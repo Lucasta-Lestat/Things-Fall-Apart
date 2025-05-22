@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=3 uid="uid://cx47exunr4x8"]
+
+[ext_resource type="Script" uid="uid://xqk2vqi16d4u" path="res://Characters/character.gd" id="1_acr0g"]
+[ext_resource type="Script" uid="uid://5we51ydxpalm" path="res://Characters/Components/stats.gd" id="2_ticvp"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ticvp"]
+
+[node name="Character" type="Node2D"]
+script = ExtResource("1_acr0g")
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_ticvp")
+
+[node name="Stats" type="Node" parent="."]
+script = ExtResource("2_ticvp")
+
+[node name="Visuals" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="Visuals"]
+
+[node name="UI" type="Node2D" parent="."]
+
+[node name="HealthBar" type="ProgressBar" parent="UI"]
+offset_right = 4.0
+offset_bottom = 27.0
+
+[node name="APBar" type="ProgressBar" parent="UI"]
+offset_right = 4.0
+offset_bottom = 27.0
+
+[node name="ActionQueueDisplay" type="Label" parent="UI"]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="SelectionIndicator" type="Sprite2D" parent="UI"]
+
+[node name="ActionIndicator" type="Node2D" parent="."]
+
+[node name="Line2D" type="Line2D" parent="ActionIndicator"]
+
+[node name="AOEPreview" type="Sprite2D" parent="ActionIndicator"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

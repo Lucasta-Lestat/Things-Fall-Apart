@@ -1,0 +1,26 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="TFA Simultaneous Demo 3"
+run/main_scene="uid://dgxu6geg7xqyx"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+AllegianceData="*res://Core/Enums/Allegiance.gd"
+DomainTraits="*res://Core/CombatSystem/domain_trait_modifiers.gd"
+SkillCheck="*res://Core/CombatSystem/SkillCheckHelper.gd"
+
+[editor]
+
+version_control/autoload_on_startup=true

@@ -1,0 +1,42 @@
+[gd_scene load_steps=3 format=3 uid="uid://ds63xhhgrwgf5"]
+
+[ext_resource type="Script" uid="uid://d3elhd4nmddbl" path="res://Scenes/combat_scene.gd" id="1_hd2ub"]
+[ext_resource type="PackedScene" uid="uid://cx47exunr4x8" path="res://Characters/character.tscn" id="2_sxav5"]
+
+[node name="CombatScene" type="Node"]
+script = ExtResource("1_hd2ub")
+
+[node name="Hero" parent="." instance=ExtResource("2_sxav5")]
+position = Vector2(40, 7)
+
+[node name="Goblin" parent="." instance=ExtResource("2_sxav5")]
+position = Vector2(183, 6)
+
+[node name="CombatUI" type="CanvasLayer" parent="."]
+
+[node name="ConfirmPlansButton" type="Button" parent="CombatUI"]
+offset_left = 8.0
+offset_top = 87.0
+offset_right = 125.0
+offset_bottom = 118.0
+text = "Confirm Plans"
+
+[node name="ResumeButton" type="Button" parent="CombatUI"]
+offset_left = 6.0
+offset_top = 133.0
+offset_right = 141.0
+offset_bottom = 164.0
+text = "Resume Combat"
+
+[node name="CombatLogDisplay" type="RichTextLabel" parent="CombatUI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -256.0
+offset_top = -220.0
+grow_horizontal = 0
+grow_vertical = 0
+bbcode_enabled = true
+scroll_following = true

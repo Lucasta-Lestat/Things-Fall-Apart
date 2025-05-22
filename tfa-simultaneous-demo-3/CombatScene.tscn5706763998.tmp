@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://ds63xhhgrwgf5"]
+
+[ext_resource type="Script" uid="uid://d3elhd4nmddbl" path="res://combat_scene.gd" id="1_hd2ub"]
+[ext_resource type="PackedScene" uid="uid://cx47exunr4x8" path="res://Characters/character.tscn" id="2_sxav5"]
+
+[node name="CombatScene" type="Node"]
+script = ExtResource("1_hd2ub")
+
+[node name="Hero" parent="." instance=ExtResource("2_sxav5")]
+
+[node name="Goblin" parent="." instance=ExtResource("2_sxav5")]
+
+[node name="Character2" parent="." instance=ExtResource("2_sxav5")]
+
+[node name="CombatUI" type="CanvasLayer" parent="."]

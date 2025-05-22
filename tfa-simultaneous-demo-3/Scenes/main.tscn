@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgxu6geg7xqyx"]
+
+[ext_resource type="PackedScene" uid="uid://ds63xhhgrwgf5" path="res://Scenes/CombatScene.tscn" id="1_bo1nx"]
+[ext_resource type="Script" uid="uid://b61smljbax5th" path="res://Core/CombatSystem/combat_manager.gd" id="2_8gbba"]
+
+[node name="Main" type="Node2D"]
+
+[node name="CombatScene" parent="." instance=ExtResource("1_bo1nx")]
+
+[node name="CombatManager" type="Node2D" parent="CombatScene"]
+script = ExtResource("2_8gbba")
