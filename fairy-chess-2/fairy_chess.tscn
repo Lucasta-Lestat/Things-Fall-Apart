@@ -1,0 +1,105 @@
+[gd_scene load_steps=12 format=3 uid="uid://bsuoy0ishctwb"]
+
+[ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
+[ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
+[ext_resource type="Script" uid="uid://divc3al5238ms" path="res://ui.gd" id="3_ik8s4"]
+[ext_resource type="PackedScene" uid="uid://bj1330b3wrqda" path="res://scenes/pieces/pawn.tscn" id="3_nbw42"]
+[ext_resource type="PackedScene" uid="uid://36475ufqra0w" path="res://scenes/pieces/Chancellor.tscn" id="4_ljmel"]
+[ext_resource type="PackedScene" uid="uid://knl5btkaj2qq" path="res://scenes/pieces/Bishop.tscn" id="5_mqiwu"]
+[ext_resource type="PackedScene" uid="uid://bbbmvtx26jq7y" path="res://scenes/pieces/King.tscn" id="6_myjci"]
+[ext_resource type="PackedScene" uid="uid://kuilwacq0k3w" path="res://scenes/pieces/Kulak.tscn" id="8_g7uw4"]
+[ext_resource type="PackedScene" uid="uid://bhbebsq87y5ep" path="res://scenes/pieces/Knight.tscn" id="9_g7uw4"]
+[ext_resource type="PackedScene" uid="uid://drmvqv3x5jfwu" path="res://scenes/pieces/Rook.tscn" id="10_ou3o4"]
+[ext_resource type="PackedScene" uid="uid://ca4o1x42i0q61" path="res://scenes/pieces/Queen.tscn" id="11_h5vv0"]
+
+[node name="FairyChess" type="Node2D"]
+
+[node name="GameBoard" type="Node2D" parent="."]
+script = ExtResource("1_jhicg")
+
+[node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("3_ik8s4")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI"]
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 816.0
+offset_bottom = 810.0
+scale = Vector2(1.84275, 1.34638)
+
+[node name="WhiteScrollContainer" type="ScrollContainer" parent="UI/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/HBoxContainer/WhiteScrollContainer"]
+layout_mode = 2
+
+[node name="ChessboardDisplay" type="Control" parent="UI/HBoxContainer"]
+custom_minimum_size = Vector2(480, 250)
+layout_mode = 2
+size_flags_horizontal = 0
+script = ExtResource("2_nbw42")
+
+[node name="Chancellor" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("4_ljmel")]
+
+[node name="Pawn" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("3_nbw42")]
+
+[node name="Bishop" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("5_mqiwu")]
+
+[node name="King" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("6_myjci")]
+
+[node name="Kulak" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("8_g7uw4")]
+
+[node name="Knight" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("9_g7uw4")]
+
+[node name="Rook" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("10_ou3o4")]
+
+[node name="Queen" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("11_h5vv0")]
+
+[node name="BlackScrollContainer" type="ScrollContainer" parent="UI/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/HBoxContainer/BlackScrollContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="GameOverlayUI" type="CanvasLayer" parent="UI"]
+
+[node name="StartButton" type="Button" parent="UI/GameOverlayUI"]
+offset_left = 548.0
+offset_top = 791.0
+offset_right = 594.0
+offset_bottom = 822.0
+text = "Start"
+
+[node name="GameStateLabel" type="Label" parent="UI/GameOverlayUI"]
+offset_left = 398.0
+offset_top = 729.0
+offset_right = 487.0
+offset_bottom = 752.0
+text = "Game state"
+
+[node name="PlayerModeButton" type="CheckBox" parent="UI/GameOverlayUI"]
+visible = false
+offset_left = 357.0
+offset_top = 730.0
+offset_right = 381.0
+offset_bottom = 754.0
+
+[node name="SetupTurnLabel" type="Label" parent="UI/GameOverlayUI"]
+offset_left = 629.0
+offset_top = 731.0
+offset_right = 752.0
+offset_bottom = 754.0
+text = "setup turn label"
+
+[node name="PlayerTurnLabel" type="Label" parent="UI/GameOverlayUI"]
+offset_left = 317.0
+offset_top = 735.0
+offset_right = 357.0
+offset_bottom = 758.0
+text = "Turn"
+
+[connection signal="pressed" from="UI/GameOverlayUI/StartButton" to="GameBoard" method="_on_start_button_pressed"]
+[connection signal="pressed" from="UI/GameOverlayUI/StartButton" to="UI" method="_on_start_button_pressed"]

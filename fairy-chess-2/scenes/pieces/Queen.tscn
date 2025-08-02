@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://ca4o1x42i0q61"]
+
+[ext_resource type="Script" uid="uid://wix0rjhb42si" path="res://scenes/pieces/queen.gd" id="1_bhpi7"]
+
+[node name="Queen" type="Node2D"]
+script = ExtResource("1_bhpi7")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

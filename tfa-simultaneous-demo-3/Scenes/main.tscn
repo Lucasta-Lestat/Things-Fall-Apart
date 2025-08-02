@@ -8,4 +8,7 @@
 [node name="CombatScene" parent="." instance=ExtResource("1_bo1nx")]
 
 [node name="CombatManager" type="Node2D" parent="CombatScene"]
+position = Vector2(39, 232)
 script = ExtResource("2_8gbba")
+max_ap_per_round = null
+execution_beat_duration = null

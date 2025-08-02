@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://ukuy5be36nkp"]
+
+[ext_resource type="Script" uid="uid://cb6dqkat4q3t6" path="res://scenes/pieces/gorgon.gd" id="1_arjik"]
+
+[node name="Gorgon" type="Node2D"]
+script = ExtResource("1_arjik")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

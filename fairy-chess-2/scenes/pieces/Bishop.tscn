@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://knl5btkaj2qq"]
+
+[ext_resource type="Script" uid="uid://drvt7252oxner" path="res://scenes/pieces/bishop.gd" id="1_brmaj"]
+
+[node name="Bishop" type="Node2D"]
+script = ExtResource("1_brmaj")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

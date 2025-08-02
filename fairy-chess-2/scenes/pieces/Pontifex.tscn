@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://dlvbeyynxyauv"]
+
+[ext_resource type="Script" uid="uid://bwtcpj52n1j7c" path="res://scenes/pieces/pontifex.gd" id="1_aq3hk"]
+
+[node name="Pontifex" type="Node2D"]
+script = ExtResource("1_aq3hk")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

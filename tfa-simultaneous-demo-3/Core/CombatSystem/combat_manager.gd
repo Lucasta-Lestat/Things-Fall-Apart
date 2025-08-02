@@ -2,7 +2,16 @@
 extends Node
 class_name CombatManager
 
-enum CombatState { IDLE, PLANNING, EXECUTING_SLOT, BEAT_PAUSE, PAUSED, ROUND_OVER, COMBAT_ENDED }
+enum CombatState {
+	IDLE,
+	PLANNING,
+	EXECUTING_SLOT,
+	AWAITING_REACTION_CHOICE, # <--- ADDED: State for when waiting on player reaction
+	BEAT_PAUSE,
+	PAUSED,
+	ROUND_OVER,
+	COMBAT_ENDED
+}
 
 var current_combat_state: CombatState = CombatState.IDLE
 var current_round: int = 0
@@ -27,6 +36,17 @@ signal combat_paused_for_replan
 signal combat_resumed_after_replan
 signal combat_ended_signal(winning_team_name)
 signal combat_log_message(message_text, message_level)
+# Add a signal to notify when a player character's plans might have changed
+signal player_character_plan_changed(character)
+var _reaction_processing_queue: Array = [] # Stores {"character": BattleCharacter, "reaction": Reaction, "triggering_slice": ExecutedActionSlice}
+var _held_action_slice_pending_reactions: ExecutedActionSlice = null # The slice that triggered current reactions
+var _current_reaction_prompt_data: Dictionary = {} # Data for the currently displayed reaction UI
+
+# Iteration within the current AP slot's action queue
+var _current_ap_slot_action_queue_idx: int = 0
+
+# ... (existing signals) ...
+signal show_reaction_prompt_ui(character, reaction, triggering_action_name) # To tell UI to show itself
 
 func _ready():
 	add_to_group("combat_manager_group") # Add to group for easy access by characters
@@ -47,6 +67,8 @@ func initialize_combat():
 		if is_instance_valid(char_node):
 			all_combatants_master_list.append(char_node)
 			# Connect character defeated signal if not already connected
+			if !char_node.reaction_prompt_requested.is_connected(_on_character_reaction_prompt_requested):
+				char_node.reaction_prompt_requested.connect(_on_character_reaction_prompt_requested)
 			if !char_node.character_defeated.is_connected(_on_character_defeated):
 				char_node.character_defeated.connect(_on_character_defeated)
 		else:
@@ -123,6 +145,273 @@ func player_confirms_plans():
 	current_ap_slot_being_resolved = 0
 	execution_phase_started.emit()
 	_resolve_current_ap_slot()
+func _proceed_with_next_action_or_reaction_in_ap_slot():
+	if current_combat_state == CombatState.COMBAT_ENDED: return
+
+	# 1. Prioritize processing any pending reactions in the UI queue
+	if !_reaction_processing_queue.is_empty():
+		_handle_next_reaction_from_ui_queue()
+		return # UI will call back via player_responds_to_reaction_prompt
+
+	# 2. If a held action was fully processed for reactions, resolve it
+	if is_instance_valid(_held_action_slice_pending_reactions):
+		_apply_final_effect_of_action_slice(_held_action_slice_pending_reactions)
+		_held_action_slice_pending_reactions = null # Clear after processing
+		if _check_and_process_combat_end_conditions(): return
+		# Continue to next action in the slot after this one is done
+	
+	# 3. Fetch and process the next action from the current AP slot's main queue
+	if _current_ap_slot_action_queue_idx < action_execution_queue_for_current_ap_slot.size():
+		var current_action_slice = action_execution_queue_for_current_ap_slot[_current_ap_slot_action_queue_idx]
+		_current_ap_slot_action_queue_idx += 1
+
+		# Basic validity checks for the caster
+		var caster = current_action_slice.caster
+		if !is_instance_valid(caster) or !is_instance_valid(caster.stats_component) or \
+		   (caster.is_defeated() and not current_action_slice.is_charging_this_slice):
+			log_message("LOGIC: %s cannot act (invalid/defeated). Skipping '%s'." % [caster.character_name if is_instance_valid(caster) else "Char", current_action_slice.original_planned_action.name], "DEBUG")
+			current_action_slice.is_resolved_logically = true # Consider it handled
+			_proceed_with_next_action_or_reaction_in_ap_slot() # Move to next
+			return
+
+		log_message("LOGIC: %s (Dex %d) slice starting for '%s'." % [caster.character_name, caster.stats_component.dexterity, current_action_slice.original_planned_action.name], "ACTION_ATTEMPT")
+		
+		# If this slice is just charging, there are no reactions to it. Apply and move on.
+		if current_action_slice.is_charging_this_slice:
+			_apply_final_effect_of_action_slice(current_action_slice) # This will just log "charging"
+			_proceed_with_next_action_or_reaction_in_ap_slot()
+			return
+
+		# Hold this slice and check for reactions from ALL other characters
+		_held_action_slice_pending_reactions = current_action_slice
+		var any_reactions_found_for_this_slice = false
+		for combatant in active_combatants_list:
+			if combatant == caster: continue # Can't react to self
+			if is_instance_valid(combatant) and !combatant.is_defeated():
+				# The BattleCharacter will emit "reaction_prompt_requested" if it has valid reactions
+				combatant.check_and_queue_reactions(current_action_slice.original_planned_action, current_action_slice)
+				# We need a way to know if any were emitted. For now, assume _on_character_reaction_prompt_requested will populate _reaction_processing_queue
+		
+		# After giving all characters a chance to queue reactions:
+		# A short delay or a signal mechanism might be needed if check_and_queue_reactions is async.
+		# Assuming it's synchronous for now.
+		call_deferred("_check_reaction_queue_after_broadcast")
+
+	else:
+		# All actions in the current AP slot's queue have been initiated and their reactions (if any) handled.
+		_finish_ap_slot_resolution()
+
+
+func _check_reaction_queue_after_broadcast():
+	# This is called after all characters have had a chance to check for reactions to _held_action_slice_pending_reactions
+	if !_reaction_processing_queue.is_empty():
+		# Reactions were found and queued by _on_character_reaction_prompt_requested
+		current_combat_state = CombatState.AWAITING_REACTION_CHOICE
+		_handle_next_reaction_from_ui_queue() # Start prompting for the first one
+	else:
+		# No reactions were queued for _held_action_slice_pending_reactions
+		_apply_final_effect_of_action_slice(_held_action_slice_pending_reactions)
+		_held_action_slice_pending_reactions = null
+		if _check_and_process_combat_end_conditions(): return
+		_proceed_with_next_action_or_reaction_in_ap_slot() # Move to next action in slot
+
+
+# Called when a character emits reaction_prompt_requested
+func _on_character_reaction_prompt_requested(character: BattleCharacter, reactions_data_array: Array, triggering_slice: ExecutedActionSlice):
+	# Ensure this reaction is for the currently held action slice
+	if triggering_slice != _held_action_slice_pending_reactions:
+		log_message("Warning: Received reaction request for a slice that is not the currently held one. Ignoring. Slice: %s, Held: %s" % [triggering_slice, _held_action_slice_pending_reactions], "WARNING")
+		return
+
+	for reaction_resource in reactions_data_array:
+		_reaction_processing_queue.append({
+			"character": character,
+			"reaction": reaction_resource, # This is the Reaction resource itself
+			"triggering_slice": triggering_slice
+		})
+	log_message("%s has %d potential reaction(s) to '%s'." % [character.character_name, reactions_data_array.size(), triggering_slice.original_planned_action.name], "REACTION")
+	# The actual prompting will be handled by _handle_next_reaction_from_ui_queue if this is the first set of reactions found.
+
+
+func _handle_next_reaction_from_ui_queue():
+	if _reaction_processing_queue.is_empty():
+		# No more reactions in the UI queue for the _held_action_slice_pending_reactions.
+		# It's time to resolve the original held action slice.
+		current_combat_state = CombatState.EXECUTING_SLOT # Restore state
+		_proceed_with_next_action_or_reaction_in_ap_slot() # This will pick up the held slice or next action
+		return
+
+	_current_reaction_prompt_data = _reaction_processing_queue.pop_front()
+	var character = _current_reaction_prompt_data.character as BattleCharacter
+	var reaction = _current_reaction_prompt_data.reaction as Reaction
+	var triggering_slice = _current_reaction_prompt_data.triggering_slice as ExecutedActionSlice
+	
+	log_message("Prompting %s for reaction '%s' to action '%s'." % [character.character_name, reaction.reaction_name, triggering_slice.original_planned_action.name], "UI_PROMPT")
+	current_combat_state = CombatState.AWAITING_REACTION_CHOICE # Ensure combat is paused
+	show_reaction_prompt_ui.emit(character, reaction, triggering_slice.original_planned_action)
+
+
+func player_responds_to_reaction_prompt(confirmed: bool):
+	if current_combat_state != CombatState.AWAITING_REACTION_CHOICE or _current_reaction_prompt_data.is_empty():
+		printerr("Received reaction response but not in correct state or no data.")
+		return
+
+	var character = _current_reaction_prompt_data.character as BattleCharacter
+	var reaction = _current_reaction_prompt_data.reaction as Reaction
+	var triggering_slice = _current_reaction_prompt_data.triggering_slice as ExecutedActionSlice
+	var original_action = triggering_slice.original_planned_action
+
+	log_message("%s responded: %s to reaction '%s'." % [character.character_name, "CONFIRMED" if confirmed else "REJECTED", reaction.reaction_name], "REACTION_RESPONSE")
+
+	if confirmed and character.can_use_reaction_resource_cost(reaction): # Double check cost
+		character.consume_reaction_resources(reaction)
+		# Apply reaction effect
+		match reaction.effect_type:
+			Reaction.ReactionEffectType.CAST_SPELL:
+				var spell_path = reaction.effect_details.get("spell_resource_path", "")
+				if !spell_path.is_empty():
+					var spell_action_res = load(spell_path) as PlannedAction
+					if spell_action_res:
+						log_message("%s reacts by casting '%s'." % [character.character_name, spell_action_res.name], "REACTION_EFFECT")
+						# This is complex: a reaction spell might need its own slice, target, etc.
+						# For simplicity now, assume it's a self-buff or simple effect.
+						# A full "reaction action" would need to be queued and resolved.
+						# For now, let's say it applies a status effect or similar immediate effect.
+						# Example: character.apply_status_effect_from_reaction_spell(spell_action_res)
+						if spell_action_res.name.to_lower().contains("shield"): # very basic
+							triggering_slice.temporary_damage_reduction = triggering_slice.get("temporary_damage_reduction", 0) + 10 # Example custom property
+							log_message("Shield reaction reduces damage on incoming attack by 10 (example).", "REACTION_EFFECT")
+
+
+			Reaction.ReactionEffectType.MODIFY_DAMAGE:
+				var reduction_percent = reaction.effect_details.get("percentage_reduction", 0.0)
+				var reduction_flat = reaction.effect_details.get("flat_reduction", 0)
+				# This modification needs to be applied to triggering_slice.calculated_damage_this_slice
+				# *before* it's dealt. We can add a temporary modifier to the slice.
+				if reduction_percent > 0.0:
+					triggering_slice.temporary_damage_reduction_multiplier = triggering_slice.get("temporary_damage_reduction_multiplier", 1.0) * (1.0 - reduction_percent)
+				if reduction_flat > 0:
+					triggering_slice.temporary_damage_reduction_flat = triggering_slice.get("temporary_damage_reduction_flat", 0) + reduction_flat
+				log_message("%s reacts to modify damage." % character.character_name, "REACTION_EFFECT")
+				
+			Reaction.ReactionEffectType.ATTEMPT_LEARN_SPELL:
+				if original_action.type == PlannedAction.ActionType.SPELL_FIREBALL or \
+				   original_action.type == PlannedAction.ActionType.SPELL_HEAL : # Check if it's a spell
+					character.attempt_learn_spell(original_action, original_action.caster_node, reaction.effect_details)
+				else:
+					log_message("Reaction to learn spell triggered by non-spell action '%s'. Cannot learn." % original_action.name, "WARNING")
+		
+		# Check for combat end after reaction effect
+		if _check_and_process_combat_end_conditions(): return
+
+	_current_reaction_prompt_data.clear() # Clear data for processed prompt
+	# Continue with next reaction in UI queue or proceed with original action
+	_handle_next_reaction_from_ui_queue()
+
+
+func _apply_final_effect_of_action_slice(exec_slice: ExecutedActionSlice):
+	if exec_slice.is_resolved_logically: return # Already processed
+
+	var caster = exec_slice.caster
+	var planned_action = exec_slice.original_planned_action
+
+	if !is_instance_valid(caster) or !is_instance_valid(caster.stats_component) or \
+	   (caster.is_defeated() and not exec_slice.is_charging_this_slice):
+		log_message("Caster %s invalid/defeated before final effect of '%s'." % [caster.character_name if is_instance_valid(caster) else "N/A", planned_action.name], "DEBUG")
+		exec_slice.is_resolved_logically = true
+		return
+
+	if exec_slice.is_charging_this_slice:
+		log_message("  %s is charging '%s'." % [caster.character_name, planned_action.name], "ACTION_DETAIL")
+		caster.execute_charge_slice_animation(execution_beat_duration) # Assuming animation is tied to charge
+	
+	# Ensure skill check is done if not already (it should be during _populate_slice_details_for_action_attempt)
+	elif exec_slice.skill_check_outcome == null and planned_action.type != PlannedAction.ActionType.MOVE and planned_action.type != PlannedAction.ActionType.IDLE:
+		log_message("Warning: Skill check outcome was null for %s. Recalculating." % planned_action.name, "WARNING")
+		# Re-perform or ensure _populate_slice_details_for_action_attempt did its job.
+		# This usually means the initial skill check for the action.
+		# For simplicity, assume _populate_slice_details_for_action_attempt has already set this.
+		# If it's an attack/spell that needs a check:
+		var skill_res = SkillCheck.perform_check(
+			caster.stats_component.get_stat_value(planned_action.relevant_stat_name),
+			caster.stats_component.traits, planned_action.action_domain, planned_action.is_piercing_damage
+		)
+		exec_slice.skill_check_outcome = skill_res
+		if skill_res.success:
+			var dmg_bonus = caster.stats_component.get_damage_bonus(planned_action.damage_bonus_stat)
+			if planned_action.base_damage > 0:
+				var total_base_dmg = planned_action.base_damage + dmg_bonus
+				exec_slice.calculated_damage_this_slice = int(round(total_base_dmg * skill_res.damage_multiplier))
+			elif planned_action.base_heal > 0:
+				var total_base_heal = planned_action.base_heal + dmg_bonus
+				exec_slice.calculated_heal_this_slice = int(round(total_base_heal * skill_res.damage_multiplier))
+		# ... etc. This logic should be in _populate_slice_details_for_action_attempt mostly.
+
+	# Apply action logic (damage, healing, movement)
+	# This is where you take exec_slice.calculated_damage_this_slice (which might have been pre-calculated)
+	# and apply reaction modifiers before dealing it.
+	match planned_action.type:
+		PlannedAction.ActionType.IDLE:
+			log_message("  %s is idle." % caster.character_name, "ACTION_DETAIL")
+		PlannedAction.ActionType.MOVE:
+			caster.global_position = exec_slice.movement_target_this_slice # Logical move
+			log_message("  %s logically moved to %s" % [caster.character_name, caster.global_position.round()], "ACTION_DETAIL")
+		PlannedAction.ActionType.ATTACK:
+			var target_char = exec_slice.attack_target_node_this_slice
+			if is_instance_valid(target_char) and !target_char.is_defeated() and exec_slice.skill_check_outcome and exec_slice.skill_check_outcome.success:
+				var final_damage = exec_slice.calculated_damage_this_slice
+				# Apply reaction modifiers
+				final_damage = int(round(final_damage * exec_slice.get("temporary_damage_reduction_multiplier", 1.0)))
+				final_damage = max(0, final_damage - exec_slice.get("temporary_damage_reduction_flat", 0))
+				final_damage = max(0, final_damage - exec_slice.get("temporary_damage_reduction", 0)) # old example
+
+				log_message("  %s vs %s: %s. BaseDmgCalc: %d, FinalDmgToDeal: %d" % [caster.character_name, target_char.character_name, exec_slice.skill_check_outcome, exec_slice.calculated_damage_this_slice, final_damage], "ACTION_RESULT")
+				target_char.take_damage_from_action(final_damage, caster, exec_slice.skill_check_outcome.is_critical_hit, exec_slice.skill_check_outcome.critical_hit_tier)
+			elif exec_slice.skill_check_outcome: # Handled misses etc.
+				log_message("  %s vs %s: %s (No damage)." % [caster.character_name, target_char.character_name if is_instance_valid(target_char) else "Invalid Target", exec_slice.skill_check_outcome], "ACTION_RESULT")
+
+		PlannedAction.ActionType.SPELL_FIREBALL:
+			# ... (similar logic for applying damage to AoE targets, considering reaction modifiers) ...
+			# The skill check outcome and base damage per target are on exec_slice.
+			if exec_slice.skill_check_outcome and exec_slice.skill_check_outcome.success:
+				var affected = find_characters_in_aoe(planned_action.target_position, planned_action.aoe_radius, active_combatants_list)
+				log_message("    Fireball AOE (might hit %d): %s" % [affected.size(), str(affected.map(func(c): return c.character_name))], "ACTION_DETAIL")
+				for target_in_aoe in affected:
+					if target_in_aoe != caster or planned_action.spell_effect_details.get("can_hit_caster", false):
+						var final_damage_target = exec_slice.calculated_damage_this_slice # Damage per target
+						# TODO: Individual target reactions could modify this. For now, global mods on slice.
+						final_damage_target = int(round(final_damage_target * exec_slice.get("temporary_damage_reduction_multiplier", 1.0)))
+						final_damage_target = max(0, final_damage_target - exec_slice.get("temporary_damage_reduction_flat", 0))
+						target_in_aoe.take_damage_from_action(final_damage_target, caster, exec_slice.skill_check_outcome.is_critical_hit, exec_slice.skill_check_outcome.critical_hit_tier)
+			# ...
+
+		PlannedAction.ActionType.SPELL_HEAL:
+			var target_char = exec_slice.attack_target_node_this_slice # Using this field for heal target too
+			if is_instance_valid(target_char) and exec_slice.skill_check_outcome and exec_slice.skill_check_outcome.success:
+				var final_heal = exec_slice.calculated_heal_this_slice
+				# Reaction could potentially boost heal, similar to damage reduction
+				log_message("  %s heals %s for %d HP." % [caster.character_name, target_char.character_name, final_heal], "ACTION_RESULT")
+				target_char.stats_component.heal(final_heal)
+				if target_char.is_defeated() and target_char.stats_component.current_hp > 0:
+					_revive_character(target_char)
+			# ...
+
+	# Clear temporary modifiers from the slice after applying them
+	exec_slice.erase("temporary_damage_reduction_multiplier")
+	exec_slice.erase("temporary_damage_reduction_flat")
+	exec_slice.erase("temporary_damage_reduction")
+
+	exec_slice.is_resolved_logically = true
+
+
+func _finish_ap_slot_resolution():
+	log_message("  All actions in AP Slot %d logically resolved. Playing animations..." % (current_ap_slot_being_resolved + 1), "SLOT_EVENT_END")
+	current_combat_state = CombatState.EXECUTING_SLOT # Ensure it's back if it was AWAITING_REACTION
+	
+	# Check combat end before starting beat, as animations might play on defeated chars otherwise
+	if _check_and_process_combat_end_conditions(): return
+
+	_play_animations_for_ap_slot_and_start_beat() # This now plays animations and then starts the beat timer for the next phase/slot
 
 func _resolve_current_ap_slot():
 	if current_combat_state == CombatState.COMBAT_ENDED: return

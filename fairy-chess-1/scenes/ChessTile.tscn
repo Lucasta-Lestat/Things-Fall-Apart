@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=3 uid="uid://cuadap0ft24ig"]
+
+[ext_resource type="Script" uid="uid://0na4nxsl8my3" path="res://fairy_chess/ChessTile.gd" id="1_ha4hi"]
+
+[node name="ChessTile" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_ha4hi")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Highlight" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PieceContainer" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0

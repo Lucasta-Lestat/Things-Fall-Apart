@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://b6wdekeqqfa66"]
+
+[ext_resource type="Script" uid="uid://dvcqr4ttacnyy" path="res://player_controller.gd" id="1_e2o6t"]
+[ext_resource type="Script" uid="uid://bal8slfjvg3bb" path="res://procedural_character.gd" id="2_feb5d"]
+
+[node name="game" type="Node2D"]
+visible = false
+
+[node name="player_controller" type="CharacterBody2D" parent="."]
+script = ExtResource("1_e2o6t")
+
+[node name="procedural_character" type="Node2D" parent="player_controller"]
+script = ExtResource("2_feb5d")
+is_female = true
+body_color = Color(1, 0.121569, 1, 1)

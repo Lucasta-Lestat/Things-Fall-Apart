@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://5bdk0kddd2a7"]
+
+[ext_resource type="Script" uid="uid://cs8kn5sfm2try" path="res://scenes/pieces/rifleman.gd" id="1_jumfo"]
+
+[node name="Rifleman" type="Node2D"]
+script = ExtResource("1_jumfo")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

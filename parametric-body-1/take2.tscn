@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://baexcx3p0wol7"]
+
+[ext_resource type="PackedScene" uid="uid://dgik8aii8ptj2" path="res://player_controller.tscn" id="1_ymbpc"]
+[ext_resource type="Script" uid="uid://bal8slfjvg3bb" path="res://procedural_character.gd" id="2_ef5mv"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="PlayerController" parent="." instance=ExtResource("1_ymbpc")]
+
+[node name="procedural_character" type="Node2D" parent="PlayerController"]
+script = ExtResource("2_ef5mv")
+is_female = true
+body_color = Color(1, 0.121569, 1, 1)

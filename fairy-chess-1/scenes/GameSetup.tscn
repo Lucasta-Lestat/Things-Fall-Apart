@@ -1,0 +1,187 @@
+[gd_scene load_steps=11 format=3 uid="uid://duacytunrlwbk"]
+
+[ext_resource type="Script" uid="uid://bcbcnbypg0cn8" path="res://fairy_chess/GameSetupManager.gd" id="1_yl58w"]
+[ext_resource type="Script" uid="uid://vh31u1ub6ykr" path="res://fairy_chess/GovernmentSelector.gd" id="2_qd0hg"]
+[ext_resource type="Script" uid="uid://ckua3bekdmew0" path="res://fairy_chess/PieceSelector.gd" id="2_w1g08"]
+[ext_resource type="Script" uid="uid://c1ih4jw404bqd" path="res://fairy_chess/WagerInput.gd" id="3_vcqf2"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_vcqf2"]
+font_color = Color(0.00532704, 3.42274e-07, 0.00533246, 1)
+
+[sub_resource type="Theme" id="Theme_vcqf2"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_hkeq1"]
+font_color = Color(0.00820202, 0.00820202, 0.00820202, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_cpetj"]
+font_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ab315"]
+font_color = Color(0.0338533, 0.0338533, 0.0338533, 1)
+outline_color = Color(0.00820202, 0.00820202, 0.00820202, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_kcibl"]
+resource_name = "Black"
+font_color = Color(0.0295066, 0.0295066, 0.0295066, 1)
+
+[node name="GameSetup" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_top = -1.0
+offset_bottom = -1.0
+scale = Vector2(0.702415, 0.59928)
+script = ExtResource("1_yl58w")
+metadata/_edit_vertical_guides_ = [-163.0]
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+scale = Vector2(38.6137, 26.1607)
+color = Color(0.634529, 0.857872, 0.981375, 1)
+
+[node name="SetupContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 156.603
+offset_top = 213.59
+offset_right = 534.603
+offset_bottom = 425.59
+scale = Vector2(2.83306, 3.42728)
+
+[node name="Label" type="Label" parent="SetupContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="SetupContainer"]
+layout_mode = 2
+
+[node name="GovernmentSelection" type="HBoxContainer" parent="SetupContainer"]
+layout_mode = 2
+script = ExtResource("2_qd0hg")
+
+[node name="WhiteGovLabel" type="Label" parent="SetupContainer/GovernmentSelection"]
+layout_mode = 2
+text = "White 
+Government"
+label_settings = SubResource("LabelSettings_vcqf2")
+
+[node name="WhiteGovernment" type="OptionButton" parent="SetupContainer/GovernmentSelection"]
+layout_mode = 2
+theme = SubResource("Theme_vcqf2")
+
+[node name="BlackGovLabel" type="Label" parent="SetupContainer/GovernmentSelection"]
+layout_mode = 2
+text = "Black 
+Government"
+label_settings = SubResource("LabelSettings_hkeq1")
+
+[node name="BlackGovernment" type="OptionButton" parent="SetupContainer/GovernmentSelection"]
+layout_mode = 2
+
+[node name="WagerSection" type="VBoxContainer" parent="SetupContainer"]
+layout_mode = 2
+script = ExtResource("3_vcqf2")
+
+[node name="WagerLabel" type="Label" parent="SetupContainer/WagerSection"]
+layout_mode = 2
+
+[node name="WagerContainer" type="HBoxContainer" parent="SetupContainer/WagerSection"]
+layout_mode = 2
+
+[node name="WhiteWagerLabel" type="Label" parent="SetupContainer/WagerSection/WagerContainer"]
+layout_mode = 2
+text = "White Wager"
+label_settings = SubResource("LabelSettings_cpetj")
+
+[node name="WhiteWager" type="SpinBox" parent="SetupContainer/WagerSection/WagerContainer"]
+layout_mode = 2
+
+[node name="BlackWagerLabel" type="Label" parent="SetupContainer/WagerSection/WagerContainer"]
+layout_mode = 2
+text = "Black Wager"
+label_settings = SubResource("LabelSettings_ab315")
+
+[node name="BlackWager" type="SpinBox" parent="SetupContainer/WagerSection/WagerContainer"]
+layout_mode = 2
+
+[node name="ConfirmWagers" type="Button" parent="SetupContainer/WagerSection"]
+layout_mode = 2
+text = "Confirm Wagers"
+
+[node name="PieceSelection" type="HBoxContainer" parent="SetupContainer"]
+layout_mode = 2
+
+[node name="BlackPieceSelector" type="Control" parent="SetupContainer/PieceSelection"]
+layout_mode = 2
+script = ExtResource("2_w1g08")
+
+[node name="Black Label" type="Label" parent="SetupContainer/PieceSelection/BlackPieceSelector"]
+layout_mode = 0
+offset_left = 199.455
+offset_top = -208.646
+offset_right = 294.455
+offset_bottom = -185.646
+text = "Black Pieces"
+label_settings = SubResource("LabelSettings_kcibl")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SetupContainer/PieceSelection/BlackPieceSelector"]
+layout_mode = 0
+offset_left = 201.411
+offset_top = -186.874
+offset_right = 241.411
+offset_bottom = -146.874
+scale = Vector2(0.476322, 0.477169)
+horizontal_scroll_mode = 0
+
+[node name="PieceGrid" type="GridContainer" parent="SetupContainer/PieceSelection/BlackPieceSelector/ScrollContainer"]
+layout_mode = 2
+
+[node name="SelectedPieces" type="VBoxContainer" parent="SetupContainer/PieceSelection/BlackPieceSelector"]
+layout_mode = 0
+offset_left = 314.585
+offset_top = -168.453
+offset_right = 354.585
+offset_bottom = -128.453
+scale = Vector2(1.39342, 0.752666)
+
+[node name="WhitePieceSelector" type="Control" parent="SetupContainer/PieceSelection"]
+layout_mode = 2
+script = ExtResource("2_w1g08")
+
+[node name="White Label" type="Label" parent="SetupContainer/PieceSelection/WhitePieceSelector"]
+offset_left = -12.0403
+offset_top = -210.385
+offset_right = 85.9597
+offset_bottom = -187.385
+text = "White Pieces"
+label_settings = SubResource("LabelSettings_kcibl")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SetupContainer/PieceSelection/WhitePieceSelector"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 46.2517
+offset_top = -188.475
+offset_right = 86.2517
+offset_bottom = -148.475
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.490055, 0.481903)
+horizontal_scroll_mode = 0
+
+[node name="PieceGrid" type="GridContainer" parent="SetupContainer/PieceSelection/WhitePieceSelector/ScrollContainer"]
+layout_mode = 2
+
+[node name="SelectedPieces" type="VBoxContainer" parent="SetupContainer/PieceSelection/WhitePieceSelector"]
+layout_mode = 0
+offset_left = -3.59912
+offset_top = -167.746
+offset_right = 36.4009
+offset_bottom = -127.746
+scale = Vector2(1.8858, 0.671206)
+
+[node name="StartGame" type="Button" parent="SetupContainer"]
+layout_mode = 2
+text = "Start Game"

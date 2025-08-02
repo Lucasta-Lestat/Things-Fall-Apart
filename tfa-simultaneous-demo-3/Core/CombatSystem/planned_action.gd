@@ -1,7 +1,7 @@
 # res://Core/CombatSystem/planned_action.gd
 class_name PlannedAction extends Resource
 
-enum ActionType { IDLE, MOVE, ATTACK, SPELL_FIREBALL, SPELL_HEAL }
+enum ActionType { IDLE, MOVE, ATTACK, SPELL_FIREBALL, SPELL_HEAL } # Ensure this matches Reaction.gd if used there
 
 @export var type: ActionType = ActionType.IDLE
 @export var caster_path: NodePath 
@@ -24,7 +24,8 @@ var target_node: BattleCharacter # Typed
 @export var damage_bonus_stat: String = "" # e.g., "strength", "intelligence" (also for heal bonus)
 @export var action_domain: String = "default" # e.g., "weapon_attack_melee"
 @export var is_piercing_damage: bool = false 
-@export var spell_effect_details: Dictionary = {}
+@export var spell_effect_details: Dictionary = {} # E.g. for spell-specific data not covered by base fields
+@export var action_tags: Array[String] = [] # <--- ADDED: Generic traits like "Arcane", "Physical", "Targeted"
 
 func _init(p_type: ActionType = ActionType.IDLE, p_caster: BattleCharacter = null, 
 			p_ap_cost: int = 1, p_name: String = ""):

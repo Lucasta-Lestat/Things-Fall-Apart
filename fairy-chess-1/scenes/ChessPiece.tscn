@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3 uid="uid://wxno5n3l1es0"]
+
+[ext_resource type="Script" uid="uid://dwekyv1vn8ygu" path="res://fairy_chess/ChessPiece.gd" id="1_bjn0o"]
+
+[node name="ChessPiece" type="Node2D"]
+script = ExtResource("1_bjn0o")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="EffectsContainer" type="Node2D" parent="."]
+
+[node name="WhitePieceSelector" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="WhiteLabel" type="Label" parent="WhitePieceSelector"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="WhitePieceSelector"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PieceGrid" type="GridContainer" parent="WhitePieceSelector/ScrollContainer"]
+layout_mode = 2
+
+[node name="SelectedPieces" type="VBoxContainer" parent="WhitePieceSelector"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgik8aii8ptj2"]
+
+[ext_resource type="Script" uid="uid://dvcqr4ttacnyy" path="res://player_controller.gd" id="1_lvefo"]
+[ext_resource type="Script" uid="uid://bal8slfjvg3bb" path="res://procedural_character.gd" id="2_f0yg5"]
+
+[node name="PlayerController" type="CharacterBody2D"]
+script = ExtResource("1_lvefo")
+
+[node name="ProceduralCharacter" type="Node2D" parent="."]
+script = ExtResource("2_f0yg5")

@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://dddwj0ugrdy5w"]
+
+[ext_resource type="Script" uid="uid://bcnjmwwmx1q2o" path="res://scenes/pieces/devil_toad.gd" id="1_os13h"]
+
+[node name="DevilToad" type="Node2D"]
+script = ExtResource("1_os13h")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

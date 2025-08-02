@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bw5ptyixuev56"]
+
+[ext_resource type="Script" uid="uid://bpti5e5qjw086" path="res://scenes/pieces/monk.gd" id="1_d4ghh"]
+
+[node name="Monk" type="Node2D"]
+script = ExtResource("1_d4ghh")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

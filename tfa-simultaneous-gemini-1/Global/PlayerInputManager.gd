@@ -1,0 +1,364 @@
+# res://Global/PlayerInputManager.gd
+extends Node
+class_name PlayerInputManager
+
+signal selection_changed(selected_characters: Array[CombatCharacter])
+signal camera_recenter_request(target_position: Vector2) # For camera to listen to
+
+var selected_characters: Array[CombatCharacter] = []
+var primary_selected_character: CombatCharacter = null # For camera focus, ability source
+
+var drag_select_active: bool = false
+var drag_start_screen_pos: Vector2
+var selection_rect_visual: ColorRect # Visual feedback for drag selection
+
+enum TargetingState { NONE, ABILITY_TARGETING }
+var current_targeting_state: TargetingState = TargetingState.NONE
+var ability_being_targeted: Ability = null
+var ability_caster_for_targeting: CombatCharacter = null # Primary caster for preview
+
+var current_planning_character: CombatCharacter = null # Set by CombatManager.player_action_pending
+var current_planning_ap_slot: int = -1
+
+func _ready():
+	selection_rect_visual = ColorRect.new()
+	selection_rect_visual.color = Color(0.5, 0.7, 1.0, 0.25) # Semi-transparent blue
+	selection_rect_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	get_tree().root.add_child(selection_rect_visual) # Add to root for global visibility
+	selection_rect_visual.visible = false
+
+	if CombatManager:
+		CombatManager.planning_phase_started.connect(func(): _set_input_active(true))
+		CombatManager.resolution_phase_started.connect(func(): _set_input_active(false))
+		CombatManager.combat_paused.connect(_on_combat_paused)
+		CombatManager.combat_resumed.connect(_on_combat_resumed)
+		CombatManager.player_action_pending.connect(_on_player_action_pending)
+		CombatManager.combat_ended.connect(func(_winner): clear_selection(); _set_input_active(false))
+	_set_input_active(false) # Initially inactive
+
+func _set_input_active(is_active: bool):
+	set_process_input(is_active)
+	if not is_active:
+		cancel_targeting_mode()
+		if is_instance_valid(selection_rect_visual): selection_rect_visual.visible = false
+		drag_select_active = false
+
+
+func _on_combat_paused(is_beat_pause: bool):
+	# Allow some input during beat pause for re-planning or unpausing
+	if is_beat_pause:
+		set_process_input(true) # Allow space to be detected for replan/resume
+	else:
+		_set_input_active(false) # General pause might disable all combat input
+
+func _on_combat_resumed():
+	# If resuming to PLANNING, CombatManager will emit planning_phase_started which calls _set_input_active(true)
+	# If resuming to RESOLUTION, input should remain largely off.
+	if CombatManager.current_combat_state == CombatManager.CombatState.PLANNING:
+		_set_input_active(true)
+	else:
+		_set_input_active(false) # Ensure input is off if not resuming to planning
+
+func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
+	current_planning_character = character
+	current_planning_ap_slot = ap_slot_index
+	# Auto-select the character whose turn it is to plan
+	if character and character.allegiance == CombatCharacter.Allegiance.PLAYER:
+		if not selected_characters.has(character) or primary_selected_character != character:
+			_clear_selection_internally()
+			_add_to_selection(character)
+			primary_selected_character = character
+			emit_signal("selection_changed", selected_characters)
+			if is_instance_valid(primary_selected_character):
+				emit_signal("camera_recenter_request", primary_selected_character.global_position)
+
+
+func _unhandled_input(event: InputEvent):
+	# Global unpause, not tied to beat_pause re-planning
+	if event.is_action_pressed("ui_cancel"): # Escape key
+		if CombatManager.current_combat_state == CombatManager.CombatState.PAUSED:
+			if CombatManager.beat_pause_requested_by_player: # If it was a beat pause
+				CombatManager.resume_normally_from_pause() # Resume resolution without replan
+			else: # Generic pause (not yet implemented, but for future menu)
+				CombatManager.resume_normally_from_pause() # Or toggle menu
+			get_tree().set_input_as_handled()
+			return
+
+	# Spacebar for beat pause / resume for replan
+	if event.is_action_pressed("ui_accept"): # Spacebar
+		if CombatManager.current_combat_state == CombatManager.CombatState.BEAT_PAUSE_WINDOW:
+			if CombatManager.request_beat_pause():
+				get_tree().set_input_as_handled()
+				return
+		elif CombatManager.current_combat_state == CombatManager.CombatState.PAUSED and CombatManager.beat_pause_requested_by_player:
+			if CombatManager.resume_from_beat_pause_for_replan():
+				get_tree().set_input_as_handled()
+				return
+
+	# If input is not generally active for planning, ignore below
+	if not is_processing_input(): return
+
+
+	# --- Targeting Mode Input ---
+	if current_targeting_state == TargetingState.ABILITY_TARGETING:
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				_handle_ability_target_click(get_viewport().get_mouse_position())
+				get_tree().set_input_as_handled()
+				return
+			elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+				cancel_targeting_mode()
+				get_tree().set_input_as_handled()
+				return
+		elif event is InputEventMouseMotion:
+			if ability_caster_for_targeting and ability_being_targeted:
+				var world_mouse_pos = _get_world_mouse_position()
+				ability_caster_for_targeting.show_ability_preview(ability_being_targeted, world_mouse_pos, current_planning_ap_slot)
+			get_tree().set_input_as_handled()
+			return
+		elif event.is_action_pressed("ui_cancel"): # Escape
+			cancel_targeting_mode()
+			get_tree().set_input_as_handled()
+			return
+		# Don't process other inputs when targeting
+		return
+
+	# --- Standard Planning Input (Selection, Hotkeys) ---
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			var world_mouse_pos = _get_world_mouse_position()
+			if event.pressed:
+				var clicked_on_char = CombatManager.get_character_at_world_pos(world_mouse_pos)
+				if clicked_on_char and clicked_on_char.allegiance == CombatCharacter.Allegiance.PLAYER:
+					if Input.is_key_pressed(KEY_SHIFT):
+						_toggle_selection(clicked_on_char)
+					else:
+						_clear_selection_internally()
+						_add_to_selection(clicked_on_char)
+						primary_selected_character = clicked_on_char
+					emit_signal("selection_changed", selected_characters)
+					if is_instance_valid(primary_selected_character):
+						emit_signal("camera_recenter_request", primary_selected_character.global_position)
+					get_tree().set_input_as_handled()
+				else: # Clicked on empty space or enemy
+					drag_start_screen_pos = get_viewport().get_mouse_position()
+					drag_select_active = true
+					selection_rect_visual.global_position = drag_start_screen_pos
+					selection_rect_visual.size = Vector2.ZERO
+					selection_rect_visual.visible = true
+					# If not shift clicking, clear previous selection on drag start
+					if not Input.is_key_pressed(KEY_SHIFT):
+						_clear_selection_internally()
+						# No emit yet, wait for drag release
+			else: # Mouse button released
+				if drag_select_active:
+					drag_select_active = false
+					selection_rect_visual.visible = false
+					var drag_end_screen_pos = get_viewport().get_mouse_position()
+					_perform_drag_selection(Rect2(drag_start_screen_pos, drag_end_screen_pos - drag_start_screen_pos), Input.is_key_pressed(KEY_SHIFT))
+					emit_signal("selection_changed", selected_characters) # Emit after drag
+					get_tree().set_input_as_handled()
+				# If not dragging and didn't click a char (handled above), click on empty space deselects
+				elif not CombatManager.get_character_at_world_pos(world_mouse_pos) and not Input.is_key_pressed(KEY_SHIFT):
+					clear_selection() # This calls _clear_selection_internally and emits
+					get_tree().set_input_as_handled()
+
+
+	elif event is InputEventMouseMotion:
+		if drag_select_active:
+			var current_screen_pos = get_viewport().get_mouse_position()
+			var rect_pos = Vector2(min(drag_start_screen_pos.x, current_screen_pos.x), min(drag_start_screen_pos.y, current_screen_pos.y))
+			var rect_size = (current_screen_pos - drag_start_screen_pos).abs()
+			selection_rect_visual.global_position = rect_pos # Visual is in screen space
+			selection_rect_visual.size = rect_size
+			get_tree().set_input_as_handled()
+
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_BACKSPACE:
+			_select_all_player_characters()
+			emit_signal("selection_changed", selected_characters)
+			get_tree().set_input_as_handled()
+		
+		# Hotbar keys (1-9, 0 for 10th)
+		var hotkey_idx = -1
+		if event.keycode >= KEY_1 and event.keycode <= KEY_9: hotkey_idx = event.keycode - KEY_1
+		elif event.keycode == KEY_0: hotkey_idx = 9
+		
+		if hotkey_idx != -1 and not selected_characters.is_empty() and current_planning_character:
+			# Use ability for the current_planning_character if they are selected,
+			# or primary_selected_character if current_planning_character is not set/selected.
+			var acting_char = current_planning_character if selected_characters.has(current_planning_character) else primary_selected_character
+			
+			if acting_char and acting_char.abilities.size() > hotkey_idx:
+				var ability = acting_char.abilities[hotkey_idx]
+				if ability and acting_char.can_start_planning_ability(ability, current_planning_ap_slot):
+					if ability.requires_target():
+						_start_ability_targeting_mode(ability, acting_char)
+					else: # Self-cast or no target needed
+						for sel_char in selected_characters: # Apply to all selected that can
+							if sel_char == acting_char or sel_char.can_start_planning_ability(ability, sel_char.get_next_available_ap_slot_index()):
+								sel_char.plan_ability_use(ability, current_planning_ap_slot, sel_char) # Target self
+						# This might auto-advance planning via signals from character.
+				elif ability:
+					print_debug(acting_char.character_name, " cannot use '", ability.display_name, "' (AP/Slot issue).")
+
+			elif acting_char and hotkey_idx == 0 : # Special: '1' could be mapped to 'Move' by convention
+				var move_ability = acting_char.get_ability_by_id(&"move") # Assuming move is an ability with ID "move"
+				if move_ability and acting_char.can_start_planning_ability(move_ability, current_planning_ap_slot):
+					_start_ability_targeting_mode(move_ability, acting_char)
+				elif move_ability:
+					print_debug(acting_char.character_name, " cannot use 'Move' (AP/Slot issue).")
+			get_tree().set_input_as_handled()
+
+
+func _get_world_mouse_position() -> Vector2:
+	var cam = get_viewport().get_camera_2d()
+	if cam:
+		return cam.get_global_mouse_position() # Godot 4 Camera2D has this helper
+	return get_viewport().get_mouse_position() # Fallback, might be inaccurate if not global space
+
+
+func _clear_selection_internally():
+	for char in selected_characters:
+		if is_instance_valid(char): char.is_selected = false
+	selected_characters.clear()
+	primary_selected_character = null
+
+func clear_selection(): # Public version that also emits
+	_clear_selection_internally()
+	emit_signal("selection_changed", selected_characters)
+
+func _add_to_selection(character: CombatCharacter):
+	if not selected_characters.has(character):
+		selected_characters.append(character)
+		character.is_selected = true
+		if not primary_selected_character: # If no primary, first selected becomes primary
+			primary_selected_character = character
+
+func _toggle_selection(character: CombatCharacter):
+	if selected_characters.has(character):
+		character.is_selected = false
+		selected_characters.erase(character)
+		if primary_selected_character == character: # If primary was deselected
+			primary_selected_character = selected_characters.back() if not selected_characters.is_empty() else null
+	else:
+		_add_to_selection(character)
+
+
+func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
+	var selection_world_rect = Rect2(_get_world_mouse_position_from_screen(screen_rect.position), 
+									 _get_world_mouse_position_from_screen(screen_rect.end) - _get_world_mouse_position_from_screen(screen_rect.position) ).abs()
+
+	if not shift_modifier: # Re-clearing here because initial clear was before drag confirmed
+		_clear_selection_internally()
+
+	for char_node in CombatManager.player_party: # Only select player characters
+		var character = char_node as CombatCharacter
+		if is_instance_valid(character) and character.current_health > 0:
+			if selection_world_rect.intersects(character.get_sprite_rect_global()): # Use sprite bounds for check
+				_add_to_selection(character)
+	
+	if not selected_characters.is_empty() and not primary_selected_character:
+		primary_selected_character = selected_characters[0]
+
+
+func _get_world_mouse_position_from_screen(screen_pos: Vector2) -> Vector2:
+	var cam = get_viewport().get_camera_2d()
+	if cam:
+		return cam.get_canvas_transform().affine_inverse() * screen_pos
+	return screen_pos # Fallback
+
+
+func _select_all_player_characters():
+	_clear_selection_internally()
+	for char_node in CombatManager.player_party:
+		var character = char_node as CombatCharacter
+		if is_instance_valid(character) and character.current_health > 0:
+			_add_to_selection(character)
+	if not selected_characters.is_empty():
+		primary_selected_character = selected_characters[0]
+		if is_instance_valid(primary_selected_character):
+			emit_signal("camera_recenter_request", primary_selected_character.global_position)
+
+
+# --- Targeting Mode Logic ---
+func _start_ability_targeting_mode(ability: Ability, caster: CombatCharacter):
+	current_targeting_state = TargetingState.ABILITY_TARGETING
+	ability_being_targeted = ability
+	ability_caster_for_targeting = caster
+	print_debug("Started targeting for: ", ability.display_name, " by ", caster.character_name)
+	# UI could change cursor here
+
+func cancel_targeting_mode():
+	if current_targeting_state == TargetingState.ABILITY_TARGETING:
+		if is_instance_valid(ability_caster_for_targeting):
+			ability_caster_for_targeting.hide_previews()
+		current_targeting_state = TargetingState.NONE
+		ability_being_targeted = null
+		ability_caster_for_targeting = null
+		print_debug("Targeting cancelled.")
+
+func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_pos is not used, using _get_world_mouse_position
+	var target_world_pos = _get_world_mouse_position()
+	var clicked_char_target = CombatManager.get_character_at_world_pos(target_world_pos)
+
+	var caster = ability_caster_for_targeting # The one who initiated targeting
+	var ability = ability_being_targeted
+
+	# Distance check (use clicked_char_target pos if available, otherwise mouse world pos)
+	var effective_target_pos = clicked_char_target.global_position if clicked_char_target else target_world_pos
+	if caster.global_position.distance_to(effective_target_pos) > ability.range:
+		print_debug("Target out of range for '", ability.display_name, "'")
+		# Don't cancel targeting, let player try again or right-click to cancel
+		return
+
+	# Apply to all selected characters that are able and have this ability
+	for char_to_act in selected_characters:
+		if not is_instance_valid(char_to_act) or char_to_act.current_health <= 0: continue
+
+		# Each character uses their own version of the ability (if they know it)
+		# For simplicity, assume they are using the same ability 'type' (ID) as `ability_being_targeted`
+		var actual_ability_for_char = char_to_act.get_ability_by_id(ability.id)
+		if not actual_ability_for_char:
+			# print_debug(char_to_act.character_name, " doesn't know '", ability.id, "'")
+			continue
+		
+		var char_next_ap_slot = char_to_act.get_next_available_ap_slot_index()
+		if char_next_ap_slot == -1: # No slots for this character
+			# print_debug(char_to_act.character_name, " has no AP slots to plan.")
+			continue
+
+
+		if char_to_act.can_start_planning_ability(actual_ability_for_char, char_next_ap_slot):
+			var final_target_char = null
+			var final_target_pos = Vector2.ZERO
+			
+			if actual_ability_for_char.target_type == Ability.TargetType.GROUND:
+				final_target_pos = target_world_pos
+			elif actual_ability_for_char.target_type != Ability.TargetType.SELF: # Needs a character
+				if clicked_char_target:
+					# Basic allegiance check
+					var can_target = false
+					match actual_ability_for_char.target_type:
+						Ability.TargetType.ENEMY:
+							can_target = (char_to_act.allegiance != clicked_char_target.allegiance)
+						Ability.TargetType.ALLY:
+							can_target = (char_to_act.allegiance == clicked_char_target.allegiance and char_to_act != clicked_char_target)
+						Ability.TargetType.ANY_CHARACTER:
+							can_target = true
+					if can_target:
+						final_target_char = clicked_char_target
+					else:
+						print_debug("Invalid allegiance target for '", actual_ability_for_char.display_name, "' on ", clicked_char_target.character_name)
+						continue # Skip this character's action
+				else:
+					print_debug("Ability '", actual_ability_for_char.display_name, "' requires character target.")
+					continue # Skip
+
+			# print_debug("  ", char_to_act.character_name, " planning '", actual_ability_for_char.display_name, "' for slot ", char_next_ap_slot)
+			char_to_act.plan_ability_use(actual_ability_for_char, char_next_ap_slot, final_target_char, final_target_pos)
+		else:
+			# print_debug(char_to_act.character_name, " cannot use '", actual_ability_for_char.display_name, "' (AP/Slot).")
+			pass
+
+	cancel_targeting_mode() # Targeting complete

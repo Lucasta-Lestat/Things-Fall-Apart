@@ -24,7 +24,14 @@ class_name BattleCharacter
 @onready var aoe_preview: Sprite2D = $ActionIndicator/AOEPreview
 @onready var action_queue_display: Label = $UI/ActionQueueDisplay
 @onready var selection_indicator: Sprite2D = $UI/SelectionIndicator
+@export_group("Reactions & Learning")
+@export var available_reactions: Array[Reaction] = [] # Reactions this character knows
+@export var character_class: String = "Generic" # E.g., "Wizard", "Fighter", for class-specific learning
+@export var known_spell_resource_paths: Array[String] = [] # Paths to spell resources (PlannedAction.tres)
 
+
+var reaction_points_current: int = 1
+var reaction_points_max: int = 1
 var planned_actions_for_round: Array[PlannedAction] = []
 var current_multi_ap_action_being_executed: PlannedAction = null
 var ap_spent_on_current_multi_ap_action: int = 0
@@ -32,6 +39,8 @@ var ap_spent_on_current_multi_ap_action: int = 0
 signal action_planned_on_char(character, planned_action_obj)
 signal actions_cleared_for_char(character)
 signal character_defeated(character_node)
+signal reaction_prompt_requested(character, reaction_data_array, triggering_slice)
+signal spell_learned(character, spell_name)
 
 var is_selected_for_planning: bool = false:
 	set(value):
@@ -314,6 +323,8 @@ func decide_actions_for_round(player_team_chars: Array[BattleCharacter], enemy_t
 	log_combat_event("%s (AI) finished planning. Total AP in plan: %d" % [character_name, get_total_planned_ap_cost()], "AI_DEBUG")
 
 func prepare_for_new_round(max_ap_for_round: int):
+	# Ensure reaction points are initialized, though this is better done in prepare_for_new_round
+	reaction_points_current = reaction_points_max
 	if stats_component: stats_component.reset_ap_for_new_round(max_ap_for_round)
 	clear_planned_actions() 
 	current_multi_ap_action_being_executed = null
@@ -328,6 +339,83 @@ func prepare_for_new_round(max_ap_for_round: int):
 			play_animation("idle")
 
 var _combat_manager_ref = null # Cache reference
+func can_use_reaction_resource_cost(reaction: Reaction) -> bool:
+	return reaction_points_current >= reaction.reaction_point_cost
+	# Add checks for other costs like mana/AP if reactions use them
+func consume_reaction_resources(reaction: Reaction):
+	reaction_points_current -= reaction.reaction_point_cost
+	# Deduct other resources if applicable
+
+# Called by CombatManager when an action slice is being considered
+func check_and_queue_reactions(triggering_action: PlannedAction, triggering_action_slice: ExecutedActionSlice):
+	if !is_instance_valid(triggering_action.caster_node): return
+
+	var triggered_reactions_data = []
+	for reaction_resource in available_reactions:
+		if reaction_resource is Reaction:
+			var reaction = reaction_resource as Reaction
+			if can_use_reaction_resource_cost(reaction) and reaction.can_trigger(self, triggering_action, triggering_action.caster_node):
+				triggered_reactions_data.append(reaction)
+	
+	if !triggered_reactions_data.is_empty():
+		# Emit a signal with an array of possible reactions for this character
+		# CombatManager will catch this and decide how to present (e.g., one by one, or a choice if multiple)
+		reaction_prompt_requested.emit(self, triggered_reactions_data, triggering_action_slice)
+
+
+# --- Spell Learning ---
+func can_learn_spell_from_action(spell_action: PlannedAction, required_class_trait_for_spell: String) -> bool:
+	if !spell_action.action_tags.has(required_class_trait_for_spell):
+		# print_debug("%s: Spell '%s' does not have required learning tag '%s'." % [character_name, spell_action.name, required_class_trait_for_spell])
+		return false
+
+	# Example class check (expand this as needed)
+	if character_class == "Wizard" and required_class_trait_for_spell == "Arcane":
+		# print_debug("%s (Wizard): Can attempt to learn Arcane spell '%s'." % [character_name, spell_action.name])
+		return true
+	# Add more class/trait combinations
+	
+	# print_debug("%s (%s): Class cannot learn spells with tag '%s' (Spell: '%s')." % [character_name, character_class, required_class_trait_for_spell, spell_action.name])
+	return false
+
+func attempt_learn_spell(spell_action: PlannedAction, triggering_caster: BattleCharacter, reaction_details: Dictionary) -> bool:
+	if !is_instance_valid(stats_component):
+		log_combat_event("%s cannot attempt to learn spell: No stats component." % character_name, "ERROR")
+		return false
+
+	var required_trait = reaction_details.get("required_class_trait_for_spell", "")
+	if !can_learn_spell_from_action(spell_action, required_trait):
+		log_combat_event("%s cannot learn spell '%s' due to class/spell trait restrictions." % [character_name, spell_action.name], "INFO")
+		return false
+
+	# Check if already known (using the name of the PlannedAction resource as a simple ID)
+	# A more robust system would use unique IDs or resource paths for spells.
+	# Assuming spell_action.resource_path is valid if it's a loaded resource.
+	var spell_identifier = spell_action.resource_path if spell_action.resource_path else spell_action.name
+	if known_spell_resource_paths.has(spell_identifier):
+		log_combat_event("%s already knows spell '%s'." % [character_name, spell_action.name], "INFO")
+		# Potentially return true if "attempting" to learn an already known spell is not an error.
+		return false # Or true, depending on desired game logic for "re-learning"
+
+	# Perform Intelligence Check
+	var int_check_result = SkillCheck.perform_check(
+		stats_component.intelligence,
+		stats_component.traits, # Potentially add a "spell_learning" domain
+		"spell_learning_check" # Define this domain in DomainTraitModifiers if needed
+	)
+	
+	log_combat_event("%s attempts to learn '%s' (INT Check: %s vs %d, Roll: %d): %s" % [character_name, spell_action.name, stats_component.intelligence, int_check_result.target_value, int_check_result.roll_value, "Success" if int_check_result.success else "Fail"], "SPELL_LEARN")
+
+	if int_check_result.success:
+		known_spell_resource_paths.append(spell_identifier) # Store path or unique ID
+		var success_msg = reaction_details.get("success_message", "Successfully learned %s!").replace("%s", spell_action.name)
+		log_combat_event(success_msg, "SPELL_LEARN_SUCCESS")
+		spell_learned.emit(self, spell_action.name)
+		return true
+	else:
+		var fail_msg = reaction_details.get("fail_message", "Failed to learn %s.").replace("%s", spell_action.name)
+		log_combat_event(fail_msg, "SPELL_LEARN_FAIL")
+		return false
 func log_combat_event(message: String, level: String = "INFO"):
 	if !_combat_manager_ref:
 		var cm_node = get_tree().get_first_node_in_group("combat_manager_group")
