@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://ccpv8y3iij1ct"]
+
+[ext_resource type="Script" uid="uid://bufjvdt6fq8jc" path="res://scenes/pieces/dragon_rider.gd" id="1_qb80o"]
+
+[node name="DragonRider" type="Node2D"]
+script = ExtResource("1_qb80o")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

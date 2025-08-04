@@ -28,13 +28,17 @@ const PIECE_DEFINITIONS = {
 		{"type": "Valkyrie", "royal": false, "scene": "res://scenes/pieces/Valkyrie.tscn"},
 		{"type": "Monk", "royal": false, "scene": "res://scenes/pieces/Monk.tscn"},
 		{"type": "Bishop", "royal": false, "scene": "res://scenes/pieces/Bishop.tscn"},
+		{"type": "Devil Toad", "royal": false, "scene": "res://scenes/pieces/DevilToad.tscn"},
 		{"type": "Rook", "royal": false, "scene": "res://scenes/pieces/Rook.tscn"},
 		{"type": "Knight", "royal": false, "scene": "res://scenes/pieces/Knight.tscn"},
-		#{"type": "Princess", "royal": false, "scene": "res://scenes/pieces/Princess.tscn"},
+		{"type": "Princess", "royal": false, "scene": "res://scenes/pieces/Princess.tscn"},
 		{"type": "Queen", "royal": false, "scene": "res://scenes/pieces/Queen.tscn"},
 		{"type": "Rifleman", "royal": false, "scene": "res://scenes/pieces/Rifleman.tscn"},
+		{"type": "Cannonier", "royal": false, "scene": "res://scenes/pieces/Cannonier.tscn"},
 		{"type": "Gorgon", "royal": false, "scene": "res://scenes/pieces/Gorgon.tscn"},
 		{"type": "Nightrider", "royal": false, "scene": "res://scenes/pieces/Nightrider.tscn"},
+		{"type": "Dragonrider", "royal": false, "scene": "res://scenes/pieces/Dragonrider.tscn"},
+		
 		# --- Royal Pieces ---
 		{"type": "Pontifex", "royal": true, "scene": "res://scenes/pieces/Pontifex.tscn"},
 		{"type": "Chancellor", "royal": true, "scene": "res://scenes/pieces/Chancellor.tscn"},

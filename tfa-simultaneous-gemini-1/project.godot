@@ -11,5 +11,10 @@ config_version=5
 [application]
 
 config/name="TFA Simultaneous Gemini 1"
+run/main_scene="uid://h6eujk2qam5p"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+CharacterDatabase="*res://Global/CharacterDatabase.gd"

@@ -12,13 +12,7 @@ script = ExtResource("1_80nbo")
 [node name="CharactersContainer" type="Node2D" parent="."]
 
 [node name="Character" parent="CharactersContainer" instance=ExtResource("2_e2o6t")]
-allegiance = 0
-max_health = 100
-dexterity = 10
-max_ap_per_round = 4
 abilities = Array[ExtResource("3_7jktm")]([ExtResource("4_ryrav"), ExtResource("5_eow3j")])
-character_name = "Character"
-move_speed = 150.0
 
 [node name="PlayerCamera" type="Camera2D" parent="."]
 position = Vector2(55, 94)

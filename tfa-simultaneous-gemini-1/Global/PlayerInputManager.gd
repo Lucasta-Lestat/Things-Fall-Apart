@@ -20,6 +20,9 @@ var ability_caster_for_targeting: CombatCharacter = null # Primary caster for pr
 var current_planning_character: CombatCharacter = null # Set by CombatManager.player_action_pending
 var current_planning_ap_slot: int = -1
 
+# Add reference to CombatManager instance
+var combat_manager: CombatManager
+
 func _ready():
 	selection_rect_visual = ColorRect.new()
 	selection_rect_visual.color = Color(0.5, 0.7, 1.0, 0.25) # Semi-transparent blue
@@ -27,13 +30,17 @@ func _ready():
 	get_tree().root.add_child(selection_rect_visual) # Add to root for global visibility
 	selection_rect_visual.visible = false
 
-	if CombatManager:
-		CombatManager.planning_phase_started.connect(func(): _set_input_active(true))
-		CombatManager.resolution_phase_started.connect(func(): _set_input_active(false))
-		CombatManager.combat_paused.connect(_on_combat_paused)
-		CombatManager.combat_resumed.connect(_on_combat_resumed)
-		CombatManager.player_action_pending.connect(_on_player_action_pending)
-		CombatManager.combat_ended.connect(func(_winner): clear_selection(); _set_input_active(false))
+	# Get reference to CombatManager instance
+	#combat_manager = CombatManager # Adjust path as needed
+	# Or if CombatManager is an autoload singleton: combat_manager = CombatManager
+	
+	if combat_manager:
+		combat_manager.planning_phase_started.connect(func(): _set_input_active(true))
+		combat_manager.resolution_phase_started.connect(func(): _set_input_active(false))
+		combat_manager.combat_paused.connect(_on_combat_paused)
+		combat_manager.combat_resumed.connect(_on_combat_resumed)
+		combat_manager.player_action_pending.connect(_on_player_action_pending)
+		combat_manager.combat_ended.connect(func(_winner): clear_selection(); _set_input_active(false))
 	_set_input_active(false) # Initially inactive
 
 func _set_input_active(is_active: bool):
@@ -54,7 +61,7 @@ func _on_combat_paused(is_beat_pause: bool):
 func _on_combat_resumed():
 	# If resuming to PLANNING, CombatManager will emit planning_phase_started which calls _set_input_active(true)
 	# If resuming to RESOLUTION, input should remain largely off.
-	if CombatManager.current_combat_state == CombatManager.CombatState.PLANNING:
+	if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PLANNING:
 		_set_input_active(true)
 	else:
 		_set_input_active(false) # Ensure input is off if not resuming to planning
@@ -76,22 +83,22 @@ func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
 func _unhandled_input(event: InputEvent):
 	# Global unpause, not tied to beat_pause re-planning
 	if event.is_action_pressed("ui_cancel"): # Escape key
-		if CombatManager.current_combat_state == CombatManager.CombatState.PAUSED:
-			if CombatManager.beat_pause_requested_by_player: # If it was a beat pause
-				CombatManager.resume_normally_from_pause() # Resume resolution without replan
+		if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PAUSED:
+			if combat_manager.beat_pause_requested_by_player: # If it was a beat pause
+				combat_manager.resume_normally_from_pause() # Resume resolution without replan
 			else: # Generic pause (not yet implemented, but for future menu)
-				CombatManager.resume_normally_from_pause() # Or toggle menu
+				combat_manager.resume_normally_from_pause() # Or toggle menu
 			get_tree().set_input_as_handled()
 			return
 
 	# Spacebar for beat pause / resume for replan
 	if event.is_action_pressed("ui_accept"): # Spacebar
-		if CombatManager.current_combat_state == CombatManager.CombatState.BEAT_PAUSE_WINDOW:
-			if CombatManager.request_beat_pause():
+		if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.BEAT_PAUSE_WINDOW:
+			if combat_manager.request_beat_pause():
 				get_tree().set_input_as_handled()
 				return
-		elif CombatManager.current_combat_state == CombatManager.CombatState.PAUSED and CombatManager.beat_pause_requested_by_player:
-			if CombatManager.resume_from_beat_pause_for_replan():
+		elif combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PAUSED and combat_manager.beat_pause_requested_by_player:
+			if combat_manager.resume_from_beat_pause_for_replan():
 				get_tree().set_input_as_handled()
 				return
 
@@ -128,7 +135,7 @@ func _unhandled_input(event: InputEvent):
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			var world_mouse_pos = _get_world_mouse_position()
 			if event.pressed:
-				var clicked_on_char = CombatManager.get_character_at_world_pos(world_mouse_pos)
+				var clicked_on_char = combat_manager.get_character_at_world_pos(world_mouse_pos) if combat_manager else null
 				if clicked_on_char and clicked_on_char.allegiance == CombatCharacter.Allegiance.PLAYER:
 					if Input.is_key_pressed(KEY_SHIFT):
 						_toggle_selection(clicked_on_char)
@@ -159,7 +166,7 @@ func _unhandled_input(event: InputEvent):
 					emit_signal("selection_changed", selected_characters) # Emit after drag
 					get_tree().set_input_as_handled()
 				# If not dragging and didn't click a char (handled above), click on empty space deselects
-				elif not CombatManager.get_character_at_world_pos(world_mouse_pos) and not Input.is_key_pressed(KEY_SHIFT):
+				elif not (combat_manager.get_character_at_world_pos(world_mouse_pos) if combat_manager else null) and not Input.is_key_pressed(KEY_SHIFT):
 					clear_selection() # This calls _clear_selection_internally and emits
 					get_tree().set_input_as_handled()
 
@@ -252,11 +259,12 @@ func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
 	if not shift_modifier: # Re-clearing here because initial clear was before drag confirmed
 		_clear_selection_internally()
 
-	for char_node in CombatManager.player_party: # Only select player characters
-		var character = char_node as CombatCharacter
-		if is_instance_valid(character) and character.current_health > 0:
-			if selection_world_rect.intersects(character.get_sprite_rect_global()): # Use sprite bounds for check
-				_add_to_selection(character)
+	if combat_manager:
+		for char_node in combat_manager.player_party: # Only select player characters
+			var character = char_node as CombatCharacter
+			if is_instance_valid(character) and character.current_health > 0:
+				if selection_world_rect.intersects(character.get_sprite_rect_global()): # Use sprite bounds for check
+					_add_to_selection(character)
 	
 	if not selected_characters.is_empty() and not primary_selected_character:
 		primary_selected_character = selected_characters[0]
@@ -271,10 +279,11 @@ func _get_world_mouse_position_from_screen(screen_pos: Vector2) -> Vector2:
 
 func _select_all_player_characters():
 	_clear_selection_internally()
-	for char_node in CombatManager.player_party:
-		var character = char_node as CombatCharacter
-		if is_instance_valid(character) and character.current_health > 0:
-			_add_to_selection(character)
+	if combat_manager:
+		for char_node in combat_manager.player_party:
+			var character = char_node as CombatCharacter
+			if is_instance_valid(character) and character.current_health > 0:
+				_add_to_selection(character)
 	if not selected_characters.is_empty():
 		primary_selected_character = selected_characters[0]
 		if is_instance_valid(primary_selected_character):
@@ -300,7 +309,7 @@ func cancel_targeting_mode():
 
 func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_pos is not used, using _get_world_mouse_position
 	var target_world_pos = _get_world_mouse_position()
-	var clicked_char_target = CombatManager.get_character_at_world_pos(target_world_pos)
+	var clicked_char_target = combat_manager.get_character_at_world_pos(target_world_pos) if combat_manager else null
 
 	var caster = ability_caster_for_targeting # The one who initiated targeting
 	var ability = ability_being_targeted

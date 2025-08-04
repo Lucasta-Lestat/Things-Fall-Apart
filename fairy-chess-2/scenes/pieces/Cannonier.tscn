@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://b5qbo5stcs5wn"]
+
+[ext_resource type="Script" uid="uid://vtdd3hsgt680" path="res://scenes/pieces/cannonier.gd" id="1_ky856"]
+
+[node name="Cannonier" type="Node2D"]
+script = ExtResource("1_ky856")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
