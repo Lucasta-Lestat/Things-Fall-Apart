@@ -6,7 +6,6 @@ extends Node2D
 
 const CharacterScene = preload("res://Characters/Character.tscn")
 
-# Create manager instances (instead of just declaring variables)
 var player_input_manager: PlayerInputManager
 var combat_manager: CombatManager
 

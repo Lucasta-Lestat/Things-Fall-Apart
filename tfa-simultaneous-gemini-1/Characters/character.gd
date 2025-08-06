@@ -9,10 +9,8 @@ signal died(character: CombatCharacter)
 
 enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 
-#@export var character_name: String = "Character" : set = _set_character_name
 @export var allegiance: Allegiance = Allegiance.PLAYER
 @export var max_health: int = 100
-# New property for character ID
 @export var character_id: String = "": 
 	set = set_character_id
 
@@ -154,7 +152,7 @@ func _ready():
 	
 	# Position the selection indicator properly
 	_position_selection_indicator()
-	selection_indicator.scale = Vector2(0.6, 0.1) # Flat rectangle under character
+	selection_indicator.scale = Vector2(0.6, 0.1) 
 	selection_indicator.position.y = sprite.texture.get_height() * sprite.scale.y / 2 + 5
 	selection_indicator.visible = false
 	add_child(selection_indicator)

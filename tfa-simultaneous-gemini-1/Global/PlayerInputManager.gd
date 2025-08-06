@@ -16,10 +16,11 @@ enum TargetingState { NONE, ABILITY_TARGETING }
 var current_targeting_state: TargetingState = TargetingState.NONE
 var ability_being_targeted: Ability = null
 var ability_caster_for_targeting: CombatCharacter = null # Primary caster for preview
+var just_selected_character: bool = false
+
 
 var current_planning_character: CombatCharacter = null # Set by CombatManager.player_action_pending
 var current_planning_ap_slot: int = -1
-
 # Add reference to CombatManager instance
 var combat_manager: CombatManager
 
@@ -100,6 +101,7 @@ func _on_combat_resumed():
 		_set_input_active(false) # Ensure input is off if not resuming to planning
 
 func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
+	print("DEBUG: on_player_action_pending: ", character.name)
 	current_planning_character = character
 	current_planning_ap_slot = ap_slot_index
 	# Auto-select the character whose turn it is to plan
@@ -180,11 +182,13 @@ func _unhandled_input(event: InputEvent):
 			var world_mouse_pos = _get_world_mouse_position()
 			print("DEBUG: World mouse position: ", world_mouse_pos)
 			if event.pressed:
+				just_selected_character = false  # Reset the flag
 				var clicked_on_char = combat_manager.get_character_at_world_pos(world_mouse_pos) 
 				print("DEBUG: Clicked on character: ", clicked_on_char.character_name if clicked_on_char else "none")
 				
 				if clicked_on_char and clicked_on_char.allegiance == CombatCharacter.Allegiance.PLAYER:
 					print("DEBUG: Selecting player character: ", clicked_on_char.character_name)
+					just_selected_character = true  # Mark that we selected a character
 					if Input.is_key_pressed(KEY_SHIFT):
 						_toggle_selection(clicked_on_char)
 					else:
@@ -197,6 +201,7 @@ func _unhandled_input(event: InputEvent):
 						print("DEBUG: Emitting camera_recenter_request to ", primary_selected_character.global_position)
 						emit_signal("camera_recenter_request", primary_selected_character.global_position)
 					get_viewport().set_input_as_handled()
+					return  # Important: return here to prevent drag selection from starting
 				else: # Clicked on empty space or enemy
 					print("DEBUG: Starting drag selection")
 					drag_start_screen_pos = get_viewport().get_mouse_position()
@@ -208,7 +213,7 @@ func _unhandled_input(event: InputEvent):
 					# If not shift clicking, clear previous selection on drag start
 					if not Input.is_key_pressed(KEY_SHIFT):
 						_clear_selection_internally()
-						# No emit yet, wait for drag release
+						# Don't emit signal yet, wait for drag release
 			else: # Mouse button released
 				if drag_select_active:
 					print("DEBUG: Ending drag selection")
@@ -219,23 +224,28 @@ func _unhandled_input(event: InputEvent):
 					_perform_drag_selection(Rect2(drag_start_screen_pos, drag_end_screen_pos - drag_start_screen_pos), Input.is_key_pressed(KEY_SHIFT))
 					emit_signal("selection_changed", selected_characters) # Emit after drag
 					get_viewport().set_input_as_handled()
-				# If not dragging and didn't click a char (handled above), click on empty space deselects
-				elif not (combat_manager.get_character_at_world_pos(world_mouse_pos) if combat_manager else null) and not Input.is_key_pressed(KEY_SHIFT):
+				# Only clear selection if we didn't just select a character, didn't just finish a drag,
+				# and we're not holding shift
+				elif not just_selected_character and not Input.is_key_pressed(KEY_SHIFT):
 					print("DEBUG: Clearing selection (clicked empty space)")
 					clear_selection() # This calls _clear_selection_internally and emits
 					get_viewport().set_input_as_handled()
+				
+				# Reset the flag after handling mouse release
+				just_selected_character = false
 
-	elif event is InputEventMouseMotion:
-		if drag_select_active:
-			var current_screen_pos = get_viewport().get_mouse_position()
-			var rect_pos = Vector2(min(drag_start_screen_pos.x, current_screen_pos.x), min(drag_start_screen_pos.y, current_screen_pos.y))
-			var rect_size = (current_screen_pos - drag_start_screen_pos).abs()
-			if is_instance_valid(selection_rect_visual):
-				selection_rect_visual.global_position = rect_pos # Visual is in screen space
-				selection_rect_visual.size = rect_size
-			get_viewport().set_input_as_handled()
+		elif event is InputEventMouseMotion:
+			if drag_select_active:
+				var current_screen_pos = get_viewport().get_mouse_position()
+				var rect_pos = Vector2(min(drag_start_screen_pos.x, current_screen_pos.x), min(drag_start_screen_pos.y, current_screen_pos.y))
+				var rect_size = (current_screen_pos - drag_start_screen_pos).abs()
+				if is_instance_valid(selection_rect_visual):
+					selection_rect_visual.global_position = rect_pos # Visual is in screen space
+					selection_rect_visual.size = rect_size
+				get_viewport().set_input_as_handled()
 
 	elif event is InputEventKey and event.pressed:
+		print("DEBUG: key pressed")
 		if event.keycode == KEY_BACKSPACE:
 			_select_all_player_characters()
 			emit_signal("selection_changed", selected_characters)
@@ -245,31 +255,63 @@ func _unhandled_input(event: InputEvent):
 		var hotkey_idx = -1
 		if event.keycode >= KEY_1 and event.keycode <= KEY_9: hotkey_idx = event.keycode - KEY_1
 		elif event.keycode == KEY_0: hotkey_idx = 9
-		
-		if hotkey_idx != -1 and not selected_characters.is_empty() and current_planning_character:
-			# Use ability for the current_planning_character if they are selected,
-			# or primary_selected_character if current_planning_character is not set/selected.
-			var acting_char = current_planning_character if selected_characters.has(current_planning_character) else primary_selected_character
-			
-			if acting_char and acting_char.abilities.size() > hotkey_idx:
-				var ability = acting_char.abilities[hotkey_idx]
-				if ability and acting_char.can_start_planning_ability(ability, current_planning_ap_slot):
-					if ability.requires_target():
-						_start_ability_targeting_mode(ability, acting_char)
-					else: # Self-cast or no target needed
-						for sel_char in selected_characters: # Apply to all selected that can
-							if sel_char == acting_char or sel_char.can_start_planning_ability(ability, sel_char.get_next_available_ap_slot_index()):
-								sel_char.plan_ability_use(ability, current_planning_ap_slot, sel_char) # Target self
-						# This might auto-advance planning via signals from character.
-				elif ability:
-					print_debug(acting_char.character_name, " cannot use '", ability.display_name, "' (AP/Slot issue).")
 
-			elif acting_char and hotkey_idx == 0 : # Special: '1' could be mapped to 'Move' by convention
-				var move_ability = acting_char.get_ability_by_id(&"move") # Assuming move is an ability with ID "move"
-				if move_ability and acting_char.can_start_planning_ability(move_ability, current_planning_ap_slot):
-					_start_ability_targeting_mode(move_ability, acting_char)
-				elif move_ability:
-					print_debug(acting_char.character_name, " cannot use 'Move' (AP/Slot issue).")
+		if hotkey_idx != -1:
+			print("DEBUG: Hotkey pressed: ", hotkey_idx)
+			print("DEBUG: current_planning_character: ", current_planning_character.character_name if current_planning_character else "<null>")
+			print("DEBUG: primary_selected_character: ", primary_selected_character.character_name if primary_selected_character else "<null>")
+			print("DEBUG: selected_characters count: ", selected_characters.size())
+			
+			# Determine which character should use the ability
+			var acting_char: CombatCharacter = null
+			
+			# Priority 1: Use primary selected character (this is what the player expects)
+			if primary_selected_character and is_instance_valid(primary_selected_character):
+				acting_char = primary_selected_character
+				print("DEBUG: Using primary selected character: ", acting_char.character_name)
+			# Priority 2: Use first selected character
+			elif not selected_characters.is_empty() and is_instance_valid(selected_characters[0]):
+				acting_char = selected_characters[0]
+				print("DEBUG: Using first selected character: ", acting_char.character_name)
+			# Priority 3: If we have a current planning character, use them (fallback)
+			elif current_planning_character and is_instance_valid(current_planning_character):
+				acting_char = current_planning_character
+				print("DEBUG: Using current planning character: ", acting_char.character_name)
+			
+			if acting_char:
+				print("DEBUG: Acting character: ", acting_char.character_name)
+				print("DEBUG: Character has ", acting_char.abilities.size(), " abilities")
+				print("DEBUG: Character current AP: ", acting_char.current_ap_for_planning)
+				
+				if acting_char.abilities.size() > hotkey_idx:
+					var ability = acting_char.abilities[hotkey_idx]
+					print("DEBUG: Trying to use ability: ", ability.display_name if ability else "null")
+					
+					if ability:
+						# Determine which slot to plan for
+						var planning_slot = acting_char.get_next_available_ap_slot_index()
+						print("DEBUG: Next available slot: ", planning_slot)
+						
+						if planning_slot != -1 and acting_char.can_start_planning_ability(ability, planning_slot):
+							print("DEBUG: Can start planning ability")
+							if ability.requires_target():
+								print("DEBUG: Ability requires target, starting targeting mode")
+								_start_ability_targeting_mode(ability, acting_char)
+							else: # Self-cast or no target needed
+								print("DEBUG: Self-casting ability")
+								acting_char.plan_ability_use(ability, planning_slot, acting_char) # Target self
+						else:
+							print("DEBUG: Cannot use ability - AP/Slot issue")
+							print("DEBUG: Current AP: ", acting_char.current_ap_for_planning, " Required: ", ability.ap_cost)
+							print("DEBUG: Planning slot: ", planning_slot)
+							print("DEBUG: can_start_planning_ability result: ", acting_char.can_start_planning_ability(ability, planning_slot) if planning_slot != -1 else "invalid slot")
+					else:
+						print("DEBUG: Ability is null")
+				else:
+					print("DEBUG: Hotkey index out of range. Character has ", acting_char.abilities.size(), " abilities, requested index ", hotkey_idx)
+			else:
+				print("DEBUG: No acting character found")
+			
 			get_viewport().set_input_as_handled()
 
 func _get_world_mouse_position() -> Vector2:
