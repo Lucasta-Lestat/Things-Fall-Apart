@@ -24,32 +24,65 @@ var current_planning_ap_slot: int = -1
 var combat_manager: CombatManager
 
 func _ready():
+	print("DEBUG: PlayerInputManager _ready() called")
+	
+	# Use call_deferred to avoid the "busy setting up children" error
+	call_deferred("_setup_ui_elements")
+	
+	
+	_set_input_active(false) # Initially inactive
+
+func _setup_ui_elements():
+	print("DEBUG: Setting up UI elements")
 	selection_rect_visual = ColorRect.new()
 	selection_rect_visual.color = Color(0.5, 0.7, 1.0, 0.25) # Semi-transparent blue
 	selection_rect_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	get_tree().root.add_child(selection_rect_visual) # Add to root for global visibility
 	selection_rect_visual.visible = false
+	print("DEBUG: Selection rect visual created and added to scene")
 
-	# Get reference to CombatManager instance
-	#combat_manager = CombatManager # Adjust path as needed
-	# Or if CombatManager is an autoload singleton: combat_manager = CombatManager
-	
+func setup_combat_manager_connections():
+	"""Call this after combat_manager is assigned"""
+	print("DEBUG: Setting up combat manager connections")
 	if combat_manager:
-		combat_manager.planning_phase_started.connect(func(): _set_input_active(true))
-		combat_manager.resolution_phase_started.connect(func(): _set_input_active(false))
+		print("DEBUG: Combat manager found, connecting signals")
+		print("DEBUG: Current combat state when connecting: ", combat_manager.current_combat_state)
+		
+		combat_manager.planning_phase_started.connect(_on_planning_phase_started)
+		combat_manager.resolution_phase_started.connect(_on_resolution_phase_started)
 		combat_manager.combat_paused.connect(_on_combat_paused)
 		combat_manager.combat_resumed.connect(_on_combat_resumed)
 		combat_manager.player_action_pending.connect(_on_player_action_pending)
-		combat_manager.combat_ended.connect(func(_winner): clear_selection(); _set_input_active(false))
-	_set_input_active(false) # Initially inactive
+		combat_manager.combat_ended.connect(_on_combat_ended)
+		
+		# Check if we're already in planning state and enable input if so
+		if combat_manager.current_combat_state == CombatManager.CombatState.PLANNING:
+			print("DEBUG: Combat is already in PLANNING state, enabling input immediately")
+			_set_input_active(true)
+	else:
+		print("ERROR: Combat manager not found when trying to connect signals")
+
+func _on_planning_phase_started():
+	print("DEBUG: Planning phase started - enabling input")
+	_set_input_active(true)
+
+func _on_resolution_phase_started():
+	print("DEBUG: Resolution phase started - disabling input")
+	_set_input_active(false)
+
+func _on_combat_ended(_winner):
+	print("DEBUG: Combat ended - clearing selection and disabling input")
+	clear_selection()
+	_set_input_active(false)
 
 func _set_input_active(is_active: bool):
+	print("DEBUG: Setting input active: ", is_active)
+	print("DEBUG: Combat manager state: ", combat_manager.current_combat_state if combat_manager else "no combat manager")
 	set_process_input(is_active)
 	if not is_active:
 		cancel_targeting_mode()
 		if is_instance_valid(selection_rect_visual): selection_rect_visual.visible = false
 		drag_select_active = false
-
 
 func _on_combat_paused(is_beat_pause: bool):
 	# Allow some input during beat pause for re-planning or unpausing
@@ -70,6 +103,7 @@ func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
 	current_planning_character = character
 	current_planning_ap_slot = ap_slot_index
 	# Auto-select the character whose turn it is to plan
+	
 	if character and character.allegiance == CombatCharacter.Allegiance.PLAYER:
 		if not selected_characters.has(character) or primary_selected_character != character:
 			_clear_selection_internally()
@@ -79,112 +113,133 @@ func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
 			if is_instance_valid(primary_selected_character):
 				emit_signal("camera_recenter_request", primary_selected_character.global_position)
 
-
 func _unhandled_input(event: InputEvent):
+	# Only print for mouse clicks to avoid spam
+	if event is InputEventMouseButton and event.pressed:
+		print("DEBUG: _unhandled_input called with mouse click: ", event.button_index, " at position: ", event.position)
+	
 	# Global unpause, not tied to beat_pause re-planning
 	if event.is_action_pressed("ui_cancel"): # Escape key
+		print("DEBUG: Escape key pressed")
 		if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PAUSED:
 			if combat_manager.beat_pause_requested_by_player: # If it was a beat pause
 				combat_manager.resume_normally_from_pause() # Resume resolution without replan
 			else: # Generic pause (not yet implemented, but for future menu)
 				combat_manager.resume_normally_from_pause() # Or toggle menu
-			get_tree().set_input_as_handled()
+			get_viewport().set_input_as_handled()
 			return
 
 	# Spacebar for beat pause / resume for replan
 	if event.is_action_pressed("ui_accept"): # Spacebar
+		print("DEBUG: Spacebar pressed")
 		if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.BEAT_PAUSE_WINDOW:
 			if combat_manager.request_beat_pause():
-				get_tree().set_input_as_handled()
+				get_viewport().set_input_as_handled()
 				return
 		elif combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PAUSED and combat_manager.beat_pause_requested_by_player:
 			if combat_manager.resume_from_beat_pause_for_replan():
-				get_tree().set_input_as_handled()
+				get_viewport().set_input_as_handled()
 				return
 
 	# If input is not generally active for planning, ignore below
-	if not is_processing_input(): return
+	if not is_processing_input(): 
+		print("DEBUG: Input not active for planning, current state: ", combat_manager.current_combat_state if combat_manager else "no combat manager")
+		return
 
+	print("DEBUG: Processing input event in planning mode")
 
 	# --- Targeting Mode Input ---
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
+		print("DEBUG: In targeting mode")
 		if event is InputEventMouseButton:
 			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 				_handle_ability_target_click(get_viewport().get_mouse_position())
-				get_tree().set_input_as_handled()
+				get_viewport().set_input_as_handled()
 				return
 			elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 				cancel_targeting_mode()
-				get_tree().set_input_as_handled()
+				get_viewport().set_input_as_handled()
 				return
 		elif event is InputEventMouseMotion:
 			if ability_caster_for_targeting and ability_being_targeted:
 				var world_mouse_pos = _get_world_mouse_position()
 				ability_caster_for_targeting.show_ability_preview(ability_being_targeted, world_mouse_pos, current_planning_ap_slot)
-			get_tree().set_input_as_handled()
+			get_viewport().set_input_as_handled()
 			return
 		elif event.is_action_pressed("ui_cancel"): # Escape
 			cancel_targeting_mode()
-			get_tree().set_input_as_handled()
+			get_viewport().set_input_as_handled()
 			return
 		# Don't process other inputs when targeting
 		return
 
 	# --- Standard Planning Input (Selection, Hotkeys) ---
 	if event is InputEventMouseButton:
+		print("DEBUG: Mouse button event: ", event.button_index, " pressed: ", event.pressed)
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			var world_mouse_pos = _get_world_mouse_position()
+			print("DEBUG: World mouse position: ", world_mouse_pos)
 			if event.pressed:
-				var clicked_on_char = combat_manager.get_character_at_world_pos(world_mouse_pos) if combat_manager else null
+				var clicked_on_char = combat_manager.get_character_at_world_pos(world_mouse_pos) 
+				print("DEBUG: Clicked on character: ", clicked_on_char.character_name if clicked_on_char else "none")
+				
 				if clicked_on_char and clicked_on_char.allegiance == CombatCharacter.Allegiance.PLAYER:
+					print("DEBUG: Selecting player character: ", clicked_on_char.character_name)
 					if Input.is_key_pressed(KEY_SHIFT):
 						_toggle_selection(clicked_on_char)
 					else:
 						_clear_selection_internally()
 						_add_to_selection(clicked_on_char)
 						primary_selected_character = clicked_on_char
+					print("DEBUG: Emitting selection_changed signal with ", selected_characters.size(), " characters")
 					emit_signal("selection_changed", selected_characters)
 					if is_instance_valid(primary_selected_character):
+						print("DEBUG: Emitting camera_recenter_request to ", primary_selected_character.global_position)
 						emit_signal("camera_recenter_request", primary_selected_character.global_position)
-					get_tree().set_input_as_handled()
+					get_viewport().set_input_as_handled()
 				else: # Clicked on empty space or enemy
+					print("DEBUG: Starting drag selection")
 					drag_start_screen_pos = get_viewport().get_mouse_position()
 					drag_select_active = true
-					selection_rect_visual.global_position = drag_start_screen_pos
-					selection_rect_visual.size = Vector2.ZERO
-					selection_rect_visual.visible = true
+					if is_instance_valid(selection_rect_visual):
+						selection_rect_visual.global_position = drag_start_screen_pos
+						selection_rect_visual.size = Vector2.ZERO
+						selection_rect_visual.visible = true
 					# If not shift clicking, clear previous selection on drag start
 					if not Input.is_key_pressed(KEY_SHIFT):
 						_clear_selection_internally()
 						# No emit yet, wait for drag release
 			else: # Mouse button released
 				if drag_select_active:
+					print("DEBUG: Ending drag selection")
 					drag_select_active = false
-					selection_rect_visual.visible = false
+					if is_instance_valid(selection_rect_visual):
+						selection_rect_visual.visible = false
 					var drag_end_screen_pos = get_viewport().get_mouse_position()
 					_perform_drag_selection(Rect2(drag_start_screen_pos, drag_end_screen_pos - drag_start_screen_pos), Input.is_key_pressed(KEY_SHIFT))
 					emit_signal("selection_changed", selected_characters) # Emit after drag
-					get_tree().set_input_as_handled()
+					get_viewport().set_input_as_handled()
 				# If not dragging and didn't click a char (handled above), click on empty space deselects
 				elif not (combat_manager.get_character_at_world_pos(world_mouse_pos) if combat_manager else null) and not Input.is_key_pressed(KEY_SHIFT):
+					print("DEBUG: Clearing selection (clicked empty space)")
 					clear_selection() # This calls _clear_selection_internally and emits
-					get_tree().set_input_as_handled()
-
+					get_viewport().set_input_as_handled()
 
 	elif event is InputEventMouseMotion:
 		if drag_select_active:
 			var current_screen_pos = get_viewport().get_mouse_position()
 			var rect_pos = Vector2(min(drag_start_screen_pos.x, current_screen_pos.x), min(drag_start_screen_pos.y, current_screen_pos.y))
 			var rect_size = (current_screen_pos - drag_start_screen_pos).abs()
-			selection_rect_visual.global_position = rect_pos # Visual is in screen space
-			selection_rect_visual.size = rect_size
-			get_tree().set_input_as_handled()
+			if is_instance_valid(selection_rect_visual):
+				selection_rect_visual.global_position = rect_pos # Visual is in screen space
+				selection_rect_visual.size = rect_size
+			get_viewport().set_input_as_handled()
 
 	elif event is InputEventKey and event.pressed:
 		if event.keycode == KEY_BACKSPACE:
 			_select_all_player_characters()
 			emit_signal("selection_changed", selected_characters)
-			get_tree().set_input_as_handled()
+			get_viewport().set_input_as_handled()
 		
 		# Hotbar keys (1-9, 0 for 10th)
 		var hotkey_idx = -1
@@ -215,8 +270,7 @@ func _unhandled_input(event: InputEvent):
 					_start_ability_targeting_mode(move_ability, acting_char)
 				elif move_ability:
 					print_debug(acting_char.character_name, " cannot use 'Move' (AP/Slot issue).")
-			get_tree().set_input_as_handled()
-
+			get_viewport().set_input_as_handled()
 
 func _get_world_mouse_position() -> Vector2:
 	var cam = get_viewport().get_camera_2d()
@@ -224,23 +278,26 @@ func _get_world_mouse_position() -> Vector2:
 		return cam.get_global_mouse_position() # Godot 4 Camera2D has this helper
 	return get_viewport().get_mouse_position() # Fallback, might be inaccurate if not global space
 
-
 func _clear_selection_internally():
+	print("DEBUG: Clearing selection internally")
 	for char in selected_characters:
 		if is_instance_valid(char): char.is_selected = false
 	selected_characters.clear()
 	primary_selected_character = null
 
 func clear_selection(): # Public version that also emits
+	print("DEBUG: Clearing selection and emitting signal")
 	_clear_selection_internally()
 	emit_signal("selection_changed", selected_characters)
 
 func _add_to_selection(character: CombatCharacter):
+	print("DEBUG: Adding character to selection: ", character.character_name)
 	if not selected_characters.has(character):
 		selected_characters.append(character)
 		character.is_selected = true
 		if not primary_selected_character: # If no primary, first selected becomes primary
 			primary_selected_character = character
+			print("DEBUG: Set primary selected character to: ", character.character_name)
 
 func _toggle_selection(character: CombatCharacter):
 	if selected_characters.has(character):
@@ -250,7 +307,6 @@ func _toggle_selection(character: CombatCharacter):
 			primary_selected_character = selected_characters.back() if not selected_characters.is_empty() else null
 	else:
 		_add_to_selection(character)
-
 
 func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
 	var selection_world_rect = Rect2(_get_world_mouse_position_from_screen(screen_rect.position), 
@@ -269,13 +325,11 @@ func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
 	if not selected_characters.is_empty() and not primary_selected_character:
 		primary_selected_character = selected_characters[0]
 
-
 func _get_world_mouse_position_from_screen(screen_pos: Vector2) -> Vector2:
 	var cam = get_viewport().get_camera_2d()
 	if cam:
 		return cam.get_canvas_transform().affine_inverse() * screen_pos
 	return screen_pos # Fallback
-
 
 func _select_all_player_characters():
 	_clear_selection_internally()
@@ -288,7 +342,6 @@ func _select_all_player_characters():
 		primary_selected_character = selected_characters[0]
 		if is_instance_valid(primary_selected_character):
 			emit_signal("camera_recenter_request", primary_selected_character.global_position)
-
 
 # --- Targeting Mode Logic ---
 func _start_ability_targeting_mode(ability: Ability, caster: CombatCharacter):
@@ -309,8 +362,8 @@ func cancel_targeting_mode():
 
 func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_pos is not used, using _get_world_mouse_position
 	var target_world_pos = _get_world_mouse_position()
-	var clicked_char_target = combat_manager.get_character_at_world_pos(target_world_pos) if combat_manager else null
-
+	var clicked_char_target = combat_manager.get_character_at_world_pos(target_world_pos)
+	print("DEBUG: Handling Ability Selection")
 	var caster = ability_caster_for_targeting # The one who initiated targeting
 	var ability = ability_being_targeted
 
@@ -336,7 +389,6 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 		if char_next_ap_slot == -1: # No slots for this character
 			# print_debug(char_to_act.character_name, " has no AP slots to plan.")
 			continue
-
 
 		if char_to_act.can_start_planning_ability(actual_ability_for_char, char_next_ap_slot):
 			var final_target_char = null

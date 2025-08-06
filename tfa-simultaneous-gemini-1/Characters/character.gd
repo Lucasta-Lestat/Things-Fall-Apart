@@ -12,6 +12,38 @@ enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 #@export var character_name: String = "Character" : set = _set_character_name
 @export var allegiance: Allegiance = Allegiance.PLAYER
 @export var max_health: int = 100
+# New property for character ID
+@export var character_id: String = "": 
+	set = set_character_id
+
+func set_character_id(value: String):
+	character_id = value
+	_apply_character_data()
+
+func _apply_character_data():
+	if character_id.is_empty():
+		print("no character ID")
+		return
+		
+	var char_data = CharacterDatabase.get_character_data(character_id)
+	if not char_data:
+		print("no character data")
+		return
+
+	# Apply character data to THIS character instance
+	character_name = char_data.display_name
+	allegiance = char_data.allegiance
+	max_health = char_data.base_health
+	current_health = max_health
+	dexterity = char_data.base_dexterity
+	max_ap_per_round = char_data.base_ap
+	
+	# Load and set sprite texture
+	set_sprite_texture(char_data.sprite_texture_path)
+	
+	# Load default abilities
+	_load_default_abilities(char_data.Abilities)
+	
 var current_health: int:
 	get: return current_health
 	set(value):
@@ -35,13 +67,29 @@ var current_ap_for_planning: int = 0 # AP available for planning this round
 
 var planned_actions: Array[PlannedAction] = [] # Index = AP Slot
 
-var is_selected: bool = false
+# Replace or add this property
+var is_selected: bool = false:
+	set(value):
+		print("DEBUG: Character ", character_name, " selection changed from ", is_selected, " to ", value)
+		is_selected = value
+		_update_selection_visual()
+		
+func _update_selection_visual():
+	if selection_indicator:
+		selection_indicator.visible = is_selected
+		print("DEBUG: Selection indicator for ", character_name, " set to visible: ", is_selected)
+		if is_selected:
+			print("DEBUG: Selection indicator position: ", selection_indicator.position, " scale: ", selection_indicator.scale)
+	else:
+		print("DEBUG: No selection indicator found for ", character_name)
+	
 @export var character_name: String = "Character": 
-	set = set_character_name
+	set = _set_character_name
+func _set_character_name(new_name: String):
+	character_name = new_name
+	if label: label.text = character_name
+	name = character_name # Set Node name for easier debugging in tree
 
-func set_character_name(value: String):
-	character_name = value
-	# Add any additional logic you need when the name changes
 # Movement
 @export var move_speed: float = 150.0
 var current_move_target_pos: Vector2 = Vector2.ZERO
@@ -57,12 +105,41 @@ var is_moving: bool = false
 var combat_manager: CombatManager
 var selection_indicator: Sprite2D # Added in _ready
 
-func _set_character_name(new_name: String):
-	character_name = new_name
-	if label: label.text = character_name
-	name = character_name # Set Node name for easier debugging in tree
 
+func set_sprite_texture(texture_path: String): #new
+	if texture_path.is_empty():
+		print("texture path is empty")
+		return
+		
+	# Ensure sprite node exists
+	if not sprite:
+		print("no sprite in character")
+		await ready  # Wait for _ready if not called yet
+		
+	if sprite and is_instance_valid(sprite):
+		var texture = load(texture_path) as Texture2D
+		if texture:
+			sprite.texture = texture
+			# Update collision shapes to match new sprite
+			call_deferred("sync_collision_shapes")
+		else:
+			print("Warning: Could not load texture from path: ", texture_path)
+	else:
+		print("Warning: Sprite node not found for character: ", character_name)
+		
+func _load_default_abilities(ability_ids: Array[String]):
+	abilities.clear()
+	for ability_id in ability_ids:
+		var ability_path = "res://Abilities/" + ability_id.capitalize().replace(" ", "") + ".tres"
+		var ability = load(ability_path) as Ability
+		if ability:
+			abilities.append(ability)
+		else:
+			print("Warning: Could not load ability: ", ability_path)
 func _ready():
+	# Apply character data if ID is set
+	if not character_id.is_empty():
+		_apply_character_data()
 	current_health = max_health # Initialize health fully
 	# Ensure planned_actions is initialized to the correct size with nulls
 	planned_actions.resize(max_ap_per_round) # Max_ap_per_round determines slots
@@ -73,6 +150,10 @@ func _ready():
 	selection_indicator = Sprite2D.new()
 	selection_indicator.texture = preload("res://selection ring.png") # Placeholder selection sprite
 	selection_indicator.modulate = Color.GREEN if allegiance == Allegiance.PLAYER else Color.ORANGE
+	await get_tree().process_frame
+	
+	# Position the selection indicator properly
+	_position_selection_indicator()
 	selection_indicator.scale = Vector2(0.6, 0.1) # Flat rectangle under character
 	selection_indicator.position.y = sprite.texture.get_height() * sprite.scale.y / 2 + 5
 	selection_indicator.visible = false
@@ -91,7 +172,37 @@ func _ready():
 		if not found_move:
 			abilities.insert(0, move_ability_res) # Add move to the front for convention (e.g. hotkey 1)
 	sync_collision_shapes()
-
+func _position_selection_indicator():
+	if not sprite or not sprite.texture or not selection_indicator:
+		print("DEBUG: Cannot position selection indicator - missing sprite or texture")
+		return
+	
+	# Get the actual sprite bounds
+	var sprite_size = sprite.texture.get_size() * sprite.scale
+	var sprite_rect = sprite.get_rect()  # This gets the local rect of the sprite
+	
+	print("DEBUG: Sprite size: ", sprite_size)
+	print("DEBUG: Sprite rect: ", sprite_rect)
+	print("DEBUG: Sprite position: ", sprite.position)
+	
+	# Position indicator at the bottom of the sprite
+	var bottom_y = sprite.position.y + sprite_rect.position.y + sprite_rect.size.y + 5
+	selection_indicator.position = Vector2(sprite.position.x, bottom_y)
+	
+	# Scale the indicator to be proportional to the sprite width
+	var indicator_width = sprite_size.x * 0.8  # 80% of sprite width
+	var indicator_height = 8  # Fixed height
+	
+	if selection_indicator.texture:
+		print("DEBUG: Selection has Texture for indicator")
+		var indicator_texture_size = selection_indicator.texture.get_size()
+		selection_indicator.scale = Vector2(
+			indicator_width / indicator_texture_size.x,
+			indicator_height / indicator_texture_size.y
+		)
+	
+	print("DEBUG: Final selection indicator position: ", selection_indicator.position)
+	print("DEBUG: Final selection indicator scale: ", selection_indicator.scale)
 func sync_collision_shapes():
 	if not sprite or not sprite.texture:
 		return
@@ -414,7 +525,7 @@ func _ai_plan_wait(slot_idx: int):
 
 # --- UI Previews ---
 func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slot: int):
-	hide_previews()
+	#hide_previews()
 	#if not ability or not CombatManager or CombatManager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if not ability or not combat_manager or combat_manager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if for_ap_slot == -1 : return # Not a valid slot for planning

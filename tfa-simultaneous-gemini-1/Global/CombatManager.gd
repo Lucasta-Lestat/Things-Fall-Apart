@@ -1,5 +1,5 @@
 # res://Global/CombatManager.gd
-extends Node
+extends Node2D
 class_name CombatManager
 
 signal round_started
@@ -383,16 +383,41 @@ func end_combat(winner_allegiance: CombatCharacter.Allegiance):
 			unregister_character(char)
 	emit_signal("combat_ended", winner_allegiance)
 
+# Replace the get_character_at_world_pos function in your CombatManager.gd with this:
+
 func get_character_at_world_pos(world_pos: Vector2) -> CombatCharacter:
-	for char_node in all_characters_in_combat:
-		var char = char_node as CombatCharacter
-		if is_instance_valid(char) and char.current_health > 0:
-			var click_area = char.get_node_or_null("ClickArea/CollisionShape2D") as CollisionShape2D
-			if click_area: # Assuming character has a CollisionShape2D for clicks
-				# Transform point to local space of collision shape
-				var local_pos = click_area.to_local(char.to_local(world_pos)) #This is complex with nested transforms
-				# A simpler check if character origin is center of its clickable area:
-				var interaction_radius = 32 # pixels, example
-				if char.global_position.distance_to(world_pos) < interaction_radius:
-					return char
+	print("DEBUG: CombatManager looking for character at world pos: ", world_pos)
+	
+	# Use physics query to find character at position (like the ClickTest showed works)
+	var space_state = get_world_2d().direct_space_state
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collision_mask = 0xFFFFFFFF  # Check all layers
+	
+	var results = space_state.intersect_point(query)
+	print("DEBUG: Physics query found ", results.size(), " bodies")
+	
+	for result in results:
+		var collider = result.collider
+		print("DEBUG: Checking collider: ", collider.name, " (", collider.get_class(), ")")
+		
+		# Check if this is a CharacterBody2D (the character itself)
+		if collider is CombatCharacter:
+			print("DEBUG: Found CombatCharacter directly: ", collider.character_name)
+			return collider
+		
+		# Check if this is a ClickArea that belongs to a character
+		if collider is Area2D and collider.name == "ClickArea":
+			var parent = collider.get_parent()
+			if parent is CombatCharacter:
+				print("DEBUG: Found CombatCharacter via ClickArea: ", parent.character_name)
+				return parent
+		
+		# Check if the collider's parent is a CombatCharacter (in case of nested collision shapes)
+		var parent = collider.get_parent()
+		if parent is CombatCharacter:
+			print("DEBUG: Found CombatCharacter as parent: ", parent.character_name)
+			return parent
+	
+	print("DEBUG: No CombatCharacter found at world pos: ", world_pos)
 	return null

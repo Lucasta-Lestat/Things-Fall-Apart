@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://h6eujk2qam5p"]
+[gd_scene load_steps=7 format=3 uid="uid://h6eujk2qam5p"]
 
 [ext_resource type="Script" uid="uid://dmlki3bsswpsu" path="res://Game.gd" id="1_80nbo"]
 [ext_resource type="PackedScene" uid="uid://j6w2crlvclub" path="res://Characters/Character.tscn" id="2_e2o6t"]
 [ext_resource type="Script" uid="uid://bj224bmidk1k1" path="res://Abilities/Ability.gd" id="3_7jktm"]
 [ext_resource type="Resource" uid="uid://ckuux33cpfgal" path="res://Abilities/BasicAttack.tres" id="4_ryrav"]
 [ext_resource type="Resource" uid="uid://h4jydkjn0k1x" path="res://Abilities/HeavyStrike.tres" id="5_eow3j"]
+[ext_resource type="Script" uid="uid://dhcm42cbgvh6h" path="res://Abilities/ClickTest.gd" id="6_ryrav"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_80nbo")
@@ -12,10 +13,12 @@ script = ExtResource("1_80nbo")
 [node name="CharactersContainer" type="Node2D" parent="."]
 
 [node name="Character" parent="CharactersContainer" instance=ExtResource("2_e2o6t")]
-visible = false
 abilities = Array[ExtResource("3_7jktm")]([ExtResource("4_ryrav"), ExtResource("5_eow3j")])
 
 [node name="PlayerCamera" type="Camera2D" parent="."]
 position = Vector2(55, 94)
 limit_smoothed = true
 position_smoothing_enabled = true
+
+[node name="ClickTest" type="Node2D" parent="."]
+script = ExtResource("6_ryrav")
