@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3 uid="uid://dnh07sw1v5hnj"]
+
+[ext_resource type="Script" uid="uid://dfris17byilgg" path="res://EnhancedCharacterController.gd" id="1_32fap"]
+[ext_resource type="Script" uid="uid://dcsx8vuljq6km" path="res://ProceduralCharacterBody.gd" id="2_tf58e"]
+[ext_resource type="Script" uid="uid://dvjemyjx0a5tb" path="res://PhysicsWeapon.gd" id="3_276lq"]
+
+[node name="EnhancedCharacterController" type="CharacterBody2D"]
+script = ExtResource("1_32fap")
+
+[node name="ProceduralBody" type="Node2D" parent="."]
+script = ExtResource("2_tf58e")
+
+[node name="Torso" type="RigidBody2D" parent="ProceduralBody"]
+
+[node name="LeftArmIK" type="Skeleton2D" parent="ProceduralBody/Torso"]
+
+[node name="RightArmIK" type="Skeleton2D" parent="ProceduralBody/Torso"]
+
+[node name="Head" type="RigidBody2D" parent="ProceduralBody/Torso"]
+
+[node name="LeftUpperArm" type="RigidBody2D" parent="ProceduralBody/Torso"]
+
+[node name="LeftLowerArm" type="RigidBody2D" parent="ProceduralBody/Torso/LeftUpperArm"]
+
+[node name="RightUpperArm" type="RigidBody2D" parent="ProceduralBody/Torso"]
+
+[node name="RightLowerArm" type="RigidBody2D" parent="ProceduralBody/Torso/RightUpperArm"]
+
+[node name="Weapon" type="RigidBody2D" parent="ProceduralBody/Torso/RightUpperArm/RightLowerArm"]
+script = ExtResource("3_276lq")
+
+[node name="LeftUpperLeg" type="RigidBody2D" parent="ProceduralBody/Torso"]
+
+[node name="LeftLowerLeg" type="RigidBody2D" parent="ProceduralBody/Torso/LeftUpperLeg"]
+
+[node name="RightUpperLeg" type="RigidBody2D" parent="ProceduralBody/Torso"]
+
+[node name="RightLowerLeg" type="RigidBody2D" parent="ProceduralBody/Torso/RightUpperLeg"]

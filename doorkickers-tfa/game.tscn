@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3 uid="uid://brl87uydhu4t2"]
+
+[ext_resource type="PackedScene" uid="uid://dnh07sw1v5hnj" path="res://EnhancedCharacterController.tscn" id="1_80nbo"]
+[ext_resource type="Script" uid="uid://daombjlpexw4i" path="res://MainScene.gd" id="1_e2o6t"]
+[ext_resource type="Script" uid="uid://d1c2bfxevulux" path="res://VisionSystem.gd" id="2_fc0e3"]
+[ext_resource type="Script" uid="uid://3m5pa4uaxjxu" path="res://PathfindingSystem.gd" id="3_7jktm"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_e2o6t")
+
+[node name="GameManager" type="Node2D" parent="."]
+
+[node name="VisionSystem" type="Node2D" parent="."]
+script = ExtResource("2_fc0e3")
+
+[node name="PathfindingSystem" type="Node2D" parent="."]
+script = ExtResource("3_7jktm")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="Wall1" type="StaticBody2D" parent="Walls"]
+
+[node name="Wall2" type="StaticBody2D" parent="Walls"]
+
+[node name="Cover" type="Node2D" parent="."]
+
+[node name="Cover1" type="Node2D" parent="Cover"]
+
+[node name="Cover2" type="Node2D" parent="Cover"]
+
+[node name="Characters" type="Node2D" parent="."]
+
+[node name="EnemyCharacter" parent="Characters" instance=ExtResource("1_80nbo")]
+
+[node name="EnhancedCharacterController" parent="Characters" instance=ExtResource("1_80nbo")]
