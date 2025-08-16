@@ -8,8 +8,8 @@ extends Node2D
 @onready var pathfinding_system: PathfindingSystem = $PathfindingSystem
 @onready var camera: Camera2D = $Camera2D
 
-var test_player_character: EnhancedCharacterController
-var test_enemy_character: EnhancedCharacterController
+var test_player_character: TopDownCharacterController
+var test_enemy_character: TopDownCharacterController
 
 func _ready():
 	_setup_camera()
@@ -120,7 +120,7 @@ func _spawn_test_characters():
 	var bow = _create_bow()
 	test_enemy_character.equip_weapon(bow)
 
-func _create_character(pos: Vector2, is_player: bool) -> EnhancedCharacterController:
+func _create_character(pos: Vector2, is_player: bool) -> TopDownCharacterController:
 	var character_scene = preload("res://EnhancedCharacterController.tscn")
 	var character = character_scene.instantiate()
 	character.global_position = pos

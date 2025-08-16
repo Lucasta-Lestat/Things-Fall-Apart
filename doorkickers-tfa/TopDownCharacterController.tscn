@@ -1,0 +1,52 @@
+[gd_scene load_steps=4 format=3 uid="uid://dnh07sw1v5hnj"]
+
+[ext_resource type="Script" uid="uid://dfris17byilgg" path="res://TopDownCharacterController.gd" id="1_kvi7l"]
+[ext_resource type="Script" uid="uid://dcsx8vuljq6km" path="res://ProceduralCharacterBody.gd" id="2_0t4vg"]
+[ext_resource type="Script" uid="uid://dvjemyjx0a5tb" path="res://PhysicsWeapon.gd" id="3_0a6nd"]
+
+[node name="TopDownCharacterController" type="CharacterBody2D"]
+script = ExtResource("1_kvi7l")
+
+[node name="PhysicsCharacterBody" type="Node2D" parent="."]
+script = ExtResource("2_0t4vg")
+
+[node name="Torso" type="RigidBody2D" parent="PhysicsCharacterBody"]
+
+[node name="LeftArmIK" type="Skeleton2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="RightArmIK" type="Skeleton2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="Head" type="RigidBody2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="LeftUpperArm" type="RigidBody2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="LeftLowerArm" type="RigidBody2D" parent="PhysicsCharacterBody/Torso/LeftUpperArm"]
+
+[node name="RightUpperArm" type="RigidBody2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="RightLowerArm" type="RigidBody2D" parent="PhysicsCharacterBody/Torso/RightUpperArm"]
+
+[node name="Weapon" type="RigidBody2D" parent="PhysicsCharacterBody/Torso/RightUpperArm/RightLowerArm"]
+script = ExtResource("3_0a6nd")
+
+[node name="LeftUpperLeg" type="RigidBody2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="LeftLowerLeg" type="RigidBody2D" parent="PhysicsCharacterBody/Torso/LeftUpperLeg"]
+
+[node name="RightUpperLeg" type="RigidBody2D" parent="PhysicsCharacterBody/Torso"]
+
+[node name="RightLowerLeg" type="RigidBody2D" parent="PhysicsCharacterBody/Torso/RightUpperLeg"]
+
+[node name="Skeleton2D" type="Skeleton2D" parent="."]
+
+[node name="BodyBone" type="Bone2D" parent="Skeleton2D"]
+
+[node name="BodyPolygon" type="Polygon2D" parent="Skeleton2D/BodyBone"]
+
+[node name="BodyBone" type="Bone2D" parent="."]
+
+[node name="BodyPolygon" type="Polygon2D" parent="BodyBone"]
+
+[node name="BodyBone2" type="Bone2D" parent="."]
+
+[node name="BodyPolygon" type="Polygon2D" parent="BodyBone2"]

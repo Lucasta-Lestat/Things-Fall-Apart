@@ -17,7 +17,8 @@ var current_targeting_state: TargetingState = TargetingState.NONE
 var ability_being_targeted: Ability = null
 var ability_caster_for_targeting: CombatCharacter = null # Primary caster for preview
 var just_selected_character: bool = false
-
+const TARGETING_CURSOR = preload("res://targeting icon.png") # <-- Adjust path to your image
+const CURSOR_HOTSPOT = Vector2(32, 32) # <-- Adjust to the center of your cursor image
 
 var current_planning_character: CombatCharacter = null # Set by CombatManager.player_action_pending
 var current_planning_ap_slot: int = -1
@@ -165,7 +166,8 @@ func _unhandled_input(event: InputEvent):
 		elif event is InputEventMouseMotion:
 			if ability_caster_for_targeting and ability_being_targeted:
 				var world_mouse_pos = _get_world_mouse_position()
-				ability_caster_for_targeting.show_ability_preview(ability_being_targeted, world_mouse_pos, current_planning_ap_slot)
+				var next_slot = ability_caster_for_targeting.get_next_available_ap_slot_index()
+				ability_caster_for_targeting.show_ability_preview(ability_being_targeted, world_mouse_pos, next_slot)
 			get_viewport().set_input_as_handled()
 			return
 		elif event.is_action_pressed("ui_cancel"): # Escape
@@ -195,6 +197,7 @@ func _unhandled_input(event: InputEvent):
 						_clear_selection_internally()
 						_add_to_selection(clicked_on_char)
 						primary_selected_character = clicked_on_char
+						current_planning_character = clicked_on_char
 					print("DEBUG: Emitting selection_changed signal with ", selected_characters.size(), " characters")
 					emit_signal("selection_changed", selected_characters)
 					if is_instance_valid(primary_selected_character):
@@ -391,7 +394,14 @@ func _start_ability_targeting_mode(ability: Ability, caster: CombatCharacter):
 	ability_being_targeted = ability
 	ability_caster_for_targeting = caster
 	print_debug("Started targeting for: ", ability.display_name, " by ", caster.character_name)
-	# UI could change cursor here
+	# --- UI FEEDBACK ADDED HERE ---
+	# 1. Change the mouse cursor to your custom targeting icon.
+	Input.set_custom_mouse_cursor(TARGETING_CURSOR, Input.CURSOR_ARROW, CURSOR_HOTSPOT)
+	# 2. Show the ability preview immediately at the current mouse position.
+	# This provides instant feedback on range and/or AOE.
+	var world_mouse_pos = _get_world_mouse_position()
+	caster.show_ability_preview(ability, world_mouse_pos, caster.get_next_available_ap_slot_index())
+	# --- END OF ADDED UI FEEDBACK ---
 
 func cancel_targeting_mode():
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
@@ -400,6 +410,10 @@ func cancel_targeting_mode():
 		current_targeting_state = TargetingState.NONE
 		ability_being_targeted = null
 		ability_caster_for_targeting = null
+		# --- UI FEEDBACK ADDED HERE ---
+		# Reset the cursor to the default system cursor.
+		Input.set_custom_mouse_cursor(null)
+		# --- END OF ADDED UI FEEDBACK ---
 		print_debug("Targeting cancelled.")
 
 func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_pos is not used, using _get_world_mouse_position

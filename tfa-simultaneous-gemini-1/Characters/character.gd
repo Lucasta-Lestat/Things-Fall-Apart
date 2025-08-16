@@ -524,6 +524,7 @@ func _ai_plan_wait(slot_idx: int):
 # --- UI Previews ---
 func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slot: int):
 	#hide_previews()
+	print("DEBUG: show_ability_preview triggered")
 	#if not ability or not CombatManager or CombatManager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if not ability or not combat_manager or combat_manager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if for_ap_slot == -1 : return # Not a valid slot for planning
@@ -538,6 +539,7 @@ func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slo
 	aoe_preview_shape.color = Color(color, 0.3) # Base color with alpha
 
 	if ability.target_type == Ability.TargetType.GROUND or ability.id == &"move":
+		print("DEBUG: Ability targeting ground or move being used")
 		action_preview_line.points = [to_local(caster_pos), to_local(world_mouse_pos)]
 		action_preview_line.visible = true
 		if ability.area_of_effect_radius > 0:
@@ -555,6 +557,7 @@ func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slo
 			aoe_preview_shape.visible = true
 
 func _draw_aoe_circle(center_local_pos: Vector2, radius: float):
+	print("DEBUG: Drawing AoE Circle")
 	var points = PackedVector2Array()
 	var segments = 32
 	for i in range(segments + 1):
@@ -573,6 +576,7 @@ func get_sprite_rect_global() -> Rect2: # For drag selection
 
 # Enemy intent display (called by a potential GameUI or CombatManager during enemy planning phase)
 func show_enemy_intent():
+	print("DEBUG: show_enemy_intent called")
 	if allegiance != Allegiance.ENEMY or not combat_manager or combat_manager.current_combat_state != CombatManager.CombatState.PLANNING:
 		return
 
