@@ -40,8 +40,10 @@ func get_valid_actions(board_state):
 	for dir in adjacent_dirs:
 		var adj_pos = grid_position + dir
 		if is_valid_square(adj_pos):
+			print("Found valid square for promotion action for Pontifex")
 			var piece = board_state[adj_pos.x][adj_pos.y]
 			if piece and piece.color == color and piece.piece_type in ["Pawn", "Kulak"]:
+				print("Attempting to add promotion action to Pontifex")
 				actions.append({"action": "promote", "target_pawn": piece, "promote_to": "Bishop"})
 	
 	return actions

@@ -27,7 +27,6 @@ script = ExtResource("6_ryrav")
 metadata/_custom_type_script = "uid://bklebuy4rusbq"
 
 [node name="MarginContainer" type="MarginContainer" parent="GameUI"]
-custom_minimum_size = Vector2(50, 0)
 offset_right = 40.0
 offset_bottom = 40.0
 

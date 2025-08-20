@@ -2,129 +2,126 @@
 extends CharacterBody2D
 class_name CombatCharacter
 
+# --- Signals (No Changes) ---
 signal planned_action_for_slot(character: CombatCharacter, ap_slot_index: int, action: PlannedAction)
 signal no_more_ap_to_plan(character: CombatCharacter) # Ran out of AP or slots this planning turn
 signal health_changed(new_health: int, max_health: int, char: CombatCharacter)
 signal died(character: CombatCharacter)
 
+# --- Core Properties ---
 enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 
-@export var allegiance: Allegiance = Allegiance.PLAYER
-@export var max_health: int = 100
+# The character_id is the primary way to configure a character.
+# Setting it will trigger _apply_character_data to load from the database.
 @export var character_id: String = "": 
 	set = set_character_id
 
-func set_character_id(value: String):
-	character_id = value
-	_apply_character_data()
+# These properties are populated by _apply_character_data. 
+# They are exported to allow for quick prototyping or debugging directly in the scene,
+# but the database is the primary source of truth.
+@export var character_name: String = "Character": set = _set_character_name
+@export var allegiance: Allegiance = Allegiance.PLAYER
+@export var max_health: int = 100
+@export var dexterity: int = 10
+@export var max_ap_per_round: int = 4
 
-func _apply_character_data():
-	if character_id.is_empty():
-		print("no character ID")
-		return
-		
-	var char_data = CharacterDatabase.get_character_data(character_id)
-	if not char_data:
-		print("no character data")
-		return
-
-	# Apply character data to THIS character instance
-	character_name = char_data.display_name
-	allegiance = char_data.allegiance
-	max_health = char_data.base_health
-	current_health = max_health
-	dexterity = char_data.base_dexterity
-	max_ap_per_round = char_data.base_ap
-	
-	# Load and set sprite texture
-	set_sprite_texture(char_data.sprite_texture_path)
-	
-	# Load default abilities
-	_load_default_abilities(char_data.Abilities)
-	
 var current_health: int:
 	get: return current_health
 	set(value):
 		var old_health = current_health
 		current_health = clamp(value, 0, max_health)
-		if health_bar: 
-			health_bar.max_value = max_health
-			health_bar.value = current_health
+		# The character's only job is to emit a signal that its health changed.
+		# It is the UI's job to listen for this and update itself.
 		if current_health != old_health:
 			emit_signal("health_changed", current_health, max_health, self)
 		if current_health == 0 and old_health > 0:
 			emit_signal("died", self)
 			_handle_death()
 
-@export var dexterity: int = 10
-@export var max_ap_per_round: int = 4 # Default AP
-var current_ap_for_planning: int = 0 # AP available for planning this round
+var current_ap_for_planning: int = 0
 
-@export var abilities: Array[Ability] = [] # Assign abilities in Inspector
+# --- Abilities & Planning ---
+@export var abilities: Array[Ability] = []
 @export var move_ability_res: Ability # Assign res://Abilities/Move.tres in Inspector
+var planned_actions: Array[PlannedAction] = []
 
-var planned_actions: Array[PlannedAction] = [] # Index = AP Slot
-
-# Replace or add this property
+# --- State ---
 var is_selected: bool = false:
 	set(value):
-		print("DEBUG: Character ", character_name, " selection changed from ", is_selected, " to ", value)
 		is_selected = value
 		_update_selection_visual()
-		
-func _update_selection_visual():
-	if selection_indicator:
-		selection_indicator.visible = is_selected
-		print("DEBUG: Selection indicator for ", character_name, " set to visible: ", is_selected)
-		if is_selected:
-			print("DEBUG: Selection indicator position: ", selection_indicator.position, " scale: ", selection_indicator.scale)
-	else:
-		print("DEBUG: No selection indicator found for ", character_name)
-	
-@export var character_name: String = "Character": 
-	set = _set_character_name
-func _set_character_name(new_name: String):
-	character_name = new_name
-	if label: label.text = character_name
-	name = character_name # Set Node name for easier debugging in tree
 
-# Movement
+# --- Movement ---
 @export var move_speed: float = 150.0
-var current_move_target_pos: Vector2 = Vector2.ZERO
 var is_moving: bool = false
 
-# Nodes
+# --- Node References ---
 @onready var sprite: Sprite2D = $sprite
-@onready var label: Label = $Label # Optional
-@onready var health_bar: ProgressBar = $HealthBar
+@onready var nav_agent: NavigationAgent2D = $NavAgent
+# In-world previews are part of the character's scene, not the UI layer. This is correct.
 @onready var action_preview_line: Line2D = $ActionPreviewLine
 @onready var aoe_preview_shape: Polygon2D = $AOEPreviewShape
-@onready var nav_agent: NavigationAgent2D = $NavAgent
+
 var combat_manager: CombatManager
-var selection_indicator: Sprite2D # Added in _ready
+var selection_indicator: Sprite2D
+var planned_move_silhouette: Sprite2D
 
+# --- Initialization ---
 
-func set_sprite_texture(texture_path: String): #new
-	if texture_path.is_empty():
-		print("texture path is empty")
+func _ready():
+	# If the character_id was set in the editor before runtime, apply data now.
+	if not character_id.is_empty():
+		_apply_character_data()
+
+	# Initialize health. The setter will emit health_changed for the UI to catch.
+	self.current_health = max_health
+
+	# Ensure planned_actions is initialized to the correct size with nulls
+	planned_actions.resize(max_ap_per_round)
+	for i in range(max_ap_per_round): planned_actions[i] = null
+	
+	name = character_name # Set Node name for easier debugging in tree
+
+	# Create in-world visuals that are part of this character's scene
+	_create_selection_indicator()
+	_create_planned_move_silhouette()
+
+	# Connect nav_agent signals
+	nav_agent.path_desired_distance = 5.0
+	nav_agent.target_desired_distance = 5.0
+
+	sync_collision_shapes()
+
+func set_character_id(value: String):
+	character_id = value
+	if not is_node_ready():
+		await ready
+	_apply_character_data()
+
+func _apply_character_data():
+	if character_id.is_empty(): return
+		
+	var char_data = CharacterDatabase.get_character_data(character_id)
+	if not char_data:
+		printerr("Could not find character data for ID: ", character_id)
 		return
-		
-	# Ensure sprite node exists
-	if not sprite:
-		print("no sprite in character")
-		await ready  # Wait for _ready if not called yet
-		
-	if sprite and is_instance_valid(sprite):
-		var texture = load(texture_path) as Texture2D
-		if texture:
-			sprite.texture = texture
-			# Update collision shapes to match new sprite
-			call_deferred("sync_collision_shapes")
-		else:
-			print("Warning: Could not load texture from path: ", texture_path)
-	else:
-		print("Warning: Sprite node not found for character: ", character_name)
-		
+
+	# Apply character data to this character instance
+	self.character_name = char_data.display_name
+	allegiance = char_data.allegiance
+	max_health = char_data.base_health
+	dexterity = char_data.base_dexterity
+	max_ap_per_round = char_data.base_ap
+	
+	# This will trigger the setter and emit the signal for the UI
+	self.current_health = max_health 
+	
+	set_sprite_texture(char_data.sprite_texture_path)
+	_load_default_abilities(char_data.Abilities)
+	
+	# Add move ability if not present
+	if move_ability_res and not abilities.has(move_ability_res):
+		abilities.insert(0, move_ability_res)
 func _load_default_abilities(ability_ids: Array[String]):
 	abilities.clear()
 	for ability_id in ability_ids:
@@ -134,89 +131,31 @@ func _load_default_abilities(ability_ids: Array[String]):
 			abilities.append(ability)
 		else:
 			print("Warning: Could not load ability: ", ability_path)
-func _ready():
-	# Apply character data if ID is set
-	if not character_id.is_empty():
-		_apply_character_data()
-	current_health = max_health # Initialize health fully
-	# Ensure planned_actions is initialized to the correct size with nulls
-	planned_actions.resize(max_ap_per_round) # Max_ap_per_round determines slots
-	for i in range(max_ap_per_round): planned_actions[i] = null
-	if label: label.text = character_name
-	if health_bar: health_bar.value = current_health; health_bar.max_value = max_health
+func _set_character_name(new_name: String):
+	character_name = new_name
+	# Set the node's name for easier debugging in the scene tree.
+	# No longer responsible for updating a UI label.
+	name = character_name
 
+func _create_selection_indicator():
 	selection_indicator = Sprite2D.new()
-	selection_indicator.texture = preload("res://selection ring.png") # Placeholder selection sprite
+	selection_indicator.texture = preload("res://selection ring.png")
 	selection_indicator.modulate = Color.GREEN if allegiance == Allegiance.PLAYER else Color.ORANGE
-	await get_tree().process_frame
-	
-	# Position the selection indicator properly
-	_position_selection_indicator()
-	selection_indicator.scale = Vector2(0.6, 0.1) 
-	selection_indicator.position.y = sprite.texture.get_height() * sprite.scale.y / 2 + 5
 	selection_indicator.visible = false
 	add_child(selection_indicator)
+	await get_tree().process_frame # Wait a frame for sprite texture to be loaded
+	_position_selection_indicator()
 
-	# Connect nav_agent signals if needed, e.g., target_reached
-	nav_agent.path_desired_distance = 5.0
-	nav_agent.target_desired_distance = 5.0
-	# nav_agent.velocity_computed.connect(Callable(self, "_on_nav_agent_velocity_computed")) # If using agent velocity
+func _create_planned_move_silhouette():
+	planned_move_silhouette = Sprite2D.new()
+	planned_move_silhouette.texture = sprite.texture
+	planned_move_silhouette.scale = sprite.scale
+	planned_move_silhouette.modulate = Color(1, 1, 1, 0.4)
+	planned_move_silhouette.visible = false
+	planned_move_silhouette.z_index = -1
+	add_child(planned_move_silhouette)
 
-	# Populate abilities with move if not already there and move_ability_res is set
-	if move_ability_res and not abilities.has(move_ability_res):
-		var found_move = false
-		for ab in abilities:
-			if ab and ab.id == &"move": found_move = true; break
-		if not found_move:
-			abilities.insert(0, move_ability_res) # Add move to the front for convention (e.g. hotkey 1)
-	sync_collision_shapes()
-func _position_selection_indicator():
-	if not sprite or not sprite.texture or not selection_indicator:
-		print("DEBUG: Cannot position selection indicator - missing sprite or texture")
-		return
-	
-	# Get the actual sprite bounds
-	var sprite_size = sprite.texture.get_size() * sprite.scale
-	var sprite_rect = sprite.get_rect()  # This gets the local rect of the sprite
-	
-	print("DEBUG: Sprite size: ", sprite_size)
-	print("DEBUG: Sprite rect: ", sprite_rect)
-	print("DEBUG: Sprite position: ", sprite.position)
-	
-	# Position indicator at the bottom of the sprite
-	var bottom_y = sprite.position.y + sprite_rect.position.y + sprite_rect.size.y + 5
-	selection_indicator.position = Vector2(sprite.position.x, bottom_y)
-	
-	# Scale the indicator to be proportional to the sprite width
-	var indicator_width = sprite_size.x * 0.8  # 80% of sprite width
-	var indicator_height = 8  # Fixed height
-	
-	if selection_indicator.texture:
-		print("DEBUG: Selection has Texture for indicator")
-		var indicator_texture_size = selection_indicator.texture.get_size()
-		selection_indicator.scale = Vector2(
-			indicator_width / indicator_texture_size.x,
-			indicator_height / indicator_texture_size.y
-		)
-	
-	print("DEBUG: Final selection indicator position: ", selection_indicator.position)
-	print("DEBUG: Final selection indicator scale: ", selection_indicator.scale)
-func sync_collision_shapes():
-	if not sprite or not sprite.texture:
-		return
-	
-	var sprite_size = sprite.texture.get_size() * sprite.scale
-	
-	# Sync ClickArea collision shape
-	var click_area = get_node_or_null("ClickArea/CollisionShape2D")
-	if click_area and click_area.shape is RectangleShape2D:
-		click_area.shape.size = sprite_size
-	
-	# Sync body collision shape (usually smaller than sprite)
-	var body_collision = get_node_or_null("CollisionShape2D")
-	if body_collision and body_collision.shape is RectangleShape2D:
-		# Make body collision slightly smaller than sprite
-		body_collision.shape.size = sprite_size * 0.8
+# --- Physics & Movement ---
 
 func _physics_process(delta):
 	if is_moving and nav_agent and not nav_agent.is_navigation_finished():
@@ -226,14 +165,13 @@ func _physics_process(delta):
 		move_and_slide()
 		if global_position.distance_to(nav_agent.target_position) < nav_agent.target_desired_distance:
 			_stop_movement()
-	elif is_moving: # Fallback if no nav_agent or finished
+	elif is_moving:
 		_stop_movement()
-
 
 func _stop_movement():
 	is_moving = false
 	velocity = Vector2.ZERO
-	# print_debug(character_name, " reached destination or stopped.")
+	print_debug(character_name, " reached destination or stopped.")
 
 func start_round_reset():
 	current_ap_for_planning = max_ap_per_round
@@ -319,13 +257,19 @@ func plan_ability_use(ability: Ability, ap_slot_to_start_planning_at: int, p_tar
 		
 		emit_signal("planned_action_for_slot", self, current_slot_for_planning, action_segment)
 		current_slot_for_planning += 1
-
+		# NEW: After planning, update the silhouette if a move was planned
+	if ability.id == &"move":
+		print("DEBUG: Attempting to show silhoutte")
+		show_planned_move_silhouette(p_target_pos)
+	
+	# NEW: Update all previews for this character
+	show_all_planned_action_previews()
 	if slots_actually_can_fill > 0:
 		print_debug(character_name, " planned '", ability.display_name, "' consuming ", slots_actually_can_fill, " AP slots. Remaining planning AP: ", current_ap_for_planning)
 	
 	if get_next_available_ap_slot_index() == -1 or current_ap_for_planning == 0:
 		emit_signal("no_more_ap_to_plan", self)
-
+	
 # Helper to find the main "root" action for a multi-AP ability, given one of its segments
 func get_multi_ap_action_root(p_multi_ap_ability_id: StringName, segment_slot_index: int) -> PlannedAction:
 	# Search backwards from the segment to find the start, then forwards to find the end (root)
@@ -529,7 +473,9 @@ func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slo
 	if not ability or not combat_manager or combat_manager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if for_ap_slot == -1 : return # Not a valid slot for planning
 
-	var caster_pos = global_position
+	#var caster_pos = global_position
+	# MODIFIED: Caster position is now based on the plan
+	var caster_pos = get_planned_position_for_slot(for_ap_slot)
 	var color = Color.YELLOW
 	var dist_to_target = caster_pos.distance_to(world_mouse_pos)
 	if dist_to_target > ability.range:
@@ -555,7 +501,7 @@ func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slo
 		if ability.area_of_effect_radius > 0:
 			_draw_aoe_circle(to_local(line_end_pos), ability.area_of_effect_radius)
 			aoe_preview_shape.visible = true
-
+	
 func _draw_aoe_circle(center_local_pos: Vector2, radius: float):
 	print("DEBUG: Drawing AoE Circle")
 	var points = PackedVector2Array()
@@ -606,5 +552,102 @@ func show_enemy_intent():
 				_draw_aoe_circle(to_local(target_pos_for_line), ability.area_of_effect_radius)
 				aoe_preview_shape.visible = true
 			
-			# Only show first intent for simplicity; a full UI would show all slots
 			break
+func _update_selection_visual():
+	if selection_indicator:
+		selection_indicator.visible = is_selected
+
+func _position_selection_indicator():
+	if not sprite or not sprite.texture or not is_instance_valid(selection_indicator):
+		return
+	var sprite_rect = sprite.get_rect()
+	var bottom_y = sprite.position.y + sprite_rect.position.y + sprite_rect.size.y + 5
+	selection_indicator.position = Vector2(sprite.position.x, bottom_y)
+	var indicator_width = sprite.texture.get_size().x * sprite.scale.x * 0.8
+	var indicator_height = 8.0
+	var indicator_texture_size = selection_indicator.texture.get_size()
+	selection_indicator.scale = Vector2(
+		indicator_width / indicator_texture_size.x,
+		indicator_height / indicator_texture_size.y
+	)
+
+func set_sprite_texture(texture_path: String):
+	if texture_path.is_empty(): return
+	if not sprite: await ready
+	if sprite and is_instance_valid(sprite):
+		var texture = load(texture_path) as Texture2D
+		if texture:
+			sprite.texture = texture
+			call_deferred("sync_collision_shapes")
+		else:
+			printerr("Could not load texture from path: ", texture_path)
+
+func sync_collision_shapes():
+	if not sprite or not sprite.texture: return
+	var sprite_size = sprite.texture.get_size() * sprite.scale
+	var click_area_shape = get_node_or_null("ClickArea/CollisionShape2D")
+	if click_area_shape and click_area_shape.shape is RectangleShape2D:
+		click_area_shape.shape.size = sprite_size
+	var body_collision_shape = get_node_or_null("CollisionShape2D")
+	if body_collision_shape and body_collision_shape.shape is RectangleShape2D:
+		body_collision_shape.shape.size = sprite_size * 0.8
+			
+# --- (NEW FUNCTIONS for Silhouette and Previews) ---
+
+func get_planned_position_for_slot(slot_index: int) -> Vector2:
+	"""Calculates the character's effective position for a given action slot,
+	   considering any moves planned in previous slots."""
+	var effective_pos = global_position
+	for i in range(slot_index):
+		var action = planned_actions[i]
+		if action and action.action_type == PlannedAction.ActionType.MOVE:
+			effective_pos = action.target_position
+	return effective_pos
+
+func get_last_planned_move_position() -> Vector2:
+	"""Finds the position of the very last move action planned in any slot."""
+	var last_pos = Vector2.INF # Use as a sentinel value for "no move planned"
+	for action in planned_actions:
+		if action and action.action_type == PlannedAction.ActionType.MOVE:
+			last_pos = action.target_position
+	return last_pos
+
+func show_planned_move_silhouette(position: Vector2):
+	if planned_move_silhouette:
+		planned_move_silhouette.global_position = position
+		planned_move_silhouette.visible = true
+
+func hide_planned_move_silhouette():
+	if planned_move_silhouette:
+		planned_move_silhouette.visible = false
+
+func show_all_planned_action_previews():
+	"""Draws previews for all actions this character has planned."""
+	hide_previews() # Clear existing single-action previews first
+	
+	for i in range(planned_actions.size()):
+		var action = planned_actions[i]
+		if action:
+			var caster_effective_pos = get_planned_position_for_slot(i)
+			var ability = get_ability_by_id(action.ability_id)
+			if ability:
+				var target_pos = action.target_position
+				if is_instance_valid(action.target_character):
+					target_pos = action.target_character.global_position
+				
+				# We need a way to draw multiple lines/previews.
+				# For simplicity, let's reuse the existing Line2D and just show the last one.
+				# A better implementation would instance new Line2D nodes for each preview.
+				_draw_persistent_preview(ability, caster_effective_pos, target_pos)
+
+func _draw_persistent_preview(ability: Ability, caster_pos: Vector2, target_pos: Vector2):
+	"""Helper to draw a preview line. In a full implementation, you'd
+	   create separate Line2D nodes for each planned action."""
+	action_preview_line.points = [to_local(caster_pos), to_local(target_pos)]
+	action_preview_line.default_color = Color.CYAN
+	action_preview_line.visible = true
+	
+	if ability.area_of_effect_radius > 0:
+		_draw_aoe_circle(to_local(target_pos), ability.area_of_effect_radius)
+		aoe_preview_shape.color = Color(Color.CYAN, 0.3)
+		aoe_preview_shape.visible = true

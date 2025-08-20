@@ -1,4 +1,5 @@
 # res://Global/CombatManager.gd
+#Autoload Singleton
 extends Node2D
 class_name CombatManager
 

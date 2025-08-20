@@ -15,6 +15,8 @@ var valid_actions_to_show = []
 # --- Initialization ---
 func _ready():
 	game_board.turn_resolved.connect(_on_turn_resolved)
+	game_board.piece_spawned.connect(_on_piece_spawned)
+
 	# Set the minimum size of this control node to match the board dimensions
 	#custom_minimum_size = Vector2(TILE_SIZE * BOARD_SIZE, TILE_SIZE * BOARD_SIZE)
 	#draw_board()
@@ -31,17 +33,33 @@ func _gui_input(event):
 			clear_selection()
 			accept_event()
 			return
-
-		# Check if the player clicked on a valid action square
+# --- FIX: Check for clicks on promotion targets ---
 		for action in valid_actions_to_show:
-			if action.get("target") == grid_pos:
+			if action.action == "move" and action.get("target") == grid_pos:
+				print("declaring move")
 				game_board.declare_action(selected_piece, action)
 				clear_selection()
 				accept_event()
 				return
-		
-		# --- NEW SELECTION LOGIC ---
+			# Check if the clicked square matches the position of a target pawn
+			elif action.action == "promote" and action.get("target_pawn").grid_position == grid_pos:
+				print("declaring promotion")
+				game_board.declare_action(selected_piece, action)
+				clear_selection()
+				accept_event()
+				return
+
+		# If not a valid move, check if they clicked on a piece
 		var clicked_piece = game_board.board[grid_pos.x][grid_pos.y]
+		
+		# Handle actions with no target (like Cannonier) by clicking the piece again
+		if clicked_piece and clicked_piece == selected_piece:
+			for action in valid_actions_to_show:
+				if not action.has("target") and not action.has("target_pawn"):
+					game_board.declare_action(selected_piece, action)
+					clear_selection()
+					accept_event()
+				
 		var can_select = false
 		if clicked_piece and not clicked_piece.is_petrified:
 			# Can select a white piece if white hasn't submitted a move yet.
@@ -87,10 +105,20 @@ func _draw():
 		
 		# Highlight the valid action squares
 		for action in valid_actions_to_show:
+			print("action: ", action)
+			var target_pos = Vector2.ZERO
+			var highlight_color = Color(0, 0.5, 1, 0.5) # Blue for move
+
 			if action.has("target"):
-				var target_pos = action.target
-				var center = target_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
-				draw_circle(center, TILE_SIZE / 4, Color(0, 0.5, 1, 0.5))
+				target_pos = action.target
+				print("target_pos updated for action")
+			elif action.has("target_pawn"):
+				target_pos = action.target_pawn.grid_position
+				highlight_color = Color(1, 1, 0, 0.5) # Yellow for promote
+			var center = target_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
+			draw_circle(center, TILE_SIZE / 4, highlight_color)
+			print("drawing_circle for action: ", action)
+
 # --- Piece Management ---
 func place_piece_on_board(data, grid_pos):
 	var piece_scene = load(data.scene_path).instantiate()
@@ -111,7 +139,9 @@ func _on_turn_resolved(moves):
 		var new_pixel_pos = target_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 		var tween = create_tween()
 		tween.tween_property(piece, "position", new_pixel_pos, 0.4).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
-
+func _on_piece_spawned(piece_node, grid_pos):
+	add_child(piece_node)
+	piece_node.position = grid_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 # --- Input Handling (for dropping pieces during setup) ---
 func _can_drop_data(at_position, data) -> bool:
 	if game_board.game_phase != "setup": return false

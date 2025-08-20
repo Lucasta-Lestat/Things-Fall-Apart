@@ -9,7 +9,7 @@ signal game_state_changed(new_state)
 signal turn_resolved(moves)
 signal setup_state_changed() # To update UI during setup
 signal turn_info_changed(message) # New, more flexible UI signal
-
+signal piece_spawned(piece_node, grid_pos)
 
 # --- Constants ---
 const BOARD_SIZE = 6
@@ -77,6 +77,7 @@ func resolve_turn():
 	# --- Phase 1: Process Actions ---
 	for piece in all_actions.keys():
 		var action = all_actions[piece]
+		print("Actions for ", piece, " are ", action )
 		match action.action:
 			"move":
 				destinations[piece] = action.target
@@ -93,6 +94,7 @@ func resolve_turn():
 				if target_piece: captures.append(target_piece)
 			"promote":
 				promotions.append(action)
+				print("promotion appended")
 			"fire_cannon", "dragon_breath":
 				action["piece"] = piece 
 				aoe_attacks.append(action)
@@ -118,7 +120,7 @@ func resolve_turn():
 				captures.append(original_occupant)
 			if arriving_pieces.size() == 1 and arriving_pieces[0].piece_type == "Nightrider":
 				spawns.append({"type": "Pawn", "color": arriving_pieces[0].color, "pos": arriving_pieces[0].grid_position})
-
+				print("PAWN ADDED TO SPAWNS")
 	# --- Phase 3: Path Blocking & Swapping Resolution ---
 	var blocked_pieces = []
 	for piece_a in destinations.keys():
@@ -192,13 +194,17 @@ func resolve_turn():
 					print("Error: Piece %s tried to move to an invalid square %s" % [piece.piece_type, final_pos])
 	# --- Phase 7: Spawning, Promotions, and On-Move Effects ---
 	var promoted_pawns = []
+	print("promotions: ", promotions)
+	
 	for promo_action in promotions:
+		print("promotion loop triggered")
 		var pawn = promo_action.target_pawn
 		if not pawn in unique_captures:
 			var pos = destinations.get(pawn, pawn.grid_position)
 			var color = pawn.color
 			var new_type = promo_action.promote_to
 			var new_piece_scene = load(PIECE_SCENES[new_type]).instantiate()
+			print("Attempted to instantiate new piece for promotion")
 			new_piece_scene.add_to_group("pieces")
 			new_piece_scene.setup_piece(new_type, color, false, 80)
 			new_piece_scene.grid_position = pos
@@ -208,17 +214,22 @@ func resolve_turn():
 
 	var spawn_locations = {}
 	for spawn_action in spawns:
+		print("for spawn_action in spawns loop triggered")
 		var pos = spawn_action.pos
 		if not spawn_locations.has(pos):
+			print("not spawn_location.has(pos) triggers")
 			spawn_locations[pos] = []
 		spawn_locations[pos].append(spawn_action)
-	
+	print("spawn_locations.keys():  ", spawn_locations.keys())
 	for pos in spawn_locations.keys():
+		
 		if spawn_locations[pos].size() == 1:
 			var spawn_data = spawn_locations[pos][0]
 			var new_piece_scene = load(PIECE_SCENES[spawn_data.type]).instantiate()
 			new_piece_scene.add_to_group("pieces")
+			print("attempted to add new piece scene to pieces group")
 			new_piece_scene.setup_piece(spawn_data.type, spawn_data.color, false, 80)
+			print("attempted to spawn piece")
 			new_piece_scene.grid_position = pos
 			next_board_state[pos.x][pos.y] = new_piece_scene
 			emit_signal("piece_spawned", new_piece_scene, pos)

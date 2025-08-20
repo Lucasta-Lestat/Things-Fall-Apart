@@ -3,6 +3,7 @@ extends Node2D
 
 @onready var characters_container: Node2D = $CharactersContainer
 @onready var player_camera: Camera2D = $PlayerCamera
+@onready var game_ui: GameUI = $GameUI
 
 const CharacterScene = preload("res://Characters/Character.tscn")
 
@@ -58,6 +59,10 @@ func setup_managers():
 	player_input_manager.selection_changed.connect(_on_player_selection_changed_for_camera)
 	player_input_manager.camera_recenter_request.connect(_on_camera_recenter_request)
 	print("DEBUG: Camera signals connected")
+	
+	# NEW: Setup GameUI
+	game_ui.setup(combat_manager, player_input_manager)
+	print("DEBUG: GameUI setup")
 	# Set combat_manager reference in characters (will be done when characters are spawned)
 
 func setup_input_actions():
