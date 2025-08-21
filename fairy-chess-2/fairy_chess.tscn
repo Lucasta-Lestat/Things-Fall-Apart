@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bsuoy0ishctwb"]
+[gd_scene load_steps=19 format=3 uid="uid://bsuoy0ishctwb"]
 
 [ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
 [ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
@@ -11,6 +11,13 @@
 [ext_resource type="PackedScene" uid="uid://bhbebsq87y5ep" path="res://scenes/pieces/Knight.tscn" id="9_g7uw4"]
 [ext_resource type="PackedScene" uid="uid://drmvqv3x5jfwu" path="res://scenes/pieces/Rook.tscn" id="10_ou3o4"]
 [ext_resource type="PackedScene" uid="uid://ca4o1x42i0q61" path="res://scenes/pieces/Queen.tscn" id="11_h5vv0"]
+[ext_resource type="Script" uid="uid://n87q08mkh6mb" path="res://highlight_layer.gd" id="12_g1r23"]
+[ext_resource type="Script" uid="uid://cbfh1b6s1g2l6" path="res://audio_manager.gd" id="13_6kral"]
+[ext_resource type="AudioStream" uid="uid://rojuy7jf2tck" path="res://Sounds/capture.mp3" id="14_jwrwn"]
+[ext_resource type="AudioStream" uid="uid://c2t50oo75x05j" path="res://Sounds/rifle.mp3" id="14_vl6e3"]
+[ext_resource type="AudioStream" uid="uid://ditfsafvcxmgx" path="res://Sounds/cannon.mp3" id="15_jwrwn"]
+[ext_resource type="AudioStream" uid="uid://bxy8shyxwgad0" path="res://Sounds/peppy jazz.mp3" id="16_au1l4"]
+[ext_resource type="AudioStream" uid="uid://cc4amikeyydfl" path="res://Sounds/promote.mp3" id="18_jwrwn"]
 
 [node name="FairyChess" type="Node2D"]
 
@@ -43,6 +50,7 @@ script = ExtResource("2_nbw42")
 [node name="Chancellor" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("4_ljmel")]
 
 [node name="Pawn" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("3_nbw42")]
+visible = false
 
 [node name="Bishop" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("5_mqiwu")]
 
@@ -55,6 +63,13 @@ script = ExtResource("2_nbw42")
 [node name="Rook" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("10_ou3o4")]
 
 [node name="Queen" parent="UI/HBoxContainer/ChessboardDisplay" instance=ExtResource("11_h5vv0")]
+
+[node name="HighlightLayer" type="Control" parent="UI/HBoxContainer/ChessboardDisplay"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 1
+script = ExtResource("12_g1r23")
 
 [node name="BlackScrollContainer" type="ScrollContainer" parent="UI/HBoxContainer"]
 layout_mode = 2
@@ -100,6 +115,28 @@ offset_top = 735.0
 offset_right = 357.0
 offset_bottom = 758.0
 text = "Turn"
+
+[node name="AudioManager" type="Node" parent="."]
+script = ExtResource("13_6kral")
+
+[node name="MoveSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+
+[node name="CaptureSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("14_jwrwn")
+
+[node name="RifleSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("14_vl6e3")
+
+[node name="CannonSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("15_jwrwn")
+
+[node name="MusicPlayer" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("16_au1l4")
+
+[node name="WinSound" type="AudioStreamPlayer2D" parent="AudioManager"]
+
+[node name="PromoteSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("18_jwrwn")
 
 [connection signal="pressed" from="UI/GameOverlayUI/StartButton" to="GameBoard" method="_on_start_button_pressed"]
 [connection signal="pressed" from="UI/GameOverlayUI/StartButton" to="UI" method="_on_start_button_pressed"]

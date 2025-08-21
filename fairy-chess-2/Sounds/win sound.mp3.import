@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cq3vkptucs0jg"
+path="res://.godot/imported/win sound.mp3-989214718d1c86fc7c5c6972434f2212.mp3str"
+
+[deps]
+
+source_file="res://Sounds/win sound.mp3"
+dest_files=["res://.godot/imported/win sound.mp3-989214718d1c86fc7c5c6972434f2212.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

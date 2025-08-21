@@ -13,7 +13,7 @@ signal piece_spawned(piece_node, grid_pos)
 
 signal spawn_credits_changed(white_credits, black_credits)
 
-
+@onready var audio_manager = get_node("../AudioManager")
 # --- Constants ---
 const BOARD_SIZE = 6
 const MAX_PEASANTS = 4
@@ -85,6 +85,7 @@ func resolve_turn():
 		print("Actions for ", piece, " are ", action )
 		match action.action:
 			"move":
+				audio_manager.play_sfx("move")
 				destinations[piece] = action.target
 				if piece.piece_type == "Gorgon": petrify_sources.append(piece)
 				if action.has("is_double_move"):
@@ -96,14 +97,21 @@ func resolve_turn():
 						captures.append(board[captured_pawn_pos.x][captured_pawn_pos.y])
 			"shoot":
 				var target_piece = board[action.target.x][action.target.y]
+				audio_manager.play_sfx("shoot")
 				if target_piece: captures.append(target_piece)
 			"promote":
 				promotions.append(action)
+				audio_manager.play_sfx("promote")
 				print("promotion appended")
-			"fire_cannon", "dragon_breath":
+			"fire_cannon" :
 				action["piece"] = piece 
+				audio_manager.play_sfx("cannon")
+				print("DEBUG: attempting to append cannonfire to aoe_attacks")
 				aoe_attacks.append(action)
-
+			"dragon_breath":
+				action["piece"] = piece 
+				print("DEBUG: attempting to append dragon_breath  to aoe_attacks")
+				aoe_attacks.append(action)
 	# --- Phase 2: Identify Movement-Based Captures ---
 	var final_positions = {}
 	for piece in destinations.keys():
@@ -164,21 +172,31 @@ func resolve_turn():
 				if is_valid_square(pos) and board[pos.x][pos.y]:
 					if not board[pos.x][pos.y] in captures: captures.append(board[pos.x][pos.y])
 		elif attack.action == "dragon_breath":
-			var forward_dir = -1 if attacker.color == "white" else 1
-			var cone_squares = [
-				attacker.grid_position + Vector2(0, forward_dir),
-				attacker.grid_position + Vector2(0, forward_dir * 2),
-				attacker.grid_position + Vector2(-1, forward_dir * 2),
-				attacker.grid_position + Vector2(1, forward_dir * 2)
-			]
-			for pos in cone_squares:
+			print("DEBUG: attack.action dragon breath in game_board")
+			# Read the direction from the action and calculate the cone ---
+			var direction = attack.direction
+			var cone_squares = []
+			if direction == Vector2.UP:
+				cone_squares = [Vector2(-1,-2), Vector2(0,-2), Vector2(1,-2), Vector2(0,-1)]
+			elif direction == Vector2.DOWN:
+				cone_squares = [Vector2(-1,2), Vector2(0,2), Vector2(1,2), Vector2(0,1)]
+			elif direction == Vector2.LEFT:
+				cone_squares = [Vector2(-2,-1), Vector2(-2,0), Vector2(-2,1), Vector2(-1,0)]
+			elif direction == Vector2.RIGHT:
+				cone_squares = [Vector2(2,-1), Vector2(2,0), Vector2(2,1), Vector2(1,0)]
+			
+			for offset in cone_squares:
+				var pos = attacker.grid_position + offset
+				print("DEBUG: pos in dragon breath: ", pos)
 				if is_valid_square(pos) and board[pos.x][pos.y]:
+					print("DEBUG: attempting to append captures for dragon breath")
 					if not board[pos.x][pos.y] in captures: captures.append(board[pos.x][pos.y])
 
 	# --- Phase 5: Finalize Captures & Death Rattles ---
 	var unique_captures = []
 	for piece in captures:
 		if not piece in unique_captures: unique_captures.append(piece)
+		audio_manager.play_sfx("capture")
 	for piece_to_capture in unique_captures:
 		if piece_to_capture.is_inside_tree():
 			piece_to_capture.on_capture(self)
@@ -211,6 +229,7 @@ func resolve_turn():
 	print("promotions: ", promotions)
 	
 	for promo_action in promotions:
+		audio_manager.play_sfx("promote")
 		print("promotion loop triggered")
 		var pawn = promo_action.target_pawn
 		if not pawn in unique_captures:
@@ -276,6 +295,7 @@ func place_piece(piece_scene, grid_pos):
 # --- Public Methods (Gameplay) ---
 
 func start_game():
+	audio_manager.play_music() # Add this line
 	if game_phase == "setup":
 		game_phase = "playing"
 		emit_signal("game_state_changed", game_phase)
@@ -374,5 +394,7 @@ func is_valid_square(pos):
 	return pos.x >= 0 and pos.x < BOARD_SIZE and pos.y >= 0 and pos.y < BOARD_SIZE
 # Ends the game and sets the final state.
 func end_game(outcome):
+	audio_manager.play_sfx("win") # Add this line
+	audio_manager.stop_music() # Optional: stop the music
 	game_phase = "game_over"
 	emit_signal("game_state_changed", "Game Over: " + outcome)
