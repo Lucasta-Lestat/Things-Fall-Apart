@@ -6,6 +6,7 @@ extends CanvasLayer
 
 # --- Nodes ---
 @onready var game_board = get_node("../GameBoard")
+#
 @onready var white_piece_panel = $HBoxContainer/WhiteScrollContainer/VBoxContainer
 @onready var black_piece_panel = $HBoxContainer/BlackScrollContainer/VBoxContainer
 @onready var start_button = $GameOverlayUI/StartButton
@@ -14,7 +15,7 @@ extends CanvasLayer
 @onready var player_turn_label = $GameOverlayUI/PlayerTurnLabel # Add a new Label node for this
 
 # --- Preload Scenes ---
-var piece_icon_scene = preload("res://scenes/ui/piece_icon.tscn")
+var piece_icon_scene = preload("res://ui/piece_icon.tscn")
 
 # A dictionary defining all the pieces available for selection.
 #define a standard size for all icons.
@@ -43,7 +44,6 @@ const PIECE_DEFINITIONS = {
 		{"type": "Pontifex", "royal": true, "scene": "res://scenes/pieces/Pontifex.tscn"},
 		{"type": "Chancellor", "royal": true, "scene": "res://scenes/pieces/Chancellor.tscn"},
 		{"type": "King", "royal": true, "scene": "res://scenes/pieces/King.tscn"}
-
 	]
 }
 
@@ -53,18 +53,37 @@ func _ready():
 	game_board.game_state_changed.connect(_on_game_state_changed)
 	game_board.setup_state_changed.connect(_on_setup_state_changed)
 	game_board.turn_info_changed.connect(_on_turn_info_changed)
-
+	game_board.spawn_credits_changed.connect(_on_spawn_credits_changed)
 	
 	# Initial UI state
 	_on_game_state_changed("setup")
 	_on_setup_state_changed()
 	
 	# Populate piece selection panels
-	populate_piece_panels()
+	populate_piece_panels(white_piece_panel, "white", PIECE_DEFINITIONS)
+	populate_piece_panels(black_piece_panel, "black", PIECE_DEFINITIONS)
 
 # --- UI Update Functions ---
+func _on_spawn_credits_changed(white_credits, black_credits):
 
+		print("DEBUG: on_spawn_credits_changed called")
+		if white_credits.size() > 0:
+			print("DEBUG: showing white piece panel and calling populate_piece_panels")
+			get_node("HBoxContainer/WhiteScrollContainer").visible = true
+			white_piece_panel.visible = true
+			populate_piece_panels(white_piece_panel, "white", white_credits, true)
+		else:
+			white_piece_panel.visible = false
+		if black_credits.size() > 0:
+			print("DEBUG: showing black piece panel and calling populate_piece_panels")
+			get_node("HBoxContainer/BlackScrollContainer").visible = true
+			black_piece_panel.visible = true
+			populate_piece_panels(black_piece_panel, "black", black_credits, true)
+		else:
+			black_piece_panel.visible = false
+		
 func _on_game_state_changed(new_state):
+	print("game state changed to: ",new_state)
 	game_state_label.text = "Game Phase: " + new_state.capitalize()
 	match new_state:
 		"setup":
@@ -112,25 +131,30 @@ func _on_setup_state_changed():
 
 
 # Populates the side panels with icons for the players to choose from.
-func populate_piece_panels():
-	for child in white_piece_panel.get_children(): child.queue_free()
-	for child in black_piece_panel.get_children(): child.queue_free()
-		
-	for color in ["white", "black"]:
-		var panel = white_piece_panel if color == "white" else black_piece_panel
-		
+func populate_piece_panels(panel, color, piece_source, is_spawn_credits=false):
+	for child in panel.get_children(): child.queue_free()
+	
+	if is_spawn_credits:
+		# piece_source is a dictionary like {"Pawn": 1}
+		for piece_type in piece_source.keys():
+			var count = piece_source[piece_type]
+			if count > 0:
+				# Find the full data for this piece type
+				var piece_data = find_piece_data(piece_type)
+				if piece_data:
+					# Create an icon for each available spawn
+					for i in range(count):
+						create_piece_icon(panel, piece_data, color)
+	else:
+		# piece_source is the full PIECE_DEFINITIONS dictionary for setup
 		var label = Label.new()
 		label.text = "Peasants"
 		panel.add_child(label)
-		for piece_data in PIECE_DEFINITIONS.peasants:
-			create_piece_icon(panel, piece_data, color)
-			
+		for piece_data in piece_source.peasants: create_piece_icon(panel, piece_data, color)
 		label = Label.new()
 		label.text = "Nobles & Royals"
-		label.add_child(HSeparator.new())
 		panel.add_child(label)
-		for piece_data in PIECE_DEFINITIONS.non_peasants:
-			create_piece_icon(panel, piece_data, color)
+		for piece_data in piece_source.non_peasants: create_piece_icon(panel, piece_data, color)
 
 # Helper function to create and configure a single piece icon.
 func create_piece_icon(panel, data, color):
@@ -152,6 +176,14 @@ func create_piece_icon(panel, data, color):
 	icon.custom_minimum_size = ICON_SIZE
 	
 	panel.add_child(icon)
+
+func find_piece_data(piece_type):
+	print("DEBUG: attempting to find_piece_data")
+	for data in PIECE_DEFINITIONS.peasants + PIECE_DEFINITIONS.non_peasants:
+		if data.type == piece_type:
+			print("DEBUG: found piece data")
+			return data
+	return null
 
 # --- Button Callbacks ---
 

@@ -9,6 +9,9 @@ const MAX_PEASANTS = 4
 const MAX_NON_PEASANTS = 4
 
 @onready var game_board = get_node("../../../GameBoard")
+@onready var promotion_icon = preload("res://ui/promotion icon.png")
+@onready var attack_icon = preload("res://ui/attack icon.png")
+
 # --- Gameplay State ---
 var selected_piece = null
 var valid_actions_to_show = []
@@ -35,19 +38,16 @@ func _gui_input(event):
 			return
 # --- FIX: Check for clicks on promotion targets ---
 		for action in valid_actions_to_show:
-			if action.action == "move" and action.get("target") == grid_pos:
-				print("declaring move")
-				game_board.declare_action(selected_piece, action)
-				clear_selection()
-				accept_event()
-				return
-			# Check if the clicked square matches the position of a target pawn
-			elif action.action == "promote" and action.get("target_pawn").grid_position == grid_pos:
-				print("declaring promotion")
-				game_board.declare_action(selected_piece, action)
-				clear_selection()
-				accept_event()
-				return
+			var target_pos = action.get("target", action.get("target_pawn", null))
+			if target_pos: # This handles both Vector2 and Node2D targets
+				var target_grid_pos = target_pos if target_pos is Vector2 else target_pos.grid_position
+				print("DEBUG: target_grid_pos created: ", )
+				if target_grid_pos == grid_pos:
+					game_board.declare_action(selected_piece, action)
+					print("DEBUG: action declared ", action)
+					clear_selection()
+					accept_event()
+					return
 
 		# If not a valid move, check if they clicked on a piece
 		var clicked_piece = game_board.board[grid_pos.x][grid_pos.y]
@@ -108,16 +108,34 @@ func _draw():
 			print("action: ", action)
 			var target_pos = Vector2.ZERO
 			var highlight_color = Color(0, 0.5, 1, 0.5) # Blue for move
+			var icon_to_draw = null
 
 			if action.has("target"):
 				target_pos = action.target
 				print("target_pos updated for action")
+				if action.action == "shoot":
+					highlight_color = Color(1, 0, 0, 0.5) # Red for attack
 			elif action.has("target_pawn"):
 				target_pos = action.target_pawn.grid_position
 				highlight_color = Color(1, 1, 0, 0.5) # Yellow for promote
+				icon_to_draw = promotion_icon
+			elif not action.has("target") and not action.has("target_pawn"): # AoE attack
+				target_pos = selected_piece.grid_position
+				highlight_color = Color(1, 0, 0, 0.3)
+				print("DEBUG: Attempting to draw highlight for AOE")
+				icon_to_draw = attack_icon
 			var center = target_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 			draw_circle(center, TILE_SIZE / 4, highlight_color)
 			print("drawing_circle for action: ", action)
+			if icon_to_draw:
+				print("DEBUG: Attempting to draw icon")
+				var icon_size = icon_to_draw.get_size()
+				var icon_pos = center - icon_size / 2
+				if action.action == "promote":
+					print("DEBUG: icon is a promotion icon")
+					# Move it to the right edge of the highlight circle
+					icon_pos.x += TILE_SIZE / 2 
+				draw_texture(icon_to_draw, center - icon_size / 2)
 
 # --- Piece Management ---
 func place_piece_on_board(data, grid_pos):
@@ -144,45 +162,55 @@ func _on_piece_spawned(piece_node, grid_pos):
 	piece_node.position = grid_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 # --- Input Handling (for dropping pieces during setup) ---
 func _can_drop_data(at_position, data) -> bool:
-	if game_board.game_phase != "setup": return false
-	if not data is Dictionary or not data.has("piece_type"): return false
-	
 	var grid_pos = (at_position / TILE_SIZE).floor()
 	if not game_board.is_valid_square(grid_pos) or game_board.board[grid_pos.x][grid_pos.y] != null:
 		return false
-	
-	var placer = game_board.setup_placer
-	var placer_counts = game_board.white_placed_pieces if placer == "white" else game_board.black_placed_pieces
-	
-	var is_peasant = data.piece_type in ["Pawn", "Kulak"]
-	var is_royal = data.get("is_royal", false)
-
-	# --- NEW CORRECTED SETUP LOGIC ---
-	# Rule: Define the valid rows for piece types.
-	var back_row = 5 if placer == "white" else 0
-	var second_row = 4 if placer == "white" else 1
-
-	# Rule: Check if the piece is being placed on its correct row.
-	if is_peasant:
-		# Peasants go on the second row.
-		if grid_pos.y != second_row:
+	if game_board.game_phase == "setup":
+		if not data is Dictionary or not data.has("piece_type"): return false
+		if not game_board.is_valid_square(grid_pos) or game_board.board[grid_pos.x][grid_pos.y] != null:
 			return false
-	else:
-		# All other pieces (nobles and royals) go on the back row.
-		if grid_pos.y != back_row:
-			return false
+		var placer = game_board.setup_placer
+		var placer_counts = game_board.white_placed_pieces if placer == "white" else game_board.black_placed_pieces
+		var is_peasant = data.piece_type in ["Pawn", "Kulak"]
+		var is_royal = data.get("is_royal", false)
+		# Rule: Define the valid rows for piece types.
+		var back_row = 5 if placer == "white" else 0
+		var second_row = 4 if placer == "white" else 1
+		# Rule: Check if the piece is being placed on its correct row.
+		if is_peasant:
+			# Peasants go on the second row.
+			if grid_pos.y != second_row:
+				return false
+		else:
+			# All other pieces (nobles and royals) go on the back row.
+			if grid_pos.y != back_row:
+				return false
+		# Rule: Check placement order (Royals must be placed after all other non-royal pieces).
+		if is_royal:
+			var non_royal_nobles_placed = placer_counts.non_peasant - placer_counts.royal
+			if non_royal_nobles_placed < (game_board.MAX_NON_PEASANTS - 1) or placer_counts.peasant < game_board.MAX_PEASANTS:
+				return false
 
-	# Rule: Check placement order (Royals must be placed after all other non-royal pieces).
-	if is_royal:
-		var non_royal_nobles_placed = placer_counts.non_peasant - placer_counts.royal
-		if non_royal_nobles_placed < (game_board.MAX_NON_PEASANTS - 1) or placer_counts.peasant < game_board.MAX_PEASANTS:
-			return false
-
-	# Rule: Check piece counts to prevent placing too many of one type.
-	if is_peasant and placer_counts.peasant >= game_board.MAX_PEASANTS: return false
-	if not is_peasant and placer_counts.non_peasant >= game_board.MAX_NON_PEASANTS: return false
-	return true
-
+		# Rule: Check piece counts to prevent placing too many of one type.
+		if is_peasant and placer_counts.peasant >= game_board.MAX_PEASANTS: return false
+		if not is_peasant and placer_counts.non_peasant >= game_board.MAX_NON_PEASANTS: return false
+		return true
+	elif game_board.game_phase == "playing":
+		# Check if the player has credits for this piece type
+		var credits = game_board.white_spawn_credits if data.color == "white" else game_board.black_spawn_credits
+		if credits.get(data.piece_type, 0) <= 0: return false
+		
+		# Use same placement rules as setup
+		var is_peasant = data.piece_type in ["Pawn", "Kulak"]
+		var back_row = 5 if data.color == "white" else 0
+		var second_row = 4 if data.color == "white" else 1
+		if is_peasant and grid_pos.y == second_row: return true
+		if not is_peasant and grid_pos.y == back_row: return true
+	return false
 func _drop_data(at_position, data):
 	var grid_pos = (at_position / TILE_SIZE).floor()
-	place_piece_on_board(data, grid_pos)
+	if game_board.game_phase == "setup":
+		place_piece_on_board(data, grid_pos)
+	elif game_board.game_phase == "playing":
+		# Declare a "spawn" action. This counts as the player's move.
+		game_board.declare_action(null, {"action": "spawn", "data": data, "target": grid_pos})

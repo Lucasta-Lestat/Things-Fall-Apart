@@ -11,6 +11,9 @@ signal setup_state_changed() # To update UI during setup
 signal turn_info_changed(message) # New, more flexible UI signal
 signal piece_spawned(piece_node, grid_pos)
 
+signal spawn_credits_changed(white_credits, black_credits)
+
+
 # --- Constants ---
 const BOARD_SIZE = 6
 const MAX_PEASANTS = 4
@@ -22,6 +25,8 @@ var current_player_turn = "white" # Whose turn it is to declare moves
 var game_phase = "setup" # "setup", "playing", "game_over"
 var white_actions = {} # {piece: {"action": "move", "target": pos}}
 var black_actions = {}
+var white_spawn_credits = {} #dictionary of spawnable pieces
+var black_spawn_credits = {}
 
 # --- Setup State ---
 var setup_placer = "white" # Who is currently placing a piece
@@ -119,8 +124,18 @@ func resolve_turn():
 			if not original_occupant in captures:
 				captures.append(original_occupant)
 			if arriving_pieces.size() == 1 and arriving_pieces[0].piece_type == "Nightrider":
-				spawns.append({"type": "Pawn", "color": arriving_pieces[0].color, "pos": arriving_pieces[0].grid_position})
+				#spawns.append({"type": "Pawn", "color": arriving_pieces[0].color, "pos": arriving_pieces[0].grid_position})
 				print("PAWN ADDED TO SPAWNS")
+				if arriving_pieces[0].color == "white":
+					print("DEBUG: White spawn credits updated")
+					white_spawn_credits["Pawn"] = white_spawn_credits.get("Pawn", 0) + 1
+					emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
+
+				else:
+					print("DEBUG: Black spawn credits updated")
+					black_spawn_credits["Pawn"] = black_spawn_credits.get("Pawn", 0) + 1
+					emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
+	
 	# --- Phase 3: Path Blocking & Swapping Resolution ---
 	var blocked_pieces = []
 	for piece_a in destinations.keys():
@@ -169,7 +184,6 @@ func resolve_turn():
 			piece_to_capture.on_capture(self)
 
 	# --- Phase 6: Build Next Board State ---
-	# --- FIX: Rebuild the board state logically and robustly ---
 	var next_board_state = []
 	next_board_state.resize(BOARD_SIZE)
 	for i in range(BOARD_SIZE):
@@ -186,13 +200,13 @@ func resolve_turn():
 			if piece and not piece in unique_captures:
 				# This piece survives. Find its final position.
 				var final_pos = destinations.get(piece, piece.grid_position)
-				
 				# Place the piece reference in the new board at its final destination.
 				if is_valid_square(final_pos):
 					next_board_state[int(final_pos.x)][int(final_pos.y)] = piece
 				else:
 					print("Error: Piece %s tried to move to an invalid square %s" % [piece.piece_type, final_pos])
-	# --- Phase 7: Spawning, Promotions, and On-Move Effects ---
+	# --- Phase 7: Promotions, and On-Move Effects ---
+
 	var promoted_pawns = []
 	print("promotions: ", promotions)
 	
@@ -211,28 +225,7 @@ func resolve_turn():
 			next_board_state[pos.x][pos.y] = new_piece_scene
 			promoted_pawns.append(pawn)
 			emit_signal("piece_spawned", new_piece_scene, pos)
-
-	var spawn_locations = {}
-	for spawn_action in spawns:
-		print("for spawn_action in spawns loop triggered")
-		var pos = spawn_action.pos
-		if not spawn_locations.has(pos):
-			print("not spawn_location.has(pos) triggers")
-			spawn_locations[pos] = []
-		spawn_locations[pos].append(spawn_action)
-	print("spawn_locations.keys():  ", spawn_locations.keys())
-	for pos in spawn_locations.keys():
-		
-		if spawn_locations[pos].size() == 1:
-			var spawn_data = spawn_locations[pos][0]
-			var new_piece_scene = load(PIECE_SCENES[spawn_data.type]).instantiate()
-			new_piece_scene.add_to_group("pieces")
-			print("attempted to add new piece scene to pieces group")
-			new_piece_scene.setup_piece(spawn_data.type, spawn_data.color, false, 80)
-			print("attempted to spawn piece")
-			new_piece_scene.grid_position = pos
-			next_board_state[pos.x][pos.y] = new_piece_scene
-			emit_signal("piece_spawned", new_piece_scene, pos)
+	
 
 	for gorgon in petrify_sources:
 		if not gorgon in unique_captures:
@@ -253,12 +246,16 @@ func resolve_turn():
 			piece.grid_position = destinations[piece]
 	
 	emit_signal("turn_resolved", destinations)
+	
+	
 	white_actions.clear()
 	black_actions.clear()
 	
 	check_win_condition()
 	if game_phase == "playing":
 		emit_signal("turn_info_changed", "White to move.")
+		
+		
 # --- Public Methods (Setup) ---
 func place_piece(piece_scene, grid_pos):
 	board[grid_pos.x][grid_pos.y] = piece_scene
@@ -288,16 +285,40 @@ func start_game():
 func declare_action(piece, action_data):
 	if game_phase != "playing": return
 
-	if piece.color == "white":
-		if white_actions.is_empty():
-			white_actions[piece] = action_data
+	if action_data.action == "spawn":
+		var color = action_data.data.color
+		var piece_type = action_data.data.piece_type
+		
+		if color == "white" and white_spawn_credits.get(piece_type, 0) > 0:
+			white_spawn_credits[piece_type] -= 1
+			var new_piece = load(PIECE_SCENES[piece_type]).instantiate()
+			new_piece.setup_piece(piece_type, color, false, 80)
+			new_piece.grid_position = action_data.target
+			board[action_data.target.x][action_data.target.y] = new_piece
+			emit_signal("piece_spawned", new_piece, action_data.target)
+			emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
+			white_actions[new_piece] = action_data
 			emit_signal("turn_info_changed", "Black to move.")
-	elif piece.color == "black":
-		if black_actions.is_empty():
-			black_actions[piece] = action_data
+		elif color == "black" and black_spawn_credits.get(piece_type, 0) > 0:
+			black_spawn_credits[piece_type] -= 1
+			var new_piece = load(PIECE_SCENES[piece_type]).instantiate()
+			new_piece.setup_piece(piece_type, color, false, 80)
+			new_piece.grid_position = action_data.target
+			board[action_data.target.x][action_data.target.y] = new_piece
+			emit_signal("piece_spawned", new_piece, action_data.target)
+			emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
+			black_actions[new_piece] = action_data
 			emit_signal("turn_info_changed", "Resolving turn...")
+	else:
+		if piece.color == "white":
+			if white_actions.is_empty():
+				white_actions[piece] = action_data
+				emit_signal("turn_info_changed", "Black to move.")
+		elif piece.color == "black":
+			if black_actions.is_empty():
+				black_actions[piece] = action_data
+				emit_signal("turn_info_changed", "Resolving turn...")
 	
-	# After any action is declared, check if both players have moved.
 	if not white_actions.is_empty() and not black_actions.is_empty():
 		resolve_turn()
 # --- Helper Functions ---

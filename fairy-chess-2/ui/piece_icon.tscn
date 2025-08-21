@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://bg7wo0pfi0oso"]
 
-[ext_resource type="Script" uid="uid://1u8dl2oer0bt" path="res://scenes/ui/piece_icon.gd" id="1_b56i2"]
+[ext_resource type="Script" uid="uid://1u8dl2oer0bt" path="res://ui/piece_icon.gd" id="1_b56i2"]
 
 [node name="PieceIcon" type="TextureRect"]
 script = ExtResource("1_b56i2")
