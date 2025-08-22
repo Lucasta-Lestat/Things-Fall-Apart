@@ -5,6 +5,7 @@ extends Node
 # Get references to all the audio player nodes
 @onready var music_player = $MusicPlayer
 @onready var move_sfx = $MoveSFX
+@onready var spawn_sfx = $SpawnSFX 
 @onready var capture_sfx = $CaptureSFX
 @onready var promote_sfx = $PromoteSFX
 @onready var shoot_sfx = $RifleSFX
@@ -25,6 +26,8 @@ func play_sfx(sfx_name):
 	match sfx_name:
 		"move":
 			move_sfx.play()
+		"spawn":
+			spawn_sfx.play()
 		"capture":
 			capture_sfx.play()
 		"promote":
@@ -35,3 +38,4 @@ func play_sfx(sfx_name):
 			cannon_sfx.play()
 		"win":
 			game_over_sfx.play()
+		

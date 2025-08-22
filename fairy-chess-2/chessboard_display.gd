@@ -1,14 +1,15 @@
 # chessboard_display.gd
 # Handles drawing the board, pieces, and player input on the board.
 
-extends Control # <-- CRITICAL CHANGE: Changed from Node2D to Control
+extends Control 
 
 const TILE_SIZE = 80 # Size of each square in pixels
 const BOARD_SIZE = 6
 const MAX_PEASANTS = 4
 const MAX_NON_PEASANTS = 4
 
-@onready var game_board = get_node("../../../GameBoard")
+@onready var game_board = get_node("../../../../GameBoard")
+@onready var audio_manager = get_node("../../../../AudioManager")
 @onready var highlight_layer = $HighlightLayer
 
 # --- Gameplay State ---
@@ -112,6 +113,7 @@ func _draw():
 func place_piece_on_board(data, grid_pos):
 	var piece_scene = load(data.scene_path).instantiate()
 	add_child(piece_scene)
+	audio_manager.play_sfx("spawn")
 	
 	# Pass the TILE_SIZE to the setup function
 	piece_scene.setup_piece(data.piece_type, data.color, data.get("is_royal", false), TILE_SIZE)
@@ -133,12 +135,31 @@ func _on_piece_spawned(piece_node, grid_pos):
 	piece_node.position = grid_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 # --- Input Handling (for dropping pieces during setup) ---
 func _can_drop_data(at_position, data) -> bool:
-	var grid_pos = (at_position / TILE_SIZE).floor()
+	print("DEBUG: _can_drop_data called")
+	print("at_position: ", at_position )
+	var global_mouse_pos = get_viewport().get_mouse_position()
+	"
+	var global_mouse_pos = get_viewport().get_mouse_position()
+	var board_global_pos = self.global_position
+	var local_mouse_pos = global_mouse_pos - board_global_pos
+	
+	# Calculate the grid position based on the local coordinates.
+	var grid_pos = (local_mouse_pos / chessboard_display.TILE_SIZE).floor()
+	
+	"
+	print("global_mouse_pos in chessboard_display: ", global_mouse_pos)
+	print("self.global_position in chessboard display", self.global_position)
+	var local_mouse_pos = global_mouse_pos - self.global_position
+	print("local_mouse_pos in chessboard display: ",local_mouse_pos)
+	var grid_pos = (local_mouse_pos / TILE_SIZE).floor()
+	print("grid_pos in chessboard display: ", grid_pos)
 	if not game_board.is_valid_square(grid_pos) or game_board.board[grid_pos.x][grid_pos.y] != null:
+		print("NOT A VALID SQUARE OR NULL AT THAT POS")
 		return false
 	if game_board.game_phase == "setup":
 		if not data is Dictionary or not data.has("piece_type"): return false
 		if not game_board.is_valid_square(grid_pos) or game_board.board[grid_pos.x][grid_pos.y] != null:
+			print("NOT A VALID SQUARE OR NULL AT THAT POS")
 			return false
 		var placer = game_board.setup_placer
 		var placer_counts = game_board.white_placed_pieces if placer == "white" else game_board.black_placed_pieces
@@ -149,7 +170,10 @@ func _can_drop_data(at_position, data) -> bool:
 		var second_row = 4 if placer == "white" else 1
 		# Rule: Check if the piece is being placed on its correct row.
 		if is_peasant:
+			print("attempting to place peasant")
+			print("peasant grid_pos.y: ", grid_pos.y)
 			# Peasants go on the second row.
+			print("second row: ", second_row)
 			if grid_pos.y != second_row:
 				return false
 		else:
@@ -179,9 +203,18 @@ func _can_drop_data(at_position, data) -> bool:
 		if not is_peasant and grid_pos.y == back_row: return true
 	return false
 func _drop_data(at_position, data):
-	var grid_pos = (at_position / TILE_SIZE).floor()
+	print("DEBUG: _drop_data called")
+	var reliable_mouse_pos = get_viewport().get_mouse_position()
+	print("mous pos from viewport: ", reliable_mouse_pos)
+	var local_pos = reliable_mouse_pos - self.global_position
+	var grid_pos = (local_pos / TILE_SIZE).floor()
+	print("local_pos: ",local_pos)
+	print("self.global_position: ", self.global_position)
+	#print("global_position: ", global_position)
+	print("grid_pos: ", grid_pos)
 	if game_board.game_phase == "setup":
 		place_piece_on_board(data, grid_pos)
+		
 	elif game_board.game_phase == "playing":
 		# Declare a "spawn" action. This counts as the player's move.
 		game_board.declare_action(null, {"action": "spawn", "data": data, "target": grid_pos})

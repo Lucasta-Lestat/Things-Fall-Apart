@@ -291,6 +291,7 @@ func place_piece(piece_scene, grid_pos):
 			
 	setup_placer = "black" if setup_placer == "white" else "white"
 	emit_signal("setup_state_changed")
+	
 
 # --- Public Methods (Gameplay) ---
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bsuoy0ishctwb"]
+[gd_scene load_steps=22 format=3 uid="uid://bsuoy0ishctwb"]
 
 [ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
 [ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
@@ -19,10 +19,8 @@
 [ext_resource type="AudioStream" uid="uid://c2t50oo75x05j" path="res://Sounds/rifle.mp3" id="14_vl6e3"]
 [ext_resource type="AudioStream" uid="uid://ditfsafvcxmgx" path="res://Sounds/cannon.mp3" id="15_jwrwn"]
 [ext_resource type="AudioStream" uid="uid://bxy8shyxwgad0" path="res://Sounds/peppy jazz.mp3" id="16_au1l4"]
-[ext_resource type="AudioStream" uid="uid://87vu5trqxvfw" path="res://Sounds/spawn.mp3" id="16_dvlb2"]
-[ext_resource type="AudioStream" uid="uid://cxn40q8woitd3" path="res://Sounds/move.mp3" id="17_qcuxe"]
+[ext_resource type="AudioStream" uid="uid://87vu5trqxvfw" path="res://spawn.mp3" id="16_dvlb2"]
 [ext_resource type="AudioStream" uid="uid://cc4amikeyydfl" path="res://Sounds/promote.mp3" id="18_jwrwn"]
-[ext_resource type="AudioStream" uid="uid://cq3vkptucs0jg" path="res://Sounds/win sound.mp3" id="22_guhtp"]
 
 [node name="FairyChess" type="Node2D"]
 
@@ -176,33 +174,26 @@ script = ExtResource("13_6kral")
 
 [node name="SpawnSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("16_dvlb2")
-volume_db = 20.0
 
 [node name="MoveSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
-stream = ExtResource("17_qcuxe")
-volume_db = 20.0
+volume_db = 3.714
 
 [node name="CaptureSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("14_jwrwn")
-volume_db = 24.0
 
 [node name="RifleSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("14_vl6e3")
-volume_db = 24.0
 
 [node name="CannonSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("15_jwrwn")
-volume_db = 24.0
 
 [node name="MusicPlayer" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("16_au1l4")
 
 [node name="WinSound" type="AudioStreamPlayer2D" parent="AudioManager"]
-stream = ExtResource("22_guhtp")
 
 [node name="PromoteSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("18_jwrwn")
-volume_db = 24.0
 
 [connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="GameBoard" method="_on_start_button_pressed"]
 [connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="UI" method="_on_start_button_pressed"]

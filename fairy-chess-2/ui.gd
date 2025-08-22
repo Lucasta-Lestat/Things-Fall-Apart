@@ -7,12 +7,12 @@ extends CanvasLayer
 # --- Nodes ---
 @onready var game_board = get_node("../GameBoard")
 #
-@onready var white_piece_panel = $HBoxContainer/WhiteScrollContainer/VBoxContainer
-@onready var black_piece_panel = $HBoxContainer/BlackScrollContainer/VBoxContainer
-@onready var start_button = $GameOverlayUI/StartButton
-@onready var game_state_label = $GameOverlayUI/GameStateLabel
-@onready var setup_turn_label = $GameOverlayUI/SetupTurnLabel
-@onready var player_turn_label = $GameOverlayUI/PlayerTurnLabel # Add a new Label node for this
+@onready var white_piece_panel = $CenterContainer/HBoxContainer/WhiteScrollContainer/VBoxContainer
+@onready var black_piece_panel = $CenterContainer/HBoxContainer/BlackScrollContainer/VBoxContainer
+@onready var start_button = $GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton
+@onready var game_state_label = $GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels/GameStateLabel
+@onready var setup_turn_label = $GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels/SetupTurnLabel
+@onready var player_turn_label = $GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels/PlayerTurnLabel 
 
 # --- Preload Scenes ---
 var piece_icon_scene = preload("res://ui/piece_icon.tscn")
@@ -69,14 +69,14 @@ func _on_spawn_credits_changed(white_credits, black_credits):
 		print("DEBUG: on_spawn_credits_changed called")
 		if white_credits.size() > 0:
 			print("DEBUG: showing white piece panel and calling populate_piece_panels")
-			get_node("HBoxContainer/WhiteScrollContainer").visible = true
+			get_node("CenterContainer/HBoxContainer/WhiteScrollContainer").visible = true
 			white_piece_panel.visible = true
 			populate_piece_panels(white_piece_panel, "white", white_credits, true)
 		else:
 			white_piece_panel.visible = false
 		if black_credits.size() > 0:
 			print("DEBUG: showing black piece panel and calling populate_piece_panels")
-			get_node("HBoxContainer/BlackScrollContainer").visible = true
+			get_node("CenterContainer/HBoxContainer/BlackScrollContainer").visible = true
 			black_piece_panel.visible = true
 			populate_piece_panels(black_piece_panel, "black", black_credits, true)
 		else:
@@ -88,14 +88,14 @@ func _on_game_state_changed(new_state):
 	match new_state:
 		"setup":
 			start_button.disabled = true
-			get_node("HBoxContainer/WhiteScrollContainer").visible = true # Show setup panels
-			get_node("HBoxContainer/BlackScrollContainer").visible = true
+			get_node("CenterContainer/HBoxContainer/WhiteScrollContainer").visible = true # Show setup panels
+			get_node("CenterContainer/HBoxContainer/BlackScrollContainer").visible = true
 			setup_turn_label.visible = true
 			player_turn_label.visible = false
 		"playing":
 			start_button.disabled = true
-			get_node("HBoxContainer/BlackScrollContainer").visible = false # Hide setup panels
-			get_node("HBoxContainer/WhiteScrollContainer").visible = false
+			get_node("CenterContainer/HBoxContainer/BlackScrollContainer").visible = false # Hide setup panels
+			get_node("CenterContainer/HBoxContainer/WhiteScrollContainer").visible = false
 			setup_turn_label.visible = false
 			player_turn_label.visible = true
 		"game_over":
