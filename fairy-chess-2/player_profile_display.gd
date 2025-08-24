@@ -18,7 +18,7 @@ func set_profile(profile_data):
 	print("DEBUG: name_label.text = ", name_label.text)
 	
 	var portrait_path = profile_data.get("portrait", "")
-	print("DEBUG: portrait_path = ", portrait_path)
+	print("DEBUG: portrait_path = ", portrait_path, " File exists: ", FileAccess.file_exists(portrait_path))
 	if FileAccess.file_exists(portrait_path):
 		portrait.texture = load(portrait_path)
 	else:

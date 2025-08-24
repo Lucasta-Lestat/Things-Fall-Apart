@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cpnv7qahifx24"]
+
+[ext_resource type="Script" uid="uid://cq41rjhj8qaw4" path="res://scenes/pieces/minister.gd" id="1_1iumi"]
+
+[node name="Minister" type="Node2D"]
+script = ExtResource("1_1iumi")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

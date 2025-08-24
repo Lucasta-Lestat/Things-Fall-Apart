@@ -33,8 +33,9 @@ var setup_placer = "white" # Who is currently placing a piece
 var white_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
 var black_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
  #Get profiles from the global PlayerDatabase 
-var white_profile = PlayerDatabase.get_profile("god")
-var black_profile = PlayerDatabase.get_profile("Zionis")
+var white_profile = PlayerDatabase.get_profile("Hanub")
+#print("DEBUG: white_profile: ", white_profile)
+var black_profile = PlayerDatabase.get_profile("Saratov")
 # --- Special Game State ---
 var phased_out_pieces = {} # {piece: turns_to_return} for Valkyrie
 var en_passant_target_square = Vector2.ZERO
@@ -42,6 +43,7 @@ var en_passant_target_square = Vector2.ZERO
 # --- Initialization ---
 func _ready():
 	print("white_profile: ", white_profile)
+	print("black_profile: ", black_profile)
 
 	initialize_board()
 	emit_signal("game_state_changed", game_phase)

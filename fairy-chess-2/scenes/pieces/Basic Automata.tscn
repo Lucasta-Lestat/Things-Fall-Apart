@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cj2hshj371jo2"]
+
+[ext_resource type="Script" uid="uid://bwegjea1i6ahi" path="res://scenes/pieces/basic_automata.gd" id="1_sf50o"]
+
+[node name="Basic Automata" type="Node2D"]
+script = ExtResource("1_sf50o")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

@@ -3,7 +3,7 @@
 
 extends Control 
 
-const TILE_SIZE = 80 # Size of each square in pixels
+const TILE_SIZE = 100 # Size of each square in pixels
 const BOARD_SIZE = 6
 const MAX_PEASANTS = 4
 const MAX_NON_PEASANTS = 4
@@ -177,6 +177,7 @@ func _on_piece_spawned(piece_node, grid_pos):
 	piece_node.position = grid_pos * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2)
 # --- Input Handling (for dropping pieces during setup) ---
 func _can_drop_data(at_position, data) -> bool:
+	print("DEBUG: data : ",data )
 	#print("DEBUG: _can_drop_data called")
 	#print("at_position: ", at_position )
 	var global_mouse_pos = get_viewport().get_mouse_position()

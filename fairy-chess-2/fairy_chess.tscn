@@ -61,9 +61,13 @@ alignment = 1
 layout_mode = 2
 size_flags_horizontal = 4
 
+[node name="TopSpacer" type="Control" parent="UI/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
 [node name="HBoxContainer" type="HBoxContainer" parent="UI/CenterContainer/VBoxContainer"]
 visibility_layer = 3
-custom_minimum_size = Vector2(800, 0)
+custom_minimum_size = Vector2(920, 0)
 layout_mode = 2
 mouse_filter = 2
 
@@ -77,7 +81,7 @@ mouse_default_cursor_shape = 2
 layout_mode = 2
 
 [node name="ChessboardDisplay" type="Control" parent="UI/CenterContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(480, 480)
+custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 size_flags_horizontal = 0
 mouse_default_cursor_shape = 3
@@ -116,6 +120,10 @@ mouse_default_cursor_shape = 2
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
+
+[node name="BottomSpacer" type="Control" parent="UI/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
 
 [node name="WhiteProfileDisplay" parent="UI/CenterContainer/VBoxContainer" instance=ExtResource("4_guhtp")]
 layout_mode = 2

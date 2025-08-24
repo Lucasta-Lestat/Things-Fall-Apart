@@ -17,3 +17,4 @@ layout_mode = 2
 [node name="NameLabel" type="Label" parent="."]
 layout_mode = 2
 text = "Player  Name"
+horizontal_alignment = 1

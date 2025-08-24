@@ -4,7 +4,7 @@
 
 extends Control
 
-const TILE_SIZE = 80
+const TILE_SIZE = 100
 const BOARD_SIZE = 6
 # --- Textures for UI Highlights ---
 @onready var promotion_icon = preload("res://ui/promotion icon.png")

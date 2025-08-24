@@ -20,7 +20,7 @@ var piece_icon_scene = preload("res://ui/piece_icon.tscn")
 
 # A dictionary defining all the pieces available for selection.
 #define a standard size for all icons.
-const ICON_SIZE = Vector2(70,140 )
+const ICON_SIZE = Vector2(90,180 )
 
 func _ready():
 	# Connect to the game board's signals
@@ -67,7 +67,7 @@ func _on_game_state_changed(new_state):
 			get_node("CenterContainer/VBoxContainer/HBoxContainer/BlackScrollContainer/VBoxContainer").visible = true
 			setup_turn_label.visible = true
 			player_turn_label.visible = false
-			# --- Hide profile displays during setup ---
+			update_profile_displays()
 			white_profile_display.visible = true
 			black_profile_display.visible = true
 		"playing":

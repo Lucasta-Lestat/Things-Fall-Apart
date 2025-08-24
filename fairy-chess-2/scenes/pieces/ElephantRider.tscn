@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://co80m1xg26bc2"]
+
+[ext_resource type="Script" uid="uid://cfrfr3hxtl6o6" path="res://scenes/pieces/elephant_rider.gd" id="1_c2lo3"]
+
+[node name="ElephantRider" type="Node2D"]
+script = ExtResource("1_c2lo3")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
