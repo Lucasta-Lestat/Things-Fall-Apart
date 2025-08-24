@@ -32,24 +32,17 @@ var black_spawn_credits = {}
 var setup_placer = "white" # Who is currently placing a piece
 var white_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
 var black_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
-
+ #Get profiles from the global PlayerDatabase 
+var white_profile = PlayerDatabase.get_profile("god")
+var black_profile = PlayerDatabase.get_profile("Zionis")
 # --- Special Game State ---
 var phased_out_pieces = {} # {piece: turns_to_return} for Valkyrie
 var en_passant_target_square = Vector2.ZERO
-const PIECE_SCENES = {
-	"Pawn": "res://scenes/pieces/Pawn.tscn",
-	"Kulak": "res://scenes/pieces/Kulak.tscn",
-	"Valkyrie": "res://scenes/pieces/Valkyrie.tscn",
-	"Monk": "res://scenes/pieces/Monk.tscn",
-	"Rifleman": "res://scenes/pieces/Rifleman.tscn",
-	"Gorgon": "res://scenes/pieces/Gorgon.tscn",
-	"Nightrider": "res://scenes/pieces/Nightrider.tscn",
-	"Pontifex": "res://scenes/pieces/Pontifex.tscn",
-	"Chancellor": "res://scenes/pieces/Chancellor.tscn",
-	"Bishop": "res://scenes/pieces/Bishop.tscn" # Assuming a standard Bishop scene exists for promotion
-}
+
 # --- Initialization ---
 func _ready():
+	print("white_profile: ", white_profile)
+
 	initialize_board()
 	emit_signal("game_state_changed", game_phase)
 	emit_signal("turn_info_changed", "White to move.")
@@ -236,7 +229,8 @@ func resolve_turn():
 			var pos = destinations.get(pawn, pawn.grid_position)
 			var color = pawn.color
 			var new_type = promo_action.promote_to
-			var new_piece_scene = load(PIECE_SCENES[new_type]).instantiate()
+			
+			var new_piece_scene = load(PlayerDatabase.PIECE_DEFINITIONS[new_type]["scene"]).instantiate()
 			print("Attempted to instantiate new piece for promotion")
 			new_piece_scene.add_to_group("pieces")
 			new_piece_scene.setup_piece(new_type, color, false, 80)
@@ -282,13 +276,8 @@ func place_piece(piece_scene, grid_pos):
 	
 	var placer_counts = white_placed_pieces if setup_placer == "white" else black_placed_pieces
 	
-	if piece_data.piece_type in ["Pawn", "Kulak"]:
-		placer_counts.peasant += 1
-	else:
-		placer_counts.non_peasant += 1
-		if piece_data.is_royal:
-			placer_counts.royal += 1
-			
+	placer_counts[piece_data.piece_type] = placer_counts.get(piece_data.piece_type, 0) + 1
+
 	setup_placer = "black" if setup_placer == "white" else "white"
 	emit_signal("setup_state_changed")
 	
@@ -312,7 +301,7 @@ func declare_action(piece, action_data):
 		
 		if color == "white" and white_spawn_credits.get(piece_type, 0) > 0:
 			white_spawn_credits[piece_type] -= 1
-			var new_piece = load(PIECE_SCENES[piece_type]).instantiate()
+			var new_piece = load(PlayerDatabase.PIECE_DEFINITIONS[piece_type]).instantiate()
 			new_piece.setup_piece(piece_type, color, false, 80)
 			new_piece.grid_position = action_data.target
 			board[action_data.target.x][action_data.target.y] = new_piece
@@ -322,7 +311,7 @@ func declare_action(piece, action_data):
 			emit_signal("turn_info_changed", "Black to move.")
 		elif color == "black" and black_spawn_credits.get(piece_type, 0) > 0:
 			black_spawn_credits[piece_type] -= 1
-			var new_piece = load(PIECE_SCENES[piece_type]).instantiate()
+			var new_piece = load(PlayerDatabase.PIECE_DEFINITIONS[piece_type]).instantiate()
 			new_piece.setup_piece(piece_type, color, false, 80)
 			new_piece.grid_position = action_data.target
 			board[action_data.target.x][action_data.target.y] = new_piece
@@ -343,6 +332,18 @@ func declare_action(piece, action_data):
 	if not white_actions.is_empty() and not black_actions.is_empty():
 		resolve_turn()
 # --- Helper Functions ---
+func get_profile_piece_counts(profile):
+	var counts = {"peasant": 0, "non_peasant": 0}
+	if not profile: return counts # Safety check
+	
+	for piece_type in profile.peasants:
+		counts.peasant += profile.peasants[piece_type]
+	for piece_type in profile.nobles:
+		counts.non_peasant += profile.nobles[piece_type]
+	for piece_type in profile.royals:
+		counts.non_peasant += profile.royals[piece_type]
+	return counts
+
 func calculate_move_path(start_pos, end_pos):
 	var path = []
 	var delta = end_pos - start_pos

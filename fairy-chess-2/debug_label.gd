@@ -4,7 +4,7 @@
 extends Label
 
 # We need a reference to the chessboard to get its global position.
-@onready var chessboard_display = get_node("/root/FairyChess/UI/CenterContainer/HBoxContainer/ChessboardDisplay")
+@onready var chessboard_display = get_node("/root/FairyChess/UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay")
 
 func _process(delta):
 	# Get the three key pieces of information every frame.

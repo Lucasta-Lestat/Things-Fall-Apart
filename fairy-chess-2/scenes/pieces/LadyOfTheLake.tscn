@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://b3plns82t0yyf"]
+
+[ext_resource type="Script" uid="uid://c7rb7g6o3cgd" path="res://scenes/pieces/lady_of_the_lake.gd" id="1_8gcmv"]
+
+[node name="LadyOfTheLake" type="Node2D"]
+script = ExtResource("1_8gcmv")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

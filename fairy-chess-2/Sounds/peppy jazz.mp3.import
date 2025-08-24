@@ -2,7 +2,7 @@
 
 importer="mp3"
 type="AudioStreamMP3"
-uid="uid://bxy8shyxwgad0"
+uid="uid://c8hd3ixm6bsrw"
 path="res://.godot/imported/peppy jazz.mp3-b6c1d129a0d993597704669e15d36f35.mp3str"
 
 [deps]
@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/peppy jazz.mp3-b6c1d129a0d993597704669e15d36f
 
 [params]
 
-loop=true
+loop=false
 loop_offset=0
 bpm=0
 beat_count=0

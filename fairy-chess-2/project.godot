@@ -13,7 +13,11 @@ config_version=5
 config/name="Fairy Chess 2"
 run/main_scene="uid://bsuoy0ishctwb"
 config/features=PackedStringArray("4.4", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="uid://dp0l84g02y328"
+
+[autoload]
+
+PlayerDatabase="*res://Global/player_database.gd"
 
 [display]
 
