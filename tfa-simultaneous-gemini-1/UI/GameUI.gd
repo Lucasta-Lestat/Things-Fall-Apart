@@ -48,12 +48,8 @@ func _create_character_ui(character: CombatCharacter):
 
 	var char_ui = CharacterUI_Scene.instantiate()
 	character_ui_container.add_child(char_ui)
-	
-	# 1. Wait for the new node to be fully ready in the scene tree.
-	# This ensures its own @onready vars are set before we proceed.
 	await char_ui.ready
 	
-	# 2. Inject the dependency. Pass the "real" combat manager to the UI instance.
 	char_ui.combat_manager = self.combat_manager
 	
 	# 3. Now that the UI has its manager, it's safe to call its setup function.
@@ -75,16 +71,16 @@ func _on_round_started():
 
 func _on_planning_phase_started():
 	# Show enemy intents when the player starts planning
+	# Show the full visual plan for all enemies.
 	for char in combat_manager.enemy_party:
 		if is_instance_valid(char) and char.current_health > 0:
-			char.show_enemy_intent()
+			char.update_all_visual_previews()
 
 func _on_resolution_phase_started():
 	# Hide all previews and silhouettes when resolution starts
 	for char in combat_manager.all_characters_in_combat:
 		if is_instance_valid(char):
 			char.hide_previews()
-			char.hide_planned_move_silhouette()
 
 func _on_ap_slot_resolved(slot_index: int):
 	for char_ui in character_ui_map.values():
@@ -92,17 +88,11 @@ func _on_ap_slot_resolved(slot_index: int):
 
 func _on_player_selection_changed(selected_chars: Array[CombatCharacter]):
 	# Hide all previews first
-	for char in combat_manager.all_characters_in_combat:
-		if is_instance_valid(char):
-			char.hide_previews()
-			# Keep enemy intents visible during planning
-			if char.allegiance == CombatCharacter.Allegiance.ENEMY and combat_manager.current_combat_state == CombatManager.CombatState.PLANNING:
-				char.show_enemy_intent()
-
-	# Show previews for the newly selected characters
-	for char in selected_chars:
-		if is_instance_valid(char):
-			char.show_all_planned_action_previews()
+	for char in combat_manager.player_party:
+		char.update_all_visual_previews()
+	print('on_player_selection_changed run')
+	#print("not currently using _on_player_selection_changed, will display abilities with it later")
+	pass
 
 func _on_combat_ended(_winner):
 	for char_ui in character_ui_map.values():

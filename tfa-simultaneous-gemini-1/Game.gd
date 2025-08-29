@@ -120,7 +120,8 @@ func create_custom_character(character_id: String, position: Vector2, overrides:
 
 func _on_player_selection_changed_for_camera(selected_chars: Array[CombatCharacter]):
 	print("DEBUG: Camera selection changed. Selected chars count: ", selected_chars.size())
-	
+	for character in characters_container.get_children():
+		character._update_selection_visual()
 	if not selected_chars.is_empty() and player_input_manager and is_instance_valid(player_input_manager.primary_selected_character):
 		print("DEBUG: Following primary selected character: ", player_input_manager.primary_selected_character.character_name)
 		_set_camera_target(player_input_manager.primary_selected_character)

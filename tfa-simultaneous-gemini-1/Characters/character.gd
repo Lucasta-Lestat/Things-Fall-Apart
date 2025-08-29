@@ -2,7 +2,7 @@
 extends CharacterBody2D
 class_name CombatCharacter
 
-# --- Signals (No Changes) ---
+# --- Signals 
 signal planned_action_for_slot(character: CombatCharacter, ap_slot_index: int, action: PlannedAction)
 signal no_more_ap_to_plan(character: CombatCharacter) # Ran out of AP or slots this planning turn
 signal health_changed(new_health: int, max_health: int, char: CombatCharacter)
@@ -13,32 +13,20 @@ enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 
 # The character_id is the primary way to configure a character.
 # Setting it will trigger _apply_character_data to load from the database.
-@export var character_id: String = "": 
-	set = set_character_id
+@export var character_id: String = ""
 
 # These properties are populated by _apply_character_data. 
 # They are exported to allow for quick prototyping or debugging directly in the scene,
 # but the database is the primary source of truth.
-@export var character_name: String = "Character": set = _set_character_name
+@export var character_name: String = "Character"
 @export var allegiance: Allegiance = Allegiance.PLAYER
 @export var max_health: int = 100
 @export var dexterity: int = 10
 @export var max_ap_per_round: int = 4
 
-var current_health: int:
-	get: return current_health
-	set(value):
-		var old_health = current_health
-		current_health = clamp(value, 0, max_health)
-		# The character's only job is to emit a signal that its health changed.
-		# It is the UI's job to listen for this and update itself.
-		if current_health != old_health:
-			emit_signal("health_changed", current_health, max_health, self)
-		if current_health == 0 and old_health > 0:
-			emit_signal("died", self)
-			_handle_death()
+var current_health = max_health
 
-var current_ap_for_planning: int = 0
+@export var current_ap_for_planning: int = 0
 
 # --- Abilities & Planning ---
 @export var abilities: Array[Ability] = []
@@ -46,10 +34,7 @@ var current_ap_for_planning: int = 0
 var planned_actions: Array[PlannedAction] = []
 
 # --- State ---
-var is_selected: bool = false:
-	set(value):
-		is_selected = value
-		_update_selection_visual()
+var is_selected: bool = false
 
 # --- Movement ---
 @export var move_speed: float = 150.0
@@ -60,12 +45,13 @@ var is_moving: bool = false
 @onready var nav_agent: NavigationAgent2D = $NavAgent
 # In-world previews are part of the character's scene, not the UI layer. This is correct.
 @onready var action_preview_line: Line2D = $ActionPreviewLine
+@onready var move_path_line: Line2D = $MovePathLine
 @onready var aoe_preview_shape: Polygon2D = $AOEPreviewShape
+
 
 var combat_manager: CombatManager
 var selection_indicator: Sprite2D
-var planned_move_silhouette: Sprite2D
-
+var move_silhouette_nodes: Array[Sprite2D] = []
 # --- Initialization ---
 
 func _ready():
@@ -73,7 +59,6 @@ func _ready():
 	if not character_id.is_empty():
 		_apply_character_data()
 
-	# Initialize health. The setter will emit health_changed for the UI to catch.
 	self.current_health = max_health
 
 	# Ensure planned_actions is initialized to the correct size with nulls
@@ -84,7 +69,7 @@ func _ready():
 
 	# Create in-world visuals that are part of this character's scene
 	_create_selection_indicator()
-	_create_planned_move_silhouette()
+	_create_move_silhouette_pool()
 
 	# Connect nav_agent signals
 	nav_agent.path_desired_distance = 5.0
@@ -99,9 +84,12 @@ func set_character_id(value: String):
 	_apply_character_data()
 
 func _apply_character_data():
+	print("_apply_character_data called")
 	if character_id.is_empty(): return
-		
+	
+	print("character_id is not empy, _apply_character_data did not return")
 	var char_data = CharacterDatabase.get_character_data(character_id)
+	print("char_data: ", char_data.display_name, " ", char_data.allegiance, " ", char_data.base_health, " ",char_data.base_dexterity, " ", char_data.base_ap)
 	if not char_data:
 		printerr("Could not find character data for ID: ", character_id)
 		return
@@ -112,6 +100,7 @@ func _apply_character_data():
 	max_health = char_data.base_health
 	dexterity = char_data.base_dexterity
 	max_ap_per_round = char_data.base_ap
+	
 	
 	# This will trigger the setter and emit the signal for the UI
 	self.current_health = max_health 
@@ -133,8 +122,7 @@ func _load_default_abilities(ability_ids: Array[String]):
 			print("Warning: Could not load ability: ", ability_path)
 func _set_character_name(new_name: String):
 	character_name = new_name
-	# Set the node's name for easier debugging in the scene tree.
-	# No longer responsible for updating a UI label.
+	
 	name = character_name
 
 func _create_selection_indicator():
@@ -146,14 +134,19 @@ func _create_selection_indicator():
 	await get_tree().process_frame # Wait a frame for sprite texture to be loaded
 	_position_selection_indicator()
 
-func _create_planned_move_silhouette():
-	planned_move_silhouette = Sprite2D.new()
-	planned_move_silhouette.texture = sprite.texture
-	planned_move_silhouette.scale = sprite.scale
-	planned_move_silhouette.modulate = Color(1, 1, 1, 0.4)
-	planned_move_silhouette.visible = false
-	planned_move_silhouette.z_index = -1
-	add_child(planned_move_silhouette)
+func _create_move_silhouette_pool():
+	# Wait for the main sprite's texture to be available
+	if not sprite.texture: await sprite.texture_changed 
+	
+	for i in range(max_ap_per_round):
+		var silhouette = Sprite2D.new()
+		silhouette.texture = sprite.texture
+		silhouette.scale = sprite.scale
+		silhouette.modulate = Color(1, 1, 1, 0.4)
+		silhouette.visible = false # All silhouettes start hidden
+		silhouette.z_index = -1
+		add_child(silhouette)
+		move_silhouette_nodes.append(silhouette)
 
 # --- Physics & Movement ---
 
@@ -174,6 +167,7 @@ func _stop_movement():
 	print_debug(character_name, " reached destination or stopped.")
 
 func start_round_reset():
+
 	current_ap_for_planning = max_ap_per_round
 	for i in range(planned_actions.size()):
 		planned_actions[i] = null # Clear actions for new round
@@ -182,7 +176,7 @@ func start_round_reset():
 		var action = planned_actions[action_slot_idx]
 		if action and (action.is_multi_ap_charge_segment or action.is_final_segment_of_multi_ap):
 			action.ap_spent_on_charge = 0 # Reset charge progress
-	hide_previews()
+	update_all_visual_previews()
 
 
 func get_next_available_ap_slot_index() -> int:
@@ -260,14 +254,15 @@ func plan_ability_use(ability: Ability, ap_slot_to_start_planning_at: int, p_tar
 		# NEW: After planning, update the silhouette if a move was planned
 	if ability.id == &"move":
 		print("DEBUG: Attempting to show silhoutte")
-		show_planned_move_silhouette(p_target_pos)
+		print("p_target_pos (to compare to sil.global_position): ",p_target_pos)
+		update_all_visual_previews()
 	
 	# NEW: Update all previews for this character
-	show_all_planned_action_previews()
 	if slots_actually_can_fill > 0:
 		print_debug(character_name, " planned '", ability.display_name, "' consuming ", slots_actually_can_fill, " AP slots. Remaining planning AP: ", current_ap_for_planning)
 	
 	if get_next_available_ap_slot_index() == -1 or current_ap_for_planning == 0:
+		print(self.character_name, "has no more ap to plan #turn resolution")
 		emit_signal("no_more_ap_to_plan", self)
 	
 # Helper to find the main "root" action for a multi-AP ability, given one of its segments
@@ -326,29 +321,31 @@ func clear_planned_actions_from_slot(start_slot_index: int, refund_ap: bool):
 	current_ap_for_planning = min(current_ap_for_planning, max_ap_per_round) # Cap refund
 	if ap_refunded > 0:
 		print_debug(character_name, " cleared ", ap_refunded, " AP slots from index ", start_slot_index, ". Planning AP now: ", current_ap_for_planning)
-	hide_previews()
+	update_all_visual_previews()
 
 
 func execute_planned_action(action: PlannedAction):
 	if not action or action.caster != self: return
 	if current_health <= 0:
-		print_debug(character_name, " is defeated, cannot execute ", action.to_string())
+		print_debug(character_name, " is defeated, cannot execute ", action.to_string(), "#turn resoultion")
 		return
 
-	print_rich("[b]", character_name, "[/b] (DEX:",action.dex_snapshot,") executes: ", action.to_string())
+	print_rich("[b]", character_name, "[/b] (DEX:",action.dex_snapshot,") executes: ", action.to_string(), "")
 	var ability_resource: Ability = null
 	if action.action_type == PlannedAction.ActionType.USE_ABILITY or \
 	   (action.action_type == PlannedAction.ActionType.MOVE and action.ability_id == &"move"): # Move is an ability
 		ability_resource = get_ability_by_id(action.ability_id)
-
+	print("attempting to match action type #turn resolution")
 	match action.action_type:
 		PlannedAction.ActionType.MOVE:
-			if nav_agent:
-				is_moving = true
-				nav_agent.target_position = action.target_position
-				# print_debug("  ", character_name, " moving to ", action.target_position)
-			else: # Fallback direct move
-				global_position = action.target_position
+			print("Implment Nav Agent later")
+			#if nav_agent:
+			#	is_moving = true
+			#	nav_agent.target_position = action.target_position
+			#	print_debug("  ", character_name, " moving to ", action.target_position)
+			#else: # Fallback direct move
+			print("updating character's global position for move #turn resolution")
+			global_position = action.target_position
 			# Play move animation
 			# sprite.play("walk")
 		
@@ -464,16 +461,56 @@ func _ai_plan_wait(slot_idx: int):
 		emit_signal("planned_action_for_slot", self, slot_idx, wait_action)
 		# print_debug(character_name, " (AI) planned WAIT in slot ", slot_idx)
 
-
 # --- UI Previews ---
+func update_all_visual_previews():
+	"""
+	Redraws every silhouette and targeting line based on the current plan.
+	It now uses a separate Line2D for the movement path vs. the action target.
+	"""
+	# 1. Start fresh by hiding everything
+	hide_previews() # This should also hide move_path_line now
+	action_preview_line.visible = false
+	move_path_line.visible = false
+
+	# 2. Draw Silhouettes & Build the Movement Path
+	var silhouette_index = 0
+	var path_points = [to_local(global_position)] # Start path from current position
+
+	for action in planned_actions:
+		if action and action.action_type == PlannedAction.ActionType.MOVE:
+			if silhouette_index < move_silhouette_nodes.size():
+				var sil = move_silhouette_nodes[silhouette_index]
+				sil.global_position = action.target_position
+				sil.visible = true
+				path_points.append(to_local(action.target_position)) # Add move destination to path
+				silhouette_index += 1
+	
+	# If any moves were planned, draw the path connecting them
+	if path_points.size() > 1:
+		move_path_line.points = path_points
+		move_path_line.visible = true
+
+	# 3. Draw the Final Action Preview Line (for attacks, etc.)
+	# This loop finds the *last* non-move, non-wait action and draws its preview.
+	for i in range(planned_actions.size() - 1, -1, -1): # Iterate backwards
+		var action = planned_actions[i]
+		if action and action.action_type == PlannedAction.ActionType.USE_ABILITY:
+			var ability = get_ability_by_id(action.ability_id)
+			if ability:
+				var caster_pos = get_planned_position_for_slot(i)
+				var target_pos = action.target_position
+				if is_instance_valid(action.target_character):
+					target_pos = action.target_character.global_position
+
+				_draw_persistent_preview(ability, caster_pos, target_pos)
+				break # We only draw the last one to avoid visual clutter
+				
 func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, for_ap_slot: int):
-	#hide_previews()
 	print("DEBUG: show_ability_preview triggered")
 	#if not ability or not CombatManager or CombatManager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if not ability or not combat_manager or combat_manager.current_combat_state != CombatManager.CombatState.PLANNING: return
 	if for_ap_slot == -1 : return # Not a valid slot for planning
 
-	#var caster_pos = global_position
 	# MODIFIED: Caster position is now based on the plan
 	var caster_pos = get_planned_position_for_slot(for_ap_slot)
 	var color = Color.YELLOW
@@ -511,10 +548,17 @@ func _draw_aoe_circle(center_local_pos: Vector2, radius: float):
 		points.append(center_local_pos + Vector2(cos(angle), sin(angle)) * radius)
 	aoe_preview_shape.polygon = points
 
+
 func hide_previews():
 	action_preview_line.visible = false
 	aoe_preview_shape.visible = false
-
+	# ADD THIS LINE
+	if move_path_line: move_path_line.visible = false
+	
+	if not move_silhouette_nodes.is_empty():
+		for silhouette in move_silhouette_nodes:
+			silhouette.visible = false
+			
 func get_sprite_rect_global() -> Rect2: # For drag selection
 	if not is_instance_valid(sprite): return Rect2(global_position, Vector2.ONE) # fallback
 	var sprite_size = sprite.texture.get_size() * sprite.scale
@@ -560,9 +604,13 @@ func _update_selection_visual():
 func _position_selection_indicator():
 	if not sprite or not sprite.texture or not is_instance_valid(selection_indicator):
 		return
+	print("_position_selection_indicator called")
 	var sprite_rect = sprite.get_rect()
-	var bottom_y = sprite.position.y + sprite_rect.position.y + sprite_rect.size.y + 5
-	selection_indicator.position = Vector2(sprite.position.x, bottom_y)
+	print("DEBUG: sprite_rect: ",sprite_rect, " pos.y ", sprite_rect.position.y, " size.y ", sprite_rect.size.y)
+	var bottom_y = sprite_rect.position.y + .8*sprite_rect.size.y
+	print("DEBUG: bottom_y of sprite: ", bottom_y)
+	selection_indicator.position = Vector2(sprite_rect.position.x + .5*sprite_rect.size.x, bottom_y)
+	print("DEBUG: selection_indicator.position: ",selection_indicator.position)
 	var indicator_width = sprite.texture.get_size().x * sprite.scale.x * 0.8
 	var indicator_height = 8.0
 	var indicator_texture_size = selection_indicator.texture.get_size()
@@ -611,34 +659,6 @@ func get_last_planned_move_position() -> Vector2:
 		if action and action.action_type == PlannedAction.ActionType.MOVE:
 			last_pos = action.target_position
 	return last_pos
-
-func show_planned_move_silhouette(position: Vector2):
-	if planned_move_silhouette:
-		planned_move_silhouette.global_position = position
-		planned_move_silhouette.visible = true
-
-func hide_planned_move_silhouette():
-	if planned_move_silhouette:
-		planned_move_silhouette.visible = false
-
-func show_all_planned_action_previews():
-	"""Draws previews for all actions this character has planned."""
-	hide_previews() # Clear existing single-action previews first
-	
-	for i in range(planned_actions.size()):
-		var action = planned_actions[i]
-		if action:
-			var caster_effective_pos = get_planned_position_for_slot(i)
-			var ability = get_ability_by_id(action.ability_id)
-			if ability:
-				var target_pos = action.target_position
-				if is_instance_valid(action.target_character):
-					target_pos = action.target_character.global_position
-				
-				# We need a way to draw multiple lines/previews.
-				# For simplicity, let's reuse the existing Line2D and just show the last one.
-				# A better implementation would instance new Line2D nodes for each preview.
-				_draw_persistent_preview(ability, caster_effective_pos, target_pos)
 
 func _draw_persistent_preview(ability: Ability, caster_pos: Vector2, target_pos: Vector2):
 	"""Helper to draw a preview line. In a full implementation, you'd

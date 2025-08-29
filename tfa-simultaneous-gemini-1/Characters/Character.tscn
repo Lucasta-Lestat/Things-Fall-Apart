@@ -33,6 +33,9 @@ offset_bottom = 27.0
 [node name="ActionPreviewLine" type="Line2D" parent="."]
 default_color = Color(1, 0.8125, 0.25, 1)
 
+[node name="MovePathLine" type="Line2D" parent="."]
+default_color = Color(0.860369, 0.860369, 0.860369, 1)
+
 [node name="AOEPreviewShape" type="Polygon2D" parent="."]
 
 [node name="ClickArea" type="Area2D" parent="."]

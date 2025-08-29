@@ -144,9 +144,11 @@ func _on_character_planned_action(character: CombatCharacter, _ap_slot_index: in
 		_prompt_next_player_character_to_plan() # Move to next player character
 
 func _on_character_finished_planning_round(character: CombatCharacter):
+	for char in all_characters_in_combat:
+		print(char.character_name, " has ", char.current_ap_for_planning, " ap remaining. # turn resolution" )
 	if not characters_finished_planning_round.has(character):
 		characters_finished_planning_round.append(character)
-		# print_debug(character.character_name, " confirmed finished planning for the round.")
+		print_debug(character.character_name, " confirmed finished planning for the round #turn resolution.")
 	
 	if character.allegiance == CombatCharacter.Allegiance.PLAYER:
 		var all_players_done = true
@@ -155,13 +157,15 @@ func _on_character_finished_planning_round(character: CombatCharacter):
 				all_players_done = false
 				break
 		if all_players_done:
-			# print_debug("All player characters have finished planning.")
+			print_debug("All player characters have finished planning. #turn resolution")
 			check_if_all_planning_is_complete_to_start_resolution()
 
 func check_if_all_planning_is_complete_to_start_resolution():
+	print("checking if all planning is complete to start #turn resolution")
 	if current_combat_state != CombatState.PLANNING: return
-
+	
 	var all_active_chars_finished_planning = true
+	print("all_active_chars have finished planning")
 	for char in all_characters_in_combat:
 		if is_instance_valid(char) and char.current_health > 0: # Only consider active characters
 			if not characters_finished_planning_round.has(char):
@@ -170,13 +174,13 @@ func check_if_all_planning_is_complete_to_start_resolution():
 				break
 	
 	if all_active_chars_finished_planning:
-		print_debug("All active characters finished planning. Starting resolution.")
+		print_debug("All active characters finished planning. Starting # turn resolution.")
 		begin_action_resolution_phase()
 
 
 func begin_action_resolution_phase():
 	if current_combat_state != CombatState.PLANNING: return
-	print_rich("[color=orange]>>> Beginning Action Resolution Phase <<<[/color]")
+	print_rich("[color=orange]>>> Beginning Action Resolution Phase #turn resolution <<<[/color]")
 	current_combat_state = CombatState.RESOLVING_SLOT
 	current_ap_slot_being_resolved = 0
 	emit_signal("resolution_phase_started")
@@ -188,7 +192,6 @@ func resolve_current_ap_slot_actions():
 		return
 
 	if current_combat_state != CombatState.RESOLVING_SLOT: 
-		# print_debug("Not in RESOLVING_SLOT state, cannot resolve. State: ", CombatState.keys()[current_combat_state])
 		return
 
 	print_rich("\n[color=yellow]-- Resolving AP Slot:", current_ap_slot_being_resolved + 1, "/", MAX_AP_SLOTS_PER_ROUND, "--[/color]")
@@ -259,11 +262,11 @@ func _on_beat_window_timer_timeout(timer: SceneTreeTimer):
 
 	if current_combat_state == CombatState.PAUSED and beat_pause_requested_by_player:
 		# Player paused during the window, stay paused. CombatManager.resume_from_beat_pause() will handle next step.
-		# print_debug("Beat window ended. Game is PAUSED by player request.")
+		print_debug("Beat window ended. Game is PAUSED by player request.")
 		return
 
 	if current_combat_state == CombatState.BEAT_PAUSE_WINDOW: # If still in window and not paused by player
-		# print_debug("Beat window timer timeout. Auto-advancing to next AP slot resolution.")
+		print_debug("Beat window timer timeout. Auto-advancing to next AP slot resolution.")
 		current_ap_slot_being_resolved += 1
 		current_combat_state = CombatState.RESOLVING_SLOT
 		resolve_current_ap_slot_actions()
@@ -292,8 +295,6 @@ func resume_from_beat_pause_for_replan():
 				if characters_finished_planning_round.has(p_char):
 					characters_finished_planning_round.erase(p_char) # Allow them to plan again
 		
-		# AI does not re-plan for this example.
-
 		current_combat_state = CombatState.PLANNING
 		active_player_character_planning_idx = 0 # Start player planning cycle again
 		emit_signal("combat_resumed")

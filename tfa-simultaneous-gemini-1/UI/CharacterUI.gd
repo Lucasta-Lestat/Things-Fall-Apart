@@ -18,7 +18,7 @@ func _ready():
 	print("DEBUG: combat_manager initialized in CharacterUI. Value: ", combat_manager)
 
 	# Hide by default until a character is set
-	visible = false
+	visible = true
 
 func set_character(char: CombatCharacter):
 	print("DEBUG: Set Character")
