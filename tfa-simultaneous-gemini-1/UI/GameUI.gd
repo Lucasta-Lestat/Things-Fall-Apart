@@ -2,7 +2,7 @@
 extends CanvasLayer
 class_name GameUI
 
-@onready var character_ui_container = $MarginContainer/CharacterUI/CharacterUIContainer
+@onready var character_ui_container = $MarginContainer/VBoxContainer/CharacterUI/CharacterUIContainer
 @onready var margin_container_vbox = $MarginContainer/VBoxContainer
 
 

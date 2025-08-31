@@ -46,13 +46,14 @@ var planned_actions: Array[PlannedAction] = []
 # --- State ---
 var is_selected: bool = false
 
-# --- Movement ---
-@export var move_speed: float = 150.0
+# --- NEW: Movement State ---
+var current_path: Array[Vector2i] = []
+var path_index: int = 0
 var is_moving: bool = false
-
+@export var move_speed: float = 250.0 # Pixels per second
 # --- Node References ---
 @onready var sprite: Sprite2D = $sprite
-@onready var nav_agent: NavigationAgent2D = $NavAgent
+#@onready var nav_agent: NavigationAgent2D = $NavAgent
 # In-world previews are part of the character's scene, not the UI layer. This is correct.
 @onready var action_preview_line: Line2D = $ActionPreviewLine
 @onready var move_path_line: Line2D = $MovePathLine
@@ -81,10 +82,6 @@ func _ready():
 	# Create in-world visuals that are part of this character's scene
 	_create_selection_indicator()
 	_create_move_silhouette_pool()
-
-	# Connect nav_agent signals
-	nav_agent.path_desired_distance = 5.0
-	nav_agent.target_desired_distance = 5.0
 
 	sync_collision_shapes()
 
@@ -169,16 +166,30 @@ func _create_move_silhouette_pool():
 
 # --- Physics & Movement ---
 
-func _physics_process(delta):
-	if is_moving and nav_agent and not nav_agent.is_navigation_finished():
-		var next_path_pos = nav_agent.get_next_path_position()
-		var direction = global_position.direction_to(next_path_pos)
-		velocity = direction * move_speed
-		move_and_slide()
-		if global_position.distance_to(nav_agent.target_position) < nav_agent.target_desired_distance:
-			_stop_movement()
-	elif is_moving:
-		_stop_movement()
+func _process(delta):
+	# Handle grid-based movement
+	if not is_moving and not current_path.is_empty():
+		_move_along_path()
+
+func _move_along_path():
+	if path_index >= current_path.size():
+		current_path.clear()
+		path_index = 0
+		return
+
+	is_moving = true
+	var target_tile = current_path[path_index]
+	var target_world_pos = GridManager.map_to_world(target_tile)
+	
+	var duration = global_position.distance_to(target_world_pos) / move_speed
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(self, "global_position", target_world_pos, duration)
+	tween.tween_callback(func():
+		path_index += 1
+		is_moving = false
+	)
+
 
 func _stop_movement():
 	is_moving = false
@@ -346,16 +357,21 @@ func execute_planned_action(action: PlannedAction):
 	if current_health <= 0:
 		print_debug(character_name, " is defeated, cannot execute ", action.to_string(), "#turn resolution")
 		return
-
+	var ability = AbilityDatabase.get_ability(action.ability_id)
 	print_rich("[b]", character_name, "[/b] (DEX:",action.dex_snapshot,") executes: ", action.to_string(), "")
 	
 	match action.action_type:
 		PlannedAction.ActionType.MOVE:
-			#if nav_agent: nav_agent.target_position = action.target_position
-			#else:
-			global_position = action.target_position 
+			
+			var start_tile = GridManager.world_to_map(global_position)
+			var end_tile = GridManager.world_to_map(action.target_position)
+			current_path = GridManager.find_path(start_tile, end_tile)
+			# Trim path to match character's movement range for this action
+			var move_range_tiles = get_effective_range(ability)
+			if current_path.size() > move_range_tiles:
+				current_path.resize(move_range_tiles)
+			path_index = 0 
 		PlannedAction.ActionType.USE_ABILITY:
-			var ability = AbilityDatabase.get_ability(action.ability_id)
 			if not ability: return
 			var success_target = get_stat_by_name(ability.success_stat)
 			var bonus = 0
@@ -398,18 +414,25 @@ func execute_planned_action(action: PlannedAction):
 				prev_action.is_part_of_resolved_multi_ap = true
 
 
-func get_effective_range(ability: Ability) -> float:
-	if not ability: return 0.0
-	match ability.range_type:
+# --- UPDATED: Range & Previews ---
+func get_effective_range(ability: Ability) -> int:
+	# Returns range in TILES
+	if not ability: return 0
+	var pixel_range: float = 0.0
+	match ability.RangeType:
 		Ability.RangeType.ABILITY:
-			return ability.range_value
+			pixel_range = ability.range_value
 		Ability.RangeType.TOUCH:
-			return touch_range
+			pixel_range = touch_range
 		Ability.RangeType.WEAPON_MELEE:
-			return touch_range + (equipped_weapon.range if equipped_weapon else 0.0)
+			pixel_range = touch_range + (equipped_weapon.range if equipped_weapon else 0.0)
 		Ability.RangeType.WEAPON_RANGED:
-			return equipped_weapon.range if equipped_weapon else touch_range
-	return 0.0
+			pixel_range = equipped_weapon.range if equipped_weapon else touch_range
+	# For movement, range_value is the number of tiles directly
+	if ability.effect == Ability.ActionEffect.MOVE:
+		return int(ability.range)
+	
+	return int(pixel_range / GridManager.TILE_SIZE)
 
 func take_damage(amount: int, _source: CombatCharacter):
 	if current_health <= 0: return # Already defeated

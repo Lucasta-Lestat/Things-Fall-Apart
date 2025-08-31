@@ -2,23 +2,34 @@
 extends Node2D
 
 @onready var characters_container: Node2D = $CharactersContainer
+# NEW: A container for our structure objects
+@onready var structures_container: Node2D = $StructuresContainer
 @onready var player_camera: Camera2D = $PlayerCamera
 @onready var game_ui: GameUI = $GameUI
+# UPDATED: We now just need the ground layer for coordinate conversion
+@onready var ground_layer: TileMapLayer = $GridContainer/GroundLayer
 
 const CharacterScene = preload("res://Characters/Character.tscn")
-
+const StructureScene = preload("res://Structures/Structure.tscn")
 var player_input_manager: PlayerInputManager
 var combat_manager: CombatManager
+
 var is_active_combat = false
 
 func _ready():
-	# Initialize managers
+	# UPDATED: Initialize the GridManager with the ground layer
+	GridManager.initialize(ground_layer)
+
 	setup_managers()
+	setup_input_actions()
 	
+	# NEW: Spawn structures before characters
+	spawn_structures()
+	spawn_characters()
+		
 	# Setup Input Map Actions if not already done (for testing)
 	setup_input_actions()
 	
-	spawn_characters()
 	
 	combat_manager.combat_started.connect(_on_combat_started)
 	combat_manager.combat_ended.connect(_on_combat_ended)
@@ -87,15 +98,12 @@ func setup_input_actions():
 
 func spawn_characters():
 	# Create characters using the database system
-	var p1 = create_character_from_database("hero_alpha", Vector2(150, 300))
-	var p2 = create_character_from_database("hero_beta", Vector2(200, 350))
-	var e1 = create_character_from_database("goblin_scout", Vector2(500, 300))
-	var e2 = create_character_from_database("orc_brute", Vector2(550, 380))
-	
-	# Add all characters to the scene
+	var p1 = create_character_from_database("hero_alpha", GridManager.map_to_world(Vector2i(5, 5)))
+	var p2 = create_character_from_database("hero_beta", GridManager.map_to_world(Vector2i(6, 7)))
+	var e1 = create_character_from_database("goblin_scout", GridManager.map_to_world(Vector2i(15, 5)))
+	var e2 = create_character_from_database("orc_brute", GridManager.map_to_world(Vector2i(16, 8)))
 	for character in [p1, p2, e1, e2]:
 		if character:
-			# Set combat_manager reference
 			character.combat_manager = combat_manager
 			characters_container.add_child(character)
 
@@ -110,7 +118,32 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	character.global_position = position
 	
 	return character
+# --- NEW: Spawning and Managing Structures ---
+func spawn_structures():
+	# Spawn a wall at a specific grid position
+	create_structure("wood_wall", Vector2i(10, 5))
+	create_structure("wood_wall", Vector2i(10, 6))
+	create_structure("wood_wall", Vector2i(10, 7))
+	
+	# Spawn a tree
+	create_structure("oak_tree", Vector2i(12, 10))
 
+func create_structure(structure_id: StringName, grid_pos: Vector2i):
+	var structure = StructureScene.instantiate() as Structure
+	structure.structure_id = structure_id
+	structure.global_position = GridManager.map_to_world(grid_pos)
+	
+	# The structure tells the GridManager it's an obstacle
+	GridManager.register_obstacle(grid_pos)
+	
+	# Connect to its destroyed signal to update pathfinding
+	structure.destroyed.connect(_on_structure_destroyed)
+	
+	structures_container.add_child(structure)
+
+func _on_structure_destroyed(structure: Structure, grid_position: Vector2i):
+	# When a structure is destroyed, it tells the GridManager its tile is now open
+	GridManager.unregister_obstacle(grid_position)
 # Alternative method if you want to override specific properties
 func create_custom_character(character_id: String, position: Vector2, overrides: Dictionary = {}) -> CombatCharacter:
 	var character = create_character_from_database(character_id, position)

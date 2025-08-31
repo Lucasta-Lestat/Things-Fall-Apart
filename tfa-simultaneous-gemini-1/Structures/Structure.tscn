@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://cwrwu78y1iuaw"]
+
+[ext_resource type="Script" uid="uid://bgfqmapest1ir" path="res://Structures/structure.gd" id="1_ybpdd"]
+
+[node name="Structure" type="StaticBody2D"]
+script = ExtResource("1_ybpdd")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="Sprite" type="Sprite2D" parent="."]
