@@ -9,6 +9,7 @@ const CharacterScene = preload("res://Characters/Character.tscn")
 
 var player_input_manager: PlayerInputManager
 var combat_manager: CombatManager
+var is_active_combat = false
 
 func _ready():
 	# Initialize managers
@@ -19,6 +20,8 @@ func _ready():
 	
 	spawn_characters()
 	
+	combat_manager.combat_started.connect(_on_combat_started)
+	combat_manager.combat_ended.connect(_on_combat_ended)
 	# Collect all characters from container to start combat
 	var all_spawned_chars: Array[CombatCharacter] = []
 	for child in characters_container.get_children():
@@ -33,6 +36,10 @@ func _ready():
 		combat_manager.start_combat(all_spawned_chars)
 	else:
 		printerr("No characters spawned or found to start combat, or CombatManager not found.")
+func _on_combat_started():
+	is_active_combat = true
+func _on_combat_ended():
+	is_active_combat = false
 
 func setup_managers():
 	print("DEBUG: Setting up managers")
@@ -61,6 +68,7 @@ func setup_managers():
 	print("DEBUG: Camera signals connected")
 	
 	# NEW: Setup GameUI
+	
 	game_ui.setup(combat_manager, player_input_manager)
 	print("DEBUG: GameUI setup")
 	# Set combat_manager reference in characters (will be done when characters are spawned)

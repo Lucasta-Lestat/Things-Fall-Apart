@@ -10,6 +10,7 @@ signal resolution_phase_started # Actions are now being resolved
 signal ap_slot_resolution_beat_starts(ap_slot_index: int) # Beat starts, player can pause
 signal ap_slot_resolved(ap_slot_index: int) # A single AP slot's actions are done
 signal all_ap_slots_resolved # All AP slots for the round are done
+signal combat_started
 signal combat_paused(is_beat_pause: bool)
 signal combat_resumed
 signal combat_ended(winner_allegiance: CombatCharacter.Allegiance)
@@ -41,11 +42,12 @@ func register_character(character: CombatCharacter):
 			player_party.append(character)
 		elif character.allegiance == CombatCharacter.Allegiance.ENEMY:
 			enemy_party.append(character)
-
+		print("party: ", player_party, " #combat #ui")
+		print("all characters in combat: ", all_characters_in_combat, " #combat #ui")
 		character.planned_action_for_slot.connect(_on_character_planned_action)
 		character.no_more_ap_to_plan.connect(_on_character_finished_planning_round)
 		character.died.connect(_on_character_died)
-		print_debug("Registered: ", character.character_name)
+		print_debug("Registered: ", character.character_name, "#ui #combat")
 
 func unregister_character(character: CombatCharacter):
 	all_characters_in_combat.erase(character)
@@ -61,19 +63,24 @@ func unregister_character(character: CombatCharacter):
 
 
 func start_combat(characters: Array[CombatCharacter]):
-	print_rich("[b]Combat Starting![/b]")
+	print_rich("[b]Combat Starting![/b] #ui #combat")
+	
 	all_characters_in_combat.clear() # Clear previous combatants
 	player_party.clear()
 	enemy_party.clear()
+	
 	for char in characters:
+		print("Attempting to register: ", char.character_name, "#ui #combat")
 		if is_instance_valid(char):
 			register_character(char) # This also connects signals
-	
+		else:
+			print("Didn't regist as wasn't a valid character #ui #combat")
+	print("combat started #ui #combat")
+	emit_signal("combat_started")
 	if player_party.is_empty() && enemy_party.is_empty():
 		print_rich("[color=red]No characters to start combat.[/color]")
 		current_combat_state = CombatState.IDLE
 		return
-
 	start_new_round()
 
 func start_new_round():

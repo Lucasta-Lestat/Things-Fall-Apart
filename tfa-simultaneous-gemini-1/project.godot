@@ -18,3 +18,6 @@ config/icon="res://icon.svg"
 [autoload]
 
 CharacterDatabase="*res://Global/CharacterDatabase.gd"
+AbilityDatabase="*res://Global/AbilityDatabase.gd"
+TraitDatabase="*res://Global/TraitDatabase.gd"
+WeaponDatabase="*res://Global/WeaponDatabase.gd"

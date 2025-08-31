@@ -19,18 +19,28 @@ enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 # They are exported to allow for quick prototyping or debugging directly in the scene,
 # but the database is the primary source of truth.
 @export var character_name: String = "Character"
+@export var icon: String = "res://Icons/dummy_icon.png"
 @export var allegiance: Allegiance = Allegiance.PLAYER
 @export var max_health: int = 100
-@export var dexterity: int = 10
 @export var max_ap_per_round: int = 4
-
+var strength: int = 50
+var dexterity: int = 50
+var constitution: int = 50
+var will: int = 50
+var intelligence: int = 50
+var charisma: int = 50
+var touch_range: float = 50.0
+var size: Vector2 = Vector2(128.0,128.0)
+var traits: Dictionary = {"deadeye": 2, "clumsy": 1} 
+var equipped_weapon_id: StringName
+var equipped_weapon: Weapon
 var current_health = max_health
 
 @export var current_ap_for_planning: int = 0
 
 # --- Abilities & Planning ---
 @export var abilities: Array[Ability] = []
-@export var move_ability_res: Ability # Assign res://Abilities/Move.tres in Inspector
+@export var move_ability_res: Ability 
 var planned_actions: Array[PlannedAction] = []
 
 # --- State ---
@@ -47,7 +57,8 @@ var is_moving: bool = false
 @onready var action_preview_line: Line2D = $ActionPreviewLine
 @onready var move_path_line: Line2D = $MovePathLine
 @onready var aoe_preview_shape: Polygon2D = $AOEPreviewShape
-
+# NOTE: You'll need to add a Label node named "FloatingTextLabel" to your Character.tscn
+@onready var floating_text_label: Label = $FloatingTextLabel
 
 var combat_manager: CombatManager
 var selection_indicator: Sprite2D
@@ -84,33 +95,41 @@ func set_character_id(value: String):
 	_apply_character_data()
 
 func _apply_character_data():
-	print("_apply_character_data called")
-	if character_id.is_empty(): return
-	
-	print("character_id is not empy, _apply_character_data did not return")
-	var char_data = CharacterDatabase.get_character_data(character_id)
-	print("char_data: ", char_data.display_name, " ", char_data.allegiance, " ", char_data.base_health, " ",char_data.base_dexterity, " ", char_data.base_ap)
-	if not char_data:
-		printerr("Could not find character data for ID: ", character_id)
+	var data = CharacterDatabase.get_character_data(character_id)
+	if not data:
+		printerr("Failed to get data for character_id: ", character_id)
 		return
-
-	# Apply character data to this character instance
-	self.character_name = char_data.display_name
-	allegiance = char_data.allegiance
-	max_health = char_data.base_health
-	dexterity = char_data.base_dexterity
-	max_ap_per_round = char_data.base_ap
 	
+	character_name = data.character_name
+	name = character_name
+	sprite.texture = load(data.sprite_texture_path)
+	size = Vector2(data.base_size,data.base_size)
+	var initial_texture_size = sprite.texture.get_size()
+	print("sprite size: ", sprite.texture.get_size())
+	var size_ratio = .5 * size.x/initial_texture_size.x
+	sprite.scale = Vector2(size_ratio,size_ratio)
 	
-	# This will trigger the setter and emit the signal for the UI
-	self.current_health = max_health 
+	#action_preview_sprite.texture = sprite.texture # Use same texture for preview
+	allegiance = data.allegiance
+	strength = data.strength
+	dexterity = data.dexterity
+	constitution = data.constitution
+	will = data.will
+	intelligence = data.intelligence
+	charisma = data.charisma
+	touch_range = data.base_touch_range
+	max_health = data.max_health
+	current_health = data.current_health
+	max_ap_per_round = data.base_ap
+	traits = data.traits.duplicate(true)
+	equipped_weapon_id = data.equipped_weapon
+	equipped_weapon = WeaponDatabase.get_weapon(equipped_weapon_id)
 	
-	set_sprite_texture(char_data.sprite_texture_path)
-	_load_default_abilities(char_data.Abilities)
-	
-	# Add move ability if not present
-	if move_ability_res and not abilities.has(move_ability_res):
-		abilities.insert(0, move_ability_res)
+	abilities.clear()
+	for ability_id in data.abilities:
+		var ability = AbilityDatabase.get_ability(ability_id)
+		if ability: abilities.append(ability)
+	start_round_reset()
 func _load_default_abilities(ability_ids: Array[String]):
 	abilities.clear()
 	for ability_id in ability_ids:
@@ -251,16 +270,14 @@ func plan_ability_use(ability: Ability, ap_slot_to_start_planning_at: int, p_tar
 		
 		emit_signal("planned_action_for_slot", self, current_slot_for_planning, action_segment)
 		current_slot_for_planning += 1
-		# NEW: After planning, update the silhouette if a move was planned
 	if ability.id == &"move":
 		print("DEBUG: Attempting to show silhoutte")
 		print("p_target_pos (to compare to sil.global_position): ",p_target_pos)
 		update_all_visual_previews()
 	
-	# NEW: Update all previews for this character
 	if slots_actually_can_fill > 0:
 		print_debug(character_name, " planned '", ability.display_name, "' consuming ", slots_actually_can_fill, " AP slots. Remaining planning AP: ", current_ap_for_planning)
-	
+		
 	if get_next_available_ap_slot_index() == -1 or current_ap_for_planning == 0:
 		print(self.character_name, "has no more ap to plan #turn resolution")
 		emit_signal("no_more_ap_to_plan", self)
@@ -327,46 +344,45 @@ func clear_planned_actions_from_slot(start_slot_index: int, refund_ap: bool):
 func execute_planned_action(action: PlannedAction):
 	if not action or action.caster != self: return
 	if current_health <= 0:
-		print_debug(character_name, " is defeated, cannot execute ", action.to_string(), "#turn resoultion")
+		print_debug(character_name, " is defeated, cannot execute ", action.to_string(), "#turn resolution")
 		return
 
 	print_rich("[b]", character_name, "[/b] (DEX:",action.dex_snapshot,") executes: ", action.to_string(), "")
-	var ability_resource: Ability = null
-	if action.action_type == PlannedAction.ActionType.USE_ABILITY or \
-	   (action.action_type == PlannedAction.ActionType.MOVE and action.ability_id == &"move"): # Move is an ability
-		ability_resource = get_ability_by_id(action.ability_id)
-	print("attempting to match action type #turn resolution")
+	
 	match action.action_type:
 		PlannedAction.ActionType.MOVE:
-			print("Implment Nav Agent later")
-			#if nav_agent:
-			#	is_moving = true
-			#	nav_agent.target_position = action.target_position
-			#	print_debug("  ", character_name, " moving to ", action.target_position)
-			#else: # Fallback direct move
-			print("updating character's global position for move #turn resolution")
-			global_position = action.target_position
-			# Play move animation
-			# sprite.play("walk")
-		
+			#if nav_agent: nav_agent.target_position = action.target_position
+			#else:
+			global_position = action.target_position 
 		PlannedAction.ActionType.USE_ABILITY:
-			if ability_resource:
-				# print_debug("  ", character_name, " using ability '", ability_resource.display_name, "'")
-				# Actual effect application here
-				if action.target_character and is_instance_valid(action.target_character):
-					print_rich("    [color=cyan]Targeting character:", action.target_character.character_name, "[/color]")
-					if ability_resource.id == &"basic_attack": action.target_character.take_damage(10, self)
-					elif ability_resource.id == &"heavy_strike": action.target_character.take_damage(30, self)
-					# Add more ability effects
-				elif action.target_position != Vector2.ZERO:
-					print_rich("    [color=cyan]Targeting position:", action.target_position, "[/color]")
-					# AOE damage/effects at position
-				else: # Self target
-					print_rich("    [color=cyan]Targeting self.[/color]")
-				# Play ability animation
-				# sprite.play(ability_resource.animation_name if ability_resource.animation_name else "attack")
+			var ability = AbilityDatabase.get_ability(action.ability_id)
+			if not ability: return
+			var success_target = get_stat_by_name(ability.success_stat)
+			var bonus = 0
+			for trait_id in ability.advantages:
+				if traits.has(trait_id): bonus += 20 * traits[trait_id]
+			for trait_id in ability.disadvantages:
+				if traits.has(trait_id): bonus -= 20 * traits[trait_id]
+
+			success_target += bonus
+			var roll = randi() % 100 + 1
+			print_rich(character_name, " uses ", ability.display_name, ". Target: <", success_target, ". Roll: ", roll)
+
+			if roll <= success_target:
+				print_rich("[color=green]  Success![/color]")
+				var damage = 0
+				if ability.is_weapon_attack:
+					damage = (equipped_weapon.base_damage if equipped_weapon else 1) + (strength / 5)
+				else:
+					damage = ability.flat_damage
+				
+				if damage > 0 and is_instance_valid(action.target_character):
+					action.target_character.take_damage(damage,self)
+					#print("action.target_character ", action.target_character.name, " took damage: ", damage)
 			else:
-				printerr("Could not find ability resource for ID: ", action.ability_id)
+				print_rich("[color=gray]  Failure![/color]")
+				if is_instance_valid(action.target_character):
+					action.target_character.show_floating_text("Miss", Color.WHITE_SMOKE)
 
 		PlannedAction.ActionType.WAIT:
 			print_debug("  ", character_name, " waits.")
@@ -382,11 +398,33 @@ func execute_planned_action(action: PlannedAction):
 				prev_action.is_part_of_resolved_multi_ap = true
 
 
+func get_effective_range(ability: Ability) -> float:
+	if not ability: return 0.0
+	match ability.range_type:
+		Ability.RangeType.ABILITY:
+			return ability.range_value
+		Ability.RangeType.TOUCH:
+			return touch_range
+		Ability.RangeType.WEAPON_MELEE:
+			return touch_range + (equipped_weapon.range if equipped_weapon else 0.0)
+		Ability.RangeType.WEAPON_RANGED:
+			return equipped_weapon.range if equipped_weapon else touch_range
+	return 0.0
+
 func take_damage(amount: int, _source: CombatCharacter):
 	if current_health <= 0: return # Already defeated
 	current_health -= amount
 	print_rich("[color=red]", character_name, " takes ", amount, " damage. HP: ", current_health, "/", max_health, "[/color]")
 
+func show_floating_text(text: String, color: Color = Color.WHITE):
+	floating_text_label.text = text
+	floating_text_label.modulate = color
+	floating_text_label.visible = true
+	var tween = create_tween().set_parallel()
+	tween.tween_property(floating_text_label, "position", Vector2(0, -70), 0.9).from(Vector2(0, -40)).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+	tween.tween_property(floating_text_label, "modulate:a", 0.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(func(): floating_text_label.visible = false)
+	
 func _handle_death():
 	print_rich("[b][color=maroon]", character_name, " has been defeated![/color][/b]")
 	sprite.modulate = Color(0.5, 0.5, 0.5, 0.7) # Dim sprite
@@ -397,7 +435,15 @@ func _handle_death():
 	hide_previews()
 	# Could play death animation and then queue_free() or set visible = false
 
-
+func get_stat_by_name(stat_name: StringName) -> int:
+	match stat_name:
+		&"str": return strength
+		&"dex": return dexterity
+		&"con": return constitution
+		&"wil": return will
+		&"int": return intelligence
+		&"cha": return charisma
+	return 50 # Default
 func get_ability_by_id(id: StringName) -> Ability:
 	for ability in abilities:
 		if ability and ability.id == id:
@@ -467,6 +513,7 @@ func update_all_visual_previews():
 	Redraws every silhouette and targeting line based on the current plan.
 	It now uses a separate Line2D for the movement path vs. the action target.
 	"""
+	print("update_all_visual_previews called #combat")
 	# 1. Start fresh by hiding everything
 	hide_previews() # This should also hide move_path_line now
 	action_preview_line.visible = false

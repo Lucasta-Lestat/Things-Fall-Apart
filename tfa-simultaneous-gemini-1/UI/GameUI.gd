@@ -3,6 +3,8 @@ extends CanvasLayer
 class_name GameUI
 
 @onready var character_ui_container = $MarginContainer/CharacterUI/CharacterUIContainer
+@onready var margin_container_vbox = $MarginContainer/VBoxContainer
+
 
 const CharacterUI_Scene = preload("res://UI/CharacterUI.tscn")
 
@@ -18,56 +20,54 @@ func _ready():
 func setup(cm: CombatManager, pim: PlayerInputManager):
 	self.combat_manager = cm
 	self.player_input_manager = pim
+	var game_node = self.get_parent()
 	
 	# Connect to CombatManager signals
-	print("DEBUG: setup in GameUI called")
-	print("DEBUG: setup characters directly in setup in GameUI")
-	var all_chars = combat_manager.all_characters_in_combat
-	print("DEBUG: all_chars created")
-	for char in all_chars:
-		if not character_ui_map.has(char):
-			_create_character_ui(char)
-	for char in character_ui_map.keys():
-		if is_instance_valid(char):
-			character_ui_map[char].update_all_ap_slots()
+	print("DEBUG: setup in GameUI called #ui")
+	combat_manager.combat_started.connect(_on_combat_started)
 	combat_manager.round_started.connect(_on_round_started)
 	combat_manager.planning_phase_started.connect(_on_planning_phase_started)
 	combat_manager.resolution_phase_started.connect(_on_resolution_phase_started)
 	combat_manager.ap_slot_resolved.connect(_on_ap_slot_resolved)
 	combat_manager.combat_ended.connect(_on_combat_ended)
-
+	
 	# Connect to PlayerInputManager signals
 	player_input_manager.selection_changed.connect(_on_player_selection_changed)
+	
+	if game_node.is_active_combat:
+		_on_combat_started()
 
 # --- MODIFIED FUNCTION ---
-# Made the function async to allow for 'await'
 func _create_character_ui(character: CombatCharacter):
-	print("DEBUG: attempt to create character UI for", character.name)
+	print("DEBUG: attempt to create character UI for ", character.character_name, " #ui")
 	if character_ui_map.has(character):
+		print("character_ui map already has character #ui")
 		return
 
-	var char_ui = CharacterUI_Scene.instantiate()
-	character_ui_container.add_child(char_ui)
-	await char_ui.ready
-	
-	char_ui.combat_manager = self.combat_manager
+	var charUI = CharacterUI_Scene.instantiate()
+	print(' test instantiate charUI #ui')
+	margin_container_vbox.add_child(charUI)
+	charUI.combat_manager = self.combat_manager
 	
 	# 3. Now that the UI has its manager, it's safe to call its setup function.
-	char_ui.set_character(character)
+	charUI.set_character(character)
 	
-	character_ui_map[character] = char_ui
-
-func _on_round_started():
-	# On the first round, this will create the UI for all characters.
-	# This ensures the node is ready and the combat manager has the character list.
-	var all_chars = combat_manager.all_characters_in_combat
-	print("DEBUG: all_chars created")
-	for char in all_chars:
+	character_ui_map[character] = charUI
+func _on_combat_started():
+	print("on_combat_started() called in gameUI #combat #ui")
+	var party_chars = combat_manager.player_party
+	print("DEBUG: party_chars created #ui")
+	for char in party_chars:
 		if not character_ui_map.has(char):
 			_create_character_ui(char)
 	for char in character_ui_map.keys():
 		if is_instance_valid(char):
 			character_ui_map[char].update_all_ap_slots()
+func _on_round_started():
+	# On the first round, this will create the UI for all characters.
+	# This ensures the node is ready and the combat manager has the character list.
+	print("on round started in GameUI #ui.  pass for now")
+	pass
 
 func _on_planning_phase_started():
 	# Show enemy intents when the player starts planning
