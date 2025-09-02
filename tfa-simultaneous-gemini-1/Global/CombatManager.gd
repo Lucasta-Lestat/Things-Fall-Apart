@@ -23,6 +23,7 @@ var all_characters_in_combat: Array[CombatCharacter] = []
 var player_party: Array[CombatCharacter] = []
 var enemy_party: Array[CombatCharacter] = []
 
+
 var current_ap_slot_being_resolved: int = 0
 const MAX_AP_SLOTS_PER_ROUND = 4 # Default, can be dynamic later
 var beat_pause_requested_by_player: bool = false
@@ -191,6 +192,7 @@ func begin_action_resolution_phase():
 	current_combat_state = CombatState.RESOLVING_SLOT
 	current_ap_slot_being_resolved = 0
 	emit_signal("resolution_phase_started")
+	
 	resolve_current_ap_slot_actions()
 
 func resolve_current_ap_slot_actions():

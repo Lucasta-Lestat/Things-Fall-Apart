@@ -10,7 +10,6 @@ class CharacterData:
 	var allegiance: CombatCharacter.Allegiance
 	var icon: String
 	var base_ap: int = 4
-	var Abilities: Array[String] = []
 	var strength: int = 50
 	var dexterity: int = 50
 	var constitution: int = 50
@@ -47,21 +46,18 @@ func _setup_character_data():
 	# Player characters
 	var hero_alpha = CharacterData.new("hero_alpha", "Hero Alpha", "res://hero1.png", CombatCharacter.Allegiance.PLAYER)
 	hero_alpha.character_name = "Hero Alpha"
-	#hero_alpha.icon = 
 	hero_alpha.strength = 75
 	hero_alpha.dexterity = 70
 	hero_alpha.constitution = 60 
-	
 	hero_alpha.max_health = hero_alpha.constitution/5
 	hero_alpha.current_health = hero_alpha.max_health
 	hero_alpha.base_ap = 4
-	
 	print("Attempting to assign abilities #combat")
-	hero_alpha.abilities.assign(["move", "basic_attack", "heavy_strike"])
+	hero_alpha.abilities.assign(["move", "basic_attack", "cleave"])
 	hero_alpha.equipped_weapon = &"short_sword"
 	hero_alpha.traits = {&"deadeye": 1}
 	character_data["hero_alpha"] = hero_alpha
-	
+	print("hero_alpha.abilities",hero_alpha.abilities)
 	var hero_beta = CharacterData.new("hero_beta", "Hero Beta", "res://hero2.png", CombatCharacter.Allegiance.PLAYER)
 	hero_beta.character_name = "Hero Beta"
 	hero_beta.strength = 75
@@ -71,8 +67,9 @@ func _setup_character_data():
 	hero_beta.base_ap = 4
 	hero_beta.equipped_weapon = &"longbow"
 	hero_beta.traits = {&"deadeye": 2}
-	hero_beta.abilities.assign(["move", "basic_attack", "heavy_strike"])
+	hero_beta.abilities.assign(["move", "basic_attack", &"cleave"])
 	character_data["hero_beta"] = hero_beta
+	print("hero_beta.abilities: ", hero_beta.abilities)
 	
 	# Enemy characters
 	var goblin_scout = CharacterData.new("goblin_scout", "Goblin Scout", "res://Goblin.png", CombatCharacter.Allegiance.ENEMY)
@@ -94,6 +91,7 @@ func _setup_character_data():
 	orc_brute.current_health = hero_alpha.max_health
 	orc_brute.base_ap = 4
 	orc_brute.abilities.assign(["move", "basic_attack", "heavy_strike"])
+	
 	character_data["orc_brute"] = orc_brute
 
 func get_character_data(character_id: String) -> CharacterData:

@@ -38,6 +38,7 @@ func set_character(char: CombatCharacter):
 	print("DEBUG:",character.character_name, "max health:", character.max_health)
 	
 	health_bar.value = character.current_health
+	print("character.icon")
 	var texture = load(character.icon)
 	
 	icon.texture = load(character.icon)

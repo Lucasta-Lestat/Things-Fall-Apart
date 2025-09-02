@@ -31,9 +31,11 @@ offset_right = 4.0
 offset_bottom = 27.0
 
 [node name="ActionPreviewLine" type="Line2D" parent="."]
+width = 4.0
 default_color = Color(1, 0.8125, 0.25, 1)
 
 [node name="MovePathLine" type="Line2D" parent="."]
+width = 4.0
 default_color = Color(0.860369, 0.860369, 0.860369, 1)
 
 [node name="AOEPreviewShape" type="Polygon2D" parent="."]
@@ -43,8 +45,17 @@ default_color = Color(0.860369, 0.860369, 0.860369, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea"]
 shape = SubResource("RectangleShape2D_03jby")
 
-[node name="NavAgent" type="NavigationAgent2D" parent="."]
-
 [node name="FloatingTextLabel" type="Label" parent="."]
 offset_right = 40.0
 offset_bottom = 23.0
+
+[node name="PreviewContainer" type="Node2D" parent="."]
+
+[node name="PathPreviewLine" type="Line2D" parent="PreviewContainer"]
+width = 4.0
+
+[node name="ActionPreviewSprite" type="Sprite2D" parent="PreviewContainer"]
+
+[node name="SelectionVisual" type="Polygon2D" parent="."]
+color = Color(0.11303, 0.62584, 0.55736, 1)
+polygon = PackedVector2Array(0, 0, 0, 0, 0, 0)

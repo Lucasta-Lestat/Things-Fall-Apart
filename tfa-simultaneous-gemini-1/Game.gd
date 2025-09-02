@@ -8,6 +8,7 @@ extends Node2D
 @onready var game_ui: GameUI = $GameUI
 # UPDATED: We now just need the ground layer for coordinate conversion
 @onready var ground_layer: TileMapLayer = $GridContainer/GroundLayer
+@onready var highlights_layer: TileMapLayer = $GridContainer/HighlightsLayer # Add this line
 
 const CharacterScene = preload("res://Characters/Character.tscn")
 const StructureScene = preload("res://Structures/Structure.tscn")
@@ -18,8 +19,7 @@ var is_active_combat = false
 
 func _ready():
 	# UPDATED: Initialize the GridManager with the ground layer
-	GridManager.initialize(ground_layer)
-
+	GridManager.initialize(ground_layer, highlights_layer)
 	setup_managers()
 	setup_input_actions()
 	

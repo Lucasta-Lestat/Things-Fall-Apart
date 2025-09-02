@@ -153,7 +153,7 @@ func _unhandled_input(event: InputEvent):
 
 	# --- Targeting Mode Input ---
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
-		print("DEBUG: In targeting mode")
+		#print("DEBUG: In targeting mode")
 		if event is InputEventMouseButton:
 			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 				_handle_ability_target_click(get_viewport().get_mouse_position())
@@ -478,4 +478,4 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 			# print_debug(char_to_act.character_name, " cannot use '", actual_ability_for_char.display_name, "' (AP/Slot).")
 			pass
 
-	cancel_targeting_mode() # Targeting complete
+	#cancel_targeting_mode() # Targeting complete

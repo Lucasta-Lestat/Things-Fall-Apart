@@ -11,6 +11,7 @@ func _define_abilities():
 	var move = Ability.new()
 	move.id = &"move"
 	move.display_name = "Move"
+	move.range_type = Ability.RangeType.ABILITY
 	move.ap_cost = 1
 	move.range = 400 
 	move.target_type = Ability.TargetType.GROUND
@@ -24,6 +25,7 @@ func _define_abilities():
 	basic_attack.description = "A standard attack with your weapon."
 	basic_attack.ap_cost = 2
 	basic_attack.range = 150.0
+	basic_attack.range_type = Ability.RangeType.WEAPON_MELEE
 	basic_attack.target_type = Ability.TargetType.ENEMY
 	basic_attack.effect = Ability.ActionEffect.DAMAGE
 	basic_attack.is_weapon_attack = true
@@ -32,6 +34,22 @@ func _define_abilities():
 	basic_attack.disadvantages = [&"clumsy"]
 	abilities[basic_attack.id] = basic_attack
 
+	var cleave = Ability.new()
+	print(cleave)
+	cleave.id = &"cleave"
+	cleave.display_name = "Cleave"
+	cleave.description = "hit multipLe."
+	cleave.ap_cost = 3
+	cleave.range = 350.0
+	cleave.range_type = Ability.RangeType.WEAPON_MELEE
+	cleave.area_of_effect_radius = 100.0
+	cleave.target_type = Ability.TargetType.ENEMY
+	cleave.effect = Ability.ActionEffect.DAMAGE
+	cleave.is_weapon_attack = true
+	cleave.success_stat = &"dex" # This attack uses Dexterity to hit
+	cleave.advantages = [&"deadeye"]
+	cleave.disadvantages = [&"clumsy"]
+	abilities[cleave.id] = cleave
 
 func get_ability(ability_id: StringName) -> Ability:
 	return abilities.get(ability_id, null)

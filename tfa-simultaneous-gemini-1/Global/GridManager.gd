@@ -5,25 +5,37 @@ extends Node
 const TILE_SIZE = 64
 var map_rect: Rect2i
 var base_layer: TileMapLayer
+var highlights_layer: TileMapLayer # NEW: For drawing previews
 var grid_costs: Dictionary = {}
+# --- NEW: Configure your highlight tile here ---
+const HIGHLIGHT_TILE_SOURCE_ID = 2  # The source ID in your TileSet
+const HIGHLIGHT_TILE_COORDS = Vector2i(0, 128) # The atlas coords of the highlight tile
 
-func initialize(p_base_layer: TileMapLayer):
+# UPDATED: Now takes the highlights layer during initialization
+func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 	self.base_layer = p_base_layer
-	if not is_instance_valid(base_layer):
+	self.highlights_layer = p_highlights_layer
+	if not is_instance_valid(base_layer) or not is_instance_valid(highlights_layer):
 		printerr("GridManager: Invalid TileMapLayer provided.")
 		return
 		
 	map_rect = base_layer.get_used_rect()
 	grid_costs.clear()
 	
-	# The grid starts completely empty of obstacles.
-	# Structures will register themselves as obstacles.
 	for y in range(map_rect.position.y, map_rect.end.y):
 		for x in range(map_rect.position.x, map_rect.end.x):
-			var cell = Vector2i(x, y)
-			grid_costs[cell] = 1 # All tiles are initially walkable
+			grid_costs[Vector2i(x, y)] = 1
 
-# --- NEW: Dynamic Obstacle Management ---
+# --- NEW: Highlight Drawing Functions ---
+func draw_highlight_tiles(tile_positions: Array[Vector2i]):
+	clear_highlights()
+	for tile_pos in tile_positions:
+		highlights_layer.set_cell(tile_pos, HIGHLIGHT_TILE_SOURCE_ID, HIGHLIGHT_TILE_COORDS)
+func clear_highlights():
+	if is_instance_valid(highlights_layer):
+		highlights_layer.clear()
+
+# --- Dynamic Obstacle Management ---
 func register_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = INF # Set cost to infinity (unwalkable)
