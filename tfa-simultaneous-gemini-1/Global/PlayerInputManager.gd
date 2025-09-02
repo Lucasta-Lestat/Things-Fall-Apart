@@ -340,6 +340,7 @@ func _add_to_selection(character: CombatCharacter):
 	if not selected_characters.has(character):
 		selected_characters.append(character)
 		character.is_selected = true
+		
 		if not primary_selected_character: # If no primary, first selected becomes primary
 			primary_selected_character = character
 			print("DEBUG: Set primary selected character to: ", character.character_name)
@@ -424,11 +425,11 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 	var ability = ability_being_targeted
 
 	# Distance check (use clicked_char_target pos if available, otherwise mouse world pos)
-	var effective_target_pos = clicked_char_target.global_position if clicked_char_target else target_world_pos
-	if caster.global_position.distance_to(effective_target_pos) > ability.range:
-		print_debug("Target out of range for '", ability.display_name, "'")
-		# Don't cancel targeting, let player try again or right-click to cancel
-		return
+	# --- NEW: Grid-based range check ---
+	var start_tile = GridManager.world_to_map(caster.global_position)
+	var end_tile = GridManager.world_to_map(target_world_pos)
+	var range_in_tiles = caster.get_effective_range(ability)
+	var is_in_range = false
 
 	# Apply to all selected characters that are able and have this ability
 	for char_to_act in selected_characters:
@@ -438,44 +439,37 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 		# For simplicity, assume they are using the same ability 'type' (ID) as `ability_being_targeted`
 		var actual_ability_for_char = char_to_act.get_ability_by_id(ability.id)
 		if not actual_ability_for_char:
-			# print_debug(char_to_act.character_name, " doesn't know '", ability.id, "'")
+			print_debug(char_to_act.character_name, " doesn't know '", ability.id, "'")
 			continue
-		
 		var char_next_ap_slot = char_to_act.get_next_available_ap_slot_index()
 		if char_next_ap_slot == -1: # No slots for this character
-			# print_debug(char_to_act.character_name, " has no AP slots to plan.")
+			print_debug(char_to_act.character_name, " has no AP slots to plan.")
 			continue
+		if ability.effect == Ability.ActionEffect.MOVE:
+			var path = GridManager.find_path(start_tile, end_tile)
+			is_in_range = not path.is_empty() and path.size() <= range_in_tiles
+		else: # Manhattan distance for attacks/spells
+			var distance = abs(start_tile.x - end_tile.x) + abs(start_tile.y - end_tile.y)
+			is_in_range = distance <= range_in_tiles
 
-		if char_to_act.can_start_planning_ability(actual_ability_for_char, char_next_ap_slot):
-			var final_target_char = null
-			var final_target_pos = Vector2.ZERO
-			
-			if actual_ability_for_char.target_type == Ability.TargetType.GROUND:
-				final_target_pos = target_world_pos
-			elif actual_ability_for_char.target_type != Ability.TargetType.SELF: # Needs a character
-				if clicked_char_target:
-					# Basic allegiance check
-					var can_target = false
-					match actual_ability_for_char.target_type:
-						Ability.TargetType.ENEMY:
-							can_target = (char_to_act.allegiance != clicked_char_target.allegiance)
-						Ability.TargetType.ALLY:
-							can_target = (char_to_act.allegiance == clicked_char_target.allegiance and char_to_act != clicked_char_target)
-						Ability.TargetType.ANY_CHARACTER:
-							can_target = true
-					if can_target:
-						final_target_char = clicked_char_target
-					else:
-						print_debug("Invalid allegiance target for '", actual_ability_for_char.display_name, "' on ", clicked_char_target.character_name)
-						continue # Skip this character's action
-				else:
-					print_debug("Ability '", actual_ability_for_char.display_name, "' requires character target.")
-					continue # Skip
+	if not is_in_range:
+		print_debug("Target out of range for '", ability.display_name, "'")
+		return # Let player try again
 
-			# print_debug("  ", char_to_act.character_name, " planning '", actual_ability_for_char.display_name, "' for slot ", char_next_ap_slot)
-			char_to_act.plan_ability_use(actual_ability_for_char, char_next_ap_slot, final_target_char, final_target_pos)
+	# Apply to all selected characters (logic is now grid-aware)
+	for char_to_act in selected_characters:
+		if not is_instance_valid(char_to_act) or char_to_act.current_health <= 0: 
+			print("character: ", char_to_act.character_name, "wasn't able to use ability #combat")
+			continue
+		
+		var actual_ability = char_to_act.get_ability_by_id(ability.id)
+		if not actual_ability: 
+			print("ability didn't exist #combat")
+			continue
+		
+		var char_next_slot = char_to_act.get_next_available_ap_slot_index()
+		if char_to_act.can_start_planning_ability(actual_ability, char_next_slot):
+			# Use target_world_pos which will be snapped to the grid center in plan_ability_use
+			char_to_act.plan_ability_use(actual_ability, char_next_slot, clicked_char_target, target_world_pos)
 		else:
-			# print_debug(char_to_act.character_name, " cannot use '", actual_ability_for_char.display_name, "' (AP/Slot).")
-			pass
-
-	#cancel_targeting_mode() # Targeting complete
+			print_debug(char_to_act.character_name, " cannot use '", actual_ability.display_name, "' (AP/Slot). #combat")
