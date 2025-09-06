@@ -11,20 +11,24 @@ func _define_weapons():
 	var short_sword = Weapon.new()
 	short_sword.id = &"short_sword"
 	short_sword.display_name = "Short Sword"
-	short_sword.base_damage = 10
+	short_sword.base_damage = 4
+	short_sword.aoe_shape = Weapon.AttackShape.SLASH
+	short_sword.aoe_size = Vector2i(1, 1) # Affects a 1-tile L-shape
 	weapons[short_sword.id] = short_sword
 
-	var longbow = Weapon.new()
-	longbow.id = &"longbow"
-	longbow.display_name = "Longbow"
-	longbow.base_damage = 12
-	weapons[longbow.id] = longbow
+	var greatsword = Weapon.new()
+	greatsword.id = &"greatsword"; greatsword.display_name = "Greatsword"
+	greatsword.base_damage = 7; greatsword.range = 120.0
+	greatsword.aoe_shape = Weapon.AttackShape.SLASH
+	greatsword.aoe_size = Vector2i(2, 2) # Affects a 2-tile L-shape
+	weapons[&"greatsword"] = greatsword
 	
-	var rusty_dagger = Weapon.new()
-	rusty_dagger.id = &"rusty_dagger"
-	rusty_dagger.display_name = "Rusty Dagger"
-	rusty_dagger.base_damage = 4
-	weapons[rusty_dagger.id] = rusty_dagger
+	var longbow = Weapon.new()
+	longbow.id = &"longbow"; longbow.display_name = "Longbow"
+	longbow.base_damage = 6; longbow.range = 1000.0
+	longbow.aoe_shape = Weapon.AttackShape.RECTANGLE # A single arrow hits one tile
+	longbow.aoe_size = Vector2i(1, 1)
+	weapons[&"longbow"] = longbow
 
 func get_weapon(weapon_id: StringName) -> Weapon:
 	return weapons.get(weapon_id, null)

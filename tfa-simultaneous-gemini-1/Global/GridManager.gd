@@ -14,6 +14,7 @@ const HIGHLIGHT_TILE_COORDS = Vector2i(0, 128) # The atlas coords of the highlig
 # UPDATED: Now takes the highlights layer during initialization
 func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 	self.base_layer = p_base_layer
+	print("p_base_layer",p_base_layer)
 	self.highlights_layer = p_highlights_layer
 	if not is_instance_valid(base_layer) or not is_instance_valid(highlights_layer):
 		printerr("GridManager: Invalid TileMapLayer provided.")
@@ -46,15 +47,20 @@ func unregister_obstacle(grid_pos: Vector2i):
 		grid_costs[grid_pos] = 1 # Set cost back to normal
 		print_debug("GridManager: Obstacle unregistered at ", grid_pos)
 
-# --- Coordinate and Pathfinding functions (unchanged from before) ---
+# --- UPDATED: More robust coordinate conversion ---
 func world_to_map(world_pos: Vector2) -> Vector2i:
 	if not is_instance_valid(base_layer): return Vector2i.ZERO
-	return base_layer.local_to_map(base_layer.to_local(world_pos))
+	# This is a more robust way to convert from global to local coordinates,
+	# as it correctly handles the TileMap's transform no matter where it is.
+	var local_pos = base_layer.to_local(world_pos)
+	return base_layer.local_to_map(local_pos)
 
 func map_to_world(map_pos: Vector2i) -> Vector2:
 	if not is_instance_valid(base_layer): return Vector2.ZERO
-	return base_layer.to_global(base_layer.map_to_local(map_pos))
-
+	# Get the tile's position in the TileMap's local space
+	var local_pos = base_layer.map_to_local(map_pos)
+	# Convert that local position to the global world position
+	return base_layer.to_global(local_pos)
 func find_path(start_pos: Vector2i, end_pos: Vector2i) -> Array[Vector2i]:
 	var open_set: Array[Vector2i] = [start_pos]
 	var came_from: Dictionary = {}

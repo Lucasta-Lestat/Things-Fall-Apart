@@ -52,10 +52,14 @@ offset_bottom = 23.0
 [node name="PreviewContainer" type="Node2D" parent="."]
 
 [node name="PathPreviewLine" type="Line2D" parent="PreviewContainer"]
-width = 4.0
+width = 3.0
 
 [node name="ActionPreviewSprite" type="Sprite2D" parent="PreviewContainer"]
 
-[node name="SelectionVisual" type="Polygon2D" parent="."]
-color = Color(0.11303, 0.62584, 0.55736, 1)
-polygon = PackedVector2Array(0, 0, 0, 0, 0, 0)
+[node name="TempPathPreview" type="Line2D" parent="PreviewContainer"]
+modulate = Color(1, 1, 1, 0.960784)
+z_index = 10
+width = 3.0
+
+[node name="SelectionVisual" type="Sprite2D" parent="."]
+z_index = 1

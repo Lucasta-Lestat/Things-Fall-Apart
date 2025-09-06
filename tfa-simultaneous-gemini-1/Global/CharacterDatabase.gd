@@ -53,8 +53,8 @@ func _setup_character_data():
 	hero_alpha.current_health = hero_alpha.max_health
 	hero_alpha.base_ap = 4
 	print("Attempting to assign abilities #combat")
-	hero_alpha.abilities.assign(["move", "basic_attack", "cleave"])
-	hero_alpha.equipped_weapon = &"short_sword"
+	hero_alpha.abilities.assign([&"move", &"basic_attack", &"cleave", &"fireball"])
+	hero_alpha.equipped_weapon = &"greatsword"
 	hero_alpha.traits = {&"deadeye": 1}
 	character_data["hero_alpha"] = hero_alpha
 	print("hero_alpha.abilities",hero_alpha.abilities)

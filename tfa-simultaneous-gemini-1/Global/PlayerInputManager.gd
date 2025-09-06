@@ -149,13 +149,15 @@ func _unhandled_input(event: InputEvent):
 		print("DEBUG: Input not active for planning, current state: ", combat_manager.current_combat_state if combat_manager else "no combat manager")
 		return
 
-	print("DEBUG: Processing input event in planning mode")
+	#print("DEBUG: Processing input event in planning mode")
 
 	# --- Targeting Mode Input ---
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
 		#print("DEBUG: In targeting mode")
-		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if event is InputEventMouseButton and event.pressed:
+			print("DEBUG: mouse input received in targeting mode")
+			if true:
+				print("DEBUG: Left mouse button click event in targeting mode")
 				_handle_ability_target_click(get_viewport().get_mouse_position())
 				get_viewport().set_input_as_handled()
 				return
@@ -164,6 +166,7 @@ func _unhandled_input(event: InputEvent):
 				get_viewport().set_input_as_handled()
 				return
 		elif event is InputEventMouseMotion:
+			# print("DEBUG: Mouse motion in targeting mode")
 			if ability_caster_for_targeting and ability_being_targeted:
 				var world_mouse_pos = _get_world_mouse_position()
 				var next_slot = ability_caster_for_targeting.get_next_available_ap_slot_index()
@@ -402,6 +405,8 @@ func _start_ability_targeting_mode(ability: Ability, caster: CombatCharacter):
 	# This provides instant feedback on range and/or AOE.
 	var world_mouse_pos = _get_world_mouse_position()
 	caster.show_ability_preview(ability, world_mouse_pos, caster.get_next_available_ap_slot_index())
+	
+	
 	# --- END OF ADDED UI FEEDBACK ---
 
 func cancel_targeting_mode():
@@ -429,7 +434,7 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 	var start_tile = GridManager.world_to_map(caster.global_position)
 	var end_tile = GridManager.world_to_map(target_world_pos)
 	var range_in_tiles = caster.get_effective_range(ability)
-	var is_in_range = false
+	var is_in_range = true
 
 	# Apply to all selected characters that are able and have this ability
 	for char_to_act in selected_characters:
@@ -449,12 +454,13 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 			var path = GridManager.find_path(start_tile, end_tile)
 			is_in_range = not path.is_empty() and path.size() <= range_in_tiles
 		else: # Manhattan distance for attacks/spells
+			print("Manhattan? why")
 			var distance = abs(start_tile.x - end_tile.x) + abs(start_tile.y - end_tile.y)
 			is_in_range = distance <= range_in_tiles
 
-	if not is_in_range:
-		print_debug("Target out of range for '", ability.display_name, "'")
-		return # Let player try again
+	#if not is_in_range:
+		#print_debug("Target out of range for '", ability.display_name, "'")
+		#return # Let player try again
 
 	# Apply to all selected characters (logic is now grid-aware)
 	for char_to_act in selected_characters:

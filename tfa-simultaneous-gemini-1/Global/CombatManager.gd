@@ -22,6 +22,8 @@ var current_combat_state: CombatState = CombatState.IDLE
 var all_characters_in_combat: Array[CombatCharacter] = []
 var player_party: Array[CombatCharacter] = []
 var enemy_party: Array[CombatCharacter] = []
+var all_structures_in_combat: Array[Structure] = [] # NEW: Tracks structures
+
 
 
 var current_ap_slot_being_resolved: int = 0
@@ -35,7 +37,37 @@ const BEAT_PAUSE_WINDOW_DURATION = 0.5 # Time player has to press space to pause
 
 var active_player_character_planning_idx: int = 0 # For turn-based planning among player chars
 
+# --- NEW: Structure Management ---
+func register_structure(structure: Structure):
+	if not structure in all_structures_in_combat:
+		all_structures_in_combat.append(structure)
+		print_debug("[CombatManager] Registered structure: ", structure.structure_id)
 
+func unregister_structure(structure: Structure):
+	all_structures_in_combat.erase(structure)
+	print_debug("[CombatManager] Unregistered structure: ", structure.structure_id)
+
+# --- NEW: AoE Helper Function ---
+func get_entities_in_tiles(tiles: Array[Vector2i]) -> Array:
+	var entities_found: Array = []
+	var tile_set = {} # Use a dictionary for faster lookups
+	for tile in tiles:
+		tile_set[tile] = true
+		
+	for char in all_characters_in_combat:
+		if is_instance_valid(char) and char.current_health > 0:
+			var char_tile = GridManager.world_to_map(char.global_position)
+			if tile_set.has(char_tile):
+				entities_found.append(char)
+				
+	for struct in all_structures_in_combat:
+		if is_instance_valid(struct) and struct.current_health > 0:
+			var struct_tile = GridManager.world_to_map(struct.global_position)
+			if tile_set.has(struct_tile):
+				entities_found.append(struct)
+				
+	print_debug("[CombatManager] Found ", entities_found.size(), " entities in ", tiles.size(), " tiles.")
+	return entities_found
 func register_character(character: CombatCharacter):
 	if not character in all_characters_in_combat:
 		all_characters_in_combat.append(character)
@@ -75,7 +107,7 @@ func start_combat(characters: Array[CombatCharacter]):
 		if is_instance_valid(char):
 			register_character(char) # This also connects signals
 		else:
-			print("Didn't regist as wasn't a valid character #ui #combat")
+			print("Didn't register as wasn't a valid character #ui #combat")
 	print("combat started #ui #combat")
 	emit_signal("combat_started")
 	if player_party.is_empty() && enemy_party.is_empty():
