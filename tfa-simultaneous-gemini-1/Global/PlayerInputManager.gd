@@ -154,7 +154,7 @@ func _unhandled_input(event: InputEvent):
 	# --- Targeting Mode Input ---
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
 		#print("DEBUG: In targeting mode")
-		if event is InputEventMouseButton and event.pressed:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			print("DEBUG: mouse input received in targeting mode")
 			if true:
 				print("DEBUG: Left mouse button click event in targeting mode")
@@ -474,7 +474,9 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 			continue
 		
 		var char_next_slot = char_to_act.get_next_available_ap_slot_index()
+		print("check if can plan")
 		if char_to_act.can_start_planning_ability(actual_ability, char_next_slot):
+			print("can plan")
 			# Use target_world_pos which will be snapped to the grid center in plan_ability_use
 			char_to_act.plan_ability_use(actual_ability, char_next_slot, clicked_char_target, target_world_pos)
 		else:

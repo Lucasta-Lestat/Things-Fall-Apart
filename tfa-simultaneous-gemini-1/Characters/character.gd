@@ -331,7 +331,7 @@ func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, ap_slot_in
 			#_draw_area_of_effect_preview(start_tile, range_in_tiles, Color(0.5, 0.7, 1.0, 0.3), start_pos)
 			pass
 	else: # For attacks, spells, etc.
-		var affected_tiles = get_affected_tiles(ability, start_pos, world_mouse_pos)
+		var affected_tiles = get_affected_tiles(ability, start_tile, world_mouse_pos)
 		_draw_area_of_effect_preview(affected_tiles, Color(1.0, 0.3, 0.3, 0.3))
 
 
@@ -432,7 +432,8 @@ func rebuild_all_previews():
 			# Non-move actions don't change position
 			var aoe_center_tile = GridManager.world_to_map(action.target_position)
 			var aoe_radius = ability.aoe_size.x
-			_draw_planned_aoe_preview(aoe_center_tile, aoe_radius, Color(0.8, 0.2, 0.2, 0.5))
+			var affected_tiles = get_affected_tiles(ability, current_world_pos, action.target_position)
+			_draw_planned_aoe_preview(affected_tiles, Color(0.8, 0.2, 0.2, 0.5))
 			preview_positions.append(current_world_pos)
 	
 	# Update the path line with all cumulative points
@@ -483,6 +484,20 @@ func _draw_area_of_effect_preview(affected_tiles: Array[Vector2i], color: Color)
 		preview_container.add_child(square)
 		range_preview_squares.append(square)
 	preview_container.visible = true
+	
+func _draw_planned_aoe_preview(affected_tiles: Array[Vector2i],  color: Color):
+	"""Draws persistent AoE for planned actions, adding squares to planned_aoe_squares."""
+	#var affected_tiles = _get_tiles_in_radius(center_tile, radius_in_tiles) WRONG
+	for tile in affected_tiles:
+		var square = ColorRect.new()
+		square.size = Vector2(GridManager.TILE_SIZE, GridManager.TILE_SIZE)
+		square.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		square.color = color
+		square.global_position = GridManager.map_to_world(tile) - square.size / 2
+		square.z_index = 0
+		preview_container.add_child(square)
+		planned_aoe_squares.append(square) # Add to persistent array
+	preview_container.visible = true
 
 func _draw_temp_path_preview(path: Array[Vector2i], from_position: Vector2, color: Color):
 	print("Attempting to draw temp path preview #ui")
@@ -511,19 +526,7 @@ func _draw_path_preview(path: Array[Vector2i], color: Color, slot_index: int):
 	rebuild_all_previews()
 	print("Successfully drew planned path preview #ui")
 	
-func _draw_planned_aoe_preview(center_tile: Vector2i, radius_in_tiles: int, color: Color):
-	"""Draws persistent AoE for planned actions, adding squares to planned_aoe_squares."""
-	var affected_tiles = _get_tiles_in_radius(center_tile, radius_in_tiles)
-	for tile in affected_tiles:
-		var square = ColorRect.new()
-		square.size = Vector2(GridManager.TILE_SIZE, GridManager.TILE_SIZE)
-		square.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		square.color = color
-		square.global_position = GridManager.map_to_world(tile) - square.size / 2
-		square.z_index = 0
-		preview_container.add_child(square)
-		planned_aoe_squares.append(square) # Add to persistent array
-	preview_container.visible = true
+
 	
 func _get_tiles_in_radius(center_tile: Vector2i, radius: int) -> Array[Vector2i]:
 	"""Helper function to get all tiles within a certain radius of a center tile."""

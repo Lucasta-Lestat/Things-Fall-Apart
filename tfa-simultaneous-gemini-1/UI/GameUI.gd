@@ -84,7 +84,8 @@ func _on_resolution_phase_started():
 
 func _on_ap_slot_resolved(slot_index: int):
 	for char_ui in character_ui_map.values():
-		char_ui.update_ap_slot(slot_index)
+		if char_ui != null:
+			char_ui.update_ap_slot(slot_index)
 
 func _on_player_selection_changed(selected_chars: Array[CombatCharacter]):
 	# Hide all previews first
