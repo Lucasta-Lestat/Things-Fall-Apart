@@ -148,7 +148,7 @@ func _prompt_next_player_character_to_plan():
 	if character_to_plan:
 		var next_slot = character_to_plan.get_next_available_ap_slot_index()
 		if next_slot != -1: # If they have slots left
-			# print_debug("Prompting ", character_to_plan.character_name, " to plan for slot ", next_slot)
+			print_debug("Prompting ", character_to_plan.character_name, " to plan for slot ", next_slot)
 			emit_signal("player_action_pending", character_to_plan, next_slot)
 		else: # This character is actually done (no slots or AP left), mark and try next
 			_on_character_finished_planning_round(character_to_plan)

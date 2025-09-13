@@ -45,7 +45,7 @@ default_color = Color(0.860369, 0.860369, 0.860369, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea"]
 shape = SubResource("RectangleShape2D_03jby")
 
-[node name="FloatingTextLabel" type="Label" parent="."]
+[node name="FloatingTextLabel" type="RichTextLabel" parent="."]
 offset_right = 40.0
 offset_bottom = 23.0
 

@@ -16,6 +16,7 @@ layout_mode = 2
 
 [node name="HealthBar" type="ProgressBar" parent="CharacterUIContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 
 [node name="APSlotsContainer" type="HBoxContainer" parent="CharacterUIContainer"]

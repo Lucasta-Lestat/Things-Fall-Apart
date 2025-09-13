@@ -26,13 +26,9 @@ var current_planning_ap_slot: int = -1
 var combat_manager: CombatManager
 
 func _ready():
-	print("DEBUG: PlayerInputManager _ready() called")
-	
-	# Use call_deferred to avoid the "busy setting up children" error
 	call_deferred("_setup_ui_elements")
-	
-	
-	_set_input_active(false) # Initially inactive
+	_set_input_active(false)
+
 
 func _setup_ui_elements():
 	print("DEBUG: Setting up UI elements")
@@ -103,6 +99,8 @@ func _on_combat_resumed():
 
 func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
 	print("DEBUG: on_player_action_pending: ", character.name)
+	if primary_selected_character != character:
+		cancel_targeting_mode()
 	current_planning_character = character
 	current_planning_ap_slot = ap_slot_index
 	# Auto-select the character whose turn it is to plan
@@ -152,6 +150,77 @@ func _unhandled_input(event: InputEvent):
 	#print("DEBUG: Processing input event in planning mode")
 
 	# --- Targeting Mode Input ---
+	#Just put hotkeys here
+	if event is InputEventKey and event.pressed:
+		print("DEBUG: key pressed")
+		if event.keycode == KEY_BACKSPACE:
+			_select_all_player_characters()
+			emit_signal("selection_changed", selected_characters)
+			get_viewport().set_input_as_handled()
+		
+		# Hotbar keys (1-9, 0 for 10th)
+		var hotkey_idx = -1
+		if event.keycode >= KEY_1 and event.keycode <= KEY_9: hotkey_idx = event.keycode - KEY_1
+		elif event.keycode == KEY_0: hotkey_idx = 9
+
+		if hotkey_idx != -1:
+			print("DEBUG: Hotkey pressed: ", hotkey_idx)
+			print("DEBUG: current_planning_character: ", current_planning_character.character_name if current_planning_character else "<null>")
+			print("DEBUG: primary_selected_character: ", primary_selected_character.character_name if primary_selected_character else "<null>")
+			print("DEBUG: selected_characters count: ", selected_characters.size())
+			
+			# Determine which character should use the ability
+			var acting_char: CombatCharacter = null
+			
+			# Priority 1: Use primary selected character (this is what the player expects)
+			if primary_selected_character and is_instance_valid(primary_selected_character):
+				acting_char = primary_selected_character
+				print("DEBUG: Using primary selected character: ", acting_char.character_name)
+			# Priority 2: Use first selected character
+			elif not selected_characters.is_empty() and is_instance_valid(selected_characters[0]):
+				acting_char = selected_characters[0]
+				print("DEBUG: Using first selected character: ", acting_char.character_name)
+			# Priority 3: If we have a current planning character, use them (fallback)
+			elif current_planning_character and is_instance_valid(current_planning_character):
+				acting_char = current_planning_character
+				print("DEBUG: Using current planning character: ", acting_char.character_name)
+			
+			if acting_char:
+				print("DEBUG: Acting character: ", acting_char.character_name)
+				print("DEBUG: Character has ", acting_char.abilities.size(), " abilities")
+				print("DEBUG: Character current AP: ", acting_char.current_ap_for_planning)
+				
+				if acting_char.abilities.size() > hotkey_idx:
+					var ability = acting_char.abilities[hotkey_idx]
+					print("DEBUG: Trying to use ability: ", ability.display_name if ability else "null")
+					
+					if ability:
+						# Determine which slot to plan for
+						var planning_slot = acting_char.get_next_available_ap_slot_index()
+						print("DEBUG: Next available slot: ", planning_slot)
+						
+						if planning_slot != -1 and acting_char.can_start_planning_ability(ability, planning_slot):
+							print("DEBUG: Can start planning ability")
+							if ability.requires_target():
+								print("DEBUG: Ability requires target, starting targeting mode")
+								_start_ability_targeting_mode(ability, acting_char)
+							else: # Self-cast or no target needed
+								print("DEBUG: Self-casting ability")
+								acting_char.plan_ability_use(ability, planning_slot, acting_char) # Target self
+						else:
+							print("DEBUG: Cannot use ability - AP/Slot issue")
+							print("DEBUG: Current AP: ", acting_char.current_ap_for_planning, " Required: ", ability.ap_cost)
+							print("DEBUG: Planning slot: ", planning_slot)
+							print("DEBUG: can_start_planning_ability result: ", acting_char.can_start_planning_ability(ability, planning_slot) if planning_slot != -1 else "invalid slot")
+					else:
+						print("DEBUG: Ability is null")
+				else:
+					print("DEBUG: Hotkey index out of range. Character has ", acting_char.abilities.size(), " abilities, requested index ", hotkey_idx)
+			else:
+				print("DEBUG: No acting character found")
+			
+			get_viewport().set_input_as_handled()
+	
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
 		#print("DEBUG: In targeting mode")
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -250,75 +319,7 @@ func _unhandled_input(event: InputEvent):
 					selection_rect_visual.size = rect_size
 				get_viewport().set_input_as_handled()
 
-	elif event is InputEventKey and event.pressed:
-		print("DEBUG: key pressed")
-		if event.keycode == KEY_BACKSPACE:
-			_select_all_player_characters()
-			emit_signal("selection_changed", selected_characters)
-			get_viewport().set_input_as_handled()
-		
-		# Hotbar keys (1-9, 0 for 10th)
-		var hotkey_idx = -1
-		if event.keycode >= KEY_1 and event.keycode <= KEY_9: hotkey_idx = event.keycode - KEY_1
-		elif event.keycode == KEY_0: hotkey_idx = 9
-
-		if hotkey_idx != -1:
-			print("DEBUG: Hotkey pressed: ", hotkey_idx)
-			print("DEBUG: current_planning_character: ", current_planning_character.character_name if current_planning_character else "<null>")
-			print("DEBUG: primary_selected_character: ", primary_selected_character.character_name if primary_selected_character else "<null>")
-			print("DEBUG: selected_characters count: ", selected_characters.size())
-			
-			# Determine which character should use the ability
-			var acting_char: CombatCharacter = null
-			
-			# Priority 1: Use primary selected character (this is what the player expects)
-			if primary_selected_character and is_instance_valid(primary_selected_character):
-				acting_char = primary_selected_character
-				print("DEBUG: Using primary selected character: ", acting_char.character_name)
-			# Priority 2: Use first selected character
-			elif not selected_characters.is_empty() and is_instance_valid(selected_characters[0]):
-				acting_char = selected_characters[0]
-				print("DEBUG: Using first selected character: ", acting_char.character_name)
-			# Priority 3: If we have a current planning character, use them (fallback)
-			elif current_planning_character and is_instance_valid(current_planning_character):
-				acting_char = current_planning_character
-				print("DEBUG: Using current planning character: ", acting_char.character_name)
-			
-			if acting_char:
-				print("DEBUG: Acting character: ", acting_char.character_name)
-				print("DEBUG: Character has ", acting_char.abilities.size(), " abilities")
-				print("DEBUG: Character current AP: ", acting_char.current_ap_for_planning)
-				
-				if acting_char.abilities.size() > hotkey_idx:
-					var ability = acting_char.abilities[hotkey_idx]
-					print("DEBUG: Trying to use ability: ", ability.display_name if ability else "null")
-					
-					if ability:
-						# Determine which slot to plan for
-						var planning_slot = acting_char.get_next_available_ap_slot_index()
-						print("DEBUG: Next available slot: ", planning_slot)
-						
-						if planning_slot != -1 and acting_char.can_start_planning_ability(ability, planning_slot):
-							print("DEBUG: Can start planning ability")
-							if ability.requires_target():
-								print("DEBUG: Ability requires target, starting targeting mode")
-								_start_ability_targeting_mode(ability, acting_char)
-							else: # Self-cast or no target needed
-								print("DEBUG: Self-casting ability")
-								acting_char.plan_ability_use(ability, planning_slot, acting_char) # Target self
-						else:
-							print("DEBUG: Cannot use ability - AP/Slot issue")
-							print("DEBUG: Current AP: ", acting_char.current_ap_for_planning, " Required: ", ability.ap_cost)
-							print("DEBUG: Planning slot: ", planning_slot)
-							print("DEBUG: can_start_planning_ability result: ", acting_char.can_start_planning_ability(ability, planning_slot) if planning_slot != -1 else "invalid slot")
-					else:
-						print("DEBUG: Ability is null")
-				else:
-					print("DEBUG: Hotkey index out of range. Character has ", acting_char.abilities.size(), " abilities, requested index ", hotkey_idx)
-			else:
-				print("DEBUG: No acting character found")
-			
-			get_viewport().set_input_as_handled()
+	
 
 func _get_world_mouse_position() -> Vector2:
 	var cam = get_viewport().get_camera_2d()
@@ -406,8 +407,6 @@ func _start_ability_targeting_mode(ability: Ability, caster: CombatCharacter):
 	var world_mouse_pos = _get_world_mouse_position()
 	caster.show_ability_preview(ability, world_mouse_pos, caster.get_next_available_ap_slot_index())
 	
-	
-	# --- END OF ADDED UI FEEDBACK ---
 
 func cancel_targeting_mode():
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:

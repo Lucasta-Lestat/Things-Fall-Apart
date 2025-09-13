@@ -22,10 +22,21 @@ class CharacterData:
 	var base_size = 128
 	var icon_size: Vector2 = Vector2(100.0,100.0)
 	var size_class = 1
+	# --- UNIFIED EQUIPMENT SLOTS ---
+	var equipped_main_hand: StringName
+	var equipped_off_hand: StringName
+	var equipped_head: StringName
+	var equipped_armor: StringName
+	var equipped_gloves: StringName
+	var equipped_boots: StringName
+	var equipped_cape: StringName
+	var equipped_neck: StringName
+	var equipped_ring1: StringName
+	var equipped_ring2: StringName
 	
+	var damage_resistances: Dictionary
 	# NEW: Traits and equipment
 	var traits: Dictionary = {} # e.g. {"deadeye": 1, "clumsy": 2}
-	var equipped_weapon: StringName = &"short_sword"
 	
 	var abilities: Array[String] = [] # IDs of abilities this character knows
 	
@@ -47,17 +58,20 @@ func _setup_character_data():
 	var hero_alpha = CharacterData.new("hero_alpha", "Hero Alpha", "res://hero1.png", CombatCharacter.Allegiance.PLAYER)
 	hero_alpha.character_name = "Hero Alpha"
 	hero_alpha.strength = 75
-	hero_alpha.dexterity = 70
+	hero_alpha.dexterity = 90
 	hero_alpha.constitution = 60 
 	hero_alpha.max_health = hero_alpha.constitution/5
 	hero_alpha.current_health = hero_alpha.max_health
 	hero_alpha.base_ap = 4
 	print("Attempting to assign abilities #combat")
 	hero_alpha.abilities.assign([&"move", &"basic_attack", &"cleave", &"fireball"])
-	hero_alpha.equipped_weapon = &"greatsword"
+	hero_alpha.equipped_main_hand = &"greatsword"
+	hero_alpha.equipped_armor = &"iron_plate_armor"
+	hero_alpha.equipped_ring1 = &"ring_of_protection"
 	hero_alpha.traits = {&"deadeye": 1}
 	character_data["hero_alpha"] = hero_alpha
 	print("hero_alpha.abilities",hero_alpha.abilities)
+	
 	var hero_beta = CharacterData.new("hero_beta", "Hero Beta", "res://hero2.png", CombatCharacter.Allegiance.PLAYER)
 	hero_beta.character_name = "Hero Beta"
 	hero_beta.strength = 75
@@ -65,7 +79,7 @@ func _setup_character_data():
 	hero_beta.max_health = hero_alpha.constitution/5
 	hero_beta.current_health = hero_alpha.max_health
 	hero_beta.base_ap = 4
-	hero_beta.equipped_weapon = &"longbow"
+	hero_beta.equipped_main_hand = &"longbow"
 	hero_beta.traits = {&"deadeye": 2}
 	hero_beta.abilities.assign(["move", "basic_attack", &"cleave"])
 	character_data["hero_beta"] = hero_beta
@@ -87,8 +101,8 @@ func _setup_character_data():
 	orc_brute.character_name = "Orc Brute"
 	orc_brute.strength = 75
 	orc_brute.dexterity = 70
-	orc_brute.max_health = hero_alpha.constitution/5
-	orc_brute.current_health = hero_alpha.max_health
+	orc_brute.max_health = orc_brute.constitution/5
+	orc_brute.current_health = orc_brute.max_health
 	orc_brute.base_ap = 4
 	orc_brute.abilities.assign(["move", "basic_attack", "heavy_strike"])
 	

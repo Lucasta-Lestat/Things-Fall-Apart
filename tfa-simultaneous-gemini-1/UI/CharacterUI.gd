@@ -18,7 +18,7 @@ const AP_SLOT_EXECUTED = preload("res://UI/Assets/ap_slot_executed.png")
 
 func _ready():
 	print("DEBUG: combat_manager initialized in CharacterUI. Value: ", combat_manager)
-
+	
 	# Hide by default until a character is set
 	visible = true
 
@@ -54,12 +54,13 @@ func set_character(char: CombatCharacter):
 	character.health_changed.connect(_on_health_changed)
 	character.planned_action_for_slot.connect(_on_action_changed)
 	character.died.connect(func(_char): queue_free()) # Remove UI on death
-
+	ap_slots_container.custom_minimum_size = icon_size/2
 	setup_ap_slots()
 	update_all_ap_slots()
 
 func setup_ap_slots():
 	# Clear any existing slots
+	print("Setting up AP Slots #ui")
 	for child in ap_slots_container.get_children():
 		child.queue_free()
 		
@@ -67,8 +68,12 @@ func setup_ap_slots():
 	for i in range(character.max_ap_per_round):
 		var ap_slot_texture = TextureRect.new()
 		ap_slot_texture.texture = AP_SLOT_EMPTY
+		print(ap_slot_texture.texture, "  ap_slot_texutre.texture ")
+		print(ap_slot_texture, "  ap_slot_texutre ")
+		ap_slot_texture.custom_minimum_size = 1/4 * icon_size
 		ap_slot_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ap_slot_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ap_slot_texture.z_index = 24
 		ap_slots_container.add_child(ap_slot_texture)
 
 func update_all_ap_slots():

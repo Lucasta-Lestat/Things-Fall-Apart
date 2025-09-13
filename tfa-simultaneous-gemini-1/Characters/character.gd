@@ -32,9 +32,23 @@ var charisma := 10
 var touch_range: float = 50.0
 var base_size: int = 64
 var traits: Dictionary = {}
-var equipped_weapon: Weapon
 var abilities: Array[Ability] = []
 var planned_actions: Array[PlannedAction] = []
+var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
+
+# --- UNIFIED EQUIPMENT SLOTS ---
+var equipped_main_hand: Equipment
+var equipped_off_hand: Equipment
+var equipped_head: Equipment
+var equipped_armor: Equipment
+var equipped_gloves: Equipment
+var equipped_boots: Equipment
+var equipped_cape: Equipment
+var equipped_neck: Equipment
+var equipped_ring1: Equipment
+var equipped_ring2: Equipment
+
+
 var is_selected: bool = false:
 	set(value):
 		is_selected = value
@@ -57,7 +71,7 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 # --- Scene Node References ---
 @onready var sprite: Sprite2D = $sprite
 @onready var selection_visual: Sprite2D = $SelectionVisual  # Changed from Polygon2D to Sprite2D
-@onready var floating_text_label: Label = $FloatingTextLabel
+@onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var preview_container: Node2D = $PreviewContainer
 @onready var path_preview_line: Line2D = $PreviewContainer/PathPreviewLine
 @onready var action_preview_sprite: Sprite2D = $PreviewContainer/ActionPreviewSprite
@@ -121,6 +135,7 @@ func execute_planned_action(action: PlannedAction):
 	if not ability: print_rich("[color=red]ERROR: Ability not found: ", action.ability_id, "[/color]"); return
 	var roll = randi() % 100 + 1
 	var success_target = get_stat_by_name(ability.success_stat)
+	
 	if ability.success_stat:
 		var bonus = 0
 		for trait_id in ability.advantages:
@@ -129,7 +144,8 @@ func execute_planned_action(action: PlannedAction):
 			if traits.has(trait_id): bonus -= 20 * traits[trait_id]
 		success_target += bonus
 		
-		
+	var success_level = _calculate_success_level(roll, success_target)
+
 	if ability.effect == Ability.ActionEffect.MOVE:
 		var start_tile = GridManager.world_to_map(global_position)
 		var end_tile = GridManager.world_to_map(action.target_position)
@@ -138,9 +154,10 @@ func execute_planned_action(action: PlannedAction):
 		if current_path.size() > move_range_tiles:
 			current_path.resize(move_range_tiles)
 		path_index = 0
+		
 	
 	elif ability.effect == Ability.ActionEffect.DAMAGE:
-		if roll <= success_target:
+		if success_level > 0 :
 			var affected_tiles = get_affected_tiles(ability, global_position, action.target_position)
 			var targets = combat_manager.get_entities_in_tiles(affected_tiles)
 			
@@ -149,17 +166,29 @@ func execute_planned_action(action: PlannedAction):
 				return
 				
 			print_rich("[color=orange]Executing Damage Action: ", ability.display_name, "[/color]")
+			var base_damage = {}
 			for entity in targets:
-				# Don't hit self unless it's an explosive type of attack (future feature)
-				#if entity == self: continue
-
-				var damage = (equipped_weapon.base_damage if equipped_weapon else 1) + (strength / 5) if ability.is_weapon_attack else ability.flat_damage
-				if is_instance_valid(entity) and entity.has_method("take_damage"):
-					print_rich("  [color=green]HIT:[/color] ", entity.name, " for ", damage, " damage.")
-					entity.take_damage(damage)
+				if ability.is_weapon_attack:
+					if is_instance_valid(entity) and entity.has_method("take_damage"):
+						if equipped_main_hand:
+							base_damage = equipped_main_hand.damage 
+							base_damage[equipped_main_hand.primary_damage_type] +=  strength/5
+							#for damage_type in damage:
+								#damage[damage_type] *= damage_multiplier
+						else: 
+							base_damage = {"bludgeoning": (1 + strength/5) }
 				else:
-					print_rich("  [color=yellow]MISS![/color] (Rolled ", roll, " vs target of ", success_target, ")")
-					entity.show_floating_text("Miss", Color.WHITE_SMOKE)
+					base_damage = ability.flat_damage 
+					#for damage_type in base_damage:
+					#		pass
+							#damage[damage_type] *= damage_multiplier
+				if is_instance_valid(entity) and entity.has_method("take_damage"):
+					#print_rich("  [color=green]HIT:[/color] ", entity.name, " for ", damage, " damage.")
+					entity.take_damage(base_damage, success_level)
+		else:
+			print_rich(" [color=yellow]MISS![/color] (Rolled ", roll, " vs target of ", success_target, ")")
+			show_floating_text("Miss", Color.WHITE_SMOKE)
+					
 # --- NEW: Core AoE Calculation Functions ---
 # --- UPDATED: Core AoE Calculation Functions ---
 func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world_pos: Vector2) -> Array[Vector2i]:
@@ -170,9 +199,9 @@ func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world
 	#print("start_tile 2 ", start_tile)
 	# UPDATED: Prioritize the ability's own AoE definition. Fall back to weapon's.
 	var aoe_shape = ability.aoe_shape if not ability.is_weapon_attack else \
-					(equipped_weapon.aoe_shape if ability.is_weapon_attack and equipped_weapon else Ability.AttackShape.RECTANGLE)
+					(equipped_main_hand.aoe_shape if ability.is_weapon_attack and equipped_main_hand else Ability.AttackShape.RECTANGLE)
 	var aoe_size = ability.aoe_size if not ability.is_weapon_attack else \
-				   (equipped_weapon.aoe_size if ability.is_weapon_attack and equipped_weapon else Vector2i.ONE)
+				   (equipped_main_hand.aoe_size if ability.is_weapon_attack and equipped_main_hand else Vector2i.ONE)
 
 	if ability.effect == Ability.ActionEffect.MOVE: # Movement uses a different "flood fill" logic
 		return _get_reachable_tiles(start_tile, get_effective_range(ability))
@@ -302,8 +331,8 @@ func get_effective_range(ability: Ability) -> int:
 	match ability.range_type:
 		Ability.RangeType.ABILITY: pixel_range = ability.range
 		Ability.RangeType.TOUCH: pixel_range = touch_range
-		Ability.RangeType.WEAPON_MELEE: pixel_range = touch_range + (equipped_weapon.range if equipped_weapon else 0.0)
-		Ability.RangeType.WEAPON_RANGED: pixel_range = equipped_weapon.range if equipped_weapon else touch_range
+		Ability.RangeType.WEAPON_MELEE: pixel_range = touch_range + (equipped_main_hand.range if equipped_main_hand else 0.0)
+		Ability.RangeType.WEAPON_RANGED: pixel_range = equipped_main_hand.range if equipped_main_hand else touch_range
 	if ability.effect == Ability.ActionEffect.MOVE:
 		print(" Movement range: ", int(ability.range))
 		return int(ability.range / GridManager.TILE_SIZE)
@@ -391,7 +420,7 @@ func rebuild_all_previews():
 	planned_aoe_squares.clear()
 	# Start from character's current position
 	cumulative_path_points.append(Vector2.ZERO)
-	var current_world_pos = global_position
+	var current_world_pos = self.global_position
 	
 	# Rebuild preview for each planned action
 	for i in range(planned_actions.size()):
@@ -569,26 +598,85 @@ func _apply_character_data():
 	touch_range = data.base_touch_range; max_health = data.max_health
 	current_health = max_health; max_ap_per_round = data.base_ap
 	traits = data.traits.duplicate(true)
-	equipped_weapon = WeaponDatabase.get_weapon(data.equipped_weapon)
+	equipped_main_hand = EquipmentDatabase.get_equipment(data.equipped_main_hand)
 	abilities.clear()
 	for ability_id in data.abilities: abilities.append(AbilityDatabase.get_ability(ability_id))
 	start_round_reset()
 
-func take_damage(amount: int):
-	current_health = max(0, current_health - amount)
+func take_damage(amount: Dictionary, success_level:int = 0):
+	var damage_multiplier = pow(1.5,success_level)
+	for damage_type in amount.keys():
+		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier)) #- self._get_total_damage_resistance()[damage_type]))
+		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
+		if damage_type == "Fire": 
+			show_floating_text(str(amount[damage_type]), Color.CRIMSON, success_level)
+		elif damage_type == "Electric":
+			show_floating_text(str(amount[damage_type]), Color.YELLOW, success_level)
+		elif damage_type == "Cold":
+			show_floating_text(str(amount[damage_type]), Color.ALICE_BLUE, success_level)
+		elif damage_type == "Acid":
+			show_floating_text(str(amount[damage_type]), Color.DARK_GREEN, success_level)
+		elif damage_type == "Radiant":
+			show_floating_text(str(amount[damage_type]), Color.LIGHT_GOLDENROD, success_level)
+		elif damage_type == "Necrotic":
+			show_floating_text(str(amount[damage_type]), Color.BLACK, success_level)
+		elif damage_type == "Poison":
+			show_floating_text(str(amount[damage_type]), Color.BLUE_VIOLET)
+		else:
+			show_floating_text(str(amount[damage_type]), Color.WHITE_SMOKE)
+			
+	var tween = create_tween()
+	tween.tween_property(sprite, "modulate", Color.RED, 0.1)
+	tween.tween_property(sprite, "modulate", Color.WHITE, 0.1)
+	
 	emit_signal("health_changed", current_health, max_health, self)
-	show_floating_text(str(amount), Color.CRIMSON)
+	
 	if current_health <= 0:
 		emit_signal("died", self); sprite.visible = false; $CollisionShape2D.disabled = true
 
-func show_floating_text(text: String, color: Color = Color.WHITE):
-	floating_text_label.text = text; floating_text_label.modulate = color
+func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
+	var formatted_text = "[b]" + text + "[/b]" if success_level else text
+	floating_text_label.text = formatted_text; floating_text_label.modulate = color
+	# Make critical hit text bigger too
+	var scale_multiplier = 1.3 * success_level if success_level else 1.0
+	floating_text_label.scale = Vector2(scale_multiplier, scale_multiplier)
+	
 	floating_text_label.visible = true
+	
 	var tween = create_tween().set_parallel()
 	tween.tween_property(floating_text_label, "position", Vector2(0, -70), 0.9).from(Vector2(0, -40))
 	tween.tween_property(floating_text_label, "modulate:a", 0.0, 0.9)
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
-
+	
+func _get_total_damage_resistance() -> Dictionary:
+	var total_dr = damage_resistances
+	var all_equipment = [
+		equipped_head, equipped_armor, equipped_gloves, equipped_boots,
+		equipped_cape, equipped_neck, equipped_ring1, equipped_ring2, 
+		equipped_main_hand, equipped_off_hand
+	]
+	
+	for item in all_equipment:
+		if not item: continue
+		for damage_type in item.damage_resistances:
+			total_dr[damage_type] = total_dr.get(damage_type, 0) + item.damage_resistances[damage_type]
+			
+	return total_dr
+	
+func _calculate_success_level(roll: int, target: int) -> int:
+	var margin = target - roll
+	var level = 0
+	
+	if margin >= 0: # It's a success
+		level = 1 + int(margin / 50) # Every 50 points over is another success level
+	
+	# Special roll modifiers
+	if roll <= 5: level += 1
+	if roll >= 96: level -= 1
+	
+	print_debug("Roll: ", roll, " vs Target: ", target, " | Margin: ", margin, " -> Success Level: ", level)
+	return level
+	
 func get_stat_by_name(stat_name: StringName) -> int:
 	match stat_name:
 		&"str": return strength
