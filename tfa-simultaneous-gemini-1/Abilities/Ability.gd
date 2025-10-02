@@ -5,7 +5,6 @@ class_name Ability
 enum TargetType { SELF, ALLY, ENEMY, ANY_CHARACTER, GROUND }
 enum ActionEffect { DAMAGE, HEAL, MOVE, BUFF }
 enum RangeType { ABILITY, TOUCH, WEAPON_MELEE, WEAPON_RANGED }
-enum AttackShape { SLASH, THRUST, RECTANGLE, CIRCLE, NONE }
 
 
 @export var id: StringName = &"" # Unique ID, e.g., "fireball", "move"
@@ -27,13 +26,15 @@ enum AttackShape { SLASH, THRUST, RECTANGLE, CIRCLE, NONE }
 @export var effect: ActionEffect = ActionEffect.DAMAGE
 # NEW: The stat used for the success roll (e.g., "dex", "str", "int")
 @export var success_stat: StringName
+@export var primary_damage_type: StringName
 
 #damage calculation
 @export var is_weapon_attack: bool = false # If true, uses weapon damage 
-@export var flat_damage: int = 0 # For non-weapon abilities like spells
+@export var damage: Dictionary  # For non-weapon abilities like spells
+#@export var 
 
 @export_group("Area of Effect")
-@export var aoe_shape: AttackShape = AttackShape.NONE
+@export var aoe_shape: StringName = &"slash"
 # For CIRCLE, x is radius. For RECTANGLE, it's width/height.
 @export var aoe_size: Vector2i = Vector2i.ONE
 

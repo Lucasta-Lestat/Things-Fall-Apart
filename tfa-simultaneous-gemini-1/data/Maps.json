@@ -1,0 +1,81 @@
+{
+	"perrow":
+		{
+		"name":"Perrow",
+		"description":"A small, de facto independent city on the Northeastern shore of Scarlatti",
+		"size_x":50,
+		"size_y":50,
+		"base_floor_type":"dirt_floor",
+		"pc_spawn_points":[
+			{
+				"coming_from":"Route 1",
+				"party_member_1":
+				{
+					"x":10,
+					"y":10
+				}
+
+			},
+			{
+				"coming_from":"The Den",
+				"party_member_1":
+				{
+					"x":20,
+					"y":10
+				}
+			}
+		],
+		"regions":[
+			{
+				"name":"Grassy Area",
+				"x":5,
+				"y":5,
+				"size_x":20,
+				"size_y":20,
+				"floor_type":"floor_grass"
+			},
+			{
+				"name":"Smithy",
+				"x":30,
+				"y":5,
+				"size_x":15,
+				"size_y":15,
+				"floor_type":"wood_floor",
+				"wall_type":"wood_wall",
+				"doors":
+				[
+					{
+						"type":"door_wood",
+						"x":37,
+						"y":5
+					}
+				],    
+			"structures":[
+					{
+						"id":"anvil",
+						"x":32,
+						"y":10,
+						"is_intact":true
+					}
+				],
+				"objects":[
+					{
+					"id": "hammer",
+					"x": 33,   
+					"y": 10,
+					"is_intact":true
+					}
+				],
+				"characters":[
+					{
+					"id":"goblin_scout",
+					"x":29,
+					"y":12,
+					"faction":"greenskins"
+					}
+				]
+
+			}
+		]
+	}
+}

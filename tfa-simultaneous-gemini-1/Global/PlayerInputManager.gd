@@ -117,8 +117,8 @@ func _on_player_action_pending(character: CombatCharacter, ap_slot_index: int):
 func _unhandled_input(event: InputEvent):
 	# Only print for mouse clicks to avoid spam
 	if event is InputEventMouseButton and event.pressed:
-		print("DEBUG: _unhandled_input called with mouse click: ", event.button_index, " at position: ", event.position)
-	
+		#print("DEBUG: _unhandled_input called with mouse click: ", event.button_index, " at position: ", event.position)
+		pass
 	# Global unpause, not tied to beat_pause re-planning
 	if event.is_action_pressed("ui_cancel"): # Escape key
 		print("DEBUG: Escape key pressed")
@@ -144,7 +144,7 @@ func _unhandled_input(event: InputEvent):
 
 	# If input is not generally active for planning, ignore below
 	if not is_processing_input(): 
-		print("DEBUG: Input not active for planning, current state: ", combat_manager.current_combat_state if combat_manager else "no combat manager")
+		#print("DEBUG: Input not active for planning, current state: ", combat_manager.current_combat_state if combat_manager else "no combat manager")
 		return
 
 	#print("DEBUG: Processing input event in planning mode")
@@ -223,9 +223,9 @@ func _unhandled_input(event: InputEvent):
 	
 	if current_targeting_state == TargetingState.ABILITY_TARGETING:
 		#print("DEBUG: In targeting mode")
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if event is InputEventMouseButton and event.pressed:
 			print("DEBUG: mouse input received in targeting mode")
-			if true:
+			if event.button_index == MOUSE_BUTTON_LEFT:
 				print("DEBUG: Left mouse button click event in targeting mode")
 				_handle_ability_target_click(get_viewport().get_mouse_position())
 				get_viewport().set_input_as_handled()
@@ -233,7 +233,7 @@ func _unhandled_input(event: InputEvent):
 			elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 				cancel_targeting_mode()
 				get_viewport().set_input_as_handled()
-				return
+			return
 		elif event is InputEventMouseMotion:
 			# print("DEBUG: Mouse motion in targeting mode")
 			if ability_caster_for_targeting and ability_being_targeted:
@@ -452,6 +452,8 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 		if ability.effect == Ability.ActionEffect.MOVE:
 			var path = GridManager.find_path(start_tile, end_tile)
 			is_in_range = not path.is_empty() and path.size() <= range_in_tiles
+			print("attempting to move after target click in playerinputmanager", " Is in range: ", is_in_range)
+
 		else: # Manhattan distance for attacks/spells
 			print("Manhattan? why")
 			var distance = abs(start_tile.x - end_tile.x) + abs(start_tile.y - end_tile.y)

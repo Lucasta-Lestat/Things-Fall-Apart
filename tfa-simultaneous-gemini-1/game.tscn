@@ -1575,6 +1575,14 @@ sources/0 = SubResource("TileSetAtlasSource_eow3j")
 [node name="Game" type="Node2D"]
 script = ExtResource("1_80nbo")
 
+[node name="FloorsContainer" type="Node2D" parent="."]
+
+[node name="Dirt" type="Node2D" parent="FloorsContainer"]
+
+[node name="Floor Layer 1" type="Node2D" parent="FloorsContainer"]
+
+[node name="Floor Layer 2" type="Node2D" parent="FloorsContainer"]
+
 [node name="CharactersContainer" type="Node2D" parent="."]
 
 [node name="PlayerCamera" type="Camera2D" parent="."]
@@ -1588,18 +1596,22 @@ script = ExtResource("6_ryrav")
 metadata/_custom_type_script = "uid://bklebuy4rusbq"
 
 [node name="MarginContainer" type="MarginContainer" parent="GameUI"]
+visible = false
 custom_minimum_size = Vector2(50, 0)
 offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GameUI/MarginContainer"]
+visible = false
 layout_mode = 2
 
 [node name="TextEdit" type="TextEdit" parent="."]
+visible = false
 offset_right = 8.0
 offset_bottom = 8.0
 
 [node name="GridContainer" type="Node2D" parent="."]
+visible = false
 
 [node name="HighlightsLayer" type="TileMapLayer" parent="GridContainer"]
 tile_set = SubResource("TileSet_eow3j")

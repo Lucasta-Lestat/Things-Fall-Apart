@@ -2,6 +2,9 @@
 extends CharacterBody2D
 class_name CombatCharacter
 
+# --- NEW: Preload the scene for our persistent previews ---
+const ActionPreviewVisualScene = preload("res://Characters/ActionPreviewVisual.tscn")
+
 # --- Signals ---
 signal health_changed(new_health, max_health, character)
 signal planned_action_for_slot(character, slot_index, action)
@@ -59,9 +62,13 @@ var current_path: Array[Vector2i] = []
 var path_index: int = 0
 var is_moving: bool = false
 @export var move_speed: float = 250.0 # Pixels per second
+enum Direction { DOWN, UP, LEFT, RIGHT }
+var current_direction: Direction = Direction.DOWN
+var body_part_data: Dictionary = {} # Stores the loaded BodyPart resources
 
 # --- Preview State ---
-var action_preview_sprites: Array[Sprite2D] = []
+# --- NEW: Array to hold persistent planned action previews ---
+var planned_action_previews: Array[Node2D] = []
 var cumulative_path_points: PackedVector2Array = PackedVector2Array()
 var preview_positions: Array[Vector2] = [] # Track position after each action
 var range_preview_squares: Array[ColorRect] = [] # For range/AOE preview
@@ -69,12 +76,21 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 
 
 # --- Scene Node References ---
-@onready var sprite: Sprite2D = $sprite
+@onready var visuals_container: Node2D = $Body
+@onready var body_sprite: Sprite2D = $Body/VBoxContainer/BodySprite
+@onready var armor_sprite: Sprite2D = $Body/VBoxContainer/ArmorSprite
+@onready var head_sprite: Sprite2D = $Body/VBoxContainer/HeadSprite
+@onready var helmet_sprite: Sprite2D = $Body/VBoxContainer/HelmetSprite
 @onready var selection_visual: Sprite2D = $SelectionVisual  # Changed from Polygon2D to Sprite2D
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var preview_container: Node2D = $PreviewContainer
 @onready var path_preview_line: Line2D = $PreviewContainer/PathPreviewLine
-@onready var action_preview_sprite: Sprite2D = $PreviewContainer/ActionPreviewSprite
+
+# This is now the TEMPORARY preview for targeting
+@onready var temp_action_preview: Node2D = $PreviewContainer/TempActionPreview
+@onready var temp_preview_body: Sprite2D = $PreviewContainer/TempActionPreview/PreviewBodySprite
+@onready var temp_preview_head: Sprite2D = $PreviewContainer/TempActionPreview/PreviewHeadSprite
+
 @onready var temp_path_preview: Line2D = $PreviewContainer/TempPathPreview
 # --- Visual Settings ---
 @export var selection_ring_texture: Texture2D # Assign ring texture in inspector
@@ -82,6 +98,7 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 @export var selection_ring_offset: Vector2 = Vector2(0, 32) # Offset to place at character's feet
 
 var combat_manager: CombatManager
+var vfx_manager: VfxSystem
 
 # --- Godot Lifecycle ---
 func _ready():
@@ -95,15 +112,15 @@ func _ready():
 			selection_visual.texture = selection_ring_texture
 			selection_visual.scale = selection_ring_scale
 			selection_visual.position = selection_ring_offset
-			selection_visual.z_index = -1 # Place behind character
+			selection_visual.z_index = 1 # Place behind character
 	
 	floating_text_label.visible = false
 		
 	temp_path_preview.default_color = Color(0.0, 0.0, 0.0, 0.5)
 #	preview_container.add_child(temp_path_preview)
-	
+	#body_sprite.texture = body_part_data["body"].texture_front
 	# Hide the original preview sprite since we'll create dynamic ones
-	action_preview_sprite.visible = false
+	temp_action_preview.visible = false
 	hide_previews()
 
 func _process(_delta):
@@ -117,15 +134,58 @@ func _move_along_path():
 		return
 
 	is_moving = true
+	var current_tile = GridManager.world_to_map(global_position)
 	var target_tile = current_path[path_index]
 	var target_world_pos = GridManager.map_to_world(target_tile)
+	
+	# --- Direction Handling ---
+	var direction_vector = target_tile - current_tile
+	_update_direction(direction_vector)
 	
 	var duration = global_position.distance_to(target_world_pos) / move_speed
 	var tween = create_tween()
 	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(self, "global_position", target_world_pos, duration)
 	tween.tween_callback(func(): path_index += 1; is_moving = false)
+# --- VISUALS LOGIC ---
+# NEW Helper function to determine direction from a vector
+func _get_direction_from_vector(vector: Vector2i) -> Direction:
+	if abs(vector.x) > abs(vector.y):
+		if vector.x > 0: return Direction.RIGHT
+		else: return Direction.LEFT
+	else:
+		if vector.y > 0: return Direction.DOWN
+		else: return Direction.UP
+	return Direction.DOWN # Default fallback
 
+func _update_direction(direction_vector: Vector2i):
+	# This function now uses the helper
+	var new_direction = _get_direction_from_vector(direction_vector)
+	if new_direction != current_direction:
+		current_direction = new_direction
+		print_debug(character_name, " facing ", Direction.keys()[current_direction])
+		_update_visual_sprites()
+
+func _update_visual_sprites():
+	if body_part_data.is_empty(): return
+	
+	var body_data: BodyPart = body_part_data.get("body")
+	var head_data: BodyPart = body_part_data.get("head")
+	
+	if body_data:
+		match current_direction:
+			Direction.DOWN: body_sprite.texture = body_data.texture_front
+			Direction.UP: body_sprite.texture = body_data.texture_back
+			Direction.LEFT: body_sprite.texture = body_data.texture_left
+			Direction.RIGHT: body_sprite.texture = body_data.texture_right
+	
+	if head_data:
+		match current_direction:
+			Direction.DOWN: head_sprite.texture = head_data.texture_front
+			Direction.UP: head_sprite.texture = head_data.texture_back
+			Direction.LEFT: head_sprite.texture = head_data.texture_left
+			Direction.RIGHT: head_sprite.texture = head_data.texture_right
+			
 # --- Core Logic ---
 func execute_planned_action(action: PlannedAction):
 	if is_moving:
@@ -160,7 +220,8 @@ func execute_planned_action(action: PlannedAction):
 		if success_level > 0 :
 			var affected_tiles = get_affected_tiles(ability, global_position, action.target_position)
 			var targets = combat_manager.get_entities_in_tiles(affected_tiles)
-			
+			show_shader(ability, action)
+
 			if targets.is_empty():
 				print_rich("  [color=gray]Attack hits nothing.[/color]")
 				return
@@ -178,17 +239,22 @@ func execute_planned_action(action: PlannedAction):
 						else: 
 							base_damage = {"bludgeoning": (1 + strength/5) }
 				else:
-					base_damage = ability.flat_damage 
+					base_damage = ability.damage
 					#for damage_type in base_damage:
 					#		pass
 							#damage[damage_type] *= damage_multiplier
 				if is_instance_valid(entity) and entity.has_method("take_damage"):
 					#print_rich("  [color=green]HIT:[/color] ", entity.name, " for ", damage, " damage.")
-					entity.take_damage(base_damage, success_level)
+					entity.take_damage(base_damage, success_level, ability.primary_damage_type)
 		else:
 			print_rich(" [color=yellow]MISS![/color] (Rolled ", roll, " vs target of ", success_target, ")")
 			show_floating_text("Miss", Color.WHITE_SMOKE)
 					
+func show_shader(ability:Ability, action:PlannedAction):
+	print("showing shader for ", ability.primary_damage_type)
+	
+	VfxSystem.create_effect(action.target_position, GridManager.TILE_SIZE*ability.aoe_size, ability.aoe_shape, ability.primary_damage_type)
+		
 # --- NEW: Core AoE Calculation Functions ---
 # --- UPDATED: Core AoE Calculation Functions ---
 func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world_pos: Vector2) -> Array[Vector2i]:
@@ -199,7 +265,7 @@ func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world
 	#print("start_tile 2 ", start_tile)
 	# UPDATED: Prioritize the ability's own AoE definition. Fall back to weapon's.
 	var aoe_shape = ability.aoe_shape if not ability.is_weapon_attack else \
-					(equipped_main_hand.aoe_shape if ability.is_weapon_attack and equipped_main_hand else Ability.AttackShape.RECTANGLE)
+					(equipped_main_hand.aoe_shape if ability.is_weapon_attack and equipped_main_hand else &"rectangle")
 	var aoe_size = ability.aoe_size if not ability.is_weapon_attack else \
 				   (equipped_main_hand.aoe_size if ability.is_weapon_attack and equipped_main_hand else Vector2i.ONE)
 
@@ -210,18 +276,18 @@ func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world
 	# Bonus reach from character stats, converted to whole tiles
 	var reach = 0
 	
-	print_debug("[get_affected_tiles] Shape: ", Ability.AttackShape.keys()[aoe_shape], ", Size: ", aoe_size, ", Dir: ", direction)
+	print_debug("[get_affected_tiles] Shape: ", ability.aoe_shape, ", Size: ", ability.aoe_size, ", Dir: ", direction)
 	
 	match aoe_shape:
-		Ability.AttackShape.SLASH:
+		&"slash":
 			return _get_slash_tiles(start_tile, direction, aoe_size.x, reach)
-		Ability.AttackShape.THRUST:
+		"thrust":
 			return _get_thrust_tiles(start_tile, direction, aoe_size.x, reach)
-		Ability.AttackShape.RECTANGLE:
+		"rectangle":
 			var target_tile = GridManager.world_to_map(target_world_pos)
 			return _get_rectangle_tiles(target_tile, aoe_size)
 		# NEW: Handle circular AoE for spells like Fireball
-		Ability.AttackShape.CIRCLE:
+		"circle":
 			var target_tile = GridManager.world_to_map(target_world_pos)
 			return _get_circular_tiles(target_tile, aoe_size.x) # aoe_size.x is the radius
 	return []
@@ -373,10 +439,10 @@ func hide_previews():
 	
 	
 	# Clean up all preview sprites
-	for sprite in action_preview_sprites:
+	for sprite in planned_action_previews:
 		if is_instance_valid(sprite):
 			sprite.queue_free()
-	action_preview_sprites.clear()
+	planned_action_previews.clear()
 	
 	# Clean up range preview squares
 	for square in range_preview_squares:
@@ -391,6 +457,7 @@ func hide_previews():
 	
 	preview_container.visible = false
 	print("Succesfully hid previews #ui")
+
 func _clear_temp_previews():
 	print("Attempting _clear_temp_previews #ui")
 	"""Clear only temporary previews (not planned action previews)"""
@@ -410,18 +477,20 @@ func rebuild_all_previews():
 	path_preview_line.clear_points()
 	cumulative_path_points.clear()
 	preview_positions.clear()
-	
-	for sprite in action_preview_sprites:
-		if is_instance_valid(sprite):
-			sprite.queue_free()
-	action_preview_sprites.clear()
+	# Step 1: Clear out all old persistent previews
+	print_debug("Rebuilding all persistent previews for ", character_name)
+	for preview in planned_action_previews:
+		if is_instance_valid(preview):
+			preview.queue_free()
+	planned_action_previews.clear()
+
 	for square in planned_aoe_squares:
 		if is_instance_valid(square): square.queue_free()
 	planned_aoe_squares.clear()
 	# Start from character's current position
-	cumulative_path_points.append(Vector2.ZERO)
+	cumulative_path_points.append(Vector2.ZERO) # why is this here?  
 	var current_world_pos = self.global_position
-	
+	var current_tile = GridManager.world_to_map(current_world_pos)
 	# Rebuild preview for each planned action
 	for i in range(planned_actions.size()):
 		if planned_actions[i] == null:
@@ -431,6 +500,7 @@ func rebuild_all_previews():
 		var ability = AbilityDatabase.get_ability(action.ability_id)
 		if not ability:
 			continue
+		var preview_instance = ActionPreviewVisualScene.instantiate()
 		
 		if ability.effect == Ability.ActionEffect.MOVE:
 			# Add path points for this move
@@ -449,14 +519,18 @@ func rebuild_all_previews():
 			
 			# Update current position for next action
 			if not path.is_empty():
+				
 				current_world_pos = GridManager.map_to_world(path.back())
 				preview_positions.append(current_world_pos)
+				preview_instance.global_position = current_world_pos
 				
 				# Create a preview sprite at this position
-				var preview_sprite = _create_preview_sprite()
-				preview_sprite.global_position = current_world_pos
-				preview_sprite.modulate.a = 0.6 - (i * 0.1) # Fade older previews
-				action_preview_sprites.append(preview_sprite)
+				#var preview_sprite = _create_preview_sprite()
+				#preview_sprite.global_position = current_world_pos
+				#preview_sprite.modulate.a = 0.6 - (i * 0.1) # Fade older previews
+				var final_direction = _get_direction_from_vector(current_tile - path[path.size()-2] if path.size() > 1 else current_tile - GridManager.world_to_map(global_position))
+				_update_preview_visuals(preview_instance, final_direction)
+				planned_action_previews.append(preview_instance)
 		else:
 			# Non-move actions don't change position
 			var aoe_center_tile = GridManager.world_to_map(action.target_position)
@@ -491,14 +565,34 @@ func _get_position_after_actions(up_to_slot: int) -> Vector2:
 	print("Got position after previews #ui")
 	return pos
 
-func _create_preview_sprite() -> Sprite2D:
+func _create_preview_sprite():
 	"""Create a new preview sprite with the same texture as the character"""
-	var preview = Sprite2D.new()
-	preview.texture = sprite.texture
-	preview.scale = sprite.scale
-	preview_container.add_child(preview)
-	return preview
-
+	#var preview = ActionPreviewVisualScene.instantiate()
+	#preview.texture = sprite.texture
+	#preview.scale = sprite.scale
+	#preview_container.add_child(preview)
+	print("create preview sprite deprecated ")
+# Renamed and modified to update a specific preview instance passed to it
+func _update_preview_visuals(preview_node: Node2D, direction: Direction):
+	if body_part_data.is_empty(): return
+	var body_data: BodyPart = body_part_data.get("body")
+	var head_data: BodyPart = body_part_data.get("head")
+	
+	var body_sprite_node = preview_node.get_node("PreviewBodySprite")
+	var head_sprite_node = preview_node.get_node("PreviewHeadSprite")
+		
+	# Update Body
+	if body_data and is_instance_valid(body_sprite_node):
+		print("attempting to assign body texture for planning preview")
+		body_sprite_node.texture = body_data.get_texture_for_direction(direction)
+		body_sprite_node.modulate.a = 0.6
+	
+	# Update Head
+	if head_data and is_instance_valid(head_sprite_node):
+		head_sprite_node.texture = head_data.get_texture_for_direction(direction)
+		head_sprite_node.modulate.a = 0.6
+		
+		
 func _draw_area_of_effect_preview(affected_tiles: Array[Vector2i], color: Color):
 	print_debug("Drawing AoE preview for ", affected_tiles.size(), " tiles. #ui")
 	"""Draw colored squares to show area of effect"""
@@ -579,18 +673,30 @@ func _get_tiles_in_radius(center_tile: Vector2i, radius: int) -> Array[Vector2i]
 # --- Unchanged Helper Functions ---
 func _apply_character_data():
 	var data = CharacterDatabase.get_character_data(character_id); if not data: return
+	
 	character_name = data.character_name; name = character_name
-	sprite.texture = load(data.sprite_texture_path)
-	var initial_sprite_size = sprite.texture.get_size()
-	var size_ratio = self.base_size/initial_sprite_size.x
-	sprite.scale = Vector2(size_ratio,size_ratio)
+	# Load visual part data
+	body_part_data.clear()
+	var visual_parts = data.visual_parts
+	print("visual_parts: ", visual_parts)
+	if visual_parts.has("body"):
+		body_part_data["body"] = BodyPartDatabase.get_part_data(visual_parts["body"])
+		print("output from body database: ", BodyPartDatabase.get_part_data(visual_parts["body"]))
+	if visual_parts.has("head"):
+		body_part_data["head"] = BodyPartDatabase.get_part_data(visual_parts["head"])
+		print("body_part_data head: ", body_part_data["head"].texture_front)
+	body_sprite.texture = body_part_data["body"].texture_front
+	print("body sprite texture: ", body_sprite.texture)
+	head_sprite.texture = body_part_data["head"].texture_front
+	body_sprite.visible = true
+	head_sprite.visible = true
 	
 	icon = "res://Icons/"+ character_name + "_icon.png"
 	if not FileAccess.file_exists(icon):
 		icon = "res://Icons/dummy_icon.png"
 	
-	action_preview_sprite.texture = sprite.texture
-	action_preview_sprite.scale = Vector2(size_ratio,size_ratio) #need the preview to be the same scale as the actual sprite
+	#action_preview_sprite.texture = sprite.texture
+	#action_preview_sprite.scale = Vector2(size_ratio,size_ratio) #need the preview to be the same scale as the actual sprite
 	
 	allegiance = data.allegiance
 	strength = data.strength; dexterity = data.dexterity; constitution = data.constitution
@@ -603,7 +709,7 @@ func _apply_character_data():
 	for ability_id in data.abilities: abilities.append(AbilityDatabase.get_ability(ability_id))
 	start_round_reset()
 
-func take_damage(amount: Dictionary, success_level:int = 0):
+func take_damage(amount: Dictionary, success_level:int = 0, primary_damage_type:String = "slashing"):
 	var damage_multiplier = pow(1.5,success_level)
 	for damage_type in amount.keys():
 		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier)) #- self._get_total_damage_resistance()[damage_type]))
@@ -626,13 +732,13 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 			show_floating_text(str(amount[damage_type]), Color.WHITE_SMOKE)
 			
 	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color.RED, 0.1)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.1)
+	tween.tween_property(body_sprite, "modulate", Color.RED, 0.1)
+	tween.tween_property(head_sprite, "modulate", Color.WHITE, 0.1)
 	
 	emit_signal("health_changed", current_health, max_health, self)
 	
 	if current_health <= 0:
-		emit_signal("died", self); sprite.visible = false; $CollisionShape2D.disabled = true
+		emit_signal("died", self); body_sprite.visible = false; head_sprite.visible = false; $CollisionShape2D.disabled = true
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
@@ -722,8 +828,10 @@ func can_start_planning_ability(ability: Ability, slot_index: int) -> bool:
 	return can_start_planning
 
 func plan_entire_round_ai(all_chars: Array[CombatCharacter]):
+	print("Planning round for AI")
 	var targets = all_chars.filter(func(c): return c.allegiance!=self.allegiance and c.current_health>0)
-	
+	print("Planning round for AI.  Possible targets: ",targets)
+
 	if targets.is_empty():
 		while get_next_available_ap_slot_index() != -1: plan_ability_use(AbilityDatabase.get_ability(&"wait"), get_next_available_ap_slot_index())
 		return
@@ -734,6 +842,8 @@ func plan_entire_round_ai(all_chars: Array[CombatCharacter]):
 	for ability in self.abilities:
 		if ability.ActionEffect.DAMAGE:
 			attacks.append(ability)
+	print("Planning round for AI, possible attacks: ", attacks)
+
 	while current_ap_for_planning > 0:
 		var slot = get_next_available_ap_slot_index(); if slot == -1: break
 		var my_tile = GridManager.world_to_map(global_position)
@@ -770,7 +880,19 @@ func _update_selection_visual():
 		selection_visual.visible = is_selected
 
 func get_sprite_rect_global() -> Rect2:
-	return sprite.get_global_transform() * sprite.get_rect() if sprite else Rect2()
+	# This function now correctly combines the areas of the body and head sprites.
+	if not is_instance_valid(body_sprite):
+		return Rect2() # Return empty rect if no body
+
+	# Start with the body's rectangle
+	var combined_rect = body_sprite.get_global_transform() * body_sprite.get_rect()
+
+	# If there's a head, merge its rectangle with the body's
+	if is_instance_valid(head_sprite):
+		var head_rect = head_sprite.get_global_transform() * head_sprite.get_rect()
+		combined_rect = combined_rect.merge(head_rect)
+		
+	return combined_rect
 
 func clear_planned_actions_from_slot(slot: int, refund_ap: bool):
 	for i in range(slot, max_ap_per_round):

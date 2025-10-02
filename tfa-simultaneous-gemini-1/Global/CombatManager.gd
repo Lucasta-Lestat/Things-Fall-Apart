@@ -76,6 +76,7 @@ func register_character(character: CombatCharacter):
 		elif character.allegiance == CombatCharacter.Allegiance.ENEMY:
 			enemy_party.append(character)
 		print("party: ", player_party, " #combat #ui")
+		print("enemy party: ", enemy_party, "#plan ai")
 		print("all characters in combat: ", all_characters_in_combat, " #combat #ui")
 		character.planned_action_for_slot.connect(_on_character_planned_action)
 		character.no_more_ap_to_plan.connect(_on_character_finished_planning_round)
@@ -171,10 +172,10 @@ func _get_next_active_player_character_for_planning() -> CombatCharacter:
 	return null # All player characters done or no active ones left
 
 func _on_character_planned_action(character: CombatCharacter, _ap_slot_index: int, _action: PlannedAction):
+	print("a character planned an action")
 	if current_combat_state != CombatState.PLANNING: return
 	if character.allegiance != CombatCharacter.Allegiance.PLAYER: return # AI plans upfront
-
-	# print_debug(character.character_name, " planned for slot ", _ap_slot_index)
+	print_debug(character.character_name, " planned for slot ", _ap_slot_index)
 	var next_slot = character.get_next_available_ap_slot_index()
 	if next_slot != -1 and character.current_ap_for_planning > 0:
 		emit_signal("player_action_pending", character, next_slot) # Still more this char can do
@@ -205,14 +206,15 @@ func check_if_all_planning_is_complete_to_start_resolution():
 	if current_combat_state != CombatState.PLANNING: return
 	
 	var all_active_chars_finished_planning = true
-	print("all_active_chars have finished planning")
 	for char in all_characters_in_combat:
 		if is_instance_valid(char) and char.current_health > 0: # Only consider active characters
 			if not characters_finished_planning_round.has(char):
 				all_active_chars_finished_planning = false
-				# print_debug("Waiting for: ", char.character_name, " to finish planning.")
+				print_debug("Waiting for: ", char.character_name, " to finish planning.")
 				break
 	
+	print("all_active_chars have finished planning: ", all_active_chars_finished_planning)
+
 	if all_active_chars_finished_planning:
 		print_debug("All active characters finished planning. Starting # turn resolution.")
 		begin_action_resolution_phase()

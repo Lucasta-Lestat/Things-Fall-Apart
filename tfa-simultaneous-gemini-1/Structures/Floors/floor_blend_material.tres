@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://d0ik5ylpekkji"]
+
+[ext_resource type="Shader" uid="uid://dpy1c31q8sj0b" path="res://Structures/Floors/floor_blend.gdshader" id="1_nt0js"]
+
+[sub_resource type="Gradient" id="Gradient_nt0js"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_nt0js"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_7vbn4"]
+color_ramp = SubResource("Gradient_nt0js")
+noise = SubResource("FastNoiseLite_nt0js")
+
+[resource]
+shader = ExtResource("1_nt0js")
+shader_parameter/noise_texture = SubResource("NoiseTexture2D_7vbn4")
+shader_parameter/blend_amount = 0.2
+shader_parameter/noise_scale = 4.0

@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://7gxqmcx4ndeb"]
+
+[node name="ActionPreviewVisual" type="Node2D"]
+
+[node name="PreviewBodySprite" type="Sprite2D" parent="."]
+
+[node name="PreviewHeadSprite" type="Sprite2D" parent="."]

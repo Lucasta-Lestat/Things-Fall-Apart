@@ -1,9 +1,7 @@
 # res://Data/Weapons/Weapon.gd
-# A new Resource script to define weapons.
 extends Resource
 class_name Weapon
 
-enum AttackShape { SLASH, THRUST, RECTANGLE, NONE }
 
 
 @export var id: StringName
@@ -15,6 +13,6 @@ enum AttackShape { SLASH, THRUST, RECTANGLE, NONE }
 
 # NEW: AoE properties for this weapon
 @export_group("Area of Effect")
-@export var aoe_shape: AttackShape = AttackShape.SLASH
+@export var aoe_shape: StringName = &"slash"
 # For SLASH/THRUST, x is length. For RECTANGLE, it's width/height.
 @export var aoe_size: Vector2i = Vector2i.ONE

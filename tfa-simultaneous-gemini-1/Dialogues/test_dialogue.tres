@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DialogueResource" load_steps=2 format=3 uid="uid://c8qiho4463kc"]
+
+[ext_resource type="Script" uid="uid://dbs4435dsf3ry" path="res://addons/dialogue_manager/dialogue_resource.gd" id="1_txck6"]
+
+[resource]
+script = ExtResource("1_txck6")
+using_states = PackedStringArray()
+titles = {}
+character_names = PackedStringArray()
+first_title = "start"
+lines = {}
+raw_text = ""
+metadata/_custom_type_script = "uid://dbs4435dsf3ry"

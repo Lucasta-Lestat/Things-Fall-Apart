@@ -38,7 +38,7 @@ func _apply_structure_data():
 	sprite.texture = load(data.texture)
 	size = data.size
 	var initial_texture_size = sprite.texture.get_size()
-	print("sprite size: ", sprite.texture.get_size())
+	#print("sprite size: ", sprite.texture.get_size())
 	var size_ratio = .5 * size.x/initial_texture_size.x
 	sprite.scale = Vector2(size_ratio,size_ratio)
 	

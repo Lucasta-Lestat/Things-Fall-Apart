@@ -3,13 +3,14 @@
 extends Node
 
 const TILE_SIZE = 64
+var active_map = "perrow"
 var map_rect: Rect2i
 var base_layer: TileMapLayer
 var highlights_layer: TileMapLayer # NEW: For drawing previews
 var grid_costs: Dictionary = {}
 # --- NEW: Configure your highlight tile here ---
-const HIGHLIGHT_TILE_SOURCE_ID = 2  # The source ID in your TileSet
-const HIGHLIGHT_TILE_COORDS = Vector2i(0, 128) # The atlas coords of the highlight tile
+#const HIGHLIGHT_TILE_SOURCE_ID = 2  # The source ID in your TileSet
+#const HIGHLIGHT_TILE_COORDS = Vector2i(0, 128) # The atlas coords of the highlight tile
 
 # UPDATED: Now takes the highlights layer during initialization
 func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
@@ -27,25 +28,27 @@ func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 		for x in range(map_rect.position.x, map_rect.end.x):
 			grid_costs[Vector2i(x, y)] = 1
 
-# --- NEW: Highlight Drawing Functions ---
-func draw_highlight_tiles(tile_positions: Array[Vector2i]):
-	clear_highlights()
-	for tile_pos in tile_positions:
-		highlights_layer.set_cell(tile_pos, HIGHLIGHT_TILE_SOURCE_ID, HIGHLIGHT_TILE_COORDS)
-func clear_highlights():
-	if is_instance_valid(highlights_layer):
-		highlights_layer.clear()
 
 # --- Dynamic Obstacle Management ---
 func register_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = INF # Set cost to infinity (unwalkable)
 		print_debug("GridManager: Obstacle registered at ", grid_pos)
+		
+func register_floor(grid_pos, floor):
+	if grid_costs.has(grid_pos):
+		grid_costs[grid_pos] = 1/floor.walkability # Set cost to infinity (unwalkable)
+		#print_debug("GridManager: Floor registered at ", grid_pos)
 
 func unregister_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = 1 # Set cost back to normal
 		print_debug("GridManager: Obstacle unregistered at ", grid_pos)
+		
+func unregister_floor(grid_pos): # claude: this needs to set walkability to that of the floor below it, but not sure how
+	if grid_costs.has(grid_pos):
+		grid_costs[grid_pos] = 1 # Set cost to infinity (unwalkable)
+		print_debug("GridManager: Floor unregistered at ", grid_pos)
 
 # --- UPDATED: More robust coordinate conversion ---
 func world_to_map(world_pos: Vector2) -> Vector2i:
@@ -61,6 +64,8 @@ func map_to_world(map_pos: Vector2i) -> Vector2:
 	var local_pos = base_layer.map_to_local(map_pos)
 	# Convert that local position to the global world position
 	return base_layer.to_global(local_pos)
+
+
 func find_path(start_pos: Vector2i, end_pos: Vector2i) -> Array[Vector2i]:
 	var open_set: Array[Vector2i] = [start_pos]
 	var came_from: Dictionary = {}

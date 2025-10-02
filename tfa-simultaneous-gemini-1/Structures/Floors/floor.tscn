@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://cxm044au85kjq"]
+
+[ext_resource type="Script" uid="uid://b6myimxdcm7n0" path="res://Structures/Floors/floor.gd" id="1_kgnsp"]
+
+[node name="Floor" type="Node2D"]
+script = ExtResource("1_kgnsp")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="FloatingTextLabel" type="RichTextLabel" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0

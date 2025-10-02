@@ -40,6 +40,7 @@ func _define_abilities():
 	cleave.display_name = "Cleave"
 	cleave.description = "hit multipLe."
 	cleave.ap_cost = 3
+	cleave.aoe_shape = &"slash"
 	cleave.range = 350.0
 	cleave.range_type = Ability.RangeType.WEAPON_MELEE
 	#cleave.attack_shape = Ability.AttackShape.SLASH
@@ -60,9 +61,10 @@ func _define_abilities():
 	var fireball = Ability.new(); fireball.id = &"fireball"; fireball.display_name = "Fireball"
 	fireball.effect = Ability.ActionEffect.DAMAGE; fireball.target_type = Ability.TargetType.GROUND
 	fireball.range_type = Ability.RangeType.ABILITY; fireball.range = 1000.0 # Long range
-	fireball.success_stat = &"int"; fireball.ap_cost = 3; fireball.flat_damage = 25
-	fireball.aoe_shape = Ability.AttackShape.CIRCLE
+	fireball.success_stat = &"int"; fireball.ap_cost = 3; fireball.damage = {"fire":25}
+	fireball.aoe_shape = &"circle"
 	fireball.aoe_size = Vector2i(3, 3) # Radius of 3
+	fireball.primary_damage_type = &"fire"
 	abilities[&"fireball"] = fireball
 
 func get_ability(ability_id: StringName) -> Ability:
