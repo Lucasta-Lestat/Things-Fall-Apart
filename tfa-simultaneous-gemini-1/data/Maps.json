@@ -40,7 +40,7 @@
 				"y":5,
 				"size_x":15,
 				"size_y":15,
-				"floor_type":"wood_floor",
+				"floor_type":"floor_wood",
 				"wall_type":"wood_wall",
 				"doors":
 				[
@@ -52,17 +52,19 @@
 				],    
 			"structures":[
 					{
-						"id":"anvil",
-						"x":32,
-						"y":10,
-						"is_intact":true
 					}
 				],
-				"objects":[
+			"objects":[
 					{
 					"id": "hammer",
 					"x": 33,   
 					"y": 10,
+					"is_intact":true
+					},
+					{
+					"id":"anvil",
+					"x":32,
+					"y":10,
 					"is_intact":true
 					}
 				],

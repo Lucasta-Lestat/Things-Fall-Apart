@@ -2,6 +2,7 @@
 	"dirt_floor":
 		 {
 		"name":"Dirt",
+		"id":"floor_dirt",
 		"description":"A patch of dirt",
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Dirt.png",
 		"alternate_textures":["res:\/\/Structures\/Floors\/Floor Dirt.png"],
@@ -19,8 +20,8 @@
 
 		}
 	},
-	"wood_floor": {
-		"id":"wood_floor",
+	"floor_wood": {
+		"id":"floor_wood",
 		"name":"Wood Floor",
 		"description":"A simple hardwood floor",
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Wood.png",
@@ -40,7 +41,7 @@
 	},
 	"stone_floor": 
 		{
-		"id":"stone_floor",
+		"id":"floor_stone",
 		"name":"Stone Floor",
 		"description":"A simple hardstone floor",
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",

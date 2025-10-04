@@ -2,7 +2,7 @@
 # UPDATED to be more dynamic
 extends Node
 
-const TILE_SIZE = 64
+const TILE_SIZE = 128
 var active_map = "perrow"
 var map_rect: Rect2i
 var base_layer: TileMapLayer
@@ -15,9 +15,9 @@ var grid_costs: Dictionary = {}
 # UPDATED: Now takes the highlights layer during initialization
 func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 	self.base_layer = p_base_layer
-	print("p_base_layer",p_base_layer)
+	#print("p_base_layer",p_base_layer)
 	self.highlights_layer = p_highlights_layer
-	if not is_instance_valid(base_layer) or not is_instance_valid(highlights_layer):
+	if not is_instance_valid(base_layer):
 		printerr("GridManager: Invalid TileMapLayer provided.")
 		return
 		
@@ -28,12 +28,11 @@ func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 		for x in range(map_rect.position.x, map_rect.end.x):
 			grid_costs[Vector2i(x, y)] = 1
 
-
 # --- Dynamic Obstacle Management ---
 func register_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = INF # Set cost to infinity (unwalkable)
-		print_debug("GridManager: Obstacle registered at ", grid_pos)
+		#print_debug("GridManager: Obstacle registered at ", grid_pos)
 		
 func register_floor(grid_pos, floor):
 	if grid_costs.has(grid_pos):

@@ -12,7 +12,7 @@ var display_name: String
 var current_health: int
 var max_health: int
 var texture: String
-var size: Vector2 = Vector2(75,75)
+var size: Vector2 = Vector2(64,64)
 var walkability: float = 1.0
 var flammable: bool = false
 var conductive: bool = false
@@ -58,7 +58,7 @@ func apply_floor_data():
 	
 	var initial_texture_size = sprite.texture.get_size()
 	var size_ratio = size.x / initial_texture_size.x
-	sprite.scale = Vector2(size_ratio, size_ratio)
+	sprite.scale = Vector2( size_ratio, size_ratio)
 
 func apply_blend_shader():
 	# Create a unique material instance for this floor

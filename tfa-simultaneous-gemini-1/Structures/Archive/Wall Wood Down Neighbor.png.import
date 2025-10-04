@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://diupcu7nupccf"
-path="res://.godot/imported/Wooden Wall.png-5c1762628638a3da282920600cd2c330.ctex"
+uid="uid://b7cw1nv7gt5yy"
+path="res://.godot/imported/Wall Wood Down Neighbor.png-28e92a6651f46358353be63c6f6cdd02.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Structures/Wooden Wall.png"
-dest_files=["res://.godot/imported/Wooden Wall.png-5c1762628638a3da282920600cd2c330.ctex"]
+source_file="res://Structures/Archive/Wall Wood Down Neighbor.png"
+dest_files=["res://.godot/imported/Wall Wood Down Neighbor.png-28e92a6651f46358353be63c6f6cdd02.ctex"]
 
 [params]
 

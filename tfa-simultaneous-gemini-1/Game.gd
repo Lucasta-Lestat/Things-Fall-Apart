@@ -40,10 +40,6 @@ func _ready():
 	combat_manager.combat_ended.connect(_on_combat_ended)
 	# Collect all characters from container to start combat
 
-	#if not all_spawned_chars.is_empty() and combat_manager:
-	#	combat_manager.start_combat(all_spawned_chars)
-	#else:
-	#	printerr("No characters spawned or found to start combat, or CombatManager not found.")
 func _on_combat_started():
 	is_active_combat = true
 func _on_combat_ended():
@@ -54,14 +50,14 @@ func load_map(map_id: StringName, coming_from: String):
 	GridManager.active_map = map_id
 	var Map = MapDatabase.map_definitions[map_id]
 	for spawn_point in Map.pc_spawn_points:
-		print("spawn point: ", )
+		#print("spawn point: ", )
 		if coming_from == spawn_point.coming_from:
 			#create_character_from_database("Protagonist", Vector2i(spawn_point.party_member_1.x, spawn_point.party_member_1.y))
 			var offset = 1
 			for character_id in party_ids:
 				#claude: add safety check for this square already being occupied
 				var c = create_character_from_database(character_id, Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
-				print("attempting to spawn: ", character_id, " at: ", Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
+				#print("attempting to spawn: ", character_id, " at: ", Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				characters_container.add_child(c)
 				offset += 1
 	print("spawned party successfully #map-loading")
@@ -76,17 +72,18 @@ func load_map(map_id: StringName, coming_from: String):
 			var rotation_amount = rotations[rotation_index%100]
 			var color_change = color_offsets[rotation_index%100]
 			if not x % 15 and not y % 15:
-				print("x,y locations of floor: ", Vector2i(x,y))
+				#print("x,y locations of floor: ", Vector2i(x,y))
+				pass
 			create_floor(Map.base_floor_type,Vector2i(x,y), rotation_amount, color_change)
 			y += 1
 		x += 1
 	print("spawned base floor successfully")
 	#print("attempting to spawn regions: ", Map.regions)
 	for region in Map.regions:
-		x = region.x
+		x = region.x 
 		y = region.y
-		end_x = x + region.size_x 
-		end_y = y + region.size_y 
+		end_x = x + region.size_x
+		end_y = y + region.size_y
 		 
 		if region.floor_type:
 			while x < end_x:
@@ -106,19 +103,22 @@ func load_map(map_id: StringName, coming_from: String):
 			var y_top = region.y
 			var y_bottom = end_y - 1
 			x = region.x
+			end_x = x + region.size_x
 			while x < end_x:
 				var door = check_for_door(region, Vector2i(x, y_top))
+				print("door: ", door)
 				if door:
 					create_structure(door.type, Vector2i(x, y_top))      # Top wall
 				else: 
 					create_structure(region.wall_type, Vector2i(x, y_top))      # Top wall
-					print("spawning wall: ",region.wall_type)
+					#print("spawning wall: ",region.wall_type)
+					
 				door = check_for_door(region, Vector2i(x, y_bottom))
 				if door:
 					create_structure(door.type, Vector2i(x, y_bottom))  
 				else:
 					create_structure(region.wall_type, Vector2i(x, y_bottom))   # Bottom wall
-					print("spawning wall: ",region.wall_type)
+					#print("spawning wall: ",region.wall_type)
 				x += 1
 			# Left and right walls
 			var x_left = region.x 
@@ -130,7 +130,7 @@ func load_map(map_id: StringName, coming_from: String):
 					create_structure(door.type, Vector2i(x_left, y))
 				else: 
 					create_structure(region.wall_type, Vector2i(x_left, y))     # Left wall
-					print("spawning wall: ",region.wall_type)
+					#print("spawning wall: ",region.wall_type)
 
 				door = check_for_door(region, Vector2i(x_right, y))
 				if door:
@@ -140,15 +140,22 @@ func load_map(map_id: StringName, coming_from: String):
 					#print("spawning wall: ",region.wall_type)
 				y += 1
 		print("spawned walls and doors")
+		#print("grid_costs: ", GridManager.grid_costs)
 		if "structures" in region.keys():	
 			for structure in region.structures:
 				print("attempting to spawn")
-				create_structure(structure.id, Vector2i(structure.x,structure.y))
+				if structure.has("id"):
+					create_structure(structure.id, Vector2i(structure.x,structure.y))
 		#print("#spawning: ",region.keys())
 		if "characters" in region.keys():	
 			for character in region.characters:
 				print("Attempting to spawn: ", character.id, " at ", Vector2i(character.x,character.y))
 				create_character_from_database(character.id, Vector2i(character.x,character.y))
+				
+	#print("structure container children: ",structures_container.get_children())
+	for structure in structures_container.get_children():
+		if structure.structure_id.contains("wall"):
+			check_neighbors(GridManager.world_to_map(structure.global_position), structure, structure.structure_id)
 			
 func check_for_door(region, pos: Vector2i):
 	if region.has("doors"):
@@ -241,16 +248,17 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	
 func create_floor(floor_id: StringName, grid_pos: Vector2i, rotation_amount, color_change):
 	var floor = FloorScene.instantiate() as Floor
-	if floor_id != "floor_grass":
+	if floor_id == "floor_stone" or floor_id == "floor_dirt":
 		floor.get_node("Sprite").rotation_degrees = rotation_amount
+	else:
+		#
+		pass
 	floor.get_node("Sprite").modulate = Color(color_change,color_change,color_change)
 	
-	
-	
-	floor.global_position = GridManager.map_to_world(grid_pos)
+	floor.global_position = GridManager.map_to_world(grid_pos) 
 	# The floor tells the GridManager how walkable it is
 	GridManager.register_floor(grid_pos, floor)
-	var base_pos = GridManager.map_to_world(grid_pos)
+	#var base_pos = GridManager.map_to_world(grid_pos)
 	
 	
 	# 5. Tiny scale variation
@@ -275,9 +283,38 @@ func create_structure(structure_id: StringName, grid_pos: Vector2i):
 	
 	# Connect to its destroyed signal to update pathfinding
 	structure.destroyed.connect(_on_structure_destroyed)
-	
 	structures_container.add_child(structure)
+	if structure_id.contains("door"):
+		print("added door: ", structure, " ", structure_id, structure.find_child("Sprite").texture)
 
+func check_neighbors(grid_pos, structure, structure_id):
+	var top = Vector2i(grid_pos.x, grid_pos.y -1)
+	var right = Vector2i(grid_pos.x+1, grid_pos.y)
+	var bottom = Vector2i(grid_pos.x, grid_pos.y+1)
+	var left = Vector2i(grid_pos.x-1, grid_pos.y)
+	var top_neighbor = ""
+	var right_neighbor = ""
+	var bottom_neighbor = ""
+	var left_neighbor = ""
+	#print("grid manager has top? #structure " , GridManager.grid_costs.has(top))
+	if GridManager.grid_costs.has(top):
+		if GridManager.grid_costs[top] == INF: 
+			top_neighbor = "Top" 
+	if GridManager.grid_costs.has(right):
+		if GridManager.grid_costs[right] == INF: 
+			right_neighbor = "Right" 
+	if GridManager.grid_costs.has(bottom):
+		if GridManager.grid_costs[bottom] == INF: 
+			bottom_neighbor = "Bottom" 
+	if GridManager.grid_costs.has(left):
+		if GridManager.grid_costs[left] == INF: 
+			left_neighbor = "Left" 
+	#print("structure data: ", StructureDatabase.structure_data[structure_id])
+	if top_neighbor or right_neighbor or left_neighbor or bottom_neighbor:
+		var texture_path = "res://Structures/"+ StructureDatabase.structure_data[structure_id].display_name + " " + top_neighbor + right_neighbor + bottom_neighbor + left_neighbor + ".png" 
+		StructureDatabase.structure_data[structure_id].texture = texture_path
+		#print("structure texture path: ", texture_path)
+		structure.change_texture(texture_path)
 func _on_structure_destroyed(structure: Structure, grid_position: Vector2i):
 	# When a structure is destroyed, it tells the GridManager its tile is now open
 	GridManager.unregister_obstacle(grid_position)
@@ -292,7 +329,6 @@ func create_custom_character(character_id: String, position: Vector2, overrides:
 	var character = create_character_from_database(character_id, position)
 	if not character:
 		return null
-	
 	# Apply any custom overrides
 	for property in overrides.keys():
 		if character.get(property) != null:
@@ -327,7 +363,6 @@ func _on_camera_recenter_request(target_pos: Vector2):
 		if not _is_following_node:
 			var tween = create_tween()
 			tween.tween_property(player_camera, "global_position", target_pos, 0.3)
-
 
 var _camera_follow_target: Node2D = null
 var _is_following_node: bool = false

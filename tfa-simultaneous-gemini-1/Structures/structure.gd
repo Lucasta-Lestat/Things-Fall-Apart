@@ -36,10 +36,14 @@ func _apply_structure_data():
 	current_health = max_health
 	resources = data.resources.duplicate()
 	sprite.texture = load(data.texture)
+	#structure_id = structure
+	#print(data.texture, " applying structure data with texture ", sprite.texture, " ", data.texture)
 	size = data.size
+	#print(size, data.size, "texture size")
+	#print
 	var initial_texture_size = sprite.texture.get_size()
 	#print("sprite size: ", sprite.texture.get_size())
-	var size_ratio = .5 * size.x/initial_texture_size.x
+	var size_ratio =  size.x/initial_texture_size.x
 	sprite.scale = Vector2(size_ratio,size_ratio)
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
@@ -96,3 +100,12 @@ func _destroy_structure():
 	print_rich(structure_id, " destroyed! Dropped: ", resources)
 	
 	queue_free()
+
+func change_texture(texture_path):
+	#print("attempting to update structure texture with: ", texture_path)
+	$Sprite.texture = load(texture_path)
+	
+func scale_sprite(new_size):
+	var initial_texture_size = sprite.texture.get_size()
+	var size_ratio = size.x/initial_texture_size.x
+	sprite.scale = Vector2(size_ratio,size_ratio)

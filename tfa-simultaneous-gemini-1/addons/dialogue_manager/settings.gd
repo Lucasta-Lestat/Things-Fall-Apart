@@ -150,7 +150,6 @@ static var SETTINGS_CONFIGURATION = {
 	},
 }
 
-
 static func prepare() -> void:
 	var should_save_settings: bool = false
 

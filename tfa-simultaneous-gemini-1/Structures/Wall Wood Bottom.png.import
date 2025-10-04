@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0fwterramiky"
-path="res://.godot/imported/Wall Wood.png-d05744bd0c24b9b374812945f29e8ac5.ctex"
+uid="uid://dd21qg535gbvi"
+path="res://.godot/imported/Wall Wood Bottom.png-f4035a67d5afdfbfff139035e670f832.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Structures/Wall Wood.png"
-dest_files=["res://.godot/imported/Wall Wood.png-d05744bd0c24b9b374812945f29e8ac5.ctex"]
+source_file="res://Structures/Wall Wood Bottom.png"
+dest_files=["res://.godot/imported/Wall Wood Bottom.png-f4035a67d5afdfbfff139035e670f832.ctex"]
 
 [params]
 

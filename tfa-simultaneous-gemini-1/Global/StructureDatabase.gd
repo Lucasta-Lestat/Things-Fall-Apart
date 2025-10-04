@@ -35,11 +35,16 @@ func _ready():
 	
 func _setup_structure_data():
 	# Define your structures here
-	var wood_wall = StructureData.new(&"wood_wall", "Wall Wood", 50, {&"wood": 20},Vector2(128,128))
+	var wood_wall = StructureData.new(&"wood_wall", "Wall Wood", 50, {&"wood": 20},Vector2(64,128))
 	structure_data[&"wood_wall"] = wood_wall
 	
 	var pine_tree = StructureData.new(&"pine_tree", "Pine Tree", 80, {&"wood": 40}, Vector2(75,75))
 	structure_data[&"oak_tree"] = pine_tree
+	
+	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10},Vector2(64,128))
+	structure_data[&"door_wood"] = wood_door
+	
+	
 
 func get_structure_data(structure_id: StringName) -> StructureData:
 	if structure_data.has(structure_id):
