@@ -8,6 +8,8 @@ var map_rect: Rect2i
 var base_layer: TileMapLayer
 var highlights_layer: TileMapLayer # NEW: For drawing previews
 var grid_costs: Dictionary = {}
+var walls: Dictionary = {}
+var floors: Dictionary = {}
 # --- NEW: Configure your highlight tile here ---
 #const HIGHLIGHT_TILE_SOURCE_ID = 2  # The source ID in your TileSet
 #const HIGHLIGHT_TILE_COORDS = Vector2i(0, 128) # The atlas coords of the highlight tile
@@ -27,28 +29,36 @@ func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 	for y in range(map_rect.position.y, map_rect.end.y):
 		for x in range(map_rect.position.x, map_rect.end.x):
 			grid_costs[Vector2i(x, y)] = 1
+			walls[Vector2i(x, y)] = false
+			floors[Vector2i(x, y)] = ""
 
 # --- Dynamic Obstacle Management ---
 func register_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = INF # Set cost to infinity (unwalkable)
+		walls[grid_pos] = true
 		#print_debug("GridManager: Obstacle registered at ", grid_pos)
 		
 func register_floor(grid_pos, floor):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = 1/floor.walkability # Set cost to infinity (unwalkable)
+		floors[grid_pos] = floor.floor_id
+		#print("floors: ",floors[grid_pos])
 		#print_debug("GridManager: Floor registered at ", grid_pos)
 
 func unregister_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = 1 # Set cost back to normal
+		walls[grid_pos] = false
 		print_debug("GridManager: Obstacle unregistered at ", grid_pos)
 		
 func unregister_floor(grid_pos): # claude: this needs to set walkability to that of the floor below it, but not sure how
 	if grid_costs.has(grid_pos):
-		grid_costs[grid_pos] = 1 # Set cost to infinity (unwalkable)
+		grid_costs[grid_pos] = 1 # Set cost to norml
+		floors[grid_pos] = ""
 		print_debug("GridManager: Floor unregistered at ", grid_pos)
-
+func get_neighboring_coords(grid_pos):
+	return [Vector2(grid_pos.x+1,grid_pos.y),Vector2(grid_pos.x-1,grid_pos.y),Vector2(grid_pos.x,grid_pos.y+1),Vector2(grid_pos.x,grid_pos.y-1)]
 # --- UPDATED: More robust coordinate conversion ---
 func world_to_map(world_pos: Vector2) -> Vector2i:
 	if not is_instance_valid(base_layer): return Vector2i.ZERO

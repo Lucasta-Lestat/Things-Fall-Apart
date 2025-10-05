@@ -1554,12 +1554,6 @@ script = ExtResource("1_80nbo")
 
 [node name="FloorsContainer" type="Node2D" parent="."]
 
-[node name="Dirt" type="Node2D" parent="FloorsContainer"]
-
-[node name="Floor Layer 1" type="Node2D" parent="FloorsContainer"]
-
-[node name="Floor Layer 2" type="Node2D" parent="FloorsContainer"]
-
 [node name="CharactersContainer" type="Node2D" parent="."]
 
 [node name="PlayerCamera" type="Camera2D" parent="."]

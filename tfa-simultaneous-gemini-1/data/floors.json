@@ -62,7 +62,7 @@
 	"floor_grass":
 		{
 		"id":"floor_grass",
-		"name":"Grass Patch",
+		"name":"Floor Grass",
 		"description":"A patch of grass",
 		"size": 0.25,
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Grass.png",

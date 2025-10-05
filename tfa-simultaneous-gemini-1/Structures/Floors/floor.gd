@@ -42,7 +42,7 @@ func apply_floor_data():
 	if not data:
 		printerr("Failed to get data for floor_id: ", floor_id)
 		return
-		
+	floor_id = data.id	
 	max_health = data.max_health
 	current_health = max_health
 	resources = data.resources.duplicate()
@@ -128,3 +128,6 @@ func _destroy_floor():
 	print_rich(floor_id, " destroyed! Dropped: ", resources)
 	
 	queue_free()
+func change_texture(texture_path):
+	#print("attempting to update structure texture with: ", texture_path)
+	$Sprite.texture = load(texture_path)

@@ -94,6 +94,7 @@ func load_map(map_id: StringName, coming_from: String):
 					#print("rotation: ",rotation)
 					var color_change = color_offsets[rotation_index%100]
 					#print("color change: ", color_change)
+					print(region.floor_type)
 					create_floor(region.floor_type,Vector2i(x,y), rotation_amount,color_change)
 					y += 1
 				x += 1
@@ -156,7 +157,11 @@ func load_map(map_id: StringName, coming_from: String):
 	for structure in structures_container.get_children():
 		if structure.structure_id.contains("wall"):
 			check_neighbors(GridManager.world_to_map(structure.global_position), structure, structure.structure_id)
-			
+	for floor in floors_container.get_children():
+			if floor.floor_id != "floor_dirt" and floor.floor_id != "floor_stone" and floor.floor_id != "floor_wood":
+				check_floor_neighbors(GridManager.world_to_map(floor.global_position), floor, floor.floor_id)
+
+		
 func check_for_door(region, pos: Vector2i):
 	if region.has("doors"):
 					for door in region.doors:
@@ -245,33 +250,25 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	return character
 # --- NEW: Spawning and Managing Structures ---
 	
-	
+
 func create_floor(floor_id: StringName, grid_pos: Vector2i, rotation_amount, color_change):
 	var floor = FloorScene.instantiate() as Floor
+	
 	if floor_id == "floor_stone" or floor_id == "floor_dirt":
 		floor.get_node("Sprite").rotation_degrees = rotation_amount
-	else:
-		#
-		pass
 	floor.get_node("Sprite").modulate = Color(color_change,color_change,color_change)
 	
 	floor.global_position = GridManager.map_to_world(grid_pos) 
 	# The floor tells the GridManager how walkable it is
+	floor.floor_id = floor_id
 	GridManager.register_floor(grid_pos, floor)
 	#var base_pos = GridManager.map_to_world(grid_pos)
 	
-	
-	# 5. Tiny scale variation
-	
 	# Connect to its destroyed signal to update pathfinding
 	floor.destroyed.connect(_on_floor_destroyed)
-	floor.floor_id = floor_id
+	
 	floors_container.add_child(floor)
-	if floor_id == "dirt_floor":
-		#floor.get_node("Sprite").scale = Vector2.ONE * randf_range(.99, 1.01)
-		#var offset = Vector2(randf_range(-1.5, 1.5), randf_range(-1.0, 1.0))
-		#floor.global_position = base_pos + offset
-		pass
+	
 
 func create_structure(structure_id: StringName, grid_pos: Vector2i):
 	var structure = StructureScene.instantiate() as Structure
@@ -298,16 +295,16 @@ func check_neighbors(grid_pos, structure, structure_id):
 	var left_neighbor = ""
 	#print("grid manager has top? #structure " , GridManager.grid_costs.has(top))
 	if GridManager.grid_costs.has(top):
-		if GridManager.grid_costs[top] == INF: 
+		if GridManager.walls[top]: 
 			top_neighbor = "Top" 
 	if GridManager.grid_costs.has(right):
-		if GridManager.grid_costs[right] == INF: 
+		if GridManager.walls[right]:
 			right_neighbor = "Right" 
 	if GridManager.grid_costs.has(bottom):
-		if GridManager.grid_costs[bottom] == INF: 
+		if GridManager.walls[bottom]:
 			bottom_neighbor = "Bottom" 
 	if GridManager.grid_costs.has(left):
-		if GridManager.grid_costs[left] == INF: 
+		if GridManager.walls[left]:
 			left_neighbor = "Left" 
 	#print("structure data: ", StructureDatabase.structure_data[structure_id])
 	if top_neighbor or right_neighbor or left_neighbor or bottom_neighbor:
@@ -315,13 +312,49 @@ func check_neighbors(grid_pos, structure, structure_id):
 		StructureDatabase.structure_data[structure_id].texture = texture_path
 		#print("structure texture path: ", texture_path)
 		structure.change_texture(texture_path)
+		
+func check_floor_neighbors(grid_pos, floor, floor_id):
+	var top = Vector2i(grid_pos.x, grid_pos.y -1)
+	var right = Vector2i(grid_pos.x+1, grid_pos.y)
+	var bottom = Vector2i(grid_pos.x, grid_pos.y+1)
+	var left = Vector2i(grid_pos.x-1, grid_pos.y)
+	var top_neighbor = ""
+	var right_neighbor = ""
+	var bottom_neighbor = ""
+	var left_neighbor = ""
+	#print("grid manager has top? #structure " , GridManager.grid_costs.has(top))
+	if GridManager.grid_costs.has(top):
+		if GridManager.floors[top] == floor_id: 
+			top_neighbor = "Top" 
+	if GridManager.grid_costs.has(right):
+		if GridManager.floors[right] == floor_id:
+			right_neighbor = "Right" 
+	if GridManager.grid_costs.has(bottom):
+		if GridManager.floors[bottom] == floor_id:
+			bottom_neighbor = "Bottom" 
+	if GridManager.grid_costs.has(left):
+		if GridManager.floors[left] == floor_id:
+			left_neighbor = "Left" 
+	#print("structure data: ", StructureDatabase.structure_data[structure_id])
+	if top_neighbor or right_neighbor or left_neighbor or bottom_neighbor:
+		var texture_path = "res://Structures/Floors/"+ FloorDatabase.floor_definitions[floor_id].name + " " + top_neighbor + right_neighbor + bottom_neighbor + left_neighbor + ".png" 
+		print("floor texture path: ", texture_path)
+
+		FloorDatabase.floor_definitions[floor_id].texture = texture_path
+		#print("structure texture path: ", texture_path)
+		floor.change_texture(texture_path)
+		
 func _on_structure_destroyed(structure: Structure, grid_position: Vector2i):
 	# When a structure is destroyed, it tells the GridManager its tile is now open
 	GridManager.unregister_obstacle(grid_position)
+	for pos in GridManager.get_neighboring_coords(grid_position):
+		check_neighbors(pos,structure, structure.structure_id)
 	
 func _on_floor_destroyed(floor: Floor, grid_position: Vector2i):
 	# When a structure is destroyed, it tells the GridManager its tile is now open
 	GridManager.unregister_floor(grid_position)
+	for pos in GridManager.get_neighboring_coords(grid_position):
+		check_neighbors(pos,floor, floor.floor_id)
 	#claude: find floor at that grid_position now that this one is gone and reregister it.
 	
 # Alternative method if you want to override specific properties
