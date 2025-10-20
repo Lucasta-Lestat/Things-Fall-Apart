@@ -15,7 +15,7 @@ float voronoi(vec2 uv) {
     vec2 i = floor(uv);
     vec2 f = fract(uv);
     float min_dist = 1.0;
-    
+
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             vec2 neighbor = vec2(float(x), float(y));
@@ -30,28 +30,28 @@ float voronoi(vec2 uv) {
 
 void fragment() {
     vec2 uv = UV * crystal_density;
-    
+
     // Create ice crystal pattern
     float crystals = voronoi(uv * 6.0);
     crystals = 1.0 - crystals;
     crystals = smoothstep(0.3, 0.8, crystals);
-    
+
     // Add frost patterns
     float frost = random(floor(uv * 10.0)) * 0.5;
     frost *= smoothstep(0.4, 0.6, random(floor(uv * 5.0)));
-    
+
     // Ice color with shimmer
     vec3 base_ice = ice_color.rgb;
     float shimmer = sin(time * 3.0 + length(uv) * 10.0) * 0.2 + 0.8;
     base_ice *= shimmer;
-    
+
     // Combine effects
     float total_ice = crystals + frost;
     vec3 final_color = base_ice + total_ice * vec3(0.9, 0.95, 1.0);
-    
+
     // Add sparkle effect
     float sparkle = step(0.98, random(uv * 20.0 + time * 2.0));
     final_color += sparkle * vec3(1.0);
-    
+
     COLOR = vec4(final_color, total_ice * ice_color.a);
 }

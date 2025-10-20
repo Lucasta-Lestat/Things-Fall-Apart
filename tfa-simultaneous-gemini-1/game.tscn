@@ -1591,3 +1591,5 @@ tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAAAAAEAAAAAAAEAAAAAAAIAAAAAAAI
 tile_set = SubResource("TileSet_j5wjh")
 
 [node name="StructuresContainer" type="Node2D" parent="."]
+
+[node name="ItemsContainer" type="Node2D" parent="."]

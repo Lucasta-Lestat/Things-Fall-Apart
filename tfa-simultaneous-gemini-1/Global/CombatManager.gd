@@ -37,7 +37,7 @@ const BEAT_PAUSE_WINDOW_DURATION = 0.5 # Time player has to press space to pause
 
 var active_player_character_planning_idx: int = 0 # For turn-based planning among player chars
 
-# --- NEW: Structure Management ---
+# --- NEW: Structure Management --- #delete and let grid manager handle
 func register_structure(structure: Structure):
 	if not structure in all_structures_in_combat:
 		all_structures_in_combat.append(structure)
@@ -446,7 +446,6 @@ func get_character_at_world_pos(world_pos: Vector2) -> CombatCharacter:
 		var collider = result.collider
 		print("DEBUG: Checking collider: ", collider.name, " (", collider.get_class(), ")")
 		
-		# Check if this is a CharacterBody2D (the character itself)
 		if collider is CombatCharacter:
 			print("DEBUG: Found CombatCharacter directly: ", collider.character_name)
 			return collider

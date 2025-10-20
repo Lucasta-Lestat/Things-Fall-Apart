@@ -82,5 +82,18 @@ offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="HelmetSprite" type="Sprite2D" parent="Body/Equipment"]
+z_index = 2
 
 [node name="ArmorSprite" type="Sprite2D" parent="Body/Equipment"]
+z_index = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Body"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="OffHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]
+
+[node name="BodySpacer" type="Control" parent="Body/HBoxContainer"]
+layout_mode = 2
+
+[node name="MainHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]

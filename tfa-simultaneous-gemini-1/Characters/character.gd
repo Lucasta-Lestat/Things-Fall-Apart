@@ -10,6 +10,7 @@ signal health_changed(new_health, max_health, character)
 signal planned_action_for_slot(character, slot_index, action)
 signal died(character)
 signal no_more_ap_to_plan(character)
+signal dropped_item(item_id)
 
 # --- Properties ---
 enum Allegiance { PLAYER, ENEMY, NEUTRAL }
@@ -40,16 +41,9 @@ var planned_actions: Array[PlannedAction] = []
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 
 # --- UNIFIED EQUIPMENT SLOTS ---
-var equipped_main_hand: Equipment
-var equipped_off_hand: Equipment
-var equipped_head: Equipment
-var equipped_armor: Equipment
-var equipped_gloves: Equipment
-var equipped_boots: Equipment
-var equipped_cape: Equipment
-var equipped_neck: Equipment
-var equipped_ring1: Equipment
-var equipped_ring2: Equipment
+
+var equipment = {"Main Hand": Item , "Off Hand": Item, "Head": Item, "Chest": Item, 
+				"Gloves": Item, "Boots": Item, "Cape": Item, "Neck": Item, "Back": Item, "Ring1":Item, "Ring2": Item }
 
 
 var is_selected: bool = false:
@@ -78,9 +72,9 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 # --- Scene Node References ---
 @onready var visuals_container: Node2D = $Body
 @onready var body_sprite: Sprite2D = $Body/VBoxContainer/BodySprite
-@onready var armor_sprite: Sprite2D = $Body/VBoxContainer/ArmorSprite
 @onready var head_sprite: Sprite2D = $Body/VBoxContainer/HeadSprite
-@onready var helmet_sprite: Sprite2D = $Body/VBoxContainer/HelmetSprite
+@onready var helmet_sprite: Sprite2D = $Body/Equipment/HelmetSprite
+@onready var armor_sprite: Sprite2D = $Body/Equipment/ArmorSprite
 @onready var selection_visual: Sprite2D = $SelectionVisual  # Changed from Polygon2D to Sprite2D
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var preview_container: Node2D = $PreviewContainer
@@ -96,6 +90,7 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 @export var selection_ring_texture: Texture2D # Assign ring texture in inspector
 @export var selection_ring_scale: Vector2 = Vector2(1.5, 1.5)
 @export var selection_ring_offset: Vector2 = Vector2(0, 32) # Offset to place at character's feet
+
 
 var combat_manager: CombatManager
 var vfx_manager: VfxSystem
@@ -171,7 +166,7 @@ func _update_visual_sprites():
 	
 	var body_data: BodyPart = body_part_data.get("body")
 	var head_data: BodyPart = body_part_data.get("head")
-	
+
 	if body_data:
 		match current_direction:
 			Direction.DOWN: body_sprite.texture = body_data.texture_front
@@ -186,6 +181,21 @@ func _update_visual_sprites():
 			Direction.LEFT: head_sprite.texture = head_data.texture_left
 			Direction.RIGHT: head_sprite.texture = head_data.texture_right
 			
+	if equipment.Head:
+		match current_direction:
+			Direction.DOWN: helmet_sprite.texture = equipment.Head.texture
+			Direction.UP: helmet_sprite.texture = equipment.Head.texture_back
+			Direction.LEFT: helmet_sprite.texture = equipment.Head.texture_left
+			Direction.RIGHT: helmet_sprite.texture = equipment.Head.texture_right
+			
+	if equipment.chest:
+		print("Chest is real")
+		match current_direction:
+			Direction.DOWN: armor_sprite.texture = equipment.Chest.texture
+			Direction.UP: armor_sprite.texture = equipment.Chest.texture_back
+			Direction.LEFT: armor_sprite.texture = equipment.Chest.texture_left
+			Direction.RIGHT: armor_sprite.texture = equipment.Chest.texture_right
+#check in database how characters are actually equipped			
 # --- Core Logic ---
 func execute_planned_action(action: PlannedAction):
 	if is_moving:
@@ -231,9 +241,9 @@ func execute_planned_action(action: PlannedAction):
 			for entity in targets:
 				if ability.is_weapon_attack:
 					if is_instance_valid(entity) and entity.has_method("take_damage"):
-						if equipped_main_hand:
-							base_damage = equipped_main_hand.damage 
-							base_damage[equipped_main_hand.primary_damage_type] +=  strength/5
+						if equipment["Main Hand"]:
+							base_damage = equipment["Main Hand"].damage 
+							base_damage[equipment["Main Hand"].primary_damage_type] +=  strength/5
 							#for damage_type in damage:
 								#damage[damage_type] *= damage_multiplier
 						else: 
@@ -265,9 +275,9 @@ func get_affected_tiles(ability: Ability, start_world_pos: Vector2, target_world
 	#print("start_tile 2 ", start_tile)
 	# UPDATED: Prioritize the ability's own AoE definition. Fall back to weapon's.
 	var aoe_shape = ability.aoe_shape if not ability.is_weapon_attack else \
-					(equipped_main_hand.aoe_shape if ability.is_weapon_attack and equipped_main_hand else &"rectangle")
+					(equipment["Main Hand"].aoe_shape if ability.is_weapon_attack and equipment["Main Hand"] else &"rectangle")
 	var aoe_size = ability.aoe_size if not ability.is_weapon_attack else \
-				   (equipped_main_hand.aoe_size if ability.is_weapon_attack and equipped_main_hand else Vector2i.ONE)
+				   (equipment["Main Hand"].aoe_size if ability.is_weapon_attack and equipment["Main Hand"] else Vector2i.ONE)
 
 	if ability.effect == Ability.ActionEffect.MOVE: # Movement uses a different "flood fill" logic
 		return _get_reachable_tiles(start_tile, get_effective_range(ability))
@@ -397,13 +407,37 @@ func get_effective_range(ability: Ability) -> int:
 	match ability.range_type:
 		Ability.RangeType.ABILITY: pixel_range = ability.range
 		Ability.RangeType.TOUCH: pixel_range = touch_range
-		Ability.RangeType.WEAPON_MELEE: pixel_range = touch_range + (equipped_main_hand.range if equipped_main_hand else 0.0)
-		Ability.RangeType.WEAPON_RANGED: pixel_range = equipped_main_hand.range if equipped_main_hand else touch_range
+		Ability.RangeType.WEAPON_MELEE: pixel_range = touch_range + (equipment["Main Hand"].range if equipment["Main Hand"] else 0.0)
+		Ability.RangeType.WEAPON_RANGED: pixel_range = equipment["Main Hand"].range if equipment["Main Hand"] else touch_range
 	if ability.effect == Ability.ActionEffect.MOVE:
 		print(" Movement range: ", int(ability.range))
 		return int(ability.range / GridManager.TILE_SIZE)
 	return int(pixel_range / GridManager.TILE_SIZE)
 
+#Item Management
+func equip_item(item_id: String): #Need to check where it is so it can swap places with the existing item if equipping from inventory
+	var item = ItemDatabase.item_definitions[item_id]
+	var current_item = equipment[item.equip_slot]
+	if current_item != null:
+		add_to_inventory(current_item)
+	equipment[item.equip_slot] = item
+#Next, get direction and use it to apply the right texture to helmet sprite and armorsprite.  
+#Put main hand and off hand in the hbox container around the body and do the same for them
+func add_to_inventory(item: Item):
+	print("Attempting to add to inventory")
+	if equipment.Belt != null:
+		if equipment.Belt.contents.size() < equipment.Belt.num_slots:
+			equipment.Belt.contents[item.id] = item
+	elif equipment.Back != null:
+		if equipment.Back.contents.size() < equipment.Back.num_slots:
+			equipment.Back.contents[item.id] = item
+	else:
+		Globals.show_floating_text("Inventory Full", global_position, get_tree().root)
+		drop(item)
+		
+func drop(item: Item):
+	emit_signal("dropped_item", item.id, self)
+		
 func show_ability_preview(ability: Ability, world_mouse_pos: Vector2, ap_slot_index: int):
 	_clear_temp_previews()
 	if not ability: return
@@ -690,7 +724,16 @@ func _apply_character_data():
 	head_sprite.texture = body_part_data["head"].texture_front
 	body_sprite.visible = true
 	head_sprite.visible = true
-	
+	#print("armor_sprite: ", armor_sprite)
+	print("armor_sprite.texture: ", armor_sprite.texture)
+	equipment["Main Hand"] = data.equipment["Main Hand"]
+	equipment["Chest"] = data.equipment["Chest"]
+	equipment ["Head"] = data.equipment["Head"]
+	#print("data: ", data.equipment)
+	print("#armor, data.equipment.Chest.texture: ", data.equipment.Chest.texture)
+	armor_sprite.texture = load(data.equipment.Chest.texture)
+	helmet_sprite.texture = load(data.equipment.Chest.texture)
+	scale_equipment_sprites(Vector2(70,70))
 	icon = "res://Icons/"+ character_name + "_icon.png"
 	if not FileAccess.file_exists(icon):
 		icon = "res://Icons/dummy_icon.png"
@@ -704,7 +747,7 @@ func _apply_character_data():
 	touch_range = data.base_touch_range; max_health = data.max_health
 	current_health = max_health; max_ap_per_round = data.base_ap
 	traits = data.traits.duplicate(true)
-	equipped_main_hand = EquipmentDatabase.get_equipment(data.equipped_main_hand)
+	
 	abilities.clear()
 	for ability_id in data.abilities: abilities.append(AbilityDatabase.get_ability(ability_id))
 	start_round_reset()
@@ -756,15 +799,10 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	
 func _get_total_damage_resistance() -> Dictionary:
 	var total_dr = damage_resistances
-	var all_equipment = [
-		equipped_head, equipped_armor, equipped_gloves, equipped_boots,
-		equipped_cape, equipped_neck, equipped_ring1, equipped_ring2, 
-		equipped_main_hand, equipped_off_hand
-	]
 	
-	for item in all_equipment:
+	for item in equipment:
 		if not item: continue
-		for damage_type in item.damage_resistances:
+		for damage_type in equipment.item.damage_resistances:
 			total_dr[damage_type] = total_dr.get(damage_type, 0) + item.damage_resistances[damage_type]
 			
 	return total_dr
@@ -893,7 +931,18 @@ func get_sprite_rect_global() -> Rect2:
 		combined_rect = combined_rect.merge(head_rect)
 		
 	return combined_rect
-
+func scale_equipment_sprites(new_size):
+	if helmet_sprite:	
+		var initial_texture_size = helmet_sprite.texture.get_size()
+		var size_ratio_x = new_size.x/initial_texture_size.x
+		var size_ratio_y = new_size.y/initial_texture_size.y
+		helmet_sprite.scale = Vector2(size_ratio_x,size_ratio_y)
+	if armor_sprite:
+		var initial_texture_size = armor_sprite.texture.get_size()
+		var size_ratio_x = new_size.x/initial_texture_size.x
+		var size_ratio_y = new_size.y/initial_texture_size.y
+		armor_sprite.scale = Vector2(size_ratio_x,size_ratio_y)
+	
 func clear_planned_actions_from_slot(slot: int, refund_ap: bool):
 	for i in range(slot, max_ap_per_round):
 		if planned_actions.size() > i and planned_actions[i]:

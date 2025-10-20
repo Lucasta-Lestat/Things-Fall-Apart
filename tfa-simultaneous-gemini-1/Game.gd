@@ -5,6 +5,7 @@ extends Node2D
 # NEW: A container for our structure objects
 @onready var structures_container: Node2D = $StructuresContainer
 @onready var floors_container: Node2D = $FloorsContainer
+@onready var items_container: Node2D = $ItemsContainer
 @onready var player_camera: Camera2D = $PlayerCamera
 @onready var game_ui: GameUI = $GameUI
 # UPDATED: We now just need the ground layer for coordinate conversion
@@ -14,9 +15,10 @@ extends Node2D
 const CharacterScene = preload("res://Characters/Character.tscn")
 const StructureScene = preload("res://Structures/Structure.tscn")
 const FloorScene = preload("res://Structures/Floors/floor.tscn")
-
+const ItemScene = preload("res://Structures/Objects/Item.tscn")
 var player_input_manager: PlayerInputManager
 var combat_manager: CombatManager
+var character: CombatCharacter
 
 var is_active_combat = false
 var party_ids = ["Protagonist", "Jacana"]
@@ -38,12 +40,15 @@ func _ready():
 	
 	combat_manager.combat_started.connect(_on_combat_started)
 	combat_manager.combat_ended.connect(_on_combat_ended)
+	
 	# Collect all characters from container to start combat
 
 func _on_combat_started():
 	is_active_combat = true
 func _on_combat_ended():
 	is_active_combat = false
+func _on_item_dropped(item_id, character):
+	create_item(item_id, GridManager.map_to_world(character.global_position))
 	
 func load_map(map_id: StringName, coming_from: String):
 	#print("Map definitions: ", MapDatabase.map_definitions)
@@ -59,6 +64,7 @@ func load_map(map_id: StringName, coming_from: String):
 				var c = create_character_from_database(character_id, Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				#print("attempting to spawn: ", character_id, " at: ", Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				characters_container.add_child(c)
+				c.dropped_item.connect(_on_item_dropped)
 				offset += 1
 	print("spawned party successfully #map-loading")
 	var x = 0
@@ -107,7 +113,7 @@ func load_map(map_id: StringName, coming_from: String):
 			end_x = x + region.size_x
 			while x < end_x:
 				var door = check_for_door(region, Vector2i(x, y_top))
-				print("door: ", door)
+				#print("door: ", door)
 				if door:
 					create_structure(door.type, Vector2i(x, y_top))      # Top wall
 				else: 
@@ -144,7 +150,7 @@ func load_map(map_id: StringName, coming_from: String):
 		#print("grid_costs: ", GridManager.grid_costs)
 		if "structures" in region.keys():	
 			for structure in region.structures:
-				print("attempting to spawn")
+				#print("attempting to spawn")
 				if structure.has("id"):
 					create_structure(structure.id, Vector2i(structure.x,structure.y))
 		#print("#spawning: ",region.keys())
@@ -152,8 +158,11 @@ func load_map(map_id: StringName, coming_from: String):
 			for character in region.characters:
 				print("Attempting to spawn: ", character.id, " at ", Vector2i(character.x,character.y))
 				create_character_from_database(character.id, Vector2i(character.x,character.y))
-				
-	#print("structure container children: ",structures_container.get_children())
+				#character._update_visual_sprites()
+		if "objects" in region.keys():
+			for item in region.objects:
+				print("Attempting to spawn ", item.id, " at ", Vector2i(item.x, item.y))
+				create_item(item.id, Vector2i(item.x, item.y))
 	for structure in structures_container.get_children():
 		if structure.structure_id.contains("wall"):
 			check_neighbors(GridManager.world_to_map(structure.global_position), structure, structure.structure_id)
@@ -283,6 +292,19 @@ func create_structure(structure_id: StringName, grid_pos: Vector2i):
 	structures_container.add_child(structure)
 	if structure_id.contains("door"):
 		print("added door: ", structure, " ", structure_id, structure.find_child("Sprite").texture)
+	
+func create_item(item_id: StringName, grid_pos: Vector2i):
+	var item = ItemScene.instantiate() as Item
+	item.item_id = item_id
+	item.global_position = GridManager.map_to_world(grid_pos)
+	
+	# The structure tells the GridManager it's an obstacle
+	GridManager.register_object(grid_pos, item)
+	
+	# Connect to its destroyed signal to update pathfinding
+	item.destroyed.connect(_on_item_destroyed)
+	items_container.add_child(item)
+
 
 func check_neighbors(grid_pos, structure, structure_id):
 	var top = Vector2i(grid_pos.x, grid_pos.y -1)
@@ -338,7 +360,7 @@ func check_floor_neighbors(grid_pos, floor, floor_id):
 	#print("structure data: ", StructureDatabase.structure_data[structure_id])
 	if top_neighbor or right_neighbor or left_neighbor or bottom_neighbor:
 		var texture_path = "res://Structures/Floors/"+ FloorDatabase.floor_definitions[floor_id].name + " " + top_neighbor + right_neighbor + bottom_neighbor + left_neighbor + ".png" 
-		print("floor texture path: ", texture_path)
+		#print("floor texture path: ", texture_path)
 
 		FloorDatabase.floor_definitions[floor_id].texture = texture_path
 		#print("structure texture path: ", texture_path)
@@ -356,8 +378,13 @@ func _on_floor_destroyed(floor: Floor, grid_position: Vector2i):
 	for pos in GridManager.get_neighboring_coords(grid_position):
 		check_neighbors(pos,floor, floor.floor_id)
 	#claude: find floor at that grid_position now that this one is gone and reregister it.
-	
+func _on_item_destroyed(item: Item, grid_position: Vector2i):
+	GridManager.unregister_item(grid_position)
+	for item_name in item.resources.keys():
+		create_item(ItemDatabase.item_name,grid_position) # need to update to check if this square is occupied
+		
 # Alternative method if you want to override specific properties
+# I think this is deprecated
 func create_custom_character(character_id: String, position: Vector2, overrides: Dictionary = {}) -> CombatCharacter:
 	var character = create_character_from_database(character_id, position)
 	if not character:

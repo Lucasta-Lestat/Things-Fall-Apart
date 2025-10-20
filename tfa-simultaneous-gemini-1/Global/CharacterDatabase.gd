@@ -44,9 +44,11 @@ var starting_stats = {"Protagonist":
 						
 					}
 var starting_gear = {"Protagonist":
-	 					{"weapon": &"greatsword", "armor":&"iron_plate_armor", "ring1": &"ring_of_protection"}, 
+	 					{"weapon": &"greatsword", "armor":&"breastplate", "ring1": &"ring_of_protection", "helmet": &"iron_helmet"}, 
 					"Jacana": 
-						{"weapon": &"longbow", "armor": &"iron_plate_armor"}}
+						{"weapon": &"longbow", "armor": &"buff","helmet": &"iron_helmet"}}
+					#	give her buff
+					#	and female body
 var starting_abilities = {"Protagonist":
 							[&"move", &"basic_attack", &"cleave", &"fireball"],
 						"Jacana":
@@ -77,17 +79,8 @@ class CharacterData:
 	var icon_size: Vector2 = Vector2(100.0,100.0)
 	var size_class = 1
 	# --- UNIFIED EQUIPMENT SLOTS ---
-	var equipped_main_hand: StringName
-	var equipped_off_hand: StringName
-	var equipped_head: StringName
-	var equipped_armor: StringName
-	var equipped_gloves: StringName
-	var equipped_boots: StringName
-	var equipped_cape: StringName
-	var equipped_neck: StringName
-	var equipped_ring1: StringName
-	var equipped_ring2: StringName
-	
+	var equipment = {"Main Hand": Item , "Off Hand": Item, "Head": Item, "Chest": Item, 
+				"Gloves": Item, "Boots": Item, "Cape": Item, "Neck": Item, "Back": Item, "Ring1":Item, "Ring2": Item }
 	var damage_resistances: Dictionary
 	# Traits and equipment
 	var traits: Dictionary = {} # e.g. {"deadeye": 1, "clumsy": 2}
@@ -124,6 +117,10 @@ func _setup_character_data():
 			var body_id = char_def["name"] + " Body"
 			print("body_id in character database: ", body_id)
 			var head_id = char_def["name"] + " Head"
+			var chest_equip_id = starting_gear[char_def["name"]].armor
+			var head_equip_id = starting_gear[char_def["name"]].helmet
+			var weapon_id = starting_gear[char_def["name"]].weapon
+			print("chest equip id: ", chest_equip_id)
 			if BodyPartDatabase.body_parts.has(body_id):
 				character.visual_parts["body"] = body_id
 			else:
@@ -134,6 +131,19 @@ func _setup_character_data():
 			else:
 				print("didn't find head: ", head_id)
 				character.visual_parts["head"] = "Male Head 1"
+			if ItemDatabase.item_definitions.has(chest_equip_id):
+				print("trying to pull item from database to equip: ",ItemDatabase.item_definitions[chest_equip_id])
+				
+				#character.equip_item(chest_equip_id)
+				#need to actually define what an item should do when equipped
+				#e.g., apply its condition, change equipment sprite
+				character.equipment.Head = ItemDatabase.item_definitions
+			if ItemDatabase.item_definitions.has(head_equip_id):
+				character.equipment.Head = ItemDatabase.item_definitions[head_equip_id]
+				
+			if ItemDatabase.item_definitions.has(weapon_id):
+				character.equipment["Main Hand"] = ItemDatabase.item_definitions[weapon_id]
+				
 		var specific_racial_bonuses = {"constituion": 0, "dexterity":0, "strength":0, "intelligence":0, "will":0, "charisma":0}
 		if char_def.has("race"):
 			for bonus in racial_bonuses[char_def["race"]]:
@@ -169,9 +179,9 @@ func _setup_character_data():
 				character.will = tank_stats.will + specific_racial_bonuses.will 
 				character.intelligence = tank_stats.intelligence + specific_racial_bonuses.intelligence
 				character.charisma = tank_stats.charisma + specific_racial_bonuses.charisma
-				character.equipped_main_hand = &"greatsword"
-				character.equipped_armor = &"iron_plate_armor"
-				character.equipped_ring1 = &"ring_of_protection"
+				character.equipment["Main Hand"] = ItemDatabase.item_definitions[&"greatsword"]
+				character.equipment.Chest = ItemDatabase.item_definitions[&"breastplate"]
+				character.equipment["Ring 1"] = ItemDatabase.item_definitions[&"ring_of_protection"]
 				#combine with list of abilities per race
 				#create that after you've redefined the combat system and know how you want them to work.
 				character.abilities.assign(basic_tank_abilities)
@@ -182,8 +192,8 @@ func _setup_character_data():
 				character.will = basic_warrior_stats.will + specific_racial_bonuses.will 
 				character.intelligence = basic_warrior_stats.intelligence + specific_racial_bonuses.intelligence
 				character.charisma = basic_warrior_stats.charisma + specific_racial_bonuses.charisma
-				character.equipped_main_hand = &"shortsword"
-				character.equipped_armor = &"iron_plate_armor"
+				character.equipment["Main Hand"] = ItemDatabase.item_definitions[&"shortsword"]
+				character.equipment.Chest = ItemDatabase.item_definitions[&"breastplate"]
 				character.abilities.assign(basic_warrior_abilities)
 		else:
 			#Find the starting stats and equipment based on that character's name
@@ -193,10 +203,11 @@ func _setup_character_data():
 			character.will = starting_stats[character.character_name].will + specific_racial_bonuses.will 
 			character.intelligence = starting_stats[character.character_name].intelligence + specific_racial_bonuses.intelligence
 			character.charisma = starting_stats[character.character_name].charisma + specific_racial_bonuses.charisma
-			character.equipped_main_hand = starting_gear[character.character_name].weapon
-			character.equipped_armor = starting_gear[character.character_name].armor
+			#print("items: ", ItemDatabase.item_definitions)
+			character.equipment["Main Hand"] = ItemDatabase.item_definitions[starting_gear[character.character_name].weapon]
+			character.equipment.Chest = ItemDatabase.item_definitions[starting_gear[character.character_name].armor]
 			if starting_gear[character.character_name].has("ring1"):
-				character.equipped_ring1 = &"ring_of_protection"
+				character.equipment["Ring 1"] = ItemDatabase.item_definitions[&"ring_of_protection"]
 			#for gear in starting_gear[character.name]:
 			#come up with a good safe for loop some other time
 			print("Attempting to assign abilities #combat")

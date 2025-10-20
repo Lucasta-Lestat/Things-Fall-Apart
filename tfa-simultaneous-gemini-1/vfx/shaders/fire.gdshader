@@ -25,23 +25,23 @@ float fbm(vec2 p) {
 void fragment() {
     vec2 uv = UV;
     vec2 pos = uv * 2.0 - 1.0;
-    
+
     // Create fire shape - taller at bottom, narrower at top
     float fire_shape = (1.0 - uv.y) * (1.0 - abs(pos.x) * (0.5 + uv.y));
-    
+
     // Add turbulence
     vec2 noise_uv = uv * 3.0 + vec2(time * 0.1, time * 0.3);
     float turbulence = fbm(noise_uv) * 0.5;
-    
+
     // Animate the fire upward
     float animated_fire = fire_shape + turbulence - (uv.y * flame_height);
     animated_fire += sin(time * 2.0 + uv.x * 10.0) * 0.1;
-    
+
     // Create fire colors
     vec3 fire_color1 = vec3(1.0, 0.3, 0.0);  // Red-orange
     vec3 fire_color2 = vec3(1.0, 0.8, 0.0);  // Yellow-orange
     vec3 fire_color3 = vec3(0.8, 0.1, 0.0);  // Dark red
-    
+
     // Color gradient based on height
     vec3 final_color;
     if (uv.y < 0.3) {
@@ -51,16 +51,16 @@ void fragment() {
     } else {
         final_color = mix(fire_color2, vec3(1.0), (uv.y - 0.7) / 0.3);
     }
-    
+
     // Apply fire intensity
     final_color *= flame_intensity;
-    
+
     // Alpha based on fire shape
     float alpha = clamp(animated_fire, 0.0, 1.0);
     alpha *= (1.0 - uv.y * 0.3);  // Fade at top
-    
+
     // Add flicker
     alpha *= (0.8 + 0.2 * sin(time * 8.0 + uv.y * 20.0));
-    
+
     COLOR = vec4(final_color, alpha);
 }

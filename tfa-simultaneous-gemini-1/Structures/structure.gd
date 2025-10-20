@@ -12,7 +12,7 @@ var max_health: int
 var size: Vector2
 var resources: Dictionary = {} # e.g., {"wood": 20}
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
-var damage: Dictionary = {"Bludgeoning": 1} 
+var damage: Dictionary = {"bludgeoning": 1} 
 
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite

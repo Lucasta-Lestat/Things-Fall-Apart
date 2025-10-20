@@ -424,6 +424,7 @@ func cancel_targeting_mode():
 func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_pos is not used, using _get_world_mouse_position
 	var target_world_pos = _get_world_mouse_position()
 	var clicked_char_target = combat_manager.get_character_at_world_pos(target_world_pos)
+	#replace with grid manager call
 	print("DEBUG: Handling Ability Selection")
 	var caster = ability_caster_for_targeting # The one who initiated targeting
 	var ability = ability_being_targeted

@@ -18,6 +18,7 @@ config/icon="uid://bb5kv4jao2sm8"
 [autoload]
 
 BodyPartDatabase="*res://Global/BodyPartDatabase.gd"
+ItemDatabase="*res://Global/ItemDatabase.gd"
 CharacterDatabase="*res://Global/CharacterDatabase.gd"
 AbilityDatabase="*res://Global/AbilityDatabase.gd"
 TraitDatabase="*res://Global/TraitDatabase.gd"
@@ -30,6 +31,7 @@ VfxSystem="*res://Global/VFXSystem.gd"
 DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 MapDatabase="*res://Global/MapDatabase.gd"
 FloorDatabase="*res://Global/FloorDatabase.gd"
+Globals="*res://Global/Globals.gd"
 
 [display]
 

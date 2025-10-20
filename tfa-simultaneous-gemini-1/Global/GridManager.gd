@@ -45,18 +45,27 @@ func register_floor(grid_pos, floor):
 		floors[grid_pos] = floor.floor_id
 		#print("floors: ",floors[grid_pos])
 		#print_debug("GridManager: Floor registered at ", grid_pos)
-
+		
+func register_object(grid_pos, item):
+	if grid_costs.has(grid_pos):
+		grid_costs[grid_pos] = 1/item.walkability # Set cost to infinity (unwalkable)
+		
+func unregister_object(grid_pos, item):
+	if grid_costs.has(grid_pos):
+		grid_costs[grid_pos] *= item.walkability # Set cost to infinity (unwalkable)
+		
 func unregister_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = 1 # Set cost back to normal
 		walls[grid_pos] = false
 		print_debug("GridManager: Obstacle unregistered at ", grid_pos)
 		
-func unregister_floor(grid_pos): # claude: this needs to set walkability to that of the floor below it, but not sure how
+func unregister_floor(grid_pos): # claude: this needs to set walkability to that of the floor below it, but not sure how.  Could also *= floor's walkability
 	if grid_costs.has(grid_pos):
-		grid_costs[grid_pos] = 1 # Set cost to norml
+		grid_costs[grid_pos] = 1 # Set cost to normal
 		floors[grid_pos] = ""
 		print_debug("GridManager: Floor unregistered at ", grid_pos)
+		
 func get_neighboring_coords(grid_pos):
 	return [Vector2(grid_pos.x+1,grid_pos.y),Vector2(grid_pos.x-1,grid_pos.y),Vector2(grid_pos.x,grid_pos.y+1),Vector2(grid_pos.x,grid_pos.y-1)]
 # --- UPDATED: More robust coordinate conversion ---
