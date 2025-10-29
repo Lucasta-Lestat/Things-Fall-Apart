@@ -44,9 +44,9 @@ var starting_stats = {"Protagonist":
 						
 					}
 var starting_gear = {"Protagonist":
-	 					{"weapon": &"greatsword", "armor":&"breastplate", "ring1": &"ring_of_protection", "helmet": &"iron_helmet"}, 
+	 					{"weapon": &"greatsword", "armor":&"breastplate", "ring1": &"ring_of_protection", "helmet": &"kettle_helm", "shield": &"buckler"}, 
 					"Jacana": 
-						{"weapon": &"longbow", "armor": &"buff","helmet": &"iron_helmet"}}
+						{"weapon": &"longbow", "armor": &"buff","helmet": &"kettle_helm", "shield": &"buckler"}}
 					#	give her buff
 					#	and female body
 var starting_abilities = {"Protagonist":
@@ -120,6 +120,8 @@ func _setup_character_data():
 			var chest_equip_id = starting_gear[char_def["name"]].armor
 			var head_equip_id = starting_gear[char_def["name"]].helmet
 			var weapon_id = starting_gear[char_def["name"]].weapon
+			var shield_id = starting_gear[char_def["name"]].shield
+			print("shield_id: ", shield_id)
 			print("chest equip id: ", chest_equip_id)
 			if BodyPartDatabase.body_parts.has(body_id):
 				character.visual_parts["body"] = body_id
@@ -132,17 +134,25 @@ func _setup_character_data():
 				print("didn't find head: ", head_id)
 				character.visual_parts["head"] = "Male Head 1"
 			if ItemDatabase.item_definitions.has(chest_equip_id):
-				print("trying to pull item from database to equip: ",ItemDatabase.item_definitions[chest_equip_id])
+				print("trying to pull item from database to equip: ", ItemDatabase.item_definitions[chest_equip_id])
 				
 				#character.equip_item(chest_equip_id)
 				#need to actually define what an item should do when equipped
 				#e.g., apply its condition, change equipment sprite
-				character.equipment.Head = ItemDatabase.item_definitions
+				character.equipment["Chest"] = ItemDatabase.item_definitions[chest_equip_id]
 			if ItemDatabase.item_definitions.has(head_equip_id):
-				character.equipment.Head = ItemDatabase.item_definitions[head_equip_id]
-				
+				character.equipment["Head"] = ItemDatabase.item_definitions[head_equip_id]
 			if ItemDatabase.item_definitions.has(weapon_id):
+				print("main hand (in char database): ", ItemDatabase.item_definitions[weapon_id])
 				character.equipment["Main Hand"] = ItemDatabase.item_definitions[weapon_id]
+			#	print("#wtf type of main hand: ", typeof(character.equipment["Main Hand"]))
+			if ItemDatabase.item_definitions.has(shield_id):
+				print("we've got a shield id")
+				print("#wtf: shield (in char database): ", ItemDatabase.item_definitions[shield_id])
+				character.equipment["Off Hand"] = ItemDatabase.item_definitions[shield_id].duplicate()
+				#print("#wtf type of off hand: ", typeof(character.equipment["Off Hand"]))
+			else:
+				print("no shield id found")
 				
 		var specific_racial_bonuses = {"constituion": 0, "dexterity":0, "strength":0, "intelligence":0, "will":0, "charisma":0}
 		if char_def.has("race"):

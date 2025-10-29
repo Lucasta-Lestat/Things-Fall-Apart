@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cpv7im61vy17e"]
+
+[ext_resource type="Script" uid="uid://djotio7legpjx" path="res://scenes/pieces/grasshopper.gd" id="1_n6bjr"]
+
+[node name="Grasshopper" type="Node2D"]
+script = ExtResource("1_n6bjr")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

@@ -22,6 +22,7 @@ var character: CombatCharacter
 
 var is_active_combat = false
 var party_ids = ["Protagonist", "Jacana"]
+var party_chars = []
 var characters_in_scene = []
 var rotations = generate_random_array(1,4,100, 12345)
 var color_offsets = generate_random_float_array(1.0, 1.0, 100, 48273)
@@ -40,7 +41,7 @@ func _ready():
 	
 	combat_manager.combat_started.connect(_on_combat_started)
 	combat_manager.combat_ended.connect(_on_combat_ended)
-	
+	TimeManager.set_time_scale(30.0)
 	# Collect all characters from container to start combat
 
 func _on_combat_started():
@@ -64,6 +65,8 @@ func load_map(map_id: StringName, coming_from: String):
 				var c = create_character_from_database(character_id, Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				#print("attempting to spawn: ", character_id, " at: ", Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				characters_container.add_child(c)
+				party_chars.append(c)
+				print("party_chars: ", party_chars)
 				c.dropped_item.connect(_on_item_dropped)
 				offset += 1
 	print("spawned party successfully #map-loading")
@@ -169,8 +172,7 @@ func load_map(map_id: StringName, coming_from: String):
 	for floor in floors_container.get_children():
 			if floor.floor_id != "floor_dirt" and floor.floor_id != "floor_stone" and floor.floor_id != "floor_wood":
 				check_floor_neighbors(GridManager.world_to_map(floor.global_position), floor, floor.floor_id)
-
-		
+	
 func check_for_door(region, pos: Vector2i):
 	if region.has("doors"):
 					for door in region.doors:
@@ -196,7 +198,6 @@ func generate_random_array(min_val: int, max_val: int, size: int, seed_value: in
 func generate_random_float_array(min_val: float, max_val: float, size: int, seed_value: int):
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed_value  # Set the seed for deterministic results
-
 	var result = []
 	for i in range(size):
 		result.append(rng.randf_range(min_val, max_val))
@@ -231,7 +232,9 @@ func setup_managers():
 	game_ui.setup(combat_manager, player_input_manager)
 	print("DEBUG: GameUI setup")
 	# Set combat_manager reference in characters (will be done when characters are spawned)
-
+func trigger_time_based_event(time):
+	
+	pass
 func setup_input_actions():
 	if not InputMap.has_action("ui_accept"): 
 		InputMap.add_action("ui_accept")

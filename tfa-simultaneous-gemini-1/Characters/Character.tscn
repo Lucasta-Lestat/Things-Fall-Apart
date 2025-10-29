@@ -88,12 +88,16 @@ z_index = 2
 z_index = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Body"]
+custom_minimum_size = Vector2(30, 0)
 offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="OffHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]
+z_index = 3
 
 [node name="BodySpacer" type="Control" parent="Body/HBoxContainer"]
+custom_minimum_size = Vector2(30, 0)
 layout_mode = 2
 
 [node name="MainHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]
+z_index = 3

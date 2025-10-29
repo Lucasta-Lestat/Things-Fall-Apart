@@ -31,7 +31,7 @@ func load_item_definitions():
 	#print("parse_result: ", parse_result)
 	# Clear existing definitions
 	item_definitions.clear()
-	item_definitions = json.data
+	item_definitions = json.data.duplicate()
 	#print("item_definitions: ", item_definitions)
 	item_definitions_loaded.emit()
 

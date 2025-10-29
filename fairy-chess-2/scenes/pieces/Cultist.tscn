@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bcitt3k1k435i"]
+
+[ext_resource type="Script" uid="uid://b76iasat6lwih" path="res://scenes/pieces/cultist.gd" id="1_bgfsh"]
+
+[node name="Cultist" type="Node2D"]
+script = ExtResource("1_bgfsh")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

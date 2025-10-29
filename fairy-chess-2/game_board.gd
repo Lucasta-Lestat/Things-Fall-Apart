@@ -27,18 +27,20 @@ var white_actions = {} # {piece: {"action": "move", "target": pos}}
 var black_actions = {}
 var white_spawn_credits = {} #dictionary of spawnable pieces
 var black_spawn_credits = {}
+var automatic_actions = {}
 
 # --- Setup State ---
 var setup_placer = "white" # Who is currently placing a piece
 var white_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
 var black_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
  #Get profiles from the global PlayerDatabase 
-var white_profile = PlayerDatabase.get_profile("Hanub")
+var white_profile = PlayerDatabase.get_profile("god") #change this to change what pieces you have access to
 #print("DEBUG: white_profile: ", white_profile)
 var black_profile = PlayerDatabase.get_profile("Saratov")
 # --- Special Game State ---
 var phased_out_pieces = {} # {piece: turns_to_return} for Valkyrie
 var en_passant_target_square = Vector2.ZERO
+
 
 # --- Initialization ---
 func _ready():
@@ -64,16 +66,19 @@ func resolve_turn():
 	var all_actions = {}
 	all_actions.merge(white_actions)
 	all_actions.merge(black_actions)
-
+	all_actions.merge(automatic_actions)
 	# --- Phase 0: Initialization ---
 	var destinations = {}
 	var captures = []
+	var conversions = []
 	var promotions = []
 	var spawns = []
 	var aoe_attacks = []
 	var petrify_sources = []
-	en_passant_target_square = Vector2.ZERO
-
+	en_passant_target_square = Vector2.ZERO #??
+	
+	
+	#AI here
 	# --- Phase 1: Process Actions ---
 	for piece in all_actions.keys():
 		var action = all_actions[piece]
@@ -99,7 +104,7 @@ func resolve_turn():
 				audio_manager.play_sfx("promote")
 				print("promotion appended")
 			"fire_cannon" :
-				action["piece"] = piece 
+				action["piece"] = piece #wtf does this do?
 				audio_manager.play_sfx("cannon")
 				print("DEBUG: attempting to append cannonfire to aoe_attacks")
 				aoe_attacks.append(action)
@@ -107,6 +112,8 @@ func resolve_turn():
 				action["piece"] = piece 
 				print("DEBUG: attempting to append dragon_breath  to aoe_attacks")
 				aoe_attacks.append(action)
+			"conversion":
+				conversions.append(action)
 	# --- Phase 2: Identify Movement-Based Captures ---
 	var final_positions = {}
 	for piece in destinations.keys():
@@ -114,7 +121,8 @@ func resolve_turn():
 		if not final_positions.has(target_pos):
 			final_positions[target_pos] = []
 		final_positions[target_pos].append(piece)
-
+	var check_if_killed = []
+	
 	for pos in final_positions.keys():
 		var arriving_pieces = final_positions[pos]
 		var original_occupant = board[pos.x][pos.y]
@@ -126,19 +134,21 @@ func resolve_turn():
 		if original_occupant and not destinations.has(original_occupant):
 			if not original_occupant in captures:
 				captures.append(original_occupant)
-			if arriving_pieces.size() == 1 and arriving_pieces[0].piece_type == "Nightrider":
+			if arriving_pieces.size() == 1 and arriving_pieces[0].piece_type == "Nightrider": # use for raider
 				#spawns.append({"type": "Pawn", "color": arriving_pieces[0].color, "pos": arriving_pieces[0].grid_position})
-				print("PAWN ADDED TO SPAWNS")
+				print("ZOMBIE ADDED TO SPAWNS")
 				if arriving_pieces[0].color == "white":
 					print("DEBUG: White spawn credits updated")
-					white_spawn_credits["Pawn"] = white_spawn_credits.get("Pawn", 0) + 1
+					white_spawn_credits["Zombie"] = white_spawn_credits.get("Zombie", 0) + 1
 					emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
 
 				else:
 					print("DEBUG: Black spawn credits updated")
-					black_spawn_credits["Pawn"] = black_spawn_credits.get("Pawn", 0) + 1
+					black_spawn_credits["Zombie"] = black_spawn_credits.get("Zombie", 0) + 1
 					emit_signal("spawn_credits_changed", white_spawn_credits, black_spawn_credits)
-	
+			
+			if arriving_pieces.size() == 1 and "Barbarian" in arriving_pieces[0].traits:
+				check_if_killed.append(arriving_pieces[0]) #add the Barbarian piece which got a capture to spawns, iff Barbarian piece itself was killed
 	# --- Phase 3: Path Blocking & Swapping Resolution ---
 	var blocked_pieces = []
 	for piece_a in destinations.keys():
@@ -218,6 +228,13 @@ func resolve_turn():
 					next_board_state[int(final_pos.x)][int(final_pos.y)] = piece
 				else:
 					print("Error: Piece %s tried to move to an invalid square %s" % [piece.piece_type, final_pos])
+	#handle barbarians going to valhalla
+	for barb in check_if_killed:
+			if barb in unique_captures:
+				if barb.color == "white":
+					white_spawn_credits[barb.piece_type] = white_spawn_credits.get(barb.piece_type, 0) + 1
+				elif barb.color == "black":
+					black_spawn_credits[barb.piece_type] = black_spawn_credits.get(barb.piece_type, 0) + 1
 	# --- Phase 7: Promotions, and On-Move Effects ---
 
 	var promoted_pawns = []
@@ -227,7 +244,12 @@ func resolve_turn():
 		audio_manager.play_sfx("promote")
 		print("promotion loop triggered")
 		var pawn = promo_action.target_pawn
+		print("pawn: ", pawn)
 		if not pawn in unique_captures:
+			# Check if the pawn object still actually exists in the game.
+			if not is_instance_valid(pawn):
+				print("Skipping promotion action for a freed pawn.")
+				continue # Skips to the next item in the 'promotions' loop
 			var pos = destinations.get(pawn, pawn.grid_position)
 			var color = pawn.color
 			var new_type = promo_action.promote_to
@@ -240,8 +262,42 @@ func resolve_turn():
 			next_board_state[pos.x][pos.y] = new_piece_scene
 			promoted_pawns.append(pawn)
 			emit_signal("piece_spawned", new_piece_scene, pos)
+	# --- Handle Conversions (add this section alongside your promotions handling) ---
+	for convert_action in conversions:
+		audio_manager.play_sfx("convert")  # Or use "promote" if you don't have a convert sound
+		print("conversion loop triggered")
+		var target_piece = convert_action.target_piece
+		print("target piece: ", target_piece)
+		
+		# Check if the target piece still exists and hasn't been captured
+		if not is_instance_valid(target_piece):
+			print("Skipping conversion action for a freed piece.")
+			continue
+		
+		if target_piece in unique_captures:
+			print("Skipping conversion action for a captured piece.")
+			continue
+		
+		# Get the position of the piece to be converted
+		var pos = destinations.get(target_piece, target_piece.grid_position)
+		
+		# Determine the converting cultist's color (the new owner)
+		var new_color = convert_action.piece.color
+		
+		# Create a new Cultist piece with the converter's color
+		var new_cultist_scene = load(PlayerDatabase.PIECE_DEFINITIONS["Cultist"]["scene"]).instantiate()
+		print("Attempted to instantiate new cultist for conversion")
+		new_cultist_scene.add_to_group("pieces")
+		new_cultist_scene.setup_piece("Cultist", new_color, false, 80)
+		new_cultist_scene.grid_position = pos
+		next_board_state[pos.x][pos.y] = new_cultist_scene
+		
+		# Mark the old piece for removal (similar to promoted pawns)
+		if not "converted_pieces" in self:
+			converted_pieces = []
+		converted_pieces.append(target_piece)
 	
-
+	emit_signal("piece_spawned", new_cultist_scene, pos)
 	for gorgon in petrify_sources:
 		if not gorgon in unique_captures:
 			var final_pos = destinations.get(gorgon)
@@ -296,15 +352,17 @@ func start_game():
 # Called by chessboard_display when a player chooses an action.
 func declare_action(piece, action_data):
 	if game_phase != "playing": return
-
 	if action_data.action == "spawn":
 		var color = action_data.data.color
 		var piece_type = action_data.data.piece_type
 		
 		if color == "white" and white_spawn_credits.get(piece_type, 0) > 0:
 			white_spawn_credits[piece_type] -= 1
-			var new_piece = load(PlayerDatabase.PIECE_DEFINITIONS[piece_type]).instantiate()
-			new_piece.setup_piece(piece_type, color, false, 80)
+			print("piece_type: ", piece_type)
+			print("PlayerDataabase.PIECE_DEFINITIONS: ", PlayerDatabase.PIECE_DEFINITIONS)
+			print(PlayerDatabase.PIECE_DEFINITIONS)
+			var new_piece = load(PlayerDatabase.PIECE_DEFINITIONS[piece_type]["scene"]).instantiate()
+			new_piece.setup_piece(piece_type, color, false, 100)
 			new_piece.grid_position = action_data.target
 			board[action_data.target.x][action_data.target.y] = new_piece
 			emit_signal("piece_spawned", new_piece, action_data.target)
@@ -314,7 +372,7 @@ func declare_action(piece, action_data):
 		elif color == "black" and black_spawn_credits.get(piece_type, 0) > 0:
 			black_spawn_credits[piece_type] -= 1
 			var new_piece = load(PlayerDatabase.PIECE_DEFINITIONS[piece_type]).instantiate()
-			new_piece.setup_piece(piece_type, color, false, 80)
+			new_piece.setup_piece(piece_type, color, false, 100)
 			new_piece.grid_position = action_data.target
 			board[action_data.target.x][action_data.target.y] = new_piece
 			emit_signal("piece_spawned", new_piece, action_data.target)
@@ -330,7 +388,6 @@ func declare_action(piece, action_data):
 			if black_actions.is_empty():
 				black_actions[piece] = action_data
 				emit_signal("turn_info_changed", "Resolving turn...")
-	
 	if not white_actions.is_empty() and not black_actions.is_empty():
 		resolve_turn()
 # --- Helper Functions ---
@@ -398,7 +455,7 @@ func is_valid_square(pos):
 	return pos.x >= 0 and pos.x < BOARD_SIZE and pos.y >= 0 and pos.y < BOARD_SIZE
 # Ends the game and sets the final state.
 func end_game(outcome):
-	audio_manager.play_sfx("win") # Add this line
+	audio_manager.play_sfx("win") 
 	audio_manager.stop_music() # Optional: stop the music
 	game_phase = "game_over"
 	emit_signal("game_state_changed", "Game Over: " + outcome)

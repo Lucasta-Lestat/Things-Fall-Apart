@@ -32,6 +32,7 @@ DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 MapDatabase="*res://Global/MapDatabase.gd"
 FloorDatabase="*res://Global/FloorDatabase.gd"
 Globals="*res://Global/Globals.gd"
+TimeManager="*res://Global/TimeManager.gd"
 
 [display]
 

@@ -59,7 +59,7 @@ func _apply_item_data():
 	if not data:
 		printerr("Failed to get data for item_id: ", item_id)
 		return
-		
+	print("Applying item data for ",data.name)	
 	max_health = data.max_health
 	current_health = max_health
 	resources = data.resources.duplicate()

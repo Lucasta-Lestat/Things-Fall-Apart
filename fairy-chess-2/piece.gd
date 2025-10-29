@@ -5,7 +5,7 @@
 extends Node2D
 
 class_name ChessPiece
-
+@onready var game_board = get_node("root/FairyChess/Gameboard")
 # --- Properties ---
 var piece_type: String = "Generic"
 var color: String = "white" # "white" or "black"
@@ -13,6 +13,7 @@ var is_royal: bool = false
 var is_petrified: bool = false
 var grid_position: Vector2 = Vector2.ZERO
 var last_known_pos: Vector2 = Vector2.ZERO # For Valkyrie
+var traits = [] #Male or Female, Virgin, Barbarian, Elf, Draconic, etc.
 
 # --- Methods to be Overridden ---
 # Returns a list of valid moves/actions for the piece.
@@ -32,7 +33,9 @@ func on_move(game_board):
 	# Implement effects that trigger on move (e.g., Gorgon's freeze).
 	# This is now handled centrally in game_board.gd for simplicity.
 	pass
-
+	
+func is_valid_square(pos):
+	return pos.x >= 0 and pos.x < 6 and pos.y >= 0 and pos.y < 6
 # --- Setup ---
 # Initializes the piece with its type, color, and royal status.
 func setup_piece(p_type, p_color, p_is_royal,tile_size):

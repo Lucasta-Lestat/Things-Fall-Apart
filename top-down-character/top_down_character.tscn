@@ -1,0 +1,38 @@
+[gd_scene load_steps=3 format=3 uid="uid://cixnwx8qbxyq0"]
+
+[ext_resource type="Script" uid="uid://cdp7742ihj6jm" path="res://top_down_character.gd" id="1_gxhqh"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_gxhqh"]
+
+[node name="TopDownCharacter" type="Node2D"]
+script = ExtResource("1_gxhqh")
+
+[node name="Body" type="VBoxContainer" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="BackBodySegment" type="AnimatableBody2D" parent="Body"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body/BackBodySegment"]
+shape = SubResource("CapsuleShape2D_gxhqh")
+
+[node name="LeftLeg" type="AnimatableBody2D" parent="Body"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body/LeftLeg"]
+shape = SubResource("CapsuleShape2D_gxhqh")
+
+[node name="FrontBodySegment" type="AnimatableBody2D" parent="Body"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body/FrontBodySegment"]
+shape = SubResource("CapsuleShape2D_gxhqh")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Body"]
+layout_mode = 2
+
+[node name="BodySpacer" type="Control" parent="Body/HBoxContainer"]
+layout_mode = 2
+
+[node name="RightLeg" type="AnimatableBody2D" parent="Body/HBoxContainer"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body/HBoxContainer/RightLeg"]
+shape = SubResource("CapsuleShape2D_gxhqh")

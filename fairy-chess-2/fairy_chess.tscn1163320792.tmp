@@ -1,0 +1,232 @@
+[gd_scene load_steps=25 format=3 uid="uid://bsuoy0ishctwb"]
+
+[ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
+[ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
+[ext_resource type="Texture2D" uid="uid://h0h5a5o0buhk" path="res://assets/Table Background.png" id="3_au1l4"]
+[ext_resource type="Script" uid="uid://divc3al5238ms" path="res://ui.gd" id="3_ik8s4"]
+[ext_resource type="PackedScene" uid="uid://bj1330b3wrqda" path="res://scenes/pieces/pawn.tscn" id="3_nbw42"]
+[ext_resource type="PackedScene" uid="uid://bvv50c65j2xhe" path="res://scenes/player_profile_display.tscn" id="4_guhtp"]
+[ext_resource type="PackedScene" uid="uid://36475ufqra0w" path="res://scenes/pieces/Chancellor.tscn" id="4_ljmel"]
+[ext_resource type="PackedScene" uid="uid://knl5btkaj2qq" path="res://scenes/pieces/Bishop.tscn" id="5_mqiwu"]
+[ext_resource type="PackedScene" uid="uid://bbbmvtx26jq7y" path="res://scenes/pieces/King.tscn" id="6_myjci"]
+[ext_resource type="PackedScene" uid="uid://kuilwacq0k3w" path="res://scenes/pieces/Kulak.tscn" id="8_g7uw4"]
+[ext_resource type="PackedScene" uid="uid://bhbebsq87y5ep" path="res://scenes/pieces/Knight.tscn" id="9_g7uw4"]
+[ext_resource type="PackedScene" uid="uid://drmvqv3x5jfwu" path="res://scenes/pieces/Rook.tscn" id="10_ou3o4"]
+[ext_resource type="PackedScene" uid="uid://ca4o1x42i0q61" path="res://scenes/pieces/Queen.tscn" id="11_h5vv0"]
+[ext_resource type="Script" uid="uid://n87q08mkh6mb" path="res://highlight_layer.gd" id="12_g1r23"]
+[ext_resource type="Script" uid="uid://cbfh1b6s1g2l6" path="res://audio_manager.gd" id="13_6kral"]
+[ext_resource type="AudioStream" uid="uid://rojuy7jf2tck" path="res://Sounds/capture.mp3" id="14_jwrwn"]
+[ext_resource type="Script" uid="uid://bly1jvexu2h33" path="res://debug_label.gd" id="14_kvhh4"]
+[ext_resource type="AudioStream" uid="uid://c2t50oo75x05j" path="res://Sounds/rifle.mp3" id="14_vl6e3"]
+[ext_resource type="AudioStream" uid="uid://ditfsafvcxmgx" path="res://Sounds/cannon.mp3" id="15_jwrwn"]
+[ext_resource type="AudioStream" uid="uid://c8hd3ixm6bsrw" path="res://Sounds/peppy jazz.mp3" id="16_au1l4"]
+[ext_resource type="AudioStream" uid="uid://87vu5trqxvfw" path="res://Sounds/spawn.mp3" id="16_dvlb2"]
+[ext_resource type="AudioStream" uid="uid://cxn40q8woitd3" path="res://Sounds/move.mp3" id="17_qcuxe"]
+[ext_resource type="AudioStream" uid="uid://cc4amikeyydfl" path="res://Sounds/promote.mp3" id="18_jwrwn"]
+[ext_resource type="AudioStream" uid="uid://cq3vkptucs0jg" path="res://Sounds/win sound.mp3" id="22_guhtp"]
+
+[node name="FairyChess" type="Node2D"]
+
+[node name="GameBoard" type="Node2D" parent="."]
+script = ExtResource("1_jhicg")
+
+[node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("3_ik8s4")
+
+[node name="Background" type="TextureRect" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -188.0
+offset_bottom = 188.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_au1l4")
+
+[node name="CenterContainer" type="CenterContainer" parent="UI"]
+custom_minimum_size = Vector2(0, 320)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/CenterContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BlackProfileDisplay" parent="UI/CenterContainer/VBoxContainer" instance=ExtResource("4_guhtp")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="TopSpacer" type="Control" parent="UI/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/CenterContainer/VBoxContainer"]
+visibility_layer = 3
+custom_minimum_size = Vector2(920, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="WhiteScrollContainer" type="ScrollContainer" parent="UI/CenterContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_default_cursor_shape = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/WhiteScrollContainer"]
+layout_mode = 2
+
+[node name="ChessboardDisplay" type="Control" parent="UI/CenterContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_default_cursor_shape = 3
+script = ExtResource("2_nbw42")
+
+[node name="Chancellor" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("4_ljmel")]
+
+[node name="Pawn" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("3_nbw42")]
+visible = false
+
+[node name="Bishop" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("5_mqiwu")]
+
+[node name="King" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("6_myjci")]
+
+[node name="Kulak" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("8_g7uw4")]
+
+[node name="Knight" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("9_g7uw4")]
+
+[node name="Rook" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("10_ou3o4")]
+
+[node name="Queen" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("11_h5vv0")]
+
+[node name="HighlightLayer" type="Control" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 1
+script = ExtResource("12_g1r23")
+
+[node name="BlackScrollContainer" type="ScrollContainer" parent="UI/CenterContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_default_cursor_shape = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/BlackScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 2
+
+[node name="BottomSpacer" type="Control" parent="UI/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="WhiteProfileDisplay" parent="UI/CenterContainer/VBoxContainer" instance=ExtResource("4_guhtp")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="GameOverlayUI" type="CanvasLayer" parent="UI"]
+follow_viewport_enabled = true
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/GameOverlayUI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/GameOverlayUI/MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopRowLabels" type="HBoxContainer" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="GameStateLabel" type="Label" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels"]
+layout_mode = 2
+text = "Game state"
+
+[node name="Spacer" type="Control" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PlayerTurnLabel" type="Label" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels"]
+layout_mode = 2
+text = "Turn"
+
+[node name="SetupTurnLabel" type="Label" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels"]
+layout_mode = 2
+text = "setup turn label"
+
+[node name="Spacer" type="Control" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="BottomRowLabels" type="HBoxContainer" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="PlayerModeButton" type="CheckBox" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels"]
+visible = false
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels"]
+layout_mode = 2
+text = "Start"
+
+[node name="DebugLabel" type="Label" parent="UI/GameOverlayUI"]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Debug Label"
+script = ExtResource("14_kvhh4")
+
+[node name="AudioManager" type="Node" parent="."]
+script = ExtResource("13_6kral")
+
+[node name="SpawnSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("16_dvlb2")
+volume_db = 20.0
+
+[node name="MoveSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("17_qcuxe")
+volume_db = 20.0
+
+[node name="CaptureSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("14_jwrwn")
+volume_db = 24.0
+
+[node name="RifleSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("14_vl6e3")
+volume_db = 24.0
+
+[node name="CannonSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("15_jwrwn")
+volume_db = 24.0
+
+[node name="MusicPlayer" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("16_au1l4")
+parameters/looping = false
+
+[node name="WinSound" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("22_guhtp")
+
+[node name="PromoteSFX" type="AudioStreamPlayer2D" parent="AudioManager"]
+stream = ExtResource("18_jwrwn")
+volume_db = 24.0
+
+[connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="GameBoard" method="_on_start_button_pressed"]
+[connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="UI" method="_on_start_button_pressed"]

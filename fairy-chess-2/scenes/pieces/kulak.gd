@@ -2,6 +2,7 @@ extends ChessPiece
 
 func _init():
 	piece_type = "Kulak"
+	traits.append("Peasant")
 
 func get_valid_actions(board_state):
 	var actions = []

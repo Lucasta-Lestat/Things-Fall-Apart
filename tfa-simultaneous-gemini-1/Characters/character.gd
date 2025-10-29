@@ -42,7 +42,7 @@ var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire"
 
 # --- UNIFIED EQUIPMENT SLOTS ---
 
-var equipment = {"Main Hand": Item , "Off Hand": Item, "Head": Item, "Chest": Item, 
+var equipment = {"Main Hand": Item , "Off Hand": {"wtf": 7}, "Head": Item, "Chest": Item, 
 				"Gloves": Item, "Boots": Item, "Cape": Item, "Neck": Item, "Back": Item, "Ring1":Item, "Ring2": Item }
 
 
@@ -75,6 +75,8 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 @onready var head_sprite: Sprite2D = $Body/VBoxContainer/HeadSprite
 @onready var helmet_sprite: Sprite2D = $Body/Equipment/HelmetSprite
 @onready var armor_sprite: Sprite2D = $Body/Equipment/ArmorSprite
+@onready var main_hand_sprite: Sprite2D = $Body/HBoxContainer/MainHandSprite
+@onready var off_hand_sprite: Sprite2D = $Body/HBoxContainer/OffHandSprite
 @onready var selection_visual: Sprite2D = $SelectionVisual  # Changed from Polygon2D to Sprite2D
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var preview_container: Node2D = $PreviewContainer
@@ -182,19 +184,29 @@ func _update_visual_sprites():
 			Direction.RIGHT: head_sprite.texture = head_data.texture_right
 			
 	if equipment.Head:
+		print("equipment head : ", equipment.Head)
+
 		match current_direction:
-			Direction.DOWN: helmet_sprite.texture = equipment.Head.texture
-			Direction.UP: helmet_sprite.texture = equipment.Head.texture_back
-			Direction.LEFT: helmet_sprite.texture = equipment.Head.texture_left
-			Direction.RIGHT: helmet_sprite.texture = equipment.Head.texture_right
+			Direction.DOWN: helmet_sprite.texture = load(equipment.Head.texture)
+			Direction.UP: helmet_sprite.texture = load(equipment.Head.texture_back)
+			Direction.LEFT: helmet_sprite.texture = load(equipment.Head.texture_left)
+			Direction.RIGHT: helmet_sprite.texture = load(equipment.Head.texture_right)
 			
-	if equipment.chest:
+	if equipment.Chest:
 		print("Chest is real")
 		match current_direction:
-			Direction.DOWN: armor_sprite.texture = equipment.Chest.texture
-			Direction.UP: armor_sprite.texture = equipment.Chest.texture_back
-			Direction.LEFT: armor_sprite.texture = equipment.Chest.texture_left
-			Direction.RIGHT: armor_sprite.texture = equipment.Chest.texture_right
+			Direction.DOWN: armor_sprite.texture = load(equipment.Chest.texture)
+			Direction.UP: armor_sprite.texture = load(equipment.Chest.texture_back)
+			Direction.LEFT: armor_sprite.texture = load(equipment.Chest.texture_left)
+			Direction.RIGHT: armor_sprite.texture = load(equipment.Chest.texture_right)
+			
+	if equipment["Main Hand"]:
+		match current_direction:
+			Direction.DOWN: armor_sprite.texture = load(equipment["Main Hand"].texture)
+			#check for null with these
+			Direction.UP: armor_sprite.texture = load(equipment["Main Hand"].texture_back)
+			Direction.LEFT: armor_sprite.texture = load(equipment["Main Hand"].texture_left)
+			Direction.RIGHT: armor_sprite.texture = load(equipment["Main Hand"].texture_right)
 #check in database how characters are actually equipped			
 # --- Core Logic ---
 func execute_planned_action(action: PlannedAction):
@@ -421,6 +433,8 @@ func equip_item(item_id: String): #Need to check where it is so it can swap plac
 	if current_item != null:
 		add_to_inventory(current_item)
 	equipment[item.equip_slot] = item
+	match: # change the appropriate sprite
+		
 #Next, get direction and use it to apply the right texture to helmet sprite and armorsprite.  
 #Put main hand and off hand in the hbox container around the body and do the same for them
 func add_to_inventory(item: Item):
@@ -683,8 +697,6 @@ func _draw_path_preview(path: Array[Vector2i], color: Color, slot_index: int):
 	rebuild_all_previews()
 	print("Successfully drew planned path preview #ui")
 	
-
-	
 func _get_tiles_in_radius(center_tile: Vector2i, radius: int) -> Array[Vector2i]:
 	"""Helper function to get all tiles within a certain radius of a center tile."""
 	print("get_tiles_in_radius called #ui")
@@ -727,12 +739,21 @@ func _apply_character_data():
 	#print("armor_sprite: ", armor_sprite)
 	print("armor_sprite.texture: ", armor_sprite.texture)
 	equipment["Main Hand"] = data.equipment["Main Hand"]
+	#equipment["Off Hand"] = data.equipment["Off Hand"].duplicate()
+	#print("#wtf: ", typeof(equipment["Main Hand"]))
+	print("#wtf: ", typeof(equipment["Off Hand"]))
+	#print("#wtf: ", equipment["Main Hand"])
+	print("#wtf, off hand in character: ", equipment["Off Hand"])
 	equipment["Chest"] = data.equipment["Chest"]
-	equipment ["Head"] = data.equipment["Head"]
+	equipment["Head"] = data.equipment["Head"]
 	#print("data: ", data.equipment)
 	print("#armor, data.equipment.Chest.texture: ", data.equipment.Chest.texture)
 	armor_sprite.texture = load(data.equipment.Chest.texture)
 	helmet_sprite.texture = load(data.equipment.Chest.texture)
+	main_hand_sprite.texture = load(equipment["Main Hand"].texture)
+	#print("main hand: ",data.equipment["Main Hand"].texture)
+	#print("off hand: ", data.equipment["Off Hand"])
+	#off_hand_sprite.texture = load(equipment["Off Hand"].texture)
 	scale_equipment_sprites(Vector2(70,70))
 	icon = "res://Icons/"+ character_name + "_icon.png"
 	if not FileAccess.file_exists(icon):
@@ -851,6 +872,69 @@ func plan_ability_use(ability: Ability, slot: int, target_char: CombatCharacter=
 	emit_signal("planned_action_for_slot", self, slot, action)
 	if get_next_available_ap_slot_index() == -1 or current_ap_for_planning <= 0:
 		emit_signal("no_more_ap_to_plan", self)
+func use_ability_immediately(ability, target_pos):
+	if is_moving:
+		current_path.clear(); path_index = 0; is_moving = false
+		
+	
+	if not ability: print_rich("[color=red]ERROR: Ability not found: ", ability.ability_id, "[/color]"); return
+	var roll = randi() % 100 + 1
+	var success_target = get_stat_by_name(ability.success_stat)
+	
+	if ability.success_stat:
+		var bonus = 0
+		for trait_id in ability.advantages:
+			if traits.has(trait_id): bonus += 20 * traits[trait_id]
+		for trait_id in ability.disadvantages:
+			if traits.has(trait_id): bonus -= 20 * traits[trait_id]
+		success_target += bonus
+		
+	var success_level = _calculate_success_level(roll, success_target)
+
+	if ability.effect == Ability.ActionEffect.MOVE:
+		var start_tile = GridManager.world_to_map(global_position)
+		var end_tile = GridManager.world_to_map(target_pos)
+		current_path = GridManager.find_path(start_tile, end_tile)
+		var move_range_tiles = get_effective_range(ability)
+		if current_path.size() > move_range_tiles:
+			current_path.resize(move_range_tiles)
+		path_index = 0
+		
+	
+	elif ability.effect == Ability.ActionEffect.DAMAGE:
+		if success_level > 0 :
+			var affected_tiles = get_affected_tiles(ability, global_position, target_pos)
+			var targets = combat_manager.get_entities_in_tiles(affected_tiles)
+			#show_shader(ability, action)
+
+			if targets.is_empty():
+				print_rich("  [color=gray]Attack hits nothing.[/color]")
+				return
+				
+			print_rich("[color=orange]Executing Damage Action: ", ability.display_name, "[/color]")
+			var base_damage = {}
+			for entity in targets:
+				if ability.is_weapon_attack:
+					if is_instance_valid(entity) and entity.has_method("take_damage"):
+						if equipment["Main Hand"]:
+							base_damage = equipment["Main Hand"].damage 
+							base_damage[equipment["Main Hand"].primary_damage_type] +=  strength/5
+							#for damage_type in damage:
+								#damage[damage_type] *= damage_multiplier
+						else: 
+							base_damage = {"bludgeoning": (1 + strength/5) }
+				else:
+					base_damage = ability.damage
+					#for damage_type in base_damage:
+					#		pass
+							#damage[damage_type] *= damage_multiplier
+				if is_instance_valid(entity) and entity.has_method("take_damage"):
+					#print_rich("  [color=green]HIT:[/color] ", entity.name, " for ", damage, " damage.")
+					entity.take_damage(base_damage, success_level, ability.primary_damage_type)
+		else:
+			print_rich(" [color=yellow]MISS![/color] (Rolled ", roll, " vs target of ", success_target, ")")
+			show_floating_text("Miss", Color.WHITE_SMOKE)
+	
 
 func get_next_available_ap_slot_index() -> int:
 	for i in range(planned_actions.size()):

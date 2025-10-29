@@ -23,8 +23,8 @@ var player_profiles = {
 		"god": {
 			"name": "God",
 			"portrait": "../icon.svg",
-			"peasants": {"Basic Automaton":1, "Kulak": 2, "Pawn":2},
-			"nobles": { "Anarch":1, "Bishop": 1, "Cannonier":1, "Centaur":1, "Devil Toad":1, "Dragonrider": 1, "Elephant Rider":1, "Gorgon":1, "Knight": 1,"Monk":1,"Minister":1, "Nightrider": 1, "Princess": 1, "Queen":1, "Rifleman": 1, "Rook": 1, "Valkyrie": 1 },
+			"peasants": {"Basic Automaton":1, "Kulak": 2, "Pawn":2, "Zombie": 2, "Raider": 1, "Cultist":1},
+			"nobles": { "Anarch":1, "Bishop": 1, "Cannonier":1, "Centaur":1, "Devil Toad":1,"Grasshopper":1, "Dragonrider": 1, "Elephant Rider":1, "Gorgon":1, "Knight": 1,"Monk":1,"Minister":1, "Nightrider": 1, "Princess": 1, "Queen":1, "Rifleman": 1, "Rook": 1, "Valkyrie": 1 },
 			"royals": {"Chancellor": 1, "Lady of the Lake":1, "Pontifex":1, "King": 1}
 		},
 		"Zionis": {
@@ -59,6 +59,10 @@ const PIECE_DEFINITIONS = {
 	"Basic Automata": {"scene": "res://scenes/pieces/Basic Automata.tscn",  "category": "peasant"},
 	"Kulak": {"scene": "res://scenes/pieces/Kulak.tscn",  "category": "peasant"},
 	"Pawn": {"scene": "res://scenes/pieces/Pawn.tscn",  "category": "peasant"},
+	"Zombie": {"scene": "res://scenes/pieces/Zombie.tscn", "category": "peasant"},
+	"Raider": {"scene": "res://scenes/pieces/Raider.tscn", "category": "peasant"},
+	"Cultist": {"scene": "res://scenes/pieces/Cultist.tscn", "category": "peasant"},  
+	"Werewolf (human form)": {"scene": "res://scenes/pieces/Werewolf (human form).tscn", "category": "peasant"},
 	
 	#Nobles:
 	"Anarch": {"scene": "res://scenes/pieces/Anarch.tscn",  "category": "noble"},
@@ -78,11 +82,13 @@ const PIECE_DEFINITIONS = {
 	"Rifleman": {"scene": "res://scenes/pieces/Rifleman.tscn", "category": "noble"},
 	"Rook":{ "category": "noble", "scene": "res://scenes/pieces/Rook.tscn"},
 	"Valkyrie": {"scene": "res://scenes/pieces/Valkyrie.tscn", "category": "noble"},
+	"Werewolf (wolf form)": {"scene": "res://scenes/pieces/Werewolf (wolf form).tscn", "category": "noble"},
 	#Royals:
 	"Chancellor": {"scene": "res://scenes/pieces/Chancellor.tscn",  "category": "royal"},
 	"King": {"category":"royal", "scene": "res://scenes/pieces/King.tscn"},
 	"Lady of the Lake": { "category": "royal", "scene": "res://scenes/pieces/LadyOfTheLake.tscn"},
-	"Pontifex": {"scene": "res://scenes/pieces/Pontifex.tscn",  "category": "royal"}
+	"Pontifex": {"scene": "res://scenes/pieces/Pontifex.tscn",  "category": "royal"},
+	"Chieftian": {"scene": "res://scenes/pieces/Chieftian.tscn", "category": "royal"}
 	
 }
 

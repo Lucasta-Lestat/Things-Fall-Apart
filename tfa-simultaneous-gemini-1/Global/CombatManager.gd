@@ -16,7 +16,7 @@ signal combat_resumed
 signal combat_ended(winner_allegiance: CombatCharacter.Allegiance)
 
 
-enum CombatState { IDLE, PLANNING, RESOLVING_SLOT, BEAT_PAUSE_WINDOW, PAUSED, ROUND_OVER }
+enum CombatState { NONE, IDLE, PLANNING, RESOLVING_SLOT, BEAT_PAUSE_WINDOW, PAUSED, ROUND_OVER }
 
 var current_combat_state: CombatState = CombatState.IDLE
 var all_characters_in_combat: Array[CombatCharacter] = []
@@ -102,7 +102,7 @@ func start_combat(characters: Array[CombatCharacter]):
 	all_characters_in_combat.clear() # Clear previous combatants
 	player_party.clear()
 	enemy_party.clear()
-	
+	TimeManager.pause_time()
 	for char in characters:
 		print("Attempting to register: ", char.character_name, "#ui #combat")
 		if is_instance_valid(char):
@@ -226,7 +226,7 @@ func begin_action_resolution_phase():
 	current_combat_state = CombatState.RESOLVING_SLOT
 	current_ap_slot_being_resolved = 0
 	emit_signal("resolution_phase_started")
-	
+	TimeManager.resume_time()
 	resolve_current_ap_slot_actions()
 
 func resolve_current_ap_slot_actions():
