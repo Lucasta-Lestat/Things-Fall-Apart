@@ -293,11 +293,9 @@ func resolve_turn():
 		next_board_state[pos.x][pos.y] = new_cultist_scene
 		
 		# Mark the old piece for removal (similar to promoted pawns)
-		if not "converted_pieces" in self:
-			converted_pieces = []
-		converted_pieces.append(target_piece)
+		promoted_pawns.append(target_piece)
 	
-	emit_signal("piece_spawned", new_cultist_scene, pos)
+		emit_signal("piece_spawned", new_cultist_scene, pos)
 	for gorgon in petrify_sources:
 		if not gorgon in unique_captures:
 			var final_pos = destinations.get(gorgon)

@@ -23,7 +23,7 @@ var player_profiles = {
 		"god": {
 			"name": "God",
 			"portrait": "../icon.svg",
-			"peasants": {"Basic Automaton":1, "Kulak": 2, "Pawn":2, "Zombie": 2, "Raider": 1, "Cultist":1},
+			"peasants": {"Basic Automaton":1, "Kulak": 2, "Pawn":2, "Zombie": 2, "Raider": 1, "Cultist":1, "Werewolf (human form)":1},
 			"nobles": { "Anarch":1, "Bishop": 1, "Cannonier":1, "Centaur":1, "Devil Toad":1,"Grasshopper":1, "Dragonrider": 1, "Elephant Rider":1, "Gorgon":1, "Knight": 1,"Monk":1,"Minister":1, "Nightrider": 1, "Princess": 1, "Queen":1, "Rifleman": 1, "Rook": 1, "Valkyrie": 1 },
 			"royals": {"Chancellor": 1, "Lady of the Lake":1, "Pontifex":1, "King": 1}
 		},
@@ -73,6 +73,7 @@ const PIECE_DEFINITIONS = {
 	"Dragonrider":{ "category": "noble", "scene": "res://scenes/pieces/Dragonrider.tscn"},
 	"Elephant Rider": { "category": "noble", "scene": "res://scenes/pieces/Elephantrider.tscn"},
 	"Gorgon":{ "category": "noble", "scene": "res://scenes/pieces/Gorgon.tscn"},
+	"Grasshopper":{ "category": "noble", "scene": "res://scenes/pieces/Grasshopper.tscn"},
 	"Knight": {"category":"noble", "scene": "res://scenes/pieces/Knight.tscn"},
 	"Minister": {"category":"noble", "scene":"res://scenes/pieces/Minister.tscn" },
 	"Monk": { "scene": "res://scenes/pieces/Monk.tscn", "category": "noble"},

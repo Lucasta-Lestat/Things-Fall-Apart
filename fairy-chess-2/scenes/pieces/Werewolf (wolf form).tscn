@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://d0p2ngwg8vp7t"]
+
+[ext_resource type="Script" uid="uid://dmdtiiyanh8hr" path="res://scenes/pieces/werewolf_(wolf_form).gd" id="1_hv6el"]
+
+[node name="Werewolf(wolfForm)" type="Node2D"]
+script = ExtResource("1_hv6el")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

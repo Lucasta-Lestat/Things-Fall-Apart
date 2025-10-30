@@ -13,6 +13,3 @@ func get_valid_actions(board_state):
 		if is_valid_square(target_pos) and (board_state[target_pos.x][target_pos.y] == null or board_state[target_pos.x][target_pos.y].color != color):
 			actions.append({"action": "move", "target": target_pos})
 	return actions
-
-func is_valid_square(pos):
-	return pos.x >= 0 and pos.x < 6 and pos.y >= 0 and pos.y < 6
