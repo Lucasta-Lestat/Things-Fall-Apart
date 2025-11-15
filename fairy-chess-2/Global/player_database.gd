@@ -100,7 +100,7 @@ func _ready():
 	print("Hanub: ", player_profiles.Hanub)
 	create_default_profiles()
 	load_profiles()
-	print("Hanub after ready: ", player_profiles.Hanub)
+	#print("Hanub after ready: ", player_profiles.Hanub)
 # --- Public Functions ---
 func get_profile(profile_name):
 	print("DEBUG: player profiles in get_profile: ", player_profiles)

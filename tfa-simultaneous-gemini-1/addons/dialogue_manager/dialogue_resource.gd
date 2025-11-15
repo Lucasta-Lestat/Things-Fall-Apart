@@ -1,3 +1,4 @@
+#dialogue_resource.gd
 @tool
 @icon("./assets/icon.svg")
 

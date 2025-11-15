@@ -31,20 +31,24 @@ var strength := 50
 var dexterity := 50
 var constitution := 50 
 var will := 50
-var intelligence := 10
-var charisma := 10
+var intelligence := 50
+var charisma := 50
 var touch_range: float = 50.0
 var base_size: int = 64
 var traits: Dictionary = {}
 var abilities: Array[Ability] = []
 var planned_actions: Array[PlannedAction] = []
+var dialogues: Array
+var current_dialogue_index = 0
+#trigger "Talk" should search the dialogues in the dialogue file until it finds one for which prerequisites are met.
+#  Can set an already played prereq to keep it from repeating
+var interact_options = ["Attack", "Talk"]
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 
 # --- UNIFIED EQUIPMENT SLOTS ---
 
-var equipment = {"Main Hand": Item , "Off Hand": {"wtf": 7}, "Head": Item, "Chest": Item, 
+var equipment = {"Main Hand": Item , "Off Hand": Item, "Head": Item, "Chest": Item, 
 				"Gloves": Item, "Boots": Item, "Cape": Item, "Neck": Item, "Back": Item, "Ring1":Item, "Ring2": Item }
-
 
 var is_selected: bool = false:
 	set(value):
@@ -93,7 +97,6 @@ var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoE
 @export var selection_ring_scale: Vector2 = Vector2(1.5, 1.5)
 @export var selection_ring_offset: Vector2 = Vector2(0, 32) # Offset to place at character's feet
 
-
 var combat_manager: CombatManager
 var vfx_manager: VfxSystem
 
@@ -122,9 +125,19 @@ func _ready():
 
 func _process(_delta):
 	if not is_moving and not current_path.is_empty():
-		_move_along_path()
-
-func _move_along_path():
+		move_along_path()
+func find_path(target_position):
+	var start_tile = GridManager.world_to_map(global_position)
+	var end_tile = GridManager.world_to_map(target_position)
+	current_path = GridManager.find_path(start_tile, end_tile)
+	#var move_range_tiles = get_effective_range(ability)
+	#if current_path.size() > move_range_tiles:
+	#	current_path.resize(move_range_tiles)
+	path_index = 0
+func move_to(target_position):
+	find_path(target_position)
+	move_along_path()
+func move_along_path():
 	print("Move Along Path Called #movement")
 	if path_index >= current_path.size():
 		current_path.clear(); path_index = 0
@@ -209,6 +222,17 @@ func _update_visual_sprites():
 			Direction.RIGHT: armor_sprite.texture = load(equipment["Main Hand"].texture_right)
 #check in database how characters are actually equipped			
 # --- Core Logic ---
+func ability_check(stat,domain):
+	var roll = randi() % 100 + 1
+	var success_target = get_stat_by_name(stat)
+	var bonus = 0
+	for trait_id in domain.advantages:
+		if traits.has(trait_id): bonus += 20 * traits[trait_id]
+	for trait_id in domain.disadvantages:
+		if traits.has(trait_id): bonus -= 20 * traits[trait_id]
+		success_target += bonus
+		
+	var success_level = _calculate_success_level(roll, success_target)
 func execute_planned_action(action: PlannedAction):
 	if is_moving:
 		current_path.clear(); path_index = 0; is_moving = false
@@ -237,7 +261,6 @@ func execute_planned_action(action: PlannedAction):
 			current_path.resize(move_range_tiles)
 		path_index = 0
 		
-	
 	elif ability.effect == Ability.ActionEffect.DAMAGE:
 		if success_level > 0 :
 			var affected_tiles = get_affected_tiles(ability, global_position, action.target_position)
@@ -433,7 +456,38 @@ func equip_item(item_id: String): #Need to check where it is so it can swap plac
 	if current_item != null:
 		add_to_inventory(current_item)
 	equipment[item.equip_slot] = item
-	match: # change the appropriate sprite
+	match item.equip_slot:
+		"Head":
+			match current_direction:
+				Direction.DOWN:
+					helmet_sprite.texture = item.texture
+				Direction.UP:
+					helmet_sprite.texture = item.texture_back
+				Direction.RIGHT:
+					helmet_sprite.texture = item.texture_right
+				Direction.LEFT:
+					helmet_sprite.texture = item.texture_left
+		"Main Hand":
+			match current_direction:
+				Direction.DOWN:
+					main_hand_sprite.texture = item.texture
+				Direction.UP:
+					main_hand_sprite.texture = item.texture_back
+				Direction.RIGHT:
+					main_hand_sprite.texture = item.texture_right
+				Direction.LEFT:
+					main_hand_sprite.texture = item.texture_left		
+		"Chest":
+			match current_direction:
+				Direction.DOWN:
+					armor_sprite.texture = item.texture
+				Direction.UP:
+					armor_sprite.texture = item.texture_back
+				Direction.RIGHT:
+					armor_sprite.texture = item.texture_right
+				Direction.LEFT:
+					armor_sprite.texture = item.texture_left
+	#match: # change the appropriate sprite
 		
 #Next, get direction and use it to apply the right texture to helmet sprite and armorsprite.  
 #Put main hand and off hand in the hbox container around the body and do the same for them
@@ -768,8 +822,9 @@ func _apply_character_data():
 	touch_range = data.base_touch_range; max_health = data.max_health
 	current_health = max_health; max_ap_per_round = data.base_ap
 	traits = data.traits.duplicate(true)
-	
+	move_speed = dexterity * 5.0
 	abilities.clear()
+	dialogues = data.dialogues
 	for ability_id in data.abilities: abilities.append(AbilityDatabase.get_ability(ability_id))
 	start_round_reset()
 

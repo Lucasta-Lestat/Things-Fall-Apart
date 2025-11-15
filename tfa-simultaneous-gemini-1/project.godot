@@ -17,6 +17,7 @@ config/icon="uid://bb5kv4jao2sm8"
 
 [autoload]
 
+Globals="*res://Global/Globals.gd"
 BodyPartDatabase="*res://Global/BodyPartDatabase.gd"
 ItemDatabase="*res://Global/ItemDatabase.gd"
 CharacterDatabase="*res://Global/CharacterDatabase.gd"
@@ -28,11 +29,11 @@ StructureDatabase="*res://Global/StructureDatabase.gd"
 EquipmentDatabase="*res://Global/EquipmentDatabase.gd"
 ConditionDatabase="*res://Global/ConditionDatabase.gd"
 VfxSystem="*res://Global/VFXSystem.gd"
-DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
+DialogueManager="*res://Global/Dialogue_Manager.gd"
 MapDatabase="*res://Global/MapDatabase.gd"
 FloorDatabase="*res://Global/FloorDatabase.gd"
-Globals="*res://Global/Globals.gd"
 TimeManager="*res://Global/TimeManager.gd"
+FluidManager="*res://Global/FluidManager.gd"
 
 [display]
 

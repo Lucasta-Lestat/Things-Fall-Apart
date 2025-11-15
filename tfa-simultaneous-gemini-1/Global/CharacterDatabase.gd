@@ -4,12 +4,12 @@ extends Node
 
 # Character data structure
 var character_definitions = [
-	{"name": "Protagonist", "generic":false, "Allegiance": CombatCharacter.Allegiance.PLAYER},
-	{"name": "Jacana", "generic":false, "Allegiance": CombatCharacter.Allegiance.PLAYER},
-	{"name": "goblin_scout", "race": "Orc", "generic": true, "Type": "Tank", "gender": "Male", "Allegiance": CombatCharacter.Allegiance.ENEMY},
-	{"name": "orc_brute", "race": "Orc", "generic": true, "Type": "Basic Warrior", "gender": "Female", "Allegiance": CombatCharacter.Allegiance.ENEMY}
+	{"name": "Protagonist", "generic":false, "Allegiance": CombatCharacter.Allegiance.PLAYER, "dialogues": ["merchant_greet"]},
+	{"name": "Jacana", "generic":false, "Allegiance": CombatCharacter.Allegiance.PLAYER, "dialogues": ["Jacana_greet","Jacana_intro"]},
+	{"name": "goblin_scout", "race": "Orc", "generic": true, "Type": "Tank", "gender": "Male", "Allegiance": CombatCharacter.Allegiance.ENEMY, "dialogues": ["goblin_dialogue_1"]},
+	{"name": "orc_brute", "race": "Orc", "generic": true, "Type": "Basic Warrior", "gender": "Female", "Allegiance": CombatCharacter.Allegiance.ENEMY, "dialogues": ["orc_dialogue_1"]},
+	{"name": "guard", "race": "Human", "generic": true, "Type": "Basic Warrior", "gender": "Female", "Allegiance": CombatCharacter.Allegiance.ENEMY, "dialogues": ["guard_greet"]},
 
-	
 	
 ]
 var orcish_names_male = [
@@ -19,7 +19,7 @@ var orcish_names_female = [
 	"Kriemhilt", "Thusnelda", "Gerlinde", "Brunichild", "Fredegund", "Radegund", "Clothild", "Grimhild", "Theodelind", "Aldegund"
 ]
 var names = {"Orc Male": orcish_names_male, "Orc Female": orcish_names_female}
-var racial_bonuses = {"Orc":{"strength": 20}}
+var racial_bonuses = {"Orc":{"strength": 20}, "Human": {}}
 var greenskin_faction = {"name": "Greenskins", "Male Names": orcish_names_male, "Female Names": orcish_names_female, 
 "Support Title": "Hornist", "Cavalry Title": "Rittmeister", "Elite Title": "Hauptmann", "Tank Title": "Knecht", "Basic Warrior Title": "Spiesser"  }
 
@@ -60,7 +60,7 @@ class CharacterData:
 	var character_name: String
 	var sprite_texture_path: String
 	var allegiance: CombatCharacter.Allegiance
-	
+	var dialogues: Array = []
 	var race: String # for now
 	var gender: String
 	
@@ -95,6 +95,7 @@ class CharacterData:
 		character_name = name
 		sprite_texture_path = sprite
 		allegiance = ally
+		
 
 # Character database
 var character_data: Dictionary = {}
@@ -102,8 +103,8 @@ var character_data: Dictionary = {}
 func _ready():
 	# Initialize character database
 	_setup_character_data()
-	for id in character_data:
-		print(character_data[id])
+	#for id in character_data:
+		#print(character_data[id])
 func _setup_character_data():
 	var character
 	for char_def in character_definitions:
@@ -111,7 +112,7 @@ func _setup_character_data():
 			character = CharacterData.new(char_def["name"], char_def["name"], "res://hero1.png", CombatCharacter.Allegiance.PLAYER)
 		else:
 			character = CharacterData.new(char_def["name"], char_def["name"], "res://hero1.png", CombatCharacter.Allegiance.ENEMY)
-
+		
 		if char_def["name"] and not char_def.generic:
 			print("char name: ", char_def["name"], "being created")
 			var body_id = char_def["name"] + " Body"
@@ -164,7 +165,9 @@ func _setup_character_data():
 			character.gender = "Male"
 		if char_def.has("race"):
 			character.race  = char_def.race
-		
+		if char_def.has("dialogues"):
+			print("dialogues: ", char_def.dialogues)
+			character.dialogues = char_def.dialogues
 		if char_def["generic"]:
 			
 			print("race: ", character.race)
@@ -226,6 +229,7 @@ func _setup_character_data():
 		character.base_ap = 4
 		character.max_health = character.constitution/5
 		character.current_health = character.max_health
+		#character.dialogues = 
 		character_data[character.character_name] = character
 
 func get_character_data(character_id: String) -> CharacterData:

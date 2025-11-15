@@ -21,9 +21,11 @@ var combat_manager: CombatManager
 var character: CombatCharacter
 
 var is_active_combat = false
+var context_menu_open = false
 var party_ids = ["Protagonist", "Jacana"]
 var party_chars = []
 var characters_in_scene = []
+var objects_in_scene = []
 var rotations = generate_random_array(1,4,100, 12345)
 var color_offsets = generate_random_float_array(1.0, 1.0, 100, 48273)
 
@@ -66,6 +68,9 @@ func load_map(map_id: StringName, coming_from: String):
 				#print("attempting to spawn: ", character_id, " at: ", Vector2i(spawn_point.party_member_1.x+offset, spawn_point.party_member_1.y))
 				characters_container.add_child(c)
 				party_chars.append(c)
+				if character_id == "Protagonist":
+					var protagonist = c
+				
 				print("party_chars: ", party_chars)
 				c.dropped_item.connect(_on_item_dropped)
 				offset += 1
@@ -166,6 +171,11 @@ func load_map(map_id: StringName, coming_from: String):
 			for item in region.objects:
 				print("Attempting to spawn ", item.id, " at ", Vector2i(item.x, item.y))
 				create_item(item.id, Vector2i(item.x, item.y))
+		if "fluids" in region.keys():
+			for fluid in region.fluids:
+				print("Attempting to spawn", fluid.id, " at ", Vector2i(fluid.x, fluid.y))
+				GridManager.spawn_fluid_tile(Vector2i(fluid.x,fluid.y), 10)
+				
 	for structure in structures_container.get_children():
 		if structure.structure_id.contains("wall"):
 			check_neighbors(GridManager.world_to_map(structure.global_position), structure, structure.structure_id)
@@ -233,7 +243,6 @@ func setup_managers():
 	print("DEBUG: GameUI setup")
 	# Set combat_manager reference in characters (will be done when characters are spawned)
 func trigger_time_based_event(time):
-	
 	pass
 func setup_input_actions():
 	if not InputMap.has_action("ui_accept"): 
@@ -307,7 +316,7 @@ func create_item(item_id: StringName, grid_pos: Vector2i):
 	# Connect to its destroyed signal to update pathfinding
 	item.destroyed.connect(_on_item_destroyed)
 	items_container.add_child(item)
-
+	objects_in_scene.append(item)
 
 func check_neighbors(grid_pos, structure, structure_id):
 	var top = Vector2i(grid_pos.x, grid_pos.y -1)

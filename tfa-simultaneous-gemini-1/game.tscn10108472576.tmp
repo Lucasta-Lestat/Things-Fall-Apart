@@ -1,15 +1,10 @@
-[gd_scene load_steps=11 format=4 uid="uid://h6eujk2qam5p"]
+[gd_scene load_steps=8 format=4 uid="uid://h6eujk2qam5p"]
 
 [ext_resource type="Script" uid="uid://dmlki3bsswpsu" path="res://Game.gd" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://dqevfou54rooo" path="res://player_camera.gd" id="2_7jktm"]
 [ext_resource type="Script" uid="uid://dp40gruhvt3ml" path="res://time.gd" id="4_7jktm"]
-[ext_resource type="Texture2D" uid="uid://bveafnhg470rq" path="res://dialogue background 2.png" id="5_eow3j"]
 [ext_resource type="Texture2D" uid="uid://d0sqbne3ex74p" path="res://Maps/open field.png" id="5_ryrav"]
-[ext_resource type="Script" uid="uid://bpy7odstcw6wr" path="res://dialogue_panel.gd" id="6_eow3j"]
 [ext_resource type="Script" uid="uid://bklebuy4rusbq" path="res://UI/GameUI.gd" id="6_ryrav"]
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_j5wjh"]
-texture = ExtResource("5_eow3j")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_eow3j"]
 texture = ExtResource("5_ryrav")
@@ -1573,58 +1568,19 @@ script = ExtResource("6_ryrav")
 metadata/_custom_type_script = "uid://bklebuy4rusbq"
 
 [node name="MarginContainer" type="MarginContainer" parent="GameUI"]
+visible = false
 custom_minimum_size = Vector2(50, 0)
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="Time" type="Label" parent="GameUI/MarginContainer"]
-layout_mode = 2
-script = ExtResource("4_7jktm")
-
 [node name="VBoxContainer" type="VBoxContainer" parent="GameUI/MarginContainer"]
+visible = false
 layout_mode = 2
 
-[node name="DialoguePanel" type="Panel" parent="GameUI"]
-custom_minimum_size = Vector2(0, 200)
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -200.0
+[node name="Time" type="Label" parent="GameUI"]
 offset_right = 40.0
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxTexture_j5wjh")
-script = ExtResource("6_eow3j")
-
-[node name="MarginContainer" type="MarginContainer" parent="GameUI/DialoguePanel"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="HBoxContainer" type="HBoxContainer" parent="GameUI/DialoguePanel/MarginContainer"]
-layout_mode = 2
-
-[node name="Portrait" type="TextureRect" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(150, 150)
-layout_mode = 2
-stretch_mode = 5
-
-[node name="DialogueVBox" type="VBoxContainer" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer"]
-layout_mode = 2
-
-[node name="SpeakerName" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
-layout_mode = 2
-
-[node name="DialogueText" type="RichTextLabel" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-
-[node name="ChoicesContainer" type="VBoxContainer" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
-layout_mode = 2
-
-[node name="ContinueIndicator" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
-layout_mode = 2
+offset_bottom = 22.0
+script = ExtResource("4_7jktm")
 
 [node name="TextEdit" type="TextEdit" parent="."]
 visible = false

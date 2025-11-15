@@ -1,4 +1,7 @@
+extends Node
 const FloatingTextScene = preload("res://UI/FloatingText.tscn")
+var world_state = {"Perrow Destroyed": false, "Justinia Remaining Loops": 7}
+var dialogue_interaction_distance = 250.0
 
 # === GLOBAL FUNCTIONS ===
 func show_floating_text(text: String, pos: Vector2, parent: Node):

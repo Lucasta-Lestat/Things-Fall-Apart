@@ -5,3 +5,7 @@
 [node name="PreviewBodySprite" type="Sprite2D" parent="."]
 
 [node name="PreviewHeadSprite" type="Sprite2D" parent="."]
+
+[node name="PreviewHelmetSprite" type="Sprite2D" parent="."]
+
+[node name="PreviewArmorSprite" type="Sprite2D" parent="."]

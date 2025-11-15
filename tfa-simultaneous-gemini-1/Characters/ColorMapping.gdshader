@@ -5,7 +5,7 @@ uniform vec4 base_color : source_color = vec4(0.8, 0.6, 0.4, 1.0); // Base skin 
 
 void fragment() {
     vec4 tex = texture(TEXTURE, UV);
-    
+
     // If pixel matches base skin color (with some tolerance)
     float tolerance = 0.1;
     if (distance(tex.rgb, base_color.rgb) < tolerance && tex.a > 0.0) {

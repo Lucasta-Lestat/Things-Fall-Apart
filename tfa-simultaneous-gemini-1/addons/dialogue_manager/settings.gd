@@ -1,6 +1,7 @@
+#settings.gd
+
 @tool
 class_name DMSettings extends Node
-
 
 #region Editor
 
@@ -238,7 +239,7 @@ static func get_user_config() -> Dictionary:
 		reopen_files = [],
 		most_recent_reopen_file = "",
 		file_meta = {},
-		run_title = "",
+		run_title = "Test Dialogue",
 		run_resource_path = "",
 		is_running_test_scene = false,
 		has_dotnet_solution = false,

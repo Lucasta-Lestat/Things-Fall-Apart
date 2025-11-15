@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://dtrxmv05q3mvt"]
+
+[ext_resource type="Script" uid="uid://rqorvukvfbpy" path="res://fluid.gd" id="1_1bey1"]
+
+[node name="Fluid" type="Node2D"]
+script = ExtResource("1_1bey1")
+
+[node name="Sprite" type="Sprite2D" parent="."]

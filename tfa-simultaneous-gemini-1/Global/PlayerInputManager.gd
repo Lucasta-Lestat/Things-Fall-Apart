@@ -24,12 +24,12 @@ var current_planning_character: CombatCharacter = null # Set by CombatManager.pl
 var current_planning_ap_slot: int = -1
 # Add reference to CombatManager instance
 var combat_manager: CombatManager
-@onready var Game = get_parent() as Node2D
+@onready var game = get_node("/root/Game") as Node2D
 
 func _ready():
 	call_deferred("_setup_ui_elements")
 	_set_input_active(true) # Enable input by default for out-of-combat use
-	
+	print("game: ", game)
 func _setup_ui_elements():
 	print("DEBUG: Setting up UI elements")
 	selection_rect_visual = ColorRect.new()
@@ -117,7 +117,7 @@ func _is_in_combat() -> bool:
 		return false
 func _unhandled_input(event: InputEvent):
 	# Only print for mouse clicks to avoid spam
-	# Global unpause, not tied to beat_pause re-planning
+	# 
 	if event.is_action_pressed("ui_cancel"): # Escape key
 		print("DEBUG: Escape key pressed")
 		if combat_manager and combat_manager.current_combat_state == CombatManager.CombatState.PAUSED:
@@ -201,7 +201,7 @@ func _unhandled_input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 		
 		elif event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed and not game.context_menu_open:
 				_handle_ability_target_click(event.position)
 				cancel_targeting_mode()
 				get_viewport().set_input_as_handled()
@@ -209,11 +209,14 @@ func _unhandled_input(event: InputEvent):
 				cancel_targeting_mode()
 				get_viewport().set_input_as_handled()
 		return
-
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		var click_world_pos = _get_world_mouse_position()
+		handle_right_click(click_world_pos)
+		get_viewport().set_input_as_handled()
 	# --- Character Selection ---
-	if event is InputEventMouseButton:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not game.context_menu_open:
 		print("handling selection, mouse button detected")
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if event.pressed:
 			print("handling selection, event pressed")
 			just_selected_character = false
 			var click_world_pos = _get_world_mouse_position()
@@ -228,11 +231,11 @@ func _unhandled_input(event: InputEvent):
 				characters_to_check = combat_manager.player_party
 			elif combat_manager == null or not _is_in_combat():
 				# Out of combat: check characters_in_scene or party_chars
-				if Game.characters_in_scene and Game.characters_in_scene is Array:
+				if game.characters_in_scene and game.characters_in_scene is Array:
 					print("handling selection, game.has characters and is array")
-					characters_to_check = Game.characters_in_scene
-				elif Game.has("party_chars") and Game.party_chars is Array:
-					characters_to_check = Game.party_chars
+					characters_to_check = game.characters_in_scene
+				elif game.has("party_chars") and game.party_chars is Array:
+					characters_to_check = game.party_chars
 			
 			for char_node in characters_to_check:
 				var character = char_node as CombatCharacter
@@ -280,13 +283,6 @@ func _unhandled_input(event: InputEvent):
 					selection_rect_visual.visible = false
 				get_viewport().set_input_as_handled()
 		
-		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			if not just_selected_character:
-				# If we have selected characters but this is not during combat planning
-				# Could potentially trigger immediate movement here in future
-				pass
-			get_viewport().set_input_as_handled()
-	
 	elif event is InputEventMouseMotion:
 		if drag_select_active:
 			var current_screen_pos = get_viewport().get_mouse_position()
@@ -333,7 +329,52 @@ func _toggle_selection(character: CombatCharacter):
 			primary_selected_character = selected_characters.back() if not selected_characters.is_empty() else null
 	else:
 		_add_to_selection(character)
+func handle_right_click(click_position: Vector2):
+	# Check each character for intersection with click position
+	print("Handling right click")
+	for character in game.characters_in_scene:
+		# Get the character's collision shape or sprite bounds
+		# This assumes characters have a CollisionShape2D or similar
+		var character_rect = get_bounds(character)
+		print("character rect: ", character_rect)
+		if character_rect.has_point(click_position):
+			# Found a character under the click - show context menu
+			show_context_menu(character, click_position)
+			return  # Only handle the first character found
+	for character in game.characters_in_scene:
+		if character.is_selected:
+			character.move_to(click_position)
+func get_bounds(character) -> Rect2:
+	# Option 1: If using Area2D with CollisionShape2D
+	if character.has_node("ClickArea/CollisionShape2D"):
+		var collision_shape = character.get_node("ClickArea/CollisionShape2D")
+		var shape = collision_shape.shape
+		var pos = character.global_position
 
+		if shape is RectangleShape2D:
+			var extents = shape.size / 2
+			return Rect2(pos - extents, shape.size)
+		elif shape is CircleShape2D:
+			var radius = shape.radius
+			return Rect2(pos - Vector2(radius, radius), Vector2(radius * 2, radius * 2))
+	return Rect2(character.global_position - Vector2(10, 10), Vector2(20, 20))
+
+
+func show_context_menu(character, position: Vector2):
+	# Create or get reference to your context menu scene
+	print("showing context menu")
+	var context_menu = preload("res://UI/ContextMenu.tscn").instantiate()
+
+	# Position it near the character (offset slightly from click)
+	context_menu.global_position = position + Vector2(GridManager.TILE_SIZE/4,GridManager.TILE_SIZE/4 )
+	context_menu.z_index = 100
+	game.context_menu_open = true  # Set flag
+	print("game.context_menu_open: ", game.context_menu_open)
+	# Populate the menu with the character's interact options
+	context_menu.setup(character, character.interact_options)
+
+	# Add to scene
+	get_tree().root.add_child(context_menu)			
 func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
 	var selection_world_rect = Rect2(_get_world_mouse_position_from_screen(screen_rect.position), 
 									 _get_world_mouse_position_from_screen(screen_rect.end) - _get_world_mouse_position_from_screen(screen_rect.position) ).abs()
@@ -345,11 +386,11 @@ func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):
 	var characters_to_check = []
 	if _is_in_combat() and combat_manager:
 		characters_to_check = combat_manager.player_party
-	elif Game.combat_manager == null or not _is_in_combat():
-		if Game.character_in_scene and Game.characters_in_scene is Array:
-			characters_to_check = Game.characters_in_scene
-		elif Game.characters_in_scene and Game.party_chars is Array:
-			characters_to_check = Game.party_chars
+	elif game.combat_manager == null or not _is_in_combat():
+		if game.characters_in_scene and game.characters_in_scene is Array:
+			characters_to_check = game.characters_in_scene
+		elif game.characters_in_scene and game.party_chars is Array:
+			characters_to_check = game.party_chars
 	
 	for char_node in characters_to_check:
 		var character = char_node as CombatCharacter
@@ -373,11 +414,11 @@ func _select_all_player_characters():
 	var characters_to_check = []
 	if _is_in_combat() and combat_manager:
 		characters_to_check = combat_manager.player_party
-	elif Game.combat_manager == null or not _is_in_combat():
-		if Game.has("characters_in_scene") and Game.characters_in_scene is Array:
-			characters_to_check = Game.characters_in_scene
-		elif Game.has("party_chars") and Game.party_chars is Array:
-			characters_to_check = Game.party_chars
+	elif game.combat_manager == null or not _is_in_combat():
+		if game.has("characters_in_scene") and game.characters_in_scene is Array:
+			characters_to_check = game.characters_in_scene
+		elif game.has("party_chars") and game.party_chars is Array:
+			characters_to_check = game.party_chars
 	
 	for char_node in characters_to_check:
 		var character = char_node as CombatCharacter
@@ -429,10 +470,10 @@ func _handle_ability_target_click(_mouse_screen_pos: Vector2): # mouse_screen_po
 	else:
 		# Out of combat: check all characters in scene
 		var characters_to_check = []
-		if Game.characters_in_scene and Game.characters_in_scene is Array:
-			characters_to_check = Game.characters_in_scene
-		elif Game.party_chars and Game.party_chars is Array:
-			characters_to_check = Game.party_chars
+		if game.characters_in_scene and game.characters_in_scene is Array:
+			characters_to_check = game.characters_in_scene
+		elif game.party_chars and game.party_chars is Array:
+			characters_to_check = game.party_chars
 		
 		for char_node in characters_to_check:
 			var character = char_node as CombatCharacter

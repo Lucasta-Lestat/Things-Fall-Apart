@@ -262,7 +262,7 @@ func resolve_turn():
 			next_board_state[pos.x][pos.y] = new_piece_scene
 			promoted_pawns.append(pawn)
 			emit_signal("piece_spawned", new_piece_scene, pos)
-	# --- Handle Conversions (add this section alongside your promotions handling) ---
+	# --- Handle Conversions  ---
 	for convert_action in conversions:
 		audio_manager.play_sfx("convert")  # Or use "promote" if you don't have a convert sound
 		print("conversion loop triggered")

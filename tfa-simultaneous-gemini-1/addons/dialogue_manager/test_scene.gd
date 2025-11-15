@@ -1,15 +1,17 @@
+#test_scene.gd 
 class_name BaseDialogueTestScene extends Node2D
 
 
 const DialogueSettings = preload("./settings.gd")
 const DialogueResource = preload("./dialogue_resource.gd")
 
-
 @onready var title: String = DialogueSettings.get_user_value("run_title")
 @onready var resource: DialogueResource = load(DialogueSettings.get_user_value("run_resource_path"))
 
 
 func _ready():
+	print("DialogueResource: ", DialogueResource)
+
 	if not Engine.is_embedded_in_editor:
 		var window: Window = get_viewport()
 		var screen_index: int = DisplayServer.get_primary_screen()

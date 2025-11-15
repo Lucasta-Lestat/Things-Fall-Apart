@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://cn0kom2jlt5hp"]
+
+[ext_resource type="Script" uid="uid://0uu280pv38n4" path="res://tentacle.gd" id="1_pp1wt"]
+
+[sub_resource type="Curve" id="Curve_3thcl"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.252941, 0.485448), 0.0, 0.0, 0, 0, Vector2(0.994118, 0.023865), 0.0, 0.0, 0, 0, Vector2(0.994118, 0.023865), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[node name="Tentacle" type="Line2D"]
+points = PackedVector2Array(370, 417, 539, 391)
+width_curve = SubResource("Curve_3thcl")
+script = ExtResource("1_pp1wt")
