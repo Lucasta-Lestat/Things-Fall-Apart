@@ -1643,3 +1643,7 @@ tile_set = SubResource("TileSet_j5wjh")
 [node name="StructuresContainer" type="Node2D" parent="."]
 
 [node name="ItemsContainer" type="Node2D" parent="."]
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+z_index = 102
+color = Color(0.40069774, 0.40069774, 0.40069768, 1)

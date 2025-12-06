@@ -60,6 +60,68 @@
 	  "wood": 5
 	}
   },
+"torch": {
+	"name": "torch",
+	"id": "torch",
+	"description": "-",
+	"texture": "res://Items/Club.png",
+	"texture_back": "res://Items/Club Back.png",
+	"texture_left": "res://Items/Club Left.png",
+	"texture_right": "res://Items/ClubRight.png",
+	"weight": 2.0,
+	"cost": 1.0,
+	"light":50.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 3
+	},
+	"damage_resitances": {
+	  "slashing": 0,
+	  "bludgeoning": 0,
+	  "piercing": 0,
+	  "fire": 0,
+	  "cold": 0,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": 0,
+	  "necrotic": 0
+	},
+	"healing": 0.0,
+	"range": 5.0,
+	"satiety": 0.0,
+	"options": [
+	  "Throw",
+	  "Drop"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 3.0,
+	"current_health": 3.0,
+	"walkability": 1.1,
+	"damage_modifiers": null,
+	"traits": [
+	  "Natural"
+	],
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {
+	  "wood": 5
+	}
+  },
   "ring_of_protection": {
 	"name": "ring of protection",
 	"id": "ring_of_protection",

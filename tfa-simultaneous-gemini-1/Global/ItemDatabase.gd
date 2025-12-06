@@ -8,7 +8,7 @@ signal item_definitions_loaded
 var item_definitions: Dictionary = {}
 
 # Path to the JSON file containing item definitions
-var item_data_path: String = "res://data/items.json"
+var item_data_path: String = "res://data/Items.json"
 
 func _ready():
 	load_item_definitions()

@@ -73,7 +73,21 @@ func load_map(map_id: StringName, coming_from: String):
 				
 				print("party_chars: ", party_chars)
 				c.dropped_item.connect(_on_item_dropped)
-				offset += 1
+				var light = PointLight2D.new()
+				# GENERATE A TEXTURE (Crucial Step)
+				# Without a texture, the light is invisible. 
+				var radius = 1440
+				var degree = 120
+				var tex = generate_cone_texture(radius,degree)
+				#light.offset = Vector2(radius/8, 0) # Half of radius (optional tweaking)
+				# Assign the generated texture to the light
+				light.texture = tex
+				light.name = "LineOfSight"
+				light.rotation_degrees = 90
+				light.shadow_enabled = true
+				light.z_index = 102
+				c.add_child(light)
+				
 	print("spawned party successfully #map-loading")
 	var x = 0
 	var y = 0
@@ -309,7 +323,8 @@ func create_item(item_id: StringName, grid_pos: Vector2i):
 	var item = ItemScene.instantiate() as Item
 	item.item_id = item_id
 	item.global_position = GridManager.map_to_world(grid_pos)
-	
+	if ItemDatabase.item_definitions[item_id].has("light"):
+		spawn_light(item.global_position, ItemDatabase.item_definitions[item_id].light)
 	# The structure tells the GridManager it's an obstacle
 	GridManager.register_object(grid_pos, item)
 	
@@ -317,7 +332,38 @@ func create_item(item_id: StringName, grid_pos: Vector2i):
 	item.destroyed.connect(_on_item_destroyed)
 	items_container.add_child(item)
 	objects_in_scene.append(item)
+	
+func spawn_light(target_position: Vector2, brightness: float):
+	# 1. Create the node
+	var light = PointLight2D.new()
 
+	# 2. Set essential properties
+	light.position = target_position
+	light.energy = brightness
+
+	# 3. GENERATE A TEXTURE (Crucial Step)
+	# Without a texture, the light is invisible. 
+	# We will create a procedural "soft ball" of light here.
+	var tex = GradientTexture2D.new()
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.width = 256
+	tex.height = 256
+
+	# Set the gradient center to the middle (0.5, 0.5) and radius edge to top (0.5, 0.0)
+	tex.fill_from = Vector2(0.5, 0.5) 
+	tex.fill_to = Vector2(0.5, 0.0)
+
+	# Create the color ramp: White (center) to Black (edge)
+	# Note: Use Transparent instead of Black if using "Add" blend mode
+	var grad = Gradient.new()
+	grad.colors = PackedColorArray([Color.WHITE, Color.GOLD]) 
+	tex.gradient = grad
+
+	# Assign the generated texture to the light
+	light.texture = tex
+	light.z_index = 102
+	# 4. Add to the scene tree
+	add_child(light)
 func check_neighbors(grid_pos, structure, structure_id):
 	var top = Vector2i(grid_pos.x, grid_pos.y -1)
 	var right = Vector2i(grid_pos.x+1, grid_pos.y)
@@ -409,6 +455,46 @@ func create_custom_character(character_id: String, position: Vector2, overrides:
 			print("Warning: Property '", property, "' not found on character")
 	
 	return character
+
+func generate_cone_texture(radius: int, angle_deg: float) -> ImageTexture:
+	# 1. Create a new empty image with RGBA channels
+	var size = radius * 2
+	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
+
+	var center = Vector2(radius, radius)
+	var angle_rad = deg_to_rad(angle_deg)
+
+	# 2. Loop through every pixel to decide if it's inside the "Cone"
+	for y in range(size):
+		for x in range(size):
+			var pixel_pos = Vector2(x, y)
+			var dir = pixel_pos - center
+			var dist = dir.length()
+
+			# Skip pixels outside the circle radius (optimization)
+			if dist > radius:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			
+			# Calculate angle of this pixel relative to the Right (0 degrees)
+			# We use `angle_to` to check the deviation from Vector2.RIGHT
+			var angle_diff = abs(Vector2.RIGHT.angle_to(dir))
+
+			# 3. Check if the pixel is within our cone angle
+			if angle_diff < angle_rad / 2.0:
+				# Calculate simple falloff (dimmer further away)
+				var alpha = 1.0 - (dist / radius)
+				# Apply squared falloff for softer light
+				alpha = ease(alpha, 0.5) 
+
+				# Set the pixel color (White with calculated transparency)
+				img.set_pixel(x, y, Color(1, 1, 1, alpha))
+			else:
+				# Pixel is outside the cone angle -> Transparent
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+	
+	# 4. Convert Image to Texture
+	return ImageTexture.create_from_image(img)
 
 func _on_player_selection_changed_for_camera(selected_chars: Array[CombatCharacter]):
 	print("DEBUG: Camera selection changed. Selected chars count: ", selected_chars.size())

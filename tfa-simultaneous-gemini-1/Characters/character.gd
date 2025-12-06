@@ -72,7 +72,6 @@ var preview_positions: Array[Vector2] = [] # Track position after each action
 var range_preview_squares: Array[ColorRect] = [] # For range/AOE preview
 var planned_aoe_squares: Array[ColorRect] = [] # NEW: For persistent planned AoEs
 
-
 # --- Scene Node References ---
 @onready var visuals_container: Node2D = $Body
 @onready var body_sprite: Sprite2D = $Body/VBoxContainer/BodySprite
@@ -171,14 +170,25 @@ func _get_direction_from_vector(vector: Vector2i) -> Direction:
 func _update_direction(direction_vector: Vector2i):
 	# This function now uses the helper
 	var new_direction = _get_direction_from_vector(direction_vector)
+	var light = find_child("LineOfSight",false,false)
 	if new_direction != current_direction:
 		current_direction = new_direction
 		print_debug(character_name, " facing ", Direction.keys()[current_direction])
 		_update_visual_sprites()
+		# --- NEW CODE STARTS HERE ---
+		# Update flashlight rotation based on the new direction
+		match current_direction:
+			Direction.RIGHT:
+				light.rotation_degrees = 0
+			Direction.LEFT:
+				light.rotation_degrees = 180
+			Direction.DOWN:
+				light.rotation_degrees = 90
+			Direction.UP:
+				light.rotation_degrees = -90 # or 270
 
 func _update_visual_sprites():
 	if body_part_data.is_empty(): return
-	
 	var body_data: BodyPart = body_part_data.get("body")
 	var head_data: BodyPart = body_part_data.get("head")
 
