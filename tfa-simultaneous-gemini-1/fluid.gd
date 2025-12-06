@@ -87,13 +87,13 @@ func set_flow_direction(flow_dir: Vector2, flow_speed: float):
 	current_flow_direction = flow_dir
 	current_flow_speed = flow_speed
 	
-	print("Setting flow for tile at ", grid_position, ": direction=", flow_dir, " speed=", flow_speed)
+	#print("Setting flow for tile at ", grid_position, ": direction=", flow_dir, " speed=", flow_speed)
 	
 	# Update shader parameters
 	if water_sprite and water_sprite.material is ShaderMaterial:
 		water_sprite.material.set_shader_parameter("flow_direction", flow_dir)
 		water_sprite.material.set_shader_parameter("flow_speed", flow_speed)
-		print("Shader parameters updated successfully")
+		#print("Shader parameters updated successfully")
 	else:
 		push_error("Cannot update shader - material is not ShaderMaterial")
 	
@@ -119,7 +119,7 @@ func _draw():
 		
 	# Draw flow direction arrow for debugging
 	if current_flow_speed > 0.01:
-		print("current_flow_speed sufficient for debug arrow")
+		#print("current_flow_speed sufficient for debug arrow")
 		var arrow_length = 40.0 * current_flow_speed
 		var arrow_end = current_flow_direction * arrow_length
 		draw_line(Vector2.ZERO, arrow_end, Color.RED, 3.0)

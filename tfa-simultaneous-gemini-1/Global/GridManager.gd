@@ -254,7 +254,7 @@ func update_fluid_simulation():
 				flow_directions[tile_pos] = total_flow_vector.normalized()
 				# Normalize flow speed to 0-1 range based on amount
 				flow_speeds[tile_pos] = clamp(total_flow_amount / amount, 0.0, 1.0)
-				print("Flow at ", tile_pos, ": direction=", flow_directions[tile_pos], " speed=", flow_speeds[tile_pos])
+				#print("Flow at ", tile_pos, ": direction=", flow_directions[tile_pos], " speed=", flow_speeds[tile_pos])
 			else:
 				flow_directions[tile_pos] = Vector2.ZERO
 				flow_speeds[tile_pos] = 0.0

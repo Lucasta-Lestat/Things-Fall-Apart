@@ -77,7 +77,7 @@ func load_map(map_id: StringName, coming_from: String):
 				# GENERATE A TEXTURE (Crucial Step)
 				# Without a texture, the light is invisible. 
 				var radius = 1440
-				var degree = 120
+				var degree = 150
 				var tex = generate_cone_texture(radius,degree)
 				#light.offset = Vector2(radius/8, 0) # Half of radius (optional tweaking)
 				# Assign the generated texture to the light
@@ -85,6 +85,8 @@ func load_map(map_id: StringName, coming_from: String):
 				light.name = "LineOfSight"
 				light.rotation_degrees = 90
 				light.shadow_enabled = true
+				# This tells the light: "Cast shadows when you hit an occluder on Layer 1"
+				light.shadow_item_cull_mask = 1
 				light.z_index = 102
 				c.add_child(light)
 				
@@ -179,12 +181,34 @@ func load_map(map_id: StringName, coming_from: String):
 		if "characters" in region.keys():	
 			for character in region.characters:
 				print("Attempting to spawn: ", character.id, " at ", Vector2i(character.x,character.y))
-				create_character_from_database(character.id, Vector2i(character.x,character.y))
-				#character._update_visual_sprites()
+				var c = create_character_from_database(character.id, Vector2i(character.x,character.y))
+				c.light_mask = 2
+				c.visibility_layer = 2
+				
+				# --- Light MAT code---
+				# 1. Create a new CanvasItemMaterial
+				var light_mat = CanvasItemMaterial.new()
+				# 2. Set the Light Mode to "Light Only"
+				light_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
+
+				# 3. Apply this material to all sprites under the "Body" node
+				# We use a helper function to dig through the VBox/HBox/Equipment containers
+				if c.has_node("Body"):
+					_apply_material_recursive(c.get_node("Body"), light_mat)
+				
 		if "objects" in region.keys():
 			for item in region.objects:
+				
 				print("Attempting to spawn ", item.id, " at ", Vector2i(item.x, item.y))
-				create_item(item.id, Vector2i(item.x, item.y))
+				# 1. Create a new CanvasItemMaterial
+				var light_mat = CanvasItemMaterial.new()
+				# 2. Set the Light Mode to "Light Only"
+				light_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
+
+				var i = create_item(item.id, Vector2i(item.x, item.y))
+				if i.has_node("Sprite"):
+					i.get_node("Sprite").material = light_mat
+				
 		if "fluids" in region.keys():
 			for fluid in region.fluids:
 				print("Attempting to spawn", fluid.id, " at ", Vector2i(fluid.x, fluid.y))
@@ -196,7 +220,15 @@ func load_map(map_id: StringName, coming_from: String):
 	for floor in floors_container.get_children():
 			if floor.floor_id != "floor_dirt" and floor.floor_id != "floor_stone" and floor.floor_id != "floor_wood":
 				check_floor_neighbors(GridManager.world_to_map(floor.global_position), floor, floor.floor_id)
-	
+func _apply_material_recursive(node: Node, material: Material):
+	# Check if the node is a visual sprite (covers Sprite2D and TextureRect)
+	if node is Sprite2D or node is TextureRect:
+		node.material = material
+		# Optional: Ensure the sprite itself is on the correct light mask if needed
+		# node.light_mask = 2 
+	# Continue digging deeper into children (Equipment, Containers, etc.)
+	for child in node.get_children():
+		_apply_material_recursive(child, material)	
 func check_for_door(region, pos: Vector2i):
 	if region.has("doors"):
 					for door in region.doors:
@@ -275,7 +307,6 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	if not character:
 		print("Error: Failed to instantiate character scene")
 		return null
-	
 	# Set character ID - this will automatically apply all character data
 	character.character_id = character_id
 	character.global_position =  GridManager.map_to_world(position)
@@ -310,14 +341,47 @@ func create_structure(structure_id: StringName, grid_pos: Vector2i):
 	structure.structure_id = structure_id
 	structure.global_position = GridManager.map_to_world(grid_pos)
 	
-	# The structure tells the GridManager it's an obstacle
 	GridManager.register_obstacle(grid_pos)
-	
-	# Connect to its destroyed signal to update pathfinding
 	structure.destroyed.connect(_on_structure_destroyed)
+	
+	# 1. Add the child FIRST. 
+	# This triggers structure._ready(), allowing it to load its texture.
 	structures_container.add_child(structure)
-	if structure_id.contains("door"):
-		print("added door: ", structure, " ", structure_id, structure.find_child("Sprite").texture)
+
+	# 2. NOW generate the shadow. 
+	# The texture is guaranteed to exist now (assuming structure._ready() loads it).
+	if structure.has_node("Sprite"):
+		var sprite = structure.get_node("Sprite")
+		
+		# Allow a tiny frame delay if textures load asynchronously (optional safety)
+		if not sprite.texture:
+			await get_tree().process_frame 
+			
+		if sprite.texture:
+			var occluder = LightOccluder2D.new()
+			var poly = OccluderPolygon2D.new()
+			poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+			
+			# IMPORTANT: Match this to your Light's "Shadow Item Cull Mask"
+			# If your light is set to Mask 1 (default), this must include 1.
+			occluder.occluder_light_mask = 1 
+			
+			var size = sprite.texture.get_size()
+			var w = size.x / 4.0
+			var h = size.y / 4.0
+			
+			poly.polygon = PackedVector2Array([
+				Vector2(-w, -h),
+				Vector2(w, -h),
+				Vector2(w, h),
+				Vector2(-w, h)
+			])
+			
+			occluder.occluder = poly
+			structure.add_child(occluder)
+			print("Success: Shadow added for ", structure_id)
+		else:
+			push_error("FAIL: Still no texture for " + str(structure_id) + ". Check Structure.gd _ready()")
 	
 func create_item(item_id: StringName, grid_pos: Vector2i):
 	var item = ItemScene.instantiate() as Item
@@ -332,6 +396,7 @@ func create_item(item_id: StringName, grid_pos: Vector2i):
 	item.destroyed.connect(_on_item_destroyed)
 	items_container.add_child(item)
 	objects_in_scene.append(item)
+	return item
 	
 func spawn_light(target_position: Vector2, brightness: float):
 	# 1. Create the node
@@ -440,7 +505,6 @@ func _on_item_destroyed(item: Item, grid_position: Vector2i):
 	GridManager.unregister_item(grid_position)
 	for item_name in item.resources.keys():
 		create_item(ItemDatabase.item_name,grid_position) # need to update to check if this square is occupied
-		
 # Alternative method if you want to override specific properties
 # I think this is deprecated
 func create_custom_character(character_id: String, position: Vector2, overrides: Dictionary = {}) -> CombatCharacter:

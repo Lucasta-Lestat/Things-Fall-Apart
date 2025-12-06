@@ -1646,4 +1646,4 @@ tile_set = SubResource("TileSet_j5wjh")
 
 [node name="CanvasModulate" type="CanvasModulate" parent="."]
 z_index = 102
-color = Color(0.40069774, 0.40069774, 0.40069768, 1)
+color = Color(0.400698, 0.400698, 0.400698, 1)
