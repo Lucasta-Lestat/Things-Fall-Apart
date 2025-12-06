@@ -40,6 +40,7 @@ var abilities: Array[Ability] = []
 var planned_actions: Array[PlannedAction] = []
 var dialogues: Array
 var current_dialogue_index = 0
+@onready var game = get_node("/root/Game")
 #trigger "Talk" should search the dialogues in the dialogue file until it finds one for which prerequisites are met.
 #  Can set an already played prereq to keep it from repeating
 var interact_options = ["Attack", "Talk"]
@@ -969,7 +970,7 @@ func use_ability_immediately(ability, target_pos):
 	elif ability.effect == Ability.ActionEffect.DAMAGE:
 		if success_level > 0 :
 			var affected_tiles = get_affected_tiles(ability, global_position, target_pos)
-			var targets = combat_manager.get_entities_in_tiles(affected_tiles)
+			var targets = game.get_entities_in_tiles(affected_tiles)
 			#show_shader(ability, action)
 
 			if targets.is_empty():

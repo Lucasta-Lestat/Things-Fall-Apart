@@ -50,7 +50,7 @@ var starting_gear = {"Protagonist":
 					#	give her buff
 					#	and female body
 var starting_abilities = {"Protagonist":
-							[&"move", &"basic_attack", &"cleave", &"fireball"],
+							[&"move", &"basic_attack", &"cleave", &"fireball", &"lightning_bolt"],
 						"Jacana":
 							[&"move", &"basic_attack", &"cleave", &"fireball"]
 						}

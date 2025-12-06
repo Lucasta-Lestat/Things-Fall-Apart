@@ -183,7 +183,7 @@ func calculate_pressure(tile_pos: Vector2i, fluid_type: String) -> float:
 
 # Main fluid simulation update - FIXED VERSION
 func update_fluid_simulation():
-	print("updating fluid simulation")
+	#print("updating fluid simulation")
 	if active_fluid_tiles.is_empty():
 		return
 	
@@ -405,3 +405,17 @@ func update_water_tile_flows():
 			var water_amount = get_fluid_amount(grid_pos, FLUID_TYPE_WATER)
 			if water_amount > 0:
 				water_tile.set_water_depth(water_amount)
+				
+func create_example_bolt(pos: Vector2i = Vector2i(1000,1000)):
+	var lightning = LightningVFX.new()
+	lightning.start_position = pos
+	lightning.end_position = Vector2i(pos.x + TILE_SIZE, pos.y + TILE_SIZE)
+	lightning.z_index =100
+	lightning.color = Color(0.7, 0.9, 1.0)  # Blue-white
+	lightning.thickness = 4.0
+	lightning.displacement = 40.0
+	lightning.jaggedness = 0.9
+	lightning.lifetime = 0.4
+	lightning.num_branches = 3
+	lightning.light_energy = 2.0
+	add_child(lightning)

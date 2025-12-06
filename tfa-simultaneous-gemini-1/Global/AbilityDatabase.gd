@@ -66,6 +66,15 @@ func _define_abilities():
 	fireball.aoe_size = Vector2i(3, 3) # Radius of 3
 	fireball.primary_damage_type = &"fire"
 	abilities[&"fireball"] = fireball
+	
+	var ligtning_bolt = Ability.new(); ligtning_bolt.id = &"ligtning_bolt"; ligtning_bolt.display_name = "ligtning_bolt"
+	ligtning_bolt.effect = Ability.ActionEffect.DAMAGE; ligtning_bolt.target_type = Ability.TargetType.GROUND
+	ligtning_bolt.range_type = Ability.RangeType.ABILITY; ligtning_bolt.range = 1000.0 # Long range
+	ligtning_bolt.success_stat = &"int"; ligtning_bolt.ap_cost = 3; ligtning_bolt.damage = {"electric":25}
+	ligtning_bolt.aoe_shape = &"circle"
+	ligtning_bolt.aoe_size = Vector2i(3, 3) # Radius of 3
+	ligtning_bolt.primary_damage_type = &"electric"
+	abilities[&"ligtning_bolt"] = ligtning_bolt
 
 func get_ability(ability_id: StringName) -> Ability:
 	return abilities.get(ability_id, null)

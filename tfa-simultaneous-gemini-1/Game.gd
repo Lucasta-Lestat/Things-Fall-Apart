@@ -26,6 +26,7 @@ var party_ids = ["Protagonist", "Jacana"]
 var party_chars = []
 var characters_in_scene = []
 var objects_in_scene = []
+var structures_in_scene = []
 var rotations = generate_random_array(1,4,100, 12345)
 var color_offsets = generate_random_float_array(1.0, 1.0, 100, 48273)
 
@@ -70,7 +71,6 @@ func load_map(map_id: StringName, coming_from: String):
 				party_chars.append(c)
 				if character_id == "Protagonist":
 					var protagonist = c
-				
 				print("party_chars: ", party_chars)
 				c.dropped_item.connect(_on_item_dropped)
 				var light = PointLight2D.new()
@@ -139,16 +139,19 @@ func load_map(map_id: StringName, coming_from: String):
 				var door = check_for_door(region, Vector2i(x, y_top))
 				#print("door: ", door)
 				if door:
-					create_structure(door.type, Vector2i(x, y_top))      # Top wall
+					var d = create_structure(door.type, Vector2i(x, y_top))      # Top wall
 				else: 
-					create_structure(region.wall_type, Vector2i(x, y_top))      # Top wall
+					var d = create_structure(region.wall_type, Vector2i(x, y_top))      # Top wall
+					structures_in_scene.append(d)
 					#print("spawning wall: ",region.wall_type)
 					
 				door = check_for_door(region, Vector2i(x, y_bottom))
 				if door:
-					create_structure(door.type, Vector2i(x, y_bottom))  
+					var w = create_structure(door.type, Vector2i(x, y_bottom)) 
+					structures_in_scene.append(w) 
 				else:
-					create_structure(region.wall_type, Vector2i(x, y_bottom))   # Bottom wall
+					var w = create_structure(region.wall_type, Vector2i(x, y_bottom))   # Bottom wall
+					structures_in_scene.append(w)
 					#print("spawning wall: ",region.wall_type)
 				x += 1
 			# Left and right walls
@@ -316,6 +319,30 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	return character
 # --- NEW: Spawning and Managing Structures ---
 	
+func get_entities_in_tiles(tiles: Array[Vector2i]) -> Array:
+	var entities_found: Array = []
+	var tile_set = {} # Use a dictionary for faster lookups
+	for tile in tiles:
+		tile_set[tile] = true
+		
+	for char in self.characters_in_scene:
+		if is_instance_valid(char) and char.current_health > 0:
+			var char_tile = GridManager.world_to_map(char.global_position)
+			if tile_set.has(char_tile):
+				entities_found.append(char)
+	for struct in self.structures_in_scene:
+		if is_instance_valid(struct) and struct.current_health > 0:
+			var struct_tile = GridManager.world_to_map(struct.global_position)
+			if tile_set.has(struct_tile):
+				entities_found.append(struct)
+	for obj in self.objects_in_scene:
+		if is_instance_valid(obj):
+			var struct_tile = GridManager.world_to_map(obj.global_position)
+			if tile_set.has(struct_tile):
+				entities_found.append(obj)
+	#claude: add floors check
+	print_debug("[CombatManager] Found ", entities_found.size(), " entities in ", tiles.size(), " tiles.")
+	return entities_found
 
 func create_floor(floor_id: StringName, grid_pos: Vector2i, rotation_amount, color_change):
 	var floor = FloorScene.instantiate() as Floor
