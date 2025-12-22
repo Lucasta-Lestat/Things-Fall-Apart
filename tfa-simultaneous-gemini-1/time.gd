@@ -7,6 +7,12 @@ extends Label
 func _ready():
 	TimeManager.connect("time_updated", _on_time_updated)
 	TimeManager.connect("date_changed", _on_date_changed)
+	# Position in bottom Left
+	anchor_left = 1.0
+	anchor_top = 1.0
+	anchor_right = 0.0
+	anchor_bottom = 1.0
+	offset_bottom = -300
 	update_display()
 
 func _on_time_updated(hour, minute, second):

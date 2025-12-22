@@ -50,6 +50,12 @@ func initialize(p_base_layer: TileMapLayer, p_highlights_layer: TileMapLayer):
 			fluids[Vector2i(x,y)] = ""
 
 # --- Dynamic Obstacle Management ---
+func would_walk(grid_pos):
+	if grid_costs[grid_pos] > 10: 
+		return false
+	else:
+		return true
+	
 func register_obstacle(grid_pos: Vector2i):
 	if grid_costs.has(grid_pos):
 		grid_costs[grid_pos] = INF # Set cost to infinity (unwalkable)
@@ -164,7 +170,6 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float):
 	if grid_costs.has(tile_pos):
 		grid_costs[tile_pos] += amount
 		
-
 # Get fluid amount at a tile
 func get_fluid_amount(tile_pos: Vector2i, fluid_type: String) -> float:
 	if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
@@ -339,25 +344,13 @@ func get_active_tile_count() -> int:
 func spawn_fluid_tile(grid_pos: Vector2i, water_amount: float):
 	"""Spawn a new water tile"""
 	print("spawning a fluid tile at ", grid_pos, " with amount ", water_amount)
-	var water_tile = WaterTile.instantiate()
-	water_tile.z_index = 100
-	water_tile.get_node("Sprite")
-	var water_sprite = water_tile.get_node("Sprite")
-	water_sprite.texture = load("res://water_texture.png")
-	add_child(water_tile)
 	
-	# Initialize the tile
-	water_tile.initialize(grid_pos, water_amount)
-	
-	# Store reference
-	active_fluid_tiles[grid_pos] = water_tile
 	GridManager.register_fluid(grid_pos,"water", water_amount)
 	# Set initial flow if available
 	print("flow_directions.has(grid_pos): ", flow_directions.has(grid_pos))
 	if flow_directions.has(grid_pos):
 		var flow_dir = flow_directions[grid_pos]
 		var flow_speed = flow_speeds.get(grid_pos, 0.1)
-		water_tile.set_flow_direction(flow_dir, flow_speed)
 		print("Set initial flow for tile at ", grid_pos, ": ", flow_dir, " speed: ", flow_speed)
 
 func update_fluid_tile(grid_pos: Vector2i, water_amount: float):

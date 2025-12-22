@@ -40,6 +40,24 @@ var abilities: Array[Ability] = []
 var planned_actions: Array[PlannedAction] = []
 var dialogues: Array
 var current_dialogue_index = 0
+var faction = 0
+var sight: float = 1.0  # Base sight stat, modify as needed
+var fov_angle_degrees: float = 150.0  # Field of view in degrees
+# AI State - using strings for flexibility
+var current_goal: String = "idle"
+var target_item: Node = null
+var goal_reassess_timer: float = 0.0
+const GOAL_REASSESS_INTERVAL: float = 2.0
+
+# Wander settings
+var wander_cooldown: float = 0.0
+const WANDER_COOLDOWN_TIME: float = 3.0
+const WANDER_RANGE_TILES: int = 5
+
+# Hunger threshold
+var hunger: float = 0.0
+const HUNGER_THRESHOLD: float = 50.0
+
 @onready var game = get_node("/root/Game")
 #trigger "Talk" should search the dialogues in the dialogue file until it finds one for which prerequisites are met.
 #  Can set an already played prereq to keep it from repeating
@@ -123,9 +141,301 @@ func _ready():
 	temp_action_preview.visible = false
 	hide_previews()
 
-func _process(_delta):
+func _process(delta):
+	# Skip AI for party members or during combat
+	if is_party_member() or game.is_active_combat:
+		if not is_moving and not current_path.is_empty():
+			move_along_path()
+		return
+	
+	# AI goal reassessment
+	goal_reassess_timer += delta
+	if goal_reassess_timer >= GOAL_REASSESS_INTERVAL:
+		goal_reassess_timer = 0.0
+		reassess_goals()
+	
+	# Wander cooldown
+	if wander_cooldown > 0:
+		wander_cooldown -= delta
+	
+	# Continue current movement
 	if not is_moving and not current_path.is_empty():
 		move_along_path()
+	
+	# If idle and no path, try to act on current goal
+	if not is_moving and current_path.is_empty():
+		execute_current_goal()
+
+func is_party_member() -> bool:
+	return self in game.party_chars
+
+func reassess_goals():
+	# Don't reassess while actively moving to a target
+	if is_moving:
+		print_rich("[color=gray][AI DEBUG] ", name, ": Skipping reassess - currently moving[/color]")
+		return
+	
+	print_rich("[color=purple][AI DEBUG] ", name, ": Reassessing goals...[/color]")
+	
+	# Clear invalid target
+	if target_item and not is_instance_valid(target_item):
+		print_rich("[color=yellow][AI DEBUG] ", name, ": Target item no longer valid, clearing[/color]")
+		target_item = null
+		current_goal = "idle"
+	
+	# Determine primary need
+	if is_hungry():
+		print_rich("[color=orange][AI DEBUG] ", name, ": Hungry! Looking for food...[/color]")
+		var best_food = find_best_food_in_sight()
+		if best_food:
+			target_item = best_food
+			current_goal = "seek_food"
+			print_rich("[color=green][AI DEBUG] ", name, ": Found food - ", best_food.name, "[/color]")
+			return
+		else:
+			print_rich("[color=yellow][AI DEBUG] ", name, ": No food in sight[/color]")
+	
+	# Look for valuables
+	var best_valuable = find_most_valuable_item_in_sight()
+	if best_valuable:
+		target_item = best_valuable
+		current_goal = "seek_wealth"
+		print_rich("[color=green][AI DEBUG] ", name, ": Found valuable - ", best_valuable.name, " (", best_valuable.cost, " gold)[/color]")
+		return
+	
+	# Nothing specific to do, wander
+	print_rich("[color=gray][AI DEBUG] ", name, ": Nothing of interest, will wander[/color]")
+	current_goal = "wander"
+	target_item = null
+
+func is_hungry() -> bool:
+	return hunger >= HUNGER_THRESHOLD
+
+func execute_current_goal():
+	print_rich("[color=blue][AI DEBUG] ", name, ": Executing goal - ", current_goal, "[/color]")
+	
+	match current_goal:
+		"idle":
+			# Do nothing
+			pass
+		
+		"seek_food", "seek_wealth":
+			execute_seek_item()
+		
+		"wander":
+			execute_wander()
+
+func execute_seek_item():
+	if not target_item or not is_instance_valid(target_item):
+		print_rich("[color=yellow][AI DEBUG] ", name, ": Target lost, returning to idle[/color]")
+		current_goal = "idle"
+		return
+	
+	# Check if we've reached the item
+	var my_tile = GridManager.world_to_map(global_position)
+	var item_tile = GridManager.world_to_map(target_item.global_position)
+	
+	if my_tile == item_tile or my_tile.distance_to(item_tile) <= 1:
+		print_rich("[color=green][AI DEBUG] ", name, ": Reached target item![/color]")
+		pickup_item(target_item)
+		target_item = null
+		current_goal = "idle"
+		return
+	
+	# Move towards the item
+	print_rich("[color=blue][AI DEBUG] ", name, ": Moving to ", target_item.name, " at tile ", item_tile, "[/color]")
+	move_to(target_item.global_position)
+
+func execute_wander():
+	# Check cooldown
+	if wander_cooldown > 0:
+		return
+	
+	var my_tile = GridManager.world_to_map(global_position)
+	var wander_target = find_random_wander_target(my_tile)
+	
+	if wander_target != Vector2i.MIN:
+		print_rich("[color=cyan][AI DEBUG] ", name, ": Wandering to tile ", wander_target, "[/color]")
+		var target_world_pos = GridManager.map_to_world(wander_target)
+		move_to(target_world_pos)
+		wander_cooldown = WANDER_COOLDOWN_TIME
+	else:
+		print_rich("[color=yellow][AI DEBUG] ", name, ": No valid wander destination found[/color]")
+		wander_cooldown = WANDER_COOLDOWN_TIME * 0.5  # Shorter cooldown to try again
+
+func find_random_wander_target(from_tile: Vector2i) -> Vector2i:
+	var valid_tiles: Array[Vector2i] = []
+	
+	# Collect all walkable tiles within wander range
+	for x in range(-WANDER_RANGE_TILES, WANDER_RANGE_TILES + 1):
+		for y in range(-WANDER_RANGE_TILES, WANDER_RANGE_TILES + 1):
+			if x == 0 and y == 0:
+				continue
+			
+			var check_tile = from_tile + Vector2i(x, y)
+			
+			if is_tile_walkable(check_tile):
+				# Verify we can actually path there
+				var test_path = GridManager.find_path(from_tile, check_tile)
+				if not test_path.is_empty():
+					valid_tiles.append(check_tile)
+	
+	if valid_tiles.is_empty():
+		return Vector2i.MIN
+	
+	# Pick a random valid tile
+	return valid_tiles[randi() % valid_tiles.size()]
+
+
+# =====================
+# ITEM EVALUATION
+# =====================
+# Check if a position is within line of sight
+func get_sight_range_pixels() -> float:
+	return 1440.0 * sight
+
+# Returns the sight range in tiles
+func get_sight_range_tiles() -> int:
+	return int(ceil(get_sight_range_pixels() / GridManager.TileSize))
+func get_facing_vector() -> Vector2:
+	match current_direction:
+		Direction.DOWN:
+			return Vector2(0, 1)
+		Direction.UP:
+			return Vector2(0, -1)
+		Direction.LEFT:
+			return Vector2(-1, 0)
+		Direction.RIGHT:
+			return Vector2(1, 0)
+	return Vector2(0, 1)  # Default fallback
+	
+func is_in_line_of_sight(target_position: Vector2) -> bool:
+	var to_target = target_position - global_position
+	var distance = to_target.length()
+	
+	# Check distance
+	if distance > get_sight_range_pixels():
+		return false
+	
+	# Check angle
+	var facing = get_facing_vector()
+	var angle_to_target = rad_to_deg(facing.angle_to(to_target.normalized()))
+	var half_fov = fov_angle_degrees / 2.0
+	
+	if abs(angle_to_target) > half_fov:
+		return false
+	
+	# Optional: Add raycast for obstacles blocking vision
+	# You can implement this if needed
+	
+	return true
+func get_items_in_line_of_sight() -> Array:
+	var visible_items = []
+	var all_items = game.objects_in_scene  # You'll need this method
+	
+	for item in all_items:
+		if is_in_line_of_sight(item.global_position):
+			visible_items.append(item)
+	
+	return visible_items
+func find_most_valuable_item_in_sight() -> Node:
+	var items = get_items_in_line_of_sight()
+	var best_item: Node = null
+	var best_value: float = 0.0
+	
+	print_rich("[color=gray][AI DEBUG] ", name, ": Scanning ", items.size(), " items in sight for valuables[/color]")
+	
+	for item in items:
+		if is_item_owned_by_ally(item):
+			print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Skipped (allied owner)[/color]")
+			continue
+		
+		if not can_reach_item(item):
+			print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Skipped (unreachable)[/color]")
+			continue
+		
+		var value = item.cost if "cost" in item else 0.0
+		print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Value = ", value, "[/color]")
+		
+		if value > best_value:
+			best_value = value
+			best_item = item
+	
+	return best_item
+
+func find_best_food_in_sight() -> Node:
+	var items = get_items_in_line_of_sight()
+	var best_food: Node = null
+	var best_calories: float = 0.0
+	
+	print_rich("[color=gray][AI DEBUG] ", name, ": Scanning ", items.size(), " items in sight for food[/color]")
+	
+	for item in items:
+		if not "calories" in item or item.calories <= 0:
+			continue
+		
+		if is_item_owned_by_ally(item):
+			print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Skipped (allied owner)[/color]")
+			continue
+		
+		if not can_reach_item(item):
+			print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Skipped (unreachable)[/color]")
+			continue
+		
+		print_rich("[color=gray][AI DEBUG]   - ", item.name, ": Calories = ", item.calories, "[/color]")
+		
+		if item.calories > best_calories:
+			best_calories = item.calories
+			best_food = item
+	
+	return best_food
+
+func is_item_owned_by_ally(item: Node) -> bool:
+	if not "owner" in item or item.owner == null:
+		return false
+	
+	if not "faction" in item.owner or item.owner.faction == null:
+		return false
+	
+	if not "faction" in self or faction == null:
+		return false
+	
+	if not "allied_factions" in faction:
+		return false
+	
+	return item.owner.faction in faction.allied_factions
+
+func can_reach_item(item: Node) -> bool:
+	var start_tile = GridManager.world_to_map(global_position)
+	var end_tile = GridManager.world_to_map(item.global_position)
+	var test_path = GridManager.find_path(start_tile, end_tile)
+	return not test_path.is_empty()
+
+func pickup_item(item: Node):
+	if not is_instance_valid(item):
+		return
+	
+	print_rich("[color=cyan]", name, " picked up ", item.name, "[/color]")
+	GameLog.add_entry(name + " picks up " + item.name)
+	
+	# Add to inventory
+	if has_method("add_to_inventory"):
+		add_to_inventory(item)
+	
+	# If it's food and we're hungry, eat it immediately
+	if current_goal == "seek_food" and "calories" in item:
+		eat_food(item)
+	else:
+		# Remove item from world (if not eaten)
+		item.queue_free()
+
+func eat_food(item: Node):
+	if "calories" in item:
+		var hunger_reduced = item.calories * 0.1
+		hunger = max(0, hunger - hunger_reduced)
+		print_rich("[color=green]", name, " ate ", item.name, " (", item.calories, " calories)[/color]")
+		GameLog.add_entry(name + " eats " + item.name)
+		item.queue_free()
 func find_path(target_position):
 	var start_tile = GridManager.world_to_map(global_position)
 	var end_tile = GridManager.world_to_map(target_position)
@@ -140,15 +450,21 @@ func move_to(target_position):
 func move_along_path():
 	print("Move Along Path Called #movement")
 	if path_index >= current_path.size():
-		current_path.clear(); path_index = 0
+		current_path.clear()
+		path_index = 0
 		return
-
+	
+	var target_tile = current_path[path_index]
+	
+	# Check if the next tile is still walkable
+	if not is_tile_walkable(target_tile):
+		_handle_path_blocked()
+		return
+	
 	is_moving = true
 	var current_tile = GridManager.world_to_map(global_position)
-	var target_tile = current_path[path_index]
 	var target_world_pos = GridManager.map_to_world(target_tile)
 	
-	# --- Direction Handling ---
 	var direction_vector = target_tile - current_tile
 	_update_direction(direction_vector)
 	
@@ -157,6 +473,20 @@ func move_along_path():
 	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(self, "global_position", target_world_pos, duration)
 	tween.tween_callback(func(): path_index += 1; is_moving = false)
+	
+func is_tile_walkable(tile: Vector2i) -> bool:
+	# Check if tile is blocked by terrain
+	if not GridManager.would_walk(tile):
+		return false
+	
+	# Check if another entity occupies this tile
+	var entities = game.get_entities_in_tiles([tile])
+	for entity in entities:
+		if entity != self:
+			return false
+	
+	return true
+	
 # --- VISUALS LOGIC ---
 # NEW Helper function to determine direction from a vector
 func _get_direction_from_vector(vector: Vector2i) -> Direction:
@@ -167,6 +497,77 @@ func _get_direction_from_vector(vector: Vector2i) -> Direction:
 		if vector.y > 0: return Direction.DOWN
 		else: return Direction.UP
 	return Direction.DOWN # Default fallback
+func _handle_path_blocked():
+	print("Path blocked, recalculating...")
+	is_moving = false
+	
+	if current_path.is_empty():
+		return
+	
+	var final_destination = current_path[current_path.size() - 1]
+	var start_tile = GridManager.world_to_map(global_position)
+	
+	current_path = GridManager.find_path(start_tile, final_destination)
+	path_index = 0
+	
+	if current_path.is_empty():
+		print("No valid path to destination, finding nearest reachable tile...")
+		var nearest_tile = find_nearest_reachable_tile(final_destination)
+		if nearest_tile != Vector2i.MIN:
+			current_path = GridManager.find_path(start_tile, nearest_tile)
+			path_index = 0
+			if not current_path.is_empty():
+				print("Rerouting to nearest tile: ", nearest_tile)
+			else:
+				print("Cannot reach any tile near destination.")
+		else:
+			print("No reachable tiles found near destination.")
+
+func find_nearest_reachable_tile(target_tile: Vector2i, max_search_radius: int = 10) -> Vector2i:
+	var start_tile = GridManager.world_to_map(global_position)
+	var best_tile = Vector2i.MIN
+	var best_distance_to_target = INF
+	
+	# Search in expanding rings around the target
+	for radius in range(1, max_search_radius + 1):
+		var found_in_ring = false
+		
+		for x in range(-radius, radius + 1):
+			for y in range(-radius, radius + 1):
+				# Only check tiles on the current ring's edge
+				if abs(x) != radius and abs(y) != radius:
+					continue
+				
+				var check_tile = target_tile + Vector2i(x, y)
+				
+				# Skip if not walkable
+				if not is_tile_walkable(check_tile):
+					continue
+				
+				# Skip if its our current position
+				if check_tile == start_tile:
+					continue
+				
+				# Check if we can actually path to this tile
+				var test_path = GridManager.find_path(start_tile, check_tile)
+				if test_path.is_empty():
+					continue
+				
+				# Calculate distance to original target
+				var distance_to_target = check_tile.distance_squared_to(target_tile)
+				
+				if distance_to_target < best_distance_to_target:
+					best_distance_to_target = distance_to_target
+					best_tile = check_tile
+					found_in_ring = true
+		
+		# If we found a valid tile in this ring, return it
+		# (tiles in inner rings are always closer to target)
+		if found_in_ring:
+			return best_tile
+	
+	return best_tile
+
 
 func _update_direction(direction_vector: Vector2i):
 	# This function now uses the helper
@@ -275,7 +676,7 @@ func execute_planned_action(action: PlannedAction):
 	elif ability.effect == Ability.ActionEffect.DAMAGE:
 		if success_level > 0 :
 			var affected_tiles = get_affected_tiles(ability, global_position, action.target_position)
-			var targets = combat_manager.get_entities_in_tiles(affected_tiles)
+			var targets = game.get_entities_in_tiles(affected_tiles)
 			show_shader(ability, action)
 
 			if targets.is_empty():

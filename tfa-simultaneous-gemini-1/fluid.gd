@@ -23,6 +23,7 @@ func _ready():
 
 func initialize(grid_pos: Vector2i, initial_depth: float):
 	"""Initialize the water tile at a grid position"""
+	return
 	grid_position = grid_pos
 	water_depth = initial_depth
 	
@@ -43,7 +44,6 @@ func setup_shader_material():
 	if not water_sprite:
 		push_error("WaterSprite not found! Check your node references.")
 		return
-	
 	# If no material exists, create one
 	if not water_sprite.material:
 		var shader_material = ShaderMaterial.new()
@@ -72,7 +72,6 @@ func update_visuals():
 	if not water_sprite:
 		print("no water sprite")
 		return
-	
 	# Adjust opacity based on depth
 	var alpha = clamp(water_depth / 4.0, 0.3, 0.9)
 	modulate.a = alpha
@@ -116,7 +115,6 @@ func get_flow_info() -> Dictionary:
 func _draw():
 	if not debug_fluid:
 		return
-		
 	# Draw flow direction arrow for debugging
 	if current_flow_speed > 0.01:
 		#print("current_flow_speed sufficient for debug arrow")

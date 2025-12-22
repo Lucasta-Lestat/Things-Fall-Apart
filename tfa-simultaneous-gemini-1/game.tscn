@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=4 uid="uid://h6eujk2qam5p"]
+[gd_scene load_steps=12 format=4 uid="uid://h6eujk2qam5p"]
 
 [ext_resource type="Script" uid="uid://dmlki3bsswpsu" path="res://Game.gd" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://dqevfou54rooo" path="res://player_camera.gd" id="2_7jktm"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://d0sqbne3ex74p" path="res://Maps/open field.png" id="5_ryrav"]
 [ext_resource type="Script" uid="uid://bpy7odstcw6wr" path="res://dialogue_panel.gd" id="6_eow3j"]
 [ext_resource type="Script" uid="uid://bklebuy4rusbq" path="res://UI/GameUI.gd" id="6_ryrav"]
+[ext_resource type="Script" uid="uid://c6e008wuisjxu" path="res://game_log_panel.gd" id="7_j5wjh"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_j5wjh"]
 texture = ExtResource("5_eow3j")
@@ -1577,10 +1578,6 @@ custom_minimum_size = Vector2(50, 0)
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="Time" type="Label" parent="GameUI/MarginContainer"]
-layout_mode = 2
-script = ExtResource("4_7jktm")
-
 [node name="VBoxContainer" type="VBoxContainer" parent="GameUI/MarginContainer"]
 layout_mode = 2
 
@@ -1625,6 +1622,26 @@ layout_mode = 2
 
 [node name="ContinueIndicator" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
 layout_mode = 2
+
+[node name="LogPanel" type="PanelContainer" parent="GameUI"]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("7_j5wjh")
+
+[node name="MarginContainer" type="MarginContainer" parent="GameUI/LogPanel"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="GameUI/LogPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="LogContent" type="VBoxContainer" parent="GameUI/LogPanel/MarginContainer/ScrollContainer"]
+layout_mode = 2
+
+[node name="Time" type="Label" parent="GameUI"]
+offset_top = 9.0
+offset_right = 50.0
+offset_bottom = 31.0
+script = ExtResource("4_7jktm")
 
 [node name="TextEdit" type="TextEdit" parent="."]
 visible = false

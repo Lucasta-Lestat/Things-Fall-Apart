@@ -1,3 +1,4 @@
+//water_shader.gdshader
 shader_type canvas_item;
 
 // Color parameters

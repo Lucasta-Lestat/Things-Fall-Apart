@@ -139,18 +139,18 @@ func load_map(map_id: StringName, coming_from: String):
 				var door = check_for_door(region, Vector2i(x, y_top))
 				#print("door: ", door)
 				if door:
-					var d = create_structure(door.type, Vector2i(x, y_top))      # Top wall
+					var d = await create_structure(door.type, Vector2i(x, y_top))      # Top wall
 				else: 
-					var d = create_structure(region.wall_type, Vector2i(x, y_top))      # Top wall
+					var d = await create_structure(region.wall_type, Vector2i(x, y_top))      # Top wall
 					structures_in_scene.append(d)
 					#print("spawning wall: ",region.wall_type)
 					
 				door = check_for_door(region, Vector2i(x, y_bottom))
 				if door:
-					var w = create_structure(door.type, Vector2i(x, y_bottom)) 
+					var w = await create_structure(door.type, Vector2i(x, y_bottom)) 
 					structures_in_scene.append(w) 
 				else:
-					var w = create_structure(region.wall_type, Vector2i(x, y_bottom))   # Bottom wall
+					var w = await create_structure(region.wall_type, Vector2i(x, y_bottom))   # Bottom wall
 					structures_in_scene.append(w)
 					#print("spawning wall: ",region.wall_type)
 				x += 1
@@ -319,7 +319,7 @@ func create_character_from_database(character_id: String, position: Vector2) -> 
 	return character
 # --- NEW: Spawning and Managing Structures ---
 	
-func get_entities_in_tiles(tiles: Array[Vector2i]) -> Array:
+func get_entities_in_tiles(tiles: Array) -> Array:
 	var entities_found: Array = []
 	var tile_set = {} # Use a dictionary for faster lookups
 	for tile in tiles:
