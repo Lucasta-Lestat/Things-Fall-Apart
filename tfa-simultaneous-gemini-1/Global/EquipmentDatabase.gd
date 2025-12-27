@@ -1,6 +1,7 @@
 # res://Data/Items/EquipmentDatabase.gd
 # AUTOLOAD this script as "EquipmentDatabase", replacing the old ones.
 extends Node
+'''
 var body_size = 70
 var head_size = 40
 var equipment_data: Dictionary = {}
@@ -149,3 +150,4 @@ func _define_body_parts(body_part_names: Array):
 			new_texture =  ImageTexture.create_from_image(image)
 			body_part.texture_right = new_texture
 			
+'''

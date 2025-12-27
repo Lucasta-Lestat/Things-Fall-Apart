@@ -1,0 +1,221 @@
+{
+	"equipment": [
+		{
+			"name": "Steel Helmet",
+			"type": "helmet",
+			"primary_color": "#808080",
+			"secondary_color": "#606060",
+			"detail_color": "#c0c0c0"
+		},
+		{
+			"name": "Golden Crown Helm",
+			"type": "helmet",
+			"primary_color": "#ffd700",
+			"secondary_color": "#b8860b",
+			"detail_color": "#ffffff"
+		},
+		{
+			"name": "Dark Iron Helmet",
+			"type": "helmet",
+			"primary_color": "#2d2d2d",
+			"secondary_color": "#1a1a1a",
+			"detail_color": "#4a4a4a"
+		},
+		{
+			"name": "Bronze Helmet",
+			"type": "helmet",
+			"primary_color": "#cd7f32",
+			"secondary_color": "#8b4513",
+			"detail_color": "#daa520"
+		},
+		{
+			"name": "Dark Hood",
+			"type": "hood",
+			"primary_color": "#1a1a1a",
+			"secondary_color": "#0d0d0d",
+			"detail_color": "#333333"
+		},
+		{
+			"name": "Brown Traveler's Hood",
+			"type": "hood",
+			"primary_color": "#5d4037",
+			"secondary_color": "#3e2723",
+			"detail_color": "#8d6e63"
+		},
+		{
+			"name": "Green Ranger Hood",
+			"type": "hood",
+			"primary_color": "#2e7d32",
+			"secondary_color": "#1b5e20",
+			"detail_color": "#4caf50"
+		},
+		{
+			"name": "Crimson Hood",
+			"type": "hood",
+			"primary_color": "#b71c1c",
+			"secondary_color": "#7f0000",
+			"detail_color": "#ef5350"
+		},
+		{
+			"name": "Cultist Hood",
+			"type": "hood",
+			"primary_color": "#4a148c",
+			"secondary_color": "#311b92",
+			"detail_color": "#7c4dff"
+		},
+		{
+			"name": "Leather Backpack",
+			"type": "backpack",
+			"primary_color": "#8b4513",
+			"secondary_color": "#5d4037",
+			"detail_color": "#a1887f"
+		},
+		{
+			"name": "Adventurer's Pack",
+			"type": "backpack",
+			"primary_color": "#4e342e",
+			"secondary_color": "#3e2723",
+			"detail_color": "#d4af37"
+		},
+		{
+			"name": "Military Rucksack",
+			"type": "backpack",
+			"primary_color": "#33691e",
+			"secondary_color": "#1b5e20",
+			"detail_color": "#558b2f"
+		},
+		{
+			"name": "Red Travel Cape",
+			"type": "cape",
+			"primary_color": "#c62828",
+			"secondary_color": "#b71c1c",
+			"detail_color": "#ffd700"
+		},
+		{
+			"name": "Royal Blue Cape",
+			"type": "cape",
+			"primary_color": "#1565c0",
+			"secondary_color": "#0d47a1",
+			"detail_color": "#ffd700"
+		},
+		{
+			"name": "Shadow Cloak",
+			"type": "cape",
+			"primary_color": "#212121",
+			"secondary_color": "#000000",
+			"detail_color": "#424242"
+		},
+		{
+			"name": "White Paladin Cape",
+			"type": "cape",
+			"primary_color": "#fafafa",
+			"secondary_color": "#e0e0e0",
+			"detail_color": "#ffd700"
+		},
+		{
+			"name": "Steel Pauldrons",
+			"type": "shoulder_pads",
+			"primary_color": "#9e9e9e",
+			"secondary_color": "#757575",
+			"detail_color": "#bdbdbd"
+		},
+		{
+			"name": "Spiked Pauldrons",
+			"type": "shoulder_pads",
+			"primary_color": "#424242",
+			"secondary_color": "#212121",
+			"detail_color": "#b71c1c"
+		},
+		{
+			"name": "Golden Pauldrons",
+			"type": "shoulder_pads",
+			"primary_color": "#ffc107",
+			"secondary_color": "#ff8f00",
+			"detail_color": "#ffffff"
+		},
+		{
+			"name": "Leather Pants",
+			"type": "pants",
+			"primary_color": "#5d4037",
+			"secondary_color": "#3e2723",
+			"detail_color": "#8d6e63"
+		},
+		{
+			"name": "Dark Trousers",
+			"type": "pants",
+			"primary_color": "#212121",
+			"secondary_color": "#1a1a1a",
+			"detail_color": "#424242"
+		},
+		{
+			"name": "Armored Leggings",
+			"type": "pants",
+			"primary_color": "#616161",
+			"secondary_color": "#424242",
+			"detail_color": "#9e9e9e"
+		},
+		{
+			"name": "Green Forest Pants",
+			"type": "pants",
+			"primary_color": "#33691e",
+			"secondary_color": "#1b5e20",
+			"detail_color": "#558b2f"
+		},
+		{
+			"name": "Royal Blue Pants",
+			"type": "pants",
+			"primary_color": "#1565c0",
+			"secondary_color": "#0d47a1",
+			"detail_color": "#ffd700"
+		},
+		{
+			"name": "Crimson Pants",
+			"type": "pants",
+			"primary_color": "#b71c1c",
+			"secondary_color": "#7f0000",
+			"detail_color": "#ef5350"
+		},
+		{
+			"name": "Leather Boots",
+			"type": "boots",
+			"primary_color": "#5d4037",
+			"secondary_color": "#3e2723",
+			"detail_color": "#8d6e63"
+		},
+		{
+			"name": "Steel Greaves",
+			"type": "boots",
+			"primary_color": "#78909c",
+			"secondary_color": "#546e7a",
+			"detail_color": "#b0bec5"
+		},
+		{
+			"name": "Dark Boots",
+			"type": "boots",
+			"primary_color": "#212121",
+			"secondary_color": "#1a1a1a",
+			"detail_color": "#424242"
+		},
+		{
+			"name": "Golden Boots",
+			"type": "boots",
+			"primary_color": "#ffc107",
+			"secondary_color": "#ff8f00",
+			"detail_color": "#ffffff"
+		},
+		{
+			"name": "Forest Boots",
+			"type": "boots",
+			"primary_color": "#33691e",
+			"secondary_color": "#1b5e20",
+			"detail_color": "#558b2f"
+		},
+		{
+			"name": "Crimson Boots",
+			"type": "boots",
+			"primary_color": "#b71c1c",
+			"secondary_color": "#7f0000",
+			"detail_color": "#ef5350"
+		}
+	]
+}

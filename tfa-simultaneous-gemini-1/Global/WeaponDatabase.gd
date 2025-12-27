@@ -1,7 +1,7 @@
 # res://Data/Weapons/WeaponDatabase.gd
 # An autoload singleton for all your game's weapons.
 extends Node
-
+'''
 var weapons: Dictionary = {}
 
 func _ready():
@@ -32,3 +32,4 @@ func _define_weapons():
 
 func get_weapon(weapon_id: StringName) -> Weapon:
 	return weapons.get(weapon_id, null)
+'''

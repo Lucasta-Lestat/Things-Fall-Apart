@@ -4,81 +4,109 @@
 			"name": "Default Human",
 			"skin_color": "#E8BEAC",
 			"hair_color": "#4a3728",
+			"faction": "player",
 			"move_speed": 150.0,
 			"body_width": 28.0,
 			"body_height": 14.0
 		},
 		{
-			"name": "Pale Wanderer",
-			"skin_color": "#F5E6D3",
-			"hair_color": "#c9a86c",
+			"name": "Town Guard",
+			"skin_color": "#E8BEAC",
+			"hair_color": "#1a1a1a",
+			"faction": "town_guard",
 			"move_speed": 120.0,
-			"body_width": 24.0,
-			"body_height": 12.0
+			"body_width": 30.0,
+			"body_height": 15.0
 		},
 		{
-			"name": "Dark Knight",
+			"name": "Merchant",
+			"skin_color": "#F5E6D3",
+			"hair_color": "#c9a86c",
+			"faction": "merchants",
+			"move_speed": 100.0,
+			"body_width": 26.0,
+			"body_height": 14.0
+		},
+		{
+			"name": "Bandit",
+			"skin_color": "#D4A574",
+			"hair_color": "#2d2d2d",
+			"faction": "bandits",
+			"move_speed": 140.0,
+			"body_width": 26.0,
+			"body_height": 13.0
+		},
+		{
+			"name": "Bandit Chief",
 			"skin_color": "#8D5524",
 			"hair_color": "#1a1a1a",
-			"move_speed": 100.0,
+			"faction": "bandits",
+			"move_speed": 110.0,
 			"body_width": 32.0,
 			"body_height": 16.0
+		},
+		{
+			"name": "Rebel Fighter",
+			"skin_color": "#E8BEAC",
+			"hair_color": "#8B0000",
+			"faction": "rebels",
+			"move_speed": 160.0,
+			"body_width": 26.0,
+			"body_height": 13.0
 		},
 		{
 			"name": "Forest Elf",
 			"skin_color": "#C8E6C9",
 			"hair_color": "#2e7d32",
+			"faction": "neutral",
 			"move_speed": 200.0,
 			"body_width": 22.0,
 			"body_height": 11.0
 		},
 		{
-			"name": "Flame Sprite",
-			"skin_color": "#FFAB91",
-			"hair_color": "#ff5722",
-			"move_speed": 180.0,
-			"body_width": 20.0,
-			"body_height": 10.0
-		},
-		{
-			"name": "Ice Golem",
-			"skin_color": "#B3E5FC",
-			"hair_color": "#0277bd",
-			"move_speed": 60.0,
-			"body_width": 36.0,
-			"body_height": 18.0
-		},
-		{
-			"name": "Shadow",
-			"skin_color": "#37474F",
-			"hair_color": "#1a1a1a",
-			"move_speed": 250.0,
+			"name": "Cultist",
+			"skin_color": "#E0E0E0",
+			"hair_color": "#4a148c",
+			"faction": "cultists",
+			"move_speed": 130.0,
 			"body_width": 24.0,
 			"body_height": 12.0
 		},
 		{
-			"name": "Golden One",
-			"skin_color": "#FFD54F",
-			"hair_color": "#ff8f00",
-			"move_speed": 140.0,
+			"name": "Skeleton Warrior",
+			"skin_color": "#E0E0D1",
+			"hair_color": "#E0E0D1",
+			"faction": "undead",
+			"move_speed": 90.0,
+			"body_width": 24.0,
+			"body_height": 12.0
+		},
+		{
+			"name": "Demon Imp",
+			"skin_color": "#B71C1C",
+			"hair_color": "#1a1a1a",
+			"faction": "demons",
+			"move_speed": 180.0,
+			"body_width": 18.0,
+			"body_height": 10.0
+		},
+		{
+			"name": "Noble Lord",
+			"skin_color": "#FFDAB9",
+			"hair_color": "#4a3728",
+			"faction": "nobles",
+			"move_speed": 100.0,
 			"body_width": 28.0,
 			"body_height": 14.0
 		},
 		{
-			"name": "Redhead",
-			"skin_color": "#FFDAB9",
-			"hair_color": "#8B0000",
-			"move_speed": 150.0,
-			"body_width": 26.0,
-			"body_height": 13.0
-		},
-		{
-			"name": "Blonde",
-			"skin_color": "#F5DEB3",
-			"hair_color": "#F0E68C",
-			"move_speed": 160.0,
-			"body_width": 25.0,
-			"body_height": 12.0
+			"name": "Wild Wolf",
+			"skin_color": "#696969",
+			"hair_color": "#4a4a4a",
+			"faction": "wildlife",
+			"move_speed": 220.0,
+			"body_width": 20.0,
+			"body_height": 16.0
 		}
 	]
 }

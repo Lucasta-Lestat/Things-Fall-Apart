@@ -12,8 +12,87 @@ var spawned_characters: Array = []
 
 func _ready() -> void:
 	load_characters_database()
-	spawn_character_by_name("Default Human", Vector2(40.0,40.0))
-
+	var character_1 = spawn_character_by_name("Default Human", Vector2(40.0,40.0))
+	character_1.give_weapon({
+		"name": "Steel Longsword",
+		"type": "longsword",
+		"damage_type": "slashing",
+		"base_damage": 14,
+		"blade_color": "#c0c0c0",
+		"handle_color": "#2d2d2d",
+		"accent_color": "#ffd700"
+	})
+	
+	character_1.give_weapon({
+		"name": "Battle Axe",
+		"type": "axe",
+		"damage_type": "slashing",
+		"base_damage": 16,
+		"blade_color": "#b0b0b0",
+		"handle_color": "#4a3728",
+		"accent_color": "#cd7f32"
+	})
+	
+	character_1.give_weapon({
+		"name": "War Spear",
+		"type": "spear",
+		"damage_type": "piercing",
+		"base_damage": 15,
+		"blade_color": "#c0c0c0",
+		"handle_color": "#2d2d2d",
+		"accent_color": "#b22222"
+	})
+	
+	character_1.give_weapon({
+		"name": "Iron Mace",
+		"type": "mace",
+		"damage_type": "bludgeoning",
+		"base_damage": 13,
+		"blade_color": "#696969",
+		"handle_color": "#4a3728",
+		"accent_color": "#808080"
+	})
+	
+	# Give the character some equipment
+	character_1.equip_equipment({
+		"name": "Steel Helmet",
+		"type": "helmet",
+		"primary_color": "#808080",
+		"secondary_color": "#606060",
+		"detail_color": "#c0c0c0"
+	})
+	
+	character_1.equip_equipment({
+		"name": "Leather Backpack",
+		"type": "backpack",
+		"primary_color": "#8b4513",
+		"secondary_color": "#5d4037",
+		"detail_color": "#a1887f"
+	})
+	
+	character_1.equip_equipment({
+		"name": "Steel Pauldrons",
+		"type": "shoulder_pads",
+		"primary_color": "#9e9e9e",
+		"secondary_color": "#757575",
+		"detail_color": "#bdbdbd"
+	})
+	
+	character_1.equip_equipment({
+		"name": "Leather Pants",
+		"type": "pants",
+		"primary_color": "#5d4037",
+		"secondary_color": "#3e2723",
+		"detail_color": "#8d6e63"
+	})
+	
+	character_1.equip_equipment({
+		"name": "Leather Boots",
+		"type": "boots",
+		"primary_color": "#5d4037",
+		"secondary_color": "#3e2723",
+		"detail_color": "#8d6e63"
+	})
 func load_characters_database() -> void:
 	if not FileAccess.file_exists(characters_json_path):
 		push_warning("Characters JSON not found at: " + characters_json_path)

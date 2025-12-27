@@ -1,6 +1,6 @@
 # res://Data/Weapons/Weapon.gd
 extends Resource
-class_name Weapon
+class_name Weapon0
 
 
 
