@@ -6,10 +6,13 @@ class_name ProceduralCharacter
 # Character data
 var character_data: Dictionary = {}
 var skin_color: Color = Color.BEIGE
+var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
 
 # Body parts
 var body: Line2D
+var head: Line2D
+var hair: Line2D
 var left_arm: Line2D
 var right_arm: Line2D
 
@@ -20,8 +23,8 @@ var is_moving: bool = false
 @export var move_speed: float = 150.0
 @export var rotation_speed: float = 8.0
 
-# Arm IK settings
-const ARM_SEGMENT_LENGTHS: Array[float] = [25.0, 20.0, 12.0]
+# Arm IK settings (smaller for top-down proportions)
+const ARM_SEGMENT_LENGTHS: Array[float] = [12.0, 10.0, 6.0]
 const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(-135, 135),  # Shoulder
 	Vector2(0, 145),      # Elbow
@@ -35,9 +38,12 @@ var right_arm_joints: Array[Vector2] = []
 var left_arm_target: Vector2
 var right_arm_target: Vector2
 
-# Body dimensions
-@export var body_width: float = 20.0
-@export var body_height: float = 35.0
+# Body dimensions (top-down view: width is left-right, height is front-back)
+@export var body_width: float = 28.0   # Shoulder width (horizontal)
+@export var body_height: float = 14.0  # Body depth/thickness (vertical in top-down)
+@export var head_width: float = 14.0   # Head width (left-right)
+@export var head_length: float = 18.0  # Head length (front-back, oval shape)
+@export var shoulder_y_offset: float = 4.0  # How far back shoulders are from head center (positive = back)
 
 signal character_reached_target
 
@@ -53,6 +59,10 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("skin_color"):
 		skin_color = Color.html(data["skin_color"])
 	
+	# Parse hair color
+	if data.has("hair_color"):
+		hair_color = Color.html(data["hair_color"])
+	
 	# Body is darker to appear "below" head
 	body_color = skin_color.darkened(0.15)
 	
@@ -66,34 +76,67 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("body_height"):
 		body_height = data["body_height"]
 	
+	if data.has("head_width"):
+		head_width = data["head_width"]
+	
+	if data.has("head_length"):
+		head_length = data["head_length"]
+	
 	# Update visuals
 	_update_colors()
 
 func _create_body_parts() -> void:
-	# Create body (oval/rounded rectangle shape using Line2D)
-	body = Line2D.new()
-	body.name = "Body"
-	body.width = body_width
-	body.default_color = body_color if body_color else skin_color.darkened(0.15)
-	body.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	body.end_cap_mode = Line2D.LINE_CAP_ROUND
-	add_child(body)
-	
-	# Body is a vertical line that will appear as an oval with round caps
-	body.add_point(Vector2(0, -body_height / 2))
-	body.add_point(Vector2(0, body_height / 2))
-	
-	# Create left arm
+	# Create arms first (behind everything)
 	left_arm = _create_arm("LeftArm")
+	left_arm.z_index = -2
 	add_child(left_arm)
 	
-	# Create right arm
 	right_arm = _create_arm("RightArm")
+	right_arm.z_index = -2
 	add_child(right_arm)
 	
-	# Arms render behind body
-	left_arm.z_index = -1
-	right_arm.z_index = -1
+	# Create body (horizontal capsule for top-down view - shoulders)
+	body = Line2D.new()
+	body.name = "Body"
+	body.width = body_height  # Height becomes the "thickness" in top-down
+	body.default_color = skin_color  # Same color as head - uniform body color
+	body.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	body.end_cap_mode = Line2D.LINE_CAP_ROUND
+	body.z_index = -1  # Behind head
+	add_child(body)
+	
+	# Body is a horizontal line (left shoulder to right shoulder), positioned behind head
+	body.add_point(Vector2(-body_width / 2, shoulder_y_offset))
+	body.add_point(Vector2(body_width / 2, shoulder_y_offset))
+	
+	# Create hair (behind head, covers back/top of head)
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 4  # Slightly wider than head
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0  # Behind head
+	add_child(hair)
+	
+	# Hair covers the back portion of the head (positive Y = back of head)
+	hair.add_point(Vector2(0, -head_length * 0.1))
+	hair.add_point(Vector2(0, head_length * 0.4))
+	
+	# Create head (oval shape - vertical line with width for left-right dimension)
+	head = Line2D.new()
+	head.name = "Head"
+	head.width = head_width  # Width of the oval (left-right)
+	head.default_color = skin_color
+	head.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head.z_index = 1  # On top of hair
+	add_child(head)
+	
+	# Head is an oval - line goes front to back, width gives left-right dimension
+	# Negative Y = front (face), Positive Y = back of head
+	head.add_point(Vector2(0, -head_length * 0.35))  # Front of head (face)
+	head.add_point(Vector2(0, head_length * 0.25))   # Back of head (covered by hair)
 
 func _create_arm(arm_name: String) -> Line2D:
 	var arm = Line2D.new()
@@ -109,7 +152,7 @@ func _create_arm(arm_name: String) -> Line2D:
 	curve.add_point(Vector2(0.6, 0.7))    # Forearm
 	curve.add_point(Vector2(1.0, 0.5))    # Hand: half width
 	arm.width_curve = curve
-	arm.width = 12.0
+	arm.width = 7.0  # Smaller for top-down view
 	
 	return arm
 
@@ -118,8 +161,9 @@ func _initialize_arms() -> void:
 	left_arm_joints.clear()
 	right_arm_joints.clear()
 	
-	# Left arm starts at left side of body
-	var left_shoulder = Vector2(-body_width / 2, -body_height / 4)
+	# Shoulders are at the BACK of the body (positive Y = behind)
+	# Left arm extends to the LEFT (negative X)
+	var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset)
 	left_arm_joints.append(left_shoulder)
 	var pos = left_shoulder
 	for length in ARM_SEGMENT_LENGTHS:
@@ -127,8 +171,8 @@ func _initialize_arms() -> void:
 		left_arm_joints.append(pos)
 	left_arm_target = left_arm_joints[-1]
 	
-	# Right arm starts at right side of body
-	var right_shoulder = Vector2(body_width / 2, -body_height / 4)
+	# Right arm extends to the RIGHT (positive X)
+	var right_shoulder = Vector2(body_width / 2, shoulder_y_offset)
 	right_arm_joints.append(right_shoulder)
 	pos = right_shoulder
 	for length in ARM_SEGMENT_LENGTHS:
@@ -140,7 +184,11 @@ func _initialize_arms() -> void:
 
 func _update_colors() -> void:
 	if body:
-		body.default_color = body_color
+		body.default_color = skin_color  # Same as head
+	if head:
+		head.default_color = skin_color
+	if hair:
+		hair.default_color = hair_color
 	if left_arm:
 		left_arm.default_color = skin_color
 	if right_arm:
@@ -158,13 +206,15 @@ func _handle_input() -> void:
 	
 	# Right click: turn to face point
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		target_rotation = (mouse_pos - global_position).angle()
+		# Add PI/2 (90 degrees) because our character's forward is -Y, not +X
+		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		is_moving = false
 	
 	# Left click: turn and move to point
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		target_position = mouse_pos
-		target_rotation = (mouse_pos - global_position).angle()
+		# Add PI/2 (90 degrees) because our character's forward is -Y, not +X
+		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		is_moving = true
 
 func _get_adjusted_mouse_position() -> Vector2:
@@ -207,50 +257,27 @@ func _update_movement(delta: float) -> void:
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
 			global_position += move_dir * min(move_speed * delta, distance)
-			
-			# Swing arms while walking
-			_animate_walking_arms(delta)
 		else:
 			is_moving = false
 			emit_signal("character_reached_target")
 
-func _animate_walking_arms(delta: float) -> void:
-	# Simple arm swing based on time
-	var swing = sin(Time.get_ticks_msec() * 0.01) * 20.0
-	
-	# Arms swing opposite to each other
-	var left_shoulder = Vector2(-body_width / 2, -body_height / 4)
-	var right_shoulder = Vector2(body_width / 2, -body_height / 4)
-	
-	# Calculate swing targets in local space, then we'll handle in IK
+func _update_arm_ik() -> void:
+	# Shoulder positions - at the sides and toward the back
+	var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset)
+	var right_shoulder = Vector2(body_width / 2, shoulder_y_offset)
 	var arm_length = ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]
 	
-	left_arm_target = left_shoulder + Vector2(-arm_length * 0.7, swing)
-	right_arm_target = right_shoulder + Vector2(arm_length * 0.7, -swing)
-
-func _update_arm_ik() -> void:
-	# When not moving, arms can reach toward mouse or rest position
-	if not is_moving:
-		var local_mouse = get_local_mouse_position()
-		
-		# Decide which arm reaches toward mouse based on which side it's on
-		var left_shoulder = Vector2(-body_width / 2, -body_height / 4)
-		var right_shoulder = Vector2(body_width / 2, -body_height / 4)
-		var arm_length = ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]
-		
-		# Rest positions
-		var left_rest = left_shoulder + Vector2(-arm_length * 0.6, arm_length * 0.3)
-		var right_rest = right_shoulder + Vector2(arm_length * 0.6, arm_length * 0.3)
-		
-		left_arm_target = left_rest
-		right_arm_target = right_rest
+	# Rest positions: arms curling forward and inward (hands near front of body)
+	# Negative Y = forward, hands come inward toward center
+	left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
+	right_arm_target = right_shoulder + Vector2(-arm_length * 0.3, -arm_length * 0.6)
 	
 	# Solve IK for both arms
 	_solve_arm_ik(left_arm_joints, left_arm_target, true)
 	_solve_arm_ik(right_arm_joints, right_arm_target, false)
 
 func _solve_arm_ik(joints: Array[Vector2], target: Vector2, is_left: bool) -> void:
-	var shoulder_pos = Vector2(-body_width / 2, -body_height / 4) if is_left else Vector2(body_width / 2, -body_height / 4)
+	var shoulder_pos = Vector2(-body_width / 2, shoulder_y_offset) if is_left else Vector2(body_width / 2, shoulder_y_offset)
 	
 	for _iter in range(IK_ITERATIONS):
 		# Forward pass: end to base
@@ -270,8 +297,14 @@ func _apply_arm_constraint(joints: Array[Vector2], joint_idx: int, direction: Ve
 	var angle = direction.angle()
 	
 	# Get parent angle
-	var parent_angle: float = 0.0 if is_left else PI  # Default facing direction
-	if joint_idx > 0:
+	var parent_angle: float
+	if joint_idx == 0:
+		# Shoulder: default arm direction is outward horizontally
+		if is_left:
+			parent_angle = PI  # 180 degrees (pointing left)
+		else:
+			parent_angle = 0.0  # 0 degrees (pointing right)
+	else:
 		var parent_dir = joints[joint_idx] - joints[joint_idx - 1]
 		parent_angle = parent_dir.angle()
 	
@@ -283,7 +316,7 @@ func _apply_arm_constraint(joints: Array[Vector2], joint_idx: int, direction: Ve
 	while relative_angle < -PI:
 		relative_angle += TAU
 	
-	# Mirror constraints for left arm
+	# Apply constraints
 	var constraint = ARM_JOINT_CONSTRAINTS[joint_idx]
 	var min_ang = deg_to_rad(constraint.x)
 	var max_ang = deg_to_rad(constraint.y)
