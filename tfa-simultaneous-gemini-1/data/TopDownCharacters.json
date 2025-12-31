@@ -5,9 +5,12 @@
 			"skin_color": "#E8BEAC",
 			"hair_color": "#4a3728",
 			"faction": "player",
-			"move_speed": 150.0,
-			"body_width": 28.0,
-			"body_height": 14.0
+			"dexterity": 50,
+			"strength": 50,
+			"consitution": 50,
+			"will": 50,
+			
+			"size": "default_human"
 		},
 		{
 			"name": "Town Guard",

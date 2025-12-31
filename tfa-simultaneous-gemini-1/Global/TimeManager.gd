@@ -1,3 +1,4 @@
+#TimeManager.gd
 extends Node
 
 # Time tracking

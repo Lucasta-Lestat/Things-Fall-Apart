@@ -36,6 +36,9 @@ TimeManager="*res://Global/TimeManager.gd"
 FluidManager="*res://Global/FluidManager.gd"
 VisibilityManager="*res://Global/VisibilityManager.gd"
 GameLog="*res://Global/GameLog.gd"
+ProceduralItemDatabase="*res://Global/ProceduralItemDatabase.gd"
+SfxManager="*res://Global/SFXManager.gd"
+MusicManager="*res://Global/MusicManager.gd"
 
 [display]
 

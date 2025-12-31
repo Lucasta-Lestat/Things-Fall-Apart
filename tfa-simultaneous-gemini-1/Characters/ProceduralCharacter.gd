@@ -2,16 +2,17 @@
 # Attach to a Node2D that will be the character root
 extends Node2D
 class_name ProceduralCharacter
-
+@onready var game2 = get_node("/root/TopDownCharacterScene")
 # Character data
 var character_data: Dictionary = {}
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-
+var traits = ["Male"]
 # Faction
 var faction_id: String = "neutral"
-
+var is_protagonist = false
+var AI_enabled = false
 # Body parts
 var body: Line2D
 var head: Line2D
@@ -21,33 +22,32 @@ var right_arm: Line2D
 var left_leg: Line2D
 var right_leg: Line2D
 
+@export var body_size_mod = 1.1
 # Leg animation
-var leg_swing_time: float = 0.0
-@export var leg_swing_speed: float = 12.0  # How fast legs oscillate
-@export var leg_swing_amount: float = 8.0  # How far legs swing
-@export var leg_length: float = 16.0       # Length of each leg
-@export var leg_width: float = 6.0         # Thickness of legs
-@export var leg_spacing: float = 6.0       # Distance between legs (left-right)
+var leg_swing_time: float = body_size_mod * Globals.default_leg_swing_time
+@export var leg_swing_speed: float = body_size_mod *Globals.default_leg_swing_speed  # How fast legs oscillate
+@export var leg_swing_amount: float = body_size_mod * Globals.default_leg_swing_amount  # How far legs swing
+@export var leg_length: float = body_size_mod *Globals.default_leg_length       # Length of each leg
+@export var leg_width: float = body_size_mod *Globals.default_leg_width         # Thickness of legs
+@export var leg_spacing: float =body_size_mod * Globals.default_leg_spacing       # Distance between legs (left-right)
 
-# Equipment slots (visual)
-var head_equipment: Equipment = null
-var back_equipment: Equipment = null
-var shoulder_equipment: Equipment = null
-var offhand_equipment: Equipment = null
-var legs_equipment: Equipment = null  # Pants
-var feet_equipment: Equipment = null  # Boots
+# Equipment slots (using new shape-based system)
+var head_equipment: EquipmentShape = null
+var torso_equipment: EquipmentShape = null  # Breastplate, armor covering body
+var back_equipment: EquipmentShape = null   # Cape, backpack
+var legs_equipment: EquipmentShape = null   # Pants
+var feet_equipment: EquipmentShape = null   # Boots
 
-# Equipment holders
+# Equipment holders (Node2D attachment points)
 var head_slot: Node2D
+var torso_slot: Node2D
 var back_slot: Node2D
-var shoulder_slot: Node2D
-var offhand_slot: Node2D
 var legs_slot: Node2D
 var feet_slot: Node2D
 
-# Inventory and weapons
+# Inventory and weapons (using new shape-based system)
 var inventory: Inventory
-var current_weapon: Weapon = null
+var current_weapon: WeaponShape = null
 var weapon_holder: Node2D
 
 # Attack system
@@ -61,7 +61,7 @@ var is_moving: bool = false
 @export var rotation_speed: float = 8.0
 
 # Arm IK settings (smaller for top-down proportions)
-const ARM_SEGMENT_LENGTHS: Array[float] = [12.0, 10.0, 6.0]
+var ARM_SEGMENT_LENGTHS: Array = Globals.DEFAULT_ARM_SEGMENT_LENGTHS.map(func(length): return length * body_size_mod)
 const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(-135, 135),  # Shoulder
 	Vector2(0, 145),      # Elbow
@@ -75,24 +75,105 @@ var right_arm_joints: Array[Vector2] = []
 var left_arm_target: Vector2
 var right_arm_target: Vector2
 
+# Base attributes (1-1000 scale, 10 is average human)
+@export var strength: int = 50      # Damage multiplier, weapon clash power
+@export var constitution: int = 50  # HP multiplier, stagger resistance
+@export var dexterity: int = 50     # Speed multiplier (move + attack)
+
+# Blood drop texture - set this in _ready or via export
+@export var blood_drop_texture: Texture2D
+
+# Configuration
+@export_group("Wound Lines")
+@export var wound_line_color: Color = Color(0.6, 0.0, 0.0, 0.9)  # Dark red
+@export var wound_line_width: float = 2.0
+@export var wound_line_min_length: float = 8.0
+@export var wound_line_max_length: float = 20.0
+
+@export_group("Blood Drops")
+@export var blood_drops_min: int = 3
+@export var blood_drops_max: int = 8
+@export var blood_drop_min_scale: float = 0.3
+@export var blood_drop_max_scale: float = 0.8
+@export var blood_drop_speed_min: float = 50.0
+@export var blood_drop_speed_max: float = 150.0
+@export var blood_drop_fade_time: float = 1.5
+@export var blood_drop_gravity: float = 0.0  # Set > 0 for top-down gravity effect
+
+@export_group("Severing")
+@export var sever_blood_multiplier: float = 3.0  # More blood when severed
+@export var stump_color: Color = Color(0.5, 0.0, 0.0, 1.0)  # Dark red stump
+
+# Active wound lines on each limb (LimbType -> Array of Line2D)
+var wound_lines: Dictionary = {}
+
+# Pool for blood drop sprites
+var blood_pool: Array[Sprite2D] = []
+var active_blood_drops: Array[Dictionary] = []
+
+# Track severed limbs for visual updates
+var severed_limbs: Dictionary = {}  # LimbType -> bool
+
+var conditions = {}
+# Derived stats (calculated from attributes)
+var max_hp: int:
+	get: return 6 + (constitution)/10  # 50 base + 10 per CON above 10
+var blood_amount = max_hp
+
+var consciousness: int:
+	get: return blood_amount
+
+var damage_multiplier: float:
+	get: return 0.5 + (strength / 100.0)  # 0.5 at STR 0, 1.5 at STR 100
+
+var speed_multiplier: float:
+	get: return 0.5 + (dexterity / 100.0)  # Same scaling as damage
+
+var attack_speed_multiplier: float:
+	get: return 0.5 + (dexterity / 100.0)  
+
+var clash_power: float:
+	get: return strength + (constitution * 0.3)  # STR is main, CON helps brace
+
+# Load from dictionary
+
+func to_data() -> Dictionary:
+	return {
+		"strength": strength,
+		"constitution": constitution,
+		"dexterity": dexterity
+	}
+
 # Body dimensions (top-down view: width is left-right, height is front-back)
-@export var body_width: float = 28.0   # Shoulder width (horizontal)
-@export var body_height: float = 14.0  # Body depth/thickness (vertical in top-down)
-@export var head_width: float = 14.0   # Head width (left-right)
-@export var head_length: float = 14.0  # Head length (front-back, oval shape)
-@export var shoulder_y_offset: float = 4.0  # How far back shoulders are from head center (positive = back)
+@export var body_width: float = Globals.default_body_width   # Shoulder width (horizontal)
+@export var body_height: float = Globals.default_body_height  # Body depth/thickness (vertical in top-down)
+@export var head_width: float = Globals.default_head_width   # Head width (left-right)
+@export var head_length: float = Globals.default_head_length  # Head length (front-back, oval shape)
+@export var shoulder_y_offset: float = Globals.default_shoulder_y_offset # How far back shoulders are from head center (positive = back)
+
+# Collision settings
+@export var collision_enabled: bool = true
+var collision_radius: float:
+	get: return max(body_width, head_width) / 2.0 + 2.0  # Derived from body size
+@export var minimum_separation: float = 5.0  # Extra buffer between characters
+var collision_shape: CollisionShape2D
+var collision_area: Area2D
 
 signal character_reached_target
-signal weapon_changed(weapon: Weapon)
+signal weapon_changed(weapon: WeaponShape)
 signal attack_hit(damage: int, damage_type: int)
 
 func _ready() -> void:
 	target_position = global_position
+	blood_drop_texture = load("res://vfx/blood drop.png")
 	_setup_inventory()
 	_setup_equipment_slots()
 	_setup_attack_system()
+	_setup_collision()
 	_create_body_parts()
 	_initialize_arms()
+	initialize_limbs(constitution)
+	TimeManager.time_updated.connect(_on_time_updated)
 
 func _setup_inventory() -> void:
 	inventory = Inventory.new()
@@ -126,20 +207,16 @@ func _setup_equipment_slots() -> void:
 	feet_slot.z_index = -3
 	add_child(feet_slot)
 	
-	shoulder_slot = Node2D.new()
-	shoulder_slot.name = "ShoulderSlot"
-	shoulder_slot.z_index = 0  # At body level
-	add_child(shoulder_slot)
+	# Torso slot (breastplate, armor) - covers body, above arms
+	torso_slot = Node2D.new()
+	torso_slot.name = "TorsoSlot"
+	torso_slot.z_index = 0  # At body level, above arms
+	add_child(torso_slot)
 	
 	head_slot = Node2D.new()
 	head_slot.name = "HeadSlot"
 	head_slot.z_index = 2  # Above head
 	add_child(head_slot)
-	
-	offhand_slot = Node2D.new()
-	offhand_slot.name = "OffhandSlot"
-	offhand_slot.z_index = 1
-	add_child(offhand_slot)
 
 func _setup_attack_system() -> void:
 	attack_animator = AttackAnimator.new()
@@ -149,6 +226,63 @@ func _setup_attack_system() -> void:
 	# Connect attack signals
 	attack_animator.attack_hit_frame.connect(_on_attack_hit)
 	attack_animator.attack_finished.connect(_on_attack_finished)
+
+func _setup_collision() -> void:
+	if not collision_enabled:
+		return
+	
+	# Create Area2D for collision detection
+	collision_area = Area2D.new()
+	collision_area.name = "CollisionArea"
+	collision_area.collision_layer = 2  # Character collision layer
+	collision_area.collision_mask = 2   # Detect other characters
+	add_child(collision_area)
+	
+	# Create circular collision shape based on body dimensions
+	collision_shape = CollisionShape2D.new()
+	collision_shape.name = "CollisionShape"
+	var circle = CircleShape2D.new()
+	circle.radius = collision_radius
+	collision_shape.shape = circle
+	collision_area.add_child(collision_shape)
+
+func _update_collision_shape() -> void:
+	# Call this if body dimensions change at runtime
+	if collision_shape and collision_shape.shape is CircleShape2D:
+		collision_shape.shape.radius = collision_radius
+
+func get_overlapping_characters() -> Array[ProceduralCharacter]:
+	"""Get all characters currently overlapping with this one"""
+	var result: Array[ProceduralCharacter] = []
+	if not collision_area:
+		return result
+	
+	for area in collision_area.get_overlapping_areas():
+		var parent = area.get_parent()
+		if parent is ProceduralCharacter and parent != self:
+			result.append(parent)
+	return result
+
+func get_separation_vector() -> Vector2:
+	"""Calculate a vector to push this character away from overlapping characters"""
+	var separation = Vector2.ZERO
+	var overlapping = get_overlapping_characters()
+	
+	for other in overlapping:
+		var to_self = global_position - other.global_position
+		var distance = to_self.length()
+		var min_dist = collision_radius + other.collision_radius + minimum_separation
+		
+		if distance < min_dist and distance > 0.01:
+			# Calculate push strength (stronger when closer)
+			var overlap = min_dist - distance
+			var push_dir = to_self.normalized()
+			separation += push_dir * overlap
+		elif distance <= 0.01:
+			# Characters are at same position, push in random direction
+			separation += Vector2(randf() - 0.5, randf() - 0.5).normalized() * min_dist
+	
+	return separation
 
 func load_from_data(data: Dictionary) -> void:
 	character_data = data
@@ -173,17 +307,39 @@ func load_from_data(data: Dictionary) -> void:
 		move_speed = data["move_speed"]
 	
 	if data.has("body_width"):
-		body_width = data["body_width"]
+		if data.has("size"):
+			if data.size == "default":
+				pass
+			else:
+				body_width = data["body_width"]
 	
 	if data.has("body_height"):
-		body_height = data["body_height"]
+		if data.has("size"):
+			if data.size == "default":
+				pass
+			else:
+				body_height = data["body_height"]
 	
 	if data.has("head_width"):
-		head_width = data["head_width"]
+		if data.has("size"):
+			if data.size == "default":
+				pass
+			else:
+				head_width = data["head_width"]
 	
 	if data.has("head_length"):
-		head_length = data["head_length"]
-	
+		if data.has("size"):
+			if data.size == "default":
+				pass
+			else:
+				head_length = data["head_length"]
+	if data.has("strength"): strength = data["strength"]
+	if data.has("constitution"): constitution = data["constitution"]
+	if data.has("dexterity"): dexterity = data["dexterity"]
+	# Also accept short forms
+	if data.has("str"): strength = data["str"]
+	if data.has("con"): constitution = data["con"]
+	if data.has("dex"): dexterity = data["dex"]
 	# Update visuals
 	_update_colors()
 
@@ -330,29 +486,90 @@ func _process(delta: float) -> void:
 	_handle_input()
 	_update_movement(delta)
 	_update_leg_animation(delta)
+	_update_body_rotation()
 	_update_arm_ik()
 	_update_arm_visuals()
 	_update_weapon_position()
+	_update_blood_drops(delta)
+	_update_severed_limb_visuals()
+	# Update timers
+	attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
+	reaction_timer = max(0, reaction_timer - delta)
+	stun_timer = max(0, stun_timer - delta)
+	state_timer += delta
+	# Add check if the character is AI controlled
+	if AI_enabled:
+		# Handle stunned state
+		if current_state == AIState.STUNNED:
+			if stun_timer <= 0:
+				_change_state(AIState.IDLE)
+			return
+		
+		# Update target
+		_update_target()
+		
+		# State machine
+		match current_state:
+			AIState.IDLE:
+				_process_idle(delta)
+			AIState.CHASE:
+				_process_chase(delta)
+			AIState.APPROACH:
+				_process_approach(delta)
+			AIState.ATTACK:
+				_process_attack(delta)
+			AIState.RETREAT:
+				_process_retreat(delta)
+		
+func _update_body_rotation() -> void:
+	# Apply body rotation during attacks
+	var body_rotation = 0.0
+	if attack_animator and attack_animator.is_attacking():
+		body_rotation = attack_animator.get_body_rotation()
+	
+	# Update body line (shoulders)
+	if body:
+		var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset).rotated(body_rotation)
+		var right_shoulder = Vector2(body_width / 2, shoulder_y_offset).rotated(body_rotation)
+		body.clear_points()
+		body.add_point(left_shoulder)
+		body.add_point(right_shoulder)
+	
+	# Update head position/rotation (head follows body slightly)
+	if head:
+		var head_rotation = body_rotation * 0.5  # Head follows less than body
+		head.rotation = head_rotation
+	
+	# Update hair to follow head
+	if hair:
+		hair.rotation = head.rotation if head else 0.0
 
 func _update_leg_animation(delta: float) -> void:
 	if is_moving:
 		# Advance leg swing time while moving
 		leg_swing_time += delta * leg_swing_speed
 	else:
-		# Smoothly return to rest when stopped
-		leg_swing_time = lerpf(leg_swing_time, 0.0, delta * 8.0)
+		# Smoothly return to rest when stopped - wrap to nearest multiple of 2*PI first
+		# This prevents the stutter by finding the nearest rest position
+		var target_time = round(leg_swing_time / TAU) * TAU
+		leg_swing_time = lerpf(leg_swing_time, target_time, delta * 5.0)
+		# Snap when very close to avoid endless tiny movements
+		if abs(leg_swing_time - target_time) < 0.01:
+			leg_swing_time = target_time
 	
 	# Calculate swing offset using sine wave
 	var swing = sin(leg_swing_time) * leg_swing_amount
 	
 	# Update leg positions
+	# In top-down view: -Y is FORWARD (toward top of screen when character faces up)
+	# Legs should extend forward (-Y direction) from hips
 	var hip_y = shoulder_y_offset + 2
 	
-	# Calculate leg positions for equipment updates
+	# Calculate leg positions - feet go FORWARD (negative Y)
 	var left_hip = Vector2(-leg_spacing, hip_y)
-	var left_foot = Vector2(-leg_spacing + swing * 0.3, hip_y + leg_length + swing)
+	var left_foot = Vector2(-leg_spacing + swing * 0.3, hip_y - leg_length + swing)  # -leg_length = forward
 	var right_hip = Vector2(leg_spacing, hip_y)
-	var right_foot = Vector2(leg_spacing - swing * 0.3, hip_y + leg_length - swing)
+	var right_foot = Vector2(leg_spacing - swing * 0.3, hip_y - leg_length - swing)  # -leg_length = forward
 	
 	if left_leg:
 		left_leg.clear_points()
@@ -371,6 +588,8 @@ func _update_leg_animation(delta: float) -> void:
 		feet_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
 
 func _handle_input() -> void:
+	if AI_enabled:
+		return
 	# Get correct mouse position accounting for SubViewport scaling
 	var mouse_pos = _get_adjusted_mouse_position()
 	
@@ -382,15 +601,15 @@ func _handle_input() -> void:
 	
 	# Left click: turn and move to point
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		print("hello, why aren't you moving")
 		target_position = mouse_pos
 		# Add PI/2 (90 degrees) because our character's forward is -Y, not +X
 		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		is_moving = true
 	
 	# Middle mouse to attack
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) or Input.is_key_pressed(KEY_B):
 		attack()
-	
 	# Mouse wheel or Tab to cycle weapons
 	if Input.is_action_just_pressed("ui_focus_next"):  # Tab by default
 		inventory.cycle_weapon(1)
@@ -440,6 +659,13 @@ func _update_movement(delta: float) -> void:
 		else:
 			is_moving = false
 			emit_signal("character_reached_target")
+	
+	# Apply collision separation
+	if collision_enabled:
+		var separation = get_separation_vector()
+		if separation.length() > 0.1:
+			# Apply separation force (scaled by delta for smooth movement)
+			global_position += separation * min(1.0, delta * 10.0)
 
 func _update_arm_ik() -> void:
 	# Shoulder positions - at the sides and toward the back
@@ -447,24 +673,38 @@ func _update_arm_ik() -> void:
 	var right_shoulder = Vector2(body_width / 2, shoulder_y_offset)
 	var arm_length = ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]
 	
-	# Get attack animation offset if attacking
+	# Get attack animation offset and body rotation if attacking
 	var attack_offset = Vector2.ZERO
+	var body_rotation = 0.0
 	if attack_animator and attack_animator.is_attacking():
 		attack_offset = attack_animator.get_arm_offset()
+		body_rotation = attack_animator.get_body_rotation()
+	
+	# Apply body rotation to shoulders
+	if body_rotation != 0.0:
+		left_shoulder = left_shoulder.rotated(body_rotation)
+		right_shoulder = right_shoulder.rotated(body_rotation)
 	
 	# Check if we have an active weapon
 	if current_weapon != null:
-		# Right arm extends forward to hold weapon
-		# Hand position is in front of the character, slightly to the right
-		var base_target = Vector2(arm_length * 0.15, -arm_length * 0.9)
+		# Right arm holds weapon - START with bent arm close to body
+		# This gives room to extend during attacks
+		# Relaxed position: elbow bent, hand near center-front of body
+		var base_target = Vector2(arm_length * 0.05, -arm_length * 0.5)  # Much closer, more bent
+		
+		# Apply body rotation to the base target
+		if body_rotation != 0.0:
+			base_target = base_target.rotated(body_rotation)
+		
 		right_arm_target = base_target + attack_offset
 		
-		# Left arm can support (for two-handed weapons) or stay relaxed
-		# For now, left arm stays in a ready position
-		left_arm_target = left_shoulder + Vector2(arm_length * 0.2, -arm_length * 0.5)
+		# Left arm stays in a ready position (slightly affected by body rotation)
+		var left_base = left_shoulder + Vector2(arm_length * 0.2, -arm_length * 0.5)
+		if body_rotation != 0.0:
+			left_base = left_base.rotated(body_rotation * 0.3)  # Left arm follows less
+		left_arm_target = left_base
 	else:
 		# Rest positions: arms curling forward and inward (hands near front of body)
-		# Negative Y = forward, hands come inward toward center
 		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
 		right_arm_target = right_shoulder + Vector2(-arm_length * 0.3, -arm_length * 0.6)
 	
@@ -554,7 +794,7 @@ func _update_weapon_position() -> void:
 		
 		weapon_holder.rotation = attack_rotation
 
-func _on_active_weapon_changed(weapon: Weapon) -> void:
+func _on_active_weapon_changed(weapon) -> void:
 	# Remove old weapon from holder
 	if current_weapon != null:
 		weapon_holder.remove_child(current_weapon)
@@ -565,16 +805,22 @@ func _on_active_weapon_changed(weapon: Weapon) -> void:
 	# Add new weapon to holder
 	if current_weapon != null:
 		weapon_holder.add_child(current_weapon)
-		# Position weapon so grip is at the holder origin
-		current_weapon.position = -current_weapon.get_grip_position()
+		# Position weapon so the grip aligns with the hand
+		# The sprite's origin is at center, but we want the grip point at holder origin
+		# grip_position is 0-1 where 0=tip, 1=pommel
+		# For a vertical weapon sprite: grip is at (grip_position) from top
+		# We need to offset the sprite so that grip point is at (0,0)
+		var grip_offset = current_weapon.get_grip_offset_for_hand()
+		current_weapon.position = grip_offset
 		current_weapon.z_index = 2  # Above character
 	
 	emit_signal("weapon_changed", weapon)
 
 func _on_attack_hit() -> void:
 	# Called when attack hits (at the impact frame)
+	#PLAY SOUND DEPENDING ON WHETHER HIT ARMOR OR FLESH
 	if current_weapon:
-		emit_signal("attack_hit", current_weapon.base_damage, current_weapon.damage_type)
+		emit_signal("attack_hit", current_weapon.base_damage, current_weapon.primary_damage_type)
 
 func _on_attack_finished() -> void:
 	# Called when attack animation completes
@@ -590,7 +836,9 @@ func attack() -> void:
 		return  # Already attacking
 	
 	# Get damage type from weapon and start appropriate animation
-	var damage_type = current_weapon["damage_type"]
+	var damage_type = current_weapon.primary_damage_type
+	if damage_type == "slashing":
+		SfxManager.play("slash",position)
 	attack_animator.start_attack(damage_type)
 
 func is_attacking() -> bool:
@@ -599,12 +847,28 @@ func is_attacking() -> bool:
 
 # ===== PUBLIC WEAPON API =====
 
-func give_weapon(weapon_data: Dictionary) -> Weapon:
+func give_weapon(weapon_data: Dictionary) -> WeaponShape:
 	"""Give the character a weapon from data and equip it"""
+	print("give weapon being run with: ", weapon_data.name)
 	return inventory.equip_weapon_from_data(weapon_data)
 
-func give_weapon_by_type(weapon_type: String) -> Weapon:
-	"""Quick method to give a weapon by type name"""
+func give_weapon_by_name(weapon_name: String) -> WeaponShape:
+	"""Give the character a weapon by looking up its name in the database"""
+	var db = ProceduralItemDatabase.weapons
+	print("giving weapon by name: ", weapon_name)
+	print("weapon database: ", db )
+	if db:
+		print("weapon database exists")
+		#print("the fucking data is structured like: ",db)
+		var data = db[weapon_name.to_lower()]
+		print("weapon data found: ",data)
+		if not data.is_empty():
+			return give_weapon(data)
+	push_warning("Could not find weapon: %s" % weapon_name)
+	return null
+
+func give_weapon_by_type(weapon_type: String) -> WeaponShape:
+	"""Quick method to give a weapon by type name (creates default weapon of that type)"""
 	return give_weapon({"type": weapon_type})
 
 func cycle_weapon(direction: int = 1) -> void:
@@ -619,7 +883,7 @@ func draw_weapon() -> void:
 	"""Draw first available weapon"""
 	inventory.draw_weapon()
 
-func get_current_weapon() -> Weapon:
+func get_current_weapon() -> WeaponShape:
 	"""Get the currently held weapon"""
 	return current_weapon
 
@@ -629,40 +893,40 @@ func has_weapon_equipped() -> bool:
 
 # ===== PUBLIC EQUIPMENT API =====
 
-func equip_equipment(equipment_data: Dictionary) -> Equipment:
-	"""Equip armor/equipment from data"""
-	var equipment = Equipment.new()
+func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
+	"""Equip armor/equipment from data using new shape-based system"""
+	var equipment = EquipmentShape.new()
 	equipment.load_from_data(equipment_data)
 	
 	var slot = equipment.get_slot()
-	var holder: Node2D
+	var holder: Node2D = null
 	
 	match slot:
-		Equipment.EquipmentSlot.HEAD:
+		EquipmentShape.EquipmentSlot.HEAD:
 			if head_equipment:
 				head_slot.remove_child(head_equipment)
 				head_equipment.queue_free()
 			head_equipment = equipment
 			holder = head_slot
-		Equipment.EquipmentSlot.BACK:
+		EquipmentShape.EquipmentSlot.TORSO:
+			if torso_equipment:
+				torso_slot.remove_child(torso_equipment)
+				torso_equipment.queue_free()
+			torso_equipment = equipment
+			holder = torso_slot
+		EquipmentShape.EquipmentSlot.BACK:
 			if back_equipment:
 				back_slot.remove_child(back_equipment)
 				back_equipment.queue_free()
 			back_equipment = equipment
 			holder = back_slot
-		Equipment.EquipmentSlot.SHOULDERS:
-			if shoulder_equipment:
-				shoulder_slot.remove_child(shoulder_equipment)
-				shoulder_equipment.queue_free()
-			shoulder_equipment = equipment
-			holder = shoulder_slot
-		Equipment.EquipmentSlot.LEGS:
+		EquipmentShape.EquipmentSlot.LEGS:
 			if legs_equipment:
 				legs_slot.remove_child(legs_equipment)
 				legs_equipment.queue_free()
 			legs_equipment = equipment
 			holder = legs_slot
-		Equipment.EquipmentSlot.FEET:
+		EquipmentShape.EquipmentSlot.FEET:
 			if feet_equipment:
 				feet_slot.remove_child(feet_equipment)
 				feet_equipment.queue_free()
@@ -674,49 +938,837 @@ func equip_equipment(equipment_data: Dictionary) -> Equipment:
 	
 	return equipment
 
-func unequip_slot(slot: Equipment.EquipmentSlot) -> void:
+func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 	"""Remove equipment from a slot"""
 	match slot:
-		Equipment.EquipmentSlot.HEAD:
+		EquipmentShape.EquipmentSlot.HEAD:
 			if head_equipment:
 				head_slot.remove_child(head_equipment)
 				head_equipment.queue_free()
 				head_equipment = null
-		Equipment.EquipmentSlot.BACK:
+		EquipmentShape.EquipmentSlot.TORSO:
+			if torso_equipment:
+				torso_slot.remove_child(torso_equipment)
+				torso_equipment.queue_free()
+				torso_equipment = null
+		EquipmentShape.EquipmentSlot.BACK:
 			if back_equipment:
 				back_slot.remove_child(back_equipment)
 				back_equipment.queue_free()
 				back_equipment = null
-		Equipment.EquipmentSlot.SHOULDERS:
-			if shoulder_equipment:
-				shoulder_slot.remove_child(shoulder_equipment)
-				shoulder_equipment.queue_free()
-				shoulder_equipment = null
-		Equipment.EquipmentSlot.LEGS:
+		EquipmentShape.EquipmentSlot.LEGS:
 			if legs_equipment:
 				legs_slot.remove_child(legs_equipment)
 				legs_equipment.queue_free()
 				legs_equipment = null
-		Equipment.EquipmentSlot.FEET:
+		EquipmentShape.EquipmentSlot.FEET:
 			if feet_equipment:
 				feet_slot.remove_child(feet_equipment)
 				feet_equipment.queue_free()
 				feet_equipment = null
 
+func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
+	"""Equip equipment by looking up its name in the database"""
+	var db = ProceduralItemDatabase.equipment
+	if db:
+		print("The fucking equipment looks like: ",db)
+		var data = db[Globals.name_to_id(equipment_name)]
+		if not data.is_empty():
+			return equip_equipment(data)
+	push_warning("Could not find equipment: %s" % equipment_name)
+	return null
+
 # ===== PUBLIC FACTION API =====
-'''
+
 func get_faction() -> String:
 	return faction_id
 
 func set_faction(new_faction_id: String) -> void:
 	faction_id = new_faction_id
 
-func is_enemy_of(other_character: ProceduralCharacter) -> bool:
-	return Faction.are_enemies(faction_id, other_character.faction_id)
-
-func is_ally_of(other_character: ProceduralCharacter) -> bool:
-	return Faction.are_allies(faction_id, other_character.faction_id)
-
 func get_relationship_with(other_character: ProceduralCharacter) -> Faction.Relationship:
-	return Faction.get_relationship(faction_id, other_character.faction_id)
-	'''
+	return game2.factions[faction_id].get_relationship(faction_id, other_character.faction_id)
+	
+	# Limb identifiers
+enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
+
+# Limb data structure
+class Limb:
+	var limb_type: LimbType
+	var name: String
+	var max_hp: int
+	var current_hp: int
+	var armor_dr: Dictionary = Globals.DR_0  # Damage Resistance from armor
+	var is_disabled: bool = false
+	var is_severed: bool = false
+	
+	# Limb-specific HP multipliers (relative to base)
+	const HP_MULTIPLIERS = {
+		LimbType.HEAD: 0.4,       # Head is fragile
+		LimbType.TORSO: 1.0,      # Torso is the base
+		LimbType.LEFT_ARM: 0.5,
+		LimbType.RIGHT_ARM: 0.5,
+		LimbType.LEFT_LEG: 0.6,
+		LimbType.RIGHT_LEG: 0.6
+	}
+	
+	func _init(type: LimbType, base_hp: int) -> void:
+		limb_type = type
+		name = LimbType.keys()[type].capitalize().replace("_", " ")
+		max_hp = int(base_hp * HP_MULTIPLIERS[type])
+		current_hp = max_hp
+	
+	
+	func heal(amount: int) -> void:
+		if not is_severed:
+			current_hp = min(current_hp + amount, max_hp)
+			if current_hp > 0:
+				is_disabled = false
+	
+	func set_armor(dr: Dictionary) -> void:
+		armor_dr = dr
+	
+	func get_hp_percent() -> float:
+		return float(current_hp) / float(max_hp) if max_hp > 0 else 0.0
+
+# All limbs
+var limbs: Dictionary = {}  # LimbType -> Limb
+
+# Reference to owner
+var owner_character: Node2D
+
+# Signals
+signal limb_damaged(limb_type: LimbType, damage_info: Dictionary)
+signal limb_disabled(limb_type: LimbType)
+signal limb_severed(limb_type: LimbType)
+signal character_died()
+
+func initialize_limbs(base_hp: int) -> void:
+	"""Initialize all limbs based on character's max HP"""
+	print("initializing limbs")
+	limbs.clear()
+	for limb_type in LimbType.values():
+		limbs[limb_type] = Limb.new(limb_type, base_hp)
+
+func get_limb(limb_type: LimbType) -> Limb:
+	return limbs.get(limb_type)
+
+func get_total_hp() -> int:
+	"""Get combined HP of all limbs (mainly torso matters for death)"""
+	var total = 0
+	for limb in limbs.values():
+		total += max(0, limb.current_hp)
+	return total
+
+func get_torso_hp() -> int:
+	"""Torso HP is the main life indicator"""
+	var torso = limbs.get(LimbType.TORSO)
+	return torso.current_hp if torso else 0
+
+func is_alive() -> bool:
+	"""Character dies if torso or head HP <= 0"""
+	var torso = limbs.get(LimbType.TORSO)
+	var head = limbs.get(LimbType.HEAD)
+	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+
+func damage_limb(limb_type: LimbType, damage: Dictionary):
+	"""Apply damage to a specific limb"""
+	var limb = limbs.get(limb_type)
+	if not limb:
+		return {}
+	# 1. Get the resistance dictionary for this specific limb
+	var armor_dr = get_limb_armor(limb_type) 
+	var total_damage = 0
+	var raw_val
+	var dr_val
+# 2. Calculate damage for each type after resistances
+	for damage_type in damage:
+		raw_val = damage[damage_type]
+		dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
+		if raw_val - dr_val > 0:
+			handle_damage_effect_based_on_type(damage_type)
+		# Ensure damage for a specific type doesn't go below zero
+		total_damage += max(0, raw_val - dr_val)
+		
+	# 3. Apply the damage to the limb
+	limb.current_hp = clamp(limb.current_hp - total_damage, 0, limb.max_hp)
+	return total_damage
+
+func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
+	"""Set armor DR for a limb"""
+	var limb = limbs.get(limb_type)
+	if limb:
+		limb.set_armor(dr)
+
+func get_limb_armor(limb_type: LimbType) -> Dictionary:
+	"""Get current armor DR for a limb"""
+	var limb = limbs.get(limb_type)
+	return limb.armor_dr if limb else Globals.DR_0 #DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
+
+
+# Map equipment slots to limb types for armor
+static func get_limb_for_equipment_slot(slot: int) -> Array[LimbType]:
+	# EquipmentShape.EquipmentSlot values
+	match slot:
+		0:  # HEAD
+			return [LimbType.HEAD]
+		1:  # TORSO
+			return [LimbType.TORSO, LimbType.LEFT_ARM, LimbType.RIGHT_ARM]
+		3:  # LEGS
+			return [LimbType.LEFT_LEG, LimbType.RIGHT_LEG]
+		4:  # FEET
+			return [LimbType.LEFT_LEG, LimbType.RIGHT_LEG]  # Feet armor protects legs too
+		_:
+			return []
+# Determine which limb was hit based on local hit position
+func get_limb_at_position(local_pos: Vector2, body_width: float, body_height: float) -> LimbType:
+	"""Determine which limb is at a local position relative to character center"""
+	var x = local_pos.x
+	var y = local_pos.y
+	
+	# Head is at front center (negative Y)
+	if y < -body_height * 0.3 and abs(x) < body_width * 0.3:
+		return LimbType.HEAD
+	
+	# Arms are to the sides
+	if abs(x) > body_width * 0.35:
+		if x < 0:
+			return LimbType.LEFT_ARM
+		else:
+			return LimbType.RIGHT_ARM
+	
+	# Legs are at the back (positive Y in our coordinate system after the fix)
+	# Actually legs are forward now (-Y), but let's check lower body area
+	if y > body_height * 0.2:
+		if x < 0:
+			return LimbType.LEFT_LEG
+		else:
+			return LimbType.RIGHT_LEG
+	# Default to torso
+	return LimbType.TORSO
+func set_stats(str_val: int, con_val: int, dex_val: int) -> void:
+	"""Set character stats"""
+	strength = str_val
+	constitution = con_val
+	dexterity = dex_val
+	
+func get_status_string() -> String:
+	"""Get a debug string showing all limb status"""
+	var parts = []
+	for limb_type in LimbType.values():
+		var limb = limbs.get(limb_type)
+		if limb:
+			var status = "%s: %d/%d" % [limb.name, limb.current_hp, limb.max_hp]
+			if limb.is_severed:
+				status += " [SEVERED]"
+			elif limb.is_disabled:
+				status += " [DISABLED]"
+			if limb.armor_dr > 0:
+				status += " (DR:%d)" % limb.armor_dr
+			parts.append(status)
+	return "\n".join(parts)
+### AI
+enum AIState {
+	IDLE,           # No enemies nearby, standing still
+	PATROL,         # Moving along patrol path (optional)
+	CHASE,          # Moving toward target
+	APPROACH,       # Getting into attack range
+	ATTACK,         # Performing attack
+	RETREAT,        # Backing away (low health, etc)
+	STUNNED         # Recovering from hit/stagger
+}
+
+# Current state
+var current_state: AIState = AIState.IDLE
+var state_timer: float = 0.0
+
+# Target tracking
+var current_target: ProceduralCharacter = null
+var last_known_target_pos: Vector2 = Vector2.ZERO
+
+# Detection settings
+@export var detection_range: float = 200.0    # How far AI can see enemies
+@export var attack_range: float = 60.0        # Range to start attacking
+@export var preferred_range: float = 40.0     # Ideal combat distance
+@export var too_close_range: float = 20.0     # Back up if closer than this
+
+# Minimum approach distance (prevents walking into other characters)
+var min_approach_distance: float:
+	get: return collision_radius + minimum_separation + 10.0  # Never get closer than this
+
+# Behavior settings
+@export var aggression: float = 0.7           # 0-1, higher = more aggressive
+@export var reaction_time: float = 0.15       # Delay before responding
+@export var attack_cooldown: float = 0.8      # Minimum time between attacks
+
+# Timing
+var attack_cooldown_timer: float = 0.0
+var reaction_timer: float = 0.0
+var stun_timer: float = 0.0
+
+signal state_changed(old_state: AIState, new_state: AIState)
+signal target_acquired(target: ProceduralCharacter)
+signal target_lost()
+	
+func _update_target() -> void:
+	"""Find and track enemy targets"""
+	#print("attempting to update target")
+	# If we have a valid target, check if still valid
+	if current_target:
+		if not is_instance_valid(current_target):
+			print("losing target because instance invalid")
+			_lose_target()
+			return
+		
+		if not current_target.is_alive():
+			print("losing target because target is dead")
+			_lose_target()
+			return
+		
+		# Check if target is now too far
+		var dist = self.global_position.distance_to(current_target.global_position)
+		if dist > detection_range * 1.5:  # Hysteresis to prevent flickering
+			print("losing target because target is too far")
+			_lose_target()
+			return
+		
+		# Update last known position
+		last_known_target_pos = current_target.global_position
+		return
+	
+	# Search for new target
+	var best_target: ProceduralCharacter = null
+	var best_distance: float = detection_range
+	
+	# Get all characters in scene (this could be optimized with groups)
+	var characters = game2.characters_in_scene
+	#print("Searching for target in: ",characters)
+	for node in characters:
+		if node == self:
+			#print("not targeting self")
+			continue
+		
+		var other = node as ProceduralCharacter
+		if not other:
+			#print("no other potential targets but self")
+			continue
+		
+		# Check if enemy faction
+		if not _is_enemy(other):
+			#print("potential target is not an enemy, continuing")
+			continue
+		#print("enemy target found")
+		# Check if alive
+		if not other.is_alive():
+			continue
+		#print("living enemy target found")
+		# Check distance
+		var dist = self.global_position.distance_to(other.global_position)
+		if dist < best_distance:
+			print("updating to closer target")
+			best_distance = dist
+			best_target = other
+	
+	if best_target:
+		print("found best target, attempting to acquire")
+		_acquire_target(best_target)
+
+func _is_enemy(other: ProceduralCharacter) -> bool:
+	"""Check if other character is an enemy"""
+	if self.faction_id == other.faction_id:
+		#print("same faction identified")
+		return false
+	
+	# Use faction system if available
+	var factions = game2.factions
+	if factions:
+		#print("My factions enemies are ", factions[self.faction_id].enemies)
+		#print("The potential target is in the faction: ", other.faction_id)
+		if other.faction_id in factions[self.faction_id].enemies:
+			#print("Identified target as enemy")
+			return true
+	
+	# Default: different factions are enemies (except neutral)
+	return self.faction_id != "neutral" and other.faction_id != "neutral"
+
+func _acquire_target(target: ProceduralCharacter) -> void:
+	current_target = target
+	last_known_target_pos = target.global_position
+	emit_signal("target_acquired", target)
+	print("target acquired")
+	# Start reaction delay before responding
+	reaction_timer = reaction_time
+
+func _lose_target() -> void:
+	current_target = null
+	emit_signal("target_lost")
+	_change_state(AIState.IDLE)
+
+func _change_state(new_state: AIState) -> void:
+	if new_state == current_state:
+		return
+	
+	var old_state = current_state
+	current_state = new_state
+	state_timer = 0.0
+	emit_signal("state_changed", old_state, new_state)
+
+# ===== STATE PROCESSING =====
+
+func _process_idle(delta: float) -> void:
+	if current_target and reaction_timer <= 0:
+		_change_state(AIState.CHASE)
+
+func _process_chase(delta: float) -> void:
+	#print("processing chase")
+	if not current_target:
+		_change_state(AIState.IDLE)
+		return
+	
+	var dist = self.global_position.distance_to(current_target.global_position)
+	
+	# Calculate safe approach distance
+	var combined_collision_dist = collision_radius + current_target.collision_radius + minimum_separation
+	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
+	
+	# Switch to approach when getting close
+	if dist <= safe_attack_range * 1.2:
+		print("Distance closed, approaching target for attack")
+		_change_state(AIState.APPROACH)
+		return
+	
+	# Move toward target, but aim for a position at attack range, not directly on top
+	var dir_to_target = (current_target.global_position - self.global_position).normalized()
+	var target_pos = current_target.global_position - dir_to_target * safe_attack_range * 0.8
+	_move_toward(target_pos)
+
+func _process_approach(delta: float) -> void:
+	#print("processing approach")
+	if not current_target:
+		_change_state(AIState.IDLE)
+		return
+	
+	var dist = self.global_position.distance_to(current_target.global_position)
+	var dir_to_target = (current_target.global_position - self.global_position).normalized()
+	
+	# Calculate combined collision distance (both characters' radii + buffer)
+	var combined_collision_dist = collision_radius + current_target.collision_radius + minimum_separation
+	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
+	var safe_preferred_range = max(preferred_range, combined_collision_dist + 10.0)
+	var safe_too_close = max(too_close_range, combined_collision_dist)
+	
+	# Face the target
+	self.target_rotation = dir_to_target.angle() + PI / 2
+	#print("checking if target is in range")
+	# Too far - chase again
+	if dist > safe_attack_range * 1.5:
+		_change_state(AIState.CHASE)
+		return
+	
+	# In attack range - attack!
+	#print("target is in range, attack")
+	if dist <= safe_attack_range and dist >= safe_too_close and attack_cooldown_timer <= 0:
+		print("actually attacking target")
+		_change_state(AIState.ATTACK)
+		return
+	
+	# Too close - back up to safe distance
+	if dist < safe_too_close:
+		var retreat_dir = -dir_to_target
+		var retreat_pos = self.global_position + retreat_dir * (safe_preferred_range - dist + 10)
+		_move_toward(retreat_pos)
+		return
+	
+	# Strafe or approach to preferred range
+	if dist > safe_preferred_range:
+		# Don't move directly to target - move to a position at preferred range
+		var approach_pos = current_target.global_position - dir_to_target * safe_preferred_range
+		_move_toward(approach_pos)
+	else:
+		# At preferred range - strafe or hold position
+		if randf() < 0.3 * delta:  # Occasional strafe
+			var strafe_dir = dir_to_target.rotated(PI / 2 * (1 if randf() > 0.5 else -1))
+			_move_toward(self.global_position + strafe_dir * 30)
+
+func _process_attack(delta: float) -> void:
+	# Calculate safe distances
+	var combined_collision_dist = collision_radius + (current_target.collision_radius if current_target else 0) + minimum_separation
+	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
+	
+	# Start attack if not already attacking
+	if not self.attack_animator.is_attacking():
+		#print("do we have a weapon?")
+		
+		if self.current_weapon:
+		#	print("yes we do have a weapon")
+			self.attack()
+			attack_cooldown_timer = attack_cooldown / (self.attack_speed_multiplier )
+		else:
+			#print("no we don't have a weapon")
+			pass
+	# Wait for attack to finish
+	if not self.attack_animator.is_attacking():
+		_change_state(AIState.APPROACH)
+	if current_target and global_position.distance_to(current_target.global_position) > 1.5 * safe_attack_range:
+		_change_state(AIState.APPROACH)
+
+func _process_retreat(delta: float) -> void:
+	if not current_target:
+		_change_state(AIState.IDLE)
+		return
+	
+	var dir_away = (self.global_position - current_target.global_position).normalized()
+	var safe_retreat_dist = collision_radius + current_target.collision_radius + minimum_separation + 50.0
+	_move_toward(self.global_position + dir_away * safe_retreat_dist)
+	
+	# Exit retreat after some time
+	if state_timer > 1.5:
+		_change_state(AIState.APPROACH)
+
+# ===== MOVEMENT =====
+
+func _move_toward(target_pos: Vector2) -> void:
+	self.target_position = target_pos
+	self.is_moving = true
+	
+	# Face movement direction
+	var dir = (target_pos - self.global_position).normalized()
+	if dir.length() > 0.1:
+		self.target_rotation = dir.angle() + PI / 2
+
+# ===== EVENTS =====
+
+func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
+	# React to being hit
+	if damage_info.get("actual_damage", 0) > 0:
+		# Stun briefly
+		stun_timer = 0.1 + randf() * 0.1
+		_change_state(AIState.STUNNED)
+		
+		# Check if should retreat (low health)
+		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
+		if torso_hp_percent < 0.3 and randf() < 0.5:
+			stun_timer = 0.0
+			_change_state(AIState.RETREAT)
+
+func _on_character_died() -> void:
+	if "Male" in self.traits and not "Beast" in self.traits:
+		SfxManager.play("man-death-scream",global_position)
+	elif "Female" in self.traits and not "Beast" in self.traits:
+		SfxManager.play("woman-death-scream",global_position)
+	current_state = AIState.IDLE
+	current_target = null
+	set_process(false)
+
+func _update_blood_drops(delta: float) -> void:
+	"""Update all active blood drops"""
+	var drops_to_remove: Array[int] = []
+	
+	for i in range(active_blood_drops.size()):
+		var drop_data = active_blood_drops[i]
+		var sprite: Sprite2D = drop_data["sprite"]
+		
+		if not is_instance_valid(sprite):
+			drops_to_remove.append(i)
+			continue
+		
+		# Update time
+		drop_data["time"] += delta
+		var t = drop_data["time"]
+		var fade_time = drop_data["fade_time"]
+		
+		# Apply velocity with drag
+		var velocity: Vector2 = drop_data["velocity"]
+		velocity *= 0.98  # Drag
+		velocity.y += blood_drop_gravity * delta  # Optional gravity
+		drop_data["velocity"] = velocity
+		
+		# Move sprite (in parent space, not character-local)
+		sprite.global_position += velocity * delta
+		
+		# Rotate
+		sprite.rotation += drop_data["rotation_speed"] * delta
+		
+		# Fade out
+		var fade_progress = t / fade_time
+		sprite.modulate.a = 1.0 - ease(fade_progress, 0.5)
+		
+		# Check if done
+		if t >= fade_time:
+			sprite.visible = false
+			drops_to_remove.append(i)
+	
+	# Remove finished drops (reverse order to preserve indices)
+	drops_to_remove.reverse()
+	for i in drops_to_remove:
+		active_blood_drops.remove_at(i)
+
+# ===== LIMB SEVERING =====
+
+func _handle_limb_severing(limb_type: ProceduralCharacter.LimbType) -> void:
+	"""Handle visual and equipment changes when a limb is severed"""
+	# Hide the limb visual
+	_hide_limb_visual(limb_type)
+	
+	# Drop equipment from that limb
+	_drop_limb_equipment(limb_type)
+	
+	# Clear wound lines on that limb
+	_clear_limb_wounds(limb_type)
+	
+	# Add stump visual
+	_add_stump_visual(limb_type)
+
+func _hide_limb_visual(limb_type: ProceduralCharacter.LimbType) -> void:
+	"""Hide the Line2D visual for a severed limb"""
+	var limb_node: Line2D = null
+	
+	match limb_type:
+		ProceduralCharacter.LimbType.LEFT_ARM:
+			limb_node = self.left_arm
+		ProceduralCharacter.LimbType.RIGHT_ARM:
+			limb_node = self.right_arm
+		ProceduralCharacter.LimbType.LEFT_LEG:
+			limb_node = self.left_leg
+		ProceduralCharacter.LimbType.RIGHT_LEG:
+			limb_node = self.right_leg
+		# HEAD and TORSO severing = death, no need to hide
+	
+	if limb_node:
+		limb_node.visible = false
+
+func _drop_limb_equipment(limb_type: ProceduralCharacter.LimbType) -> void:
+	"""Drop any equipment held on the severed limb"""
+	match limb_type:
+		ProceduralCharacter.LimbType.RIGHT_ARM:
+			# Drop held weapon
+			if self.current_weapon:
+				_drop_weapon()
+		ProceduralCharacter.LimbType.LEFT_ARM:
+			# Could handle shield/off-hand here
+			pass
+		ProceduralCharacter.LimbType.LEFT_LEG, ProceduralCharacter.LimbType.RIGHT_LEG:
+			# Check if both legs are severed for feet equipment
+			var left_severed = severed_limbs.get(ProceduralCharacter.LimbType.LEFT_LEG, false)
+			var right_severed = severed_limbs.get(ProceduralCharacter.LimbType.RIGHT_LEG, false)
+			if left_severed and right_severed:
+				if self.feet_equipment:
+					self.unequip_slot(EquipmentShape.EquipmentSlot.FEET)
+		ProceduralCharacter.LimbType.HEAD:
+			# Drop head equipment
+			if self.head_equipment:
+				self.unequip_slot(EquipmentShape.EquipmentSlot.HEAD)
+
+func _drop_weapon() -> void:
+	"""Drop the currently held weapon"""
+	if not self.current_weapon:
+		return
+	
+	# Store reference before removing
+	var weapon = self.current_weapon
+	
+	# Remove from inventory's active slot
+	self.inventory.holster_weapon()
+	
+	# Optionally: spawn a dropped weapon pickup here
+	# For now, just remove it
+	print("Weapon dropped due to arm severing: ", weapon.name if weapon else "unknown")
+
+func _clear_limb_wounds(limb_type: ProceduralCharacter.LimbType) -> void:
+	"""Remove all wound lines from a limb"""
+	if wound_lines.has(limb_type):
+		for wound in wound_lines[limb_type]:
+			if is_instance_valid(wound):
+				wound.queue_free()
+		wound_lines[limb_type].clear()
+
+func _add_stump_visual(limb_type: ProceduralCharacter.LimbType) -> void:
+	"""Add a bloody stump where the limb was"""
+	var stump_pos = _get_limb_attachment_position(limb_type)
+	
+	# Create a small circle for the stump
+	var stump = Line2D.new()
+	stump.name = "Stump_" + ProceduralCharacter.LimbType.keys()[limb_type]
+	stump.width = 6.0
+	stump.default_color = stump_color
+	stump.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	stump.end_cap_mode = Line2D.LINE_CAP_ROUND
+	stump.z_index = 3
+	
+	# Short line to represent stump
+	stump.add_point(stump_pos)
+	stump.add_point(stump_pos + Vector2(2, 2))
+	
+	add_child(stump)
+
+func _update_severed_limb_visuals() -> void:
+	"""Keep severed limbs hidden (in case animation tries to show them)"""
+	for limb_type in severed_limbs:
+		if severed_limbs[limb_type]:
+			_hide_limb_visual(limb_type)
+
+# ===== HELPER FUNCTIONS =====
+
+func _get_limb_center_position(limb_type: ProceduralCharacter.LimbType) -> Vector2:
+	"""Get the center position of a limb in local coordinates"""
+	match limb_type:
+		ProceduralCharacter.LimbType.HEAD:
+			return Vector2(0, -self.head_length * 0.1)
+		ProceduralCharacter.LimbType.TORSO:
+			return Vector2(0, self.shoulder_y_offset)
+		ProceduralCharacter.LimbType.LEFT_ARM:
+			if self.left_arm_joints.size() > 1:
+				# Middle of arm
+				var start = self.left_arm_joints[0]
+				var end = self.left_arm_joints[-1]
+				return (start + end) / 2
+			return Vector2(-self.body_width / 2, self.shoulder_y_offset)
+		ProceduralCharacter.LimbType.RIGHT_ARM:
+			if self.right_arm_joints.size() > 1:
+				var start = self.right_arm_joints[0]
+				var end = self.right_arm_joints[-1]
+				return (start + end) / 2
+			return Vector2(self.body_width / 2, self.shoulder_y_offset)
+		ProceduralCharacter.LimbType.LEFT_LEG:
+			return Vector2(-self.leg_spacing, self.shoulder_y_offset + self.leg_length / 2)
+		ProceduralCharacter.LimbType.RIGHT_LEG:
+			return Vector2(self.leg_spacing, self.shoulder_y_offset + self.leg_length / 2)
+	return Vector2.ZERO
+
+func _get_limb_attachment_position(limb_type: ProceduralCharacter.LimbType) -> Vector2:
+	"""Get where a limb attaches to the body"""
+	match limb_type:
+		ProceduralCharacter.LimbType.LEFT_ARM:
+			return Vector2(-self.body_width / 2, self.shoulder_y_offset)
+		ProceduralCharacter.LimbType.RIGHT_ARM:
+			return Vector2(self.body_width / 2, self.shoulder_y_offset)
+		ProceduralCharacter.LimbType.LEFT_LEG:
+			return Vector2(-self.leg_spacing, self.shoulder_y_offset + 2)
+		ProceduralCharacter.LimbType.RIGHT_LEG:
+			return Vector2(self.leg_spacing, self.shoulder_y_offset + 2)
+	return Vector2.ZERO
+
+func _get_limb_size(limb_type: ProceduralCharacter.LimbType) -> Vector2:
+	"""Get approximate size of a limb for wound placement"""
+	match limb_type:
+		ProceduralCharacter.LimbType.HEAD:
+			return Vector2(self.head_width, self.head_length)
+		ProceduralCharacter.LimbType.TORSO:
+			return Vector2(self.body_width, self.body_height)
+		ProceduralCharacter.LimbType.LEFT_ARM, ProceduralCharacter.LimbType.RIGHT_ARM:
+			var arm_length = 0.0
+			for seg in self.ARM_SEGMENT_LENGTHS:
+				arm_length += seg
+			return Vector2(arm_length, 7.0)
+		ProceduralCharacter.LimbType.LEFT_LEG, ProceduralCharacter.LimbType.RIGHT_LEG:
+			return Vector2(self.leg_width, self.leg_length)
+	return Vector2(10, 10)
+
+# ===== CLEANUP =====
+
+func clear_all_wounds() -> void:
+	"""Remove all wound effects (for healing, respawn, etc.)"""
+	for limb_type in wound_lines:
+		for wound in wound_lines[limb_type]:
+			if is_instance_valid(wound):
+				wound.queue_free()
+		wound_lines[limb_type].clear()
+
+func reset_severed_limbs() -> void:
+	"""Reset all severed limbs (for respawn)"""
+	for limb_type in severed_limbs:
+		severed_limbs[limb_type] = false
+	
+	# Show all limb visuals again
+	if self.left_arm:
+		self.left_arm.visible = true
+	if self.right_arm:
+		self.right_arm.visible = true
+	if self.left_leg:
+		self.left_leg.visible = true
+	if self.right_leg:
+		self.right_leg.visible = true
+	
+	# Remove stump visuals
+	for child in get_children():
+		if child.name.begins_with("Stump_"):
+			child.queue_free()
+
+func _exit_tree() -> void:
+	# Clean up blood pool
+	for sprite in blood_pool:
+		if is_instance_valid(sprite):
+			sprite.queue_free()
+	blood_pool.clear()
+	active_blood_drops.clear()
+	
+func handle_damage_effect_based_on_type(damage_type: String):
+		#match statement for adding conditions, or knockback for force
+		match damage_type:
+			"slashing", "piercing":
+				# .get(key, default) prevents a crash if the key doesn't exist yet
+				var current_tier = conditions.get("bleeding", 0)
+				conditions["bleeding"] = current_tier + 1
+				print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
+
+			"fire":
+				conditions["burning"] = conditions.get("burning", 0) + 1
+				
+			"poison":
+				conditions["poisoned"] = conditions.get("poisoned", 0) + 1
+
+			"cold":
+				conditions["chilled"] = conditions.get("chilled", 0) + 1
+
+			_: 
+				# This is the 'default' case (wildcard) 
+				# useful for damage types that don't have conditions yet
+				pass
+					
+# ===== PUBLIC API =====
+
+func set_target(target: ProceduralCharacter) -> void:
+	"""Manually set a target"""
+	if target and _is_enemy(target):
+		_acquire_target(target)
+
+func clear_target() -> void:
+	"""Clear current target"""
+	_lose_target()
+
+func stun(duration: float) -> void:
+	"""Stun the AI for a duration"""
+	stun_timer = duration
+	_change_state(AIState.STUNNED)
+
+func get_state_name() -> String:
+	return AIState.keys()[current_state]
+func _on_time_updated(_hour: int, _minute: int, second: int):
+	# 1. Check if the character is currently bleeding
+	if not conditions.has("bleeding"):
+		return
+	
+	# 2. Trigger logic every 6 seconds (at second 0, 6, 12, 18, etc.)
+	if second % 6 == 0:
+		apply_bleeding_tick()
+
+func apply_bleeding_tick():
+	var tier = conditions.get("bleeding", 0)
+	
+	if tier > 0:
+		# Subtract 1 per tier from blood_amount
+		blood_amount -= tier
+		
+		# Subtract 1 from constitution
+		constitution -= 1
+		
+		# Optional: Clamp values so they don't drop into negative infinity
+		blood_amount = max(0, blood_amount)
+		constitution = max(0, constitution)
+		
+		print("Bleed Tick: Blood at ", blood_amount, " | Con at ", constitution)
+		
+		# Logic check: if constitution or blood hits 0, handle death/unconsciousness
+		if blood_amount <= 0 or constitution <= 0:
+			_on_character_died()

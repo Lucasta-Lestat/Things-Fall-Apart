@@ -5,16 +5,16 @@ class_name Inventory
 
 signal item_added(item_data: Dictionary)
 signal item_removed(item_data: Dictionary)
-signal weapon_equipped(weapon: Weapon)
-signal weapon_unequipped(weapon: Weapon)
-signal active_weapon_changed(weapon: Weapon)
+signal weapon_equipped(weapon: WeaponShape)
+signal weapon_unequipped(weapon: WeaponShape)
+signal active_weapon_changed(weapon: WeaponShape)
 
 # Inventory storage
 var items: Array[Dictionary] = []
 var max_slots: int = 20
 
 # Equipment slots
-var equipped_weapons: Array[Weapon] = []  # Can hold multiple weapons to swap between
+var equipped_weapons: Array[WeaponShape] = []  # Can hold multiple weapons to swap between
 var max_equipped_weapons: int = 4
 var active_weapon_index: int = -1  # -1 means no weapon active/drawn
 
@@ -64,31 +64,32 @@ func clear_inventory() -> void:
 
 # ===== WEAPON EQUIPMENT =====
 
-func equip_weapon(weapon: Weapon) -> bool:
+func equip_weapon(weapon: WeaponShape) -> bool:
 	if equipped_weapons.size() >= max_equipped_weapons:
 		push_warning("All weapon slots full!")
 		return false
-	
+	possessor.current_weapon = weapon
 	equipped_weapons.append(weapon)
 	emit_signal("weapon_equipped", weapon)
-	
 	# If this is the first weapon, make it active
-	if equipped_weapons.size() == 1:
-		set_active_weapon(0)
+	print(possessor.name, "equipped the weapon ", weapon)
+	set_active_weapon(0)
 	
 	return true
 
-func equip_weapon_from_data(weapon_data: Dictionary) -> Weapon:
-	var weapon = Weapon.new()
+func equip_weapon_from_data(weapon_data: Dictionary) -> WeaponShape:
+	var weapon = WeaponShape.new()
 	weapon.load_from_data(weapon_data)
-	
+	print("attempting to equip weapon from data: ", weapon_data.name)
 	if equip_weapon(weapon):
+		print("successfully equipped weapon from data: ", weapon_data.name)
 		return weapon
 	else:
+		print("failed to equip weapon from data")
 		weapon.queue_free()
 		return null
 
-func unequip_weapon(index: int) -> Weapon:
+func unequip_weapon(index: int) -> WeaponShape:
 	if index < 0 or index >= equipped_weapons.size():
 		push_warning("Invalid weapon slot index")
 		return null
@@ -106,12 +107,12 @@ func unequip_weapon(index: int) -> Weapon:
 	emit_signal("weapon_unequipped", weapon)
 	return weapon
 
-func get_equipped_weapon(index: int) -> Weapon:
+func get_equipped_weapon(index: int) -> WeaponShape:
 	if index < 0 or index >= equipped_weapons.size():
 		return null
 	return equipped_weapons[index]
 
-func get_active_weapon() -> Weapon:
+func get_active_weapon() -> WeaponShape:
 	if active_weapon_index < 0 or active_weapon_index >= equipped_weapons.size():
 		return null
 	return equipped_weapons[active_weapon_index]
@@ -153,13 +154,7 @@ func get_equipped_weapon_count() -> int:
 func save_to_dict() -> Dictionary:
 	var weapon_data_list = []
 	for weapon in equipped_weapons:
-		weapon_data_list.append({
-			"type": Weapon.WeaponType.keys()[weapon.weapon_type].to_lower(),
-			"name": weapon.weapon_name,
-			"blade_color": weapon.blade_color.to_html(),
-			"handle_color": weapon.handle_color.to_html(),
-			"accent_color": weapon.accent_color.to_html()
-		})
+		weapon_data_list.append(weapon.to_data())
 	
 	return {
 		"items": items,

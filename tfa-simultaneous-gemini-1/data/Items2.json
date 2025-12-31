@@ -1,0 +1,258 @@
+{
+	"_comment": "Weapon definitions with procedural shape data and sprite overlay paths",
+	"_note": "sprite_path should point to your weapon sprite textures",
+	
+	"weapons": [
+		{
+			"name": "Iron Longsword",
+			"type": "sword",
+			"damage_type": "slashing",
+			"base_damage": 10,
+			"total_length": 50.0,
+			"grip_position": 0.75,
+			"grip_length": 12.0,
+			"blade_width": 5.0,
+			"balance_point": 0.35,
+			"sprite_path": "res://Items/iron_longsword.png"
+		},
+		{
+			"name": "Steel Longsword",
+			"type": "sword",
+			"damage_type": "slashing",
+			"base_damage": 14,
+			"total_length": 55.0,
+			"grip_position": 0.73,
+			"grip_length": 14.0,
+			"blade_width": 5.0,
+			"balance_point": 0.33,
+			"sprite_path": "res://Items/Longsword.png"
+		},
+		{
+			"name": "Flaming Sword",
+			"type": "sword",
+			"damage_type": "slashing",
+			"base_damage": 18,
+			"total_length": 52.0,
+			"grip_position": 0.75,
+			"grip_length": 13.0,
+			"blade_width": 6.0,
+			"balance_point": 0.3,
+			"sprite_path": "res://Items/flaming_sword.png"
+		},
+		{
+			"name": "Woodcutter's Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 12,
+			"total_length": 40.0,
+			"grip_position": 0.85,
+			"grip_length": 24.0,
+			"blade_width": 14.0,
+			"balance_point": 0.2,
+			"sprite_path": "res://Items/Handaxe.png"
+		},
+		{
+			"name": "Battle Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 16,
+			"total_length": 50.0,
+			"grip_position": 0.82,
+			"grip_length": 28.0,
+			"blade_width": 16.0,
+			"balance_point": 0.18,
+			"sprite_path": "res://Items/Battleaxe.png"
+		},
+		{
+			"name": "Frost Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 15,
+			"total_length": 48.0,
+			"grip_position": 0.83,
+			"grip_length": 26.0,
+			"blade_width": 15.0,
+			"balance_point": 0.2,
+			"sprite_path": "res://Items/frost_axe.png"
+		},
+		{
+			"name": "Steel Dagger",
+			"type": "dagger",
+			"damage_type": "piercing",
+			"base_damage": 6,
+			"total_length": 25.0,
+			"grip_position": 0.65,
+			"grip_length": 8.0,
+			"blade_width": 3.0,
+			"balance_point": 0.4,
+			"sprite_path": "res://Items/Dagger.png"
+		},
+		{
+			"name": "Assassin's Blade",
+			"type": "dagger",
+			"damage_type": "piercing",
+			"base_damage": 10,
+			"total_length": 28.0,
+			"grip_position": 0.6,
+			"grip_length": 9.0,
+			"blade_width": 2.5,
+			"balance_point": 0.35,
+			"sprite_path": "res://Items/assassin_blade.png"
+		},
+		{
+			"name": "Hunting Spear",
+			"type": "spear",
+			"damage_type": "piercing",
+			"base_damage": 11,
+			"total_length": 70.0,
+			"grip_position": 0.6,
+			"grip_length": 30.0,
+			"blade_width": 4.0,
+			"balance_point": 0.45,
+			"sprite_path": "res://Items/Spear.png"
+		},
+		{
+			"name": "War Spear",
+			"type": "spear",
+			"damage_type": "piercing",
+			"base_damage": 15,
+			"total_length": 80.0,
+			"grip_position": 0.55,
+			"grip_length": 35.0,
+			"blade_width": 5.0,
+			"balance_point": 0.4,
+			"sprite_path": "res://Items/Spear.png"
+		},
+		{
+			"name": "Iron Mace",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 13,
+			"total_length": 38.0,
+			"grip_position": 0.8,
+			"grip_length": 18.0,
+			"blade_width": 10.0,
+			"balance_point": 0.15,
+			"sprite_path": "res://Items/Mace.png"
+		},
+		{
+			"name": "Holy Mace",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 16,
+			"total_length": 42.0,
+			"grip_position": 0.78,
+			"grip_length": 20.0,
+			"blade_width": 12.0,
+			"balance_point": 0.12,
+			"sprite_path": "res://Items/holy_mace.png"
+		},
+		{
+			"name": "Warhammer",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 20,
+			"total_length": 55.0,
+			"grip_position": 0.75,
+			"grip_length": 30.0,
+			"blade_width": 14.0,
+			"balance_point": 0.1,
+			"sprite_path": "res://Items/warhammer.png"
+		}
+	],
+	"equipment": [
+		{
+			"name": "Fancy Metal Helmet",
+			"type": "helmet",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/Fancy Metal Helmet.png"
+		},
+		{
+			"name": "Golden Crown Helm",
+			"type": "helmet",
+			"base_width": 20.0,
+			"base_height": 18.0,
+			"sprite_path": "res://Items/golden_helm.png"
+		},
+		{
+			"name": "Dark Hood",
+			"type": "hood",
+			"base_width": 20.0,
+			"base_height": 20.0,
+			"sprite_path": "res://Items/dark_hood.png"
+		},
+		{
+			"name": "Green Ranger Hood",
+			"type": "hood",
+			"base_width": 20.0,
+			"base_height": 20.0,
+			"sprite_path": "res://Items/ranger_hood.png"
+		},
+		{
+			"name": "Leather Backpack",
+			"type": "backpack",
+			"base_width": 16.0,
+			"base_height": 14.0,
+			"sprite_path": "res://Items/leather_backpack.png"
+		},
+		{
+			"name": "Adventurer's Pack",
+			"type": "backpack",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/adventurer_pack.png"
+		},
+		{
+			"name": "Red Travel Cape",
+			"type": "cape",
+			"base_width": 28.0,
+			"base_height": 24.0,
+			"sprite_path": "res://Items/red_cape.png"
+		},
+		{
+			"name": "Shadow Cloak",
+			"type": "cape",
+			"base_width": 30.0,
+			"base_height": 26.0,
+			"sprite_path": "res://Items/shadow_cloak.png"
+		},
+		{
+			"name": "Steel Pauldrons",
+			"type": "shoulder_pads",
+			"base_width": 32.0,
+			"base_height": 10.0,
+			"sprite_path": "res://Items/steel_pauldrons.png"
+		},
+		{
+			"name": "Leather Pants",
+			"type": "pants",
+			"base_width": 7.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/leather_pants.png"
+		},
+		{
+			"name": "Armored Leggings",
+			"type": "pants",
+			"base_width": 8.0,
+			"base_height": 18.0,
+			"sprite_path": "res://Items/armored_leggings.png"
+		},
+		{
+			"name": "Leather Boots",
+			"type": "boots",
+			"base_width": 8.0,
+			"base_height": 8.0,
+			"sprite_path": "res://Items/leather_boots.png"
+		},
+		{
+			"name": "Steel Greaves",
+			"type": "boots",
+			"base_width": 9.0,
+			"base_height": 10.0,
+			"sprite_path": "res://Items/steel_greaves.png"
+		}
+	]
+}
+
+}
