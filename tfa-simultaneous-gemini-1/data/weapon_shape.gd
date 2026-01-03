@@ -8,6 +8,8 @@ enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW }
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum GripStyle { ONE_HANDED, TWO_HANDED }
 
+@export var weapon_scale = 1.15
+@export var weight = 4.0
 @export var weapon_type: WeaponType = WeaponType.SWORD
 @export var weapon_name: String = "Weapon"
 @export var primary_damage_type: String = "slashing"
@@ -321,11 +323,14 @@ func load_from_data(data: Dictionary) -> void:
 	
 	if data.has("name"): weapon_name = data["name"]
 	if data.has("base_damage"): base_damage = data["base_damage"]
-	if data.has("total_length"): total_length = data["total_length"]
-	if data.has("grip_position"): grip_position = data["grip_position"]
-	if data.has("grip_length"): grip_length = data["grip_length"]
-	if data.has("blade_width"): blade_width = data["blade_width"]
-	if data.has("balance_point"): balance_point = data["balance_point"]
+	if data.get("size") == "default":
+		_apply_default_size_for_type()
+	else:
+		if data.has("total_length"): total_length = data["total_length"]
+		if data.has("grip_position"): grip_position = data["grip_position"]
+		if data.has("grip_length"): grip_length = data["grip_length"]
+		if data.has("blade_width"): blade_width = data["blade_width"]
+		if data.has("balance_point"): balance_point = data["balance_point"]
 	if data.has("sprite_path"): 
 		sprite_path = data["sprite_path"]
 		set_sprite_from_path(sprite_path)
@@ -334,7 +339,8 @@ func load_from_data(data: Dictionary) -> void:
 			sprite_scale = data["sprite_scale"]
 		elif data["sprite_scale"] is float:
 			sprite_scale = Vector2(data["sprite_scale"], data["sprite_scale"])
-	
+	if data.has("weight"):
+		weight = data.weight
 	_update_sprite_transform()
 	if debug_draw:
 		_create_debug_visualization()
@@ -350,8 +356,43 @@ func to_data() -> Dictionary:
 		"grip_length": grip_length,
 		"blade_width": blade_width,
 		"balance_point": balance_point,
-		"sprite_path": sprite_path
+		"sprite_path": sprite_path, 
+		"weight": weight
 	}
 
 func get_damage_type_name() -> String:
 	return primary_damage_type
+	
+func _apply_default_size_for_type() -> void:
+	"""Resets geometric parameters to hardcoded defaults based on weapon_type"""
+	match weapon_type:
+		WeaponType.SWORD:
+			total_length = 50.0 * weapon_scale
+			grip_position = 0.75 * weapon_scale
+			grip_length = 12.5 * weapon_scale
+			blade_width = 5.0 * weapon_scale
+			balance_point = 0.35 * weapon_scale
+		WeaponType.AXE:
+			total_length = 45.0
+			grip_position = 0.85
+			grip_length = 27.0
+			blade_width = 14.0
+			balance_point = 0.2
+		WeaponType.SPEAR:
+			total_length = 70.0
+			grip_position = 0.6
+			grip_length = 28.0
+			blade_width = 4.0
+			balance_point = 0.45
+		WeaponType.DAGGER:
+			total_length = 25.0
+			grip_position = 0.65
+			grip_length = 8.75
+			blade_width = 3.0
+			balance_point = 0.4
+		WeaponType.MACE:
+			total_length = 40.0
+			grip_position = 0.8
+			grip_length = 20.0
+			blade_width = 10.0
+			balance_point = 0.15

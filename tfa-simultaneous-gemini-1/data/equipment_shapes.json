@@ -12,6 +12,15 @@
 			"sprite_path": "res://Items/Fancy Metal Helmet.png"
 		},
 		{
+			"id": "full_face_helmet",
+			"size": "default",
+			"name": "Full Face Helmet",
+			"type": "helmet",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/Full Face Helmet.png"
+		},
+		{
 			"id": "golden_crown_helm",
 			"size": "default",
 			"name": "Golden Crown Helm",

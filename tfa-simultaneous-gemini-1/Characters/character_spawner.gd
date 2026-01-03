@@ -9,25 +9,51 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 
 var characters_database: Array = []
 var characters_in_scene: Array = []
+var party_chars: Array = [] 
 var enemies: Array
 var player = null
 var factions: Dictionary
+signal character_selected(character: ProceduralCharacter, index: int)
+signal character_deselected(character: ProceduralCharacter)
+
+# Reference to main game node (set this in _ready or via export)
+var game: Node = null
+
+# Currently selected character
+var selected_character: ProceduralCharacter = null
+var selected_index: int = 0
+
+# Selection indicator
+var selection_indicator: Node2D = null
+const SELECTION_CIRCLE_RADIUS = 25.0
+const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White
+const SELECTION_CIRCLE_WIDTH = 2.0
+
 func _ready() -> void:
 	load_characters_database()
+	#process_mode = Node.PROCESS_MODE_ALWAYS
+	_create_selection_indicator(Globals.default_body_width+5)
 	factions = load_factions_from_json("res://data/factions.json")
 	player = spawn_character_by_name("Default Human", Vector2(40.0,40.0))
+	call_deferred("_select_initial_character")
+	var ally = spawn_character_by_name("Default Human", Vector2(80.0,80.0), "player")
+	party_chars.append(player)
+	party_chars.append(ally)
 	# Using new shape-based weapon system
 	# METHOD 1: Equip by name (requires ItemDatabase autoload)
 	# This is the cleanest way - just reference items by name from your JSON database
 	player.give_weapon_by_name("Longsword")
 	player.give_weapon_by_name("Battle Axe")
-	player.equip_equipment_by_name("Fancy Metal Helmet")
+	player.equip_equipment_by_name("Full Face Helmet")
 	player.equip_equipment_by_name("Breastplate 2")
 	player.set_faction("player")
+	player.strength = 1000
 	# Create enemies
 	_spawn_enemy(Vector2(250, 80))
 	_spawn_enemy(Vector2(300, 150))
 	_spawn_enemy(Vector2(80, 220))
+	
+	
 	
 func load_factions_from_json(json_path: String):
 	if not FileAccess.file_exists(json_path):
@@ -61,10 +87,11 @@ func _create_character(pos: Vector2, faction: String, ai_enabled: bool) -> Proce
 	
 	var skin_colors = ["#E8BEAC", "#D4A574", "#8D5524", "#C68642"]
 	var hair_colors = ["#4a3728", "#2C1810", "#8B4513", "#1C1C1C"]
-	
+	var hair_types = ["bald", "balidng", "full", "combover", "pompadour", "buzz", "mohawk"]
 	char.load_from_data({
 		"skin_color": skin_colors[randi() % skin_colors.size()],
 		"hair_color": hair_colors[randi() % hair_colors.size()],
+		"hair_style": hair_types[randi() % hair_types.size()],
 		"faction": faction
 	})
 	
@@ -75,6 +102,7 @@ func _create_character(pos: Vector2, faction: String, ai_enabled: bool) -> Proce
 func _spawn_enemy(pos: Vector2, faction: String ="bandits") -> void:
 	var enemy = _create_character(pos, "enemy", true)
 	enemy.set_faction("bandits")
+	
 	# Random stats
 	enemy.set_stats(
 		randi_range(8, 14),   # STR
@@ -107,6 +135,12 @@ func _process(delta: float) -> void:
 	for key in to_remove:
 		clash_cooldowns.erase(key)
 	_check_combat_collisions()
+	
+	if selected_character and is_instance_valid(selected_character) and selection_indicator:
+		selection_indicator.global_position = selected_character.global_position
+		selection_indicator.visible = true
+	elif selection_indicator:
+		selection_indicator.visible = false
 
 func _check_combat_collisions() -> void:
 	if not player or not player.is_alive():
@@ -129,7 +163,6 @@ func _check_combat_collisions() -> void:
 					player, enemy, hit["position"],
 					player.current_weapon, hit["velocity"]
 				)
-	
 	# Check enemies attacking player
 	for enemy in enemies:
 		if not enemy.is_alive() or not enemy.is_attacking():
@@ -144,16 +177,18 @@ func _check_combat_collisions() -> void:
 				enemy, player, hit["position"],
 				enemy.current_weapon, hit["velocity"]
 			)
+		
 	
 	# Check weapon clashes
-	if player.is_attacking():
-		for enemy in enemies:
-			if not enemy.is_alive() or not enemy.is_attacking():
-				continue
-			
-			var clash = check_weapon_weapon_collision(player, enemy)
-			if clash.get("collision", false):
-				process_weapon_clash(player, enemy, clash["position"])
+	
+	for enemy in enemies:
+		if not enemy.is_alive() or not enemy.is_attacking():
+			continue
+		
+		var clash = check_weapon_weapon_collision(player, enemy)
+		if clash.get("collision", false):
+			process_weapon_clash(player, enemy, clash["position"])
+	
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
@@ -164,17 +199,87 @@ func _input(event: InputEvent) -> void:
 			KEY_P:
 				# Print status
 				_print_status()
-			KEY_SPACE:
-				# Spawn new enemy
-				_spawn_enemy(Vector2(
-					randf_range(50, 350),
-					randf_range(50, 250)
-				))
-				print("Spawned new enemy!")
+	# Number keys 1-9 to select party members
+	if event is InputEventKey and event.pressed and not event.echo:
+		var key = event.keycode
+		if key >= KEY_1 and key <= KEY_9:
+			var index = key - KEY_1  # 0-8
+			select_character_by_index(index)
+				
+func _create_selection_indicator(size:int) -> void:
+	"""Create the white circle selection indicator"""
+	selection_indicator = Node2D.new()
+	selection_indicator.name = "SelectionIndicator"
+	selection_indicator.z_index = 100  # Above most things
+	
+	# We'll draw the circle in a custom draw node
+	var circle_drawer = SelectionCircle.new()
+	circle_drawer.radius = size
+	circle_drawer.circle_color = SELECTION_CIRCLE_COLOR
+	circle_drawer.line_width = SELECTION_CIRCLE_WIDTH
+	selection_indicator.add_child(circle_drawer)
+	
+	# Add to scene tree (will be repositioned each frame)
+	add_child(selection_indicator)
+	selection_indicator.visible = false
+
+func _select_initial_character() -> void:
+	"""Select the first party character on startup"""
+	var party = get_party()
+	if party.size() > 0:
+		select_character(party[0], 0)
+func get_party() -> Array:
+	"""Get the party characters array"""
+	return party_chars
+func select_character_by_index(index: int) -> bool:
+	"""Select a party member by their index (0-based)"""
+	var party = get_party()
+	if index >= 0 and index < party.size():
+		var character = party[index]
+		if character and is_instance_valid(character):
+			select_character(character, index)
+			return true
+	return false
+
+func select_character(character: ProceduralCharacter, index: int = -1) -> void:
+	"""Select a specific character"""
+	if selected_character == character:
+		return
+	
+	# Deselect previous
+	if selected_character:
+		emit_signal("character_deselected", selected_character)
+	
+	# Select new
+	selected_character = character
+	selected_index = index if index >= 0 else get_party().find(character)
+	
+	emit_signal("character_selected", character, selected_index)
+	print("Selected: ", character.Name, " (index ", selected_index, ")")
+
+func select_next() -> void:
+	"""Select next party member"""
+	var party = get_party()
+	if party.size() == 0:
+		return
+	var next_index = (selected_index + 1) % party.size()
+	select_character_by_index(next_index)
+
+func select_previous() -> void:
+	"""Select previous party member"""
+	var party = get_party()
+	if party.size() == 0:
+		return
+	var prev_index = (selected_index - 1 + party.size()) % party.size()
+	select_character_by_index(prev_index)
+
+func get_selected() -> ProceduralCharacter:
+	"""Get the currently selected character"""
+	return selected_character
 
 # ===== COMBAT CALLBACKS =====
 
-func _on_damage_dealt(attacker: Node2D, target: Node2D, info: Dictionary) -> void:
+func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: Dictionary) -> void:
 	var attacker_name = "Player" if attacker == player else "Enemy"
 	var target_name = "Player" if target == player else "Enemy"
 	print("%s hit %s's %s for %d damage (blocked %d)" % [
@@ -187,14 +292,14 @@ func _on_damage_dealt(attacker: Node2D, target: Node2D, info: Dictionary) -> voi
 	if info.get("limb_severed", false):
 		print("  -> %s SEVERED!" % info["limb_name"])
 
-func _on_weapon_bounced(attacker: Node2D, target: Node2D, limb_type: int) -> void:
+func _on_weapon_bounced(attacker: CharacterBody2D, target: CharacterBody2D, limb_type: int) -> void:
 	print("Weapon bounced off armor!")
 
-func _on_weapon_clash(char1: Node2D, char2: Node2D, winner: Node2D, power_diff: float) -> void:
+func _on_weapon_clash(char1: CharacterBody2D, char2: CharacterBody2D, winner: CharacterBody2D, power_diff: float) -> void:
 	var winner_name = "Player" if winner == player else "Enemy"
 	print("Weapon clash! %s wins (power diff: %.1f)" % [winner_name, power_diff])
 
-func _on_weapon_disarmed(character: Node2D) -> void:
+func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 	var name = "Player" if character == player else "Enemy"
 	print("%s was DISARMED!" % name)
 
@@ -258,11 +363,13 @@ func load_characters_database() -> void:
 	
 	print("Loaded ", characters_database.size(), " character definitions")
 
-func spawn_character_by_name(char_name: String, spawn_position: Vector2) -> ProceduralCharacter:
+func spawn_character_by_name(char_name: String, spawn_position: Vector2, faction = null) -> ProceduralCharacter:
 	for char_data in characters_database:
 		if char_data.get("name", "") == char_name:
-			return spawn_character(char_data, spawn_position)
-	
+			var c = spawn_character(char_data, spawn_position)
+			if faction:
+				c.faction = faction
+			return c	
 	push_warning("Character not found: " + char_name)
 	return null
 
@@ -277,7 +384,7 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 	var container = spawn_container if spawn_container else self
 	
 	# Create character node
-	var character_node = Node2D.new()
+	var character_node = CharacterBody2D.new()
 	character_node.set_script(ProceduralCharacterScript)
 	character_node.global_position = spawn_position
 	
@@ -354,11 +461,11 @@ var active_hits: Dictionary = {}  # attacker_id -> { target_id -> hit_data }
 # Weapon clash cooldowns
 var clash_cooldowns: Dictionary = {}  # "id1_id2" -> time_remaining
 
-signal damage_dealt(attacker: Node2D, target: Node2D, damage_info: Dictionary)
-signal weapon_bounced(attacker: Node2D, target: Node2D, limb_type: int)
-signal weapon_clash(char1: Node2D, char2: Node2D, winner: Node2D, power_diff: float)
-signal weapon_knocked_away(character: Node2D)
-signal weapon_disarmed(character: Node2D)
+signal damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, damage_info: Dictionary)
+signal weapon_bounced(attacker: CharacterBody2D, target: CharacterBody2D, limb_type: int)
+signal weapon_clash(char1: CharacterBody2D, char2: CharacterBody2D, winner: CharacterBody2D, power_diff: float)
+signal weapon_knocked_away(character: CharacterBody2D)
+signal weapon_disarmed(character: CharacterBody2D)
 
 const CLASH_COOLDOWN: float = 0.3  # Seconds between weapon clashes	
 
@@ -387,7 +494,7 @@ func process_weapon_hit(
 	# Get armor DR for that limb
 	var limb = target.get_limb(limb_type)
 	# Calculate base damage
-	var damage = target.damage_limb(limb_type, weapon.base_damage) #need to heavily update to add damage riders
+	var damage = target.damage_limb(limb_type, weapon.base_damage, local_hit) #need to heavily update to add damage riders
 	var armor_dr = limb.armor_dr if limb else 0
 	print("limb: ", limb.name)
 	# Calculate penetration based on damage vs DR
@@ -471,6 +578,8 @@ func _calculate_penetration(damage: Dictionary, armor_dr: Dictionary, velocity: 
 	}
 # ===== WEAPON VS WEAPON COLLISION =====
 
+
+		# Visual feedback could be added here (screen shake, etc)
 func process_weapon_clash(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter,
@@ -514,8 +623,8 @@ func process_weapon_clash(
 
 		result["outcome"] = "stalemate"
 		print("weapon clash resulted in stalemate")
-		_apply_stagger(char1, 0.1)
-		_apply_stagger(char2, 0.1)
+		char2.apply_stagger(0.2)
+		char1.apply_stagger(0.2)
 	elif abs(power_diff) < 5.0:
 		# Moderate difference - loser knocked back
 		winner = char1 if power_diff > 0 else char2
@@ -524,7 +633,7 @@ func process_weapon_clash(
 		result["outcome"] = "knockback"
 		result["winner"] = winner
 		result["loser"] = loser
-		_apply_stagger(loser, 0.3)
+		loser.apply_stagger(0.3)
 		emit_signal("weapon_clash", char1, char2, winner, abs(power_diff))
 	elif abs(power_diff) < 10.0:
 		# Large difference - weapon knocked away
@@ -534,7 +643,7 @@ func process_weapon_clash(
 		result["outcome"] = "knocked_away"
 		result["winner"] = winner
 		result["loser"] = loser
-		_knock_weapon_away(loser)
+		loser.knock_weapon_away()
 		emit_signal("weapon_knocked_away", loser)
 	else:
 		# Massive difference - disarm
@@ -543,41 +652,17 @@ func process_weapon_clash(
 		result["outcome"] = "disarm"
 		result["winner"] = winner
 		result["loser"] = loser
-		_disarm_character(loser)
+		loser.disarm_character()
 		emit_signal("weapon_disarmed", loser)
 	
 	return result
 
-func _get_clash_key(char1: Node2D, char2: Node2D) -> String:
+func _get_clash_key(char1: CharacterBody2D, char2: CharacterBody2D) -> String:
 	var id1 = char1.get_instance_id()
 	var id2 = char2.get_instance_id()
 	if id1 > id2:
 		return "%d_%d" % [id2, id1]
 	return "%d_%d" % [id1, id2]
-
-func _apply_stagger(character: ProceduralCharacter, intensity: float) -> void:
-	"""Apply stagger effect to character (interrupts attack, brief pause)"""
-	if character.attack_animator:
-		# Interrupt current attack if stagger is strong enough
-		if intensity >= 0.2 and character.attack_animator.is_attacking():
-			character.attack_animator.interrupt_attack()
-		
-		# Visual feedback could be added here (screen shake, etc)
-
-func _knock_weapon_away(character: ProceduralCharacter) -> void:
-	"""Knock the weapon to the side (still held but out of position)"""
-	if character.attack_animator:
-		character.attack_animator.interrupt_attack()
-		character.attack_animator.apply_knockback(0.4)  # Recovery time
-
-func _disarm_character(character: ProceduralCharacter) -> void:
-	"""Force character to drop their weapon"""
-	if character.attack_animator:
-		character.attack_animator.interrupt_attack()
-	
-	# TODO: Create dropped weapon entity at character position
-	# For now, just holster
-	character.holster_weapon()
 
 # ===== HIT TRACKING =====
 
@@ -597,7 +682,10 @@ func can_hit_target(attacker: ProceduralCharacter, target: ProceduralCharacter) 
 	if not active_hits.has(attacker_id):
 		return true
 	
-	return not active_hits[attacker_id].has(target_id)
+	var can_hit = not active_hits[attacker_id].has(target_id)
+	if not can_hit:
+		print("BLOCKED: ", attacker.Name, " already hit ", target.Name, " in this attack. active_hits: ", active_hits)
+	return can_hit
 
 func register_hit(attacker: ProceduralCharacter, target: ProceduralCharacter) -> void:
 	"""Mark that this attack has hit this target"""
@@ -632,50 +720,98 @@ func get_weapon_hitbox(character: ProceduralCharacter) -> Array:
 	
 	return points
 
-func get_body_hitbox(character: ProceduralCharacter) -> Rect2:
-	"""Get character's body hitbox in world space"""
+func get_body_hitbox_corners(character: ProceduralCharacter) -> Array:
+	"""Get character's body hitbox as 4 world-space corners (handles rotation)"""
 	var half_width = character.body_width / 2
-	var half_height = character.body_height / 2 + character.head_length
 	
-	var local_rect = Rect2(
-		Vector2(-half_width, -half_height),
-		Vector2(character.body_width, half_height * 2 + character.leg_length)
-	)
+	# The character origin is at the center of the head
+	# Head front is at -head_length * 0.35
+	# Legs end at shoulder_y_offset + leg_length
+	var top = -character.head_length * 0.35
+	var bottom = character.shoulder_y_offset + character.leg_length
 	
-	# For simplicity, return axis-aligned rect (rotation handled separately)
-	return Rect2(
-		character.global_position + local_rect.position.rotated(character.rotation),
-		local_rect.size
-	)
+	# Local space corners
+	var local_corners = [
+		Vector2(-half_width, top),      # top-left
+		Vector2(half_width, top),       # top-right
+		Vector2(half_width, bottom),    # bottom-right
+		Vector2(-half_width, bottom)    # bottom-left
+	]
+	
+	# Transform each corner to world space (applying rotation)
+	var world_corners = []
+	for corner in local_corners:
+		world_corners.append(character.global_position + corner.rotated(character.rotation))
+	
+	return world_corners
+
+func point_in_polygon(point: Vector2, polygon: Array) -> bool:
+	"""Check if a point is inside a convex polygon using cross product method"""
+	var n = polygon.size()
+	if n < 3:
+		return false
+	
+	for i in range(n):
+		var a = polygon[i]
+		var b = polygon[(i + 1) % n]
+		var cross = (b - a).cross(point - a)
+		if cross < 0:
+			return false
+	return true
 
 func check_weapon_body_collision(
 	attacker: ProceduralCharacter,
 	target: ProceduralCharacter
 ) -> Dictionary:
-	"""Check if attacker's weapon is hitting target's body"""
-	
+	"""Check if attacker's weapon is hitting target's body.
+	Returns: {hit: bool, position: Vector2, velocity: float, limb_type: LimbType}"""
 	if not attacker.current_weapon:
 		return {"hit": false}
 	
 	if not attacker.attack_animator or not attacker.attack_animator.is_attacking():
 		return {"hit": false}
 	
-	# Simple rect-based collision for now
-	var weapon_tip = attacker.weapon_holder.to_global(
-		attacker.current_weapon.position + attacker.current_weapon.get_tip_local_position()
-	)
+	var weapon = attacker.current_weapon
+	var body_corners = get_body_hitbox_corners(target)
 	
-	var body_rect = get_body_hitbox(target)
+	# Get blade endpoints in local weapon space
+	var tip_local = weapon.get_tip_local_position()
+	var blade_start_local = weapon.get_blade_start_local()
 	
-	if body_rect.has_point(weapon_tip):
-		return {
-			"hit": true,
-			"position": weapon_tip,
-			"velocity": 100.0  # TODO: Calculate actual velocity from animation
-		}
+	# Check multiple points along the blade (not just the tip)
+	# More points = more accurate but slower
+	var num_checks = 5
+	for i in range(num_checks):
+		var t = float(i) / float(num_checks - 1)  # 0.0 to 1.0
+		var check_point_local = tip_local.lerp(blade_start_local, t)
+		
+		# Transform to world space through weapon_holder
+		var check_point_world = attacker.weapon_holder.to_global(
+			weapon.position + check_point_local
+		)
+		
+		if point_in_polygon(check_point_world, body_corners):
+			# Convert hit position to target's local space for limb detection
+			var hit_local = target.to_local(check_point_world)
+			# Account for target's rotation - we need the position relative to 
+			# the unrotated body, so we "unrotate" the local position
+			var hit_local_unrotated = hit_local.rotated(-target.rotation)
+			
+			var limb_type = target.get_limb_at_position(
+				hit_local_unrotated,
+				target.body_width,
+				target.body_height
+			)
+			
+			return {
+				"hit": true,
+				"position": check_point_world,
+				"velocity": 100.0,  # TODO: Calculate actual velocity from animation
+				"limb_type": limb_type
+			}
 	
 	return {"hit": false}
-
+	
 func check_weapon_weapon_collision(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter
@@ -691,24 +827,51 @@ func check_weapon_weapon_collision(
 	if not char2.attack_animator or not char2.attack_animator.is_attacking():
 		return {"collision": false}
 	
-	# Get weapon blade rects
-	var rect1 = char1.current_weapon.get_blade_collision_rect()
-	var rect2 = char2.current_weapon.get_blade_collision_rect()
+	var weapon1 = char1.current_weapon
+	var weapon2 = char2.current_weapon
 	
-	# Transform to world space (simplified - just use tip positions and a radius)
-	var tip1 = char1.weapon_holder.to_global(
-		char1.current_weapon.position + char1.current_weapon.get_tip_local_position()
-	)
-	var tip2 = char2.weapon_holder.to_global(
-		char2.current_weapon.position + char2.current_weapon.get_tip_local_position()
-	)
+	# Get blade points for both weapons
+	var tip1_local = weapon1.get_tip_local_position()
+	var blade_start1_local = weapon1.get_blade_start_local()
+	var tip2_local = weapon2.get_tip_local_position()
+	var blade_start2_local = weapon2.get_blade_start_local()
 	
-	# Check if tips are close (crude but fast)
-	var collision_radius = 15.0
-	if tip1.distance_to(tip2) < collision_radius:
-		return {
-			"collision": true,
-			"position": (tip1 + tip2) / 2
-		}
+	# Check multiple points along each blade against each other
+	var num_checks = 3
+	var collision_radius = 8.0  # How close blades need to be to "clash"
+	
+	for i in range(num_checks):
+		var t1 = float(i) / float(num_checks - 1)
+		var point1_local = tip1_local.lerp(blade_start1_local, t1)
+		var point1_world = char1.weapon_holder.to_global(weapon1.position + point1_local)
+		
+		for j in range(num_checks):
+			var t2 = float(j) / float(num_checks - 1)
+			var point2_local = tip2_local.lerp(blade_start2_local, t2)
+			var point2_world = char2.weapon_holder.to_global(weapon2.position + point2_local)
+			
+			if point1_world.distance_to(point2_world) < collision_radius:
+				return {
+					"collision": true,
+					"position": (point1_world + point2_world) / 2
+				}
 	
 	return {"collision": false}
+
+# ===== SELECTION CIRCLE DRAWER =====
+
+class SelectionCircle extends Node2D:
+	var radius: float = 25.0
+	var circle_color: Color = Color.WHITE
+	var line_width: float = 2.0
+	var num_segments: int = 32
+	
+	func _draw() -> void:
+		# Draw circle outline
+		var points = PackedVector2Array()
+		for i in range(num_segments + 1):
+			var angle = (float(i) / num_segments) * TAU
+			points.append(Vector2(cos(angle), sin(angle)) * radius)
+		
+		for i in range(num_segments):
+			draw_line(points[i], points[i + 1], circle_color, line_width, true)

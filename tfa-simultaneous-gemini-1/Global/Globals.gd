@@ -4,6 +4,7 @@ var world_state = {"Perrow Destroyed": false, "Justinia Remaining Loops": 7}
 var dialogue_interaction_distance = 250.0
 var default_body_proportions = {}
 var default_leg_swing_time: float = 0.0
+const SIGHT_TEXTURE = preload("res://sight_cone_smooth.png")
 
 @export var default_leg_swing_speed: float = 12.0  # How fast default_legs oscillate
 @export var default_leg_swing_amount: float = 8.0  # How far default_legs swing

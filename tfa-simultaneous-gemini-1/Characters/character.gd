@@ -18,7 +18,7 @@ enum Allegiance { PLAYER, ENEMY, NEUTRAL }
 	set(value):
 		character_id = value
 		if is_inside_tree(): _apply_character_data()
-
+#LOS
 # --- Stats & Attributes ---
 var character_name: String = "Unnamed"
 var icon: String
@@ -645,6 +645,7 @@ func ability_check(stat,domain):
 		success_target += bonus
 		
 	var success_level = _calculate_success_level(roll, success_target)
+	
 func execute_planned_action(action: PlannedAction):
 	if is_moving:
 		current_path.clear(); path_index = 0; is_moving = false
@@ -951,7 +952,6 @@ func hide_previews():
 	cumulative_path_points.clear()
 	preview_positions.clear()
 	
-	
 	# Clean up all preview sprites
 	for sprite in planned_action_previews:
 		if is_instance_valid(sprite):
@@ -1079,13 +1079,6 @@ func _get_position_after_actions(up_to_slot: int) -> Vector2:
 	print("Got position after previews #ui")
 	return pos
 
-func _create_preview_sprite():
-	"""Create a new preview sprite with the same texture as the character"""
-	#var preview = ActionPreviewVisualScene.instantiate()
-	#preview.texture = sprite.texture
-	#preview.scale = sprite.scale
-	#preview_container.add_child(preview)
-	print("create preview sprite deprecated ")
 # Renamed and modified to update a specific preview instance passed to it
 func _update_preview_visuals(preview_node: Node2D, direction: Direction):
 	if body_part_data.is_empty(): return

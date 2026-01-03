@@ -27,8 +27,9 @@ signal date_changed(day, month, year)
 
 func _ready():
 	# Set initial time if desired
-	set_time(6, 0, 0)  # Start at 8:00 AM
-	set_date(1, 10, 2524)  # June 1, 2024
+	set_time(6, 0, 0)  # Start at 6:00 AM
+	set_date(1, 10, 2524)  # October 1, 2224
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _process(delta):
 	if is_paused:

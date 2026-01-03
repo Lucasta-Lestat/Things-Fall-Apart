@@ -9,7 +9,7 @@
 			"strength": 50,
 			"consitution": 50,
 			"will": 50,
-			
+			"weight": 70.0,
 			"size": "default_human"
 		},
 		{
@@ -19,7 +19,9 @@
 			"faction": "town_guard",
 			"move_speed": 120.0,
 			"body_width": 30.0,
-			"body_height": 15.0
+			"body_height": 15.0,
+			"weight": 85.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Merchant",
@@ -28,7 +30,9 @@
 			"faction": "merchants",
 			"move_speed": 100.0,
 			"body_width": 26.0,
-			"body_height": 14.0
+			"body_height": 14.0,
+			"weight": 75.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Bandit",
@@ -37,7 +41,9 @@
 			"faction": "bandits",
 			"move_speed": 140.0,
 			"body_width": 26.0,
-			"body_height": 13.0
+			"body_height": 13.0,
+			"weight": 68.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Bandit Chief",
@@ -46,7 +52,9 @@
 			"faction": "bandits",
 			"move_speed": 110.0,
 			"body_width": 32.0,
-			"body_height": 16.0
+			"body_height": 16.0,
+			"weight": 105.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Rebel Fighter",
@@ -55,7 +63,9 @@
 			"faction": "rebels",
 			"move_speed": 160.0,
 			"body_width": 26.0,
-			"body_height": 13.0
+			"body_height": 13.0,
+			"weight": 72.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Forest Elf",
@@ -64,7 +74,9 @@
 			"faction": "neutral",
 			"move_speed": 200.0,
 			"body_width": 22.0,
-			"body_height": 11.0
+			"body_height": 11.0,
+			"weight": 55.0,
+			"size": "default_elf"
 		},
 		{
 			"name": "Cultist",
@@ -73,7 +85,9 @@
 			"faction": "cultists",
 			"move_speed": 130.0,
 			"body_width": 24.0,
-			"body_height": 12.0
+			"body_height": 12.0,
+			"weight": 60.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Skeleton Warrior",
@@ -82,7 +96,9 @@
 			"faction": "undead",
 			"move_speed": 90.0,
 			"body_width": 24.0,
-			"body_height": 12.0
+			"body_height": 12.0,
+			"weight": 20.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Demon Imp",
@@ -91,7 +107,9 @@
 			"faction": "demons",
 			"move_speed": 180.0,
 			"body_width": 18.0,
-			"body_height": 10.0
+			"body_height": 10.0,
+			"weight": 15.0,
+			"size": "tiny"
 		},
 		{
 			"name": "Noble Lord",
@@ -100,7 +118,9 @@
 			"faction": "nobles",
 			"move_speed": 100.0,
 			"body_width": 28.0,
-			"body_height": 14.0
+			"body_height": 14.0,
+			"weight": 80.0,
+			"size": "default_human"
 		},
 		{
 			"name": "Wild Wolf",
@@ -109,7 +129,9 @@
 			"faction": "wildlife",
 			"move_speed": 220.0,
 			"body_width": 20.0,
-			"body_height": 16.0
+			"body_height": 16.0,
+			"weight": 45.0,
+			"size": "animal"
 		}
 	]
 }

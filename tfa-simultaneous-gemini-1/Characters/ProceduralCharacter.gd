@@ -1,10 +1,11 @@
 # character.gd
 # Attach to a Node2D that will be the character root
-extends Node2D
+extends CharacterBody2D
 class_name ProceduralCharacter
 @onready var game2 = get_node("/root/TopDownCharacterScene")
 # Character data
 var character_data: Dictionary = {}
+var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
@@ -13,6 +14,7 @@ var traits = ["Male"]
 var faction_id: String = "neutral"
 var is_protagonist = false
 var AI_enabled = false
+var action_queue: ActionQueue = null
 # Body parts
 var body: Line2D
 var head: Line2D
@@ -21,7 +23,11 @@ var left_arm: Line2D
 var right_arm: Line2D
 var left_leg: Line2D
 var right_leg: Line2D
-
+#Shaking
+# --- NEW: Shake & Push Variables ---
+var current_shake_intensity: float = 0.0
+var shake_decay_rate: float = 10.0
+var current_shake_offset: Vector2 = Vector2.ZERO
 @export var body_size_mod = 1.1
 # Leg animation
 var leg_swing_time: float = body_size_mod * Globals.default_leg_swing_time
@@ -45,11 +51,23 @@ var back_slot: Node2D
 var legs_slot: Node2D
 var feet_slot: Node2D
 
+enum HairStyle {
+	NONE,
+	HORSESHOE,      # Original balding/receding hairline
+	FULL,           # Normal full head of hair
+	COMBOVER,       # Side-swept comb over
+	POMPADOUR,      # High volume front swept back
+	BUZZCUT,        # Very short all over
+	MOHAWK          # Strip down the middle
+}
+var hair_style: HairStyle = HairStyle.FULL
 # Inventory and weapons (using new shape-based system)
 var inventory: Inventory
-var current_weapon: WeaponShape = null
-var weapon_holder: Node2D
-
+var current_main_hand_weapon: WeaponShape = null
+var current_off_hand_weapon: WeaponShape = null
+var main_hand_holder: Node2D
+var off_hand_holder: Node2D
+var unarmed_strike_damage_type = "bludgeoning"
 # Attack system
 var attack_animator: AttackAnimator
 
@@ -117,7 +135,7 @@ var severed_limbs: Dictionary = {}  # LimbType -> bool
 var conditions = {}
 # Derived stats (calculated from attributes)
 var max_hp: int:
-	get: return 6 + (constitution)/10  # 50 base + 10 per CON above 10
+	get: return 6 + (constitution)/10 
 var blood_amount = max_hp
 
 var consciousness: int:
@@ -175,6 +193,31 @@ func _ready() -> void:
 	initialize_limbs(constitution)
 	TimeManager.time_updated.connect(_on_time_updated)
 
+# Add this to your _ready() function:
+func _setup_action_queue() -> void:
+	action_queue = ActionQueue.new()
+	action_queue.name = "ActionQueue"
+	add_child(action_queue)
+	
+	# Configure queue behavior
+	action_queue.max_queue_size = 10
+	action_queue.queue_only_when_paused = false  # Set true if you only want queueing while paused
+	
+	# Optional: connect to signals for UI feedback
+	action_queue.action_queued.connect(_on_action_queued)
+	action_queue.action_started.connect(_on_action_started)
+	action_queue.action_completed.connect(_on_action_completed)
+
+# Optional signal handlers for UI feedback
+func _on_action_queued(action: ActionQueue.Action) -> void:
+	print("Action queued: ", ActionQueue.ActionType.keys()[action.type])
+
+func _on_action_started(action: ActionQueue.Action) -> void:
+	print("Action started: ", ActionQueue.ActionType.keys()[action.type])
+
+func _on_action_completed(action: ActionQueue.Action) -> void:
+	print("Action completed: ", ActionQueue.ActionType.keys()[action.type])
+
 func _setup_inventory() -> void:
 	inventory = Inventory.new()
 	inventory.name = "Inventory"
@@ -184,9 +227,13 @@ func _setup_inventory() -> void:
 	inventory.active_weapon_changed.connect(_on_active_weapon_changed)
 	
 	# Create weapon holder (attaches to right hand position)
-	weapon_holder = Node2D.new()
-	weapon_holder.name = "WeaponHolder"
-	add_child(weapon_holder)
+	main_hand_holder = Node2D.new()
+	off_hand_holder = Node2D.new()
+	main_hand_holder.name = "WeaponHolder"
+	off_hand_holder.name = "OffHandHolder"
+	#look here for updating to dual hand system.
+	add_child(main_hand_holder)
+	add_child(off_hand_holder)
 
 func _setup_equipment_slots() -> void:
 	# Create holder nodes for each equipment slot
@@ -238,18 +285,32 @@ func _setup_collision() -> void:
 	collision_area.collision_mask = 2   # Detect other characters
 	add_child(collision_area)
 	
-	# Create circular collision shape based on body dimensions
+	# Create polygon collision shape based on body dimensions
 	collision_shape = CollisionShape2D.new()
 	collision_shape.name = "CollisionShape"
-	var circle = CircleShape2D.new()
-	circle.radius = collision_radius
-	collision_shape.shape = circle
+	var polygon = ConvexPolygonShape2D.new()
+	polygon.points = _get_body_collision_points()
+	collision_shape.shape = polygon
 	collision_area.add_child(collision_shape)
 
 func _update_collision_shape() -> void:
 	# Call this if body dimensions change at runtime
-	if collision_shape and collision_shape.shape is CircleShape2D:
-		collision_shape.shape.radius = collision_radius
+	if collision_shape and collision_shape.shape is ConvexPolygonShape2D:
+		collision_shape.shape.points = _get_body_collision_points()
+
+func _get_body_collision_points() -> PackedVector2Array:
+	"""Get the local-space collision polygon points matching body hitbox"""
+	var half_width = body_width / 2
+	var top = -head_length * 0.35
+	var bottom = shoulder_y_offset + leg_length
+	
+	# Return points in clockwise or counter-clockwise order
+	return PackedVector2Array([
+		Vector2(-half_width, top),      # top-left
+		Vector2(half_width, top),       # top-right
+		Vector2(half_width, bottom),    # bottom-right
+		Vector2(-half_width, bottom)    # bottom-left
+	])
 
 func get_overlapping_characters() -> Array[ProceduralCharacter]:
 	"""Get all characters currently overlapping with this one"""
@@ -284,9 +345,11 @@ func get_separation_vector() -> Vector2:
 	
 	return separation
 
+# Updated load_from_data function
 func load_from_data(data: Dictionary) -> void:
 	character_data = data
-	
+	if data.has("name"):
+		Name = data["name"]
 	# Parse skin color
 	if data.has("skin_color"):
 		skin_color = Color.html(data["skin_color"])
@@ -294,6 +357,10 @@ func load_from_data(data: Dictionary) -> void:
 	# Parse hair color
 	if data.has("hair_color"):
 		hair_color = Color.html(data["hair_color"])
+	
+	# Parse hair style
+	if data.has("hair_style"):
+		hair_style = _parse_hair_style(data["hair_style"])
 	
 	# Parse faction
 	if data.has("faction"):
@@ -343,6 +410,25 @@ func load_from_data(data: Dictionary) -> void:
 	# Update visuals
 	_update_colors()
 
+func _parse_hair_style(style_name: String) -> HairStyle:
+	match style_name.to_lower():
+		"none", "bald":
+			return HairStyle.NONE
+		"horseshoe", "balding", "receding":
+			return HairStyle.HORSESHOE
+		"full", "normal", "default":
+			return HairStyle.FULL
+		"combover", "comb_over", "comb-over":
+			return HairStyle.COMBOVER
+		"pompadour", "pomp":
+			return HairStyle.POMPADOUR
+		"buzzcut", "buzz", "short":
+			return HairStyle.BUZZCUT
+		"mohawk":
+			return HairStyle.MOHAWK
+		_:
+			return HairStyle.FULL
+
 func _create_body_parts() -> void:
 	# Create legs first (behind everything else)
 	left_leg = _create_leg("LeftLeg")
@@ -376,19 +462,8 @@ func _create_body_parts() -> void:
 	body.add_point(Vector2(-body_width / 2, shoulder_y_offset))
 	body.add_point(Vector2(body_width / 2, shoulder_y_offset))
 	
-	# Create hair (behind head, covers back/top of head)
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width + 4  # Slightly wider than head
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0  # Behind head
-	add_child(hair)
-	
-	# Hair covers the back portion of the head (positive Y = back of head)
-	hair.add_point(Vector2(0, -head_length * 0.1))
-	hair.add_point(Vector2(0, head_length * 0.4))
+	# Create hair based on style
+	_create_hair()
 	
 	# Create head (oval shape - vertical line with width for left-right dimension)
 	head = Line2D.new()
@@ -405,6 +480,168 @@ func _create_body_parts() -> void:
 	head.add_point(Vector2(0, -head_length * 0.35))  # Front of head (face)
 	head.add_point(Vector2(0, head_length * 0.25))   # Back of head (covered by hair)
 
+func _create_hair() -> void:
+	# Remove existing hair if any
+	if hair:
+		hair.queue_free()
+		hair = null
+	
+	# Remove any additional hair components
+	for child in get_children():
+		if child.name.begins_with("Hair"):
+			child.queue_free()
+	
+	if hair_style == HairStyle.NONE:
+		return
+	
+	match hair_style:
+		HairStyle.HORSESHOE:
+			_create_horseshoe_hair()
+		HairStyle.FULL:
+			_create_full_hair()
+		HairStyle.COMBOVER:
+			_create_combover_hair()
+		HairStyle.POMPADOUR:
+			_create_pompadour_hair()
+		HairStyle.BUZZCUT:
+			_create_buzzcut_hair()
+		HairStyle.MOHAWK:
+			_create_mohawk_hair()
+
+func _create_horseshoe_hair() -> void:
+	# Original hair style - receding/balding with hair on sides and back
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 4  # Slightly wider than head
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0  # Behind head
+	add_child(hair)
+	
+	# Hair covers only the back portion of the head
+	hair.add_point(Vector2(0, -head_length * 0.1))
+	hair.add_point(Vector2(0, head_length * 0.4))
+
+func _create_full_hair() -> void:
+	# Full head of hair - covers most of the head from top-down view
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 6  # Wider than head for full coverage
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0  # Behind head
+	add_child(hair)
+	
+	# Hair extends from front to back, covering most of the head
+	hair.add_point(Vector2(0, -head_length * 0.3))  # Near front
+	hair.add_point(Vector2(0, head_length * 0.45))  # Past back
+
+func _create_combover_hair() -> void:
+	# Comb over - hair swept from one side to the other
+	# Main hair mass on one side
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.7
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0
+	add_child(hair)
+	
+	# Hair sweeps from left side across the top
+	hair.add_point(Vector2(-head_width * 0.35, -head_length * 0.1))
+	hair.add_point(Vector2(head_width * 0.2, -head_length * 0.25))
+	hair.add_point(Vector2(head_width * 0.35, head_length * 0.1))
+	
+	# Back portion of hair
+	var hair_back = Line2D.new()
+	hair_back.name = "HairBack"
+	hair_back.width = head_width + 2
+	hair_back.default_color = hair_color
+	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.z_index = -1  # Further behind
+	add_child(hair_back)
+	
+	hair_back.add_point(Vector2(0, head_length * 0.1))
+	hair_back.add_point(Vector2(0, head_length * 0.4))
+
+func _create_pompadour_hair() -> void:
+	# Pompadour - high volume at the front swept back
+	# Main pompadour volume at front
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 8  # Extra wide for volume
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # In front of head for the pomp
+	add_child(hair)
+	
+	# High front portion that extends forward
+	hair.add_point(Vector2(0, -head_length * 0.5))  # Extends past front of head
+	hair.add_point(Vector2(0, -head_length * 0.2))
+	
+	# Side and back hair
+	var hair_back = Line2D.new()
+	hair_back.name = "HairBack"
+	hair_back.width = head_width + 4
+	hair_back.default_color = hair_color.darkened(0.1)  # Slightly darker for depth
+	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.z_index = 0  # Behind head
+	add_child(hair_back)
+	
+	hair_back.add_point(Vector2(0, -head_length * 0.15))
+	hair_back.add_point(Vector2(0, head_length * 0.45))
+
+func _create_buzzcut_hair() -> void:
+	# Buzzcut - very short hair all over, just a slight texture on the head
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 2  # Just slightly wider than head
+	hair.default_color = hair_color.darkened(0.2)  # Darker because it's so short
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0  # Behind head
+	add_child(hair)
+	
+	# Covers the whole head tightly
+	hair.add_point(Vector2(0, -head_length * 0.32))
+	hair.add_point(Vector2(0, head_length * 0.35))
+
+func _create_mohawk_hair() -> void:
+	# Mohawk - strip of hair down the middle
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.35  # Narrow strip
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 1  # On top of head
+	add_child(hair)
+	
+	# Strip from front to back, slightly elevated
+	hair.add_point(Vector2(0, -head_length * 0.45))  # Front spike
+	hair.add_point(Vector2(0, head_length * 0.35))   # Back
+
+# Add this to your _update_colors function if you have one, or create it
+func _update_hair_colors() -> void:
+	if hair:
+		if hair_style == HairStyle.BUZZCUT:
+			hair.default_color = hair_color.darkened(0.2)
+		else:
+			hair.default_color = hair_color
+	
+	# Update any secondary hair components
+	var hair_back = get_node_or_null("HairBack")
+	if hair_back:
+		if hair_style == HairStyle.POMPADOUR:
+			hair_back.default_color = hair_color.darkened(0.1)
+		else:
+			hair_back.default_color = hair_color
 func _create_leg(leg_name: String) -> Line2D:
 	var leg = Line2D.new()
 	leg.name = leg_name
@@ -483,6 +720,7 @@ func _update_colors() -> void:
 		right_leg.default_color = skin_color
 
 func _process(delta: float) -> void:
+	handle_visual_shake(delta)
 	_handle_input()
 	_update_movement(delta)
 	_update_leg_animation(delta)
@@ -510,6 +748,8 @@ func _process(delta: float) -> void:
 		
 		# State machine
 		match current_state:
+			AIState.DEAD:
+				pass
 			AIState.IDLE:
 				_process_idle(delta)
 			AIState.CHASE:
@@ -520,7 +760,26 @@ func _process(delta: float) -> void:
 				_process_attack(delta)
 			AIState.RETREAT:
 				_process_retreat(delta)
-		
+func handle_visual_shake(delta) -> void:
+	if current_shake_intensity > 0:
+		print("Im literally shaking: ", current_shake_intensity)
+		current_shake_intensity = move_toward(current_shake_intensity, 0, shake_decay_rate * delta)
+		# Generate random jitter based on intensity
+		current_shake_offset = Vector2(
+			randf_range(-1.0, 1.0),
+			randf_range(-1.0, 1.0)
+		) * current_shake_intensity
+	else:
+		current_shake_offset = Vector2.ZERO	
+func shake_body(intensity: float) -> void:
+	"""
+	Applies a visual shake to the character.
+	intensity: How many pixels to offset (e.g., 5.0 is a mild hit, 15.0 is a heavy hit)
+	"""
+	current_shake_intensity = intensity
+func get_shake_offset() -> Vector2:
+	"""Add this to your character sprite's position in your main script"""
+	return current_shake_offset	
 func _update_body_rotation() -> void:
 	# Apply body rotation during attacks
 	var body_rotation = 0.0
@@ -590,31 +849,50 @@ func _update_leg_animation(delta: float) -> void:
 func _handle_input() -> void:
 	if AI_enabled:
 		return
-	# Get correct mouse position accounting for SubViewport scaling
+	
 	var mouse_pos = _get_adjusted_mouse_position()
+	var paused = PauseManager.is_paused
 	
-	# Right click: turn to face point
+	# When paused: queue actions
+	# When unpaused: execute immediately (queue processes automatically)
+	
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		# Add PI/2 (90 degrees) because our character's forward is -Y, not +X
-		target_rotation = (mouse_pos - global_position).angle() + PI / 2
-		is_moving = false
+		if paused:
+			action_queue.queue_face(mouse_pos)
+		else:
+			target_rotation = (mouse_pos - global_position).angle() + PI / 2
+			is_moving = false
 	
-	# Left click: turn and move to point
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		print("hello, why aren't you moving")
-		target_position = mouse_pos
-		# Add PI/2 (90 degrees) because our character's forward is -Y, not +X
-		target_rotation = (mouse_pos - global_position).angle() + PI / 2
-		is_moving = true
+		if paused:
+			action_queue.queue_move(mouse_pos)
+		else:
+			target_position = mouse_pos
+			target_rotation = (mouse_pos - global_position).angle() + PI / 2
+			is_moving = true
 	
-	# Middle mouse to attack
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) or Input.is_key_pressed(KEY_B):
-		attack()
-	# Mouse wheel or Tab to cycle weapons
-	if Input.is_action_just_pressed("ui_focus_next"):  # Tab by default
-		inventory.cycle_weapon(1)
-	if Input.is_action_just_pressed("ui_focus_prev"):  # Shift+Tab
-		inventory.cycle_weapon(-1)
+		if paused:
+			action_queue.queue_attack()
+		else:
+			attack()
+	
+	if Input.is_action_just_pressed("ui_focus_next"):
+		if paused:
+			action_queue.queue_cycle_weapon(1)
+		else:
+			inventory.cycle_weapon(1)
+	
+	if Input.is_action_just_pressed("ui_focus_prev"):
+		if paused:
+			action_queue.queue_cycle_weapon(-1)
+		else:
+			inventory.cycle_weapon(-1)
+	
+	# Queue management (only when paused)
+	if paused:
+		if Input.is_action_just_pressed("ui_cancel"):
+			action_queue.cancel_all()
 
 func _get_adjusted_mouse_position() -> Vector2:
 	# Check if we're inside a SubViewport
@@ -686,7 +964,7 @@ func _update_arm_ik() -> void:
 		right_shoulder = right_shoulder.rotated(body_rotation)
 	
 	# Check if we have an active weapon
-	if current_weapon != null:
+	if current_main_hand_weapon != null:
 		# Right arm holds weapon - START with bent arm close to body
 		# This gives room to extend during attacks
 		# Relaxed position: elbow bent, hand near center-front of body
@@ -779,48 +1057,72 @@ func _update_arm_visuals() -> void:
 			right_arm.add_point(joint)
 
 func _update_weapon_position() -> void:
-	if current_weapon == null:
-		return
-	
+	#look here for dual hand updates
 	# Position weapon at the right hand (last joint of right arm)
+	if left_arm_joints.size() > 0:
+		var off_hand_pos = left_arm_joints[-1]
+		off_hand_holder.positoin = off_hand_pos
+		var off_hand_attack_rotation = 0.0
+		if attack_animator and attack_animator.is_attacking():
+			off_hand_attack_rotation = attack_animator.get_off_hand_weapon_rotation()
+		
 	if right_arm_joints.size() > 0:
-		var hand_pos = right_arm_joints[-1]
-		weapon_holder.position = hand_pos
+		var main_hand_pos = right_arm_joints[-1]
+		main_hand_holder.position = main_hand_pos
 		
 		# Apply attack animation rotation if attacking
-		var attack_rotation = 0.0
+		var main_hand_attack_rotation = 0.0
 		if attack_animator and attack_animator.is_attacking():
-			attack_rotation = attack_animator.get_weapon_rotation()
+			main_hand_attack_rotation = attack_animator.get_main_hand_weapon_rotation()
 		
-		weapon_holder.rotation = attack_rotation
+		main_hand_holder.rotation = main_hand_attack_rotation
 
-func _on_active_weapon_changed(weapon) -> void:
+func _on_active_weapon_changed(weapon, hand) -> void:
 	# Remove old weapon from holder
-	if current_weapon != null:
-		weapon_holder.remove_child(current_weapon)
-		# Don't free it - it's still in the inventory
-	
-	current_weapon = weapon
-	
-	# Add new weapon to holder
-	if current_weapon != null:
-		weapon_holder.add_child(current_weapon)
-		# Position weapon so the grip aligns with the hand
-		# The sprite's origin is at center, but we want the grip point at holder origin
-		# grip_position is 0-1 where 0=tip, 1=pommel
-		# For a vertical weapon sprite: grip is at (grip_position) from top
-		# We need to offset the sprite so that grip point is at (0,0)
-		var grip_offset = current_weapon.get_grip_offset_for_hand()
-		current_weapon.position = grip_offset
-		current_weapon.z_index = 2  # Above character
-	
+	if hand == "Main":
+		if current_main_hand_weapon != null:
+			main_hand_holder.remove_child(current_main_hand_weapon)
+			# Don't free it - it's still in the inventory
+		
+		current_main_hand_weapon = weapon
+		
+		# Add new weapon to holder
+		if current_main_hand_weapon != null:
+			main_hand_holder.add_child(current_main_hand_weapon)
+			# Position weapon so the grip aligns with the hand
+			# The sprite's origin is at center, but we want the grip point at holder origin
+			# grip_position is 0-1 where 0=tip, 1=pommel
+			# For a vertical weapon sprite: grip is at (grip_position) from top
+			# We need to offset the sprite so that grip point is at (0,0)
+			var grip_offset = current_main_hand_weapon.get_grip_offset_for_hand()
+			current_main_hand_weapon.position = grip_offset
+			current_main_hand_weapon.z_index = 2  # Above character
+	if hand	== "Off":
+		if current_off_hand_weapon != null:
+			off_hand_holder.remove_child(current_off_hand_weapon)
+			# Don't free it - it's still in the inventory
+		
+		current_off_hand_weapon = weapon
+		
+		# Add new weapon to holder
+		if current_off_hand_weapon != null:
+			off_hand_holder.add_child(current_off_hand_weapon)
+			# Position weapon so the grip aligns with the hand
+			# The sprite's origin is at center, but we want the grip point at holder origin
+			# grip_position is 0-1 where 0=tip, 1=pommel
+			# For a vertical weapon sprite: grip is at (grip_position) from top
+			# We need to offset the sprite so that grip point is at (0,0)
+			var grip_offset = current_off_hand_weapon.get_grip_offset_for_hand()
+			current_off_hand_weapon.position = grip_offset
+			current_off_hand_weapon.z_index = 2  # Above character
 	emit_signal("weapon_changed", weapon)
 
-func _on_attack_hit() -> void:
+func _on_attack_hit(ability) -> void:
+	if ability== "Main":
 	# Called when attack hits (at the impact frame)
-	#PLAY SOUND DEPENDING ON WHETHER HIT ARMOR OR FLESH
-	if current_weapon:
-		emit_signal("attack_hit", current_weapon.base_damage, current_weapon.primary_damage_type)
+		emit_signal("attack_hit", current_main_hand_weapon.base_damage, current_main_hand_weapon.primary_damage_type)
+	if ability == "Off":
+		emit_signal("attack_hit", current_off_hand_weapon.base_damage, current_off_hand_weapon.primary_damage_type)
 
 func _on_attack_finished() -> void:
 	# Called when attack animation completes
@@ -828,18 +1130,21 @@ func _on_attack_finished() -> void:
 
 # ===== PUBLIC ATTACK API =====
 
-func attack() -> void:
+func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
-	if current_weapon == null:
-		return
-	if attack_animator.is_attacking():
-		return  # Already attacking
-	
-	# Get damage type from weapon and start appropriate animation
-	var damage_type = current_weapon.primary_damage_type
-	if damage_type == "slashing":
-		SfxManager.play("slash",position)
-	attack_animator.start_attack(damage_type)
+	if Ability == "Main": 
+		if attack_animator.is_attacking():
+			return  # Already attacking
+		
+		# Get damage type from weapon and start appropriate animation
+		var damage_type
+		if current_main_hand_weapon != null:
+			damage_type = current_main_hand_weapon.primary_damage_type
+		else:
+			damage_type = unarmed_strike_damage_type
+		if damage_type == "slashing":
+			SfxManager.play("slash",position)
+		attack_animator.start_attack(damage_type)
 
 func is_attacking() -> bool:
 	"""Check if currently performing an attack"""
@@ -883,13 +1188,13 @@ func draw_weapon() -> void:
 	"""Draw first available weapon"""
 	inventory.draw_weapon()
 
-func get_current_weapon() -> WeaponShape:
+func get_current_main_hand_weapon() -> WeaponShape:
 	"""Get the currently held weapon"""
-	return current_weapon
+	return current_main_hand_weapon
 
 func has_weapon_equipped() -> bool:
 	"""Check if character is holding a weapon"""
-	return current_weapon != null
+	return current_main_hand_weapon != null or current_off_hand_weapon != null
 
 # ===== PUBLIC EQUIPMENT API =====
 
@@ -1070,9 +1375,10 @@ func is_alive() -> bool:
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
 	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
 
-func damage_limb(limb_type: LimbType, damage: Dictionary):
+func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
 	var limb = limbs.get(limb_type)
 	if not limb:
@@ -1087,11 +1393,13 @@ func damage_limb(limb_type: LimbType, damage: Dictionary):
 		raw_val = damage[damage_type]
 		dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
 		if raw_val - dr_val > 0:
-			handle_damage_effect_based_on_type(damage_type)
+			handle_damage_effect_based_on_type(raw_val-dr_val,damage_type, limb_type, location)
 		# Ensure damage for a specific type doesn't go below zero
+		
 		total_damage += max(0, raw_val - dr_val)
 		
 	# 3. Apply the damage to the limb
+	
 	limb.current_hp = clamp(limb.current_hp - total_damage, 0, limb.max_hp)
 	return total_damage
 
@@ -1170,6 +1478,7 @@ func get_status_string() -> String:
 	return "\n".join(parts)
 ### AI
 enum AIState {
+	DEAD,           # Does nothing for now, want to implement some spirit world mechanics later
 	IDLE,           # No enemies nearby, standing still
 	PATROL,         # Moving along patrol path (optional)
 	CHASE,          # Moving toward target
@@ -1200,7 +1509,7 @@ var min_approach_distance: float:
 # Behavior settings
 @export var aggression: float = 0.7           # 0-1, higher = more aggressive
 @export var reaction_time: float = 0.15       # Delay before responding
-@export var attack_cooldown: float = 0.8      # Minimum time between attacks
+@export var attack_cooldown: float = 0.2      # Minimum time between attacks
 
 # Timing
 var attack_cooldown_timer: float = 0.0
@@ -1369,7 +1678,7 @@ func _process_approach(delta: float) -> void:
 	# In attack range - attack!
 	#print("target is in range, attack")
 	if dist <= safe_attack_range and dist >= safe_too_close and attack_cooldown_timer <= 0:
-		print("actually attacking target")
+		#print("actually attacking target")
 		_change_state(AIState.ATTACK)
 		return
 	
@@ -1400,13 +1709,13 @@ func _process_attack(delta: float) -> void:
 	if not self.attack_animator.is_attacking():
 		#print("do we have a weapon?")
 		
-		if self.current_weapon:
+		if self.current_main_hand_weapon:
 		#	print("yes we do have a weapon")
 			self.attack()
 			attack_cooldown_timer = attack_cooldown / (self.attack_speed_multiplier )
 		else:
-			#print("no we don't have a weapon")
-			pass
+			print("trying attack without a weapon")
+			self.attack()
 	# Wait for attack to finish
 	if not self.attack_animator.is_attacking():
 		_change_state(AIState.APPROACH)
@@ -1424,7 +1733,7 @@ func _process_retreat(delta: float) -> void:
 	
 	# Exit retreat after some time
 	if state_timer > 1.5:
-		_change_state(AIState.APPROACH)
+		_change_state(AIState.IDLE)
 
 # ===== MOVEMENT =====
 
@@ -1448,6 +1757,7 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 		
 		# Check if should retreat (low health)
 		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
+		#TODO: Will Check
 		if torso_hp_percent < 0.3 and randf() < 0.5:
 			stun_timer = 0.0
 			_change_state(AIState.RETREAT)
@@ -1457,14 +1767,14 @@ func _on_character_died() -> void:
 		SfxManager.play("man-death-scream",global_position)
 	elif "Female" in self.traits and not "Beast" in self.traits:
 		SfxManager.play("woman-death-scream",global_position)
-	current_state = AIState.IDLE
+	current_state = AIState.DEAD
 	current_target = null
 	set_process(false)
 
 func _update_blood_drops(delta: float) -> void:
 	"""Update all active blood drops"""
 	var drops_to_remove: Array[int] = []
-	
+	#print("Updating blood drops. Current active blood drops = ",active_blood_drops.size())
 	for i in range(active_blood_drops.size()):
 		var drop_data = active_blood_drops[i]
 		var sprite: Sprite2D = drop_data["sprite"]
@@ -1503,6 +1813,73 @@ func _update_blood_drops(delta: float) -> void:
 	drops_to_remove.reverse()
 	for i in drops_to_remove:
 		active_blood_drops.remove_at(i)
+
+# ===== BLOOD DROP SYSTEM =====
+
+func _spawn_blood_drops(origin: Vector2, count: int, is_severing: bool) -> void:
+	"""Spawn blood drop particles at the origin"""
+	print("Attempting to spawn blood drops")
+	if not blood_drop_texture:
+		print("The blood drop texture hasn't been set")
+		push_warning("No blood drop texture set!")
+		return
+	
+	for i in range(count):
+		var drop = _get_blood_drop_sprite()
+		drop.texture = blood_drop_texture
+		drop.visible = true
+		drop.modulate = Color.WHITE
+		drop.modulate.a = 1.0
+		
+		# Random scale
+		var scale_val = randf_range(blood_drop_min_scale, blood_drop_max_scale)
+		if is_severing:
+			scale_val *= randf_range(1.0, 1.5)  # Bigger drops for severing
+		drop.scale = Vector2(scale_val, scale_val)
+		
+		# Random rotation
+		drop.rotation = randf() * TAU
+		
+		# Position at origin with slight offset
+		var offset = Vector2(randf_range(-5, 5), randf_range(-5, 5))
+		drop.position = origin + offset
+		
+		# Random velocity - away from character center
+		var base_dir = (origin - Vector2.ZERO).normalized()
+		if base_dir.length() < 0.1:
+			base_dir = Vector2.RIGHT.rotated(randf() * TAU)
+		
+		# Add randomness to direction
+		var spread = randf_range(-PI/3, PI/3)
+		var velocity_dir = base_dir.rotated(spread)
+		var speed = randf_range(blood_drop_speed_min, blood_drop_speed_max)
+		if is_severing:
+			speed *= randf_range(1.2, 2.0)  # Faster for severing
+		
+		# Track this drop
+		active_blood_drops.append({
+			"sprite": drop,
+			"velocity": velocity_dir * speed,
+			"time": 0.0,
+			"fade_time": blood_drop_fade_time * randf_range(0.8, 1.2),
+			"rotation_speed": randf_range(-3.0, 3.0)
+		})
+
+func _get_blood_drop_sprite() -> Sprite2D:
+	"""Get a sprite from pool or create new one"""
+	# Look for inactive sprite in pool
+	for sprite in blood_pool:
+		if is_instance_valid(sprite) and not sprite.visible:
+			return sprite
+	
+	# Create new sprite
+	var sprite = Sprite2D.new()
+	sprite.name = "BloodDrop"
+	sprite.z_index = 10  # Above everything
+	add_child(sprite)
+	blood_pool.append(sprite)
+	return sprite
+
 
 # ===== LIMB SEVERING =====
 
@@ -1608,6 +1985,18 @@ func _update_severed_limb_visuals() -> void:
 		if severed_limbs[limb_type]:
 			_hide_limb_visual(limb_type)
 
+
+func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
+	severed_limbs[limb_type] = true
+	print("on_limb_severed")
+	# Create extra blood spray for severing
+	var limb_pos = _get_limb_center_position(limb_type)
+	var blood_count = int((blood_drops_max * sever_blood_multiplier))
+	_spawn_blood_drops(limb_pos, blood_count, true)
+	
+	# Hide the limb visual and drop equipment
+	_handle_limb_severing(limb_type)
+
 # ===== HELPER FUNCTIONS =====
 
 func _get_limb_center_position(limb_type: ProceduralCharacter.LimbType) -> Vector2:
@@ -1703,15 +2092,22 @@ func _exit_tree() -> void:
 	blood_pool.clear()
 	active_blood_drops.clear()
 	
-func handle_damage_effect_based_on_type(damage_type: String):
+func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
-			"slashing", "piercing":
+			"slashing":
 				# .get(key, default) prevents a crash if the key doesn't exist yet
 				var current_tier = conditions.get("bleeding", 0)
 				conditions["bleeding"] = current_tier + 1
 				print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
-
+				if damage >= 8:
+					_handle_limb_severing(limb)
+				_spawn_blood_drops(location, 3 * conditions["bleeding"],false)
+			"piercing":
+				var current_tier = conditions.get("bleeding", 0)
+				conditions["bleeding"] = current_tier + 1
+				print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
+				_spawn_blood_drops(location, 3 * conditions["bleeding"],false)
 			"fire":
 				conditions["burning"] = conditions.get("burning", 0) + 1
 				
@@ -1727,7 +2123,37 @@ func handle_damage_effect_based_on_type(damage_type: String):
 				pass
 					
 # ===== PUBLIC API =====
+		# Visual feedback could be added here (screen shake, etc)
 
+func _knock_weapon_away() -> void:
+	"""Knock the weapon to the side (still held but out of position)"""
+	if self.attack_animator:
+		self.attack_animator.interrupt_attack()
+		self.attack_animator.apply_knockback(0.4)  # Recovery time
+		
+func apply_stagger(intensity: float) -> void:
+	"""Apply stagger effect to character (interrupts attack, brief pause)"""
+	if self.attack_animator:
+		# Interrupt current attack if stagger is strong enough
+		if intensity >= 0.2 and self.attack_animator.is_attacking():
+			self.attack_animator.interrupt_attack()
+			#TODO: implement movement and shaking of the character
+		
+func disarm_character() -> void:
+	"""Force character to drop their weapon"""
+	if self.attack_animator:
+		self.attack_animator.interrupt_attack()
+	
+	# TODO: Create dropped weapon entity at character position
+	# For now, just holster
+	self.holster_weapon()
+# INTERUPTION AND KNOCKBACK
+func apply_knockback(duration: float) -> void:
+	"""Apply a knockback recovery period (can't attack)"""
+	attack_animator.interrupt_attack()
+	attack_animator.knockback_timer = duration
+	attack_animator.is_knocked_back = true
+	
 func set_target(target: ProceduralCharacter) -> void:
 	"""Manually set a target"""
 	if target and _is_enemy(target):
@@ -1744,6 +2170,7 @@ func stun(duration: float) -> void:
 
 func get_state_name() -> String:
 	return AIState.keys()[current_state]
+	
 func _on_time_updated(_hour: int, _minute: int, second: int):
 	# 1. Check if the character is currently bleeding
 	if not conditions.has("bleeding"):
@@ -1767,8 +2194,9 @@ func apply_bleeding_tick():
 		blood_amount = max(0, blood_amount)
 		constitution = max(0, constitution)
 		
-		print("Bleed Tick: Blood at ", blood_amount, " | Con at ", constitution)
+		#print("Bleed Tick: Blood at ", blood_amount, " | Con at ", constitution)
 		
 		# Logic check: if constitution or blood hits 0, handle death/unconsciousness
-		if blood_amount <= 0 or constitution <= 0:
+		if blood_amount <= 0 or constitution <= 0 and is_alive():
 			_on_character_died()
+			conditions["Bleeding"] = 0

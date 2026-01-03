@@ -76,12 +76,16 @@ func load_map(map_id: StringName, coming_from: String):
 				var light = PointLight2D.new()
 				# GENERATE A TEXTURE (Crucial Step)
 				# Without a texture, the light is invisible. 
-				var radius = 1440
-				var degree = 150
-				var tex = generate_cone_texture(radius,degree)
-				#light.offset = Vector2(radius/8, 0) # Half of radius (optional tweaking)
-				# Assign the generated texture to the light
-				light.texture = tex
+				light.texture = Globals.SIGHT_TEXTURE
+				light.energy = 0.3
+				# 2. Calculate the Scale
+				# Our master image is 1024x1024, so the radius is 512 pixels.
+				# We want the final radius to be 1440 * c.sight.
+				var master_radius = 512.0 
+				var desired_radius = 1440.0 * c.sight
+
+# texture_scale is a multiplier. 1.0 = original size.
+				light.texture_scale = desired_radius / master_radius
 				light.name = "LineOfSight"
 				light.rotation_degrees = 90
 				light.shadow_enabled = true
