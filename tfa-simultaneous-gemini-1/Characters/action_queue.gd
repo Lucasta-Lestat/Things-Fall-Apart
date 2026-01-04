@@ -219,13 +219,13 @@ func _is_action_complete(action: Action) -> bool:
 		ActionType.ATTACK:
 			# Complete when attack animation is done
 			if character.attack_animator:
-				return not character.attack_animator.is_attacking()
+				return not character.attack_animator.is_attacking
 			return true
 		
 		ActionType.ATTACK_TARGET:
 			# Same as regular attack
 			if character.attack_animator:
-				return not character.attack_animator.is_attacking()
+				return not character.attack_animator.is_attacking
 			return true
 		
 		ActionType.CYCLE_WEAPON, ActionType.USE_ITEM, ActionType.CUSTOM:

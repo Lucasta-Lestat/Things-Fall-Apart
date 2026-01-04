@@ -43,7 +43,7 @@ func _ready() -> void:
 	# METHOD 1: Equip by name (requires ItemDatabase autoload)
 	# This is the cleanest way - just reference items by name from your JSON database
 	player.give_weapon_by_name("Longsword")
-	player.give_weapon_by_name("Battle Axe")
+	player.give_weapon_by_name("Dagger", "Off")
 	player.equip_equipment_by_name("Full Face Helmet")
 	player.equip_equipment_by_name("Breastplate 2")
 	player.set_faction("player")
@@ -76,8 +76,8 @@ func load_factions_from_json(json_path: String):
 			var faction = Faction.new()
 			faction.load_from_data(faction_data)
 			factions[faction.faction_id] = faction
-	print("factions: ", factions)
-	print("Loaded ", factions.size(), " factions")
+	#print("factions: ", factions)
+	#print("Loaded ", factions.size(), " factions")
 	return factions
 
 func _create_character(pos: Vector2, faction: String, ai_enabled: bool) -> ProceduralCharacter:
@@ -148,6 +148,11 @@ func _check_combat_collisions() -> void:
 	
 	# Check player attacking enemies
 	if player.is_attacking():
+		var weapon
+		if player.current_hand == "Main":
+			weapon = player.current_main_hand_weapon
+		else:
+			weapon = player.current_off_hand_weapon
 		print("Player is attacking")
 		for enemy in enemies:
 			if not enemy.is_alive():
@@ -161,24 +166,27 @@ func _check_combat_collisions() -> void:
 				register_hit(player, enemy)
 				process_weapon_hit(
 					player, enemy, hit["position"],
-					player.current_weapon, hit["velocity"]
+					weapon, hit["velocity"]
 				)
 	# Check enemies attacking player
 	for enemy in enemies:
+		var weapon
 		if not enemy.is_alive() or not enemy.is_attacking():
 			continue
 		if not can_hit_target(enemy, player):
 			continue
-		
+		if enemy.current_hand == "Main":
+			weapon = enemy.current_main_hand_weapon
+		else:
+			weapon = enemy.current_off_hand_weapon
 		var hit = check_weapon_body_collision(enemy, player)
 		if hit.get("hit", false):
 			register_hit(enemy, player)
 			process_weapon_hit(
 				enemy, player, hit["position"],
-				enemy.current_weapon, hit["velocity"]
+				weapon, hit["velocity"]
 			)
 		
-	
 	# Check weapon clashes
 	
 	for enemy in enemies:
@@ -368,7 +376,7 @@ func spawn_character_by_name(char_name: String, spawn_position: Vector2, faction
 		if char_data.get("name", "") == char_name:
 			var c = spawn_character(char_data, spawn_position)
 			if faction:
-				c.faction = faction
+				c.set_faction(faction)
 			return c	
 	push_warning("Character not found: " + char_name)
 	return null
@@ -765,16 +773,21 @@ func check_weapon_body_collision(
 ) -> Dictionary:
 	"""Check if attacker's weapon is hitting target's body.
 	Returns: {hit: bool, position: Vector2, velocity: float, limb_type: LimbType}"""
-	if not attacker.current_weapon:
-		return {"hit": false}
 	
-	if not attacker.attack_animator or not attacker.attack_animator.is_attacking():
+	if not attacker.attack_animator or not attacker.attack_animator.is_attacking:
 		return {"hit": false}
-	
-	var weapon = attacker.current_weapon
+	var weapon
+	var holder
+	if attacker.attack_animator.current_hand == "Main":
+		weapon = attacker.current_main_hand_weapon
+		holder = attacker.main_hand_holder
+	else:
+		weapon = attacker.current_off_hand_weapon
+		holder = attacker.off_hand_holder
 	var body_corners = get_body_hitbox_corners(target)
 	
 	# Get blade endpoints in local weapon space
+	
 	var tip_local = weapon.get_tip_local_position()
 	var blade_start_local = weapon.get_blade_start_local()
 	
@@ -786,7 +799,8 @@ func check_weapon_body_collision(
 		var check_point_local = tip_local.lerp(blade_start_local, t)
 		
 		# Transform to world space through weapon_holder
-		var check_point_world = attacker.weapon_holder.to_global(
+			
+		var check_point_world = holder.to_global(
 			weapon.position + check_point_local
 		)
 		
@@ -809,7 +823,7 @@ func check_weapon_body_collision(
 				"velocity": 100.0,  # TODO: Calculate actual velocity from animation
 				"limb_type": limb_type
 			}
-	
+		
 	return {"hit": false}
 	
 func check_weapon_weapon_collision(
@@ -817,18 +831,29 @@ func check_weapon_weapon_collision(
 	char2: ProceduralCharacter
 ) -> Dictionary:
 	"""Check if two weapons are colliding"""
-	
-	if not char1.current_weapon or not char2.current_weapon:
-		return {"collision": false}
+	var weapon1
+	var weapon2
+	var holder1
+	var holder2
 	
 	# Both must be attacking
-	if not char1.attack_animator or not char1.attack_animator.is_attacking():
+	if not char1.attack_animator or not char1.attack_animator.is_attacking:
 		return {"collision": false}
-	if not char2.attack_animator or not char2.attack_animator.is_attacking():
+	if not char2.attack_animator or not char2.attack_animator.is_attacking:
 		return {"collision": false}
-	
-	var weapon1 = char1.current_weapon
-	var weapon2 = char2.current_weapon
+	if char1.current_hand == "Main":
+		weapon1 = char1.current_main_hand_weapon
+		holder1 = char1.main_hand_holder
+	else: 
+		weapon1 = char1.current_off_hand_weapon
+		holder1 = char1.off_hand_holder
+		
+	if char2.current_hand == "Main":
+		weapon2 = char2.current_main_hand_weapon
+		holder2 = char2.main_hand_holder
+	else:
+		weapon2 = char2.current_off_hand_weapon
+		holder2 = char2.off_hand_holder
 	
 	# Get blade points for both weapons
 	var tip1_local = weapon1.get_tip_local_position()
@@ -843,12 +868,12 @@ func check_weapon_weapon_collision(
 	for i in range(num_checks):
 		var t1 = float(i) / float(num_checks - 1)
 		var point1_local = tip1_local.lerp(blade_start1_local, t1)
-		var point1_world = char1.weapon_holder.to_global(weapon1.position + point1_local)
+		var point1_world = holder1.to_global(weapon1.position + point1_local)
 		
 		for j in range(num_checks):
 			var t2 = float(j) / float(num_checks - 1)
 			var point2_local = tip2_local.lerp(blade_start2_local, t2)
-			var point2_world = char2.weapon_holder.to_global(weapon2.position + point2_local)
+			var point2_world = holder2.to_global(weapon2.position + point2_local)
 			
 			if point1_world.distance_to(point2_world) < collision_radius:
 				return {

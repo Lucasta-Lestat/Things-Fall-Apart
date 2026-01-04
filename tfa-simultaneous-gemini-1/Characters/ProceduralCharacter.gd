@@ -23,6 +23,8 @@ var left_arm: Line2D
 var right_arm: Line2D
 var left_leg: Line2D
 var right_leg: Line2D
+
+var current_hand = "Main"
 #Shaking
 # --- NEW: Shake & Push Variables ---
 var current_shake_intensity: float = 0.0
@@ -783,7 +785,7 @@ func get_shake_offset() -> Vector2:
 func _update_body_rotation() -> void:
 	# Apply body rotation during attacks
 	var body_rotation = 0.0
-	if attack_animator and attack_animator.is_attacking():
+	if attack_animator and attack_animator.is_attacking:
 		body_rotation = attack_animator.get_body_rotation()
 	
 	# Update body line (shoulders)
@@ -857,6 +859,7 @@ func _handle_input() -> void:
 	# When unpaused: execute immediately (queue processes automatically)
 	
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		current_hand = "Off"
 		if paused:
 			action_queue.queue_face(mouse_pos)
 		else:
@@ -864,6 +867,7 @@ func _handle_input() -> void:
 			is_moving = false
 	
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		current_hand = "Main"
 		if paused:
 			action_queue.queue_move(mouse_pos)
 		else:
@@ -954,7 +958,7 @@ func _update_arm_ik() -> void:
 	# Get attack animation offset and body rotation if attacking
 	var attack_offset = Vector2.ZERO
 	var body_rotation = 0.0
-	if attack_animator and attack_animator.is_attacking():
+	if attack_animator and attack_animator.is_attacking:
 		attack_offset = attack_animator.get_arm_offset()
 		body_rotation = attack_animator.get_body_rotation()
 	
@@ -1061,10 +1065,10 @@ func _update_weapon_position() -> void:
 	# Position weapon at the right hand (last joint of right arm)
 	if left_arm_joints.size() > 0:
 		var off_hand_pos = left_arm_joints[-1]
-		off_hand_holder.positoin = off_hand_pos
+		off_hand_holder.position = off_hand_pos
 		var off_hand_attack_rotation = 0.0
-		if attack_animator and attack_animator.is_attacking():
-			off_hand_attack_rotation = attack_animator.get_off_hand_weapon_rotation()
+		if attack_animator and attack_animator.is_attacking:
+			off_hand_attack_rotation = attack_animator.get_weapon_rotation()
 		
 	if right_arm_joints.size() > 0:
 		var main_hand_pos = right_arm_joints[-1]
@@ -1072,8 +1076,8 @@ func _update_weapon_position() -> void:
 		
 		# Apply attack animation rotation if attacking
 		var main_hand_attack_rotation = 0.0
-		if attack_animator and attack_animator.is_attacking():
-			main_hand_attack_rotation = attack_animator.get_main_hand_weapon_rotation()
+		if attack_animator and attack_animator.is_attacking:
+			main_hand_attack_rotation = attack_animator.get_weapon_rotation()
 		
 		main_hand_holder.rotation = main_hand_attack_rotation
 
@@ -1133,7 +1137,7 @@ func _on_attack_finished() -> void:
 func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
 	if Ability == "Main": 
-		if attack_animator.is_attacking():
+		if attack_animator.is_attacking:
 			return  # Already attacking
 		
 		# Get damage type from weapon and start appropriate animation
@@ -1148,27 +1152,28 @@ func attack(Ability:String= "Main") -> void:
 
 func is_attacking() -> bool:
 	"""Check if currently performing an attack"""
-	return attack_animator.is_attacking()
+	#print("Does character think they're attacking? ", attack_animator.is_attacking)
+	return attack_animator.is_attacking
 
 # ===== PUBLIC WEAPON API =====
 
-func give_weapon(weapon_data: Dictionary) -> WeaponShape:
+func give_weapon(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	"""Give the character a weapon from data and equip it"""
-	print("give weapon being run with: ", weapon_data.name)
-	return inventory.equip_weapon_from_data(weapon_data)
+	print("give weapon being run with: ", weapon_data.name, "in hand ", hand)
+	return inventory.equip_weapon_from_data(weapon_data, hand)
 
-func give_weapon_by_name(weapon_name: String) -> WeaponShape:
+func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponShape:
 	"""Give the character a weapon by looking up its name in the database"""
 	var db = ProceduralItemDatabase.weapons
 	print("giving weapon by name: ", weapon_name)
-	print("weapon database: ", db )
+	#print("weapon database: ", db )
 	if db:
 		print("weapon database exists")
 		#print("the fucking data is structured like: ",db)
 		var data = db[weapon_name.to_lower()]
 		print("weapon data found: ",data)
 		if not data.is_empty():
-			return give_weapon(data)
+			return give_weapon(data, hand)
 	push_warning("Could not find weapon: %s" % weapon_name)
 	return null
 
@@ -1276,7 +1281,7 @@ func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 	"""Equip equipment by looking up its name in the database"""
 	var db = ProceduralItemDatabase.equipment
 	if db:
-		print("The fucking equipment looks like: ",db)
+		#print("The fucking equipment looks like: ",db)
 		var data = db[Globals.name_to_id(equipment_name)]
 		if not data.is_empty():
 			return equip_equipment(data)
@@ -1706,7 +1711,7 @@ func _process_attack(delta: float) -> void:
 	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
 	
 	# Start attack if not already attacking
-	if not self.attack_animator.is_attacking():
+	if not self.attack_animator.is_attacking:
 		#print("do we have a weapon?")
 		
 		if self.current_main_hand_weapon:
@@ -1717,7 +1722,7 @@ func _process_attack(delta: float) -> void:
 			print("trying attack without a weapon")
 			self.attack()
 	# Wait for attack to finish
-	if not self.attack_animator.is_attacking():
+	if not self.attack_animator.is_attacking:
 		_change_state(AIState.APPROACH)
 	if current_target and global_position.distance_to(current_target.global_position) > 1.5 * safe_attack_range:
 		_change_state(AIState.APPROACH)
@@ -1920,7 +1925,7 @@ func _drop_limb_equipment(limb_type: ProceduralCharacter.LimbType) -> void:
 	match limb_type:
 		ProceduralCharacter.LimbType.RIGHT_ARM:
 			# Drop held weapon
-			if self.current_weapon:
+			if self.current_main_hand_weapon:
 				_drop_weapon()
 		ProceduralCharacter.LimbType.LEFT_ARM:
 			# Could handle shield/off-hand here
@@ -1937,13 +1942,16 @@ func _drop_limb_equipment(limb_type: ProceduralCharacter.LimbType) -> void:
 			if self.head_equipment:
 				self.unequip_slot(EquipmentShape.EquipmentSlot.HEAD)
 
-func _drop_weapon() -> void:
+func _drop_weapon(hand:String = "Main") -> void:
 	"""Drop the currently held weapon"""
-	if not self.current_weapon:
+	if not self.current_main_hand_weapon or self.current_off_hand_weapon:
 		return
-	
+	var weapon
 	# Store reference before removing
-	var weapon = self.current_weapon
+	if current_hand == "Main":
+		weapon = self.current_main_hand_weapon
+	else:
+		weapon = self.current_off_hand_weapon
 	
 	# Remove from inventory's active slot
 	self.inventory.holster_weapon()
@@ -2135,7 +2143,7 @@ func apply_stagger(intensity: float) -> void:
 	"""Apply stagger effect to character (interrupts attack, brief pause)"""
 	if self.attack_animator:
 		# Interrupt current attack if stagger is strong enough
-		if intensity >= 0.2 and self.attack_animator.is_attacking():
+		if intensity >= 0.2 and self.attack_animator.is_attacking:
 			self.attack_animator.interrupt_attack()
 			#TODO: implement movement and shaking of the character
 		

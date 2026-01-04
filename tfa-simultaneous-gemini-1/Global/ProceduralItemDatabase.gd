@@ -31,7 +31,7 @@ func load_databases() -> void:
 	
 	if success:
 		emit_signal("database_loaded")
-		print("ItemDatabase: Loaded %d weapons, %d equipment" % [weapons.size(), equipment.size()])
+		#print("ItemDatabase: Loaded %d weapons, %d equipment" % [weapons.size(), equipment.size()])
 
 func _load_weapons_database() -> bool:
 	if not FileAccess.file_exists(weapons_json_path):

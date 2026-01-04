@@ -25,6 +25,7 @@ func toggle_pause() -> void:
 func pause() -> void:
 	if is_paused:
 		return
+	print("game paused")
 	is_paused = true
 	get_tree().paused = true
 	
