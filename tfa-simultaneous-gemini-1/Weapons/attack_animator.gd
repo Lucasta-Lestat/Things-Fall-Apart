@@ -24,7 +24,6 @@ var current_rotation_intensity: float = 1.0
 # Attack data
 var current_damage_type: String = "slashing"
 var attack_direction: Vector2 = Vector2.UP
-var current_hand: String = "Main"  # "Main" (right) or "Off" (left)
 
 # Visual Offsets - now supports both hands
 var animated_arm_offset: Vector2 = Vector2.ZERO
@@ -32,10 +31,11 @@ var animated_weapon_rotation: float = 0.0
 var animated_body_rotation: float = 0.0
 
 # Legacy getter compatibility
+
 var animated_right_arm_offset: Vector2:
-	get: return animated_arm_offset if current_hand == "Main" else Vector2.ZERO
+	get: return animated_arm_offset if character.current_hand == "Main" else Vector2.ZERO
 var animated_left_arm_offset: Vector2:
-	get: return animated_arm_offset if current_hand == "Off" else Vector2.ZERO
+	get: return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
 
 var knockback_velocity: Vector2 = Vector2.ZERO
 var knockback_friction: float = 1500.0
@@ -186,7 +186,6 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	
 	current_damage_type = damage_type
 	attack_direction = direction.normalized()
-	current_hand = hand
 	current_state = AttackState.WINDUP
 	attack_timer = 0.0
 	
@@ -201,16 +200,16 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	
 	# Get weapon from the appropriate hand
 	var weapon = null
-	if current_hand == "Main" and "current_main_hand_weapon" in character:
+	if hand == "Main" and "current_main_hand_weapon" in character:
 		weapon = character.current_main_hand_weapon
-	elif current_hand == "Off" and "current_off_hand_weapon" in character:
+	elif hand == "Off" and "current_off_hand_weapon" in character:
 		weapon = character.current_off_hand_weapon
 	
 	if weapon != null:
 		weight = weapon.weight
 	
 	weight = max(0.1, weight)
-	var speed_multiplier = clamp((dex / 10.0) / (weight / 4.0), 0.4, 3.0)
+	var speed_multiplier = clamp((dex / 100.0) / (weight / 4.0), 0.4, 3.0)
 	current_rotation_intensity = clamp(weight / 4.5, 0.4, 1.4)
 	
 	# Adjust dynamics based on weapon weight (heavier = slower response, more momentum)
@@ -312,7 +311,7 @@ func _apply_dynamics(delta: float) -> void:
 
 func _get_hand_mirror() -> float:
 	# Returns -1 for Off hand (left), 1 for Main hand (right)
-	return -1.0 if current_hand == "Off" else 1.0
+	return -1.0 if character.current_hand == "Off" else 1.0
 
 func _mirror_offset(offset: Vector2) -> Vector2:
 	# Mirror the X component for off-hand attacks
@@ -359,7 +358,6 @@ func _animate_slash_windup() -> void:
 func _animate_slash_strike() -> void:
 	var ease_progress = _ease_out_cubic(attack_progress)
 	var mirror = _get_hand_mirror()
-	
 	# Set targets - dynamics system handles the interpolation with overshoot
 	var start_offset = _mirror_offset(Vector2(18, 12))
 	var end_offset = _mirror_offset(Vector2(-20, -15))
@@ -466,19 +464,19 @@ func _ease_out_cubic(t: float) -> float:
 # ===== PUBLIC GETTERS =====
 
 func get_current_hand() -> String:
-	return current_hand
+	return character.current_hand
 
 func get_arm_offset(hand: String = "") -> Vector2:
 	# If no hand specified, return current attacking arm's offset
-	if hand == "" or hand == current_hand:
+	if hand == "" or hand == character.current_hand:
 		return animated_arm_offset
 	return Vector2.ZERO
 
 func get_main_arm_offset() -> Vector2:
-	return animated_arm_offset if current_hand == "Main" else Vector2.ZERO
+	return animated_arm_offset if character.current_hand == "Main" else Vector2.ZERO
 
 func get_off_arm_offset() -> Vector2:
-	return animated_arm_offset if current_hand == "Off" else Vector2.ZERO
+	return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
 
 func get_weapon_rotation() -> float: 
 	return animated_weapon_rotation

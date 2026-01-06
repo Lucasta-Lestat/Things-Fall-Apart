@@ -69,6 +69,7 @@ func _process(_delta: float) -> void:
 
 func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	"""Add an action to the queue. Returns false if queue is full."""
+	print("attempting to queue an action of type: ", type)
 	# Check if we should only queue when paused
 	if queue_only_when_paused and not PauseManager.is_paused:
 		# Execute immediately instead of queueing
@@ -77,6 +78,7 @@ func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	
 	# Check queue size limit
 	if max_queue_size > 0 and queue.size() >= max_queue_size:
+		print("exceeded queue size limit")
 		return false
 	
 	var action = Action.new(type, data)

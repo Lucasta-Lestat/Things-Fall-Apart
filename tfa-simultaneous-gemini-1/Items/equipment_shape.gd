@@ -38,28 +38,28 @@ func _determine_equipment_properties() -> void:
 	match equipment_type:
 		EquipmentType.HELMET:
 			equipment_slot = EquipmentSlot.HEAD
-			base_width = 18.0
-			base_height = 16.0
+			base_width = Globals.default_head_width
+			base_height = Globals.default_head_length
 		EquipmentType.HOOD:
 			equipment_slot = EquipmentSlot.HEAD
-			base_width = 20.0
-			base_height = 20.0
+			base_width = Globals.default_head_width+4
+			base_height = Globals.default_head_length+2
 		EquipmentType.BACKPACK:
 			equipment_slot = EquipmentSlot.BACK
 			base_width = 16.0
 			base_height = 14.0
 		EquipmentType.TORSO_ARMOR:
 			equipment_slot = EquipmentSlot.TORSO
-			base_width = 28.0  # Covers full body width
-			base_height = 18.0  # Covers torso depth
+			base_width = Globals.default_body_width  # Covers full body width
+			base_height = Globals.default_body_height # Covers torso depth
 		EquipmentType.CAPE:
 			equipment_slot = EquipmentSlot.BACK
 			base_width = 28.0
 			base_height = 24.0
 		EquipmentType.PANTS:
 			equipment_slot = EquipmentSlot.LEGS
-			base_width = 7.0
-			base_height = 16.0
+			base_width = Globals.default_leg_width
+			base_height = Globals.default_leg_length
 			is_leg_equipment = true
 		EquipmentType.BOOTS:
 			equipment_slot = EquipmentSlot.FEET
@@ -134,7 +134,7 @@ func set_sprite_from_path(path: String) -> void:
 		_load_sprite_texture(path)
 		_auto_scale_sprite()
 
-func _auto_scale_sprite() -> void:
+func _auto_scale_sprite(body_scale:float = 1.0) -> void:
 	"""Scale sprite to match equipment dimensions"""
 	var tex: Texture2D = null
 	if is_leg_equipment and left_sprite:

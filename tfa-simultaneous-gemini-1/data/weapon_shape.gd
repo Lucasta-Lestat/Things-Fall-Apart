@@ -17,10 +17,10 @@ enum GripStyle { ONE_HANDED, TWO_HANDED }
 @export var grip_style: GripStyle = GripStyle.ONE_HANDED
 
 # Shape definition (all in local coordinates, weapon points "up" at -Y)
-@export var total_length: float = 50.0      # Total weapon length
+@export var total_length: float = 50.0 *Globals.default_body_scale   # Total weapon length
 @export var grip_position: float = 0.7      # 0-1, where along length the grip is (0=tip, 1=pommel)
-@export var grip_length: float = 12.0       # Length of the grip area
-@export var blade_width: float = 6.0        # Width at widest point (for collision)
+@export var grip_length: float = 12.0 * Globals.default_body_scale      # Length of the grip area
+@export var blade_width: float = 6.0  * Globals.default_body_scale      # Width at widest point (for collision)
 @export var balance_point: float = 0.4      # 0-1, center of mass (affects swing feel)
 
 # Collision shape points (optional, for complex shapes like axes)
@@ -100,7 +100,7 @@ func _auto_scale_sprite() -> void:
 	if sprite and sprite.texture:
 		var tex_size = sprite.texture.get_size()
 		# Scale to match total_length (assuming sprite is vertical)
-		var target_height = total_length
+		var target_height = total_length *Globals.default_body_scale
 		var scale_factor = target_height / tex_size.y
 		
 		# Store calculated scale (will be multiplied by sprite_scale in _update_sprite_transform)
@@ -242,7 +242,7 @@ static func create_sword(length: float = 50.0, damage: int = 12) -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.weapon_type = WeaponType.SWORD
 	weapon.weapon_name = "Sword"
-	weapon.damage_type = "slashing"
+	weapon.primary_damage_type = "slashing"
 	weapon.base_damage = {"slashing": damage}
 	weapon.total_length = length
 	weapon.grip_position = 0.75  # Grip near bottom
@@ -255,7 +255,7 @@ static func create_axe(length: float = 45.0, damage: int = 15) -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.weapon_type = WeaponType.AXE
 	weapon.weapon_name = "Axe"
-	weapon.damage_type = "slashing"
+	weapon.primary_damage_type = "slashing"
 	weapon.base_damage = {"slashing": damage}
 	weapon.total_length = length
 	weapon.grip_position = 0.85  # Long handle
@@ -268,7 +268,7 @@ static func create_spear(length: float = 70.0, damage: int = 11) -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.weapon_type = WeaponType.SPEAR
 	weapon.weapon_name = "Spear"
-	weapon.damage_type = "piercing"
+	weapon.primary_damage_type = "piercing"
 	weapon.base_damage = {"piercing": damage}
 	weapon.total_length = length
 	weapon.grip_position = 0.6  # Grip in middle-back
@@ -281,7 +281,7 @@ static func create_dagger(length: float = 25.0, damage: int = 8) -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.weapon_type = WeaponType.DAGGER
 	weapon.weapon_name = "Dagger"
-	weapon.damage_type = "piercing"
+	weapon.primary_damage_type = "piercing"
 	weapon.base_damage = {"slashing": damage}
 	weapon.total_length = length
 	weapon.grip_position = 0.65
@@ -294,7 +294,7 @@ static func create_mace(length: float = 40.0, damage: int = 14) -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.weapon_type = WeaponType.MACE
 	weapon.weapon_name = "Mace"
-	weapon.damage_type = "bludgeoning"
+	weapon.primary_damage_type = "bludgeoning"
 	weapon.base_damage = {"bludgeoning": damage}
 	weapon.total_length = length
 	weapon.grip_position = 0.8

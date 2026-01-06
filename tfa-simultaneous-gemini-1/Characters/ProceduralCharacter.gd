@@ -70,6 +70,7 @@ var current_off_hand_weapon: WeaponShape = null
 var main_hand_holder: Node2D
 var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
+var unarmed_strike_damage = 1
 # Attack system
 var attack_animator: AttackAnimator
 
@@ -77,8 +78,10 @@ var attack_animator: AttackAnimator
 var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
-@export var move_speed: float = 150.0
-@export var rotation_speed: float = 8.0
+
+
+var CRIT_FAIL_THRESHOLD = 96
+var CRIT_THRESHOLD = 5
 
 # Arm IK settings (smaller for top-down proportions)
 var ARM_SEGMENT_LENGTHS: Array = Globals.DEFAULT_ARM_SEGMENT_LENGTHS.map(func(length): return length * body_size_mod)
@@ -99,7 +102,7 @@ var right_arm_target: Vector2
 @export var strength: int = 50      # Damage multiplier, weapon clash power
 @export var constitution: int = 50  # HP multiplier, stagger resistance
 @export var dexterity: int = 50     # Speed multiplier (move + attack)
-
+@export var move_speed: = 150.0
 # Blood drop texture - set this in _ready or via export
 @export var blood_drop_texture: Texture2D
 
@@ -138,8 +141,12 @@ var conditions = {}
 # Derived stats (calculated from attributes)
 var max_hp: int:
 	get: return 6 + (constitution)/10 
+var max_blood_amount = max_hp
 var blood_amount = max_hp
 
+@export var rotation_speed: float:
+	get: return 8.0 * (dexterity/50)
+	
 var consciousness: int:
 	get: return blood_amount
 
@@ -186,6 +193,7 @@ signal attack_hit(damage: int, damage_type: int)
 func _ready() -> void:
 	target_position = global_position
 	blood_drop_texture = load("res://vfx/blood drop.png")
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
 	_setup_equipment_slots()
 	_setup_attack_system()
@@ -579,7 +587,7 @@ func _create_pompadour_hair() -> void:
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 2  # In front of head for the pomp
+	hair.z_index = 1  # In front of head for the pomp
 	add_child(hair)
 	
 	# High front portion that extends forward
@@ -675,7 +683,7 @@ func _create_arm(arm_name: String) -> Line2D:
 	curve.add_point(Vector2(0.6, 0.7))    # Forearm
 	curve.add_point(Vector2(1.0, 0.5))    # Hand: half width
 	arm.width_curve = curve
-	arm.width = 7.0  # Smaller for top-down view
+	arm.width = 7.0*Globals.default_body_scale  # Smaller for top-down view
 	
 	return arm
 
@@ -722,46 +730,47 @@ func _update_colors() -> void:
 		right_leg.default_color = skin_color
 
 func _process(delta: float) -> void:
-	handle_visual_shake(delta)
 	_handle_input()
-	_update_movement(delta)
-	_update_leg_animation(delta)
-	_update_body_rotation()
-	_update_arm_ik()
-	_update_arm_visuals()
-	_update_weapon_position()
-	_update_blood_drops(delta)
-	_update_severed_limb_visuals()
-	# Update timers
-	attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
-	reaction_timer = max(0, reaction_timer - delta)
-	stun_timer = max(0, stun_timer - delta)
-	state_timer += delta
-	# Add check if the character is AI controlled
-	if AI_enabled:
-		# Handle stunned state
-		if current_state == AIState.STUNNED:
-			if stun_timer <= 0:
-				_change_state(AIState.IDLE)
-			return
-		
-		# Update target
-		_update_target()
-		
-		# State machine
-		match current_state:
-			AIState.DEAD:
-				pass
-			AIState.IDLE:
-				_process_idle(delta)
-			AIState.CHASE:
-				_process_chase(delta)
-			AIState.APPROACH:
-				_process_approach(delta)
-			AIState.ATTACK:
-				_process_attack(delta)
-			AIState.RETREAT:
-				_process_retreat(delta)
+	if not PauseManager.is_paused:
+		handle_visual_shake(delta)
+		_update_movement(delta)
+		_update_leg_animation(delta)
+		_update_body_rotation()
+		_update_arm_ik()
+		_update_arm_visuals()
+		_update_weapon_position()
+		_update_blood_drops(delta)
+		_update_severed_limb_visuals()
+		# Update timers
+		attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
+		reaction_timer = max(0, reaction_timer - delta)
+		stun_timer = max(0, stun_timer - delta)
+		state_timer += delta
+		# Add check if the character is AI controlled
+		if AI_enabled:
+			# Handle stunned state
+			if current_state == AIState.STUNNED:
+				if stun_timer <= 0:
+					_change_state(AIState.IDLE)
+				return
+			
+			# Update target
+			_update_target()
+			
+			# State machine
+			match current_state:
+				AIState.DEAD:
+					pass
+				AIState.IDLE:
+					_process_idle(delta)
+				AIState.CHASE:
+					_process_chase(delta)
+				AIState.APPROACH:
+					_process_approach(delta)
+				AIState.ATTACK:
+					_process_attack(delta)
+				AIState.RETREAT:
+					_process_retreat(delta)
 func handle_visual_shake(delta) -> void:
 	if current_shake_intensity > 0:
 		print("Im literally shaking: ", current_shake_intensity)
@@ -862,24 +871,30 @@ func _handle_input() -> void:
 		current_hand = "Off"
 		if paused:
 			action_queue.queue_face(mouse_pos)
+			action_queue.queue_attack()
+			
 		else:
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			is_moving = false
+			attack()
+			
 	
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_B):
 		current_hand = "Main"
+		print("attack key pressed, checking if this works while paused")
+		if paused:
+			action_queue.queue_attack()
+		else:
+			target_rotation = (mouse_pos - global_position).angle() + PI / 2
+			attack()
+			
+	
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) :
 		if paused:
 			action_queue.queue_move(mouse_pos)
 		else:
 			target_position = mouse_pos
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
 			is_moving = true
-	
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) or Input.is_key_pressed(KEY_B):
-		if paused:
-			action_queue.queue_attack()
-		else:
-			attack()
 	
 	if Input.is_action_just_pressed("ui_focus_next"):
 		if paused:
@@ -958,6 +973,10 @@ func _update_arm_ik() -> void:
 	# Get attack animation offset and body rotation if attacking
 	var attack_offset = Vector2.ZERO
 	var body_rotation = 0.0
+	
+	# Determine which hand is currently active/dominant
+	var is_off_hand = current_hand == "Off"
+	
 	if attack_animator and attack_animator.is_attacking:
 		attack_offset = attack_animator.get_arm_offset()
 		body_rotation = attack_animator.get_body_rotation()
@@ -967,24 +986,43 @@ func _update_arm_ik() -> void:
 		left_shoulder = left_shoulder.rotated(body_rotation)
 		right_shoulder = right_shoulder.rotated(body_rotation)
 	
-	# Check if we have an active weapon
-	if current_main_hand_weapon != null:
-		# Right arm holds weapon - START with bent arm close to body
-		# This gives room to extend during attacks
-		# Relaxed position: elbow bent, hand near center-front of body
-		var base_target = Vector2(arm_length * 0.05, -arm_length * 0.5)  # Much closer, more bent
+	# Check if we are in a "combat state" (attacking or holding a weapon)
+	# (Updated condition to check for EITHER weapon or active attack)
+	var in_combat_stance = (current_main_hand_weapon != null) or (current_off_hand_weapon != null) or (attack_animator and attack_animator.is_attacking)
+
+	if in_combat_stance:
+		# Define the "Active" arm base target (bent arm close to body)
+		# If Off-Hand, we flip the X offset to the left side
+		var active_base_x = -arm_length * 0.05 if is_off_hand else arm_length * 0.05
+		var base_target = Vector2(active_base_x, -arm_length * 0.5)
 		
 		# Apply body rotation to the base target
 		if body_rotation != 0.0:
 			base_target = base_target.rotated(body_rotation)
 		
-		right_arm_target = base_target + attack_offset
+		# Define the "Ready" arm base (the non-attacking hand)
+		# If Off-Hand is active, Right arm is "Ready". If Main is active, Left arm is "Ready".
+		var ready_shoulder = right_shoulder if is_off_hand else left_shoulder
 		
-		# Left arm stays in a ready position (slightly affected by body rotation)
-		var left_base = left_shoulder + Vector2(arm_length * 0.2, -arm_length * 0.5)
+		# Flip the X offset for the ready position if we are checking the Right arm
+		var ready_x_offset = -arm_length * 0.2 if is_off_hand else arm_length * 0.2
+		var ready_base = ready_shoulder + Vector2(ready_x_offset, -arm_length * 0.5)
+		
 		if body_rotation != 0.0:
-			left_base = left_base.rotated(body_rotation * 0.3)  # Left arm follows less
-		left_arm_target = left_base
+			ready_base = ready_base.rotated(body_rotation * 0.3)
+		
+		# ASSIGN TARGETS BASED ON HAND
+		if is_off_hand:
+			# Left Arm gets the Attack Offset
+			left_arm_target = base_target + attack_offset
+			# Right Arm is in Ready position
+			right_arm_target = ready_base
+		else:
+			# Right Arm gets the Attack Offset
+			right_arm_target = base_target + attack_offset
+			# Left Arm is in Ready position
+			left_arm_target = ready_base
+			
 	else:
 		# Rest positions: arms curling forward and inward (hands near front of body)
 		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
@@ -1144,6 +1182,18 @@ func attack(Ability:String= "Main") -> void:
 		var damage_type
 		if current_main_hand_weapon != null:
 			damage_type = current_main_hand_weapon.primary_damage_type
+		else:
+			damage_type = unarmed_strike_damage_type
+		if damage_type == "slashing":
+			SfxManager.play("slash",position)
+		attack_animator.start_attack(damage_type)
+	if Ability == "Off": 
+		if attack_animator.is_attacking:
+			return  # Already attacking
+		# Get damage type from weapon and start appropriate animation
+		var damage_type
+		if current_off_hand_weapon != null:
+			damage_type = current_off_hand_weapon.primary_damage_type
 		else:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
@@ -1502,10 +1552,10 @@ var current_target: ProceduralCharacter = null
 var last_known_target_pos: Vector2 = Vector2.ZERO
 
 # Detection settings
-@export var detection_range: float = 200.0    # How far AI can see enemies
-@export var attack_range: float = 60.0        # Range to start attacking
-@export var preferred_range: float = 40.0     # Ideal combat distance
-@export var too_close_range: float = 20.0     # Back up if closer than this
+@export var detection_range: float = 300.0*Globals.default_body_scale    # How far AI can see enemies
+@export var attack_range: float = 70.0 * Globals.default_body_scale         # Range to start attacking
+@export var preferred_range: float = 40.0 *Globals.default_body_scale     # Ideal combat distance
+@export var too_close_range: float = 20.0 *Globals.default_body_scale     # Back up if closer than this
 
 # Minimum approach distance (prevents walking into other characters)
 var min_approach_distance: float:
@@ -1762,8 +1812,9 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 		
 		# Check if should retreat (low health)
 		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
+		
 		#TODO: Will Check
-		if torso_hp_percent < 0.3 and randf() < 0.5:
+		if torso_hp_percent < 0.3 and randf() < 0.5 or blood_amount < 0.5* max_blood_amount:
 			stun_timer = 0.0
 			_change_state(AIState.RETREAT)
 
@@ -2208,3 +2259,33 @@ func apply_bleeding_tick():
 		if blood_amount <= 0 or constitution <= 0 and is_alive():
 			_on_character_died()
 			conditions["Bleeding"] = 0
+#Ability Checks, character.gd code
+func ability_check(stat,domain):
+	var roll = randi() % 100 + 1
+	var success_target = get_stat_by_name(stat)
+	var bonus = 0
+	for trait_id in domain.advantages:
+		if traits.has(trait_id): bonus += 20 * traits[trait_id]
+	for trait_id in domain.disadvantages:
+		if traits.has(trait_id): bonus -= 20 * traits[trait_id]
+		success_target += bonus
+		
+	var success_level = _calculate_success_level(roll, success_target)
+func get_stat_by_name(stat_name: StringName) -> int:
+	match stat_name:
+		&"str": return strength
+		&"dex": return dexterity
+		&"con": return constitution
+	return 50
+func _calculate_success_level(roll: int, target: int) -> int:
+	var margin = target - roll
+	var level = 0
+	
+	if margin >= 0: # It's a success
+		level = 1 + int(margin / 50) # Every 50 points over is another success level
+	
+	# Special roll modifiers
+	if roll <= CRIT_THRESHOLD: level += 1
+	if roll >= CRIT_FAIL_THRESHOLD: level -= 1
+	
+	return level

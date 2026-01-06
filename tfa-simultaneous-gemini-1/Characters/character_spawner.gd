@@ -37,6 +37,7 @@ func _ready() -> void:
 	player = spawn_character_by_name("Default Human", Vector2(40.0,40.0))
 	call_deferred("_select_initial_character")
 	var ally = spawn_character_by_name("Default Human", Vector2(80.0,80.0), "player")
+	ally.AI_enabled = true
 	party_chars.append(player)
 	party_chars.append(ally)
 	# Using new shape-based weapon system
@@ -143,60 +144,51 @@ func _process(delta: float) -> void:
 		selection_indicator.visible = false
 
 func _check_combat_collisions() -> void:
-	if not player or not player.is_alive():
-		return
-	
-	# Check player attacking enemies
-	if player.is_attacking():
+	# specific reference to the list of all characters
+	var all_characters = characters_in_scene
+
+	# OUTER LOOP: Iterate through every character acting as an 'attacker'
+	for attacker in all_characters:
+		# Skip if attacker is dead or not currently swinging
+		if not attacker.is_alive() or not attacker.is_attacking():
+			continue
+
+		# Determine which weapon is active
 		var weapon
-		if player.current_hand == "Main":
-			weapon = player.current_main_hand_weapon
+		if attacker.current_hand == "Main":
+			weapon = attacker.current_main_hand_weapon
 		else:
-			weapon = player.current_off_hand_weapon
-		print("Player is attacking")
-		for enemy in enemies:
-			if not enemy.is_alive():
-				continue
-			if not can_hit_target(player, enemy):
+			weapon = attacker.current_off_hand_weapon
+
+		# INNER LOOP: Check if this attacker hits anyone else
+		for victim in all_characters:
+			# 1. Don't hit yourself
+			if attacker == victim:
 				continue
 			
-			var hit = check_weapon_body_collision(player, enemy)
-			print("Was there actually a hit? ", hit)
+			# 2. Skip dead victims
+			if not victim.is_alive():
+				continue
+
+			# 3. Check range/eligibility
+			if not can_hit_target(attacker, victim):
+				continue
+			
+			# 4. Perform the precise physics collision check
+			var hit = check_weapon_body_collision(attacker, victim)
+			
 			if hit.get("hit", false):
-				register_hit(player, enemy)
+				# Optional: Debug print
+				# print(attacker.name, " hit ", victim.name, " result: ", hit)
+				
+				register_hit(attacker, victim)
 				process_weapon_hit(
-					player, enemy, hit["position"],
-					weapon, hit["velocity"]
+					attacker, 
+					victim, 
+					hit["position"],
+					weapon, 
+					hit["velocity"]
 				)
-	# Check enemies attacking player
-	for enemy in enemies:
-		var weapon
-		if not enemy.is_alive() or not enemy.is_attacking():
-			continue
-		if not can_hit_target(enemy, player):
-			continue
-		if enemy.current_hand == "Main":
-			weapon = enemy.current_main_hand_weapon
-		else:
-			weapon = enemy.current_off_hand_weapon
-		var hit = check_weapon_body_collision(enemy, player)
-		if hit.get("hit", false):
-			register_hit(enemy, player)
-			process_weapon_hit(
-				enemy, player, hit["position"],
-				weapon, hit["velocity"]
-			)
-		
-	# Check weapon clashes
-	
-	for enemy in enemies:
-		if not enemy.is_alive() or not enemy.is_attacking():
-			continue
-		
-		var clash = check_weapon_weapon_collision(player, enemy)
-		if clash.get("collision", false):
-			process_weapon_clash(player, enemy, clash["position"])
-	
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
@@ -256,12 +248,13 @@ func select_character(character: ProceduralCharacter, index: int = -1) -> void:
 	
 	# Deselect previous
 	if selected_character:
+		selected_character.AI_enabled = true
 		emit_signal("character_deselected", selected_character)
 	
 	# Select new
 	selected_character = character
 	selected_index = index if index >= 0 else get_party().find(character)
-	
+	selected_character.AI_enabled = false
 	emit_signal("character_selected", character, selected_index)
 	print("Selected: ", character.Name, " (index ", selected_index, ")")
 
@@ -502,11 +495,18 @@ func process_weapon_hit(
 	# Get armor DR for that limb
 	var limb = target.get_limb(limb_type)
 	# Calculate base damage
-	var damage = target.damage_limb(limb_type, weapon.base_damage, local_hit) #need to heavily update to add damage riders
+	var base_damage
+	
+	if weapon:
+		base_damage = {weapon.primary_damage_type: weapon.base_damage[weapon.primary_damage_type] +  attacker.strength / 10}
+		#TODO implement magic/abilities
+	else:
+		base_damage = {attacker.unarmed_strike_damage_type: attacker.unarmed_strike_damage}	
+	var damage = target.damage_limb(limb_type, base_damage, local_hit) #need to heavily update to add damage riders
 	var armor_dr = limb.armor_dr if limb else 0
 	print("limb: ", limb.name)
 	# Calculate penetration based on damage vs DR
-	var penetration_result = _calculate_penetration(weapon.base_damage, armor_dr, attack_velocity, weapon)
+	var penetration_result = _calculate_penetration(base_damage, armor_dr, attack_velocity, weapon)
 	print("Is the attack actually penetrating? Penetration = ", penetration_result)
 	var result = {
 		"attacker": attacker,
@@ -692,7 +692,8 @@ func can_hit_target(attacker: ProceduralCharacter, target: ProceduralCharacter) 
 	
 	var can_hit = not active_hits[attacker_id].has(target_id)
 	if not can_hit:
-		print("BLOCKED: ", attacker.Name, " already hit ", target.Name, " in this attack. active_hits: ", active_hits)
+		pass
+		#print("BLOCKED: ", attacker.Name, " already hit ", target.Name, " in this attack. active_hits: ", active_hits)
 	return can_hit
 
 func register_hit(attacker: ProceduralCharacter, target: ProceduralCharacter) -> void:
@@ -767,48 +768,69 @@ func point_in_polygon(point: Vector2, polygon: Array) -> bool:
 			return false
 	return true
 
-func check_weapon_body_collision(
-	attacker: ProceduralCharacter,
-	target: ProceduralCharacter
-) -> Dictionary:
-	"""Check if attacker's weapon is hitting target's body.
-	Returns: {hit: bool, position: Vector2, velocity: float, limb_type: LimbType}"""
+func check_weapon_body_collision(holder, target):
+	# 1. Determine the start and end points of the "hit line" in the holder's LOCAL space
+	var hit_start_local: Vector2
+	var hit_end_local: Vector2
 	
-	if not attacker.attack_animator or not attacker.attack_animator.is_attacking:
-		return {"hit": false}
-	var weapon
-	var holder
-	if attacker.attack_animator.current_hand == "Main":
-		weapon = attacker.current_main_hand_weapon
-		holder = attacker.main_hand_holder
+	# Check if the holder is actually holding a weapon in the active hand
+	var current_weapon
+	if holder.current_hand == "Main":
+		current_weapon = holder.current_main_hand_weapon
 	else:
-		weapon = attacker.current_off_hand_weapon
-		holder = attacker.off_hand_holder
-	var body_corners = get_body_hitbox_corners(target)
-	
-	# Get blade endpoints in local weapon space
-	
-	var tip_local = weapon.get_tip_local_position()
-	var blade_start_local = weapon.get_blade_start_local()
-	
-	# Check multiple points along the blade (not just the tip)
-	# More points = more accurate but slower
-	var num_checks = 5
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)  # 0.0 to 1.0
-		var check_point_local = tip_local.lerp(blade_start_local, t)
+		current_weapon = holder.current_off_hand_weapon
+
+	if current_weapon != null:
+		# --- WEAPON LOGIC ---
+		# Get the weapon's local vectors (relative to the weapon scene)
+		var tip = current_weapon.get_tip_local_position()
+		var base = current_weapon.get_blade_start_local()
 		
-		# Transform to world space through weapon_holder
+		# Convert to holder's local space by adding the weapon's position
+		hit_end_local = current_weapon.position + tip
+		hit_start_local = current_weapon.position + base
+	else:
+		# --- UNARMED / FIST LOGIC ---
+		# Get the joint array for the active hand
+		var joints: Array[Vector2]
+		if holder.current_hand == "Main":
+			# Assuming Main Hand = Right Arm based on your IK code
+			joints = holder.right_arm_joints
+		else:
+			joints = holder.left_arm_joints
 			
-		var check_point_world = holder.to_global(
-			weapon.position + check_point_local
-		)
+		# Safety check in case joints aren't initialized
+		if joints.is_empty() or joints.size() < 2:
+			return {"hit": false}
+			
+		# The last joint is the hand/tip
+		hit_end_local = joints[-1]
+		
+		# The second to last joint is the elbow. 
+		# We define the "fist" as the last 20% of the forearm.
+		# This prevents the whole arm from acting like a blade.
+		var elbow_local = joints[-2]
+		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
+
+	# 2. Perform the Interpolation Check (Shared Logic)
+	# Use your specific helper function here
+	var body_corners = get_body_hitbox_corners(target)
+	var num_checks = 5
+	
+	for i in range(num_checks):
+		var t = float(i) / float(num_checks - 1)
+		
+		# Interpolate in local space first
+		var check_point_local = hit_end_local.lerp(hit_start_local, t)
+		
+		# Convert to global world space using the holder (attacker)
+		var check_point_world = holder.to_global(check_point_local)
 		
 		if point_in_polygon(check_point_world, body_corners):
 			# Convert hit position to target's local space for limb detection
 			var hit_local = target.to_local(check_point_world)
-			# Account for target's rotation - we need the position relative to 
-			# the unrotated body, so we "unrotate" the local position
+			
+			# Un-rotate to align with the target's limb coordinate system
 			var hit_local_unrotated = hit_local.rotated(-target.rotation)
 			
 			var limb_type = target.get_limb_at_position(
@@ -820,10 +842,10 @@ func check_weapon_body_collision(
 			return {
 				"hit": true,
 				"position": check_point_world,
-				"velocity": 100.0,  # TODO: Calculate actual velocity from animation
+				"velocity": holder.attack_speed_multiplier, #this might only effect cooldown, not attack speed?
 				"limb_type": limb_type
 			}
-		
+			
 	return {"hit": false}
 	
 func check_weapon_weapon_collision(
@@ -888,7 +910,7 @@ func check_weapon_weapon_collision(
 class SelectionCircle extends Node2D:
 	var radius: float = 25.0
 	var circle_color: Color = Color.WHITE
-	var line_width: float = 2.0
+	var line_width: float = 1.0
 	var num_segments: int = 32
 	
 	func _draw() -> void:
