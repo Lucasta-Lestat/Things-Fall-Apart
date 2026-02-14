@@ -20,10 +20,10 @@
 "Federica_greet": {
 	"dialogueNodes": {
 		"Federica_intro": {
-			"Narrator": "The churchyard reeks of fresh-turned earth. Between the headstones, 
+			"narrator": "The churchyard reeks of fresh-turned earth. Between the headstones, 
 			two figures work by lantern-light — a broad-shouldered half-orc woman and
 			 a slack-jawed man driving his shovel with mechanical patience. Neither has seen you yet.",
-			"Surgeon-Captain Federica": "Deeper Verhoeven.  No martyr of the antique world lies in a coffin this shallow.",
+			"Surgeon-Captain Federica": "Deeper, Verhoeven.  No martyr of the antique world lies in a coffin this shallow.",
 			"Verhoeven": "'Outstanding, Ma'am!'  **He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
 			"choices":
 				[
@@ -37,8 +37,8 @@
 					"text": "**Pass by quietly, hoping the plunderers don't see you witnessing their crime.**",
 					"nextNode": "end_convo"
 				]
-			}
-			"Federica_intro_talk_down": 
+			},
+			"Federica-intro-talk-down": 
 				{
 				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)
 You would be within your rights. I won't insult you with denials — the evidence is plain."
@@ -50,11 +50,55 @@ You would be within your rights. I won't insult you with denials — the evidenc
 					"nextNode": "Federica-intro-guard-fight"
 					},
 					{
-					"text": "**Back Away quietly with your hands raised**.",
+					"text": "**Back away quietly with your hands raised**.",
 					"nextNode": "Federica-intro-let-go"
 					}
 				]
 			},
+		"Federica-intro-agree-to-help":
+			{
+				"NARRATOR: The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry. Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.
+FEDERICA: Stand back.
+NARRATOR: The corpse convulses. A sound comes from it — not speech, not yet. A wet, whistling shriek through a throat half-collapsed with rot.
+THE KNIGHT: (thrashing, clawing at her own ruined face) — it BURNS — what have you — I was SLEEPING —
+FEDERICA: You served under General Maratesta. You campaigned against Emperor Regalus in the Year of Broken Standards.
+THE KNIGHT: (weeping without tears, without eyes) I can feel my bones — they're wrong — everything is WRONG —
+FEDERICA: His weaknesses. His habits in battle. Speak and I will let you sleep again.
+THE KNIGHT: He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice — we were fools — please, PLEASE —
+NARRATOR: Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She records something in a small notebook, expression unchanged.
+FEDERICA: Verhoeven. The next one.
+VERHOEVEN: Outstanding, Ma'am.
+
+NARRATOR: The second coffin holds a robed man — a court astrologer, judging by the celestial charts crumbling against his chest. The needles go in. He wakes screaming.
+THE ASTROLOGER: MY HANDS — I can't feel my — no, I CAN feel them, I can feel them ROTTING —
+FEDERICA: You served in the court of Regalus. You were executed for treason. Why?
+THE ASTROLOGER: (shuddering, jaw clicking loose and resetting with each word) I cast his — his true horoscope. Not the man's. The thing beneath the man. The stars don't lie — they said his birth was — thousands of years before the — oh gods, my teeth are falling into my stomach —
+FEDERICA: What did you learn?
+THE ASTROLOGER: Fire. He IS fire. But old fire — banked coals — he's been burning so long he's mostly ash — find the ash — find where he keeps —
+NARRATOR: His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She makes another note.
+FEDERICA: Promising. Verhoeven — the deep one now.
+
+NARRATOR: The third coffin is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.
+VERHOEVEN: ...Ma'am?
+NARRATOR: The lid explodes upward. A corpse sits bolt upright in the ruined casket — desiccated, eyeless, wearing the rotted vestments of a Scarlattian senator dead three centuries. Its jaw unhinges with a sound like tearing leather.
+THE SENATOR: He still sits the throne. He still wears the face. You dig for answers in the graves of those he's already silenced — do you think we failed for lack of TRYING?
+NARRATOR: It scrambles from the hole with horrible, insectile speed and vanishes over the churchyard wall into darkness.
+Silence. Then — torchlight, and the clatter of armor from the lane.
+GUARD-SERGEANT: Halt! Stand where you are — all of you!
+NARRATOR: Four city guards pour through the churchyard gate, halberds leveled. They see the open graves, the scattered bones, the three of you caked in dirt.
+Centurion: Graverobbers and a gods-damned necromancer. On your knees, the lot of you.
+FEDERICA: (quietly, to you) I will not kneel. That is not negotiable. What you do next — that is your affair.
+VERHOEVEN: (setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am."
+			}
+		"Federica-intro-guard-fight":
+			{
+			"narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard')]]"	,
+			}
+		"Federica-intro-let-go":
+			{
+				"Surgeon Captain Federica": "**The scowl on her face suggests she thinks your cowardice genuine, and it disgusts her.  She does not pursue you, but picks up her shovel with renewed urgency.**"
+			}
+			
   "guard_greet": {
 	"dialogueNodes": {
 	  "guard_greet": {
