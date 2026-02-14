@@ -1,0 +1,121 @@
+{
+	"weapons": [
+		{
+			"name": "Iron Longsword",
+			"type": "longsword",
+			"damage_type": "slashing",
+			"base_damage": 10,
+			"blade_color": "#a8a8a8",
+			"handle_color": "#4a3728",
+			"accent_color": "#8b7355"
+		},
+		{
+			"name": "Steel Longsword",
+			"type": "longsword",
+			"damage_type": "slashing",
+			"base_damage": 14,
+			"blade_color": "#c0c0c0",
+			"handle_color": "#2d2d2d",
+			"accent_color": "#ffd700"
+		},
+		{
+			"name": "Flaming Sword",
+			"type": "longsword",
+			"damage_type": "slashing",
+			"base_damage": 18,
+			"blade_color": "#ff6b35",
+			"handle_color": "#1a1a1a",
+			"accent_color": "#ff4500"
+		},
+		{
+			"name": "Woodcutter's Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 12,
+			"blade_color": "#808080",
+			"handle_color": "#8b4513",
+			"accent_color": "#a0522d"
+		},
+		{
+			"name": "Battle Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 16,
+			"blade_color": "#b0b0b0",
+			"handle_color": "#4a3728",
+			"accent_color": "#cd7f32"
+		},
+		{
+			"name": "Frost Axe",
+			"type": "axe",
+			"damage_type": "slashing",
+			"base_damage": 15,
+			"blade_color": "#87ceeb",
+			"handle_color": "#4682b4",
+			"accent_color": "#e0ffff"
+		},
+		{
+			"name": "Steel Dagger",
+			"type": "dagger",
+			"damage_type": "piercing",
+			"base_damage": 6,
+			"blade_color": "#c0c0c0",
+			"handle_color": "#2d2d2d",
+			"accent_color": "#b8860b"
+		},
+		{
+			"name": "Assassin's Blade",
+			"type": "dagger",
+			"damage_type": "piercing",
+			"base_damage": 10,
+			"blade_color": "#1a1a1a",
+			"handle_color": "#4a0080",
+			"accent_color": "#9400d3"
+		},
+		{
+			"name": "Hunting Spear",
+			"type": "spear",
+			"damage_type": "piercing",
+			"base_damage": 11,
+			"blade_color": "#a8a8a8",
+			"handle_color": "#8b4513",
+			"accent_color": "#deb887"
+		},
+		{
+			"name": "War Spear",
+			"type": "spear",
+			"damage_type": "piercing",
+			"base_damage": 15,
+			"blade_color": "#c0c0c0",
+			"handle_color": "#2d2d2d",
+			"accent_color": "#b22222"
+		},
+		{
+			"name": "Iron Mace",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 13,
+			"blade_color": "#696969",
+			"handle_color": "#4a3728",
+			"accent_color": "#808080"
+		},
+		{
+			"name": "Holy Mace",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 16,
+			"blade_color": "#ffd700",
+			"handle_color": "#f5f5dc",
+			"accent_color": "#ffffff"
+		},
+		{
+			"name": "Warhammer",
+			"type": "mace",
+			"damage_type": "bludgeoning",
+			"base_damage": 20,
+			"blade_color": "#4a4a4a",
+			"handle_color": "#2d2d2d",
+			"accent_color": "#757575"
+		}
+	]
+}

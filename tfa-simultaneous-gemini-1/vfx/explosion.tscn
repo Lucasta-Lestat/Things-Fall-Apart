@@ -1,0 +1,54 @@
+[gd_scene load_steps=9 format=3 uid="uid://ddkejecmvmrbk"]
+
+[ext_resource type="Script" uid="uid://ciudn8h6s7xyd" path="res://vfx/explosion.gd" id="1_6yiqx"]
+
+[sub_resource type="Gradient" id="Gradient_2fdrf"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_dxjn5"]
+gradient = SubResource("Gradient_2fdrf")
+
+[sub_resource type="Curve" id="Curve_dxjn5"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.484848, 0.0898877), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_yygjg"]
+curve = SubResource("Curve_dxjn5")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_5plj4"]
+particle_flag_disable_z = true
+direction = Vector3(0, -1, 0)
+spread = 180.0
+initial_velocity_min = 100.0
+initial_velocity_max = 150.0
+gravity = Vector3(0, 0, 0)
+damping_min = 50.0
+damping_max = 100.0
+scale_min = 0.5
+scale_curve = SubResource("CurveTexture_yygjg")
+color_ramp = SubResource("GradientTexture1D_dxjn5")
+turbulence_enabled = true
+turbulence_noise_strength = 3.0
+
+[sub_resource type="Gradient" id="Gradient_6yiqx"]
+colors = PackedColorArray(0.99, 0.9372, 0.891, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_otjre"]
+gradient = SubResource("Gradient_6yiqx")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[node name="Explosion" type="GPUParticles2D"]
+scale = Vector2(50, 50)
+emitting = false
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource("ParticleProcessMaterial_5plj4")
+script = ExtResource("1_6yiqx")
+
+[node name="PointLight2D" type="PointLight2D" parent="."]
+position = Vector2(135, 91)
+shadow_enabled = true
+shadow_filter = 1
+texture = SubResource("GradientTexture2D_otjre")

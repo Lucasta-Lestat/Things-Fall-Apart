@@ -8,10 +8,10 @@ enum EffectType {
 	MOD_STAT,
 	MOD_DAMAGE_RESISTANCE,
 	MOD_MOVESPEED,
-	MOD_MAX_AP,
 	MOD_TOUCH_RANGE,
 	MOD_WEAPON_ATTACK_SIZE,
 	MOD_CRIT_CHANCE_ROLL,
+	MOD_DURATION_BY_TRAIT, #e.g., makes fire spells with a persistent effect last longer
 
 	# Trait & Condition Interactions
 	ADD_TRAIT,

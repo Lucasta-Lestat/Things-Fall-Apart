@@ -1,0 +1,141 @@
+{
+	"_comment": "Equipment definitions with shape data and sprite paths",
+	"_note": "sprite_path should point to your equipment sprite textures",
+	"equipment": [
+		{
+			"id": "fancy_metal_helmet",
+			"size": "default",
+			"name": "Fancy Metal Helmet",
+			"type": "helmet",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/Fancy Metal Helmet.png"
+		},
+		{
+			"id": "full_face_helmet",
+			"size": "default",
+			"name": "Full Face Helmet",
+			"type": "helmet",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/Full Face Helmet.png"
+		},
+		{
+			"id": "golden_crown_helm",
+			"size": "default",
+			"name": "Golden Crown Helm",
+			"type": "helmet",
+			"base_width": 20.0,
+			"base_height": 18.0,
+			"sprite_path": "res://Items/golden_helm.png"
+		},
+		{
+			"id": "dark_hood",
+			"size": "default",
+			"name": "Dark Hood",
+			"type": "hood",
+			"base_width": 20.0,
+			"base_height": 20.0,
+			"sprite_path": "res://Items/dark_hood.png"
+		},
+		{
+			"id": "green_ranger_hood",
+			"size": "default",
+			"name": "Green Ranger Hood",
+			"type": "hood",
+			"base_width": 20.0,
+			"base_height": 20.0,
+			"sprite_path": "res://Items/ranger_hood.png"
+		},
+		{
+			"id": "leather_backpack",
+			"size": "default",
+			"name": "Leather Backpack",
+			"type": "backpack",
+			"base_width": 16.0,
+			"base_height": 14.0,
+			"sprite_path": "res://Items/Leather Backpack.png"
+		},
+		{
+			"id": "adventurer's_pack",
+			"size": "default",
+			"name": "Adventurer's Pack",
+			"type": "backpack",
+			"base_width": 18.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/adventurer_pack.png"
+		},
+		{
+			"id": "red_travel_cape",
+			"size": "default",
+			"name": "Red Travel Cape",
+			"type": "cape",
+			"base_width": 28.0,
+			"base_height": 24.0,
+			"sprite_path": "res://Items/red_cape.png"
+		},
+		{
+			"id": "shadow_cloak",
+			"size": "default",
+			"name": "Shadow Cloak",
+			"type": "cape",
+			"base_width": 30.0,
+			"base_height": 26.0,
+			"sprite_path": "res://Items/shadow_cloak.png"
+		},
+		{
+			"id": "steel_pauldrons",
+			"size": "default",
+			"name": "Steel Pauldrons",
+			"type": "shoulder_pads",
+			"base_width": 32.0,
+			"base_height": 10.0,
+			"sprite_path": "res://Items/steel_pauldrons.png"
+		},
+		{
+			"id": "leather_pants",
+			"size": "default",
+			"name": "Leather Pants",
+			"type": "pants",
+			"base_width": 7.0,
+			"base_height": 16.0,
+			"sprite_path": "res://Items/leather_pants.png"
+		},
+		{
+			"id": "armored_leggings",
+			"size": "default",
+			"name": "Armored Leggings",
+			"type": "pants",
+			"base_width": 8.0,
+			"base_height": 18.0,
+			"sprite_path": "res://Items/armored_leggings.png"
+		},
+		{
+			"id": "leather_boots",
+			"size": "default",
+			"name": "Leather Boots",
+			"type": "boots",
+			"base_width": 8.0,
+			"base_height": 8.0,
+			"sprite_path": "res://Items/leather_boots.png"
+		},
+		{
+			"id": "steel_greaves",
+			"size": "default",
+			"name": "Steel Greaves",
+			"type": "boots",
+			"base_width": 9.0,
+			"base_height": 10.0,
+			"sprite_path": "res://Items/steel_greaves.png"
+		},
+		{
+			"id": "breastplate_2",
+			"size": "default",
+			"name": "Breastplate 2",
+			"type": "torso_armor",
+			"base_width": 64,
+			"base_height": 10.0,
+			"sprite_path": "res://Items/Breastplate 2.png"
+		}
+	]
+}

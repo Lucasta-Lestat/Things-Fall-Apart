@@ -1,0 +1,137 @@
+{
+	"characters": [
+		{
+			"name": "Default Human",
+			"skin_color": "#E8BEAC",
+			"hair_color": "#4a3728",
+			"faction": "player",
+			"dexterity": 50,
+			"strength": 50,
+			"consitution": 50,
+			"will": 50,
+			"weight": 70.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Town Guard",
+			"skin_color": "#E8BEAC",
+			"hair_color": "#1a1a1a",
+			"faction": "town_guard",
+			"move_speed": 120.0,
+			"body_width": 30.0,
+			"body_height": 15.0,
+			"weight": 85.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Merchant",
+			"skin_color": "#F5E6D3",
+			"hair_color": "#c9a86c",
+			"faction": "merchants",
+			"move_speed": 100.0,
+			"body_width": 26.0,
+			"body_height": 14.0,
+			"weight": 75.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Bandit",
+			"skin_color": "#D4A574",
+			"hair_color": "#2d2d2d",
+			"faction": "bandits",
+			"move_speed": 140.0,
+			"body_width": 26.0,
+			"body_height": 13.0,
+			"weight": 68.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Bandit Chief",
+			"skin_color": "#8D5524",
+			"hair_color": "#1a1a1a",
+			"faction": "bandits",
+			"move_speed": 110.0,
+			"body_width": 32.0,
+			"body_height": 16.0,
+			"weight": 105.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Rebel Fighter",
+			"skin_color": "#E8BEAC",
+			"hair_color": "#8B0000",
+			"faction": "rebels",
+			"move_speed": 160.0,
+			"body_width": 26.0,
+			"body_height": 13.0,
+			"weight": 72.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Forest Elf",
+			"skin_color": "#C8E6C9",
+			"hair_color": "#2e7d32",
+			"faction": "neutral",
+			"move_speed": 200.0,
+			"body_width": 22.0,
+			"body_height": 11.0,
+			"weight": 55.0,
+			"size": "default_elf"
+		},
+		{
+			"name": "Cultist",
+			"skin_color": "#E0E0E0",
+			"hair_color": "#4a148c",
+			"faction": "cultists",
+			"move_speed": 130.0,
+			"body_width": 24.0,
+			"body_height": 12.0,
+			"weight": 60.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Skeleton Warrior",
+			"skin_color": "#E0E0D1",
+			"hair_color": "#E0E0D1",
+			"faction": "undead",
+			"move_speed": 90.0,
+			"body_width": 24.0,
+			"body_height": 12.0,
+			"weight": 20.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Demon Imp",
+			"skin_color": "#B71C1C",
+			"hair_color": "#1a1a1a",
+			"faction": "demons",
+			"move_speed": 180.0,
+			"body_width": 18.0,
+			"body_height": 10.0,
+			"weight": 15.0,
+			"size": "tiny"
+		},
+		{
+			"name": "Noble Lord",
+			"skin_color": "#FFDAB9",
+			"hair_color": "#4a3728",
+			"faction": "nobles",
+			"move_speed": 100.0,
+			"body_width": 28.0,
+			"body_height": 14.0,
+			"weight": 80.0,
+			"size": "default_human"
+		},
+		{
+			"name": "Wild Wolf",
+			"skin_color": "#696969",
+			"hair_color": "#4a4a4a",
+			"faction": "wildlife",
+			"move_speed": 220.0,
+			"body_width": 20.0,
+			"body_height": 16.0,
+			"weight": 45.0,
+			"size": "animal"
+		}
+	]
+}

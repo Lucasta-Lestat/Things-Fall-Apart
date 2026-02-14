@@ -3,15 +3,14 @@
 extends Node2D
 
 enum TargetShape { NONE, CIRCLE, RECTANGLE }
-enum HandSlot { LEFT, RIGHT }
 
-signal targeting_started(hand: HandSlot, ability: Dictionary)
-signal targeting_confirmed(hand: HandSlot, ability: Dictionary, target_position: Vector2)
-signal targeting_cancelled(hand: HandSlot)
+signal targeting_started(hand: String, ability: Dictionary)
+signal targeting_confirmed(hand: String, ability: Dictionary, target_position: Vector2)
+signal targeting_cancelled(hand: String)
 
 # Current targeting state
 var is_targeting: bool = false
-var current_hand: HandSlot = HandSlot.RIGHT
+var current_hand: String = "Main"
 var current_ability: Dictionary = {}
 var target_position: Vector2 = Vector2.ZERO
 
@@ -41,9 +40,12 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
+		print("is taargeting update in process")
+		this is somehow still triggering after end_taargeting is called
 		# Update target position to mouse
 		target_position = _get_mouse_world_position()
 		_update_active_indicator()
+	
 	
 
 func _create_indicators() -> void:
@@ -66,6 +68,7 @@ func _create_indicators() -> void:
 
 func _update_active_indicator() -> void:
 	"""Update the position and appearance of the active indicator"""
+	#print("target_shape is : ", target_shape)
 	match target_shape:
 		TargetShape.CIRCLE:
 			circle_indicator.global_position = target_position
@@ -92,19 +95,23 @@ func _update_active_indicator() -> void:
 
 func _get_mouse_world_position() -> Vector2:
 	"""Get mouse position in world coordinates"""
-	# This may need adjustment based on your viewport setup
 	return get_global_mouse_position()
 
 # ===== PUBLIC API =====
 
-func start_targeting(hand: HandSlot, ability: Dictionary) -> void:
+func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> void:
 	"""Begin targeting for an ability"""
+	print("start_targeting called for ability ", ability.display_name)
 	is_targeting = true
 	current_hand = hand
 	current_ability = ability
 	
+	# Set initial position immediately so it doesn't jump from (0,0)
+	target_position = mouse_pos
+	
 	# Set shape from ability data
 	var shape_str = ability.get("target_shape", "none")
+	print("ability shape for this ability: ", shape_str)
 	match shape_str:
 		"circle":
 			target_shape = TargetShape.CIRCLE
@@ -114,6 +121,9 @@ func start_targeting(hand: HandSlot, ability: Dictionary) -> void:
 			rectangle_size = ability.get("size", Vector2(100, 50))
 		_:
 			target_shape = TargetShape.NONE
+	
+	# Force an immediate update to ensure visual appears this frame
+	_update_active_indicator()
 	
 	emit_signal("targeting_started", hand, ability)
 
@@ -139,10 +149,12 @@ func cancel_targeting() -> void:
 	"""Cancel current targeting"""
 	if is_targeting:
 		emit_signal("targeting_cancelled", current_hand)
-	_end_targeting()
+	end_targeting()
 
-func _end_targeting() -> void:
+func end_targeting() -> void:
 	"""Clean up targeting state"""
+	#end targeting not getting called
+	print("is end targeting being called?")
 	is_targeting = false
 	current_ability = {}
 	target_shape = TargetShape.NONE

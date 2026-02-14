@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://jdaarvlt2l76"]
+
+[ext_resource type="Script" uid="uid://derlelu32psb5" path="res://arm.gd" id="1_hdnvd"]
+[ext_resource type="Script" uid="uid://cwgwh5m6fgdfs" path="res://Characters/character_spawner.gd" id="1_ltjhp"]
+
+[sub_resource type="Curve" id="Curve_ltjhp"]
+_data = [Vector2(0, 0.505618), 0.0, 0.0, 0, 0, Vector2(0.352041, 0.988764), 0.0, 0.0, 0, 0, Vector2(0.979592, 0.235955), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[node name="TopDownCharacterScene" type="Node2D"]
+script = ExtResource("1_ltjhp")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+visible = false
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+render_target_update_mode = 0
+
+[node name="RightArm" type="Line2D" parent="SubViewportContainer/SubViewport"]
+visible = false
+position = Vector2(49, 22)
+points = PackedVector2Array(19, 13, 41, 38, 68, 26)
+width_curve = SubResource("Curve_ltjhp")
+default_color = Color(0.909804, 0.745098, 0.67451, 1)
+script = ExtResource("1_hdnvd")

@@ -1,0 +1,81 @@
+{
+	"factions": [
+		{
+			"id": "neutral",
+			"name": "Neutral",
+			"color": "#808080",
+			"allies": [],
+			"enemies": []
+		},
+		{
+			"id": "player",
+			"name": "Player's Party",
+			"color": "#4CAF50",
+			"allies": ["town_guard", "merchants"],
+			"enemies": ["bandits", "undead", "demons"]
+		},
+		{
+			"id": "town_guard",
+			"name": "Town Guard",
+			"color": "#2196F3",
+			"allies": ["player", "merchants", "nobles"],
+			"enemies": ["bandits", "undead", "demons", "rebels"]
+		},
+		{
+			"id": "merchants",
+			"name": "Merchant Guild",
+			"color": "#FFD700",
+			"allies": ["player", "town_guard", "nobles"],
+			"enemies": ["bandits"]
+		},
+		{
+			"id": "nobles",
+			"name": "Nobility",
+			"color": "#9C27B0",
+			"allies": ["town_guard", "merchants"],
+			"enemies": ["rebels", "bandits"]
+		},
+		{
+			"id": "bandits",
+			"name": "Bandit Clan",
+			"color": "#795548",
+			"allies": [],
+			"enemies": ["player", "town_guard", "merchants", "nobles"]
+		},
+		{
+			"id": "rebels",
+			"name": "Rebel Alliance",
+			"color": "#F44336",
+			"allies": [],
+			"enemies": ["town_guard", "nobles"]
+		},
+		{
+			"id": "undead",
+			"name": "The Undead",
+			"color": "#1B5E20",
+			"allies": ["demons"],
+			"enemies": ["player", "town_guard", "bandits", "rebels", "merchants", "nobles"]
+		},
+		{
+			"id": "demons",
+			"name": "Demonic Forces",
+			"color": "#B71C1C",
+			"allies": ["undead"],
+			"enemies": ["player", "town_guard", "bandits", "rebels", "merchants", "nobles"]
+		},
+		{
+			"id": "wildlife",
+			"name": "Wildlife",
+			"color": "#8BC34A",
+			"allies": [],
+			"enemies": []
+		},
+		{
+			"id": "cultists",
+			"name": "Dark Cult",
+			"color": "#4A148C",
+			"allies": ["demons"],
+			"enemies": ["player", "town_guard", "nobles"]
+		}
+	]
+}

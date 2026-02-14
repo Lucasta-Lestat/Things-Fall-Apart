@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Ability" load_steps=2 format=3 uid="uid://h4jydkjn0k1x"]
+
+[ext_resource type="Script" uid="uid://bj224bmidk1k1" path="res://Abilities/Ability.gd" id="1_jxo2s"]
+
+[resource]
+script = ExtResource("1_jxo2s")
+id = &"heavy_strike"
+display_name = "Heavy_Strike"
+ap_cost = 3
+range = 150.0
+target_type = 2
+area_of_effect_radius = 0.0
+metadata/_custom_type_script = "uid://bj224bmidk1k1"

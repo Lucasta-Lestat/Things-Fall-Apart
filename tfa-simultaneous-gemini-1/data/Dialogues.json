@@ -7,6 +7,46 @@
 		}
 	}
 },
+"Zak_greet": {
+	"dialogueNodes": {
+		"Zak_intro": {
+			"Jacana": "May it be the hour you first believed"
+		}
+	}
+},
+"Federica_greet": {
+	"dialogueNodes": {
+		"Federica_intro": {
+			"Narrator": "The churchyard reeks of fresh-turned earth. Between the headstones, 
+			two figures work by lantern-light — a broad-shouldered half-orc woman and
+			 a slack-jawed man driving his shovel with mechanical patience. Neither has seen you yet.",
+			"Surgeon-Captain Federica": "Deeper Verhoeven.  No martyr of the antique world lies in a coffin this shallow.",
+			"Verhoeven": "'Outstanding, Ma'am!'  **He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
+			"choices":
+				[
+				{	"text": "What Ho, Graverobbers? Speak quickly the reason I should not cry for the guard.",
+					"nextNode": "Federica-intro-talk-down"
+				},
+				{ 
+					"text": "Lovely night, aye?"
+					"nextNode": ""
+				},
+					"text": "**Pass by quietly, hoping they don't see you witnessing their crime.**"
+					"nextNode": "end_convo"
+				]
+			}
+			"Federica_intro_talk_down": {
+				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)
+You would be within your rights. I won't insult you with denials — the evidence is plain."
+				"Surgeon-Captain Federica": "Two foreign strangers desecrating graves — in war time no less. I'd expect a speedy trial and an expeditious execution."
+				"Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** That is, if there are any witnesses to testify.",
+				"choices":[
+					"text": "**Shout for the guards!**",
+					"nextNode":
+					]
+			}
+	}
+},
   "guard_greet": {
 	"dialogueNodes": {
 	  "guard_greet": {
@@ -29,6 +69,7 @@
 		  }
 		]
 	  },
+	
 	  "guard_traveler": {
 		"guard": "Is that so? We've had trouble with *travelers* lately.",
 		"guard": "Move along, but I'm watching you.",

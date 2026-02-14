@@ -1,7 +1,7 @@
 # weapon_shape.gd
 # Defines the procedural shape/skeleton of a weapon for animation and collision
 # A sprite is overlaid on top for visual fidelity
-extends Node2D
+extends CharacterBody2D
 class_name WeaponShape
 
 enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW }
@@ -37,7 +37,7 @@ var sprite: Sprite2D = null
 var _calculated_sprite_scale: Vector2 = Vector2.ONE
 
 # Debug visualization
-@export var debug_draw: bool = false
+@export var debug_draw: bool = true
 var debug_lines: Array[Line2D] = []
 
 # Calculated values
@@ -100,7 +100,7 @@ func _auto_scale_sprite() -> void:
 	if sprite and sprite.texture:
 		var tex_size = sprite.texture.get_size()
 		# Scale to match total_length (assuming sprite is vertical)
-		var target_height = total_length *Globals.default_body_scale
+		var target_height = total_length*weapon_scale
 		var scale_factor = target_height / tex_size.y
 		
 		# Store calculated scale (will be multiplied by sprite_scale in _update_sprite_transform)
@@ -133,7 +133,7 @@ func get_grip_offset_for_hand() -> Vector2:
 
 func get_tip_local_position() -> Vector2:
 	"""Get the weapon tip in local coordinates"""
-	return Vector2(0, -total_length * grip_position)
+	return  
 
 func get_pommel_local_position() -> Vector2:
 	"""Get the pommel/bottom end in local coordinates"""
@@ -367,32 +367,32 @@ func _apply_default_size_for_type() -> void:
 	"""Resets geometric parameters to hardcoded defaults based on weapon_type"""
 	match weapon_type:
 		WeaponType.SWORD:
-			total_length = 50.0 * weapon_scale
-			grip_position = 0.75 * weapon_scale
+			total_length = 50.0 * weapon_scale * Globals.default_body_scale
+			grip_position = 0.75 * weapon_scale 
 			grip_length = 12.5 * weapon_scale
 			blade_width = 5.0 * weapon_scale
-			balance_point = 0.35 * weapon_scale
+			balance_point = 0.35 
 		WeaponType.AXE:
-			total_length = 45.0
-			grip_position = 0.85
-			grip_length = 27.0
-			blade_width = 14.0
-			balance_point = 0.2
+			total_length = 45.0 * weapon_scale
+			grip_position = 0.85* weapon_scale
+			grip_length = 27.0* weapon_scale
+			blade_width = 14.0* weapon_scale
+			balance_point = 0.2* weapon_scale
 		WeaponType.SPEAR:
-			total_length = 70.0
-			grip_position = 0.6
-			grip_length = 28.0
-			blade_width = 4.0
-			balance_point = 0.45
+			total_length = 70.0* weapon_scale
+			grip_position = 0.6* weapon_scale
+			grip_length = 28.0* weapon_scale
+			blade_width = 4.0* weapon_scale
+			balance_point = 0.45* weapon_scale
 		WeaponType.DAGGER:
-			total_length = 25.0
-			grip_position = 0.65
-			grip_length = 8.75
-			blade_width = 3.0
-			balance_point = 0.4
+			total_length = 25.0* weapon_scale
+			grip_position = 0.65* weapon_scale
+			grip_length = 8.75* weapon_scale
+			blade_width = 3.0* weapon_scale
+			balance_point = 0.4* weapon_scale
 		WeaponType.MACE:
-			total_length = 40.0
-			grip_position = 0.8
-			grip_length = 20.0
-			blade_width = 10.0
-			balance_point = 0.15
+			total_length = 40.0* weapon_scale
+			grip_position = 0.8* weapon_scale
+			grip_length = 20.0* weapon_scale
+			blade_width = 10.0* weapon_scale
+			balance_point = 0.15* weapon_scale

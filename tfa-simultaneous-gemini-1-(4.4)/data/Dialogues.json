@@ -1,0 +1,157 @@
+{
+"Jacana_greet": {
+	"dialogueNodes": {
+	  "Jacana_greet": {
+		"Jacana": "And that is why the world must change.",
+		"Protagonist": "I disagree"
+		}
+	}
+},
+  "guard_greet": {
+	"dialogueNodes": {
+	  "guard_greet": {
+		"guard": "Halt! Who goes there? State your business.",
+		"choices": [
+		  {
+			"text": "I'm just a traveler passing through.",
+			"nextNode": "guard_traveler"
+		  },
+		  {
+			"text": "My name is [[game.protagonist.name]], on official business for the Jarl.",
+			"branch": {
+			  "protagonist.ability_check('persuasion', 15)": "guard_persuade_success",
+			  "default": "guard_persuade_failure"
+			}
+		  },
+		  {
+			"text": "Never mind.",
+			"nextNode": "end_convo"
+		  }
+		]
+	  },
+	  "guard_traveler": {
+		"guard": "Is that so? We've had trouble with *travelers* lately.",
+		"guard": "Move along, but I'm watching you.",
+		"next": "end_convo_watched"
+	  },
+	  "guard_persuade_success": {
+		"guard": "The Jarl? Ah, I see the **Jarl's sigil** on your cloak.",
+		"guard": "Very well, [[game.protagonist.name]]. Go on in. Don't cause any trouble.",
+		"next": "end_convo_pass"
+	  },
+	  "guard_persuade_failure": {
+		"guard": "The Jarl? Hmm... you don't look like his usual company.",
+		"guard": "I don't believe you. Move along!",
+		"next": "end_convo_watched"
+	  },
+	  "end_convo": {
+		"narrator": "The guard nods and you walk away."
+	  },
+	  "end_convo_watched": {
+		"narrator": "The guard watches you suspiciously as you leave."
+	  },
+	  "end_convo_pass": {
+		"narrator": "The guard steps aside and lets you pass through the gate."
+	  }
+	}
+  },
+  "merchant_trade": {
+	"dialogueNodes": {
+	  "merchant_trade": {
+		"prerequisites": ["protagonist.gold >= 10"],
+		"merchant": "Welcome, welcome! I am **Gareth the Trader**.",
+		"merchant": "I have *rare goods* from across the realm, [[protagonist.name]]!",
+		"merchant": "What catches your eye?",
+		"choices": [
+		  {
+			"text": "Show me your weapons.",
+			"nextNode": "merchant_weapons"
+		  },
+		  {
+			"text": "Do you have any potions?",
+			"nextNode": "merchant_potions"
+		  },
+		  {
+			"text": "I'm just browsing.",
+			"nextNode": "merchant_browse"
+		  },
+		  {
+			"text": "Goodbye.",
+			"nextNode": "merchant_end"
+		  }
+		]
+	  },
+	  "merchant_weapons": {
+		"merchant": "Ah, a warrior! I have some *fine blades* here.",
+		"merchant": "Each one has tasted **victory** in battle!",
+		"next": "merchant_trade"
+	  },
+	  "merchant_potions": {
+		"merchant": "Indeed! Healing draughts, mana elixirs, even some exotic brews.",
+		"next": "merchant_trade"
+	  },
+	  "merchant_browse": {
+		"merchant": "Of course, of course! Take your time.",
+		"merchant": "Let me know if anything interests you.",
+		"next": "merchant_trade"
+	  },
+	  "merchant_end": {
+		"merchant": "Safe travels, friend!",
+		"narrator": "The merchant waves as you depart."
+	  }
+	}
+  },
+  "skill_check_example": {
+	"dialogueNodes": {
+	  "skill_check_example": {
+		"rogue": "Think you can pick this lock?",
+		"protagonist": "Let me try...",
+		"branch": {
+		  "protagonist.ability_check('lockpicking', 12)": "lockpick_success",
+		  "default": "lockpick_failure"
+		}
+	  },
+	  "lockpick_success": {
+		"narrator": "*Click!* The lock springs open.",
+		"protagonist": "Got it!",
+		"rogue": "Impressive work. You've got talent.",
+		"next": "end_skill_check"
+	  },
+	  "lockpick_failure": {
+		"narrator": "The picks slip. The lock remains shut.",
+		"protagonist": "Damn... it's too complex.",
+		"rogue": "Don't worry. We'll find another way in.",
+		"next": "end_skill_check"
+	  },
+	  "end_skill_check": {
+		"narrator": "You continue onward."
+	  }
+	}
+  },
+  "complex_branch_example": {
+	"dialogueNodes": {
+	  "complex_branch": {
+		"wizard": "You seek the **Ancient Tome**?",
+		"wizard": "Only those worthy may possess it.",
+		"branch": {
+		  "protagonist.has_item('elder_seal') and protagonist.level >= 10": "worthy_path",
+		  "protagonist.ability_check('arcana', 18)": "knowledge_path",
+		  "default": "unworthy_path"
+		}
+	  },
+	  "worthy_path": {
+		"wizard": "You bear the **Elder Seal**! You are indeed worthy.",
+		"narrator": "The wizard hands you the ancient tome."
+	  },
+	  "knowledge_path": {
+		"wizard": "Your knowledge of the arcane is impressive.",
+		"wizard": "Perhaps you are worthy after all...",
+		"narrator": "The wizard reluctantly gives you the tome."
+	  },
+	  "unworthy_path": {
+		"wizard": "You are *not* ready. Return when you have proven yourself.",
+		"narrator": "The wizard dismisses you."
+	  }
+	}
+  }
+}

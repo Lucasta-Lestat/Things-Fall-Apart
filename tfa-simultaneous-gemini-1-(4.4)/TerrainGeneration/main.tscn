@@ -1,0 +1,191 @@
+[gd_scene load_steps=3 format=3 uid="uid://bgi5f3v7ptqv2"]
+
+[ext_resource type="Script" uid="uid://xye7jxxhti3v" path="res://TerrainGeneration/ui_controller.gd" id="1_ui"]
+[ext_resource type="Script" uid="uid://cfxw7cgl6hcqq" path="res://TerrainGeneration/grass_terrain_generator.gd" id="2_terrain"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ui")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -250.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1650, 1080)
+render_target_update_mode = 4
+
+[node name="TerrainGenerator" type="Node2D" parent="SubViewportContainer/SubViewport"]
+script = ExtResource("2_terrain")
+
+[node name="Camera2D" type="Camera2D" parent="SubViewportContainer/SubViewport"]
+position = Vector2(256, 256)
+
+[node name="UIPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -250.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UIPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+text = "Procedural Grass"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SeedContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SeedLabel" type="Label" parent="UIPanel/VBoxContainer/SeedContainer"]
+layout_mode = 2
+text = "Seed:"
+
+[node name="SeedSpinBox" type="SpinBox" parent="UIPanel/VBoxContainer/SeedContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 999999.0
+value = 12345.0
+
+[node name="GenerateButton" type="Button" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+text = "Generate"
+
+[node name="HSeparator2" type="HSeparator" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="PaintLabel" type="Label" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+text = "Paint Terrain"
+horizontal_alignment = 1
+
+[node name="TerrainContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="TerrainLabel" type="Label" parent="UIPanel/VBoxContainer/TerrainContainer"]
+layout_mode = 2
+text = "Type:"
+
+[node name="TerrainOption" type="OptionButton" parent="UIPanel/VBoxContainer/TerrainContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BrushContainer" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="BrushLabel" type="Label" parent="UIPanel/VBoxContainer/BrushContainer"]
+layout_mode = 2
+text = "Brush: 20"
+
+[node name="BrushSlider" type="HSlider" parent="UIPanel/VBoxContainer/BrushContainer"]
+layout_mode = 2
+min_value = 1.0
+value = 20.0
+
+[node name="HSeparator3" type="HSeparator" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SettingsLabel" type="Label" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+text = "Noise Settings"
+horizontal_alignment = 1
+
+[node name="FlowerContainer" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FlowerLabel" type="Label" parent="UIPanel/VBoxContainer/FlowerContainer"]
+layout_mode = 2
+text = "Flowers: 0.88"
+
+[node name="FlowerSlider" type="HSlider" parent="UIPanel/VBoxContainer/FlowerContainer"]
+layout_mode = 2
+min_value = 0.5
+max_value = 0.99
+step = 0.01
+value = 0.88
+
+[node name="EdgeContainer" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="EdgeLabel" type="Label" parent="UIPanel/VBoxContainer/EdgeContainer"]
+layout_mode = 2
+text = "Edge: 12.0"
+
+[node name="EdgeSlider" type="HSlider" parent="UIPanel/VBoxContainer/EdgeContainer"]
+layout_mode = 2
+max_value = 30.0
+step = 0.5
+value = 12.0
+
+[node name="HSeparator4" type="HSeparator" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FileButtons" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SaveButton" type="Button" parent="UIPanel/VBoxContainer/FileButtons"]
+layout_mode = 2
+text = "Save Map"
+
+[node name="LoadButton" type="Button" parent="UIPanel/VBoxContainer/FileButtons"]
+layout_mode = 2
+text = "Load Map"
+
+[node name="ExportButton" type="Button" parent="UIPanel/VBoxContainer/FileButtons"]
+layout_mode = 2
+text = "Export PNG"
+
+[node name="ClearButton" type="Button" parent="UIPanel/VBoxContainer/FileButtons"]
+layout_mode = 2
+text = "Clear Terrain"
+
+[node name="HSeparator5" type="HSeparator" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="HelpLabel" type="Label" parent="UIPanel/VBoxContainer"]
+layout_mode = 2
+text = "Controls:
+LMB: Paint terrain
+RMB: Erase (paint grass)
+MMB: Pan camera
+Scroll: Zoom"
+autowrap_mode = 2
+
+[node name="SaveDialog" type="FileDialog" parent="."]
+title = "Save Map"
+size = Vector2i(500, 400)
+access = 2
+filters = PackedStringArray("*.grassmap")
+
+[node name="LoadDialog" type="FileDialog" parent="."]
+title = "Load Map"
+size = Vector2i(500, 400)
+access = 2
+filters = PackedStringArray("*.grassmap")
+
+[connection signal="pressed" from="UIPanel/VBoxContainer/FileButtons/SaveButton" to="." method="_on_save_pressed"]
+[connection signal="pressed" from="UIPanel/VBoxContainer/FileButtons/LoadButton" to="." method="_on_load_pressed"]
+[connection signal="pressed" from="UIPanel/VBoxContainer/FileButtons/ExportButton" to="." method="_on_export_pressed"]
+[connection signal="pressed" from="UIPanel/VBoxContainer/FileButtons/ClearButton" to="." method="_on_clear_pressed"]

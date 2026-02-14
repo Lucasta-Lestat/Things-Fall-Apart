@@ -1,0 +1,81 @@
+config_version=5
+
+[application]
+
+config/name="TFA Simultaneous Gemini 1 (4.4)"
+run/main_scene="uid://h6eujk2qam5p"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="uid://bb5kv4jao2sm8"
+
+[autoload]
+
+Globals="*res://Global/Globals.gd"
+BodyPartDatabase="*res://Global/BodyPartDatabase.gd"
+ItemDatabase="*res://Global/ItemDatabase.gd"
+CharacterDatabase="*res://Global/CharacterDatabase.gd"
+AbilityDatabase="*res://Global/AbilityDatabase.gd"
+TraitDatabase="*res://Global/TraitDatabase.gd"
+WeaponDatabase="*res://Global/WeaponDatabase.gd"
+GridManager="*res://Global/GridManager.gd"
+StructureDatabase="*res://Global/StructureDatabase.gd"
+EquipmentDatabase="*res://Global/EquipmentDatabase.gd"
+ConditionDatabase="*res://Global/ConditionDatabase.gd"
+VfxSystem="*res://Global/VFXSystem.gd"
+DialogueManager="*res://Global/Dialogue_Manager.gd"
+MapDatabase="*res://Global/MapDatabase.gd"
+FloorDatabase="*res://Global/FloorDatabase.gd"
+TimeManager="*res://Global/TimeManager.gd"
+FluidManager="*res://Global/FluidManager.gd"
+VisibilityManager="*res://Global/VisibilityManager.gd"
+GameLog="*res://Global/GameLog.gd"
+ProceduralItemDatabase="*res://Global/ProceduralItemDatabase.gd"
+SfxManager="*res://Global/SFXManager.gd"
+MusicManager="*res://Global/MusicManager.gd"
+PauseManager="*res://Global/PauseManager.gd"
+AbilityDatabase2="*res://Global/AbilityDatabase2.gd"
+
+[display]
+
+window/size/viewport_width=1900
+window/size/viewport_height=1080
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg")
+
+[file_customization]
+
+folder_colors={
+"res://vfx/shaders/": "red"
+}
+
+[gui]
+
+theme/custom_font="uid://upo1jw5d4ss0"
+
+[input]
+
+pause={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":32,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+left_click={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":false,"double_click":false,"script":null)
+]
+}
+middle_mouse={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":3,"canceled":false,"pressed":false,"double_click":false,"script":null)
+]
+}
+right_click={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":false,"double_click":false,"script":null)
+]
+}
+
+[internationalization]
+
+locale/translations_pot_files=PackedStringArray("res://Dialogues/test_dialogue 2.dialogue")

@@ -1,4 +1,4 @@
-# character.gd
+# procedrual character.gd
 # Attach to a Node2D that will be the character root
 extends CharacterBody2D
 class_name ProceduralCharacter
@@ -9,12 +9,14 @@ var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-var traits = ["Male"]
+var traits = {"Male":1}
 # Faction
 var faction_id: String = "neutral"
 var is_protagonist = false
 var AI_enabled = false
+
 var action_queue: ActionQueue = null
+var _was_paused: bool = false
 # Body parts
 var body: Line2D
 var head: Line2D
@@ -25,6 +27,27 @@ var left_leg: Line2D
 var right_leg: Line2D
 
 var current_hand = "Main"
+var display_name = "John Doe"
+
+# Ability Resolution:
+## Currently casting ability (null if not casting)
+var current_cast: Dictionary = {}
+
+## Cooldowns for abilities {ability_id: time_when_available}
+var cooldowns: Dictionary = {}
+
+var MODIFY_DURATION_BY_TRAIT: Dictionary = {
+	"fire": 1.2,
+	"ice": 1.5,
+	"spell": 1.0,
+	"aoe": 1.3,
+	"attack": 1.0,
+	"magical": 1.1,
+}
+
+## Preloaded visual effect scenes
+var _effect_cache: Dictionary = {}
+
 #Shaking
 # --- NEW: Shake & Push Variables ---
 var current_shake_intensity: float = 0.0
@@ -65,8 +88,8 @@ enum HairStyle {
 var hair_style: HairStyle = HairStyle.FULL
 # Inventory and weapons (using new shape-based system)
 var inventory: Inventory
-var current_main_hand_weapon: WeaponShape = null
-var current_off_hand_weapon: WeaponShape = null
+var current_main_hand_item: Node2D = null
+var current_off_hand_item: Node2D = null
 var main_hand_holder: Node2D
 var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
@@ -98,10 +121,11 @@ var right_arm_joints: Array[Vector2] = []
 var left_arm_target: Vector2
 var right_arm_target: Vector2
 
-# Base attributes (1-1000 scale, 10 is average human)
+# Base attributes (1-100 scale, 50 is average human)
 @export var strength: int = 50      # Damage multiplier, weapon clash power
 @export var constitution: int = 50  # HP multiplier, stagger resistance
 @export var dexterity: int = 50     # Speed multiplier (move + attack)
+@export var will: int = 50
 @export var move_speed: = 150.0
 # Blood drop texture - set this in _ready or via export
 @export var blood_drop_texture: Texture2D
@@ -144,11 +168,19 @@ var max_hp: int:
 var max_blood_amount = max_hp
 var blood_amount = max_hp
 
+#MP
+var max_MP: int:
+	get: return will * consciousness
+var MP = max_MP	
+@export var mp_regen_amount: int = 5
+@export var mp_regen_interval: float = 0.5
+var mp_regen_timer: float = 0.0
+
 @export var rotation_speed: float:
 	get: return 8.0 * (dexterity/50)
 	
 var consciousness: int:
-	get: return blood_amount
+	get: return blood_amount + will
 
 var damage_multiplier: float:
 	get: return 0.5 + (strength / 100.0)  # 0.5 at STR 0, 1.5 at STR 100
@@ -168,7 +200,8 @@ func to_data() -> Dictionary:
 	return {
 		"strength": strength,
 		"constitution": constitution,
-		"dexterity": dexterity
+		"dexterity": dexterity,
+		"will": will
 	}
 
 # Body dimensions (top-down view: width is left-right, height is front-back)
@@ -185,6 +218,8 @@ var collision_radius: float:
 @export var minimum_separation: float = 5.0  # Extra buffer between characters
 var collision_shape: CollisionShape2D
 var collision_area: Area2D
+const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
+var targeting_system: Node2D
 
 signal character_reached_target
 signal weapon_changed(weapon: WeaponShape)
@@ -192,9 +227,14 @@ signal attack_hit(damage: int, damage_type: int)
 
 func _ready() -> void:
 	target_position = global_position
+	targeting_system = AbilityTargetingScript.new()
+	# 2. Name it (optional, but helps with debugging)
+	targeting_system.name = "AbilityTargeting"
+	add_child(targeting_system)
 	blood_drop_texture = load("res://vfx/blood drop.png")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
+	_setup_action_queue()
 	_setup_equipment_slots()
 	_setup_attack_system()
 	_setup_collision()
@@ -202,8 +242,7 @@ func _ready() -> void:
 	_initialize_arms()
 	initialize_limbs(constitution)
 	TimeManager.time_updated.connect(_on_time_updated)
-
-# Add this to your _ready() function:
+	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 func _setup_action_queue() -> void:
 	action_queue = ActionQueue.new()
 	action_queue.name = "ActionQueue"
@@ -306,6 +345,7 @@ func _setup_collision() -> void:
 func _update_collision_shape() -> void:
 	# Call this if body dimensions change at runtime
 	if collision_shape and collision_shape.shape is ConvexPolygonShape2D:
+		print("updating collision shape")
 		collision_shape.shape.points = _get_body_collision_points()
 
 func _get_body_collision_points() -> PackedVector2Array:
@@ -741,11 +781,21 @@ func _process(delta: float) -> void:
 		_update_weapon_position()
 		_update_blood_drops(delta)
 		_update_severed_limb_visuals()
+		if not current_cast.is_empty():
+			_process_casting(delta)
 		# Update timers
 		attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
 		reaction_timer = max(0, reaction_timer - delta)
 		stun_timer = max(0, stun_timer - delta)
 		state_timer += delta
+		
+		# MP regeneration (only when not stunned)
+		if stun_timer <= 0:
+			mp_regen_timer += delta
+			if mp_regen_timer >= mp_regen_interval:
+				mp_regen_timer -= mp_regen_interval
+				MP = min(MP + mp_regen_amount, max_MP)
+	
 		# Add check if the character is AI controlled
 		if AI_enabled:
 			# Handle stunned state
@@ -856,42 +906,115 @@ func _update_leg_animation(delta: float) -> void:
 		legs_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
 	if feet_equipment:
 		feet_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
+# Helper to distinguish Weapon vs Ability logic
+func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, paused: bool) -> void:
+	if item is WeaponShape:
+		# Standard Weapon Logic
+		if paused:
+			target_rotation = (mouse_pos - global_position).angle() + PI / 2
+			action_queue.queue_attack(mouse_pos)
+		else:
+			target_rotation = (mouse_pos - global_position).angle() + PI / 2
+			attack()
+			
+	elif item is AbilityShape:
+		# Ability Logic
+		var ability_data = item.get_ability_data()
+		print("ability data for item: ", ability_data)
+		# Check if it needs targeting first
+		print("Does the ability require targeting: ", ability_data.get("requires_targeting"))
+		if ability_data.get("requires_targeting", false):
+			print("ability targeting begining")
+			targeting_system.start_targeting(hand_str, ability_data, mouse_pos)
+		else:
+			# Instant cast (self buffs, etc)
+			if paused:
+				target_rotation = (mouse_pos - global_position).angle() + PI / 2
+				action_queue.queue_ability(item.ability_id, mouse_pos)
+			else:
+				target_rotation = (mouse_pos - global_position).angle() + PI / 2
+				var ability_obj = Ability2.from_dict(ability_data)
+				use_ability(ability_obj, {"position": mouse_pos})
+
+func cast_ability(ability: AbilityShape):
+	if attack_animator.is_attacking: return
+	
+	print("Casting ability: ", ability.ability_name)
+
+	# 1. Trigger Visuals
+	ability.activate_visuals(true)
+
+	# 2. Trigger Animation (Straight arm push)
+	attack_animator.start_cast()
+
+	# 3. Wait for hit frame (via signal) to spawn actual projectile
+	await attack_animator.attack_hit_frame
+
+	# 4. Execute Logic (Spawn fireball, etc)
+	
+
+	# 5. Cleanup Visuals
+	await attack_animator.attack_finished
+	ability.activate_visuals(false)
+	print("is cast ability being called") #it isn't
+	targeting_system._end_targeting()
 
 func _handle_input() -> void:
 	if AI_enabled:
 		return
-	
-	var mouse_pos = _get_adjusted_mouse_position()
+	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
-	
+	# Skip input processing on the frame pause state changes
+	# This prevents accidental action queueing when pausing/unpausing
+	if paused != _was_paused:
+		_was_paused = paused
+		return
 	# When paused: queue actions
 	# When unpaused: execute immediately (queue processes automatically)
+	# Right mouse button - Off hand
+	if paused:
+		# When paused, only trigger on initial click
+		if Input.is_action_just_pressed("right_click"):
+			current_hand = "Off"
+			if targeting_system.is_targeting and targeting_system.current_hand == "Off":
+				print("confirm_ability_target triggered by right_click")
+				_confirm_ability_target(paused)
+			elif not targeting_system.is_targeting:
+				_process_hand_action(current_off_hand_item, "Off", mouse_pos, paused)
+	else:
+		# When unpaused, allow held input for continuous actions
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+			current_hand = "Off"
+			print("ability system is targeting? ", targeting_system.is_targeting, " and what hand is it using? ", targeting_system.current_hand)
+			if targeting_system.is_targeting and targeting_system.current_hand == "Off":
+				_confirm_ability_target(paused)
+			elif not targeting_system.is_targeting:
+				_process_hand_action(current_off_hand_item, "Off", mouse_pos, paused)
 	
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		current_hand = "Off"
-		if paused:
-			action_queue.queue_face(mouse_pos)
-			action_queue.queue_attack()
-			
-		else:
-			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			attack()
-			
+	# Left mouse button / B key - Main hand
+	if paused:
+		# When paused, only trigger on initial click
+		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
+			current_hand = "Main"
+			if targeting_system.is_targeting and targeting_system.current_hand == "Main":
+				_confirm_ability_target(paused)
+			elif not targeting_system.is_targeting:
+				_process_hand_action(current_main_hand_item, "Main", mouse_pos, paused)
+	else:
+		# When unpaused, allow held input for continuous actions
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_B):
+			current_hand = "Main"
+			if targeting_system.is_targeting and targeting_system.current_hand =="Main":
+				_confirm_ability_target(paused)
+			elif not targeting_system.is_targeting:
+				_process_hand_action(current_main_hand_item, "Main", mouse_pos, paused)
 	
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_B):
-		current_hand = "Main"
-		print("attack key pressed, checking if this works while paused")
-		if paused:
-			action_queue.queue_attack()
-		else:
-			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			attack()
-			
-	
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) :
-		if paused:
+	# Middle mouse button - Move
+	if paused:
+		if Input.is_action_just_pressed("middle_mouse"):
 			action_queue.queue_move(mouse_pos)
-		else:
+	else:
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 			target_position = mouse_pos
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
 			is_moving = true
@@ -912,33 +1035,38 @@ func _handle_input() -> void:
 	if paused:
 		if Input.is_action_just_pressed("ui_cancel"):
 			action_queue.cancel_all()
-
-func _get_adjusted_mouse_position() -> Vector2:
-	# Check if we're inside a SubViewport
-	var vp = get_viewport()
-	var parent = vp.get_parent()
+	# Cancel Targeting (Right click cancels Left targeting, or Escape)
+	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
+		targeting_system.cancel_targeting()
+func _confirm_ability_target(paused: bool) -> void:
+	# Retrieve the data from the targeting system
+	var result = targeting_system.confirm_targeting()
+	#print("RESULT OF CONFIRM_ABILITY_TARGET: ", result)
 	
-	if parent is SubViewportContainer:
-		# Get mouse position relative to the container
-		var container = parent as SubViewportContainer
-		var screen_mouse = DisplayServer.mouse_get_position()
-		var window_pos = get_window().position
-		var local_mouse = Vector2(screen_mouse) - Vector2(window_pos)
+	if result.is_empty(): return
+	
+	var ability_data = result.get("ability", {})
+	var target_pos = result.get("position", Vector2.ZERO)
+	var ability_id = ability_data.get("id", "")
+	
+	if paused:
+		# QUEUE: Add visual indicator to world and add to action queue
+		# Matches your queue_ability signature
+		action_queue.queue_ability(ability_id, target_pos)
 		
-		# Account for container position and scaling
-		local_mouse -= container.global_position
-		
-		# Scale factor between container and viewport
-		var scale_factor = Vector2(vp.size) / container.size
-		local_mouse *= scale_factor
-		
-		# Convert to global coords within the SubViewport
-		# We need to account for camera/transform
-		var canvas_transform = vp.canvas_transform
-		return canvas_transform.affine_inverse() * local_mouse
+		# Optional: Create the persistent ghost indicator since we are paused
+		targeting_system.create_queued_indicator(
+			target_pos, 
+			result.get("shape"), 
+			result.get("radius", 0), 
+			result.get("size", Vector2.ZERO), 
+			result.get("rotation", 0.0)
+		)
 	else:
-		# Regular viewport, use standard method
-		return get_global_mouse_position()
+		# IMMEDIATE: Cast
+		var ability_obj = Ability2.from_dict(ability_data)
+		use_ability(ability_obj, {"position": target_pos})
+
 
 func _update_movement(delta: float) -> void:
 	# Smoothly rotate toward target
@@ -988,7 +1116,7 @@ func _update_arm_ik() -> void:
 	
 	# Check if we are in a "combat state" (attacking or holding a weapon)
 	# (Updated condition to check for EITHER weapon or active attack)
-	var in_combat_stance = (current_main_hand_weapon != null) or (current_off_hand_weapon != null) or (attack_animator and attack_animator.is_attacking)
+	var in_combat_stance = (current_main_hand_item != null) or (current_off_hand_item != null) or (attack_animator and attack_animator.is_attacking)
 
 	if in_combat_stance:
 		# Define the "Active" arm base target (bent arm close to body)
@@ -1099,7 +1227,6 @@ func _update_arm_visuals() -> void:
 			right_arm.add_point(joint)
 
 func _update_weapon_position() -> void:
-	#look here for dual hand updates
 	# Position weapon at the right hand (last joint of right arm)
 	if left_arm_joints.size() > 0:
 		var off_hand_pos = left_arm_joints[-1]
@@ -1122,49 +1249,49 @@ func _update_weapon_position() -> void:
 func _on_active_weapon_changed(weapon, hand) -> void:
 	# Remove old weapon from holder
 	if hand == "Main":
-		if current_main_hand_weapon != null:
-			main_hand_holder.remove_child(current_main_hand_weapon)
+		if current_main_hand_item != null:
+			main_hand_holder.remove_child(current_main_hand_item)
 			# Don't free it - it's still in the inventory
 		
-		current_main_hand_weapon = weapon
+		current_main_hand_item = weapon
 		
 		# Add new weapon to holder
-		if current_main_hand_weapon != null:
-			main_hand_holder.add_child(current_main_hand_weapon)
+		if current_main_hand_item != null:
+			main_hand_holder.add_child(current_main_hand_item)
 			# Position weapon so the grip aligns with the hand
 			# The sprite's origin is at center, but we want the grip point at holder origin
 			# grip_position is 0-1 where 0=tip, 1=pommel
 			# For a vertical weapon sprite: grip is at (grip_position) from top
 			# We need to offset the sprite so that grip point is at (0,0)
-			var grip_offset = current_main_hand_weapon.get_grip_offset_for_hand()
-			current_main_hand_weapon.position = grip_offset
-			current_main_hand_weapon.z_index = 2  # Above character
+			var grip_offset = current_main_hand_item.get_grip_offset_for_hand()
+			current_main_hand_item.position = grip_offset
+			current_main_hand_item.z_index = 2  # Above character
 	if hand	== "Off":
-		if current_off_hand_weapon != null:
-			off_hand_holder.remove_child(current_off_hand_weapon)
+		if current_off_hand_item != null:
+			off_hand_holder.remove_child(current_off_hand_item)
 			# Don't free it - it's still in the inventory
 		
-		current_off_hand_weapon = weapon
+		current_off_hand_item = weapon
 		
 		# Add new weapon to holder
-		if current_off_hand_weapon != null:
-			off_hand_holder.add_child(current_off_hand_weapon)
+		if current_off_hand_item != null:
+			off_hand_holder.add_child(current_off_hand_item)
 			# Position weapon so the grip aligns with the hand
 			# The sprite's origin is at center, but we want the grip point at holder origin
 			# grip_position is 0-1 where 0=tip, 1=pommel
 			# For a vertical weapon sprite: grip is at (grip_position) from top
 			# We need to offset the sprite so that grip point is at (0,0)
-			var grip_offset = current_off_hand_weapon.get_grip_offset_for_hand()
-			current_off_hand_weapon.position = grip_offset
-			current_off_hand_weapon.z_index = 2  # Above character
+			var grip_offset = current_off_hand_item.get_grip_offset_for_hand()
+			current_off_hand_item.position = grip_offset
+			current_off_hand_item.z_index = 2  # Above character
 	emit_signal("weapon_changed", weapon)
 
 func _on_attack_hit(ability) -> void:
 	if ability== "Main":
 	# Called when attack hits (at the impact frame)
-		emit_signal("attack_hit", current_main_hand_weapon.base_damage, current_main_hand_weapon.primary_damage_type)
+		emit_signal("attack_hit", current_main_hand_item.base_damage, current_main_hand_item.primary_damage_type)
 	if ability == "Off":
-		emit_signal("attack_hit", current_off_hand_weapon.base_damage, current_off_hand_weapon.primary_damage_type)
+		emit_signal("attack_hit", current_off_hand_item.base_damage, current_off_hand_item.primary_damage_type)
 
 func _on_attack_finished() -> void:
 	# Called when attack animation completes
@@ -1180,8 +1307,8 @@ func attack(Ability:String= "Main") -> void:
 		
 		# Get damage type from weapon and start appropriate animation
 		var damage_type
-		if current_main_hand_weapon != null:
-			damage_type = current_main_hand_weapon.primary_damage_type
+		if current_main_hand_item != null:
+			damage_type = current_main_hand_item.primary_damage_type
 		else:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
@@ -1192,8 +1319,8 @@ func attack(Ability:String= "Main") -> void:
 			return  # Already attacking
 		# Get damage type from weapon and start appropriate animation
 		var damage_type
-		if current_off_hand_weapon != null:
-			damage_type = current_off_hand_weapon.primary_damage_type
+		if current_off_hand_item != null:
+			damage_type = current_off_hand_item.primary_damage_type
 		else:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
@@ -1226,7 +1353,10 @@ func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponSha
 			return give_weapon(data, hand)
 	push_warning("Could not find weapon: %s" % weapon_name)
 	return null
-
+func give_ability_by_name(ability_name: String, hand:String= "Main"):
+	print("giving ability by name: ", ability_name)
+	inventory.equip_ability_from_id(ability_name, hand)
+	
 func give_weapon_by_type(weapon_type: String) -> WeaponShape:
 	"""Quick method to give a weapon by type name (creates default weapon of that type)"""
 	return give_weapon({"type": weapon_type})
@@ -1243,13 +1373,13 @@ func draw_weapon() -> void:
 	"""Draw first available weapon"""
 	inventory.draw_weapon()
 
-func get_current_main_hand_weapon() -> WeaponShape:
+func get_current_main_hand_item() -> WeaponShape:
 	"""Get the currently held weapon"""
-	return current_main_hand_weapon
+	return current_main_hand_item
 
 func has_weapon_equipped() -> bool:
 	"""Check if character is holding a weapon"""
-	return current_main_hand_weapon != null or current_off_hand_weapon != null
+	return current_main_hand_item != null or current_off_hand_item != null
 
 # ===== PUBLIC EQUIPMENT API =====
 
@@ -1426,11 +1556,14 @@ func get_torso_hp() -> int:
 	return torso.current_hp if torso else 0
 
 func is_alive() -> bool:
-	"""Character dies if torso or head HP <= 0"""
+	"""Character dies if torso or head HP <= 0 or blood is 0"""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
 	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
 	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
+	var is_alive = (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+	if not is_alive:
+		_on_character_died()
 	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
@@ -1570,6 +1703,7 @@ var min_approach_distance: float:
 var attack_cooldown_timer: float = 0.0
 var reaction_timer: float = 0.0
 var stun_timer: float = 0.0
+var MP_recovery: float = 0.5
 
 signal state_changed(old_state: AIState, new_state: AIState)
 signal target_acquired(target: ProceduralCharacter)
@@ -1763,13 +1897,12 @@ func _process_attack(delta: float) -> void:
 	# Start attack if not already attacking
 	if not self.attack_animator.is_attacking:
 		#print("do we have a weapon?")
-		
-		if self.current_main_hand_weapon:
+		if self.current_main_hand_item:
 		#	print("yes we do have a weapon")
 			self.attack()
 			attack_cooldown_timer = attack_cooldown / (self.attack_speed_multiplier )
 		else:
-			print("trying attack without a weapon")
+			#print("trying attack without a weapon")
 			self.attack()
 	# Wait for attack to finish
 	if not self.attack_animator.is_attacking:
@@ -1874,7 +2007,7 @@ func _update_blood_drops(delta: float) -> void:
 
 func _spawn_blood_drops(origin: Vector2, count: int, is_severing: bool) -> void:
 	"""Spawn blood drop particles at the origin"""
-	print("Attempting to spawn blood drops")
+	#print("Attempting to spawn blood drops")
 	if not blood_drop_texture:
 		print("The blood drop texture hasn't been set")
 		push_warning("No blood drop texture set!")
@@ -1976,7 +2109,7 @@ func _drop_limb_equipment(limb_type: ProceduralCharacter.LimbType) -> void:
 	match limb_type:
 		ProceduralCharacter.LimbType.RIGHT_ARM:
 			# Drop held weapon
-			if self.current_main_hand_weapon:
+			if self.current_main_hand_item:
 				_drop_weapon()
 		ProceduralCharacter.LimbType.LEFT_ARM:
 			# Could handle shield/off-hand here
@@ -1995,14 +2128,14 @@ func _drop_limb_equipment(limb_type: ProceduralCharacter.LimbType) -> void:
 
 func _drop_weapon(hand:String = "Main") -> void:
 	"""Drop the currently held weapon"""
-	if not self.current_main_hand_weapon or self.current_off_hand_weapon:
+	if not self.current_main_hand_item or self.current_off_hand_item:
 		return
 	var weapon
 	# Store reference before removing
 	if current_hand == "Main":
-		weapon = self.current_main_hand_weapon
+		weapon = self.current_main_hand_item
 	else:
-		weapon = self.current_off_hand_weapon
+		weapon = self.current_off_hand_item
 	
 	# Remove from inventory's active slot
 	self.inventory.holster_weapon()
@@ -2158,7 +2291,7 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# .get(key, default) prevents a crash if the key doesn't exist yet
 				var current_tier = conditions.get("bleeding", 0)
 				conditions["bleeding"] = current_tier + 1
-				print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
+				#print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
 				if damage >= 8:
 					_handle_limb_severing(limb)
 				_spawn_blood_drops(location, 3 * conditions["bleeding"],false)
@@ -2289,3 +2422,548 @@ func _calculate_success_level(roll: int, target: int) -> int:
 	if roll >= CRIT_FAIL_THRESHOLD: level -= 1
 	
 	return level
+
+
+## Ability Use
+## Start using an ability
+signal cast_started(ability: Ability2, target_position: Vector2)
+signal cast_completed(ability: Ability2, results: Array)
+signal cast_interrupted(ability: Ability2, reason: String)
+signal cast_failed(ability: Ability2, reason: String)
+signal targeting_started(ability: Ability2)
+signal targeting_cancelled(ability: Ability2)
+
+func use_ability(ability: Ability2, target_data: Dictionary = {}) -> bool:
+	# Check if we can use this ability
+	var can_use = _check_ability_usable(ability)
+	if not can_use["success"]:
+		cast_failed.emit(ability, can_use["reason"])
+		return false
+	
+	# Pay costs
+	if not _pay_ability_costs(ability):
+		cast_failed.emit(ability, "Cannot pay costs")
+		return false
+	
+	# Start cooldown
+	_start_cooldown(ability)
+	
+	# Get target position
+	var target_position = target_data.get("position", self.global_position)
+	
+	# If instant cast, execute immediately
+	if ability.cast_time <= 0:
+		_execute_ability(ability, target_position)
+		return true
+	
+	# Start casting
+	_start_casting(ability, target_position)
+	return true
+
+
+## Start targeting mode for an ability
+
+func _start_targeting(ability: Ability2) -> void:
+	
+	if not targeting_system:
+		# No targeting system - just cast at mouse position
+		print("Couldn't find targeting system, just cast at mouse position")
+		var target_pos = get_viewport().get_mouse_position()
+		use_ability(ability, {"position": target_pos})
+		return
+	
+	# Configure targeting system
+	var targeting_data = {
+		"target_shape": ability.get_target_shape(),
+		"radius": ability.get_aoe_radius(),
+		"size": ability.get_aoe_size(),
+		"range": ability.targeting.get("range", 0.0),
+	}
+	
+	# Store ability for when targeting confirms
+	current_cast = {
+		"ability": ability,
+		"state": "targeting"
+	}
+	
+	# Start targeting (assuming hand slot, adjust as needed)
+	targeting_system.start_targeting(0, targeting_data)
+	targeting_started.emit(ability)
+
+## Called when targeting is confirmed
+func on_targeting_confirmed(target_position: Vector2) -> void:
+	if current_cast.is_empty() or current_cast.get("state") != "targeting":
+		return
+	
+	var ability = current_cast.get("ability") as Ability2
+	if not ability:
+		return
+	
+	# Check range
+	var range_limit = ability.targeting.get("range", 0.0)
+	if range_limit > 0:
+		var distance = global_position.distance_to(target_position)
+		if distance > range_limit:
+			cast_failed.emit(ability, "Out of range")
+			_cancel_current()
+			return
+	
+	# Clear targeting state and use ability
+	current_cast.clear()
+	use_ability(ability, {"position": target_position})
+
+
+## Called when targeting is cancelled
+func on_targeting_cancelled() -> void:
+	if current_cast.is_empty():
+		return
+	
+	var ability = current_cast.get("ability") as Ability2
+	current_cast.clear()
+	
+	if ability:
+		targeting_cancelled.emit(ability)
+
+
+## Start the casting process
+func _start_casting(ability: Ability2, target_position: Vector2) -> void:
+	current_cast = {
+		"ability": ability,
+		"state": "casting",
+		"target_position": target_position,
+		"cast_progress": 0.0,
+		"cast_time": ability.cast_time
+	}
+	
+	# --- INTEGRATION START ---
+	# 1. Feed the logic duration into the visual system
+	# We set the windup (channeling) duration to match the ability's cast time exactly
+	if attack_animator:
+		# Pass the cast time and a small fixed value for the release/recovery phases
+		attack_animator.setup_cast_parameters(ability.cast_time, 0.2, 0.3)
+		attack_animator.start_cast()
+	# --- INTEGRATION END ---
+	
+	# Spawn cast effect (e.g., magic circle at feet)
+	var cast_effect_path = ability.visuals.get("cast_effect", "")
+	if cast_effect_path != "":
+		_spawn_effect(cast_effect_path, global_position, 1.0)
+	
+	cast_started.emit(ability, target_position)
+	targeting_system.end_targeting()
+
+## Process ongoing casting
+func _process_casting(delta: float) -> void:
+	if current_cast.get("state") != "casting":
+		return
+	
+	current_cast["cast_progress"] += delta
+	
+	# OPTIONAL: You can pass the exact progress to the animator if you want 
+	# manual control, but the Animator's internal timer is usually sufficient 
+	# if durations are synced.
+	
+	if current_cast["cast_progress"] >= current_cast["cast_time"]:
+		var ability = current_cast["ability"] as Ability2
+		var target_pos = current_cast["target_position"]
+		current_cast.clear()
+		print("finished processing ability cast")
+		
+		# This function spawns the projectile
+		_execute_ability(ability, target_pos)
+
+
+## Execute the ability (after casting completes)
+func _execute_ability(ability: Ability2, target_position: Vector2) -> void:
+	var projectile_path = ability.visuals.get("projectile", "")
+	
+	if projectile_path != "":
+		# Spawn projectile
+		print("execute_ability calls spawn_projectile for ", ability.display_name)
+		_spawn_projectile(ability, target_position)
+	else:
+		# Instant effect
+		_resolve_ability_effects(ability, target_position)
+		print("execute_ability resolves immediately for ", ability.display_name)
+		
+	
+## Resolve ability effects and spawn impact visuals
+func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> void:
+	# Find targets in AoE
+	print("resolve ability effects called")
+	var targets = _find_targets_in_area(ability, target_position)
+	
+	# Process each effect
+	var results: Array = []
+	for effect in ability.effects:
+		var result = AbilityEffect.resolve_effect(
+			effect,
+			self,
+			targets,
+			ability,
+			target_position
+		)
+		results.append(result)
+	print("execute ability called")
+	# Spawn impact visual effect
+	_spawn_ability_visuals(ability, target_position)
+	
+	cast_completed.emit(ability, results)
+
+## Spawn a projectile that travels to the target
+func _spawn_projectile(ability: Ability2, target_position: Vector2) -> void:
+	print("spawning projectile with target_position ", target_position)
+	var projectile_path = ability.visuals.get("projectile", "")
+	var scene = _load_effect_scene(projectile_path)
+	if not scene:
+		print("Did not find projectile scene at path: ", projectile_path)
+		_resolve_ability_effects(ability, target_position)
+		return
+	
+	var projectile = scene.instantiate()
+	
+	# Position at caster
+	var spawn_offset = ability.visuals.get("projectile_spawn_offset", Vector2(0, -20))
+	projectile.global_position = global_position + spawn_offset
+	projectile.z_index = 3
+	
+	# Add to scene
+	var scene_root = get_tree().current_scene
+	scene_root.add_child(projectile)
+	
+	# Configure projectile movement
+	var speed = ability.visuals.get("projectile_speed", 400.0)
+	var max_lifetime = ability.visuals.get("projectile_max_lifetime", 5.0)
+	
+	# Rotate to face target
+	var direction = (target_position - projectile.global_position).normalized()
+	projectile.rotation = direction.angle()
+	
+	# Start projectile movement
+	_move_projectile(projectile, target_position, speed, max_lifetime, ability)
+
+
+## Move projectile toward target (using a tween or manual process)
+func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float, max_lifetime: float, ability: Ability2) -> void:
+	var distance = projectile.global_position.distance_to(target_position)
+	var duration = distance / speed
+	
+	# Clamp duration to max lifetime
+	duration = min(duration, max_lifetime)
+	
+	var tween = create_tween()
+	tween.tween_property(projectile, "global_position", target_position, duration)
+	
+	# When projectile arrives (or times out), resolve effects
+	tween.finished.connect(func():
+		var final_position = projectile.global_position
+		projectile.queue_free()
+		_resolve_ability_effects(ability, final_position)
+	)
+	
+	# Safety timeout in case tween fails
+	get_tree().create_timer(max_lifetime + 0.1).timeout.connect(func():
+		if is_instance_valid(projectile):
+			var final_position = projectile.global_position
+			projectile.queue_free()
+			_resolve_ability_effects(ability, final_position)
+	, CONNECT_ONE_SHOT)
+func _get_modified_visual_duration(ability: Ability2) -> float:
+	var base_duration = ability.visual_duration
+	var traits = ability.traits  # assuming this is an Array of strings like ["spell", "fire", "aoe"]
+	
+	var final_multiplier = 1.0
+	for TRAIT in traits:
+		if MODIFY_DURATION_BY_TRAIT.has(TRAIT):
+			final_multiplier *= MODIFY_DURATION_BY_TRAIT[TRAIT]
+	
+	return base_duration * final_multiplier
+## Find targets in the ability's area of effect
+func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
+	var targets: Array = []
+	var shape = ability.targeting.get("shape", "none")
+	var radius = ability.targeting.get("radius", 0.0)
+	var size = ability.targeting.get("size", Vector2.ZERO)
+	
+	# Get all potential targets
+	var potential_targets: Array = []
+	if game2:
+		if "characters_in_scene" in game2:
+			potential_targets.append_array(game2.characters_in_scene)
+		if "items_in_scene" in game2:
+			potential_targets.append_array(game2.items_in_scene)
+	
+	# Filter by area
+	for target in potential_targets:
+		if not is_instance_valid(target):
+			continue
+		
+		var in_area = false
+		
+		match shape:
+			"circle":
+				var distance = center.distance_to(target.global_position)
+				in_area = distance <= radius
+			"rectangle":
+				# Axis-aligned rectangle check
+				var half_size = size / 2
+				var diff = target.global_position - center
+				in_area = abs(diff.x) <= half_size.x and abs(diff.y) <= half_size.y
+			"cone":
+				# Cone check (direction from caster to target_position)
+				var cone_direction = (center - global_position).normalized()
+				var to_target = (target.global_position - global_position)
+				var distance = to_target.length()
+				if distance <= radius:
+					var angle_to_target = cone_direction.angle_to(to_target.normalized())
+					var half_angle = deg_to_rad(ability.targeting.get("angle", 45.0)) / 2
+					in_area = abs(angle_to_target) <= half_angle
+			"none", "single":
+				# No AoE - would need different targeting logic
+				in_area = target.global_position.distance_to(center) < 50.0
+		
+		if in_area:
+			targets.append(target)
+	
+	return targets
+
+
+## Spawn visual effects for ability
+func _spawn_ability_visuals(ability: Ability2, target_position: Vector2) -> void:
+	print("Attempting to spawn ability visuals")
+	var impact_path = ability.visuals.get("impact_effect", "")
+	print("IMPACT PATH: ", impact_path, " vs ", "res://vfx/fire.tscn")
+	if impact_path == "":
+		print('Did not find impact_path')
+		return
+
+	var size_scale = 1.0
+	var radius = ability.get_aoe_radius()
+	if radius > 0:
+		size_scale = radius / 25.0
+
+	var duration = _get_modified_visual_duration(ability)
+	_spawn_effect(impact_path, target_position, size_scale, duration)
+
+
+## Spawn a visual effect
+func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0) -> Node:
+	var scene = _load_effect_scene(scene_path)
+	if not scene:
+		print("did not find ability vfx scene at scene path: ", scene_path)
+		return null
+	print("DID FIND ABILITY VFX SCENE at scene path: ", scene_path)
+
+	var instance = scene.instantiate()
+	instance.global_position = position
+	instance.z_index = 3
+
+	var scene_root = get_tree().current_scene
+	scene_root.add_child(instance)
+
+	if instance.has_method("explode"):
+		instance.explode(size_scale)
+	elif instance.has_method("play"):
+		instance.play(size_scale)
+	elif instance.has_method("start"):
+		instance.start(size_scale)
+	elif "scale" in instance:
+		instance.scale = Vector2(size_scale, size_scale)
+
+	# Schedule cleanup after modified duration
+	_schedule_effect_cleanup(instance, duration)
+
+	return instance
+
+
+func _schedule_effect_cleanup(effect: Node, duration: float) -> void:
+	get_tree().create_timer(duration).timeout.connect(func():
+		if is_instance_valid(effect):
+			# Fade out if possible, otherwise just remove
+			if effect.has_method("stop"):
+				effect.stop()
+			if effect is GPUParticles2D or effect is CPUParticles2D:
+				effect.emitting = false
+				# Give particles time to finish their current emission
+				get_tree().create_timer(effect.lifetime if "lifetime" in effect else 1.0).timeout.connect(func():
+					if is_instance_valid(effect):
+						effect.queue_free()
+				, CONNECT_ONE_SHOT)
+			else:
+				effect.queue_free()
+	, CONNECT_ONE_SHOT)
+
+
+## Load and cache effect scene
+func _load_effect_scene(path: String) -> PackedScene:
+	if path in _effect_cache:
+		return _effect_cache[path]
+	
+	if not ResourceLoader.exists(path):
+		push_warning("Effect scene not found: %s" % path)
+		return null
+	
+	var scene = load(path) as PackedScene
+	_effect_cache[path] = scene
+	return scene
+
+
+## Check if ability can be used
+func _check_ability_usable(ability: Ability2) -> Dictionary:
+	# Check cooldown
+	if is_on_cooldown(ability.id):
+		print("ability is on cooldown")
+		return {"success": false, "reason": "On cooldown"}
+	
+	# Check costs
+	for resource_name in ability.costs:
+		var cost = ability.costs[resource_name]
+		print("cost: ", cost, " ", resource_name)
+		var current = _get_character_resource(resource_name)
+		
+		if current < cost:
+			print('insufficient resources with which to use ability')
+			return {"success": false, "reason": "Not enough %s" % resource_name}
+	
+	# Check requirements
+	var reqs = ability.requirements
+	
+	# Check required conditions
+	var required_conditions = reqs.get("conditions", [])
+	print("required_conditions: ",required_conditions)
+	if not required_conditions.is_empty():
+		var cond_manager = _get_condition_manager()
+		if cond_manager:
+			for cond_id in required_conditions:
+				if not cond_manager.has_active_condition(cond_id):
+					print("Does not meet requirements to use ability")
+					return {"success": false, "reason": "Missing required condition: %s" % cond_id}
+	
+	# Check forbidden conditions
+	var forbidden_conditions = reqs.get("no_conditions", [])
+	if not forbidden_conditions.is_empty():
+		var cond_manager = _get_condition_manager()
+		if cond_manager:
+			for cond_id in forbidden_conditions:
+				if cond_manager.has_active_condition(cond_id):
+					print("Cannot cast ability, has forbidden condition")
+					return {"success": false, "reason": "Cannot use while: %s" % cond_id}
+	
+	# Check if currently casting
+	if not current_cast.is_empty() and current_cast.get("state") == "casting":
+		print("can't cast ability, already casting one")
+		return {"success": false, "reason": "Already casting"}
+	print("Successfully cast ability")
+	return {"success": true}
+
+
+## Pay the costs for an ability
+func _pay_ability_costs(ability: Ability2) -> bool:
+	for resource_name in ability.costs:
+		var cost = ability.costs[resource_name]
+		if not _spend_character_resource(resource_name, cost):
+			return false
+	return true
+
+
+## Start cooldown for ability
+func _start_cooldown(ability: Ability2) -> void:
+	if ability.cooldown > 0:
+		cooldowns[ability.id] = Time.get_ticks_msec() / 1000.0 + ability.cooldown
+
+
+## Check if ability is on cooldown
+func is_on_cooldown(ability_id: String) -> bool:
+	if ability_id not in cooldowns:
+		return false
+	return Time.get_ticks_msec() / 1000.0 < cooldowns[ability_id]
+
+
+## Get remaining cooldown time
+func get_cooldown_remaining(ability_id: String) -> float:
+	if ability_id not in cooldowns:
+		return 0.0
+	return max(0.0, cooldowns[ability_id] - Time.get_ticks_msec() / 1000.0)
+
+
+## Interrupt current cast
+func interrupt_cast(reason: String = "Interrupted") -> bool:
+	if current_cast.is_empty():
+		return false
+	
+	var ability = current_cast.get("ability") as Ability2
+	if ability and not ability.interruptible:
+		return false
+	
+	current_cast.clear()
+	
+	if ability:
+		cast_interrupted.emit(ability, reason)
+	
+	return true
+
+
+## Cancel current action (targeting or casting)
+func _cancel_current() -> void:
+	if current_cast.get("state") == "targeting":
+		if targeting_system:
+			targeting_system.cancel_targeting()
+	current_cast.clear()
+
+
+## Get character resource value
+func _get_character_resource(resource_name: String) -> float:
+	# Try common patterns
+	var stat_name = resource_name 
+	
+	if stat_name in self:
+		return self.get(stat_name)
+	
+	if resource_name in self:
+		return self.get(resource_name)
+	print("Did not find resource ", resource_name, "in get_character_resource")
+	return 0.0
+
+
+## Spend character resource
+func _spend_character_resource(resource_name: String, amount: float) -> bool:
+	var stat_name = resource_name 
+	
+	if stat_name in self:
+		self.set(stat_name, self.get(stat_name) - amount)
+		return true
+	
+	if resource_name in self:
+		self.set(resource_name, self.get(resource_name) - amount)
+		return true
+		print("Did not find resource ", resource_name, "in spend_character_resource")
+
+	return false
+
+func _on_targeting_confirmed(_hand, _ability, _pos):
+	# Signal listener if you need audio/UI feedback outside the input flow
+	pass
+
+func _get_item_for_ability(id: String) -> Node2D:
+	print("Attempting to get item for ability")
+	# Helper to find the AbilityShape node in hands that matches the ID
+	if current_main_hand_item is AbilityShape and current_main_hand_item.ability_id == id:
+		return current_main_hand_item
+	if current_off_hand_item is AbilityShape and current_off_hand_item.ability_id == id:
+		return current_off_hand_item
+	return null
+## Get condition manager
+func _get_condition_manager():
+	if self.has_node("ConditionManager"):
+		return self.get_node("ConditionManager")
+	return null
+
+
+## Serialize cooldowns for saving
+func save_cooldowns() -> Dictionary:
+	return cooldowns.duplicate()
+
+
+## Load cooldowns from save
+func load_cooldowns(data: Dictionary) -> void:
+	cooldowns = data.duplicate()

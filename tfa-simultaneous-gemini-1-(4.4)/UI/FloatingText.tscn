@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://bvuo0bf7x8rhh"]
+
+[ext_resource type="Script" uid="uid://jxjnk5baxbq" path="res://UI/FloatingText.gd" id="1_ydsml"]
+
+[node name="FloatingText" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ydsml")

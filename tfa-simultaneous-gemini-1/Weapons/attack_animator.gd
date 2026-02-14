@@ -3,7 +3,7 @@ extends Node
 class_name AttackAnimator
 
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
-enum AttackState { IDLE, WINDUP, STRIKE, RECOVERY }
+enum AttackState { IDLE, WINDUP, STRIKE, RECOVERY,CAST_WINDUP, CAST_RELEASE, CAST_RECOVERY  }
 
 signal attack_started(damage_type: String)
 signal attack_hit_frame()
@@ -20,6 +20,11 @@ var windup_duration: float = 0.15
 var strike_duration: float = 0.1
 var recovery_duration: float = 0.2
 var current_rotation_intensity: float = 1.0
+
+# 2. Add Casting Variables
+var cast_windup_duration: float = 0.2
+var cast_release_duration: float = 0.3
+var cast_recovery_duration: float = 0.2
 
 # Attack data
 var current_damage_type: String = "slashing"
@@ -38,7 +43,7 @@ var animated_left_arm_offset: Vector2:
 	get: return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
 
 var knockback_velocity: Vector2 = Vector2.ZERO
-var knockback_friction: float = 1500.0
+var knockback_friction: float = 150.0
 var knockback_active: bool = false
 
 # ===== SECOND ORDER DYNAMICS =====
@@ -272,37 +277,112 @@ func _update_knockback_physics(delta: float) -> void:
 		knockback_active = false
 		knockback_velocity = Vector2.ZERO
 
-# ===== ANIMATION UPDATES =====
+# attack_animator.gd
+
+# Add variable to control if we are currently looking at a target
+var is_casting: bool = false
+
 func _update_animation(delta: float) -> void:
 	match current_state:
-		AttackState.WINDUP:
-			attack_progress = attack_timer / windup_duration
-			_animate_windup()
-			if attack_timer >= windup_duration:
-				current_state = AttackState.STRIKE
+		# ... [Existing Melee States: WINDUP, STRIKE, RECOVERY] ...
+		# ===== CASTING STATES =====
+		AttackState.CAST_WINDUP:
+			# Channeling phase: Matches the ability.cast_time
+			attack_progress = attack_timer / cast_windup_duration
+			_animate_cast_windup()
+
+			if attack_timer >= cast_windup_duration:
+				# Transition to release (Fire the spell visual)
+				current_state = AttackState.CAST_RELEASE
 				attack_timer = 0.0
-		
-		AttackState.STRIKE:
-			attack_progress = attack_timer / strike_duration
-			_animate_strike()
-			if attack_progress >= 0.5 and attack_progress - (get_process_delta_time() / strike_duration) < 0.5:
-				emit_signal("attack_hit_frame")
-			if attack_timer >= strike_duration:
-				current_state = AttackState.RECOVERY
+
+				# IMPORTANT: This signal tells the system visual sync is ready, 
+				# though the logic script spawned the projectile based on its own timer.
+				emit_signal("attack_hit_frame") 
+			
+		AttackState.CAST_RELEASE:
+			# The "Punch" or "Push" of the magic
+			attack_progress = attack_timer / cast_release_duration
+			_animate_cast_release()
+
+			if attack_timer >= cast_release_duration:
+				current_state = AttackState.CAST_RECOVERY
 				attack_timer = 0.0
-		
-		AttackState.RECOVERY:
-			attack_progress = attack_timer / recovery_duration
-			_animate_recovery()
-			if attack_timer >= recovery_duration:
+
+		AttackState.CAST_RECOVERY:
+			# Return to Idle
+			attack_progress = attack_timer / cast_recovery_duration
+			_animate_cast_recovery()
+			
+			if attack_timer >= cast_recovery_duration:
 				current_state = AttackState.IDLE
-				attack_timer = 0.0
-				_reset_offsets()
-				emit_signal("attack_finished")
+				is_attacking = false
+				is_casting = false
 				_finish_attack()
+				_reset_offsets()
 	# Apply second-order dynamics to smooth all animations
 	_apply_dynamics(delta)
 
+# --- PROCEDURAL ANIMATION MATH ---
+
+func _animate_cast_windup():
+	var ease_in = _ease_in_quad(attack_progress)
+	var mirror = _get_hand_mirror()
+
+	# WINDUP: Pull hand back, gathering energy
+	# Vector2(-5, 10) assumes pulling hand close to chest/shoulder
+	var target_pos = Vector2(-5, 10) 
+
+	# Introduce a slight "shake" or vibration as progress gets closer to 1.0 (optional)
+	var jitter = Vector2(randf_range(-1,1), randf_range(-1,1)) * (attack_progress * 0.5)
+
+	target_arm_offset = _mirror_offset(target_pos + jitter) * ease_in
+
+	# Rotate body slightly away to "load" the throw
+	target_body_rotation = (-0.2 * ease_in * mirror)
+
+func _animate_cast_release():
+	# CUBIC ease out makes the punch feel explosive
+	var ease_out = _ease_out_cubic(attack_progress)
+	var mirror = _get_hand_mirror()
+
+	# RELEASE: Push hand far forward
+	var start_pos = Vector2(-5, 10) # Where windup ended
+	var end_pos = Vector2(0, -50)   # Full extension forward
+
+	# Interpolate linearly between start and end based on easing
+	var current_target = start_pos.lerp(end_pos, ease_out)
+
+	target_arm_offset = _mirror_offset(current_target)
+
+	# Snap body rotation forward into the cast
+	target_body_rotation = (0.3 * ease_out * mirror)
+
+func _animate_cast_recovery():
+	# Smoothly return to 0,0
+	var ease_out = 1.0 - _ease_out_quad(attack_progress)
+	var mirror = _get_hand_mirror()
+
+	# Start from the extended position (0, -50) and fade to (0,0)
+	target_arm_offset = _mirror_offset(Vector2(0, -50)) * ease_out
+	target_body_rotation = (0.3 * ease_out * mirror)
+
+# --- HELPER FUNCTIONS ---
+
+# New helper to configure timings dynamically based on the specific Ability
+func setup_cast_parameters(windup: float, release: float = 0.15, recovery: float = 0.3):
+	cast_windup_duration = windup
+	# Keep release/recovery snappy unless specified otherwise
+	cast_release_duration = release 
+	cast_recovery_duration = recovery
+
+# Call this to start the procedural animation
+func start_cast():
+	current_state = AttackState.CAST_WINDUP
+	attack_timer = 0.0
+	is_attacking = true
+	is_casting = true
+	
 func _apply_dynamics(delta: float) -> void:
 	# Update positions using spring-damper system for natural motion
 	animated_arm_offset = arm_dynamics.update(delta, target_arm_offset)

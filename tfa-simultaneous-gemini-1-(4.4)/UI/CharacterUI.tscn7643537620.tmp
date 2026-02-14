@@ -1,0 +1,32 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7y30jdbxnvi6"]
+
+[ext_resource type="Script" uid="uid://bykad1job6ns4" path="res://UI/CharacterUI.gd" id="1_nytir"]
+
+[node name="CharacterUI" type="PanelContainer"]
+offset_right = 4.0
+offset_bottom = 61.0
+script = ExtResource("1_nytir")
+
+[node name="CharacterUIContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CharacterUIContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HealthBar" type="ProgressBar" parent="CharacterUIContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="APSlotsContainer" type="HBoxContainer" parent="CharacterUIContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="CharacterUIContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+expand_mode = 1
+stretch_mode = 5

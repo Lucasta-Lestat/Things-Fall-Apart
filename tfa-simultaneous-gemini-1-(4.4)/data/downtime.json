@@ -1,0 +1,255 @@
+{
+    "carousing": 
+    {
+        "name": "Carousing",
+        "description": "You spend your downtime carousing, which involves socializing, partying, and enjoying the company of others. This activity can help you build relationships, gain information, and improve your reputation. The DM will determine the specific events and opportunities available based on the setting and local culture.\n\nTo carouse effectively, you need access to suitable venues, such as taverns, inns, or social clubs. You may also need some starting funds to cover the costs of food, drinks, and entertainment. The amount you spend can vary based on your personal preferences and the nature of the event.\n\nDuring your carousing sessions, you will interact with various NPCs, including locals, travelers, and influential figures. The DM may require you to make skill checks (such as Charisma (Persuasion) to make friends or Intelligence (Investigation) to gather information) to improve your social standing and uncover useful tidbits.\n\nSuccessful carousing can lead to new friendships, romantic relationships, or even alliances that may benefit you in your adventures. However, be mindful of potential risks, such as getting into trouble with the law or offending powerful individuals.",
+        "cost": "Varies (cost of food, drinks, entertainment, etc.)",
+        "time": "4 hours",
+        "disliked_traits": ["Chaste"],
+        "results": 
+        {
+            "any_map":{ 
+                "brawl": 
+                {
+                    "%":3
+                    "event_description": " got into a brawl at the tavern and ended up with a black eye and a broken nose. Lost some money on the fight.",
+                    "effects": {"hp": -2, "money": "-5"},
+                    "required_traits": ["Aggressive"]
+                },
+                "catfished": 
+                {
+                    "%": 4,
+                    "event_description": " met a charming stranger who turned out to be a thief. They stole some of your valuables while you were distracted.",
+                    "effects": {"money": "-10"},
+                    "required_traits": ["Gullible"]
+                },
+                "partied_hard":
+                {
+                    "event_description": " had a great time at the party and made some new friends. Gained a bit of money from a generous benefactor.",
+                    "effects": {"money": "+10", "favorability": "+10"}, #applies to anyone who goes out with you.
+                },
+                "my_wife":
+                {  
+                    "event_description": " met a Ravishing ogre maiden and brutish entourage seeking former suitor now in hiding.",
+                    "effects": {"money": "+10", "favorability": "+10"}, 
+                },
+                "Rodomontade":
+                { 
+                    "event_description": " boasted loudly about their exploits, increasing the reputational impacts (good and bad) of your recent adventures.",
+                    "effects": {"hp": -5, "money": "-10"},
+                    "required_traits": []
+                },
+                #check Vornheim for more
+                #some drunk from a previous encounter (either in campaign or from PC’s backstory).
+                3-4 Family member of recent victim of PC’s recklessness/perfidy/righteous wrath (parents possibly of different races).
+                5-6 Damsel fleeing mutated thugs of wicked noble. Collapses at PC’s feet.
+                7-8 Pickpocket attempting to steal important item from PC. If successful, thief runs to (Zoo of Ping Feng/Eshrigel’s
+                House/Library of Zorlac/Other Location), if not, clue to the thief’s employer is on thief’s body.
+                9-10 Winsome wench or dark-eyed youth. Encourages PCs to regale him/her with tales of adventure. Secretly feeds the
+                details about PCs to accomplices – all thieves. They attack PCs one by one slowly after they scatter or sleep.
+                11-12 Scout for a decadent and fetishistic aristocrat charged with recruiting companions for his master precisely resembling a
+                PC’s physical profile (athletic red-haired elf missing two teeth, etc.). Won’t take no for an answer and has bodyguards.
+                13-14
+                Two well-dressed young men apparently helping a drunk friend home – in truth, he is dead. They ask the PCs to help
+                them hide the body. They’re working for (random noble) against (random noble) and demand total secrecy. Body was
+                a courier delivering blackmail-worthy material to (second noble).
+                15-16
+                d10 escaped Face Rats – rats specially bred by envious courtiers to destroy the beautiful. They will attack eyes, noses,
+                ears, etc. Alchemical element in their saliva prevents facial wounds from fully healing. The hp damage can be healed
+                but the disfiguring effects can only be cured by Remove Curse or similar magic.
+                17-18 Husky, green-eyed dog begins following party member.
+                19-20
+                *PCs stumble into the middle of a street fight or tavern brawl between (d8) 1 – Young lords of a noble house 2 –
+                Criminal gang 3 – Berserkers 4 – Church faction 5 – Cult 6 – Party of adventurers 7 – Strange beast 8 – Seemingly
+                harmless group (old women, cripples, etc.) who fight with unexpected ferocity and...(roll d8 again).
+                23-24 Pregnant woman missing tooth starts argument, accuses party member of mistreating her. Local militia responds.
+                25-26 Street/floor collapses, d6 PCs tumble 50 feet into black water and stone tunnels. Strange toads (or albino crocodiles
+                encrusted with jewels) stir in the murk.
+                27-28 Group of thieves strike in well-coordinated ambush, using decoys, crossbows, backstabs, etc.. Saves or checks should
+                be allowed to possibly see it coming.
+                29-30 d8 tentacles erupt from corpse or carcass in street and strike. Footman in livery lurks nearby during the encounter,
+                pays everyone involved 50 gp to remain silent about the incident then makes his way back to his employer’s home.
+                31-32
+                33-34 Merchant recognizes martial and battle-scarred bearing of PCs and quietly offers them battered but functional siege
+                tower in working condition concealed in warehouse a few blocks away for only 300 gp.
+                35-36
+                *District’s citizens are in midst of lottery festival. Will not allow PCs through unless they participate. Each participant
+                is randomly assigned a fate for one month: example – s/he is considered a slave of another character, s/he is treated as
+                if s/he were a different person for a month, s/he must steal a white mask from a tall tower, s/he is considered ritually
+                invisible and must be ignored, etc.
+                39-40 Mercenaries returning after campaign in the East. One spoil is a long lost friend of PC’s who quietly beseeches
+                him/her for aid as s/he is paraded past in 4 foot cage and taken to a prison, knight’s home, or marketplace.
+                43-44 Lunar eclipse. Citizens become nervous, superstitious, and paranoid until next morning.
+                45-46 PC is accused of violating a local sumptuary law because of some item of clothing s/he is wearing. Militia attempts to
+                arrest PC.
+                47 Drunk fortune teller pronounces three fates, unasked (see Fortunes, page 56).
+                51-52 Gang of drunken berserkers accosts PCs looking for an excuse to fight.
+                53 Powerful noble of opposite sex aggressively pursues PC (probably one w/highest Charisma), will be offended if
+                refused.
+                54
+                Due to long-ago alchemical experiment, area PCs pass through is infused with chaotic magical forces Attempts to use magic in area will go haywire in an interesting way. Wizards may be allowed roll
+                to sense this.
+                55 Troupe of viciously persistent street clowns demand some form of social justice. Exhort PCs to join their cause – they
+                will follow the PCs, juggling and performing small magic tricks until driven away by force.
+                58 escaping local gang s/he’s offended/crossed/cheated.
+                59-60 Trained monkey pickpocket. Possibly disguised as entertainer.
+                
+            }
+
+               
+
+            
+        
+    },
+    {
+        "name": "Drinking",
+        "description": "You spend your downtime drinking alcohol at a tavern, bar, or pub. You can drink alone or with others. If you drink with others, you can make a DC 10 Charisma (Persuasion) check to gain information about local rumors or events. On a success, the DM provides you with a useful piece of information related to your current adventure or location.\n\nWhile drinking, you can also attempt to learn more about the local culture and customs. Make a DC 15 Intelligence (History) check. On a success, you gain insight into the traditions and social norms of the area, which may help you navigate future interactions.\n\nHowever, excessive drinking can lead to negative consequences. If you consume too much alcohol (as determined by the DM), you may suffer from disadvantage on Wisdom (Perception) checks and Dexterity saving throws until you finish a long rest.",
+        "cost": "Varies (typically 1-5 gp per session)",
+        "time": "4 hours",
+        "requirements": "Access to a tavern, bar, or pub; sufficient funds to purchase drinks"
+    },
+    "arena fighting":
+    {
+        "name": "Arena Fighting",
+        "description": "You participate in arena fights, which can be a thrilling and dangerous way to spend your downtime. You can choose to fight in a variety of combat styles, such as one-on-one duels, team battles, or free-for-alls. The DM will determine the rules and structure of the fights based on the setting and available resources.\n\nTo participate in arena fighting, you must first find a suitable venue and register for the event. This may involve paying an entry fee or securing sponsorship from a local patron. Once registered, you can train and prepare for your matches, honing your combat skills and tactics.\n\nDuring the fights, you will face off against other combatants, each with their own strengths and weaknesses. The DM will control the opponents and adjudicate the outcomes of the battles based on your actions and rolls. Winning matches can earn you fame, fortune, and valuable prizes, while losing may result in injury or humiliation.\n\nKeep in mind that arena fighting can be dangerous, and there is always a risk of serious injury or death. Be sure to weigh the potential rewards against the risks before deciding to participate.",
+        "cost": "Varies (entry fees, training costs, etc.)",
+        "time": "Varies (depends on the number of matches and preparation time)",
+        "requirements": "Access to an arena or fighting pit; sufficient funds to cover entry fees and training costs; combat proficiency"
+    },
+    "crafting":
+    {
+        "name": "Crafting",
+        "description": "You spend your downtime crafting items, which can range from simple tools to complex magical artifacts. To craft an item, you must have the necessary materials, tools, and a suitable workspace. The DM will determine the availability of materials and the quality of your workspace based on the setting.\n\nTo begin crafting, you must first decide what item you want to create. This could be anything from a basic weapon or piece of armor to a potion or scroll. Once you have chosen your item, you will need to gather the required materials and tools. The DM may require you to make skill checks (such as Intelligence (Arcana) for magical items or Dexterity (Smith's Tools) for weapons) to successfully gather and prepare the materials.\n\nOnce you have everything you need, you can begin the crafting process. This typically takes a certain amount of time, which the DM will determine based on the complexity of the item. During this time, you may need to make additional skill checks to ensure the quality of your work.\n\nUpon completion, you will have created a new item that you can use, sell, or trade. The quality and effectiveness of the item may vary based on your skill level and the success of your crafting checks.",
+        "cost": "Varies (cost of materials and tools)",
+        "time": "Varies (depends on the complexity of the item)",
+        "requirements": "Access to necessary materials and tools; suitable workspace; proficiency in relevant crafting skills"
+    },
+    "study":
+    {
+        "name": "Study",
+        "description": "You spend your downtime studying a particular subject, which can help you gain new knowledge and skills. To study effectively, you need access to relevant resources, such as books, scrolls, or knowledgeable individuals. The DM will determine the availability of these resources based on the setting.\n\nTo begin studying, you must first choose a subject that interests you. This could be anything from history and lore to magic and alchemy. Once you have selected your subject, you can dedicate time to reading, researching, and practicing related skills.\n\nDuring your study sessions, you may need to make skill checks (such as Intelligence (Arcana) for magical subjects or Intelligence (History) for historical topics) to determine how much you learn. The DC for these checks will depend on the complexity of the subject and the quality of the resources available.\n\nIf you succeed on your checks, you can gain new knowledge or even learn a new language or tool proficiency related to your chosen subject. The DM will provide guidance on what you can learn based on your successes.",
+        "cost": "Varies (cost of books, scrolls, or tutoring)",
+        "time": "Varies (depends on the depth of study)",
+        "requirements": "Access to relevant resources; sufficient time to dedicate to study"
+    },
+    "prayer":
+    {
+        "name": "Prayer",
+        "description": "You spend your downtime in prayer, seeking guidance, solace, or divine intervention from a deity or higher power. This activity can help you strengthen your connection to your faith and may provide spiritual benefits.\n\nTo pray effectively, you need a quiet and respectful environment, such as a temple, shrine, or secluded outdoor location. The DM will determine the availability of such places based on the setting.\n\nDuring your prayer sessions, you may choose to meditate, recite prayers or hymns, or perform rituals associated with your faith. The DM may require you to make Wisdom (Religion) checks to determine the effectiveness of your prayers and the level of divine favor you receive.\n\nSuccessful prayers may grant you temporary boons, such as advantage on certain skill checks, healing effects, or protection from harm. The specific benefits will depend on your deity's domain and the nature of your prayers. However, excessive or insincere prayer may lead to diminished returns or even divine disfavor.",
+        "cost": "Varies (donations or offerings to a temple)",
+        "time": "1 hour",
+        "requirements": "Access to a suitable place for prayer; sincere devotion to a deity or higher power"
+    },
+    "gambling":
+    {
+        "name": "Gambling",
+        "urban": true,
+        "description": "You spend your downtime gambling, which can be a thrilling and potentially lucrative way to pass the time. Gambling can take many forms, such as card games, dice games, or betting on events. The DM will determine the specific games available based on the setting and local culture.\n\nTo gamble, you need access to a suitable venue, such as a tavern, casino, or underground gambling den. You will also need some starting funds to place bets. The amount you wager can vary based on the game and your personal risk tolerance.\n\nDuring your gambling sessions, you will participate in various games of chance and skill. The DM may require you to make skill checks (such as Intelligence (Investigation) to read opponents or Dexterity (Sleight of Hand) for cheating) to improve your chances of winning. The outcomes of the games will be determined by a combination of your actions and random rolls.\n\nWinning at gambling can earn you money and prestige, while losing can deplete your funds and lead to debt. Be cautious, as excessive gambling can lead to addiction and negative consequences in your personal life.",
+        "cost": "Varies (amount wagered)",
+        "time": "Varies (depends on the duration of gambling sessions)",
+        "requirements": "Access to a gambling venue; sufficient funds to place bets"
+    },
+    "orgies":
+    {
+        "name": "Orgies",
+        "urban": true,
+        "description": "You spend your downtime attending or hosting orgies, which can be a way to explore your sexuality and build social connections. Orgies can vary in size and nature, from small, intimate gatherings to large, extravagant parties. The DM will determine the specific details based on the setting and local culture.\n\nTo participate in an orgy, you need access to a suitable location, such as a private residence, a secluded outdoor area, or a designated venue. You may also need to arrange for food, drinks, and entertainment to create a comfortable and enjoyable atmosphere for all participants.\n\nDuring the orgy, you can engage in consensual sexual activities with other participants. The DM may require you to make Charisma (Persuasion) or Dexterity (Acrobatics) checks to navigate social dynamics or perform certain acts. The outcomes of these interactions will depend on your actions and the responses of other participants.\n\nParticipating in orgies can lead to new friendships, romantic relationships, or even alliances that may benefit you in your adventures. However, be mindful of potential risks, such as sexually transmitted infections or social stigma, which may have consequences in your personal and professional life.",
+        "cost": "Varies (cost of venue, food, drinks, etc.)",
+        "time": "Varies (depends on the duration of the event)",
+        "requirements": "Access to a suitable location; willing participants; resources to host the event"
+    },
+    "theft":
+    {
+        "name": "Theft",
+        "urban": true,
+        "rural": false,
+        "description": "You spend your downtime engaging in theft, which can be a risky but potentially rewarding way to acquire valuable items or information. Theft can take many forms, such as pickpocketing, burglary, or heists. The DM will determine the specific targets and challenges based on the setting and local security measures.\n\nTo successfully carry out a theft, you need to plan your approach carefully. This may involve gathering information about your target, scouting the location, and assembling any necessary tools or accomplices. The DM may require you to make skill checks (such as Dexterity (Stealth) to avoid detection or Intelligence (Investigation) to gather information) to improve your chances of success.\n\nDuring the theft, you will need to navigate various obstacles, such as guards, traps, and security systems. The DM will control these challenges and adjudicate the outcomes based on your actions and rolls. Successfully completing a theft can yield valuable loot, while failure may result in injury, imprisonment, or other negative consequences.\n\nKeep in mind that engaging in theft can lead to legal repercussions and damage your reputation. Be sure to weigh the potential rewards against the risks before deciding to pursue this activity.",
+        "cost": "Varies (cost of tools, bribes, etc.)",
+        "time": "Varies (depends on the complexity of the theft)",
+        "requirements": "Access to target location; necessary tools or accomplices; proficiency in relevant skills"
+    },
+    "meditation":
+    {
+        "name": "Meditation",
+        "urban": true,
+        "rural": true,
+        "description": "You spend your downtime meditating, which can help you achieve mental clarity, emotional balance, and spiritual growth. Meditation can take many forms, such as mindfulness meditation, guided visualization, or transcendental meditation. The DM will determine the specific techniques and practices based on the setting and your character's background.\n\nTo meditate effectively, you need a quiet and comfortable environment where you can focus without distractions. This could be a secluded outdoor location, a dedicated meditation room, or a peaceful corner of your home. The DM may also suggest specific times of day or conditions that are conducive to meditation.\n\nDuring your meditation sessions, you can choose to focus on your breath, visualize calming images, or repeat mantras or affirmations. The DM may require you to make Wisdom (Insight) checks to determine the effectiveness of your meditation and the level of mental clarity you achieve.\n\nSuccessful meditation can grant you temporary benefits, such as advantage on Wisdom saving throws, improved concentration, or resistance to stress-related effects. The specific benefits will depend on the nature of your meditation practice and your character's personal growth.",
+        "cost": "Free (or minimal cost for a suitable environment)",
+        "preferred_traits": ["Calm"],
+        "disliked_traits": ["Anxious"],
+        "adds_traits": ["Focused"], 
+        "ability_check" : "Will"
+
+    },
+    "whoremongering":
+    {
+        "name": "Whoremongering",
+        "description": " wishes to go out whoremongering",
+        "urban": true,
+        "results": 
+        {
+            "map":{ 
+                "any": 
+                {
+                "event_description": " tried to stiff a prostitute and got caught.  The escort's pimp beat them up and took all their money.",
+                "effects": {"hp": -3, "money": "-all"},
+                "required_traits": ["Greedy"]
+                }
+        }
+        },
+    },
+    "whoring":
+    {
+        "name": "Whoring",
+        "intention_description": " wishes to engage in prostitution (on the supply side)",
+        "urban": true,
+        "preferred_traits": ["Seductive"],
+        "disliked_traits": ["Chaste"],
+        "results": 
+        {
+            "any_map":{ 
+                "What a loser": 
+                {
+                "event_description": " hired by a fellow who just wanted to talk. A bit dull, but you are VD free and made a chunk of silver.",
+                "effects": {"money": 10},
+                "required_traits": ["Compassionate"]
+                },
+            "any_map":{ 
+                "Dashing Dandy": 
+                {
+                "event_description": " hired by a vampire dandy",
+                "effects": {"money": 15, "hp": -5},
+                "required_traits": ["Female"]
+                }
+        }
+
+    },
+
+    "hunting":
+    {
+        "name": "Hunting",
+        "description": "You spend your downtime hunting for game, which can provide you with food, resources, and a sense of adventure. Hunting can take many forms, such as tracking animals in the wilderness, fishing in rivers or lakes, or trapping small creatures. The DM will determine the specific targets and challenges based on the setting and local wildlife.\n\nTo successfully hunt, you need to prepare by gathering the necessary equipment, such as weapons, traps, and bait. You may also need to study the habits and habitats of your target species to increase your chances of success. The DM may require you to make skill checks (such as Wisdom (Survival) to track animals or Dexterity (Stealth) to approach them quietly) to improve your hunting abilities.\n\nDuring your hunting expeditions, you will need to navigate various obstacles, such as rough terrain, weather conditions, and potential predators. The DM will control these challenges and adjudicate the outcomes based on your actions and rolls. Successfully completing a hunt can yield valuable food and resources, while failure may result in injury or wasted time.\n\nKeep in mind that hunting can have ethical and environmental implications. Be sure to respect local laws and customs regarding hunting practices and conservation efforts.",
+        "cost": "Varies (cost of equipment, bait, etc.)",
+        "time": 1,
+        "requirements": "Access to suitable hunting grounds; necessary equipment; proficiency in relevant skills",
+        "ability_check" : "Dexterity",
+        "urban": false
+
+
+    }
+
+    # need to  search the map for whether it has the appropriate region to put the activity, and whether its owner has laws against the activity.  Owners will be factions which have their own JSON where that information will be pulled from
+    # must restrict to either urban or rural areas. Urban bool
+    # traits can be added or removed on crit success
+    # characters should randomly pick from activities for which they have a preferred trait.  Don't both waiting it, that will limit variety too much.
+    # if no preferred trait activities, pick from activities with no disliked traits.  If none of those, will just rest unless forced to do something.
+    # forcing party member to do something- subtract your favorability in their eyes from their will stat for the roll.  
+    # multiply money gain by success level when applicable.
+    # Should have ways you can randomly meet up with recruitable characters
+    # Don't repeat an event for seven days.
+    # Take % for relative probability.  Exclude those for which the character doesn't have the required trait and those that have happened too recently 
+        # Also add a minimum success level requirement for the event to occur if there is an ability check.  Exclude all those for which the pc didn't meet the requirement.
+        #can either treat preferred and diskliked traits as advantages and disadvantages or have something separate for that.  Probably should separate or people would always succeed at what they want. 
+        #For preference, Should also let higher tier traits dominate
+
+}

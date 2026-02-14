@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bguc67vhnudo6"]
+
+[ext_resource type="Script" uid="uid://voh4h5ctqssc" path="res://vfx/lightning.gd" id="1_wa648"]
+
+[node name="Lightning" type="Node2D"]
+script = ExtResource("1_wa648")

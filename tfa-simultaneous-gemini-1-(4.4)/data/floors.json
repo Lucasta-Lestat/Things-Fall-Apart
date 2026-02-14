@@ -1,0 +1,82 @@
+{
+	"dirt_floor":
+		 {
+		"name":"Dirt",
+		"id":"floor_dirt",
+		"description":"A patch of dirt",
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Dirt.png",
+		"alternate_textures":["res:\/\/Structures\/Floors\/Floor Dirt.png"],
+		"texture":"res:\/\/Structures\/Floors\/Floor Dirt.png",
+		"walkability":0.9,
+		"rarity":"common",
+		"flammable":false,
+		"conductive":false,
+		"max_health":1000,
+		"current_health":1000,
+		"damage_resistances":{
+
+		},
+		"resources":{
+
+		}
+	},
+	"floor_wood": {
+		"id":"floor_wood",
+		"name":"Wood Floor",
+		"description":"A simple hardwood floor",
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Wood.png",
+		"texture":"res:\/\/Structures\/Floors\/Floor Wood.png",
+		"walkability":1.0,
+		"rarity":"common",
+		"flammable":true,
+		"conductive":false,
+		"max_health":10,
+		"current_health":10,
+		"damage_resistances":{
+
+		},
+		"resources":{
+			"wood":10
+		}
+	},
+	"stone_floor": 
+		{
+		"id":"floor_stone",
+		"name":"Stone Floor",
+		"description":"A simple hardstone floor",
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"texture":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"walkability":1.0,
+		"rarity":"common",
+		"flammable":false,
+		"conductive":false,
+		"max_health":30,
+		"current_health":30,
+		"damage_resistances":{
+
+		},
+		"resources":{
+			"stone":10
+		}
+	},
+	"floor_grass":
+		{
+		"id":"floor_grass",
+		"name":"Floor Grass",
+		"description":"A patch of grass",
+		"size": 0.25,
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Grass.png",
+		"texture":"res:\/\/Structures\/Floors\/Floor Grass.png",
+		"walkability":0.8,
+		"rarity":"common",
+		"flammable":true,
+		"conductive":false,
+		"max_health":10,
+		"current_health":30,
+		"damage_resistances":{
+
+		},
+		"resources":{
+		}
+	}	
+}

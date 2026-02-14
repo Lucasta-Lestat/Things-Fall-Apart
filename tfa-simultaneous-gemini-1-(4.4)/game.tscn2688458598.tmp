@@ -1,0 +1,34 @@
+[gd_scene load_steps=8 format=3 uid="uid://h6eujk2qam5p"]
+
+[ext_resource type="Script" uid="uid://dmlki3bsswpsu" path="res://Game.gd" id="1_80nbo"]
+[ext_resource type="PackedScene" uid="uid://j6w2crlvclub" path="res://Characters/Character.tscn" id="2_e2o6t"]
+[ext_resource type="Script" uid="uid://bj224bmidk1k1" path="res://Abilities/Ability.gd" id="3_7jktm"]
+[ext_resource type="Resource" uid="uid://ckuux33cpfgal" path="res://Abilities/BasicAttack.tres" id="4_ryrav"]
+[ext_resource type="Resource" uid="uid://h4jydkjn0k1x" path="res://Abilities/HeavyStrike.tres" id="5_eow3j"]
+[ext_resource type="Script" uid="uid://bklebuy4rusbq" path="res://UI/GameUI.gd" id="6_ryrav"]
+[ext_resource type="PackedScene" uid="uid://c7y30jdbxnvi6" path="res://UI/CharacterUI.tscn" id="7_eow3j"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_80nbo")
+
+[node name="CharactersContainer" type="Node2D" parent="."]
+
+[node name="Character" parent="CharactersContainer" instance=ExtResource("2_e2o6t")]
+visible = false
+abilities = Array[ExtResource("3_7jktm")]([ExtResource("4_ryrav"), ExtResource("5_eow3j")])
+
+[node name="PlayerCamera" type="Camera2D" parent="."]
+position = Vector2(55, 94)
+limit_smoothed = true
+position_smoothing_enabled = true
+
+[node name="GameUI" type="CanvasLayer" parent="."]
+script = ExtResource("6_ryrav")
+metadata/_custom_type_script = "uid://bklebuy4rusbq"
+
+[node name="MarginContainer" type="MarginContainer" parent="GameUI"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="CharacterUI" parent="GameUI/MarginContainer" instance=ExtResource("7_eow3j")]
+layout_mode = 2

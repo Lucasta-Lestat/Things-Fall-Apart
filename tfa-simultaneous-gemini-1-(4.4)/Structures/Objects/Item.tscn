@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqpl67m1yisie"]
+
+[ext_resource type="Script" uid="uid://ceeyij1o4r06c" path="res://Structures/Objects/Item.gd" id="1_0vtaf"]
+
+[node name="ItemScene" type="AnimatableBody2D"]
+script = ExtResource("1_0vtaf")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="FloatingTextLabel" type="RichTextLabel" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0

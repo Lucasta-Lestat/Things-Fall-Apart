@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3 uid="uid://j6w2crlvclub"]
+
+[ext_resource type="Script" uid="uid://d00rhlufcsaev" path="res://Characters/character.gd" id="1_bqlw8"]
+[ext_resource type="Texture2D" uid="uid://bucu4x82raxmy" path="res://icon.svg" id="2_03jby"]
+[ext_resource type="PackedScene" uid="uid://c7y30jdbxnvi6" path="res://UI/CharacterUI.tscn" id="3_3wwac"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cjnyq"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_03jby"]
+
+[node name="Character" type="CharacterBody2D"]
+input_pickable = true
+motion_mode = 1
+script = ExtResource("1_bqlw8")
+
+[node name="sprite" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_03jby")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_cjnyq")
+
+[node name="Label" type="Label" parent="."]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+custom_minimum_size = Vector2(40, 6)
+offset_right = 4.0
+offset_bottom = 27.0
+
+[node name="ActionPreviewLine" type="Line2D" parent="."]
+default_color = Color(1, 0.8125, 0.25, 1)
+
+[node name="AOEPreviewShape" type="Polygon2D" parent="."]
+
+[node name="ClickArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea"]
+shape = SubResource("RectangleShape2D_03jby")
+
+[node name="NavAgent" type="NavigationAgent2D" parent="."]
+
+[node name="CharacterUI" parent="." instance=ExtResource("3_3wwac")]

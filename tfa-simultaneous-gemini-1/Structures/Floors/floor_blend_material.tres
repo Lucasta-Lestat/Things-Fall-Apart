@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://d0ik5ylpekkji"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://d0ik5ylpekkji"]
 
 [ext_resource type="Shader" uid="uid://dpy1c31q8sj0b" path="res://Structures/Floors/floor_blend.gdshader" id="1_nt0js"]
 

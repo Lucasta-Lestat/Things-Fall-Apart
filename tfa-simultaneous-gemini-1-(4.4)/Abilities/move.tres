@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Ability" load_steps=2 format=3 uid="uid://ovyl1f36rqql"]
+
+[ext_resource type="Script" uid="uid://bj224bmidk1k1" path="res://Abilities/Ability.gd" id="1_al6s0"]
+
+[resource]
+script = ExtResource("1_al6s0")
+id = &"move"
+display_name = "Move"
+ap_cost = 1
+range = 300.0
+target_type = 4
+area_of_effect_radius = 0.0
+metadata/_custom_type_script = "uid://bj224bmidk1k1"

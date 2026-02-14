@@ -1,0 +1,103 @@
+[gd_scene load_steps=4 format=3 uid="uid://j6w2crlvclub"]
+
+[ext_resource type="Script" uid="uid://d00rhlufcsaev" path="res://Characters/character.gd" id="1_bqlw8"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cjnyq"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_03jby"]
+
+[node name="Character" type="CharacterBody2D"]
+input_pickable = true
+motion_mode = 1
+script = ExtResource("1_bqlw8")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_cjnyq")
+
+[node name="Label" type="Label" parent="."]
+visible = false
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+visible = false
+custom_minimum_size = Vector2(40, 6)
+offset_right = 4.0
+offset_bottom = 27.0
+
+[node name="ActionPreviewLine" type="Line2D" parent="."]
+width = 4.0
+default_color = Color(1, 0.8125, 0.25, 1)
+
+[node name="MovePathLine" type="Line2D" parent="."]
+width = 4.0
+default_color = Color(0.860369, 0.860369, 0.860369, 1)
+
+[node name="AOEPreviewShape" type="Polygon2D" parent="."]
+
+[node name="ClickArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea"]
+shape = SubResource("RectangleShape2D_03jby")
+
+[node name="FloatingTextLabel" type="RichTextLabel" parent="."]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="PreviewContainer" type="Node2D" parent="."]
+
+[node name="PathPreviewLine" type="Line2D" parent="PreviewContainer"]
+width = 3.0
+
+[node name="TempPathPreview" type="Line2D" parent="PreviewContainer"]
+modulate = Color(1, 1, 1, 0.960784)
+z_index = 10
+width = 3.0
+
+[node name="TempActionPreview" type="Node2D" parent="PreviewContainer"]
+
+[node name="PreviewBodySprite" type="Sprite2D" parent="PreviewContainer/TempActionPreview"]
+
+[node name="PreviewHeadSprite" type="Sprite2D" parent="PreviewContainer/TempActionPreview"]
+
+[node name="SelectionVisual" type="Sprite2D" parent="."]
+z_index = 1
+
+[node name="Body" type="Node2D" parent="."]
+z_index = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Body"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="BodySprite" type="Sprite2D" parent="Body/VBoxContainer"]
+z_index = 1
+
+[node name="HeadSprite" type="Sprite2D" parent="Body/VBoxContainer"]
+z_index = 1
+offset = Vector2(0, -45)
+
+[node name="Equipment" type="VBoxContainer" parent="Body"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HelmetSprite" type="Sprite2D" parent="Body/Equipment"]
+z_index = 2
+
+[node name="ArmorSprite" type="Sprite2D" parent="Body/Equipment"]
+z_index = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Body"]
+custom_minimum_size = Vector2(30, 0)
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="OffHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]
+z_index = 3
+
+[node name="BodySpacer" type="Control" parent="Body/HBoxContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="MainHandSprite" type="Sprite2D" parent="Body/HBoxContainer"]
+z_index = 3

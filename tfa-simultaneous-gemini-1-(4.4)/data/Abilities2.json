@@ -1,0 +1,441 @@
+{
+  "abilities": [
+	{
+	  "id": "fireball",
+	  "display_name": "Fireball",
+	  "description": "Hurl a ball of fire that explodes on impact, dealing fire damage to all enemies in the area.",
+	  "cooldown": 2.0,
+	  "costs": {
+		"MP": 25
+	  },
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": ["spell", "fire", "magical", "attack", "aoe"],
+	  "targeting": {
+		"type": "point",
+		"range": 400.0,
+		"shape": "circle",
+		"radius": 80.0
+	  },
+	"projectile_speed": 50.0,
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"fire": 35
+		  }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "burning",
+		  "stacks": 2,
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/fire.tscn",
+		"cast_effect": "",
+		"projectile": "res://vfx/fire.tscn",
+		"impact_effect": "res://vfx/fire.tscn",
+		"sound_cast": "res://sfx/fire_cast.wav",
+		"sound_impact": "res://sfx/explosion.mp3"
+	  }
+	},
+	{
+	  "id": "ice_storm",
+	  "display_name": "Ice Storm",
+	  "description": "Conjure a storm of ice that damages and slows all enemies in the area.",
+	  "cooldown": 12.0,
+	  "costs": {
+		"MP": 35
+	  },
+	  "cast_time": 1.5,
+	  "traits": ["spell", "cold", "magical", "attack", "aoe", "control"],
+	  "targeting": {
+		"type": "point",
+		"range": 350.0,
+		"shape": "circle",
+		"radius": 100.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"cold": 25,
+			"bludgeoning": 10
+		  }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "chilled",
+		  "stacks": 2,
+		  "chance": 0.8
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/ice_storm.tscn"
+	  }
+	},
+	{
+	  "id": "lightning_bolt",
+	  "display_name": "Lightning Bolt",
+	  "description": "Fire a bolt of lightning in a line, damaging all enemies it passes through.",
+	  "cooldown": 6.0,
+	  "costs": {
+		"MP": 20
+	  },
+	  "cast_time": 0.5,
+	  "traits": ["spell", "lightning", "magical", "attack", "line"],
+	  "targeting": {
+		"type": "direction",
+		"range": 500.0,
+		"shape": "rectangle",
+		"size": {"x": 500, "y": 30}
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"lightning": 40
+		  },
+		  "target_traits": [],
+		  "immune_traits": ["lightning_immune"]
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/lightning.tscn"
+	  }
+	},
+	{
+	  "id": "magnetic_pull",
+	  "display_name": "Magnetic Pull",
+	  "description": "Create a magnetic field that pulls all metal objects and armored enemies toward the center.",
+	  "cooldown": 15.0,
+	  "costs": {
+		"MP": 30
+	  },
+	  "cast_time": 0.0,
+	  "traits": ["spell", "force", "magical", "control"],
+	  "targeting": {
+		"type": "point",
+		"range": 300.0,
+		"shape": "circle",
+		"radius": 120.0
+	  },
+	  "effects": [
+		{
+		  "type": "force_field",
+		  "field_type": "magnetic_attract",
+		  "radius": 120.0,
+		  "strength": 600.0,
+		  "duration": 4.0,
+		  "affected_traits": ["metal", "armored"]
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/magnetic_field.tscn"
+	  }
+	},
+	{
+	  "id": "repulsion_wave",
+	  "display_name": "Repulsion Wave",
+	  "description": "Release a wave of force that pushes all nearby enemies away.",
+	  "cooldown": 10.0,
+	  "costs": {
+		"MP": 20,
+		"stamina": 10
+	  },
+	  "cast_time": 0.0,
+	  "traits": ["spell", "force", "magical", "control", "defensive"],
+	  "targeting": {
+		"type": "self",
+		"shape": "circle",
+		"radius": 100.0
+	  },
+	  "effects": [
+		{
+		  "type": "knockback",
+		  "strength": 800.0,
+		  "from_caster": true
+		},
+		{
+		  "type": "damage",
+		  "damage": {
+			"force": 15
+		  }
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/shockwave.tscn"
+	  }
+	},
+	{
+	  "id": "gravity_well",
+	  "display_name": "Gravity Well",
+	  "description": "Create a point of intense gravity that pulls all enemies toward it.",
+	  "cooldown": 20.0,
+	  "costs": {
+		"MP": 45
+	  },
+	  "cast_time": 2.0,
+	  "traits": ["spell", "force", "magical", "control", "aoe"],
+	  "targeting": {
+		"type": "point",
+		"range": 350.0,
+		"shape": "circle",
+		"radius": 150.0
+	  },
+	  "effects": [
+		{
+		  "type": "force_field",
+		  "field_type": "gravity",
+		  "radius": 150.0,
+		  "strength": 400.0,
+		  "duration": 5.0,
+		  "affected_traits": []
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "slowed",
+		  "chance": 0.6
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/gravity_well.tscn"
+	  }
+	},
+	{
+	  "id": "vortex",
+	  "display_name": "Vortex",
+	  "description": "Create a swirling vortex that spins enemies around and pulls them inward.",
+	  "cooldown": 18.0,
+	  "costs": {
+		"MP": 40
+	  },
+	  "cast_time": 1.0,
+	  "traits": ["spell", "wind", "magical", "control"],
+	  "targeting": {
+		"type": "point",
+		"range": 300.0,
+		"shape": "circle",
+		"radius": 120.0
+	  },
+	  "effects": [
+		{
+		  "type": "force_field",
+		  "field_type": "vortex",
+		  "radius": 120.0,
+		  "strength": 500.0,
+		  "duration": 4.0,
+		  "clockwise": true,
+		  "inward_pull": 0.4
+		},
+		{
+		  "type": "damage",
+		  "damage": {
+			"bludgeoning": 5
+		  }
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/vortex.tscn"
+	  }
+	},
+	{
+	  "id": "heal",
+	  "display_name": "Heal",
+	  "description": "Restore health to yourself or an ally.",
+	  "cooldown": 5.0,
+	  "costs": {
+		"MP": 15
+	  },
+	  "cast_time": 1.0,
+	  "traits": ["spell", "healing", "magical", "support"],
+	  "targeting": {
+		"type": "target",
+		"range": 200.0,
+		"shape": "single"
+	  },
+	  "effects": [
+		{
+		  "type": "heal",
+		  "amount": 40
+		},
+		{
+		  "type": "remove_condition",
+		  "trait": "poison"
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/heal_glow.tscn"
+	  }
+	},
+	{
+	  "id": "smite_undead",
+	  "display_name": "Smite Undead",
+	  "description": "Deal massive radiant damage to undead creatures.",
+	  "cooldown": 10.0,
+	  "costs": {
+		"MP": 20
+	  },
+	  "cast_time": 0.5,
+	  "traits": ["spell", "radiant", "magical", "attack", "holy"],
+	  "targeting": {
+		"type": "point",
+		"range": 250.0,
+		"shape": "circle",
+		"radius": 60.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"radiant": 80
+		  },
+		  "target_traits": ["undead"],
+		  "immune_traits": ["holy"]
+		},
+		{
+		  "type": "damage",
+		  "damage": {
+			"radiant": 20
+		  },
+		  "target_traits": [],
+		  "immune_traits": ["undead", "holy"]
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/holy_burst.tscn"
+	  }
+	},
+	{
+	  "id": "poison_cloud",
+	  "display_name": "Poison Cloud",
+	  "description": "Create a lingering cloud of poison that damages enemies over time.",
+	  "cooldown": 14.0,
+	  "costs": {
+		"MP": 30
+	  },
+	  "cast_time": 1.0,
+	  "traits": ["spell", "poison", "magical", "attack", "aoe", "dot"],
+	  "targeting": {
+		"type": "point",
+		"range": 350.0,
+		"shape": "circle",
+		"radius": 90.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"poison": 10
+		  }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "poisoned",
+		  "stacks": 3,
+		  "chance": 0.9
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/poison_cloud.tscn"
+	  }
+	},
+	{
+	  "id": "wind_gust",
+	  "display_name": "Wind Gust",
+	  "description": "Create a strong gust of wind that pushes enemies in a direction.",
+	  "cooldown": 8.0,
+	  "costs": {
+		"MP": 15
+	  },
+	  "cast_time": 0.0,
+	  "traits": ["spell", "wind", "magical", "control"],
+	  "targeting": {
+		"type": "point",
+		"range": 300.0,
+		"shape": "rectangle",
+		"size": {"x": 150, "y": 80}
+	  },
+	  "effects": [
+		{
+		  "type": "force_field",
+		  "field_type": "wind",
+		  "radius": 100.0,
+		  "strength": 700.0,
+		  "duration": 2.0,
+		  "direction_x": 1,
+		  "direction_y": 0,
+		  "affected_traits": []
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/wind_effect.tscn"
+	  }
+	},
+	{
+	  "id": "shield_bash",
+	  "display_name": "Shield Bash",
+	  "description": "Bash an enemy with your shield, dealing damage and stunning them.",
+	  "cooldown": 6.0,
+	  "costs": {
+		"stamina": 20
+	  },
+	  "cast_time": 0.0,
+	  "traits": ["physical", "attack", "melee", "stun"],
+	  "requirements": {
+		"traits": ["has_shield"]
+	  },
+	  "targeting": {
+		"type": "point",
+		"range": 50.0,
+		"shape": "circle",
+		"radius": 40.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": {
+			"bludgeoning": 25
+		  }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "stunned",
+		  "duration": 2.0,
+		  "chance": 0.7
+		}
+	  ],
+	  "visuals": {
+		"impact_effect": "res://effects/impact_metal.tscn"
+	  },
+	  "animation": "shield_bash"
+	},
+	{
+	  "id": "berserker_rage",
+	  "display_name": "Berserker Rage",
+	  "description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
+	  "cooldown": 30.0,
+	  "costs": {
+		"HP": 10
+	  },
+	  "cast_time": 0.0,
+	  "traits": ["physical", "buff", "self", "rage"],
+	  "targeting": {
+		"type": "self",
+		"shape": "none"
+	  },
+	  "effects": [
+		{
+		  "type": "apply_condition",
+		  "condition_id": "berserker_rage",
+		  "duration": 15.0
+		}
+	  ],
+	  "visuals": {
+		"cast_effect": "res://effects/rage_aura.tscn"
+	  },
+	  "animation": "rage_roar"
+	}
+  ]
+}
