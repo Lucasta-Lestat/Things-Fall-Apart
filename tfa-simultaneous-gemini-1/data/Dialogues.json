@@ -7,13 +7,16 @@
 		}
 	}
 },
-"Zak_greet": {
-	"dialogueNodes": {
-		"Zak_intro": {
+"Zak_greet": 
+	{
+	"dialogueNodes": 
+		{
+		"Zak_intro": 
+			{
 			"Jacana": "May it be the hour you first believed"
+			}
 		}
-	}
-},
+	},
 "Federica_greet": {
 	"dialogueNodes": {
 		"Federica_intro": {
@@ -28,25 +31,30 @@
 					"nextNode": "Federica-intro-talk-down"
 				},
 				{ 
-					"text": "Lovely night, aye?"
+					"text": "Lovely night, aye?",
 					"nextNode": ""
 				},
-					"text": "**Pass by quietly, hoping they don't see you witnessing their crime.**"
+					"text": "**Pass by quietly, hoping the plunderers don't see you witnessing their crime.**",
 					"nextNode": "end_convo"
 				]
 			}
-			"Federica_intro_talk_down": {
+			"Federica_intro_talk_down": 
+				{
 				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)
 You would be within your rights. I won't insult you with denials — the evidence is plain."
 				"Surgeon-Captain Federica": "Two foreign strangers desecrating graves — in war time no less. I'd expect a speedy trial and an expeditious execution."
 				"Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** That is, if there are any witnesses to testify.",
 				"choices":[
+					{
 					"text": "**Shout for the guards!**",
-					"nextNode":
-					]
-			}
-	}
-},
+					"nextNode": "Federica-intro-guard-fight"
+					},
+					{
+					"text": "**Back Away quietly with your hands raised**.",
+					"nextNode": "Federica-intro-let-go"
+					}
+				]
+			},
   "guard_greet": {
 	"dialogueNodes": {
 	  "guard_greet": {
