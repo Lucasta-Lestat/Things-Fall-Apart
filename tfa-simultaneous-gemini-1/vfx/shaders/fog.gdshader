@@ -1,39 +1,48 @@
 shader_type canvas_item;
 
-// Configurable properties
-uniform vec4 fog_color : source_color = vec4(0.5, 0.6, 0.7, 1.0);
-uniform float density : hint_range(0.0, 2.0) = 1.0;
-uniform sampler2D noise_texture : repeat_enable, filter_nearest;
+uniform vec4 fog_color : source_color = vec4(0.8, 0.8, 0.8, 0.5);
+uniform float density : hint_range(0.0, 1.0) = 0.5;
+uniform vec2 speed = vec2(0.02, 0.01);
+uniform float scale = 4.0;
 
-// Wind settings (updated by script)
-uniform vec2 wind_velocity = vec2(0.1, 0.0);
+// Simple hash-based noise (no texture dependency)
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
 
-// Softness at edges
-uniform float edge_softness : hint_range(0.0, 0.5) = 0.1;
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+
+	float a = hash(i);
+	float b = hash(i + vec2(1.0, 0.0));
+	float c = hash(i + vec2(0.0, 1.0));
+	float d = hash(i + vec2(1.0, 1.0));
+
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm(vec2 p) {
+	float value = 0.0;
+	float amplitude = 0.5;
+	for (int i = 0; i < 5; i++) {
+		value += amplitude * noise(p);
+		p *= 2.0;
+		amplitude *= 0.5;
+	}
+	return value;
+}
 
 void fragment() {
-    // 1. Calculate UV scrolling for wind effect
-    // We use two layers moving at different speeds to create depth
-    vec2 uv_move_1 = UV + (wind_velocity * TIME);
-    vec2 uv_move_2 = UV + (wind_velocity * TIME * 0.5) + vec2(0.5); // Offset second layer
+	vec2 uv = UV * scale;
+	vec2 movement = TIME * speed;
 
-    // 2. Sample Noise
-    float noise_1 = texture(noise_texture, uv_move_1).r;
-    float noise_2 = texture(noise_texture, uv_move_2).r;
-    
-    // Combine noise layers
-    float combined_noise = mix(noise_1, noise_2, 0.5);
-    
-    // 3. Apply Edge Softness (Fades out near the bounds of the ColorRect)
-    vec2 center_dist = abs(UV - 0.5) * 2.0;
-    // Calculate distance from edge (0 at center, 1 at edge)
-    float mask_x = smoothstep(1.0, 1.0 - edge_softness, center_dist.x);
-    float mask_y = smoothstep(1.0, 1.0 - edge_softness, center_dist.y);
-    float edge_mask = mask_x * mask_y;
+	float n1 = fbm(uv + movement);
+	float n2 = fbm(uv * 1.5 - movement * 0.7);
+	float fog = (n1 + n2) * 0.5;
 
-    // 4. Final Output
-    // Alpha is determined by noise * density * edge fade * color alpha
-    float final_alpha = combined_noise * density * edge_mask * fog_color.a;
-    
-    COLOR = vec4(fog_color.rgb, final_alpha);
+	fog = smoothstep(1.0 - density, 1.0, fog);
+
+	COLOR = vec4(fog_color.rgb, fog * fog_color.a);
 }

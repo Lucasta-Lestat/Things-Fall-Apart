@@ -1,3 +1,6 @@
 [gd_scene format=3 uid="uid://b47e8p6kfvkn3"]
 
-[node name="Fog" type="Node2D"]
+[ext_resource type="Script" uid="uid://cjfyq2ow0gw1d" path="res://vfx/fog_overlay.gd" id="1_r66pd"]
+
+[node name="Fog" type="Node2D" unique_id=469538653]
+script = ExtResource("1_r66pd")

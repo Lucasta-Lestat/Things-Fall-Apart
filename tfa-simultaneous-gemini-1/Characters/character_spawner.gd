@@ -4,7 +4,10 @@ extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
 
+@onready var fog_manager: FogManager = $FogManager
+
 @export var characters_json_path: String = "res://data/TopDownCharacters.json"
+var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
 @export var spawn_container: Node2D  # Where to spawn characters
 
 var characters_database: Array = []
@@ -33,12 +36,21 @@ const SELECTION_CIRCLE_WIDTH = 1.0
 func _ready() -> void:
 	load_characters_database()
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	fog_manager.create_fog_from_params(
+		Color(0.2, 0.6, 0.2, 0.4),   # green poison fog
+		Vector2(512, 512),             # size in pixels
+		0.7,                           # density
+		6.0,                           # noise scale
+		Vector2(0.03, 0.015),          # drift speed
+		Vector2(600, 800)             # world position
+	)
 	_create_selection_indicator(Globals.default_body_width+5)
 	factions = load_factions_from_json("res://data/factions.json")
 	player = spawn_character_by_name("Default Human", Vector2(40.0,40.0))
 	call_deferred("_select_initial_character")
 	var ally = spawn_character_by_name("Default Human", Vector2(80.0,80.0), "player")
 	ally.AI_enabled = true
+	ally.give_weapon_by_name("Dagger")
 	party_chars.append(player)
 	party_chars.append(ally)
 	# Using new shape-based weapon system
@@ -60,8 +72,6 @@ func _ready() -> void:
 	_spawn_enemy(Vector2(300, 150))
 	_spawn_enemy(Vector2(80, 220))
 	
-	
-	
 func load_factions_from_json(json_path: String):
 	if not FileAccess.file_exists(json_path):
 		push_warning("Factions JSON not found: " + json_path)
@@ -76,7 +86,7 @@ func load_factions_from_json(json_path: String):
 	if error != OK:
 		push_error("Failed to parse factions JSON: " + json.get_error_message())
 		return
-	
+	#fix your spawning code using updated faction JSON
 	var data = json.get_data()
 	if data.has("factions"):
 		for faction_data in data["factions"]:
@@ -88,7 +98,11 @@ func load_factions_from_json(json_path: String):
 	return factions
 
 func _create_character(pos: Vector2, faction: String, ai_enabled: bool) -> ProceduralCharacter:
-	var char = ProceduralCharacter.new()
+	var char = CharacterScene.instantiate()
+	#Add ConditionManager:
+	var condition_manager = ConditionManager.new()
+	condition_manager.name = "ConditionManager"
+	char.add_child(condition_manager)
 	char.position = pos
 	char.faction_id = faction
 	
@@ -108,27 +122,27 @@ func _create_character(pos: Vector2, faction: String, ai_enabled: bool) -> Proce
 
 func _spawn_enemy(pos: Vector2, faction: String ="bandits") -> void:
 	var enemy = _create_character(pos, "enemy", true)
-	enemy.set_faction("bandits")
+	enemy.set_faction(faction)
 	
 	# Random stats
 	enemy.set_stats(
-		randi_range(8, 14),   # STR
-		randi_range(8, 12),   # CON
-		randi_range(8, 14)    # DEX
+		randi_range(40, 70),   # STR
+		randi_range(40, 60),   # CON
+		randi_range(40, 70)    # DEX
 	)
 	add_child(enemy)
 
 	# Random weapon
-	var weapon_types = [
+	var weapon_types = [ #update to use weapon database
 		"Longsword", "Dagger"
 	]
 	var enemy_weapon = weapon_types[randi() % weapon_types.size()]
 	print("attempting to give enemy weapon: ", enemy_weapon)
 	enemy.give_weapon_by_name(weapon_types[randi() % weapon_types.size()])
 	
-	# Light armor
+	#  armor
 	if randf() > 0.5:
-		enemy.equip_equipment_by_name("Fancy Metal Helmet")
+		enemy.equip_equipment_by_name("Fancy Metal Helmet") #update to use weapon database
 	enemy.AI_enabled = true
 	enemies.append(enemy)
 
@@ -192,6 +206,8 @@ func _check_combat_collisions() -> void:
 				print(attacker.name, " hit ", victim.name, " result: ", hit)
 				
 				register_hit(attacker, victim)
+				if weapon: 
+					print("weapon: ", weapon.weapon_name)
 				process_weapon_hit(
 					attacker, 
 					victim, 
@@ -318,7 +334,7 @@ func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
 	print("%s has died!" % name)
-	
+	character.current_state = character.AIState.DEAD
 	if character == player:
 		print("\n=== GAME OVER ===")
 		print("Press R to restart")
@@ -397,8 +413,7 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 	var container = spawn_container if spawn_container else self
 	
 	# Create character node
-	var character_node = CharacterBody2D.new()
-	character_node.set_script(ProceduralCharacterScript)
+	var character_node = CharacterScene.instantiate()
 	character_node.global_position = spawn_position
 	
 	container.add_child(character_node)
@@ -493,13 +508,11 @@ func process_weapon_hit(
 	attacker: ProceduralCharacter,
 	target: ProceduralCharacter,
 	hit_position: Vector2,  # World position of hit
-	weapon: WeaponShape,
+	weapon: Node2D,
 	attack_velocity: float  # Speed of the swing (affects penetration)
 ) -> Dictionary:
 	"""Process a weapon hitting a character's body"""
 	#print("someone actually got hit")
-	
-	
 	#Calculation of complex damage
 	# Determine which limb was hit
 	var local_hit = target.to_local(hit_position)

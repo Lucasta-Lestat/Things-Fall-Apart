@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://cfxmcvwxsjvow"]
+
+[ext_resource type="Script" uid="uid://df3ts0usqktg6" path="res://Characters/ProceduralCharacter.gd" id="1_vvvec"]
+[ext_resource type="Script" uid="uid://c2ahw6u50iqlc" path="res://Characters/dual_health_bars.gd" id="2_r7xje"]
+
+[node name="ProceduralCharacter" type="CharacterBody2D" unique_id=734602895]
+script = ExtResource("1_vvvec")
+metadata/_custom_type_script = "uid://df3ts0usqktg6"
+
+[node name="DualHealthBar" type="Control" parent="." unique_id=1357104230]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("2_r7xje")

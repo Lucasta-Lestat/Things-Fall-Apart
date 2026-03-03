@@ -19,13 +19,13 @@ extends Resource
 @export var icon: Texture2D
 
 ## Tags/traits this condition has (e.g., "poison", "magical", "disease")
-@export var traits: Array = []
+@export var traits: Dictionary = {}
 
 ## Whether this condition stacks (multiple instances can exist)
 @export var stackable: bool = false
 
-## Maximum stacks if stackable
-@export var max_stacks: int = 1
+## Maximum tier if stackable
+@export var max_tier: int = 1
 
 ## Duration in game seconds (-1 for permanent until removed)
 @export var duration: float = -1.0
@@ -46,11 +46,14 @@ extends Resource
 @export var conditional_modifiers: Array = []
 
 ## Conditions that this condition is immune to or suppresses
-@export var immunities: Array = []
+@export var immunities: Dictionary = {}
 
 ## Conditions this condition transforms into under certain circumstances
-@export var transforms_to: Dictionary = {}  # {condition_id: {trigger: "condition", value: "..."}}
+@export var transforms_into: Dictionary = {}  # {condition_id: {trigger: "condition", value: "..."}}
 
+@export var canceled_by_trait: Array = []
+@export var custom_vfx: String = ""
+@export var custom_sfx: String = ""
 
 # Helper function to create a condition instance from data
 static func create_from_data(data: Dictionary) -> Condition:
@@ -61,11 +64,17 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.tier = data.get("tier", 1)
 	condition.traits = data.get("traits", [])
 	condition.stackable = data.get("stackable", false)
-	condition.max_stacks = data.get("max_stacks", 1)
+	condition.max_tier = data.get("max_tier", 1) ####
 	condition.duration = data.get("duration", -1.0)
+	condition.icon = load(data.get("icon","dummy_icon.png")) ####
+	condition.transforms_into = data.get("transforms_into", {})
+	condition.canceled_by_trait = data.get("canceled_by_trait", []) ####
+	condition.custom_vfx = data.get("custom_vfx", "no vfx scene") ####
+	condition.custom_sfx = data.get("custom_sfx", "no sfx scene") ####
+	
 	condition.stat_modifiers = data.get("stat_modifiers", [])
 	condition.triggered_effects = data.get("triggered_effects", [])
 	condition.conditional_modifiers = data.get("conditional_modifiers", [])
 	condition.immunities = data.get("immunities", [])
-	condition.transforms_to = data.get("transforms_to", {})
+	
 	return condition

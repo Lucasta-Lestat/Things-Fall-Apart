@@ -65,8 +65,10 @@ func clear_inventory() -> void:
 # ===== WEAPON EQUIPMENT =====
 
 func equip_item(item: Node2D, hand: String = "Main") -> bool:
+	print("equipping item")
 	if equipped_weapons.size() >= max_equipped_weapons:
 		push_warning("All weapon slots full!")
+		print("failed to equip item")
 		return false
 	
 	if hand == "Main":
@@ -85,6 +87,9 @@ func equip_item(item: Node2D, hand: String = "Main") -> bool:
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	# 1. Fetch Data
 	var data = AbilityDatabase2.get_ability_data(ability_id)
+	print("when equipping ability from data: 
+		
+		", data)
 	if data.is_empty():
 		return false
 

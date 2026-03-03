@@ -11,14 +11,14 @@ const DAMAGE_TYPES = [
 	"cold",
 	"fire",
 	"force",
-	"lightning",
+	"electric",
 	"necrotic",
 	"piercing",
 	"poison",
 	"psychic",
 	"radiant",
 	"slashing",
-	"thunder",
+	"sonic",
 	"true"  # Untyped/true damage (ignores resistances)
 ]
 
@@ -57,13 +57,14 @@ static func resolve_effect(
 	}
 	
 	var effect_type = effect.get("type", "")
-	
+	print("attempting to resolve ability effect")
 	match effect_type:
 		"damage":
 			result = _resolve_damage(effect, caster, targets, ability)
 		"heal":
 			result = _resolve_healing(effect, caster, targets, ability)
 		"apply_condition":
+			print("applying condition in resolve_effect")
 			result = _resolve_apply_condition(effect, caster, targets, ability)
 		"remove_condition":
 			result = _resolve_remove_condition(effect, caster, targets, ability)
@@ -211,7 +212,7 @@ static func _calculate_modified_damage(
 static func _apply_target_defenses(
 	damage: Dictionary,
 	target: Node,
-	target_traits: Array
+	target_traits: Dictionary
 ) -> Dictionary:
 	var modified = damage.duplicate()
 	
@@ -373,20 +374,20 @@ static func _resolve_apply_condition(
 	}
 	
 	var condition_id = effect.get("condition_id", "")
+	print("what condition id was found in resolve_apply_condition: ", condition_id)
 	var stacks = effect.get("stacks", 1)
 	var duration_override = effect.get("duration", -2.0)
 	var chance = effect.get("chance", 1.0)
-	
+	print("what targets were found in resolve_apply_condition: ", targets)
+
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
 		
-		# Check chance
-		if randf() > chance:
-			continue
 		
 		var condition_manager = _get_condition_manager(target)
 		if not condition_manager:
+			print("did not find condition manager for target")
 			continue
 		
 		var instance = condition_manager.apply_condition(
@@ -807,7 +808,7 @@ static func _resolve_custom(
 
 
 ## Helper: Get entity traits
-static func _get_entity_traits(entity: Node) -> Array:
+static func _get_entity_traits(entity: Node) -> Dictionary:
 	return entity.traits
 
 

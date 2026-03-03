@@ -135,7 +135,7 @@ func _setup_character_data():
 				print("didn't find head: ", head_id)
 				character.visual_parts["head"] = "Male Head 1"
 			if ItemDatabase.item_definitions.has(chest_equip_id):
-				print("trying to pull item from database to equip: ", ItemDatabase.item_definitions[chest_equip_id])
+				#print("trying to pull item from database to equip: ", ItemDatabase.item_definitions[chest_equip_id])
 				
 				#character.equip_item(chest_equip_id)
 				#need to actually define what an item should do when equipped
@@ -144,12 +144,12 @@ func _setup_character_data():
 			if ItemDatabase.item_definitions.has(head_equip_id):
 				character.equipment["Head"] = ItemDatabase.item_definitions[head_equip_id]
 			if ItemDatabase.item_definitions.has(weapon_id):
-				print("main hand (in char database): ", ItemDatabase.item_definitions[weapon_id])
+				#print("main hand (in char database): ", ItemDatabase.item_definitions[weapon_id])
 				character.equipment["Main Hand"] = ItemDatabase.item_definitions[weapon_id]
 			#	print("#wtf type of main hand: ", typeof(character.equipment["Main Hand"]))
 			if ItemDatabase.item_definitions.has(shield_id):
-				print("we've got a shield id")
-				print("#wtf: shield (in char database): ", ItemDatabase.item_definitions[shield_id])
+				#print("we've got a shield id")
+				#print("#wtf: shield (in char database): ", ItemDatabase.item_definitions[shield_id])
 				character.equipment["Off Hand"] = ItemDatabase.item_definitions[shield_id].duplicate()
 				#print("#wtf type of off hand: ", typeof(character.equipment["Off Hand"]))
 			else:

@@ -6,8 +6,8 @@ class_name AbilityShape
 enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE }
 
 @export_group("Identity")
-@export var ability_id: String = "fireball"
-@export var ability_name: String = "Fireball"
+@export var ability_id: String = "fireball_shape"
+@export var display_name: String = "Fireball"
 
 @export_group("Visuals")
 @export var visual_scene: PackedScene
@@ -22,7 +22,8 @@ enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE }
 @export_group("Visual Positioning")
 @export var hand_offset: Vector2 = Vector2()
 
-
+@export var primary_damage_type = "bludgeoning"
+@export var base_damage: Dictionary = Globals.dmg_0_dict
 var raw_data: Dictionary = {}
 
 var _active_visual: Node2D
@@ -53,7 +54,7 @@ func get_ability_data() -> Dictionary:
 	# 2. Ensure critical fields are present if raw_data was empty (e.g. placed in Editor)
 	if data_to_send.is_empty():
 		data_to_send["id"] = ability_id
-		data_to_send["display_name"] = ability_name
+		data_to_send["display_name"] = display_name
 		data_to_send["visuals"] = {} # Prevent crash if missing
 		
 	# 3. Update Targeting data with current Node values 
@@ -82,7 +83,7 @@ func setup_from_database(data: Dictionary) -> void:
 	
 	# 1. Identity
 	ability_id = data.get("id", "unknown")
-	ability_name = data.get("display_name", "Unknown Ability")
+	display_name = data.get("display_name", "Unknown Ability")
 	
 	# 2. Visuals (In-Hand)
 	var visuals = data.get("visuals", {})

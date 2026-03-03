@@ -40,13 +40,11 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
-		print("is taargeting update in process")
-		this is somehow still triggering after end_taargeting is called
+		#print("is taargeting update in process")
+		#this is somehow still triggering after end_targeting is called
 		# Update target position to mouse
 		target_position = _get_mouse_world_position()
 		_update_active_indicator()
-	
-	
 
 func _create_indicators() -> void:
 	"""Create the targeting indicator nodes"""
@@ -100,6 +98,7 @@ func _get_mouse_world_position() -> Vector2:
 # ===== PUBLIC API =====
 
 func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> void:
+	
 	"""Begin targeting for an ability"""
 	print("start_targeting called for ability ", ability.display_name)
 	is_targeting = true
@@ -154,7 +153,7 @@ func cancel_targeting() -> void:
 func end_targeting() -> void:
 	"""Clean up targeting state"""
 	#end targeting not getting called
-	print("is end targeting being called?")
+	print("is end targeting being called? Yes")
 	is_targeting = false
 	current_ability = {}
 	target_shape = TargetShape.NONE

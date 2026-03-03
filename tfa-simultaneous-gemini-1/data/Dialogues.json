@@ -13,7 +13,14 @@
 		{
 		"Zak_intro": 
 			{
-			"Jacana": "May it be the hour you first believed"
+			"Narrator": "A priestess kneels among a cluster of hollow-eyed and filthy children.  Her purple robes are in tatters, almost to the point of indecency.
+			 She seems to have torn strips from her own vestment to bandage a boy's wounds",
+			"Jacana": "May it be the hour you first believed",
+			"ZAKARIAH": "Oh, this is marvelous. This is simply marvelous. I arrive to find a nun administering the opiate.",
+			"ZAKARIAH": "It is a drug, Sister. A soporific. A substance which deadens pain by deadening the mind along with it. Which is precisely what you're doing. 
+			(to the children, not unkindly but relentlessly) Your fathers died because this city's defenses were managed according to principles laid down three hundred years ago by men who had never seen a Skaarsgaardian raiding formation. 
+			It is a logistics problem. It is a solvable logistics problem, and the Senate has the solution sitting in a drawer somewhere because the man who wrote it also wrote an essay arguing that church tithes were a form of taxation without representation",
+			"Jacana": "something to do with taking the orphans to the soup kitchen.  Being fed turtle soup.  Jacana knows"
 			}
 		}
 	},
@@ -24,7 +31,8 @@
 			two figures work by lantern-light — a broad-shouldered half-orc woman and
 			 a slack-jawed man driving his shovel with mechanical patience. Neither has seen you yet.",
 			"Surgeon-Captain Federica": "Deeper, Verhoeven.  No martyr of the antique world lies in a coffin this shallow.",
-			"Verhoeven": "'Outstanding, Ma'am!'  **He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
+			"Verhoeven": "'Outstanding, Ma'am!'  
+			**He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
 			"choices":
 				[
 				{	"text": "What Ho, Graverobbers? Speak quickly the reason I should not cry for the guard.",
@@ -32,18 +40,19 @@
 				},
 				{ 
 					"text": "Lovely night, aye?",
-					"nextNode": ""
+					"nextNode": "Frederica-intro-spiel"
 				},
-					"text": "**Pass by quietly, hoping the plunderers don't see you witnessing their crime.**",
+				{	"text": "**Pass by quietly, hoping the plunderers don't see you witnessing their crime.**",
 					"nextNode": "end_convo"
+				}
 				]
 			},
 			"Federica-intro-talk-down": 
 				{
 				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)
-You would be within your rights. I won't insult you with denials — the evidence is plain."
-				"Surgeon-Captain Federica": "Two foreign strangers desecrating graves — in war time no less. I'd expect a speedy trial and an expeditious execution."
-				"Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** That is, if there are any witnesses to testify.",
+You would be within your rights. I won't insult you with denials — the evidence is plain.",
+				"Surgeon-Captain Federica": "Two foreign strangers desecrating graves — in wartime no less. I'd expect a speedy trial and an expeditious execution.",
+				"Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** 'That is, if there are any witnesses to testify.'",
 				"choices":[
 					{
 					"text": "**Shout for the guards!**",
@@ -55,50 +64,101 @@ You would be within your rights. I won't insult you with denials — the evidenc
 					}
 				]
 			},
+		"Federica-intro-spiel":
+			{
+				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)",
+				"Surgeon-Captain Federica": "Stand easy, we are not thieves.",
+				"Surgeon-Captain Federica": "We perform a service for the living, though it requires a brief discourtesy to the dead.",
+				"choice":
+					[
+						{
+							"text": "Not to be presumptous, but I suspect you could perhaps instruct me in the noble art of necromancy?",
+							"branch":
+								{
+									"protagonist.ability_check('charisma', ['secular', 'occult', 'persuasive'])": "Federica-apprenticeship",
+									"default":	"Federica-intro-fight"
+								}	
+						}
+					]
+			},
+		"Federica-intro-fight":
+			{
+				"Surgeon-Captain Federica": "If you possess any familiarity with my art, then I'm afraid you've seen too much. [[start_combat(game.characters_in_scene)]]"
+			},	
+		"Federica-intro-apprenticeship":
+			{
+				"narrator": "**She smiles at you**",
+				"Surgeon-Captain Federica": "I am, in fact, in dire need of an apprentice.  And you seem an eager pupil.",
+				"Surgeon-Captain Federica": "Certainly I can teach you.  **She hands you a shovel**. The first, and, I suppose most fundamental lesson, is how to dig a hole.",
+				"nextNode": "Federica-intro-agree-to-help"
+			},
 		"Federica-intro-agree-to-help":
 			{
-				"NARRATOR: The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry. Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.
-FEDERICA: Stand back.
-NARRATOR: The corpse convulses. A sound comes from it — not speech, not yet. A wet, whistling shriek through a throat half-collapsed with rot.
-THE KNIGHT: (thrashing, clawing at her own ruined face) — it BURNS — what have you — I was SLEEPING —
-FEDERICA: You served under General Maratesta. You campaigned against Emperor Regalus in the Year of Broken Standards.
-THE KNIGHT: (weeping without tears, without eyes) I can feel my bones — they're wrong — everything is WRONG —
-FEDERICA: His weaknesses. His habits in battle. Speak and I will let you sleep again.
-THE KNIGHT: He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice — we were fools — please, PLEASE —
-NARRATOR: Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She records something in a small notebook, expression unchanged.
-FEDERICA: Verhoeven. The next one.
-VERHOEVEN: Outstanding, Ma'am.
-
-NARRATOR: The second coffin holds a robed man — a court astrologer, judging by the celestial charts crumbling against his chest. The needles go in. He wakes screaming.
-THE ASTROLOGER: MY HANDS — I can't feel my — no, I CAN feel them, I can feel them ROTTING —
-FEDERICA: You served in the court of Regalus. You were executed for treason. Why?
-THE ASTROLOGER: (shuddering, jaw clicking loose and resetting with each word) I cast his — his true horoscope. Not the man's. The thing beneath the man. The stars don't lie — they said his birth was — thousands of years before the — oh gods, my teeth are falling into my stomach —
-FEDERICA: What did you learn?
-THE ASTROLOGER: Fire. He IS fire. But old fire — banked coals — he's been burning so long he's mostly ash — find the ash — find where he keeps —
-NARRATOR: His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She makes another note.
-FEDERICA: Promising. Verhoeven — the deep one now.
-
-NARRATOR: The third coffin is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.
-VERHOEVEN: ...Ma'am?
-NARRATOR: The lid explodes upward. A corpse sits bolt upright in the ruined casket — desiccated, eyeless, wearing the rotted vestments of a Scarlattian senator dead three centuries. Its jaw unhinges with a sound like tearing leather.
-THE SENATOR: He still sits the throne. He still wears the face. You dig for answers in the graves of those he's already silenced — do you think we failed for lack of TRYING?
-NARRATOR: It scrambles from the hole with horrible, insectile speed and vanishes over the churchyard wall into darkness.
-Silence. Then — torchlight, and the clatter of armor from the lane.
-GUARD-SERGEANT: Halt! Stand where you are — all of you!
-NARRATOR: Four city guards pour through the churchyard gate, halberds leveled. They see the open graves, the scattered bones, the three of you caked in dirt.
-Centurion: Graverobbers and a gods-damned necromancer. On your knees, the lot of you.
-FEDERICA: (quietly, to you) I will not kneel. That is not negotiable. What you do next — that is your affair.
-VERHOEVEN: (setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am."
-			}
+			"narrator": "Your new master imparts a few pointers in the use of a shovel, and you join Verhoeven, who has been digging mechanically this whole time.",
+			"narrator": "The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry.
+			Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.",
+			"Surgeon Captain Federica": "Stand back.",
+			"narrator": "The corpse convulses.  A wet shriek whistles through a throat half-collapsed with rot.",
+			"THE KNIGHT": "(thrashing, clawing at his own ruined face) — it BURNS — what have you —",
+			"Surgeon Captain Federica": "You served under General Maratesta. You campaigned against Emperor Regalus in the Year of Broken Standards.",
+			"The KNIGHT": "(weeping without tears, without eyes)",
+			"Surgeon Captain Federica": "His weaknesses. His habits in battle. Speak and I will let you sleep again.",
+			"THE KNIGHT": "He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice. **The rotten limbs begin to thrash harder.**",
+			"narrator": "Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She puts a jack boot on its chest and wrenches both its arms loose from the torso, placing these in a large canvas bag that smells of rot and hay. [[Federica.add_item_to_inventory('Arms of Octavian')]]",
+			"Surgeon Captain Federica": "Verhoeven. Deeper.",
+			"Verhoeven": "Outstanding, Ma'am.",
+			"choices": [
+				{
+					"text": "**You've seen enough to know whatever they're doing isn't ethical.  You shout for the guard.**",
+					"nextNode": "Federica-intro-guard-fight"
+				},
+				{
+					"text": "**You decide to keep playing along, out of morbid curiousity**",
+					"nextNode": "Federica-intro-interrogation-continued"
+				},
+				{
+					"text": "**You decide to keep aiding the Surgeon-Captain in her task, believing the rigteousness of her cause justifies this callous cruelty. The three of you continue digging.**",
+					"nextNode": "Federica-intro-interrogation-continued"
+				}
+			],
+			},
+			"Federica-intro-interrogation-continued":
+				{
+					"narrator": "The second coffin holds a robed man — a court astrologer, judging by the celestial charts crumbling against his chest. The needles go in. He wakes screaming.",
+					"THE ASTROLOGER": "MY HANDS — I can't feel my — no, I CAN feel them, I can feel them ROTTING —",
+					"Surgeon-Captain Federica": "You served in the court of Regalus. You were executed for treason. Why?",
+					"THE ASTROLOGER": "(shuddering, jaw clicking loose and resetting with each word) I cast his... his true horoscope. Not the man's. The thing beneath the man. The Living Stars do not lie",
+					"Surgeon Captain Federica": "What did you learn?",
+					"THE ASTROLOGER": "Fire. He IS fire. A creature from the First Age.  But even he has a touch of impurity.  A drop of human blood.  He is not timeless, he...",
+					"narrator": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. 
+					She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag. [[Federica.add_item_to_inventory('Skull of a Scholar')]]",
+					"Surgeon-Captain Federica": "Promising. Verhoeven — keep digging",
+					"narrator": "By now you are over twenty feet deep in the same plot. The third coffin you strike is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.",
+					"Verhoeven": "...Ma'am?",
+					"narrator": "The lid explodes upward. A skeleton sits bolt upright in the ruined casket wearing the rotted vestments of a Scarlattian senator. Its jaw unhinges with a sound like tearing leather.",
+					"THE SENATOR": "Heavy is the heart that releases me again upon the world.",
+					"narrator": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness.
+					Then, torchlight at the cemetery gates, and the clatter of armor from the lane. [[spawn_character_from_name('golden_guard',4)]]",
+					"Centurion": "Halt! Stand where you are — all of you!",
+					"narrator": "Four city guards pour through the churchyard gate, halberds leveled. They surround the open grave in which the three of you stand, caked in dirt.",
+					"Centurion": "Graverobbers and a gods-damned necromancer. On your knees, the lot of you.",
+					"Surgeon-Captain Federica": "(quietly, to you) I will not kneel. That is not negotiable. What you do next, that is your affair.",
+					"Verhoeven": "(setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am."
+			},
 		"Federica-intro-guard-fight":
 			{
-			"narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard')]]"	,
-			}
+			"narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard',4)]]"	,
+			},
 		"Federica-intro-let-go":
 			{
 				"Surgeon Captain Federica": "**The scowl on her face suggests she thinks your cowardice genuine, and it disgusts her.  She does not pursue you, but picks up her shovel with renewed urgency.**"
+			},
+		"end-convo":
+			{
+				"narrator": "You draw back silently.[[protagonist.add_trait('subtle')]]"
 			}
-			
+		},	
+		
   "guard_greet": {
 	"dialogueNodes": {
 	  "guard_greet": {
@@ -247,4 +307,5 @@ VERHOEVEN: (setting down his shovel with great care, as though placing a child i
 	  }
 	}
   }
+}
 }

@@ -48,8 +48,6 @@ enum ModifierType {
 	EVASION,            # Modify dodge chance
 	CUSTOM,             # For custom effect handlers
 }
-
-
 ## Check if traits match requirements
 ## Requirements can be: String (single trait), Array (any of these), or Dictionary (complex logic)
 static func traits_match(entity_traits: Dictionary, requirements) -> bool:
@@ -96,8 +94,6 @@ static func traits_match(entity_traits: Dictionary, requirements) -> bool:
 		return true
 	
 	return false
-
-
 ## Evaluate a conditional modifier
 ## Returns null if conditions not met, or the modifier value/data if met
 ## 

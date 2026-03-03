@@ -169,7 +169,7 @@ func apply_condition(
 	
 	# Create new instance
 	var instance = ConditionInstance.new(template, source)
-	instance.stacks = min(stacks, template.max_stacks) if template.stackable else 1
+	instance.stacks = min(stacks, template.max_tier) if template.stackable else 1
 	
 	# Set duration
 	if duration_override > -2.0:

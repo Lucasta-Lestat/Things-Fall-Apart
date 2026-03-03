@@ -236,7 +236,15 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	recovery_duration /= speed_multiplier
 	
 	emit_signal("attack_started", damage_type)
-
+func get_weapon_for_appropriate_hand():
+	var weapon = null
+	var hand = get_current_hand()
+	if hand == "Main" and "current_main_hand_weapon" in character:
+		weapon = character.current_main_hand_weapon
+	elif hand == "Off" and "current_off_hand_weapon" in character:
+		weapon = character.current_off_hand_weapon
+	return weapon
+	
 func _finish_attack() -> void:
 	current_state = AttackState.IDLE
 	attack_timer = 0.0
@@ -284,7 +292,31 @@ var is_casting: bool = false
 
 func _update_animation(delta: float) -> void:
 	match current_state:
-		# ... [Existing Melee States: WINDUP, STRIKE, RECOVERY] ...
+		#===== MELEE STATES =====
+		AttackState.WINDUP:
+			attack_progress = attack_timer / windup_duration
+			_animate_windup()
+			if attack_timer >= windup_duration:
+				current_state = AttackState.STRIKE
+				attack_timer = 0.0
+	
+		AttackState.STRIKE:
+			attack_progress = attack_timer / strike_duration
+			_animate_strike()
+			if attack_progress >= 0.5 and attack_progress - (get_process_delta_time() / strike_duration) < 0.5:
+				emit_signal("attack_hit_frame", get_current_hand())
+			if attack_timer >= strike_duration:
+				current_state = AttackState.RECOVERY
+				attack_timer = 0.0
+	
+		AttackState.RECOVERY:
+			attack_progress = attack_timer / recovery_duration
+			_animate_recovery()
+			if attack_timer >= recovery_duration:
+				current_state = AttackState.IDLE
+				attack_timer = 0.0
+				_reset_offsets()
+				emit_signal("attack_finished")
 		# ===== CASTING STATES =====
 		AttackState.CAST_WINDUP:
 			# Channeling phase: Matches the ability.cast_time
@@ -294,11 +326,12 @@ func _update_animation(delta: float) -> void:
 			if attack_timer >= cast_windup_duration:
 				# Transition to release (Fire the spell visual)
 				current_state = AttackState.CAST_RELEASE
+				print("changing attack state to cast release now that attack timer passed duration")
 				attack_timer = 0.0
 
 				# IMPORTANT: This signal tells the system visual sync is ready, 
 				# though the logic script spawned the projectile based on its own timer.
-				emit_signal("attack_hit_frame") 
+				emit_signal("attack_hit_frame", get_current_hand()) 
 			
 		AttackState.CAST_RELEASE:
 			# The "Punch" or "Push" of the magic
@@ -307,6 +340,7 @@ func _update_animation(delta: float) -> void:
 
 			if attack_timer >= cast_release_duration:
 				current_state = AttackState.CAST_RECOVERY
+				print("changing attack state to cast recover now that attack timer has passed duration")
 				attack_timer = 0.0
 
 		AttackState.CAST_RECOVERY:
@@ -315,6 +349,7 @@ func _update_animation(delta: float) -> void:
 			_animate_cast_recovery()
 			
 			if attack_timer >= cast_recovery_duration:
+				print("completed cast recovery, changing state back to idle")
 				current_state = AttackState.IDLE
 				is_attacking = false
 				is_casting = false
@@ -379,6 +414,7 @@ func setup_cast_parameters(windup: float, release: float = 0.15, recovery: float
 # Call this to start the procedural animation
 func start_cast():
 	current_state = AttackState.CAST_WINDUP
+	print("start_cast called, AttackState.CAST_WINDUP")
 	attack_timer = 0.0
 	is_attacking = true
 	is_casting = true

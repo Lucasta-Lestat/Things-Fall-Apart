@@ -18,7 +18,7 @@ extends Resource
 ## Cooldown in seconds
 @export var cooldown: float = 0.0
 
-@export var visual_duration: float = 1.0
+@export var visual_duration: float = 1.5
 
 ## Resource costs (e.g., {"MP": 10, "stamina": 5})
 @export var costs: Dictionary = {}
@@ -77,12 +77,14 @@ static func from_dict(data: Dictionary) -> Ability2:
 	ability.costs = data.get("costs", {})
 	ability.cast_time = data.get("cast_time", 0.0)
 	ability.interruptible = data.get("interruptible", true)
-	ability.traits = {}
+	ability.traits = data.get("traits", {})
 	ability.targeting = _parse_targeting(data.get("targeting", {}))
-	ability.effects = [] #Array of Dictionaries
+	ability.effects = data.get("effects", [])
 	ability.visuals = data.get("visuals", {})
 	ability.requirements = data.get("requirements", {})
 	ability.animation = data.get("animation", "")
+	
+	#replace bleeding tick code with gemini general condition
 	
 	# Load icon if path provided
 	var icon_path = data.get("icon", "")

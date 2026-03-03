@@ -4,78 +4,454 @@
 			"id": "neutral",
 			"name": "Neutral",
 			"color": "#808080",
+			"tier": 0,
+			"icon": "res://icons/neutral.png",
+			"flag": "res://icons/neutral_flag.png",
 			"allies": [],
-			"enemies": []
+			"enemies": [],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"units": {
+				"tank": [
+					{ "id": "militia_guard", "name": "Militia Guard", "min_tier": 0 }
+				],
+				"dps": [
+					{ "id": "militia_fighter", "name": "Militia Fighter", "min_tier": 0 }
+				],
+				"support": [
+					{ "id": "herbalist", "name": "Herbalist", "min_tier": 0 }
+				],
+				"special": []
+			}
 		},
 		{
 			"id": "player",
 			"name": "Player's Party",
 			"color": "#4CAF50",
+			"tier": 1,
+			"icon": "res://icons/player.png",
+			"flag": "res://icons/player_flag.png",
 			"allies": ["town_guard", "merchants"],
-			"enemies": ["bandits", "undead", "demons"]
+			"enemies": ["bandits", "undead", "demons"],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"units": {
+				"tank": [
+					{ "id": "squire", "name": "Squire", "min_tier": 1 },
+					{ "id": "knight", "name": "Knight", "min_tier": 2 },
+					{ "id": "champion", "name": "Champion", "min_tier": 4 }
+				],
+				"dps": [
+					{ "id": "sellsword", "name": "Sellsword", "min_tier": 1 },
+					{ "id": "ranger", "name": "Ranger", "min_tier": 2 },
+					{ "id": "blademaster", "name": "Blademaster", "min_tier": 3 }
+				],
+				"support": [
+					{ "id": "acolyte", "name": "Acolyte", "min_tier": 1 },
+					{ "id": "battle_cleric", "name": "Battle Cleric", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "hero", "name": "Hero", "min_tier": 5 }
+				]
+			}
 		},
 		{
-			"id": "town_guard",
-			"name": "Town Guard",
+			"id": "adventurers_guild",
+			"name": "Adventurer's Guild",
 			"color": "#2196F3",
-			"allies": ["player", "merchants", "nobles"],
-			"enemies": ["bandits", "undead", "demons", "rebels"]
+			"tier": 2,
+			"icon": "res://icons/adventurers_guild.png",
+			"flag": "res://icons/adventurers_guild_flag.png",
+			"allies": ["player", "patriciate"],
+			"enemies": ["bandits", "undead", "demons", "rebels"],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"units": {
+				"tank": [
+					{ "id": "guild_defender", "name": "Guild Defender", "min_tier": 1 },
+					{ "id": "iron_vanguard", "name": "Iron Vanguard", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "guild_hunter", "name": "Guild Hunter", "min_tier": 1 },
+					{ "id": "guild_assassin", "name": "Guild Assassin", "min_tier": 2 },
+					{ "id": "elite_slayer", "name": "Elite Slayer", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "guild_medic", "name": "Guild Medic", "min_tier": 1 },
+					{ "id": "lorekeeper", "name": "Lorekeeper", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "guildmaster", "name": "Guildmaster", "min_tier": 5 }
+				]
+			}
 		},
 		{
-			"id": "merchants",
-			"name": "Merchant Guild",
+			"id": "golden_guard",
+			"name": "Golden Guard",
 			"color": "#FFD700",
-			"allies": ["player", "town_guard", "nobles"],
-			"enemies": ["bandits"]
+			"tier": 3,
+			"icon": "res://icons/golden_guard.png",
+			"flag": "res://icons/golden_guard_flag.png",
+			"allies": ["player"],
+			"enemies": ["bandits"],
+			"equipment_traits": {
+				"required": { "Metal": 1, "Military": 1 },
+				"forbidden": { "Crude": 1, "Cursed": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "golden_sentinel", "name": "Golden Sentinel", "min_tier": 1 },
+					{ "id": "golden_bulwark", "name": "Golden Bulwark", "min_tier": 3 },
+					{ "id": "auric_guardian", "name": "Auric Guardian", "min_tier": 5 }
+				],
+				"dps": [
+					{ "id": "golden_lancer", "name": "Golden Lancer", "min_tier": 1 },
+					{ "id": "golden_halberdier", "name": "Golden Halberdier", "min_tier": 2 },
+					{ "id": "sunblade", "name": "Sunblade", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "golden_standard_bearer", "name": "Standard Bearer", "min_tier": 1 },
+					{ "id": "golden_war_priest", "name": "War Priest", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "golden_commander", "name": "Golden Commander", "min_tier": 4 },
+					{ "id": "lord_protector", "name": "Lord Protector", "min_tier": 5 }
+				]
+			}
 		},
 		{
-			"id": "nobles",
-			"name": "Nobility",
+			"id": "liziti",
+			"name": "Liziti",
+			"color": "#FFD800",
+			"tier": 1,
+			"icon": "res://icons/liziti.png",
+			"flag": "res://icons/liziti_flag.png",
+			"allies": ["rebels", "patriciate"],
+			"enemies": ["golden_guard"],
+			"equipment_traits": {
+				"required": { "Simple": 1 },
+				"forbidden": { "Complex": 1, "Arcane": 1, "Precision": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "liziti_bruiser", "name": "Liziti Bruiser", "min_tier": 1 },
+					{ "id": "liziti_thug_boss", "name": "Thug Boss", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "liziti_knifeman", "name": "Liziti Knifeman", "min_tier": 1 },
+					{ "id": "liziti_legbreaker", "name": "Legbreaker", "min_tier": 2 }
+				],
+				"support": [
+					{ "id": "liziti_lookout", "name": "Liziti Lookout", "min_tier": 1 }
+				],
+				"special": [
+					{ "id": "liziti_don", "name": "Liziti Don", "min_tier": 4 }
+				]
+			}
+		},
+		{
+			"id": "patriciate",
+			"name": "Patriciate",
 			"color": "#9C27B0",
-			"allies": ["town_guard", "merchants"],
-			"enemies": ["rebels", "bandits"]
+			"tier": 3,
+			"icon": "res://icons/patriciate.png",
+			"flag": "res://icons/patriciate_flag.png",
+			"allies": ["cultists"],
+			"enemies": ["rebels", "bandits", "golden_guard"],
+			"equipment_traits": {
+				"required": { "Ornate": 1 },
+				"forbidden": { "Crude": 1, "Simple": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "house_guard", "name": "House Guard", "min_tier": 1 },
+					{ "id": "patrician_knight", "name": "Patrician Knight", "min_tier": 2 },
+					{ "id": "praetorian", "name": "Praetorian", "min_tier": 4 }
+				],
+				"dps": [
+					{ "id": "noble_duelist", "name": "Noble Duelist", "min_tier": 1 },
+					{ "id": "court_poisoner", "name": "Court Poisoner", "min_tier": 3 }
+				],
+				"support": [
+					{ "id": "court_advisor", "name": "Court Advisor", "min_tier": 1 },
+					{ "id": "noble_enchantress", "name": "Noble Enchantress", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "high_patrician", "name": "High Patrician", "min_tier": 5 }
+				]
+			}
 		},
 		{
 			"id": "bandits",
 			"name": "Bandit Clan",
 			"color": "#795548",
+			"tier": 1,
+			"icon": "res://icons/bandits.png",
+			"flag": "res://icons/bandits_flag.png",
 			"allies": [],
-			"enemies": ["player", "town_guard", "merchants", "nobles"]
+			"enemies": ["player", "town_guard", "merchants", "nobles"],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": { "Holy": 1, "Ornate": 1, "Military": 2 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "bandit_brute", "name": "Bandit Brute", "min_tier": 1 },
+					{ "id": "bandit_enforcer", "name": "Bandit Enforcer", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "bandit_cutthroat", "name": "Cutthroat", "min_tier": 1 },
+					{ "id": "bandit_archer", "name": "Bandit Archer", "min_tier": 1 },
+					{ "id": "bandit_ravager", "name": "Ravager", "min_tier": 3 }
+				],
+				"support": [
+					{ "id": "bandit_scout", "name": "Bandit Scout", "min_tier": 1 },
+					{ "id": "bandit_hedge_witch", "name": "Hedge Witch", "min_tier": 2 }
+				],
+				"special": [
+					{ "id": "bandit_king", "name": "Bandit King", "min_tier": 4 }
+				]
+			}
 		},
 		{
 			"id": "rebels",
 			"name": "Rebel Alliance",
 			"color": "#F44336",
+			"tier": 2,
+			"icon": "res://icons/rebels.png",
+			"flag": "res://icons/rebels_flag.png",
 			"allies": [],
-			"enemies": ["town_guard", "nobles"]
+			"enemies": ["town_guard", "nobles"],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": { "Ornate": 1, "Noble": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "rebel_shieldwall", "name": "Rebel Shieldwall", "min_tier": 1 },
+					{ "id": "barricade_captain", "name": "Barricade Captain", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "rebel_firebrand", "name": "Firebrand", "min_tier": 1 },
+					{ "id": "rebel_saboteur", "name": "Saboteur", "min_tier": 2 },
+					{ "id": "revolutionary", "name": "Revolutionary", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "rebel_agitator", "name": "Agitator", "min_tier": 1 },
+					{ "id": "rebel_field_medic", "name": "Field Medic", "min_tier": 2 }
+				],
+				"special": [
+					{ "id": "rebel_leader", "name": "Rebel Leader", "min_tier": 4 }
+				]
+			}
 		},
 		{
 			"id": "undead",
 			"name": "The Undead",
 			"color": "#1B5E20",
-			"allies": ["demons"],
-			"enemies": ["player", "town_guard", "bandits", "rebels", "merchants", "nobles"]
-		},
-		{
-			"id": "demons",
-			"name": "Demonic Forces",
-			"color": "#B71C1C",
-			"allies": ["undead"],
-			"enemies": ["player", "town_guard", "bandits", "rebels", "merchants", "nobles"]
+			"tier": 2,
+			"icon": "res://icons/undead.png",
+			"flag": "res://icons/undead_flag.png",
+			"allies": ["wildlife", "liziti"],
+			"enemies": ["player", "bandits", "rebels", "golden_guard", "patriciate"],
+			"equipment_traits": {
+				"required": { "Necrotic": 1 },
+				"forbidden": { "Holy": 1, "Living": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "skeleton_warrior", "name": "Skeleton Warrior", "min_tier": 1 },
+					{ "id": "bone_colossus", "name": "Bone Colossus", "min_tier": 3 },
+					{ "id": "death_knight", "name": "Death Knight", "min_tier": 5 }
+				],
+				"dps": [
+					{ "id": "ghoul", "name": "Ghoul", "min_tier": 1 },
+					{ "id": "wraith", "name": "Wraith", "min_tier": 2 },
+					{ "id": "lich_acolyte", "name": "Lich Acolyte", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "necromancer_initiate", "name": "Necromancer Initiate", "min_tier": 1 },
+					{ "id": "banshee", "name": "Banshee", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "lich_lord", "name": "Lich Lord", "min_tier": 5 }
+				]
+			}
 		},
 		{
 			"id": "wildlife",
 			"name": "Wildlife",
 			"color": "#8BC34A",
+			"tier": 0,
+			"icon": "res://icons/wildlife.png",
+			"flag": "res://icons/wildlife_flag.png",
 			"allies": [],
-			"enemies": []
+			"enemies": [],
+			"equipment_traits": {
+				"required": { "Natural": 1 },
+				"forbidden": { "Metal": 1, "Crafted": 1, "Arcane": 1, "Simple": 1, "Complex": 1, "Military": 1, "Ornate": 1, "Firearm": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "dire_bear", "name": "Dire Bear", "min_tier": 1 },
+					{ "id": "ancient_treant", "name": "Ancient Treant", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "wolf_pack", "name": "Wolf Pack", "min_tier": 1 },
+					{ "id": "great_cat", "name": "Great Cat", "min_tier": 2 },
+					{ "id": "wyvern", "name": "Wyvern", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "sprite_swarm", "name": "Sprite Swarm", "min_tier": 1 }
+				],
+				"special": [
+					{ "id": "elder_beast", "name": "Elder Beast", "min_tier": 5 }
+				]
+			}
 		},
 		{
 			"id": "cultists",
 			"name": "Dark Cult",
 			"color": "#4A148C",
-			"allies": ["demons"],
-			"enemies": ["player", "town_guard", "nobles"]
+			"tier": 2,
+			"icon": "res://icons/cultists.png",
+			"flag": "res://icons/cultists_flag.png",
+			"allies": ["demons", "patriciate"],
+			"enemies": ["player", "town_guard", "nobles"],
+			"equipment_traits": {
+				"required": { "Cursed": 1 },
+				"forbidden": { "Holy": 1, "Blessed": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "cult_zealot", "name": "Cult Zealot", "min_tier": 1 },
+					{ "id": "abyssal_warden", "name": "Abyssal Warden", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "cult_blood_mage", "name": "Blood Mage", "min_tier": 1 },
+					{ "id": "shadow_stalker", "name": "Shadow Stalker", "min_tier": 2 },
+					{ "id": "void_channeler", "name": "Void Channeler", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "cult_initiate", "name": "Cult Initiate", "min_tier": 1 },
+					{ "id": "dark_oracle", "name": "Dark Oracle", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "cult_high_priest", "name": "High Priest", "min_tier": 4 },
+					{ "id": "demon_summoner", "name": "Demon Summoner", "min_tier": 5 }
+				]
+			}
+		},
+		{
+			"id": "dragatini",
+			"name": "Dragatini",
+			"color": "#B71C1C",
+			"tier": 3,
+			"icon": "res://icons/dragatini.png",
+			"flag": "res://icons/dragatini_flag.png",
+			"allies": ["patriciate"],
+			"enemies": ["tortellini", "rebels", "bandits"],
+			"equipment_traits": {
+				"required": { "Metal": 1, "Military": 1 },
+				"forbidden": { "Crude": 1, "Natural": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "draga_legionnaire", "name": "Draga Legionnaire", "min_tier": 1 },
+					{ "id": "draga_centurion", "name": "Draga Centurion", "min_tier": 2 },
+					{ "id": "draga_praetorian", "name": "Draga Praetorian", "min_tier": 4 }
+				],
+				"dps": [
+					{ "id": "draga_gladiator", "name": "Draga Gladiator", "min_tier": 1 },
+					{ "id": "draga_fire_breather", "name": "Fire Breather", "min_tier": 2 },
+					{ "id": "draga_dragon_knight", "name": "Dragon Knight", "min_tier": 3 },
+					{ "id": "draga_flame_tribune", "name": "Flame Tribune", "min_tier": 5 }
+				],
+				"support": [
+					{ "id": "draga_signifer", "name": "Draga Signifer", "min_tier": 1 },
+					{ "id": "draga_augur", "name": "Draga Augur", "min_tier": 3 }
+				],
+				"special": [
+					{ "id": "draga_imperator", "name": "Draga Imperator", "min_tier": 4 },
+					{ "id": "draga_dragon_consul", "name": "Dragon Consul", "min_tier": 5 }
+				]
+			}
+		},
+		{
+			"id": "tortellini",
+			"name": "Tortellini",
+			"color": "#33691E",
+			"tier": 2,
+			"icon": "res://icons/tortellini.png",
+			"flag": "res://icons/tortellini_flag.png",
+			"allies": ["wildlife", "undead"],
+			"enemies": ["dragatini", "golden_guard"],
+			"equipment_traits": {
+				"required": { "Natural": 1 },
+				"forbidden": { "Metal": 2, "Firearm": 1, "Complex": 1 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "shell_basher", "name": "Shell Basher", "min_tier": 1 },
+					{ "id": "ironshell_enforcer", "name": "Ironshell Enforcer", "min_tier": 2 },
+					{ "id": "ancient_shellback", "name": "Ancient Shellback", "min_tier": 4 }
+				],
+				"dps": [
+					{ "id": "tort_snapper", "name": "Tort Snapper", "min_tier": 1 },
+					{ "id": "tort_vine_whip", "name": "Vine Whip", "min_tier": 2 },
+					{ "id": "tort_thorn_caller", "name": "Thorn Caller", "min_tier": 3 }
+				],
+				"support": [
+					{ "id": "tort_swamp_druid", "name": "Swamp Druid", "min_tier": 1 },
+					{ "id": "tort_elder_druid", "name": "Elder Druid", "min_tier": 3 },
+					{ "id": "tort_tide_shaman", "name": "Tide Shaman", "min_tier": 4 }
+				],
+				"special": [
+					{ "id": "tort_don_carapace", "name": "Don Carapace", "min_tier": 4 },
+					{ "id": "tort_great_elder", "name": "The Great Elder", "min_tier": 5 }
+				]
+			}
+		},
+		{
+			"id": "pirates",
+			"name": "Freebooters",
+			"color": "#37474F",
+			"tier": 2,
+			"icon": "res://icons/pirates.png",
+			"flag": "res://icons/pirates_flag.png",
+			"allies": ["bandits"],
+			"enemies": ["golden_guard", "patriciate", "dragatini"],
+			"equipment_traits": {
+				"required": { "Firearm": 1 },
+				"forbidden": { "Holy": 1, "Ornate": 2 }
+			},
+			"units": {
+				"tank": [
+					{ "id": "pirate_bosun", "name": "Bosun", "min_tier": 1 },
+					{ "id": "pirate_boarding_chief", "name": "Boarding Chief", "min_tier": 3 }
+				],
+				"dps": [
+					{ "id": "pirate_buccaneer", "name": "Buccaneer", "min_tier": 1 },
+					{ "id": "pirate_musketeer", "name": "Musketeer", "min_tier": 1 },
+					{ "id": "pirate_cannoneer", "name": "Cannoneer", "min_tier": 2 },
+					{ "id": "pirate_sharpshooter", "name": "Sharpshooter", "min_tier": 3 },
+					{ "id": "pirate_powder_keg", "name": "Powder Keg", "min_tier": 4 }
+				],
+				"support": [
+					{ "id": "pirate_sea_witch", "name": "Sea Witch", "min_tier": 1 },
+					{ "id": "pirate_quartermaster", "name": "Quartermaster", "min_tier": 2 }
+				],
+				"special": [
+					{ "id": "pirate_captain", "name": "Pirate Captain", "min_tier": 3 },
+					{ "id": "pirate_dread_admiral", "name": "Dread Admiral", "min_tier": 5 }
+				]
+			}
 		}
 	]
 }

@@ -126,7 +126,6 @@ var right_arm_target: Vector2
 @export var constitution: int = 50  # HP multiplier, stagger resistance
 @export var dexterity: int = 50     # Speed multiplier (move + attack)
 @export var will: int = 50
-@export var move_speed: = 150.0
 # Blood drop texture - set this in _ready or via export
 @export var blood_drop_texture: Texture2D
 
@@ -185,8 +184,8 @@ var consciousness: int:
 var damage_multiplier: float:
 	get: return 0.5 + (strength / 100.0)  # 0.5 at STR 0, 1.5 at STR 100
 
-var speed_multiplier: float:
-	get: return 0.5 + (dexterity / 100.0)  # Same scaling as damage
+var move_speed: float:
+	get: return GridManager.TILE_SIZE*(0.5 + (dexterity / 100.0))  # Same scaling as damage # this is the actual speed, not a multiplier
 
 var attack_speed_multiplier: float:
 	get: return 0.5 + (dexterity / 100.0)  
@@ -218,10 +217,13 @@ var collision_radius: float:
 @export var minimum_separation: float = 5.0  # Extra buffer between characters
 var collision_shape: CollisionShape2D
 var collision_area: Area2D
+
 const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 var targeting_system: Node2D
+var _awaiting_target_release: bool = false
 
 signal character_reached_target
+signal character_died
 signal weapon_changed(weapon: WeaponShape)
 signal attack_hit(damage: int, damage_type: int)
 
@@ -232,6 +234,7 @@ func _ready() -> void:
 	targeting_system.name = "AbilityTargeting"
 	add_child(targeting_system)
 	blood_drop_texture = load("res://vfx/blood drop.png")
+	$DualHealthBar.setup(self)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
 	_setup_action_queue()
@@ -243,6 +246,7 @@ func _ready() -> void:
 	initialize_limbs(constitution)
 	TimeManager.time_updated.connect(_on_time_updated)
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
+	print("AISTate: ", AIState)
 func _setup_action_queue() -> void:
 	action_queue = ActionQueue.new()
 	action_queue.name = "ActionQueue"
@@ -795,11 +799,12 @@ func _process(delta: float) -> void:
 			if mp_regen_timer >= mp_regen_interval:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
-	
+		$DualHealthBar.update_debug_state(current_state, $AttackAnimator.current_state)
 		# Add check if the character is AI controlled
 		if AI_enabled:
 			# Handle stunned state
 			if current_state == AIState.STUNNED:
+				print("the ai is actually stunned")
 				if stun_timer <= 0:
 					_change_state(AIState.IDLE)
 				return
@@ -952,7 +957,6 @@ func cast_ability(ability: AbilityShape):
 
 	# 4. Execute Logic (Spawn fireball, etc)
 	
-
 	# 5. Cleanup Visuals
 	await attack_animator.attack_finished
 	ability.activate_visuals(false)
@@ -964,52 +968,32 @@ func _handle_input() -> void:
 		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
-	# Skip input processing on the frame pause state changes
-	# This prevents accidental action queueing when pausing/unpausing
+
 	if paused != _was_paused:
 		_was_paused = paused
 		return
-	# When paused: queue actions
-	# When unpaused: execute immediately (queue processes automatically)
-	# Right mouse button - Off hand
+
+	# --- Right mouse button - Off hand ---
 	if paused:
-		# When paused, only trigger on initial click
 		if Input.is_action_just_pressed("right_click"):
 			current_hand = "Off"
-			if targeting_system.is_targeting and targeting_system.current_hand == "Off":
-				print("confirm_ability_target triggered by right_click")
-				_confirm_ability_target(paused)
-			elif not targeting_system.is_targeting:
-				_process_hand_action(current_off_hand_item, "Off", mouse_pos, paused)
+			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 	else:
-		# When unpaused, allow held input for continuous actions
-		if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		if Input.is_action_just_pressed("right_click"):
 			current_hand = "Off"
-			print("ability system is targeting? ", targeting_system.is_targeting, " and what hand is it using? ", targeting_system.current_hand)
-			if targeting_system.is_targeting and targeting_system.current_hand == "Off":
-				_confirm_ability_target(paused)
-			elif not targeting_system.is_targeting:
-				_process_hand_action(current_off_hand_item, "Off", mouse_pos, paused)
-	
-	# Left mouse button / B key - Main hand
+			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
+
+	# --- Left mouse button - Main hand ---
 	if paused:
-		# When paused, only trigger on initial click
 		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
 			current_hand = "Main"
-			if targeting_system.is_targeting and targeting_system.current_hand == "Main":
-				_confirm_ability_target(paused)
-			elif not targeting_system.is_targeting:
-				_process_hand_action(current_main_hand_item, "Main", mouse_pos, paused)
+			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 	else:
-		# When unpaused, allow held input for continuous actions
-		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_B):
+		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
 			current_hand = "Main"
-			if targeting_system.is_targeting and targeting_system.current_hand =="Main":
-				_confirm_ability_target(paused)
-			elif not targeting_system.is_targeting:
-				_process_hand_action(current_main_hand_item, "Main", mouse_pos, paused)
-	
-	# Middle mouse button - Move
+			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
+
+	# --- Middle mouse button - Move ---
 	if paused:
 		if Input.is_action_just_pressed("middle_mouse"):
 			action_queue.queue_move(mouse_pos)
@@ -1018,26 +1002,39 @@ func _handle_input() -> void:
 			target_position = mouse_pos
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
 			is_moving = true
-	
+
 	if Input.is_action_just_pressed("ui_focus_next"):
 		if paused:
 			action_queue.queue_cycle_weapon(1)
 		else:
 			inventory.cycle_weapon(1)
-	
+
 	if Input.is_action_just_pressed("ui_focus_prev"):
 		if paused:
 			action_queue.queue_cycle_weapon(-1)
 		else:
 			inventory.cycle_weapon(-1)
-	
-	# Queue management (only when paused)
+
 	if paused:
 		if Input.is_action_just_pressed("ui_cancel"):
 			action_queue.cancel_all()
-	# Cancel Targeting (Right click cancels Left targeting, or Escape)
+
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
+func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
+	if targeting_system.is_targeting:
+		if targeting_system.current_hand == hand:
+			# 2nd click: confirm the target and cast
+			_confirm_ability_target(paused)
+		else:
+			# Clicked the other hand while targeting — cancel current targeting
+			# and start a new action with this hand instead
+			targeting_system.cancel_targeting()
+			_process_hand_action(item, hand, mouse_pos, paused)
+	else:
+		# 1st click: this will enter targeting if the ability requires it,
+		# or execute immediately for non-targeted actions (melee, items, etc.)
+		_process_hand_action(item, hand, mouse_pos, paused)
 func _confirm_ability_target(paused: bool) -> void:
 	# Retrieve the data from the targeting system
 	var result = targeting_system.confirm_targeting()
@@ -1286,16 +1283,21 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 			current_off_hand_item.z_index = 2  # Above character
 	emit_signal("weapon_changed", weapon)
 
-func _on_attack_hit(ability) -> void:
-	if ability== "Main":
+func _on_attack_hit(hand) -> void:
+	if hand== "Main":
 	# Called when attack hits (at the impact frame)
-		emit_signal("attack_hit", current_main_hand_item.base_damage, current_main_hand_item.primary_damage_type)
-	if ability == "Off":
-		emit_signal("attack_hit", current_off_hand_item.base_damage, current_off_hand_item.primary_damage_type)
+		if current_main_hand_item:
+			emit_signal("attack_hit", current_main_hand_item.base_damage, current_main_hand_item.primary_damage_type)
+		else:
+			emit_signal("attack_hit", unarmed_strike_damage, unarmed_strike_damage_type)
+	if hand == "Off":
+		if current_main_hand_item:
+			emit_signal("attack_hit", current_off_hand_item.base_damage, current_off_hand_item.primary_damage_type)
+		else:
+			emit_signal("attack_hit", unarmed_strike_damage, unarmed_strike_damage_type)
 
 func _on_attack_finished() -> void:
-	# Called when attack animation completes
-	pass
+	attack_animator.is_attacking = false
 
 # ===== PUBLIC ATTACK API =====
 
@@ -1524,15 +1526,6 @@ class Limb:
 # All limbs
 var limbs: Dictionary = {}  # LimbType -> Limb
 
-# Reference to owner
-var owner_character: Node2D
-
-# Signals
-signal limb_damaged(limb_type: LimbType, damage_info: Dictionary)
-signal limb_disabled(limb_type: LimbType)
-signal limb_severed(limb_type: LimbType)
-signal character_died()
-
 func initialize_limbs(base_hp: int) -> void:
 	"""Initialize all limbs based on character's max HP"""
 	print("initializing limbs")
@@ -1544,16 +1537,11 @@ func get_limb(limb_type: LimbType) -> Limb:
 	return limbs.get(limb_type)
 
 func get_total_hp() -> int:
-	"""Get combined HP of all limbs (mainly torso matters for death)"""
+	"""Get combined HP of all limbs"""
 	var total = 0
 	for limb in limbs.values():
 		total += max(0, limb.current_hp)
 	return total
-
-func get_torso_hp() -> int:
-	"""Torso HP is the main life indicator"""
-	var torso = limbs.get(LimbType.TORSO)
-	return torso.current_hp if torso else 0
 
 func is_alive() -> bool:
 	"""Character dies if torso or head HP <= 0 or blood is 0"""
@@ -1568,6 +1556,7 @@ func is_alive() -> bool:
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
+	$DualHealthBar.update_from_limbs(limbs)
 	var limb = limbs.get(limb_type)
 	if not limb:
 		return {}
@@ -1895,9 +1884,10 @@ func _process_attack(delta: float) -> void:
 	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
 	
 	# Start attack if not already attacking
+	#print("self.attack_animator.is_attacking: ", self.attack_animator.is_attacking )
 	if not self.attack_animator.is_attacking:
 		#print("do we have a weapon?")
-		if self.current_main_hand_item:
+		if self.current_main_hand_item: 
 		#	print("yes we do have a weapon")
 			self.attack()
 			attack_cooldown_timer = attack_cooldown / (self.attack_speed_multiplier )
@@ -1905,9 +1895,12 @@ func _process_attack(delta: float) -> void:
 			#print("trying attack without a weapon")
 			self.attack()
 	# Wait for attack to finish
+	
 	if not self.attack_animator.is_attacking:
+		print("changing state to appraoch")
 		_change_state(AIState.APPROACH)
 	if current_target and global_position.distance_to(current_target.global_position) > 1.5 * safe_attack_range:
+		print("changing state to approach")
 		_change_state(AIState.APPROACH)
 
 func _process_retreat(delta: float) -> void:
@@ -1940,24 +1933,25 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 	# React to being hit
 	if damage_info.get("actual_damage", 0) > 0:
 		# Stun briefly
-		stun_timer = 0.1 + randf() * 0.1
-		_change_state(AIState.STUNNED)
+		if current_state != AIState.STUNNED:
+			_change_state(AIState.STUNNED)
+			stun_timer = 0.1 + randf() * 0.1
 		
 		# Check if should retreat (low health)
 		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
 		
-		#TODO: Will Check
-		if torso_hp_percent < 0.3 and randf() < 0.5 or blood_amount < 0.5* max_blood_amount:
-			stun_timer = 0.0
-			_change_state(AIState.RETREAT)
-
+		#TODO: Will Check for retreat
+		
 func _on_character_died() -> void:
+	if current_state == AIState.DEAD:
+		return  # Already dead, don't re-trigger
 	if "Male" in self.traits and not "Beast" in self.traits:
 		SfxManager.play("man-death-scream",global_position)
 	elif "Female" in self.traits and not "Beast" in self.traits:
 		SfxManager.play("woman-death-scream",global_position)
 	current_state = AIState.DEAD
 	current_target = null
+	character_died.emit()
 	set_process(false)
 
 func _update_blood_drops(delta: float) -> void:
@@ -2374,17 +2368,17 @@ func _on_time_updated(_hour: int, _minute: int, second: int):
 
 func apply_bleeding_tick():
 	var tier = conditions.get("bleeding", 0)
-	
+	$DualHealthBar.update_from_limbs(limbs)
 	if tier > 0:
 		# Subtract 1 per tier from blood_amount
 		blood_amount -= tier
-		
-		# Subtract 1 from constitution
-		constitution -= 1
-		
+				
 		# Optional: Clamp values so they don't drop into negative infinity
 		blood_amount = max(0, blood_amount)
-		constitution = max(0, constitution)
+		#print("attempting to lower torso hp: ", limbs.get(LimbType.TORSO).current_hp)
+		limbs.get(LimbType.TORSO).current_hp -= tier
+		#print("after attempt to lower torso hp: ", limbs.get(LimbType.TORSO).current_hp)
+		#constitution = max(0, constitution)
 		
 		#print("Bleed Tick: Blood at ", blood_amount, " | Con at ", constitution)
 		
@@ -2462,7 +2456,7 @@ func use_ability(ability: Ability2, target_data: Dictionary = {}) -> bool:
 
 
 ## Start targeting mode for an ability
-
+'''
 func _start_targeting(ability: Ability2) -> void:
 	
 	if not targeting_system:
@@ -2489,7 +2483,7 @@ func _start_targeting(ability: Ability2) -> void:
 	# Start targeting (assuming hand slot, adjust as needed)
 	targeting_system.start_targeting(0, targeting_data)
 	targeting_started.emit(ability)
-
+'''
 ## Called when targeting is confirmed
 func on_targeting_confirmed(target_position: Vector2) -> void:
 	if current_cast.is_empty() or current_cast.get("state") != "targeting":
@@ -2592,9 +2586,14 @@ func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> vo
 	# Find targets in AoE
 	print("resolve ability effects called")
 	var targets = _find_targets_in_area(ability, target_position)
+	print("targets of ability: ", targets)
 	
 	# Process each effect
 	var results: Array = []
+	print("what does the ability look like: ", ability, " ", ability.display_name, " ", ability.id,
+	 " description: ", ability.description, "cooldown: ", ability.cooldown, " traits: ", ability.traits, "effects: ", ability.effects)
+	print("Ability.effects: ", ability.effects, " for ability: ", ability.display_name)
+	#^This is empty and its called fireball
 	for effect in ability.effects:
 		var result = AbilityEffect.resolve_effect(
 			effect,
@@ -2684,7 +2683,7 @@ func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
 	var shape = ability.targeting.get("shape", "none")
 	var radius = ability.targeting.get("radius", 0.0)
 	var size = ability.targeting.get("size", Vector2.ZERO)
-	
+	print("shape: ", shape, " size: ", size, " and radius: ", radius, "of ability ", ability.display_name)
 	# Get all potential targets
 	var potential_targets: Array = []
 	if game2:

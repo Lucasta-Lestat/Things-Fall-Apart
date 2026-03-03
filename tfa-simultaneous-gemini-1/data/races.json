@@ -1,0 +1,1922 @@
+{
+	"races": [
+		{
+			"id": "human",
+			"name": "Human",
+			"icon": "res://Icons/Human.png",
+			"description": "The most numerous race in much of Galba, either by breeding faster or dying less often than other races. One of the shortest lived races, after only orcs and half-orcs, and one of the most ambitious and present oriented.",
+			"cost": 0,
+			"features": [],
+			"ability_score_increases": {},
+			"traits": {
+				"_choice": "Choose 2"
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 20,
+				"middle": 40,
+				"old": 60
+			},
+			"height": {
+				"male": 148,
+				"female": 135
+			},
+			"weight": {
+				"male": 170,
+				"female": 130
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#F5D6B8",
+					"#D4A574",
+					"#8D5524",
+					"#4A2912"
+				],
+				"hair_colors": [
+					"#4A3728",
+					"#1A1A1A",
+					"#C4A35A",
+					"#8B4513",
+					"#D4D4D4"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"HORSESHOE",
+					"COMBOVER",
+					"POMPADOUR",
+					"BUZZCUT",
+					"MOHAWK"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "halfling",
+			"name": "Halfling",
+			"icon": "res://Icons/Halfling.png",
+			"description": "A shorter, earthier, and more materialistic relative of humans. Known for their great agility, the monkeys to our gorillas, one might say",
+			"cost": 1,
+			"features": [
+				"lucky"
+			],
+			"ability_score_increases": {
+				"Dex": 10,
+				"Cha": 5,
+				"Str": -10
+			},
+			"traits": {
+				"Mobility": 1,
+				"Stealth": 1,
+				"Fear": 1,
+				"Thrown Weapon": 1,
+				"Unassuming": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 25,
+				"middle": 50,
+				"old": 75
+			},
+			"height": {
+				"male": 75,
+				"female": 69
+			},
+			"weight": {
+				"male": 30,
+				"female": 25
+			},
+			"size": "Small",
+			"range_increase": 0,
+			"speed": 25,
+			"body": {
+				"body_size_mod": 0.7,
+				"body_width": 10,
+				"body_height": 9,
+				"head_width": 10,
+				"head_length": 9,
+				"shoulder_y_offset": 4,
+				"leg_length": 6,
+				"leg_width": 2,
+				"leg_spacing": 5
+			},
+			"appearance": {
+				"skin_colors": [
+					"#F5D6B8",
+					"#E8C49A",
+					"#D4A574"
+				],
+				"hair_colors": [
+					"#8B4513",
+					"#C4A35A",
+					"#4A3728",
+					"#A0522D"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"COMBOVER"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "gnome",
+			"name": "Gnome",
+			"icon": "res://Icons/Gnome.png",
+			"description": "Curious sentient fungal creatures with red mushrooms caps on their heads. Highly intelligent, mercurial, and masochistic.",
+			"cost": 1,
+			"features": [
+				"quixotic"
+			],
+			"ability_score_increases": {
+				"Cha": 5,
+				"Str": -10,
+				"Int": 10
+			},
+			"traits": {
+				"Scientific": 1,
+				"Tinkerer": 1,
+				"Arcana": 1,
+				"Unassuming": 1,
+				"Carousing": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 100,
+				"middle": 200,
+				"old": 300
+			},
+			"height": {
+				"male": 70,
+				"female": 64
+			},
+			"weight": {
+				"male": 25,
+				"female": 20
+			},
+			"size": "Small",
+			"range_increase": 0,
+			"speed": 25,
+			"body": {
+				"body_size_mod": 0.7,
+				"body_width": 10,
+				"body_height": 9,
+				"head_width": 12,
+				"head_length": 11,
+				"shoulder_y_offset": 4,
+				"leg_length": 6,
+				"leg_width": 2,
+				"leg_spacing": 5
+			},
+			"appearance": {
+				"skin_colors": [
+					"#E8D5C4",
+					"#F0E0D0",
+					"#C4A882"
+				],
+				"hair_colors": [
+					"#CC0000",
+					"#AA0000",
+					"#880000"
+				],
+				"blood_color": "#556B2F",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 7,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "half_elf",
+			"name": "Half-Elf",
+			"icon": "res://Icons/Half-Elf.png",
+			"description": "Despite the Elves racially charged arrogance, they frequently intermarry with \"hylics\", as they call the lesser races. Indeed, they must do so in order to maintain a stable population in warlike times, given their slow rate of maturation. Though once looked down upon, those of mixed human and elven descent now make up the outright majority of the population in Belmonte and among noble classes throughout the continent",
+			"cost": 1,
+			"features": [
+				"light_cantrip"
+			],
+			"ability_score_increases": {
+				"Cha": 5,
+				"Dex": 7,
+				"Int": 7,
+				"Str": -2
+			},
+			"traits": {
+				"Persuasive": 1,
+				"Race Relations": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 37.5,
+				"middle": 75,
+				"old": 120
+			},
+			"height": {
+				"male": 158,
+				"female": 145
+			},
+			"weight": {
+				"male": 160,
+				"female": 132
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": null,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#FAEBD7",
+					"#F5D6B8",
+					"#D4A574"
+				],
+				"hair_colors": [
+					"#C4A35A",
+					"#F5E6CC",
+					"#4A3728",
+					"#1A1A1A"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "half_orc",
+			"name": "Half-Orc",
+			"icon": "res://Icons/Half-Orc.png",
+			"description": "Typically the sad products of systemic rape. Their half that isn't orc may be almost literally anything else, as the orc's flexible genetics find purchase in almost any womb, or any flower even",
+			"cost": 1,
+			"features": [
+				"brutal_critical"
+			],
+			"ability_score_increases": {
+				"Str": 15,
+				"Con": 10,
+				"Int": -7,
+				"Cha": -7
+			},
+			"traits": {
+				"Athletic": 1,
+				"Savage": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 10,
+				"middle": 20,
+				"old": 30
+			},
+			"height": {
+				"male": 158,
+				"female": 145
+			},
+			"weight": {
+				"male": 200,
+				"female": 166
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": null,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#6B8E23",
+					"#556B2F",
+					"#8FBC8F",
+					"#808060"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F2F2F",
+					"#4A3728"
+				],
+				"blood_color": "#4A0000",
+				"hair_styles": [
+					"MOHAWK",
+					"BUZZCUT",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 7,
+				"crit_fail_threshold": 94,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "dwarf",
+			"name": "Dwarf",
+			"icon": "res://Icons/Dwarf.png",
+			"description": "Crass, materialistic and cruel midgets. Excessively ambitious and with a short memory for everything but grudges",
+			"cost": 1,
+			"features": [
+				"immune_to_drunken"
+			],
+			"ability_score_increases": {
+				"Str": 5,
+				"Con": 5,
+				"Wil": 5
+			},
+			"traits": {
+				"Stone": 1,
+				"Vengeful": 1,
+				"Historian": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 100,
+				"middle": 200,
+				"old": 300
+			},
+			"height": {
+				"male": 115,
+				"female": 105
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Small",
+			"range_increase": 0,
+			"speed": 25,
+			"body": {
+				"body_size_mod": 0.7,
+				"body_width": 14,
+				"body_height": 11,
+				"head_width": 10,
+				"head_length": 8,
+				"shoulder_y_offset": 4,
+				"leg_length": 6,
+				"leg_width": 2,
+				"leg_spacing": 5
+			},
+			"appearance": {
+				"skin_colors": [
+					"#D4A574",
+					"#C4956A",
+					"#B8860B"
+				],
+				"hair_colors": [
+					"#8B4513",
+					"#A0522D",
+					"#D4A35A",
+					"#C0C0C0",
+					"#1A1A1A"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"HORSESHOE",
+					"BUZZCUT"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "sahuagin",
+			"name": "Sahuagin",
+			"icon": "res://Icons/Sahuagin.png",
+			"description": "Gar-like humanoids known for their toughness and distrust of all terrestrial life. Often used as shock troops by the Neptunians.",
+			"cost": 1,
+			"features": [
+				"swift_swim",
+				"rough_skin"
+			],
+			"ability_score_increases": {
+				"Dex": 10,
+				"Con": 5
+			},
+			"traits": {
+				"Paranoid": 1,
+				"Aquatic": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 25,
+				"middle": 50,
+				"old": 75
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 12,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#2E8B57",
+					"#20B2AA",
+					"#008080",
+					"#006666"
+				],
+				"hair_colors": [],
+				"blood_color": "#00CED1",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "kobold",
+			"name": "Kobold",
+			"icon": "res://Icons/Kobold.png",
+			"description": "Little misshapen lizards created by the First Dragons to terrorize the populations over which they ruled. They were granted by their creators a great practical intelligence but also a vanishingly short memory and an active malice toward all non-reptiles. Kobold's have inherited the great Engineering projects of the old Empire, and turned them to antisocial uses, such as the transformation of the Aqueducts into Inferniducts",
+			"cost": 1,
+			"features": [
+				"jury_rig"
+			],
+			"ability_score_increases": {
+				"Cha": -5,
+				"Wil": -5,
+				"Str": -10,
+				"Dex": 15,
+				"Int": 10
+			},
+			"traits": {
+				"chaotic": 1,
+				"Technical": 1,
+				"Intimidating": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 20,
+				"middle": 40,
+				"old": 60
+			},
+			"height": {
+				"male": 90,
+				"female": 82
+			},
+			"weight": {
+				"male": 40,
+				"female": 33
+			},
+			"size": "Small",
+			"range_increase": 0,
+			"speed": 25,
+			"body": {
+				"body_size_mod": 0.7,
+				"body_width": 10,
+				"body_height": 9,
+				"head_width": 8,
+				"head_length": 9,
+				"shoulder_y_offset": 4,
+				"leg_length": 6,
+				"leg_width": 2,
+				"leg_spacing": 5
+			},
+			"appearance": {
+				"skin_colors": [
+					"#CD853F",
+					"#B8860B",
+					"#8B7355",
+					"#D2691E"
+				],
+				"hair_colors": [],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 93,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "saurian",
+			"name": "Saurian",
+			"icon": "res://Icons/Saurian.png",
+			"description": "A semi aquatic draconic race, created by the Dragon Emperor Heliograbalus to serve as his personal Privateer navy. They eventually rebelled against his rule, and now mostly live in quasi independent communities on the east coast of scarlatti",
+			"cost": 1,
+			"features": [
+				"tough_claws",
+				"natural_armor"
+			],
+			"ability_score_increases": {
+				"Str": 5,
+				"Con": 5,
+				"Wil": 5
+			},
+			"traits": {
+				"Cruel": 1,
+				"Aquatic": 1,
+				"Survival": 1,
+				"Drug user": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 20,
+				"middle": 40,
+				"old": 60
+			},
+			"height": {
+				"male": 160,
+				"female": 147
+			},
+			"weight": {
+				"male": 200,
+				"female": 166
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 16,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 13,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#6B8E23",
+					"#228B22",
+					"#2E8B57",
+					"#556B2F"
+				],
+				"hair_colors": [],
+				"blood_color": "#6B8E23",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "mephistkin",
+			"name": "Mephistkin",
+			"icon": "res://Icons/Mephistkin.png",
+			"description": "Pregnant mothers in regions where corruption and bribery have become normalized often bear children with strange deformities such as goat horns or purple skin. In the past, both the mother and such children were often strangled to death on the spot by the midwife herself. In these more enlightened times, the Mephistkin are merely consigned to live in ghettoes. While not necessarily evil, devilspawn are acknowledged to make some of the finest barristers and journalists, having an innate nack for twisting rules or information to their advantage.",
+			"cost": 1,
+			"features": [
+				"devilsight"
+			],
+			"ability_score_increases": {
+				"Cha": 20
+			},
+			"traits": {
+				"Fire resistant": 1,
+				"Stigmatized": 1,
+				"Manipulative": 3
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 100,
+				"middle": 200,
+				"old": 300
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#8B0000",
+					"#B22222",
+					"#A52A2A",
+					"#DC143C"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F0000"
+				],
+				"blood_color": "#4A0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"MOHAWK"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 4,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "goluna",
+			"name": "Goluna",
+			"icon": "res://Icons/Goluna.png",
+			"description": "A race of avian humanoids who migrate to Galba every summer from a distant continent.",
+			"cost": 2,
+			"features": [
+				"flight"
+			],
+			"ability_score_increases": {
+				"Dex": 10,
+				"Con": -5
+			},
+			"traits": {
+				"Perceptive": 1,
+				"Nimble": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 25,
+				"middle": 50,
+				"old": 75
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 110,
+				"female": 91
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 12,
+				"body_height": 10,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#E8E8E8",
+					"#D3D3D3",
+					"#C0C0C0",
+					"#F5F5F5"
+				],
+				"hair_colors": [
+					"#F5F5F5",
+					"#E0E0E0",
+					"#C4A35A"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "orc",
+			"name": "Orc",
+			"icon": "res://Icons/Orc.png",
+			"description": "One would think that belated rainfall in the world's harshest desert would be a cause for joy. Sadly, it heralds the bloom of the desert fungus creatures known as orcs, who quickly set about on their unique and terrible reproductive strategy of cross-species rape.",
+			"cost": 2,
+			"features": [
+				"ferocity",
+				"detritivore",
+				"brutal_critical",
+				"get_at_the_flesh"
+			],
+			"ability_score_increases": {
+				"Str": 30,
+				"Con": 20,
+				"Int": -15,
+				"Cha": -15
+			},
+			"traits": {
+				"Intimidating": 1,
+				"Ignorant": 3
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 0.5,
+				"middle": 1,
+				"old": 2
+			},
+			"height": {
+				"male": 168,
+				"female": 154
+			},
+			"weight": {
+				"male": 230,
+				"female": 190
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 18,
+				"body_height": 16,
+				"head_width": 13,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 4,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#556B2F",
+					"#4A5D23",
+					"#3B4A1A",
+					"#6B8E23"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F2F2F"
+				],
+				"blood_color": "#4A0000",
+				"hair_styles": [
+					"MOHAWK",
+					"BUZZCUT",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 8,
+				"crit_fail_threshold": 92,
+				"mp_regen_amount": 2,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "draconian",
+			"name": "Draconian",
+			"icon": "res://Icons/Dragonsworn.png",
+			"description": "The most loyal servants of the First Dragons, most remain slaves to this day, though they staff most of the important positions in Scarlatti's government. They were created more in the dragon's own image than the other draconic races, with the gift of their parents' deadly breath",
+			"cost": 2,
+			"features": [
+				"breath_weapon"
+			],
+			"ability_score_increases": {
+				"Str": 20,
+				"Con": 20,
+				"Wil": -20
+			},
+			"traits": {
+				"Unassuming": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 90,
+				"middle": 180,
+				"old": 270
+			},
+			"height": {
+				"male": 168,
+				"female": 154
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 16,
+				"body_height": 14,
+				"head_width": 11,
+				"head_length": 14,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#8B0000",
+					"#B8860B",
+					"#2F4F4F",
+					"#4A0080"
+				],
+				"hair_colors": [],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "goatmen",
+			"name": "Goatmen",
+			"icon": "res://Icons/Goatment.png",
+			"description": "The goatmen are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don\u2019t even think humans have souls and are therefore not worthy of any respect.",
+			"cost": 2,
+			"features": [],
+			"ability_score_increases": {},
+			"traits": {},
+			"creature_type": null,
+			"age": {
+				"base": null,
+				"middle": null,
+				"old": null
+			},
+			"height": {
+				"male": null,
+				"female": null
+			},
+			"weight": {
+				"male": null,
+				"female": null
+			},
+			"size": null,
+			"range_increase": null,
+			"speed": null,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#8B7355",
+					"#A0522D",
+					"#6B4423"
+				],
+				"hair_colors": [
+					"#2F2F2F",
+					"#4A3728",
+					"#1A1A1A"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "carapacians",
+			"name": "Carapacians",
+			"icon": "res://Icons/Carapacians.png",
+			"description": "A race of turtle people often accused of being a \"fifth-column\" for invasion of the Land by the Neptunians. Slow, patient, and methodical planners of both revenge and preemptive hostility",
+			"cost": 2,
+			"features": [
+				"withdraw"
+			],
+			"ability_score_increases": {
+				"Con": 20,
+				"Dex": -20,
+				"Wil": 20
+			},
+			"traits": {
+				"Historian": 1,
+				"Cruel": 1,
+				"Aquatic": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 200,
+				"middle": 400,
+				"old": 600
+			},
+			"height": {
+				"male": 158,
+				"female": 145
+			},
+			"weight": {
+				"male": 230,
+				"female": 190
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 18,
+				"body_height": 16,
+				"head_width": 10,
+				"head_length": 9,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#556B2F",
+					"#4A6A3A",
+					"#3B5B2B"
+				],
+				"hair_colors": [],
+				"blood_color": "#6B8E23",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "naga",
+			"name": "Naga",
+			"icon": "res://Icons/Naga.png",
+			"description": "A matriarchal race of snake people, known for their iron-clad caste system. All male Naga are either castrated or killed at birth, while the females reproduce parthenogenically, ensuring each generation is genetically identical to the last. Their Eastern Empire is perhaps the oldest and most reactionary civilization on Earth.",
+			"cost": 2,
+			"features": [
+				"poison_bite",
+				"charm_person"
+			],
+			"ability_score_increases": {
+				"Cha": 10,
+				"Int": 10,
+				"Will": 10
+			},
+			"traits": {
+				"Poison": 1,
+				"Calculating": 1,
+				"Manipulative": 1,
+				"Cruel": 2,
+				"Stealthy": 2,
+				"Deceptive": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 100,
+				"middle": 200,
+				"old": 300
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 14,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#9370DB",
+					"#8A2BE2",
+					"#20B2AA",
+					"#2E8B57"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F0050",
+					"#006400"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "newt",
+			"name": "Newt",
+			"icon": "res://Icons/Newt.png",
+			"description": "Humanoid amphibians from the jungles of Obi. Known for the hallucinogenic poison that coats their skin, and their particularly nightmarish practice of slavery. The slaves they take of other races, constantly having to be in contact with the Newts' psychedelic secretions, all eventually lose their minds in strange and terrible ways.",
+			"cost": 2,
+			"features": [
+				"poisonous_skin"
+			],
+			"ability_score_increases": {
+				"Cha": 15,
+				"Will": 15
+			},
+			"traits": {
+				"Barter": 1,
+				"Poison": 1,
+				"Primitive": 1,
+				"Cruel": 2
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 50,
+				"middle": 100,
+				"old": 150
+			},
+			"height": {
+				"male": 138,
+				"female": 126
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#FF6347",
+					"#FF4500",
+					"#FFA500",
+					"#32CD32"
+				],
+				"hair_colors": [],
+				"blood_color": "#ADFF2F",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "centaur",
+			"name": "Centaur",
+			"icon": "res://Icons/Centaur.png",
+			"description": "One of the exalted mutants created by the Grail, Centaurs fill the ranks of the Knightly Orders of Belmonte",
+			"cost": 2,
+			"features": [
+				"chilling_neigh"
+			],
+			"ability_score_increases": {
+				"Str": 10,
+				"Dex": 10,
+				"Wil": 5
+			},
+			"traits": {
+				"Noble": 1,
+				"Primitive": 2
+			},
+			"creature_type": "Fey",
+			"age": {
+				"base": 75,
+				"middle": 150,
+				"old": 225
+			},
+			"height": {
+				"male": 180,
+				"female": 165
+			},
+			"weight": {
+				"male": 400,
+				"female": 332
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 20,
+				"body_height": 22,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 14,
+				"leg_width": 3,
+				"leg_spacing": 12
+			},
+			"appearance": {
+				"skin_colors": [
+					"#D4A574",
+					"#8B7355",
+					"#F5D6B8"
+				],
+				"hair_colors": [
+					"#4A3728",
+					"#1A1A1A",
+					"#C4A35A",
+					"#8B4513"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"MOHAWK"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "cerebrals",
+			"name": "Cerebrals",
+			"icon": "res://Icons/Cerebrals.png",
+			"description": "A bizarre research project by the genocidal gnomish leader Fridrik the Terrible to create the ideal being. Through a liberal use of both eugenics and dangerous alchemy, a race with the ambition of humans, the equanimity of elves, and the intelligence of gnomes was supposedly created. Fridrik's successor had no interest in the project and let everyone go home. Much time has passed since, and Cerebrals have formed their own communities and culture, but their minds and bodies show strange quirks of the genetic and magical ringer they were put through. Tend to have an odd fascination with water, especially tranquil pools",
+			"cost": 2,
+			"features": [
+				"came_to_me_in_a_dream"
+			],
+			"ability_score_increases": {
+				"Int": 30,
+				"Str": -5
+			},
+			"traits": {
+				"Aquatic": 1,
+				"Calm": 2,
+				"Scientific": 3,
+				"Historian": 3,
+				"Calculating": 3
+			},
+			"creature_type": "Aberration",
+			"age": {
+				"base": 150,
+				"middle": 300,
+				"old": 450
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 160,
+				"female": 132
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 10,
+				"body_height": 12,
+				"head_width": 16,
+				"head_length": 14,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#DDA0DD",
+					"#DA70D6",
+					"#BA55D3",
+					"#E6E6FA"
+				],
+				"hair_colors": [],
+				"blood_color": "#9370DB",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 10,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "pixie",
+			"name": "Pixie",
+			"icon": "res://Icons/Pixie.png",
+			"description": "The most whimiscal and malicious of fey, these mercurial and obnoxious bug-men are resented throughout Galba. Even in Belmonte, where due to fae pacts and tradition they effectively run the legal system, the people's patience often wears thin. \"Pixie Pogroms\" or \"Pest control\" are solutions of first resort for angry peasantry",
+			"cost": 2,
+			"features": [
+				"quixotic",
+				"flight"
+			],
+			"ability_score_increases": {
+				"Cha": 15,
+				"Int": 5,
+				"Wil": -10,
+				"Dex": 15
+			},
+			"traits": {
+				"Stigmatized": 2,
+				"Chaotic": 3
+			},
+			"creature_type": "Fey",
+			"age": {
+				"base": 500,
+				"middle": 1000,
+				"old": 1500
+			},
+			"height": {
+				"male": 30,
+				"female": 27
+			},
+			"weight": {
+				"male": 10,
+				"female": 8
+			},
+			"size": "Tiny",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 0.35,
+				"body_width": 6,
+				"body_height": 5,
+				"head_width": 5,
+				"head_length": 5,
+				"shoulder_y_offset": 2,
+				"leg_length": 3,
+				"leg_width": 1,
+				"leg_spacing": 3
+			},
+			"appearance": {
+				"skin_colors": [
+					"#FFB6C1",
+					"#98FB98",
+					"#87CEEB",
+					"#DDA0DD"
+				],
+				"hair_colors": [
+					"#FFD700",
+					"#FF69B4",
+					"#00FA9A",
+					"#87CEEB"
+				],
+				"blood_color": "#FFD700",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 3,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "sobruaro",
+			"name": "Sobruaro",
+			"icon": "res://Icons/Sobruaro.png",
+			"description": "Proud, prickly loners, these humanoid cacti typically make a solitary living herding livestock across the great deserts to the South, protecting their flocks from rape-mad orcs",
+			"cost": 2,
+			"features": [
+				"thorns"
+			],
+			"ability_score_increases": {
+				"Str": 5,
+				"Dex": 15,
+				"Wil": 10,
+				"Cha": -5
+			},
+			"traits": {
+				"Antisocial": 1,
+				"Primitive": 1,
+				"Empathetic": 2
+			},
+			"creature_type": "Plant",
+			"age": {
+				"base": 50,
+				"middle": 100,
+				"old": 150
+			},
+			"height": {
+				"male": 170,
+				"female": 156
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 16,
+				"body_height": 14,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#228B22",
+					"#2E8B57",
+					"#006400",
+					"#6B8E23"
+				],
+				"hair_colors": [],
+				"blood_color": "#228B22",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "dhampir",
+			"name": "Dhampir",
+			"icon": "res://Icons/Dhampir.png",
+			"description": "The most thinblooded vampires often retain some degree of function in their reproductive organs, allowing them to produce offspring with other races. These are known as \"Dhampir\"",
+			"cost": 2,
+			"features": [
+				"con_drain_bite"
+			],
+			"ability_score_increases": {
+				"Str": 7,
+				"Dex": 7,
+				"Cha": 7,
+				"Int": 7,
+				"Will": -5
+			},
+			"traits": {
+				"Persuasive": 1,
+				"Deceptive": 2
+			},
+			"creature_type": "Humanoid, Undead",
+			"age": {
+				"base": 250,
+				"middle": 500,
+				"old": 750
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#F5F5DC",
+					"#E8E0D0",
+					"#D3C4B0",
+					"#C0B0A0"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#F5F5F5",
+					"#4A0000"
+				],
+				"blood_color": "#4A0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"COMBOVER"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "bugaboo",
+			"name": "Bugaboo",
+			"icon": "res://Icons/Bugaboo.png",
+			"description": "Long limbed mantis people known for their infinite patience and homicidal mating rituals. Known to lay in wait for days at a time, blending in with foliage on the side of a road, striking out with nutcracker like arms to make a quick meal of any unwary traveller",
+			"cost": 2,
+			"features": [
+				"opportunist",
+				"grappling_strike"
+			],
+			"ability_score_increases": {
+				"Str": 10,
+				"Wil": 10,
+				"Dex": 10
+			},
+			"traits": {
+				"Calm": 1,
+				"Intimidation": 1,
+				"Stealthy": 2
+			},
+			"creature_type": "Monstrosity",
+			"age": {
+				"base": 5,
+				"middle": 10,
+				"old": 15
+			},
+			"height": {
+				"male": 180,
+				"female": 165
+			},
+			"weight": {
+				"male": 180,
+				"female": 149
+			},
+			"size": "Medium",
+			"range_increase": 5,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 18,
+				"body_height": 16,
+				"head_width": 12,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 10,
+				"leg_width": 4,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#2F4F2F",
+					"#3B5B3B",
+					"#4A6A4A",
+					"#1A3A1A"
+				],
+				"hair_colors": [],
+				"blood_color": "#ADFF2F",
+				"hair_styles": [
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "high_elf",
+			"name": "High-Elf",
+			"icon": "res://Icons/High-Elf.png",
+			"description": "The reigning nobility of Belmonte, and once all of Galba. Believed to have been put in place by Archfey such as the Lady of the Lake to establish a foothold of the Feyrealm in the realm of mortals, the Elves superficial similarity to men belies their truly alien nature, (alien in biology, morality and much else besides. )",
+			"cost": 3,
+			"features": [
+				"immortal",
+				"light_cantrip",
+				"command",
+				"large_sized"
+			],
+			"ability_score_increases": {
+				"Int": 15,
+				"Dex": 15,
+				"Str": -5,
+				"Cha": 10
+			},
+			"traits": {
+				"Perceptive": 1,
+				"Magical": 1,
+				"Noble": 3
+			},
+			"creature_type": "Humanoid, Fey",
+			"age": {
+				"base": 18,
+				"middle": "immortal",
+				"old": "immortal"
+			},
+			"height": {
+				"male": 168,
+				"female": 154
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 5,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 18,
+				"body_height": 16,
+				"head_width": 14,
+				"head_length": 12,
+				"shoulder_y_offset": 5,
+				"leg_length": 12,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#FAEBD7",
+					"#FFF8DC",
+					"#FFFFF0"
+				],
+				"hair_colors": [
+					"#F5E6CC",
+					"#C4A35A",
+					"#FFD700",
+					"#C0C0C0"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 4,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 8,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "aedelf",
+			"name": "Aedelf",
+			"icon": "res://Icons/Aedelf.png",
+			"description": "The knowledge of you stabs them in the\nflesh with every recollection and event.\nThough they know it well, the wound of you\nwill not close. Each memory of you, each\nexperience, all evidence of your continued\nbeing, is like a knife twisting in the skin.\nNo other species could absorb such titanic\ncontempt and remain sane. They would be\nreduced to raving berserkers, living only to\nkill, directly, the loathed enabler of their pain.\nBut the \u00c6delf are old; they know much\nof patience and control. And they know\nthat they are born from the substance of\nyour fear and that if there was nothing left\nto feel afraid, they might well die.\nSo.\nEverything that can be done is being done.\nThe situation is difficult, but there is time.\nThere is always time. They must endure,\nas they have for so long. They wait and\nplan for an inverted world, a world where\nsocieties and civilisations and empires and\nspecies exist purely to instill and sustain\nfear.\nThey will live to see it.",
+			"cost": 3,
+			"features": [
+				"alter_self",
+				"phantasmal_killer",
+				"maddening_darkness",
+				"immortal",
+				"large_sized"
+			],
+			"ability_score_increases": {
+				"Int": 15,
+				"Wil": 20,
+				"Dex": 15,
+				"Cha": -10,
+				"Str": -5
+			},
+			"traits": {
+				"Religious": 1,
+				"Unnerving": 2,
+				"Cruel": 3,
+				"Noble": 3
+			},
+			"creature_type": "Humanoid, Dream Spirit",
+			"age": {
+				"base": 18,
+				"middle": "immortal",
+				"old": "immortal"
+			},
+			"height": {
+				"male": 168,
+				"female": 154
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 18,
+				"body_height": 16,
+				"head_width": 14,
+				"head_length": 12,
+				"shoulder_y_offset": 5,
+				"leg_length": 12,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#4A0080",
+					"#2F0050",
+					"#6A0DAD",
+					"#1A0030"
+				],
+				"hair_colors": [
+					"#F5F5F5",
+					"#E0E0E0",
+					"#C0C0C0"
+				],
+				"blood_color": "#4A0080",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"NONE"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 3,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 10,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "vampire",
+			"name": "Vampire",
+			"icon": "res://Icons/Vampire.png",
+			"description": "Just a vampire ass vampire",
+			"cost": 3,
+			"features": [
+				"con_drain_bite",
+				"charm_person"
+			],
+			"ability_score_increases": {
+				"Str": 15,
+				"Dex": 15,
+				"Cha": 15,
+				"Int": 15,
+				"Wil": -10
+			},
+			"traits": {
+				"Commanding": 1,
+				"Intimidating": 2,
+				"Persuasive": 3,
+				"Historian": 3
+			},
+			"creature_type": "Undead",
+			"age": {
+				"base": 18,
+				"middle": "immortal",
+				"old": "immortal"
+			},
+			"height": {
+				"male": 148,
+				"female": 136
+			},
+			"weight": {
+				"male": 170,
+				"female": 141
+			},
+			"size": "Medium",
+			"range_increase": 0,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"appearance": {
+				"skin_colors": [
+					"#F5F5DC",
+					"#E8E0D0",
+					"#DCDCDC"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F0000",
+					"#F5F5F5"
+				],
+				"blood_color": "#4A0000",
+				"hair_styles": [
+					"FULL",
+					"POMPADOUR",
+					"COMBOVER"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 4,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 7,
+				"mp_regen_interval": 0.5
+			}
+		},
+		{
+			"id": "troll",
+			"name": "Troll",
+			"icon": "res://Icons/Troll.png",
+			"description": "Spindly pipecleaner limbs, twisted ice-pick\nfingers and an oversized monstrous head.\nUncomfortably organic fungal spirals throughout its body\nIts infections have infections.",
+			"cost": 3,
+			"features": [
+				"regen"
+			],
+			"ability_score_increases": {
+				"Str": 30,
+				"Con": 30,
+				"Int": -5,
+				"Cha": -5,
+				"Will": -5
+			},
+			"traits": {
+				"Primitive": 3,
+				"Intimidting": 3
+			},
+			"creature_type": "Monstrosity",
+			"age": {
+				"base": 250,
+				"middle": 500,
+				"old": 750
+			},
+			"height": {
+				"male": 270,
+				"female": 248
+			},
+			"weight": {
+				"male": 340,
+				"female": 282
+			},
+			"size": "Large",
+			"range_increase": 5,
+			"speed": 30,
+			"body": {
+				"body_size_mod": 1.5,
+				"body_width": 24,
+				"body_height": 22,
+				"head_width": 14,
+				"head_length": 12,
+				"shoulder_y_offset": 8,
+				"leg_length": 14,
+				"leg_width": 5,
+				"leg_spacing": 12
+			},
+			"appearance": {
+				"skin_colors": [
+					"#556B2F",
+					"#6B8E23",
+					"#808060",
+					"#4A5D23"
+				],
+				"hair_colors": [
+					"#2F2F2F",
+					"#1A1A1A"
+				],
+				"blood_color": "#556B2F",
+				"hair_styles": [
+					"NONE",
+					"MOHAWK"
+				]
+			},
+			"stat_overrides": {
+				"crit_threshold": 8,
+				"crit_fail_threshold": 90,
+				"mp_regen_amount": 2,
+				"mp_regen_interval": 0.5
+			}
+		}
+	]
+}

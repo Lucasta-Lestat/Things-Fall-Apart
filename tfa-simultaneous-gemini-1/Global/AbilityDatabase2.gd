@@ -1,3 +1,4 @@
+#AbilityDatabase.gd
 extends Node
 var _abilities: Dictionary = {}
 
@@ -14,15 +15,19 @@ func _load_database() -> void:
 	var content = file.get_as_text()
 	var json = JSON.new()
 	var error = json.parse(content)
-	
+	print("====== Ability list =======")
 	if error == OK:
 		var data = json.get_data()
 		# Index abilities by ID for fast lookup
+		#print("ability data: ")
 		for entry in data.get("abilities", []):
 			_abilities[entry["id"]] = entry
+		#	print(_abilities[entry["id"]])
 	else:
 		push_error("Failed to parse Ability JSON: ", json.get_error_message())
-
+	print(" 
+	
+	===== end Ability list")
 func get_ability_data(ability_id: String) -> Dictionary:
 	if _abilities.has(ability_id):
 		return _abilities[ability_id]

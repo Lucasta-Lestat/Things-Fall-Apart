@@ -133,7 +133,7 @@ func get_grip_offset_for_hand() -> Vector2:
 
 func get_tip_local_position() -> Vector2:
 	"""Get the weapon tip in local coordinates"""
-	return  
+	return Vector2(0,-total_length)
 
 func get_pommel_local_position() -> Vector2:
 	"""Get the pommel/bottom end in local coordinates"""

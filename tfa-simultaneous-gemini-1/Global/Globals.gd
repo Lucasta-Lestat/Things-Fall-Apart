@@ -19,6 +19,7 @@ var default_body_scale = 1.7
 @export var default_head_length: float = 14.0 * default_body_scale  # Head length (front-back, oval shape)
 @export var default_shoulder_y_offset: float = 4.0  * default_body_scale  # How far back shoulders are from head center (positive = back)
 const DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
+const dmg_0_dict = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
 # Arm IK settings (smaller for top-down proportions)
 var DEFAULT_ARM_SEGMENT_LENGTHS: Array[float] = [12.0 * default_body_scale, 10.0 * default_body_scale, 6.0 * default_body_scale]
 const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
