@@ -102,15 +102,15 @@ func get_all_conditions() -> Array:
 		"description": "Cannot take actions.",
 		"traits": {"debuff": 1, "cc": 2, "stun": 1, "incapacitate": 1},
 		"stackable": false,
-		"duration": 3.0,
+		"duration": 0.5,
 		"icon": "res://UI/UI Icons/stunned.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "res://vfx/stun_stars.tscn",
 		"custom_sfx": "res://sfx/stun_impact.mp3",
 		"stat_modifiers": [
-			{"stat": "EVASION", "operation": "set", "value": 0},
-			{"stat": "DEX", "operation": "set", "value": 0}
+			{"stat": "move_speed", "operation": "set", "value": 0},
+			{"stat": "dex", "operation": "subtract", "value": 10}
 		],
 		"immunities": {}
 	},

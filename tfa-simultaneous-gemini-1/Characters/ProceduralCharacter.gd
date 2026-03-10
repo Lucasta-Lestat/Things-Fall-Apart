@@ -43,10 +43,13 @@ var MODIFY_DURATION_BY_TRAIT: Dictionary = {
 	"aoe": 1.3,
 	"attack": 1.0,
 	"magical": 1.1,
-}
+} #
 
 ## Preloaded visual effect scenes
 var _effect_cache: Dictionary = {}
+var _audio_cache: Dictionary = {}   # path -> AudioStream
+var _active_condition_vfx: Dictionary = {}  # condition_id -> Node (VFX instance attached to character)
+var _active_condition_sfx: Dictionary = {}  # condition_id -> AudioStreamPlayer2D
 
 #Shaking
 # --- NEW: Shake & Push Variables ---
@@ -102,6 +105,36 @@ var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
 
+@export var sight: float = 1.0  # Base sight stat
+var fov_angle_degrees: float = 150.0  # Field of view in degrees
+@export var hearing: float = 1.0 #base hearing stat
+
+@export var targeting_confusion = 0.0
+@export var restricted_actions_by_trait= {
+		"manipulate": false,
+		"attack": false,
+		"magic": false,
+		"arcane": false,
+		"holy": false,
+		"occult": false,
+		"primal": false,
+		"concentration": false
+	}
+@export var bonus_damage = 0.0
+@export var bonus_damage_against_trait = {
+	"giant": 0.0,
+	"draconic": 0.0,
+	"fungal": 0.0,
+	"fae": 0.0,
+	"oneiric":0.0,
+	"mechanical": 0.0,
+	"organic": 0.0,
+	"metal": 0.0,
+	"undead": 0.0,
+	"angelic": 0.0,
+	"devil": 0.0,
+	"demon": 0.0
+}
 
 var CRIT_FAIL_THRESHOLD = 96
 var CRIT_THRESHOLD = 5
@@ -126,6 +159,66 @@ var right_arm_target: Vector2
 @export var constitution: int = 50  # HP multiplier, stagger resistance
 @export var dexterity: int = 50     # Speed multiplier (move + attack)
 @export var will: int = 50
+@export var intelligence: int = 50
+@export var charisma: int = 50
+# --- Add these modifier variables near your other vars ---
+var strength_modifier: float = 0.0
+var constitution_modifier: float = 0.0
+var dexterity_modifier: float = 0.0
+var will_modifier: float = 0.0
+var intelligence_modifier: float = 0.0
+var charisma_modifier: float = 0.0
+var sight_modifier: float = 0.0
+var hearing_modifier: float = 0.0
+var fov_modifier: float = 0.0
+var mp_regen_modifier: float = 0.0
+var crit_threshold_modifier: float = 0.0
+var crit_fail_modifier: float = 0.0
+
+# --- Helper to get effective attribute values ---
+func effective_strength() -> float:
+	return strength + strength_modifier
+
+func effective_constitution() -> float:
+	return constitution + constitution_modifier
+
+func effective_dexterity() -> float:
+	return dexterity + dexterity_modifier
+
+func effective_will() -> float:
+	return will + will_modifier
+
+func effective_intelligence() -> float:
+	return intelligence + intelligence_modifier
+
+func effective_charisma() -> float:
+	return charisma + charisma_modifier
+
+func effective_sight() -> float:
+	return sight + sight_modifier
+
+func effective_hearing() -> float:
+	return hearing + hearing_modifier
+
+func effective_fov() -> float:
+	return fov_angle_degrees + fov_modifier
+
+func effective_mp_regen() -> int:
+	return int(mp_regen_amount + mp_regen_modifier)
+
+func effective_crit_threshold() -> float:
+	return CRIT_THRESHOLD + crit_threshold_modifier
+
+func effective_crit_fail_threshold() -> float:
+	return CRIT_FAIL_THRESHOLD + crit_fail_modifier
+	
+	
+var speed_modifier: float = 0.0
+var arm_length: float = 0.0
+var race_id: String = ""
+var creature_size: String = "Medium"
+var racial_features: Array = []
+
 # Blood drop texture - set this in _ready or via export
 @export var blood_drop_texture: Texture2D
 
@@ -161,37 +254,42 @@ var active_blood_drops: Array[Dictionary] = []
 var severed_limbs: Dictionary = {}  # LimbType -> bool
 
 var conditions = {}
+@onready var condition_manager: ConditionManager = $ConditionManager
 # Derived stats (calculated from attributes)
-var max_hp: int:
-	get: return 6 + (constitution)/10 
+
 var max_blood_amount = max_hp
 var blood_amount = max_hp
 
-#MP
+# --- Update your existing getters to use effective values ---
+
+var max_hp: int:
+	get: return 6 + int(effective_constitution()) / 10
+
 var max_MP: int:
-	get: return will * consciousness
+	get: return int(effective_will()) * consciousness
+
+var rotation_speed: float:
+	get: return 8.0 * (effective_dexterity() / 50.0)
+
+var consciousness: int:
+	get: return blood_amount + int(effective_will())
+
+var damage_multiplier: float:
+	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
+
+var move_speed: float:
+	get: return GridManager.TILE_SIZE * (0.5 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
+
+var attack_speed_multiplier: float:
+	get: return 0.5 + (effective_dexterity() / 100.0)
+
+var clash_power: float:
+	get: return effective_strength() + (effective_constitution() * 0.3)
+#MP
 var MP = max_MP	
 @export var mp_regen_amount: int = 5
 @export var mp_regen_interval: float = 0.5
 var mp_regen_timer: float = 0.0
-
-@export var rotation_speed: float:
-	get: return 8.0 * (dexterity/50)
-	
-var consciousness: int:
-	get: return blood_amount + will
-
-var damage_multiplier: float:
-	get: return 0.5 + (strength / 100.0)  # 0.5 at STR 0, 1.5 at STR 100
-
-var move_speed: float:
-	get: return GridManager.TILE_SIZE*(0.5 + (dexterity / 100.0))  # Same scaling as damage # this is the actual speed, not a multiplier
-
-var attack_speed_multiplier: float:
-	get: return 0.5 + (dexterity / 100.0)  
-
-var clash_power: float:
-	get: return strength + (constitution * 0.3)  # STR is main, CON helps brace
 
 # Load from dictionary
 
@@ -200,7 +298,9 @@ func to_data() -> Dictionary:
 		"strength": strength,
 		"constitution": constitution,
 		"dexterity": dexterity,
-		"will": will
+		"will": will,  
+		"intelligence": intelligence, 
+		"charisma": charisma
 	}
 
 # Body dimensions (top-down view: width is left-right, height is front-back)
@@ -209,6 +309,7 @@ func to_data() -> Dictionary:
 @export var head_width: float = Globals.default_head_width   # Head width (left-right)
 @export var head_length: float = Globals.default_head_length  # Head length (front-back, oval shape)
 @export var shoulder_y_offset: float = Globals.default_shoulder_y_offset # How far back shoulders are from head center (positive = back)
+
 
 # Collision settings
 @export var collision_enabled: bool = true
@@ -222,6 +323,7 @@ const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 var targeting_system: Node2D
 var _awaiting_target_release: bool = false
 
+# Add reference to the child ConditionManager
 signal character_reached_target
 signal character_died
 signal weapon_changed(weapon: WeaponShape)
@@ -230,10 +332,19 @@ signal attack_hit(damage: int, damage_type: int)
 func _ready() -> void:
 	target_position = global_position
 	targeting_system = AbilityTargetingScript.new()
+	 # Connect condition signals
+	condition_manager.condition_applied.connect(_on_condition_applied)
+	condition_manager.condition_removed.connect(_on_condition_removed)
+	condition_manager.condition_expired.connect(_on_condition_expired)
+	condition_manager.stats_recalculated.connect(_on_stats_recalculated)
+	condition_manager.triggered_effect_fired.connect(_on_triggered_effect_fired)
+	condition_manager.condition_suppressed.connect(_on_condition_suppressed)
+	condition_manager.condition_unsuppressed.connect(_on_condition_unsuppressed)
 	# 2. Name it (optional, but helps with debugging)
 	targeting_system.name = "AbilityTargeting"
 	add_child(targeting_system)
 	blood_drop_texture = load("res://vfx/blood drop.png")
+
 	$DualHealthBar.setup(self)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
@@ -365,6 +476,119 @@ func _get_body_collision_points() -> PackedVector2Array:
 		Vector2(half_width, bottom),    # bottom-right
 		Vector2(-half_width, bottom)    # bottom-left
 	])
+## Wrapper that applies your trait-based duration scaling before delegating
+# Update the character's apply_condition wrapper to accept target_limb:
+
+func apply_condition(condition_id: String, source: Node = null, stacks: int = 1, duration_override: float = -2.0, target_limb = null) -> ConditionInstance:
+	var template = ConditionManager.condition_registry.get(condition_id)
+	if not template:
+		return condition_manager.apply_condition(condition_id, source, stacks, duration_override, target_limb)
+	
+	# Scale duration by trait affinity if no explicit override
+	if duration_override <= -2.0 and template.duration > 0:
+		var scaled_duration = template.duration
+		for trait_key in template.traits:
+			if trait_key in MODIFY_DURATION_BY_TRAIT:
+				scaled_duration *= MODIFY_DURATION_BY_TRAIT[trait_key]
+		return condition_manager.apply_condition(condition_id, source, stacks, scaled_duration, target_limb)
+	
+	return condition_manager.apply_condition(condition_id, source, stacks, duration_override, target_limb)
+
+func _on_condition_applied(instance: ConditionInstance) -> void:
+	_spawn_condition_vfx(instance)
+	_start_condition_sfx(instance)
+
+func _on_condition_removed(instance: ConditionInstance) -> void:
+	_remove_condition_vfx(instance)
+	_stop_condition_sfx(instance)
+
+func _on_condition_expired(instance: ConditionInstance) -> void:
+	_remove_condition_vfx(instance)
+	_stop_condition_sfx(instance)
+
+func _on_stats_recalculated() -> void:
+	# --- Core attributes (conditions can buff/debuff these) ---
+	# We store the base values and let conditions modify them.
+	# Using "add" operations on these means a condition with
+	# {"stat": "strength", "operation": "add", "value": -10} reduces STR by 10.
+	
+	# For base attributes, calculate_effective_stat takes the export value as base.
+	# But we don't want to overwrite the export — we need separate "effective" values
+	# that the getters can use. So we use modifier floats.
+	
+	# --- Simple modifier stats (base is 0.0, conditions add/multiply onto them) ---
+	speed_modifier = condition_manager.calculate_effective_stat(0.0, "speed_modifier")
+	bonus_damage = condition_manager.calculate_effective_stat(0.0, "bonus_damage")
+	
+	# --- Attribute modifiers (applied on top of base attributes) ---
+	# These are separate floats that getters can incorporate
+	strength_modifier = condition_manager.calculate_effective_stat(0.0, "strength")
+	constitution_modifier = condition_manager.calculate_effective_stat(0.0, "constitution")
+	dexterity_modifier = condition_manager.calculate_effective_stat(0.0, "dexterity")
+	will_modifier = condition_manager.calculate_effective_stat(0.0, "will")
+	intelligence_modifier = condition_manager.calculate_effective_stat(0.0, "intelligence")
+	charisma_modifier = condition_manager.calculate_effective_stat(0.0, "charisma")
+	
+	# --- Sensory stats ---
+	sight_modifier = condition_manager.calculate_effective_stat(0.0, "sight")
+	hearing_modifier = condition_manager.calculate_effective_stat(0.0, "hearing")
+	fov_modifier = condition_manager.calculate_effective_stat(0.0, "fov_angle_degrees")
+	targeting_confusion = condition_manager.calculate_effective_stat(0.0, "targeting_confusion")
+	
+	# --- MP regen ---
+	mp_regen_modifier = condition_manager.calculate_effective_stat(0.0, "mp_regen_amount")
+	
+	# --- Crit thresholds ---
+	crit_threshold_modifier = condition_manager.calculate_effective_stat(0.0, "crit_threshold")
+	crit_fail_modifier = condition_manager.calculate_effective_stat(0.0, "crit_fail_threshold")
+	
+	# --- Bonus damage against trait (each trait is its own stat key) ---
+	for trait_key in bonus_damage_against_trait:
+		bonus_damage_against_trait[trait_key] = condition_manager.calculate_effective_stat(
+			0.0, "bonus_damage_against_%s" % trait_key
+		)
+	
+	# --- Action restrictions (conditions can set these to true) ---
+	# A "set" operation with value 1.0 means restricted
+	for action_trait in restricted_actions_by_trait:
+		var val = condition_manager.calculate_effective_stat(0.0, "restrict_%s" % action_trait)
+		restricted_actions_by_trait[action_trait] = val >= 1.0
+
+
+func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
+	if result.has("damage"):
+		var damage_amount = result["damage"]
+		var damage_type = result.get("damage_type", "true")
+		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
+		
+		# Build damage dict matching your damage_limb format
+		var damage_dict = {damage_type: damage_amount}
+		
+		# Use global position as fallback for visual location
+		var hit_location = global_position
+		damage_limb(limb_type, damage_dict, hit_location)
+		$DualHealthBar.update_from_limbs(limbs)
+		is_alive()  # Check death
+	
+	if result.has("heal"):
+		var heal_amount = result["heal"]
+		if instance.target_limb != null:
+			var limb = get_limb(instance.target_limb)
+			if limb:
+				limb.heal(heal_amount)
+		else:
+			# Whole body heal — distribute across all limbs
+			for limb in limbs.values():
+				limb.heal(heal_amount)
+		$DualHealthBar.update_from_limbs(limbs)
+	
+	if result.has("condition_id") and effect.get("type") == "apply_condition":
+		if randf() <= result.get("chance", 1.0):
+			# Chain-applied conditions inherit the same limb
+			apply_condition(result["condition_id"], instance.source, 1, -2.0, instance.target_limb)
+	
+	if result.has("condition_id") and effect.get("type") == "remove_condition":
+		condition_manager.remove_condition(result["condition_id"])
 
 func get_overlapping_characters() -> Array[ProceduralCharacter]:
 	"""Get all characters currently overlapping with this one"""
@@ -404,64 +628,93 @@ func load_from_data(data: Dictionary) -> void:
 	character_data = data
 	if data.has("name"):
 		Name = data["name"]
-	# Parse skin color
+	
 	if data.has("skin_color"):
 		skin_color = Color.html(data["skin_color"])
-	
-	# Parse hair color
 	if data.has("hair_color"):
 		hair_color = Color.html(data["hair_color"])
-	
-	# Parse hair style
 	if data.has("hair_style"):
 		hair_style = _parse_hair_style(data["hair_style"])
-	
-	# Parse faction
 	if data.has("faction"):
 		faction_id = data["faction"]
 	
-	# Body is darker to appear "below" head
 	body_color = skin_color.darkened(0.15)
 	
-	# Apply other properties
-	if data.has("move_speed"):
-		move_speed = data["move_speed"]
+	# --- Body dimensions (respect size override) ---
+	var use_custom_size = data.has("size") and data["size"] != "default"
+	if data.has("body_width") and use_custom_size:
+		body_width = data["body_width"]
+	if data.has("body_height") and use_custom_size:
+		body_height = data["body_height"]
+	if data.has("head_width") and use_custom_size:
+		head_width = data["head_width"]
+	if data.has("head_length") and use_custom_size:
+		head_length = data["head_length"]
+	if data.has("shoulder_y_offset") and use_custom_size:
+		shoulder_y_offset = data["shoulder_y_offset"]
 	
-	if data.has("body_width"):
-		if data.has("size"):
-			if data.size == "default":
-				pass
-			else:
-				body_width = data["body_width"]
-	
-	if data.has("body_height"):
-		if data.has("size"):
-			if data.size == "default":
-				pass
-			else:
-				body_height = data["body_height"]
-	
-	if data.has("head_width"):
-		if data.has("size"):
-			if data.size == "default":
-				pass
-			else:
-				head_width = data["head_width"]
-	
-	if data.has("head_length"):
-		if data.has("size"):
-			if data.size == "default":
-				pass
-			else:
-				head_length = data["head_length"]
+	# --- Core attributes ---
 	if data.has("strength"): strength = data["strength"]
 	if data.has("constitution"): constitution = data["constitution"]
 	if data.has("dexterity"): dexterity = data["dexterity"]
-	# Also accept short forms
+	if data.has("intelligence"): intelligence = data["intelligence"]
+	if data.has("will"): will = data["will"]
+	if data.has("charisma"): charisma = data["charisma"]
+	# Short forms
 	if data.has("str"): strength = data["str"]
 	if data.has("con"): constitution = data["con"]
 	if data.has("dex"): dexterity = data["dex"]
-	# Update visuals
+	if data.has("int"): intelligence = data["int"]
+	if data.has("wil"): will = data["wil"]
+	if data.has("cha"): charisma = data["cha"]
+	
+	# --- Identity / race ---
+	if data.has("race_id"): race_id = data["race_id"]
+	if data.has("creature_size"): creature_size = data["creature_size"]
+	if data.has("racial_features"): racial_features = data["racial_features"]
+	
+	# --- Combat stats ---
+	if data.has("unarmed_strike_damage_type"):
+		unarmed_strike_damage_type = data["unarmed_strike_damage_type"]
+	if data.has("unarmed_strike_damage"):
+		unarmed_strike_damage = data["unarmed_strike_damage"]
+	if data.has("crit_threshold"): CRIT_THRESHOLD = data["crit_threshold"]
+	if data.has("crit_fail_threshold"): CRIT_FAIL_THRESHOLD = data["crit_fail_threshold"]
+	
+	# --- Sensory ---
+	if data.has("sight"): sight = data["sight"]
+	if data.has("hearing"): hearing = data["hearing"]
+	if data.has("fov_angle_degrees"): fov_angle_degrees = data["fov_angle_degrees"]
+	
+	# --- MP ---
+	if data.has("mp_regen_amount"): mp_regen_amount = data["mp_regen_amount"]
+	if data.has("mp_regen_interval"): mp_regen_interval = data["mp_regen_interval"]
+	
+	# --- Bonus damage / trait bonuses ---
+	if data.has("bonus_damage"): bonus_damage = data["bonus_damage"]
+	if data.has("bonus_damage_against_trait"):
+		var trait_data = data["bonus_damage_against_trait"]
+		for trait_key in trait_data:
+			if trait_key in bonus_damage_against_trait:
+				bonus_damage_against_trait[trait_key] = trait_data[trait_key]
+	
+	# --- Action restrictions ---
+	if data.has("restricted_actions_by_trait"):
+		var restrict_data = data["restricted_actions_by_trait"]
+		for action_key in restrict_data:
+			if action_key in restricted_actions_by_trait:
+				restricted_actions_by_trait[action_key] = restrict_data[action_key]
+	
+	# --- Duration modifiers ---
+	if data.has("modify_duration_by_trait"):
+		var dur_data = data["modify_duration_by_trait"]
+		for trait_key in dur_data:
+			MODIFY_DURATION_BY_TRAIT[trait_key] = dur_data[trait_key]
+	
+	# --- Targeting ---
+	if data.has("targeting_confusion"):
+		targeting_confusion = data["targeting_confusion"]
+	
 	_update_colors()
 
 func _parse_hair_style(style_name: String) -> HairStyle:
@@ -790,11 +1043,10 @@ func _process(delta: float) -> void:
 		# Update timers
 		attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
 		reaction_timer = max(0, reaction_timer - delta)
-		stun_timer = max(0, stun_timer - delta)
 		state_timer += delta
 		
 		# MP regeneration (only when not stunned)
-		if stun_timer <= 0:
+		if true: # make stun alter mp_regen_timer
 			mp_regen_timer += delta
 			if mp_regen_timer >= mp_regen_interval:
 				mp_regen_timer -= mp_regen_interval
@@ -805,7 +1057,7 @@ func _process(delta: float) -> void:
 			# Handle stunned state
 			if current_state == AIState.STUNNED:
 				print("the ai is actually stunned")
-				if stun_timer <= 0:
+				if not "stunned" in conditions: #Update stun_timer to say if it does not have sunned conditoin
 					_change_state(AIState.IDLE)
 				return
 			
@@ -1481,7 +1733,7 @@ func set_faction(new_faction_id: String) -> void:
 func get_relationship_with(other_character: ProceduralCharacter) -> Faction.Relationship:
 	return game2.factions[faction_id].get_relationship(faction_id, other_character.faction_id)
 	
-	# Limb identifiers
+# Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
 
 # Limb data structure
@@ -1668,16 +1920,32 @@ enum AIState {
 # Current state
 var current_state: AIState = AIState.IDLE
 var state_timer: float = 0.0
-
 # Target tracking
 var current_target: ProceduralCharacter = null
 var last_known_target_pos: Vector2 = Vector2.ZERO
 
+var target_item: Node = null
+var goal_reassess_timer: float = 0.0
+const GOAL_REASSESS_INTERVAL: float = 2.0
+
+# Wander settings
+var wander_cooldown: float = 0.0
+const WANDER_COOLDOWN_TIME: float = 3.0
+const WANDER_RANGE_TILES: int = 5
+
+# Hunger threshold
+var hunger: float = 0.0
+const HUNGER_THRESHOLD: float = 50.0
+
+@onready var game = get_node("/root/Game")
+#trigger "Talk" should search the dialogues in the dialogue file until it finds one for which prerequisites are met.
+#  Can set an already played prereq to keep it from repeating
+var interact_options = ["Attack", "Talk"]
 # Detection settings
-@export var detection_range: float = 300.0*Globals.default_body_scale    # How far AI can see enemies
-@export var attack_range: float = 70.0 * Globals.default_body_scale         # Range to start attacking
-@export var preferred_range: float = 40.0 *Globals.default_body_scale     # Ideal combat distance
-@export var too_close_range: float = 20.0 *Globals.default_body_scale     # Back up if closer than this
+@export var detection_range: float = 1440*sight   # How far AI can see enemies
+@export var attack_range: float = 70.0 * body_size_mod      # Range to start attacking
+@export var preferred_range: float = 40.0 *body_size_mod     # Ideal combat distance
+@export var too_close_range: float = 20.0 *body_size_mod    # Back up if closer than this
 
 # Minimum approach distance (prevents walking into other characters)
 var min_approach_distance: float:
@@ -1691,8 +1959,6 @@ var min_approach_distance: float:
 # Timing
 var attack_cooldown_timer: float = 0.0
 var reaction_timer: float = 0.0
-var stun_timer: float = 0.0
-var MP_recovery: float = 0.5
 
 signal state_changed(old_state: AIState, new_state: AIState)
 signal target_acquired(target: ProceduralCharacter)
@@ -1700,7 +1966,6 @@ signal target_lost()
 	
 func _update_target() -> void:
 	"""Find and track enemy targets"""
-	#print("attempting to update target")
 	# If we have a valid target, check if still valid
 	if current_target:
 		if not is_instance_valid(current_target):
@@ -1933,9 +2198,8 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 	# React to being hit
 	if damage_info.get("actual_damage", 0) > 0:
 		# Stun briefly
-		if current_state != AIState.STUNNED:
-			_change_state(AIState.STUNNED)
-			stun_timer = 0.1 + randf() * 0.1
+		if not "stunned" in conditions:
+			apply_condition("stunned")
 		
 		# Check if should retreat (low health)
 		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
@@ -2349,10 +2613,6 @@ func clear_target() -> void:
 	"""Clear current target"""
 	_lose_target()
 
-func stun(duration: float) -> void:
-	"""Stun the AI for a duration"""
-	stun_timer = duration
-	_change_state(AIState.STUNNED)
 
 func get_state_name() -> String:
 	return AIState.keys()[current_state]
@@ -2583,17 +2843,9 @@ func _execute_ability(ability: Ability2, target_position: Vector2) -> void:
 	
 ## Resolve ability effects and spawn impact visuals
 func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> void:
-	# Find targets in AoE
-	print("resolve ability effects called")
 	var targets = _find_targets_in_area(ability, target_position)
-	print("targets of ability: ", targets)
 	
-	# Process each effect
 	var results: Array = []
-	print("what does the ability look like: ", ability, " ", ability.display_name, " ", ability.id,
-	 " description: ", ability.description, "cooldown: ", ability.cooldown, " traits: ", ability.traits, "effects: ", ability.effects)
-	print("Ability.effects: ", ability.effects, " for ability: ", ability.display_name)
-	#^This is empty and its called fireball
 	for effect in ability.effects:
 		var result = AbilityEffect.resolve_effect(
 			effect,
@@ -2603,10 +2855,16 @@ func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> vo
 			target_position
 		)
 		results.append(result)
-	print("execute ability called")
-	# Spawn impact visual effect
-	_spawn_ability_visuals(ability, target_position)
+		
+		# Apply conditions from ability effects to targets
+		if effect.has("apply_condition"):
+			var cond_id = effect["apply_condition"]
+			for target in targets:
+				if target.has_method("apply_condition"):
+					# Default to torso for ability-applied conditions
+					target.apply_condition(cond_id, self, 1, -2.0, LimbType.TORSO)
 	
+	_spawn_ability_visuals(ability, target_position)
 	cast_completed.emit(ability, results)
 
 ## Spawn a projectile that travels to the target
@@ -2729,22 +2987,261 @@ func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
 
 ## Spawn visual effects for ability
 func _spawn_ability_visuals(ability: Ability2, target_position: Vector2) -> void:
-	print("Attempting to spawn ability visuals")
 	var impact_path = ability.visuals.get("impact_effect", "")
-	print("IMPACT PATH: ", impact_path, " vs ", "res://vfx/fire.tscn")
 	if impact_path == "":
-		print('Did not find impact_path')
 		return
-
 	var size_scale = 1.0
 	var radius = ability.get_aoe_radius()
 	if radius > 0:
 		size_scale = radius / 25.0
-
 	var duration = _get_modified_visual_duration(ability)
 	_spawn_effect(impact_path, target_position, size_scale, duration)
+	
+	# Play ability SFX
+	var sfx_path = ability.visuals.get("sound_impact", "")
+	if sfx_path != "":
+		_play_sfx_at(sfx_path, target_position)
+
+# --- Add these variables near your other vars in character.gd ---
 
 
+
+
+# ============================================================
+# ABILITY SFX
+# ============================================================
+
+## Play a one-shot sound effect at a world position
+func _play_sfx_at(path: String, position: Vector2, volume_db: float = 0.0, pitch_scale: float = 1.0) -> AudioStreamPlayer2D:
+	var stream = _load_audio(path)
+	if not stream:
+		return null
+	
+	var player = AudioStreamPlayer2D.new()
+	player.stream = stream
+	player.global_position = position
+	player.volume_db = volume_db
+	player.pitch_scale = pitch_scale
+	player.max_distance = 2000.0
+	
+	var scene_root = get_tree().current_scene
+	scene_root.add_child(player)
+	player.play()
+	
+	# Auto-cleanup when done
+	player.finished.connect(func():
+		if is_instance_valid(player):
+			player.queue_free()
+	, CONNECT_ONE_SHOT)
+	
+	return player
+
+
+## Play a one-shot sound attached to this character
+func _play_sfx_on_self(path: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> AudioStreamPlayer2D:
+	var stream = _load_audio(path)
+	if not stream:
+		return null
+	
+	var player = AudioStreamPlayer2D.new()
+	player.stream = stream
+	player.volume_db = volume_db
+	player.pitch_scale = pitch_scale
+	player.max_distance = 2000.0
+	add_child(player)
+	player.play()
+	
+	player.finished.connect(func():
+		if is_instance_valid(player):
+			player.queue_free()
+	, CONNECT_ONE_SHOT)
+	
+	return player
+
+
+func _load_audio(path: String) -> AudioStream:
+	if path in _audio_cache:
+		return _audio_cache[path]
+	
+	if not ResourceLoader.exists(path):
+		push_warning("Audio not found: %s" % path)
+		return null
+	
+	var stream = load(path) as AudioStream
+	_audio_cache[path] = stream
+	return stream
+
+
+# ============================================================
+# CONDITION VFX — attached to character, persistent while active
+# ============================================================
+
+func _spawn_condition_vfx(instance: ConditionInstance) -> void:
+	var vfx_path = instance.condition.custom_vfx
+	if vfx_path == "" or vfx_path == "no vfx scene":
+		return
+	
+	# Don't double-spawn
+	if instance.condition.id in _active_condition_vfx:
+		return
+	
+	var scene = _load_effect_scene(vfx_path)
+	if not scene:
+		return
+	
+	var vfx = scene.instantiate()
+	vfx.z_index = 2
+	
+	# Attach as child of character so it follows movement
+	add_child(vfx)
+	
+	# Offset to the target limb if applicable
+	if instance.target_limb != null:
+		vfx.position = _get_limb_vfx_offset(instance.target_limb)
+	else:
+		vfx.position = Vector2.ZERO
+	
+	# Start playing if the effect supports it
+	if vfx.has_method("play"):
+		vfx.play(1.0)
+	elif vfx.has_method("start"):
+		vfx.start(1.0)
+	elif vfx is GPUParticles2D or vfx is CPUParticles2D:
+		vfx.emitting = true
+	
+	_active_condition_vfx[instance.condition.id] = vfx
+
+
+func _remove_condition_vfx(instance: ConditionInstance) -> void:
+	var cond_id = instance.condition.id
+	if cond_id not in _active_condition_vfx:
+		return
+	
+	var vfx = _active_condition_vfx[cond_id]
+	_active_condition_vfx.erase(cond_id)
+	
+	if not is_instance_valid(vfx):
+		return
+	
+	# Graceful shutdown: stop emitting, then clean up after particles finish
+	if vfx.has_method("stop"):
+		vfx.stop()
+	
+	if vfx is GPUParticles2D or vfx is CPUParticles2D:
+		vfx.emitting = false
+		var lifetime = vfx.lifetime if "lifetime" in vfx else 1.0
+		get_tree().create_timer(lifetime).timeout.connect(func():
+			if is_instance_valid(vfx):
+				vfx.queue_free()
+		, CONNECT_ONE_SHOT)
+	else:
+		vfx.queue_free()
+
+
+## Approximate visual offset for a limb — 
+## Position VFX relative to the procedural body layout
+func _get_limb_vfx_offset(limb_type) -> Vector2:
+	match limb_type:
+		LimbType.HEAD:
+			# Head center is at origin, face points -Y
+			return Vector2(0, -head_length * 0.1)
+		LimbType.TORSO:
+			# Body line runs at shoulder_y_offset
+			return Vector2(0, shoulder_y_offset)
+		LimbType.LEFT_ARM:
+			# Left shoulder is at (-body_width/2, shoulder_y_offset)
+			# Mid-arm is a bit further left
+			return Vector2(-body_width / 2 - 5, shoulder_y_offset)
+		LimbType.RIGHT_ARM:
+			return Vector2(body_width / 2 + 5, shoulder_y_offset)
+		LimbType.LEFT_LEG:
+			# Legs start at shoulder_y_offset+2, extend by leg_length
+			# Place VFX at mid-leg
+			return Vector2(-leg_spacing, shoulder_y_offset + 2 + leg_length * 0.5)
+		LimbType.RIGHT_LEG:
+			return Vector2(leg_spacing, shoulder_y_offset + 2 + leg_length * 0.5)
+		_:
+			return Vector2.ZERO
+
+
+# ============================================================
+# CONDITION SFX — looping ambient sound while condition is active
+# ============================================================
+
+func _start_condition_sfx(instance: ConditionInstance) -> void:
+	var sfx_path = instance.condition.custom_sfx
+	if sfx_path == "" or sfx_path == "no sfx scene":
+		return
+	
+	if instance.condition.id in _active_condition_sfx:
+		return
+	
+	var stream = _load_audio(sfx_path)
+	if not stream:
+		return
+	
+	var player = AudioStreamPlayer2D.new()
+	player.stream = stream
+	player.volume_db = -5.0
+	player.max_distance = 1500.0
+	
+	# Loop if the stream supports it — otherwise it plays once as an apply sound
+	# AudioStreamWAV and AudioStreamOggVorbis have loop properties;
+	# we just let it play and check if it finishes
+	add_child(player)
+	player.play()
+	
+	_active_condition_sfx[instance.condition.id] = player
+	
+	# If it's a non-looping sound, clean up when done but keep the dict entry
+	# so we don't re-trigger. The entry gets erased in _stop_condition_sfx.
+	player.finished.connect(func():
+		# Sound ended naturally — don't free yet, _stop_condition_sfx handles that
+		pass
+	, CONNECT_ONE_SHOT)
+
+
+func _stop_condition_sfx(instance: ConditionInstance) -> void:
+	var cond_id = instance.condition.id
+	if cond_id not in _active_condition_sfx:
+		return
+	
+	var player = _active_condition_sfx[cond_id]
+	_active_condition_sfx.erase(cond_id)
+	
+	if is_instance_valid(player):
+		player.stop()
+		player.queue_free()
+
+
+# ============================================================
+# UPDATED CONDITION SIGNAL HANDLERS
+# ============================================================
+
+
+
+func _on_condition_suppressed(instance: ConditionInstance) -> void:
+	# Hide VFX/mute SFX while suppressed but don't destroy them
+	var vfx = _active_condition_vfx.get(instance.condition.id)
+	if vfx and is_instance_valid(vfx):
+		vfx.visible = false
+		if vfx is GPUParticles2D or vfx is CPUParticles2D:
+			vfx.emitting = false
+	
+	var sfx = _active_condition_sfx.get(instance.condition.id)
+	if sfx and is_instance_valid(sfx):
+		sfx.stream_paused = true
+
+func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
+	var vfx = _active_condition_vfx.get(instance.condition.id)
+	if vfx and is_instance_valid(vfx):
+		vfx.visible = true
+		if vfx is GPUParticles2D or vfx is CPUParticles2D:
+			vfx.emitting = true
+	
+	var sfx = _active_condition_sfx.get(instance.condition.id)
+	if sfx and is_instance_valid(sfx):
+		sfx.stream_paused = false
 ## Spawn a visual effect
 func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0) -> Node:
 	var scene = _load_effect_scene(scene_path)

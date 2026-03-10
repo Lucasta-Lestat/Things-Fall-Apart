@@ -22,18 +22,23 @@ const BAR_CONFIG: Array = [
 	},
 ]
 
+# Layout Constants
 const BAR_WIDTH: int = 80
 const BAR_HEIGHT: int = 8
 const BAR_SPACING: int = 2
 const LABEL_FONT_SIZE: int = 10
 const DEBUG_FONT_SIZE: int = 9
+
+# Condition Display Constants
+const COND_ICON_SIZE: int = 14
+const COND_SPACING: int = 2
+const COND_DURATION_HEIGHT: int = 2
+
 const BG_COLOR: Color = Color(0.15, 0.15, 0.15, 0.8)
 const BORDER_COLOR: Color = Color(0.0, 0.0, 0.0, 0.9)
 const OFFSET_Y: float = -40.0  # Offset above the character
 
-# Debug state label config: maps enum values to display names and colors
-
-# Debug state label config: maps enum values to display names and colors
+# Debug state label config
 const AI_STATE_DISPLAY: Dictionary = {
 	0: { "name": "DEAD", "color": Color(0.4, 0.4, 0.4) },        # AIState.DEAD
 	1: { "name": "IDLE", "color": Color(0.6, 0.6, 0.6) },        # AIState.IDLE
@@ -56,17 +61,21 @@ const ATTACK_STATE_DISPLAY: Dictionary = {
 }
 
 var _target_node: Node2D = null
-var _bar_data: Array = []  # Stores current state per bar
+var _condition_manager: ConditionManager = null
+var _bar_data: Array = [] 
 var _show_debug: bool = true
 var _ai_state: int = 0
 var _attack_state: int = 0
-
+var _time_manager: Node = null # For calculating duration bars
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 100
 	_init_bar_data()
-
+	
+	# Try to grab time manager globally if possible
+	if has_node("/root/TimeManager"):
+		_time_manager = get_node("/root/TimeManager")
 
 func _init_bar_data() -> void:
 	_bar_data.clear()
@@ -77,10 +86,19 @@ func _init_bar_data() -> void:
 			"target_percent": 1.0,
 		})
 
-
 func setup(target: Node2D) -> void:
 	_target_node = target
-
+	
+	# Attempt to find the ConditionManager on the target
+	# Adjust the path if your structure differs (e.g., target.get_node("Managers/ConditionManager"))
+	if _target_node.has_node("ConditionManager"):
+		_condition_manager = _target_node.get_node("ConditionManager")
+	else:
+		# Search children if not a direct child
+		for child in _target_node.get_children():
+			if child is ConditionManager:
+				_condition_manager = child
+				break
 
 func update_from_limbs(limbs: Dictionary) -> void:
 	for i in range(_bar_data.size()):
@@ -89,15 +107,12 @@ func update_from_limbs(limbs: Dictionary) -> void:
 			var limb = limbs[limb_type]
 			_bar_data[i]["target_percent"] = limb.get_hp_percent()
 
-
 func update_debug_state(ai_state: int, attack_state: int) -> void:
 	_ai_state = ai_state
 	_attack_state = attack_state
 
-
 func set_debug_visible(enabled: bool) -> void:
 	_show_debug = enabled
-
 
 func _process(delta: float) -> void:
 	# Smooth interpolation toward target
@@ -110,15 +125,36 @@ func _process(delta: float) -> void:
 
 	queue_redraw()
 
-
 func _draw() -> void:
-	var total_height: int = _bar_data.size() * (BAR_HEIGHT + LABEL_FONT_SIZE + BAR_SPACING)
+	var y_offset: float = 0.0
+	
+	# 1. Calculate Sizes
+	# Base height (Limbs)
+	var content_height: float = _bar_data.size() * (BAR_HEIGHT + LABEL_FONT_SIZE + BAR_SPACING)
+	
+	# Condition height
+	var active_conditions: Array = []
+	if _condition_manager:
+		active_conditions = _condition_manager.conditions.values()
+	
+	var conditions_height: float = 0.0
+	if not active_conditions.is_empty():
+		# Add a small divider space
+		conditions_height += 4 
+		conditions_height += active_conditions.size() * (COND_ICON_SIZE + COND_SPACING)
+	
+	# Debug height
+	var debug_height: float = 0.0
 	if _show_debug:
-		total_height += 2 + (DEBUG_FONT_SIZE + 2) * 2  # Two debug lines
+		debug_height = 4 + (DEBUG_FONT_SIZE + 2) * 2
+	
+	var total_height = content_height + conditions_height + debug_height
+	
+	# 2. Draw Background
 	var bg_rect := Rect2(-4, -4, BAR_WIDTH + 8, total_height + 8)
 	draw_rect(bg_rect, BG_COLOR)
 
-	var y_offset: float = 0.0
+	# 3. Draw Limb Bars
 	for data in _bar_data:
 		var config: Dictionary = data["config"]
 		var percent: float = data["current_percent"]
@@ -135,7 +171,7 @@ func _draw() -> void:
 		)
 		y_offset += LABEL_FONT_SIZE + 1
 
-		# Bar background (empty portion)
+		# Bar background
 		var bar_rect := Rect2(0, y_offset, BAR_WIDTH, BAR_HEIGHT)
 		draw_rect(bar_rect, Color(0.3, 0.1, 0.1, 0.6))
 
@@ -147,16 +183,71 @@ func _draw() -> void:
 
 		# Border
 		draw_rect(bar_rect, BORDER_COLOR, false, 1.0)
-
 		y_offset += BAR_HEIGHT + BAR_SPACING
 
-	# Debug: AI state and attack state labels
+	# 4. Draw Conditions
+	if not active_conditions.is_empty():
+		y_offset += 4 # Divider spacing
+		y_offset = _draw_conditions(y_offset, active_conditions)
+
+	# 5. Draw Debug Text
 	if _show_debug:
-		y_offset += 2
+		y_offset += 4
 		_draw_debug_label(y_offset, "AI", _ai_state, AI_STATE_DISPLAY)
 		y_offset += DEBUG_FONT_SIZE + 2
 		_draw_debug_label(y_offset, "ATK", _attack_state, ATTACK_STATE_DISPLAY)
 
+func _draw_conditions(start_y: float, conditions: Array) -> float:
+	var current_y = start_y
+	var game_time = _time_manager.game_time if _time_manager else 0.0
+	
+	for instance in conditions:
+		# Assume instance.condition has 'icon' (Texture2D) and 'display_name' (String)
+		# Fallback to defaults if properties are missing
+		var cond_res = instance.condition
+		var display_name = cond_res.get("display_name") if "display_name" in cond_res else cond_res.id
+		var icon = cond_res.get("icon") if "icon" in cond_res else null
+		
+		# Draw Icon
+		var icon_rect = Rect2(0, current_y, COND_ICON_SIZE, COND_ICON_SIZE)
+		if icon and icon is Texture2D:
+			draw_texture_rect(icon, icon_rect, false)
+		else:
+			# Placeholder if no icon
+			draw_rect(icon_rect, Color(0.5, 0.5, 0.5, 0.5))
+			draw_rect(icon_rect, Color.WHITE, false, 1.0)
+			
+		# Draw Name & Stacks
+		var text_x = COND_ICON_SIZE + 4
+		var text_str = display_name
+		if instance.stacks > 1:
+			text_str += " x%d" % instance.stacks
+			
+		draw_string(
+			ThemeDB.fallback_font,
+			Vector2(text_x, current_y + LABEL_FONT_SIZE),
+			text_str,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			BAR_WIDTH - text_x,
+			LABEL_FONT_SIZE,
+			Color(0.9, 0.9, 0.9)
+		)
+		
+		# Draw Duration Bar (Tiny line at bottom of icon/row)
+		if instance.expires_at > 0:
+			var total_dur = cond_res.duration
+			if total_dur > 0:
+				var time_left = max(0.0, instance.expires_at - game_time)
+				var dur_pct = clampf(time_left / total_dur, 0.0, 1.0)
+				
+				# Draw background line
+				draw_rect(Rect2(text_x, current_y + LABEL_FONT_SIZE + 1, BAR_WIDTH - text_x, 2), Color(0.2, 0.2, 0.2))
+				# Draw progress
+				draw_rect(Rect2(text_x, current_y + LABEL_FONT_SIZE + 1, (BAR_WIDTH - text_x) * dur_pct, 2), Color.CYAN)
+		
+		current_y += COND_ICON_SIZE + COND_SPACING
+		
+	return current_y
 
 func _draw_debug_label(y: float, prefix: String, state: int, display_map: Dictionary) -> void:
 	var info: Dictionary = display_map.get(state, { "name": "???", "color": Color.WHITE })
@@ -170,7 +261,6 @@ func _draw_debug_label(y: float, prefix: String, state: int, display_map: Dictio
 		DEBUG_FONT_SIZE,
 		info["color"]
 	)
-
 
 func _get_bar_color(percent: float, config: Dictionary) -> Color:
 	if percent <= config["low_threshold"]:

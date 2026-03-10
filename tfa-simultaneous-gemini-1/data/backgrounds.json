@@ -1,0 +1,621 @@
+{
+	"backgrounds": [
+		{
+			"id": "academic",
+			"name": "Academic",
+			"description": "A teacher at one of Galba’s prestigious houses of learning. Perhaps you were a professor at Scarlatti’s University of Minschaleft, or merely a visiting Lecturer",
+			"traits": {
+				"Worldly": 1,
+				"Rationalist": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [
+				{
+					"id": "bookbag",
+					"name": "Bookbag",
+					"quantity": 1
+				}
+			],
+			"icon": "res://Icons/Academic.png"
+		},
+		{
+			"id": "activist_journalist",
+			"name": "Activist Journalist",
+			"description": "Gods, you’re annoying. But maybe somewhere in your long career of pearl-clutching and feining outrage, you've discovered something really worth getting angry over.  Maybe you got fired for it",
+			"traits": {
+				"Strident": 1,
+				"Intimidating": 1,
+				"Politically Aware": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [
+				{
+					"id": "compromat",
+					"name": "Compromat",
+					"quantity": 1,
+					"description": "Gain a bonus to intimidation checks against one random political figure"
+				}
+			],
+			"icon": "res://Icons/Activist Journalist.png"
+		},
+		{
+			"id": "airship_master",
+			"name": "Airship Master",
+			"description": "The feared Zeppelins of Caine are no more, most destroyed in the blast that ended the war, those already in the field with no home port to return to. After hearing the news, you sadly circumnavigated the world until you ran out of fuel, and crashed somewhere offshore",
+			"traits": {
+				"Driver": 1,
+				"Worldly": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Airship Master.png"
+		},
+		{
+			"id": "almsgiver",
+			"name": "Almsgiver",
+			"description": "A generous soul.",
+			"traits": {
+				"Generous": 1,
+				"Empathetic": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Almsgiver.png"
+		},
+		{
+			"id": "agoraphobe",
+			"name": "Agoraphobe",
+			"description": "You’re afraid of almost anything. But years of shutting yourself away in a hut with only candles for lighting has caused your eyes to adapt to very low levels of light",
+			"traits": {
+				"Stressed": 1
+			},
+			"conditions": [
+				{
+					"id": "blind_flighting"
+				}
+			],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Agoraphobe.png"
+		},
+		{
+			"id": "amnesiac",
+			"name": "Amnesiac",
+			"description": "You don’t even know who you are.",
+			"traits": {},
+			"trait_generation": [
+				{
+					"random_from": "Traits",
+					"count": 2,
+					"tier": 1
+				}
+			],
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Amnesiac.png"
+		},
+		{
+			"id": "ultranationalist_senatorial_staffer",
+			"name": "Ultranationalist Senatorial Staffer",
+			"description": "You are a bit player in the rising tide of isolationist Nationalism in Scarlatti, backed by a populace disgusted with the horrors of the last great war. Why involve ourselves in another apocalyptic conflagration, especially with so many problems here at home?",
+			"traits": {
+				"Politically Aware": 1,
+				"organized": 1,
+				"Strident": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Ultranationalist Senatorial Staffer.png"
+		},
+		{
+			"id": "aristocratic_envoy",
+			"name": "Aristocratic Envoy",
+			"description": "You are a courtier and diplomat. Despite some considerable talent, your profession hasn’t been very successful lately at preventing Rearmament and the march toward another World War",
+			"traits": {
+				"Persuasive": 1,
+				"Noble": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Aristocratic Envoy.png"
+		},
+		{
+			"id": "bar_keep",
+			"name": "Bar Keep",
+			"description": "You make just enough money slinging prosecco and Amaretto sours to pay off your protection money. Locals tend to confide in you, and you’ve got a good reputation and an approachable face",
+			"traits": {
+				"Personable": 1,
+				"Trusted": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Bar Keep.png"
+		},
+		{
+			"id": "golden_legion_basic_training_graduate",
+			"name": "Golden Legion Basic Training Graduate",
+			"description": "You’re a physical specimen, on paper. You made it through training in the Golden Guard with flying colors. Despite these auspicious beginnings, you were granted a medical discharge after your third hernia surgery.",
+			"traits": {
+				"Martial": 1,
+				"Brave": 1,
+				"Frail": 1
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"id": "strong_back"
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Golden Legion Basic Training Graduate.png"
+		},
+		{
+			"id": "body_guard",
+			"name": "Body Guard",
+			"description": "The third most popular occupation in Scarlatti, after criminal and “None”",
+			"traits": {
+				"Intimidating": 1,
+				"Athletic": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Body Guard.png"
+		},
+		{
+			"id": "blood_serf",
+			"name": "Blood Serf",
+			"description": "For whatever reason, you left behind the comfortable, well fed life of a Wallechan blood donor. Maybe you choose a life of honorable independence despite these dark times. Or maybe you just didn’t taste very good",
+			"traits": {
+				"Unathletic": 1,
+				"Relaxed": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Blood Serf.png"
+		},
+		{
+			"id": "carnie",
+			"name": "Carnie",
+			"description": "One of the myriad uses for the recent technological boom in Galba is more advanced forms of entertainment. The Scarlattin Emperor has made special use of the new gadgets to upgrade the Circus Maximus into a Mechanized Carnival. You helped build and maintain the patently unsafe Mechanical Wheel Rides and the like that now fill the festival grounds",
+			"traits": {
+				"Lazy": 1,
+				"Brave": 1,
+				"Crafty": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Carnie.png"
+		},
+		{
+			"id": "clergy_inquisitor",
+			"name": "Clergy (Inquisitor)",
+			"description": "Religious inquisitors get a bad rap in “enlightened” parts of the world, but in Scarlatti they are a bit of a liberalizing force, far less likely to resort to torture than the civil police. Still pretty likely though",
+			"traits": {
+				"Intimidating": 1,
+				"Detective": 1,
+				"Orthodox": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Clergy (Inquisitor).png"
+		},
+		{
+			"id": "clergy_preacher",
+			"name": "Clergy (Preacher)",
+			"description": "Piety is at an all time low these days, despite the apocalyptic nature of recent events. Oracles have mostly stopped working, and few miracles have been performed this century. Still, you’ve found a way to inspire people and give some hope (or pious fear) in these dark times",
+			"traits": {
+				"Orthodox": 1,
+				"Persuasive": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Clergy (Preacher).png"
+		},
+		{
+			"id": "criminal",
+			"name": "Criminal",
+			"description": "Who isn’t in this country?",
+			"traits": {
+				"Lockpicking": 1,
+				"Streetsmart": 1,
+				"Criminal": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Criminal.png"
+		},
+		{
+			"id": "mystery_cult_initiate",
+			"name": "Mystery Cult Initiate",
+			"description": "You’re still just dipping your toe into this cult thing. You haven’t signed away you’re whole soul yet, just a piece of it.",
+			"traits": {
+				"Heretical": 1,
+				"Fanatic": 2
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"choose_from": "Clauses"
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Mystery Cult Initiate.png"
+		},
+		{
+			"id": "desert_explorer",
+			"name": "Desert Explorer",
+			"description": "You’ve scaled the great sand dunes of the Southern continent, braving Orc blooms and Cactus cowboys, all in a desperate search for gold. You probably found some too, there’s plenty out there. Getting it back was a different story",
+			"traits": {
+				"Worldly": 1,
+				"Hardy": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [
+				{
+					"id": "gold",
+					"name": "Gold",
+					"quantity": 1
+				}
+			],
+			"icon": "res://Icons/Desert Explorer.png"
+		},
+		{
+			"id": "yeatsian_breeding_slave",
+			"name": "Yeatsian Breeding Slave",
+			"description": "To the monsters that shift through the irradiated mists of Caine, a human womb is just a factory. A very slow factory, so you need a lot of them. Let’s just say you’ve been through a lot. But it took immense cunning on your part to escape that situation",
+			"traits": {
+				"Desensitized": 1,
+				"misandrist": 1,
+				"Calculating": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Yeatsian Breeding Slave.png"
+		},
+		{
+			"id": "oriental_dancing_girl",
+			"name": "Oritental Dancing Girl",
+			"description": "A graceful and talented courtesan, you’ve talked your way into  many a Senator’s bed in Justinia. Alas, this aspect of your profession carries with it some risks. To hide his illegitimate child, the Consul has shipped you off to a far away land.",
+			"traits": {
+				"Performer": 1,
+				"Courtly": 1,
+				"Seductive": 1,
+				"Detective": 1
+			},
+			"conditions": [{
+					"id": "pregnant"
+				}],
+			"abilities": [
+				
+			],
+			"items": [],
+			"icon": "res://Icons/Dancing Girl.png"
+		},
+		{
+			"id": "fey_prisoner",
+			"name": "Fey Prisoner",
+			"description": "You somehow escaped the Vivi-Dungeons of Belmonte, or a pixie commandant freed you in a characteristically unpredictable act of mercy. Either way, both your body and mind bear deep scars.",
+			"traits": {
+				"Desensitized": 2
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"choose_from": "Wild Shape Modifiers"
+				}
+			],
+			"items": [],
+			"notes": "Belmonte, nature torture prison",
+			"icon": "res://Icons/Fey Prisoner.png"
+		},
+		{
+			"id": "hallowed_host_heretic",
+			"name": "Hallowed Host Heretic",
+			"description": "Opposing the Anointed",
+			"traits": {
+				"Heretical": 1,
+				"Brave": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Heretic.png"
+		},
+		{
+			"id": "investigator",
+			"name": "Investigator",
+			"description": "A Private eye is a dangerous occupation in Scarlatti. The Guard really don’t like the competition, to the point you’re more likely to be hired by the Gangs to keep an eye on the competition",
+			"traits": {
+				"Criminal": 1,
+				"Detective": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Investigator.png"
+		},
+		{
+			"id": "judge_for_hire",
+			"name": "Judge for Hire",
+			"description": "In Scarlatti, Judges accept bribes at standardized, openly disclosed rates. When both the plaintiff and the defendant have money to throw around, a trial starts to look more like an auction.\nDespite this you possess a cultivated reputation for impartiality, and a cunning and mendacious mind.",
+			"traits": {
+				"Rational": 1,
+				"Calculating": 1,
+				"Trusted": 1,
+				"Deceptive": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Judge for Higher.png"
+		},
+		{
+			"id": "pauper",
+			"name": "Pauper",
+			"description": "You are a hapless bum. In Scarlatti, this means you attach yourself to some big man who acts as your patron, saving you from starvation in exchange for your loyalty",
+			"traits": {
+				"Loyal": 1,
+				"Unassuming": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Pauper.png"
+		},
+		{
+			"id": "plague_survivor",
+			"name": "Plague Survivor",
+			"description": "You escaped the outbreak of a mysterious plague in Southern Raskov, just before the village was quarantined. The ethical thing to do would have been to stay in place to prevent the spread, but at least you didn't catch anything. You think.",
+			"traits": {},
+			"conditions": [],
+			"abilities": [
+				{
+					"id": "toxic"
+				}
+			],
+			"items": [],
+			"notes": "Phyrexian zombie. You start with a level of affliction",
+			"icon": "res://Icons/Plague Survivor.png"
+		},
+		{
+			"id": "recovered_cultist",
+			"name": "Recovered Cultist",
+			"description": "You saw through it all. The lies. The hypocrisy. Your leader’s desire to sleep with your wife/husband. The experience has soured you on religion in general",
+			"traits": {
+				"Rationalist": 1,
+				"Occultist": 1
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"choose_from": "Occult Spells"
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Recovered Cultist.png"
+		},
+		{
+			"id": "retired_adventurer",
+			"name": "Retired Adventurer",
+			"description": "You’ve led a rich life. Now it’s time to settle down",
+			"traits": {
+				"Desensitized": 1,
+				"lazy": 1,
+				"Worldly": 2
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"random_from": "Feats",
+					"count": 1
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Retired Adventurer.png"
+		},
+		{
+			"id": "street_shaman",
+			"name": "Street Shaman",
+			"description": "A vagrant who has, through sheer drug induced induced paranoia, achieved some sort of transcendence",
+			"traits": {
+				"Streetsmart": 1
+			},
+			"conditions": [
+				{
+					"id": "addiction_to_zip"
+				}
+			],
+			"abilities": [
+				{
+					"id": "architects_eye"
+				},
+				{
+					"random_from": "Primal Spells",
+					"count": 1
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Street Shaman.png"
+		},
+		{
+			"id": "wage_slave",
+			"name": "Wage Slave",
+			"description": "You work the counter at one of Scarlatti’s Thermopolia, serving hot food in big clay jars. Burns are frequent",
+			"traits": {
+				"Stressed": 1,
+				"Cruel": 1,
+				"desensitized": 1,
+				"personable": 1,
+				"inflammable": 1
+			},
+			"conditions": [
+				{
+					"id": "inflammable"
+				}
+			],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Wage Slave.png"
+		},
+		{
+			"id": "urchin",
+			"name": "Urchin",
+			"description": "You were one of many children orphaned by the Great War, forced to the streets by a society who couldn’t afford to care for them",
+			"traits": {
+				"Streetsmart": 1,
+				"Thief": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Urchin.png"
+		},
+		{
+			"id": "exposed_skaarsgaardian_infant",
+			"name": "Exposed Skaarsgaardian Infant",
+			"description": "Every hard-hearted Skaarsgaardian mother knows her baby’s not worth keeping if it can’t survive a few days out in the cold on its own. Overpopulation is, for unknown reasons, a serious concern among the Northmen. You were likely swapped with a changeling and frittered away by faeries, making cuckolds of your cruel parents",
+			"traits": {
+				"Hardy": 2,
+				"Mistrusted": 2
+			},
+			"conditions": [],
+			"abilities": [
+				{
+					"id": "fae_touched"
+				}
+			],
+			"items": [],
+			"icon": "res://Icons/Exposed Skaarsgaardian Infant.png"
+		},
+		{
+			"id": "deformed_refugee",
+			"name": "Deformed Refugee",
+			"description": "You are a survivor of the apocalyptic bombing that ended the last Great War. Though you escaped, like many of your kind, you bear scars from the strange magics that sundered your homeland",
+			"traits": {},
+			"conditions": [
+				{
+					"random_from": "Mutations",
+					"count": 2
+				}
+			],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Deformed Refugee.png"
+		},
+		{
+			"id": "foppish_elf",
+			"name": "Foppish Elf",
+			"description": "Despite your noble birth, you weren’t made for Knighthood. You were made for nights-in-the-hood, cruising for hunky half-orcs at 10:00 PM on your warmblood pony",
+			"traits": {
+				"Gay": 1,
+				"Noble": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Foppish Elf.png"
+		},
+		{
+			"id": "gnommunist_spy",
+			"name": "Gnommunist Spy",
+			"description": "You are an infiltrator (almost certainly an unsucessful one) trying to bring down Scarlatti from the inside. But the political establishment here trusts no one, let alone an outsider",
+			"traits": {
+				"Subtle": 1,
+				"Deceptive": 1,
+				"Politically Aware": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Gnommunist Spy.png"
+		},
+		{
+			"id": "penal_legionnaire",
+			"name": "Penal Legionnaire",
+			"description": "You just finished your sentence",
+			"traits": {
+				"Hardy": 1,
+				"Densensitized": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Penal Legionnaire.png"
+		},
+		{
+			"id": "kobold_corps_of_engineers_research_assistant",
+			"name": "Kobold Corps of Engineers Research Assistant -",
+			"description": "You played an underappreciated role in maintaining Scarlatti's crumbing Harrasment Infrastructure.  You were perhaps an understudy to a Fabricator Molestiarum or an Architectus Vexationis or perhaps even a Curator Infernum)",
+			"traits": {
+				"Rationalist": 1,
+				"Calculating": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Kobold Corps of Engineers Research Assistant -.png"
+		},
+		{
+			"id": "escaped_slave",
+			"name": "Escaped Slave",
+			"description": "Slavery is only legal here in Scarlatti and in one other country on the continent, and yet still you came here. Why?",
+			"traits": {
+				"Calculating": 1,
+				"Desensitized": 2
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Escaped Slave.png"
+		},
+		{
+			"id": "spiritually_depleted_adjunct_professor",
+			"name": "Spiritually Depleted Adjunct Professor",
+			"description": "A dubiously compensated educator at one of Galba’s prestigious houses of learning. Perhaps you were a professor at Scarlatti’s University of Minschaleft, or merely a visiting Lecturer",
+			"traits": {
+				"Wordly": 1,
+				"Rationalist": 1
+			},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Spiritually Depleted Adjunct Professor.png"
+		},
+		{
+			"id": "grail_squire",
+			"name": "Grail Squire",
+			"description": "You have been granted your first quest, and your first opportunity for transcendence of the human form. Your lady watches",
+			"traits": {},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Grail Squire.png"
+		},
+		{
+			"id": "perfected_paralegal",
+			"name": "Perfected Paralegal",
+			"description": "You were an assistant to a Barrister of the Perfected Law in Justinia. Your services were no longer needed when that country fell to lawlessness",
+			"traits": {},
+			"conditions": [],
+			"abilities": [],
+			"items": [],
+			"icon": "res://Icons/Perfected Paralegal.png"
+		}
+	]
+}

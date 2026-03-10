@@ -5,12 +5,11 @@ extends Node
 class_name ItemDatabaseClass
 
 # Cached data from JSON files
-var weapons: Dictionary = {}      # name -> weapon data
-var equipment: Dictionary = {}    # name -> equipment data
+var weapons: Dictionary = {}	# name -> weapon data
+var equipment: Dictionary = {}	# name -> equipment data
 
 # File paths (can be customized)
-var weapons_json_path: String = "res://data/weapons_shapes.json"
-var equipment_json_path: String = "res://data/equipment_shapes.json"
+var items_json_path: String = "res://data/Items2.json"
 
 signal database_loaded
 signal database_load_failed(error: String)
@@ -20,27 +19,25 @@ func _ready() -> void:
 	load_databases()
 
 func load_databases() -> void:
-	"""Load all item databases from JSON files"""
-	var success = true
-	
-	if not _load_weapons_database():
-		success = false
-	
-	if not _load_equipment_database():
-		success = false
+	"""Load all item databases from the unified JSON file"""
+	var success = _load_items_database()
 	
 	if success:
 		emit_signal("database_loaded")
 		#print("ItemDatabase: Loaded %d weapons, %d equipment" % [weapons.size(), equipment.size()])
 
-func _load_weapons_database() -> bool:
-	if not FileAccess.file_exists(weapons_json_path):
-		push_warning("ItemDatabase: Weapons file not found at %s" % weapons_json_path)
+func _load_items_database() -> bool:
+	if not FileAccess.file_exists(items_json_path):
+		var err_msg = "ItemDatabase: Items file not found at %s" % items_json_path
+		push_warning(err_msg)
+		emit_signal("database_load_failed", err_msg)
 		return false
 	
-	var file = FileAccess.open(weapons_json_path, FileAccess.READ)
+	var file = FileAccess.open(items_json_path, FileAccess.READ)
 	if not file:
-		push_error("ItemDatabase: Failed to open weapons file")
+		var err_msg = "ItemDatabase: Failed to open items file"
+		push_error(err_msg)
+		emit_signal("database_load_failed", err_msg)
 		return false
 	
 	var json = JSON.new()
@@ -48,42 +45,26 @@ func _load_weapons_database() -> bool:
 	file.close()
 	
 	if error != OK:
-		push_error("ItemDatabase: Failed to parse weapons JSON: %s" % json.get_error_message())
+		var err_msg = "ItemDatabase: Failed to parse items JSON: %s" % json.get_error_message()
+		push_error(err_msg)
+		emit_signal("database_load_failed", err_msg)
 		return false
 	
 	var data = json.get_data()
+	
+	# Parse Weapons
 	if data.has("weapons"):
 		for weapon_data in data["weapons"]:
-			var name = weapon_data.get("name", "")
-			if name:
-				weapons[name.to_lower()] = weapon_data
+			var weapon_name = weapon_data.get("name", "")
+			if weapon_name:
+				weapons[weapon_name.to_lower()] = weapon_data
 	
-	return true
-
-func _load_equipment_database() -> bool:
-	if not FileAccess.file_exists(equipment_json_path):
-		push_warning("ItemDatabase: Equipment file not found at %s" % equipment_json_path)
-		return false
-	
-	var file = FileAccess.open(equipment_json_path, FileAccess.READ)
-	if not file:
-		push_error("ItemDatabase: Failed to open equipment file")
-		return false
-	
-	var json = JSON.new()
-	var error = json.parse(file.get_as_text())
-	file.close()
-	
-	if error != OK:
-		push_error("ItemDatabase: Failed to parse equipment JSON: %s" % json.get_error_message())
-		return false
-	
-	var data = json.get_data()
+	# Parse Equipment
 	if data.has("equipment"):
 		for equip_data in data["equipment"]:
-			var id = equip_data.get("id", "")
-			if id:
-				equipment[id] = equip_data
+			var equip_name = equip_data.get("name", "")
+			if equip_name:
+				equipment[equip_name.to_lower()] = equip_data
 	
 	return true
 
@@ -124,7 +105,7 @@ func find_weapons_by_damage_type(damage_type: String) -> Array:
 
 func get_equipment_data(equipment_name: String) -> Dictionary:
 	"""Get equipment data by name (case-insensitive)"""
-	var key = Globals.name_to_id(equipment_name)
+	var key = equipment_name.to_lower()
 	if equipment.has(key):
 		return equipment[key].duplicate()
 	push_warning("ItemDatabase: Equipment '%s' not found" % equipment_name)
@@ -173,10 +154,9 @@ func reload_databases() -> void:
 	equipment.clear()
 	load_databases()
 
-func set_database_paths(weapons_path: String, equipment_path: String) -> void:
-	"""Set custom paths for database files"""
-	weapons_json_path = weapons_path
-	equipment_json_path = equipment_path
+func set_database_path(items_path: String) -> void:
+	"""Set custom path for the unified database file"""
+	items_json_path = items_path
 
 func has_weapon(weapon_name: String) -> bool:
 	return weapons.has(weapon_name.to_lower())

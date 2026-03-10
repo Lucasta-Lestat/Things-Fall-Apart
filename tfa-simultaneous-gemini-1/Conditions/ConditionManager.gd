@@ -132,18 +132,20 @@ static func register_conditions(conditions_array: Array) -> void:
 
 
 ## Apply a condition to this character
+# Update apply_condition signature and the instance creation:
+
 func apply_condition(
 	condition_id: String,
 	source: Node = null,
 	stacks: int = 1,
-	duration_override: float = -2.0  # -2 means use default
+	duration_override: float = -2.0,
+	target_limb = null  # LimbType or null
 ) -> ConditionInstance:
 	var template = condition_registry.get(condition_id)
 	if not template:
 		push_warning("Unknown condition: %s" % condition_id)
 		return null
 	
-	# Check for immunities
 	if _is_immune_to(condition_id):
 		return null
 	
@@ -152,7 +154,6 @@ func apply_condition(
 	
 	if existing:
 		if template.stackable:
-			# Add stacks to existing
 			var old_stacks = existing.stacks
 			var added = existing.add_stacks(stacks)
 			if added > 0:
@@ -160,18 +161,16 @@ func apply_condition(
 				stats_recalculated.emit()
 			return existing
 		else:
-			# Refresh duration for non-stackable
 			if duration_override > -2.0:
 				existing.expires_at = current_time + duration_override if duration_override > 0 else -1.0
 			elif template.duration > 0:
 				existing.expires_at = current_time + template.duration
 			return existing
 	
-	# Create new instance
-	var instance = ConditionInstance.new(template, source)
+	# Create new instance — now with target_limb
+	var instance = ConditionInstance.new(template, source, target_limb)
 	instance.stacks = min(stacks, template.max_tier) if template.stackable else 1
 	
-	# Set duration
 	if duration_override > -2.0:
 		if duration_override > 0:
 			instance.expires_at = current_time + duration_override
@@ -185,8 +184,6 @@ func apply_condition(
 	stats_recalculated.emit()
 	
 	return instance
-
-
 ## Remove a condition completely
 func remove_condition(condition_id: String) -> bool:
 	if condition_id not in conditions:

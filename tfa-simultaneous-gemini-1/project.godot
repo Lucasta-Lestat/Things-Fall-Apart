@@ -45,6 +45,7 @@ SfxManager="*res://Global/SFXManager.gd"
 MusicManager="*res://Global/MusicManager.gd"
 PauseManager="*res://Global/PauseManager.gd"
 AbilityDatabase2="*res://Global/AbilityDatabase2.gd"
+BackgroundDabase="*uid://b8qfeiymqx8wj"
 
 [display]
 

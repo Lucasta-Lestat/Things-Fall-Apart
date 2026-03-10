@@ -32,18 +32,56 @@ var instance_id: String = ""
 
 static var _next_id: int = 0
 
+var target_limb = null  # LimbType enum value or null
 
-func _init(p_condition: Condition = null, p_source: Node = null) -> void:
+# Update _init to accept it:
+func _init(p_condition: Condition = null, p_source: Node = null, p_target_limb = null) -> void:
 	condition = p_condition
 	source = p_source
+	target_limb = p_target_limb
 	instance_id = "cond_%d_%d" % [_next_id, randi()]
 	_next_id += 1
 	
 	if condition:
-		# Initialize trigger times for all triggered effects
 		for i in range(condition.triggered_effects.size()):
 			last_trigger_times[i] = -INF
 
+# Update to_dict:
+func to_dict() -> Dictionary:
+	return {
+		"condition_id": condition.id if condition else "",
+		"stacks": stacks,
+		"is_suppressed": is_suppressed,
+		"applied_at": applied_at,
+		"expires_at": expires_at,
+		"custom_data": custom_data,
+		"last_trigger_times": last_trigger_times,
+		"instance_id": instance_id,
+		"target_limb": target_limb if target_limb != null else -1
+	}
+
+# Update from_dict:
+static func from_dict(data: Dictionary, condition_registry: Dictionary) -> ConditionInstance:
+	var condition_id = data.get("condition_id", "")
+	var condition_template = condition_registry.get(condition_id)
+	
+	if not condition_template:
+		push_warning("Unknown condition ID: %s" % condition_id)
+		return null
+	
+	var saved_limb = data.get("target_limb", -1)
+	var limb_value = null if saved_limb == -1 else saved_limb
+	
+	var instance = ConditionInstance.new(condition_template, null, limb_value)
+	instance.stacks = data.get("stacks", 1)
+	instance.is_suppressed = data.get("is_suppressed", false)
+	instance.applied_at = data.get("applied_at", 0.0)
+	instance.expires_at = data.get("expires_at", -1.0)
+	instance.custom_data = data.get("custom_data", {})
+	instance.last_trigger_times = data.get("last_trigger_times", {})
+	instance.instance_id = data.get("instance_id", "cond_loaded_%d" % randi())
+	
+	return instance
 
 func apply(game_time: float) -> void:
 	applied_at = game_time
@@ -70,7 +108,7 @@ func add_stacks(amount: int) -> int:
 		return stacks
 	
 	var old_stacks = stacks
-	stacks = min(stacks + amount, condition.max_stacks)
+	stacks = min(stacks + amount, condition.max_tier)
 	return stacks - old_stacks  # Return actual stacks added
 
 
@@ -110,38 +148,3 @@ func get_scaled_stat_modifiers() -> Array[Dictionary]:
 		scaled.append(scaled_mod)
 	
 	return scaled
-
-
-func to_dict() -> Dictionary:
-	"""Serialize to dictionary for saving."""
-	return {
-		"condition_id": condition.id if condition else "",
-		"stacks": stacks,
-		"is_suppressed": is_suppressed,
-		"applied_at": applied_at,
-		"expires_at": expires_at,
-		"custom_data": custom_data,
-		"last_trigger_times": last_trigger_times,
-		"instance_id": instance_id
-	}
-
-
-static func from_dict(data: Dictionary, condition_registry: Dictionary) -> ConditionInstance:
-	"""Deserialize from dictionary."""
-	var condition_id = data.get("condition_id", "")
-	var condition_template = condition_registry.get(condition_id)
-	
-	if not condition_template:
-		push_warning("Unknown condition ID: %s" % condition_id)
-		return null
-	
-	var instance = ConditionInstance.new(condition_template, null)
-	instance.stacks = data.get("stacks", 1)
-	instance.is_suppressed = data.get("is_suppressed", false)
-	instance.applied_at = data.get("applied_at", 0.0)
-	instance.expires_at = data.get("expires_at", -1.0)
-	instance.custom_data = data.get("custom_data", {})
-	instance.last_trigger_times = data.get("last_trigger_times", {})
-	instance.instance_id = data.get("instance_id", "cond_loaded_%d" % randi())
-	
-	return instance

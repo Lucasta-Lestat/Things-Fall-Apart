@@ -1,5 +1,5 @@
 # RaceDatabase.gd
-# Autoload singleton — add to Project > AutoLoad as "RaceDatabase"
+# Autoload singleton - add to Project > AutoLoad as "RaceDatabase"
 extends Node
 
 var _races: Dictionary = {}
@@ -57,16 +57,19 @@ func get_races_by_size(size: String) -> Array:
 # ---------------------------------------------------------------------------
 # Apply race data to a character node
 # ---------------------------------------------------------------------------
-# Expects `character` to be the node that owns the stat variables shown in
-# the character script (strength, constitution, body_width, skin_color, etc.)
+# Expects `character` to own the stat vars (strength, constitution, dexterity,
+# will, intelligence, charisma, body_width, skin_color, arm_length, etc.)
 #
-# `options` is an optional dictionary for character-creation choices:
-#   - "gender"       : "male" or "female" (defaults to "male")
-#   - "skin_index"   : int index into the race's skin_colors array
-#   - "hair_index"   : int index into the race's hair_colors array
-#   - "hair_style"   : string name of HairStyle enum value (e.g. "MOHAWK")
-#   - "trait_choices" : Array of trait names when the race has a "_choice" entry
-# ---------------------------------------------------------------------------
+# Child nodes expected:
+#   "EquipmentManager" with equip_ability_from_id(id) -> bool
+#   "ConditionManager" with apply_condition(id, source, stacks, duration)
+#
+# `options` dict:
+#   "gender"       : "male" / "female" (default "male")
+#   "skin_index"   : int index into skin_colors
+#   "hair_index"   : int index into hair_colors
+#   "hair_style"   : HairStyle string e.g. "MOHAWK"
+#   "trait_choices" : Array of trait names for races with "_choice"
 
 func apply_race_to_character(character, race_id: String, options: Dictionary = {}) -> void:
 	var race = get_race_data(race_id)
@@ -77,8 +80,7 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	var gender: String = options.get("gender", "male")
 
 	# --- Core identity ---
-	if character.has_method("set") or true:  # all Objects support set()
-		character.set("race_id", race_id) if "race_id" in character else null
+	_set_if_exists(character, "race_id", race_id)
 
 	# --- Ability Score Increases ---
 	var asi: Dictionary = race.get("ability_score_increases", {})
@@ -86,8 +88,6 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_apply_asi(character, "constitution",  asi.get("Con", 0))
 	_apply_asi(character, "dexterity",     asi.get("Dex", 0))
 	_apply_asi(character, "will",          asi.get("Wil", 0) + asi.get("Will", 0))
-	# Intelligence and Charisma — store as modifiers even if the character
-	# script doesn't yet expose them; future-proofs the data.
 	_apply_asi(character, "intelligence",  asi.get("Int", 0))
 	_apply_asi(character, "charisma",      asi.get("Cha", 0))
 
@@ -97,79 +97,55 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 		character.traits = {}
 	for trait_name in race_traits:
 		if trait_name == "_choice":
-			# Apply player-chosen traits if provided
 			for chosen in options.get("trait_choices", []):
 				character.traits[chosen] = 1
 			continue
 		character.traits[trait_name] = race_traits[trait_name]
 
-	# --- Size & movement ---
-	if "size" in character and race.get("size"):
-		character.size = race["size"]
-	if race.get("speed") != null:
-		# speed column is the base; centaur overrides via feature
-		character.set("base_speed", race["speed"]) if "base_speed" in character else null
-	if race.get("range_increase") != null and race["range_increase"] != 0:
-		character.set("range_increase", race["range_increase"]) if "range_increase" in character else null
+	# --- Size ---
+	_set_if_exists(character, "creature_size", race.get("size"))
+
+	# --- Speed modifier (additive offset from base 30) ---
+	# Halflings: -5, Centaur 60 base would be +30, etc.
+	var speed_mod: float = race.get("speed_modifier", 0)
+	if speed_mod != 0:
+		_add_to(character, "speed_modifier", speed_mod)
+
+	# --- Arm length bonus (from range_increase column) ---
+	# Trolls +5, High-Elves +5, Bugaboos +5
+	var arm_bonus: float = race.get("arm_length_bonus", 0)
+	if arm_bonus != 0:
+		_add_to(character, "arm_length", arm_bonus)
 
 	# --- Body dimensions ---
 	var body: Dictionary = race.get("body", {})
-	_set_if_exists(character, "body_size_mod",      body.get("body_size_mod", 1.0))
-	_set_if_exists(character, "body_width",          body.get("body_width"))
-	_set_if_exists(character, "body_height",         body.get("body_height"))
-	_set_if_exists(character, "head_width",          body.get("head_width"))
-	_set_if_exists(character, "head_length",         body.get("head_length"))
-	_set_if_exists(character, "shoulder_y_offset",   body.get("shoulder_y_offset"))
-	_set_if_exists(character, "leg_length",          body.get("leg_length"))
-	_set_if_exists(character, "leg_width",           body.get("leg_width"))
-	_set_if_exists(character, "leg_spacing",         body.get("leg_spacing"))
+	_set_if_exists(character, "body_size_mod",    body.get("body_size_mod", 1.0))
+	_set_if_exists(character, "body_width",        body.get("body_width"))
+	_set_if_exists(character, "body_height",       body.get("body_height"))
+	_set_if_exists(character, "head_width",        body.get("head_width"))
+	_set_if_exists(character, "head_length",       body.get("head_length"))
+	_set_if_exists(character, "shoulder_y_offset", body.get("shoulder_y_offset"))
+	_set_if_exists(character, "leg_length",        body.get("leg_length"))
+	_set_if_exists(character, "leg_width",         body.get("leg_width"))
+	_set_if_exists(character, "leg_spacing",       body.get("leg_spacing"))
 
-	# Recompute leg animation values from body_size_mod
+	# Recompute leg animation from body_size_mod
 	var bsm: float = body.get("body_size_mod", 1.0)
 	_set_if_exists(character, "leg_swing_time",   bsm * Globals.default_leg_swing_time)
 	_set_if_exists(character, "leg_swing_speed",  bsm * Globals.default_leg_swing_speed)
 	_set_if_exists(character, "leg_swing_amount", bsm * Globals.default_leg_swing_amount)
 
 	# --- Appearance ---
-	var appearance: Dictionary = race.get("appearance", {})
+	_apply_appearance(character, race.get("appearance", {}), options)
 
-	# Skin color
-	var skin_colors: Array = appearance.get("skin_colors", ["#F5D6B8"])
-	var skin_idx: int = options.get("skin_index", randi() % skin_colors.size())
-	skin_idx = clampi(skin_idx, 0, skin_colors.size() - 1)
-	character.skin_color = Color(skin_colors[skin_idx])
-	character.body_color = character.skin_color.darkened(0.15)
-
-	# Hair color
-	var hair_colors: Array = appearance.get("hair_colors", [])
-	if hair_colors.size() > 0:
-		var hair_idx: int = options.get("hair_index", randi() % hair_colors.size())
-		hair_idx = clampi(hair_idx, 0, hair_colors.size() - 1)
-		character.hair_color = Color(hair_colors[hair_idx])
-	else:
-		# Hairless race — set transparent so draw code can skip
-		character.hair_color = Color(0, 0, 0, 0)
-
-	# Hair style
-	var valid_styles: Array = appearance.get("hair_styles", ["FULL"])
-	if options.has("hair_style") and options["hair_style"] in valid_styles:
-		character.hair_style = _hair_style_from_string(options["hair_style"])
-	elif valid_styles.size() > 0:
-		character.hair_style = _hair_style_from_string(valid_styles[0])
-
-	# Blood
-	if appearance.has("blood_color"):
-		var blood_tex_color = Color(appearance["blood_color"])
-		_set_if_exists(character, "blood_color", blood_tex_color)
-
-	# --- Stat overrides (crit, mana regen) ---
+	# --- Stat overrides ---
 	var stats: Dictionary = race.get("stat_overrides", {})
-	_set_if_exists(character, "CRIT_THRESHOLD",      stats.get("crit_threshold", 5))
-	_set_if_exists(character, "CRIT_FAIL_THRESHOLD",  stats.get("crit_fail_threshold", 96))
-	_set_if_exists(character, "mp_regen_amount",      stats.get("mp_regen_amount", 5))
-	_set_if_exists(character, "mp_regen_interval",    stats.get("mp_regen_interval", 0.5))
+	_set_if_exists(character, "CRIT_THRESHOLD",     stats.get("crit_threshold", 5))
+	_set_if_exists(character, "CRIT_FAIL_THRESHOLD", stats.get("crit_fail_threshold", 96))
+	_set_if_exists(character, "mp_regen_amount",     stats.get("mp_regen_amount", 5))
+	_set_if_exists(character, "mp_regen_interval",   stats.get("mp_regen_interval", 0.5))
 
-	# --- Height / Weight (pick gendered value) ---
+	# --- Height / Weight (gendered) ---
 	var height_data: Dictionary = race.get("height", {})
 	var weight_data: Dictionary = race.get("weight", {})
 	_set_if_exists(character, "race_height", height_data.get(gender, height_data.get("male")))
@@ -184,8 +160,90 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	# --- Creature type ---
 	_set_if_exists(character, "creature_type", race.get("creature_type"))
 
-	# --- Features (array of feature ids the character gains) ---
-	_set_if_exists(character, "racial_features", race.get("features", []))
+	# --- Equip active racial abilities ---
+	_equip_racial_abilities(character, race.get("active_abilities", []))
+
+	# --- Apply passive racial conditions ---
+	_apply_racial_conditions(character, race.get("passive_conditions", []))
+
+# ---------------------------------------------------------------------------
+# Active abilities - equip via EquipmentManager
+# These are usable skills: breath_weapon, charm_person, light_cantrip, etc.
+# ---------------------------------------------------------------------------
+
+func _equip_racial_abilities(character, ability_ids: Array) -> void:
+	if ability_ids.is_empty():
+		return
+
+	var equip_mgr = _find_child_by_name(character, "Inventory")
+	if not equip_mgr:
+		if character.has_method("equip_ability_from_id"):
+			equip_mgr = character
+		else:
+			push_warning("No EquipmentManager on %s - skipping racial abilities" % character.name)
+			return
+
+	for ability_id in ability_ids:
+		var success = equip_mgr.equip_ability_from_id(ability_id)
+		if success:
+			print("[RaceDatabase] Equipped racial ability '" + ability_id + "' on " + character.name)
+		else:
+			push_warning("[RaceDatabase] Failed to equip ability '" + ability_id + "' on " + character.name)
+
+# ---------------------------------------------------------------------------
+# Passive conditions - apply via ConditionManager
+# Always-on racial buffs: lucky, flight, tough_claws, regen, etc.
+# Applied with duration -1 (permanent) and source null (innate).
+# ---------------------------------------------------------------------------
+
+func _apply_racial_conditions(character, condition_ids: Array) -> void:
+	if condition_ids.is_empty():
+		return
+
+	var cond_mgr = _find_child_by_name(character, "ConditionManager")
+	if not cond_mgr:
+		push_warning("No ConditionManager on %s - skipping racial conditions" % character.name)
+		return
+
+	for condition_id in condition_ids:
+		# source=null (innate), stacks=1, duration=-1.0 (permanent)
+		var instance = cond_mgr.apply_condition(condition_id, null, 1, -1.0)
+		if instance:
+			print("[RaceDatabase] Applied racial condition '" + condition_id + "' on " + character.name)
+		else:
+			push_warning("[RaceDatabase] Condition '" + condition_id + "' not registered or " + character.name + " is immune")
+
+# ---------------------------------------------------------------------------
+# Appearance
+# ---------------------------------------------------------------------------
+
+func _apply_appearance(character, appearance: Dictionary, options: Dictionary) -> void:
+	# Skin color
+	var skin_colors: Array = appearance.get("skin_colors", ["#F5D6B8"])
+	var skin_idx: int = options.get("skin_index", randi() % skin_colors.size())
+	skin_idx = clampi(skin_idx, 0, skin_colors.size() - 1)
+	character.skin_color = Color(skin_colors[skin_idx])
+	character.body_color = character.skin_color.darkened(0.15)
+
+	# Hair color
+	var hair_colors: Array = appearance.get("hair_colors", [])
+	if hair_colors.size() > 0:
+		var hair_idx: int = options.get("hair_index", randi() % hair_colors.size())
+		hair_idx = clampi(hair_idx, 0, hair_colors.size() - 1)
+		character.hair_color = Color(hair_colors[hair_idx])
+	else:
+		character.hair_color = Color(0, 0, 0, 0)
+
+	# Hair style
+	var valid_styles: Array = appearance.get("hair_styles", ["FULL"])
+	if options.has("hair_style") and options["hair_style"] in valid_styles:
+		character.hair_style = _hair_style_from_string(options["hair_style"])
+	elif valid_styles.size() > 0:
+		character.hair_style = _hair_style_from_string(valid_styles[0])
+
+	# Blood color
+	if appearance.has("blood_color"):
+		_set_if_exists(character, "blood_color", Color(appearance["blood_color"]))
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -197,16 +255,24 @@ func _apply_asi(character, stat_name: String, modifier: int) -> void:
 	if stat_name in character:
 		character.set(stat_name, character.get(stat_name) + modifier)
 
+func _add_to(character, property: String, amount: float) -> void:
+	if property in character:
+		character.set(property, character.get(property) + amount)
+
 func _set_if_exists(character, property: String, value) -> void:
 	if value == null:
 		return
 	if property in character:
 		character.set(property, value)
 
+func _find_child_by_name(node: Node, child_name: String) -> Node:
+	for child in node.get_children():
+		if child.name == child_name:
+			return child
+	return null
+
 func _hair_style_from_string(style_name: String) -> int:
-	# Maps string names to the HairStyle enum values defined on the character.
-	# Returns int so it works regardless of where the enum lives.
-	match style_name: #make sure these enums are correct
+	match style_name:
 		"NONE":       return 0
 		"HORSESHOE":  return 1
 		"FULL":       return 2
@@ -214,4 +280,4 @@ func _hair_style_from_string(style_name: String) -> int:
 		"POMPADOUR":  return 4
 		"BUZZCUT":    return 5
 		"MOHAWK":     return 6
-		_:            return 2  # Default to FULL
+		_:            return 2

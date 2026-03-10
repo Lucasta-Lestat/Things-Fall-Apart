@@ -16,6 +16,7 @@ enabled = false
 script = ExtResource("3_y3car")
 
 [node name="Background" type="Sprite2D" parent="." unique_id=1715537969]
+visible = false
 z_index = -2
 position = Vector2(336.99997, 71.99999)
 scale = Vector2(5, 5)

@@ -7,16 +7,16 @@ signal destroyed(floor, grid_position)
 @export var floor_id: StringName 
 @export var use_blend_shader: bool = true  # Toggle shader on/off
 @export var blend_amount: float = 0.2  # Adjust per floor type if needed
-
+see Map loader
 var display_name: String
-var current_health: int
+@export var current_health: int
 var max_health: int
 var texture: String
 var size: Vector2 = Vector2(64,64)
 var walkability: float = 1.0
 var flammable: bool = false
 var conductive: bool = false
-var resources: Dictionary = {}
+var resources: Dictionary = {} #e.g. Wood:10 for a wooden floor
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 var damage: Dictionary = {"Bludgeoning": 1}
 
@@ -123,11 +123,19 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 func _destroy_floor():
 	# Notify the game world that this tile is now clear
 	emit_signal("destroyed", self, GridManager.world_to_map(global_position))
-	
+	#game.create_item()
 	# TODO: Implement spawning the actual resource items
-	print_rich(floor_id, " destroyed! Dropped: ", resources)
+	print_rich(floor_id, " destroyed! Dropped: ", resources, " (implement this with game.create_item()")
 	
 	queue_free()
 func change_texture(texture_path):
 	#print("attempting to update structure texture with: ", texture_path)
 	$Sprite.texture = load(texture_path)
+	
+# Add to floor.gd
+func _set_custom_texture(tex: ImageTexture):
+	sprite.texture = tex
+	# Recalculate scale to fit tile size
+	var tex_size = tex.get_size()
+	var ratio = size.x / tex_size.x
+	sprite.scale = Vector2(ratio, ratio)

@@ -416,7 +416,6 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 	var character_node = CharacterScene.instantiate()
 	character_node.global_position = spawn_position
 	
-	container.add_child(character_node)
 	
 	#Add ConditionManager:
 	var condition_manager = ConditionManager.new()
@@ -425,7 +424,8 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 	#character_node.add_child(targeting_system)
 	# Load character data
 	character_node.load_from_data(data)
-	
+	container.add_child(character_node)
+
 	characters_in_scene.append(character_node)
 	
 	print("Spawned character: ", data.get("name", "Unknown"))
@@ -661,7 +661,7 @@ func process_weapon_clash(
 
 		result["outcome"] = "stalemate"
 		print("weapon clash resulted in stalemate")
-		char2.apply_stagger(0.2)
+		char2.apply_stagger(0.2) #REMOVE? Or make a condtions
 		char1.apply_stagger(0.2)
 	elif abs(power_diff) < 5.0:
 		# Moderate difference - loser knocked back
