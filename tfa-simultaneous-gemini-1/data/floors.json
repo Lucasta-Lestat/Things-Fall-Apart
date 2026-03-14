@@ -1,5 +1,5 @@
 {
-	"dirt_floor":
+	"floor_dirt":
 		 {
 		"name":"Dirt",
 		"id":"floor_dirt",
@@ -59,9 +59,9 @@
 			"stone":10
 		}
 	},
-	"floor_grass":
+	"grass":
 		{
-		"id":"floor_grass",
+		"id":"grass",
 		"name":"Floor Grass",
 		"description":"A patch of grass",
 		"size": 0.25,
@@ -72,11 +72,12 @@
 		"flammable":true,
 		"conductive":false,
 		"max_health":10,
-		"current_health":30,
+		"current_health":10,
 		"damage_resistances":{
 
 		},
 		"resources":{
+			
 		}
 	}	
 }

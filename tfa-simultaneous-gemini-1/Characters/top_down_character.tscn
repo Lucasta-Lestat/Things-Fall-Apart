@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://cd64bdifyjjr0" path="res://Characters/collision_visualizer.gd" id="3_jcuat"]
 [ext_resource type="Script" uid="uid://dsya2vcimv0cn" path="res://Characters/fog_manager.gd" id="3_y3car"]
 [ext_resource type="Texture2D" uid="uid://cnvm7i2hdkasu" path="res://Dawn Chatelaine House.png" id="4_y3car"]
+[ext_resource type="Script" uid="uid://bngn6oy1bvvmt" path="res://Structures/MapLoader.gd" id="5_krf2i"]
 
 [node name="TopDownCharacterScene" type="Node2D" unique_id=1936713047]
 script = ExtResource("1_ltjhp")
@@ -21,3 +22,6 @@ z_index = -2
 position = Vector2(336.99997, 71.99999)
 scale = Vector2(5, 5)
 texture = ExtResource("4_y3car")
+
+[node name="MapLoader" type="Node2D" parent="." unique_id=555230935]
+script = ExtResource("5_krf2i")

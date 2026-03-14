@@ -7,7 +7,6 @@ signal destroyed(floor, grid_position)
 @export var floor_id: StringName 
 @export var use_blend_shader: bool = true  # Toggle shader on/off
 @export var blend_amount: float = 0.2  # Adjust per floor type if needed
-see Map loader
 var display_name: String
 @export var current_health: int
 var max_health: int
@@ -24,15 +23,19 @@ var damage: Dictionary = {"Bludgeoning": 1}
 @onready var sprite: Sprite2D = $Sprite
 @onready var collision_shape: Area2D = $Area2D
 
+var use_custom_texture: bool = false
+var custom_texture: ImageTexture
+var skip_grid_snap: bool = false
+
 # Preload the shader material
 const BLEND_SHADER = preload("res://Structures/floors/floor_blend_material.tres")
 
 func _ready():
 	apply_floor_data()
 	floating_text_label.visible = false
-	var grid_pos = GridManager.world_to_map(global_position)
-	global_position = GridManager.map_to_world(grid_pos)
-	
+	if not skip_grid_snap:
+		var grid_pos = GridManager.world_to_map(global_position)
+		global_position = GridManager.map_to_world(grid_pos)
 	# Apply shader after texture is loaded
 	if use_blend_shader:
 		apply_blend_shader()
@@ -42,23 +45,24 @@ func apply_floor_data():
 	if not data:
 		printerr("Failed to get data for floor_id: ", floor_id)
 		return
-	floor_id = data.id	
+	floor_id = data.id
 	max_health = data.max_health
 	current_health = max_health
 	resources = data.resources.duplicate()
-	
-	if "alternate_textures" in data.keys():
-		sprite.texture = load(data.alternate_textures.pick_random())
-	else:
-		sprite.texture = load(data.texture)
-		
 	walkability = data.walkability
 	flammable = data.flammable
 	conductive = data.conductive
-	
+
+	if use_custom_texture and custom_texture:
+		sprite.texture = custom_texture
+	elif "alternate_textures" in data.keys():
+		sprite.texture = load(data.alternate_textures.pick_random())
+	else:
+		sprite.texture = load(data.texture)
+
 	var initial_texture_size = sprite.texture.get_size()
 	var size_ratio = size.x / initial_texture_size.x
-	sprite.scale = Vector2( size_ratio, size_ratio)
+	sprite.scale = Vector2(size_ratio, size_ratio)
 
 func apply_blend_shader():
 	# Create a unique material instance for this floor
