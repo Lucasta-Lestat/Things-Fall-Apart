@@ -63,7 +63,6 @@ class CharacterData:
 	var dialogues: Array = []
 	var race: String # for now
 	var gender: String
-	
 	var icon: String
 	var base_ap: int = 4
 	var strength: int = 50

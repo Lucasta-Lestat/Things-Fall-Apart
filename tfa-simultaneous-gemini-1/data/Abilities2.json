@@ -39,6 +39,36 @@
 	  }
 	},
 	{
+	"id": "cloud_kill",
+	 "display_name": "Cloud Kill",
+	  "description": "Conjure a cloud of deadly poison.",
+	  "cooldown": 2.0,
+	  "visual_duration": 1.5,
+	  "costs": { "MP": 25 },
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": { "spell": 1, "poison": 3, "magical": 1, "attack": 1, "aoe": 2 },
+	  "target_shape": "circle",
+	  "targeting": {
+		"type": "point",
+		"range": 400.0,
+		"shape": "circle",
+		"radius": 80.0
+	  },
+	"projectile_speed": 50.0,
+	"effects": {
+		"type": "cloud",
+		"radius": 80,
+		"duration": 15.0,
+		"color": "#40804020",
+		"condition_id": "poisoned",
+		"condition_stacks": 1,
+		"apply_interval": 2.0,
+		"density": 0.99	
+		}
+	},
+	
+	{
 	  "id": "ice_storm",
 	  "display_name": "Ice Storm",
 	  "description": "Conjure a storm of ice that damages and slows all enemies in the area.",
@@ -229,92 +259,7 @@
 	  ],
 	  "visuals": { "impact_effect": "res://effects/heal_glow.tscn" }
 	},
-	{
-	  "id": "smite_undead",
-	  "display_name": "Smite Undead",
-	  "description": "Deal massive radiant damage to undead creatures.",
-	  "cooldown": 10.0,
-	  "costs": { "MP": 20 },
-	  "cast_time": 0.5,
-	  "traits": { "spell": 1, "radiant": 3, "magical": 1, "attack": 2, "holy": 4 },
-	  "targeting": {
-		"type": "point",
-		"range": 250.0,
-		"shape": "circle",
-		"radius": 60.0
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "radiant": 80 },
-		  "target_traits": ["undead"],
-		  "immune_traits": ["holy"]
-		},
-		{
-		  "type": "damage",
-		  "damage": { "radiant": 20 },
-		  "target_traits": [],
-		  "immune_traits": ["undead", "holy"]
-		}
-	  ],
-	  "visuals": { "impact_effect": "res://effects/holy_burst.tscn" }
-	},
-	{
-	  "id": "poison_cloud",
-	  "display_name": "Poison Cloud",
-	  "description": "Create a lingering cloud of poison that damages enemies over time.",
-	  "cooldown": 14.0,
-	  "costs": { "MP": 30 },
-	  "cast_time": 1.0,
-	  "traits": { "spell": 1, "poison": 3, "magical": 1, "attack": 1, "aoe": 2, "dot": 3 },
-	  "targeting": {
-		"type": "point",
-		"range": 350.0,
-		"shape": "circle",
-		"radius": 90.0
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "poison": 10 }
-		},
-		{
-		  "type": "apply_condition",
-		  "condition_id": "poisoned",
-		  "stacks": 3,
-		  "chance": 0.9
-		}
-	  ],
-	  "visuals": { "impact_effect": "res://effects/poison_cloud.tscn" }
-	},
-	{
-	  "id": "wind_gust",
-	  "display_name": "Wind Gust",
-	  "description": "Create a strong gust of wind that pushes enemies in a direction.",
-	  "cooldown": 8.0,
-	  "costs": { "MP": 15 },
-	  "cast_time": 0.0,
-	  "traits": { "spell": 1, "wind": 3, "magical": 1, "control": 2 },
-	  "targeting": {
-		"type": "point",
-		"range": 300.0,
-		"shape": "rectangle",
-		"size": { "x": 150, "y": 80 }
-	  },
-	  "effects": [
-		{
-		  "type": "force_field",
-		  "field_type": "wind",
-		  "radius": 100.0,
-		  "strength": 700.0,
-		  "duration": 2.0,
-		  "direction_x": 1,
-		  "direction_y": 0,
-		  "affected_traits": []
-		}
-	  ],
-	  "visuals": { "impact_effect": "res://effects/wind_effect.tscn" }
-	},
+	
 	{
 	  "id": "shield_bash",
 	  "display_name": "Shield Bash",
@@ -346,8 +291,8 @@
 	  "animation": "shield_bash"
 	},
 	{
-	  "id": "berserker_rage",
-	  "display_name": "Berserker Rage",
+	  "id": "rage",
+	  "display_name": "Rage",
 	  "description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
 	  "cooldown": 30.0,
 	  "costs": { "HP": 10 },

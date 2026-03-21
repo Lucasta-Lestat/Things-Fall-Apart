@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://df3ts0usqktg6" path="res://Characters/ProceduralCharacter.gd" id="1_vvvec"]
 [ext_resource type="Script" uid="uid://c2ahw6u50iqlc" path="res://Characters/dual_health_bars.gd" id="2_r7xje"]
+[ext_resource type="Script" uid="uid://dpqqr0xmkw7fj" path="res://Conditions/ConditionManager.gd" id="3_r7xje"]
 
 [node name="ProceduralCharacter" type="CharacterBody2D" unique_id=734602895]
 script = ExtResource("1_vvvec")
@@ -13,3 +14,7 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("2_r7xje")
+
+[node name="ConditionManager" type="Node" parent="." unique_id=816682641]
+script = ExtResource("3_r7xje")
+metadata/_custom_type_script = "uid://dpqqr0xmkw7fj"

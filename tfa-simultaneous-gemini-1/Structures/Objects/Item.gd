@@ -116,7 +116,6 @@ func _apply_item_data():
 
 func take_damage(amount: Dictionary, success_level:int = 0):
 	var damage_multiplier = pow(1.5,success_level)
-
 	for damage_type in amount.keys():
 		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier - self.damage_resistances[damage_type]))
 		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)

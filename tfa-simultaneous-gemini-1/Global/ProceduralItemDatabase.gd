@@ -7,7 +7,7 @@ class_name ItemDatabaseClass
 # Cached data from JSON files
 var weapons: Dictionary = {}	# name -> weapon data
 var equipment: Dictionary = {}	# name -> equipment data
-
+var items: Dictionary = {}		# name -> general item data
 # File paths (can be customized)
 var items_json_path: String = "res://data/Items2.json"
 
@@ -52,22 +52,44 @@ func _load_items_database() -> bool:
 	
 	var data = json.get_data()
 	
-	# Parse Weapons
-	if data.has("weapons"):
-		for weapon_data in data["weapons"]:
-			var weapon_name = weapon_data.get("name", "")
-			if weapon_name:
-				weapons[weapon_name.to_lower()] = weapon_data
-	
-	# Parse Equipment
-	if data.has("equipment"):
-		for equip_data in data["equipment"]:
-			var equip_name = equip_data.get("name", "")
-			if equip_name:
-				equipment[equip_name.to_lower()] = equip_data
+	# Support both formats:
+	# Old: {"weapons": [...], "equipment": [...]}
+	# New: flat array [{"type": "sword", ...}, {"equip_slot": "Chest", ...}, ...]
+	if data is Array:
+		_parse_flat_item_list(data)
+	elif data is Dictionary:
+		if data.has("weapons"):
+			for weapon_data in data["weapons"]:
+				var weapon_name = weapon_data.get("name", "")
+				if weapon_name:
+					weapons[weapon_name.to_lower()] = weapon_data
+		if data.has("equipment"):
+			for equip_data in data["equipment"]:
+				var equip_name = equip_data.get("name", "")
+				if equip_name:
+					equipment[equip_name.to_lower()] = equip_data
+		# Also handle flat list inside a dictionary wrapper
+		if data.has("items"):
+			_parse_flat_item_list(data["items"])
 	
 	return true
 
+func _parse_flat_item_list(item_list: Array) -> void:
+	"""Sort a flat array of items into weapons, equipment, and general items by type."""
+	var weapon_types = ["sword", "longsword", "axe", "dagger", "spear", "mace", "bow"]
+	var equipment_types = ["armor", "helmet", "shield", "boots", "gloves", "ring", "amulet", "cloak", "belt"]
+	for item_data in item_list:
+		var item_name = item_data.get("name", item_data.get("display_name", ""))
+		if not item_name:
+			continue
+		var item_key = Globals.name_to_id(item_name)
+		var item_type = item_data.get("type", "").to_lower()
+		if item_type in weapon_types:
+			weapons[item_key] = item_data
+		elif item_type in equipment_types:
+			equipment[item_key] = item_data
+		else:
+			items[item_key] = item_data
 # ===== WEAPON LOOKUPS =====
 
 func get_weapon_data(weapon_name: String) -> Dictionary:

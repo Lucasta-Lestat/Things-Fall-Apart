@@ -359,7 +359,6 @@ func get_bounds(character) -> Rect2:
 			return Rect2(pos - Vector2(radius, radius), Vector2(radius * 2, radius * 2))
 	return Rect2(character.global_position - Vector2(10, 10), Vector2(20, 20))
 
-
 func show_context_menu(character, position: Vector2):
 	# Create or get reference to your context menu scene
 	print("showing context menu")
@@ -372,7 +371,6 @@ func show_context_menu(character, position: Vector2):
 	print("game.context_menu_open: ", game.context_menu_open)
 	# Populate the menu with the character's interact options
 	context_menu.setup(character, character.interact_options)
-
 	# Add to scene
 	get_tree().root.add_child(context_menu)			
 func _perform_drag_selection(screen_rect: Rect2, shift_modifier: bool):

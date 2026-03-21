@@ -1,9 +1,9 @@
 # res://Structures/Structure.gd
-# Attach this to a StaticBody2D scene for any destructible object.
 extends StaticBody2D
 class_name Structure
 
 signal destroyed(structure, grid_position)
+signal health_changed(current_health, max_health, structure)
 
 @export var structure_id: StringName
 
@@ -13,6 +13,11 @@ var size: Vector2
 var resources: Dictionary = {} # e.g., {"wood": 20}
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 var damage: Dictionary = {"bludgeoning": 1} 
+var use_custom_texture: bool = false
+var custom_texture: ImageTexture
+var skip_grid_snap: bool = false
+var custom_size: Vector2 = Vector2.ZERO
+
 
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
@@ -22,9 +27,9 @@ func _ready():
 	_apply_structure_data()
 	# Snap to the grid
 	floating_text_label.visible = false
-
-	var grid_pos = GridManager.world_to_map(global_position)
-	global_position = GridManager.map_to_world(grid_pos)
+	if not skip_grid_snap:
+		var grid_pos = GridManager.world_to_map(global_position)
+		global_position = GridManager.map_to_world(grid_pos)
 
 func _apply_structure_data():
 	var data = StructureDatabase.get_structure_data(structure_id)
@@ -35,16 +40,16 @@ func _apply_structure_data():
 	max_health = data.max_health
 	current_health = max_health
 	resources = data.resources.duplicate()
-	sprite.texture = load(data.texture)
-	#structure_id = structure
-	#print(data.texture, " applying structure data with texture ", sprite.texture, " ", data.texture)
-	size = data.size
-	#print(size, data.size, "texture size")
-	#print
-	var initial_texture_size = sprite.texture.get_size()
-	#print("sprite size: ", sprite.texture.get_size())
-	var size_ratio =  size.x/initial_texture_size.x
-	sprite.scale = Vector2(size_ratio,size_ratio)
+	if use_custom_texture and custom_texture:
+		sprite.texture = custom_texture
+		# Texture is already cropped to the correct size, no scaling needed
+		sprite.scale = Vector2(1.0, 1.0)
+	else:
+		sprite.texture = load(data.texture)
+		size = data.size
+		var initial_texture_size = sprite.texture.get_size()
+		var size_ratio = size.x / initial_texture_size.x
+		sprite.scale = Vector2(size_ratio, size_ratio)
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
 	var damage_multiplier = pow(1.5,success_level)
@@ -76,7 +81,7 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 	emit_signal("health_changed", current_health, max_health, self)
 	
 	if current_health <= 0:
-		emit_signal("died", self); sprite.visible = false; $CollisionShape2D.disabled = true
+		_destroy_structure()
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
@@ -93,12 +98,9 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 	
 func _destroy_structure():
-	# Notify the game world that this tile is now clear
-	emit_signal("destroyed", self, GridManager.world_to_map(global_position))
-	
-	# TODO: Implement spawning the actual resource items
-	print_rich(structure_id, " destroyed! Dropped: ", resources)
-	
+	emit_signal("destroyed", self, global_position)
+	sprite.visible = false
+	collision_shape.disabled = true
 	queue_free()
 
 func change_texture(texture_path):

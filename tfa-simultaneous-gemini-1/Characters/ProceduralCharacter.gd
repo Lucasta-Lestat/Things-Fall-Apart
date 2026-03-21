@@ -286,7 +286,7 @@ var attack_speed_multiplier: float:
 var clash_power: float:
 	get: return effective_strength() + (effective_constitution() * 0.3)
 #MP
-var MP = max_MP	
+@export var MP = max_MP	
 @export var mp_regen_amount: int = 5
 @export var mp_regen_interval: float = 0.5
 var mp_regen_timer: float = 0.0

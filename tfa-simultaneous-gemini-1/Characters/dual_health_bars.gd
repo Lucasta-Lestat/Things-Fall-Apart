@@ -93,12 +93,10 @@ func setup(target: Node2D) -> void:
 	# Adjust the path if your structure differs (e.g., target.get_node("Managers/ConditionManager"))
 	if _target_node.has_node("ConditionManager"):
 		_condition_manager = _target_node.get_node("ConditionManager")
+		print('found condition manager')
 	else:
-		# Search children if not a direct child
-		for child in _target_node.get_children():
-			if child is ConditionManager:
-				_condition_manager = child
-				break
+		print("Did not find condition managemer")
+
 
 func update_from_limbs(limbs: Dictionary) -> void:
 	for i in range(_bar_data.size()):

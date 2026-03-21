@@ -38,8 +38,11 @@ func _setup_structure_data():
 	var wood_wall = StructureData.new(&"wood_wall", "Wall Wood", 50, {&"wood": 20},Vector2(64,128))
 	structure_data[&"wood_wall"] = wood_wall
 	
-	var pine_tree = StructureData.new(&"pine_tree", "Pine Tree", 80, {&"wood": 40}, Vector2(75,75))
-	structure_data[&"oak_tree"] = pine_tree
+	var stone_wall = StructureData.new(&"stone_wall", "Wall Stone", 80, {&"stone": 20},Vector2(64,128))
+	structure_data[&"stone_wall"] = stone_wall
+	
+	var tree = StructureData.new(&"tree", "Tree", 80, {&"wood": 40}, Vector2(75,75))
+	structure_data[&"tree"] = tree
 	
 	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10},Vector2(64,128))
 	structure_data[&"door_wood"] = wood_door

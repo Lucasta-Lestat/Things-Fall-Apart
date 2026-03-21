@@ -27,6 +27,7 @@ var game: Node = null
 func _ready() -> void:
 	# Find the game node - adjust path as needed
 	game = get_tree().current_scene
+	print("debug vsiualizer ready")
 	z_index = 100  # Draw on top of everything
 
 func _process(_delta: float) -> void:
@@ -39,9 +40,11 @@ func _draw() -> void:
 	
 	var characters = game.characters_in_scene
 	if characters == null or characters.is_empty():
+		print("debug visualizer was unable to find characters")
 		return
 	
 	for character in characters:
+		print("debug visualizer found a character: ")
 		if character == null or not is_instance_valid(character):
 			continue
 		

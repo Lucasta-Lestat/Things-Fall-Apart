@@ -1,91 +1,307 @@
 {
-	"perrow":
+	"maps": [
 		{
-		"name":"Perrow",
-		"description":"A small, de facto independent city on the Northeastern shore of Scarlatti",
-		"size_x":50,
-		"size_y":50,
-		"base_floor_type":"dirt_floor",
-		"pc_spawn_points":[
-			{
-				"coming_from":"Route 1",
-				"party_member_1":
-				{
-					"x":10,
-					"y":10
-				}
-
+			"id": "cemetery",
+			"name": "Old Cemetery",
+			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
+			"images": {
+				"map": "res://Maps/cemetery.png",
+				"mask": "res://Maps/cemetery_mask.png",
+				"structures": "res://Maps/cemetery_structures.png",
+				"structures_mask": "res://Maps/cemetery_structures_mask.png"
 			},
-			{
-				"coming_from":"The Den",
-				"party_member_1":
-				{
-					"x":20,
-					"y":10
+			"tile_size": 64,
+			"ambient": {
+				"music": "res://Audio/Music/cemetery_ambient.ogg",
+				"fog": {
+					"color": [
+						0.2,
+						0.6,
+						0.2,
+						0.4
+					],
+					"size": [
+						512,
+						512
+					],
+					"density": 0.7,
+					"noise_scale": 6.0,
+					"drift": [
+						0.03,
+						0.015
+					],
+					"position": [
+						600,
+						800
+					]
 				}
-			}
-		],
-		"regions":[
-			{
-				"name":"Grassy Area",
-				"x":5,
-				"y":5,
-				"size_x":20,
-				"size_y":20,
-				"floor_type":"floor_grass"
 			},
-			
-			{
-				"name":"Smithy",
-				"x":30,
-				"y":5,
-				"size_x":15,
-				"size_y":15,
-				"floor_type":"floor_wood",
-				"wall_type":"wood_wall",
-				"doors":
-				[
-					{
-						"type":"door_wood",
-						"x":37,
-						"y":5
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				},
+				"from_town_square": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				},
+				"from_catacombs": {
+					"position": [
+						480,
+						350
+					],
+					"facing": 270
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40
+				},
+				"from_town_square": {
+					"formation": "column",
+					"offset_radius": 30,
+					"facing": 90
+				}
+			},
+			"npc_spawns": [
+				{
+					"template_id": "skeleton_warrior",
+					"position": [
+						250,
+						80
+					],
+					"count": 1,
+					"patrol_points": [
+						[
+							250,
+							80
+						],
+						[
+							300,
+							120
+						],
+						[
+							250,
+							160
+						]
+					]
+				},
+				{
+					"template_id": "skeleton_warrior",
+					"position": [
+						300,
+						150
+					],
+					"count": 1
+				},
+				{
+					"template_id": "skeleton_warrior",
+					"position": [
+						80,
+						220
+					],
+					"count": 1
+				},
+				{
+					"template_id": "cultist",
+					"position": [
+						400,
+						300
+					],
+					"count": 2,
+					"spread_radius": 30,
+					"condition": {
+						"quest": "dark_ritual",
+						"state": "active"
 					}
-				],    
-			"structures":[
-					{
+				}
+			],
+			"item_spawns": [
+				{
+					"item_name": "Health Potion",
+					"position": [
+						150,
+						200
+					],
+					"quantity": 1
+				},
+				{
+					"item_name": "Gold",
+					"position": [
+						320,
+						280
+					],
+					"quantity": 3,
+					"container": "chest"
+				}
+			],
+			"warp_points": [
+				{
+					"id": "to_town_square",
+					"position": [
+						20,
+						300
+					],
+					"size": [
+						20,
+						60
+					],
+					"target_map": "town_square",
+					"target_spawn": "from_cemetery",
+					"label": "To Town Square"
+				},
+				{
+					"id": "to_catacombs",
+					"position": [
+						490,
+						350
+					],
+					"size": [
+						30,
+						30
+					],
+					"target_map": "catacombs",
+					"target_spawn": "from_cemetery",
+					"label": "Enter Catacombs",
+					"condition": {
+						"item": "catacombs_key"
 					}
-				],
-			"objects":[
-					{
-					"id": "hammer",
-					"x": 33,   
-					"y": 10,
-					"is_intact":true
-					},
-					{
-					"id":"anvil",
-					"x":32,
-					"y":10,
-					"is_intact":true
-					}
-				],
-				"characters":[
-					{
-					"id":"goblin_scout",
-					"x":29,
-					"y":12,
-					"faction":"greenskins"
-					}
-				],
-				"fluids": [
-					{
-						"id": "water",
-						"x": 22,
-						"y": 11,
-						"amount": 1500
-					}
-				]
-			}
-		]
-	}
+				}
+			]
+		},
+		{
+			"id": "town_square",
+			"name": "Town Square",
+			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
+			"images": {
+				"map": "res://Maps/town_square.png",
+				"mask": "res://Maps/town_square_mask.png",
+				"structures": "res://Maps/town_square_structures.png",
+				"structures_mask": "res://Maps/town_square_structures_mask.png"
+			},
+			"tile_size": 64,
+			"ambient": {
+				"music": "res://Audio/Music/town_theme.ogg"
+			},
+			"player_spawns": {
+				"default": {
+					"position": [
+						256,
+						400
+					],
+					"facing": 0
+				},
+				"from_cemetery": {
+					"position": [
+						490,
+						256
+					],
+					"facing": 180
+				},
+				"from_tavern": {
+					"position": [
+						200,
+						100
+					],
+					"facing": 90
+				},
+				"from_market": {
+					"position": [
+						100,
+						256
+					],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 35
+				}
+			},
+			"npc_spawns": [
+				{
+					"template_id": "town_guard",
+					"position": [
+						100,
+						100
+					],
+					"count": 2,
+					"spread_radius": 40
+				},
+				{
+					"template_id": "merchant",
+					"position": [
+						256,
+						200
+					],
+					"count": 3,
+					"spread_radius": 60,
+					"dialogue": "merchant_generic"
+				},
+				{
+					"template_id": "noble_lord",
+					"position": [
+						400,
+						300
+					],
+					"count": 1,
+					"unique_name": "Lord Castellan",
+					"dialogue": "castellan_intro"
+				}
+			],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_cemetery",
+					"position": [
+						500,
+						256
+					],
+					"size": [
+						20,
+						60
+					],
+					"target_map": "cemetery",
+					"target_spawn": "from_town_square",
+					"label": "To Cemetery"
+				},
+				{
+					"id": "to_tavern",
+					"position": [
+						200,
+						20
+					],
+					"size": [
+						40,
+						20
+					],
+					"target_map": "tavern",
+					"target_spawn": "from_town_square",
+					"label": "Enter Tavern"
+				},
+				{
+					"id": "to_market",
+					"position": [
+						20,
+						256
+					],
+					"size": [
+						20,
+						80
+					],
+					"target_map": "market_district",
+					"target_spawn": "from_town_square",
+					"label": "To Market District"
+				}
+			]
+		}
+	]
 }

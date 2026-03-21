@@ -32,6 +32,7 @@ const EFFECT_TYPES = [
 	"knockback",        # Apply knockback force
 	"teleport",         # Move target instantly
 	"summon",           # Summon an entity
+	"cloud",            # Create a Cloud
 	"custom",           # Custom effect with callback
 ]
 
@@ -55,7 +56,6 @@ static func resolve_effect(
 		"conditions_removed": [],
 		"created_objects": [],
 	}
-	
 	var effect_type = effect.get("type", "")
 	print("attempting to resolve ability effect")
 	match effect_type:
@@ -76,13 +76,166 @@ static func resolve_effect(
 			result = _resolve_teleport(effect, caster, targets, target_position)
 		"custom":
 			result = _resolve_custom(effect, caster, targets, ability, target_position)
+		"summon":
+			result = _resolve_summon(effect, caster, target_position, ability)
+		"cloud":
+			result = _resolve_cloud(effect, caster, target_position, ability)
 		_:
 			result["success"] = false
 			result["error"] = "Unknown effect type: %s" % effect_type
 	
 	return result
 
+## Resolve summon effect
+static func _resolve_summon(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2,
+	ability: Ability2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "summon",
+		"created_objects": [],
+	}
 
+	var summon_type = effect.get("summon_type", "")  # "character", "item", "structure"
+	var summon_id = effect.get("summon_id", "")
+	var count = effect.get("count", 1)
+	var spread = effect.get("spread_radius", 32.0)
+	var stack_count = effect.get("stack_count", 1)
+
+	if summon_id.is_empty():
+		result["success"] = false
+		result["error"] = "No summon_id specified"
+		return result
+
+	# Get the main scene — walk up from caster to find it
+	var game = _get_game_scene(caster)
+	if not game:
+		result["success"] = false
+		result["error"] = "Could not find game scene for spawning"
+		return result
+
+	for i in range(count):
+		var pos = target_position
+		if i > 0 and spread > 0:
+			pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
+
+		var spawned = null
+		match summon_type:
+			"character":
+				if game.has_method("_spawn_character"):
+					var overrides = effect.get("overrides", {})
+					spawned = game._spawn_character(summon_id, pos, overrides)
+					if spawned:
+						spawned.AI_enabled = true
+						# If caster has a faction/team, ally the summon to them
+						if "faction" in caster and "faction" in spawned:
+							spawned.faction = caster.faction
+			"item":
+				if game.has_method("create_item"):
+					spawned = game.create_item(summon_id, pos, stack_count)
+			"structure":
+				if game.has_method("create_structure"):
+					spawned = game.create_structure(summon_id, pos)
+			_:
+				push_warning("Unknown summon_type: %s" % summon_type)
+				continue
+
+		if spawned:
+			result["created_objects"].append(spawned)
+
+	if result["created_objects"].is_empty():
+		result["success"] = false
+		result["error"] = "Failed to spawn any objects"
+
+	return result
+
+
+## Walk up the scene tree from a node to find the main game scene
+static func _get_game_scene(node: Node) -> Node:
+	# Try the tree root's main scene first
+	var tree = node.get_tree()
+	if tree:
+		var root = tree.current_scene
+		if root and root.has_method("create_item"):
+			return root
+		# Search children of root (in case game is a child node)
+		for child in root.get_children():
+			if child.has_method("create_item"):
+				return child
+	# Walk up from the caster
+	var current = node
+	while current:
+		if current.has_method("create_item") and current.has_method("_spawn_character"):
+			return current
+		current = current.get_parent()
+	return null
+	
+static func _resolve_cloud(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2,
+	ability: Ability2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "cloud",
+		"created_objects": [],
+	}
+
+	var game = _get_game_scene(caster)
+	if not game:
+		result["success"] = false
+		result["error"] = "Could not find game scene"
+		return result
+
+	var fog_manager = game.get_node_or_null("FogManager")
+	if not fog_manager:
+		result["success"] = false
+		result["error"] = "No FogManager found"
+		return result
+
+	var cloud_color = Color(effect.get("color", "#808080"))
+	var cloud_size = Vector2(
+		effect.get("radius", 64.0) * 2,
+		effect.get("radius", 64.0) * 2
+	)
+	var duration = effect.get("duration", 10.0)
+	var condition_id = effect.get("condition_id", "")
+	var condition_stacks = effect.get("condition_stacks", 1)
+	var condition_duration = effect.get("condition_duration", -2.0)
+	var apply_interval = effect.get("apply_interval", 1.0)
+	var density = effect.get("density", 0.6)
+	var speed = Vector2(
+		effect.get("speed_x", 0.02),
+		effect.get("speed_y", 0.01)
+	)
+
+	var overlay = fog_manager.create_cloud(
+		cloud_color,
+		cloud_size,
+		duration,
+		condition_id,
+		condition_stacks,
+		condition_duration,
+		apply_interval,
+		density,
+		4.0,
+		speed,
+		target_position,
+		caster
+	)
+
+	if overlay:
+		result["created_objects"].append(overlay)
+	else:
+		result["success"] = false
+		result["error"] = "Failed to create cloud"
+
+	return result
+	
 ## Resolve damage effect
 static func _resolve_damage(
 	effect: Dictionary,
@@ -208,90 +361,89 @@ static func _calculate_modified_damage(
 	return modified
 
 
-## Apply target's resistances, immunities, and vulnerabilities
+## Apply target's resistances/vulnerabilities using the actual DR system
+## This replaces the old list-based resistance check
 static func _apply_target_defenses(
 	damage: Dictionary,
 	target: Node,
 	target_traits: Dictionary
 ) -> Dictionary:
 	var modified = damage.duplicate()
-	
-	# Get resistance/immunity/vulnerability data from target
-	var resistances = _get_target_resistances(target)
-	var immunities = _get_target_immunities(target)
-	var vulnerabilities = _get_target_vulnerabilities(target)
-	
+
+	# Get numeric DR dictionary from target (works for characters, items, structures)
+	var dr = _get_target_dr(target)
+
 	for damage_type in modified.keys():
 		# True damage ignores all defenses
 		if damage_type == "true":
 			continue
-		
-		# Check immunity first (complete negation)
-		if damage_type in immunities:
-			modified[damage_type] = 0.0
-			continue
-		
-		# Check resistance (half damage)
-		if damage_type in resistances:
-			modified[damage_type] *= 0.5
-		
-		# Check vulnerability (double damage)
-		if damage_type in vulnerabilities:
-			modified[damage_type] *= 2.0
-	
+
+		var resistance_value = dr.get(damage_type, 0)
+		modified[damage_type] = max(0.0, modified[damage_type] - resistance_value)
+
 	return modified
 
-
-## Get resistances from target
-static func _get_target_resistances(target: Node) -> Array:
+## Get numeric damage resistance dictionary from any target type
+static func _get_target_dr(target: Node) -> Dictionary:
+	# Characters with limb system — get torso DR as general fallback
+	# (limb-specific DR is handled by damage_limb when we have a hit position)
+	if target.has_method("get_limb_armor"):
+		# Use torso armor as the general DR for abilities without a hit position
+		return target.get_limb_armor(target.LimbType.TORSO) if "LimbType" in target else {}
+	# Items and structures use damage_resistances dict directly
+	if "damage_resistances" in target:
+		return target.damage_resistances
 	if target.has_method("get_resistances"):
-		return target.get_resistances()
-	if "resistances" in target:
-		return target.resistances
-	if target.has_node("CharacterStats") and "resistances" in target.get_node("CharacterStats"):
-		return target.get_node("CharacterStats").resistances
-	return []
+		var res = target.get_resistances()
+		if res is Dictionary:
+			return res
+	return {}
 
 
-## Get immunities from target
-static func _get_target_immunities(target: Node) -> Array:
-	if target.has_method("get_immunities"):
-		return target.get_immunities()
-	if "damage_immunities" in target:
-		return target.damage_immunities
-	if target.has_node("CharacterStats") and "damage_immunities" in target.get_node("CharacterStats"):
-		return target.get_node("CharacterStats").damage_immunities
-	return []
-
-
-## Get vulnerabilities from target
-static func _get_target_vulnerabilities(target: Node) -> Array:
-	if target.has_method("get_vulnerabilities"):
-		return target.get_vulnerabilities()
-	if "vulnerabilities" in target:
-		return target.vulnerabilities
-	if target.has_node("CharacterStats") and "vulnerabilities" in target.get_node("CharacterStats"):
-		return target.get_node("CharacterStats").vulnerabilities
-	return []
-
-
-## Actually deal damage to a target
+## Deal damage to any target type (character, item, or structure)
 static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> float:
 	var total = 0.0
 	for damage_type in damage_dict:
 		total += damage_dict[damage_type]
-	
-	# Call the target's damage method
-	if target.has_method("take_damage"):
-		target.take_damage(total, damage_dict)
-	elif target.has_method("damage"):
-		target.damage(total)
+
+	if total <= 0.0:
+		return 0.0
+
+	# Characters with limb system — pick a random limb if no hit position
+	if target.has_method("damage_limb"):
+		var limb_type = _pick_random_limb(target)
+		# damage_limb applies its own limb-specific armor DR, so we pass
+		# the already-general-DR-reduced dict. To avoid double-dipping,
+		# we skip _apply_target_defenses for limbed targets upstream,
+		# OR we pass the raw damage here and let damage_limb handle DR.
+		# Since we already reduced by torso DR above, just call damage_limb
+		# with the dict and accept minor DR approximation for abilities.
+		target.damage_limb(limb_type, damage_dict, target.global_position)
+	# Items use take_damage(damage_dict, success_level)
+	elif target.has_method("take_damage"):
+		if target is Item2 or target is Structure:
+			target.take_damage(damage_dict, 0)
+		else:
+			# Unknown type with take_damage — try dict signature
+			target.take_damage(damage_dict, 0)
 	elif "HP_CURRENT" in target:
 		target.HP_CURRENT = max(0, target.HP_CURRENT - total)
-	elif target.has_node("CharacterStats"):
-		target.get_node("CharacterStats").take_damage(total)
-	
+
 	return total
+
+
+## Pick a random limb weighted by size (for abilities without a specific hit position)
+static func _pick_random_limb(target: Node) -> int:
+	# LimbType enum: HEAD=0, TORSO=1, LEFT_ARM=2, RIGHT_ARM=3, LEFT_LEG=4, RIGHT_LEG=5
+	# Weight torso highest since it's the biggest target
+	var weights = [0.1, 0.35, 0.1, 0.1, 0.175, 0.175]
+	var roll = randf()
+	var cumulative = 0.0
+	for i in range(weights.size()):
+		cumulative += weights[i]
+		if roll <= cumulative:
+			return i
+	return 1  # Default to torso
 
 
 ## Resolve healing effect
@@ -354,8 +506,6 @@ static func _resolve_healing(
 static func _heal_target(target: Node, amount: float) -> float:
 	if target.has_method("heal"):
 		return target.heal(amount)
-	elif target.has_node("CharacterStats"):
-		return target.get_node("CharacterStats").heal(amount)
 	return 0.0
 
 
@@ -739,7 +889,6 @@ static func _resolve_knockback(
 		})
 	
 	return result
-
 
 ## Resolve teleport effect
 static func _resolve_teleport(

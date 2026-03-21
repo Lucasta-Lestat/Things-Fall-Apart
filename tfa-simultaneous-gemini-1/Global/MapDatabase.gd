@@ -1,37 +1,47 @@
+# MapDatabase.gd
+# Autoload singleton - add to Project > AutoLoad as "MapDatabase"
 extends Node
 
-signal map_definitions_loaded
+var _maps: Dictionary = {}
 
-# Dictionary to store all map definitions
-var map_definitions: Dictionary = {}
+func _ready() -> void:
+	_load_database()
 
-# Path to the JSON file containing map definitions
-var map_data_path: String = "res://data/Maps.json"
-
-func _ready():
-	load_map_definitions()
-
-func load_map_definitions():
-	var file = FileAccess.open(map_data_path, FileAccess.READ)
-	if file == null:
-		printerr("Error: Could not open map definitions file at: ", map_data_path)
+func _load_database() -> void:
+	var file_path = "res://data/maps.json"
+	if not FileAccess.file_exists(file_path):
+		push_error("Map Database not found at: " + file_path)
 		return
-	
-	var json_text = file.get_as_text()
-	file.close()
-	#print("json_text: ", json_text)
+
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	var content = file.get_as_text()
 	var json = JSON.new()
-	var parse_result = json.parse(json_text)
-	print("parsed_result: ", parse_result)
-	if parse_result != OK:
-		print("Error parsing JSON: ", json.get_error_message())
-		return
-	map_definitions.clear()
+	var error = json.parse(content)
+	print("====== Map Database =======")
+	if error == OK:
+		var data = json.get_data()
+		for entry in data.get("maps", []):
+			_maps[entry["id"]] = entry
+		print("Loaded %d maps" % _maps.size())
+	else:
+		push_error("Failed to parse Map JSON: " + json.get_error_message())
+	print("====== End Map Database ======")
 
-	map_definitions = json.data
-	
-func get_all_map_ids() -> Array[String]:
-	var ids: Array[String] = []
-	for id in map_definitions.keys():
-		ids.append(id)
-	return ids
+func get_map_data(map_id: String) -> Dictionary:
+	if _maps.has(map_id):
+		return _maps[map_id]
+	push_error("Map ID not found: " + map_id)
+	return {}
+
+func get_all_map_ids() -> Array:
+	return _maps.keys()
+
+func get_warp_targets(map_id: String) -> Array:
+	## Returns all maps reachable from this map via warp points.
+	var data = get_map_data(map_id)
+	var targets: Array = []
+	for warp in data.get("warp_points", []):
+		var target = warp.get("target_map", "")
+		if not target.is_empty() and target not in targets:
+			targets.append(target)
+	return targets

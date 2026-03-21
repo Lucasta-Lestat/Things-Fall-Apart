@@ -31,7 +31,14 @@ signal weapon_unequipped
 
 func _ready() -> void:
 	_create_weapon()
-
+	print("=========
+	
+	
+	procedural weapon still gets called
+	
+	
+	
+	======")
 func _create_weapon() -> void:
 	# Clear existing parts
 	for child in get_children():

@@ -5,7 +5,7 @@ class_name Floor
 signal destroyed(floor, grid_position)
 
 @export var floor_id: StringName 
-@export var use_blend_shader: bool = true  # Toggle shader on/off
+@export var use_blend_shader: bool = false  # Toggle shader on/off
 @export var blend_amount: float = 0.2  # Adjust per floor type if needed
 var display_name: String
 @export var current_health: int
@@ -60,9 +60,9 @@ func apply_floor_data():
 	else:
 		sprite.texture = load(data.texture)
 
-	var initial_texture_size = sprite.texture.get_size()
-	var size_ratio = size.x / initial_texture_size.x
-	sprite.scale = Vector2(size_ratio, size_ratio)
+		var initial_texture_size = sprite.texture.get_size()
+		var size_ratio = size.x / initial_texture_size.x
+		#sprite.scale = Vector2(size_ratio, size_ratio)
 
 func apply_blend_shader():
 	# Create a unique material instance for this floor

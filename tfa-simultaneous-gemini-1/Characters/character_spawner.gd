@@ -15,14 +15,14 @@ var characters_in_scene: Array = []
 var party_chars: Array = [] 
 var enemies: Array
 var player = null
+var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
+var items_in_scene: Array = []
+var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
+var structures_in_scene: Array[Structure] = []
+
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
-
-# Reference to main game node (set this in _ready or via export)
-var game: Node = null
-
-#const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 
 # Currently selected character
 var selected_character: ProceduralCharacter = null
@@ -33,15 +33,75 @@ var selection_indicator: Node2D = null
 const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White
 const SELECTION_CIRCLE_WIDTH = 1.0
 
+'''
+# ---------------------------------------------------------------------------
+# NPC spawning
+# ---------------------------------------------------------------------------
+ 
+func _spawn_npcs(npc_list: Array) -> void:
+	for npc_def in npc_list:
+		# Check spawn conditions
+		if npc_def.has("condition") and not _check_condition(npc_def["condition"]):
+			continue
+ 
+		var template_id: String = npc_def.get("template_id", "")
+		var pos_arr = npc_def.get("position", [0, 0])
+		var base_pos = Vector2(pos_arr[0], pos_arr[1])
+		var count: int = npc_def.get("count", 1)
+		var spread: float = npc_def.get("spread_radius", 0)
+ 
+		for i in range(count):
+			var pos = base_pos
+			if spread > 0 and i > 0:
+				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
+ 
+			var npc = _spawn_character(template_id, pos)
+			if npc:
+				npc.AI_enabled = true
+ 
+				# Optional overrides from the spawn definition
+				if npc_def.has("unique_name"):
+					npc.display_name = npc_def["unique_name"]
+				if npc_def.has("patrol_points"):
+					var patrol = []
+					for pt in npc_def["patrol_points"]:
+						patrol.append(Vector2(pt[0], pt[1]))
+					npc.set_meta("patrol_points", patrol)
+ 
+# ---------------------------------------------------------------------------
+# Core character spawn helper
+# ---------------------------------------------------------------------------
+ 
+func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary = {}) -> ProceduralCharacter:
+	var character = CharacterScene.instantiate()
+ 
+	# Position first (before body creation reads it)
+	character.position = pos
+ 
+	# Build from template — this applies race, background, stats, equipment
+	CharacterDatabase.build_character(character, template_id, overrides)
+ 
+	# Connect signals
+	character.character_died.connect(_on_character_died.bind(character))
+ 
+	# Add to scene tree and track
+	add_child(character)
+	characters_in_scene.append(character)
+ 
+	return character
+ 
+
+'''
+
 func _ready() -> void:
 	load_characters_database()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(
 		Color(0.2, 0.6, 0.2, 0.4),   # green poison fog
 		Vector2(512, 512),             # size in pixels
-		0.7,                           # density
+		0.95,                           # density
 		6.0,                           # noise scale
-		Vector2(0.03, 0.015),          # drift speed
+		Vector2(0.63, 0.215),          # drift speed
 		Vector2(600, 800)             # world position
 	)
 	_create_selection_indicator(Globals.default_body_width+5)
@@ -62,8 +122,6 @@ func _ready() -> void:
 	player.equip_equipment_by_name("Full Face Helmet")
 	player.equip_equipment_by_name("Breastplate 2")
 	player.set_faction("player")
-	player.strength = 1000
-	player.traits["metal"] = 1
 	# Create enemies
 	#var targeting = AbilityTargetingScript.new()
 	#for char in party_chars:
@@ -145,6 +203,102 @@ func _spawn_enemy(pos: Vector2, faction: String ="bandits") -> void:
 		enemy.equip_equipment_by_name("Fancy Metal Helmet") #update to use weapon database
 	enemy.AI_enabled = true
 	enemies.append(enemy)
+	
+func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item2:
+	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world."""
+	var item_instance = item_scene.instantiate() as Item2
+	item_instance.id = item_id
+	item_instance.global_position = world_position
+
+	# Set stack count before _ready applies data
+	if stack_count > 1:
+		item_instance.stack_count = stack_count
+
+	add_child(item_instance)
+	items_in_scene.append(item_instance)
+
+	# Connect signals
+	item_instance.destroyed.connect(_on_item_destroyed)
+
+	return item_instance
+
+func _on_item_destroyed(item: Item2):
+	# Remove from tracking
+	items_in_scene.erase(item)
+
+	# Spawn resource items from the destroyed item
+	if item.resources.is_empty():
+		return
+
+	var spawn_offset = 0
+	for resource_id in item.resources:
+		var amount = int(item.resources[resource_id])
+		if amount <= 0:
+			continue
+
+		# Look up the resource in the database to figure out stack sizes
+		var resource_data = _lookup_any_item(resource_id)
+		var max_stack = int(resource_data.get("max_stack_size", 100)) if resource_data else 100
+
+		# Spawn in stacks up to max_stack_size
+		var remaining = amount
+		while remaining > 0:
+			var this_stack = mini(remaining, max_stack)
+			var offset = Vector2(spawn_offset * 12, 0).rotated(randf() * TAU)
+			var resource_item = create_item(resource_id, item.global_position + offset, this_stack)
+			remaining -= this_stack
+			spawn_offset += 1
+
+func _lookup_any_item(item_id: String) -> Dictionary:
+	"""Look up item data from any category in the database."""
+	var item_key = Globals.name_to_id(item_id)
+	if ItemDatabase.weapons.has(item_key):
+		return ItemDatabase.weapons[item_key]
+	if ItemDatabase.equipment.has(item_key):
+		return ItemDatabase.equipment[item_key]
+	if ItemDatabase.items.has(item_key):
+		return ItemDatabase.items[item_key]
+	# Try raw id
+	if ItemDatabase.items.has(item_id):
+		return ItemDatabase.items[item_id]
+	return {}
+	
+
+func create_structure(structure_id: String, world_position: Vector2) -> Structure:
+	"""Create a structure by its ID and place it in the world."""
+	var structure_instance = structure_scene.instantiate() as Structure
+	structure_instance.structure_id = structure_id
+	structure_instance.global_position = world_position
+
+	add_child(structure_instance)
+	structures_in_scene.append(structure_instance)
+
+	structure_instance.destroyed.connect(_on_structure_destroyed)
+
+	return structure_instance
+
+func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
+	structures_in_scene.erase(structure)
+
+	if structure.resources.is_empty():
+		return
+
+	var spawn_offset = 0
+	for resource_id in structure.resources:
+		var amount = int(structure.resources[resource_id])
+		if amount <= 0:
+			continue
+
+		var resource_data = _lookup_any_item(resource_id)
+		var max_stack = int(resource_data.get("max_stack_size", 100)) if resource_data else 100
+
+		var remaining = amount
+		while remaining > 0:
+			var this_stack = mini(remaining, max_stack)
+			var offset = Vector2(spawn_offset * 12, 0).rotated(randf() * TAU)
+			create_item(resource_id, world_pos + offset, this_stack)
+			remaining -= this_stack
+			spawn_offset += 1
 
 func _process(delta: float) -> void:
 	# Check for combat collisions# Update clash cooldowns
@@ -157,7 +311,9 @@ func _process(delta: float) -> void:
 		for key in to_remove:
 			clash_cooldowns.erase(key)
 		_check_combat_collisions()
-	
+	# Tick fog effects
+		if $FogManager:
+			$FogManager.update_fogs(delta, characters_in_scene)
 	if selected_character and is_instance_valid(selected_character) and selection_indicator:
 		selection_indicator.global_position = selected_character.global_position
 		if PauseManager.is_paused:
@@ -166,56 +322,106 @@ func _process(delta: float) -> void:
 		selection_indicator.visible = false
 
 func _check_combat_collisions() -> void:
-	# specific reference to the list of all characters
 	var all_characters = characters_in_scene
 
-	# OUTER LOOP: Iterate through every character acting as an 'attacker'
 	for attacker in all_characters:
-		# Skip if attacker is dead or not currently swinging
 		if not attacker.is_alive() or not attacker.is_attacking():
 			continue
 
-		# Determine which weapon is active
 		var weapon
 		if attacker.current_hand == "Main":
 			weapon = attacker.current_main_hand_item
 		else:
 			weapon = attacker.current_off_hand_item
 
-		# INNER LOOP: Check if this attacker hits anyone else
+		# Check against other characters
 		for victim in all_characters:
-			# 1. Don't hit yourself
 			if attacker == victim:
 				continue
-			
-			# 2. Skip dead victims
 			if not victim.is_alive():
-			#	print("continuing in hit checking loop because of victim.is_alive()")
 				continue
-
-			# 3. Check range/eligibility
 			if not can_hit_target(attacker, victim):
-				#print("continuing in hit checking loop because of can_hit_target")
 				continue
-			
-			# 4. Perform the precise physics collision check
-			var hit = check_weapon_body_collision(attacker, victim)
-			#print("Was there a hit? ", hit)
-			if hit.get("hit", false):
-				# Optional: Debug print
-				print(attacker.name, " hit ", victim.name, " result: ", hit)
-				
-				register_hit(attacker, victim)
-				if weapon: 
-					print("weapon: ", weapon.weapon_name)
-				process_weapon_hit(
-					attacker, 
-					victim, 
-					hit["position"],
-					weapon, 
-					hit["velocity"]
-				)
 
+			var hit = check_weapon_body_collision(attacker, victim)
+			if hit.get("hit", false):
+				register_hit(attacker, victim)
+				process_weapon_hit(attacker, victim, hit["position"], weapon, hit["velocity"])
+
+		# Check against items
+		for item in items_in_scene:
+			if not is_instance_valid(item):
+				continue
+			if not can_hit_target(attacker, item):
+				continue
+
+			var hit = check_weapon_body_collision(attacker, item)
+			if hit.get("hit", false):
+				process_object_hit(attacker, item, hit["position"], weapon, hit["velocity"])
+
+		# Check against structures
+		for structure in structures_in_scene:
+			if not is_instance_valid(structure):
+				continue
+			if not can_hit_target(attacker, structure):
+				continue
+
+			var hit = check_weapon_body_collision(attacker, structure)
+			if hit.get("hit", false):
+				process_object_hit(attacker, structure, hit["position"], weapon, hit["velocity"])
+				
+func process_object_hit(
+	attacker: ProceduralCharacter,
+	target: Node2D,
+	hit_position: Vector2,
+	weapon: Node2D,
+	attack_velocity: float
+) -> Dictionary:
+	# Build damage dict — duplicate to avoid mutating weapon data
+	var attack_damage: Dictionary
+	if weapon:
+		attack_damage = weapon.damage.duplicate()
+		if weapon.get("traits") and "melee" in weapon.traits:
+			var str_bonus = attacker.strength / 10.0
+			for dtype in attack_damage:
+				attack_damage[dtype] += str_bonus
+	else:
+		attack_damage = {
+			attacker.unarmed_strike_damage_type:
+				attacker.unarmed_strike_damage + attacker.strength / 10.0
+		}
+
+	# Objects use take_damage(damage_dict, success_level) and handle DR internally
+	target.take_damage(attack_damage, 0)
+
+	# Calculate total damage for penetration check
+	var total_damage = 0.0
+	var dr = target.damage_resistances if "damage_resistances" in target else {}
+	for dtype in attack_damage:
+		total_damage += max(0.0, attack_damage[dtype] - dr.get(dtype, 0))
+
+	var penetration_result = _calculate_penetration(total_damage, attack_velocity, weapon)
+
+	if penetration_result.state == PenetrationState.BOUNCED:
+		SfxManager.play("clash", target.global_position)
+	else:
+		SfxManager.play("impact", target.global_position)
+
+	# Trigger weapon ability on non-bounced hits
+	if weapon and penetration_result.state != PenetrationState.BOUNCED:
+		if weapon.get("use_ability") and weapon.get("ability"):
+			attacker._resolve_ability_effects(weapon.ability, hit_position)
+
+	return {
+		"attacker": attacker,
+		"target": target,
+		"weapon": weapon,
+		"raw_damage": attack_damage,
+		"penetration_state": penetration_result.state,
+		"penetration_depth": penetration_result.depth,
+		"actual_damage": total_damage,
+	}
+	
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
@@ -468,17 +674,6 @@ var _torso_equipment_options: Array = [
 	null  # No torso equipment
 ]
 
-func _cycle_torso_equipment() -> void:
-	_torso_equipment_index = (_torso_equipment_index + 1) % _torso_equipment_options.size()
-	var equip_data = _torso_equipment_options[_torso_equipment_index]
-	
-	if equip_data:
-		player.equip_equipment(equip_data)
-		print("Equipped: %s" % equip_data.get("name", "unknown"))
-	else:
-		player.unequip_slot(EquipmentShape.EquipmentSlot.TORSO)
-		print("Removed torso equipment")
-		
 # Weapon penetration states
 enum PenetrationState { 
 	NOT_HITTING,      # No contact
@@ -503,86 +698,77 @@ signal weapon_disarmed(character: CharacterBody2D)
 const CLASH_COOLDOWN: float = 0.3  # Seconds between weapon clashes	
 
 # ===== WEAPON VS BODY COLLISION =====
-
 func process_weapon_hit(
 	attacker: ProceduralCharacter,
 	target: ProceduralCharacter,
-	hit_position: Vector2,  # World position of hit
+	hit_position: Vector2,
 	weapon: Node2D,
-	attack_velocity: float  # Speed of the swing (affects penetration)
+	attack_velocity: float
 ) -> Dictionary:
-	"""Process a weapon hitting a character's body"""
-	#print("someone actually got hit")
-	#Calculation of complex damage
 	# Determine which limb was hit
 	var local_hit = target.to_local(hit_position)
 	var limb_type = target.get_limb_at_position(
-		local_hit, 
-		target.body_width, 
+		local_hit,
+		target.body_width,
 		target.body_height
 	)
-	
-	# Get armor DR for that limb
-	var limb = target.get_limb(limb_type)
-	# Calculate base damage
-	var base_damage
-	
+
+	# Calculate base damage — DUPLICATE to avoid mutating the weapon's data
+	var attack_damage: Dictionary
 	if weapon:
-		base_damage = {weapon.primary_damage_type: weapon.base_damage[weapon.primary_damage_type] +  attacker.strength / 10}
-		#TODO implement magic/abilities
+		attack_damage = weapon.damage.duplicate()
+		if weapon.get("traits") and "melee" in weapon.traits:
+			var str_bonus = attacker.strength / 10.0
+			for dtype in attack_damage:
+				attack_damage[dtype] += str_bonus
 	else:
-		base_damage = {attacker.unarmed_strike_damage_type: attacker.unarmed_strike_damage}	
-	var damage = target.damage_limb(limb_type, base_damage, local_hit) #need to heavily update to add damage riders
-	var armor_dr = limb.armor_dr if limb else 0
-	print("limb: ", limb.name)
-	# Calculate penetration based on damage vs DR
-	var penetration_result = _calculate_penetration(base_damage, armor_dr, attack_velocity, weapon)
-	#print("Is the attack actually penetrating? Penetration = ", penetration_result)
+		attack_damage = {
+			attacker.unarmed_strike_damage_type:
+				attacker.unarmed_strike_damage + attacker.strength / 10.0
+		}
+
+	# damage_limb applies limb-specific armor DR internally and returns total dealt
+	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
+
+	var limb = target.get_limb(limb_type)
+	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
+
+	# Penetration uses the post-DR damage
+	var penetration_result = _calculate_penetration(final_damage, attack_velocity, weapon)
+
+	# Trigger weapon ability only if we actually penetrated
+	if weapon and penetration_result.state != PenetrationState.BOUNCED:
+		if weapon.get("use_ability") and weapon.get("ability"):
+			attacker._resolve_ability_effects(weapon.ability, hit_position)
+
 	var result = {
 		"attacker": attacker,
 		"target": target,
 		"weapon": weapon,
 		"limb_type": limb_type,
-		"limb_name":limb_type,
-		"raw_damage": damage,
+		"limb_name": limb.name if limb else "Unknown",
+		"raw_damage": attack_damage,
 		"armor_dr": armor_dr,
 		"penetration_state": penetration_result.state,
 		"penetration_depth": penetration_result.depth,
 		"velocity_reduction": penetration_result.velocity_reduction,
-		"actual_damage": 0,
+		"actual_damage": final_damage,
 		"blocked": 0
 	}
-	
-	# Apply damage based on penetration
+
 	if penetration_result.state == PenetrationState.BOUNCED:
-		result["blocked"] = damage
+		result["blocked"] = attack_damage
 		SfxManager.play("clash", attacker.position)
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
-		SfxManager.play("sword-on-flesh",target.position)
-		# Damage scales with penetration depth
-	
+		SfxManager.play("sword-on-flesh", target.position)
+
 	return result
 
-func _calculate_penetration(damage: Dictionary, armor_dr: Dictionary, velocity: float, weapon: WeaponShape) -> Dictionary:
+func _calculate_penetration(damage: float, velocity: float, weapon: WeaponShape) -> Dictionary:
 	"""Calculate how deeply a weapon penetrates based on damage, armor, and velocity"""
 	
-	var total_effective_damage = 0.0
-	
-	# 1. Calculate unresisted damage for each type and sum them
-	for damage_type in damage:
-		var raw_val = damage[damage_type]
-		var dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
-		
-		# Ensure we don't add negative values if armor exceeds damage
-		var effective_type_damage = max(0, raw_val - dr_val)
-		
-		# If damage got through, trigger the condition effect
-			
-		total_effective_damage += effective_type_damage
-	
-	# 2. If armor completely blocks all types, weapon bounces
-	if total_effective_damage <= 0:
+	if damage <= 0.0:
 		return {
 			"state": PenetrationState.BOUNCED,
 			"depth": 0.0,
@@ -592,7 +778,7 @@ func _calculate_penetration(damage: Dictionary, armor_dr: Dictionary, velocity: 
 	# 3. Apply velocity to the total unresisted damage
 	# velocity affects initial penetration power
 	var velocity_factor = clamp(velocity / 100.0, 0.5, 2.0)
-	var penetration_power = total_effective_damage * velocity_factor
+	var penetration_power = damage * velocity_factor
 	
 	# 4. Flesh resistance (nonlinear - gets harder to penetrate deeper)
 	var max_penetration_depth = 1.0
@@ -614,6 +800,7 @@ func _calculate_penetration(damage: Dictionary, armor_dr: Dictionary, velocity: 
 		"depth": depth,
 		"velocity_reduction": clamp(velocity_reduction, 0.0, 1.0)
 	}
+	
 # ===== WEAPON VS WEAPON COLLISION =====
 
 
@@ -703,39 +890,33 @@ func _get_clash_key(char1: CharacterBody2D, char2: CharacterBody2D) -> String:
 	return "%d_%d" % [id1, id2]
 
 # ===== HIT TRACKING =====
-
-func register_attack_start(attacker: ProceduralCharacter) -> void:
+func register_attack_start(attacker: Node2D) -> void:
 	"""Called when an attack begins - resets hit tracking for this attack"""
 	active_hits[attacker.get_instance_id()] = {}
 
-func register_attack_end(attacker: ProceduralCharacter) -> void:
+func register_attack_end(attacker: Node2D) -> void:
 	"""Called when an attack ends - clears hit tracking"""
 	active_hits.erase(attacker.get_instance_id())
 
-func can_hit_target(attacker: ProceduralCharacter, target: ProceduralCharacter) -> bool:
+func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 	"""Check if this attack can still hit this target (hasn't already)"""
 	var attacker_id = attacker.get_instance_id()
 	var target_id = target.get_instance_id()
-	
+
 	if not active_hits.has(attacker_id):
 		return true
-	
-	var can_hit = not active_hits[attacker_id].has(target_id)
-	if not can_hit:
-		pass
-		#print("BLOCKED: ", attacker.Name, " already hit ", target.Name, " in this attack. active_hits: ", active_hits)
-	return can_hit
 
-func register_hit(attacker: ProceduralCharacter, target: ProceduralCharacter) -> void:
+	return not active_hits[attacker_id].has(target_id)
+
+func register_hit(attacker: Node2D, target: Node2D) -> void:
 	"""Mark that this attack has hit this target"""
 	var attacker_id = attacker.get_instance_id()
 	var target_id = target.get_instance_id()
-	
+
 	if not active_hits.has(attacker_id):
 		active_hits[attacker_id] = {}
-	
-	active_hits[attacker_id][target_id] = true
 
+	active_hits[attacker_id][target_id] = true
 # ===== COLLISION DETECTION HELPERS =====
 
 func get_body_hitbox_corners(character: ProceduralCharacter) -> Array:
