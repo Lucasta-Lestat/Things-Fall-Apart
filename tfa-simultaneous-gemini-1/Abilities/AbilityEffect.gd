@@ -236,7 +236,7 @@ static func _resolve_cloud(
 
 	return result
 	
-## Resolve damage effect
+	
 static func _resolve_damage(
 	effect: Dictionary,
 	caster: Node,
@@ -251,24 +251,19 @@ static func _resolve_damage(
 		"damage_breakdown": [],
 	}
 	
-	# Get base damage values {damage_type: amount}
 	var base_damage: Dictionary = effect.get("damage", {})
-	
-	# Get trait requirements for damage to apply
 	var required_traits = effect.get("target_traits", [])
 	var immune_traits = effect.get("immune_traits", [])
 	
-	# Get caster's traits and condition manager
 	var caster_traits = _get_entity_traits(caster)
 	var caster_conditions = _get_condition_manager(caster)
 	
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-		
+			
 		var target_traits = _get_entity_traits(target)
 		
-		# Check trait requirements
 		if not required_traits.is_empty():
 			var has_required = false
 			for req in required_traits:
@@ -277,8 +272,7 @@ static func _resolve_damage(
 					break
 			if not has_required:
 				continue
-		
-		# Check immunities
+				
 		var is_immune = false
 		for immune in immune_traits:
 			if immune in target_traits:
@@ -286,8 +280,7 @@ static func _resolve_damage(
 				break
 		if is_immune:
 			continue
-		
-		# Calculate damage with modifiers from conditions
+			
 		var final_damage = _calculate_modified_damage(
 			base_damage.duplicate(),
 			caster,
@@ -298,10 +291,7 @@ static func _resolve_damage(
 			caster_conditions
 		)
 		
-		# Apply target's resistances/vulnerabilities
-		final_damage = _apply_target_defenses(final_damage, target, target_traits)
-		
-		# Deal the damage
+		# DR is skipped here. target.damage_limb and target.take_damage handle it natively!
 		var damage_dealt = _deal_damage_to_target(target, final_damage)
 		
 		result["targets_affected"].append({
@@ -310,11 +300,56 @@ static func _resolve_damage(
 			"damage_types": final_damage.keys()
 		})
 		result["total_damage"] += damage_dealt
-	
+		
 	return result
 
-
-## Calculate damage modified by caster's conditions
+static func _resolve_apply_condition(
+	effect: Dictionary,
+	caster: Node,
+	targets: Array,
+	ability: Ability2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "apply_condition",
+		"targets_affected": [],
+		"conditions_applied": [],
+	}
+	
+	var condition_id = effect.get("condition_id", "")
+	var stacks = effect.get("stacks", 1)
+	var duration_override = effect.get("duration", -2.0)
+	var target_limb = effect.get("target_limb", null)
+	
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+			
+		var target_cond_manager = _get_condition_manager(target)
+		if not target_cond_manager:
+			continue
+			
+		# The ConditionManager scales durations internally based on target traits
+		var instance = target_cond_manager.apply_condition(
+			condition_id,
+			caster,
+			stacks,
+			duration_override,
+			target_limb
+		)
+		
+		if instance:
+			result["targets_affected"].append(target)
+			result["conditions_applied"].append({
+				"target": target,
+				"condition": condition_id,
+				"stacks": instance.stacks
+			})
+			
+	return result
+	
+	
+	
 static func _calculate_modified_damage(
 	base_damage: Dictionary,
 	caster: Node,
@@ -336,7 +371,6 @@ static func _calculate_modified_damage(
 		target_traits,
 		ability_traits
 	)
-	
 	# Separate flat and percent modifiers
 	var flat_bonus: float = 0.0
 	var percent_bonus: float = 1.0
@@ -361,43 +395,6 @@ static func _calculate_modified_damage(
 	return modified
 
 
-## Apply target's resistances/vulnerabilities using the actual DR system
-## This replaces the old list-based resistance check
-static func _apply_target_defenses(
-	damage: Dictionary,
-	target: Node,
-	target_traits: Dictionary
-) -> Dictionary:
-	var modified = damage.duplicate()
-
-	# Get numeric DR dictionary from target (works for characters, items, structures)
-	var dr = _get_target_dr(target)
-
-	for damage_type in modified.keys():
-		# True damage ignores all defenses
-		if damage_type == "true":
-			continue
-
-		var resistance_value = dr.get(damage_type, 0)
-		modified[damage_type] = max(0.0, modified[damage_type] - resistance_value)
-
-	return modified
-
-## Get numeric damage resistance dictionary from any target type
-static func _get_target_dr(target: Node) -> Dictionary:
-	# Characters with limb system — get torso DR as general fallback
-	# (limb-specific DR is handled by damage_limb when we have a hit position)
-	if target.has_method("get_limb_armor"):
-		# Use torso armor as the general DR for abilities without a hit position
-		return target.get_limb_armor(target.LimbType.TORSO) if "LimbType" in target else {}
-	# Items and structures use damage_resistances dict directly
-	if "damage_resistances" in target:
-		return target.damage_resistances
-	if target.has_method("get_resistances"):
-		var res = target.get_resistances()
-		if res is Dictionary:
-			return res
-	return {}
 
 
 ## Deal damage to any target type (character, item, or structure)
@@ -507,55 +504,6 @@ static func _heal_target(target: Node, amount: float) -> float:
 	if target.has_method("heal"):
 		return target.heal(amount)
 	return 0.0
-
-
-## Resolve apply condition effect
-static func _resolve_apply_condition(
-	effect: Dictionary,
-	caster: Node,
-	targets: Array,
-	ability: Ability2
-) -> Dictionary:
-	var result = {
-		"success": true,
-		"effect_type": "apply_condition",
-		"targets_affected": [],
-		"conditions_applied": [],
-	}
-	
-	var condition_id = effect.get("condition_id", "")
-	print("what condition id was found in resolve_apply_condition: ", condition_id)
-	var stacks = effect.get("stacks", 1)
-	var duration_override = effect.get("duration", -2.0)
-	var chance = effect.get("chance", 1.0)
-	print("what targets were found in resolve_apply_condition: ", targets)
-
-	for target in targets:
-		if not is_instance_valid(target):
-			continue
-		
-		
-		var condition_manager = _get_condition_manager(target)
-		if not condition_manager:
-			print("did not find condition manager for target")
-			continue
-		
-		var instance = condition_manager.apply_condition(
-			condition_id,
-			caster,
-			stacks,
-			duration_override
-		)
-		
-		if instance:
-			result["targets_affected"].append(target)
-			result["conditions_applied"].append({
-				"target": target,
-				"condition": condition_id,
-				"stacks": instance.stacks
-			})
-	
-	return result
 
 
 ## Resolve remove condition effect
