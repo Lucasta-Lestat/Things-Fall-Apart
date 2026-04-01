@@ -84,7 +84,7 @@ func equip_item(item: Node2D, hand: String = "Main") -> bool:
 	return true
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	# 1. Fetch Data
-	var data = AbilityDatabase2.get_ability_data(ability_id)
+	var data = AbilityDatabase.get_ability_data(ability_id)
 	if data.is_empty():
 		return false
 

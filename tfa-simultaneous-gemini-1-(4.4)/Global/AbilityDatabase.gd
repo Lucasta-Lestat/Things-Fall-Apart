@@ -1,80 +1,32 @@
-# res://Data/Abilities/AbilityDatabase.gd
-# A new autoload singleton to store and provide all defined abilities.
+# AbilityDatabase.gd
+# Autoload singleton — loads all abilities from JSON and provides fast lookup.
 extends Node
 
-var abilities: Dictionary = {}
+var _abilities: Dictionary = {}
 
-func _ready():
-	_define_abilities()
+func _ready() -> void:
+	_load_database()
 
-func _define_abilities():
-	var move = Ability.new()
-	move.id = &"move"
-	move.display_name = "Move"
-	move.range_type = Ability.RangeType.ABILITY
-	move.ap_cost = 1
-	move.range = 2100 
-	move.target_type = Ability.TargetType.GROUND
-	move.effect = Ability.ActionEffect.MOVE
-	abilities[move.id] = move
-	
-	var basic_attack = Ability.new()
-	print(basic_attack)
-	basic_attack.id = &"basic_attack"
-	basic_attack.display_name = "Basic Attack"
-	basic_attack.description = "A standard attack with your weapon."
-	basic_attack.ap_cost = 2
-	basic_attack.range = 150.0
-	basic_attack.range_type = Ability.RangeType.WEAPON_MELEE
-	#basic_attack.target_type = Ability.TargetType.ENEMY
-	basic_attack.effect = Ability.ActionEffect.DAMAGE
-	basic_attack.is_weapon_attack = true
-	basic_attack.success_stat = &"dex" # This attack uses Dexterity to hit
-	basic_attack.advantages = [&"deadeye"]
-	basic_attack.disadvantages = [&"clumsy"]
-	abilities[basic_attack.id] = basic_attack
+func _load_database() -> void:
+	var file_path = "res://data/Abilities.json"
+	if not FileAccess.file_exists(file_path):
+		push_error("AbilityDatabase: file not found at " + file_path)
+		return
 
-	var cleave = Ability.new()
-	print(cleave)
-	cleave.id = &"cleave"
-	cleave.display_name = "Cleave"
-	cleave.description = "hit multipLe."
-	cleave.ap_cost = 3
-	cleave.aoe_shape = &"slash"
-	cleave.range = 350.0
-	cleave.range_type = Ability.RangeType.WEAPON_MELEE
-	#cleave.attack_shape = Ability.AttackShape.SLASH
-	cleave.target_type = Ability.TargetType.ENEMY
-	cleave.effect = Ability.ActionEffect.DAMAGE
-	cleave.is_weapon_attack = true
-	cleave.success_stat = &"dex" # This attack uses Dexterity to hit
-	cleave.advantages = [&"deadeye"]
-	cleave.disadvantages = [&"clumsy"]
-	abilities[cleave.id] = cleave
-	
-	
-	var wait = Ability.new(); wait.id = &"wait"; wait.display_name = "Wait"
-	wait.effect = Ability.ActionEffect.BUFF # Technically does nothing
-	wait.target_type = Ability.TargetType.SELF; wait.ap_cost = 1
-	wait.success_stat = &""; abilities[&"wait"] = wait
-	
-	var fireball = Ability.new(); fireball.id = &"fireball"; fireball.display_name = "Fireball"
-	fireball.effect = Ability.ActionEffect.DAMAGE; fireball.target_type = Ability.TargetType.GROUND
-	fireball.range_type = Ability.RangeType.ABILITY; fireball.range = 1000.0 # Long range
-	fireball.success_stat = &"int"; fireball.ap_cost = 3; fireball.damage = {"fire":25}
-	fireball.aoe_shape = &"circle"
-	fireball.aoe_size = Vector2i(3, 3) # Radius of 3
-	fireball.primary_damage_type = &"fire"
-	abilities[&"fireball"] = fireball
-	
-	var ligtning_bolt = Ability.new(); ligtning_bolt.id = &"ligtning_bolt"; ligtning_bolt.display_name = "ligtning_bolt"
-	ligtning_bolt.effect = Ability.ActionEffect.DAMAGE; ligtning_bolt.target_type = Ability.TargetType.GROUND
-	ligtning_bolt.range_type = Ability.RangeType.ABILITY; ligtning_bolt.range = 1000.0 # Long range
-	ligtning_bolt.success_stat = &"int"; ligtning_bolt.ap_cost = 3; ligtning_bolt.damage = {"electric":25}
-	ligtning_bolt.aoe_shape = &"circle"
-	ligtning_bolt.aoe_size = Vector2i(3, 3) # Radius of 3
-	ligtning_bolt.primary_damage_type = &"electric"
-	abilities[&"ligtning_bolt"] = ligtning_bolt
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	var content = file.get_as_text()
+	var json = JSON.new()
+	var error = json.parse(content)
 
-func get_ability(ability_id: StringName) -> Ability:
-	return abilities.get(ability_id, null)
+	if error == OK:
+		var data = json.get_data()
+		for entry in data.get("abilities", []):
+			_abilities[entry["id"]] = entry
+	else:
+		push_error("AbilityDatabase: failed to parse JSON: " + json.get_error_message())
+
+func get_ability_data(ability_id: String) -> Dictionary:
+	if _abilities.has(ability_id):
+		return _abilities[ability_id]
+	push_error("AbilityDatabase: ability ID not found: " + ability_id)
+	return {}
