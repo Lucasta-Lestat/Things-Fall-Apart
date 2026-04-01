@@ -1571,6 +1571,9 @@ script = ExtResource("2_as8t5")
 
 [node name="GameUI" type="CanvasLayer" parent="." unique_id=1932040831]
 script = ExtResource("3_iojcr")
+show_seconds = null
+use_12_hour_format = null
+show_date = null
 metadata/_custom_type_script = "uid://bklebuy4rusbq"
 
 [node name="MarginContainer" type="MarginContainer" parent="GameUI" unique_id=396581495]

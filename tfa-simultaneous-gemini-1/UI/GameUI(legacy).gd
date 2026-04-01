@@ -41,8 +41,8 @@ func setup(cm: CombatManager, pim: PlayerInputManager):
 	
 
 # --- MODIFIED FUNCTION ---
-func _create_character_ui(character: CombatCharacter):
-	print("DEBUG: attempt to create character UI for ", character.character_name, " #ui")
+func _create_character_ui(character):
+	print("DEBUG: attempt to create character UI for ", character.display_name, " #ui")
 	if character_ui_map.has(character):
 		print("character_ui map already has character #ui")
 		return

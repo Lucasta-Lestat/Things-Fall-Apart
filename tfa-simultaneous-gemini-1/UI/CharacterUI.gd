@@ -8,8 +8,7 @@ class_name CharacterUI
 @onready var ap_slots_container: HBoxContainer = $CharacterUIContainer/APSlotsContainer
 
 var icon_size: Vector2 = Vector2(100.0,100.0)
-var character: CombatCharacter
-var combat_manager: CombatManager
+var character: ProceduralCharacter
 
 # Use a TextureRect for AP slots to show different states
 const AP_SLOT_EMPTY = preload("res://UI/Assets/ap_slot.png")
@@ -17,12 +16,11 @@ const AP_SLOT_PLANNED = preload("res://UI/Assets/ap_slot_planned.png")
 const AP_SLOT_EXECUTED = preload("res://UI/Assets/ap_slot_executed.png")
 
 func _ready():
-	print("DEBUG: combat_manager initialized in CharacterUI. Value: ", combat_manager)
 	
 	# Hide by default until a character is set
 	visible = true
 
-func set_character(char: CombatCharacter):
+func set_character(char):
 	print("DEBUG: Set Character #ui")
 	self.character = char
 	if not is_instance_valid(character):
