@@ -4,7 +4,7 @@
 extends CharacterBody2D
 class_name WeaponShape
 
-enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW }
+enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW, PISTOL }
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum GripStyle { ONE_HANDED, TWO_HANDED }
 
@@ -35,6 +35,7 @@ var collision_points: PackedVector2Array = []
 # Sprite overlay
 var sprite: Sprite2D = null
 @export var sprite_path: String = ""			# Path to sprite texture
+@export var projectile_texture_path: String = ""	# Path to projectile sprite (for ranged weapons)
 @export var sprite_scale: Vector2 = Vector2.ONE	# Additional scale multiplier (user-facing)
 @export var sprite_offset: Vector2 = Vector2.ZERO	# Fine-tune sprite position
 @export var sprite_rotation: float = 0.0		# Rotation offset in radians
@@ -351,6 +352,38 @@ static func create_mace(length: float = 40.0, damage: int = 14) -> WeaponShape:
 	weapon.balance_point = 0.15
 	return weapon
 
+static func create_bow(length: float = 60.0, damage: int = 10, projectile_texture: String = "") -> WeaponShape:
+	var weapon = WeaponShape.new()
+	weapon.weapon_type = WeaponType.BOW
+	weapon.display_name = "Bow"
+	weapon.primary_damage_type = "ranged_arrow"
+	weapon.damage = {"piercing": damage}
+	weapon.grip_style = GripStyle.TWO_HANDED
+	var s = weapon.weapon_scale * Globals.default_body_scale
+	weapon.total_length = length * s
+	weapon.grip_position = 0.5
+	weapon.grip_length = 8.0 * s
+	weapon.blade_width = 3.0 * s
+	weapon.balance_point = 0.5
+	weapon.projectile_texture_path = projectile_texture
+	return weapon
+
+static func create_pistol(length: float = 22.0, damage: int = 16, projectile_texture: String = "") -> WeaponShape:
+	var weapon = WeaponShape.new()
+	weapon.weapon_type = WeaponType.PISTOL
+	weapon.display_name = "Pistol"
+	weapon.primary_damage_type = "ranged_bullet"
+	weapon.damage = {"piercing": damage}
+	weapon.grip_style = GripStyle.ONE_HANDED
+	var s = weapon.weapon_scale * Globals.default_body_scale
+	weapon.total_length = length * s
+	weapon.grip_position = 0.85
+	weapon.grip_length = 8.0 * s
+	weapon.blade_width = 4.0 * s
+	weapon.balance_point = 0.25
+	weapon.projectile_texture_path = projectile_texture
+	return weapon
+
 # ===== SERIALIZATION =====
 
 func load_from_data(data: Dictionary) -> void:
@@ -363,6 +396,7 @@ func load_from_data(data: Dictionary) -> void:
 			"spear": weapon_type = WeaponType.SPEAR
 			"mace": weapon_type = WeaponType.MACE
 			"bow": weapon_type = WeaponType.BOW
+			"pistol": weapon_type = WeaponType.PISTOL
 
 	# Basic Properties
 	if data.has("id"): id = data["id"]
@@ -423,6 +457,8 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("sprite_path"):
 		sprite_path = data["sprite_path"]
 		set_sprite_from_path(sprite_path)
+	if data.has("projectile_texture_path"):
+		projectile_texture_path = str(data["projectile_texture_path"]) if data["projectile_texture_path"] != null else ""
 		
 	if data.has("sprite_scale"):
 		if data["sprite_scale"] is Vector2:
@@ -476,7 +512,8 @@ func to_data() -> Dictionary:
 		"grip_length": grip_length,
 		"blade_width": blade_width,
 		"balance_point": balance_point,
-		"sprite_path": sprite_path
+		"sprite_path": sprite_path,
+		"projectile_texture_path": projectile_texture_path
 	}
 
 func get_damage_type_name() -> String:
@@ -519,3 +556,17 @@ func _apply_default_size_for_type() -> void:
 			grip_length = 20.0 * s
 			blade_width = 10.0 * s
 			balance_point = 0.15
+		WeaponType.BOW:
+			# Long stave, gripped at center; width represents limb spread
+			total_length = 60.0 * s
+			grip_position = 0.5
+			grip_length = 8.0 * s
+			blade_width = 3.0 * s
+			balance_point = 0.5
+		WeaponType.PISTOL:
+			# Short barrel-heavy weapon; grip at rear
+			total_length = 22.0 * s
+			grip_position = 0.85
+			grip_length = 8.0 * s
+			blade_width = 4.0 * s
+			balance_point = 0.25

@@ -1582,10 +1582,10 @@ func _on_attack_finished() -> void:
 
 func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
-	if Ability == "Main": 
+	if Ability == "Main":
 		if attack_animator.is_attacking:
 			return  # Already attacking
-		
+
 		# Get damage type from weapon and start appropriate animation
 		var damage_type
 		if current_main_hand_item != null:
@@ -1593,9 +1593,11 @@ func attack(Ability:String= "Main") -> void:
 		else:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
-			SfxManager.play("slash",position)
+			SfxManager.play("slash", position)
+		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_main_hand_item)
 		attack_animator.start_attack(damage_type)
-	if Ability == "Off": 
+	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
 		# Get damage type from weapon and start appropriate animation
@@ -1605,8 +1607,26 @@ func attack(Ability:String= "Main") -> void:
 		else:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
-			SfxManager.play("slash",position)
+			SfxManager.play("slash", position)
+		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_off_hand_item)
 		attack_animator.start_attack(damage_type)
+
+func _fire_ranged_async(weapon: WeaponShape) -> void:
+	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
+	await attack_animator.attack_hit_frame
+	if not is_instance_valid(weapon):
+		return
+	# Play the appropriate firing sound at the moment of release
+	if weapon.primary_damage_type == "ranged_bullet":
+		SfxManager.play("gun", global_position)
+	else:
+		SfxManager.play("bow_release", global_position)
+	# Ask Game.gd to spawn and manage the projectile
+	var game = get_node_or_null("/root/TopDownCharacterScene")
+	if game and game.has_method("spawn_projectile"):
+		var fire_direction = Vector2.UP.rotated(rotation)
+		game.spawn_projectile(self, fire_direction, weapon)
 
 func is_attacking() -> bool:
 	"""Check if currently performing an attack"""
