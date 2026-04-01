@@ -40,7 +40,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
-		#print("is taargeting update in process")
+		#print("is targeting update in process")
 		#this is somehow still triggering after end_targeting is called
 		# Update target position to mouse
 		target_position = _get_mouse_world_position()
@@ -140,7 +140,7 @@ func confirm_targeting() -> Dictionary:
 		"size": rectangle_size if target_shape == TargetShape.RECTANGLE else Vector2.ZERO,
 		"rotation": rectangle_rotation
 	}
-	
+	print("targeting confirmed with position: ", target_position)
 	emit_signal("targeting_confirmed", current_hand, current_ability, target_position)
 	return result
 

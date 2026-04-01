@@ -21,6 +21,8 @@ var default_body_scale = 1.7
 const DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
 const dmg_0_dict = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
 # Arm IK settings (smaller for top-down proportions)
+
+
 var DEFAULT_ARM_SEGMENT_LENGTHS: Array[float] = [12.0 * default_body_scale, 10.0 * default_body_scale, 6.0 * default_body_scale]
 const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(-135, 135),  # Shoulder

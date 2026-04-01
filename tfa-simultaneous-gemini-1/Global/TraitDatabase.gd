@@ -1,5 +1,6 @@
 # res://Data/Traits/TraitDatabase.gd
 # A new autoload singleton for all character traits.
+#currently unused
 extends Node
 
 var traits: Dictionary = {}

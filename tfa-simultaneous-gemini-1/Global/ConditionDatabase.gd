@@ -28,7 +28,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/weakened.tscn",
 		"custom_sfx": "res://sfx/debuff_generic.mp3",
 		"stat_modifiers": [
-			{"stat": "STR", "operation": "add", "value": -2}
+			{"stat": "STR", "operation": "add", "value": -20}
 		],
 		"immunities": {}
 	},
@@ -153,26 +153,25 @@ func get_all_conditions() -> Array:
 		}
 	},
 	{
-		"id": "might",
-		"display_name": "Might",
+		"id": "mighty",
+		"display_name": "Mighty",
 		"description": "Increased physical power.",
-		"traits": {"buff": 1, "physical": 1, "enhancement": 1},
+		"traits": {"buff": 1, "physical": 1},
 		"stackable": false,
 		"duration": 60.0,
 		"icon": "res://UI/UI Icons/might.png",
 		"transforms_into": {},
-		"canceled_by_trait": ["curse"],
+		"canceled_by_trait": ["weak"],
 		"custom_vfx": "res://vfx/might_aura.tscn",
-		"custom_sfx": "res://sfx/buff_shout.mp3",
+		"custom_sfx": null,
 		"stat_modifiers": [
-			{"stat": "STR", "operation": "add", "value": 5},
-			{"stat": "DAMAGE", "operation": "multiply", "value": 1.15}
+			{"stat": "STR", "operation": "add", "value": 20},
 		],
 		"immunities": {}
 	},
 	{
-		"id": "haste",
-		"display_name": "Haste",
+		"id": "hasted",
+		"display_name": "Hasted",
 		"description": "Moving and acting faster.",
 		"traits": {"buff": 1, "speed": 2, "magical": 1},
 		"stackable": false,

@@ -133,24 +133,32 @@ static func register_conditions(conditions_array: Array) -> void:
 
 ## Apply a condition to this character
 # Update apply_condition signature and the instance creation:
-
 func apply_condition(
 	condition_id: String,
 	source: Node = null,
 	stacks: int = 1,
 	duration_override: float = -2.0,
-	target_limb = null  # LimbType or null
+	target_limb = null
 ) -> ConditionInstance:
 	var template = condition_registry.get(condition_id)
 	if not template:
 		push_warning("Unknown condition: %s" % condition_id)
 		return null
-	
+		
 	if _is_immune_to(condition_id):
 		return null
-	
+		
 	var current_time = time_manager.game_time if time_manager else 0.0
 	var existing = conditions.get(condition_id)
+	
+	# --- Trait-based duration scaling handled internally ---
+	var final_duration = duration_override
+	if duration_override <= -2.0 and template.duration > 0:
+		final_duration = template.duration
+		if character and "MODIFY_DURATION_BY_TRAIT" in character:
+			for trait_key in template.traits:
+				if trait_key in character.MODIFY_DURATION_BY_TRAIT:
+					final_duration *= character.MODIFY_DURATION_BY_TRAIT[trait_key]
 	
 	if existing:
 		if template.stackable:
@@ -161,22 +169,22 @@ func apply_condition(
 				stats_recalculated.emit()
 			return existing
 		else:
-			if duration_override > -2.0:
-				existing.expires_at = current_time + duration_override if duration_override > 0 else -1.0
+			if final_duration > -2.0:
+				existing.expires_at = current_time + final_duration if final_duration > 0 else -1.0
 			elif template.duration > 0:
 				existing.expires_at = current_time + template.duration
 			return existing
-	
-	# Create new instance — now with target_limb
+			
+	# Create new instance
 	var instance = ConditionInstance.new(template, source, target_limb)
 	instance.stacks = min(stacks, template.max_tier) if template.stackable else 1
 	
-	if duration_override > -2.0:
-		if duration_override > 0:
-			instance.expires_at = current_time + duration_override
+	if final_duration > -2.0:
+		if final_duration > 0:
+			instance.expires_at = current_time + final_duration
 		else:
 			instance.expires_at = -1.0
-	
+			
 	instance.apply(current_time)
 	conditions[condition_id] = instance
 	
@@ -259,8 +267,10 @@ func get_active_stat_modifiers() -> Array[Dictionary]:
 	
 	for cond_id in conditions:
 		var instance: ConditionInstance = conditions[cond_id]
-		all_mods.append_array(instance.get_scaled_stat_modifiers())
-	
+		# Ensure suppressed conditions are ignored during math calculations
+		if not instance.is_suppressed:
+			all_mods.append_array(instance.get_scaled_stat_modifiers())
+			
 	return all_mods
 
 

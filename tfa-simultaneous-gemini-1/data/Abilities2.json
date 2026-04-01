@@ -259,6 +259,27 @@
 	  ],
 	  "visuals": { "impact_effect": "res://effects/heal_glow.tscn" }
 	},
+	{
+	  "id": "chasten",
+	  "display_name": "Chasten",
+	  "description": "End a creature's current infatuation",
+	  "cooldown": 5.0,
+	  "costs": { "MP": 15 },
+	  "cast_time": 1.0,
+	  "traits": { "holy":1, "support": 1 },
+	  "targeting": {
+		"type": "target",
+		"range": 200.0,
+		"shape": "single"
+	  },
+	  "effects": [
+		{
+		  "type": "remove_condition",
+		  "trait": "infatuated"
+		}
+	  ],
+	  "visuals": { "impact_effect": "res://vfx/heartbreak.tscn" }
+	},
 	
 	{
 	  "id": "shield_bash",

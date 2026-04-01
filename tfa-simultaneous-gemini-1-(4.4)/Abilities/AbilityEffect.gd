@@ -42,7 +42,7 @@ static func resolve_effect(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2,
+	ability: Ability,
 	target_position: Vector2
 ) -> Dictionary:
 	var result = {
@@ -87,7 +87,7 @@ static func _resolve_damage(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2
+	ability: Ability
 ) -> Dictionary:
 	var result = {
 		"success": true,
@@ -167,7 +167,7 @@ static func _calculate_modified_damage(
 	target: Node,
 	caster_traits: Dictionary,
 	target_traits: Dictionary,
-	ability_traits: Dictionary,
+	ability_traits,
 	caster_conditions: ConditionManager
 ) -> Dictionary:
 	if not caster_conditions:
@@ -298,7 +298,7 @@ static func _resolve_healing(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2
+	ability: Ability
 ) -> Dictionary:
 	var result = {
 		"success": true,
@@ -363,7 +363,7 @@ static func _resolve_apply_condition(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2
+	ability: Ability
 ) -> Dictionary:
 	var result = {
 		"success": true,
@@ -412,7 +412,7 @@ static func _resolve_remove_condition(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2
+	ability: Ability
 ) -> Dictionary:
 	var result = {
 		"success": true,
@@ -470,7 +470,7 @@ static func _resolve_force_field(
 	effect: Dictionary,
 	caster: Node,
 	target_position: Vector2,
-	ability: Ability2
+	ability: Ability
 ) -> Dictionary:
 	var result = {
 		"success": true,
@@ -787,7 +787,7 @@ static func _resolve_custom(
 	effect: Dictionary,
 	caster: Node,
 	targets: Array,
-	ability: Ability2,
+	ability: Ability,
 	target_position: Vector2
 ) -> Dictionary:
 	var result = {

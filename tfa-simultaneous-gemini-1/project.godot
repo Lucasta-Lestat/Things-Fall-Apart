@@ -26,15 +26,16 @@ BodyPartDatabase="*res://Global/BodyPartDatabase.gd"
 ItemDatabase="*res://Global/ItemDatabase.gd"
 RaceDatabase="*uid://cffw0anwwp2pv"
 BackgroundDatabase="*uid://b8qfeiymqx8wj"
+ConditionDatabase="*res://Global/ConditionDatabase.gd"
 FactionDatabase="*uid://x31opkf2t1j6"
-CharacterDatabase="*res://Global/CharacterDatabase.gd"
-AbilityDatabase="*res://Global/AbilityDatabase.gd"
+AbilityDatabase="*res://Global/AbilityDatabase(Legacy).gd"
+AbilityDatabase2="*res://Global/AbilityDatabase2.gd"
+ProceduralItemDatabase="*res://Global/ProceduralItemDatabase.gd"
+TopDownCharacterDatabase="*uid://xk83nx1un7ui"
 TraitDatabase="*res://Global/TraitDatabase.gd"
-WeaponDatabase="*res://Global/WeaponDatabase.gd"
 GridManager="*res://Global/GridManager.gd"
 StructureDatabase="*res://Global/StructureDatabase.gd"
 EquipmentDatabase="*res://Global/EquipmentDatabase.gd"
-ConditionDatabase="*res://Global/ConditionDatabase.gd"
 VfxSystem="*res://Global/VFXSystem.gd"
 DialogueManager="*res://Global/Dialogue_Manager.gd"
 MapDatabase="*res://Global/MapDatabase.gd"
@@ -43,11 +44,9 @@ TimeManager="*res://Global/TimeManager.gd"
 FluidManager="*res://Global/FluidManager.gd"
 VisibilityManager="*res://Global/VisibilityManager.gd"
 GameLog="*res://Global/GameLog.gd"
-ProceduralItemDatabase="*res://Global/ProceduralItemDatabase.gd"
 SfxManager="*res://Global/SFXManager.gd"
 MusicManager="*res://Global/MusicManager.gd"
 PauseManager="*res://Global/PauseManager.gd"
-AbilityDatabase2="*res://Global/AbilityDatabase2.gd"
 
 [display]
 
@@ -88,6 +87,11 @@ middle_mouse={
 right_click={
 "deadzone": 0.2,
 "events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":false,"double_click":false,"script":null)
+]
+}
+dash={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194325,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
 

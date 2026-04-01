@@ -279,6 +279,15 @@ var damage_multiplier: float:
 
 var move_speed: float:
 	get: return GridManager.TILE_SIZE * (0.5 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
+@export var dash_speed_multiplier: float = 5.0
+@export var dash_duration: float = 0.2
+@export var dash_cooldown: float = 0.8
+@export var avoidance_radius: float = 50.0
+@export var avoidance_strength: float = 200.0
+var is_dashing: bool = false
+var dash_timer: float = 0.0
+var dash_cooldown_timer: float = 0.0
+
 
 var attack_speed_multiplier: float:
 	get: return 0.5 + (effective_dexterity() / 100.0)
@@ -357,6 +366,7 @@ func _ready() -> void:
 	initialize_limbs(constitution)
 	TimeManager.time_updated.connect(_on_time_updated)
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
+	_on_stats_recalculated() # Initialize the effective stats
 	print("AISTate: ", AIState)
 func _setup_action_queue() -> void:
 	action_queue = ActionQueue.new()
@@ -476,23 +486,8 @@ func _get_body_collision_points() -> PackedVector2Array:
 		Vector2(half_width, bottom),    # bottom-right
 		Vector2(-half_width, bottom)    # bottom-left
 	])
-## Wrapper that applies your trait-based duration scaling before delegating
-# Update the character's apply_condition wrapper to accept target_limb:
 
-func apply_condition(condition_id: String, source: Node = null, stacks: int = 1, duration_override: float = -2.0, target_limb = null) -> ConditionInstance:
-	var template = ConditionManager.condition_registry.get(condition_id)
-	if not template:
-		return condition_manager.apply_condition(condition_id, source, stacks, duration_override, target_limb)
-	
-	# Scale duration by trait affinity if no explicit override
-	if duration_override <= -2.0 and template.duration > 0:
-		var scaled_duration = template.duration
-		for trait_key in template.traits:
-			if trait_key in MODIFY_DURATION_BY_TRAIT:
-				scaled_duration *= MODIFY_DURATION_BY_TRAIT[trait_key]
-		return condition_manager.apply_condition(condition_id, source, stacks, scaled_duration, target_limb)
-	
-	return condition_manager.apply_condition(condition_id, source, stacks, duration_override, target_limb)
+
 
 func _on_condition_applied(instance: ConditionInstance) -> void:
 	_spawn_condition_vfx(instance)
@@ -505,6 +500,7 @@ func _on_condition_removed(instance: ConditionInstance) -> void:
 func _on_condition_expired(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
+
 
 func _on_stats_recalculated() -> void:
 	# --- Core attributes (conditions can buff/debuff these) ---
@@ -585,7 +581,7 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 	if result.has("condition_id") and effect.get("type") == "apply_condition":
 		if randf() <= result.get("chance", 1.0):
 			# Chain-applied conditions inherit the same limb
-			apply_condition(result["condition_id"], instance.source, 1, -2.0, instance.target_limb)
+			condition_manager.apply_condition(result["condition_id"], instance.source, 1, -2.0, instance.target_limb)
 	
 	if result.has("condition_id") and effect.get("type") == "remove_condition":
 		condition_manager.remove_condition(result["condition_id"])
@@ -1270,7 +1266,12 @@ func _handle_input() -> void:
 	if paused:
 		if Input.is_action_just_pressed("ui_cancel"):
 			action_queue.cancel_all()
-
+			
+	if paused: 
+		if Input.is_action_just_pressed("dash"):
+			action_queue.queue_dash(mouse_pos)
+	else: 
+		dash(mouse_pos)
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
@@ -1321,7 +1322,14 @@ func _update_movement(delta: float) -> void:
 	# Smoothly rotate toward target
 	var angle_diff = wrapf(target_rotation - rotation, -PI, PI)
 	rotation += sign(angle_diff) * min(abs(angle_diff), rotation_speed * delta)
-	
+	# Update dash timers
+	if is_dashing:
+		dash_timer -= delta
+		if dash_timer <= 0.0:
+			is_dashing = false
+	if dash_cooldown_timer > 0.0:
+		dash_cooldown_timer -= delta
+		
 	# Move toward target if moving
 	if is_moving:
 		var to_target = target_position - global_position
@@ -2191,6 +2199,18 @@ func _move_toward(target_pos: Vector2) -> void:
 	var dir = (target_pos - self.global_position).normalized()
 	if dir.length() > 0.1:
 		self.target_rotation = dir.angle() + PI / 2
+		
+func dash(target_pos: Vector2) -> void:
+	if is_dashing or dash_cooldown_timer > 0.0:
+		print("tried to dash too soon after cooldown")
+		return
+
+	var dir = (target_pos - global_position).normalized()
+	if dir.length() < 0.1:
+		return
+	is_dashing = true
+	dash_timer = dash_duration
+	dash_cooldown_timer = dash_cooldown
 
 # ===== EVENTS =====
 
@@ -2855,15 +2875,7 @@ func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> vo
 			target_position
 		)
 		results.append(result)
-		
-		# Apply conditions from ability effects to targets
-		if effect.has("apply_condition"):
-			var cond_id = effect["apply_condition"]
-			for target in targets:
-				if target.has_method("apply_condition"):
-					# Default to torso for ability-applied conditions
-					target.apply_condition(cond_id, self, 1, -2.0, LimbType.TORSO)
-	
+
 	_spawn_ability_visuals(ability, target_position)
 	cast_completed.emit(ability, results)
 
@@ -2949,6 +2961,8 @@ func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
 			potential_targets.append_array(game2.characters_in_scene)
 		if "items_in_scene" in game2:
 			potential_targets.append_array(game2.items_in_scene)
+		if "structures_in_scene" in game2:
+			potential_targets.append_array(game2.structures_in_scene)
 	
 	# Filter by area
 	for target in potential_targets:

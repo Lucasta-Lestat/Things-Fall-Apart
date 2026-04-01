@@ -1312,7 +1312,7 @@
 	  "extra_abilities": [],
 	  "extra_conditions": [],
 	  "extra_traits": {
-		"Hard_Shell": 2
+		"sturdy": 2
 	  },
 	  "combat": {},
 	  "sensory": {}
@@ -1446,7 +1446,7 @@
 		"intelligence": 50,
 		"charisma": 65
 	  },
-	  "equipment": [],
+	  "equipment": ["vermin_bag"],
 	  "icon": "res://icons/characters/joey.png",
 	  "dialogue": null,
 	  "interact_options": [
