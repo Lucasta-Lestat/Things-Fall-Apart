@@ -1,4 +1,5 @@
 ### AI
+extends Node
 enum AIState {
 	DEAD,           # Does nothing for now, want to implement some spirit world mechanics later
 	IDLE,           # No enemies nearby, standing still
@@ -87,7 +88,7 @@ func _update_target() -> void:
 	var best_distance: float = detection_range
 	
 	# Get all characters in scene (this could be optimized with groups)
-	var characters = game2.characters_in_scene
+	var characters = game.characters_in_scene
 	#print("Searching for target in: ",characters)
 	for node in characters:
 		if node == self:

@@ -2,7 +2,7 @@
 # Attach to a Node2D that will be the character root
 extends CharacterBody2D
 class_name ProceduralCharacter
-@onready var game2 = get_node("/root/TopDownCharacterScene")
+@onready var game2 = get_node("/root/game")
 # Character data
 var character_data: Dictionary = {}
 var Name = ""
@@ -2258,12 +2258,12 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 	if damage_info.get("actual_damage", 0) > 0:
 		# Stun briefly
 		if not "stunned" in conditions:
-			apply_condition("stunned")
+			condition_manager.apply_condition("stunned")
 		
 		# Check if should retreat (low health)
 		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
 		
-		#TODO: Will Check for retreat
+		#TODO: Will Check for retreat using ability check function
 		
 func _on_character_died() -> void:
 	if current_state == AIState.DEAD:
