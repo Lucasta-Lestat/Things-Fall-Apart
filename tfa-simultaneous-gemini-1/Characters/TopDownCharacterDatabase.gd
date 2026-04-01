@@ -2,7 +2,7 @@
 # Autoload singleton - add to Project > AutoLoad as "TopDownCharacterDatabase"
 #
 # Depends on: RaceDatabase, BackgroundDatabase, FactionDatabase,
-#             AbilityDatabase2, ItemDatabase (item_database.gd)
+#             AbilityDatabase, ItemDatabase (item_database.gd)
 # (all must be loaded as autoloads above this one)
 #
 # ItemDatabase is accessed via its .weapons and .equipment dicts directly,

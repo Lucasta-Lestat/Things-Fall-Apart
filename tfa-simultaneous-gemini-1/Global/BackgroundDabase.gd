@@ -228,12 +228,12 @@ func _get_pool_for_category(category: String) -> Array:
 	return results
 
 func _get_ability_pool_for_category(category: String) -> Array:
-	## Filters AbilityDatabase2 for abilities tagged with the category.
+	## Filters AbilityDatabase for abilities tagged with the category.
 	## Matches against the ability's "tags", "traits", or "category" fields.
 	var pool: Array = []
 	var cat_lower = category.to_lower()
-	for ability_id in AbilityDatabase2.get_all_ability_ids():
-		var data = AbilityDatabase2.get_ability_data(ability_id)
+	for ability_id in AbilityDatabase.get_all_ability_ids():
+		var data = AbilityDatabase.get_ability_data(ability_id)
 		if _entry_matches_category(data, cat_lower):
 			pool.append(ability_id)
 	return pool
@@ -306,7 +306,7 @@ func get_chooseable_abilities(category: String) -> Array:
 	var pool = _get_ability_pool_for_category(category)
 	var results: Array = []
 	for ability_id in pool:
-		var data = AbilityDatabase2.get_ability_data(ability_id)
+		var data = AbilityDatabase.get_ability_data(ability_id)
 		if not data.is_empty():
 			results.append(data)
 	return results
