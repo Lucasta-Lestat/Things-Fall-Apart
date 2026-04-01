@@ -230,6 +230,12 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 			windup_duration = 0.22; strike_duration = 0.06; recovery_duration = 0.25
 		"bludgeoning":
 			windup_duration = 0.28; strike_duration = 0.08; recovery_duration = 0.30
+		"ranged_arrow":
+			# Draw bow: slow deliberate pull, very short release snap, quick recovery
+			windup_duration = 0.35; strike_duration = 0.05; recovery_duration = 0.25
+		"ranged_bullet":
+			# Raise and aim pistol: moderate raise, brief fire, snappy recovery from recoil
+			windup_duration = 0.20; strike_duration = 0.06; recovery_duration = 0.20
 	
 	windup_duration /= speed_multiplier
 	strike_duration /= speed_multiplier
@@ -299,12 +305,17 @@ func _update_animation(delta: float) -> void:
 			if attack_timer >= windup_duration:
 				current_state = AttackState.STRIKE
 				attack_timer = 0.0
-	
+				# Ranged weapons release the projectile right as the strike begins
+				if current_damage_type in ["ranged_arrow", "ranged_bullet"]:
+					emit_signal("attack_hit_frame", get_current_hand())
+
 		AttackState.STRIKE:
 			attack_progress = attack_timer / strike_duration
 			_animate_strike()
-			if attack_progress >= 0.5 and attack_progress - (get_process_delta_time() / strike_duration) < 0.5:
-				emit_signal("attack_hit_frame", get_current_hand())
+			# Melee hit frame fires at strike midpoint; ranged already fired on transition above
+			if current_damage_type not in ["ranged_arrow", "ranged_bullet"]:
+				if attack_progress >= 0.5 and attack_progress - (get_process_delta_time() / strike_duration) < 0.5:
+					emit_signal("attack_hit_frame", get_current_hand())
 			if attack_timer >= strike_duration:
 				current_state = AttackState.RECOVERY
 				attack_timer = 0.0
@@ -438,17 +449,21 @@ func _animate_windup() -> void:
 		"slashing": _animate_slash_windup()
 		"piercing": _animate_thrust_windup()
 		"bludgeoning": _animate_smash_windup()
+		"ranged_arrow": _animate_bow_windup()
+		"ranged_bullet": _animate_gun_windup()
 
 func _animate_strike() -> void:
 	match current_damage_type:
 		"slashing": _animate_slash_strike()
 		"piercing": _animate_thrust_strike()
 		"bludgeoning": _animate_smash_strike()
+		"ranged_arrow": _animate_bow_strike()
+		"ranged_bullet": _animate_gun_strike()
 
 func _animate_recovery() -> void:
 	var ease_out = 1.0 - _ease_out_quad(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	match current_damage_type:
 		"slashing":
 			target_arm_offset = _mirror_offset(Vector2(-20, -15)) * ease_out
@@ -462,6 +477,16 @@ func _animate_recovery() -> void:
 			target_arm_offset = _mirror_offset(Vector2(0, -25)) * ease_out
 			target_weapon_rotation = 0.4 * mirror * ease_out
 			target_body_rotation = (-0.15 * ease_out * mirror) * current_rotation_intensity
+		"ranged_arrow":
+			# Arm drifts back to rest from the released draw position
+			target_arm_offset = _mirror_offset(Vector2(8, -10)) * ease_out
+			target_weapon_rotation = -0.1 * mirror * ease_out
+			target_body_rotation = (-0.15 * ease_out * mirror) * current_rotation_intensity
+		"ranged_bullet":
+			# Arm settles from recoil kick back to low ready
+			target_arm_offset = _mirror_offset(Vector2(0, -20)) * ease_out
+			target_weapon_rotation = -0.2 * mirror * ease_out
+			target_body_rotation = (-0.1 * ease_out * mirror) * current_rotation_intensity
 
 func _animate_slash_windup() -> void:
 	var ease_in = _ease_in_quad(attack_progress)
@@ -526,6 +551,53 @@ func _animate_smash_strike() -> void:
 	target_body_rotation = _second_order_float(
 		0.2 * current_rotation_intensity * mirror, 
 		-0.15 * current_rotation_intensity * mirror, 
+		ease_progress
+	)
+
+func _animate_bow_windup() -> void:
+	# Drawing the string: main hand pulls back and up while weapon arm extends forward
+	var ease_in = _ease_in_quad(attack_progress)
+	var mirror = _get_hand_mirror()
+	# Pull draw arm back toward the shoulder; slight body lean into the draw
+	target_arm_offset = _mirror_offset(Vector2(12, 8)) * ease_in
+	target_weapon_rotation = 0.15 * mirror * ease_in
+	target_body_rotation = (0.2 * ease_in * mirror) * current_rotation_intensity
+
+func _animate_bow_strike() -> void:
+	# Release: draw arm snaps forward as string is loosed; brief follow-through
+	var ease_progress = _ease_out_cubic(attack_progress)
+	var mirror = _get_hand_mirror()
+	var start_offset = _mirror_offset(Vector2(12, 8))
+	var end_offset = _mirror_offset(Vector2(8, -10))
+	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
+	target_weapon_rotation = _second_order_float(0.15 * mirror, -0.1 * mirror, ease_progress)
+	target_body_rotation = _second_order_float(
+		0.2 * current_rotation_intensity * mirror,
+		-0.15 * current_rotation_intensity * mirror,
+		ease_progress
+	)
+
+func _animate_gun_windup() -> void:
+	# Raise pistol: arm lifts forward and up into an aimed position
+	var ease_in = _ease_in_quad(attack_progress)
+	var mirror = _get_hand_mirror()
+	target_arm_offset = _mirror_offset(Vector2(5, -30)) * ease_in
+	target_weapon_rotation = -0.1 * mirror * ease_in
+	target_body_rotation = (0.1 * ease_in * mirror) * current_rotation_intensity
+
+func _animate_gun_strike() -> void:
+	# Recoil: pistol kicks back and up sharply, then eases toward recovery position
+	var ease_progress = _ease_out_cubic(attack_progress)
+	var mirror = _get_hand_mirror()
+	# Recoil travels upward and slightly back from the aimed position
+	var start_offset = _mirror_offset(Vector2(5, -30))
+	var end_offset = _mirror_offset(Vector2(0, -20))
+	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
+	# Weapon rotates upward (muzzle flip) then settles
+	target_weapon_rotation = _second_order_float(-0.1 * mirror, -0.2 * mirror, ease_progress)
+	target_body_rotation = _second_order_float(
+		0.1 * current_rotation_intensity * mirror,
+		-0.1 * current_rotation_intensity * mirror,
 		ease_progress
 	)
 

@@ -330,6 +330,7 @@ func _process(delta: float) -> void:
 		for key in to_remove:
 			clash_cooldowns.erase(key)
 		_check_combat_collisions()
+		_update_projectiles(delta)
 	# Tick fog effects
 		if $FogManager:
 			$FogManager.update_fogs(delta, characters_in_scene)
@@ -352,7 +353,11 @@ func _check_combat_collisions() -> void:
 			weapon = attacker.current_main_hand_item
 		else:
 			weapon = attacker.current_off_hand_item
-		
+
+		# Ranged weapons use the projectile system — skip melee collision entirely
+		if weapon is WeaponShape and weapon.weapon_type in [WeaponShape.WeaponType.BOW, WeaponShape.WeaponType.PISTOL]:
+			continue
+
 		# Check against other characters
 		#print("how many characters? ", all_characters)
 		for victim in all_characters:
@@ -707,6 +712,9 @@ enum PenetrationState {
 
 # Active hit tracking (prevents multiple hits per swing)
 var active_hits: Dictionary = {}  # attacker_id -> { target_id -> hit_data }
+
+# Live projectiles spawned by ranged weapons
+var active_projectiles: Array = []
 
 # Weapon clash cooldowns
 var clash_cooldowns: Dictionary = {}  # "id1_id2" -> time_remaining
@@ -1184,6 +1192,135 @@ func check_weapon_weapon_collision(
 				}
 	
 	return {"collision": false}
+
+# ===== PROJECTILE SYSTEM =====
+
+func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: WeaponShape) -> Node2D:
+	"""Create a projectile node and register it for per-frame collision tracking."""
+	var proj = Node2D.new()
+	proj.name = "Projectile"
+	proj.z_index = 3
+
+	var sprite = Sprite2D.new()
+	if weapon.projectile_texture_path != "" and ResourceLoader.exists(weapon.projectile_texture_path):
+		sprite.texture = load(weapon.projectile_texture_path)
+	else:
+		# Fallback: draw a small rectangle so something is visible
+		var img = Image.create(4, 12, false, Image.FORMAT_RGBA8)
+		img.fill(Color.WHITE)
+		sprite.texture = ImageTexture.create_from_image(img)
+	proj.add_child(sprite)
+
+	# Spawn slightly ahead of the shooter so it doesn't immediately collide with them
+	proj.global_position = shooter.global_position + direction.normalized() * 20.0
+	# Rotate so the sprite's up-axis points along the travel direction
+	proj.rotation = direction.angle() + PI / 2.0
+
+	var is_pistol = weapon.weapon_type == WeaponShape.WeaponType.PISTOL
+	var speed = 600.0 if is_pistol else 380.0
+	var max_range = 700.0 if is_pistol else 900.0
+
+	get_tree().current_scene.add_child(proj)
+
+	active_projectiles.append({
+		"node": proj,
+		"shooter": shooter,
+		"direction": direction.normalized(),
+		"weapon": weapon,
+		"speed": speed,
+		"max_range": max_range,
+		"distance_traveled": 0.0,
+	})
+	return proj
+
+func _update_projectiles(delta: float) -> void:
+	var to_remove: Array = []
+
+	for proj_data in active_projectiles:
+		var proj: Node2D = proj_data["node"]
+		if not is_instance_valid(proj):
+			to_remove.append(proj_data)
+			continue
+
+		var move_vec: Vector2 = proj_data["direction"] * proj_data["speed"] * delta
+		proj.global_position += move_vec
+		proj_data["distance_traveled"] += move_vec.length()
+
+		if proj_data["distance_traveled"] >= proj_data["max_range"]:
+			proj.queue_free()
+			to_remove.append(proj_data)
+			continue
+
+		var hit := false
+
+		# --- Character collision ---
+		for target in characters_in_scene:
+			if not is_instance_valid(target) or not target.is_alive():
+				continue
+			if target == proj_data["shooter"]:
+				continue
+			var body_corners = get_body_hitbox_corners(target)
+			if point_in_polygon(proj.global_position, body_corners):
+				_process_projectile_hit_character(proj_data["shooter"], target, proj.global_position, proj_data["weapon"])
+				proj.queue_free()
+				to_remove.append(proj_data)
+				hit = true
+				break
+
+		if hit:
+			continue
+
+		# --- Structure collision ---
+		for structure in structures_in_scene:
+			if not is_instance_valid(structure):
+				continue
+			var target_rect: Rect2
+			if "sprite" in structure and structure.sprite and structure.sprite.texture:
+				var tex_size = structure.sprite.texture.get_size() * structure.sprite.scale
+				target_rect = Rect2(structure.global_position - tex_size / 2.0, tex_size)
+			elif "size" in structure:
+				target_rect = Rect2(structure.global_position - structure.size / 2.0, structure.size)
+			else:
+				continue
+			if target_rect.has_point(proj.global_position):
+				_process_projectile_hit_object(proj_data["shooter"], structure, proj.global_position, proj_data["weapon"])
+				proj.queue_free()
+				to_remove.append(proj_data)
+				hit = true
+				break
+
+	for proj_data in to_remove:
+		active_projectiles.erase(proj_data)
+
+func _process_projectile_hit_character(
+	shooter: ProceduralCharacter,
+	target: ProceduralCharacter,
+	hit_position: Vector2,
+	weapon: WeaponShape
+) -> void:
+	var local_hit = target.to_local(hit_position)
+	var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
+	var attack_damage = weapon.damage.duplicate()
+	target.damage_limb(limb_type, attack_damage, local_hit)
+
+	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
+		SfxManager.play("sword-on-flesh", hit_position)
+	else:
+		SfxManager.play("arrow-body-impact", hit_position)
+
+func _process_projectile_hit_object(
+	_shooter: ProceduralCharacter,
+	target: Node2D,
+	hit_position: Vector2,
+	weapon: WeaponShape
+) -> void:
+	if target.has_method("take_damage"):
+		target.take_damage(weapon.damage.duplicate(), 0)
+
+	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
+		SfxManager.play("armor-impact", hit_position)
+	else:
+		SfxManager.play("arrow-wall-impact", hit_position)
 
 # ===== SELECTION CIRCLE DRAWER =====
 
