@@ -54,6 +54,21 @@ func _on_combat_ended():
 func _on_item_dropped(item_id, character):
 	create_item(item_id, GridManager.map_to_world(character.global_position))
 	
+func setup_map_fogs(map_data: Dictionary) -> void:
+	var fog_manager: FogManager = get_node_or_null("FogManager")
+	if not fog_manager:
+		return
+	fog_manager.clear_all_fog()
+	for fog_id in map_data.get("fog_ids", []):
+		fog_manager.create_fog_from_id(fog_id)
+
+func setup_map_music(map_data: Dictionary) -> void:
+	var track: String = map_data.get("music_track", "")
+	if not track.is_empty():
+		MusicManager.play(track)
+	else:
+		MusicManager.stop()
+
 func load_map(map_id: StringName, coming_from: String):
 	#print("Map definitions: ", MapDatabase.map_definitions)
 	GridManager.active_map = map_id
@@ -227,6 +242,9 @@ func load_map(map_id: StringName, coming_from: String):
 	for floor in floors_container.get_children():
 			if floor.floor_id != "floor_dirt" and floor.floor_id != "floor_stone" and floor.floor_id != "floor_wood":
 				check_floor_neighbors(GridManager.world_to_map(floor.global_position), floor, floor.floor_id)
+	var map_json_data = MapDatabase.get_map_data(map_id)
+	setup_map_fogs(map_json_data)
+	setup_map_music(map_json_data)
 func _apply_material_recursive(node: Node, material: Material):
 	# Check if the node is a visual sprite (covers Sprite2D and TextureRect)
 	if node is Sprite2D or node is TextureRect:
