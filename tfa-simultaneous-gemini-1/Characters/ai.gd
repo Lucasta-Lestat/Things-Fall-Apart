@@ -6,6 +6,8 @@ var game2
 
 # ===== AI STATE MACHINE =====
 
+### AI
+extends Node
 enum AIState {
 	DEAD,
 	IDLE,
