@@ -30,11 +30,22 @@ var current_hand = "Main"
 var display_name = "John Doe"
 
 # Ability Resolution:
-## Currently casting ability (null if not casting)
-var current_cast: Dictionary = {}
+## AbilityManager handles casting, cooldowns, and multi-step sequences
+var ability_manager: AbilityManager
 
-## Cooldowns for abilities {ability_id: time_when_available}
-var cooldowns: Dictionary = {}
+## Currently casting ability — delegates to ability_manager.current_cast
+var current_cast: Dictionary:
+	get: return ability_manager.current_cast if ability_manager else {}
+	set(value):
+		if ability_manager:
+			ability_manager.current_cast = value
+
+## Cooldowns for abilities — delegates to ability_manager.cooldowns
+var cooldowns: Dictionary:
+	get: return ability_manager.cooldowns if ability_manager else {}
+	set(value):
+		if ability_manager:
+			ability_manager.cooldowns = value
 
 var MODIFY_DURATION_BY_TRAIT: Dictionary = {
 	"fire": 1.2,
@@ -352,6 +363,16 @@ func _ready() -> void:
 	# 2. Name it (optional, but helps with debugging)
 	targeting_system.name = "AbilityTargeting"
 	add_child(targeting_system)
+	# Set up AbilityManager
+	ability_manager = AbilityManager.new()
+	ability_manager.name = "AbilityManager"
+	add_child(ability_manager)
+	ability_manager.cast_started.connect(_on_ability_cast_started)
+	ability_manager.cast_completed.connect(_on_ability_cast_completed)
+	ability_manager.cast_interrupted.connect(_on_ability_cast_interrupted)
+	ability_manager.cast_failed.connect(_on_ability_cast_failed)
+	ability_manager.step_started.connect(_on_ability_step_started)
+	ability_manager.step_completed.connect(_on_ability_step_completed)
 	blood_drop_texture = load("res://vfx/blood drop.png")
 
 	$DualHealthBar.setup(self)
@@ -1034,8 +1055,6 @@ func _process(delta: float) -> void:
 		_update_weapon_position()
 		_update_blood_drops(delta)
 		_update_severed_limb_visuals()
-		if not current_cast.is_empty():
-			_process_casting(delta)
 		# Update timers
 		attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
 		reaction_timer = max(0, reaction_timer - delta)
@@ -1186,7 +1205,7 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 				action_queue.queue_ability(item.ability_id, mouse_pos)
 			else:
 				target_rotation = (mouse_pos - global_position).angle() + PI / 2
-				var ability_obj = Ability2.from_dict(ability_data)
+				var ability_obj = Ability.from_dict(ability_data)
 				use_ability(ability_obj, {"position": mouse_pos})
 
 func cast_ability(ability: AbilityShape):
@@ -1314,7 +1333,7 @@ func _confirm_ability_target(paused: bool) -> void:
 		)
 	else:
 		# IMMEDIATE: Cast
-		var ability_obj = Ability2.from_dict(ability_data)
+		var ability_obj = Ability.from_dict(ability_data)
 		use_ability(ability_obj, {"position": target_pos})
 
 
@@ -2700,44 +2719,20 @@ func _calculate_success_level(roll: int, target: int) -> int:
 
 ## Ability Use
 ## Start using an ability
-signal cast_started(ability: Ability2, target_position: Vector2)
-signal cast_completed(ability: Ability2, results: Array)
-signal cast_interrupted(ability: Ability2, reason: String)
-signal cast_failed(ability: Ability2, reason: String)
-signal targeting_started(ability: Ability2)
-signal targeting_cancelled(ability: Ability2)
+signal cast_started(ability: Ability, target_position: Vector2)
+signal cast_completed(ability: Ability, results: Array)
+signal cast_interrupted(ability: Ability, reason: String)
+signal cast_failed(ability: Ability, reason: String)
+signal targeting_started(ability: Ability)
+signal targeting_cancelled(ability: Ability)
 
-func use_ability(ability: Ability2, target_data: Dictionary = {}) -> bool:
-	# Check if we can use this ability
-	var can_use = _check_ability_usable(ability)
-	if not can_use["success"]:
-		cast_failed.emit(ability, can_use["reason"])
-		return false
-	
-	# Pay costs
-	if not _pay_ability_costs(ability):
-		cast_failed.emit(ability, "Cannot pay costs")
-		return false
-	
-	# Start cooldown
-	_start_cooldown(ability)
-	
-	# Get target position
-	var target_position = target_data.get("position", self.global_position)
-	
-	# If instant cast, execute immediately
-	if ability.cast_time <= 0:
-		_execute_ability(ability, target_position)
-		return true
-	
-	# Start casting
-	_start_casting(ability, target_position)
-	return true
+func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
+	return ability_manager.use_ability(ability, target_data)
 
 
 ## Start targeting mode for an ability
 '''
-func _start_targeting(ability: Ability2) -> void:
+func _start_targeting(ability: Ability) -> void:
 	
 	if not targeting_system:
 		# No targeting system - just cast at mouse position
@@ -2769,7 +2764,7 @@ func on_targeting_confirmed(target_position: Vector2) -> void:
 	if current_cast.is_empty() or current_cast.get("state") != "targeting":
 		return
 	
-	var ability = current_cast.get("ability") as Ability2
+	var ability = current_cast.get("ability") as Ability
 	if not ability:
 		return
 	
@@ -2792,101 +2787,42 @@ func on_targeting_cancelled() -> void:
 	if current_cast.is_empty():
 		return
 	
-	var ability = current_cast.get("ability") as Ability2
+	var ability = current_cast.get("ability") as Ability
 	current_cast.clear()
 	
 	if ability:
 		targeting_cancelled.emit(ability)
 
 
-## Start the casting process
-func _start_casting(ability: Ability2, target_position: Vector2) -> void:
-	current_cast = {
-		"ability": ability,
-		"state": "casting",
-		"target_position": target_position,
-		"cast_progress": 0.0,
-		"cast_time": ability.cast_time
-	}
-	
-	# --- INTEGRATION START ---
-	# 1. Feed the logic duration into the visual system
-	# We set the windup (channeling) duration to match the ability's cast time exactly
-	if attack_animator:
-		# Pass the cast time and a small fixed value for the release/recovery phases
-		attack_animator.setup_cast_parameters(ability.cast_time, 0.2, 0.3)
-		attack_animator.start_cast()
-	# --- INTEGRATION END ---
-	
-	# Spawn cast effect (e.g., magic circle at feet)
-	var cast_effect_path = ability.visuals.get("cast_effect", "")
-	if cast_effect_path != "":
-		_spawn_effect(cast_effect_path, global_position, 1.0)
-	
+## AbilityManager signal handlers
+func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> void:
 	cast_started.emit(ability, target_position)
-	targeting_system.end_targeting()
 
-## Process ongoing casting
-func _process_casting(delta: float) -> void:
-	if current_cast.get("state") != "casting":
-		return
-	
-	current_cast["cast_progress"] += delta
-	
-	# OPTIONAL: You can pass the exact progress to the animator if you want 
-	# manual control, but the Animator's internal timer is usually sufficient 
-	# if durations are synced.
-	
-	if current_cast["cast_progress"] >= current_cast["cast_time"]:
-		var ability = current_cast["ability"] as Ability2
-		var target_pos = current_cast["target_position"]
-		current_cast.clear()
-		print("finished processing ability cast")
-		
-		# This function spawns the projectile
-		_execute_ability(ability, target_pos)
-
-
-## Execute the ability (after casting completes)
-func _execute_ability(ability: Ability2, target_position: Vector2) -> void:
-	var projectile_path = ability.visuals.get("projectile", "")
-	
-	if projectile_path != "":
-		# Spawn projectile
-		print("execute_ability calls spawn_projectile for ", ability.display_name)
-		_spawn_projectile(ability, target_position)
-	else:
-		# Instant effect
-		_resolve_ability_effects(ability, target_position)
-		print("execute_ability resolves immediately for ", ability.display_name)
-		
-	
-## Resolve ability effects and spawn impact visuals
-func _resolve_ability_effects(ability: Ability2, target_position: Vector2) -> void:
-	var targets = _find_targets_in_area(ability, target_position)
-	
-	var results: Array = []
-	for effect in ability.effects:
-		var result = AbilityEffect.resolve_effect(
-			effect,
-			self,
-			targets,
-			ability,
-			target_position
-		)
-		results.append(result)
-
-	_spawn_ability_visuals(ability, target_position)
+func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	cast_completed.emit(ability, results)
 
+func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
+	cast_interrupted.emit(ability, reason)
+
+func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
+	cast_failed.emit(ability, reason)
+
+func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:
+	pass
+
+func _on_ability_step_completed(_ability: Ability, _step_index: int, _results: Array) -> void:
+	pass
+
 ## Spawn a projectile that travels to the target
-func _spawn_projectile(ability: Ability2, target_position: Vector2) -> void:
+func _spawn_projectile(ability: Ability, target_position: Vector2) -> void:
 	print("spawning projectile with target_position ", target_position)
 	var projectile_path = ability.visuals.get("projectile", "")
 	var scene = _load_effect_scene(projectile_path)
 	if not scene:
 		print("Did not find projectile scene at path: ", projectile_path)
-		_resolve_ability_effects(ability, target_position)
+		var results = ability_manager._resolve_effects(ability, ability.effects, target_position)
+		_spawn_ability_visuals(ability, target_position)
+		ability_manager.cast_completed.emit(ability, results)
 		return
 	
 	var projectile = scene.instantiate()
@@ -2913,7 +2849,7 @@ func _spawn_projectile(ability: Ability2, target_position: Vector2) -> void:
 
 
 ## Move projectile toward target (using a tween or manual process)
-func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float, max_lifetime: float, ability: Ability2) -> void:
+func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float, max_lifetime: float, ability: Ability) -> void:
 	var distance = projectile.global_position.distance_to(target_position)
 	var duration = distance / speed
 	
@@ -2927,17 +2863,21 @@ func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float
 	tween.finished.connect(func():
 		var final_position = projectile.global_position
 		projectile.queue_free()
-		_resolve_ability_effects(ability, final_position)
+		var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
+		_spawn_ability_visuals(ability, final_position)
+		ability_manager.cast_completed.emit(ability, results)
 	)
-	
+
 	# Safety timeout in case tween fails
 	get_tree().create_timer(max_lifetime + 0.1).timeout.connect(func():
 		if is_instance_valid(projectile):
 			var final_position = projectile.global_position
 			projectile.queue_free()
-			_resolve_ability_effects(ability, final_position)
+			var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
+			_spawn_ability_visuals(ability, final_position)
+			ability_manager.cast_completed.emit(ability, results)
 	, CONNECT_ONE_SHOT)
-func _get_modified_visual_duration(ability: Ability2) -> float:
+func _get_modified_visual_duration(ability: Ability) -> float:
 	var base_duration = ability.visual_duration
 	var traits = ability.traits  # assuming this is an Array of strings like ["spell", "fire", "aoe"]
 	
@@ -2948,7 +2888,7 @@ func _get_modified_visual_duration(ability: Ability2) -> float:
 	
 	return base_duration * final_multiplier
 ## Find targets in the ability's area of effect
-func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
+func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	var targets: Array = []
 	var shape = ability.targeting.get("shape", "none")
 	var radius = ability.targeting.get("radius", 0.0)
@@ -3000,7 +2940,7 @@ func _find_targets_in_area(ability: Ability2, center: Vector2) -> Array:
 
 
 ## Spawn visual effects for ability
-func _spawn_ability_visuals(ability: Ability2, target_position: Vector2) -> void:
+func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 	var impact_path = ability.visuals.get("impact_effect", "")
 	if impact_path == "":
 		return
@@ -3318,107 +3258,21 @@ func _load_effect_scene(path: String) -> PackedScene:
 	return scene
 
 
-## Check if ability can be used
-func _check_ability_usable(ability: Ability2) -> Dictionary:
-	# Check cooldown
-	if is_on_cooldown(ability.id):
-		print("ability is on cooldown")
-		return {"success": false, "reason": "On cooldown"}
-	
-	# Check costs
-	for resource_name in ability.costs:
-		var cost = ability.costs[resource_name]
-		print("cost: ", cost, " ", resource_name)
-		var current = _get_character_resource(resource_name)
-		
-		if current < cost:
-			print('insufficient resources with which to use ability')
-			return {"success": false, "reason": "Not enough %s" % resource_name}
-	
-	# Check requirements
-	var reqs = ability.requirements
-	
-	# Check required conditions
-	var required_conditions = reqs.get("conditions", [])
-	print("required_conditions: ",required_conditions)
-	if not required_conditions.is_empty():
-		var cond_manager = _get_condition_manager()
-		if cond_manager:
-			for cond_id in required_conditions:
-				if not cond_manager.has_active_condition(cond_id):
-					print("Does not meet requirements to use ability")
-					return {"success": false, "reason": "Missing required condition: %s" % cond_id}
-	
-	# Check forbidden conditions
-	var forbidden_conditions = reqs.get("no_conditions", [])
-	if not forbidden_conditions.is_empty():
-		var cond_manager = _get_condition_manager()
-		if cond_manager:
-			for cond_id in forbidden_conditions:
-				if cond_manager.has_active_condition(cond_id):
-					print("Cannot cast ability, has forbidden condition")
-					return {"success": false, "reason": "Cannot use while: %s" % cond_id}
-	
-	# Check if currently casting
-	if not current_cast.is_empty() and current_cast.get("state") == "casting":
-		print("can't cast ability, already casting one")
-		return {"success": false, "reason": "Already casting"}
-	print("Successfully cast ability")
-	return {"success": true}
-
-
-## Pay the costs for an ability
-func _pay_ability_costs(ability: Ability2) -> bool:
-	for resource_name in ability.costs:
-		var cost = ability.costs[resource_name]
-		if not _spend_character_resource(resource_name, cost):
-			return false
-	return true
-
-
-## Start cooldown for ability
-func _start_cooldown(ability: Ability2) -> void:
-	if ability.cooldown > 0:
-		cooldowns[ability.id] = Time.get_ticks_msec() / 1000.0 + ability.cooldown
-
-
-## Check if ability is on cooldown
+## Delegates to AbilityManager
 func is_on_cooldown(ability_id: String) -> bool:
-	if ability_id not in cooldowns:
-		return false
-	return Time.get_ticks_msec() / 1000.0 < cooldowns[ability_id]
+	return ability_manager.is_on_cooldown(ability_id)
 
-
-## Get remaining cooldown time
 func get_cooldown_remaining(ability_id: String) -> float:
-	if ability_id not in cooldowns:
-		return 0.0
-	return max(0.0, cooldowns[ability_id] - Time.get_ticks_msec() / 1000.0)
+	return ability_manager.get_cooldown_remaining(ability_id)
 
-
-## Interrupt current cast
 func interrupt_cast(reason: String = "Interrupted") -> bool:
-	if current_cast.is_empty():
-		return false
-	
-	var ability = current_cast.get("ability") as Ability2
-	if ability and not ability.interruptible:
-		return false
-	
-	current_cast.clear()
-	
-	if ability:
-		cast_interrupted.emit(ability, reason)
-	
-	return true
+	return ability_manager.interrupt_cast(reason)
 
-
-## Cancel current action (targeting or casting)
 func _cancel_current() -> void:
 	if current_cast.get("state") == "targeting":
 		if targeting_system:
 			targeting_system.cancel_targeting()
-	current_cast.clear()
+	ability_manager.current_cast.clear()
 
 
 ## Get character resource value
@@ -3471,9 +3325,9 @@ func _get_condition_manager():
 
 ## Serialize cooldowns for saving
 func save_cooldowns() -> Dictionary:
-	return cooldowns.duplicate()
+	return ability_manager.save_cooldowns()
 
 
 ## Load cooldowns from save
 func load_cooldowns(data: Dictionary) -> void:
-	cooldowns = data.duplicate()
+	ability_manager.load_cooldowns(data)

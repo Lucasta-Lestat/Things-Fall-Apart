@@ -6,7 +6,7 @@ func _ready() -> void:
 	_load_database()
 
 func _load_database() -> void:
-	var file_path = "res://data/Abilities2.json"
+	var file_path = "res://data/Abilities.json"
 	if not FileAccess.file_exists(file_path):
 		push_error("Ability Database not found at: " + file_path)
 		return
@@ -33,3 +33,6 @@ func get_ability_data(ability_id: String) -> Dictionary:
 		return _abilities[ability_id]
 	push_error("Ability ID not found: " + ability_id)
 	return {}
+
+func get_all_ability_ids() -> Array:
+	return _abilities.keys()

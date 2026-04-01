@@ -1,6 +1,6 @@
 # Ability.gd
 # Defines an ability that can be loaded from JSON and executed
-class_name Ability2
+class_name Ability
 extends Resource
 
 ## Unique identifier
@@ -65,10 +65,21 @@ extends Resource
 ## Animation to play when using
 @export var animation: String = ""
 
+## Multi-step sequence. Each step is a Dictionary with:
+##   "delay": float — seconds to wait before this step (relative to previous step completing)
+##   "effects": Array — effect definitions (same format as top-level effects)
+##   "targeting": Dictionary — optional per-step targeting override
+##   "move_to_target": bool — if true, dash/move caster to target position
+##   "move_speed": float — speed of dash movement (pixels/sec)
+##   "animation": String — optional per-step animation
+##   "visuals": Dictionary — optional per-step visual effects
+## When empty, the ability uses top-level effects as a single step (backwards compatible).
+@export var steps: Array = []
+
 
 ## Load an ability from a dictionary (parsed JSON)
-static func from_dict(data: Dictionary) -> Ability2:
-	var ability = Ability2.new()
+static func from_dict(data: Dictionary) -> Ability:
+	var ability = Ability.new()
 	
 	ability.id = data.get("id", "")
 	ability.display_name = data.get("display_name", ability.id)
@@ -83,8 +94,7 @@ static func from_dict(data: Dictionary) -> Ability2:
 	ability.visuals = data.get("visuals", {})
 	ability.requirements = data.get("requirements", {})
 	ability.animation = data.get("animation", "")
-	
-	#replace bleeding tick code with gemini general condition
+	ability.steps = data.get("steps", [])
 	
 	# Load icon if path provided
 	var icon_path = data.get("icon", "")
@@ -161,6 +171,7 @@ func to_dict() -> Dictionary:
 		"visuals": visuals,
 		"requirements": requirements,
 		"animation": animation,
+		"steps": steps,
 	}
 
 
@@ -178,3 +189,8 @@ func get_aoe_radius() -> float:
 ## Get the AoE size (for rectangles)
 func get_aoe_size() -> Vector2:
 	return targeting.get("size", Vector2.ZERO)
+
+
+## Whether this ability uses multi-step sequencing
+func is_multi_step() -> bool:
+	return steps.size() > 0

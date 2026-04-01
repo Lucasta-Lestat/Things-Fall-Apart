@@ -112,8 +112,8 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 	if action_type == ActionType.USE_ABILITY:
 		var ability_id = data.get("ability_id", "")
 		if ability_id != "":
-			var ability = AbilityDatabase.get_ability(ability_id)
-			if ability and _ability_has_healing(ability):
+			var ability = AbilityDatabase.get_ability_data(ability_id)
+			if not ability.is_empty() and _ability_has_healing(ability):
 				color = reticle_color_healing
 	
 	reticle.modulate = color
@@ -341,8 +341,8 @@ func _execute_action(action: Action) -> void:
 			var ability_id = action.data.get("ability_id", "")
 			var target_pos = action.data.get("target_position", Vector2.INF)
 			var needs_targeting = action.data.get("needs_targeting", false)
-			var ability = AbilityDatabase2.get_ability_data(ability_id)
-			var ability_obj = Ability2.from_dict(ability)
+			var ability = AbilityDatabase.get_ability_data(ability_id)
+			var ability_obj = Ability.from_dict(ability)
 			if ability:
 				character.use_ability(ability_obj, {"position": target_pos})
 
