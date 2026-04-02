@@ -102,6 +102,22 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	var appearance: Dictionary = template.get("appearance_override", {})
 	_apply_appearance_overrides(character, appearance)
 
+	# --- Dialogue and interaction ---
+	var dialogue_id = template.get("dialogue", "")
+	if dialogue_id and dialogue_id is String and not dialogue_id.is_empty():
+		_set_if_exists(character, "dialogues", [dialogue_id])
+	var interact_opts = template.get("interact_options", [])
+	if not interact_opts.is_empty():
+		_set_if_exists(character, "interact_options", interact_opts)
+
+	# --- Extra inventory items (non-equipment) ---
+	var extra_items = template.get("extra_items", [])
+	if not extra_items.is_empty():
+		var inv = _find_child_by_name(character, "Inventory")
+		if inv:
+			for item_entry in extra_items:
+				inv.add_item(item_entry.duplicate())
+
 	# --- Creature flag ---
 	if template.get("is_creature", false):
 		_set_if_exists(character, "is_creature", true)
@@ -162,7 +178,7 @@ func _resolve_background(template: Dictionary, faction_data: Dictionary, overrid
 # ---------------------------------------------------------------------------
 # Equipment resolution
 # ---------------------------------------------------------------------------
-# Maps the equip_slot strings from Items2.json to loadout categories.
+# Maps the equip_slot strings from Items.json to loadout categories.
 # Items use "Main Hand", "Off Hand", "Head", "Torso", etc.
 const SLOT_TO_CATEGORY: Dictionary = {
 	"Main Hand": "main_hand",

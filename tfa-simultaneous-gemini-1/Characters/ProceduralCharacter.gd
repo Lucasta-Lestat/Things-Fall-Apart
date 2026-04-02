@@ -14,6 +14,10 @@ var traits = {"Male":1}
 var faction_id: String = "neutral"
 var is_protagonist = false
 var AI_enabled = false
+# Dialogue / interaction
+var dialogues: Array = []
+var current_dialogue_index: int = 0
+var interact_options: Array = ["Inspect"]
 
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
@@ -1628,7 +1632,7 @@ func give_weapon(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 
 func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponShape:
 	"""Give the character a weapon by looking up its name in the database"""
-	var db = ProceduralItemDatabase.weapons
+	var db = ItemDatabase.weapons
 	print("giving weapon by name: ", weapon_name)
 	#print("weapon database: ", db )
 	if db:
@@ -1746,7 +1750,7 @@ func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 
 func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 	"""Equip equipment by looking up its name in the database"""
-	var db = ProceduralItemDatabase.equipment
+	var db = ItemDatabase.equipment
 	if db:
 		#print("The fucking equipment looks like: ",db)
 		var data = db[Globals.name_to_id(equipment_name)]

@@ -1244,6 +1244,9 @@
 		"charisma": 60
 	  },
 	  "equipment": "from_faction",
+	  "extra_items": [
+		{"id": "alcohol", "name": "Alcohol", "description": "A bottle of strong spirits."}
+	  ],
 	  "icon": "res://icons/characters/jacana.png",
 	  "dialogue": null,
 	  "interact_options": [

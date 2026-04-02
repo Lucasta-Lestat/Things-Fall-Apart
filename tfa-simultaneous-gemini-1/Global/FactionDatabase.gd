@@ -96,7 +96,7 @@ func _weighted_pick(weights: Dictionary) -> String:
 func item_passes_faction_filter(item_data: Dictionary, faction_id: String) -> bool:
 	## Checks if an item is allowed by a faction's equipment trait rules.
 	## item_data should have a "traits" dict like {"Metal": 1, "Industrial": 1}
-	## as found in Items2.json entries.
+	## as found in Items.json entries.
 	var faction = get_faction_data(faction_id)
 	var equip_traits: Dictionary = faction.get("equipment_traits", {})
 	var required: Dictionary = equip_traits.get("required", {})
