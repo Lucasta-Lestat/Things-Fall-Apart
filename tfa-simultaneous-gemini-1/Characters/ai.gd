@@ -2,7 +2,7 @@ extends Node
 
 # Parent reference — set in _ready()
 var character: ProceduralCharacter
-var game2
+var game
 
 # ===== AI STATE MACHINE =====
 enum AIState {
@@ -74,7 +74,7 @@ signal target_lost()
 
 func _ready():
 	character = get_parent()
-	game2 = character.game2
+	game = character.game
 	detection_range = 1440.0 * character.sight
 	attack_range = 70.0 * character.body_size_mod
 	preferred_range = 40.0 * character.body_size_mod
@@ -165,7 +165,7 @@ func is_in_line_of_sight(target_position: Vector2) -> bool:
 
 func get_items_in_line_of_sight() -> Array:
 	var visible_items = []
-	var all_items = game2.items_in_scene
+	var all_items = game.items_in_scene
 
 	for item in all_items:
 		if is_instance_valid(item) and is_in_line_of_sight(item.global_position):
@@ -175,7 +175,7 @@ func get_items_in_line_of_sight() -> Array:
 
 func get_characters_in_line_of_sight() -> Array:
 	var visible_chars = []
-	for c in game2.characters_in_scene:
+	for c in game.characters_in_scene:
 		if c != character and is_instance_valid(c) and is_in_line_of_sight(c.global_position):
 			visible_chars.append(c)
 	return visible_chars
@@ -207,7 +207,7 @@ func _update_target() -> void:
 	var best_target: ProceduralCharacter = null
 	var best_distance: float = detection_range
 
-	for node in game2.characters_in_scene:
+	for node in game.characters_in_scene:
 		if node == character:
 			continue
 
@@ -236,7 +236,7 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 	if character.faction_id == other.faction_id:
 		return false
 
-	var factions = game2.factions
+	var factions = game.factions
 	if factions:
 		if other.faction_id in factions[character.faction_id].enemies:
 			return true
@@ -500,7 +500,7 @@ func is_item_owned_by_ally(item: Node) -> bool:
 		return false
 	if not "faction_id" in item.owner:
 		return false
-	var factions = game2.factions
+	var factions = game.factions
 	if factions and character.faction_id in factions and item.owner.faction_id in factions:
 		if item.owner.faction_id in factions[character.faction_id].allies:
 			return true
@@ -526,8 +526,8 @@ func pickup_item(item: Node):
 		if character.inventory:
 			character.inventory.add_item({"name": item.name, "node": item})
 		item.get_parent().remove_child(item)
-		if item in game2.items_in_scene:
-			game2.items_in_scene.erase(item)
+		if item in game.items_in_scene:
+			game.items_in_scene.erase(item)
 		item.queue_free()
 
 func eat_food(item: Node):
@@ -535,8 +535,8 @@ func eat_food(item: Node):
 		var hunger_reduced = item.calories * 0.1
 		hunger = max(0, hunger - hunger_reduced)
 		GameLog.add_entry(character.Name + " eats " + item.name)
-		if item in game2.items_in_scene:
-			game2.items_in_scene.erase(item)
+		if item in game.items_in_scene:
+			game.items_in_scene.erase(item)
 		item.queue_free()
 
 
@@ -577,7 +577,7 @@ func is_tile_walkable(tile: Vector2i) -> bool:
 	if not GridManager.would_walk(tile):
 		return false
 	# Check if another character occupies this tile
-	for c in game2.characters_in_scene:
+	for c in game.characters_in_scene:
 		if c != character and is_instance_valid(c):
 			if GridManager.world_to_map(c.global_position) == tile:
 				return false
