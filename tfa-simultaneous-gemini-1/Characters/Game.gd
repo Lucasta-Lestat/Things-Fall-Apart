@@ -107,7 +107,7 @@ func remove_party_member(index: int) -> void:
 func _spawn_npcs(npc_list: Array) -> void:
 	for npc_def in npc_list:
 		# Check spawn conditions
-		if npc_def.has("condition") and not _check_condition(npc_def["condition"]):
+		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
 			continue
  
 		var template_id: String = npc_def.get("template_id", "")
