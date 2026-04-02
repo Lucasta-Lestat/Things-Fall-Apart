@@ -778,13 +778,6 @@ func _toggle_weapon_debug() -> void:
 		weapon.set_debug_draw(not weapon.debug_draw)
 		print("Debug visualization: %s" % ("ON" if weapon.debug_draw else "OFF"))
 
-var _torso_equipment_index: int = 0
-var _torso_equipment_options: Array = [
-	{"type": "torso_armor", "name": "Steel Breastplate", "base_width": 28.0, "base_height": 18.0},
-	{"type": "torso_armor", "name": "Leather Armor", "base_width": 26.0, "base_height": 16.0},
-	{"type": "torso_armor", "name": "Chainmail", "base_width": 28.0, "base_height": 20.0},
-	null  # No torso equipment
-]
 
 # Weapon penetration states
 enum PenetrationState { 
