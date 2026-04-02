@@ -2,7 +2,7 @@
 # Attach to a Node2D that will be the character root
 extends CharacterBody2D
 class_name ProceduralCharacter
-@onready var game2 = get_node("/root/game")
+@onready var game = get_node("/root/game")
 # Character data
 var character_data: Dictionary = {}
 var Name = ""
@@ -1768,7 +1768,7 @@ func set_faction(new_faction_id: String) -> void:
 	faction_id = new_faction_id
 
 func get_relationship_with(other_character: ProceduralCharacter) -> Faction.Relationship:
-	return game2.factions[faction_id].get_relationship(faction_id, other_character.faction_id)
+	return game.factions[faction_id].get_relationship(faction_id, other_character.faction_id)
 	
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
@@ -2615,13 +2615,13 @@ func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	print("shape: ", shape, " size: ", size, " and radius: ", radius, "of ability ", ability.display_name)
 	# Get all potential targets
 	var potential_targets: Array = []
-	if game2:
-		if "characters_in_scene" in game2:
-			potential_targets.append_array(game2.characters_in_scene)
-		if "items_in_scene" in game2:
-			potential_targets.append_array(game2.items_in_scene)
-		if "structures_in_scene" in game2:
-			potential_targets.append_array(game2.structures_in_scene)
+	if game:
+		if "characters_in_scene" in game:
+			potential_targets.append_array(game.characters_in_scene)
+		if "items_in_scene" in game:
+			potential_targets.append_array(game.items_in_scene)
+		if "structures_in_scene" in game:
+			potential_targets.append_array(game.structures_in_scene)
 	
 	# Filter by area
 	for target in potential_targets:
