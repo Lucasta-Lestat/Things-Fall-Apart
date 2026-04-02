@@ -1,4 +1,4 @@
-# character_spawner.gd
+# Game.gd
 # Attach to your main scene or a manager node
 extends Node
 
@@ -21,7 +21,7 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = ""
+var current_map_id: String = "cemetery"
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false

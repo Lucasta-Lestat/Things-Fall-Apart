@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://b6poxjic1bgal"]
+[gd_scene format=3 uid="uid://b6poxjic1bgal"]
 
 [ext_resource type="Script" uid="uid://ceq4sduf8bjwg" path="res://UI/context_menu.gd" id="1_uwbsf"]
 
-[node name="ContextMenu" type="PanelContainer"]
+[node name="ContextMenu" type="PanelContainer" unique_id=1935140697]
 custom_minimum_size = Vector2(150, 0)
 layout_direction = 2
 anchors_preset = 15
