@@ -287,11 +287,11 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	var item_index: int = slot.get_meta("item_index")
 	var character = panel_data["character"]
 
+	var options: Array = item_data.get("interact_options", ["Use", "Drop"])
 	var menu = PopupMenu.new()
-	menu.add_item("Use", 0)
-	menu.add_item("Throw", 1)
-	menu.add_item("Drop", 2)
-	menu.id_pressed.connect(_on_item_menu_selected.bind(character, item_index, item_data))
+	for i in range(options.size()):
+		menu.add_item(options[i], i)
+	menu.id_pressed.connect(_on_item_menu_selected.bind(character, item_index, item_data, options))
 
 	add_child(menu)
 	menu.popup(Rect2i(
@@ -299,14 +299,17 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		Vector2i.ZERO
 	))
 
-func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dictionary) -> void:
-	match id:
-		0: # Use
+func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dictionary, options: Array) -> void:
+	var option_name = options[id] if id < options.size() else ""
+	match option_name:
+		"Use":
 			_use_item(character, item_index, item_data)
-		1: # Throw
+		"Throw":
 			_throw_item(character, item_index, item_data)
-		2: # Drop
+		"Drop":
 			_drop_item(character, item_index, item_data)
+		_:
+			print("Unhandled item option: ", option_name)
 
 func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 	var use_ability_id = item_data.get("use_ability", "")

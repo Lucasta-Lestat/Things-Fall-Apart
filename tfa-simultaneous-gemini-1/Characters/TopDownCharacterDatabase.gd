@@ -115,8 +115,12 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	if not extra_items.is_empty():
 		var inv = _find_child_by_name(character, "Inventory")
 		if inv:
-			for item_entry in extra_items:
-				inv.add_item(item_entry.duplicate())
+			for item_id in extra_items:
+				var item_data = ItemDatabase.get_item_data(item_id)
+				if not item_data.is_empty():
+					inv.add_item(item_data)
+				else:
+					push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
 
 	# --- Creature flag ---
 	if template.get("is_creature", false):
@@ -318,9 +322,17 @@ func _grant_equipment(character, equipment: Array) -> void:
 		return
 
 	for entry in equipment:
-		var item_data: Dictionary = entry.duplicate()
+		var item_id: String = entry.get("id", "")
+		var item_data: Dictionary = ItemDatabase.get_item_data(item_id)
+		if item_data.is_empty():
+			push_warning("Equipment item '%s' not found in ItemDatabase" % item_id)
+			continue
+
+		# Merge per-character overrides from the entry
+		if entry.has("slot"):
+			item_data["equip_slot"] = entry["slot"]
 		item_data["source"] = "starting_equipment"
-		var quantity: int = item_data.get("quantity", 1)
+		var quantity: int = entry.get("quantity", item_data.get("quantity", 1))
 
 		# Grant the item to inventory
 		for i in range(quantity):
@@ -329,16 +341,13 @@ func _grant_equipment(character, equipment: Array) -> void:
 			inventory.add_item(single)
 
 		# Auto-equip items that have an equip_slot defined
-		var equip_slot: String = entry.get("equip_slot", "")
-		var item_name: String = entry.get("name", entry.get("id", ""))
+		var equip_slot: String = item_data.get("equip_slot", "")
+		var item_name: String = item_data.get("name", item_id)
 		if not equip_slot.is_empty() and not item_name.is_empty():
 			if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 				var hand = "Main" if equip_slot == "Main Hand" else "Off"
 				if inventory.has_method("equip_weapon_from_data"):
-					# Look up full weapon data from ItemDatabase
-					var full_data = ItemDatabase.get_weapon_data(item_name)
-					if not full_data.is_empty():
-						inventory.equip_weapon_from_data(full_data, hand)
+					inventory.equip_weapon_from_data(item_data, hand)
 				elif inventory.has_method("equip_ability_from_id"):
 					inventory.equip_ability_from_id(item_name, hand)
 
