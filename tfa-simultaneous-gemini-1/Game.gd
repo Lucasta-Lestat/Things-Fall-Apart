@@ -1493,7 +1493,7 @@ class SelectionCircle extends Node2D:
 func _create_warp_zones(warp_list: Array) -> void:
 	for warp_def in warp_list:
 		# Check warp conditions (e.g. need a key)
-		if warp_def.has("condition") and not _check_condition(warp_def["condition"]):
+		if warp_def.has("condition") and not check_spawn_conditions(warp_def["condition"]):
 			continue
  
 		var pos_arr = warp_def.get("position", [0, 0])
