@@ -72,14 +72,14 @@
 			],
 			"item_spawns": [
 				{
-					"item_name": "Health Potion",
+					"id": "potion_of_healing",
 					"position": [150, 200],
-					"quantity": 1
+					"count": 1
 				},
 				{
-					"item_name": "Gold",
+					"id": "gold",
 					"position": [320, 280],
-					"quantity": 3,
+					"count": 3,
 					"container": "chest"
 				}
 			],
