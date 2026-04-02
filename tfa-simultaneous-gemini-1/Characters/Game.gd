@@ -294,7 +294,7 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 
 func _spawn_items(item_list: Array) -> void:
 	for item_def in item_list:
-		if item_def.has("condition") and not _check_condition(item_def["condition"]):
+		if item_def.has("condition") and not check_spawn_conditions(item_def["condition"]):
 			continue
 
 		var item_id: String = item_def.get("id", "")
