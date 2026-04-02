@@ -9,7 +9,7 @@ var weapons: Dictionary = {}	# name -> weapon data
 var equipment: Dictionary = {}	# name -> equipment data
 var items: Dictionary = {}		# name -> general item data
 # File paths (can be customized)
-var items_json_path: String = "res://data/Items2.json"
+var items_json_path: String = "res://data/Items.json"
 
 signal database_loaded
 signal database_load_failed(error: String)

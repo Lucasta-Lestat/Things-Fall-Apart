@@ -1,6 +1,6 @@
-# res://Items/Item2.gd
+# res://Items/Item.gd
 extends AnimatableBody2D
-class_name Item2
+class_name Item
 
 signal destroyed(item)
 signal health_changed(current_health, max_health, item)

@@ -418,7 +418,7 @@ static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> flo
 		target.damage_limb(limb_type, damage_dict, target.global_position)
 	# Items use take_damage(damage_dict, success_level)
 	elif target.has_method("take_damage"):
-		if target is Item2 or target is Structure:
+		if target is Item or target is Structure:
 			target.take_damage(damage_dict, 0)
 		else:
 			# Unknown type with take_damage — try dict signature

@@ -4,6 +4,14 @@
 [ext_resource type="Script" uid="uid://cd64bdifyjjr0" path="res://Characters/collision_visualizer.gd" id="2_7jktm"]
 [ext_resource type="Script" uid="uid://dsya2vcimv0cn" path="res://Characters/fog_manager.gd" id="3_ryrav"]
 [ext_resource type="Script" uid="uid://bngn6oy1bvvmt" path="res://Structures/MapLoader.gd" id="4_eow3j"]
+[ext_resource type="Script" path="res://player_camera.gd" id="5_camera"]
+[ext_resource type="Script" path="res://dialogue_panel.gd" id="6_dialogue"]
+[ext_resource type="Script" path="res://time.gd" id="7_time"]
+[ext_resource type="Script" path="res://UI/PartySidePanel.gd" id="8_party"]
+[ext_resource type="Texture2D" path="res://Dialogue Background.png" id="9_dlgbg"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dlg"]
+texture = ExtResource("9_dlgbg")
 
 [node name="Game" type="Node2D" unique_id=1936713047]
 script = ExtResource("1_fc0e3")
@@ -24,3 +32,73 @@ scale = Vector2(5, 5)
 
 [node name="MapLoader" type="Node2D" parent="." unique_id=555230935]
 script = ExtResource("4_eow3j")
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+z_index = 102
+color = Color(0.716296, 0.716296, 0.716296, 1)
+
+[node name="PlayerCamera" type="Camera2D" parent="."]
+script = ExtResource("5_camera")
+
+[node name="GameUI" type="CanvasLayer" parent="."]
+
+[node name="DialoguePanel" type="Panel" parent="GameUI"]
+custom_minimum_size = Vector2(0, 200)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -200.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxTexture_dlg")
+script = ExtResource("6_dialogue")
+
+[node name="MarginContainer" type="MarginContainer" parent="GameUI/DialoguePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="GameUI/DialoguePanel/MarginContainer"]
+layout_mode = 2
+
+[node name="Portrait" type="TextureRect" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 150)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="DialogueVBox" type="VBoxContainer" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SpeakerName" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
+layout_mode = 2
+
+[node name="DialogueText" type="RichTextLabel" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = true
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
+layout_mode = 2
+
+[node name="ContinueIndicator" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox"]
+layout_mode = 2
+
+[node name="TimeLabel" type="Label" parent="GameUI"]
+script = ExtResource("7_time")
+
+[node name="PartySidePanel" type="PanelContainer" parent="GameUI"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -250.0
+grow_horizontal = 0
+script = ExtResource("8_party")

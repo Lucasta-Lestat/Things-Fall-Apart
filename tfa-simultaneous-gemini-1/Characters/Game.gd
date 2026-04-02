@@ -6,6 +6,7 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var map_loader: Node2D = $MapLoader
+@onready var player_camera: Camera2D = $PlayerCamera
 
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
@@ -22,10 +23,13 @@ var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
 var current_map_id: String = ""
 var current_map_data: Dictionary = {}
+var warp_zones: Array = []
+var context_menu_open: bool = false
 
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
+signal map_loaded(map_id: String)
 
 # Currently selected character
 var selected_character: ProceduralCharacter = null
@@ -120,6 +124,12 @@ func _spawn_npcs(npc_list: Array) -> void:
 			var npc = _spawn_character(template_id, pos)
 			if npc:
 				npc.AI_enabled = true
+				# NPCs are only visible under player line-of-sight lights
+				npc.light_mask = 2
+				npc.visibility_layer = 2
+				var light_mat = CanvasItemMaterial.new()
+				light_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
+				_apply_material_recursive(npc, light_mat)
  
 # ---------------------------------------------------------------------------
 # Core character spawn helper
@@ -172,7 +182,8 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	map_loader.generate_map()
  
 	# 2. Set up ambient effects (fog, music)
-	_apply_ambient(current_map_data.get("ambient", {}))
+	setup_map_fogs(current_map_data)
+	setup_map_music(current_map_data)
  
 	# 3. Determine which spawn key to use based on where we came from
 	var spawn_key: String = "default"
@@ -221,9 +232,119 @@ func _unload_current_map() -> void:
 	current_map_id = ""
 	current_map_data = {}
 
-func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item2:
+# ---------------------------------------------------------------------------
+# Ambient setup (fog + music)
+# ---------------------------------------------------------------------------
+
+func setup_map_fogs(map_data: Dictionary) -> void:
+	if not fog_manager:
+		return
+	fog_manager.clear_all_fog()
+	for fog_id in map_data.get("fog_ids", []):
+		fog_manager.create_fog_from_id(fog_id)
+
+func setup_map_music(map_data: Dictionary) -> void:
+	var track: String = map_data.get("music_track", "")
+	if not track.is_empty():
+		MusicManager.play(track)
+	else:
+		MusicManager.stop()
+
+# ---------------------------------------------------------------------------
+# Party spawning
+# ---------------------------------------------------------------------------
+
+func _spawn_player_and_party(spawn_key: String) -> void:
+	var spawns: Dictionary = current_map_data.get("player_spawns", {})
+	var spawn_data = spawns.get(spawn_key, spawns.get("default", {}))
+	var base_pos_arr = spawn_data.get("position", [400, 400])
+	var base_pos = Vector2(base_pos_arr[0], base_pos_arr[1])
+
+	for i in range(party_state.size()):
+		var entry = party_state[i]
+		var offset = Vector2(i * 40, 0)
+		var character = _spawn_character(entry["template_id"], base_pos + offset, entry.get("overrides", {}))
+		if not character:
+			continue
+
+		party_chars.append(character)
+		character.AI_enabled = false
+
+		# Restore live state if we have one (from map transition / save load)
+		if entry.get("live_state"):
+			_deserialize_character(character, entry["live_state"])
+
+		# First party member is the player
+		if i == 0:
+			player = character
+			character.is_protagonist = true
+
+		# Add line-of-sight light
+		_add_line_of_sight_light(character)
+
+# ---------------------------------------------------------------------------
+# Item spawning
+# ---------------------------------------------------------------------------
+
+func _spawn_items(item_list: Array) -> void:
+	for item_def in item_list:
+		if item_def.has("condition") and not _check_condition(item_def["condition"]):
+			continue
+
+		var item_id: String = item_def.get("id", "")
+		var pos_arr = item_def.get("position", [0, 0])
+		var pos = Vector2(pos_arr[0], pos_arr[1])
+		var count: int = item_def.get("count", 1)
+
+		for j in range(count):
+			create_item(item_id, pos)
+
+# ---------------------------------------------------------------------------
+# Context menu
+# ---------------------------------------------------------------------------
+
+func show_context_menu(target, position: Vector2) -> void:
+	var context_menu = preload("res://UI/ContextMenu.tscn").instantiate()
+	context_menu.global_position = position + Vector2(16, 16)
+	context_menu.z_index = 100
+	context_menu_open = true
+
+	var options: Array = []
+	if target is ProceduralCharacter:
+		options = target.get("interact_options") if "interact_options" in target else ["Inspect"]
+	elif target is Area2D and target.has_meta("target_map"):
+		options = ["Enter " + target.get_meta("label", "area")]
+
+	context_menu.setup(target, options)
+	get_tree().root.add_child(context_menu)
+
+# ---------------------------------------------------------------------------
+# Lighting helpers
+# ---------------------------------------------------------------------------
+
+func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
+	var light = PointLight2D.new()
+	light.texture = Globals.SIGHT_TEXTURE
+	light.energy = 0.3
+	var master_radius = 512.0
+	var desired_radius = 1440.0 * character.sight
+	light.texture_scale = desired_radius / master_radius
+	light.name = "LineOfSight"
+	light.rotation_degrees = 90
+	light.shadow_enabled = true
+	light.shadow_item_cull_mask = 1
+	light.z_index = 102
+	character.add_child(light)
+
+func _apply_material_recursive(node: Node, material: Material) -> void:
+	if node is Sprite2D or node is TextureRect:
+		node.material = material
+	for child in node.get_children():
+		_apply_material_recursive(child, material)
+
+func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item:
 	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world."""
-	var item_instance = item_scene.instantiate() as Item2
+	var item_instance = item_scene.instantiate() as Item
 	item_instance.id = item_id
 	item_instance.global_position = world_position
 
@@ -239,7 +360,7 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1)
 
 	return item_instance
 
-func _on_item_destroyed(item: Item2):
+func _on_item_destroyed(item: Item):
 	# Remove from tracking
 	items_in_scene.erase(item)
 
@@ -340,6 +461,10 @@ func _process(delta: float) -> void:
 			selection_indicator.visible = true
 	if selection_indicator and not PauseManager.is_paused:
 		selection_indicator.visible = false
+	# Camera follows selected character
+	if selected_character and is_instance_valid(selected_character) and player_camera:
+		player_camera.global_position = player_camera.global_position.lerp(
+			selected_character.global_position, 5.0 * delta)
 
 func _check_combat_collisions() -> void:
 	var all_characters = characters_in_scene
@@ -1247,6 +1372,11 @@ func _update_projectiles(delta: float) -> void:
 		proj_data["distance_traveled"] += move_vec.length()
 
 		if proj_data["distance_traveled"] >= proj_data["max_range"]:
+			# Drop thrown items at landing position
+			if proj_data.get("thrown_item_data"):
+				var item_id = proj_data["thrown_item_data"].get("id", "")
+				if not item_id.is_empty():
+					create_item(item_id, proj.global_position)
 			proj.queue_free()
 			to_remove.append(proj_data)
 			continue
@@ -1261,7 +1391,18 @@ func _update_projectiles(delta: float) -> void:
 				continue
 			var body_corners = get_body_hitbox_corners(target)
 			if point_in_polygon(proj.global_position, body_corners):
-				_process_projectile_hit_character(proj_data["shooter"], target, proj.global_position, proj_data["weapon"])
+				if proj_data["weapon"]:
+					_process_projectile_hit_character(proj_data["shooter"], target, proj.global_position, proj_data["weapon"])
+				elif proj_data.get("thrown_item_data"):
+					# Thrown item hit
+					var dmg = proj_data.get("thrown_damage", {"bludgeoning": 2})
+					var local_hit = target.to_local(proj.global_position)
+					var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
+					target.damage_limb(limb_type, dmg.duplicate(), local_hit)
+					# Drop the item at hit location
+					var item_id = proj_data["thrown_item_data"].get("id", "")
+					if not item_id.is_empty():
+						create_item(item_id, proj.global_position)
 				proj.queue_free()
 				to_remove.append(proj_data)
 				hit = true
@@ -1283,7 +1424,15 @@ func _update_projectiles(delta: float) -> void:
 			else:
 				continue
 			if target_rect.has_point(proj.global_position):
-				_process_projectile_hit_object(proj_data["shooter"], structure, proj.global_position, proj_data["weapon"])
+				if proj_data["weapon"]:
+					_process_projectile_hit_object(proj_data["shooter"], structure, proj.global_position, proj_data["weapon"])
+				elif proj_data.get("thrown_item_data"):
+					var dmg = proj_data.get("thrown_damage", {"bludgeoning": 2})
+					if structure.has_method("take_damage"):
+						structure.take_damage(dmg.duplicate(), 0)
+					var item_id = proj_data["thrown_item_data"].get("id", "")
+					if not item_id.is_empty():
+						create_item(item_id, proj.global_position)
 				proj.queue_free()
 				to_remove.append(proj_data)
 				hit = true
@@ -1321,6 +1470,44 @@ func _process_projectile_hit_object(
 		SfxManager.play("armor-impact", hit_position)
 	else:
 		SfxManager.play("arrow-wall-impact", hit_position)
+
+# ===== THROWN ITEM PROJECTILES =====
+
+func _add_thrown_projectile(proj_data: Dictionary) -> void:
+	# Create a simple visual for the thrown item
+	var proj = Sprite2D.new()
+	var item_data = proj_data.get("item_data", {})
+	var item_id = item_data.get("id", "")
+
+	# Try to load a sprite for the item
+	var sprite_path = item_data.get("sprite_path", "")
+	if sprite_path.is_empty():
+		var item_db_data = _lookup_any_item(item_id)
+		sprite_path = item_db_data.get("sprite_path", "")
+	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+		proj.texture = load(sprite_path)
+	else:
+		# Fallback: small colored square
+		var img = Image.create(12, 12, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0.7, 0.5, 0.3))
+		proj.texture = ImageTexture.create_from_image(img)
+
+	proj.global_position = proj_data["position"]
+	proj.rotation = proj_data["velocity"].angle() + PI / 2.0
+	proj.z_index = 50
+	get_tree().current_scene.add_child(proj)
+
+	active_projectiles.append({
+		"node": proj,
+		"shooter": proj_data["shooter"],
+		"direction": proj_data["velocity"].normalized(),
+		"speed": proj_data["velocity"].length(),
+		"max_range": proj_data.get("max_range", 400.0),
+		"distance_traveled": 0.0,
+		"weapon": null,
+		"thrown_item_data": item_data,
+		"thrown_damage": proj_data.get("damage", {"bludgeoning": 2}),
+	})
 
 # ===== SELECTION CIRCLE DRAWER =====
 
