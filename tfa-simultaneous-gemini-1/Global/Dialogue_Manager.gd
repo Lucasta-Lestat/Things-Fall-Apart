@@ -10,7 +10,6 @@ var current_node_id: String = ""
 var current_line_index: int = 0
 var current_node_lines: Array = []
 @onready var game = get_node_or_null("/root/Game")
-# Reference to CharacterDatabase (assumed to be another autoload)
 
 
 # Reserved keywords that aren't character names
@@ -461,8 +460,8 @@ func evaluate_expression(expression: String) -> bool:
 
 # Get character portrait from CharacterDatabase
 func get_character_portrait(speaker_name: String) -> Texture:
-	if CharacterDatabase == null:
-		push_warning("CharacterDatabase not found")
+	if TopDownCharacterDatabase == null:
+		push_warning("TopDownCharacterDatabase not found")
 		return null
 	for character in game.characters_in_scene:
 		if character.character_id == speaker_name:

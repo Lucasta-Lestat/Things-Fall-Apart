@@ -707,47 +707,7 @@ func _print_status() -> void:
 		if enemy.is_alive():
 			print("Enemy %d: %s" % [i+1, enemy.get_stats_string()])
 
-	
-	'''
-	player.equip_equipment({
-		"name": "Leather Pants",
-		"type": "pants",
-		"base_width": 7.0,
-		"base_height": 16.0,
-		"sprite_path": "res://Items//leather_pants.png"
-	})
 
-	player.equip_equipment({
-		"name": "Leather Boots",
-		"type": "boots",
-		"base_width": 8.0,
-		"base_height": 8.0,
-		"sprite_path": "res://Items//leather_boots.png"
-	})
-	'''
-func load_characters_database() -> void:
-	if not FileAccess.file_exists(characters_json_path):
-		push_warning("Characters JSON not found at: " + characters_json_path)
-		return
-	
-	var file = FileAccess.open(characters_json_path, FileAccess.READ)
-	var json_text = file.get_as_text()
-	file.close()
-	
-	var json = JSON.new()
-	var error = json.parse(json_text)
-	
-	if error != OK:
-		push_error("Failed to parse characters JSON: " + json.get_error_message())
-		return
-	
-	var data = json.get_data()
-	if data is Dictionary and data.has("characters"):
-		characters_database = data["characters"]
-	elif data is Array:
-		characters_database = data
-	
-	print("Loaded ", characters_database.size(), " character definitions")
 
 func spawn_character_by_name(char_name: String, spawn_position: Vector2, faction = null) -> ProceduralCharacter:
 	for char_data in characters_database:
