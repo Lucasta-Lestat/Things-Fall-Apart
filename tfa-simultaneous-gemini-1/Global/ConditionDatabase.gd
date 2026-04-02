@@ -163,7 +163,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["weak"],
 		"custom_vfx": "res://vfx/might_aura.tscn",
-		"custom_sfx": null,
+		"custom_sfx": "",
 		"stat_modifiers": [
 			{"stat": "STR", "operation": "add", "value": 20},
 		],
