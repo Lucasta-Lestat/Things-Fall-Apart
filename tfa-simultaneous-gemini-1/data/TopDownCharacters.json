@@ -1,1468 +1,1517 @@
 {
-	"characters": [
-		{
-			"id": "default_human",
-			"name": "Default Human",
-			"race": "human",
-			"background": "pauper",
-			"faction": "player",
-			"stats": {
-				"strength": 50,
-				"constitution": 50,
-				"dexterity": 50,
-				"will": 50,
-				"intelligence": 50,
-				"charisma": 50
-			},
-			"equipment": [
-				{
-					"id": "iron_sword",
-					"slot": "main_hand"
-				},
-				{
-					"id": "leather_armor",
-					"slot": "body"
-				}
-			],
-			"icon": "res://icons/characters/default_human.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "town_guard",
-			"name": "Town Guard",
-			"race": "from_faction",
-			"background": "golden_legion_basic_training_graduate",
-			"faction": "golden_guard",
-			"stats": {
-				"strength": 55,
-				"constitution": 60,
-				"dexterity": 45,
-				"will": 45,
-				"intelligence": 40,
-				"charisma": 40
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/town_guard.png",
-			"dialogue": "guard_generic",
-			"interact_options": [
-				"Talk",
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "merchant",
-			"name": "Merchant",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "neutral",
-			"stats": {
-				"strength": 40,
-				"constitution": 45,
-				"dexterity": 45,
-				"will": 50,
-				"intelligence": 55,
-				"charisma": 65
-			},
-			"equipment": [
-				{
-					"id": "dagger",
-					"slot": "main_hand"
-				},
-				{
-					"id": "merchant_garb",
-					"slot": "body"
-				},
-				{
-					"id": "gold",
-					"quantity": 20
-				}
-			],
-			"icon": "res://icons/characters/merchant.png",
-			"dialogue": "merchant_generic",
-			"interact_options": [
-				"Talk",
-				"Trade",
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "bandit",
-			"name": "Bandit",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "bandits",
-			"stats": {
-				"strength": 50,
-				"constitution": 45,
-				"dexterity": 55,
-				"will": 40,
-				"intelligence": 40,
-				"charisma": 35
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/bandit.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "bandit_chief",
-			"name": "Bandit Chief",
-			"race": "from_faction",
-			"background": "criminal",
-			"faction": "bandits",
-			"stats": {
-				"strength": 65,
-				"constitution": 60,
-				"dexterity": 50,
-				"will": 50,
-				"intelligence": 45,
-				"charisma": 55
-			},
-			"equipment": [
-				{
-					"id": "war_axe",
-					"slot": "main_hand"
-				},
-				{
-					"id": "studded_leather",
-					"slot": "body"
-				},
-				{
-					"id": "gold",
-					"quantity": 5
-				}
-			],
-			"icon": "res://icons/characters/bandit_chief.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [
-				"war_cry"
-			],
-			"extra_conditions": [],
-			"extra_traits": {
-				"Intimidating": 2,
-				"Savage": 1
-			},
-			"combat": {
-				"unarmed_strike_damage": 5,
-				"unarmed_strike_damage_type": "bludgeoning",
-				"bonus_damage": 2
-			},
-			"sensory": {}
-		},
-		{
-			"id": "rebel_fighter",
-			"name": "Rebel Fighter",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "rebels",
-			"stats": {
-				"strength": 50,
-				"constitution": 50,
-				"dexterity": 55,
-				"will": 55,
-				"intelligence": 45,
-				"charisma": 45
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/rebel_fighter.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "forest_elf",
-			"name": "Forest Elf",
-			"race": "high_elf",
-			"background": "fey_prisoner",
-			"faction": "neutral",
-			"stats": {
-				"strength": 40,
-				"constitution": 40,
-				"dexterity": 65,
-				"will": 55,
-				"intelligence": 60,
-				"charisma": 55
-			},
-			"equipment": [
-				{
-					"id": "elven_bow",
-					"slot": "main_hand"
-				},
-				{
-					"id": "elven_garb",
-					"slot": "body"
-				}
-			],
-			"icon": "res://icons/characters/forest_elf.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "cultist",
-			"name": "Cultist",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "cultists",
-			"stats": {
-				"strength": 40,
-				"constitution": 40,
-				"dexterity": 45,
-				"will": 60,
-				"intelligence": 55,
-				"charisma": 45
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/cultist.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "skeleton_warrior",
-			"name": "Skeleton Warrior",
-			"race": "from_faction",
-			"background": "plague_survivor",
-			"faction": "undead",
-			"stats": {
-				"strength": 45,
-				"constitution": 30,
-				"dexterity": 40,
-				"will": 60,
-				"intelligence": 20,
-				"charisma": 10
-			},
-			"appearance_override": {
-				"skin_color": "#E0E0D1",
-				"hair_color": "#E0E0D1"
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/skeleton_warrior.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [
-				"undead_resilience"
-			],
-			"extra_traits": {},
-			"combat": {
-				"unarmed_strike_damage_type": "slashing",
-				"unarmed_strike_damage": 3
-			},
-			"sensory": {
-				"sight": 80,
-				"hearing": 30,
-				"fov_angle_degrees": 360
-			}
-		},
-		{
-			"id": "demon_imp",
-			"name": "Demon Imp",
-			"race": "mephistkin",
-			"faction": "neutral",
-			"stats": {
-				"strength": 25,
-				"constitution": 25,
-				"dexterity": 70,
-				"will": 50,
-				"intelligence": 45,
-				"charisma": 40
-			},
-			"equipment": [
-				{
-					"id": "imp_claws",
-					"slot": "main_hand"
-				}
-			],
-			"icon": "res://icons/characters/demon_imp.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [
-				"fire_bolt"
-			],
-			"extra_conditions": [
-				"flight"
-			],
-			"extra_traits": {},
-			"combat": {
-				"unarmed_strike_damage_type": "slashing",
-				"unarmed_strike_damage": 4
-			},
-			"sensory": {
-				"sight": 120,
-				"fov_angle_degrees": 300
-			}
-		},
-		{
-			"id": "noble_lord",
-			"name": "Noble Lord",
-			"race": "from_faction",
-			"background": "aristocratic_envoy",
-			"faction": "patriciate",
-			"stats": {
-				"strength": 45,
-				"constitution": 45,
-				"dexterity": 45,
-				"will": 55,
-				"intelligence": 60,
-				"charisma": 70
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/noble_lord.png",
-			"dialogue": "castellan_intro",
-			"interact_options": [
-				"Talk",
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {
-				"Noble": 2,
-				"Commanding": 1
-			},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "wild_wolf",
-			"name": "Wild Wolf",
-			"is_creature": true,
-			"faction": "wildlife",
-			"stats": {
-				"strength": 55,
-				"constitution": 50,
-				"dexterity": 70,
-				"will": 30,
-				"intelligence": 10,
-				"charisma": 10
-			},
-			"appearance_override": {
-				"skin_color": "#696969",
-				"hair_color": "#4a4a4a",
-				"body_width": 20.0,
-				"body_height": 16.0
-			},
-			"equipment": [],
-			"icon": "res://icons/characters/wild_wolf.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {
-				"unarmed_strike_damage_type": "piercing",
-				"unarmed_strike_damage": 6
-			},
-			"sensory": {
-				"sight": 150,
-				"hearing": 200,
-				"fov_angle_degrees": 270
-			}
-		},
-		{
-			"id": "liziti_thug",
-			"name": "Liziti Thug",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "liziti",
-			"stats": {
-				"strength": 55,
-				"constitution": 55,
-				"dexterity": 45,
-				"will": 35,
-				"intelligence": 30,
-				"charisma": 35
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/liziti_thug.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "liziti_don",
-			"name": "Liziti Don",
-			"race": "saurian",
-			"background": "criminal",
-			"faction": "liziti",
-			"stats": {
-				"strength": 60,
-				"constitution": 60,
-				"dexterity": 50,
-				"will": 50,
-				"intelligence": 45,
-				"charisma": 55
-			},
-			"equipment": [
-				{
-					"id": "heavy_cudgel",
-					"slot": "main_hand"
-				},
-				{
-					"id": "liziti_boss_vest",
-					"slot": "body"
-				},
-				{
-					"id": "gold",
-					"quantity": 8
-				}
-			],
-			"icon": "res://icons/characters/liziti_don.png",
-			"dialogue": "liziti_don_intro",
-			"interact_options": [
-				"Talk",
-				"Inspect"
-			],
-			"extra_abilities": [
-				"crushing_blow"
-			],
-			"extra_conditions": [],
-			"extra_traits": {
-				"Intimidating": 2,
-				"Criminal": 2
-			},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "draga_legionnaire",
-			"name": "Draga Legionnaire",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "dragatini",
-			"stats": {
-				"strength": 60,
-				"constitution": 60,
-				"dexterity": 45,
-				"will": 40,
-				"intelligence": 40,
-				"charisma": 40
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/draga_legionnaire.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "draga_centurion",
-			"name": "Draga Centurion",
-			"race": "draconian",
-			"background": "golden_legion_basic_training_graduate",
-			"faction": "dragatini",
-			"stats": {
-				"strength": 70,
-				"constitution": 65,
-				"dexterity": 50,
-				"will": 50,
-				"intelligence": 50,
-				"charisma": 55
-			},
-			"equipment": [
-				{
-					"id": "centurion_gladius",
-					"slot": "main_hand"
-				},
-				{
-					"id": "centurion_scutum",
-					"slot": "off_hand"
-				},
-				{
-					"id": "centurion_lorica",
-					"slot": "body"
-				},
-				{
-					"id": "centurion_crest",
-					"slot": "head"
-				}
-			],
-			"icon": "res://icons/characters/draga_centurion.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [
-				"breath_weapon",
-				"shield_bash"
-			],
-			"extra_conditions": [],
-			"extra_traits": {
-				"Commanding": 2,
-				"Disciplined": 1
-			},
-			"combat": {
-				"bonus_damage": 3
-			},
-			"sensory": {}
-		},
-		{
-			"id": "tort_enforcer",
-			"name": "Tortellini Enforcer",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "tortellini",
-			"stats": {
-				"strength": 55,
-				"constitution": 65,
-				"dexterity": 35,
-				"will": 50,
-				"intelligence": 40,
-				"charisma": 35
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/tort_enforcer.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "pirate_buccaneer",
-			"name": "Pirate Buccaneer",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "pirates",
-			"stats": {
-				"strength": 50,
-				"constitution": 50,
-				"dexterity": 55,
-				"will": 45,
-				"intelligence": 45,
-				"charisma": 45
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/pirate_buccaneer.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "pirate_captain",
-			"name": "Pirate Captain",
-			"race": "from_faction",
-			"background": "criminal",
-			"faction": "pirates",
-			"stats": {
-				"strength": 55,
-				"constitution": 55,
-				"dexterity": 60,
-				"will": 55,
-				"intelligence": 55,
-				"charisma": 60
-			},
-			"equipment": [
-				{
-					"id": "ornate_flintlock",
-					"slot": "main_hand"
-				},
-				{
-					"id": "captain_cutlass",
-					"slot": "off_hand"
-				},
-				{
-					"id": "captain_coat",
-					"slot": "body"
-				},
-				{
-					"id": "captain_hat",
-					"slot": "head"
-				},
-				{
-					"id": "gold",
-					"quantity": 15
-				}
-			],
-			"icon": "res://icons/characters/pirate_captain.png",
-			"dialogue": "pirate_captain_intro",
-			"interact_options": [
-				"Talk",
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {
-				"Intimidating": 1,
-				"Seafaring": 2
-			},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "guild_hunter",
-			"name": "Guild Hunter",
-			"race": "from_faction",
-			"background": "from_faction",
-			"faction": "adventurers_guild",
-			"stats": {
-				"strength": 50,
-				"constitution": 50,
-				"dexterity": 60,
-				"will": 50,
-				"intelligence": 50,
-				"charisma": 45
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/guild_hunter.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-			"id": "patrician_knight",
-			"name": "Patrician Knight",
-			"race": "from_faction",
-			"background": "aristocratic_envoy",
-			"faction": "patriciate",
-			"stats": {
-				"strength": 60,
-				"constitution": 55,
-				"dexterity": 50,
-				"will": 50,
-				"intelligence": 50,
-				"charisma": 55
-			},
-			"equipment": "from_faction",
-			"icon": "res://icons/characters/patrician_knight.png",
-			"dialogue": null,
-			"interact_options": [
-				"Inspect"
-			],
-			"extra_abilities": [],
-			"extra_conditions": [],
-			"extra_traits": {},
-			"combat": {},
-			"sensory": {}
-		},
-		{
-	  "id": "djargo",
-	  "name": "Djargo",
-	  "race": "grimalkin",
-	  "background": "pauper",
-	  "faction": "neutral",
-	  "stats": {
-		"strength": 35,
-		"constitution": 40,
-		"dexterity": 65,
-		"will": 50,
-		"intelligence": 55,
-		"charisma": 60
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/djargo.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+  "characters": [
+    {
+      "id": "default_human",
+      "name": "Default Human",
+      "race": "human",
+      "background": "pauper",
+      "faction": "player",
+      "stats": {
+        "strength": 50,
+        "constitution": 50,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 50,
+        "charisma": 50
+      },
+      "equipment": [
+        {
+          "id": "iron_sword",
+          "slot": "main_hand"
+        },
+        {
+          "id": "leather_armor",
+          "slot": "body"
+        }
+      ],
+      "icon": "res://icons/characters/default_human.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [
-        "little_trick"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "hadrian_rosemerrow",
-	  "name": "Hadrian Rosemerrow",
-	  "race": "human",
-	  "background": "noble",
-	  "faction": "spider_party",
-	  "stats": {
-		"strength": 40,
-		"constitution": 45,
-		"dexterity": 45,
-		"will": 60,
-		"intelligence": 60,
-		"charisma": 65
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/hadrian.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "town_guard",
+      "name": "Town Guard",
+      "race": "from_faction",
+      "background": "golden_legion_basic_training_graduate",
+      "faction": "golden_guard",
+      "stats": {
+        "strength": 55,
+        "constitution": 60,
+        "dexterity": 45,
+        "will": 45,
+        "intelligence": 40,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/town_guard.png",
+      "dialogue": "guard_generic",
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
-        "soothe"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "sunder_havelton",
-	  "name": "Sunder Havelton",
-	  "race": "human",
-	  "background": "soldier",
-	  "faction": "spider_party",
-	  "stats": {
-		"strength": 65,
-		"constitution": 60,
-		"dexterity": 45,
-		"will": 50,
-		"intelligence": 40,
-		"charisma": 45
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/sunder.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "merchant",
+      "name": "Merchant",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "neutral",
+      "stats": {
+        "strength": 40,
+        "constitution": 45,
+        "dexterity": 45,
+        "will": 50,
+        "intelligence": 55,
+        "charisma": 65
+      },
+      "equipment": [
+        {
+          "id": "dagger",
+          "slot": "main_hand"
+        },
+        {
+          "id": "merchant_garb",
+          "slot": "body"
+        },
+        {
+          "id": "gold",
+          "quantity": 20
+        }
+      ],
+      "icon": "res://icons/characters/merchant.png",
+      "dialogue": "merchant_generic",
+      "interact_options": [
+        "Talk",
+        "Trade",
         "Inspect"
-	  ],
-	  "extra_abilities": [
-        "body_slam"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "brutus_half_off",
-	  "name": "Brutus Half-Off",
-	  "race": "dwarf",
-	  "background": "mercenary",
-	  "faction": "spider_party",
-	  "stats": {
-		"strength": 60,
-		"constitution": 70,
-		"dexterity": 35,
-		"will": 55,
-		"intelligence": 35,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/brutus.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "bandit",
+      "name": "Bandit",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "bandits",
+      "stats": {
+        "strength": 50,
+        "constitution": 45,
+        "dexterity": 55,
+        "will": 40,
+        "intelligence": 40,
+        "charisma": 35
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/bandit.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "bandit_chief",
+      "name": "Bandit Chief",
+      "race": "from_faction",
+      "background": "criminal",
+      "faction": "bandits",
+      "stats": {
+        "strength": 65,
+        "constitution": 60,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 45,
+        "charisma": 55
+      },
+      "equipment": [
+        {
+          "id": "war_axe",
+          "slot": "main_hand"
+        },
+        {
+          "id": "studded_leather",
+          "slot": "body"
+        },
+        {
+          "id": "gold",
+          "quantity": 5
+        }
+      ],
+      "icon": "res://icons/characters/bandit_chief.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "war_cry"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Intimidating": 2,
+        "Savage": 1
+      },
+      "combat": {
+        "unarmed_strike_damage": 5,
+        "unarmed_strike_damage_type": "bludgeoning",
+        "bonus_damage": 2
+      },
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "rebel_fighter",
+      "name": "Rebel Fighter",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "rebels",
+      "stats": {
+        "strength": 50,
+        "constitution": 50,
+        "dexterity": 55,
+        "will": 55,
+        "intelligence": 45,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/rebel_fighter.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "forest_elf",
+      "name": "Forest Elf",
+      "race": "high_elf",
+      "background": "fey_prisoner",
+      "faction": "neutral",
+      "stats": {
+        "strength": 40,
+        "constitution": 40,
+        "dexterity": 65,
+        "will": 55,
+        "intelligence": 60,
+        "charisma": 55
+      },
+      "equipment": [
+        {
+          "id": "elven_bow",
+          "slot": "main_hand"
+        },
+        {
+          "id": "elven_garb",
+          "slot": "body"
+        }
+      ],
+      "icon": "res://icons/characters/forest_elf.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "cultist",
+      "name": "Cultist",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "cultists",
+      "stats": {
+        "strength": 40,
+        "constitution": 40,
+        "dexterity": 45,
+        "will": 60,
+        "intelligence": 55,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/cultist.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
+      "race": "from_faction",
+      "background": "plague_survivor",
+      "faction": "undead",
+      "stats": {
+        "strength": 45,
+        "constitution": 30,
+        "dexterity": 40,
+        "will": 60,
+        "intelligence": 20,
+        "charisma": 10
+      },
+      "appearance_override": {
+        "skin_color": "#E0E0D1",
+        "hair_color": "#E0E0D1"
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/skeleton_warrior.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [
+        "undead_resilience"
+      ],
+      "extra_traits": {},
+      "combat": {
+        "unarmed_strike_damage_type": "slashing",
+        "unarmed_strike_damage": 3
+      },
+      "sensory": {
+        "sight": 80,
+        "hearing": 30,
+        "fov_angle_degrees": 360
+      },
+      "spawn_conditions": {}
+    },
+    {
+      "id": "demon_imp",
+      "name": "Demon Imp",
+      "race": "mephistkin",
+      "faction": "neutral",
+      "stats": {
+        "strength": 25,
+        "constitution": 25,
+        "dexterity": 70,
+        "will": 50,
+        "intelligence": 45,
+        "charisma": 40
+      },
+      "equipment": [
+        {
+          "id": "imp_claws",
+          "slot": "main_hand"
+        }
+      ],
+      "icon": "res://icons/characters/demon_imp.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "fire_bolt"
+      ],
+      "extra_conditions": [
+        "flight"
+      ],
+      "extra_traits": {},
+      "combat": {
+        "unarmed_strike_damage_type": "slashing",
+        "unarmed_strike_damage": 4
+      },
+      "sensory": {
+        "sight": 120,
+        "fov_angle_degrees": 300
+      },
+      "spawn_conditions": {}
+    },
+    {
+      "id": "noble_lord",
+      "name": "Noble Lord",
+      "race": "from_faction",
+      "background": "aristocratic_envoy",
+      "faction": "patriciate",
+      "stats": {
+        "strength": 45,
+        "constitution": 45,
+        "dexterity": 45,
+        "will": 55,
+        "intelligence": 60,
+        "charisma": 70
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/noble_lord.png",
+      "dialogue": "castellan_intro",
+      "interact_options": [
+        "Talk",
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Noble": 2,
+        "Commanding": 1
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "wild_wolf",
+      "name": "Wild Wolf",
+      "is_creature": true,
+      "faction": "wildlife",
+      "stats": {
+        "strength": 55,
+        "constitution": 50,
+        "dexterity": 70,
+        "will": 30,
+        "intelligence": 10,
+        "charisma": 10
+      },
+      "appearance_override": {
+        "skin_color": "#696969",
+        "hair_color": "#4a4a4a",
+        "body_width": 20.0,
+        "body_height": 16.0
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/wild_wolf.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {
+        "unarmed_strike_damage_type": "piercing",
+        "unarmed_strike_damage": 6
+      },
+      "sensory": {
+        "sight": 150,
+        "hearing": 200,
+        "fov_angle_degrees": 270
+      },
+      "spawn_conditions": {}
+    },
+    {
+      "id": "liziti_thug",
+      "name": "Liziti Thug",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "liziti",
+      "stats": {
+        "strength": 55,
+        "constitution": 55,
+        "dexterity": 45,
+        "will": 35,
+        "intelligence": 30,
+        "charisma": 35
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/liziti_thug.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "liziti_don",
+      "name": "Liziti Don",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 60,
+        "constitution": 60,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 45,
+        "charisma": 55
+      },
+      "equipment": [
+        {
+          "id": "heavy_cudgel",
+          "slot": "main_hand"
+        },
+        {
+          "id": "liziti_boss_vest",
+          "slot": "body"
+        },
+        {
+          "id": "gold",
+          "quantity": 8
+        }
+      ],
+      "icon": "res://icons/characters/liziti_don.png",
+      "dialogue": "liziti_don_intro",
+      "interact_options": [
+        "Talk",
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "crushing_blow"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Intimidating": 2,
+        "Criminal": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "draga_legionnaire",
+      "name": "Draga Legionnaire",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "dragatini",
+      "stats": {
+        "strength": 60,
+        "constitution": 60,
+        "dexterity": 45,
+        "will": 40,
+        "intelligence": 40,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/draga_legionnaire.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "draga_centurion",
+      "name": "Draga Centurion",
+      "race": "draconian",
+      "background": "golden_legion_basic_training_graduate",
+      "faction": "dragatini",
+      "stats": {
+        "strength": 70,
+        "constitution": 65,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 50,
+        "charisma": 55
+      },
+      "equipment": [
+        {
+          "id": "centurion_gladius",
+          "slot": "main_hand"
+        },
+        {
+          "id": "centurion_scutum",
+          "slot": "off_hand"
+        },
+        {
+          "id": "centurion_lorica",
+          "slot": "body"
+        },
+        {
+          "id": "centurion_crest",
+          "slot": "head"
+        }
+      ],
+      "icon": "res://icons/characters/draga_centurion.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "breath_weapon",
         "shield_bash"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "quillath",
-	  "name": "Quillath",
-	  "race": "halfling",
-	  "background": "outlander",
-	  "faction": "neutral",
-	  "stats": {
-		"strength": 55,
-		"constitution": 55,
-		"dexterity": 60,
-		"will": 40,
-		"intelligence": 35,
-		"charisma": 45
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/quillath.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Commanding": 2,
+        "Disciplined": 1
+      },
+      "combat": {
+        "bonus_damage": 3
+      },
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "tort_enforcer",
+      "name": "Tortellini Enforcer",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "tortellini",
+      "stats": {
+        "strength": 55,
+        "constitution": 65,
+        "dexterity": 35,
+        "will": 50,
+        "intelligence": 40,
+        "charisma": 35
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/tort_enforcer.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "pirate_buccaneer",
+      "name": "Pirate Buccaneer",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "pirates",
+      "stats": {
+        "strength": 50,
+        "constitution": 50,
+        "dexterity": 55,
+        "will": 45,
+        "intelligence": 45,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/pirate_buccaneer.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "pirate_captain",
+      "name": "Pirate Captain",
+      "race": "from_faction",
+      "background": "criminal",
+      "faction": "pirates",
+      "stats": {
+        "strength": 55,
+        "constitution": 55,
+        "dexterity": 60,
+        "will": 55,
+        "intelligence": 55,
+        "charisma": 60
+      },
+      "equipment": [
+        {
+          "id": "ornate_flintlock",
+          "slot": "main_hand"
+        },
+        {
+          "id": "captain_cutlass",
+          "slot": "off_hand"
+        },
+        {
+          "id": "captain_coat",
+          "slot": "body"
+        },
+        {
+          "id": "captain_hat",
+          "slot": "head"
+        },
+        {
+          "id": "gold",
+          "quantity": 15
+        }
+      ],
+      "icon": "res://icons/characters/pirate_captain.png",
+      "dialogue": "pirate_captain_intro",
+      "interact_options": [
+        "Talk",
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Intimidating": 1,
+        "Seafaring": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "guild_hunter",
+      "name": "Guild Hunter",
+      "race": "from_faction",
+      "background": "from_faction",
+      "faction": "adventurers_guild",
+      "stats": {
+        "strength": 50,
+        "constitution": 50,
+        "dexterity": 60,
+        "will": 50,
+        "intelligence": 50,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/guild_hunter.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "patrician_knight",
+      "name": "Patrician Knight",
+      "race": "from_faction",
+      "background": "aristocratic_envoy",
+      "faction": "patriciate",
+      "stats": {
+        "strength": 60,
+        "constitution": 55,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 50,
+        "charisma": 55
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/patrician_knight.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "djargo",
+      "name": "Djargo",
+      "race": "grimalkin",
+      "background": "pauper",
+      "faction": "neutral",
+      "stats": {
+        "strength": 35,
+        "constitution": 40,
+        "dexterity": 65,
+        "will": 50,
+        "intelligence": 55,
+        "charisma": 60
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/djargo.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "little_trick"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "hadrian_rosemerrow",
+      "name": "Hadrian Rosemerrow",
+      "race": "human",
+      "background": "noble",
+      "faction": "spider_party",
+      "stats": {
+        "strength": 40,
+        "constitution": 45,
+        "dexterity": 45,
+        "will": 60,
+        "intelligence": 60,
+        "charisma": 65
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/hadrian.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "soothe"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "sunder_havelton",
+      "name": "Sunder Havelton",
+      "race": "human",
+      "background": "soldier",
+      "faction": "spider_party",
+      "stats": {
+        "strength": 65,
+        "constitution": 60,
+        "dexterity": 45,
+        "will": 50,
+        "intelligence": 40,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/sunder.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "body_slam"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "brutus_half_off",
+      "name": "Brutus Half-Off",
+      "race": "dwarf",
+      "background": "mercenary",
+      "faction": "spider_party",
+      "stats": {
+        "strength": 60,
+        "constitution": 70,
+        "dexterity": 35,
+        "will": 55,
+        "intelligence": 35,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/brutus.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
+        "shield_bash"
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "quillath",
+      "name": "Quillath",
+      "race": "halfling",
+      "background": "outlander",
+      "faction": "neutral",
+      "stats": {
+        "strength": 55,
+        "constitution": 55,
+        "dexterity": 60,
+        "will": 40,
+        "intelligence": 35,
+        "charisma": 45
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/quillath.png",
+      "dialogue": null,
+      "interact_options": [
+        "Inspect"
+      ],
+      "extra_abilities": [
         "rage"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Small": 1
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "stokes_carfire",
-	  "name": "Stokes Carfire",
-	  "race": "kobold",
-	  "background": "from_faction",
-	  "faction": "dragatini",
-	  "stats": {
-		"strength": 35,
-		"constitution": 40,
-		"dexterity": 65,
-		"will": 45,
-		"intelligence": 50,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/stokes.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Small": 1
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "stokes_carfire",
+      "name": "Stokes Carfire",
+      "race": "kobold",
+      "background": "from_faction",
+      "faction": "dragatini",
+      "stats": {
+        "strength": 35,
+        "constitution": 40,
+        "dexterity": 65,
+        "will": 45,
+        "intelligence": 50,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/stokes.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
-		"scamper",
+      ],
+      "extra_abilities": [
+        "scamper",
         "firebreath"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "captain_morgan",
-	  "name": "Captain Morgan",
-	  "race": "human",
-	  "background": "criminal",
-	  "faction": "pirates",
-	  "stats": {
-		"strength": 55,
-		"constitution": 55,
-		"dexterity": 50,
-		"will": 60,
-		"intelligence": 55,
-		"charisma": 65
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/morgan.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "captain_morgan",
+      "name": "Captain Morgan",
+      "race": "human",
+      "background": "criminal",
+      "faction": "pirates",
+      "stats": {
+        "strength": 55,
+        "constitution": 55,
+        "dexterity": 50,
+        "will": 60,
+        "intelligence": 55,
+        "charisma": 65
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/morgan.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Seafaring": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "captain_jameson",
-	  "name": "Captain Jameson",
-	  "race": "human",
-	  "background": "criminal",
-	  "faction": "pirates",
-	  "stats": {
-		"strength": 50,
-		"constitution": 60,
-		"dexterity": 45,
-		"will": 65,
-		"intelligence": 50,
-		"charisma": 60
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/jameson.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Seafaring": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "captain_jameson",
+      "name": "Captain Jameson",
+      "race": "human",
+      "background": "criminal",
+      "faction": "pirates",
+      "stats": {
+        "strength": 50,
+        "constitution": 60,
+        "dexterity": 45,
+        "will": 65,
+        "intelligence": 50,
+        "charisma": 60
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/jameson.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Seafaring": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "earl_grey",
-	  "name": "Earl Grey",
-	  "race": "human",
-	  "background": "hermit",
-	  "faction": "druids",
-	  "stats": {
-		"strength": 40,
-		"constitution": 50,
-		"dexterity": 45,
-		"will": 70,
-		"intelligence": 60,
-		"charisma": 50
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/earl_grey.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Seafaring": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "earl_grey",
+      "name": "Earl Grey",
+      "race": "human",
+      "background": "hermit",
+      "faction": "druids",
+      "stats": {
+        "strength": 40,
+        "constitution": 50,
+        "dexterity": 45,
+        "will": 70,
+        "intelligence": 60,
+        "charisma": 50
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/earl_grey.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Nature_Attuned": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "dryad",
-	  "name": "Dryad",
-	  "is_creature": true,
-	  "race": "fey",
-	  "faction": "neutral",
-	  "stats": {
-		"strength": 35,
-		"constitution": 50,
-		"dexterity": 60,
-		"will": 65,
-		"intelligence": 55,
-		"charisma": 75
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/dryad.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Nature_Attuned": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "dryad",
+      "name": "Dryad",
+      "is_creature": true,
+      "race": "fey",
+      "faction": "neutral",
+      "stats": {
+        "strength": 35,
+        "constitution": 50,
+        "dexterity": 60,
+        "will": 65,
+        "intelligence": 55,
+        "charisma": 75
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/dryad.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
-		"beguile",
-		"happy_place",
+      ],
+      "extra_abilities": [
+        "beguile",
+        "happy_place",
         "story_of_your_life"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "nude_elf",
-	  "name": "Nude Elf",
-	  "race": "elf",
-	  "background": "amnesiac",
-	  "faction": "neutral",
-	  "stats": {
-		"strength": 45,
-		"constitution": 40,
-		"dexterity": 55,
-		"will": 30,
-		"intelligence": 30,
-		"charisma": 50
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/nude_elf.png",
-	  "dialogue": "amnesiac_elf_intro",
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "nude_elf",
+      "name": "Nude Elf",
+      "race": "elf",
+      "background": "amnesiac",
+      "faction": "neutral",
+      "stats": {
+        "strength": 45,
+        "constitution": 40,
+        "dexterity": 55,
+        "will": 30,
+        "intelligence": 30,
+        "charisma": 50
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/nude_elf.png",
+      "dialogue": "amnesiac_elf_intro",
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [
         "confused"
-	  ],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "lighthouse_keeper_brother",
-	  "name": "Lighthouse Keeper Brother",
-	  "race": "human",
-	  "background": "hermit",
-	  "faction": "none",
-	  "stats": {
-		"strength": 50,
-		"constitution": 55,
-		"dexterity": 40,
-		"will": 60,
-		"intelligence": 50,
-		"charisma": 35
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/keeper.png",
-	  "dialogue": "lighthouse_dialogue",
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "lighthouse_keeper_brother",
+      "name": "Lighthouse Keeper Brother",
+      "race": "human",
+      "background": "hermit",
+      "faction": "none",
+      "stats": {
+        "strength": 50,
+        "constitution": 55,
+        "dexterity": 40,
+        "will": 60,
+        "intelligence": 50,
+        "charisma": 35
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/keeper.png",
+      "dialogue": "lighthouse_dialogue",
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "iguana_don",
-	  "name": "Iguana Don",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 55,
-		"constitution": 60,
-		"dexterity": 40,
-		"will": 55,
-		"intelligence": 50,
-		"charisma": 60
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/iguana_don.png",
-	  "dialogue": "liziti_boss_dialogue",
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "iguana_don",
+      "name": "Iguana Don",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 55,
+        "constitution": 60,
+        "dexterity": 40,
+        "will": 55,
+        "intelligence": 50,
+        "charisma": 60
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/iguana_don.png",
+      "dialogue": "liziti_boss_dialogue",
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Intimidating": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "roy_demonitor",
-	  "name": "Roy DeMonitor",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 55,
-		"constitution": 55,
-		"dexterity": 45,
-		"will": 45,
-		"intelligence": 45,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/roy.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Intimidating": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "roy_demonitor",
+      "name": "Roy DeMonitor",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 55,
+        "constitution": 55,
+        "dexterity": 45,
+        "will": 45,
+        "intelligence": 45,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/roy.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "andrew_tuatara",
-	  "name": "Andrew Tuatara",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 50,
-		"constitution": 50,
-		"dexterity": 50,
-		"will": 50,
-		"intelligence": 50,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/andrew.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "andrew_tuatara",
+      "name": "Andrew Tuatara",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 50,
+        "constitution": 50,
+        "dexterity": 50,
+        "will": 50,
+        "intelligence": 50,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/andrew.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "gordon_gecko",
-	  "name": "Gordon Gecko",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 40,
-		"constitution": 40,
-		"dexterity": 55,
-		"will": 50,
-		"intelligence": 65,
-		"charisma": 70
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/gordon.png",
-	  "dialogue": "gordon_dialogue",
-	  "interact_options": [
-		"Talk",
-		"Trade",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "gordon_gecko",
+      "name": "Gordon Gecko",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 40,
+        "constitution": 40,
+        "dexterity": 55,
+        "will": 50,
+        "intelligence": 65,
+        "charisma": 70
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/gordon.png",
+      "dialogue": "gordon_dialogue",
+      "interact_options": [
+        "Talk",
+        "Trade",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Greedy": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "dusk",
-	  "name": "Dusk",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 50,
-		"constitution": 45,
-		"dexterity": 65,
-		"will": 45,
-		"intelligence": 50,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/dusk.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Greedy": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "dusk",
+      "name": "Dusk",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 50,
+        "constitution": 45,
+        "dexterity": 65,
+        "will": 45,
+        "intelligence": 50,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/dusk.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "chameleon_paglia",
-	  "name": "Chameleon Paglia",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 40,
-		"constitution": 45,
-		"dexterity": 70,
-		"will": 55,
-		"intelligence": 60,
-		"charisma": 50
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/paglia.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "chameleon_paglia",
+      "name": "Chameleon Paglia",
+      "race": "saurian",
+      "background": "criminal",
+      "faction": "liziti",
+      "stats": {
+        "strength": 40,
+        "constitution": 45,
+        "dexterity": 70,
+        "will": 55,
+        "intelligence": 60,
+        "charisma": 50
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/paglia.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
+      ],
+      "extra_abilities": [
         "invisibility"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "jacana",
-	  "name": "Jacana",
-	  "race": "quadrelf",
-	  "background": "aristocratic_envoy",
-	  "faction": "patriciate",
-	  "stats": {
-		"strength": 45,
-		"constitution": 45,
-		"dexterity": 60,
-		"will": 55,
-		"intelligence": 65,
-		"charisma": 60
-	  },
-	  "equipment": "from_faction",
-	  "extra_items": [
-		{"id": "alcohol", "name": "Alcohol", "description": "A bottle of strong spirits."}
-	  ],
-	  "icon": "res://icons/characters/jacana.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "jacana",
+      "name": "Jacana",
+      "race": "quadrelf",
+      "background": "aristocratic_envoy",
+      "faction": "patriciate",
+      "stats": {
+        "strength": 45,
+        "constitution": 45,
+        "dexterity": 60,
+        "will": 55,
+        "intelligence": 65,
+        "charisma": 60
+      },
+      "equipment": "from_faction",
+      "extra_items": [
+        "alcohol"
+      ],
+      "icon": "res://icons/characters/jacana.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Noble": 1
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "siren",
-	  "name": "Siren",
-	  "race": "siren",
-	  "background": "from_faction",
-	  "faction": "tortellini",
-	  "stats": {
-		"strength": 40,
-		"constitution": 50,
-		"dexterity": 55,
-		"will": 60,
-		"intelligence": 55,
-		"charisma": 80
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/siren.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Noble": 1
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "siren",
+      "name": "Siren",
+      "race": "siren",
+      "background": "from_faction",
+      "faction": "tortellini",
+      "stats": {
+        "strength": 40,
+        "constitution": 50,
+        "dexterity": 55,
+        "will": 60,
+        "intelligence": 55,
+        "charisma": 80
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/siren.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
+      ],
+      "extra_abilities": [
         "enthrall"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Amphibious": 1
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "pesto",
-	  "name": "Pesto",
-	  "race": "carapacian",
-	  "background": "from_faction",
-	  "faction": "tortellini",
-	  "stats": {
-		"strength": 60,
-		"constitution": 75,
-		"dexterity": 30,
-		"will": 55,
-		"intelligence": 40,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/pesto.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Amphibious": 1
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "pesto",
+      "name": "Pesto",
+      "race": "carapacian",
+      "background": "from_faction",
+      "faction": "tortellini",
+      "stats": {
+        "strength": 60,
+        "constitution": 75,
+        "dexterity": 30,
+        "will": 55,
+        "intelligence": 40,
+        "charisma": 40
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/pesto.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"sturdy": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "tommy",
-	  "name": "Tommy",
-	  "race": "carapacian",
-	  "background": "from_faction",
-	  "faction": "tortellini",
-	  "stats": {
-		"strength": 55,
-		"constitution": 70,
-		"dexterity": 35,
-		"will": 50,
-		"intelligence": 40,
-		"charisma": 45
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/tommy.png",
-	  "dialogue": null,
-	  "interact_options": [
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "sturdy": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "tommy",
+      "name": "Tommy",
+      "race": "carapacian",
+      "background": "from_faction",
+      "faction": "tortellini",
+      "stats": {
+        "strength": 55,
+        "constitution": 70,
+        "dexterity": 35,
+        "will": 50,
+        "intelligence": 40,
+        "charisma": 45
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/tommy.png",
+      "dialogue": null,
+      "interact_options": [
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Hard_Shell": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "prosecco",
-	  "name": "Prosecco",
-	  "race": "human",
-	  "background": "aristocratic_envoy",
-	  "faction": "patriciate",
-	  "stats": {
-		"strength": 40,
-		"constitution": 40,
-		"dexterity": 50,
-		"will": 55,
-		"intelligence": 65,
-		"charisma": 75
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/prosecco.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Hard_Shell": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "prosecco",
+      "name": "Prosecco",
+      "race": "human",
+      "background": "aristocratic_envoy",
+      "faction": "patriciate",
+      "stats": {
+        "strength": 40,
+        "constitution": 40,
+        "dexterity": 50,
+        "will": 55,
+        "intelligence": 65,
+        "charisma": 75
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/prosecco.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Noble": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "boa",
-	  "name": "Boa",
-	  "race": "saurian",
-	  "background": "aristocratic_envoy",
-	  "faction": "patriciate",
-	  "stats": {
-		"strength": 60,
-		"constitution": 55,
-		"dexterity": 45,
-		"will": 60,
-		"intelligence": 50,
-		"charisma": 55
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/boa.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Noble": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "boa",
+      "name": "Boa",
+      "race": "saurian",
+      "background": "aristocratic_envoy",
+      "faction": "patriciate",
+      "stats": {
+        "strength": 60,
+        "constitution": 55,
+        "dexterity": 45,
+        "will": 60,
+        "intelligence": 50,
+        "charisma": 55
+      },
+      "equipment": "from_faction",
+      "icon": "res://icons/characters/boa.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Noble": 1
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "rodney_the_rat",
-	  "name": "Rodney the Rat",
-	  "race": "rodentkin",
-	  "background": "pauper",
-	  "faction": "vermincelli",
-	  "stats": {
-		"strength": 35,
-		"constitution": 40,
-		"dexterity": 70,
-		"will": 45,
-		"intelligence": 55,
-		"charisma": 50
-	  },
-	  "equipment": [],
-	  "icon": "res://icons/characters/rodney.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Noble": 1
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "rodney_the_rat",
+      "name": "Rodney the Rat",
+      "race": "rodentkin",
+      "background": "pauper",
+      "faction": "vermincelli",
+      "stats": {
+        "strength": 35,
+        "constitution": 40,
+        "dexterity": 70,
+        "will": 45,
+        "intelligence": 55,
+        "charisma": 50
+      },
+      "equipment": [],
+      "icon": "res://icons/characters/rodney.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {
-		"Small": 2
-	  },
-	  "combat": {},
-	  "sensory": {}
-	},
-	{
-	  "id": "joey_feritas",
-	  "name": "Joey Feritas",
-	  "race": "human",
-	  "background": "pauper",
-	  "faction": "none",
-	  "stats": {
-		"strength": 40,
-		"constitution": 45,
-		"dexterity": 60,
-		"will": 55,
-		"intelligence": 50,
-		"charisma": 65
-	  },
-	  "equipment": ["vermin_bag"],
-	  "icon": "res://icons/characters/joey.png",
-	  "dialogue": null,
-	  "interact_options": [
-		"Talk",
+      ],
+      "extra_abilities": [],
+      "extra_conditions": [],
+      "extra_traits": {
+        "Small": 2
+      },
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    },
+    {
+      "id": "joey_feritas",
+      "name": "Joey Feritas",
+      "race": "human",
+      "background": "pauper",
+      "faction": "none",
+      "stats": {
+        "strength": 40,
+        "constitution": 45,
+        "dexterity": 60,
+        "will": 55,
+        "intelligence": 50,
+        "charisma": 65
+      },
+      "equipment": [
+        "vermin_bag"
+      ],
+      "icon": "res://icons/characters/joey.png",
+      "dialogue": null,
+      "interact_options": [
+        "Talk",
         "Inspect"
-	  ],
-	  "extra_abilities": [
+      ],
+      "extra_abilities": [
         "pied_piper"
-	  ],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {}
-	}
-	]
+      ],
+      "extra_conditions": [],
+      "extra_traits": {},
+      "combat": {},
+      "sensory": {},
+      "spawn_conditions": {}
+    }
+  ]
 }

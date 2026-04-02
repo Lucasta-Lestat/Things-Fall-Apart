@@ -136,11 +136,17 @@ func _spawn_npcs(npc_list: Array) -> void:
 # ---------------------------------------------------------------------------
  
 func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary = {}) -> ProceduralCharacter:
+	# Check template-level spawn conditions before creating the character
+	var template = TopDownCharacterDatabase.get_template(template_id)
+	var spawn_conditions = template.get("spawn_conditions", {})
+	if not spawn_conditions.is_empty() and not check_spawn_conditions(spawn_conditions):
+		return null
+
 	var character = CharacterScene.instantiate()
- 
+
 	# Position first (before body creation reads it)
 	character.position = pos
- 
+
 	# Build from template — this applies race, background, stats, equipment
 	TopDownCharacterDatabase.build_character(character, template_id, overrides)
  
@@ -314,6 +320,9 @@ func show_context_menu(target, position: Vector2) -> void:
 		options = target.get("interact_options") if "interact_options" in target else ["Inspect"]
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
+	elif target is Dictionary:
+		# Item context menu — use interact_options from item data
+		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
 	get_tree().root.add_child(context_menu)
@@ -1522,14 +1531,38 @@ func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Are
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 		show_context_menu(area, event.global_position)
 		
-func _check_condition(condition_key: String, condition_value = true):
-	if Globals.world_state.has(condition_key):
-		if Globals.world_state.condition_key == condition_value:
-			return true
-		else:
+func _check_condition(condition_key: String, condition_value = true) -> bool:
+	if not Globals.world_state.has(condition_key):
+		push_warning("Missing world_state condition: " + condition_key)
+		return false
+	var actual = Globals.world_state[condition_key]
+	# Support string comparison operators: ">3", "<5", ">=2", "<=10", "!=0"
+	if condition_value is String:
+		var op = ""
+		var val_str = condition_value
+		for prefix in [">=", "<=", "!=", ">", "<"]:
+			if condition_value.begins_with(prefix):
+				op = prefix
+				val_str = condition_value.substr(prefix.length()).strip_edges()
+				break
+		if not op.is_empty():
+			var num_val = float(val_str)
+			var num_actual = float(actual)
+			match op:
+				">": return num_actual > num_val
+				"<": return num_actual < num_val
+				">=": return num_actual >= num_val
+				"<=": return num_actual <= num_val
+				"!=": return num_actual != num_val
 			return false
-	else:
-		push_error("Missing world_state condition: ",condition_key)
+	# Default: strict equality
+	return actual == condition_value
+
+func check_spawn_conditions(spawn_conditions: Dictionary) -> bool:
+	for key in spawn_conditions:
+		if not _check_condition(key, spawn_conditions[key]):
+			return false
+	return true
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
 # ---------------------------------------------------------------------------

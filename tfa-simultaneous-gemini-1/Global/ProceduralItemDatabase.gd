@@ -180,6 +180,18 @@ func set_database_path(items_path: String) -> void:
 	"""Set custom path for the unified database file"""
 	items_json_path = items_path
 
+func get_item_data(item_id: String) -> Dictionary:
+	"""Get any item data by id, searching all categories (items, weapons, equipment)"""
+	var key = Globals.name_to_id(item_id)
+	if items.has(key):
+		return items[key].duplicate()
+	if weapons.has(key):
+		return weapons[key].duplicate()
+	if equipment.has(key):
+		return equipment[key].duplicate()
+	push_warning("ItemDatabase: Item '%s' not found" % item_id)
+	return {}
+
 func has_weapon(weapon_name: String) -> bool:
 	return weapons.has(weapon_name.to_lower())
 
