@@ -79,7 +79,7 @@ func _parse_flat_item_list(item_list: Array) -> void:
 	var weapon_types = ["sword", "longsword", "axe", "dagger", "spear", "mace", "bow", "weapon", "pistol", "club", "hammer", "staff", "glaive", "pike"]
 	var equipment_types = ["armor", "helmet", "shield", "boots", "gloves", "ring", "amulet", "cloak", "belt", "hood", "cape", "backpack", "pants", "leggings", "greaves", "breastplate"]
 	for item_data in item_list:
-		var item_name = item_data.get("name", item_data.get("display_name", ""))
+		var item_name = item_data.get("display_name", item_data.get("name", ""))
 		if not item_name:
 			continue
 		var item_key = Globals.name_to_id(item_name)
@@ -104,7 +104,7 @@ func get_weapon_names() -> Array:
 	"""Get list of all weapon names"""
 	var names = []
 	for key in weapons:
-		names.append(weapons[key].get("name", key))
+		names.append(weapons[key].get("display_name", key))
 	return names
 
 func find_weapons_by_type(weapon_type: String) -> Array:
@@ -137,7 +137,7 @@ func get_equipment_names() -> Array:
 	"""Get list of all equipment names"""
 	var names = []
 	for key in equipment:
-		names.append(equipment[key].get("name", key))
+		names.append(equipment[key].get("display_name", key))
 	return names
 
 func find_equipment_by_type(equip_type: String) -> Array:

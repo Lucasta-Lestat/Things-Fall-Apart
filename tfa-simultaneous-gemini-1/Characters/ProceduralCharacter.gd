@@ -1654,7 +1654,7 @@ func is_attacking() -> bool:
 
 func give_weapon(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	"""Give the character a weapon from data and equip it"""
-	print("give weapon being run with: ", weapon_data.name, "in hand ", hand)
+	print("give weapon being run with: ", weapon_data.get("display_name", weapon_data.get("id", "")), " in hand ", hand)
 	return inventory.equip_weapon_from_data(weapon_data, hand)
 
 func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponShape:

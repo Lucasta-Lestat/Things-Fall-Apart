@@ -270,8 +270,8 @@ func _roll_faction_loadout(faction_data: Dictionary) -> Array:
 			continue
 		var picked: Dictionary = pool[randi() % pool.size()]
 		loadout.append({
-			"id": picked.get("id", picked.get("name", "")),
-			"name": picked.get("name", ""),
+			"id": picked.get("id", picked.get("display_name", "")),
+			"display_name": picked.get("display_name", ""),
 			"equip_slot": picked.get("equip_slot", ""),
 			"quantity": 1
 		})
@@ -281,8 +281,8 @@ func _roll_faction_loadout(faction_data: Dictionary) -> Array:
 	if not off_pool.is_empty() and randf() > 0.4:
 		var picked: Dictionary = off_pool[randi() % off_pool.size()]
 		loadout.append({
-			"id": picked.get("id", picked.get("name", "")),
-			"name": picked.get("name", ""),
+			"id": picked.get("id", picked.get("display_name", "")),
+			"display_name": picked.get("display_name", ""),
 			"equip_slot": "Off Hand",
 			"quantity": 1
 		})
@@ -356,7 +356,7 @@ func _grant_equipment(character, equipment: Array) -> void:
 
 		# Auto-equip items that have an equip_slot defined
 		var equip_slot: String = item_data.get("equip_slot", "")
-		var item_name: String = item_data.get("name", item_id)
+		var item_name: String = item_data.get("display_name", item_id)
 		if not equip_slot.is_empty() and not item_name.is_empty():
 			if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 				var hand = "Main" if equip_slot == "Main Hand" else "Off"

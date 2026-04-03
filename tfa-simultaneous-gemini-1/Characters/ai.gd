@@ -516,7 +516,7 @@ func pickup_item(item: Node):
 	if not is_instance_valid(item):
 		return
 
-	GameLog.add_entry(character.Name + " picks up " + item.name)
+	GameLog.add_entry(character.Name + " picks up " + item.display_name)
 
 	# If food and hungry, eat immediately
 	if current_goal == "seek_food" and "calories" in item:
@@ -524,7 +524,7 @@ func pickup_item(item: Node):
 	else:
 		# Add to inventory if possible
 		if character.inventory:
-			character.inventory.add_item({"name": item.name, "node": item})
+			character.inventory.add_item({"display_name": item.display_name, "id": item.id, "node": item})
 		item.get_parent().remove_child(item)
 		if item in game.items_in_scene:
 			game.items_in_scene.erase(item)
@@ -534,7 +534,7 @@ func eat_food(item: Node):
 	if "calories" in item:
 		var hunger_reduced = item.calories * 0.1
 		hunger = max(0, hunger - hunger_reduced)
-		GameLog.add_entry(character.Name + " eats " + item.name)
+		GameLog.add_entry(character.Name + " eats " + item.display_name)
 		if item in game.items_in_scene:
 			game.items_in_scene.erase(item)
 		item.queue_free()
