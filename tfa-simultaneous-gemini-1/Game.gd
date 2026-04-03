@@ -913,7 +913,7 @@ func process_weapon_hit(
 	")
 	# Calculate base damage — DUPLICATE to avoid mutating the weapon's data
 	var attack_damage: Dictionary
-	if weapon:
+	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
 		print("attack_damage: ", attack_damage)
 		if weapon.get("traits") and "melee" in weapon.traits:
