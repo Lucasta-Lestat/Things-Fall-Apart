@@ -334,9 +334,9 @@ func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			_show_item_context_menu(slot)
 			get_viewport().set_input_as_handled()
-		elif event.button_index == MOUSE_BUTTON_LEFT:
-			# Consume left clicks on slots so they don't pass to world
-			get_viewport().set_input_as_handled()
+		# Left clicks are NOT consumed here — they need to flow through
+		# to _get_drag_data for drag-and-drop to work. The panel's
+		# MOUSE_FILTER_STOP already prevents them from reaching the world.
 
 func _show_item_context_menu(slot: PanelContainer) -> void:
 	var item_data: Dictionary = slot.get_meta("item_data")
@@ -361,6 +361,8 @@ func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dict
 	match option_name:
 		"Use":
 			_use_item(character, item_index, item_data)
+		"Consume":
+			_consume_item(character, item_index, item_data)
 		"Throw":
 			_throw_item(character, item_index, item_data)
 		"Drop":
@@ -375,6 +377,31 @@ func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 		if not ability_data.is_empty() and character.ability_manager:
 			character.ability_manager.use_ability(ability_data, character, character.global_position)
 	# Consume the item
+	character.inventory.remove_item(item_index)
+
+func _consume_item(character, item_index: int, item_data: Dictionary) -> void:
+	"""Use an item on the currently selected character (e.g. potions, food)."""
+	var target = game_node.selected_character if game_node and game_node.selected_character else character
+	var use_ability_id = item_data.get("use_ability", "")
+	if use_ability_id is String and not use_ability_id.is_empty():
+		var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
+		if not ability_data.is_empty() and target.has_node("AbilityManager"):
+			target.get_node("AbilityManager").use_ability(ability_data, target, target.global_position)
+	# Apply satiety if the item has it
+	var satiety = item_data.get("satiety", 0.0)
+	if satiety > 0 and "hunger" in target:
+		target.hunger = max(0, target.hunger - satiety)
+	# Apply healing if the item has it
+	var healing = item_data.get("healing", 0.0)
+	if healing > 0 and target.has_method("heal"):
+		target.heal(healing)
+	# Apply conditions if the item adds any
+	var condition_id = item_data.get("adds_condition_on_equip", "")
+	if condition_id is String and not condition_id.is_empty():
+		var cm = target.get_node_or_null("ConditionManager")
+		if cm:
+			cm.apply_condition(condition_id, character)
+	# Remove from inventory
 	character.inventory.remove_item(item_index)
 
 func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
