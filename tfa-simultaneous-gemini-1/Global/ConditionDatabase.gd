@@ -230,5 +230,71 @@ func get_all_conditions() -> Array:
 			"fire": 1,
 			"cold": 1
 		}
+	},
+	{
+		"id": "slowed",
+		"display_name": "Slowed",
+		"description": "Movement speed reduced.",
+		"traits": {"debuff": 1, "slow": 1},
+		"stackable": false,
+		"duration": 3.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["speed", "haste"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "DEX", "operation": "multiply", "value": 0.8}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "corroding",
+		"display_name": "Corroding",
+		"description": "Acid eats away at flesh and armor.",
+		"traits": {"debuff": 1, "acid": 1, "dot": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 5.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["purify", "water"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{
+				"type": "damage",
+				"value": 8,
+				"damage_type": "acid",
+				"interval": 2.0
+			}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "suffocating",
+		"display_name": "Suffocating",
+		"description": "Choking, taking damage from lack of air.",
+		"traits": {"debuff": 1, "cc": 1},
+		"stackable": false,
+		"duration": 4.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["wind", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "DEX", "operation": "multiply", "value": 0.9}
+		],
+		"triggered_effects": [
+			{
+				"type": "damage",
+				"value": 6,
+				"damage_type": "bludgeoning",
+				"interval": 2.0
+			}
+		],
+		"immunities": {}
 	}
 ]

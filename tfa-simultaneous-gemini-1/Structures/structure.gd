@@ -17,6 +17,7 @@ var use_custom_texture: bool = false
 var custom_texture: ImageTexture
 var skip_grid_snap: bool = false
 var custom_size: Vector2 = Vector2.ZERO
+var occupied_tiles: Array[Vector2i] = []
 
 
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
@@ -98,6 +99,9 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 	
 func _destroy_structure():
+	# Unregister all occupied tiles from the grid
+	for tile_pos in occupied_tiles:
+		GridManager.unregister_obstacle(tile_pos)
 	emit_signal("destroyed", self, global_position)
 	sprite.visible = false
 	collision_shape.disabled = true

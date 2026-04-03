@@ -1,0 +1,36 @@
+{
+	"fluids": {
+		"water": {
+			"color": [0.2, 0.4, 0.8, 0.6],
+			"wave_color": [0.0, 0.9, 1.0, 0.4],
+			"conductive": true,
+			"condition_id": "",
+			"condition_stacks": 0,
+			"apply_interval": 1.0
+		},
+		"poison": {
+			"color": [0.3, 0.7, 0.1, 0.5],
+			"wave_color": [0.5, 0.9, 0.2, 0.4],
+			"conductive": true,
+			"condition_id": "poisoned",
+			"condition_stacks": 1,
+			"apply_interval": 2.0
+		},
+		"oil": {
+			"color": [0.15, 0.12, 0.08, 0.7],
+			"wave_color": [0.25, 0.2, 0.12, 0.3],
+			"conductive": false,
+			"condition_id": "slowed",
+			"condition_stacks": 1,
+			"apply_interval": 1.0
+		},
+		"acid": {
+			"color": [0.4, 0.75, 0.1, 0.6],
+			"wave_color": [0.6, 0.95, 0.2, 0.4],
+			"conductive": true,
+			"condition_id": "corroding",
+			"condition_stacks": 1,
+			"apply_interval": 1.5
+		}
+	}
+}

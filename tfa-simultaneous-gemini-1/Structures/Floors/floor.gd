@@ -125,12 +125,13 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 	
 func _destroy_floor():
+	# Unregister from grid before removal
+	var grid_pos = GridManager.world_to_map(global_position)
+	GridManager.unregister_floor(grid_pos)
 	# Notify the game world that this tile is now clear
-	emit_signal("destroyed", self, GridManager.world_to_map(global_position))
-	#game.create_item()
-	# TODO: Implement spawning the actual resource items
+	emit_signal("destroyed", self, grid_pos)
 	print_rich(floor_id, " destroyed! Dropped: ", resources, " (implement this with game.create_item()")
-	
+
 	queue_free()
 func change_texture(texture_path):
 	#print("attempting to update structure texture with: ", texture_path)
