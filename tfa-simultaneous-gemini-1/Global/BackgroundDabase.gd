@@ -189,9 +189,9 @@ func _grant_background_items(character, item_entries: Array) -> void:
 		# inventory can handle stacking via the quantity field)
 		var success = inventory.add_item(item_data)
 		if success:
-			print("[BackgroundDB] Granted item '%s' x%d to %s" % [entry.get("name", entry["id"]), entry.get("quantity", 1), character.name])
+			print("[BackgroundDB] Granted item '%s' x%d to %s" % [entry.get("display_name", entry["id"]), entry.get("quantity", 1), character.name])
 		else:
-			push_warning("[BackgroundDB] Failed to grant item '%s' to %s" % [entry.get("name", entry["id"]), character.name])
+			push_warning("[BackgroundDB] Failed to grant item '%s' to %s" % [entry.get("display_name", entry["id"]), character.name])
 
 # ---------------------------------------------------------------------------
 # Category resolution - filters databases by trait tags

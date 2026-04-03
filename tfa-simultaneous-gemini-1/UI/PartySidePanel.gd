@@ -168,7 +168,7 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = Vector2(40, 40)
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = item_data.get("name", item_data.get("id", "Unknown"))
+	slot.tooltip_text = item_data.get("display_name", item_data.get("id", "Unknown"))
 
 	var bg = StyleBoxFlat.new()
 	bg.bg_color = Color(0.2, 0.2, 0.25, 0.8)
@@ -194,7 +194,7 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 	return slot
 
 func _get_item_short_name(item_data: Dictionary) -> String:
-	var n = item_data.get("name", item_data.get("id", "?"))
+	var n = item_data.get("display_name", item_data.get("id", "?"))
 	if n.length() > 5:
 		return n.substr(0, 4) + "."
 	return n
@@ -215,7 +215,7 @@ func _get_drag_data(at_position: Vector2):
 
 	# Create drag preview
 	var preview = Label.new()
-	preview.text = item_data.get("name", item_data.get("id", "Item"))
+	preview.text = item_data.get("display_name", item_data.get("id", "Item"))
 	preview.add_theme_font_size_override("font_size", 12)
 	set_drag_preview(preview)
 
