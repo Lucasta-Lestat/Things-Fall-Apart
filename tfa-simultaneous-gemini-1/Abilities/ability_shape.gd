@@ -96,10 +96,7 @@ func setup_from_database(data: Dictionary) -> void:
 			_active_visual = visual_scene.instantiate()
 			add_child(_active_visual)
 			# Scale down for in-hand display (small preview, not full AoE size)
-			if _active_visual.has_method("play"):
-				_active_visual.play(0.25)
-			else:
-				_active_visual.scale = Vector2(0.25, 0.25)
+			_active_visual.scale = Vector2(0.25, 0.25)
 			activate_visuals(false) # Start turned off
 
 	# 3. Targeting Configuration
