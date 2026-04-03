@@ -126,12 +126,8 @@ func _spawn_npcs(npc_list: Array) -> void:
 			var npc = _spawn_character(template_id, pos)
 			if npc:
 				npc.AI_enabled = true
-				# NPCs only visible where party LOS lights reach them
-				npc.light_mask = 2
-				npc.visibility_layer = 2
-				var light_mat = CanvasItemMaterial.new()
-				light_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
-				_apply_material_recursive(npc, light_mat)
+				# NPCs hidden by default; made visible when inside party LOS
+				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
 				_add_npc_line_of_sight_light(npc)
  
@@ -355,15 +351,9 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	# The cone texture points downward (positive Y) at 0 degrees.
-	# Characters face up at rotation 0, so offset by 180 to flip the
-	# cone from down to up (forward in local space).
-	light.rotation_degrees = 180
+	light.rotation_degrees = 90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
-	# Illuminate both normal objects (layer 1) and NPCs (layer 2)
-	# so NPCs become visible when inside a party member's LOS cone
-	light.range_item_cull_mask = 3  # bits 1 + 2
 	light.z_index = 102
 	character.add_child(light)
 
@@ -377,7 +367,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "NPCLineOfSight"
-	light.rotation_degrees = 180
+	light.rotation_degrees = 90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	# NPC LOS lights only illuminate layer 2 (other NPCs), not party
@@ -490,12 +480,6 @@ func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 			remaining -= this_stack
 			spawn_offset += 1
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_C:
-			stealth_mode = not stealth_mode
-			_toggle_npc_los_cones()
-
 func _toggle_npc_los_cones() -> void:
 	"""Show or hide NPC line-of-sight cones based on stealth mode."""
 	for character in characters_in_scene:
@@ -506,6 +490,33 @@ func _toggle_npc_los_cones() -> void:
 		var npc_los = character.get_node_or_null("NPCLineOfSight")
 		if npc_los:
 			npc_los.visible = stealth_mode
+
+func _update_npc_los_visibility() -> void:
+	"""NPCs are only visible when inside a party member's sight cone."""
+	for npc in characters_in_scene:
+		if not is_instance_valid(npc):
+			continue
+		if npc in party_chars:
+			continue
+		var seen = false
+		for ally in party_chars:
+			if not is_instance_valid(ally) or not ally.is_alive():
+				continue
+			var to_npc = npc.global_position - ally.global_position
+			var dist = to_npc.length()
+			var sight_range = 1440.0 * ally.sight
+			if dist > sight_range:
+				continue
+			# Check if NPC is within the ally's FOV cone
+			# ally.rotation points in facing direction (up = 0)
+			# Convert rotation to a direction vector
+			var facing_dir = Vector2.UP.rotated(ally.rotation)
+			var angle_to_npc = facing_dir.angle_to(to_npc.normalized())
+			var half_fov = deg_to_rad(ally.fov_angle_degrees * 0.5)
+			if abs(angle_to_npc) <= half_fov:
+				seen = true
+				break
+		npc.visible = seen
 
 func _process(delta: float) -> void:
 	# Check for combat collisions / Update clash cooldowns
@@ -531,6 +542,8 @@ func _process(delta: float) -> void:
 			selection_indicator.visible = true
 	if selection_indicator and not PauseManager.is_paused:
 		selection_indicator.visible = false
+	# Update NPC visibility based on party line-of-sight
+	_update_npc_los_visibility()
 	# Camera follows selected character
 	if selected_character and is_instance_valid(selected_character) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
@@ -653,6 +666,10 @@ func _input(event: InputEvent) -> void:
 			KEY_P:
 				# Print status
 				_print_status()
+			KEY_C:
+				if not event.echo:
+					stealth_mode = not stealth_mode
+					_toggle_npc_los_cones()
 	# Number keys 1-9 to select party members
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key = event.keycode
