@@ -26,6 +26,7 @@ var current_map_id: String = "cemetery"
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
+var stealth_mode: bool = false
 
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
@@ -125,12 +126,14 @@ func _spawn_npcs(npc_list: Array) -> void:
 			var npc = _spawn_character(template_id, pos)
 			if npc:
 				npc.AI_enabled = true
-				# NPCs are only visible under player line-of-sight lights
+				# NPCs only visible where party LOS lights reach them
 				npc.light_mask = 2
 				npc.visibility_layer = 2
 				var light_mat = CanvasItemMaterial.new()
 				light_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
 				_apply_material_recursive(npc, light_mat)
+				# Give NPCs their own LOS cone (hidden until stealth mode)
+				_add_npc_line_of_sight_light(npc)
  
 # ---------------------------------------------------------------------------
 # Core character spawn helper
@@ -349,11 +352,33 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	light.rotation_degrees = 90
+	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
+	# Illuminate both normal objects (layer 1) and NPCs (layer 2)
+	# so NPCs become visible when inside a party member's LOS cone
+	light.range_item_cull_mask = 3  # bits 1 + 2
 	light.z_index = 102
 	character.add_child(light)
+
+func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
+	"""Add a LOS cone to an NPC, hidden by default. Toggled by stealth mode."""
+	var light = PointLight2D.new()
+	light.texture = Globals.SIGHT_TEXTURE
+	light.energy = 0.08
+	light.color = Color(1.0, 0.4, 0.3)  # reddish tint to distinguish from party
+	var master_radius = 512.0
+	var desired_radius = 1440.0 * npc.sight
+	light.texture_scale = desired_radius / master_radius
+	light.name = "NPCLineOfSight"
+	light.rotation_degrees = -90
+	light.shadow_enabled = true
+	light.shadow_item_cull_mask = 1
+	# NPC LOS lights only illuminate layer 2 (other NPCs), not party
+	light.range_item_cull_mask = 2
+	light.z_index = 102
+	light.visible = false  # hidden until stealth mode
+	npc.add_child(light)
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
 	if node is Sprite2D or node is TextureRect:
@@ -459,8 +484,25 @@ func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 			remaining -= this_stack
 			spawn_offset += 1
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_C:
+			stealth_mode = not stealth_mode
+			_toggle_npc_los_cones()
+
+func _toggle_npc_los_cones() -> void:
+	"""Show or hide NPC line-of-sight cones based on stealth mode."""
+	for character in characters_in_scene:
+		if not is_instance_valid(character):
+			continue
+		if character in party_chars:
+			continue
+		var npc_los = character.get_node_or_null("NPCLineOfSight")
+		if npc_los:
+			npc_los.visible = stealth_mode
+
 func _process(delta: float) -> void:
-	# Check for combat collisions# Update clash cooldowns
+	# Check for combat collisions / Update clash cooldowns
 	if not PauseManager.is_paused:
 		var to_remove = []
 		for key in clash_cooldowns:
