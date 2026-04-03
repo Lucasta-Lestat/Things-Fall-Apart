@@ -7,6 +7,7 @@ const PANEL_WIDTH := 250.0
 const SLIDE_DURATION := 0.3
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 const CONTEXT_MENU_SCENE := preload("res://UI/ContextMenu.tscn")
+const ITEM_SLOT_SIZE := Vector2(40, 40)
 
 var game_node: Node = null
 var panel_visible: bool = true
@@ -31,10 +32,12 @@ func _ready() -> void:
 	scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(scroll)
 
 	vbox = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.mouse_filter = Control.MOUSE_FILTER_STOP
 	scroll.add_child(vbox)
 
 	# Populate after a frame so characters exist
@@ -58,22 +61,29 @@ func _populate_party() -> void:
 func _create_character_panel(character, index: int) -> Dictionary:
 	var container = VBoxContainer.new()
 	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	# --- Header: Icon + Name ---
+	# --- Header: Icon + Name (clickable to select character) ---
 	var header = HBoxContainer.new()
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var icon = TextureRect.new()
 	icon.custom_minimum_size = Vector2(40, 40)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_load_character_icon(icon, character)
 	header.add_child(icon)
 
 	var name_label = Label.new()
 	name_label.text = character.display_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(name_label)
+
+	# Click header to select this character
+	header.gui_input.connect(_on_header_gui_input.bind(index))
 
 	container.add_child(header)
 
@@ -83,6 +93,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	mp_bar.max_value = character.max_MP
 	mp_bar.value = character.MP
 	mp_bar.show_percentage = false
+	mp_bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	# Style the bar blue
 	var fill_style = StyleBoxFlat.new()
 	fill_style.bg_color = Color(0.2, 0.4, 0.9, 0.9)
@@ -95,17 +106,20 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	var mp_label = Label.new()
 	mp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mp_label.add_theme_font_size_override("font_size", 10)
+	mp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(mp_label)
 
 	# --- Inventory Grid ---
 	var inv_label = Label.new()
 	inv_label.text = "Inventory"
 	inv_label.add_theme_font_size_override("font_size", 11)
+	inv_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(inv_label)
 
 	var inv_grid = GridContainer.new()
 	inv_grid.columns = 5
 	inv_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inv_grid.mouse_filter = Control.MOUSE_FILTER_STOP
 	container.add_child(inv_grid)
 
 	# Separator
@@ -149,6 +163,21 @@ func _load_character_icon(tex_rect: TextureRect, character) -> void:
 		img.fill(character.skin_color if "skin_color" in character else Color.GRAY)
 		tex_rect.texture = ImageTexture.create_from_image(img)
 
+# ---------------------------------------------------------------------------
+# Character selection via portrait click
+# ---------------------------------------------------------------------------
+
+func _on_header_gui_input(event: InputEvent, index: int) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if game_node and game_node.has_method("select_character_by_index"):
+				game_node.select_character_by_index(index)
+			get_viewport().set_input_as_handled()
+
+# ---------------------------------------------------------------------------
+# Inventory display
+# ---------------------------------------------------------------------------
+
 func _refresh_inventory(data: Dictionary) -> void:
 	var grid: GridContainer = data["inv_grid"]
 	var character = data["character"]
@@ -166,7 +195,7 @@ func _refresh_inventory(data: Dictionary) -> void:
 
 func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dictionary) -> PanelContainer:
 	var slot = PanelContainer.new()
-	slot.custom_minimum_size = Vector2(40, 40)
+	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
 	slot.tooltip_text = item_data.get("display_name", item_data.get("id", "Unknown"))
 
@@ -175,13 +204,25 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 	bg.set_corner_radius_all(4)
 	slot.add_theme_stylebox_override("panel", bg)
 
-	var label = Label.new()
-	label.text = _get_item_short_name(item_data)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 9)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	slot.add_child(label)
+	# Show item sprite icon, scaled to fit the slot
+	var sprite_path: String = item_data.get("sprite_path", "")
+	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+		var tex_rect = TextureRect.new()
+		tex_rect.texture = load(sprite_path)
+		tex_rect.custom_minimum_size = ITEM_SLOT_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(tex_rect)
+	else:
+		# Fallback: show abbreviated text if no sprite
+		var label = Label.new()
+		label.text = _get_item_short_name(item_data)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 9)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(label)
 
 	# Store metadata for drag-drop and right-click
 	slot.set_meta("item_index", item_index)
@@ -213,10 +254,8 @@ func _get_drag_data(at_position: Vector2):
 	var panel_data = slot.get_meta("panel_data")
 	var item_index = slot.get_meta("item_index")
 
-	# Create drag preview
-	var preview = Label.new()
-	preview.text = item_data.get("display_name", item_data.get("id", "Item"))
-	preview.add_theme_font_size_override("font_size", 12)
+	# Create drag preview with item icon
+	var preview = _create_drag_preview(item_data)
 	set_drag_preview(preview)
 
 	return {
@@ -225,6 +264,21 @@ func _get_drag_data(at_position: Vector2):
 		"item_data": item_data,
 		"source_panel": panel_data,
 	}
+
+func _create_drag_preview(item_data: Dictionary) -> Control:
+	var sprite_path: String = item_data.get("sprite_path", "")
+	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+		var tex = TextureRect.new()
+		tex.texture = load(sprite_path)
+		tex.custom_minimum_size = ITEM_SLOT_SIZE
+		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		return tex
+	else:
+		var label = Label.new()
+		label.text = item_data.get("display_name", item_data.get("id", "Item"))
+		label.add_theme_font_size_override("font_size", 12)
+		return label
 
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
@@ -279,6 +333,9 @@ func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			_show_item_context_menu(slot)
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			# Consume left clicks on slots so they don't pass to world
 			get_viewport().set_input_as_handled()
 
 func _show_item_context_menu(slot: PanelContainer) -> void:
