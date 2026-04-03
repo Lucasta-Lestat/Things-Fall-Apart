@@ -119,6 +119,10 @@ var attack_animator: AttackAnimator
 var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
+# Waypoint-based pathfinding for real-time movement
+var _nav_waypoints: Array[Vector2] = []
+var _nav_index: int = 0
+var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 
 @export var sight: float = 1.0  # Base sight stat
 var fov_angle_degrees: float = 150.0  # Field of view in degrees
@@ -1256,9 +1260,22 @@ func _handle_input() -> void:
 			action_queue.queue_move(mouse_pos)
 	else:
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
-			target_position = mouse_pos
-			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			is_moving = true
+			var target_tile = GridManager.world_to_map(mouse_pos)
+			if target_tile != _last_nav_target_tile:
+				_last_nav_target_tile = target_tile
+				var start_tile = GridManager.world_to_map(global_position)
+				var tile_path = GridManager.find_path(start_tile, target_tile)
+				_nav_waypoints.clear()
+				for tile in tile_path:
+					_nav_waypoints.append(GridManager.map_to_world(tile))
+				_nav_index = 0
+				if _nav_waypoints.is_empty():
+					# No path or same tile — move directly
+					target_position = mouse_pos
+				else:
+					target_position = _nav_waypoints[0]
+				target_rotation = (target_position - global_position).angle() + PI / 2
+				is_moving = true
 
 	if Input.is_action_just_pressed("ui_focus_next"):
 		if paused:
@@ -1276,11 +1293,11 @@ func _handle_input() -> void:
 		if Input.is_action_just_pressed("ui_cancel"):
 			action_queue.cancel_all()
 			
-	if paused: 
-		if Input.is_action_just_pressed("dash"):
+	if Input.is_action_just_pressed("dash"):
+		if paused:
 			action_queue.queue_dash(mouse_pos)
-	else: 
-		dash(mouse_pos)
+		else:
+			dash(mouse_pos)
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
@@ -1343,13 +1360,21 @@ func _update_movement(delta: float) -> void:
 	if is_moving:
 		var to_target = target_position - global_position
 		var distance = to_target.length()
-		
+
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
 			global_position += move_dir * min(move_speed * delta, distance)
 		else:
-			is_moving = false
-			emit_signal("character_reached_target")
+			# Check if there are more waypoints to follow
+			if not _nav_waypoints.is_empty() and _nav_index < _nav_waypoints.size() - 1:
+				_nav_index += 1
+				target_position = _nav_waypoints[_nav_index]
+				target_rotation = (target_position - global_position).angle() + PI / 2
+			else:
+				_nav_waypoints.clear()
+				_nav_index = 0
+				is_moving = false
+				emit_signal("character_reached_target")
 	
 	# Apply collision separation
 	if collision_enabled:

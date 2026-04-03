@@ -5,6 +5,7 @@ extends Node
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
 
 @onready var fog_manager: FogManager = $FogManager
+@onready var fluid_manager: FluidManager = $FluidManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
 
@@ -178,39 +179,44 @@ func load_map(map_id: String, from_map: String = "") -> void:
 		return
 	current_map_id = map_id
  
-	# 1. Tell the MapLoader to build the visual map (floors, structures)
+	# 1. Configure GridManager tile size and initialize the grid
+	GridManager.TILE_SIZE = current_map_data.get("tile_size", 64)
 	var images: Dictionary = current_map_data.get("images", {})
+	# Load structure map to get pixel dimensions for grid initialization
+	var struct_img: Image = load(images.get("structures", "")).get_image()
+	GridManager.initialize(struct_img.get_width(), struct_img.get_height())
+
+	# 2. Tell the MapLoader to build the visual map (floors, structures)
 	map_loader.map_image_path = images.get("map", "")
 	map_loader.mask_image_path = images.get("mask", "")
 	map_loader.structure_map_image_path = images.get("structures", "")
 	map_loader.structure_mask_path = images.get("structures_mask", "")
-	map_loader.tile_size = current_map_data.get("tile_size", 64)
 	map_loader.generate_map()
  
-	# 2. Set up ambient effects (fog, music)
+	# 3. Set up ambient effects (fog, music)
 	setup_map_fogs(current_map_data)
 	setup_map_music(current_map_data)
- 
-	# 3. Determine which spawn key to use based on where we came from
+
+	# 4. Determine which spawn key to use based on where we came from
 	var spawn_key: String = "default"
 	if not from_map.is_empty():
 		var from_key = "from_" + from_map
 		if current_map_data.get("player_spawns", {}).has(from_key):
 			spawn_key = from_key
  
-	# 4. Spawn the player and party
+	# 5. Spawn the player and party
 	_spawn_player_and_party(spawn_key)
- 
-	# 5. Spawn NPCs
+
+	# 6. Spawn NPCs
 	_spawn_npcs(current_map_data.get("npc_spawns", []))
- 
-	# 6. Spawn items
+
+	# 7. Spawn items
 	_spawn_items(current_map_data.get("item_spawns", []))
- 
-	# 7. Create warp zones
+
+	# 8. Create warp zones
 	_create_warp_zones(current_map_data.get("warp_points", []))
- 
-	# 8. Select the player
+
+	# 9. Select the player
 	call_deferred("_select_initial_character")
  
 	emit_signal("map_loaded", map_id)
@@ -234,7 +240,11 @@ func _unload_current_map() -> void:
 	# Clear the MapLoader's children (floors, structures)
 	for child in map_loader.get_children():
 		child.queue_free()
- 
+
+	# Clear fluids
+	if fluid_manager:
+		fluid_manager.clear_all_water_tiles()
+
 	current_map_id = ""
 	current_map_data = {}
 
@@ -462,8 +472,11 @@ func _process(delta: float) -> void:
 		_check_combat_collisions()
 		_update_projectiles(delta)
 	# Tick fog effects
-		if $FogManager:
-			$FogManager.update_fogs(delta, characters_in_scene)
+		if fog_manager:
+			fog_manager.update_fogs(delta, characters_in_scene)
+		# Tick fluid condition effects
+		if fluid_manager:
+			fluid_manager.update_fluid_conditions(delta, characters_in_scene)
 	if selected_character and is_instance_valid(selected_character) and selection_indicator:
 		selection_indicator.global_position = selected_character.global_position
 		if PauseManager.is_paused:

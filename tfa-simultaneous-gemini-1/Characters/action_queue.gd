@@ -213,9 +213,21 @@ func _get_action_target_position(type: ActionType, data: Dictionary) -> Vector2:
 			return Vector2.INF
 
 func queue_move(target_pos: Vector2) -> bool:
-	"""Queue a move action"""
-	#find path and display as a white line.
-	return queue_action(ActionType.MOVE, {"target_position": target_pos})
+	"""Queue a move action with pathfinding"""
+	var start_tile = GridManager.world_to_map(character.global_position)
+	var end_tile = GridManager.world_to_map(target_pos)
+	var tile_path = GridManager.find_path(start_tile, end_tile)
+	var waypoints: Array[Vector2] = []
+	for tile in tile_path:
+		waypoints.append(GridManager.map_to_world(tile))
+	# Fallback: if no path found, go directly (might be same tile or unreachable)
+	if waypoints.is_empty():
+		waypoints.append(target_pos)
+	return queue_action(ActionType.MOVE, {"target_position": target_pos, "waypoints": waypoints, "waypoint_index": 0})
+
+func queue_dash(target_pos: Vector2) -> bool:
+	"""Queue a dash action (straight-line, no pathfinding)"""
+	return queue_action(ActionType.CUSTOM, {"callable": Callable(character, "dash").bind(target_pos)})
 
 func queue_face(target_pos: Vector2) -> bool:
 	"""Queue a face direction action"""
@@ -300,10 +312,18 @@ func _execute_action(action: Action) -> void:
 	"""Begin executing an action"""
 	match action.type:
 		ActionType.MOVE:
-			var target_pos = action.data.get("target_position", character.global_position)
-			character.target_position = target_pos
-			character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
-			character.is_moving = true
+			var waypoints = action.data.get("waypoints", [])
+			var wp_index = action.data.get("waypoint_index", 0)
+			if waypoints.size() > 0 and wp_index < waypoints.size():
+				var wp = waypoints[wp_index]
+				character.target_position = wp
+				character.target_rotation = (wp - character.global_position).angle() + PI / 2
+				character.is_moving = true
+			else:
+				var target_pos = action.data.get("target_position", character.global_position)
+				character.target_position = target_pos
+				character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
+				character.is_moving = true
 		
 		ActionType.FACE:
 			character.target_rotation = action.data.get("target_rotation", character.rotation)
@@ -358,7 +378,25 @@ func _is_action_complete(action: Action) -> bool:
 	"""Check if the current action has finished"""
 	match action.type:
 		ActionType.MOVE:
-			# Complete when we've reached the destination
+			# Advance through waypoints
+			var waypoints = action.data.get("waypoints", [])
+			var wp_index = action.data.get("waypoint_index", 0)
+			if waypoints.size() > 0 and wp_index < waypoints.size():
+				var dist = character.global_position.distance_to(waypoints[wp_index])
+				if dist < 5.0 or not character.is_moving:
+					# Advance to next waypoint
+					wp_index += 1
+					action.data["waypoint_index"] = wp_index
+					if wp_index < waypoints.size():
+						var next_wp = waypoints[wp_index]
+						character.target_position = next_wp
+						character.target_rotation = (next_wp - character.global_position).angle() + PI / 2
+						character.is_moving = true
+						return false
+					else:
+						return true
+				return false
+			# Fallback: no waypoints
 			var dist = character.global_position.distance_to(action.data.get("target_position", character.global_position))
 			return dist < 5.0 or not character.is_moving
 		

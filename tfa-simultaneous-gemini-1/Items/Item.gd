@@ -47,12 +47,15 @@ var options: Array = []
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var stack_label: RichTextLabel = $StackLabel
 
+var _grid_pos: Vector2i = Vector2i.ZERO
+
 func _ready():
 	_apply_item_data()
 	floating_text_label.visible = false
 	_update_stack_label()
-	var grid_pos = GridManager.world_to_map(global_position)
-	global_position = GridManager.map_to_world(grid_pos)
+	_grid_pos = GridManager.world_to_map(global_position)
+	global_position = GridManager.map_to_world(_grid_pos)
+	GridManager.register_object(_grid_pos, self)
 
 func _apply_item_data():
 	var data = _lookup_item_data()
@@ -217,6 +220,7 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level:
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 
 func _destroy_item():
+	GridManager.unregister_object(_grid_pos, self)
 	emit_signal("destroyed", self)
 	sprite.visible = false
 	collision_shape.disabled = true

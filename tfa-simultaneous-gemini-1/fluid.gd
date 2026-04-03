@@ -23,7 +23,6 @@ func _ready():
 
 func initialize(grid_pos: Vector2i, initial_depth: float):
 	"""Initialize the water tile at a grid position"""
-	return
 	grid_position = grid_pos
 	water_depth = initial_depth
 	
