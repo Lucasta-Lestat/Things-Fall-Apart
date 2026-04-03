@@ -235,13 +235,13 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 		else:
 			stowed_items.insert(0, current)
 
-	# Place next item in hand
+	# Update hand slot reference — DON'T set possessor references here,
+	# the signal handler (_on_active_weapon_changed) manages visual attach/detach
+	# and sets possessor.current_*_hand_item.
 	if hand == "Main":
 		main_hand_item = next_item
-		possessor.current_main_hand_item = next_item
 	else:
 		off_hand_item = next_item
-		possessor.current_off_hand_item = next_item
 
 	emit_signal("active_weapon_changed", next_item, hand)
 

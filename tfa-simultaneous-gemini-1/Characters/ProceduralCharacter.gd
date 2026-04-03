@@ -1550,43 +1550,25 @@ func _update_weapon_position() -> void:
 		main_hand_holder.rotation = main_hand_attack_rotation
 
 func _on_active_weapon_changed(weapon, hand) -> void:
-	# Remove old weapon from holder
+	# Determine the holder for this hand
+	var holder = main_hand_holder if hand == "Main" else off_hand_holder
+
+	# Remove ALL children from the holder (the old item). Don't free — still in inventory.
+	for child in holder.get_children():
+		holder.remove_child(child)
+
+	# Update the character reference
 	if hand == "Main":
-		if current_main_hand_item != null:
-			main_hand_holder.remove_child(current_main_hand_item)
-			# Don't free it - it's still in the inventory
-		
 		current_main_hand_item = weapon
-		
-		# Add new weapon to holder
-		if current_main_hand_item != null:
-			main_hand_holder.add_child(current_main_hand_item)
-			# Position weapon so the grip aligns with the hand
-			# The sprite's origin is at center, but we want the grip point at holder origin
-			# grip_position is 0-1 where 0=tip, 1=pommel
-			# For a vertical weapon sprite: grip is at (grip_position) from top
-			# We need to offset the sprite so that grip point is at (0,0)
-			var grip_offset = current_main_hand_item.get_grip_offset_for_hand()
-			current_main_hand_item.position = grip_offset
-			current_main_hand_item.z_index = 2  # Above character
-	if hand	== "Off":
-		if current_off_hand_item != null:
-			off_hand_holder.remove_child(current_off_hand_item)
-			# Don't free it - it's still in the inventory
-		
+	else:
 		current_off_hand_item = weapon
-		
-		# Add new weapon to holder
-		if current_off_hand_item != null:
-			off_hand_holder.add_child(current_off_hand_item)
-			# Position weapon so the grip aligns with the hand
-			# The sprite's origin is at center, but we want the grip point at holder origin
-			# grip_position is 0-1 where 0=tip, 1=pommel
-			# For a vertical weapon sprite: grip is at (grip_position) from top
-			# We need to offset the sprite so that grip point is at (0,0)
-			var grip_offset = current_off_hand_item.get_grip_offset_for_hand()
-			current_off_hand_item.position = grip_offset
-			current_off_hand_item.z_index = 2  # Above character
+
+	# Add new weapon/ability to holder
+	if weapon != null:
+		holder.add_child(weapon)
+		var grip_offset = weapon.get_grip_offset_for_hand()
+		weapon.position = grip_offset
+		weapon.z_index = 2  # Above character
 	emit_signal("weapon_changed", weapon)
 
 func _on_attack_hit(hand) -> void:
