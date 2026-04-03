@@ -205,7 +205,7 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 	slot.add_theme_stylebox_override("panel", bg)
 
 	# Show item sprite icon, scaled to fit the slot
-	var sprite_path: String = item_data.get("sprite_path", "")
+	var sprite_path: String = str(item_data.get("sprite_path", "")) if item_data.get("sprite_path") != null else ""
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		var tex_rect = TextureRect.new()
 		tex_rect.texture = load(sprite_path)
@@ -266,7 +266,7 @@ func _get_drag_data(at_position: Vector2):
 	}
 
 func _create_drag_preview(item_data: Dictionary) -> Control:
-	var sprite_path: String = item_data.get("sprite_path", "")
+	var sprite_path: String = str(item_data.get("sprite_path", "")) if item_data.get("sprite_path") != null else ""
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		var tex = TextureRect.new()
 		tex.texture = load(sprite_path)
