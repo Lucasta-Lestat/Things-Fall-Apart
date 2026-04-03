@@ -1307,7 +1307,7 @@
 		"intelligence": 65,
 		"charisma": 60
 	  },
-	  "equipment": ["purple_hood", "sickle"],
+	  "equipment": ["sickle","purple_hood"],
 	  "extra_items": [
         "alcohol"
 	  ],
