@@ -1,0 +1,59 @@
+[gd_scene load_steps=9 format=3 uid="uid://c4vn8rj2pqx6t"]
+
+[ext_resource type="Script" uid="uid://b3kp7w2nxm8fy" path="res://vfx/poison_cloud.gd" id="1_script"]
+
+[sub_resource type="Gradient" id="Gradient_color_ramp"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(0.2, 0.8, 0.2, 1, 0.1, 0.5, 0.1, 0.6, 0.05, 0.2, 0.05, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_ramp"]
+gradient = SubResource("Gradient_color_ramp")
+
+[sub_resource type="Curve" id="Curve_scale"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(0.3, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.5), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_scale"]
+curve = SubResource("Curve_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_poison"]
+particle_flag_disable_z = true
+direction = Vector3(0, -1, 0)
+spread = 180.0
+initial_velocity_min = 20.0
+initial_velocity_max = 40.0
+gravity = Vector3(0, 0, 0)
+damping_min = 10.0
+damping_max = 20.0
+scale_min = 0.8
+scale_max = 1.5
+scale_curve = SubResource("CurveTexture_scale")
+color_ramp = SubResource("GradientTexture1D_ramp")
+turbulence_enabled = true
+turbulence_noise_strength = 5.0
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_light"]
+colors = PackedColorArray(0.2, 0.7, 0.2, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_light"]
+gradient = SubResource("Gradient_light")
+width = 16
+height = 16
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[node name="PoisonCloud" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+amount = 60
+amount_ratio = 0.7
+lifetime = 2.0
+process_material = SubResource("ParticleProcessMaterial_poison")
+
+[node name="PointLight2D" type="PointLight2D" parent="."]
+color = Color(0.2, 0.7, 0.2, 1)
+energy = 0.4
+texture = SubResource("GradientTexture2D_light")
+texture_scale = 3.0

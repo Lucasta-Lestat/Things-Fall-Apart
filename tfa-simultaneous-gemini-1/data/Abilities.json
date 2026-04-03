@@ -64,10 +64,15 @@
 		"condition_id": "poisoned",
 		"condition_stacks": 1,
 		"apply_interval": 2.0,
-		"density": 0.99	
-		}
+		"density": 0.99
+		},
+	  "visuals": {
+		"in_hand_effect": "res://vfx/poison_cloud.tscn",
+		"projectile": "res://vfx/poison_cloud.tscn",
+		"impact_effect": ""
+	  }
 	},
-	
+
 	{
 	  "id": "ice_storm",
 	  "display_name": "Ice Storm",
@@ -94,7 +99,10 @@
 		  "chance": 0.8
 		}
 	  ],
-	  "visuals": { "impact_effect": "res://effects/ice_storm.tscn" }
+	  "visuals": {
+		"in_hand_effect": "res://vfx/ice_storm.tscn",
+		"impact_effect": "res://vfx/ice_storm.tscn"
+	  }
 	},
 	{
 	  "id": "lightning_bolt",
