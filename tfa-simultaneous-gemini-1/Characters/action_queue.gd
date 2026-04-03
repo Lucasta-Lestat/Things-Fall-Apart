@@ -242,9 +242,9 @@ func queue_attack_target(target: ProceduralCharacter) -> bool:
 	"""Queue an attack on a specific target"""
 	return queue_action(ActionType.ATTACK_TARGET, {"target": target})
 
-func queue_cycle_weapon(direction: int) -> bool:
-	"""Queue a weapon switch"""
-	return queue_action(ActionType.CYCLE_WEAPON, {"direction": direction})
+func queue_cycle_weapon(direction: int, hand: String = "Main") -> bool:
+	"""Queue a weapon switch for a specific hand"""
+	return queue_action(ActionType.CYCLE_WEAPON, {"direction": direction, "hand": hand})
 
 func queue_ability(ability_id: String, target_position: Vector2 = Vector2.INF) -> bool:
 	"""Queue an ability to be used"""
@@ -344,7 +344,8 @@ func _execute_action(action: Action) -> void:
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)
-			character.inventory.cycle_weapon(direction)
+			var hand = action.data.get("hand", "Main")
+			character.inventory.cycle_weapon_for_hand(hand, direction)
 		
 		ActionType.USE_ITEM:
 			# Implement item usage here

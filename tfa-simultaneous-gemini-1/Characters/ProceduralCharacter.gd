@@ -1278,17 +1278,28 @@ func _handle_input() -> void:
 				target_rotation = (target_position - global_position).angle() + PI / 2
 				is_moving = true
 
-	if Input.is_action_just_pressed("ui_focus_next"):
+	# Per-hand weapon cycling: E/Shift+E for main hand, Q/Shift+Q for off hand
+	if Input.is_action_just_pressed("cycle_main_hand_next"):
 		if paused:
-			action_queue.queue_cycle_weapon(1)
+			action_queue.queue_cycle_weapon(1, "Main")
 		else:
-			inventory.cycle_weapon(1)
+			inventory.cycle_weapon_for_hand("Main", 1)
+	elif Input.is_action_just_pressed("cycle_main_hand_prev"):
+		if paused:
+			action_queue.queue_cycle_weapon(-1, "Main")
+		else:
+			inventory.cycle_weapon_for_hand("Main", -1)
 
-	if Input.is_action_just_pressed("ui_focus_prev"):
+	if Input.is_action_just_pressed("cycle_off_hand_next"):
 		if paused:
-			action_queue.queue_cycle_weapon(-1)
+			action_queue.queue_cycle_weapon(1, "Off")
 		else:
-			inventory.cycle_weapon(-1)
+			inventory.cycle_weapon_for_hand("Off", 1)
+	elif Input.is_action_just_pressed("cycle_off_hand_prev"):
+		if paused:
+			action_queue.queue_cycle_weapon(-1, "Off")
+		else:
+			inventory.cycle_weapon_for_hand("Off", -1)
 
 	if paused:
 		if Input.is_action_just_pressed("ui_cancel"):
