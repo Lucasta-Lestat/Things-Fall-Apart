@@ -1185,21 +1185,16 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 			attack()
 			
 	elif item is AbilityShape:
-		# Ability Logic
+		# Ability Logic — always face the target
+		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		var ability_data = item.get_ability_data()
-		print("ability data for item: ", ability_data)
-		# Check if it needs targeting first
-		print("Does the ability require targeting: ", ability_data.get("requires_targeting"))
 		if ability_data.get("requires_targeting", false):
-			print("ability targeting begining")
 			targeting_system.start_targeting(hand_str, ability_data, mouse_pos)
 		else:
 			# Instant cast (self buffs, etc)
 			if paused:
-				target_rotation = (mouse_pos - global_position).angle() + PI / 2
 				action_queue.queue_ability(item.ability_id, mouse_pos)
 			else:
-				target_rotation = (mouse_pos - global_position).angle() + PI / 2
 				var ability_obj = Ability.from_dict(ability_data)
 				use_ability(ability_obj, {"position": mouse_pos})
 
@@ -1338,6 +1333,9 @@ func _confirm_ability_target(paused: bool) -> void:
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
+
+	# Face the target when confirming an ability
+	target_rotation = (target_pos - global_position).angle() + PI / 2
 
 	if paused:
 		# QUEUE: Add visual indicator to world and add to action queue

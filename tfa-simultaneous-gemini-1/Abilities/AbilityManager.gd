@@ -47,6 +47,9 @@ func _process(delta: float) -> void:
 
 ## Use an ability. Entry point for all ability execution.
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
+	if ability == null:
+		push_warning("AbilityManager.use_ability: received null ability")
+		return false
 	var can_use = _check_ability_usable(ability)
 	if not can_use["success"]:
 		cast_failed.emit(ability, can_use["reason"])
