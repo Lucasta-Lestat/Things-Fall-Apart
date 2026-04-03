@@ -364,8 +364,11 @@ func _grant_equipment(character, equipment: Array) -> void:
 					inventory.equip_weapon_from_data(item_data, hand)
 				elif inventory.has_method("equip_ability_from_id"):
 					inventory.equip_ability_from_id(item_name, hand)
+			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
+				if character.has_method("equip_equipment"):
+					character.equip_equipment(item_data)
 
-		print("[CharDB] Granted %s x%d to %s" % [item_name, quantity, character.name])
+		print("[CharDB] Granted %s x%d to %s" % [item_name, quantity, character.display_name])
 
 # ---------------------------------------------------------------------------
 # Appearance overrides (applied after race to stomp specific values)
