@@ -151,14 +151,17 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 	# Position first (before body creation reads it)
 	character.position = pos
 
+	# Add to scene tree BEFORE build_character so that _ready() fires
+	# and the Inventory node exists when equipment is granted
+	add_child(character)
+
 	# Build from template — this applies race, background, stats, equipment
 	TopDownCharacterDatabase.build_character(character, template_id, overrides)
- 
+
 	# Connect signals
 	character.character_died.connect(_on_character_died.bind(character))
- 
-	# Add to scene tree and track
-	add_child(character)
+
+	# Track in scene
 	characters_in_scene.append(character)
  
 	return character
@@ -352,7 +355,10 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	light.rotation_degrees = -90
+	# No local rotation offset — the light is a child of the character and
+	# inherits its rotation. The cone texture points in the character's
+	# forward direction when offset is 0.
+	light.rotation_degrees = 0
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	# Illuminate both normal objects (layer 1) and NPCs (layer 2)
@@ -371,7 +377,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "NPCLineOfSight"
-	light.rotation_degrees = -90
+	light.rotation_degrees = 0
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	# NPC LOS lights only illuminate layer 2 (other NPCs), not party
