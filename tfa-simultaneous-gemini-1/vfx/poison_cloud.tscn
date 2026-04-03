@@ -3,8 +3,8 @@
 [ext_resource type="Script" uid="uid://b3kp7w2nxm8fy" path="res://vfx/poison_cloud.gd" id="1_script"]
 
 [sub_resource type="Gradient" id="Gradient_color_ramp"]
-offsets = PackedFloat32Array(0, 0.5, 1)
-colors = PackedColorArray(0.2, 0.8, 0.2, 1, 0.1, 0.5, 0.1, 0.6, 0.05, 0.2, 0.05, 0)
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(0.3, 0.9, 0.2, 1, 0.15, 0.6, 0.1, 0.85, 0.05, 0.3, 0.05, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_ramp"]
 gradient = SubResource("Gradient_color_ramp")
@@ -25,8 +25,8 @@ initial_velocity_max = 40.0
 gravity = Vector3(0, 0, 0)
 damping_min = 10.0
 damping_max = 20.0
-scale_min = 0.8
-scale_max = 1.5
+scale_min = 1.5
+scale_max = 3.0
 scale_curve = SubResource("CurveTexture_scale")
 color_ramp = SubResource("GradientTexture1D_ramp")
 turbulence_enabled = true
@@ -47,13 +47,13 @@ fill_from = Vector2(0.5, 0.5)
 script = ExtResource("1_script")
 
 [node name="GPUParticles2D" type="GPUParticles2D" parent="."]
-amount = 60
-amount_ratio = 0.7
-lifetime = 2.0
+amount = 100
+amount_ratio = 0.9
+lifetime = 2.5
 process_material = SubResource("ParticleProcessMaterial_poison")
 
 [node name="PointLight2D" type="PointLight2D" parent="."]
 color = Color(0.2, 0.7, 0.2, 1)
-energy = 0.4
+energy = 0.7
 texture = SubResource("GradientTexture2D_light")
-texture_scale = 3.0
+texture_scale = 4.0
