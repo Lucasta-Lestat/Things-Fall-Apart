@@ -84,6 +84,10 @@ func equip_item(item: Node2D, hand: String = "Main") -> bool:
 	set_active_weapon(equipped_weapons.size() - 1, hand)  # <-- Pass hand
 	
 	return true
+func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
+	"""Add an ability to inventory and equip it. Called by BackgroundDatabase."""
+	return equip_ability_from_id(ability_id, hand)
+
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	# 1. Fetch Data
 	var data = AbilityDatabase.get_ability_data(ability_id)

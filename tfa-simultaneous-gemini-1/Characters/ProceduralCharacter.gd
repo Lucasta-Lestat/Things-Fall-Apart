@@ -396,7 +396,8 @@ func _ready() -> void:
 	TimeManager.time_updated.connect(_on_time_updated)
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 	_on_stats_recalculated() # Initialize the effective stats
-	_setup_los_visual()
+	# LOS light is added by Game.gd after spawn (not here) to control
+	# per-character settings like cull masks and NPC visibility
 func _setup_action_queue() -> void:
 	action_queue = ActionQueue.new()
 	action_queue.name = "ActionQueue"

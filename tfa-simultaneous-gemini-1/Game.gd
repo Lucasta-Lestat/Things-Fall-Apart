@@ -355,10 +355,10 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	# No local rotation offset — the light is a child of the character and
-	# inherits its rotation. The cone texture points in the character's
-	# forward direction when offset is 0.
-	light.rotation_degrees = 0
+	# The cone texture points downward (positive Y) at 0 degrees.
+	# Characters face up at rotation 0, so offset by 180 to flip the
+	# cone from down to up (forward in local space).
+	light.rotation_degrees = 180
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	# Illuminate both normal objects (layer 1) and NPCs (layer 2)
@@ -377,7 +377,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "NPCLineOfSight"
-	light.rotation_degrees = 0
+	light.rotation_degrees = 180
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	# NPC LOS lights only illuminate layer 2 (other NPCs), not party
@@ -762,7 +762,9 @@ func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
 	print("%s has died!" % name)
-	character.current_state = character.AIState.DEAD
+	var ai_node = character.get_node_or_null("AI")
+	if ai_node:
+		ai_node.current_state = ai_node.AIState.DEAD
 	if character == player:
 		print("\n=== GAME OVER ===")
 		print("Press R to restart")
