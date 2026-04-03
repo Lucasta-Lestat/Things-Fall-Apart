@@ -12,7 +12,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "cemetery_ambient",
-			"fog_ids": ["thick_fog"],
+			"fog_ids": ["fog"],
 			"player_spawns": {
 				"default": {
 					"position": [40, 40],

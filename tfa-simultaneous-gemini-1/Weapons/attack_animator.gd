@@ -183,7 +183,7 @@ func _process(delta: float) -> void:
 
 func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: String = "Main") -> void:
 	if combat_manager == null: 
-		combat_manager = get_node("root/TopDownCharacterScene")
+		combat_manager = get_tree().current_scene
 	is_attacking = true
 	combat_manager.register_attack_start(character)
 	if current_state != AttackState.IDLE: 

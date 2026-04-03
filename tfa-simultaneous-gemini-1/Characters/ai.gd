@@ -74,7 +74,7 @@ signal target_lost()
 
 func _ready():
 	character = get_parent()
-	game = character.game
+	game = get_tree().current_scene
 	detection_range = 1440.0 * character.sight
 	attack_range = 70.0 * character.body_size_mod
 	preferred_range = 40.0 * character.body_size_mod
