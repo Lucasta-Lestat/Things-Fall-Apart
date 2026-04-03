@@ -334,7 +334,7 @@ func show_context_menu(target, position: Vector2) -> void:
 func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var light = PointLight2D.new()
 	light.texture = Globals.SIGHT_TEXTURE
-	light.energy = 0.3
+	light.energy = 0.1
 	var master_radius = 512.0
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius

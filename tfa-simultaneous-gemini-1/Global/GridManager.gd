@@ -1,8 +1,7 @@
 # res://Global/GridManager.gd
 extends Node
 
-const TILE_SIZE = 128
-var active_map = "perrow"
+const TILE_SIZE = 64
 var map_rect: Rect2i
 var base_layer: TileMapLayer
 var highlights_layer: TileMapLayer # NEW: For drawing previews
@@ -17,7 +16,7 @@ const FLUID_TYPE_WATER = "water"
 const PUDDLE_HEIGHT = 0.01  # Height threshold for pressure to start
 const PRESSURE_COEFFICIENT = 1.0  # How much pressure affects flow
 const FLOW_RATE = 0.1  # How fast fluid flows (0-1, lower = more stable)
-const EVAPORATION_RATE = 0.0  # Small amount that evaporates per update
+const EVAPORATION_RATE = 0.01  # Small amount that evaporates per update
 # NEW: Flow tracking for visualization
 var flow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 var flow_speeds: Dictionary = {}  # Dictionary[Vector2i, float]
