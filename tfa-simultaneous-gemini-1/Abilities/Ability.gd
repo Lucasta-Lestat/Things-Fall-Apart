@@ -90,7 +90,8 @@ static func from_dict(data: Dictionary) -> Ability:
 	ability.interruptible = data.get("interruptible", true)
 	ability.traits = data.get("traits", {})
 	ability.targeting = _parse_targeting(data.get("targeting", {}))
-	ability.effects = data.get("effects", [])
+	var raw_effects = data.get("effects", [])
+	ability.effects = [raw_effects] if raw_effects is Dictionary else raw_effects
 	ability.visuals = data.get("visuals", {})
 	ability.requirements = data.get("requirements", {})
 	ability.animation = data.get("animation", "")
