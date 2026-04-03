@@ -936,8 +936,9 @@ func process_weapon_hit(
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
-	# Penetration uses the post-DR damage
-	var penetration_result = _calculate_penetration(final_damage, attack_velocity, weapon)
+	# Penetration uses the post-DR damage (pass null for non-weapon items like AbilityShape)
+	var actual_weapon = weapon if weapon is WeaponShape else null
+	var penetration_result = _calculate_penetration(final_damage, attack_velocity, actual_weapon)
 
 	# Trigger weapon ability only if we actually penetrated
 	if weapon and penetration_result.state != PenetrationState.BOUNCED:
