@@ -1740,11 +1740,17 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	# We serialize each equipped weapon's exportable data + which hand it's in.
 	if character.inventory:
 		state["equipped_weapons"] = []
-		for weapon in character.inventory.equipped_weapons:
+		var inv = character.inventory
+		for weapon in inv.equipped_weapons:
 			var weapon_entry: Dictionary = {}
-			# Determine hand
-			weapon_entry["hand"] = character.inventory.weapon_hands.get(weapon, "Main")
- 
+			# Determine hand from the new slot model
+			if weapon == inv.main_hand_item:
+				weapon_entry["hand"] = "Main"
+			elif weapon == inv.off_hand_item:
+				weapon_entry["hand"] = "Off"
+			else:
+				weapon_entry["hand"] = "Stowed"
+
 			if weapon is WeaponShape and weapon.has_method("to_data"):
 				weapon_entry["type"] = "weapon"
 				weapon_entry["data"] = weapon.to_data()
@@ -1752,12 +1758,11 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 				weapon_entry["type"] = "ability"
 				weapon_entry["data"] = {"ability_id": weapon.ability_id if "ability_id" in weapon else ""}
 			else:
-				# Generic fallback — store whatever we can
 				weapon_entry["type"] = "unknown"
 				weapon_entry["data"] = {}
 			state["equipped_weapons"].append(weapon_entry)
- 
-		state["active_weapon_index"] = character.inventory.active_weapon_index
+
+		state["active_weapon_index"] = inv.active_weapon_index
  
 	# --- Active conditions ---
 	if character.condition_manager:

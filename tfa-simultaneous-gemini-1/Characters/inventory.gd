@@ -12,14 +12,12 @@ signal active_weapon_changed(weapon, hand)
 var items: Array[Dictionary] = []
 var max_slots: int = 20
 
-# Equipment slots
-var equipped_weapons: Array = []  # Can hold multiple weapons to swap between
-var max_equipped_weapons: int = 8
-var weapon_hands: Dictionary = {}  # Maps weapon -> hand ("Main" or "Off")
+# Hand slots — each hand holds exactly one item (weapon or ability) or null
+var main_hand_item: Node2D = null
+var off_hand_item: Node2D = null
 
-# Per-hand active tracking: index into the hand-filtered list, -1 = holstered
-var _active_main_index: int = -1
-var _active_off_index: int = -1
+# Stowed items that can be cycled into a hand (weapons and abilities not currently held)
+var stowed_items: Array = []
 
 # Reference to possessor character
 var possessor: Node2D
@@ -67,55 +65,60 @@ func clear_inventory() -> void:
 
 # ===== HAND HELPERS =====
 
-## Returns all equipped weapons/abilities assigned to the given hand.
-func _get_hand_weapons(hand: String) -> Array:
-	var result: Array = []
-	for weapon in equipped_weapons:
-		if weapon_hands.get(weapon, "Main") == hand:
-			result.append(weapon)
-	return result
+func _get_hand_item(hand: String) -> Node2D:
+	return main_hand_item if hand == "Main" else off_hand_item
 
-## Returns true if the given hand has no weapons equipped to it.
 func _hand_is_empty(hand: String) -> bool:
-	for weapon in equipped_weapons:
-		if weapon_hands.get(weapon, "Main") == hand:
-			return false
-	return true
+	return _get_hand_item(hand) == null
 
-## Picks the best hand for a new equip: prefers the requested hand,
-## but if it's occupied and the other hand is free, uses the other hand.
+## Picks the best hand: prefers the requested hand, uses the other if occupied.
 func _pick_hand(preferred: String) -> String:
 	if _hand_is_empty(preferred):
 		return preferred
 	var other = "Off" if preferred == "Main" else "Main"
 	if _hand_is_empty(other):
 		return other
-	# Both occupied — add to the preferred hand's pool for cycling
 	return preferred
 
-# ===== WEAPON EQUIPMENT =====
+# ===== WEAPON / ABILITY EQUIPMENT =====
 
+## Equip an item to a hand. If the hand is occupied, the current item is stowed.
 func equip_item(item: Node2D, hand: String = "Main") -> bool:
-	if equipped_weapons.size() >= max_equipped_weapons:
-		push_warning("All weapon slots full!")
-		return false
-
-	# Smart hand assignment: use unoccupied hand when possible
 	hand = _pick_hand(hand)
 
-	equipped_weapons.append(item)
-	weapon_hands[item] = hand
+	# Unequip whatever is currently in this hand → stow it
+	var current = _get_hand_item(hand)
+	if current != null:
+		_stow_item(current, hand)
+
+	# Place the new item in the hand
+	if hand == "Main":
+		main_hand_item = item
+		possessor.current_main_hand_item = item
+	else:
+		off_hand_item = item
+		possessor.current_off_hand_item = item
 
 	emit_signal("weapon_equipped", item)
-	# Activate this weapon in its hand
-	_set_active_for_hand(hand, item)
-
+	emit_signal("active_weapon_changed", item, hand)
 	return true
 
-func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
-	return equip_ability_from_id(ability_id, hand)
+## Stow an item from a hand into the stowed_items pool (no visual, no hand ref).
+func _stow_item(item: Node2D, hand: String) -> void:
+	# Remove from visual holder via signal (null = nothing in that hand now)
+	if hand == "Main":
+		main_hand_item = null
+		possessor.current_main_hand_item = null
+	else:
+		off_hand_item = null
+		possessor.current_off_hand_item = null
+	emit_signal("active_weapon_changed", null, hand)
 
-func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
+	stowed_items.append(item)
+	emit_signal("weapon_unequipped", item)
+
+## Add an ability: equip to a hand if one is free, otherwise stow it.
+func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
 	var data = AbilityDatabase.get_ability_data(ability_id)
 	if data.is_empty():
 		return false
@@ -123,7 +126,17 @@ func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	var ability_node = AbilityShape.new()
 	ability_node.name = data.get("display_name", "Ability")
 	ability_node.setup_from_database(data)
+
+	# If both hands are occupied, stow instead of displacing
+	if not _hand_is_empty(hand):
+		var other = "Off" if hand == "Main" else "Main"
+		if not _hand_is_empty(other):
+			stowed_items.append(ability_node)
+			return true
 	return equip_item(ability_node, hand)
+
+func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
+	return add_ability_by_id(ability_id, hand)
 
 func equip_weapon_from_data(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	var weapon = WeaponShape.new()
@@ -134,137 +147,167 @@ func equip_weapon_from_data(weapon_data: Dictionary, hand = "Main") -> WeaponSha
 		weapon.queue_free()
 		return null
 
-func unequip_weapon(index: int) -> Node2D:
-	if index < 0 or index >= equipped_weapons.size():
-		push_warning("Invalid weapon slot index")
+## Remove the item in a specific hand and return it.
+func unequip_hand(hand: String) -> Node2D:
+	var item = _get_hand_item(hand)
+	if item == null:
 		return null
 
-	var weapon = equipped_weapons[index]
-	var hand = weapon_hands.get(weapon, "Main")
-
-	equipped_weapons.remove_at(index)
-	weapon_hands.erase(weapon)
-
-	# If the removed weapon was the active one for its hand, clear it
-	var hand_weapons = _get_hand_weapons(hand)
 	if hand == "Main":
-		if hand_weapons.is_empty():
-			_active_main_index = -1
-			possessor.current_main_hand_item = null
-			emit_signal("active_weapon_changed", null, "Main")
-		else:
-			_active_main_index = clampi(_active_main_index, 0, hand_weapons.size() - 1)
-			_set_active_for_hand("Main", hand_weapons[_active_main_index])
+		main_hand_item = null
+		possessor.current_main_hand_item = null
 	else:
-		if hand_weapons.is_empty():
-			_active_off_index = -1
-			possessor.current_off_hand_item = null
-			emit_signal("active_weapon_changed", null, "Off")
-		else:
-			_active_off_index = clampi(_active_off_index, 0, hand_weapons.size() - 1)
-			_set_active_for_hand("Off", hand_weapons[_active_off_index])
+		off_hand_item = null
+		possessor.current_off_hand_item = null
 
-	emit_signal("weapon_unequipped", weapon)
-	return weapon
+	emit_signal("active_weapon_changed", null, hand)
+	emit_signal("weapon_unequipped", item)
+	return item
 
-func get_equipped_weapon(index: int) -> WeaponShape:
-	if index < 0 or index >= equipped_weapons.size():
+## Legacy unequip by global index — finds the item and unequips from its hand.
+func unequip_weapon(index: int) -> Node2D:
+	# Try to match by checking hands then stowed
+	var all_equipped = get_all_equipped()
+	if index < 0 or index >= all_equipped.size():
 		return null
-	return equipped_weapons[index]
+	var weapon = all_equipped[index]
+
+	if weapon == main_hand_item:
+		return unequip_hand("Main")
+	elif weapon == off_hand_item:
+		return unequip_hand("Off")
+	else:
+		# It's in stowed
+		stowed_items.erase(weapon)
+		emit_signal("weapon_unequipped", weapon)
+		return weapon
+
+# ===== GETTERS =====
 
 func get_active_weapon() -> Node:
-	return get_active_weapon_for_hand("Main")
+	return main_hand_item
 
 func get_active_weapon_for_hand(hand: String) -> Node:
-	var hand_weapons = _get_hand_weapons(hand)
-	var idx = _active_main_index if hand == "Main" else _active_off_index
-	if idx < 0 or idx >= hand_weapons.size():
+	return _get_hand_item(hand)
+
+## Returns a flat list of all equipped items (hands + stowed) for legacy compat.
+func get_all_equipped() -> Array:
+	var result: Array = []
+	if main_hand_item:
+		result.append(main_hand_item)
+	if off_hand_item:
+		result.append(off_hand_item)
+	result.append_array(stowed_items)
+	return result
+
+## Legacy: the old equipped_weapons array — now computed dynamically.
+var equipped_weapons: Array:
+	get:
+		return get_all_equipped()
+
+func get_equipped_weapon(index: int) -> WeaponShape:
+	var all = get_all_equipped()
+	if index < 0 or index >= all.size():
 		return null
-	return hand_weapons[idx]
+	return all[index]
 
-func _set_active_for_hand(hand: String, weapon) -> void:
-	var hand_weapons = _get_hand_weapons(hand)
-	var idx = hand_weapons.find(weapon)
-	if idx == -1:
-		return
-	if hand == "Main":
-		_active_main_index = idx
-		possessor.current_main_hand_item = weapon
-	else:
-		_active_off_index = idx
-		possessor.current_off_hand_item = weapon
-	emit_signal("active_weapon_changed", weapon, hand)
+func get_equipped_weapon_count() -> int:
+	return get_all_equipped().size()
 
-## Legacy: set active weapon by global index (used by Game.gd save/load).
-func set_active_weapon(index: int, hand: String = "") -> void:
-	if index < 0 or index >= equipped_weapons.size():
-		return
-	var weapon = equipped_weapons[index]
-	var weapon_hand = hand if hand != "" else weapon_hands.get(weapon, "Main")
-	_set_active_for_hand(weapon_hand, weapon)
+# ===== CYCLING =====
 
-## Cycle through weapons equipped to a specific hand.
+## Cycle the item in a hand: stow the current item, pull next stowed item in.
 func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
-	var hand_weapons = _get_hand_weapons(hand)
-	if hand_weapons.is_empty():
+	if stowed_items.is_empty():
 		return
 
-	var current_idx = _active_main_index if hand == "Main" else _active_off_index
+	var current = _get_hand_item(hand)
 
-	if current_idx == -1:
-		# Nothing active in this hand, activate the first one
-		_set_active_for_hand(hand, hand_weapons[0])
+	# Pick the next stowed item (direction determines which end we pull from)
+	var pick_index = 0 if direction >= 0 else stowed_items.size() - 1
+	var next_item = stowed_items[pick_index]
+	stowed_items.remove_at(pick_index)
+
+	# Stow current hand item (if any) — add to opposite end for round-robin
+	if current != null:
+		if direction >= 0:
+			stowed_items.append(current)
+		else:
+			stowed_items.insert(0, current)
+
+	# Place next item in hand
+	if hand == "Main":
+		main_hand_item = next_item
+		possessor.current_main_hand_item = next_item
 	else:
-		var new_idx = (current_idx + direction) % hand_weapons.size()
-		if new_idx < 0:
-			new_idx = hand_weapons.size() - 1
-		_set_active_for_hand(hand, hand_weapons[new_idx])
+		off_hand_item = next_item
+		possessor.current_off_hand_item = next_item
+
+	emit_signal("active_weapon_changed", next_item, hand)
 
 ## Legacy cycle_weapon — cycles main hand by default.
 func cycle_weapon(direction: int = 1) -> void:
 	cycle_weapon_for_hand("Main", direction)
 
 func holster_weapon() -> void:
-	_active_main_index = -1
-	possessor.current_main_hand_item = null
-	emit_signal("active_weapon_changed", null, "Main")
+	if main_hand_item:
+		_stow_item(main_hand_item, "Main")
 
 func draw_weapon() -> void:
-	var main_weapons = _get_hand_weapons("Main")
-	if not main_weapons.is_empty() and _active_main_index == -1:
-		_set_active_for_hand("Main", main_weapons[0])
-
-func get_equipped_weapon_count() -> int:
-	return equipped_weapons.size()
+	if main_hand_item == null and not stowed_items.is_empty():
+		var item = stowed_items.pop_front()
+		main_hand_item = item
+		possessor.current_main_hand_item = item
+		emit_signal("active_weapon_changed", item, "Main")
 
 # Legacy compatibility property for save/load and Game.gd references
 var active_weapon_index: int:
 	get:
-		return _active_main_index
+		return 0 if main_hand_item != null else -1
 	set(value):
-		_active_main_index = value
+		pass  # No-op for legacy compat
+
+## Legacy: set active weapon by global index (used by Game.gd save/load).
+func set_active_weapon(index: int, hand: String = "") -> void:
+	var all = get_all_equipped()
+	if index < 0 or index >= all.size():
+		return
+	var weapon = all[index]
+	if weapon in stowed_items:
+		var target_hand = hand if hand != "" else "Main"
+		stowed_items.erase(weapon)
+		var current = _get_hand_item(target_hand)
+		if current:
+			stowed_items.append(current)
+		if target_hand == "Main":
+			main_hand_item = weapon
+			possessor.current_main_hand_item = weapon
+		else:
+			off_hand_item = weapon
+			possessor.current_off_hand_item = weapon
+		emit_signal("active_weapon_changed", weapon, target_hand)
 
 # ===== SERIALIZATION =====
 
 func save_to_dict() -> Dictionary:
 	var weapon_data_list = []
-	for weapon in equipped_weapons:
+	for weapon in get_all_equipped():
 		weapon_data_list.append(weapon.to_data())
 
 	return {
 		"items": items,
 		"equipped_weapons": weapon_data_list,
-		"active_weapon_index": _active_main_index,
-		"active_off_index": _active_off_index
+		"active_weapon_index": 0 if main_hand_item else -1,
 	}
 
 func load_from_dict(data: Dictionary) -> void:
 	# Clear current inventory
 	clear_inventory()
-	for weapon in equipped_weapons:
-		weapon.queue_free()
-	equipped_weapons.clear()
-	weapon_hands.clear()
+	for item in get_all_equipped():
+		item.queue_free()
+	main_hand_item = null
+	off_hand_item = null
+	stowed_items.clear()
 
 	# Load items
 	if data.has("items"):
@@ -275,9 +318,3 @@ func load_from_dict(data: Dictionary) -> void:
 	if data.has("equipped_weapons"):
 		for weapon_data in data["equipped_weapons"]:
 			equip_weapon_from_data(weapon_data)
-
-	# Set active weapons
-	if data.has("active_weapon_index"):
-		_active_main_index = data["active_weapon_index"]
-	if data.has("active_off_index"):
-		_active_off_index = data["active_off_index"]
