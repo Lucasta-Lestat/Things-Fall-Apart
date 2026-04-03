@@ -18,7 +18,7 @@
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
-	  "extra_abilities": [],
+	  "extra_abilities": ["fireball", "cloud_kill", "ice_storm"],
 	  "extra_conditions": [],
 	  "extra_traits": {},
 	  "combat": {},
