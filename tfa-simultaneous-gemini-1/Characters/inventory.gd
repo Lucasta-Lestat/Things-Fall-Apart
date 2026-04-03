@@ -107,9 +107,9 @@ func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 func equip_weapon_from_data(weapon_data: Dictionary, hand ="Main") -> WeaponShape:
 	var weapon = WeaponShape.new()
 	weapon.load_from_data(weapon_data)
-	print("attempting to equip weapon from data: ", weapon_data.name)
+	print("attempting to equip weapon from data: ", weapon_data.display_name)
 	if equip_item(weapon, hand):
-		print("successfully equipped weapon from data: ", weapon_data.name)
+		print("successfully equipped weapon from data: ", weapon_data.display_name)
 		return weapon
 	else:
 		print("failed to equip weapon from data")
