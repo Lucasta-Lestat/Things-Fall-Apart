@@ -351,29 +351,29 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	light.rotation_degrees = 90
+	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	light.z_index = 102
 	character.add_child(light)
 
 func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
-	"""Add a LOS cone to an NPC, hidden by default. Toggled by stealth mode."""
+	"""Add a LOS cone as a child of the NPC. Hidden unless stealth mode is on.
+	When the NPC is hidden (not in party LOS), the light hides with it."""
 	var light = PointLight2D.new()
 	light.texture = Globals.SIGHT_TEXTURE
 	light.energy = 0.08
-	light.color = Color(1.0, 0.4, 0.3)  # reddish tint to distinguish from party
+	light.color = Color(1.0, 0.4, 0.3)
 	var master_radius = 512.0
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "NPCLineOfSight"
-	light.rotation_degrees = 90
+	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
-	# NPC LOS lights only illuminate layer 2 (other NPCs), not party
 	light.range_item_cull_mask = 2
 	light.z_index = 102
-	light.visible = false  # hidden until stealth mode
+	light.visible = false
 	npc.add_child(light)
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
@@ -492,7 +492,8 @@ func _toggle_npc_los_cones() -> void:
 			npc_los.visible = stealth_mode
 
 func _update_npc_los_visibility() -> void:
-	"""NPCs are only visible when inside a party member's sight cone."""
+	"""NPCs are only visible when inside a party member's sight cone.
+	NPC LOS lights are children of the NPC, so they hide when the NPC hides."""
 	for npc in characters_in_scene:
 		if not is_instance_valid(npc):
 			continue
@@ -507,9 +508,6 @@ func _update_npc_los_visibility() -> void:
 			var sight_range = 1440.0 * ally.sight
 			if dist > sight_range:
 				continue
-			# Check if NPC is within the ally's FOV cone
-			# ally.rotation points in facing direction (up = 0)
-			# Convert rotation to a direction vector
 			var facing_dir = Vector2.UP.rotated(ally.rotation)
 			var angle_to_npc = facing_dir.angle_to(to_npc.normalized())
 			var half_fov = deg_to_rad(ally.fov_angle_degrees * 0.5)
