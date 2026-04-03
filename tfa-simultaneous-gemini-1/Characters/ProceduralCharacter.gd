@@ -1317,14 +1317,16 @@ func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) ->
 func _confirm_ability_target(paused: bool) -> void:
 	# Retrieve the data from the targeting system
 	var result = targeting_system.confirm_targeting()
-	#print("RESULT OF CONFIRM_ABILITY_TARGET: ", result)
-	
+
 	if result.is_empty(): return
-	
+
+	# End targeting state so subsequent clicks go back to normal input
+	targeting_system.end_targeting()
+
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
-	
+
 	if paused:
 		# QUEUE: Add visual indicator to world and add to action queue
 		# Matches your queue_ability signature
