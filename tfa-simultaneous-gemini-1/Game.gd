@@ -362,8 +362,8 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	When the NPC is hidden (not in party LOS), the light hides with it."""
 	var light = PointLight2D.new()
 	light.texture = Globals.SIGHT_TEXTURE
-	light.energy = 0.08
-	light.color = Color(1.0, 0.4, 0.3)
+	light.energy = 0.5
+	light.color = Color(1.0, 0.3, 0.2)  # strong red tint
 	var master_radius = 512.0
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
@@ -371,7 +371,8 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
-	light.range_item_cull_mask = 2
+	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
+	light.range_item_cull_mask = 1
 	light.z_index = 102
 	light.visible = false
 	npc.add_child(light)
