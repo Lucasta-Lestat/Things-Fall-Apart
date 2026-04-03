@@ -130,7 +130,6 @@ func _spawn_npcs(npc_list: Array) -> void:
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
 				_add_npc_line_of_sight_light(npc)
-				print("[NPC Spawn] '%s' added to characters_in_scene (total=%d, party=%d)" % [npc.display_name, characters_in_scene.size(), party_chars.size()])
 
 # ---------------------------------------------------------------------------
 # Core character spawn helper
@@ -363,8 +362,8 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	When the NPC is hidden (not in party LOS), the light hides with it."""
 	var light = PointLight2D.new()
 	light.texture = Globals.SIGHT_TEXTURE
-	light.energy = 0.08
-	light.color = Color(1.0, 0.4, 0.3)
+	light.energy = 0.5
+	light.color = Color(1.0, 0.3, 0.2)  # strong red tint
 	var master_radius = 512.0
 	var desired_radius = 1440.0 * npc.sight
 	light.texture_scale = desired_radius / master_radius
@@ -372,11 +371,11 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
-	light.range_item_cull_mask = 2
+	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
+	light.range_item_cull_mask = 1
 	light.z_index = 102
 	light.visible = false
 	npc.add_child(light)
-	print("[NPC LOS] Added NPCLineOfSight to '%s'. Verify child exists: %s" % [npc.display_name, str(npc.get_node_or_null("NPCLineOfSight") != null)])
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
 	if node is Sprite2D or node is TextureRect:
@@ -484,30 +483,14 @@ func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 
 func _toggle_npc_los_cones() -> void:
 	"""Show or hide NPC line-of-sight cones based on stealth mode."""
-	var total = characters_in_scene.size()
-	var party_count = party_chars.size()
-	var npc_count = 0
-	var found_lights = 0
 	for character in characters_in_scene:
 		if not is_instance_valid(character):
 			continue
 		if character in party_chars:
 			continue
-		npc_count += 1
 		var npc_los = character.get_node_or_null("NPCLineOfSight")
 		if npc_los:
-			found_lights += 1
 			npc_los.visible = stealth_mode
-			print("[Stealth]   NPC '%s' LOS light set visible=%s" % [character.display_name, stealth_mode])
-		else:
-			print("[Stealth]   NPC '%s' has NO NPCLineOfSight child. Children: %s" % [character.display_name, str(_get_child_names(character))])
-	print("[Stealth] characters_in_scene=%d, party=%d, npcs=%d, lights_found=%d" % [total, party_count, npc_count, found_lights])
-
-func _get_child_names(node: Node) -> Array:
-	var names = []
-	for child in node.get_children():
-		names.append(child.name)
-	return names
 
 func _update_npc_los_visibility() -> void:
 	"""NPCs are only visible when inside a party member's sight cone.
@@ -685,7 +668,6 @@ func _input(event: InputEvent) -> void:
 			KEY_C:
 				if not event.echo:
 					stealth_mode = not stealth_mode
-					print("[Stealth] Toggled stealth_mode = ", stealth_mode)
 					_toggle_npc_los_cones()
 	# Number keys 1-9 to select party members
 	if event is InputEventKey and event.pressed and not event.echo:
