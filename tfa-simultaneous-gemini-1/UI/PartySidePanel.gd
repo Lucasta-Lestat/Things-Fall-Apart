@@ -196,7 +196,9 @@ func _refresh_inventory(data: Dictionary) -> void:
 func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dictionary) -> PanelContainer:
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
-	slot.mouse_filter = Control.MOUSE_FILTER_STOP
+	# MOUSE_FILTER_PASS: slot receives gui_input (right-click menus) but also
+	# propagates to PartySidePanel so _get_drag_data can start drag-and-drop
+	slot.mouse_filter = Control.MOUSE_FILTER_PASS
 	slot.tooltip_text = item_data.get("display_name", item_data.get("id", "Unknown"))
 
 	var bg = StyleBoxFlat.new()
