@@ -122,6 +122,14 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 				else:
 					push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
 
+	# --- Extra abilities (directly equipped) ---
+	var extra_abilities = template.get("extra_abilities", [])
+	if not extra_abilities.is_empty():
+		var inv = _find_child_by_name(character, "Inventory")
+		if inv:
+			for ability_id in extra_abilities:
+				inv.add_ability_by_id(ability_id)
+
 	# --- Creature flag ---
 	if template.get("is_creature", false):
 		_set_if_exists(character, "is_creature", true)
