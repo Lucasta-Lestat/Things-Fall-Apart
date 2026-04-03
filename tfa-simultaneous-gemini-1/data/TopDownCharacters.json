@@ -1,6 +1,31 @@
 {
   "characters": [
 	{
+	  "id": "protagonist",
+	  "name": "Protagonist",
+	  "race": "human",
+	  "background": "pauper",
+	  "faction": "player",
+	  "stats": {
+		"strength": 55,
+		"constitution": 50,
+		"dexterity": 50,
+		"will": 50,
+		"intelligence": 50,
+		"charisma": 50
+	  },
+	  "equipment": ["breastplate_2", "longsword"],
+	  "icon": "res://icons/characters/default_human.png",
+	  "dialogue": null,
+	  "interact_options": ["Inspect"],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
 	  "id": "default_human",
 	  "name": "Default Human",
 	  "race": "human",
@@ -1282,7 +1307,7 @@
 		"intelligence": 65,
 		"charisma": 60
 	  },
-	  "equipment": "from_faction",
+	  "equipment": ["purple_hood", "sickle"],
 	  "extra_items": [
         "alcohol"
 	  ],

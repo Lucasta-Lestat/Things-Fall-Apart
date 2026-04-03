@@ -26,6 +26,7 @@ var current_map_id: String = "cemetery"
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
+var stealth_mode: bool = false
 
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
@@ -125,7 +126,8 @@ func _spawn_npcs(npc_list: Array) -> void:
 			var npc = _spawn_character(template_id, pos)
 			if npc:
 				npc.AI_enabled = true
-				# NPCs are only visible under player line-of-sight lights
+				# NPCs hidden by default; visible in stealth mode under LOS
+				npc.visible = false
 				npc.light_mask = 2
 				npc.visibility_layer = 2
 				var light_mat = CanvasItemMaterial.new()
@@ -349,7 +351,10 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var desired_radius = 1440.0 * character.sight
 	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
-	light.rotation_degrees = 90
+	# Local rotation offset: the cone texture points right at 0 degrees,
+	# but the character faces up at rotation 0. Offset by -90 degrees
+	# so the cone emits in the character's forward direction.
+	light.rotation_degrees = -90
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1
 	light.z_index = 102
@@ -459,8 +464,23 @@ func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 			remaining -= this_stack
 			spawn_offset += 1
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_C:
+			stealth_mode = not stealth_mode
+			_update_npc_visibility()
+
+func _update_npc_visibility() -> void:
+	for character in characters_in_scene:
+		if not is_instance_valid(character):
+			continue
+		# Party members are always visible
+		if character in party_chars:
+			continue
+		character.visible = stealth_mode
+
 func _process(delta: float) -> void:
-	# Check for combat collisions# Update clash cooldowns
+	# Check for combat collisions / Update clash cooldowns
 	if not PauseManager.is_paused:
 		var to_remove = []
 		for key in clash_cooldowns:

@@ -199,13 +199,27 @@ const LOADOUT_SLOTS: Array = ["main_hand", "torso", "head"]
 func _resolve_equipment(template: Dictionary, faction_data: Dictionary, overrides: Dictionary) -> Array:
 	# Explicit equipment list on the template
 	var equip = template.get("equipment", [])
-	if equip is Array:
-		return equip
 
-	# "from_faction" - build a random loadout from ItemDatabase,
-	# filtered by the faction's equipment trait restrictions
+	# "from_faction" - build a random loadout from ItemDatabase
 	if equip is String and equip == "from_faction":
 		return _roll_faction_loadout(faction_data)
+
+	if equip is Array:
+		# Normalize: support both simple ID strings and full dict entries.
+		# e.g. ["longsword", "breastplate_2"] or [{"id": "longsword", "slot": "Main Hand"}]
+		var normalized: Array = []
+		for entry in equip:
+			if entry is String:
+				# Simple ID string — look up equip_slot from the item database
+				var item_data = ItemDatabase.get_item_data(entry)
+				normalized.append({
+					"id": entry,
+					"quantity": 1,
+					"equip_slot": item_data.get("equip_slot", "") if not item_data.is_empty() else ""
+				})
+			elif entry is Dictionary:
+				normalized.append(entry)
+		return normalized
 
 	return []
 

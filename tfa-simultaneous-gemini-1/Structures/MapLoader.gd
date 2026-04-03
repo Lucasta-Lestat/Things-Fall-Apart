@@ -31,7 +31,8 @@ var color_to_floor: Dictionary = {
 var floor_scene: PackedScene = preload("res://Structures/floors/floor.tscn")
 
 func _ready():
-	generate_map()
+	# Don't auto-generate; Game.load_map() calls generate_map() after GridManager is initialized
+	pass
 
 func generate_map():
 	var tile_size = GridManager.TILE_SIZE
