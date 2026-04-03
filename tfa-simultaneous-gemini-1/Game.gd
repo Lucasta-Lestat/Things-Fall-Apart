@@ -130,7 +130,8 @@ func _spawn_npcs(npc_list: Array) -> void:
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
 				_add_npc_line_of_sight_light(npc)
- 
+				print("[NPC Spawn] '%s' added to characters_in_scene (total=%d, party=%d)" % [npc.display_name, characters_in_scene.size(), party_chars.size()])
+
 # ---------------------------------------------------------------------------
 # Core character spawn helper
 # ---------------------------------------------------------------------------
@@ -375,6 +376,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.z_index = 102
 	light.visible = false
 	npc.add_child(light)
+	print("[NPC LOS] Added NPCLineOfSight to '%s'. Verify child exists: %s" % [npc.display_name, str(npc.get_node_or_null("NPCLineOfSight") != null)])
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
 	if node is Sprite2D or node is TextureRect:
@@ -482,14 +484,30 @@ func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 
 func _toggle_npc_los_cones() -> void:
 	"""Show or hide NPC line-of-sight cones based on stealth mode."""
+	var total = characters_in_scene.size()
+	var party_count = party_chars.size()
+	var npc_count = 0
+	var found_lights = 0
 	for character in characters_in_scene:
 		if not is_instance_valid(character):
 			continue
 		if character in party_chars:
 			continue
+		npc_count += 1
 		var npc_los = character.get_node_or_null("NPCLineOfSight")
 		if npc_los:
+			found_lights += 1
 			npc_los.visible = stealth_mode
+			print("[Stealth]   NPC '%s' LOS light set visible=%s" % [character.display_name, stealth_mode])
+		else:
+			print("[Stealth]   NPC '%s' has NO NPCLineOfSight child. Children: %s" % [character.display_name, str(_get_child_names(character))])
+	print("[Stealth] characters_in_scene=%d, party=%d, npcs=%d, lights_found=%d" % [total, party_count, npc_count, found_lights])
+
+func _get_child_names(node: Node) -> Array:
+	var names = []
+	for child in node.get_children():
+		names.append(child.name)
+	return names
 
 func _update_npc_los_visibility() -> void:
 	"""NPCs are only visible when inside a party member's sight cone.
@@ -667,6 +685,7 @@ func _input(event: InputEvent) -> void:
 			KEY_C:
 				if not event.echo:
 					stealth_mode = not stealth_mode
+					print("[Stealth] Toggled stealth_mode = ", stealth_mode)
 					_toggle_npc_los_cones()
 	# Number keys 1-9 to select party members
 	if event is InputEventKey and event.pressed and not event.echo:
