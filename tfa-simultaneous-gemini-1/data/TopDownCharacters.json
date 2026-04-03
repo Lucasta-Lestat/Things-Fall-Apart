@@ -1282,7 +1282,7 @@
 		"intelligence": 65,
 		"charisma": 60
 	  },
-	  "equipment": "from_faction",
+	  "equipment": ["sickle","purple_hood"],
 	  "extra_items": [
         "alcohol"
 	  ],

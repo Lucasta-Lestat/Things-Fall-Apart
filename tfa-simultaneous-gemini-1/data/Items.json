@@ -965,12 +965,12 @@
 	"resources": { "cloth": 5 }
   },
   {
-	"id": "green_ranger_hood",
-	"name": "Green Ranger Hood",
+	"id": "purple-hood",
+	"name": "Purple Hood",
 	"type": "hood",
 	"base_width": 20.0,
 	"base_height": 20.0,
-	"sprite_path": "res://Items/ranger_hood.png",
+	"sprite_path": "res://Items/purple_hood.png",
 	"weight": 0.5,
 	"cost": 20.0,
 	"equip_slot": "Head",
