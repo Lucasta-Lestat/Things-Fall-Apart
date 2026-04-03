@@ -454,7 +454,7 @@ func load_from_data(data: Dictionary) -> void:
 		if data.has("blade_width"): blade_width = data["blade_width"]
 		if data.has("balance_point"): balance_point = data["balance_point"]
 		
-	if data.has("sprite_path"):
+	if data.has("sprite_path") and data["sprite_path"] != null:
 		sprite_path = data["sprite_path"]
 		set_sprite_from_path(sprite_path)
 	if data.has("projectile_texture_path"):
