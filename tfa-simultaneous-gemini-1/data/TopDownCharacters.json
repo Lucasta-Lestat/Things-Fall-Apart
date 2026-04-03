@@ -1311,7 +1311,7 @@
 	  "extra_items": [
         "alcohol"
 	  ],
-	  "icon": "res://icons/characters/jacana.png",
+	  "icon": "res://Icons/jacana_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
