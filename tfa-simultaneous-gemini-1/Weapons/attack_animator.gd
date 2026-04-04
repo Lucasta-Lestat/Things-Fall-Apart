@@ -6,7 +6,7 @@ enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum AttackState { IDLE, WINDUP, STRIKE, RECOVERY,CAST_WINDUP, CAST_RELEASE, CAST_RECOVERY  }
 
 signal attack_started(damage_type: String)
-signal attack_hit_frame()
+signal attack_hit_frame(hand: String)
 signal attack_finished()
 var is_attacking: bool
 

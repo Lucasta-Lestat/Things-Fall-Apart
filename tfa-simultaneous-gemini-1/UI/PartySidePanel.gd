@@ -286,6 +286,22 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(label)
 
+	# Show stack count badge for stacked items
+	var num_stacks = int(item_data.get("num_stacks", 1))
+	if num_stacks > 1:
+		var stack_label = Label.new()
+		stack_label.text = str(num_stacks)
+		stack_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		stack_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		stack_label.add_theme_font_size_override("font_size", 10)
+		stack_label.add_theme_color_override("font_color", Color.WHITE)
+		stack_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+		stack_label.add_theme_constant_override("shadow_offset_x", 1)
+		stack_label.add_theme_constant_override("shadow_offset_y", 1)
+		stack_label.custom_minimum_size = ITEM_SLOT_SIZE
+		stack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(stack_label)
+
 	# Store metadata for drag-drop and right-click
 	slot.set_meta("item_index", item_index)
 	slot.set_meta("item_data", item_data)
