@@ -111,16 +111,30 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 		_set_if_exists(character, "interact_options", interact_opts)
 
 	# --- Extra inventory items (non-equipment) ---
-	var extra_items = template.get("extra_items", [])
+	var extra_items = template.get("extra_items", {})
 	if not extra_items.is_empty():
 		var inv = _find_child_by_name(character, "Inventory")
 		if inv:
-			for item_id in extra_items:
-				var item_data = ItemDatabase.get_item_data(item_id)
-				if not item_data.is_empty():
-					inv.add_item(item_data)
-				else:
-					push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
+			if extra_items is Dictionary:
+				for item_id in extra_items:
+					var count = int(extra_items[item_id])
+					var item_data = ItemDatabase.get_item_data(item_id)
+					if not item_data.is_empty():
+						var entry = item_data.duplicate()
+						if count > 1:
+							entry["is_stackable"] = true
+							entry["num_stacks"] = count
+							entry["max_stack_size"] = max(count, int(entry.get("max_stack_size", 20)))
+						inv.add_item(entry)
+					else:
+						push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
+			elif extra_items is Array:
+				for item_id in extra_items:
+					var item_data = ItemDatabase.get_item_data(item_id)
+					if not item_data.is_empty():
+						inv.add_item(item_data)
+					else:
+						push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
 
 	# --- Extra abilities (directly equipped) ---
 	var extra_abilities = template.get("extra_abilities", [])

@@ -1671,7 +1671,7 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 	else:
 		SfxManager.play("bow_release", global_position)
 	# Ask Game.gd to spawn and manage the projectile
-	var game = get_node_or_null("/root/TopDownCharacterScene")
+	var game = get_tree().current_scene
 	if game and game.has_method("spawn_projectile"):
 		var fire_direction = Vector2.UP.rotated(rotation)
 		game.spawn_projectile(self, fire_direction, weapon)

@@ -15,7 +15,7 @@
 		"charisma": 50
 	  },
 	  "equipment": ["breastplate_2", "longsword", "shortbow", "pistol"],
-	  "extra_items": ["arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet"],
+	  "extra_items": {"arrow": 10, "bullet": 10},
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
@@ -1309,9 +1309,7 @@
 		"charisma": 60
 	  },
 	  "equipment": ["sickle","purple_hood"],
-	  "extra_items": [
-        "alcohol"
-	  ],
+	  "extra_items": {"alcohol": 1},
 	  "icon": "res://Icons/jacana_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
