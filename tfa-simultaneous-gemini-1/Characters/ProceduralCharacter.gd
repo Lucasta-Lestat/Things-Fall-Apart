@@ -2667,6 +2667,22 @@ func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 					var angle_to_target = cone_direction.angle_to(to_target.normalized())
 					var half_angle = deg_to_rad(ability.targeting.get("angle", 45.0)) / 2
 					in_area = abs(angle_to_target) <= half_angle
+			"line":
+				# Line from caster to target_position — hit anything within half-width
+				if target == self:
+					continue  # Don't hit the caster
+				var half_width = size.y / 2.0 if size.y > 0 else 15.0
+				var line_start = global_position
+				var line_end = center
+				var seg = line_end - line_start
+				var seg_len_sq = seg.length_squared()
+				if seg_len_sq < 1.0:
+					continue
+				var to_pt = target.global_position - line_start
+				var t = clamp(to_pt.dot(seg) / seg_len_sq, 0.0, 1.0)
+				var closest = line_start + seg * t
+				var dist_to_line = target.global_position.distance_to(closest)
+				in_area = dist_to_line <= half_width
 			"none", "single":
 				# No AoE - would need different targeting logic
 				in_area = target.global_position.distance_to(center) < 50.0
@@ -2682,17 +2698,42 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 	var impact_path = ability.visuals.get("impact_effect", "")
 	if impact_path == "":
 		return
-	var size_scale = 1.0
-	var radius = ability.get_aoe_radius()
-	if radius > 0:
-		size_scale = radius / 25.0
-	var duration = _get_modified_visual_duration(ability)
-	_spawn_effect(impact_path, target_position, size_scale, duration)
-	
+
+	var shape = ability.targeting.get("shape", "none")
+	if shape == "line":
+		_spawn_line_effect(ability, target_position)
+	else:
+		var size_scale = 1.0
+		var radius = ability.get_aoe_radius()
+		if radius > 0:
+			size_scale = radius / 25.0
+		var duration = _get_modified_visual_duration(ability)
+		_spawn_effect(impact_path, target_position, size_scale, duration)
+
 	# Play ability SFX
 	var sfx_path = ability.visuals.get("sound_impact", "")
 	if sfx_path != "":
 		_play_sfx_at(sfx_path, target_position)
+
+
+## Spawn a line effect (e.g., lightning bolt) from caster to target
+func _spawn_line_effect(ability: Ability, target_position: Vector2) -> void:
+	var impact_path = ability.visuals.get("impact_effect", "")
+	var scene = _load_effect_scene(impact_path)
+	if not scene:
+		return
+
+	var instance = scene.instantiate()
+	instance.z_index = 3
+
+	# Configure start/end for LightningVFX or similar line effects
+	if "start_position" in instance:
+		instance.start_position = Vector2.ZERO  # Local coords; position node at caster
+		instance.end_position = target_position - global_position
+	instance.global_position = global_position
+
+	var scene_root = get_tree().current_scene
+	scene_root.add_child(instance)
 
 # --- Add these variables near your other vars in character.gd ---
 
