@@ -8,6 +8,14 @@ const SLIDE_DURATION := 0.3
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 const CONTEXT_MENU_SCENE := preload("res://UI/ContextMenu.tscn")
 const ITEM_SLOT_SIZE := Vector2(40, 40)
+const COND_ICON_SIZE := Vector2(16, 16)
+
+# Health bar color thresholds (matching old dual_health_bars style)
+const HP_COLOR_FULL := Color(0.2, 0.8, 0.2)
+const HP_COLOR_MID := Color(0.9, 0.8, 0.1)
+const HP_COLOR_LOW := Color(0.8, 0.1, 0.1)
+const HP_MID_THRESHOLD := 0.5
+const HP_LOW_THRESHOLD := 0.25
 
 var game_node: Node = null
 var panel_visible: bool = true
@@ -85,7 +93,56 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	# Click header to select this character
 	header.gui_input.connect(_on_header_gui_input.bind(index))
 
+	# --- Condition icons row (next to portrait area) ---
+	var cond_container = HBoxContainer.new()
+	cond_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cond_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cond_container.add_theme_constant_override("separation", 2)
+	header.add_child(cond_container)
+
 	container.add_child(header)
+
+	# --- Head Health Bar ---
+	var head_label = Label.new()
+	head_label.text = "Head"
+	head_label.add_theme_font_size_override("font_size", 9)
+	head_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(head_label)
+
+	var head_bar = ProgressBar.new()
+	head_bar.custom_minimum_size = Vector2(0, 10)
+	head_bar.max_value = 100
+	head_bar.value = 100
+	head_bar.show_percentage = false
+	head_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var head_fill = StyleBoxFlat.new()
+	head_fill.bg_color = HP_COLOR_FULL
+	head_bar.add_theme_stylebox_override("fill", head_fill)
+	var head_bg = StyleBoxFlat.new()
+	head_bg.bg_color = Color(0.3, 0.1, 0.1, 0.6)
+	head_bar.add_theme_stylebox_override("background", head_bg)
+	container.add_child(head_bar)
+
+	# --- Torso Health Bar ---
+	var torso_label = Label.new()
+	torso_label.text = "Torso"
+	torso_label.add_theme_font_size_override("font_size", 9)
+	torso_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(torso_label)
+
+	var torso_bar = ProgressBar.new()
+	torso_bar.custom_minimum_size = Vector2(0, 10)
+	torso_bar.max_value = 100
+	torso_bar.value = 100
+	torso_bar.show_percentage = false
+	torso_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var torso_fill = StyleBoxFlat.new()
+	torso_fill.bg_color = HP_COLOR_FULL
+	torso_bar.add_theme_stylebox_override("fill", torso_fill)
+	var torso_bg = StyleBoxFlat.new()
+	torso_bg.bg_color = Color(0.3, 0.1, 0.1, 0.6)
+	torso_bar.add_theme_stylebox_override("background", torso_bg)
+	container.add_child(torso_bar)
 
 	# --- MP Bar ---
 	var mp_bar = ProgressBar.new()
@@ -135,6 +192,11 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"container": container,
 		"icon": icon,
 		"name_label": name_label,
+		"head_bar": head_bar,
+		"head_fill": head_fill,
+		"torso_bar": torso_bar,
+		"torso_fill": torso_fill,
+		"condition_container": cond_container,
 		"mp_bar": mp_bar,
 		"mp_label": mp_label,
 		"inv_grid": inv_grid,
@@ -485,9 +547,83 @@ func _process(_delta: float) -> void:
 		if not is_instance_valid(character):
 			continue
 
+		# Update health bars
+		_update_health_bar(data, "head_bar", "head_fill", 0, character)
+		_update_health_bar(data, "torso_bar", "torso_fill", 1, character)
+
+		# Update conditions display
+		_update_conditions(data, character)
+
 		var mp_bar: ProgressBar = data["mp_bar"]
 		mp_bar.max_value = character.max_MP
 		mp_bar.value = character.MP
 
 		var mp_label: Label = data["mp_label"]
 		mp_label.text = "%d / %d MP" % [character.MP, character.max_MP]
+
+func _update_health_bar(data: Dictionary, bar_key: String, fill_key: String, limb_type: int, character) -> void:
+	var bar: ProgressBar = data[bar_key]
+	var fill_style: StyleBoxFlat = data[fill_key]
+	if character.limbs.has(limb_type):
+		var pct: float = character.limbs[limb_type].get_hp_percent()
+		bar.value = pct * 100.0
+		if pct <= HP_LOW_THRESHOLD:
+			fill_style.bg_color = HP_COLOR_LOW
+		elif pct <= HP_MID_THRESHOLD:
+			fill_style.bg_color = HP_COLOR_MID
+		else:
+			fill_style.bg_color = HP_COLOR_FULL
+
+func _update_conditions(data: Dictionary, character) -> void:
+	var cond_container: HBoxContainer = data["condition_container"]
+	var cm = character.get_node_or_null("ConditionManager")
+	if not cm:
+		return
+
+	var conditions: Dictionary = cm.conditions
+	var existing_children = cond_container.get_children()
+
+	# Quick check: if count matches and IDs match, just update tooltips
+	var cond_ids: Array = conditions.keys()
+	var needs_rebuild := existing_children.size() != cond_ids.size()
+	if not needs_rebuild:
+		for i in range(cond_ids.size()):
+			if i >= existing_children.size() or existing_children[i].get_meta("cond_id", "") != cond_ids[i]:
+				needs_rebuild = true
+				break
+
+	if needs_rebuild:
+		for child in existing_children:
+			child.queue_free()
+		for cond_id in cond_ids:
+			var instance = conditions[cond_id]
+			var cond_res = instance.condition
+			var icon_tex = cond_res.get("icon") if "icon" in cond_res else null
+			var tex_rect = TextureRect.new()
+			tex_rect.custom_minimum_size = COND_ICON_SIZE
+			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_PASS
+			if icon_tex and icon_tex is Texture2D:
+				tex_rect.texture = icon_tex
+			tex_rect.set_meta("cond_id", cond_id)
+			cond_container.add_child(tex_rect)
+
+	# Update tooltips with current stacks/duration
+	var time_manager = get_node_or_null("/root/TimeManager")
+	var game_time: float = time_manager.game_time if time_manager else 0.0
+	var children = cond_container.get_children()
+	for i in range(children.size()):
+		if i >= cond_ids.size():
+			break
+		var cond_id = cond_ids[i]
+		var instance = conditions[cond_id]
+		var cond_res = instance.condition
+		var display_name = cond_res.get("display_name") if "display_name" in cond_res else cond_id
+		var tip = display_name
+		if instance.stacks > 1:
+			tip += " x%d" % instance.stacks
+		if instance.expires_at > 0 and cond_res.duration > 0:
+			var time_left = max(0.0, instance.expires_at - game_time)
+			tip += " (%.0fs)" % time_left
+		children[i].tooltip_text = tip
