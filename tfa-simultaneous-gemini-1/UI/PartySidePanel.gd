@@ -287,7 +287,8 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 		slot.add_child(label)
 
 	# Show stack count badge for stacked items
-	var num_stacks = int(item_data.get("num_stacks", 1))
+	var raw_stacks = item_data.get("num_stacks", 1)
+	var num_stacks: int = int(raw_stacks) if raw_stacks != null else 1
 	if num_stacks > 1:
 		var stack_label = Label.new()
 		stack_label.text = str(num_stacks)
