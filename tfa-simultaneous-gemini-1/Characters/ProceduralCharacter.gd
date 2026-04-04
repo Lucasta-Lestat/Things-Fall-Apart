@@ -3395,6 +3395,17 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 	var shape = ability.targeting.get("shape", "none")
 	if shape == "line":
 		_spawn_line_effect(ability, target_position)
+	elif shape == "cone":
+		# Cone VFX spawns at caster, facing toward target
+		var size_scale = 1.0
+		var radius = ability.get_aoe_radius()
+		if radius > 0:
+			size_scale = radius / 25.0
+		var duration = _get_modified_visual_duration(ability)
+		var instance = _spawn_effect(impact_path, global_position, size_scale, duration)
+		if instance:
+			var dir = (target_position - global_position).angle()
+			instance.rotation = dir
 	else:
 		var size_scale = 1.0
 		var radius = ability.get_aoe_radius()
@@ -3419,14 +3430,27 @@ func _spawn_line_effect(ability: Ability, target_position: Vector2) -> void:
 	var instance = scene.instantiate()
 	instance.z_index = 3
 
-	# Configure start/end for LightningVFX or similar line effects
 	if "start_position" in instance:
-		instance.start_position = Vector2.ZERO  # Local coords; position node at caster
+		# LightningVFX-style: has start/end position properties
+		instance.start_position = Vector2.ZERO
 		instance.end_position = target_position - global_position
-	instance.global_position = global_position
+		instance.global_position = global_position
+	else:
+		# Generic particle VFX: position at midpoint, rotate toward target, stretch
+		var midpoint = (global_position + target_position) / 2.0
+		instance.global_position = midpoint
+		var direction = target_position - global_position
+		instance.rotation = direction.angle()
+		# Stretch along the line direction
+		var line_length = direction.length()
+		var base_size = 100.0  # Default VFX diameter
+		instance.scale.x = line_length / base_size
 
 	var scene_root = get_tree().current_scene
 	scene_root.add_child(instance)
+
+	var duration = _get_modified_visual_duration(ability)
+	_schedule_effect_cleanup(instance, duration)
 
 # --- Add these variables near your other vars in character.gd ---
 
