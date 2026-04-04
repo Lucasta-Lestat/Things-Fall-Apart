@@ -3,7 +3,7 @@ extends Node2D
 class_name AbilityShape
 
 # Matches your AbilityTargeting enum strings
-enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE }
+enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
 
 @export_group("Identity")
 @export var ability_id: String = "fireball_shape"
@@ -64,15 +64,18 @@ func get_ability_data() -> Dictionary:
 		AbilityTargetShape.CIRCLE: shape_str = "circle"
 		AbilityTargetShape.RECTANGLE: shape_str = "rectangle"
 		AbilityTargetShape.LINE: shape_str = "line"
+		AbilityTargetShape.CONE: shape_str = "cone"
 	
 	# We construct the specific targeting block expected by the system
 	# Pull range from raw targeting data
 	var ability_range = raw_data.get("targeting", {}).get("range", 500.0)
+	var ability_angle = raw_data.get("targeting", {}).get("angle", 45.0)
 	var targeting_override = {
 		"shape": shape_str,
 		"radius": target_radius,
 		"size": target_size,
 		"range": ability_range,
+		"angle": ability_angle,
 		"requires_targeting": requires_targeting,
 		"target_shape": shape_str,
 	}
@@ -112,6 +115,7 @@ func setup_from_database(data: Dictionary) -> void:
 		"circle": target_shape = AbilityTargetShape.CIRCLE
 		"rectangle": target_shape = AbilityTargetShape.RECTANGLE
 		"line": target_shape = AbilityTargetShape.LINE
+		"cone": target_shape = AbilityTargetShape.CONE
 		_: target_shape = AbilityTargetShape.NONE
 		
 	target_radius = targeting.get("radius", 50.0)

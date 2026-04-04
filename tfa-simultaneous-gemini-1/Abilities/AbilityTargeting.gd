@@ -2,7 +2,7 @@
 # Handles AoE targeting visualization and input
 extends Node2D
 
-enum TargetShape { NONE, CIRCLE, RECTANGLE, LINE }
+enum TargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
 
 signal targeting_started(hand: String, ability: Dictionary)
 signal targeting_confirmed(hand: String, ability: Dictionary, target_position: Vector2)
@@ -18,6 +18,7 @@ var target_position: Vector2 = Vector2.ZERO
 var circle_indicator: Node2D = null
 var rectangle_indicator: Node2D = null
 var line_indicator: Node2D = null
+var cone_indicator: Node2D = null
 
 # Targeting parameters (set from ability data)
 var target_shape: TargetShape = TargetShape.NONE
@@ -27,6 +28,8 @@ var rectangle_rotation: float = 0.0  # In radians
 var line_range: float = 500.0
 var line_width: float = 30.0
 var caster_position: Vector2 = Vector2.ZERO
+var cone_radius: float = 150.0
+var cone_angle: float = 45.0  # Degrees
 
 # Visual settings
 const INDICATOR_COLOR = Color(1, 1, 1, 0.5)  # Semi-transparent white
@@ -76,6 +79,14 @@ func _create_indicators() -> void:
 	line_indicator.visible = false
 	add_child(line_indicator)
 
+	# Cone indicator
+	cone_indicator = Node2D.new()
+	cone_indicator.name = "ConeIndicator"
+	var cone_drawer = ConeDrawer.new()
+	cone_indicator.add_child(cone_drawer)
+	cone_indicator.visible = false
+	add_child(cone_indicator)
+
 func _update_active_indicator() -> void:
 	"""Update the position and appearance of the active indicator"""
 	#print("target_shape is : ", target_shape)
@@ -116,10 +127,26 @@ func _update_active_indicator() -> void:
 			circle_indicator.visible = false
 			rectangle_indicator.visible = false
 
+		TargetShape.CONE:
+			# Cone from caster toward mouse
+			cone_indicator.global_position = caster_position
+			var cone_dir = target_position - caster_position
+			cone_indicator.rotation = cone_dir.angle()
+			var drawer_c = cone_indicator.get_child(0) as ConeDrawer
+			if drawer_c:
+				drawer_c.cone_radius = cone_radius
+				drawer_c.cone_angle_deg = cone_angle
+				drawer_c.queue_redraw()
+			cone_indicator.visible = true
+			circle_indicator.visible = false
+			rectangle_indicator.visible = false
+			line_indicator.visible = false
+
 		TargetShape.NONE:
 			circle_indicator.visible = false
 			rectangle_indicator.visible = false
 			line_indicator.visible = false
+			cone_indicator.visible = false
 
 func _get_mouse_world_position() -> Vector2:
 	"""Get mouse position in world coordinates"""
@@ -153,7 +180,11 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 			line_range = ability.get("range", 500.0)
 			var size_data = ability.get("size", Vector2(500, 30))
 			line_width = size_data.y if size_data is Vector2 else float(size_data.get("y", 30))
-			# Store caster position for the line origin
+			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+		"cone":
+			target_shape = TargetShape.CONE
+			cone_radius = ability.get("radius", 150.0)
+			cone_angle = ability.get("angle", 45.0)
 			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
 		_:
 			target_shape = TargetShape.NONE
@@ -205,6 +236,7 @@ func end_targeting() -> void:
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
 	line_indicator.visible = false
+	cone_indicator.visible = false
 
 func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0) -> Node2D:
 	"""Create a persistent indicator for a queued ability"""
@@ -320,3 +352,31 @@ class LineDrawer extends Node2D:
 		# Border
 		for i in range(corners.size()):
 			draw_line(corners[i], corners[(i + 1) % corners.size()], border_color, 2.0, true)
+
+
+class ConeDrawer extends Node2D:
+	var cone_radius: float = 150.0
+	var cone_angle_deg: float = 45.0
+	var is_queued: bool = false
+	var num_segments: int = 24
+
+	func _draw() -> void:
+		var color = Color(0.5, 0.8, 1.0, 0.3) if is_queued else Color(1, 1, 1, 0.3)
+		var border_color = Color(0.5, 0.8, 1.0, 0.7) if is_queued else Color(1, 1, 1, 0.7)
+
+		var half_angle = deg_to_rad(cone_angle_deg) / 2.0
+
+		# Build cone polygon: origin → arc points → back to origin
+		var points = PackedVector2Array()
+		points.append(Vector2.ZERO)
+		for i in range(num_segments + 1):
+			var t = float(i) / num_segments
+			var angle = -half_angle + t * cone_angle_deg * PI / 180.0
+			points.append(Vector2(cos(angle), sin(angle)) * cone_radius)
+
+		# Fill
+		draw_colored_polygon(points, color)
+
+		# Border (lines along edges)
+		for i in range(points.size()):
+			draw_line(points[i], points[(i + 1) % points.size()], border_color, 2.0, true)

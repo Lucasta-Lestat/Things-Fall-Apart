@@ -348,6 +348,108 @@
 	  ],
 	  "visuals": { "cast_effect": "res://effects/rage_aura.tscn" },
 	  "animation": "rage_roar"
+	},
+	{
+	  "id": "creepy_beam",
+	  "display_name": "Creepy Beam",
+	  "description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
+	  "cooldown": 7.0,
+	  "costs": { "MP": 22 },
+	  "cast_time": 0.6,
+	  "traits": { "spell": 1, "necrotic": 3, "magical": 1, "attack": 2, "line": 2 },
+	  "targeting": {
+		"type": "direction",
+		"range": 400.0,
+		"shape": "line",
+		"size": { "x": 400, "y": 24 }
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "necrotic": 30 }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "weakened",
+		  "stacks": 1,
+		  "chance": 0.5
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/necrotic_hand.tscn",
+		"impact_effect": "res://vfx/necrotic.tscn"
+	  }
+	},
+	{
+	  "id": "acid_splash",
+	  "display_name": "Acid Splash",
+	  "description": "Hurl a glob of acid that splashes on impact, corroding everything in the area and leaving behind a pool of acid.",
+	  "cooldown": 5.0,
+	  "costs": { "MP": 18 },
+	  "cast_time": 0.5,
+	  "visual_duration": 2.0,
+	  "traits": { "spell": 1, "acid": 3, "magical": 1, "attack": 1, "aoe": 1 },
+	  "targeting": {
+		"type": "point",
+		"range": 350.0,
+		"shape": "circle",
+		"radius": 50.0
+	  },
+	  "projectile_speed": 60.0,
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "acid": 20 }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "corroding",
+		  "stacks": 1
+		},
+		{
+		  "type": "spawn_fluid",
+		  "fluid_type": "acid",
+		  "amount": 0.5,
+		  "spread": 2
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/acid_hand.tscn",
+		"projectile": "res://vfx/acid_hand.tscn",
+		"impact_effect": "res://vfx/acid.tscn"
+	  }
+	},
+	{
+	  "id": "thunderwave",
+	  "display_name": "Thunderwave",
+	  "description": "Unleash a cone of thunderous force that damages and pushes back all enemies caught in the blast.",
+	  "cooldown": 8.0,
+	  "costs": { "MP": 25 },
+	  "cast_time": 0.3,
+	  "visual_duration": 1.0,
+	  "traits": { "spell": 1, "sonic": 3, "magical": 1, "attack": 2, "aoe": 2, "control": 1 },
+	  "targeting": {
+		"type": "direction",
+		"range": 150.0,
+		"shape": "cone",
+		"radius": 150.0,
+		"angle": 60.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "sonic": 25 }
+		},
+		{
+		  "type": "knockback",
+		  "strength": 600.0,
+		  "from_caster": true
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/sonic_hand.tscn",
+		"impact_effect": "res://vfx/sonic.tscn"
+	  }
 	}
   ]
 }
