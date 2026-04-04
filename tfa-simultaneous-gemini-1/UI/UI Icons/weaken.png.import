@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cp8t5f78y80pw"
-path="res://.godot/imported/Movement.png-884b1f572607cace043362cccfec2624.ctex"
+uid="uid://ctrwu0pvqr8m1"
+path="res://.godot/imported/weaken.png-9c8a47479e3d9585529ef8ba22eaecf3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://UI/UI Icons/Movement.png"
-dest_files=["res://.godot/imported/Movement.png-884b1f572607cace043362cccfec2624.ctex"]
+source_file="res://UI/UI Icons/weaken.png"
+dest_files=["res://.godot/imported/weaken.png-9c8a47479e3d9585529ef8ba22eaecf3.ctex"]
 
 [params]
 

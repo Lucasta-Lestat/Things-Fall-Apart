@@ -2914,7 +2914,7 @@
 	"grip_length": 8.0,
 	"blade_width": 3.0,
 	"balance_point": 0.4,
-	"sprite_path": null,
+	"sprite_path": "res://Items/pistol.png",
 	"weight": 2.0,
 	"cost": 50.0,
 	"equip_slot": "Main Hand",

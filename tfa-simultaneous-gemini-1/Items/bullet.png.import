@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://g7v4icwljipw"
-path="res://.godot/imported/weaken.png-696e9ebdae5fcba4fc3f31b673db4a84.ctex"
+uid="uid://ewk1y0dsjswk"
+path="res://.godot/imported/bullet.png-00529a014c5e889a2b0f8ff2905dafb3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Icons/weaken.png"
-dest_files=["res://.godot/imported/weaken.png-696e9ebdae5fcba4fc3f31b673db4a84.ctex"]
+source_file="res://Items/bullet.png"
+dest_files=["res://.godot/imported/bullet.png-00529a014c5e889a2b0f8ff2905dafb3.ctex"]
 
 [params]
 
