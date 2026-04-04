@@ -598,7 +598,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 		for cond_id in cond_ids:
 			var instance = conditions[cond_id]
 			var cond_res = instance.condition
-			var icon_tex = cond_res.get("icon") if "icon" in cond_res else null
+			var icon_tex = cond_res.icon if cond_res else null
 			var tex_rect = TextureRect.new()
 			tex_rect.custom_minimum_size = COND_ICON_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -619,7 +619,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 		var cond_id = cond_ids[i]
 		var instance = conditions[cond_id]
 		var cond_res = instance.condition
-		var display_name = cond_res.get("display_name") if "display_name" in cond_res else cond_id
+		var display_name = cond_res.display_name if cond_res and cond_res.display_name else cond_id
 		var tip = display_name
 		if instance.stacks > 1:
 			tip += " x%d" % instance.stacks
