@@ -2454,7 +2454,7 @@
 	"description": "A classic red potion that knits wounds and mends flesh upon consumption.",
 	"base_width": 2.5,
 	"base_height": 5.0,
-	"sprite_path": "res://Items/potion_healing.png",
+	"sprite_path": "res://Items/potion_of_healing.png",
 	"weight": 0.5,
 	"cost": 50.0,
 	"use_ability": "heal",
@@ -2865,6 +2865,8 @@
 	"blade_width": 2.0,
 	"balance_point": 0.5,
 	"sprite_path": "res://Items/Shortbow.png",
+	"projectile_texture_path": "res://Items/Arrow.png",
+	"ammo_type": "arrow",
 	"weight": 2.0,
 	"cost": 25.0,
 	"equip_slot": "Main Hand",
@@ -2877,7 +2879,7 @@
 	"range": 5.0,
 	"satiety": 0.0,
 	"interact_options": ["Drop", "Sheathe"],
-	"primary_damage_type": "piercing",
+	"primary_damage_type": "ranged_arrow",
 	"max_health": 20.0,
 	"current_health": 20.0,
 	"walkability": 1.0,
@@ -2915,6 +2917,8 @@
 	"blade_width": 3.0,
 	"balance_point": 0.4,
 	"sprite_path": "res://Items/pistol.png",
+	"projectile_texture_path": "res://Items/bullet.png",
+	"ammo_type": "bullet",
 	"weight": 2.0,
 	"cost": 50.0,
 	"equip_slot": "Main Hand",
@@ -2927,7 +2931,7 @@
 	"range": 4.0,
 	"satiety": 0.0,
 	"interact_options": ["Drop", "Sheathe"],
-	"primary_damage_type": "piercing",
+	"primary_damage_type": "ranged_bullet",
 	"max_health": 30.0,
 	"current_health": 30.0,
 	"walkability": 1.0,
@@ -2953,6 +2957,40 @@
 	"restricted_item_type": null,
 	"resources": {
 	  "metal": 5
+	}
+  },
+  {
+	"id": "arrow",
+	"type": "item",
+	"display_name": "Arrow",
+	"description": "A simple wooden arrow with an iron tip.",
+	"base_width": 1.0,
+	"base_height": 8.0,
+	"sprite_path": "res://Items/Arrow.png",
+	"weight": 0.1,
+	"cost": 1.0,
+	"is_stackable": 1.0,
+	"max_stack_size": 20,
+	"num_stacks": 1,
+	"traits": {
+	  "Ammunition": 1
+	}
+  },
+  {
+	"id": "bullet",
+	"type": "item",
+	"display_name": "Bullet",
+	"description": "A lead bullet for firearms.",
+	"base_width": 1.0,
+	"base_height": 1.0,
+	"sprite_path": "res://Items/bullet.png",
+	"weight": 0.05,
+	"cost": 2.0,
+	"is_stackable": 1.0,
+	"max_stack_size": 20,
+	"num_stacks": 1,
+	"traits": {
+	  "Ammunition": 1
 	}
   }
 ]
