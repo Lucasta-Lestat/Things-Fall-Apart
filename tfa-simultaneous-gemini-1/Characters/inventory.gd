@@ -28,6 +28,18 @@ func _ready() -> void:
 # ===== INVENTORY MANAGEMENT =====
 
 func add_item(item_data: Dictionary) -> bool:
+	# Try to stack with an existing item of the same id
+	if item_data.get("is_stackable", false):
+		var item_id = item_data.get("id", "")
+		var max_stack = int(item_data.get("max_stack_size", 20))
+		for i in range(items.size()):
+			if items[i].get("id", "") == item_id:
+				var current_stacks = int(items[i].get("num_stacks", 1))
+				if current_stacks < max_stack:
+					items[i]["num_stacks"] = current_stacks + 1
+					emit_signal("item_added", item_data)
+					return true
+
 	if items.size() >= max_slots:
 		push_warning("Inventory full!")
 		return false
@@ -42,6 +54,13 @@ func remove_item(index: int) -> Dictionary:
 		return {}
 
 	var item = items[index]
+	# Decrement stack instead of removing if stacked
+	var stacks = int(item.get("num_stacks", 1))
+	if stacks > 1:
+		items[index]["num_stacks"] = stacks - 1
+		emit_signal("item_removed", item)
+		return item
+
 	items.remove_at(index)
 	emit_signal("item_removed", item)
 	return item

@@ -1215,7 +1215,7 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 			action_queue.queue_attack(mouse_pos)
 		else:
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			attack()
+			attack(hand_str)
 			
 	elif item is AbilityShape:
 		# Ability Logic — always face the target

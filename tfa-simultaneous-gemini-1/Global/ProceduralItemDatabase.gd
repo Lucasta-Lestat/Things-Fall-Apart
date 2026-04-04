@@ -76,7 +76,7 @@ func _load_items_database() -> bool:
 
 func _parse_flat_item_list(item_list: Array) -> void:
 	"""Sort a flat array of items into weapons, equipment, and general items by type."""
-	var weapon_types = ["sword", "longsword", "axe", "dagger", "spear", "mace", "bow", "weapon", "pistol", "club", "hammer", "staff", "glaive", "pike"]
+	var weapon_types = ["sword", "longsword", "axe", "dagger", "spear", "mace", "bow", "weapon", "pistol", "gun", "club", "hammer", "staff", "glaive", "pike"]
 	var equipment_types = ["armor", "helmet", "shield", "boots", "gloves", "ring", "amulet", "cloak", "belt", "hood", "cape", "backpack", "pants", "leggings", "greaves", "breastplate"]
 	for item_data in item_list:
 		var item_name = item_data.get("display_name", item_data.get("name", ""))
