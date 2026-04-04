@@ -553,7 +553,7 @@ func _refresh_condition_display() -> void:
 	for cond_id in condition_manager.conditions:
 		var instance = condition_manager.conditions[cond_id]
 		var cond_res = instance.condition
-		var icon_tex = cond_res.get("icon") if "icon" in cond_res else null
+		var icon_tex = cond_res.icon if cond_res else null
 		var tex_rect = TextureRect.new()
 		tex_rect.custom_minimum_size = COND_DISPLAY_ICON_SIZE
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
