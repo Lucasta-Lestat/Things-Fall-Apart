@@ -101,9 +101,45 @@ enum HairStyle {
 	COMBOVER,       # Side-swept comb over
 	POMPADOUR,      # High volume front swept back
 	BUZZCUT,        # Very short all over
-	MOHAWK          # Strip down the middle
+	MOHAWK,         # Strip down the middle
+	LONG,           # Long hair extending past back of head
+	BRAIDS,         # Two braids running along left and right sides
+	BUN,            # Hair gathered in a bun at the back
+	PIGTAILS,       # Two small bunches on left and right sides
+	MANE            # Mane running along spine (for horses/quadrupeds)
 }
 var hair_style: HairStyle = HairStyle.FULL
+
+enum HeadShape {
+	HUMANOID,    # Default oval
+	ORCISH,      # Wider, squarer jaw + tusks
+	DRACONIC,    # Elongated snout, tapering forward
+	CANINE,      # Animal head with short snout
+	EQUINE       # Long narrow head (horse)
+}
+var head_shape: HeadShape = HeadShape.HUMANOID
+var head_features: Array = []  # e.g. ["elf_ears", "animal_ears"]
+
+# Head feature nodes (created by _create_racial_features)
+var head_features_node: Node2D = null
+
+enum BodyType {
+	BIPEDAL,     # Default (2 legs, 2 arms)
+	QUADRUPED    # 4 legs, no arms (unless has_arms), elongated body, tail
+}
+var body_type: BodyType = BodyType.BIPEDAL
+var body_length: float = 0.0       # Front-to-back length for quadrupeds
+var has_tail: bool = false
+var tail_length: float = 0.0
+var has_arms: bool = true          # Quadrupeds can have arms (centaur)
+
+# Quadruped-specific body parts
+var front_left_leg: Line2D = null
+var front_right_leg: Line2D = null
+var tail: Line2D = null
+var tail_swing_time: float = 0.0
+var tail_swing_speed: float = 4.0  # Faster when moving
+var tail_idle_speed: float = 1.5
 # Inventory and weapons (using new shape-based system)
 var inventory: Inventory
 var current_main_hand_item: Node2D = null
@@ -113,7 +149,7 @@ var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
 var unarmed_strike_damage = 1
 # Attack system
-var attack_animator: AttackAnimator
+@onready var attack_animator: AttackAnimator = $AttackAnimator
 
 # Movement
 var target_position: Vector2
@@ -484,11 +520,8 @@ func _setup_equipment_slots() -> void:
 	add_child(head_slot)
 
 func _setup_attack_system() -> void:
-	attack_animator = AttackAnimator.new()
-	attack_animator.name = "AttackAnimator"
-	add_child(attack_animator)
-	
-	# Connect attack signals
+	# AttackAnimator is now a scene child node (see ProceduralCharacter.tscn)
+	# Just connect signals here
 	attack_animator.attack_hit_frame.connect(_on_attack_hit)
 	attack_animator.attack_finished.connect(_on_attack_finished)
 
@@ -518,18 +551,27 @@ func _update_collision_shape() -> void:
 		collision_shape.shape.points = _get_body_collision_points()
 
 func _get_body_collision_points() -> PackedVector2Array:
-	"""Get the local-space collision polygon points matching body hitbox"""
 	var half_width = body_width / 2
-	var top = -head_length * 0.35
-	var bottom = shoulder_y_offset + leg_length
-	
-	# Return points in clockwise or counter-clockwise order
-	return PackedVector2Array([
-		Vector2(-half_width, top),      # top-left
-		Vector2(half_width, top),       # top-right
-		Vector2(half_width, bottom),    # bottom-right
-		Vector2(-half_width, bottom)    # bottom-left
-	])
+
+	if body_type == BodyType.QUADRUPED:
+		# Elongated body collision for quadrupeds
+		var front = -body_length * 0.5
+		var rear = body_length * 0.5
+		return PackedVector2Array([
+			Vector2(-half_width, front),
+			Vector2(half_width, front),
+			Vector2(half_width, rear),
+			Vector2(-half_width, rear)
+		])
+	else:
+		var top = -head_length * 0.35
+		var bottom = shoulder_y_offset + leg_length
+		return PackedVector2Array([
+			Vector2(-half_width, top),
+			Vector2(half_width, top),
+			Vector2(half_width, bottom),
+			Vector2(-half_width, bottom)
+		])
 
 
 
@@ -709,6 +751,10 @@ func load_from_data(data: Dictionary) -> void:
 		hair_color = Color.html(data["hair_color"])
 	if data.has("hair_style"):
 		hair_style = _parse_hair_style(data["hair_style"])
+	if data.has("head_shape"):
+		head_shape = _parse_head_shape(data["head_shape"])
+	if data.has("head_features"):
+		head_features = data["head_features"]
 	if data.has("faction"):
 		faction_id = data["faction"]
 	
@@ -791,6 +837,21 @@ func load_from_data(data: Dictionary) -> void:
 	
 	_update_colors()
 
+func _parse_head_shape(shape_name: String) -> HeadShape:
+	match shape_name.to_lower():
+		"humanoid", "default":
+			return HeadShape.HUMANOID
+		"orcish", "orc":
+			return HeadShape.ORCISH
+		"draconic", "dragon":
+			return HeadShape.DRACONIC
+		"canine", "wolf", "dog":
+			return HeadShape.CANINE
+		"equine", "horse":
+			return HeadShape.EQUINE
+		_:
+			return HeadShape.HUMANOID
+
 func _parse_hair_style(style_name: String) -> HairStyle:
 	match style_name.to_lower():
 		"none", "bald":
@@ -807,59 +868,397 @@ func _parse_hair_style(style_name: String) -> HairStyle:
 			return HairStyle.BUZZCUT
 		"mohawk":
 			return HairStyle.MOHAWK
+		"long":
+			return HairStyle.LONG
+		"braids":
+			return HairStyle.BRAIDS
+		"bun":
+			return HairStyle.BUN
+		"pigtails":
+			return HairStyle.PIGTAILS
+		"mane":
+			return HairStyle.MANE
 		_:
 			return HairStyle.FULL
 
 func _create_body_parts() -> void:
+	if body_type == BodyType.QUADRUPED:
+		_create_quadruped_body()
+	else:
+		_create_bipedal_body()
+
+	# Create hair based on style
+	_create_hair()
+
+	# Create head based on race head shape
+	_create_head_by_shape()
+
+	# Create racial features (ears, tusks, etc.)
+	_create_racial_features()
+
+	# Create tail if applicable
+	if has_tail and tail_length > 0:
+		_create_tail()
+
+func _create_bipedal_body() -> void:
 	# Create legs first (behind everything else)
 	left_leg = _create_leg("LeftLeg")
 	left_leg.z_index = -3
 	add_child(left_leg)
-	
+
 	right_leg = _create_leg("RightLeg")
 	right_leg.z_index = -3
 	add_child(right_leg)
-	
+
 	# Create arms (behind body)
 	left_arm = _create_arm("LeftArm")
 	left_arm.z_index = -2
 	add_child(left_arm)
-	
+
 	right_arm = _create_arm("RightArm")
 	right_arm.z_index = -2
 	add_child(right_arm)
-	
+
 	# Create body (horizontal capsule for top-down view - shoulders)
 	body = Line2D.new()
 	body.name = "Body"
-	body.width = body_height  # Height becomes the "thickness" in top-down
-	body.default_color = skin_color  # Same color as head - uniform body color
+	body.width = body_height
+	body.default_color = skin_color
 	body.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	body.end_cap_mode = Line2D.LINE_CAP_ROUND
-	body.z_index = -1  # Behind head
+	body.z_index = -1
 	add_child(body)
-	
-	# Body is a horizontal line (left shoulder to right shoulder), positioned behind head
+
 	body.add_point(Vector2(-body_width / 2, shoulder_y_offset))
 	body.add_point(Vector2(body_width / 2, shoulder_y_offset))
-	
-	# Create hair based on style
-	_create_hair()
-	
-	# Create head (oval shape - vertical line with width for left-right dimension)
+
+func _create_quadruped_body() -> void:
+	# Quadruped: elongated body running front-to-back (-Y to +Y)
+	# Rear legs (reuse left_leg/right_leg for compatibility)
+	var rear_y = body_length * 0.4  # Rear hips position
+	left_leg = _create_quad_leg("RearLeftLeg", -leg_spacing, rear_y)
+	left_leg.z_index = -3
+	add_child(left_leg)
+
+	right_leg = _create_quad_leg("RearRightLeg", leg_spacing, rear_y)
+	right_leg.z_index = -3
+	add_child(right_leg)
+
+	# Front legs
+	var front_y = -body_length * 0.35  # Front shoulder position
+	front_left_leg = _create_quad_leg("FrontLeftLeg", -leg_spacing, front_y)
+	front_left_leg.z_index = -3
+	add_child(front_left_leg)
+
+	front_right_leg = _create_quad_leg("FrontRightLeg", leg_spacing, front_y)
+	front_right_leg.z_index = -3
+	add_child(front_right_leg)
+
+	# Create arms only if this quadruped has arms (e.g. centaur)
+	if has_arms:
+		left_arm = _create_arm("LeftArm")
+		left_arm.z_index = -2
+		add_child(left_arm)
+
+		right_arm = _create_arm("RightArm")
+		right_arm.z_index = -2
+		add_child(right_arm)
+
+	# Quadruped body: vertical line from front to back
+	body = Line2D.new()
+	body.name = "Body"
+	body.width = body_width  # Left-right width of the body
+	body.default_color = skin_color
+	body.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	body.end_cap_mode = Line2D.LINE_CAP_ROUND
+	body.z_index = -1
+	add_child(body)
+
+	# Body runs front-to-back (vertical in top-down view)
+	body.add_point(Vector2(0, -body_length * 0.4))  # Front (head end)
+	body.add_point(Vector2(0, body_length * 0.45))   # Rear (tail end)
+
+func _create_quad_leg(leg_name: String, x_offset: float, hip_y: float) -> Line2D:
+	var leg = Line2D.new()
+	leg.name = leg_name
+	leg.default_color = skin_color
+	leg.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	leg.end_cap_mode = Line2D.LINE_CAP_ROUND
+	leg.width = leg_width
+	# Legs extend outward from the body
+	leg.add_point(Vector2(x_offset, hip_y))  # Hip
+	leg.add_point(Vector2(x_offset * 1.5, hip_y))  # Foot (extends outward)
+	return leg
+
+func _create_tail() -> void:
+	tail = Line2D.new()
+	tail.name = "Tail"
+	tail.default_color = skin_color
+	tail.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	tail.end_cap_mode = Line2D.LINE_CAP_ROUND
+	tail.z_index = -1  # Same level as body
+
+	# Width curve: tapers from base to tip
+	var curve = Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))    # Base: full width
+	curve.add_point(Vector2(0.3, 0.7))
+	curve.add_point(Vector2(0.6, 0.4))
+	curve.add_point(Vector2(1.0, 0.15))   # Tip: thin
+	tail.width_curve = curve
+	tail.width = leg_width * 1.2
+
+	add_child(tail)
+
+	# 5 points from base to tip, extending backward (+Y)
+	var tail_base_y = body_length * 0.45 if body_type == BodyType.QUADRUPED else shoulder_y_offset + leg_length
+	for i in range(5):
+		var t = float(i) / 4.0
+		tail.add_point(Vector2(0, tail_base_y + t * tail_length))
+
+func _create_head_by_shape() -> void:
+	match head_shape:
+		HeadShape.HUMANOID:
+			_create_humanoid_head()
+		HeadShape.ORCISH:
+			_create_orcish_head()
+		HeadShape.DRACONIC:
+			_create_draconic_head()
+		HeadShape.CANINE:
+			_create_canine_head()
+		HeadShape.EQUINE:
+			_create_equine_head()
+		_:
+			_create_humanoid_head()
+
+func _create_humanoid_head() -> void:
+	# Default oval head (existing code)
 	head = Line2D.new()
 	head.name = "Head"
-	head.width = head_width  # Width of the oval (left-right)
+	head.width = head_width
 	head.default_color = skin_color
 	head.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	head.end_cap_mode = Line2D.LINE_CAP_ROUND
-	head.z_index = 1  # On top of hair
+	head.z_index = 1
 	add_child(head)
-	
-	# Head is an oval - line goes front to back, width gives left-right dimension
-	# Negative Y = front (face), Positive Y = back of head
 	head.add_point(Vector2(0, -head_length * 0.35))  # Front of head (face)
-	head.add_point(Vector2(0, head_length * 0.25))   # Back of head (covered by hair)
+	head.add_point(Vector2(0, head_length * 0.25))   # Back of head
+
+func _create_orcish_head() -> void:
+	# Wider, squarer jaw with box cap at the front
+	head = Line2D.new()
+	head.name = "Head"
+	head.width = head_width + 4  # Wider than humanoid
+	head.default_color = skin_color
+	head.begin_cap_mode = Line2D.LINE_CAP_BOX  # Square jaw
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND   # Round back
+	head.z_index = 1
+	add_child(head)
+	head.add_point(Vector2(0, -head_length * 0.35))
+	head.add_point(Vector2(0, head_length * 0.25))
+
+	# Tusks - two small prongs extending forward from the jaw
+	var tusk_l = Line2D.new()
+	tusk_l.name = "TuskL"
+	tusk_l.width = 2.5
+	tusk_l.default_color = Color("#FFFFF0")  # Ivory/bone color
+	tusk_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	tusk_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	tusk_l.z_index = 2  # Above head
+	add_child(tusk_l)
+	tusk_l.add_point(Vector2(-head_width * 0.25, -head_length * 0.25))
+	tusk_l.add_point(Vector2(-head_width * 0.2, -head_length * 0.55))
+
+	var tusk_r = Line2D.new()
+	tusk_r.name = "TuskR"
+	tusk_r.width = 2.5
+	tusk_r.default_color = Color("#FFFFF0")
+	tusk_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	tusk_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	tusk_r.z_index = 2
+	add_child(tusk_r)
+	tusk_r.add_point(Vector2(head_width * 0.25, -head_length * 0.25))
+	tusk_r.add_point(Vector2(head_width * 0.2, -head_length * 0.55))
+
+func _create_draconic_head() -> void:
+	# Elongated snout head with width_curve tapering from back to front
+	head = Line2D.new()
+	head.name = "Head"
+	head.width = head_width
+	head.default_color = skin_color
+	head.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head.z_index = 1
+	add_child(head)
+
+	# Width curve tapers from full at back to narrow at snout
+	var curve = Curve.new()
+	curve.add_point(Vector2(0.0, 0.4))    # Snout tip: narrow
+	curve.add_point(Vector2(0.3, 0.65))   # Mid-snout
+	curve.add_point(Vector2(0.6, 0.9))    # Jaw area: widening
+	curve.add_point(Vector2(1.0, 1.0))    # Back of head: full width
+	head.width_curve = curve
+
+	# Longer head for draconic snout
+	head.add_point(Vector2(0, -head_length * 0.55))  # Snout tip (further forward)
+	head.add_point(Vector2(0, head_length * 0.25))   # Back of head
+
+func _create_canine_head() -> void:
+	# Animal head with a separate snout extending forward
+	head = Line2D.new()
+	head.name = "Head"
+	head.width = head_width
+	head.default_color = skin_color
+	head.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head.z_index = 1
+	add_child(head)
+	head.add_point(Vector2(0, -head_length * 0.2))
+	head.add_point(Vector2(0, head_length * 0.25))
+
+	# Snout extending forward from the front of the head
+	var snout = Line2D.new()
+	snout.name = "Snout"
+	snout.width = head_width * 0.5  # Narrower than head
+	snout.default_color = skin_color.darkened(0.05)
+	snout.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	snout.end_cap_mode = Line2D.LINE_CAP_ROUND
+	snout.z_index = 2  # Above head
+	add_child(snout)
+	snout.add_point(Vector2(0, -head_length * 0.15))
+	snout.add_point(Vector2(0, -head_length * 0.55))  # Forward extending snout
+
+func _create_equine_head() -> void:
+	# Very elongated narrow horse head
+	head = Line2D.new()
+	head.name = "Head"
+	head.width = head_width
+	head.default_color = skin_color
+	head.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head.z_index = 1
+	add_child(head)
+
+	# Width curve: narrower at front, wider at back (skull)
+	var curve = Curve.new()
+	curve.add_point(Vector2(0.0, 0.45))   # Nose: narrow
+	curve.add_point(Vector2(0.4, 0.6))    # Mid-face
+	curve.add_point(Vector2(0.7, 0.85))   # Cheekbones
+	curve.add_point(Vector2(1.0, 1.0))    # Back of skull: full
+	head.width_curve = curve
+
+	# Very elongated from snout to back
+	head.add_point(Vector2(0, -head_length * 0.6))  # Long snout
+	head.add_point(Vector2(0, head_length * 0.25))   # Back of skull
+
+func _create_racial_features() -> void:
+	# Create a container for head features that will rotate with the head
+	if head_features_node:
+		head_features_node.queue_free()
+	head_features_node = Node2D.new()
+	head_features_node.name = "HeadFeatures"
+	head_features_node.z_index = 2  # Above head
+	add_child(head_features_node)
+
+	for feature in head_features:
+		match feature:
+			"elf_ears":
+				_create_elf_ears()
+			"animal_ears":
+				_create_animal_ears()
+			"round_ears":
+				_create_round_ears()
+			"horse_ears":
+				_create_horse_ears()
+
+func _create_elf_ears() -> void:
+	# Pointed ears extending outward and slightly backward from sides of head
+	var ear_l = Line2D.new()
+	ear_l.name = "ElfEarL"
+	ear_l.width = 3.0
+	ear_l.default_color = skin_color
+	ear_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_l)
+	# Left ear: base at side of head, extends outward and backward
+	ear_l.add_point(Vector2(-head_width * 0.45, 0))
+	ear_l.add_point(Vector2(-head_width * 0.8, head_length * 0.15))
+
+	var ear_r = Line2D.new()
+	ear_r.name = "ElfEarR"
+	ear_r.width = 3.0
+	ear_r.default_color = skin_color
+	ear_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_r)
+	ear_r.add_point(Vector2(head_width * 0.45, 0))
+	ear_r.add_point(Vector2(head_width * 0.8, head_length * 0.15))
+
+func _create_animal_ears() -> void:
+	# Triangular ears pointing upward from top of head (wolf, etc.)
+	var ear_l = Line2D.new()
+	ear_l.name = "AnimalEarL"
+	ear_l.width = 4.0
+	ear_l.default_color = skin_color
+	ear_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_l)
+	ear_l.add_point(Vector2(-head_width * 0.35, -head_length * 0.1))
+	ear_l.add_point(Vector2(-head_width * 0.55, -head_length * 0.45))
+
+	var ear_r = Line2D.new()
+	ear_r.name = "AnimalEarR"
+	ear_r.width = 4.0
+	ear_r.default_color = skin_color
+	ear_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_r)
+	ear_r.add_point(Vector2(head_width * 0.35, -head_length * 0.1))
+	ear_r.add_point(Vector2(head_width * 0.55, -head_length * 0.45))
+
+func _create_round_ears() -> void:
+	# Small round ears on left/right of head (bear, rat)
+	var ear_l = Line2D.new()
+	ear_l.name = "RoundEarL"
+	ear_l.width = 5.0
+	ear_l.default_color = skin_color
+	ear_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_l)
+	# Short line creates a round bump on each side
+	ear_l.add_point(Vector2(-head_width * 0.4, -head_length * 0.15))
+	ear_l.add_point(Vector2(-head_width * 0.5, -head_length * 0.25))
+
+	var ear_r = Line2D.new()
+	ear_r.name = "RoundEarR"
+	ear_r.width = 5.0
+	ear_r.default_color = skin_color
+	ear_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_r)
+	ear_r.add_point(Vector2(head_width * 0.4, -head_length * 0.15))
+	ear_r.add_point(Vector2(head_width * 0.5, -head_length * 0.25))
+
+func _create_horse_ears() -> void:
+	# Small forward-pointing ears (horse)
+	var ear_l = Line2D.new()
+	ear_l.name = "HorseEarL"
+	ear_l.width = 2.5
+	ear_l.default_color = skin_color
+	ear_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_l)
+	ear_l.add_point(Vector2(-head_width * 0.3, -head_length * 0.05))
+	ear_l.add_point(Vector2(-head_width * 0.35, -head_length * 0.35))
+
+	var ear_r = Line2D.new()
+	ear_r.name = "HorseEarR"
+	ear_r.width = 2.5
+	ear_r.default_color = skin_color
+	ear_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	ear_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	head_features_node.add_child(ear_r)
+	ear_r.add_point(Vector2(head_width * 0.3, -head_length * 0.05))
+	ear_r.add_point(Vector2(head_width * 0.35, -head_length * 0.35))
 
 func _create_hair() -> void:
 	# Remove existing hair if any
@@ -888,6 +1287,16 @@ func _create_hair() -> void:
 			_create_buzzcut_hair()
 		HairStyle.MOHAWK:
 			_create_mohawk_hair()
+		HairStyle.LONG:
+			_create_long_hair()
+		HairStyle.BRAIDS:
+			_create_braids_hair()
+		HairStyle.BUN:
+			_create_bun_hair()
+		HairStyle.PIGTAILS:
+			_create_pigtails_hair()
+		HairStyle.MANE:
+			_create_mane_hair()
 
 func _create_horseshoe_hair() -> void:
 	# Original hair style - receding/balding with hair on sides and back
@@ -1008,6 +1417,139 @@ func _create_mohawk_hair() -> void:
 	hair.add_point(Vector2(0, -head_length * 0.45))  # Front spike
 	hair.add_point(Vector2(0, head_length * 0.35))   # Back
 
+func _create_long_hair() -> void:
+	# Long hair - extends well past the back of the head into shoulder area
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 4
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0  # Behind head
+	add_child(hair)
+
+	# Extends from near front of head well past the back into shoulder area
+	hair.add_point(Vector2(0, -head_length * 0.2))
+	hair.add_point(Vector2(0, head_length * 0.5))
+	hair.add_point(Vector2(0, shoulder_y_offset + 6))  # Past shoulders
+
+func _create_braids_hair() -> void:
+	# Two braids running along the left and right sides of the head
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.3  # Narrow braid
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0
+	add_child(hair)
+
+	# Left braid
+	hair.add_point(Vector2(-head_width * 0.35, -head_length * 0.1))
+	hair.add_point(Vector2(-head_width * 0.4, head_length * 0.3))
+	hair.add_point(Vector2(-head_width * 0.35, shoulder_y_offset + 4))
+
+	# Right braid
+	var hair_right = Line2D.new()
+	hair_right.name = "HairBraidR"
+	hair_right.width = head_width * 0.3
+	hair_right.default_color = hair_color
+	hair_right.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_right.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_right.z_index = 0
+	add_child(hair_right)
+
+	hair_right.add_point(Vector2(head_width * 0.35, -head_length * 0.1))
+	hair_right.add_point(Vector2(head_width * 0.4, head_length * 0.3))
+	hair_right.add_point(Vector2(head_width * 0.35, shoulder_y_offset + 4))
+
+func _create_bun_hair() -> void:
+	# Hair bun - short extra-wide blob at the back of the head
+	# Back coverage first
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 2
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0
+	add_child(hair)
+
+	# Covers the back portion of the head
+	hair.add_point(Vector2(0, -head_length * 0.1))
+	hair.add_point(Vector2(0, head_length * 0.25))
+
+	# The bun itself - a thick round blob at the back
+	var bun = Line2D.new()
+	bun.name = "HairBun"
+	bun.width = head_width * 0.6
+	bun.default_color = hair_color.darkened(0.05)
+	bun.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	bun.end_cap_mode = Line2D.LINE_CAP_ROUND
+	bun.z_index = 0
+	add_child(bun)
+
+	# Small thick line creates a round bump at the back
+	bun.add_point(Vector2(0, head_length * 0.3))
+	bun.add_point(Vector2(0, head_length * 0.45))
+
+func _create_pigtails_hair() -> void:
+	# Two small bunches on left and right sides of the head
+	# Main hair coverage on top
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 2
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 0
+	add_child(hair)
+
+	hair.add_point(Vector2(0, -head_length * 0.25))
+	hair.add_point(Vector2(0, head_length * 0.15))
+
+	# Left pigtail - small round protrusion
+	var pigtail_l = Line2D.new()
+	pigtail_l.name = "HairPigtailL"
+	pigtail_l.width = head_width * 0.35
+	pigtail_l.default_color = hair_color
+	pigtail_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	pigtail_l.end_cap_mode = Line2D.LINE_CAP_ROUND
+	pigtail_l.z_index = 0
+	add_child(pigtail_l)
+
+	pigtail_l.add_point(Vector2(-head_width * 0.4, -head_length * 0.05))
+	pigtail_l.add_point(Vector2(-head_width * 0.6, head_length * 0.15))
+
+	# Right pigtail
+	var pigtail_r = Line2D.new()
+	pigtail_r.name = "HairPigtailR"
+	pigtail_r.width = head_width * 0.35
+	pigtail_r.default_color = hair_color
+	pigtail_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	pigtail_r.end_cap_mode = Line2D.LINE_CAP_ROUND
+	pigtail_r.z_index = 0
+	add_child(pigtail_r)
+
+	pigtail_r.add_point(Vector2(head_width * 0.4, -head_length * 0.05))
+	pigtail_r.add_point(Vector2(head_width * 0.6, head_length * 0.15))
+
+func _create_mane_hair() -> void:
+	# Mane running along the spine/neck for quadrupeds (horses)
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.3  # Narrow strip along spine
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 1  # On top of body
+	add_child(hair)
+
+	# Runs from back of head down along spine
+	hair.add_point(Vector2(0, head_length * 0.2))
+	hair.add_point(Vector2(0, shoulder_y_offset))
+	hair.add_point(Vector2(0, shoulder_y_offset + 12))  # Extends down the body
+
 # Add this to your _update_colors function if you have one, or create it
 func _update_hair_colors() -> void:
 	if hair:
@@ -1015,14 +1557,16 @@ func _update_hair_colors() -> void:
 			hair.default_color = hair_color.darkened(0.2)
 		else:
 			hair.default_color = hair_color
-	
+
 	# Update any secondary hair components
-	var hair_back = get_node_or_null("HairBack")
-	if hair_back:
-		if hair_style == HairStyle.POMPADOUR:
-			hair_back.default_color = hair_color.darkened(0.1)
-		else:
-			hair_back.default_color = hair_color
+	for child in get_children():
+		if child is Line2D and child.name.begins_with("Hair") and child != hair:
+			if child.name == "HairBack" and hair_style == HairStyle.POMPADOUR:
+				child.default_color = hair_color.darkened(0.1)
+			elif child.name == "HairBun":
+				child.default_color = hair_color.darkened(0.05)
+			else:
+				child.default_color = hair_color
 func _create_leg(leg_name: String) -> Line2D:
 	var leg = Line2D.new()
 	leg.name = leg_name
@@ -1059,13 +1603,20 @@ func _create_arm(arm_name: String) -> Line2D:
 	return arm
 
 func _initialize_arms() -> void:
+	# Skip arm initialization for armless quadrupeds
+	if body_type == BodyType.QUADRUPED and not has_arms:
+		return
+
 	# Initialize joint arrays
 	left_arm_joints.clear()
 	right_arm_joints.clear()
-	
+
+	# For centaur-type quadrupeds, shoulders are at the front of the body
+	var shoulder_base_y = -body_length * 0.35 if (body_type == BodyType.QUADRUPED and has_arms) else shoulder_y_offset
+
 	# Shoulders are at the BACK of the body (positive Y = behind)
 	# Left arm extends to the LEFT (negative X)
-	var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset)
+	var left_shoulder = Vector2(-body_width / 2, shoulder_base_y)
 	left_arm_joints.append(left_shoulder)
 	var pos = left_shoulder
 	for length in ARM_SEGMENT_LENGTHS:
@@ -1074,7 +1625,7 @@ func _initialize_arms() -> void:
 	left_arm_target = left_arm_joints[-1]
 	
 	# Right arm extends to the RIGHT (positive X)
-	var right_shoulder = Vector2(body_width / 2, shoulder_y_offset)
+	var right_shoulder = Vector2(body_width / 2, shoulder_base_y)
 	right_arm_joints.append(right_shoulder)
 	pos = right_shoulder
 	for length in ARM_SEGMENT_LENGTHS:
@@ -1086,7 +1637,7 @@ func _initialize_arms() -> void:
 
 func _update_colors() -> void:
 	if body:
-		body.default_color = skin_color  # Same as head
+		body.default_color = skin_color
 	if head:
 		head.default_color = skin_color
 	if hair:
@@ -1099,6 +1650,21 @@ func _update_colors() -> void:
 		left_leg.default_color = skin_color
 	if right_leg:
 		right_leg.default_color = skin_color
+	if front_left_leg:
+		front_left_leg.default_color = skin_color
+	if front_right_leg:
+		front_right_leg.default_color = skin_color
+	if tail:
+		tail.default_color = skin_color
+	# Update snout color if present
+	var snout = get_node_or_null("Snout")
+	if snout:
+		snout.default_color = skin_color.darkened(0.05)
+	# Update head features (ears) color
+	if head_features_node:
+		for child in head_features_node.get_children():
+			if child is Line2D and not child.name.begins_with("Tusk"):
+				child.default_color = skin_color
 
 func _process(delta: float) -> void:
 	_handle_input()
@@ -1146,66 +1712,144 @@ func _update_body_rotation() -> void:
 	var body_rotation = 0.0
 	if attack_animator and attack_animator.is_attacking:
 		body_rotation = attack_animator.get_body_rotation()
-	
-	# Update body line (shoulders)
-	if body:
-		var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset).rotated(body_rotation)
-		var right_shoulder = Vector2(body_width / 2, shoulder_y_offset).rotated(body_rotation)
-		body.clear_points()
-		body.add_point(left_shoulder)
-		body.add_point(right_shoulder)
-	
+
+	if body_type == BodyType.QUADRUPED:
+		# Quadruped body doesn't rotate much during attacks
+		# Body line runs front-to-back, so rotation is applied differently
+		if body:
+			var front = Vector2(0, -body_length * 0.4).rotated(body_rotation * 0.3)
+			var rear = Vector2(0, body_length * 0.45).rotated(body_rotation * 0.1)
+			body.clear_points()
+			body.add_point(front)
+			body.add_point(rear)
+	else:
+		# Bipedal: update body line (shoulders)
+		if body:
+			var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset).rotated(body_rotation)
+			var right_shoulder = Vector2(body_width / 2, shoulder_y_offset).rotated(body_rotation)
+			body.clear_points()
+			body.add_point(left_shoulder)
+			body.add_point(right_shoulder)
+
 	# Update head position/rotation (head follows body slightly)
 	if head:
-		var head_rotation = body_rotation * 0.5  # Head follows less than body
+		var head_rotation = body_rotation * 0.5
 		head.rotation = head_rotation
-	
+
 	# Update hair to follow head
 	if hair:
 		hair.rotation = head.rotation if head else 0.0
 
+	# Update head features (ears, tusks) to follow head rotation
+	if head_features_node:
+		head_features_node.rotation = head.rotation if head else 0.0
+
+	# Update snout rotation for canine/equine heads
+	var snout = get_node_or_null("Snout")
+	if snout:
+		snout.rotation = head.rotation if head else 0.0
+
+	# Update tusk rotation for orcish heads
+	var tusk_l = get_node_or_null("TuskL")
+	var tusk_r = get_node_or_null("TuskR")
+	if tusk_l:
+		tusk_l.rotation = head.rotation if head else 0.0
+	if tusk_r:
+		tusk_r.rotation = head.rotation if head else 0.0
+
 func _update_leg_animation(delta: float) -> void:
+	if body_type == BodyType.QUADRUPED:
+		_update_quadruped_legs(delta)
+		_update_tail_animation(delta)
+	else:
+		_update_bipedal_legs(delta)
+
+func _update_bipedal_legs(delta: float) -> void:
 	if is_moving:
-		# Advance leg swing time while moving
 		leg_swing_time += delta * leg_swing_speed
 	else:
-		# Smoothly return to rest when stopped - wrap to nearest multiple of 2*PI first
-		# This prevents the stutter by finding the nearest rest position
 		var target_time = round(leg_swing_time / TAU) * TAU
 		leg_swing_time = lerpf(leg_swing_time, target_time, delta * 5.0)
-		# Snap when very close to avoid endless tiny movements
 		if abs(leg_swing_time - target_time) < 0.01:
 			leg_swing_time = target_time
-	
-	# Calculate swing offset using sine wave
+
 	var swing = sin(leg_swing_time) * leg_swing_amount
-	
-	# Update leg positions
-	# In top-down view: -Y is FORWARD (toward top of screen when character faces up)
-	# Legs should extend forward (-Y direction) from hips
 	var hip_y = shoulder_y_offset + 2
-	
-	# Calculate leg positions - feet go FORWARD (negative Y)
+
 	var left_hip = Vector2(-leg_spacing, hip_y)
-	var left_foot = Vector2(-leg_spacing + swing * 0.3, hip_y - leg_length + swing)  # -leg_length = forward
+	var left_foot = Vector2(-leg_spacing + swing * 0.3, hip_y - leg_length + swing)
 	var right_hip = Vector2(leg_spacing, hip_y)
-	var right_foot = Vector2(leg_spacing - swing * 0.3, hip_y - leg_length - swing)  # -leg_length = forward
-	
+	var right_foot = Vector2(leg_spacing - swing * 0.3, hip_y - leg_length - swing)
+
 	if left_leg:
 		left_leg.clear_points()
 		left_leg.add_point(left_hip)
 		left_leg.add_point(left_foot)
-	
+
 	if right_leg:
 		right_leg.clear_points()
 		right_leg.add_point(right_hip)
 		right_leg.add_point(right_foot)
-	
-	# Update leg equipment (pants and boots)
+
 	if legs_equipment:
 		legs_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
 	if feet_equipment:
 		feet_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
+
+func _update_quadruped_legs(delta: float) -> void:
+	if is_moving:
+		leg_swing_time += delta * leg_swing_speed
+	else:
+		var target_time = round(leg_swing_time / TAU) * TAU
+		leg_swing_time = lerpf(leg_swing_time, target_time, delta * 5.0)
+		if abs(leg_swing_time - target_time) < 0.01:
+			leg_swing_time = target_time
+
+	# Trot gait: diagonal pairs move together
+	var swing_a = sin(leg_swing_time) * leg_swing_amount
+	var swing_b = sin(leg_swing_time + PI) * leg_swing_amount
+
+	var front_y = -body_length * 0.35
+	var rear_y = body_length * 0.4
+
+	# Front-left + Rear-right move together (swing_a)
+	if front_left_leg:
+		front_left_leg.clear_points()
+		front_left_leg.add_point(Vector2(-leg_spacing, front_y))
+		front_left_leg.add_point(Vector2(-leg_spacing - leg_length * 0.5, front_y + swing_a))
+
+	if right_leg:  # Rear-right
+		right_leg.clear_points()
+		right_leg.add_point(Vector2(leg_spacing, rear_y))
+		right_leg.add_point(Vector2(leg_spacing + leg_length * 0.5, rear_y + swing_a))
+
+	# Front-right + Rear-left move together (swing_b)
+	if front_right_leg:
+		front_right_leg.clear_points()
+		front_right_leg.add_point(Vector2(leg_spacing, front_y))
+		front_right_leg.add_point(Vector2(leg_spacing + leg_length * 0.5, front_y + swing_b))
+
+	if left_leg:  # Rear-left
+		left_leg.clear_points()
+		left_leg.add_point(Vector2(-leg_spacing, rear_y))
+		left_leg.add_point(Vector2(-leg_spacing - leg_length * 0.5, rear_y + swing_b))
+
+func _update_tail_animation(delta: float) -> void:
+	if not tail or not has_tail:
+		return
+
+	# Tail wags faster when moving
+	var current_tail_speed = tail_swing_speed if is_moving else tail_idle_speed
+	tail_swing_time += delta * current_tail_speed
+
+	var tail_base_y = body_length * 0.45 if body_type == BodyType.QUADRUPED else shoulder_y_offset + leg_length
+	tail.clear_points()
+
+	for i in range(5):
+		var t = float(i) / 4.0
+		# Progressive lateral displacement creating a wave
+		var lateral = sin(tail_swing_time + t * 1.5) * (t * t * 6.0)
+		tail.add_point(Vector2(lateral, tail_base_y + t * tail_length))
 # Helper to distinguish Weapon vs Ability logic
 func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, paused: bool) -> void:
 	if item is WeaponShape:
@@ -1429,9 +2073,14 @@ func _update_movement(delta: float) -> void:
 			global_position += separation * min(1.0, delta * 10.0)
 
 func _update_arm_ik() -> void:
+	# Skip for armless quadrupeds
+	if body_type == BodyType.QUADRUPED and not has_arms:
+		return
+
 	# Shoulder positions - at the sides and toward the back
-	var left_shoulder = Vector2(-body_width / 2, shoulder_y_offset)
-	var right_shoulder = Vector2(body_width / 2, shoulder_y_offset)
+	var shoulder_base_y = -body_length * 0.35 if (body_type == BodyType.QUADRUPED and has_arms) else shoulder_y_offset
+	var left_shoulder = Vector2(-body_width / 2, shoulder_base_y)
+	var right_shoulder = Vector2(body_width / 2, shoulder_base_y)
 	var arm_length = ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]
 	
 	# Get attack animation offset and body rotation if attacking

@@ -52,14 +52,12 @@
 					"#D4D4D4"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"HORSESHOE",
-					"COMBOVER",
-					"POMPADOUR",
-					"BUZZCUT",
-					"MOHAWK"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "HORSESHOE", "COMBOVER", "BUZZCUT", "MOHAWK"],
+					"female": ["FULL", "LONG", "BRAIDS", "BUN", "PIGTAILS", "POMPADOUR"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -132,10 +130,12 @@
 					"#A0522D"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"COMBOVER"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "COMBOVER"],
+					"female": ["FULL", "LONG", "BRAIDS"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -209,9 +209,11 @@
 					"#880000"
 				],
 				"blood_color": "#556B2F",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -284,10 +286,12 @@
 					"#1A1A1A"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": ["elf_ears"],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR"],
+					"female": ["FULL", "LONG", "POMPADOUR", "BRAIDS"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -360,11 +364,12 @@
 					"#4A3728"
 				],
 				"blood_color": "#4A0000",
-				"hair_styles": [
-					"MOHAWK",
-					"BUZZCUT",
-					"NONE"
-				]
+				"head_shape": "ORCISH",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["MOHAWK", "BUZZCUT", "NONE"],
+					"female": ["MOHAWK", "BUZZCUT", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 7,
@@ -438,11 +443,12 @@
 					"#1A1A1A"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"HORSESHOE",
-					"BUZZCUT"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "HORSESHOE", "BUZZCUT"],
+					"female": ["FULL", "BRAIDS", "BUN"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -510,9 +516,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#00CED1",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -584,9 +592,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "DRACONIC",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -657,9 +667,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#6B8E23",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "DRACONIC",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -730,11 +742,12 @@
 					"#2F0000"
 				],
 				"blood_color": "#4A0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"MOHAWK"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "MOHAWK"],
+					"female": ["FULL", "POMPADOUR", "LONG"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 4,
@@ -805,10 +818,12 @@
 					"#C4A35A"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "NONE"],
+					"female": ["FULL", "LONG", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -883,11 +898,12 @@
 					"#2F2F2F"
 				],
 				"blood_color": "#4A0000",
-				"hair_styles": [
-					"MOHAWK",
-					"BUZZCUT",
-					"NONE"
-				]
+				"head_shape": "ORCISH",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["MOHAWK", "BUZZCUT", "NONE"],
+					"female": ["MOHAWK", "BUZZCUT", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 8,
@@ -957,9 +973,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "DRACONIC",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1021,10 +1039,12 @@
 					"#1A1A1A"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": ["animal_ears"],
+				"hair_styles": {
+					"male": ["FULL", "NONE"],
+					"female": ["FULL", "LONG", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1090,9 +1110,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#6B8E23",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1169,11 +1191,12 @@
 					"#006400"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "NONE"],
+					"female": ["FULL", "POMPADOUR", "LONG", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1243,9 +1266,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#ADFF2F",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1294,15 +1319,20 @@
 			},
 			"size": "Medium",
 			"body": {
+				"body_type": "quadruped",
 				"body_size_mod": 1.0,
-				"body_width": 20,
-				"body_height": 22,
+				"body_width": 16,
+				"body_height": 18,
+				"body_length": 30,
 				"head_width": 11,
 				"head_length": 10,
-				"shoulder_y_offset": 5,
-				"leg_length": 14,
+				"shoulder_y_offset": -10,
+				"leg_length": 12,
 				"leg_width": 3,
-				"leg_spacing": 12
+				"leg_spacing": 7,
+				"tail_length": 14,
+				"has_tail": true,
+				"has_arms": true
 			},
 			"appearance": {
 				"skin_colors": [
@@ -1317,11 +1347,12 @@
 					"#8B4513"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"MOHAWK"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "MOHAWK"],
+					"female": ["FULL", "LONG", "BRAIDS", "POMPADOUR"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1391,9 +1422,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#9370DB",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1468,10 +1501,12 @@
 					"#87CEEB"
 				],
 				"blood_color": "#FFD700",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR"],
+					"female": ["FULL", "POMPADOUR", "PIGTAILS"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 3,
@@ -1542,9 +1577,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#228B22",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1618,11 +1655,12 @@
 					"#4A0000"
 				],
 				"blood_color": "#4A0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"COMBOVER"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "COMBOVER"],
+					"female": ["FULL", "POMPADOUR", "LONG"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1692,9 +1730,11 @@
 				],
 				"hair_colors": [],
 				"blood_color": "#ADFF2F",
-				"hair_styles": [
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"any": ["NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 5,
@@ -1772,10 +1812,12 @@
 					"#C0C0C0"
 				],
 				"blood_color": "#8B0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": ["elf_ears"],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR"],
+					"female": ["FULL", "LONG", "POMPADOUR"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 4,
@@ -1858,11 +1900,12 @@
 					"#C0C0C0"
 				],
 				"blood_color": "#4A0080",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"NONE"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": ["elf_ears"],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "NONE"],
+					"female": ["FULL", "LONG", "POMPADOUR", "NONE"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 3,
@@ -1942,11 +1985,12 @@
 					"#F5F5F5"
 				],
 				"blood_color": "#4A0000",
-				"hair_styles": [
-					"FULL",
-					"POMPADOUR",
-					"COMBOVER"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["FULL", "POMPADOUR", "COMBOVER"],
+					"female": ["FULL", "POMPADOUR", "LONG"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 4,
@@ -2020,10 +2064,12 @@
 					"#1A1A1A"
 				],
 				"blood_color": "#556B2F",
-				"hair_styles": [
-					"NONE",
-					"MOHAWK"
-				]
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["NONE", "MOHAWK"],
+					"female": ["NONE", "MOHAWK"]
+				}
 			},
 			"stat_overrides": {
 				"crit_threshold": 8,
@@ -2037,6 +2083,292 @@
 			"passive_conditions": [
 				"regen"
 			]
+		},
+		{
+			"id": "wolf",
+			"name": "Wolf",
+			"icon": "Assets/Icons/Wolf.png",
+			"description": "A common predator of the forests and plains. Wolves hunt in packs and are feared for their intelligence and coordination.",
+			"cost": 0,
+			"features": [],
+			"ability_score_increases": {
+				"Dex": 10,
+				"Str": 5,
+				"Int": -20
+			},
+			"traits": {
+				"Pack Hunter": 2
+			},
+			"creature_type": "Beast",
+			"age": {
+				"base": 2,
+				"middle": 6,
+				"old": 10
+			},
+			"height": {
+				"male": 80,
+				"female": 73
+			},
+			"weight": {
+				"male": 40,
+				"female": 33
+			},
+			"size": "Medium",
+			"body": {
+				"body_type": "quadruped",
+				"body_size_mod": 0.9,
+				"body_width": 12,
+				"body_height": 10,
+				"body_length": 28,
+				"head_width": 9,
+				"head_length": 11,
+				"shoulder_y_offset": -10,
+				"leg_length": 8,
+				"leg_width": 2,
+				"leg_spacing": 5,
+				"tail_length": 18,
+				"has_tail": true,
+				"has_arms": false
+			},
+			"appearance": {
+				"head_shape": "CANINE",
+				"head_features": ["animal_ears"],
+				"skin_colors": [
+					"#808080",
+					"#A0A0A0",
+					"#4A4A4A",
+					"#C0C0C0"
+				],
+				"hair_colors": [],
+				"blood_color": "#8B0000",
+				"hair_styles": {
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 0,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 10,
+			"arm_length_bonus": 0,
+			"active_abilities": [],
+			"passive_conditions": []
+		},
+		{
+			"id": "bear",
+			"name": "Bear",
+			"icon": "Assets/Icons/Bear.png",
+			"description": "A massive woodland predator. Bears are solitary creatures of tremendous strength and resilience.",
+			"cost": 0,
+			"features": [],
+			"ability_score_increases": {
+				"Str": 25,
+				"Con": 20,
+				"Int": -25
+			},
+			"traits": {},
+			"creature_type": "Beast",
+			"age": {
+				"base": 3,
+				"middle": 12,
+				"old": 20
+			},
+			"height": {
+				"male": 120,
+				"female": 100
+			},
+			"weight": {
+				"male": 250,
+				"female": 200
+			},
+			"size": "Large",
+			"body": {
+				"body_type": "quadruped",
+				"body_size_mod": 1.4,
+				"body_width": 18,
+				"body_height": 14,
+				"body_length": 34,
+				"head_width": 13,
+				"head_length": 12,
+				"shoulder_y_offset": -12,
+				"leg_length": 8,
+				"leg_width": 4,
+				"leg_spacing": 7,
+				"tail_length": 6,
+				"has_tail": true,
+				"has_arms": false
+			},
+			"appearance": {
+				"head_shape": "CANINE",
+				"head_features": ["round_ears"],
+				"skin_colors": [
+					"#4A3728",
+					"#2F1F14",
+					"#8B7355",
+					"#1A1A1A"
+				],
+				"hair_colors": [],
+				"blood_color": "#8B0000",
+				"hair_styles": {
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 0,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 5,
+			"arm_length_bonus": 0,
+			"active_abilities": [],
+			"passive_conditions": []
+		},
+		{
+			"id": "horse",
+			"name": "Horse",
+			"icon": "Assets/Icons/Horse.png",
+			"description": "A noble steed. Horses are prized for their speed and endurance, serving as mounts for knights and messengers alike.",
+			"cost": 0,
+			"features": [],
+			"ability_score_increases": {
+				"Str": 15,
+				"Dex": 10,
+				"Int": -25
+			},
+			"traits": {},
+			"creature_type": "Beast",
+			"age": {
+				"base": 3,
+				"middle": 12,
+				"old": 25
+			},
+			"height": {
+				"male": 160,
+				"female": 150
+			},
+			"weight": {
+				"male": 500,
+				"female": 450
+			},
+			"size": "Large",
+			"body": {
+				"body_type": "quadruped",
+				"body_size_mod": 1.2,
+				"body_width": 14,
+				"body_height": 12,
+				"body_length": 32,
+				"head_width": 8,
+				"head_length": 14,
+				"shoulder_y_offset": -12,
+				"leg_length": 12,
+				"leg_width": 2,
+				"leg_spacing": 5,
+				"tail_length": 22,
+				"has_tail": true,
+				"has_arms": false
+			},
+			"appearance": {
+				"head_shape": "EQUINE",
+				"head_features": ["horse_ears"],
+				"skin_colors": [
+					"#8B7355",
+					"#4A3728",
+					"#1A1A1A",
+					"#F5F5F5"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#4A3728",
+					"#F5F5F5"
+				],
+				"blood_color": "#8B0000",
+				"hair_styles": {
+					"any": ["MANE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 0,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 20,
+			"arm_length_bonus": 0,
+			"active_abilities": [],
+			"passive_conditions": []
+		},
+		{
+			"id": "rat",
+			"name": "Rat",
+			"icon": "Assets/Icons/Rat.png",
+			"description": "A common vermin found in every city and sewer. Small but numerous, they carry disease and chew through everything.",
+			"cost": 0,
+			"features": [],
+			"ability_score_increases": {
+				"Dex": 15,
+				"Str": -20,
+				"Int": -20
+			},
+			"traits": {},
+			"creature_type": "Beast",
+			"age": {
+				"base": 1,
+				"middle": 2,
+				"old": 3
+			},
+			"height": {
+				"male": 20,
+				"female": 18
+			},
+			"weight": {
+				"male": 1,
+				"female": 1
+			},
+			"size": "Small",
+			"body": {
+				"body_type": "quadruped",
+				"body_size_mod": 0.5,
+				"body_width": 8,
+				"body_height": 7,
+				"body_length": 18,
+				"head_width": 7,
+				"head_length": 8,
+				"shoulder_y_offset": -6,
+				"leg_length": 5,
+				"leg_width": 1,
+				"leg_spacing": 3,
+				"tail_length": 20,
+				"has_tail": true,
+				"has_arms": false
+			},
+			"appearance": {
+				"head_shape": "CANINE",
+				"head_features": ["round_ears"],
+				"skin_colors": [
+					"#808080",
+					"#696969",
+					"#4A3728",
+					"#F5F5F5"
+				],
+				"hair_colors": [],
+				"blood_color": "#8B0000",
+				"hair_styles": {
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 0,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 0,
+			"arm_length_bonus": 0,
+			"active_abilities": [],
+			"passive_conditions": []
 		}
 	]
 }

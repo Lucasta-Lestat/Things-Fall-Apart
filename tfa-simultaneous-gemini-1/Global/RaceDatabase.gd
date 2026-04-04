@@ -129,6 +129,15 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_set_if_exists(character, "leg_width",         body.get("leg_width"))
 	_set_if_exists(character, "leg_spacing",       body.get("leg_spacing"))
 
+	# Quadruped body fields
+	if body.has("body_type"):
+		var bt_str: String = body.get("body_type", "bipedal")
+		character.body_type = 1 if bt_str == "quadruped" else 0  # BodyType enum
+	_set_if_exists(character, "body_length",       body.get("body_length"))
+	_set_if_exists(character, "tail_length",       body.get("tail_length"))
+	_set_if_exists(character, "has_tail",          body.get("has_tail", false))
+	_set_if_exists(character, "has_arms",          body.get("has_arms", true))
+
 	# Recompute leg animation from body_size_mod
 	var bsm: float = body.get("body_size_mod", 1.0)
 	_set_if_exists(character, "leg_swing_time",   bsm * Globals.default_leg_swing_time)
@@ -234,12 +243,34 @@ func _apply_appearance(character, appearance: Dictionary, options: Dictionary) -
 	else:
 		character.hair_color = Color(0, 0, 0, 0)
 
-	# Hair style
-	var valid_styles: Array = appearance.get("hair_styles", ["FULL"])
+	# Hair style — supports gendered dict or flat array
+	var char_gender: String = options.get("gender", "male")
+	var hair_styles_data = appearance.get("hair_styles", ["FULL"])
+	var valid_styles: Array = []
+	if hair_styles_data is Dictionary:
+		# Gendered format: {"male": [...], "female": [...], "any": [...]}
+		valid_styles = hair_styles_data.get(char_gender, []) + hair_styles_data.get("any", [])
+		if valid_styles.is_empty():
+			# Fallback: try the other gender's styles
+			for key in hair_styles_data:
+				valid_styles += hair_styles_data[key]
+	else:
+		# Legacy flat array format
+		valid_styles = hair_styles_data
+
 	if options.has("hair_style") and options["hair_style"] in valid_styles:
 		character.hair_style = _hair_style_from_string(options["hair_style"])
 	elif valid_styles.size() > 0:
-		character.hair_style = _hair_style_from_string(valid_styles[0])
+		var random_style = valid_styles[randi() % valid_styles.size()]
+		character.hair_style = _hair_style_from_string(random_style)
+
+	# Head shape
+	if appearance.has("head_shape"):
+		character.head_shape = _head_shape_from_string(appearance["head_shape"])
+
+	# Head features (elf ears, animal ears, etc.)
+	if appearance.has("head_features"):
+		character.head_features = appearance["head_features"]
 
 	# Blood color
 	if appearance.has("blood_color"):
@@ -271,6 +302,15 @@ func _find_child_by_name(node: Node, child_name: String) -> Node:
 			return child
 	return null
 
+func _head_shape_from_string(shape_name: String) -> int:
+	match shape_name:
+		"HUMANOID":   return 0
+		"ORCISH":     return 1
+		"DRACONIC":   return 2
+		"CANINE":     return 3
+		"EQUINE":     return 4
+		_:            return 0
+
 func _hair_style_from_string(style_name: String) -> int:
 	match style_name:
 		"NONE":       return 0
@@ -280,4 +320,9 @@ func _hair_style_from_string(style_name: String) -> int:
 		"POMPADOUR":  return 4
 		"BUZZCUT":    return 5
 		"MOHAWK":     return 6
+		"LONG":       return 7
+		"BRAIDS":     return 8
+		"BUN":        return 9
+		"PIGTAILS":   return 10
+		"MANE":       return 11
 		_:            return 2
