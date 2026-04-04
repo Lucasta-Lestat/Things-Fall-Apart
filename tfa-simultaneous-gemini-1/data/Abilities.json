@@ -115,7 +115,7 @@
 	  "targeting": {
 		"type": "direction",
 		"range": 500.0,
-		"shape": "rectangle",
+		"shape": "line",
 		"size": { "x": 500, "y": 30 }
 	  },
 	  "effects": [
@@ -126,7 +126,10 @@
 		  "immune_traits": ["lightning_immune"]
 		}
 	  ],
-	  "visuals": { "impact_effect": "res://effects/lightning.tscn" }
+	  "visuals": {
+		"in_hand_effect": "res://vfx/lightning_hand.tscn",
+		"impact_effect": "res://vfx/lightning.tscn"
+	  }
 	},
 	{
 	  "id": "magnetic_pull",
