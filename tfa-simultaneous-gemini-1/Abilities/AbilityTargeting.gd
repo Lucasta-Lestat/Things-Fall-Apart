@@ -2,7 +2,7 @@
 # Handles AoE targeting visualization and input
 extends Node2D
 
-enum TargetShape { NONE, CIRCLE, RECTANGLE }
+enum TargetShape { NONE, CIRCLE, RECTANGLE, LINE }
 
 signal targeting_started(hand: String, ability: Dictionary)
 signal targeting_confirmed(hand: String, ability: Dictionary, target_position: Vector2)
@@ -17,12 +17,16 @@ var target_position: Vector2 = Vector2.ZERO
 # Visual indicators
 var circle_indicator: Node2D = null
 var rectangle_indicator: Node2D = null
+var line_indicator: Node2D = null
 
 # Targeting parameters (set from ability data)
 var target_shape: TargetShape = TargetShape.NONE
 var circle_radius: float = 50.0
 var rectangle_size: Vector2 = Vector2(100, 50)
 var rectangle_rotation: float = 0.0  # In radians
+var line_range: float = 500.0
+var line_width: float = 30.0
+var caster_position: Vector2 = Vector2.ZERO
 
 # Visual settings
 const INDICATOR_COLOR = Color(1, 1, 1, 0.5)  # Semi-transparent white
@@ -64,6 +68,14 @@ func _create_indicators() -> void:
 	rectangle_indicator.visible = false
 	add_child(rectangle_indicator)
 
+	# Line indicator
+	line_indicator = Node2D.new()
+	line_indicator.name = "LineIndicator"
+	var line_drawer = LineDrawer.new()
+	line_indicator.add_child(line_drawer)
+	line_indicator.visible = false
+	add_child(line_indicator)
+
 func _update_active_indicator() -> void:
 	"""Update the position and appearance of the active indicator"""
 	#print("target_shape is : ", target_shape)
@@ -87,9 +99,27 @@ func _update_active_indicator() -> void:
 				drawer.rect_size = rectangle_size
 				drawer.queue_redraw()
 		
+		TargetShape.LINE:
+			# Line from caster to mouse, clamped to range
+			line_indicator.global_position = caster_position
+			var direction = target_position - caster_position
+			var dist = direction.length()
+			var clamped_end = target_position
+			if dist > line_range:
+				clamped_end = caster_position + direction.normalized() * line_range
+			var drawer = line_indicator.get_child(0) as LineDrawer
+			if drawer:
+				drawer.line_end = clamped_end - caster_position  # Local coords
+				drawer.line_width = line_width
+				drawer.queue_redraw()
+			line_indicator.visible = true
+			circle_indicator.visible = false
+			rectangle_indicator.visible = false
+
 		TargetShape.NONE:
 			circle_indicator.visible = false
 			rectangle_indicator.visible = false
+			line_indicator.visible = false
 
 func _get_mouse_world_position() -> Vector2:
 	"""Get mouse position in world coordinates"""
@@ -118,6 +148,13 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 		"rectangle":
 			target_shape = TargetShape.RECTANGLE
 			rectangle_size = ability.get("size", Vector2(100, 50))
+		"line":
+			target_shape = TargetShape.LINE
+			line_range = ability.get("range", 500.0)
+			var size_data = ability.get("size", Vector2(500, 30))
+			line_width = size_data.y if size_data is Vector2 else float(size_data.get("y", 30))
+			# Store caster position for the line origin
+			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
 		_:
 			target_shape = TargetShape.NONE
 	
@@ -131,14 +168,22 @@ func confirm_targeting() -> Dictionary:
 	if not is_targeting:
 		return {}
 	
+	# For line targeting, clamp the target position to range
+	var final_position = target_position
+	if target_shape == TargetShape.LINE:
+		var direction = target_position - caster_position
+		if direction.length() > line_range:
+			final_position = caster_position + direction.normalized() * line_range
+
 	var result = {
 		"hand": current_hand,
 		"ability": current_ability,
-		"position": target_position,
+		"position": final_position,
 		"shape": target_shape,
 		"radius": circle_radius if target_shape == TargetShape.CIRCLE else 0.0,
 		"size": rectangle_size if target_shape == TargetShape.RECTANGLE else Vector2.ZERO,
-		"rotation": rectangle_rotation
+		"rotation": rectangle_rotation,
+		"caster_position": caster_position,
 	}
 	print("targeting confirmed with position: ", target_position)
 	emit_signal("targeting_confirmed", current_hand, current_ability, target_position)
@@ -159,6 +204,7 @@ func end_targeting() -> void:
 	target_shape = TargetShape.NONE
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
+	line_indicator.visible = false
 
 func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0) -> Node2D:
 	"""Create a persistent indicator for a queued ability"""
@@ -231,15 +277,46 @@ class CircleDrawer extends Node2D:
 class RectangleDrawer extends Node2D:
 	var rect_size: Vector2 = Vector2(100, 50)
 	var is_queued: bool = false
-	
+
 	func _draw() -> void:
 		var color = Color(0.5, 0.8, 1.0, 0.4) if is_queued else Color(1, 1, 1, 0.4)
 		var border_color = Color(0.5, 0.8, 1.0, 0.8) if is_queued else Color(1, 1, 1, 0.8)
-		
+
 		var rect = Rect2(-rect_size / 2, rect_size)
-		
+
 		# Fill
 		draw_rect(rect, color, true)
-		
+
 		# Border
 		draw_rect(rect, border_color, false, 2.0)
+
+
+class LineDrawer extends Node2D:
+	var line_end: Vector2 = Vector2(100, 0)
+	var line_width: float = 30.0
+	var is_queued: bool = false
+
+	func _draw() -> void:
+		var color = Color(0.5, 0.8, 1.0, 0.3) if is_queued else Color(1, 1, 1, 0.3)
+		var border_color = Color(0.5, 0.8, 1.0, 0.7) if is_queued else Color(1, 1, 1, 0.7)
+
+		if line_end.length() < 1.0:
+			return
+
+		var direction = line_end.normalized()
+		var perpendicular = direction.rotated(PI / 2.0) * line_width * 0.5
+
+		# Build rotated rectangle as polygon
+		var corners = PackedVector2Array([
+			-perpendicular,
+			line_end - perpendicular,
+			line_end + perpendicular,
+			perpendicular,
+		])
+
+		# Fill
+		draw_colored_polygon(corners, color)
+
+		# Border
+		for i in range(corners.size()):
+			draw_line(corners[i], corners[(i + 1) % corners.size()], border_color, 2.0, true)

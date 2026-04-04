@@ -3,7 +3,7 @@ extends Node2D
 class_name AbilityShape
 
 # Matches your AbilityTargeting enum strings
-enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE }
+enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE }
 
 @export_group("Identity")
 @export var ability_id: String = "fireball_shape"
@@ -63,14 +63,18 @@ func get_ability_data() -> Dictionary:
 	match target_shape:
 		AbilityTargetShape.CIRCLE: shape_str = "circle"
 		AbilityTargetShape.RECTANGLE: shape_str = "rectangle"
+		AbilityTargetShape.LINE: shape_str = "line"
 	
 	# We construct the specific targeting block expected by the system
+	# Pull range from raw targeting data
+	var ability_range = raw_data.get("targeting", {}).get("range", 500.0)
 	var targeting_override = {
 		"shape": shape_str,
 		"radius": target_radius,
 		"size": target_size,
-		"requires_targeting": requires_targeting
-		# Add range if you have an export for it
+		"range": ability_range,
+		"requires_targeting": requires_targeting,
+		"target_shape": shape_str,
 	}
 	
 	#
@@ -106,10 +110,16 @@ func setup_from_database(data: Dictionary) -> void:
 	match shape_str:
 		"circle": target_shape = AbilityTargetShape.CIRCLE
 		"rectangle": target_shape = AbilityTargetShape.RECTANGLE
+		"line": target_shape = AbilityTargetShape.LINE
 		_: target_shape = AbilityTargetShape.NONE
 		
 	target_radius = targeting.get("radius", 50.0)
-	
+	var size_val = targeting.get("size", {})
+	if size_val is Dictionary:
+		target_size = Vector2(size_val.get("x", 0), size_val.get("y", 0))
+	elif size_val is Vector2:
+		target_size = size_val
+
 	# 4. Timings
 	cast_duration = data.get("cast_time", 1.0)
 # The Interface Implementation
