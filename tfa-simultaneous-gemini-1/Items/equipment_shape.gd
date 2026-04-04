@@ -30,8 +30,11 @@ var is_leg_equipment: bool = false
 signal equipment_equipped
 signal equipment_unequipped
 
+var _loaded_from_data: bool = false
+
 func _ready() -> void:
-	_determine_equipment_properties()
+	if not _loaded_from_data:
+		_determine_equipment_properties()
 	_setup_sprites()
 
 func _determine_equipment_properties() -> void:
@@ -68,9 +71,6 @@ func _determine_equipment_properties() -> void:
 			is_leg_equipment = true
 
 func _setup_sprites() -> void:
-	# Guard against double-creation (load_from_data may call before _ready)
-	if sprite != null or left_sprite != null or right_sprite != null:
-		return
 	if is_leg_equipment:
 		# Create paired sprites for legs
 		left_sprite = Sprite2D.new()
@@ -231,10 +231,8 @@ func load_from_data(data: Dictionary) -> void:
 			sprite_scale = Vector2(data["sprite_scale"], data["sprite_scale"])
 	if data.has("sprite_offset"):
 		sprite_offset = data["sprite_offset"]
-	
-	_setup_sprites()
-	if sprite_path:
-		set_sprite_from_path(sprite_path)
+
+	_loaded_from_data = true
 
 func to_data() -> Dictionary:
 	return {
