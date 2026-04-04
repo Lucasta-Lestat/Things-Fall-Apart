@@ -2,7 +2,7 @@
 # Attach to a Node2D that will be the character root
 extends CharacterBody2D
 class_name ProceduralCharacter
-@onready var game = get_node("/root/game")
+@onready var game = get_node_or_null("/root/Game")
 # Character data
 var character_data: Dictionary = {}
 var Name = ""
