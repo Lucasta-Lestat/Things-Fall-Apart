@@ -1659,6 +1659,12 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 	await attack_animator.attack_hit_frame
 	if not is_instance_valid(weapon):
 		return
+	# Consume ammo if the weapon requires it
+	if weapon.ammo_type != "":
+		var ammo_index = _find_ammo_in_inventory(weapon.ammo_type)
+		if ammo_index == -1:
+			return  # No ammo available, skip firing
+		inventory.remove_item(ammo_index)
 	# Play the appropriate firing sound at the moment of release
 	if weapon.primary_damage_type == "ranged_bullet":
 		SfxManager.play("gun", global_position)
@@ -1669,6 +1675,13 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 	if game and game.has_method("spawn_projectile"):
 		var fire_direction = Vector2.UP.rotated(rotation)
 		game.spawn_projectile(self, fire_direction, weapon)
+
+func _find_ammo_in_inventory(ammo_id: String) -> int:
+	"""Find the first inventory item matching the given ammo id. Returns index or -1."""
+	for i in range(inventory.items.size()):
+		if inventory.items[i].get("id", "") == ammo_id:
+			return i
+	return -1
 
 func is_attacking() -> bool:
 	"""Check if currently performing an attack"""

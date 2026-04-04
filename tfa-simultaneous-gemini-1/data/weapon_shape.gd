@@ -36,6 +36,7 @@ var collision_points: PackedVector2Array = []
 var sprite: Sprite2D = null
 @export var sprite_path: String = ""			# Path to sprite texture
 @export var projectile_texture_path: String = ""	# Path to projectile sprite (for ranged weapons)
+@export var ammo_type: String = ""			# Item id of required ammunition (e.g. "arrow", "bullet")
 @export var sprite_scale: Vector2 = Vector2.ONE	# Additional scale multiplier (user-facing)
 @export var sprite_offset: Vector2 = Vector2.ZERO	# Fine-tune sprite position
 @export var sprite_rotation: float = 0.0		# Rotation offset in radians
@@ -396,7 +397,7 @@ func load_from_data(data: Dictionary) -> void:
 			"spear": weapon_type = WeaponType.SPEAR
 			"mace": weapon_type = WeaponType.MACE
 			"bow": weapon_type = WeaponType.BOW
-			"pistol": weapon_type = WeaponType.PISTOL
+			"pistol", "gun": weapon_type = WeaponType.PISTOL
 
 	# Basic Properties
 	if data.has("id"): id = data["id"]
@@ -459,6 +460,8 @@ func load_from_data(data: Dictionary) -> void:
 		set_sprite_from_path(sprite_path)
 	if data.has("projectile_texture_path"):
 		projectile_texture_path = str(data["projectile_texture_path"]) if data["projectile_texture_path"] != null else ""
+	if data.has("ammo_type"):
+		ammo_type = str(data["ammo_type"]) if data["ammo_type"] != null else ""
 		
 	if data.has("sprite_scale"):
 		if data["sprite_scale"] is Vector2:
@@ -513,7 +516,8 @@ func to_data() -> Dictionary:
 		"blade_width": blade_width,
 		"balance_point": balance_point,
 		"sprite_path": sprite_path,
-		"projectile_texture_path": projectile_texture_path
+		"projectile_texture_path": projectile_texture_path,
+		"ammo_type": ammo_type
 	}
 
 func get_damage_type_name() -> String:
