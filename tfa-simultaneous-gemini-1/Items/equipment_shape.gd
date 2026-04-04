@@ -68,6 +68,9 @@ func _determine_equipment_properties() -> void:
 			is_leg_equipment = true
 
 func _setup_sprites() -> void:
+	# Guard against double-creation (load_from_data may call before _ready)
+	if sprite != null or left_sprite != null or right_sprite != null:
+		return
 	if is_leg_equipment:
 		# Create paired sprites for legs
 		left_sprite = Sprite2D.new()
