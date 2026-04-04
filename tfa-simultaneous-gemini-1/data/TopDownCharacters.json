@@ -14,7 +14,7 @@
 		"intelligence": 50,
 		"charisma": 50
 	  },
-	  "equipment": ["breastplate_2", "longsword", "pistol", "shortbow"],
+	  "equipment": ["breastplate_2", "longsword", "shortbow", "pistol"],
 	  "extra_items": ["arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "arrow", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet"],
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
