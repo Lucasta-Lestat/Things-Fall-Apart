@@ -101,6 +101,7 @@
 	  ],
 	  "visuals": {
 		"in_hand_effect": "res://vfx/ice_storm.tscn",
+		"in_hand_scale": 0.15,
 		"impact_effect": "res://vfx/ice_storm.tscn"
 	  }
 	},
@@ -128,6 +129,7 @@
 	  ],
 	  "visuals": {
 		"in_hand_effect": "res://vfx/lightning_hand.tscn",
+		"in_hand_scale": 0.4,
 		"impact_effect": "res://vfx/lightning.tscn"
 	  }
 	},
@@ -268,7 +270,10 @@
 		  "trait": "poison"
 		}
 	  ],
-	  "visuals": { "impact_effect": "res://effects/heal_glow.tscn" }
+	  "visuals": {
+		"in_hand_effect": "res://vfx/heal_hand.tscn",
+		"impact_effect": "res://vfx/heal.tscn"
+	  }
 	},
 	{
 	  "id": "chasten",
