@@ -1371,6 +1371,13 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	var sprite = Sprite2D.new()
 	if weapon.projectile_texture_path != "" and ResourceLoader.exists(weapon.projectile_texture_path):
 		sprite.texture = load(weapon.projectile_texture_path)
+		# Scale the texture so the longest side fits ~16 pixels
+		var tex_size = sprite.texture.get_size()
+		var longest = max(tex_size.x, tex_size.y)
+		if longest > 0:
+			var target_size = 16.0
+			var s = target_size / longest
+			sprite.scale = Vector2(s, s)
 	else:
 		# Fallback: draw a small rectangle so something is visible
 		var img = Image.create(4, 12, false, Image.FORMAT_RGBA8)
