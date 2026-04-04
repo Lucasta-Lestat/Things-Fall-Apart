@@ -383,7 +383,7 @@ func _ready() -> void:
 	ability_manager.step_completed.connect(_on_ability_step_completed)
 	blood_drop_texture = load("res://vfx/blood drop.png")
 
-	$DualHealthBar.setup(self)
+	_setup_condition_display()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
 	_setup_action_queue()
@@ -533,17 +533,53 @@ func _get_body_collision_points() -> PackedVector2Array:
 
 
 
+var _condition_display: HBoxContainer = null
+const COND_DISPLAY_ICON_SIZE := Vector2(16, 16)
+const COND_DISPLAY_OFFSET_Y := -30.0
+
+func _setup_condition_display() -> void:
+	_condition_display = HBoxContainer.new()
+	_condition_display.name = "ConditionDisplay"
+	_condition_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_condition_display.z_index = 100
+	_condition_display.add_theme_constant_override("separation", 2)
+	add_child(_condition_display)
+
+func _refresh_condition_display() -> void:
+	if not _condition_display:
+		return
+	for child in _condition_display.get_children():
+		child.queue_free()
+	for cond_id in condition_manager.conditions:
+		var instance = condition_manager.conditions[cond_id]
+		var cond_res = instance.condition
+		var icon_tex = cond_res.get("icon") if "icon" in cond_res else null
+		var tex_rect = TextureRect.new()
+		tex_rect.custom_minimum_size = COND_DISPLAY_ICON_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if icon_tex and icon_tex is Texture2D:
+			tex_rect.texture = icon_tex
+		_condition_display.add_child(tex_rect)
+	# Center the icons above the character
+	var total_width = condition_manager.conditions.size() * (COND_DISPLAY_ICON_SIZE.x + 2)
+	_condition_display.position = Vector2(-total_width * 0.5, COND_DISPLAY_OFFSET_Y)
+
 func _on_condition_applied(instance: ConditionInstance) -> void:
 	_spawn_condition_vfx(instance)
 	_start_condition_sfx(instance)
+	_refresh_condition_display()
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
+	_refresh_condition_display()
 
 func _on_condition_expired(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
+	_refresh_condition_display()
 
 
 func _on_stats_recalculated() -> void:
@@ -607,7 +643,6 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		# Use global position as fallback for visual location
 		var hit_location = global_position
 		damage_limb(limb_type, damage_dict, hit_location)
-		$DualHealthBar.update_from_limbs(limbs)
 		is_alive()  # Check death
 	
 	if result.has("heal"):
@@ -620,7 +655,6 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 			# Whole body heal — distribute across all limbs
 			for limb in limbs.values():
 				limb.heal(heal_amount)
-		$DualHealthBar.update_from_limbs(limbs)
 	
 	if result.has("condition_id") and effect.get("type") == "apply_condition":
 		if randf() <= result.get("chance", 1.0):
@@ -1084,7 +1118,6 @@ func _process(delta: float) -> void:
 			if mp_regen_timer >= mp_regen_interval:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
-		$DualHealthBar.update_debug_state($AI.current_state, $AttackAnimator.current_state)
 		# Delegate to AI child node
 		if AI_enabled:
 			$AI.process_ai(delta)
@@ -1864,7 +1897,6 @@ func is_alive() -> bool:
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
-	$DualHealthBar.update_from_limbs(limbs)
 	var limb = limbs.get(limb_type)
 	if not limb:
 		return {}
@@ -2405,7 +2437,6 @@ func _on_time_updated(_hour: int, _minute: int, second: int):
 
 func apply_bleeding_tick():
 	var tier = conditions.get("bleeding", 0)
-	$DualHealthBar.update_from_limbs(limbs)
 	if tier > 0:
 		# Subtract 1 per tier from blood_amount
 		blood_amount -= tier
