@@ -68,6 +68,31 @@
 						"quest": "dark_ritual",
 						"state": "active"
 					}
+				},
+				{
+					"template_id": "forest_elf",
+					"position": [180, 120],
+					"count": 1
+				},
+				{
+					"template_id": "orc_warrior",
+					"position": [350, 200],
+					"count": 1
+				},
+				{
+					"template_id": "liziti_don",
+					"position": [420, 120],
+					"count": 1
+				},
+				{
+					"template_id": "wild_wolf",
+					"position": [100, 320],
+					"count": 1
+				},
+				{
+					"template_id": "centaur_druid",
+					"position": [200, 280],
+					"count": 1
 				}
 			],
 			"item_spawns": [

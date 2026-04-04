@@ -413,6 +413,7 @@
 	{
 	  "id": "wild_wolf",
 	  "name": "Wild Wolf",
+	  "race": "wolf",
 	  "is_creature": true,
 	  "faction": "wildlife",
 	  "stats": {
@@ -1533,6 +1534,108 @@
 	  ],
 	  "extra_conditions": [],
 	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "orc_warrior",
+	  "name": "Orc Warrior",
+	  "race": "orc",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "stats": {
+		"strength": 70,
+		"constitution": 65,
+		"dexterity": 45,
+		"will": 30,
+		"intelligence": 25,
+		"charisma": 20
+	  },
+	  "equipment": [
+		{
+		  "id": "greataxe",
+		  "slot": "main_hand"
+		}
+	  ],
+	  "icon": "res://icons/characters/orc_warrior.png",
+	  "dialogue": null,
+	  "interact_options": [
+        "Inspect"
+	  ],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "centaur_druid",
+	  "name": "Centaur Druid",
+	  "race": "centaur",
+	  "background": "hermit",
+	  "faction": "druids",
+	  "stats": {
+		"strength": 55,
+		"constitution": 55,
+		"dexterity": 55,
+		"will": 60,
+		"intelligence": 50,
+		"charisma": 50
+	  },
+	  "equipment": [
+		{
+		  "id": "glaive",
+		  "slot": "main_hand"
+		}
+	  ],
+	  "icon": "res://icons/characters/centaur_druid.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Talk",
+        "Inspect"
+	  ],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {
+		"Nature_Attuned": 1
+	  },
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "goatman_druid",
+	  "name": "Goatman Druid",
+	  "race": "goatmen",
+	  "background": "hermit",
+	  "faction": "druids",
+	  "stats": {
+		"strength": 55,
+		"constitution": 50,
+		"dexterity": 50,
+		"will": 60,
+		"intelligence": 55,
+		"charisma": 45
+	  },
+	  "equipment": [
+		{
+		  "id": "quarterstaff",
+		  "slot": "main_hand"
+		}
+	  ],
+	  "icon": "res://icons/characters/goatman_druid.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Talk",
+        "Inspect"
+	  ],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {
+		"Nature_Attuned": 1
+	  },
 	  "combat": {},
 	  "sensory": {},
 	  "spawn_conditions": {}
