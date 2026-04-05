@@ -488,6 +488,15 @@ func _setup_inventory() -> void:
 	#look here for updating to dual hand system.
 	add_child(main_hand_holder)
 	add_child(off_hand_holder)
+	_update_holder_scale()
+
+func _update_holder_scale() -> void:
+	# Scale weapon holders so weapons match character size (race body_size_mod)
+	var s = Vector2(body_size_mod, body_size_mod)
+	if main_hand_holder:
+		main_hand_holder.scale = s
+	if off_hand_holder:
+		off_hand_holder.scale = s
 
 func _setup_equipment_slots() -> void:
 	# Create holder nodes for each equipment slot
@@ -2268,6 +2277,16 @@ func _on_attack_hit(hand) -> void:
 
 func _on_attack_finished() -> void:
 	attack_animator.is_attacking = false
+
+func get_weapon_tip_world_position() -> Vector2:
+	var weapon = current_main_hand_item if current_hand == "Main" else current_off_hand_item
+	if weapon and weapon.has_method("get_tip_local_position"):
+		return weapon.to_global(weapon.get_tip_local_position())
+	# Fallback: use hand position
+	var joints = right_arm_joints if current_hand == "Main" else left_arm_joints
+	if joints.size() > 0:
+		return to_global(joints[-1])
+	return global_position
 
 # ===== PUBLIC ATTACK API =====
 

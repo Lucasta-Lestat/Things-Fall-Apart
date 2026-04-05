@@ -1163,95 +1163,75 @@ func point_in_polygon(point: Vector2, polygon: Array) -> bool:
 	return true
 
 func check_weapon_body_collision(holder, target: ProceduralCharacter):
-	# 1. Determine the start and end points of the "hit line" in the holder's LOCAL space
-	var hit_start_local: Vector2
-	var hit_end_local: Vector2
-	
+	# 1. Determine the start and end points of the "hit line" in WORLD space
+	var tip_world: Vector2
+	var base_world: Vector2
+
 	# Check if the holder is actually holding a weapon in the active hand
 	var current_weapon
 	if holder.current_hand == "Main":
 		current_weapon = holder.current_main_hand_item
 	else:
 		current_weapon = holder.current_off_hand_item
-	#print("current weapon: ", current_weapon.display_name)
+
 	if current_weapon != null and not (current_weapon is AbilityShape):
 		# --- WEAPON LOGIC ---
-		# Get the weapon's local vectors (relative to the weapon scene)
+		# Use to_global() on the weapon node itself -- this correctly chains through
+		# weapon -> holder Node2D -> character -> world, including holder rotation/scale
 		var tip = current_weapon.get_tip_local_position()
 		var base = current_weapon.get_blade_start_local()
-		
-		# Convert to holder's local space by adding the weapon's position
-		hit_end_local = current_weapon.position + tip
-		hit_start_local = current_weapon.position + base
+		tip_world = current_weapon.to_global(tip)
+		base_world = current_weapon.to_global(base)
 	else:
 		# --- UNARMED / FIST LOGIC ---
-		# Get the joint array for the active hand
+		# Arm joints are in character-local space, so holder.to_global() is correct
 		var joints: Array[Vector2]
 		if holder.current_hand == "Main":
-			# Assuming Main Hand = Right Arm based on your IK code
 			joints = holder.right_arm_joints
 		else:
 			joints = holder.left_arm_joints
-			
-		# Safety check in case joints aren't initialized
+
 		if joints.is_empty() or joints.size() < 2:
 			return {"hit": false}
-			
-		# The last joint is the hand/tip
-		hit_end_local = joints[-1]
-		
-		# The second to last joint is the elbow. 
-		# We define the "fist" as the last 20% of the forearm.
-		# This prevents the whole arm from acting like a blade.
+
+		var hand_local = joints[-1]
 		var elbow_local = joints[-2]
-		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
-	
-	# 2. Perform the Interpolation Check (Shared Logic)
-	# Use your specific helper function here
+		var fist_start_local = hand_local.lerp(elbow_local, 0.2)
+		tip_world = holder.to_global(hand_local)
+		base_world = holder.to_global(fist_start_local)
+
+	# 2. Perform the Interpolation Check in world space
 	var body_corners = get_body_hitbox_corners(target)
 	var num_checks = 5
-	# DEBUG — add these lines temporarily
-	var tip_world = holder.to_global(hit_end_local)
-	var base_world = holder.to_global(hit_start_local)
-	print("weapon line: ", tip_world, " -> ", base_world)
-	print("target corners: ", body_corners)
-	print("target pos: ", target.global_position, " rot: ", target.rotation)
-	
+
 	for i in range(num_checks):
 		var t = float(i) / float(num_checks - 1)
-		
-		# Interpolate in local space first
-		var check_point_local = hit_end_local.lerp(hit_start_local, t)
-		
-		# Convert to global world space using the holder (attacker)
-		var check_point_world = holder.to_global(check_point_local)
-		
+		var check_point_world = tip_world.lerp(base_world, t)
+
 		if point_in_polygon(check_point_world, body_corners):
 			# Convert hit position to target's local space for limb detection
 			var hit_local = target.to_local(check_point_world)
-			
-			# Un-rotate to align with the target's limb coordinate system
 			var hit_local_unrotated = hit_local.rotated(-target.rotation)
-			
+
 			var limb_type = target.get_limb_at_position(
 				hit_local_unrotated,
 				target.body_width,
 				target.body_height
 			)
-			
+
 			return {
 				"hit": true,
 				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier, #this might only effect cooldown, not attack speed?
+				"velocity": holder.attack_speed_multiplier,
 				"limb_type": limb_type
 			}
-			
+
 	return {"hit": false}
 	
 func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) -> Dictionary:
 	"""Collision check for items and structures using their collision shape bounds"""
-	var hit_start_local: Vector2
-	var hit_end_local: Vector2
+	var tip_world: Vector2
+	var base_world: Vector2
 
 	var current_weapon
 	if holder.current_hand == "Main":
@@ -1262,8 +1242,8 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 	if current_weapon != null and not (current_weapon is AbilityShape):
 		var tip = current_weapon.get_tip_local_position()
 		var base = current_weapon.get_blade_start_local()
-		hit_end_local = current_weapon.position + tip
-		hit_start_local = current_weapon.position + base
+		tip_world = current_weapon.to_global(tip)
+		base_world = current_weapon.to_global(base)
 	else:
 		var joints: Array[Vector2]
 		if holder.current_hand == "Main":
@@ -1272,9 +1252,10 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 			joints = holder.left_arm_joints
 		if joints.is_empty() or joints.size() < 2:
 			return {"hit": false}
-		hit_end_local = joints[-1]
+		var hand_local = joints[-1]
 		var elbow_local = joints[-2]
-		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
+		tip_world = holder.to_global(hand_local)
+		base_world = holder.to_global(hand_local.lerp(elbow_local, 0.2))
 
 	# Use the target's sprite size as a simple bounding box
 	var target_rect: Rect2
@@ -1291,8 +1272,7 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 	var num_checks = 5
 	for i in range(num_checks):
 		var t = float(i) / float(num_checks - 1)
-		var check_point_local = hit_end_local.lerp(hit_start_local, t)
-		var check_point_world = holder.to_global(check_point_local)
+		var check_point_world = tip_world.lerp(base_world, t)
 
 		if target_rect.has_point(check_point_world):
 			return {
@@ -1332,26 +1312,26 @@ func check_weapon_weapon_collision(
 		weapon2 = char2.current_off_hand_item
 		holder2 = char2.off_hand_holder
 	
-	# Get blade points for both weapons
+	# Get blade points for both weapons in world space
 	var tip1_local = weapon1.get_tip_local_position()
 	var blade_start1_local = weapon1.get_blade_start_local()
 	var tip2_local = weapon2.get_tip_local_position()
 	var blade_start2_local = weapon2.get_blade_start_local()
-	
+
 	# Check multiple points along each blade against each other
 	var num_checks = 3
 	var collision_radius = 8.0  # How close blades need to be to "clash"
-	
+
 	for i in range(num_checks):
 		var t1 = float(i) / float(num_checks - 1)
 		var point1_local = tip1_local.lerp(blade_start1_local, t1)
-		var point1_world = holder1.to_global(weapon1.position + point1_local)
-		
+		var point1_world = weapon1.to_global(point1_local)
+
 		for j in range(num_checks):
 			var t2 = float(j) / float(num_checks - 1)
 			var point2_local = tip2_local.lerp(blade_start2_local, t2)
-			var point2_world = holder2.to_global(weapon2.position + point2_local)
-			
+			var point2_world = weapon2.to_global(point2_local)
+
 			if point1_world.distance_to(point2_world) < collision_radius:
 				return {
 					"collision": true,
@@ -1385,8 +1365,8 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 		sprite.texture = ImageTexture.create_from_image(img)
 	proj.add_child(sprite)
 
-	# Spawn slightly ahead of the shooter so it doesn't immediately collide with them
-	proj.global_position = shooter.global_position + direction.normalized() * 20.0
+	# Spawn from the weapon tip so projectiles visually emerge from the weapon
+	proj.global_position = shooter.get_weapon_tip_world_position()
 	# Rotate so the sprite's up-axis points along the travel direction
 	proj.rotation = direction.angle() + PI / 2.0
 
