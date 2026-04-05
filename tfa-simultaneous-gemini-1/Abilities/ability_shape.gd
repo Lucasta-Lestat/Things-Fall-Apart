@@ -44,7 +44,7 @@ func activate_visuals(active: bool):
 			_active_visual.visible = active
 	
 func get_tip_local_position():
-	Vector2(0, min(10.0,target_size.y / 10.0)) #looks bigger in hand based on size of spell AoE
+	return Vector2(0, min(10.0, target_size.y / 10.0)) #looks bigger in hand based on size of spell AoE
 # Converts local export vars into the Dictionary format AbilityTargeting expects
 func get_ability_data() -> Dictionary:
 	# 1. Start with the full original data from the database (includes visuals/effects)

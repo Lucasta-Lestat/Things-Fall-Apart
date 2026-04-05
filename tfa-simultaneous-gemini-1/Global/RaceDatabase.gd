@@ -143,6 +143,9 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_set_if_exists(character, "leg_swing_time",   bsm * Globals.default_leg_swing_time)
 	_set_if_exists(character, "leg_swing_speed",  bsm * Globals.default_leg_swing_speed)
 	_set_if_exists(character, "leg_swing_amount", bsm * Globals.default_leg_swing_amount)
+	# Scale weapon holders to match character size
+	if character.has_method("_update_holder_scale"):
+		character._update_holder_scale()
 
 	# --- Appearance ---
 	_apply_appearance(character, race.get("appearance", {}), options)
