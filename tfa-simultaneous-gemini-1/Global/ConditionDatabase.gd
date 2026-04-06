@@ -457,5 +457,44 @@ func get_all_conditions() -> Array:
 		"stat_modifiers": [],
 		"triggered_effects": [],
 		"immunities": {}
+	},
+	{
+		"id": "blinded",
+		"display_name": "Blinded",
+		"description": "Cannot see. Does not contribute to party visibility.",
+		"traits": {"debuff": 1, "sensory": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 10.0,
+		"icon": "res://UI/UI Icons/blinded.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "sight", "operation": "set", "value": 0}
+		],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "unconscious",
+		"display_name": "Unconscious",
+		"description": "Knocked out. Cannot see or take any actions.",
+		"traits": {"debuff": 1, "incapacitate": 1, "sensory": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/unconscious.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "res://vfx/unconscious.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "move_speed", "operation": "set", "value": 0},
+			{"stat": "sight", "operation": "set", "value": 0}
+		],
+		"triggered_effects": [],
+		"immunities": {}
 	}
 ]
