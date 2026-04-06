@@ -237,6 +237,7 @@ func update_fluid_simulation() -> void:
 	apply_flow_deltas(flow_deltas)
 	update_water_tile_flows()
 	cleanup_inactive_tiles()
+	update_edge_masks()
 
 func apply_flow_deltas(flow_deltas: Dictionary) -> void:
 	for tile_pos in flow_deltas.keys():
@@ -311,6 +312,40 @@ func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float)
 			fluid_node.set_fluid_colors(water_color, wave_color)
 
 	active_fluid_tiles[grid_pos] = fluid_node
+	# Defer edge mask update so all tiles in a batch are created first
+	call_deferred("update_edge_masks")
+
+func update_edge_masks() -> void:
+	"""Recompute edge masks for all active fluid tiles based on neighbor presence."""
+	for tile_pos in active_fluid_tiles:
+		var fluid_node = active_fluid_tiles[tile_pos]
+		if not fluid_node or not is_instance_valid(fluid_node) or fluid_node is bool:
+			continue
+		if not fluid_node.has_method("set_edge_mask"):
+			continue
+
+		# Check 4 cardinal neighbors for fluid presence
+		var right = Vector2i(tile_pos.x + 1, tile_pos.y)
+		var left = Vector2i(tile_pos.x - 1, tile_pos.y)
+		var bottom = Vector2i(tile_pos.x, tile_pos.y + 1)
+		var top = Vector2i(tile_pos.x, tile_pos.y - 1)
+
+		var mask = Vector4(
+			0.0 if _has_fluid_at(right) else 1.0,  # right exposed
+			0.0 if _has_fluid_at(left) else 1.0,   # left exposed
+			0.0 if _has_fluid_at(bottom) else 1.0,  # bottom exposed
+			0.0 if _has_fluid_at(top) else 1.0      # top exposed
+		)
+		fluid_node.set_edge_mask(mask)
+
+func _has_fluid_at(tile_pos: Vector2i) -> bool:
+	"""Check if there's meaningful fluid at a tile position."""
+	if not fluid_grid.has(tile_pos):
+		return false
+	for fluid_type in fluid_grid[tile_pos]:
+		if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
+			return true
+	return false
 
 func spawn_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	register_fluid(grid_pos, "water", water_amount)

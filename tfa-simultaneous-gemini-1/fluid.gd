@@ -70,6 +70,11 @@ func set_fluid_colors(water_color: Color, wave_color: Color) -> void:
 		water_sprite.material.set_shader_parameter("water_color", water_color)
 		water_sprite.material.set_shader_parameter("wave_color", wave_color)
 
+func set_edge_mask(mask: Vector4) -> void:
+	"""Set which edges are exposed boundaries. vec4(right, left, bottom, top), 1.0 = exposed."""
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("edge_mask", mask)
+
 func set_custom_shader(shader_path: String) -> void:
 	"""Replace the shader with a custom one (e.g. oil sheen)."""
 	if not water_sprite:
