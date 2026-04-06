@@ -89,7 +89,7 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 15,
+				"value": 8,
 				"damage_type": "fire",
 				"interval": 1.0
 			}
