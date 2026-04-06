@@ -53,6 +53,7 @@ func _ready():
 	_apply_item_data()
 	floating_text_label.visible = false
 	floating_text_label.z_index = 200
+	floating_text_label.z_as_relative = false
 	_update_stack_label()
 	_grid_pos = GridManager.world_to_map(global_position)
 	global_position = GridManager.map_to_world(_grid_pos)
