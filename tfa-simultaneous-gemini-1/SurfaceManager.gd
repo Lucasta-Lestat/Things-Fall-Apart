@@ -283,7 +283,7 @@ func _spawn_fire_vfx(tile_pos: Vector2i, fire_def: Dictionary) -> Node:
 	vfx.global_position = GridManager.map_to_world(tile_pos)
 	add_child(vfx)
 	if vfx.has_method("play"):
-		vfx.play(1.0)
+		vfx.play(2.0)
 	return vfx
 
 func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
