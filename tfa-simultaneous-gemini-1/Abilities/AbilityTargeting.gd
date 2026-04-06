@@ -47,10 +47,13 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
-		#print("is targeting update in process")
-		#this is somehow still triggering after end_targeting is called
 		# Update target position to mouse
 		target_position = _get_mouse_world_position()
+
+		# For line and cone, keep caster_position in sync with the character
+		if target_shape == TargetShape.LINE or target_shape == TargetShape.CONE:
+			caster_position = get_parent().global_position if get_parent() else caster_position
+
 		_update_active_indicator()
 
 func _create_indicators() -> void:

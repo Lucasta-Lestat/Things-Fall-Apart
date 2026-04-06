@@ -1,14 +1,15 @@
 [gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://vfx/sonic.gd" id="1_script"]
-[ext_resource type="Shader" uid="uid://dumhtbtl61wiy" path="res://vfx/shaders/sound_waves.gdshader" id="2_waves"]
+[ext_resource type="Shader" path="res://vfx/shaders/sonic_cone.gdshader" id="2_waves"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sonic"]
 shader = ExtResource("2_waves")
 shader_parameter/time = 0.0
 shader_parameter/wave_frequency = 5.0
 shader_parameter/wave_amplitude = 0.4
-shader_parameter/resolution = Vector2(160, 160)
+shader_parameter/resolution = Vector2(300, 300)
+shader_parameter/cone_half_angle = 0.524
 
 [sub_resource type="Gradient" id="Gradient_sonic_ramp"]
 offsets = PackedFloat32Array(0, 0.3, 1)
@@ -28,8 +29,8 @@ curve = SubResource("Curve_sonic_scale")
 particle_flag_disable_z = true
 emission_shape = 1
 emission_sphere_radius = 10.0
-direction = Vector3(0, 0, 0)
-spread = 180.0
+direction = Vector3(1, 0, 0)
+spread = 30.0
 initial_velocity_min = 60.0
 initial_velocity_max = 120.0
 gravity = Vector3(0, 0, 0)
@@ -57,10 +58,10 @@ fill_from = Vector2(0.5, 0.5)
 script = ExtResource("1_script")
 
 [node name="WaveLayer" type="ColorRect" parent="."]
-offset_left = -80.0
-offset_top = -80.0
-offset_right = 80.0
-offset_bottom = 80.0
+offset_left = 0.0
+offset_top = -150.0
+offset_right = 300.0
+offset_bottom = 150.0
 material = SubResource("ShaderMaterial_sonic")
 
 [node name="GPUParticles2D" type="GPUParticles2D" parent="."]
@@ -70,6 +71,7 @@ lifetime = 0.6
 process_material = SubResource("ParticleProcessMaterial_sonic")
 
 [node name="PointLight2D" type="PointLight2D" parent="."]
+position = Vector2(75, 0)
 color = Color(0.7, 0.85, 1.0, 1)
 energy = 0.5
 texture = SubResource("GradientTexture2D_light")

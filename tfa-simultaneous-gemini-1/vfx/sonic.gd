@@ -5,14 +5,16 @@ extends Node2D
 @onready var light: PointLight2D = $PointLight2D
 
 var _base_wave_size: Vector2
+var _base_wave_pos: Vector2
 
 func _ready() -> void:
 	_base_wave_size = waves.size
+	_base_wave_pos = waves.position
 
 func play(size_scale: float = 1.0):
-	# Scale the sound wave shader layer
+	# Scale the cone wave layer — origin stays at left edge (0, -h/2)
 	waves.size = _base_wave_size * size_scale
-	waves.position = -waves.size * 0.5
+	waves.position = Vector2(0, -waves.size.y * 0.5)
 	if waves.material is ShaderMaterial:
 		waves.material = waves.material.duplicate()
 		waves.material.set_shader_parameter("resolution", waves.size)
@@ -29,6 +31,7 @@ func play(size_scale: float = 1.0):
 	particles.amount = int(particles.amount * size_scale * size_scale)
 	particles.lifetime *= sqrt(size_scale)
 
+	light.position = Vector2(75 * size_scale, 0)
 	light.texture_scale *= size_scale
 	light.energy *= size_scale
 
