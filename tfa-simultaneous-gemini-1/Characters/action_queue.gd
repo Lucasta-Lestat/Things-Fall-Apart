@@ -382,7 +382,8 @@ func _execute_action(action: Action) -> void:
 				if use_ability_id is String and not use_ability_id.is_empty():
 					var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
 					if not ability_data.is_empty() and character.ability_manager:
-						character.ability_manager.use_ability(ability_data, character, character.global_position)
+						var ability_obj = Ability.from_dict(ability_data)
+							character.ability_manager.use_ability(ability_obj, {"position": character.global_position})
 				character.inventory.remove_item(item_index)
 		
 		ActionType.CUSTOM:

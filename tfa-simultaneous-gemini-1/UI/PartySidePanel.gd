@@ -460,7 +460,8 @@ func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 	if use_ability_id is String and not use_ability_id.is_empty():
 		var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
 		if not ability_data.is_empty() and character.ability_manager:
-			character.ability_manager.use_ability(ability_data, character, character.global_position)
+			var ability_obj = Ability.from_dict(ability_data)
+			character.ability_manager.use_ability(ability_obj, {"position": character.global_position})
 	# Consume the item
 	character.inventory.remove_item(item_index)
 
@@ -495,7 +496,8 @@ func _execute_consume(character, item_index: int, item_data: Dictionary) -> void
 	if use_ability_id is String and not use_ability_id.is_empty():
 		var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
 		if not ability_data.is_empty() and target.has_node("AbilityManager"):
-			target.get_node("AbilityManager").use_ability(ability_data, target, target.global_position)
+			var ability_obj = Ability.from_dict(ability_data)
+			target.get_node("AbilityManager").use_ability(ability_obj, {"position": target.global_position})
 	# Apply satiety if the item has it
 	var satiety = item_data.get("satiety", 0.0)
 	if satiety > 0 and "hunger" in target:
