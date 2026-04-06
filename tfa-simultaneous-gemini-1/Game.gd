@@ -31,15 +31,24 @@ var stealth_mode: bool = false
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
+signal selection_changed()
 signal map_loaded(map_id: String)
 
-# Currently selected character
-var selected_character: ProceduralCharacter = null
-var selected_index: int = 0
+# Multi-select: all currently selected characters
+var selected_characters: Array = []
+# Primary selected character (most recently clicked, camera follows this one)
+var primary_selected: ProceduralCharacter = null
+var primary_index: int = 0
+# Backward compat alias
+var selected_character: ProceduralCharacter:
+	get: return primary_selected
+var selected_index: int:
+	get: return primary_index
 
-# Selection indicator
-var selection_indicator: Node2D = null
-const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White
+# Selection indicators (one per selected character)
+var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
+const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White (primary)
+const SELECTION_CIRCLE_COLOR_MULTI = Color(0.5, 0.7, 1.0, 0.5)  # Blue (multi-select)
 const SELECTION_CIRCLE_WIDTH = 1.0
 
 # ---------------------------------------------------------------------------
@@ -286,7 +295,8 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			continue
 
 		party_chars.append(character)
-		character.AI_enabled = false
+		character.AI_enabled = true
+		character.is_player_controlled = false
 
 		# Restore live state if we have one (from map transition / save load)
 		if entry.get("live_state"):
@@ -535,18 +545,20 @@ func _process(delta: float) -> void:
 		# Tick fluid condition effects
 		if fluid_manager:
 			fluid_manager.update_fluid_conditions(delta, characters_in_scene)
-	if selected_character and is_instance_valid(selected_character) and selection_indicator:
-		selection_indicator.global_position = selected_character.global_position
-		if PauseManager.is_paused:
-			selection_indicator.visible = true
-	if selection_indicator and not PauseManager.is_paused:
-		selection_indicator.visible = false
+	# Update all selection indicators
+	for character in selection_indicators.keys():
+		if is_instance_valid(character):
+			selection_indicators[character].global_position = character.global_position
+			selection_indicators[character].visible = PauseManager.is_paused
+		else:
+			selection_indicators[character].queue_free()
+			selection_indicators.erase(character)
 	# Update NPC visibility based on party line-of-sight
 	_update_npc_los_visibility()
-	# Camera follows selected character
-	if selected_character and is_instance_valid(selected_character) and player_camera:
+	# Camera follows primary selected character
+	if primary_selected and is_instance_valid(primary_selected) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
-			selected_character.global_position, 5.0 * delta)
+			primary_selected.global_position, 5.0 * delta)
 
 func _check_combat_collisions() -> void:
 	var all_characters = characters_in_scene
@@ -669,41 +681,70 @@ func _input(event: InputEvent) -> void:
 				if not event.echo:
 					stealth_mode = not stealth_mode
 					_toggle_npc_los_cones()
-	# Number keys 1-9 to select party members
+	# Number keys 1-9 to select party members (Ctrl+number to toggle multi-select)
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key = event.keycode
 		if key >= KEY_1 and key <= KEY_9:
 			var index = key - KEY_1  # 0-8
-			select_character_by_index(index)
+			var party = get_party()
+			if index >= 0 and index < party.size():
+				var character = party[index]
+				if character and is_instance_valid(character):
+					if event.ctrl_pressed:
+						toggle_character_selection(character)
+					else:
+						select_character_by_index(index)
 			
-func _create_selection_indicator(size:int) -> void:
-	"""Create the white circle selection indicator"""
-	selection_indicator = Node2D.new()
-	selection_indicator.name = "SelectionIndicator"
-	selection_indicator.z_index = 100  # Above most things
-	
-	# We'll draw the circle in a custom draw node
-	
+func _create_selection_indicator(size: int) -> void:
+	"""Create selection indicators — now managed per-character via selection methods"""
+	pass  # Indicators are now created/removed in _add/_remove_selection_circle
+
+func _add_selection_circle(character: ProceduralCharacter, color: Color) -> void:
+	if character in selection_indicators:
+		_update_circle_color(character, color)
+		return
+	var indicator = Node2D.new()
+	indicator.z_index = 100
 	var circle_drawer = SelectionCircle.new()
-	circle_drawer.radius = size
-	circle_drawer.circle_color = SELECTION_CIRCLE_COLOR
+	circle_drawer.radius = 85
+	circle_drawer.circle_color = color
 	circle_drawer.line_width = SELECTION_CIRCLE_WIDTH
-	selection_indicator.add_child(circle_drawer)
-	
-	# Add to scene tree (will be repositioned each frame)
-	add_child(selection_indicator)
-	selection_indicator.visible = false
+	indicator.add_child(circle_drawer)
+	add_child(indicator)
+	indicator.visible = false
+	selection_indicators[character] = indicator
+
+func _remove_selection_circle(character: ProceduralCharacter) -> void:
+	if character in selection_indicators:
+		selection_indicators[character].queue_free()
+		selection_indicators.erase(character)
+
+func _update_circle_color(character: ProceduralCharacter, color: Color) -> void:
+	if character in selection_indicators:
+		var circle = selection_indicators[character].get_child(0) as SelectionCircle
+		circle.circle_color = color
+		circle.queue_redraw()
+
+func _refresh_all_circles() -> void:
+	"""Update circle colors so primary is white and others are blue."""
+	for character in selection_indicators:
+		if character == primary_selected:
+			_update_circle_color(character, SELECTION_CIRCLE_COLOR)
+		else:
+			_update_circle_color(character, SELECTION_CIRCLE_COLOR_MULTI)
 
 func _select_initial_character() -> void:
 	"""Select the first party character on startup"""
 	var party = get_party()
 	if party.size() > 0:
 		select_character(party[0], 0)
+
 func get_party() -> Array:
 	"""Get the party characters array"""
 	return party_chars
+
 func select_character_by_index(index: int) -> bool:
-	"""Select a party member by their index (0-based)"""
+	"""Exclusive-select a party member by their index (0-based)"""
 	var party = get_party()
 	if index >= 0 and index < party.size():
 		var character = party[index]
@@ -713,41 +754,85 @@ func select_character_by_index(index: int) -> bool:
 	return false
 
 func select_character(character: ProceduralCharacter, index: int = -1) -> void:
-	"""Select a specific character"""
-	if selected_character == character:
-		return
-	
-	# Deselect previous
-	if selected_character:
-		selected_character.AI_enabled = true
-		emit_signal("character_deselected", selected_character)
-	
+	"""Exclusive select: deselect all others, select only this character."""
+	# Deselect everyone currently selected
+	_deselect_all()
+
 	# Select new
-	selected_character = character
-	selected_index = index if index >= 0 else get_party().find(character)
-	selected_character.AI_enabled = false
-	emit_signal("character_selected", character, selected_index)
-	print("Selected: ", character.Name, " (index ", selected_index, ")")
+	primary_selected = character
+	primary_index = index if index >= 0 else get_party().find(character)
+	selected_characters.append(character)
+	_sync_character_flags()
+	_add_selection_circle(character, SELECTION_CIRCLE_COLOR)
+	emit_signal("character_selected", character, primary_index)
+	emit_signal("selection_changed")
+
+func toggle_character_selection(character: ProceduralCharacter) -> void:
+	"""Ctrl+click: add or remove a character from the multi-select group."""
+	if character in selected_characters:
+		# Don't allow removing the primary if it's the only one
+		if character == primary_selected:
+			if selected_characters.size() <= 1:
+				return
+			# Promote another character to primary
+			selected_characters.erase(character)
+			primary_selected = selected_characters[0]
+			primary_index = get_party().find(primary_selected)
+			emit_signal("character_selected", primary_selected, primary_index)
+		else:
+			selected_characters.erase(character)
+		_remove_selection_circle(character)
+		emit_signal("character_deselected", character)
+	else:
+		selected_characters.append(character)
+		_add_selection_circle(character, SELECTION_CIRCLE_COLOR_MULTI)
+	_sync_character_flags()
+	_refresh_all_circles()
+	emit_signal("selection_changed")
+
+func _deselect_all() -> void:
+	"""Remove all characters from selection."""
+	for c in selected_characters.duplicate():
+		_remove_selection_circle(c)
+		emit_signal("character_deselected", c)
+	selected_characters.clear()
+	primary_selected = null
+	primary_index = 0
+
+func _sync_character_flags() -> void:
+	"""Set is_player_controlled and AI_enabled based on selection state."""
+	for character in party_chars:
+		if not is_instance_valid(character):
+			continue
+		if character in selected_characters:
+			character.is_player_controlled = true
+			character.AI_enabled = false
+		else:
+			character.is_player_controlled = false
+			character.AI_enabled = true
+
+func is_character_selected(character: ProceduralCharacter) -> bool:
+	return character in selected_characters
 
 func select_next() -> void:
-	"""Select next party member"""
+	"""Select next party member (exclusive)"""
 	var party = get_party()
 	if party.size() == 0:
 		return
-	var next_index = (selected_index + 1) % party.size()
+	var next_index = (primary_index + 1) % party.size()
 	select_character_by_index(next_index)
 
 func select_previous() -> void:
-	"""Select previous party member"""
+	"""Select previous party member (exclusive)"""
 	var party = get_party()
 	if party.size() == 0:
 		return
-	var prev_index = (selected_index - 1 + party.size()) % party.size()
+	var prev_index = (primary_index - 1 + party.size()) % party.size()
 	select_character_by_index(prev_index)
 
 func get_selected() -> ProceduralCharacter:
-	"""Get the currently selected character"""
-	return selected_character
+	"""Get the primary selected character"""
+	return primary_selected
 
 # ===== COMBAT CALLBACKS =====
 
@@ -1648,7 +1733,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["traits"] = character.traits.duplicate()
 	state["is_protagonist"] = character.is_protagonist
 	state["AI_enabled"] = character.AI_enabled
- 
+	state["is_player_controlled"] = character.is_player_controlled
+
 	# --- Core attributes ---
 	state["strength"] = character.strength
 	state["constitution"] = character.constitution
@@ -1794,7 +1880,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.is_protagonist = state["is_protagonist"]
 	if state.has("AI_enabled"):
 		character.AI_enabled = state["AI_enabled"]
- 
+	if state.has("is_player_controlled"):
+		character.is_player_controlled = state["is_player_controlled"]
+
 	# --- Core attributes ---
 	if state.has("strength"):    character.strength = state["strength"]
 	if state.has("constitution"): character.constitution = state["constitution"]
