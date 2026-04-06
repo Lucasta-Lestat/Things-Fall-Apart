@@ -8,7 +8,7 @@ enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW, PISTOL }
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum GripStyle { ONE_HANDED, TWO_HANDED }
 
-@export var weapon_scale: float = 1.15
+@export var weapon_scale: float = 1.6
 
 @export var weight: float = 4.0
 @export var weapon_type: WeaponType = WeaponType.SWORD
