@@ -12,20 +12,22 @@ class StructureData:
 	var max_health: int = 100
 	var current_health: int = max_health
 	var damage_resistances: Dictionary = {}
-	var damage: Dictionary = {"Bludgeoning": 1} 
+	var damage: Dictionary = {"Bludgeoning": 1}
 	var resources: Dictionary = {} # What resources it drops on destruction
-	
-	func _init(p_id, p_name, p_health, p_resources,p_size = size):
+	var flammable: bool = false
+
+	func _init(p_id, p_name, p_health, p_resources, p_size = size, p_flammable: bool = false):
 		var texture_path = "res://Structures/" + p_name + ".png"
 		print("texture_path: ", texture_path, " #structures")
 		id = p_id
 		display_name = p_name
 		texture = texture_path
-		
+
 		max_health = p_health
 		current_health = max_health
 		resources = p_resources
 		size = p_size
+		flammable = p_flammable
 
 var structure_data: Dictionary = {}
 
@@ -35,16 +37,16 @@ func _ready():
 	
 func _setup_structure_data():
 	# Define your structures here
-	var wood_wall = StructureData.new(&"wood_wall", "Wall Wood", 50, {&"wood": 20},Vector2(64,128))
+	var wood_wall = StructureData.new(&"wood_wall", "Wall Wood", 50, {&"wood": 20}, Vector2(64,128), true)
 	structure_data[&"wood_wall"] = wood_wall
-	
-	var stone_wall = StructureData.new(&"stone_wall", "Wall Stone", 80, {&"stone": 20},Vector2(64,128))
+
+	var stone_wall = StructureData.new(&"stone_wall", "Wall Stone", 80, {&"stone": 20}, Vector2(64,128), false)
 	structure_data[&"stone_wall"] = stone_wall
-	
-	var tree = StructureData.new(&"tree", "Tree", 80, {&"wood": 40}, Vector2(75,75))
+
+	var tree = StructureData.new(&"tree", "Tree", 80, {&"wood": 40}, Vector2(75,75), true)
 	structure_data[&"tree"] = tree
-	
-	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10},Vector2(64,128))
+
+	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10}, Vector2(64,128), true)
 	structure_data[&"door_wood"] = wood_door
 	
 	

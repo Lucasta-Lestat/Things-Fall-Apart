@@ -80,11 +80,13 @@ func apply_blend_shader():
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
 	var damage_multiplier = pow(1.5,success_level)
+	var took_fire_damage = false
 
 	for damage_type in amount.keys():
 		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier - self.damage_resistances[damage_type]))
 		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
-		if damage_type == "fire": 
+		if damage_type == "fire":
+			took_fire_damage = true
 			show_floating_text(str(amount[damage_type]), Color.CRIMSON, success_level)
 		elif damage_type == "electric":
 			show_floating_text(str(amount[damage_type]), Color.YELLOW, success_level)
@@ -100,15 +102,31 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 			show_floating_text(str(amount[damage_type]), Color.BLUE_VIOLET, success_level)
 		else:
 			show_floating_text(str(amount[damage_type]), Color.WHITE_SMOKE, success_level)
-			
+
+	# Fire damage on flammable floors triggers ignition
+	if took_fire_damage and flammable:
+		var grid_pos = GridManager.world_to_map(global_position)
+		var game = get_tree().get_first_node_in_group("game")
+		if not game:
+			game = get_tree().current_scene
+		if game and "surface_manager" in game and game.surface_manager:
+			game.surface_manager.try_ignite(grid_pos)
+
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color.RED, 0.1)
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.1)
-	
+
 	emit_signal("health_changed", current_health, max_health, self)
-	
+
 	if current_health <= 0:
-		emit_signal("died", self); sprite.visible = false; $CollisionShape2D.disabled = true
+		emit_signal("died", self)
+		sprite.visible = false
+		var col_shape = get_node_or_null("CollisionShape2D")
+		if col_shape:
+			col_shape.disabled = true
+		var area = get_node_or_null("Area2D")
+		if area:
+			area.monitoring = false
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text

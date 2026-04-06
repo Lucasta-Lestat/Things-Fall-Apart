@@ -6,6 +6,7 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var fluid_manager: FluidManager = $FluidManager
+@onready var surface_manager: SurfaceManager = $SurfaceManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
 
@@ -255,6 +256,11 @@ func _unload_current_map() -> void:
 	# Clear fluids
 	if fluid_manager:
 		fluid_manager.clear_all_water_tiles()
+
+	# Clear surfaces (fire, etc.)
+	if surface_manager:
+		surface_manager.clear_all_surfaces()
+		surface_manager.invalidate_floor_cache()
 
 	current_map_id = ""
 	current_map_data = {}
@@ -553,6 +559,14 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
+		if surface_manager:
+			surface_manager.update_surfaces(delta, characters_in_scene, self)
+	if selected_character and is_instance_valid(selected_character) and selection_indicator:
+		selection_indicator.global_position = selected_character.global_position
+		if PauseManager.is_paused:
+			selection_indicator.visible = true
+	if selection_indicator and not PauseManager.is_paused:
+		selection_indicator.visible = false
 	# Update NPC visibility based on party line-of-sight
 	_update_npc_los_visibility()
 	# Camera follows primary selected character

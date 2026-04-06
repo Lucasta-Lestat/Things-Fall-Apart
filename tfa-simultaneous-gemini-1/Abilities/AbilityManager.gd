@@ -262,6 +262,7 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 		targets = character._find_targets_in_area(ability, target_position)
 
 	var results: Array = []
+	var dealt_fire_damage = false
 	for effect in effects:
 		var result = AbilityEffect.resolve_effect(
 			effect,
@@ -271,6 +272,31 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 			target_position
 		)
 		results.append(result)
+		# Check if this effect dealt fire damage
+		if result.get("effect_type") == "damage" and result.get("total_damage", 0) > 0:
+			for target_info in result.get("targets_affected", []):
+				if "fire" in target_info.get("damage_types", []):
+					dealt_fire_damage = true
+					break
+		# Also check if the effect definition itself has fire damage
+		if not dealt_fire_damage and effect.get("type") == "damage":
+			var dmg = effect.get("damage", {})
+			if dmg.has("fire") and dmg["fire"] > 0:
+				dealt_fire_damage = true
+
+	# If fire damage was dealt, try to ignite floors/fluids in the AoE
+	if dealt_fire_damage:
+		var game = character.get_tree().get_first_node_in_group("game")
+		if not game:
+			game = character.get_tree().current_scene
+		if game and "surface_manager" in game and game.surface_manager:
+			var radius = ability.targeting.get("radius", 0.0)
+			if radius > 0:
+				game.surface_manager.try_ignite_area(target_position, radius)
+			else:
+				# Single-target fire: ignite just the target tile
+				var tile = GridManager.world_to_map(target_position)
+				game.surface_manager.try_ignite(tile)
 
 	return results
 
