@@ -161,6 +161,10 @@ var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
 var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 
+# Condition-driven movement timers (for player-controlled override)
+var _panic_timer: float = 0.0
+var _flee_timer: float = 0.0
+
 @export var sight: float = 1.0  # Base sight stat
 var fov_angle_degrees: float = 150.0  # Field of view in degrees
 @export var hearing: float = 1.0 #base hearing stat
@@ -714,6 +718,200 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 	
 	if result.has("condition_id") and effect.get("type") == "remove_condition":
 		condition_manager.remove_condition(result["condition_id"])
+
+	# Handle custom triggered effects
+	if result.has("custom_type"):
+		match result["custom_type"]:
+			"spread_sickness":
+				_handle_spread_sickness(instance, result.get("custom_data", {}))
+			"vomit":
+				_handle_vomit(instance, result.get("custom_data", {}))
+			"spawn_animal":
+				_handle_spawn_animal(instance, result.get("custom_data", {}))
+
+
+func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> void:
+	var chance: float = data.get("chance", 0.3)
+	var radius_tiles: int = data.get("radius_tiles", 2)
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+
+	for c in game.characters_in_scene:
+		if c == self or not is_instance_valid(c) or not c.is_alive():
+			continue
+		var their_tile = GridManager.world_to_map(c.global_position)
+		var tile_dist = abs(their_tile.x - my_tile.x) + abs(their_tile.y - my_tile.y)
+		if tile_dist <= radius_tiles:
+			if randf() <= chance:
+				var their_cm = c.get_node_or_null("ConditionManager")
+				if their_cm and not their_cm.has_condition("sickened"):
+					their_cm.apply_condition("sickened", self, 1)
+					GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+
+
+func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
+	var chance: float = data.get("chance", 0.4)
+	if randf() > chance:
+		return
+	var fluid_type: String = data.get("fluid_type", "acid")
+	var amount: float = data.get("amount", 0.3)
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+
+	if game.fluid_manager:
+		game.fluid_manager.register_fluid(my_tile, fluid_type, amount)
+		GameLog.add_entry(Name + " vomits " + fluid_type + "!")
+
+
+func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> void:
+	var templates: Array = data.get("templates", ["wild_wolf"])
+	var radius_tiles: int = data.get("radius_tiles", 3)
+	var game = get_tree().current_scene
+	var my_tile = GridManager.world_to_map(global_position)
+
+	var template_id: String = templates[randi() % templates.size()]
+
+	# Find a random walkable tile within radius
+	var attempts = 10
+	while attempts > 0:
+		var dx = randi_range(-radius_tiles, radius_tiles)
+		var dy = randi_range(-radius_tiles, radius_tiles)
+		var target_tile = my_tile + Vector2i(dx, dy)
+		if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
+			var spawn_pos = GridManager.map_to_world(target_tile)
+			game._spawn_character(template_id, spawn_pos)
+			GameLog.add_entry("A " + template_id.replace("_", " ") + " appears near " + Name + "!")
+			return
+		attempts -= 1
+
+
+# ===== CUSTOM ABILITY METHODS (called via "custom" effect type) =====
+
+func _confess(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Confess: caster and target become mutually infatuated."""
+	for target in targets:
+		if not is_instance_valid(target) or target == self:
+			continue
+		if target is ProceduralCharacter:
+			# Target becomes infatuated with caster
+			var target_cm = target.get_node_or_null("ConditionManager")
+			if target_cm:
+				target_cm.apply_condition("infatuated", self, 1)
+			# Caster becomes infatuated with target
+			condition_manager.apply_condition("infatuated", target, 1)
+			GameLog.add_entry(Name + " and " + target.Name + " confess their feelings!")
+			return {"success": true}
+	return {"success": false}
+
+func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Hitch: two targets in the area become infatuated with each other."""
+	var valid_targets: Array = []
+	for target in targets:
+		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
+			valid_targets.append(target)
+	if valid_targets.size() < 2:
+		GameLog.add_entry("Not enough targets for Hitch!")
+		return {"success": false}
+	# Pick the two closest to the center
+	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
+	var target_a = valid_targets[0]
+	var target_b = valid_targets[1]
+	var cm_a = target_a.get_node_or_null("ConditionManager")
+	var cm_b = target_b.get_node_or_null("ConditionManager")
+	if cm_a:
+		cm_a.apply_condition("infatuated", target_b, 1)
+	if cm_b:
+		cm_b.apply_condition("infatuated", target_a, 1)
+	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " become smitten with each other!")
+	return {"success": true}
+
+func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Fatal Attraction: two targets become infatuated and their fates are linked."""
+	var valid_targets: Array = []
+	for target in targets:
+		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
+			valid_targets.append(target)
+	if valid_targets.size() < 2:
+		GameLog.add_entry("Not enough targets for Fatal Attraction!")
+		return {"success": false}
+	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
+	var target_a = valid_targets[0]
+	var target_b = valid_targets[1]
+	# Apply infatuation
+	var cm_a = target_a.get_node_or_null("ConditionManager")
+	var cm_b = target_b.get_node_or_null("ConditionManager")
+	if cm_a:
+		cm_a.apply_condition("infatuated", target_b, 1)
+		cm_a.apply_condition("fatal_attraction", target_b, 1)
+	if cm_b:
+		cm_b.apply_condition("infatuated", target_a, 1)
+		cm_b.apply_condition("fatal_attraction", target_a, 1)
+	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
+	return {"success": true}
+
+
+func _process_condition_movement_overrides(delta: float) -> void:
+	# Panicked: force random movement
+	if condition_manager.has_active_condition("panicked"):
+		_panic_timer -= delta
+		if _panic_timer <= 0 or (not is_moving and _nav_waypoints.is_empty()):
+			_panic_timer = randf_range(1.0, 2.0)
+			var my_tile = GridManager.world_to_map(global_position)
+			var angle = randf() * TAU
+			var dist_tiles = randi_range(3, 5)
+			var offset = Vector2(cos(angle), sin(angle)) * dist_tiles
+			var target_tile = my_tile + Vector2i(int(offset.x), int(offset.y))
+			target_tile.x = clampi(target_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+			target_tile.y = clampi(target_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+			if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
+				var start_tile = GridManager.world_to_map(global_position)
+				var tile_path = GridManager.find_path(start_tile, target_tile)
+				_nav_waypoints.clear()
+				for tile in tile_path:
+					_nav_waypoints.append(GridManager.map_to_world(tile))
+				_nav_index = 0
+				if not _nav_waypoints.is_empty():
+					target_position = _nav_waypoints[0]
+					target_rotation = (target_position - global_position).angle() + PI / 2
+					is_moving = true
+		return
+
+	# Frightened: flee from fear source
+	if condition_manager.has_active_condition("frightened"):
+		var fear_instance = condition_manager.conditions.get("frightened")
+		if fear_instance and is_instance_valid(fear_instance.source):
+			_flee_timer -= delta
+			if _flee_timer <= 0 or (not is_moving and _nav_waypoints.is_empty()):
+				_flee_timer = 1.0
+				var fear_source = fear_instance.source
+				var dir_away = (global_position - fear_source.global_position).normalized()
+				var flee_dist_tiles = 5
+				var my_tile = GridManager.world_to_map(global_position)
+				var flee_tile = my_tile + Vector2i(int(dir_away.x * flee_dist_tiles), int(dir_away.y * flee_dist_tiles))
+				flee_tile.x = clampi(flee_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+				flee_tile.y = clampi(flee_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+
+				var found_path = false
+				for angle_offset in [0.0, 0.5, -0.5, 1.0, -1.0]:
+					var test_dir = dir_away.rotated(angle_offset)
+					var test_tile = my_tile + Vector2i(int(test_dir.x * flee_dist_tiles), int(test_dir.y * flee_dist_tiles))
+					test_tile.x = clampi(test_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+					test_tile.y = clampi(test_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+					if not GridManager.walls.get(test_tile, false) and GridManager.grid_costs.get(test_tile, INF) < INF:
+						var start_tile = GridManager.world_to_map(global_position)
+						var tile_path = GridManager.find_path(start_tile, test_tile)
+						if not tile_path.is_empty():
+							_nav_waypoints.clear()
+							for tile in tile_path:
+								_nav_waypoints.append(GridManager.map_to_world(tile))
+							_nav_index = 0
+							target_position = _nav_waypoints[0]
+							target_rotation = (target_position - global_position).angle() + PI / 2
+							is_moving = true
+							found_path = true
+							break
+		return
+
 
 func get_overlapping_characters() -> Array[ProceduralCharacter]:
 	"""Get all characters currently overlapping with this one"""
@@ -1677,6 +1875,9 @@ func _update_colors() -> void:
 
 func _process(delta: float) -> void:
 	_handle_input()
+	# Condition-driven forced movement (applies to all characters, not just AI)
+	if not PauseManager.is_paused and is_player_controlled:
+		_process_condition_movement_overrides(delta)
 	if not PauseManager.is_paused:
 		handle_visual_shake(delta)
 		_update_movement(delta)
@@ -1906,6 +2107,9 @@ func cast_ability(ability: AbilityShape):
 
 func _handle_input() -> void:
 	if not is_player_controlled:
+		return
+	# Block player input when panicked or frightened — movement is forced
+	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
@@ -2290,6 +2494,18 @@ func get_weapon_tip_world_position() -> Vector2:
 
 func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
+	# Infatuated: refuse to swing if infatuation source is in front and in melee range
+	if condition_manager.has_active_condition("infatuated"):
+		var inf_instance = condition_manager.conditions.get("infatuated")
+		if inf_instance and is_instance_valid(inf_instance.source):
+			var to_source = inf_instance.source.global_position - global_position
+			var dist = to_source.length()
+			if dist <= 150.0:  # Within melee engagement range
+				var facing = Vector2.UP.rotated(rotation)
+				var angle = abs(facing.angle_to(to_source.normalized()))
+				if angle < PI / 2:  # Source is in the forward arc
+					GameLog.add_entry(Name + " can't bring themselves to attack " + inf_instance.source.Name + "!")
+					return
 	if Ability == "Main":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -2701,6 +2917,22 @@ func _on_character_died() -> void:
 	$AI.die()
 	character_died.emit()
 	set_process(false)
+
+	# Fatal Attraction: linked death — if partner is still alive, kill them too
+	if condition_manager.has_condition("fatal_attraction"):
+		var fa_instance = condition_manager.conditions.get("fatal_attraction")
+		if fa_instance and is_instance_valid(fa_instance.source) and fa_instance.source.is_alive():
+			var partner = fa_instance.source
+			GameLog.add_entry(partner.Name + " dies from the severed bond of Fatal Attraction!")
+			# Remove their fatal_attraction first to prevent infinite recursion
+			var partner_cm = partner.get_node_or_null("ConditionManager")
+			if partner_cm:
+				partner_cm.remove_condition("fatal_attraction")
+			# Kill the partner by destroying their torso
+			var torso = partner.limbs.get(partner.LimbType.TORSO)
+			if torso:
+				torso.current_hp = 0
+				partner.is_alive()
 
 func _update_blood_drops(delta: float) -> void:
 	"""Update all active blood drops"""
