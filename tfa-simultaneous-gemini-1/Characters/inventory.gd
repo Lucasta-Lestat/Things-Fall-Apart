@@ -90,11 +90,20 @@ func _get_hand_item(hand: String) -> Node2D:
 func _hand_is_empty(hand: String) -> bool:
 	return _get_hand_item(hand) == null
 
+func _is_two_handed(item: Node2D) -> bool:
+	return item is WeaponShape and item.is_two_handed()
+
 ## Picks the best hand: prefers the requested hand, uses the other if occupied.
 func _pick_hand(preferred: String) -> String:
+	# Can't use off-hand when main hand holds a two-handed weapon
+	if preferred == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		return "Main"
 	if _hand_is_empty(preferred):
 		return preferred
 	var other = "Off" if preferred == "Main" else "Main"
+	# Don't fall back to off-hand if main is two-handed
+	if other == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		return preferred
 	if _hand_is_empty(other):
 		return other
 	return preferred
@@ -103,7 +112,19 @@ func _pick_hand(preferred: String) -> String:
 
 ## Equip an item to a hand. If the hand is occupied, the current item is stowed.
 func equip_item(item: Node2D, hand: String = "Main") -> bool:
-	hand = _pick_hand(hand)
+	# Two-handed weapons always go to main hand
+	if _is_two_handed(item):
+		hand = "Main"
+	else:
+		hand = _pick_hand(hand)
+
+	# If equipping a two-handed weapon, stow off-hand first
+	if _is_two_handed(item) and off_hand_item != null:
+		_stow_item(off_hand_item, "Off")
+
+	# If equipping to off-hand while main has a two-handed weapon, stow main first
+	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		_stow_item(main_hand_item, "Main")
 
 	# Unequip whatever is currently in this hand → stow it
 	var current = _get_hand_item(hand)
@@ -263,6 +284,12 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 		off_hand_item = next_item
 
 	emit_signal("active_weapon_changed", next_item, hand)
+
+	# Two-handed enforcement after cycling
+	if hand == "Main" and _is_two_handed(next_item) and off_hand_item != null:
+		_stow_item(off_hand_item, "Off")
+	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		_stow_item(main_hand_item, "Main")
 
 ## Legacy cycle_weapon — cycles main hand by default.
 func cycle_weapon(direction: int = 1) -> void:

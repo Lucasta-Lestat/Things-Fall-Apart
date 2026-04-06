@@ -149,6 +149,10 @@ var main_hand_holder: Node2D
 var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
 var unarmed_strike_damage = 1
+
+func _main_hand_is_two_handed() -> bool:
+	return current_main_hand_item is WeaponShape and current_main_hand_item.is_two_handed()
+
 # Attack system
 @onready var attack_animator: AttackAnimator = $AttackAnimator
 
@@ -601,9 +605,13 @@ func _refresh_condition_display() -> void:
 		return
 	for child in _condition_display.get_children():
 		child.queue_free()
+	var icon_count := 0
 	for cond_id in condition_manager.conditions:
 		var instance = condition_manager.conditions[cond_id]
 		var cond_res = instance.condition
+		# Skip conditions that use VFX instead of icon overlay
+		if cond_res and cond_res.custom_vfx != "" and cond_res.custom_vfx != "no vfx scene":
+			continue
 		var icon_tex = cond_res.icon if cond_res else null
 		var tex_rect = TextureRect.new()
 		tex_rect.custom_minimum_size = COND_DISPLAY_ICON_SIZE
@@ -613,8 +621,9 @@ func _refresh_condition_display() -> void:
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
 		_condition_display.add_child(tex_rect)
+		icon_count += 1
 	# Center the icons above the character
-	var total_width = condition_manager.conditions.size() * (COND_DISPLAY_ICON_SIZE.x + 2)
+	var total_width = icon_count * (COND_DISPLAY_ICON_SIZE.x + 2)
 	_condition_display.position = Vector2(-total_width * 0.5, COND_DISPLAY_OFFSET_Y)
 
 func _on_condition_applied(instance: ConditionInstance) -> void:
@@ -1907,6 +1916,8 @@ func cast_ability(ability: AbilityShape):
 func _handle_input() -> void:
 	if not is_player_controlled:
 		return
+	if condition_manager.has_condition("unconscious"):
+		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
@@ -2142,7 +2153,20 @@ func _update_arm_ik() -> void:
 			right_arm_target = base_target + attack_offset
 			# Left Arm is in Ready position
 			left_arm_target = ready_base
-			
+
+		# Two-handed weapon override: off-hand tracks weapon instead of "ready" position
+		if _main_hand_is_two_handed() and not is_off_hand:
+			if attack_animator and attack_animator.is_attacking:
+				var off_hand_two_handed = attack_animator.get_off_arm_offset_two_handed()
+				if off_hand_two_handed != Vector2.ZERO:
+					var off_base = Vector2(-arm_length * 0.05, -arm_length * 0.5)
+					if body_rotation != 0.0:
+						off_base = off_base.rotated(body_rotation)
+					left_arm_target = off_base + off_hand_two_handed
+			else:
+				# Idle with two-handed: off-hand grips near main hand on weapon
+				left_arm_target = right_arm_target + Vector2(-6, 4)
+
 	else:
 		# Rest positions: arms curling forward and inward (hands near front of body)
 		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
@@ -2304,7 +2328,7 @@ func attack(Ability:String= "Main") -> void:
 			SfxManager.play("slash", position)
 		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_main_hand_item)
-		attack_animator.start_attack(damage_type)
+		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -2318,7 +2342,7 @@ func attack(Ability:String= "Main") -> void:
 			SfxManager.play("slash", position)
 		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_off_hand_item)
-		attack_animator.start_attack(damage_type)
+		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
