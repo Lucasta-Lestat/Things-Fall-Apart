@@ -101,16 +101,21 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> vo
 		return
 	if not fluid_grid.has(tile_pos):
 		fluid_grid[tile_pos] = {}
+	var is_new_tile = not fluid_grid[tile_pos].has(fluid_type) or fluid_grid[tile_pos].get(fluid_type, 0.0) < PUDDLE_HEIGHT
 	if not fluid_grid[tile_pos].has(fluid_type):
 		fluid_grid[tile_pos][fluid_type] = 0.0
 	fluid_grid[tile_pos][fluid_type] += amount
+
+	# Spawn a visual tile if this is a new fluid tile
+	if is_new_tile and fluid_grid[tile_pos][fluid_type] >= PUDDLE_HEIGHT:
+		if not active_fluid_tiles.has(tile_pos) or not is_instance_valid(active_fluid_tiles.get(tile_pos)):
+			_create_fluid_visual(tile_pos, fluid_type, fluid_grid[tile_pos][fluid_type])
 
 	if not active_fluid_tiles.has(tile_pos):
 		active_fluid_tiles[tile_pos] = true
 
 	# Also update GridManager's fluids dict for pathfinding awareness
-	if GridManager.fluids.has(tile_pos):
-		GridManager.fluids[tile_pos] = fluid_type
+	GridManager.fluids[tile_pos] = fluid_type
 
 func get_fluid_amount(tile_pos: Vector2i, fluid_type: String) -> float:
 	if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
@@ -282,11 +287,28 @@ func get_all_fluid_data() -> Dictionary:
 func get_active_tile_count() -> int:
 	return active_fluid_tiles.size()
 
+func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float) -> void:
+	"""Instantiate a visible fluid tile node at the given grid position."""
+	var fluid_node = WaterTile.instantiate()
+	add_child(fluid_node)
+	fluid_node.initialize(grid_pos, amount)
+
+	# Apply fluid-type-specific colors from the database
+	if _fluid_db.has(fluid_type):
+		var fluid_def = _fluid_db[fluid_type]
+		var color_arr = fluid_def.get("color", [0.0, 0.4, 0.8, 0.7])
+		var wave_arr = fluid_def.get("wave_color", [0.0, 0.9, 1.0, 0.4])
+		var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
+		var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
+		var sprite = fluid_node.get_node_or_null("Sprite")
+		if sprite and sprite.material is ShaderMaterial:
+			sprite.material.set_shader_parameter("water_color", water_color)
+			sprite.material.set_shader_parameter("wave_color", wave_color)
+
+	active_fluid_tiles[grid_pos] = fluid_node
+
 func spawn_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	register_fluid(grid_pos, "water", water_amount)
-	if flow_directions.has(grid_pos):
-		var flow_dir = flow_directions[grid_pos]
-		var flow_speed = flow_speeds.get(grid_pos, 0.1)
 
 func update_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	var water_tile = active_fluid_tiles.get(grid_pos)

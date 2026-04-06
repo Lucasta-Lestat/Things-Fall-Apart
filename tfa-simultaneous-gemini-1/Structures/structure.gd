@@ -30,6 +30,7 @@ func _ready():
 	# Snap to the grid
 	floating_text_label.visible = false
 	floating_text_label.z_index = 200
+	floating_text_label.z_as_relative = false
 	if not skip_grid_snap:
 		var grid_pos = GridManager.world_to_map(global_position)
 		global_position = GridManager.map_to_world(grid_pos)

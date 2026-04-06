@@ -334,7 +334,7 @@ var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
 
 var move_speed: float:
-	get: return GridManager.TILE_SIZE * (0.5 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
+	get: return GridManager.TILE_SIZE * (0.7 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
 @export var dash_speed_multiplier: float = 5.0
 @export var dash_duration: float = 0.2
 @export var dash_cooldown: float = 0.8

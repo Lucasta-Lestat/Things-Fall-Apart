@@ -28,7 +28,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/weakened.tscn",
 		"custom_sfx": "res://sfx/debuff_generic.mp3",
 		"stat_modifiers": [
-			{"stat": "STR", "operation": "add", "value": -20}
+			{"stat": "strength", "operation": "add", "value": -20}
 		],
 		"immunities": {}
 	},
@@ -45,7 +45,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/exhausted.tscn",
 		"custom_sfx": "res://sfx/heavy_breathing.mp3",
 		"stat_modifiers": [
-			{"stat": "CON", "operation": "add", "value": -7}
+			{"stat": "constitution", "operation": "add", "value": -7}
 		],
 		"immunities": {}
 	},
@@ -109,8 +109,8 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/stun_stars.tscn",
 		"custom_sfx": "res://sfx/stun_impact.mp3",
 		"stat_modifiers": [
-			{"stat": "move_speed", "operation": "set", "value": 0},
-			{"stat": "dex", "operation": "subtract", "value": 10}
+			{"stat": "speed_modifier", "operation": "set", "value": -1.0},
+			{"stat": "dexterity", "operation": "add", "value": -10}
 		],
 		"immunities": {}
 	},
@@ -128,7 +128,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/frost_mist.tscn",
 		"custom_sfx": "res://sfx/ice_crack.mp3",
 		"stat_modifiers": [
-			{"stat": "DEX", "operation": "multiply", "value": 0.85}
+			{"stat": "dexterity", "operation": "multiply", "value": 0.85}
 		],
 		"immunities": {}
 	},
@@ -139,13 +139,13 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "cold": 2, "cc": 2, "incapacitate": 1, "elemental": 1},
 		"stackable": false,
 		"duration": 5.0,
-		"icon": "res://UI/UI Icons/frozen.png",
+		"icon": "res://UI/UI Icons/chilled.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["fire", "heat"],
 		"custom_vfx": "res://vfx/ice_block.tscn",
 		"custom_sfx": "res://sfx/frozen_solid.mp3",
 		"stat_modifiers": [
-			{"stat": "DEX", "operation": "set", "value": 0}
+			{"stat": "dexterity", "operation": "set", "value": 0}
 		],
 		"immunities": {
 			"cold": 1,
@@ -159,13 +159,13 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "physical": 1},
 		"stackable": false,
 		"duration": 60.0,
-		"icon": "res://UI/UI Icons/might.png",
+		"icon": "res://UI/UI Icons/mighty.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["weak"],
 		"custom_vfx": "res://vfx/might_aura.tscn",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "STR", "operation": "add", "value": 20},
+			{"stat": "strength", "operation": "add", "value": 20},
 		],
 		"immunities": {}
 	},
@@ -176,14 +176,14 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "speed": 2, "magical": 1},
 		"stackable": false,
 		"duration": 30.0,
-		"icon": "res://UI/UI Icons/haste.png",
+		"icon": "res://UI/UI Icons/hasted.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["slow"],
 		"custom_vfx": "res://vfx/speed_trails.tscn",
 		"custom_sfx": "res://sfx/haste_wind.mp3",
 		"stat_modifiers": [
-			{"stat": "DEX", "operation": "multiply", "value": 1.5},
-			{"stat": "EVASION", "operation": "add", "value": 10}
+			{"stat": "dexterity", "operation": "multiply", "value": 1.5},
+			{"stat": "evasion", "operation": "add", "value": 10}
 		],
 		"immunities": {
 			"slow": 1
@@ -224,7 +224,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/energy_shield.tscn",
 		"custom_sfx": "res://sfx/shield_hum.mp3",
 		"stat_modifiers": [
-			{"stat": "DR", "operation": "add", "value": 25}
+			{"stat": "dr", "operation": "add", "value": 25}
 		],
 		"immunities": {
 			"fire": 1,
@@ -238,13 +238,13 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "slow": 1},
 		"stackable": false,
 		"duration": 3.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/slowed.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["speed", "haste"],
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "DEX", "operation": "multiply", "value": 0.8}
+			{"stat": "speed_modifier", "operation": "add", "value": -0.4}
 		],
 		"immunities": {}
 	},
@@ -256,7 +256,7 @@ func get_all_conditions() -> Array:
 		"stackable": true,
 		"max_tier": 5,
 		"duration": 5.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/corroding.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "water"],
 		"custom_vfx": "",
@@ -279,13 +279,13 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "cc": 1},
 		"stackable": false,
 		"duration": 4.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/suffocating.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["wind", "purify"],
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "DEX", "operation": "multiply", "value": 0.9}
+			{"stat": "dexterity", "operation": "multiply", "value": 0.9}
 		],
 		"triggered_effects": [
 			{

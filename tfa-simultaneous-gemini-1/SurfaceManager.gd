@@ -287,11 +287,24 @@ func _spawn_fire_vfx(tile_pos: Vector2i, fire_def: Dictionary) -> Node:
 	return vfx
 
 func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
-	# Check fluid
+	# Non-flammable fluid on tile blocks fire (e.g. water)
 	var fluid_manager = _get_fluid_manager(game)
-	if fluid_manager and fluid_manager.is_fluid_flammable(tile_pos):
-		return true
-	# Check floor
+	if fluid_manager:
+		var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
+		if not fluid_type.is_empty():
+			# There's fluid here — only flammable if the fluid itself is flammable
+			return fluid_manager.is_fluid_flammable(tile_pos)
+
+	# Non-flammable structure on tile blocks fire from reaching the floor underneath
+	if game and "structures_in_scene" in game:
+		for structure in game.structures_in_scene:
+			if not is_instance_valid(structure):
+				continue
+			if tile_pos in structure.occupied_tiles:
+				# Structure is here — fire can only spread if structure is flammable
+				return structure.flammable
+
+	# Check floor flammability
 	return _is_floor_flammable(tile_pos)
 
 func _is_floor_flammable(tile_pos: Vector2i) -> bool:

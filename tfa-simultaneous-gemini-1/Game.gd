@@ -316,6 +316,9 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			player = character
 			character.is_protagonist = true
 
+		# All party members share the player faction so AI won't target allies
+		character.faction_id = "player"
+
 		# Add line-of-sight light
 		_add_line_of_sight_light(character)
 
