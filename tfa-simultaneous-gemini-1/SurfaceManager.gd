@@ -321,13 +321,21 @@ func _is_floor_flammable(tile_pos: Vector2i) -> bool:
 	var floor_data = FloorDatabase.floor_definitions[floor_id]
 	return floor_data.get("flammable", false)
 
+const SCORCH_SHADER = preload("res://vfx/shaders/scorched.gdshader")
+
 func _scorch_floor(tile_pos: Vector2i, scorch_color: Color, game: Node) -> void:
-	"""Tint the floor sprite dark and make it non-flammable."""
+	"""Apply a scorched ash shader to the floor and make it non-flammable."""
 	var floor_node = _get_floor_at(tile_pos, game)
 	if floor_node and is_instance_valid(floor_node):
 		floor_node.flammable = false
 		if floor_node.has_node("Sprite"):
-			floor_node.get_node("Sprite").modulate = scorch_color
+			var sprite = floor_node.get_node("Sprite")
+			var mat = ShaderMaterial.new()
+			mat.shader = SCORCH_SHADER
+			mat.set_shader_parameter("ash_color", Color(0.08, 0.06, 0.05, 1.0))
+			mat.set_shader_parameter("ember_color", Color(0.15, 0.05, 0.02, 1.0))
+			mat.set_shader_parameter("scorch_amount", 0.85)
+			sprite.material = mat
 
 func _get_floor_at(tile_pos: Vector2i, game: Node) -> Node:
 	"""Find the Floor node at a tile position by scanning MapLoader children."""

@@ -28,10 +28,12 @@ var _fluid_db: Dictionary = {}
 # Condition application timer per fluid type per tile
 var _condition_timers: Dictionary = {}  # Dictionary[Vector2i, float]
 
+# Real-time fluid simulation
+var _sim_timer: float = 0.0
+const SIM_INTERVAL: float = 2.0  # Simulate flow every 2 seconds
+
 func _ready() -> void:
 	_load_fluid_database()
-	if TimeManager:
-		TimeManager.connect("time_updated", _on_time_updated)
 
 func _load_fluid_database() -> void:
 	var file_path = "res://data/fluids.json"
@@ -45,8 +47,11 @@ func _load_fluid_database() -> void:
 	else:
 		push_error("FluidManager: Failed to parse fluids.json")
 
-func _on_time_updated(hour: int, minute: int, second: int) -> void:
-	if minute % 3 == 0 and second % 60 == 0:
+func update_fluid_tick(delta: float) -> void:
+	"""Called from Game._process to drive fluid simulation in real time."""
+	_sim_timer += delta
+	if _sim_timer >= SIM_INTERVAL:
+		_sim_timer = 0.0
 		update_fluid_simulation()
 
 # --- Condition Application (modeled after FogOverlay) ---

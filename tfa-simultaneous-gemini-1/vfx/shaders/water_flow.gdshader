@@ -25,7 +25,7 @@ uniform vec2 tile_position = vec2(0.0);
 // Edge noise displacement — vec4(right, left, bottom, top)
 // 1.0 = exposed boundary edge, 0.0 = neighbor present
 uniform vec4 edge_mask = vec4(0.0);
-uniform float edge_fade_width = 0.35;
+uniform float edge_fade_width = 0.4;
 uniform float edge_noise_scale = 6.0;
 
 // --- Noise functions ---
@@ -56,49 +56,52 @@ float fbm(vec2 p) {
 
 float compute_edge_alpha(vec2 uv, vec2 world_uv) {
     float alpha = 1.0;
-    // Use world-space coordinates for noise so pattern is unique per tile
     vec2 noise_pos = world_uv * edge_noise_scale;
+
+    // Per-edge fade: compute distance from each exposed edge
+    // and use noise to create an irregular threshold
+    float right_a = 1.0, left_a = 1.0, bottom_a = 1.0, top_a = 1.0;
 
     if (edge_mask.x > 0.5) { // right
         float dist = 1.0 - uv.x;
         float n = fbm(noise_pos + vec2(37.0, 0.0));
-        alpha = min(alpha, smoothstep(0.0, edge_fade_width * n * 0.5 + 0.02, dist));
+        right_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
     }
     if (edge_mask.y > 0.5) { // left
         float dist = uv.x;
         float n = fbm(noise_pos + vec2(0.0, 71.0));
-        alpha = min(alpha, smoothstep(0.0, edge_fade_width * n * 0.5 + 0.02, dist));
+        left_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
     }
     if (edge_mask.z > 0.5) { // bottom
         float dist = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(113.0, 0.0));
-        alpha = min(alpha, smoothstep(0.0, edge_fade_width * n * 0.5 + 0.02, dist));
+        bottom_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
     }
     if (edge_mask.w > 0.5) { // top
         float dist = uv.y;
         float n = fbm(noise_pos + vec2(0.0, 157.0));
-        alpha = min(alpha, smoothstep(0.0, edge_fade_width * n * 0.5 + 0.02, dist));
+        top_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
     }
+
+    // Multiply edges together — corners (2 edges meeting) get much stronger erosion
+    alpha = right_a * left_a * bottom_a * top_a;
     return alpha;
 }
 
 void fragment() {
     vec2 uv = UV;
     float time = TIME;
-    // World-continuous coordinate: tile grid pos + local UV
     vec2 world_uv = tile_position + uv;
 
     float flow_magnitude = length(flow_direction);
     vec2 flow_dir_norm = flow_magnitude > 0.001 ? normalize(flow_direction) : vec2(0.0);
 
-    // Distortion in world space for continuity
     vec2 distort_offset = vec2(
         sin(world_uv.y * 10.0 + time * distortion_speed) * distortion_strength,
         cos(world_uv.x * 10.0 + time * distortion_speed) * distortion_strength
     );
     vec2 wuv_d = world_uv + distort_offset;
 
-    // Wave pattern
     float wave_coord;
     if (flow_magnitude > 0.001) {
         vec2 perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
@@ -113,7 +116,6 @@ void fragment() {
     wp = pow(abs(wp), 1.0 / wave_sharpness) * sign(wp);
     float wi = (wp * 0.5 + 0.5) * wave_amplitude;
 
-    // Secondary wave
     float wave_coord2;
     if (flow_magnitude > 0.001) {
         vec2 perp2 = vec2(-flow_dir_norm.y, flow_dir_norm.x);
@@ -130,7 +132,6 @@ void fragment() {
 
     vec3 final_color = mix(water_color.rgb, wave_color.rgb, wave_highlight);
 
-    // Shimmer
     if (flow_magnitude > 0.001) {
         float sc = dot(wuv_d, flow_dir_norm) * 8.0 - time * 3.0;
         final_color += vec3(pow(abs(sin(sc * 6.28318)), 8.0) * 0.2 * flow_magnitude);

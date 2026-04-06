@@ -576,6 +576,7 @@ func _process(delta: float) -> void:
 		# Tick fluid condition effects
 		if fluid_manager:
 			fluid_manager.update_fluid_conditions(delta, characters_in_scene)
+			fluid_manager.update_fluid_tick(delta)
 		if surface_manager:
 			surface_manager.update_surfaces(delta, characters_in_scene, self)
 	# Update all selection indicators
