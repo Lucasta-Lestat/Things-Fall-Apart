@@ -296,5 +296,166 @@ func get_all_conditions() -> Array:
 			}
 		],
 		"immunities": {}
+	},
+	{
+		"id": "infatuated",
+		"display_name": "Infatuated",
+		"description": "Charmed by a specific creature and unwilling to attack them.",
+		"traits": {"debuff": 1, "charm": 1, "mental": 1},
+		"stackable": false,
+		"duration": 20.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["clarity", "purify"],
+		"custom_vfx": "res://vfx/infatuated_hearts.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "confused",
+		"display_name": "Confused",
+		"description": "Attacks random creatures regardless of faction.",
+		"traits": {"debuff": 1, "cc": 1, "mental": 1},
+		"stackable": false,
+		"duration": 15.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["clarity", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "targeting_confusion", "operation": "add", "value": 50}
+		],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "frightened",
+		"display_name": "Frightened",
+		"description": "Terrified of a specific creature and compelled to flee from them.",
+		"traits": {"debuff": 1, "fear": 1, "mental": 1},
+		"stackable": false,
+		"duration": 15.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["courage", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "dexterity", "operation": "multiply", "value": 0.8}
+		],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "panicked",
+		"display_name": "Panicked",
+		"description": "Overcome with terror, running in random directions.",
+		"traits": {"debuff": 1, "fear": 2, "mental": 1, "cc": 1},
+		"stackable": false,
+		"duration": 10.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["courage", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": 0.3}
+		],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "sickened",
+		"display_name": "Sickened",
+		"description": "Diseased, with reduced strength and constitution. May spread to nearby creatures.",
+		"traits": {"debuff": 1, "disease": 1, "physical": 1},
+		"stackable": true,
+		"max_tier": 3,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["purify", "antidote"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "strength", "operation": "add", "value": -15},
+			{"stat": "constitution", "operation": "add", "value": -10}
+		],
+		"triggered_effects": [
+			{
+				"type": "custom",
+				"custom_type": "spread_sickness",
+				"interval": 5.0,
+				"custom_data": {"chance": 0.3, "radius_tiles": 2}
+			}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "nauseated",
+		"display_name": "Nauseated",
+		"description": "Sickly and slow, with a chance to vomit acid instead of acting.",
+		"traits": {"debuff": 1, "disease": 1, "physical": 1},
+		"stackable": false,
+		"duration": 20.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["purify", "antidote"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": -0.4}
+		],
+		"triggered_effects": [
+			{
+				"type": "custom",
+				"custom_type": "vomit",
+				"interval": 4.0,
+				"custom_data": {"chance": 0.4, "fluid_type": "acid", "amount": 0.3}
+			}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "animal_magnetism",
+		"display_name": "Animal Magnetism",
+		"description": "Exudes a supernatural aura that attracts wild animals to spawn nearby.",
+		"traits": {"buff": 1, "nature": 1, "magical": 1},
+		"stackable": false,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/mighty.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{
+				"type": "custom",
+				"custom_type": "spawn_animal",
+				"interval": 6.0,
+				"custom_data": {"templates": ["wild_wolf"], "radius_tiles": 3}
+			}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "fatal_attraction",
+		"display_name": "Fatal Attraction",
+		"description": "Bound by a deadly infatuation. If either partner dies, the other dies too.",
+		"traits": {"debuff": 1, "charm": 1, "mental": 1, "curse": 1},
+		"stackable": false,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["clarity", "purify"],
+		"custom_vfx": "res://vfx/infatuated_hearts.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {}
 	}
 ]

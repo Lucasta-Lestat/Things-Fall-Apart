@@ -55,13 +55,22 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, can_use["reason"])
 		return false
 
+	var target_position = target_data.get("position", character.global_position)
+
+	# Infatuated: block offensive abilities that would hit the charm source
+	if _would_hit_infatuation_source(ability, target_position):
+		var cond_mgr = _get_condition_manager()
+		var inf_instance = cond_mgr.conditions.get("infatuated") if cond_mgr else null
+		var source_name = inf_instance.source.Name if inf_instance and is_instance_valid(inf_instance.source) else "them"
+		GameLog.add_entry(character.Name + " can't use " + ability.display_name + " against " + source_name + "!")
+		cast_failed.emit(ability, "Cannot harm charm source")
+		return false
+
 	if not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
 
 	_start_cooldown(ability)
-
-	var target_position = target_data.get("position", character.global_position)
 
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position)
@@ -336,6 +345,44 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 			return {"success": false, "reason": "Already casting"}
 
 	return {"success": true}
+
+
+## Check if an ability would offensively affect the caster's infatuation source
+func _would_hit_infatuation_source(ability: Ability, target_position: Vector2) -> bool:
+	var cond_mgr = _get_condition_manager()
+	if not cond_mgr or not cond_mgr.has_active_condition("infatuated"):
+		return false
+
+	var inf_instance = cond_mgr.conditions.get("infatuated")
+	if not inf_instance or not is_instance_valid(inf_instance.source):
+		return false
+
+	# Check if ability has offensive effects (damage or debuff conditions)
+	var is_offensive = false
+	var effects = ability.effects if ability.effects is Array else [ability.effects]
+	for effect in effects:
+		if not effect is Dictionary:
+			continue
+		var effect_type = effect.get("type", "")
+		if effect_type == "damage" or effect_type == "knockback":
+			is_offensive = true
+			break
+		if effect_type == "apply_condition":
+			# Check if the condition being applied is a debuff
+			var cond_id = effect.get("condition_id", "")
+			var cond_template = ConditionManager.condition_registry.get(cond_id)
+			if cond_template and cond_template.traits.has("debuff"):
+				is_offensive = true
+				break
+	if not is_offensive:
+		return false
+
+	# Check if the infatuation source is in the ability's target area
+	if character.has_method("_find_targets_in_area"):
+		var targets = character._find_targets_in_area(ability, target_position)
+		return inf_instance.source in targets
+
+	return false
 
 
 ## Pay the costs for an ability

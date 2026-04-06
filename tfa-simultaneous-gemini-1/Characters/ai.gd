@@ -63,6 +63,10 @@ var min_approach_distance: float:
 var attack_cooldown_timer: float = 0.0
 var reaction_timer: float = 0.0
 
+# Panic/fear state
+var panic_direction_timer: float = 0.0
+var frightened_repath_timer: float = 0.0
+
 # Path following
 var nav_path: Array[Vector2i] = []
 var nav_path_index: int = 0
@@ -93,6 +97,16 @@ func process_ai(delta: float) -> void:
 	if current_state == AIState.STUNNED:
 		if not "stunned" in character.conditions:
 			_change_state(AIState.IDLE)
+		return
+
+	# Handle panicked — random movement, overrides everything
+	if _cm and _cm.has_active_condition("panicked"):
+		_process_panicked(delta)
+		return
+
+	# Handle frightened — flee from fear source, overrides combat
+	if _cm and _cm.has_active_condition("frightened"):
+		_process_frightened(delta)
 		return
 
 	# Check path progress for wandering/seeking
@@ -203,6 +217,32 @@ func _update_target() -> void:
 		last_known_target_pos = current_target.global_position
 		return
 
+	# Check for confusion — pick random target from all visible living characters
+	var _cm2 = character.get_node_or_null("ConditionManager")
+	if _cm2 and _cm2.has_active_condition("confused"):
+		var visible_chars: Array = []
+		for node in game.characters_in_scene:
+			if node == character:
+				continue
+			var other = node as ProceduralCharacter
+			if not other or not other.is_alive():
+				continue
+			if not is_in_line_of_sight(other.global_position):
+				continue
+			var dist = character.global_position.distance_to(other.global_position)
+			if dist < detection_range:
+				visible_chars.append(other)
+		if not visible_chars.is_empty():
+			_acquire_target(visible_chars[randi() % visible_chars.size()])
+		return
+
+	# Get infatuation source to exclude from targeting
+	var infatuation_source: Node = null
+	if _cm2 and _cm2.has_active_condition("infatuated"):
+		var inf_instance = _cm2.conditions.get("infatuated")
+		if inf_instance:
+			infatuation_source = inf_instance.source
+
 	# Search for new target (must be in LOS)
 	var best_target: ProceduralCharacter = null
 	var best_distance: float = detection_range
@@ -219,6 +259,10 @@ func _update_target() -> void:
 			continue
 
 		if not other.is_alive():
+			continue
+
+		# Infatuated: skip the charm source
+		if infatuation_source and other == infatuation_source:
 			continue
 
 		if not is_in_line_of_sight(other.global_position):
@@ -357,6 +401,87 @@ func _process_retreat(delta: float) -> void:
 
 	if state_timer > 1.5:
 		_change_state(AIState.IDLE)
+
+
+# ===== CONDITION BEHAVIOR OVERRIDES =====
+
+func _process_panicked(delta: float) -> void:
+	# Drop combat target
+	if current_target:
+		_lose_target()
+
+	panic_direction_timer -= delta
+	if panic_direction_timer <= 0 or (not character.is_moving and nav_path.is_empty()):
+		# Pick a new random direction
+		panic_direction_timer = randf_range(1.0, 2.0)
+		var my_tile = GridManager.world_to_map(character.global_position)
+		var angle = randf() * TAU
+		var dist_tiles = randi_range(3, 5)
+		var offset = Vector2(cos(angle), sin(angle)) * dist_tiles
+		var target_tile = my_tile + Vector2i(int(offset.x), int(offset.y))
+
+		# Clamp to map bounds and find walkable tile
+		target_tile.x = clampi(target_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+		target_tile.y = clampi(target_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+
+		if is_tile_walkable(target_tile):
+			navigate_to(GridManager.map_to_world(target_tile))
+		else:
+			# Try a nearby tile instead
+			for dx in range(-1, 2):
+				for dy in range(-1, 2):
+					var alt = target_tile + Vector2i(dx, dy)
+					if is_tile_walkable(alt):
+						navigate_to(GridManager.map_to_world(alt))
+						return
+	else:
+		_check_path_progress()
+
+
+func _process_frightened(delta: float) -> void:
+	# Drop combat target
+	if current_target:
+		_lose_target()
+
+	var _cm = character.get_node_or_null("ConditionManager")
+	if not _cm:
+		return
+
+	var fear_instance = _cm.conditions.get("frightened")
+	if not fear_instance or not is_instance_valid(fear_instance.source):
+		return
+
+	var fear_source = fear_instance.source
+	var dist_to_source = character.global_position.distance_to(fear_source.global_position)
+
+	frightened_repath_timer -= delta
+
+	# Re-path periodically or when not moving
+	if frightened_repath_timer <= 0 or (not character.is_moving and nav_path.is_empty()):
+		frightened_repath_timer = 1.0
+		var dir_away = (character.global_position - fear_source.global_position).normalized()
+		var flee_dist_tiles = 5
+		var my_tile = GridManager.world_to_map(character.global_position)
+		var target_tile = my_tile + Vector2i(int(dir_away.x * flee_dist_tiles), int(dir_away.y * flee_dist_tiles))
+
+		# Clamp to map bounds
+		target_tile.x = clampi(target_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+		target_tile.y = clampi(target_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+
+		if is_tile_walkable(target_tile):
+			navigate_to(GridManager.map_to_world(target_tile))
+		else:
+			# Try angled escape routes
+			for angle_offset in [0.5, -0.5, 1.0, -1.0]:
+				var alt_dir = dir_away.rotated(angle_offset)
+				var alt_tile = my_tile + Vector2i(int(alt_dir.x * flee_dist_tiles), int(alt_dir.y * flee_dist_tiles))
+				alt_tile.x = clampi(alt_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+				alt_tile.y = clampi(alt_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+				if is_tile_walkable(alt_tile):
+					navigate_to(GridManager.map_to_world(alt_tile))
+					break
+	else:
+		_check_path_progress()
 
 
 # ===== MOVEMENT =====

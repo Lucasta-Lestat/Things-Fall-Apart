@@ -308,9 +308,9 @@ static func _resolve_damage(
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-			
+
 		var target_traits = _get_entity_traits(target)
-		
+
 		if not required_traits.is_empty():
 			var has_required = false
 			for req in required_traits:
