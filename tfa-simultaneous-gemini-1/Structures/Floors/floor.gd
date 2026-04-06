@@ -119,7 +119,14 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 	emit_signal("health_changed", current_health, max_health, self)
 
 	if current_health <= 0:
-		emit_signal("died", self); sprite.visible = false; $CollisionShape2D.disabled = true
+		emit_signal("died", self)
+		sprite.visible = false
+		var col_shape = get_node_or_null("CollisionShape2D")
+		if col_shape:
+			col_shape.disabled = true
+		var area = get_node_or_null("Area2D")
+		if area:
+			area.monitoring = false
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
