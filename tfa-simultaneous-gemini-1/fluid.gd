@@ -27,6 +27,10 @@ func initialize(grid_pos: Vector2i, initial_depth: float):
 	if water_sprite and not water_sprite.material:
 		setup_shader_material()
 
+	# Pass grid position so shaders can compute world-continuous effects
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("tile_position", Vector2(grid_pos.x, grid_pos.y))
+
 	update_visuals()
 
 func setup_shader_material():
@@ -83,6 +87,8 @@ func set_custom_shader(shader_path: String) -> void:
 		var shader_material = ShaderMaterial.new()
 		shader_material.shader = load(shader_path)
 		water_sprite.material = shader_material
+		# Re-apply tile position for world-space continuity
+		shader_material.set_shader_parameter("tile_position", Vector2(grid_position.x, grid_position.y))
 
 func update_visuals():
 	"""Update the visual representation based on depth"""
