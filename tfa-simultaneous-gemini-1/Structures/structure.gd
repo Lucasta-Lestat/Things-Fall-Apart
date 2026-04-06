@@ -13,6 +13,7 @@ var size: Vector2
 var resources: Dictionary = {} # e.g., {"wood": 20}
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 var damage: Dictionary = {"bludgeoning": 1} 
+var flammable: bool = false
 var use_custom_texture: bool = false
 var custom_texture: ImageTexture
 var skip_grid_snap: bool = false
@@ -41,6 +42,7 @@ func _apply_structure_data():
 	max_health = data.max_health
 	current_health = max_health
 	resources = data.resources.duplicate()
+	flammable = data.flammable
 	if use_custom_texture and custom_texture:
 		sprite.texture = custom_texture
 		# Texture is already cropped to the correct size, no scaling needed
@@ -54,11 +56,13 @@ func _apply_structure_data():
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
 	var damage_multiplier = pow(1.5,success_level)
+	var took_fire_damage = false
 
 	for damage_type in amount.keys():
 		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier - self.damage_resistances[damage_type]))
 		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
-		if damage_type == "fire": 
+		if damage_type == "fire":
+			took_fire_damage = true
 			show_floating_text(str(amount[damage_type]), Color.CRIMSON, success_level)
 		elif damage_type == "electric":
 			show_floating_text(str(amount[damage_type]), Color.YELLOW, success_level)
@@ -74,13 +78,22 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 			show_floating_text(str(amount[damage_type]), Color.BLUE_VIOLET, success_level)
 		else:
 			show_floating_text(str(amount[damage_type]), Color.WHITE_SMOKE, success_level)
-			
+
+	# Fire damage on flammable structures triggers ignition on occupied tiles
+	if took_fire_damage and flammable:
+		var game = get_tree().get_first_node_in_group("game")
+		if not game:
+			game = get_tree().current_scene
+		if game and "surface_manager" in game and game.surface_manager:
+			for tile_pos in occupied_tiles:
+				game.surface_manager.try_ignite(tile_pos)
+
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color.RED, 0.1)
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.1)
-	
+
 	emit_signal("health_changed", current_health, max_health, self)
-	
+
 	if current_health <= 0:
 		_destroy_structure()
 
