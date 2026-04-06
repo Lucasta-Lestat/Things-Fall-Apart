@@ -14,6 +14,7 @@ var traits = {"Male":1}
 var faction_id: String = "neutral"
 var is_protagonist = false
 var AI_enabled = false
+var is_player_controlled: bool = false
 # Dialogue / interaction
 var dialogues: Array = []
 var current_dialogue_index: int = 0
@@ -1907,7 +1908,7 @@ func cast_ability(ability: AbilityShape):
 	targeting_system._end_targeting()
 
 func _handle_input() -> void:
-	if AI_enabled:
+	if not is_player_controlled:
 		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
