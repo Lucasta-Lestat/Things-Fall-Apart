@@ -1,0 +1,18 @@
+{
+	"surfaces": {
+		"fire": {
+			"display_name": "Fire",
+			"condition_id": "burning",
+			"condition_stacks": 1,
+			"apply_interval": 1.0,
+			"spread_interval": 2.0,
+			"spread_chance": 0.4,
+			"base_duration": 10.0,
+			"damage_per_tick": {"fire": 10},
+			"damage_interval": 1.0,
+			"fluid_consume_rate": 0.05,
+			"vfx_scene": "res://vfx/fire.tscn",
+			"scorch_color": [0.15, 0.12, 0.1, 1.0]
+		}
+	}
+}

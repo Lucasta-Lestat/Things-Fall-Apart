@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://dp40gruhvt3ml" path="res://time.gd" id="7_time"]
 [ext_resource type="Script" uid="uid://q252g8rcccm4" path="res://UI/PartySidePanel.gd" id="8_party"]
 [ext_resource type="Texture2D" uid="uid://domvlsmqeq8il" path="res://Dialogue Background.png" id="9_dlgbg"]
+[ext_resource type="Script" path="res://SurfaceManager.gd" id="10_surface"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dlg"]
 texture = ExtResource("9_dlgbg")
@@ -22,6 +23,9 @@ enabled = false
 
 [node name="FogManager" type="Node2D" parent="." unique_id=1234116120]
 script = ExtResource("3_ryrav")
+
+[node name="SurfaceManager" type="Node2D" parent="."]
+script = ExtResource("10_surface")
 
 [node name="Background" type="Sprite2D" parent="." unique_id=1715537969]
 visible = false

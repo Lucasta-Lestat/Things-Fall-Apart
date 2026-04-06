@@ -126,6 +126,28 @@ func get_fluid_type_at(tile_pos: Vector2i) -> String:
 			return fluid_type
 	return ""
 
+func is_fluid_flammable(tile_pos: Vector2i) -> bool:
+	"""Returns whether the fluid at this tile is flammable."""
+	var fluid_type = get_fluid_type_at(tile_pos)
+	if fluid_type.is_empty():
+		return false
+	if not _fluid_db.has(fluid_type):
+		return false
+	return _fluid_db[fluid_type].get("flammable", false)
+
+func remove_fluid(tile_pos: Vector2i, amount: float) -> void:
+	"""Reduces the fluid amount at a tile (e.g. fire consuming oil)."""
+	if not fluid_grid.has(tile_pos):
+		return
+	for fluid_type in fluid_grid[tile_pos]:
+		fluid_grid[tile_pos][fluid_type] = max(0.0, fluid_grid[tile_pos][fluid_type] - amount)
+	# Clean up if all fluids are gone
+	var total = 0.0
+	for fluid_type in fluid_grid[tile_pos]:
+		total += fluid_grid[tile_pos][fluid_type]
+	if total < PUDDLE_HEIGHT:
+		remove_fluid_tile(tile_pos)
+
 func is_conductive(tile_pos: Vector2i) -> bool:
 	"""Returns whether the fluid at this tile conducts electricity."""
 	var fluid_type = get_fluid_type_at(tile_pos)
@@ -225,6 +247,14 @@ func apply_flow_deltas(flow_deltas: Dictionary) -> void:
 			if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT and not active_fluid_tiles.has(tile_pos):
 				active_fluid_tiles[tile_pos] = true
 				spawn_fluid_tile(tile_pos, fluid_grid[tile_pos][fluid_type])
+
+			# Water flowing into a tile extinguishes fire
+			if fluid_type == FLUID_TYPE_WATER and fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
+				var game = get_tree().get_first_node_in_group("game")
+				if not game:
+					game = get_tree().current_scene
+				if game and "surface_manager" in game and game.surface_manager:
+					game.surface_manager.try_extinguish(tile_pos)
 
 func get_neighbors(tile_pos: Vector2i) -> Array[Vector2i]:
 	var neighbors: Array[Vector2i] = []
