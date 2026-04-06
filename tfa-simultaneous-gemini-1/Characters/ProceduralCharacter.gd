@@ -22,6 +22,11 @@ var interact_options: Array = ["Inspect"]
 
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
+
+# Tactical path planning (Doorkickers 2-style)
+var tactical_path: TacticalPath = null
+var path_drawer: PathDrawer = null
+var path_input_handler: PathInputHandler = null
 # Body parts
 var body: Line2D
 var head: Line2D
@@ -432,6 +437,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_inventory()
 	_setup_action_queue()
+	_setup_tactical_path()
 	_setup_equipment_slots()
 	_setup_attack_system()
 	_setup_collision()
@@ -466,6 +472,33 @@ func _on_action_started(action: ActionQueue.Action) -> void:
 
 func _on_action_completed(action: ActionQueue.Action) -> void:
 	pass
+
+func _setup_tactical_path() -> void:
+	tactical_path = TacticalPath.new()
+
+	path_drawer = PathDrawer.new()
+	path_drawer.name = "PathDrawer"
+	path_drawer.tactical_path = tactical_path
+	add_child(path_drawer)
+
+	path_input_handler = PathInputHandler.new()
+	path_input_handler.name = "PathInputHandler"
+	path_input_handler.tactical_path = tactical_path
+	path_input_handler.path_drawer = path_drawer
+	add_child(path_input_handler)
+
+	PauseManager.game_unpaused.connect(_on_game_unpaused_convert_path)
+
+func _on_game_unpaused_convert_path() -> void:
+	if tactical_path == null or tactical_path.is_empty():
+		return
+	if not is_player_controlled:
+		return
+	var actions = tactical_path.to_action_queue_actions()
+	for a in actions:
+		action_queue.queue_action(a.type, a.data)
+	tactical_path.clear()
+	path_drawer.queue_redraw()
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -2168,6 +2201,11 @@ func _handle_input() -> void:
 		_was_paused = paused
 		return
 
+	# Tactical path input (only when paused)
+	if paused and path_input_handler != null:
+		if path_input_handler.handle_input(mouse_pos):
+			return  # Path input consumed the event
+
 	# --- Right mouse button - Off hand ---
 	if paused:
 		if Input.is_action_just_pressed("right_click"):
@@ -2237,6 +2275,8 @@ func _handle_input() -> void:
 	if paused:
 		if Input.is_action_just_pressed("ui_cancel"):
 			action_queue.cancel_all()
+			if path_input_handler:
+				path_input_handler.cancel_path()
 			
 	if Input.is_action_just_pressed("dash"):
 		if paused:

@@ -466,6 +466,30 @@ func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 
 func _consume_item(character, item_index: int, item_data: Dictionary) -> void:
 	"""Use an item on the currently selected character (e.g. potions, food)."""
+	# When paused: assign to pending action node or queue
+	if PauseManager.is_paused:
+		var icon: Texture2D = null
+		var sprite_path = item_data.get("sprite_path", "")
+		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+			icon = load(sprite_path)
+
+		if character.path_input_handler and character.path_input_handler.is_placing_action():
+			character.path_input_handler.assign_item_to_pending_node(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_consume").bind(character, item_index, item_data)},
+				icon
+			)
+		else:
+			character.action_queue.queue_action(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_consume").bind(character, item_index, item_data)}
+			)
+		return
+
+	# Unpaused: consume immediately
+	_execute_consume(character, item_index, item_data)
+
+func _execute_consume(character, item_index: int, item_data: Dictionary) -> void:
 	var target = game_node.selected_character if game_node and game_node.selected_character else character
 	var use_ability_id = item_data.get("use_ability", "")
 	if use_ability_id is String and not use_ability_id.is_empty():
@@ -493,6 +517,41 @@ func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
 
+	# When paused: assign to pending action node on tactical path, or queue to ActionQueue
+	if PauseManager.is_paused:
+		var icon: Texture2D = null
+		var sprite_path = item_data.get("sprite_path", "")
+		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+			icon = load(sprite_path)
+
+		var throw_data = {
+			"item_index": item_index,
+			"item_data": item_data.duplicate(),
+			"character": character,
+		}
+
+		# Check if the character has a pending action node on their tactical path
+		if character.path_input_handler and character.path_input_handler.is_placing_action():
+			character.path_input_handler.assign_item_to_pending_node(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, item_index, item_data)},
+				icon
+			)
+		else:
+			# Queue directly to action queue
+			character.action_queue.queue_action(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, item_index, item_data)}
+			)
+		return
+
+	# Unpaused: throw immediately
+	_execute_throw(character, item_index, item_data)
+
+func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
+	if not game_node:
+		return
+
 	# Remove from inventory
 	var item = character.inventory.remove_item(item_index)
 	if item.is_empty():
@@ -514,6 +573,7 @@ func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
 		"distance_traveled": 0.0,
 		"damage": item.get("damage", {"bludgeoning": 2}),
 		"size": Vector2(8, 8),
+		"sprite_scale": Vector2(0.5, 0.5),
 	}
 
 	# Use the game's projectile system if available

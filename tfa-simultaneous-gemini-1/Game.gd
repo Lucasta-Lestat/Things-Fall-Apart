@@ -1629,6 +1629,9 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	proj.global_position = proj_data["position"]
 	proj.rotation = proj_data["velocity"].angle() + PI / 2.0
 	proj.z_index = 50
+	# Apply sprite scaling if specified (fixes oversized thrown items)
+	var sprite_scale = proj_data.get("sprite_scale", Vector2(1.0, 1.0))
+	proj.scale = sprite_scale
 	get_tree().current_scene.add_child(proj)
 
 	active_projectiles.append({
