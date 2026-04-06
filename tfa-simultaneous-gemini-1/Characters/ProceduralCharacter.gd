@@ -3426,6 +3426,11 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 		if instance:
 			var dir = (target_position - global_position).angle()
 			instance.rotation = dir
+			# Pass cone angle to shader if present
+			var cone_angle_deg = ability.targeting.get("angle", 60.0)
+			var wave_layer = instance.get_node_or_null("WaveLayer")
+			if wave_layer and wave_layer.material is ShaderMaterial:
+				wave_layer.material.set_shader_parameter("cone_half_angle", deg_to_rad(cone_angle_deg) / 2.0)
 	else:
 		var size_scale = 1.0
 		var radius = ability.get_aoe_radius()
