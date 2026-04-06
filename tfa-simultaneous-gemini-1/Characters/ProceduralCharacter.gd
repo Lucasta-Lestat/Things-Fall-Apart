@@ -141,6 +141,8 @@ var tail: Line2D = null
 var tail_swing_time: float = 0.0
 var tail_swing_speed: float = 4.0  # Faster when moving
 var tail_idle_speed: float = 1.5
+# Offset applied to head/hair/features for quadrupeds (head at front of body)
+var _head_offset: Vector2 = Vector2.ZERO
 # Inventory and weapons (using new shape-based system)
 var inventory: Inventory
 var current_main_hand_item: Node2D = null
@@ -1139,8 +1141,11 @@ func rebuild_visuals() -> void:
 func _create_body_parts() -> void:
 	if body_type == BodyType.QUADRUPED:
 		_create_quadruped_body()
+		# Quadruped head is at the front of the body
+		_head_offset = Vector2(0, -body_length * 0.4 - head_length * 0.2)
 	else:
 		_create_bipedal_body()
+		_head_offset = Vector2.ZERO
 
 	# Create hair based on style
 	_create_hair()
@@ -1286,7 +1291,7 @@ func _create_head_by_shape() -> void:
 			_create_humanoid_head()
 
 func _create_humanoid_head() -> void:
-	# Default oval head (existing code)
+	# Default oval head
 	head = Line2D.new()
 	head.name = "Head"
 	head.width = head_width
@@ -1295,33 +1300,33 @@ func _create_humanoid_head() -> void:
 	head.end_cap_mode = Line2D.LINE_CAP_ROUND
 	head.z_index = 1
 	add_child(head)
-	head.add_point(Vector2(0, -head_length * 0.35))  # Front of head (face)
-	head.add_point(Vector2(0, head_length * 0.25))   # Back of head
+	head.add_point(_head_offset + Vector2(0, -head_length * 0.35))
+	head.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
 func _create_orcish_head() -> void:
 	# Wider, squarer jaw with box cap at the front
 	head = Line2D.new()
 	head.name = "Head"
-	head.width = head_width + 4  # Wider than humanoid
+	head.width = head_width + 4
 	head.default_color = skin_color
-	head.begin_cap_mode = Line2D.LINE_CAP_BOX  # Square jaw
-	head.end_cap_mode = Line2D.LINE_CAP_ROUND   # Round back
+	head.begin_cap_mode = Line2D.LINE_CAP_BOX
+	head.end_cap_mode = Line2D.LINE_CAP_ROUND
 	head.z_index = 1
 	add_child(head)
-	head.add_point(Vector2(0, -head_length * 0.35))
-	head.add_point(Vector2(0, head_length * 0.25))
+	head.add_point(_head_offset + Vector2(0, -head_length * 0.35))
+	head.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
-	# Tusks - two small prongs extending forward from the jaw
+	# Tusks extending forward from the jaw sides
 	var tusk_l = Line2D.new()
 	tusk_l.name = "TuskL"
 	tusk_l.width = 2.5
-	tusk_l.default_color = Color("#FFFFF0")  # Ivory/bone color
+	tusk_l.default_color = Color("#FFFFF0")
 	tusk_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	tusk_l.end_cap_mode = Line2D.LINE_CAP_ROUND
-	tusk_l.z_index = 2  # Above head
+	tusk_l.z_index = 2
 	add_child(tusk_l)
-	tusk_l.add_point(Vector2(-head_width * 0.25, -head_length * 0.25))
-	tusk_l.add_point(Vector2(-head_width * 0.2, -head_length * 0.55))
+	tusk_l.add_point(_head_offset + Vector2(-head_width * 0.3, -head_length * 0.3))
+	tusk_l.add_point(_head_offset + Vector2(-head_width * 0.35, -head_length * 0.6))
 
 	var tusk_r = Line2D.new()
 	tusk_r.name = "TuskR"
@@ -1331,8 +1336,8 @@ func _create_orcish_head() -> void:
 	tusk_r.end_cap_mode = Line2D.LINE_CAP_ROUND
 	tusk_r.z_index = 2
 	add_child(tusk_r)
-	tusk_r.add_point(Vector2(head_width * 0.25, -head_length * 0.25))
-	tusk_r.add_point(Vector2(head_width * 0.2, -head_length * 0.55))
+	tusk_r.add_point(_head_offset + Vector2(head_width * 0.3, -head_length * 0.3))
+	tusk_r.add_point(_head_offset + Vector2(head_width * 0.35, -head_length * 0.6))
 
 func _create_draconic_head() -> void:
 	# Elongated snout head with width_curve tapering from back to front
@@ -1345,17 +1350,15 @@ func _create_draconic_head() -> void:
 	head.z_index = 1
 	add_child(head)
 
-	# Width curve tapers from full at back to narrow at snout
 	var curve = Curve.new()
-	curve.add_point(Vector2(0.0, 0.4))    # Snout tip: narrow
-	curve.add_point(Vector2(0.3, 0.65))   # Mid-snout
-	curve.add_point(Vector2(0.6, 0.9))    # Jaw area: widening
-	curve.add_point(Vector2(1.0, 1.0))    # Back of head: full width
+	curve.add_point(Vector2(0.0, 0.4))
+	curve.add_point(Vector2(0.3, 0.65))
+	curve.add_point(Vector2(0.6, 0.9))
+	curve.add_point(Vector2(1.0, 1.0))
 	head.width_curve = curve
 
-	# Longer head for draconic snout
-	head.add_point(Vector2(0, -head_length * 0.55))  # Snout tip (further forward)
-	head.add_point(Vector2(0, head_length * 0.25))   # Back of head
+	head.add_point(_head_offset + Vector2(0, -head_length * 0.55))
+	head.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
 func _create_canine_head() -> void:
 	# Animal head with a separate snout extending forward
@@ -1367,20 +1370,20 @@ func _create_canine_head() -> void:
 	head.end_cap_mode = Line2D.LINE_CAP_ROUND
 	head.z_index = 1
 	add_child(head)
-	head.add_point(Vector2(0, -head_length * 0.2))
-	head.add_point(Vector2(0, head_length * 0.25))
+	head.add_point(_head_offset + Vector2(0, -head_length * 0.2))
+	head.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
-	# Snout extending forward from the front of the head
+	# Snout extending forward
 	var snout = Line2D.new()
 	snout.name = "Snout"
-	snout.width = head_width * 0.5  # Narrower than head
+	snout.width = head_width * 0.5
 	snout.default_color = skin_color.darkened(0.05)
 	snout.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	snout.end_cap_mode = Line2D.LINE_CAP_ROUND
-	snout.z_index = 2  # Above head
+	snout.z_index = 2
 	add_child(snout)
-	snout.add_point(Vector2(0, -head_length * 0.15))
-	snout.add_point(Vector2(0, -head_length * 0.55))  # Forward extending snout
+	snout.add_point(_head_offset + Vector2(0, -head_length * 0.15))
+	snout.add_point(_head_offset + Vector2(0, -head_length * 0.55))
 
 func _create_equine_head() -> void:
 	# Very elongated narrow horse head
@@ -1393,17 +1396,15 @@ func _create_equine_head() -> void:
 	head.z_index = 1
 	add_child(head)
 
-	# Width curve: narrower at front, wider at back (skull)
 	var curve = Curve.new()
-	curve.add_point(Vector2(0.0, 0.45))   # Nose: narrow
-	curve.add_point(Vector2(0.4, 0.6))    # Mid-face
-	curve.add_point(Vector2(0.7, 0.85))   # Cheekbones
-	curve.add_point(Vector2(1.0, 1.0))    # Back of skull: full
+	curve.add_point(Vector2(0.0, 0.45))
+	curve.add_point(Vector2(0.4, 0.6))
+	curve.add_point(Vector2(0.7, 0.85))
+	curve.add_point(Vector2(1.0, 1.0))
 	head.width_curve = curve
 
-	# Very elongated from snout to back
-	head.add_point(Vector2(0, -head_length * 0.6))  # Long snout
-	head.add_point(Vector2(0, head_length * 0.25))   # Back of skull
+	head.add_point(_head_offset + Vector2(0, -head_length * 0.6))
+	head.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
 func _create_racial_features() -> void:
 	# Create a container for head features that will rotate with the head
@@ -1411,7 +1412,8 @@ func _create_racial_features() -> void:
 		head_features_node.queue_free()
 	head_features_node = Node2D.new()
 	head_features_node.name = "HeadFeatures"
-	head_features_node.z_index = 2  # Above head
+	head_features_node.z_index = 2
+	head_features_node.position = _head_offset
 	add_child(head_features_node)
 
 	for feature in head_features:
@@ -1554,256 +1556,222 @@ func _create_hair() -> void:
 			_create_mane_hair()
 
 func _create_horseshoe_hair() -> void:
-	# Original hair style - receding/balding with hair on sides and back
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width + 4  # Slightly wider than head
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0  # Behind head
-	add_child(hair)
-	
-	# Hair covers only the back portion of the head
-	hair.add_point(Vector2(0, -head_length * 0.1))
-	hair.add_point(Vector2(0, head_length * 0.4))
-
-func _create_full_hair() -> void:
-	# Full head of hair - covers most of the head from top-down view
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width + 6  # Wider than head for full coverage
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0  # Behind head
-	add_child(hair)
-	
-	# Hair extends from front to back, covering most of the head
-	hair.add_point(Vector2(0, -head_length * 0.3))  # Near front
-	hair.add_point(Vector2(0, head_length * 0.45))  # Past back
-
-func _create_combover_hair() -> void:
-	# Comb over - hair swept from one side to the other
-	# Main hair mass on one side
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width * 0.7
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0
-	add_child(hair)
-	
-	# Hair sweeps from left side across the top
-	hair.add_point(Vector2(-head_width * 0.35, -head_length * 0.1))
-	hair.add_point(Vector2(head_width * 0.2, -head_length * 0.25))
-	hair.add_point(Vector2(head_width * 0.35, head_length * 0.1))
-	
-	# Back portion of hair
-	var hair_back = Line2D.new()
-	hair_back.name = "HairBack"
-	hair_back.width = head_width + 2
-	hair_back.default_color = hair_color
-	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair_back.z_index = -1  # Further behind
-	add_child(hair_back)
-	
-	hair_back.add_point(Vector2(0, head_length * 0.1))
-	hair_back.add_point(Vector2(0, head_length * 0.4))
-
-func _create_pompadour_hair() -> void:
-	# Pompadour - high volume at the front swept back
-	# Main pompadour volume at front
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width + 8  # Extra wide for volume
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 1  # In front of head for the pomp
-	add_child(hair)
-	
-	# High front portion that extends forward
-	hair.add_point(Vector2(0, -head_length * 0.5))  # Extends past front of head
-	hair.add_point(Vector2(0, -head_length * 0.2))
-	
-	# Side and back hair
-	var hair_back = Line2D.new()
-	hair_back.name = "HairBack"
-	hair_back.width = head_width + 4
-	hair_back.default_color = hair_color.darkened(0.1)  # Slightly darker for depth
-	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair_back.z_index = 0  # Behind head
-	add_child(hair_back)
-	
-	hair_back.add_point(Vector2(0, -head_length * 0.15))
-	hair_back.add_point(Vector2(0, head_length * 0.45))
-
-func _create_buzzcut_hair() -> void:
-	# Buzzcut - very short hair all over, just a slight texture on the head
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width + 2  # Just slightly wider than head
-	hair.default_color = hair_color.darkened(0.2)  # Darker because it's so short
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0  # Behind head
-	add_child(hair)
-	
-	# Covers the whole head tightly
-	hair.add_point(Vector2(0, -head_length * 0.32))
-	hair.add_point(Vector2(0, head_length * 0.35))
-
-func _create_mohawk_hair() -> void:
-	# Mohawk - strip of hair down the middle
-	hair = Line2D.new()
-	hair.name = "Hair"
-	hair.width = head_width * 0.35  # Narrow strip
-	hair.default_color = hair_color
-	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 1  # On top of head
-	add_child(hair)
-	
-	# Strip from front to back, slightly elevated
-	hair.add_point(Vector2(0, -head_length * 0.45))  # Front spike
-	hair.add_point(Vector2(0, head_length * 0.35))   # Back
-
-func _create_long_hair() -> void:
-	# Long hair - extends well past the back of the head into shoulder area
+	# Receding/balding - only back and sides visible, top of head exposed
 	hair = Line2D.new()
 	hair.name = "Hair"
 	hair.width = head_width + 4
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0  # Behind head
+	hair.z_index = 0  # Behind head - intentionally shows bald top
 	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.1))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.4))
 
-	# Extends from near front of head well past the back into shoulder area
-	hair.add_point(Vector2(0, -head_length * 0.2))
-	hair.add_point(Vector2(0, head_length * 0.5))
-	hair.add_point(Vector2(0, shoulder_y_offset + 6))  # Past shoulders
-
-func _create_braids_hair() -> void:
-	# Two braids running along the left and right sides of the head
+func _create_full_hair() -> void:
+	# Full head of hair - covers the head from top-down view
 	hair = Line2D.new()
 	hair.name = "Hair"
-	hair.width = head_width * 0.3  # Narrow braid
+	hair.width = head_width + 6
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0
+	hair.z_index = 2  # ON TOP of head - hair covers the skull
 	add_child(hair)
+	# Covers most of head, leaving only the front face edge visible
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.15))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.45))
 
-	# Left braid
-	hair.add_point(Vector2(-head_width * 0.35, -head_length * 0.1))
-	hair.add_point(Vector2(-head_width * 0.4, head_length * 0.3))
-	hair.add_point(Vector2(-head_width * 0.35, shoulder_y_offset + 4))
+func _create_combover_hair() -> void:
+	# Hair swept from one side to the other
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.7
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top of head
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(-head_width * 0.35, -head_length * 0.1))
+	hair.add_point(_head_offset + Vector2(head_width * 0.2, -head_length * 0.25))
+	hair.add_point(_head_offset + Vector2(head_width * 0.35, head_length * 0.1))
 
-	# Right braid
+	# Back portion
+	var hair_back = Line2D.new()
+	hair_back.name = "HairBack"
+	hair_back.width = head_width + 2
+	hair_back.default_color = hair_color
+	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.z_index = 0  # Behind head
+	add_child(hair_back)
+	hair_back.add_point(_head_offset + Vector2(0, head_length * 0.1))
+	hair_back.add_point(_head_offset + Vector2(0, head_length * 0.4))
+
+func _create_pompadour_hair() -> void:
+	# High volume at the front
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 8
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top of head
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.5))
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.2))
+
+	# Back hair
+	var hair_back = Line2D.new()
+	hair_back.name = "HairBack"
+	hair_back.width = head_width + 4
+	hair_back.default_color = hair_color.darkened(0.1)
+	hair_back.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair_back.z_index = 2  # Also on top
+	add_child(hair_back)
+	hair_back.add_point(_head_offset + Vector2(0, -head_length * 0.15))
+	hair_back.add_point(_head_offset + Vector2(0, head_length * 0.45))
+
+func _create_buzzcut_hair() -> void:
+	# Very short hair all over - slightly wider than head to show texture
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 2
+	hair.default_color = hair_color.darkened(0.2)
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top of head
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.32))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.35))
+
+func _create_mohawk_hair() -> void:
+	# Narrow strip down the middle
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.35
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top of head
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.45))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.35))
+
+func _create_long_hair() -> void:
+	# Long hair extending past the back into shoulder area
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width + 4
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top of head
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.15))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.5))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.5 + 10))
+
+func _create_braids_hair() -> void:
+	# Two braids along left and right sides
+	hair = Line2D.new()
+	hair.name = "Hair"
+	hair.width = head_width * 0.3
+	hair.default_color = hair_color
+	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
+	hair.z_index = 2  # On top
+	add_child(hair)
+	hair.add_point(_head_offset + Vector2(-head_width * 0.35, -head_length * 0.1))
+	hair.add_point(_head_offset + Vector2(-head_width * 0.4, head_length * 0.3))
+	hair.add_point(_head_offset + Vector2(-head_width * 0.35, head_length * 0.5 + 4))
+
 	var hair_right = Line2D.new()
 	hair_right.name = "HairBraidR"
 	hair_right.width = head_width * 0.3
 	hair_right.default_color = hair_color
 	hair_right.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair_right.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair_right.z_index = 0
+	hair_right.z_index = 2
 	add_child(hair_right)
-
-	hair_right.add_point(Vector2(head_width * 0.35, -head_length * 0.1))
-	hair_right.add_point(Vector2(head_width * 0.4, head_length * 0.3))
-	hair_right.add_point(Vector2(head_width * 0.35, shoulder_y_offset + 4))
+	hair_right.add_point(_head_offset + Vector2(head_width * 0.35, -head_length * 0.1))
+	hair_right.add_point(_head_offset + Vector2(head_width * 0.4, head_length * 0.3))
+	hair_right.add_point(_head_offset + Vector2(head_width * 0.35, head_length * 0.5 + 4))
 
 func _create_bun_hair() -> void:
-	# Hair bun - short extra-wide blob at the back of the head
-	# Back coverage first
+	# Hair covering back half of head + bun blob at back
 	hair = Line2D.new()
 	hair.name = "Hair"
 	hair.width = head_width + 2
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0
+	hair.z_index = 2  # On top
 	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.1))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.25))
 
-	# Covers the back portion of the head
-	hair.add_point(Vector2(0, -head_length * 0.1))
-	hair.add_point(Vector2(0, head_length * 0.25))
-
-	# The bun itself - a thick round blob at the back
 	var bun = Line2D.new()
 	bun.name = "HairBun"
 	bun.width = head_width * 0.6
 	bun.default_color = hair_color.darkened(0.05)
 	bun.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	bun.end_cap_mode = Line2D.LINE_CAP_ROUND
-	bun.z_index = 0
+	bun.z_index = 2
 	add_child(bun)
-
-	# Small thick line creates a round bump at the back
-	bun.add_point(Vector2(0, head_length * 0.3))
-	bun.add_point(Vector2(0, head_length * 0.45))
+	bun.add_point(_head_offset + Vector2(0, head_length * 0.3))
+	bun.add_point(_head_offset + Vector2(0, head_length * 0.45))
 
 func _create_pigtails_hair() -> void:
-	# Two small bunches on left and right sides of the head
-	# Main hair coverage on top
+	# Main hair on top + two side bunches
 	hair = Line2D.new()
 	hair.name = "Hair"
 	hair.width = head_width + 2
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 0
+	hair.z_index = 2  # On top
 	add_child(hair)
+	hair.add_point(_head_offset + Vector2(0, -head_length * 0.25))
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.15))
 
-	hair.add_point(Vector2(0, -head_length * 0.25))
-	hair.add_point(Vector2(0, head_length * 0.15))
-
-	# Left pigtail - small round protrusion
 	var pigtail_l = Line2D.new()
 	pigtail_l.name = "HairPigtailL"
 	pigtail_l.width = head_width * 0.35
 	pigtail_l.default_color = hair_color
 	pigtail_l.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	pigtail_l.end_cap_mode = Line2D.LINE_CAP_ROUND
-	pigtail_l.z_index = 0
+	pigtail_l.z_index = 2
 	add_child(pigtail_l)
+	pigtail_l.add_point(_head_offset + Vector2(-head_width * 0.4, -head_length * 0.05))
+	pigtail_l.add_point(_head_offset + Vector2(-head_width * 0.6, head_length * 0.15))
 
-	pigtail_l.add_point(Vector2(-head_width * 0.4, -head_length * 0.05))
-	pigtail_l.add_point(Vector2(-head_width * 0.6, head_length * 0.15))
-
-	# Right pigtail
 	var pigtail_r = Line2D.new()
 	pigtail_r.name = "HairPigtailR"
 	pigtail_r.width = head_width * 0.35
 	pigtail_r.default_color = hair_color
 	pigtail_r.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	pigtail_r.end_cap_mode = Line2D.LINE_CAP_ROUND
-	pigtail_r.z_index = 0
+	pigtail_r.z_index = 2
 	add_child(pigtail_r)
-
-	pigtail_r.add_point(Vector2(head_width * 0.4, -head_length * 0.05))
-	pigtail_r.add_point(Vector2(head_width * 0.6, head_length * 0.15))
+	pigtail_r.add_point(_head_offset + Vector2(head_width * 0.4, -head_length * 0.05))
+	pigtail_r.add_point(_head_offset + Vector2(head_width * 0.6, head_length * 0.15))
 
 func _create_mane_hair() -> void:
-	# Mane running along the spine/neck for quadrupeds (horses)
+	# Mane running along spine for quadrupeds
 	hair = Line2D.new()
 	hair.name = "Hair"
-	hair.width = head_width * 0.3  # Narrow strip along spine
+	hair.width = head_width * 0.3
 	hair.default_color = hair_color
 	hair.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	hair.end_cap_mode = Line2D.LINE_CAP_ROUND
-	hair.z_index = 1  # On top of body
+	hair.z_index = 2  # On top of body
 	add_child(hair)
-
-	# Runs from back of head down along spine
-	hair.add_point(Vector2(0, head_length * 0.2))
-	hair.add_point(Vector2(0, shoulder_y_offset))
-	hair.add_point(Vector2(0, shoulder_y_offset + 12))  # Extends down the body
+	# From back of head along the spine
+	hair.add_point(_head_offset + Vector2(0, head_length * 0.2))
+	hair.add_point(Vector2(0, 0))  # Mid-body (absolute, not head-relative)
+	hair.add_point(Vector2(0, body_length * 0.2))
 
 # Add this to your _update_colors function if you have one, or create it
 func _update_hair_colors() -> void:
@@ -1869,12 +1837,18 @@ func _initialize_arms() -> void:
 	# For centaur-type quadrupeds, shoulders are at the front of the body
 	var shoulder_base_y = -body_length * 0.35 if (body_type == BodyType.QUADRUPED and has_arms) else shoulder_y_offset
 
+	# Scale arm segments for quadrupeds (arms should be proportional to body, not full humanoid size)
+	var seg_lengths = ARM_SEGMENT_LENGTHS
+	if body_type == BodyType.QUADRUPED and has_arms:
+		var arm_scale = 0.5  # Centaur arms are smaller relative to horse body
+		seg_lengths = ARM_SEGMENT_LENGTHS.map(func(l): return l * arm_scale)
+
 	# Shoulders are at the BACK of the body (positive Y = behind)
 	# Left arm extends to the LEFT (negative X)
 	var left_shoulder = Vector2(-body_width / 2, shoulder_base_y)
 	left_arm_joints.append(left_shoulder)
 	var pos = left_shoulder
-	for length in ARM_SEGMENT_LENGTHS:
+	for length in seg_lengths:
 		pos += Vector2(-length, 0)  # Extend left
 		left_arm_joints.append(pos)
 	left_arm_target = left_arm_joints[-1]
@@ -1883,7 +1857,7 @@ func _initialize_arms() -> void:
 	var right_shoulder = Vector2(body_width / 2, shoulder_base_y)
 	right_arm_joints.append(right_shoulder)
 	pos = right_shoulder
-	for length in ARM_SEGMENT_LENGTHS:
+	for length in seg_lengths:
 		pos += Vector2(length, 0)  # Extend right
 		right_arm_joints.append(pos)
 	right_arm_target = right_arm_joints[-1]
@@ -2342,7 +2316,8 @@ func _update_arm_ik() -> void:
 	var shoulder_base_y = -body_length * 0.35 if (body_type == BodyType.QUADRUPED and has_arms) else shoulder_y_offset
 	var left_shoulder = Vector2(-body_width / 2, shoulder_base_y)
 	var right_shoulder = Vector2(body_width / 2, shoulder_base_y)
-	var arm_length = ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]
+	var arm_scale_factor = 0.5 if (body_type == BodyType.QUADRUPED and has_arms) else 1.0
+	var arm_length = (ARM_SEGMENT_LENGTHS[0] + ARM_SEGMENT_LENGTHS[1] + ARM_SEGMENT_LENGTHS[2]) * arm_scale_factor
 	
 	# Get attack animation offset and body rotation if attacking
 	var attack_offset = Vector2.ZERO
