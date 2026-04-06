@@ -878,6 +878,7 @@ func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: 
 		print("  -> %s SEVERED!" % info["limb_name"])
 
 func _on_weapon_bounced(attacker: CharacterBody2D, target: CharacterBody2D, limb_type: int) -> void:
+	pass
 
 func _on_weapon_clash(char1: CharacterBody2D, char2: CharacterBody2D, winner: CharacterBody2D, power_diff: float) -> void:
 	var winner_name = "Player" if winner == player else "Enemy"
