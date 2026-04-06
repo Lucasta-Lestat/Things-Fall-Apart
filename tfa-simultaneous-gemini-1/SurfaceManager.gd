@@ -333,8 +333,9 @@ func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
 func _is_floor_flammable(tile_pos: Vector2i) -> bool:
 	if not GridManager.floors.has(tile_pos):
 		return false
-	# Check the actual floor node first (it may have been scorched)
-	var floor_node = _floor_cache.get(tile_pos)
+	# Check the actual main floor node first (it may have been scorched)
+	var game = _get_game()
+	var floor_node = _get_floor_at(tile_pos, game)
 	if floor_node and is_instance_valid(floor_node):
 		return floor_node.flammable
 	# Fallback to database definition
@@ -347,32 +348,42 @@ func _is_floor_flammable(tile_pos: Vector2i) -> bool:
 const SCORCH_SHADER = preload("res://vfx/shaders/scorched.gdshader")
 
 func _scorch_floor(tile_pos: Vector2i, scorch_color: Color, game: Node) -> void:
-	"""Apply a scorched ash shader to the floor and make it non-flammable."""
-	var floor_node = _get_floor_at(tile_pos, game)
-	if not floor_node or not is_instance_valid(floor_node):
-		print("[SurfaceManager] _scorch_floor: no floor node at ", tile_pos)
+	"""Apply a scorched ash shader to ALL floor layers at this tile."""
+	var floors = _get_all_floors_at(tile_pos, game)
+	if floors.is_empty():
 		return
-	floor_node.flammable = false
-	var sprite = floor_node.get_node_or_null("Sprite")
-	if not sprite:
-		print("[SurfaceManager] _scorch_floor: no Sprite child on floor at ", tile_pos)
-		return
-	# Re-show sprite if it was hidden by the floor reaching 0 HP
-	sprite.visible = true
-	# Apply scorched shader
-	var mat = ShaderMaterial.new()
-	mat.shader = SCORCH_SHADER
-	mat.set_shader_parameter("ash_color", Color(0.08, 0.06, 0.05, 1.0))
-	mat.set_shader_parameter("ember_color", Color(0.15, 0.05, 0.02, 1.0))
-	mat.set_shader_parameter("scorch_amount", 0.85)
-	sprite.material = mat
-	print("[SurfaceManager] Scorched floor at ", tile_pos, " sprite.visible=", sprite.visible, " material=", sprite.material)
+	for floor_node in floors:
+		if not is_instance_valid(floor_node):
+			continue
+		floor_node.flammable = false
+		var sprite = floor_node.get_node_or_null("Sprite")
+		if not sprite:
+			continue
+		sprite.visible = true
+		var mat = ShaderMaterial.new()
+		mat.shader = SCORCH_SHADER
+		mat.set_shader_parameter("ash_color", Color(0.08, 0.06, 0.05, 1.0))
+		mat.set_shader_parameter("ember_color", Color(0.15, 0.05, 0.02, 1.0))
+		mat.set_shader_parameter("scorch_amount", 0.85)
+		sprite.material = mat
 
 func _get_floor_at(tile_pos: Vector2i, game: Node) -> Node:
-	"""Find the Floor node at a tile position by scanning MapLoader children."""
+	"""Find the top Floor node at a tile position (highest z_index)."""
+	var floors = _get_all_floors_at(tile_pos, game)
+	if floors.is_empty():
+		return null
+	# Return the one with highest z_index (the visible main floor)
+	var best = floors[0]
+	for f in floors:
+		if f.z_index > best.z_index:
+			best = f
+	return best
+
+func _get_all_floors_at(tile_pos: Vector2i, game: Node) -> Array:
+	"""Get all Floor nodes at a tile position (main + under layers)."""
 	if _floor_cache_dirty:
 		_rebuild_floor_cache(game)
-	return _floor_cache.get(tile_pos)
+	return _floor_cache.get(tile_pos, [])
 
 func _rebuild_floor_cache(game: Node) -> void:
 	_floor_cache.clear()
@@ -383,7 +394,9 @@ func _rebuild_floor_cache(game: Node) -> void:
 	for child in map_loader.get_children():
 		if child is Floor:
 			var grid_pos = GridManager.world_to_map(child.global_position)
-			_floor_cache[grid_pos] = child
+			if not _floor_cache.has(grid_pos):
+				_floor_cache[grid_pos] = []
+			_floor_cache[grid_pos].append(child)
 	_floor_cache_dirty = false
 
 func invalidate_floor_cache() -> void:

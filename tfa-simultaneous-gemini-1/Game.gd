@@ -545,6 +545,9 @@ func _update_npc_los_visibility() -> void:
 		for ally in party_chars:
 			if not is_instance_valid(ally) or not ally.is_alive():
 				continue
+			var _cm = ally.get_node_or_null("ConditionManager")
+			if _cm and (_cm.has_condition("blinded") or _cm.has_condition("unconscious")):
+				continue
 			var to_npc = npc.global_position - ally.global_position
 			var dist = to_npc.length()
 			var sight_range = 1440.0 * ally.sight
@@ -1457,7 +1460,7 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 		var tex_size = sprite.texture.get_size()
 		var longest = max(tex_size.x, tex_size.y)
 		if longest > 0:
-			var target_size = 16.0
+			var target_size = 32.0
 			var s = target_size / longest
 			sprite.scale = Vector2(s, s)
 	else:
