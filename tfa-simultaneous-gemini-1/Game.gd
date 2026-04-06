@@ -216,6 +216,9 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# 7. Spawn items
 	_spawn_items(current_map_data.get("item_spawns", []))
 
+	# 7b. Spawn fluids (oil, water, etc.)
+	_spawn_fluids(current_map_data.get("fluid_spawns", []))
+
 	# 8. Create warp zones
 	_create_warp_zones(current_map_data.get("warp_points", []))
 
@@ -322,6 +325,22 @@ func _spawn_items(item_list: Array) -> void:
 
 		for j in range(count):
 			create_item(item_id, pos)
+
+func _spawn_fluids(fluid_list: Array) -> void:
+	for fluid_def in fluid_list:
+		var fluid_type: String = fluid_def.get("type", "water")
+		var pos_arr = fluid_def.get("position", [0, 0])
+		var amount: float = fluid_def.get("amount", 0.5)
+		var radius: int = fluid_def.get("radius", 0)
+		var center_tile = Vector2i(pos_arr[0], pos_arr[1])
+
+		# Spawn fluid at center tile and optionally in a radius
+		for dx in range(-radius, radius + 1):
+			for dy in range(-radius, radius + 1):
+				if Vector2(dx, dy).length() <= radius + 0.5:
+					var tile = center_tile + Vector2i(dx, dy)
+					if not GridManager.walls.get(tile, false):
+						fluid_manager.register_fluid(tile, fluid_type, amount)
 
 # ---------------------------------------------------------------------------
 # Context menu
