@@ -33,6 +33,7 @@ const EFFECT_TYPES = [
 	"teleport",         # Move target instantly
 	"summon",           # Summon an entity
 	"cloud",            # Create a Cloud
+	"spawn_fluid",      # Spawn fluid at target (acid, poison, etc.)
 	"custom",           # Custom effect with callback
 ]
 
@@ -80,6 +81,8 @@ static func resolve_effect(
 			result = _resolve_summon(effect, caster, target_position, ability)
 		"cloud":
 			result = _resolve_cloud(effect, caster, target_position, ability)
+		"spawn_fluid":
+			result = _resolve_spawn_fluid(effect, caster, target_position, ability)
 		_:
 			result["success"] = false
 			result["error"] = "Unknown effect type: %s" % effect_type
@@ -235,8 +238,52 @@ static func _resolve_cloud(
 		result["error"] = "Failed to create cloud"
 
 	return result
-	
-	
+
+
+## Resolve spawn_fluid effect — creates fluid tiles at the target position
+static func _resolve_spawn_fluid(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2,
+	ability: Ability
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "spawn_fluid",
+		"created_objects": [],
+	}
+
+	var fluid_type = effect.get("fluid_type", "water")
+	var amount = effect.get("amount", 0.5)
+	var spread = int(effect.get("spread", 1))  # How many tiles to fill (radius)
+
+	# Convert world position to grid tile
+	var center_tile = GridManager.world_to_map(target_position)
+
+	var fluid_manager = _get_fluid_manager(caster)
+	if not fluid_manager:
+		result["success"] = false
+		result["error"] = "No FluidManager found"
+		return result
+
+	# Fill tiles in a diamond/square pattern around the center
+	for dx in range(-spread + 1, spread):
+		for dy in range(-spread + 1, spread):
+			if abs(dx) + abs(dy) < spread:
+				var tile = center_tile + Vector2i(dx, dy)
+				fluid_manager.register_fluid(tile, fluid_type, amount)
+				result["created_objects"].append(tile)
+
+	return result
+
+
+static func _get_fluid_manager(caster: Node):
+	var game = _get_game_scene(caster)
+	if not game:
+		return null
+	return game.get_node_or_null("FluidManager")
+
+
 static func _resolve_damage(
 	effect: Dictionary,
 	caster: Node,
@@ -261,9 +308,9 @@ static func _resolve_damage(
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-			
+
 		var target_traits = _get_entity_traits(target)
-		
+
 		if not required_traits.is_empty():
 			var has_required = false
 			for req in required_traits:

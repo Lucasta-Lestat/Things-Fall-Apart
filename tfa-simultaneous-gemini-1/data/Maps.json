@@ -95,6 +95,20 @@
 					"count": 1
 				}
 			],
+			"fluid_spawns": [
+				{
+					"type": "oil",
+					"position": [5, 3],
+					"amount": 0.5,
+					"radius": 2
+				},
+				{
+					"type": "oil",
+					"position": [3, 6],
+					"amount": 0.3,
+					"radius": 1
+				}
+			],
 			"item_spawns": [
 				{
 					"id": "potion_of_healing",

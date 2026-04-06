@@ -28,16 +28,18 @@ var _fluid_db: Dictionary = {}
 # Condition application timer per fluid type per tile
 var _condition_timers: Dictionary = {}  # Dictionary[Vector2i, float]
 
+# Real-time fluid simulation
+var _sim_timer: float = 0.0
+const SIM_INTERVAL: float = 2.0  # Simulate flow every 2 seconds
+
 func _ready() -> void:
 	_load_fluid_database()
-	if TimeManager:
-		TimeManager.connect("time_updated", _on_time_updated)
 
 func _load_fluid_database() -> void:
 	var file_path = "res://data/fluids.json"
 	if not FileAccess.file_exists(file_path):
 		push_error("FluidManager: fluids.json not found at " + file_path)
-		return
+		return 
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	var json = JSON.new()
 	if json.parse(file.get_as_text()) == OK:
@@ -45,8 +47,11 @@ func _load_fluid_database() -> void:
 	else:
 		push_error("FluidManager: Failed to parse fluids.json")
 
-func _on_time_updated(hour: int, minute: int, second: int) -> void:
-	if minute % 3 == 0 and second % 60 == 0:
+func update_fluid_tick(delta: float) -> void:
+	"""Called from Game._process to drive fluid simulation in real time."""
+	_sim_timer += delta
+	if _sim_timer >= SIM_INTERVAL:
+		_sim_timer = 0.0
 		update_fluid_simulation()
 
 # --- Condition Application (modeled after FogOverlay) ---
@@ -101,16 +106,21 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> vo
 		return
 	if not fluid_grid.has(tile_pos):
 		fluid_grid[tile_pos] = {}
+	var is_new_tile = not fluid_grid[tile_pos].has(fluid_type) or fluid_grid[tile_pos].get(fluid_type, 0.0) < PUDDLE_HEIGHT
 	if not fluid_grid[tile_pos].has(fluid_type):
 		fluid_grid[tile_pos][fluid_type] = 0.0
 	fluid_grid[tile_pos][fluid_type] += amount
+
+	# Spawn a visual tile if this is a new fluid tile
+	if is_new_tile and fluid_grid[tile_pos][fluid_type] >= PUDDLE_HEIGHT:
+		if not active_fluid_tiles.has(tile_pos) or not is_instance_valid(active_fluid_tiles.get(tile_pos)):
+			_create_fluid_visual(tile_pos, fluid_type, fluid_grid[tile_pos][fluid_type])
 
 	if not active_fluid_tiles.has(tile_pos):
 		active_fluid_tiles[tile_pos] = true
 
 	# Also update GridManager's fluids dict for pathfinding awareness
-	if GridManager.fluids.has(tile_pos):
-		GridManager.fluids[tile_pos] = fluid_type
+	GridManager.fluids[tile_pos] = fluid_type
 
 func get_fluid_amount(tile_pos: Vector2i, fluid_type: String) -> float:
 	if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
@@ -125,6 +135,28 @@ func get_fluid_type_at(tile_pos: Vector2i) -> String:
 		if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
 			return fluid_type
 	return ""
+
+func is_fluid_flammable(tile_pos: Vector2i) -> bool:
+	"""Returns whether the fluid at this tile is flammable."""
+	var fluid_type = get_fluid_type_at(tile_pos)
+	if fluid_type.is_empty():
+		return false
+	if not _fluid_db.has(fluid_type):
+		return false
+	return _fluid_db[fluid_type].get("flammable", false)
+
+func remove_fluid(tile_pos: Vector2i, amount: float) -> void:
+	"""Reduces the fluid amount at a tile (e.g. fire consuming oil)."""
+	if not fluid_grid.has(tile_pos):
+		return
+	for fluid_type in fluid_grid[tile_pos]:
+		fluid_grid[tile_pos][fluid_type] = max(0.0, fluid_grid[tile_pos][fluid_type] - amount)
+	# Clean up if all fluids are gone
+	var total = 0.0
+	for fluid_type in fluid_grid[tile_pos]:
+		total += fluid_grid[tile_pos][fluid_type]
+	if total < PUDDLE_HEIGHT:
+		remove_fluid_tile(tile_pos)
 
 func is_conductive(tile_pos: Vector2i) -> bool:
 	"""Returns whether the fluid at this tile conducts electricity."""
@@ -210,6 +242,7 @@ func update_fluid_simulation() -> void:
 	apply_flow_deltas(flow_deltas)
 	update_water_tile_flows()
 	cleanup_inactive_tiles()
+	update_edge_masks()
 
 func apply_flow_deltas(flow_deltas: Dictionary) -> void:
 	for tile_pos in flow_deltas.keys():
@@ -225,6 +258,14 @@ func apply_flow_deltas(flow_deltas: Dictionary) -> void:
 			if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT and not active_fluid_tiles.has(tile_pos):
 				active_fluid_tiles[tile_pos] = true
 				spawn_fluid_tile(tile_pos, fluid_grid[tile_pos][fluid_type])
+
+			# Water flowing into a tile extinguishes fire
+			if fluid_type == FLUID_TYPE_WATER and fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
+				var game = get_tree().get_first_node_in_group("game")
+				if not game:
+					game = get_tree().current_scene
+				if game and "surface_manager" in game and game.surface_manager:
+					game.surface_manager.try_extinguish(tile_pos)
 
 func get_neighbors(tile_pos: Vector2i) -> Array[Vector2i]:
 	var neighbors: Array[Vector2i] = []
@@ -252,11 +293,67 @@ func get_all_fluid_data() -> Dictionary:
 func get_active_tile_count() -> int:
 	return active_fluid_tiles.size()
 
+func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float) -> void:
+	"""Instantiate a visible fluid tile node at the given grid position."""
+	var fluid_node = WaterTile.instantiate()
+	add_child(fluid_node)
+	fluid_node.initialize(grid_pos, amount)
+
+	# Apply fluid-type-specific shader and colors from the database
+	if _fluid_db.has(fluid_type):
+		var fluid_def = _fluid_db[fluid_type]
+
+		# Custom shader (e.g. oil sheen) — must be set before colors
+		var shader_path = fluid_def.get("shader", "")
+		if not shader_path.is_empty() and fluid_node.has_method("set_custom_shader"):
+			fluid_node.set_custom_shader(shader_path)
+
+		# Colors
+		if fluid_node.has_method("set_fluid_colors"):
+			var color_arr = fluid_def.get("color", [0.0, 0.4, 0.8, 0.7])
+			var wave_arr = fluid_def.get("wave_color", [0.0, 0.9, 1.0, 0.4])
+			var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
+			var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
+			fluid_node.set_fluid_colors(water_color, wave_color)
+
+	active_fluid_tiles[grid_pos] = fluid_node
+	# Defer edge mask update so all tiles in a batch are created first
+	call_deferred("update_edge_masks")
+
+func update_edge_masks() -> void:
+	"""Recompute edge masks for all active fluid tiles based on neighbor presence."""
+	for tile_pos in active_fluid_tiles:
+		var fluid_node = active_fluid_tiles[tile_pos]
+		if not fluid_node or not is_instance_valid(fluid_node) or fluid_node is bool:
+			continue
+		if not fluid_node.has_method("set_edge_mask"):
+			continue
+
+		# Check 4 cardinal neighbors for fluid presence
+		var right = Vector2i(tile_pos.x + 1, tile_pos.y)
+		var left = Vector2i(tile_pos.x - 1, tile_pos.y)
+		var bottom = Vector2i(tile_pos.x, tile_pos.y + 1)
+		var top = Vector2i(tile_pos.x, tile_pos.y - 1)
+
+		var mask = Vector4(
+			0.0 if _has_fluid_at(right) else 1.0,  # right exposed
+			0.0 if _has_fluid_at(left) else 1.0,   # left exposed
+			0.0 if _has_fluid_at(bottom) else 1.0,  # bottom exposed
+			0.0 if _has_fluid_at(top) else 1.0      # top exposed
+		)
+		fluid_node.set_edge_mask(mask)
+
+func _has_fluid_at(tile_pos: Vector2i) -> bool:
+	"""Check if there's meaningful fluid at a tile position."""
+	if not fluid_grid.has(tile_pos):
+		return false
+	for fluid_type in fluid_grid[tile_pos]:
+		if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
+			return true
+	return false
+
 func spawn_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	register_fluid(grid_pos, "water", water_amount)
-	if flow_directions.has(grid_pos):
-		var flow_dir = flow_directions[grid_pos]
-		var flow_speed = flow_speeds.get(grid_pos, 0.1)
 
 func update_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	var water_tile = active_fluid_tiles.get(grid_pos)

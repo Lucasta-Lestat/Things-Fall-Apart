@@ -14,6 +14,7 @@ var traits = {"Male":1}
 var faction_id: String = "neutral"
 var is_protagonist = false
 var AI_enabled = false
+var is_player_controlled: bool = false
 # Dialogue / interaction
 var dialogues: Array = []
 var current_dialogue_index: int = 0
@@ -148,6 +149,10 @@ var main_hand_holder: Node2D
 var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
 var unarmed_strike_damage = 1
+
+func _main_hand_is_two_handed() -> bool:
+	return current_main_hand_item is WeaponShape and current_main_hand_item.is_two_handed()
+
 # Attack system
 @onready var attack_animator: AttackAnimator = $AttackAnimator
 
@@ -159,6 +164,10 @@ var is_moving: bool = false
 var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
 var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
+
+# Condition-driven movement timers (for player-controlled override)
+var _panic_timer: float = 0.0
+var _flee_timer: float = 0.0
 
 @export var sight: float = 1.0  # Base sight stat
 var fov_angle_degrees: float = 150.0  # Field of view in degrees
@@ -333,7 +342,7 @@ var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
 
 var move_speed: float:
-	get: return GridManager.TILE_SIZE * (0.5 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
+	get: return GridManager.TILE_SIZE * (0.7 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
 @export var dash_speed_multiplier: float = 5.0
 @export var dash_duration: float = 0.2
 @export var dash_cooldown: float = 0.8
@@ -450,13 +459,13 @@ func _setup_action_queue() -> void:
 
 # Optional signal handlers for UI feedback
 func _on_action_queued(action: ActionQueue.Action) -> void:
-	print("Action queued: ", ActionQueue.ActionType.keys()[action.type])
+	pass
 
 func _on_action_started(action: ActionQueue.Action) -> void:
-	print("Action started: ", ActionQueue.ActionType.keys()[action.type])
+	pass
 
 func _on_action_completed(action: ActionQueue.Action) -> void:
-	print("Action completed: ", ActionQueue.ActionType.keys()[action.type])
+	pass
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -488,6 +497,15 @@ func _setup_inventory() -> void:
 	#look here for updating to dual hand system.
 	add_child(main_hand_holder)
 	add_child(off_hand_holder)
+	_update_holder_scale()
+
+func _update_holder_scale() -> void:
+	# Scale weapon holders so weapons match character size (race body_size_mod)
+	var s = Vector2(body_size_mod, body_size_mod)
+	if main_hand_holder:
+		main_hand_holder.scale = s
+	if off_hand_holder:
+		off_hand_holder.scale = s
 
 func _setup_equipment_slots() -> void:
 	# Create holder nodes for each equipment slot
@@ -547,7 +565,6 @@ func _setup_collision() -> void:
 func _update_collision_shape() -> void:
 	# Call this if body dimensions change at runtime
 	if collision_shape and collision_shape.shape is ConvexPolygonShape2D:
-		print("updating collision shape")
 		collision_shape.shape.points = _get_body_collision_points()
 
 func _get_body_collision_points() -> PackedVector2Array:
@@ -592,9 +609,13 @@ func _refresh_condition_display() -> void:
 		return
 	for child in _condition_display.get_children():
 		child.queue_free()
+	var icon_count := 0
 	for cond_id in condition_manager.conditions:
 		var instance = condition_manager.conditions[cond_id]
 		var cond_res = instance.condition
+		# Skip conditions that use VFX instead of icon overlay
+		if cond_res and cond_res.custom_vfx != "" and cond_res.custom_vfx != "no vfx scene":
+			continue
 		var icon_tex = cond_res.icon if cond_res else null
 		var tex_rect = TextureRect.new()
 		tex_rect.custom_minimum_size = COND_DISPLAY_ICON_SIZE
@@ -604,8 +625,9 @@ func _refresh_condition_display() -> void:
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
 		_condition_display.add_child(tex_rect)
+		icon_count += 1
 	# Center the icons above the character
-	var total_width = condition_manager.conditions.size() * (COND_DISPLAY_ICON_SIZE.x + 2)
+	var total_width = icon_count * (COND_DISPLAY_ICON_SIZE.x + 2)
 	_condition_display.position = Vector2(-total_width * 0.5, COND_DISPLAY_OFFSET_Y)
 
 func _on_condition_applied(instance: ConditionInstance) -> void:
@@ -705,6 +727,200 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 	
 	if result.has("condition_id") and effect.get("type") == "remove_condition":
 		condition_manager.remove_condition(result["condition_id"])
+
+	# Handle custom triggered effects
+	if result.has("custom_type"):
+		match result["custom_type"]:
+			"spread_sickness":
+				_handle_spread_sickness(instance, result.get("custom_data", {}))
+			"vomit":
+				_handle_vomit(instance, result.get("custom_data", {}))
+			"spawn_animal":
+				_handle_spawn_animal(instance, result.get("custom_data", {}))
+
+
+func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> void:
+	var chance: float = data.get("chance", 0.3)
+	var radius_tiles: int = data.get("radius_tiles", 2)
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+
+	for c in game.characters_in_scene:
+		if c == self or not is_instance_valid(c) or not c.is_alive():
+			continue
+		var their_tile = GridManager.world_to_map(c.global_position)
+		var tile_dist = abs(their_tile.x - my_tile.x) + abs(their_tile.y - my_tile.y)
+		if tile_dist <= radius_tiles:
+			if randf() <= chance:
+				var their_cm = c.get_node_or_null("ConditionManager")
+				if their_cm and not their_cm.has_condition("sickened"):
+					their_cm.apply_condition("sickened", self, 1)
+					GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+
+
+func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
+	var chance: float = data.get("chance", 0.4)
+	if randf() > chance:
+		return
+	var fluid_type: String = data.get("fluid_type", "acid")
+	var amount: float = data.get("amount", 0.3)
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+
+	if game.fluid_manager:
+		game.fluid_manager.register_fluid(my_tile, fluid_type, amount)
+		GameLog.add_entry(Name + " vomits " + fluid_type + "!")
+
+
+func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> void:
+	var templates: Array = data.get("templates", ["wild_wolf"])
+	var radius_tiles: int = data.get("radius_tiles", 3)
+	var game = get_tree().current_scene
+	var my_tile = GridManager.world_to_map(global_position)
+
+	var template_id: String = templates[randi() % templates.size()]
+
+	# Find a random walkable tile within radius
+	var attempts = 10
+	while attempts > 0:
+		var dx = randi_range(-radius_tiles, radius_tiles)
+		var dy = randi_range(-radius_tiles, radius_tiles)
+		var target_tile = my_tile + Vector2i(dx, dy)
+		if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
+			var spawn_pos = GridManager.map_to_world(target_tile)
+			game._spawn_character(template_id, spawn_pos)
+			GameLog.add_entry("A " + template_id.replace("_", " ") + " appears near " + Name + "!")
+			return
+		attempts -= 1
+
+
+# ===== CUSTOM ABILITY METHODS (called via "custom" effect type) =====
+
+func _confess(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Confess: caster and target become mutually infatuated."""
+	for target in targets:
+		if not is_instance_valid(target) or target == self:
+			continue
+		if target is ProceduralCharacter:
+			# Target becomes infatuated with caster
+			var target_cm = target.get_node_or_null("ConditionManager")
+			if target_cm:
+				target_cm.apply_condition("infatuated", self, 1)
+			# Caster becomes infatuated with target
+			condition_manager.apply_condition("infatuated", target, 1)
+			GameLog.add_entry(Name + " and " + target.Name + " confess their feelings!")
+			return {"success": true}
+	return {"success": false}
+
+func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Hitch: two targets in the area become infatuated with each other."""
+	var valid_targets: Array = []
+	for target in targets:
+		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
+			valid_targets.append(target)
+	if valid_targets.size() < 2:
+		GameLog.add_entry("Not enough targets for Hitch!")
+		return {"success": false}
+	# Pick the two closest to the center
+	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
+	var target_a = valid_targets[0]
+	var target_b = valid_targets[1]
+	var cm_a = target_a.get_node_or_null("ConditionManager")
+	var cm_b = target_b.get_node_or_null("ConditionManager")
+	if cm_a:
+		cm_a.apply_condition("infatuated", target_b, 1)
+	if cm_b:
+		cm_b.apply_condition("infatuated", target_a, 1)
+	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " become smitten with each other!")
+	return {"success": true}
+
+func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
+	"""Fatal Attraction: two targets become infatuated and their fates are linked."""
+	var valid_targets: Array = []
+	for target in targets:
+		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
+			valid_targets.append(target)
+	if valid_targets.size() < 2:
+		GameLog.add_entry("Not enough targets for Fatal Attraction!")
+		return {"success": false}
+	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
+	var target_a = valid_targets[0]
+	var target_b = valid_targets[1]
+	# Apply infatuation
+	var cm_a = target_a.get_node_or_null("ConditionManager")
+	var cm_b = target_b.get_node_or_null("ConditionManager")
+	if cm_a:
+		cm_a.apply_condition("infatuated", target_b, 1)
+		cm_a.apply_condition("fatal_attraction", target_b, 1)
+	if cm_b:
+		cm_b.apply_condition("infatuated", target_a, 1)
+		cm_b.apply_condition("fatal_attraction", target_a, 1)
+	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
+	return {"success": true}
+
+
+func _process_condition_movement_overrides(delta: float) -> void:
+	# Panicked: force random movement
+	if condition_manager.has_active_condition("panicked"):
+		_panic_timer -= delta
+		if _panic_timer <= 0 or (not is_moving and _nav_waypoints.is_empty()):
+			_panic_timer = randf_range(1.0, 2.0)
+			var my_tile = GridManager.world_to_map(global_position)
+			var angle = randf() * TAU
+			var dist_tiles = randi_range(3, 5)
+			var offset = Vector2(cos(angle), sin(angle)) * dist_tiles
+			var target_tile = my_tile + Vector2i(int(offset.x), int(offset.y))
+			target_tile.x = clampi(target_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+			target_tile.y = clampi(target_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+			if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
+				var start_tile = GridManager.world_to_map(global_position)
+				var tile_path = GridManager.find_path(start_tile, target_tile)
+				_nav_waypoints.clear()
+				for tile in tile_path:
+					_nav_waypoints.append(GridManager.map_to_world(tile))
+				_nav_index = 0
+				if not _nav_waypoints.is_empty():
+					target_position = _nav_waypoints[0]
+					target_rotation = (target_position - global_position).angle() + PI / 2
+					is_moving = true
+		return
+
+	# Frightened: flee from fear source
+	if condition_manager.has_active_condition("frightened"):
+		var fear_instance = condition_manager.conditions.get("frightened")
+		if fear_instance and is_instance_valid(fear_instance.source):
+			_flee_timer -= delta
+			if _flee_timer <= 0 or (not is_moving and _nav_waypoints.is_empty()):
+				_flee_timer = 1.0
+				var fear_source = fear_instance.source
+				var dir_away = (global_position - fear_source.global_position).normalized()
+				var flee_dist_tiles = 5
+				var my_tile = GridManager.world_to_map(global_position)
+				var flee_tile = my_tile + Vector2i(int(dir_away.x * flee_dist_tiles), int(dir_away.y * flee_dist_tiles))
+				flee_tile.x = clampi(flee_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+				flee_tile.y = clampi(flee_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+
+				var found_path = false
+				for angle_offset in [0.0, 0.5, -0.5, 1.0, -1.0]:
+					var test_dir = dir_away.rotated(angle_offset)
+					var test_tile = my_tile + Vector2i(int(test_dir.x * flee_dist_tiles), int(test_dir.y * flee_dist_tiles))
+					test_tile.x = clampi(test_tile.x, GridManager.map_rect.position.x, GridManager.map_rect.position.x + GridManager.map_rect.size.x - 1)
+					test_tile.y = clampi(test_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
+					if not GridManager.walls.get(test_tile, false) and GridManager.grid_costs.get(test_tile, INF) < INF:
+						var start_tile = GridManager.world_to_map(global_position)
+						var tile_path = GridManager.find_path(start_tile, test_tile)
+						if not tile_path.is_empty():
+							_nav_waypoints.clear()
+							for tile in tile_path:
+								_nav_waypoints.append(GridManager.map_to_world(tile))
+							_nav_index = 0
+							target_position = _nav_waypoints[0]
+							target_rotation = (target_position - global_position).angle() + PI / 2
+							is_moving = true
+							found_path = true
+							break
+		return
+
 
 func get_overlapping_characters() -> Array[ProceduralCharacter]:
 	"""Get all characters currently overlapping with this one"""
@@ -1707,6 +1923,9 @@ func _update_colors() -> void:
 
 func _process(delta: float) -> void:
 	_handle_input()
+	# Condition-driven forced movement (applies to all characters, not just AI)
+	if not PauseManager.is_paused and is_player_controlled:
+		_process_condition_movement_overrides(delta)
 	if not PauseManager.is_paused:
 		handle_visual_shake(delta)
 		_update_movement(delta)
@@ -1728,7 +1947,6 @@ func _process(delta: float) -> void:
 			$AI.process_ai(delta)
 func handle_visual_shake(delta) -> void:
 	if current_shake_intensity > 0:
-		print("Im literally shaking: ", current_shake_intensity)
 		current_shake_intensity = move_toward(current_shake_intensity, 0, shake_decay_rate * delta)
 		# Generate random jitter based on intensity
 		current_shake_offset = Vector2(
@@ -1933,11 +2151,15 @@ func cast_ability(ability: AbilityShape):
 	# 5. Cleanup Visuals
 	await attack_animator.attack_finished
 	ability.activate_visuals(false)
-	print("is cast ability being called") #it isn't
 	targeting_system._end_targeting()
 
 func _handle_input() -> void:
-	if AI_enabled:
+	if not is_player_controlled:
+		return
+	if condition_manager.has_condition("unconscious"):
+		return
+	# Block player input when panicked or frightened — movement is forced
+	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
@@ -2174,7 +2396,20 @@ func _update_arm_ik() -> void:
 			right_arm_target = base_target + attack_offset
 			# Left Arm is in Ready position
 			left_arm_target = ready_base
-			
+
+		# Two-handed weapon override: off-hand tracks weapon instead of "ready" position
+		if _main_hand_is_two_handed() and not is_off_hand:
+			if attack_animator and attack_animator.is_attacking:
+				var off_hand_two_handed = attack_animator.get_off_arm_offset_two_handed()
+				if off_hand_two_handed != Vector2.ZERO:
+					var off_base = Vector2(-arm_length * 0.05, -arm_length * 0.5)
+					if body_rotation != 0.0:
+						off_base = off_base.rotated(body_rotation)
+					left_arm_target = off_base + off_hand_two_handed
+			else:
+				# Idle with two-handed: off-hand grips near main hand on weapon
+				left_arm_target = right_arm_target + Vector2(-6, 4)
+
 	else:
 		# Rest positions: arms curling forward and inward (hands near front of body)
 		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
@@ -2308,10 +2543,32 @@ func _on_attack_hit(hand) -> void:
 func _on_attack_finished() -> void:
 	attack_animator.is_attacking = false
 
+func get_weapon_tip_world_position() -> Vector2:
+	var weapon = current_main_hand_item if current_hand == "Main" else current_off_hand_item
+	if weapon and weapon.has_method("get_tip_local_position"):
+		return weapon.to_global(weapon.get_tip_local_position())
+	# Fallback: use hand position
+	var joints = right_arm_joints if current_hand == "Main" else left_arm_joints
+	if joints.size() > 0:
+		return to_global(joints[-1])
+	return global_position
+
 # ===== PUBLIC ATTACK API =====
 
 func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
+	# Infatuated: refuse to swing if infatuation source is in front and in melee range
+	if condition_manager.has_active_condition("infatuated"):
+		var inf_instance = condition_manager.conditions.get("infatuated")
+		if inf_instance and is_instance_valid(inf_instance.source):
+			var to_source = inf_instance.source.global_position - global_position
+			var dist = to_source.length()
+			if dist <= 150.0:  # Within melee engagement range
+				var facing = Vector2.UP.rotated(rotation)
+				var angle = abs(facing.angle_to(to_source.normalized()))
+				if angle < PI / 2:  # Source is in the forward arc
+					GameLog.add_entry(Name + " can't bring themselves to attack " + inf_instance.source.Name + "!")
+					return
 	if Ability == "Main":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -2326,7 +2583,7 @@ func attack(Ability:String= "Main") -> void:
 			SfxManager.play("slash", position)
 		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_main_hand_item)
-		attack_animator.start_attack(damage_type)
+		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -2340,7 +2597,7 @@ func attack(Ability:String= "Main") -> void:
 			SfxManager.play("slash", position)
 		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_off_hand_item)
-		attack_animator.start_attack(damage_type)
+		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
@@ -2380,25 +2637,20 @@ func is_attacking() -> bool:
 
 func give_weapon(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	"""Give the character a weapon from data and equip it"""
-	print("give weapon being run with: ", weapon_data.get("display_name", weapon_data.get("id", "")), " in hand ", hand)
 	return inventory.equip_weapon_from_data(weapon_data, hand)
 
 func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponShape:
 	"""Give the character a weapon by looking up its name in the database"""
 	var db = ItemDatabase.weapons
-	print("giving weapon by name: ", weapon_name)
 	#print("weapon database: ", db )
 	if db:
-		print("weapon database exists")
 		#print("the fucking data is structured like: ",db)
 		var data = db[weapon_name.to_lower()]
-		print("weapon data found: ",data)
 		if not data.is_empty():
 			return give_weapon(data, hand)
 	push_warning("Could not find weapon: %s" % weapon_name)
 	return null
 func give_ability_by_name(ability_name: String, hand:String= "Main"):
-	print("giving ability by name: ", ability_name)
 	inventory.equip_ability_from_id(ability_name, hand)
 	
 func give_weapon_by_type(weapon_type: String) -> WeaponShape:
@@ -2570,7 +2822,6 @@ var limbs: Dictionary = {}  # LimbType -> Limb
 
 func initialize_limbs(base_hp: int) -> void:
 	"""Initialize all limbs based on character's max HP"""
-	print("initializing limbs")
 	limbs.clear()
 	for limb_type in LimbType.values():
 		limbs[limb_type] = Limb.new(limb_type, base_hp)
@@ -2696,7 +2947,6 @@ func get_status_string() -> String:
 	return "\n".join(parts)
 func dash(target_pos: Vector2) -> void:
 	if is_dashing or dash_cooldown_timer > 0.0:
-		print("tried to dash too soon after cooldown")
 		return
 
 	var dir = (target_pos - global_position).normalized()
@@ -2730,6 +2980,22 @@ func _on_character_died() -> void:
 	$AI.die()
 	character_died.emit()
 	set_process(false)
+
+	# Fatal Attraction: linked death — if partner is still alive, kill them too
+	if condition_manager.has_condition("fatal_attraction"):
+		var fa_instance = condition_manager.conditions.get("fatal_attraction")
+		if fa_instance and is_instance_valid(fa_instance.source) and fa_instance.source.is_alive():
+			var partner = fa_instance.source
+			GameLog.add_entry(partner.Name + " dies from the severed bond of Fatal Attraction!")
+			# Remove their fatal_attraction first to prevent infinite recursion
+			var partner_cm = partner.get_node_or_null("ConditionManager")
+			if partner_cm:
+				partner_cm.remove_condition("fatal_attraction")
+			# Kill the partner by destroying their torso
+			var torso = partner.limbs.get(partner.LimbType.TORSO)
+			if torso:
+				torso.current_hp = 0
+				partner.is_alive()
 
 func _update_blood_drops(delta: float) -> void:
 	"""Update all active blood drops"""
@@ -2780,7 +3046,6 @@ func _spawn_blood_drops(origin: Vector2, count: int, is_severing: bool) -> void:
 	"""Spawn blood drop particles at the origin"""
 	#print("Attempting to spawn blood drops")
 	if not blood_drop_texture:
-		print("The blood drop texture hasn't been set")
 		push_warning("No blood drop texture set!")
 		return
 	
@@ -2951,7 +3216,6 @@ func _update_severed_limb_visuals() -> void:
 
 func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	severed_limbs[limb_type] = true
-	print("on_limb_severed")
 	# Create extra blood spray for severing
 	var limb_pos = _get_limb_center_position(limb_type)
 	var blood_count = int((blood_drops_max * sever_blood_multiplier))
@@ -3434,6 +3698,22 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 	var shape = ability.targeting.get("shape", "none")
 	if shape == "line":
 		_spawn_line_effect(ability, target_position)
+	elif shape == "cone":
+		# Cone VFX spawns at caster, facing toward target
+		var size_scale = 1.0
+		var radius = ability.get_aoe_radius()
+		if radius > 0:
+			size_scale = radius / 25.0
+		var duration = _get_modified_visual_duration(ability)
+		var instance = _spawn_effect(impact_path, global_position, size_scale, duration)
+		if instance:
+			var dir = (target_position - global_position).angle()
+			instance.rotation = dir
+			# Pass cone angle to shader if present
+			var cone_angle_deg = ability.targeting.get("angle", 60.0)
+			var wave_layer = instance.get_node_or_null("WaveLayer")
+			if wave_layer and wave_layer.material is ShaderMaterial:
+				wave_layer.material.set_shader_parameter("cone_half_angle", deg_to_rad(cone_angle_deg) / 2.0)
 	else:
 		var size_scale = 1.0
 		var radius = ability.get_aoe_radius()
@@ -3458,14 +3738,27 @@ func _spawn_line_effect(ability: Ability, target_position: Vector2) -> void:
 	var instance = scene.instantiate()
 	instance.z_index = 3
 
-	# Configure start/end for LightningVFX or similar line effects
 	if "start_position" in instance:
-		instance.start_position = Vector2.ZERO  # Local coords; position node at caster
+		# LightningVFX-style: has start/end position properties
+		instance.start_position = Vector2.ZERO
 		instance.end_position = target_position - global_position
-	instance.global_position = global_position
+		instance.global_position = global_position
+	else:
+		# Generic particle VFX: position at midpoint, rotate toward target, stretch
+		var midpoint = (global_position + target_position) / 2.0
+		instance.global_position = midpoint
+		var direction = target_position - global_position
+		instance.rotation = direction.angle()
+		# Stretch along the line direction
+		var line_length = direction.length()
+		var base_size = 100.0  # Default VFX diameter
+		instance.scale.x = line_length / base_size
 
 	var scene_root = get_tree().current_scene
 	scene_root.add_child(instance)
+
+	var duration = _get_modified_visual_duration(ability)
+	_schedule_effect_cleanup(instance, duration)
 
 # --- Add these variables near your other vars in character.gd ---
 

@@ -55,13 +55,22 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, can_use["reason"])
 		return false
 
+	var target_position = target_data.get("position", character.global_position)
+
+	# Infatuated: block offensive abilities that would hit the charm source
+	if _would_hit_infatuation_source(ability, target_position):
+		var cond_mgr = _get_condition_manager()
+		var inf_instance = cond_mgr.conditions.get("infatuated") if cond_mgr else null
+		var source_name = inf_instance.source.Name if inf_instance and is_instance_valid(inf_instance.source) else "them"
+		GameLog.add_entry(character.Name + " can't use " + ability.display_name + " against " + source_name + "!")
+		cast_failed.emit(ability, "Cannot harm charm source")
+		return false
+
 	if not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
 
 	_start_cooldown(ability)
-
-	var target_position = target_data.get("position", character.global_position)
 
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position)
@@ -262,6 +271,7 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 		targets = character._find_targets_in_area(ability, target_position)
 
 	var results: Array = []
+	var dealt_fire_damage = false
 	for effect in effects:
 		var result = AbilityEffect.resolve_effect(
 			effect,
@@ -271,6 +281,31 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 			target_position
 		)
 		results.append(result)
+		# Check if this effect dealt fire damage
+		if result.get("effect_type") == "damage" and result.get("total_damage", 0) > 0:
+			for target_info in result.get("targets_affected", []):
+				if "fire" in target_info.get("damage_types", []):
+					dealt_fire_damage = true
+					break
+		# Also check if the effect definition itself has fire damage
+		if not dealt_fire_damage and effect.get("type") == "damage":
+			var dmg = effect.get("damage", {})
+			if dmg.has("fire") and dmg["fire"] > 0:
+				dealt_fire_damage = true
+
+	# If fire damage was dealt, try to ignite floors/fluids in the AoE
+	if dealt_fire_damage:
+		var game = character.get_tree().get_first_node_in_group("game")
+		if not game:
+			game = character.get_tree().current_scene
+		if game and "surface_manager" in game and game.surface_manager:
+			var radius = ability.targeting.get("radius", 0.0)
+			if radius > 0:
+				game.surface_manager.try_ignite_area(target_position, radius)
+			else:
+				# Single-target fire: ignite just the target tile
+				var tile = GridManager.world_to_map(target_position)
+				game.surface_manager.try_ignite(tile)
 
 	return results
 
@@ -310,6 +345,44 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 			return {"success": false, "reason": "Already casting"}
 
 	return {"success": true}
+
+
+## Check if an ability would offensively affect the caster's infatuation source
+func _would_hit_infatuation_source(ability: Ability, target_position: Vector2) -> bool:
+	var cond_mgr = _get_condition_manager()
+	if not cond_mgr or not cond_mgr.has_active_condition("infatuated"):
+		return false
+
+	var inf_instance = cond_mgr.conditions.get("infatuated")
+	if not inf_instance or not is_instance_valid(inf_instance.source):
+		return false
+
+	# Check if ability has offensive effects (damage or debuff conditions)
+	var is_offensive = false
+	var effects = ability.effects if ability.effects is Array else [ability.effects]
+	for effect in effects:
+		if not effect is Dictionary:
+			continue
+		var effect_type = effect.get("type", "")
+		if effect_type == "damage" or effect_type == "knockback":
+			is_offensive = true
+			break
+		if effect_type == "apply_condition":
+			# Check if the condition being applied is a debuff
+			var cond_id = effect.get("condition_id", "")
+			var cond_template = ConditionManager.condition_registry.get(cond_id)
+			if cond_template and cond_template.traits.has("debuff"):
+				is_offensive = true
+				break
+	if not is_offensive:
+		return false
+
+	# Check if the infatuation source is in the ability's target area
+	if character.has_method("_find_targets_in_area"):
+		var targets = character._find_targets_in_area(ability, target_position)
+		return inf_instance.source in targets
+
+	return false
 
 
 ## Pay the costs for an ability

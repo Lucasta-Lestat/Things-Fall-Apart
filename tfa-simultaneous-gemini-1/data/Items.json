@@ -579,6 +579,7 @@
 	"weight": 15.0,
 	"cost": 55.0,
 	"equip_slot": "Main Hand",
+	"grip_style": "two_handed",
 	"use_ability": "Crushing Blow",
 	"damage": {
 	  "bludgeoning": 22
@@ -637,6 +638,7 @@
 	"weight": 14.0,
 	"cost": 65.0,
 	"equip_slot": "Main Hand",
+	"grip_style": "two_handed",
 	"use_ability": "Execution",
 	"damage": {
 	  "slashing": 20
@@ -693,6 +695,7 @@
 	"weight": 10.0,
 	"cost": 8.0,
 	"equip_slot": "Main Hand",
+	"grip_style": "two_handed",
 	"use_ability": "Battering Ram",
 	"damage": {
 	  "bludgeoning": 18
@@ -807,6 +810,7 @@
 	"weight": 7.0,
 	"cost": 45.0,
 	"equip_slot": "Main Hand",
+	"grip_style": "two_handed",
 	"use_ability": "Cleave",
 	"damage": {
 	  "slashing": 16
@@ -2870,6 +2874,7 @@
 	"weight": 2.0,
 	"cost": 25.0,
 	"equip_slot": "Main Hand",
+	"grip_style": "two_handed",
 	"use_ability": null,
 	"damage": {
 	  "piercing": 6

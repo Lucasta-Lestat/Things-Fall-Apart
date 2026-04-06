@@ -253,6 +253,13 @@ func _generate_structures(struct_img: Image, mask_img: Image, width: int, height
 			struct_instance.z_index = -3
 			add_child(struct_instance)
 
+			# Register with Game's structures_in_scene for fire/combat awareness
+			var game = get_parent()
+			if game and "structures_in_scene" in game:
+				game.structures_in_scene.append(struct_instance)
+				if struct_instance.has_signal("destroyed") and game.has_method("_on_structure_destroyed"):
+					struct_instance.destroyed.connect(game._on_structure_destroyed)
+
 			# Register all grid tiles this structure occupies as obstacles
 			var tile_min_x = int(floor(float(min_x) / tile_size))
 			var tile_min_y = int(floor(float(min_y) / tile_size))

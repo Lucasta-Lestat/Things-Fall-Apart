@@ -176,42 +176,39 @@ func _draw_zone(character, local_corners: Array, color: Color, label: String) ->
 
 func _draw_weapon_hit_line(character) -> void:
 	"""Draw the weapon/fist hit line used for collision checks"""
-	var hit_start_local: Vector2
-	var hit_end_local: Vector2
+	var hit_start_world: Vector2
+	var hit_end_world: Vector2
 	var is_weapon: bool = false
-	
+
 	# Check current hand's weapon
 	var current_weapon = null
 	if character.current_hand == "Main":
 		current_weapon = character.current_main_hand_item
 	else:
 		current_weapon = character.current_off_hand_item
-	
+
 	if current_weapon != null and current_weapon.has_method("get_tip_local_position"):
-		# Weapon logic
+		# Weapon logic -- use to_global on the weapon node to chain through holder transform
 		is_weapon = true
 		var tip = current_weapon.get_tip_local_position()
 		var base = current_weapon.get_blade_start_local()
-		hit_end_local = current_weapon.position + tip
-		hit_start_local = current_weapon.position + base
+		hit_end_world = current_weapon.to_global(tip)
+		hit_start_world = current_weapon.to_global(base)
 	else:
-		# Fist logic
+		# Fist logic -- arm joints are in character-local space
 		var joints: Array
 		if character.current_hand == "Main":
 			joints = character.right_arm_joints
 		else:
 			joints = character.left_arm_joints
-		
+
 		if joints.is_empty() or joints.size() < 2:
 			return
-		
-		hit_end_local = joints[-1]
+
+		var hand_local = joints[-1]
 		var elbow_local = joints[-2]
-		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
-	
-	# Convert to world space
-	var hit_start_world = character.to_global(hit_start_local)
-	var hit_end_world = character.to_global(hit_end_local)
+		hit_end_world = character.to_global(hand_local)
+		hit_start_world = character.to_global(hand_local.lerp(elbow_local, 0.2))
 	
 	# Draw the hit line
 	var color = weapon_line_color if is_weapon else fist_line_color

@@ -101,6 +101,7 @@
 	  ],
 	  "visuals": {
 		"in_hand_effect": "res://vfx/ice_storm.tscn",
+		"in_hand_scale": 0.15,
 		"impact_effect": "res://vfx/ice_storm.tscn"
 	  }
 	},
@@ -128,6 +129,7 @@
 	  ],
 	  "visuals": {
 		"in_hand_effect": "res://vfx/lightning_hand.tscn",
+		"in_hand_scale": 0.4,
 		"impact_effect": "res://vfx/lightning.tscn"
 	  }
 	},
@@ -268,7 +270,10 @@
 		  "trait": "poison"
 		}
 	  ],
-	  "visuals": { "impact_effect": "res://effects/heal_glow.tscn" }
+	  "visuals": {
+		"in_hand_effect": "res://vfx/heal_hand.tscn",
+		"impact_effect": "res://vfx/heal.tscn"
+	  }
 	},
 	{
 	  "id": "chasten",
@@ -343,6 +348,248 @@
 	  ],
 	  "visuals": { "cast_effect": "res://effects/rage_aura.tscn" },
 	  "animation": "rage_roar"
+	},
+	{
+	  "id": "creepy_beam",
+	  "display_name": "Creepy Beam",
+	  "description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
+	  "cooldown": 7.0,
+	  "costs": { "MP": 22 },
+	  "cast_time": 0.6,
+	  "traits": { "spell": 1, "necrotic": 3, "magical": 1, "attack": 2, "line": 2 },
+	  "targeting": {
+		"type": "direction",
+		"range": 400.0,
+		"shape": "line",
+		"size": { "x": 400, "y": 24 }
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "necrotic": 30 }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "weakened",
+		  "stacks": 1,
+		  "chance": 0.5
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/necrotic_hand.tscn",
+		"impact_effect": "res://vfx/necrotic.tscn"
+	  }
+	},
+	{
+	  "id": "acid_splash",
+	  "display_name": "Acid Splash",
+	  "description": "Hurl a glob of acid that splashes on impact, corroding everything in the area and leaving behind a pool of acid.",
+	  "cooldown": 5.0,
+	  "costs": { "MP": 18 },
+	  "cast_time": 0.5,
+	  "visual_duration": 2.0,
+	  "traits": { "spell": 1, "acid": 3, "magical": 1, "attack": 1, "aoe": 1 },
+	  "targeting": {
+		"type": "point",
+		"range": 350.0,
+		"shape": "circle",
+		"radius": 50.0
+	  },
+	  "projectile_speed": 60.0,
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "acid": 20 }
+		},
+		{
+		  "type": "apply_condition",
+		  "condition_id": "corroding",
+		  "stacks": 1
+		},
+		{
+		  "type": "spawn_fluid",
+		  "fluid_type": "acid",
+		  "amount": 0.5,
+		  "spread": 2
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/acid_hand.tscn",
+		"projectile": "res://vfx/acid_hand.tscn",
+		"impact_effect": "res://vfx/acid.tscn"
+	  }
+	},
+	{
+	  "id": "thunderwave",
+	  "display_name": "Thunderwave",
+	  "description": "Unleash a cone of thunderous force that damages and pushes back all enemies caught in the blast.",
+	  "cooldown": 8.0,
+	  "costs": { "MP": 25 },
+	  "cast_time": 0.3,
+	  "visual_duration": 1.0,
+	  "traits": { "spell": 1, "sonic": 3, "magical": 1, "attack": 2, "aoe": 2, "control": 1 },
+	  "targeting": {
+		"type": "direction",
+		"range": 150.0,
+		"shape": "cone",
+		"radius": 150.0,
+		"angle": 60.0
+	  },
+	  "effects": [
+		{
+		  "type": "damage",
+		  "damage": { "sonic": 25 }
+		},
+		{
+		  "type": "knockback",
+		  "strength": 600.0,
+		  "from_caster": true
+		}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/sonic_hand.tscn",
+		"impact_effect": "res://vfx/sonic.tscn"
+	  }
+	},
+	{
+	  "id": "beguile",
+	  "display_name": "Beguile",
+	  "description": "Charms a target, making them infatuated with the caster and unable to attack them.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "charm": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "infatuated", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "confess",
+	  "display_name": "Confess",
+	  "description": "The caster and target become mutually infatuated, unable to harm each other.",
+	  "cooldown": 8.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "charm": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "custom", "method": "_confess"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "hitch",
+	  "display_name": "Hitch",
+	  "description": "The two targets closest to the target point become infatuated with each other.",
+	  "cooldown": 8.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "charm": 1},
+	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 80.0},
+	  "effects": [
+		{"type": "custom", "method": "_hitch"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "fatal_attraction",
+	  "display_name": "Fatal Attraction",
+	  "description": "Two targets become infatuated with each other. If one dies, the other dies too.",
+	  "cooldown": 12.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "charm": 1, "curse": 1},
+	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 80.0},
+	  "effects": [
+		{"type": "custom", "method": "_fatal_attraction"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_confused",
+	  "display_name": "Confuse",
+	  "description": "Confuses a target, causing them to attack random creatures.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "confused", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_frightened",
+	  "display_name": "Frighten",
+	  "description": "Frightens a target, forcing them to flee from the caster.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "fear": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "frightened", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_panicked",
+	  "display_name": "Panic",
+	  "description": "Causes a target to panic, running in random directions.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "mental": 1, "fear": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "panicked", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_sickened",
+	  "display_name": "Sicken",
+	  "description": "Inflicts disease on a target, reducing STR/CON and possibly spreading.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "disease": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "sickened", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_nauseated",
+	  "display_name": "Nauseate",
+	  "description": "Nauseates a target, slowing them and causing acid vomiting.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "disease": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "nauseated", "stacks": 1}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "test_animal_magnetism",
+	  "display_name": "Animal Magnetism",
+	  "description": "Grants an aura that randomly spawns wild animals nearby.",
+	  "cooldown": 5.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "traits": {"spell": 1, "nature": 1},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "animal_magnetism", "stacks": 1}
+	  ],
+	  "visuals": {}
 	}
   ]
 }

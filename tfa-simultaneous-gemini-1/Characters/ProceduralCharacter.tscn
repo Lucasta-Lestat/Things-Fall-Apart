@@ -16,5 +16,5 @@ metadata/_custom_type_script = "uid://dpqqr0xmkw7fj"
 [node name="AI" type="Node" parent="." unique_id=1835663748]
 script = ExtResource("4_k0dh0")
 
-[node name="AttackAnimator" type="Node" parent="."]
+[node name="AttackAnimator" type="Node" parent="." unique_id=621414670]
 script = ExtResource("5_atk")

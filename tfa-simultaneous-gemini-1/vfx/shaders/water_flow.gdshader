@@ -1,98 +1,142 @@
 shader_type canvas_item;
 
 // Flow direction and speed
-uniform vec2 flow_direction = vec2(0.0, 0.0); // Normalized direction vector
-uniform float flow_speed = 0.5; // Overall flow speed multiplier
-uniform float wave_speed = 2.0; // Speed of wave animation
+uniform vec2 flow_direction = vec2(0.0, 0.0);
+uniform float flow_speed = 0.5;
+uniform float wave_speed = 2.0;
 
 // Wave appearance
-uniform float wave_frequency = 4.0; // How many waves across the tile
-uniform float wave_amplitude = 0.08; // Height of the waves
-uniform float wave_sharpness = 3.0; // How defined the wave crests are
+uniform float wave_frequency = 4.0;
+uniform float wave_amplitude = 0.08;
+uniform float wave_sharpness = 3.0;
 
 // Colors
 uniform vec4 water_color : source_color = vec4(0.0, 0.5, 0.8, 0.7);
 uniform vec4 wave_color : source_color = vec4(0.2, 0.8, 1.0, 0.4);
-uniform float wave_brightness = 0.3; // How bright the wave highlights are
+uniform float wave_brightness = 0.3;
 
 // Distortion
-uniform float distortion_strength = 0.02; // UV distortion amount
+uniform float distortion_strength = 0.02;
 uniform float distortion_speed = 1.0;
+
+// World-space tile position for cross-tile continuity
+uniform vec2 tile_position = vec2(0.0);
+
+// Edge noise displacement — vec4(right, left, bottom, top)
+// 1.0 = exposed boundary edge, 0.0 = neighbor present
+uniform vec4 edge_mask = vec4(0.0);
+uniform float edge_fade_width = 0.4;
+uniform float edge_noise_scale = 6.0;
+
+// --- Noise functions ---
+float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float value_noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm(vec2 p) {
+    float v = 0.0;
+    v += value_noise(p) * 0.5;
+    v += value_noise(p * 2.0 + 17.0) * 0.25;
+    v += value_noise(p * 4.0 + 31.0) * 0.125;
+    return v / 0.875;
+}
+
+float compute_edge_alpha(vec2 uv, vec2 world_uv) {
+    float alpha = 1.0;
+    vec2 noise_pos = world_uv * edge_noise_scale;
+
+    // Per-edge fade: compute distance from each exposed edge
+    // and use noise to create an irregular threshold
+    float right_a = 1.0, left_a = 1.0, bottom_a = 1.0, top_a = 1.0;
+
+    if (edge_mask.x > 0.5) { // right
+        float dist = 1.0 - uv.x;
+        float n = fbm(noise_pos + vec2(37.0, 0.0));
+        right_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
+    }
+    if (edge_mask.y > 0.5) { // left
+        float dist = uv.x;
+        float n = fbm(noise_pos + vec2(0.0, 71.0));
+        left_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
+    }
+    if (edge_mask.z > 0.5) { // bottom
+        float dist = 1.0 - uv.y;
+        float n = fbm(noise_pos + vec2(113.0, 0.0));
+        bottom_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
+    }
+    if (edge_mask.w > 0.5) { // top
+        float dist = uv.y;
+        float n = fbm(noise_pos + vec2(0.0, 157.0));
+        top_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
+    }
+
+    // Multiply edges together — corners (2 edges meeting) get much stronger erosion
+    alpha = right_a * left_a * bottom_a * top_a;
+    return alpha;
+}
 
 void fragment() {
     vec2 uv = UV;
     float time = TIME;
-    
-    // Calculate flow influence
+    vec2 world_uv = tile_position + uv;
+
     float flow_magnitude = length(flow_direction);
-    vec2 flow_dir_norm = flow_magnitude > 0.001 ? normalize(flow_direction) : vec2(0.0, 0.0);
-    
-    // Create distortion that moves with flow
+    vec2 flow_dir_norm = flow_magnitude > 0.001 ? normalize(flow_direction) : vec2(0.0);
+
     vec2 distort_offset = vec2(
-        sin(uv.y * 10.0 + time * distortion_speed) * distortion_strength,
-        cos(uv.x * 10.0 + time * distortion_speed) * distortion_strength
+        sin(world_uv.y * 10.0 + time * distortion_speed) * distortion_strength,
+        cos(world_uv.x * 10.0 + time * distortion_speed) * distortion_strength
     );
-    vec2 distorted_uv = uv + distort_offset;
-    
-    // Calculate wave pattern along flow direction
-    // Project UV onto flow direction to create waves perpendicular to flow
+    vec2 wuv_d = world_uv + distort_offset;
+
     float wave_coord;
     if (flow_magnitude > 0.001) {
-        // Create waves perpendicular to flow direction
-        vec2 perpendicular = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord = dot(distorted_uv, perpendicular) * wave_frequency;
-        
-        // Move waves in flow direction
+        vec2 perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
+        wave_coord = dot(wuv_d, perp) * wave_frequency;
         wave_coord -= time * wave_speed * flow_speed * flow_magnitude;
     } else {
-        // No flow - gentle ambient waves
-        wave_coord = (distorted_uv.x + distorted_uv.y) * wave_frequency * 0.5;
+        wave_coord = (wuv_d.x + wuv_d.y) * wave_frequency * 0.5;
         wave_coord -= time * wave_speed * 0.3;
     }
-    
-    // Create wave pattern using sine
-    float wave_pattern = sin(wave_coord * 6.28318); // 2*PI
-    
-    // Sharpen the waves to create more defined crests
-    wave_pattern = pow(abs(wave_pattern), 1.0 / wave_sharpness) * sign(wave_pattern);
-    
-    // Convert to 0-1 range and apply amplitude
-    float wave_intensity = (wave_pattern * 0.5 + 0.5) * wave_amplitude;
-    
-    // Add secondary wave layer for more detail
+
+    float wp = sin(wave_coord * 6.28318);
+    wp = pow(abs(wp), 1.0 / wave_sharpness) * sign(wp);
+    float wi = (wp * 0.5 + 0.5) * wave_amplitude;
+
     float wave_coord2;
     if (flow_magnitude > 0.001) {
-        vec2 perpendicular2 = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord2 = dot(distorted_uv, perpendicular2) * wave_frequency * 1.7;
+        vec2 perp2 = vec2(-flow_dir_norm.y, flow_dir_norm.x);
+        wave_coord2 = dot(wuv_d, perp2) * wave_frequency * 1.7;
         wave_coord2 -= time * wave_speed * flow_speed * flow_magnitude * 0.7;
     } else {
-        wave_coord2 = (distorted_uv.x - distorted_uv.y) * wave_frequency * 0.7;
+        wave_coord2 = (wuv_d.x - wuv_d.y) * wave_frequency * 0.7;
         wave_coord2 -= time * wave_speed * 0.2;
     }
-    
-    float wave_pattern2 = sin(wave_coord2 * 6.28318) * 0.5;
-    float wave_intensity2 = (wave_pattern2 * 0.5 + 0.5) * wave_amplitude * 0.5;
-    
-    // Combine wave layers
-    float combined_waves = wave_intensity + wave_intensity2;
-    
-    // Create wave highlights
-    float wave_highlight = smoothstep(0.1, 0.15, combined_waves) * wave_brightness;
-    
-    // Flow-based opacity variation (more visible where flowing faster)
+    float wi2 = (sin(wave_coord2 * 6.28318) * 0.25 + 0.25) * wave_amplitude;
+
+    float wave_highlight = smoothstep(0.1, 0.15, wi + wi2) * wave_brightness;
     float flow_alpha = mix(0.8, 1.0, flow_magnitude * flow_speed);
-    
-    // Mix base water color with wave highlights
+
     vec3 final_color = mix(water_color.rgb, wave_color.rgb, wave_highlight);
-    
-    // Add subtle shimmer along flow direction
-    float shimmer = 0.0;
+
     if (flow_magnitude > 0.001) {
-        float shimmer_coord = dot(distorted_uv, flow_dir_norm) * 8.0 - time * 3.0;
-        shimmer = pow(abs(sin(shimmer_coord * 6.28318)), 8.0) * 0.2 * flow_magnitude;
+        float sc = dot(wuv_d, flow_dir_norm) * 8.0 - time * 3.0;
+        final_color += vec3(pow(abs(sin(sc * 6.28318)), 8.0) * 0.2 * flow_magnitude);
     }
-    final_color += vec3(shimmer);
-    
-    // Output
-    COLOR = vec4(final_color, water_color.a * flow_alpha);
+
+    float edge_alpha = compute_edge_alpha(uv, world_uv);
+    COLOR = vec4(final_color, water_color.a * flow_alpha * edge_alpha);
 }

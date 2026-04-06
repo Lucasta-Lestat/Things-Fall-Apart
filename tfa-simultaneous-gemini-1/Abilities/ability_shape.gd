@@ -3,7 +3,7 @@ extends Node2D
 class_name AbilityShape
 
 # Matches your AbilityTargeting enum strings
-enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE }
+enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
 
 @export_group("Identity")
 @export var ability_id: String = "fireball_shape"
@@ -44,7 +44,7 @@ func activate_visuals(active: bool):
 			_active_visual.visible = active
 	
 func get_tip_local_position():
-	Vector2(0, min(10.0,target_size.y / 10.0)) #looks bigger in hand based on size of spell AoE
+	return Vector2(0, min(10.0, target_size.y / 10.0)) #looks bigger in hand based on size of spell AoE
 # Converts local export vars into the Dictionary format AbilityTargeting expects
 func get_ability_data() -> Dictionary:
 	# 1. Start with the full original data from the database (includes visuals/effects)
@@ -64,15 +64,18 @@ func get_ability_data() -> Dictionary:
 		AbilityTargetShape.CIRCLE: shape_str = "circle"
 		AbilityTargetShape.RECTANGLE: shape_str = "rectangle"
 		AbilityTargetShape.LINE: shape_str = "line"
+		AbilityTargetShape.CONE: shape_str = "cone"
 	
 	# We construct the specific targeting block expected by the system
 	# Pull range from raw targeting data
 	var ability_range = raw_data.get("targeting", {}).get("range", 500.0)
+	var ability_angle = raw_data.get("targeting", {}).get("angle", 45.0)
 	var targeting_override = {
 		"shape": shape_str,
 		"radius": target_radius,
 		"size": target_size,
 		"range": ability_range,
+		"angle": ability_angle,
 		"requires_targeting": requires_targeting,
 		"target_shape": shape_str,
 	}
@@ -99,8 +102,9 @@ func setup_from_database(data: Dictionary) -> void:
 			# Instantiate immediately for the equipment system
 			_active_visual = visual_scene.instantiate()
 			add_child(_active_visual)
-			# Scale down for in-hand display (small preview, not full AoE size)
-			_active_visual.scale = Vector2(0.25, 0.25)
+			# Scale down for in-hand display (configurable per ability, default 0.25)
+			var in_hand_scale = visuals.get("in_hand_scale", 0.25)
+			_active_visual.scale = Vector2(in_hand_scale, in_hand_scale)
 			activate_visuals(false) # Start turned off
 
 	# 3. Targeting Configuration
@@ -111,6 +115,7 @@ func setup_from_database(data: Dictionary) -> void:
 		"circle": target_shape = AbilityTargetShape.CIRCLE
 		"rectangle": target_shape = AbilityTargetShape.RECTANGLE
 		"line": target_shape = AbilityTargetShape.LINE
+		"cone": target_shape = AbilityTargetShape.CONE
 		_: target_shape = AbilityTargetShape.NONE
 		
 	target_radius = targeting.get("radius", 50.0)

@@ -232,8 +232,14 @@ func _load_character_icon(tex_rect: TextureRect, character) -> void:
 func _on_header_gui_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if game_node and game_node.has_method("select_character_by_index"):
-				game_node.select_character_by_index(index)
+			if game_node:
+				var party = game_node.get_party()
+				if index >= 0 and index < party.size():
+					var character = party[index]
+					if event.ctrl_pressed and game_node.has_method("toggle_character_selection"):
+						game_node.toggle_character_selection(character)
+					elif game_node.has_method("select_character_by_index"):
+						game_node.select_character_by_index(index)
 			get_viewport().set_input_as_handled()
 
 # ---------------------------------------------------------------------------
@@ -287,7 +293,8 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 		slot.add_child(label)
 
 	# Show stack count badge for stacked items
-	var num_stacks = int(item_data.get("num_stacks", 1))
+	var raw_stacks = item_data.get("num_stacks", 1)
+	var num_stacks: int = int(raw_stacks) if raw_stacks != null else 1
 	if num_stacks > 1:
 		var stack_label = Label.new()
 		stack_label.text = str(num_stacks)
@@ -563,6 +570,16 @@ func _process(_delta: float) -> void:
 		if not is_instance_valid(character):
 			continue
 
+		# Selection highlight
+		var container = data["container"]
+		if game_node:
+			if game_node.primary_selected == character:
+				container.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			elif game_node.is_character_selected(character):
+				container.modulate = Color(0.8, 0.9, 1.0, 1.0)
+			else:
+				container.modulate = Color(0.6, 0.6, 0.6, 1.0)
+
 		# Update health bars
 		_update_health_bar(data, "head_bar", "head_fill", 0, character)
 		_update_health_bar(data, "torso_bar", "torso_fill", 1, character)
@@ -619,7 +636,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 			tex_rect.custom_minimum_size = COND_ICON_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-			tex_rect.mouse_filter = Control.MOUSE_FILTER_PASS
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 			if icon_tex and icon_tex is Texture2D:
 				tex_rect.texture = icon_tex
 			tex_rect.set_meta("cond_id", cond_id)

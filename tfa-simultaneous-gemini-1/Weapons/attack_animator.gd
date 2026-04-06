@@ -35,6 +35,12 @@ var animated_arm_offset: Vector2 = Vector2.ZERO
 var animated_weapon_rotation: float = 0.0
 var animated_body_rotation: float = 0.0
 
+# Off-hand animation for two-handed weapons
+var animated_off_arm_offset: Vector2 = Vector2.ZERO
+var target_off_arm_offset: Vector2 = Vector2.ZERO
+var off_arm_dynamics: SecondOrderDynamics
+var is_two_handed_attack: bool = false
+
 # Legacy getter compatibility
 
 var animated_right_arm_offset: Vector2:
@@ -168,6 +174,7 @@ func _init_dynamics() -> void:
 	arm_dynamics = SecondOrderDynamics.new(8.0, 0.6, 1.5, Vector2.ZERO)
 	weapon_rot_dynamics = SecondOrderFloat.new(10.0, 0.5, 2.0, 0.0)
 	body_rot_dynamics = SecondOrderFloat.new(6.0, 0.7, 1.0, 0.0)
+	off_arm_dynamics = SecondOrderDynamics.new(8.0, 0.6, 1.5, Vector2.ZERO)
 
 func _process(delta: float) -> void:
 	if knockback_active:
@@ -181,47 +188,52 @@ func _process(delta: float) -> void:
 	_update_animation(delta)
 	
 
-func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: String = "Main") -> void:
-	if combat_manager == null: 
+func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: String = "Main", weapon_ref: Node2D = null) -> void:
+	if combat_manager == null:
 		combat_manager = get_tree().current_scene
 	is_attacking = true
 	combat_manager.register_attack_start(character)
-	if current_state != AttackState.IDLE: 
+	if current_state != AttackState.IDLE:
 		return
-	
+
 	current_damage_type = damage_type
 	attack_direction = direction.normalized()
 	current_state = AttackState.WINDUP
 	attack_timer = 0.0
-	
+
 	# Reset dynamics for fresh attack
 	_reset_dynamics()
-	
+
 	var dex: float = 10
 	var weight: float = 4.0
-	
-	if "dexterity" in character: 
+
+	if "dexterity" in character:
 		dex = character.dexterity
-	
-	# Get weapon from the appropriate hand
-	var weapon = null
-	if hand == "Main" and "current_main_hand_weapon" in character:
-		weapon = character.current_main_hand_weapon
-	elif hand == "Off" and "current_off_hand_weapon" in character:
-		weapon = character.current_off_hand_weapon
-	
+
+	# Use passed weapon reference, falling back to character hand items
+	var weapon = weapon_ref
+	if weapon == null:
+		if hand == "Main" and "current_main_hand_item" in character:
+			weapon = character.current_main_hand_item
+		elif hand == "Off" and "current_off_hand_item" in character:
+			weapon = character.current_off_hand_item
+
 	if weapon != null:
 		weight = weapon.weight
-	
+
+	# Detect two-handed weapon
+	is_two_handed_attack = weapon != null and weapon is WeaponShape and weapon.is_two_handed()
+
 	weight = max(0.1, weight)
 	var speed_multiplier = clamp((dex / 100.0) / (weight / 4.0), 0.4, 3.0)
 	current_rotation_intensity = clamp(weight / 4.5, 0.4, 1.4)
-	
+
 	# Adjust dynamics based on weapon weight (heavier = slower response, more momentum)
 	var weight_factor = clamp(weight / 4.0, 0.5, 2.0)
 	arm_dynamics = SecondOrderDynamics.new(8.0 / weight_factor, 0.5 + weight_factor * 0.1, 1.5, Vector2.ZERO)
 	weapon_rot_dynamics = SecondOrderFloat.new(10.0 / weight_factor, 0.4 + weight_factor * 0.15, 2.0, 0.0)
 	body_rot_dynamics = SecondOrderFloat.new(6.0 / weight_factor, 0.6 + weight_factor * 0.1, 1.0, 0.0)
+	off_arm_dynamics = SecondOrderDynamics.new(8.0 / weight_factor, 0.5 + weight_factor * 0.1, 1.5, Vector2.ZERO)
 	
 	match damage_type:
 		"slashing":
@@ -255,7 +267,8 @@ func _finish_attack() -> void:
 	current_state = AttackState.IDLE
 	attack_timer = 0.0
 	_reset_offsets()
-	
+	is_two_handed_attack = false
+
 	if combat_manager and character is ProceduralCharacter:
 		combat_manager.register_attack_end(character)
 	is_attacking = false
@@ -435,6 +448,10 @@ func _apply_dynamics(delta: float) -> void:
 	animated_arm_offset = arm_dynamics.update(delta, target_arm_offset)
 	animated_weapon_rotation = weapon_rot_dynamics.update(delta, target_weapon_rotation)
 	animated_body_rotation = body_rot_dynamics.update(delta, target_body_rotation)
+	if is_two_handed_attack and off_arm_dynamics:
+		animated_off_arm_offset = off_arm_dynamics.update(delta, target_off_arm_offset)
+	else:
+		animated_off_arm_offset = Vector2.ZERO
 
 func _get_hand_mirror() -> float:
 	# Returns -1 for Off hand (left), 1 for Main hand (right)
@@ -469,19 +486,27 @@ func _animate_recovery() -> void:
 			target_arm_offset = _mirror_offset(Vector2(-20, -15)) * ease_out
 			target_weapon_rotation = -1.5 * mirror * ease_out
 			target_body_rotation = (-0.25 * ease_out * mirror) * current_rotation_intensity
+			if is_two_handed_attack:
+				target_off_arm_offset = (target_arm_offset + Vector2(-mirror * 4, 6)) * ease_out
 		"piercing":
 			target_arm_offset = _mirror_offset(Vector2(0, -55)) * ease_out
 			target_weapon_rotation = -0.05 * mirror * ease_out
 			target_body_rotation = (-0.2 * ease_out * mirror) * current_rotation_intensity
+			if is_two_handed_attack:
+				target_off_arm_offset = (target_arm_offset + Vector2(-mirror * 4, 6)) * ease_out
 		"bludgeoning":
 			target_arm_offset = _mirror_offset(Vector2(0, -25)) * ease_out
 			target_weapon_rotation = 0.4 * mirror * ease_out
 			target_body_rotation = (-0.15 * ease_out * mirror) * current_rotation_intensity
+			if is_two_handed_attack:
+				target_off_arm_offset = (target_arm_offset + Vector2(-mirror * 4, 6)) * ease_out
 		"ranged_arrow":
-			# Arm drifts back to rest from the released draw position
-			target_arm_offset = _mirror_offset(Vector2(8, -10)) * ease_out
-			target_weapon_rotation = -0.1 * mirror * ease_out
-			target_body_rotation = (-0.15 * ease_out * mirror) * current_rotation_intensity
+			# Bow arm returns from extended position to rest
+			target_arm_offset = _mirror_offset(Vector2(0, -22)) * ease_out
+			target_weapon_rotation = 0.0
+			target_body_rotation = (-0.05 * ease_out * mirror) * current_rotation_intensity
+			if is_two_handed_attack:
+				target_off_arm_offset = Vector2(0, -20) * ease_out
 		"ranged_bullet":
 			# Arm settles from recoil kick back to low ready
 			target_arm_offset = _mirror_offset(Vector2(0, -20)) * ease_out
@@ -491,10 +516,12 @@ func _animate_recovery() -> void:
 func _animate_slash_windup() -> void:
 	var ease_in = _ease_in_quad(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	target_arm_offset = _mirror_offset(Vector2(18, 12)) * ease_in
 	target_weapon_rotation = 1.2 * mirror * ease_in
 	target_body_rotation = (0.3 * ease_in * mirror) * current_rotation_intensity
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
 
 func _animate_slash_strike() -> void:
 	var ease_progress = _ease_out_cubic(attack_progress)
@@ -505,77 +532,96 @@ func _animate_slash_strike() -> void:
 	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
 	target_weapon_rotation = _second_order_float(1.2 * mirror, -1.5 * mirror, ease_progress)
 	target_body_rotation = _second_order_float(
-		0.3 * current_rotation_intensity * mirror, 
-		-0.25 * current_rotation_intensity * mirror, 
+		0.3 * current_rotation_intensity * mirror,
+		-0.25 * current_rotation_intensity * mirror,
 		ease_progress
 	)
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
 
 func _animate_thrust_windup() -> void:
 	var ease_in = _ease_in_quad(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	target_arm_offset = _mirror_offset(Vector2(15, 35)) * ease_in
 	target_weapon_rotation = 0.4 * mirror * ease_in
 	target_body_rotation = (0.25 * ease_in * mirror) * current_rotation_intensity
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
 
 func _animate_thrust_strike() -> void:
 	var ease_progress = _ease_out_cubic(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	var start_offset = _mirror_offset(Vector2(15, 35))
 	var end_offset = _mirror_offset(Vector2(0, -55))
 	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
 	target_weapon_rotation = _second_order_float(0.4 * mirror, -0.05 * mirror, ease_progress)
 	target_body_rotation = _second_order_float(
-		0.25 * current_rotation_intensity * mirror, 
-		-0.2 * current_rotation_intensity * mirror, 
+		0.25 * current_rotation_intensity * mirror,
+		-0.2 * current_rotation_intensity * mirror,
 		ease_progress
 	)
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
 
 func _animate_smash_windup() -> void:
 	var ease_in = _ease_in_quad(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	target_arm_offset = _mirror_offset(Vector2(10, 20)) * ease_in
 	target_weapon_rotation = 2.0 * mirror * ease_in
 	target_body_rotation = (0.2 * ease_in * mirror) * current_rotation_intensity
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
 
 func _animate_smash_strike() -> void:
 	var ease_progress = _ease_out_cubic(attack_progress)
 	var mirror = _get_hand_mirror()
-	
+
 	var start_offset = _mirror_offset(Vector2(10, 20))
 	var end_offset = _mirror_offset(Vector2(0, -25))
 	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
 	target_weapon_rotation = _second_order_float(2.0 * mirror, 0.4 * mirror, ease_progress)
 	target_body_rotation = _second_order_float(
-		0.2 * current_rotation_intensity * mirror, 
-		-0.15 * current_rotation_intensity * mirror, 
-		ease_progress
-	)
-
-func _animate_bow_windup() -> void:
-	# Drawing the string: main hand pulls back and up while weapon arm extends forward
-	var ease_in = _ease_in_quad(attack_progress)
-	var mirror = _get_hand_mirror()
-	# Pull draw arm back toward the shoulder; slight body lean into the draw
-	target_arm_offset = _mirror_offset(Vector2(12, 8)) * ease_in
-	target_weapon_rotation = 0.15 * mirror * ease_in
-	target_body_rotation = (0.2 * ease_in * mirror) * current_rotation_intensity
-
-func _animate_bow_strike() -> void:
-	# Release: draw arm snaps forward as string is loosed; brief follow-through
-	var ease_progress = _ease_out_cubic(attack_progress)
-	var mirror = _get_hand_mirror()
-	var start_offset = _mirror_offset(Vector2(12, 8))
-	var end_offset = _mirror_offset(Vector2(8, -10))
-	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
-	target_weapon_rotation = _second_order_float(0.15 * mirror, -0.1 * mirror, ease_progress)
-	target_body_rotation = _second_order_float(
 		0.2 * current_rotation_intensity * mirror,
 		-0.15 * current_rotation_intensity * mirror,
 		ease_progress
 	)
+	if is_two_handed_attack:
+		target_off_arm_offset = target_arm_offset + Vector2(-mirror * 4, 6)
+
+func _animate_bow_windup() -> void:
+	# Main arm extends forward holding the bow steady; off-hand draws back (pulls string)
+	var ease_in = _ease_in_quad(attack_progress)
+	var mirror = _get_hand_mirror()
+	# Bow hand: extend forward toward target
+	target_arm_offset = _mirror_offset(Vector2(0, -25)) * ease_in
+	target_weapon_rotation = 0.05 * mirror * ease_in
+	target_body_rotation = (0.1 * ease_in * mirror) * current_rotation_intensity
+	# Off-hand: draw back toward shoulder/chest (string pull)
+	if is_two_handed_attack:
+		target_off_arm_offset = Vector2(-mirror * 8, 15) * ease_in
+
+func _animate_bow_strike() -> void:
+	# Release: bow arm stays extended, off-hand snaps forward (string release)
+	var ease_progress = _ease_out_cubic(attack_progress)
+	var mirror = _get_hand_mirror()
+	# Bow hand: stays extended forward with slight recoil
+	var start_offset = _mirror_offset(Vector2(0, -25))
+	var end_offset = _mirror_offset(Vector2(0, -22))
+	target_arm_offset = _second_order_vec2(start_offset, end_offset, ease_progress)
+	target_weapon_rotation = _second_order_float(0.05 * mirror, 0.0, ease_progress)
+	target_body_rotation = _second_order_float(
+		0.1 * current_rotation_intensity * mirror,
+		-0.05 * current_rotation_intensity * mirror,
+		ease_progress
+	)
+	# Off-hand: snaps forward from drawn position
+	if is_two_handed_attack:
+		var off_start = Vector2(-mirror * 8, 15)
+		var off_end = Vector2(0, -20)
+		target_off_arm_offset = _second_order_vec2(off_start, off_end, ease_progress)
 
 func _animate_gun_windup() -> void:
 	# Raise pistol: arm lifts forward and up into an aimed position
@@ -631,6 +677,8 @@ func _reset_offsets() -> void:
 	target_arm_offset = Vector2.ZERO
 	target_weapon_rotation = 0.0
 	target_body_rotation = 0.0
+	animated_off_arm_offset = Vector2.ZERO
+	target_off_arm_offset = Vector2.ZERO
 
 func _reset_dynamics() -> void:
 	if arm_dynamics:
@@ -639,6 +687,8 @@ func _reset_dynamics() -> void:
 		weapon_rot_dynamics.reset(0.0)
 	if body_rot_dynamics:
 		body_rot_dynamics.reset(0.0)
+	if off_arm_dynamics:
+		off_arm_dynamics.reset(Vector2.ZERO)
 
 func _ease_in_quad(t: float) -> float: 
 	return t * t
@@ -665,6 +715,11 @@ func get_main_arm_offset() -> Vector2:
 
 func get_off_arm_offset() -> Vector2:
 	return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
+
+func get_off_arm_offset_two_handed() -> Vector2:
+	if is_two_handed_attack:
+		return animated_off_arm_offset
+	return Vector2.ZERO
 
 func get_weapon_rotation() -> float: 
 	return animated_weapon_rotation

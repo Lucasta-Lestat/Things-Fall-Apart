@@ -6,6 +6,7 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var fluid_manager: FluidManager = $FluidManager
+@onready var surface_manager: SurfaceManager = $SurfaceManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
 
@@ -31,15 +32,24 @@ var stealth_mode: bool = false
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
+signal selection_changed()
 signal map_loaded(map_id: String)
 
-# Currently selected character
-var selected_character: ProceduralCharacter = null
-var selected_index: int = 0
+# Multi-select: all currently selected characters
+var selected_characters: Array = []
+# Primary selected character (most recently clicked, camera follows this one)
+var primary_selected: ProceduralCharacter = null
+var primary_index: int = 0
+# Backward compat alias
+var selected_character: ProceduralCharacter:
+	get: return primary_selected
+var selected_index: int:
+	get: return primary_index
 
-# Selection indicator
-var selection_indicator: Node2D = null
-const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White
+# Selection indicators (one per selected character)
+var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
+const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White (primary)
+const SELECTION_CIRCLE_COLOR_MULTI = Color(0.5, 0.7, 1.0, 0.5)  # Blue (multi-select)
 const SELECTION_CIRCLE_WIDTH = 1.0
 
 # ---------------------------------------------------------------------------
@@ -215,6 +225,9 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# 7. Spawn items
 	_spawn_items(current_map_data.get("item_spawns", []))
 
+	# 7b. Spawn fluids (oil, water, etc.)
+	_spawn_fluids(current_map_data.get("fluid_spawns", []))
+
 	# 8. Create warp zones
 	_create_warp_zones(current_map_data.get("warp_points", []))
 
@@ -246,6 +259,11 @@ func _unload_current_map() -> void:
 	# Clear fluids
 	if fluid_manager:
 		fluid_manager.clear_all_water_tiles()
+
+	# Clear surfaces (fire, etc.)
+	if surface_manager:
+		surface_manager.clear_all_surfaces()
+		surface_manager.invalidate_floor_cache()
 
 	current_map_id = ""
 	current_map_data = {}
@@ -286,7 +304,8 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			continue
 
 		party_chars.append(character)
-		character.AI_enabled = false
+		character.AI_enabled = true
+		character.is_player_controlled = false
 
 		# Restore live state if we have one (from map transition / save load)
 		if entry.get("live_state"):
@@ -296,6 +315,9 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 		if i == 0:
 			player = character
 			character.is_protagonist = true
+
+		# All party members share the player faction so AI won't target allies
+		character.faction_id = "player"
 
 		# Add line-of-sight light
 		_add_line_of_sight_light(character)
@@ -316,6 +338,25 @@ func _spawn_items(item_list: Array) -> void:
 
 		for j in range(count):
 			create_item(item_id, pos)
+
+func _spawn_fluids(fluid_list: Array) -> void:
+	if not fluid_manager:
+		push_warning("FluidManager not available — skipping fluid_spawns")
+		return
+	for fluid_def in fluid_list:
+		var fluid_type: String = fluid_def.get("type", "water")
+		var pos_arr = fluid_def.get("position", [0, 0])
+		var amount: float = fluid_def.get("amount", 0.5)
+		var radius: int = fluid_def.get("radius", 0)
+		var center_tile = Vector2i(pos_arr[0], pos_arr[1])
+
+		# Spawn fluid at center tile and optionally in a radius
+		for dx in range(-radius, radius + 1):
+			for dy in range(-radius, radius + 1):
+				if Vector2(dx, dy).length() <= radius + 0.5:
+					var tile = center_tile + Vector2i(dx, dy)
+					if not GridManager.walls.get(tile, false):
+						fluid_manager.register_fluid(tile, fluid_type, amount)
 
 # ---------------------------------------------------------------------------
 # Context menu
@@ -504,6 +545,9 @@ func _update_npc_los_visibility() -> void:
 		for ally in party_chars:
 			if not is_instance_valid(ally) or not ally.is_alive():
 				continue
+			var _cm = ally.get_node_or_null("ConditionManager")
+			if _cm and (_cm.has_condition("blinded") or _cm.has_condition("unconscious")):
+				continue
 			var to_npc = npc.global_position - ally.global_position
 			var dist = to_npc.length()
 			var sight_range = 1440.0 * ally.sight
@@ -535,18 +579,23 @@ func _process(delta: float) -> void:
 		# Tick fluid condition effects
 		if fluid_manager:
 			fluid_manager.update_fluid_conditions(delta, characters_in_scene)
-	if selected_character and is_instance_valid(selected_character) and selection_indicator:
-		selection_indicator.global_position = selected_character.global_position
-		if PauseManager.is_paused:
-			selection_indicator.visible = true
-	if selection_indicator and not PauseManager.is_paused:
-		selection_indicator.visible = false
+			fluid_manager.update_fluid_tick(delta)
+		if surface_manager:
+			surface_manager.update_surfaces(delta, characters_in_scene, self)
+	# Update all selection indicators
+	for character in selection_indicators.keys():
+		if is_instance_valid(character):
+			selection_indicators[character].global_position = character.global_position
+			selection_indicators[character].visible = PauseManager.is_paused
+		else:
+			selection_indicators[character].queue_free()
+			selection_indicators.erase(character)
 	# Update NPC visibility based on party line-of-sight
 	_update_npc_los_visibility()
-	# Camera follows selected character
-	if selected_character and is_instance_valid(selected_character) and player_camera:
+	# Camera follows primary selected character
+	if primary_selected and is_instance_valid(primary_selected) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
-			selected_character.global_position, 5.0 * delta)
+			primary_selected.global_position, 5.0 * delta)
 
 func _check_combat_collisions() -> void:
 	var all_characters = characters_in_scene
@@ -576,7 +625,6 @@ func _check_combat_collisions() -> void:
 				continue
 
 			var hit = check_weapon_body_collision(attacker, victim)
-			print("is the weaapon hitting? ", hit)
 			if hit.get("hit", false):
 				register_hit(attacker, victim)
 				
@@ -669,41 +717,70 @@ func _input(event: InputEvent) -> void:
 				if not event.echo:
 					stealth_mode = not stealth_mode
 					_toggle_npc_los_cones()
-	# Number keys 1-9 to select party members
+	# Number keys 1-9 to select party members (Ctrl+number to toggle multi-select)
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key = event.keycode
 		if key >= KEY_1 and key <= KEY_9:
 			var index = key - KEY_1  # 0-8
-			select_character_by_index(index)
+			var party = get_party()
+			if index >= 0 and index < party.size():
+				var character = party[index]
+				if character and is_instance_valid(character):
+					if event.ctrl_pressed:
+						toggle_character_selection(character)
+					else:
+						select_character_by_index(index)
 			
-func _create_selection_indicator(size:int) -> void:
-	"""Create the white circle selection indicator"""
-	selection_indicator = Node2D.new()
-	selection_indicator.name = "SelectionIndicator"
-	selection_indicator.z_index = 100  # Above most things
-	
-	# We'll draw the circle in a custom draw node
-	
+func _create_selection_indicator(size: int) -> void:
+	"""Create selection indicators — now managed per-character via selection methods"""
+	pass  # Indicators are now created/removed in _add/_remove_selection_circle
+
+func _add_selection_circle(character: ProceduralCharacter, color: Color) -> void:
+	if character in selection_indicators:
+		_update_circle_color(character, color)
+		return
+	var indicator = Node2D.new()
+	indicator.z_index = 100
 	var circle_drawer = SelectionCircle.new()
-	circle_drawer.radius = size
-	circle_drawer.circle_color = SELECTION_CIRCLE_COLOR
+	circle_drawer.radius = 85
+	circle_drawer.circle_color = color
 	circle_drawer.line_width = SELECTION_CIRCLE_WIDTH
-	selection_indicator.add_child(circle_drawer)
-	
-	# Add to scene tree (will be repositioned each frame)
-	add_child(selection_indicator)
-	selection_indicator.visible = false
+	indicator.add_child(circle_drawer)
+	add_child(indicator)
+	indicator.visible = false
+	selection_indicators[character] = indicator
+
+func _remove_selection_circle(character: ProceduralCharacter) -> void:
+	if character in selection_indicators:
+		selection_indicators[character].queue_free()
+		selection_indicators.erase(character)
+
+func _update_circle_color(character: ProceduralCharacter, color: Color) -> void:
+	if character in selection_indicators:
+		var circle = selection_indicators[character].get_child(0) as SelectionCircle
+		circle.circle_color = color
+		circle.queue_redraw()
+
+func _refresh_all_circles() -> void:
+	"""Update circle colors so primary is white and others are blue."""
+	for character in selection_indicators:
+		if character == primary_selected:
+			_update_circle_color(character, SELECTION_CIRCLE_COLOR)
+		else:
+			_update_circle_color(character, SELECTION_CIRCLE_COLOR_MULTI)
 
 func _select_initial_character() -> void:
 	"""Select the first party character on startup"""
 	var party = get_party()
 	if party.size() > 0:
 		select_character(party[0], 0)
+
 func get_party() -> Array:
 	"""Get the party characters array"""
 	return party_chars
+
 func select_character_by_index(index: int) -> bool:
-	"""Select a party member by their index (0-based)"""
+	"""Exclusive-select a party member by their index (0-based)"""
 	var party = get_party()
 	if index >= 0 and index < party.size():
 		var character = party[index]
@@ -713,51 +790,91 @@ func select_character_by_index(index: int) -> bool:
 	return false
 
 func select_character(character: ProceduralCharacter, index: int = -1) -> void:
-	"""Select a specific character"""
-	if selected_character == character:
-		return
-	
-	# Deselect previous
-	if selected_character:
-		selected_character.AI_enabled = true
-		emit_signal("character_deselected", selected_character)
-	
+	"""Exclusive select: deselect all others, select only this character."""
+	# Deselect everyone currently selected
+	_deselect_all()
+
 	# Select new
-	selected_character = character
-	selected_index = index if index >= 0 else get_party().find(character)
-	selected_character.AI_enabled = false
-	emit_signal("character_selected", character, selected_index)
-	print("Selected: ", character.Name, " (index ", selected_index, ")")
+	primary_selected = character
+	primary_index = index if index >= 0 else get_party().find(character)
+	selected_characters.append(character)
+	_sync_character_flags()
+	_add_selection_circle(character, SELECTION_CIRCLE_COLOR)
+	emit_signal("character_selected", character, primary_index)
+	emit_signal("selection_changed")
+
+func toggle_character_selection(character: ProceduralCharacter) -> void:
+	"""Ctrl+click: add or remove a character from the multi-select group."""
+	if character in selected_characters:
+		# Don't allow removing the primary if it's the only one
+		if character == primary_selected:
+			if selected_characters.size() <= 1:
+				return
+			# Promote another character to primary
+			selected_characters.erase(character)
+			primary_selected = selected_characters[0]
+			primary_index = get_party().find(primary_selected)
+			emit_signal("character_selected", primary_selected, primary_index)
+		else:
+			selected_characters.erase(character)
+		_remove_selection_circle(character)
+		emit_signal("character_deselected", character)
+	else:
+		selected_characters.append(character)
+		_add_selection_circle(character, SELECTION_CIRCLE_COLOR_MULTI)
+	_sync_character_flags()
+	_refresh_all_circles()
+	emit_signal("selection_changed")
+
+func _deselect_all() -> void:
+	"""Remove all characters from selection."""
+	for c in selected_characters.duplicate():
+		_remove_selection_circle(c)
+		emit_signal("character_deselected", c)
+	selected_characters.clear()
+	primary_selected = null
+	primary_index = 0
+
+func _sync_character_flags() -> void:
+	"""Set is_player_controlled and AI_enabled based on selection state."""
+	for character in party_chars:
+		if not is_instance_valid(character):
+			continue
+		if character in selected_characters:
+			character.is_player_controlled = true
+			character.AI_enabled = false
+		else:
+			character.is_player_controlled = false
+			character.AI_enabled = true
+
+func is_character_selected(character: ProceduralCharacter) -> bool:
+	return character in selected_characters
 
 func select_next() -> void:
-	"""Select next party member"""
+	"""Select next party member (exclusive)"""
 	var party = get_party()
 	if party.size() == 0:
 		return
-	var next_index = (selected_index + 1) % party.size()
+	var next_index = (primary_index + 1) % party.size()
 	select_character_by_index(next_index)
 
 func select_previous() -> void:
-	"""Select previous party member"""
+	"""Select previous party member (exclusive)"""
 	var party = get_party()
 	if party.size() == 0:
 		return
-	var prev_index = (selected_index - 1 + party.size()) % party.size()
+	var prev_index = (primary_index - 1 + party.size()) % party.size()
 	select_character_by_index(prev_index)
 
 func get_selected() -> ProceduralCharacter:
-	"""Get the currently selected character"""
-	return selected_character
+	"""Get the primary selected character"""
+	return primary_selected
 
 # ===== COMBAT CALLBACKS =====
 
 func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: Dictionary) -> void:
 	var attacker_name = "Player" if attacker == player else "Enemy"
 	var target_name = "Player" if target == player else "Enemy"
-	print("%s hit %s's %s for %d damage (blocked %d)" % [
-		attacker_name, target_name, info["limb_name"],
-		info["actual_damage"], info["blocked"]
-	])
 	
 	if info.get("limb_disabled", false):
 		print("  -> %s DISABLED!" % info["limb_name"])
@@ -765,15 +882,13 @@ func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: 
 		print("  -> %s SEVERED!" % info["limb_name"])
 
 func _on_weapon_bounced(attacker: CharacterBody2D, target: CharacterBody2D, limb_type: int) -> void:
-	print("Weapon bounced off armor!")
+	pass
 
 func _on_weapon_clash(char1: CharacterBody2D, char2: CharacterBody2D, winner: CharacterBody2D, power_diff: float) -> void:
 	var winner_name = "Player" if winner == player else "Enemy"
-	print("Weapon clash! %s wins (power diff: %.1f)" % [winner_name, power_diff])
 
 func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 	var name = "Player" if character == player else "Enemy"
-	print("%s was DISARMED!" % name)
 
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
@@ -834,7 +949,6 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 
 	characters_in_scene.append(character_node)
 	
-	print("Spawned character: ", data.get("name", "Unknown"))
 	return character_node
 
 func spawn_all_characters(spacing: float = 100.0) -> void:
@@ -864,7 +978,6 @@ func _toggle_weapon_debug() -> void:
 	var weapon = player.get_current_weapon()
 	if weapon:
 		weapon.set_debug_draw(not weapon.debug_draw)
-		print("Debug visualization: %s" % ("ON" if weapon.debug_draw else "OFF"))
 
 
 # Weapon penetration states
@@ -908,14 +1021,10 @@ func process_weapon_hit(
 		target.body_width,
 		target.body_height
 	)
-	print("processing weapon hit
-	
-	")
 	# Calculate base damage — DUPLICATE to avoid mutating the weapon's data
 	var attack_damage: Dictionary
 	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
-		print("attack_damage: ", attack_damage)
 		if weapon.get("traits") and "melee" in weapon.traits:
 			var str_bonus = attacker.strength / 10.0
 			# Get all damage type keys (e.g., ["physical", "fire"])
@@ -932,7 +1041,6 @@ func process_weapon_hit(
 
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
 	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
-	print("final damage: ", final_damage)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
@@ -1051,14 +1159,12 @@ func process_weapon_clash(
 		SfxManager.play("clash", char1.position)
 
 		result["outcome"] = "stalemate"
-		print("weapon clash resulted in stalemate")
 		char2.apply_stagger(0.2) #REMOVE? Or make a condtions
 		char1.apply_stagger(0.2)
 	elif abs(power_diff) < 5.0:
 		# Moderate difference - loser knocked back
 		winner = char1 if power_diff > 0 else char2
 		loser = char2 if power_diff > 0 else char1
-		print("weapon clash resulted in knockback")
 		result["outcome"] = "knockback"
 		result["winner"] = winner
 		result["loser"] = loser
@@ -1066,7 +1172,6 @@ func process_weapon_clash(
 		emit_signal("weapon_clash", char1, char2, winner, abs(power_diff))
 	elif abs(power_diff) < 10.0:
 		# Large difference - weapon knocked away
-		print("weapon clash resulted in weapon being knocked away")
 		winner = char1 if power_diff > 0 else char2
 		loser = char2 if power_diff > 0 else char1
 		result["outcome"] = "knocked_away"
@@ -1163,95 +1268,75 @@ func point_in_polygon(point: Vector2, polygon: Array) -> bool:
 	return true
 
 func check_weapon_body_collision(holder, target: ProceduralCharacter):
-	# 1. Determine the start and end points of the "hit line" in the holder's LOCAL space
-	var hit_start_local: Vector2
-	var hit_end_local: Vector2
-	
+	# 1. Determine the start and end points of the "hit line" in WORLD space
+	var tip_world: Vector2
+	var base_world: Vector2
+
 	# Check if the holder is actually holding a weapon in the active hand
 	var current_weapon
 	if holder.current_hand == "Main":
 		current_weapon = holder.current_main_hand_item
 	else:
 		current_weapon = holder.current_off_hand_item
-	#print("current weapon: ", current_weapon.display_name)
+
 	if current_weapon != null and not (current_weapon is AbilityShape):
 		# --- WEAPON LOGIC ---
-		# Get the weapon's local vectors (relative to the weapon scene)
+		# Use to_global() on the weapon node itself -- this correctly chains through
+		# weapon -> holder Node2D -> character -> world, including holder rotation/scale
 		var tip = current_weapon.get_tip_local_position()
 		var base = current_weapon.get_blade_start_local()
-		
-		# Convert to holder's local space by adding the weapon's position
-		hit_end_local = current_weapon.position + tip
-		hit_start_local = current_weapon.position + base
+		tip_world = current_weapon.to_global(tip)
+		base_world = current_weapon.to_global(base)
 	else:
 		# --- UNARMED / FIST LOGIC ---
-		# Get the joint array for the active hand
+		# Arm joints are in character-local space, so holder.to_global() is correct
 		var joints: Array[Vector2]
 		if holder.current_hand == "Main":
-			# Assuming Main Hand = Right Arm based on your IK code
 			joints = holder.right_arm_joints
 		else:
 			joints = holder.left_arm_joints
-			
-		# Safety check in case joints aren't initialized
+
 		if joints.is_empty() or joints.size() < 2:
 			return {"hit": false}
-			
-		# The last joint is the hand/tip
-		hit_end_local = joints[-1]
-		
-		# The second to last joint is the elbow. 
-		# We define the "fist" as the last 20% of the forearm.
-		# This prevents the whole arm from acting like a blade.
+
+		var hand_local = joints[-1]
 		var elbow_local = joints[-2]
-		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
-	
-	# 2. Perform the Interpolation Check (Shared Logic)
-	# Use your specific helper function here
+		var fist_start_local = hand_local.lerp(elbow_local, 0.2)
+		tip_world = holder.to_global(hand_local)
+		base_world = holder.to_global(fist_start_local)
+
+	# 2. Perform the Interpolation Check in world space
 	var body_corners = get_body_hitbox_corners(target)
 	var num_checks = 5
-	# DEBUG — add these lines temporarily
-	var tip_world = holder.to_global(hit_end_local)
-	var base_world = holder.to_global(hit_start_local)
-	print("weapon line: ", tip_world, " -> ", base_world)
-	print("target corners: ", body_corners)
-	print("target pos: ", target.global_position, " rot: ", target.rotation)
-	
+
 	for i in range(num_checks):
 		var t = float(i) / float(num_checks - 1)
-		
-		# Interpolate in local space first
-		var check_point_local = hit_end_local.lerp(hit_start_local, t)
-		
-		# Convert to global world space using the holder (attacker)
-		var check_point_world = holder.to_global(check_point_local)
-		
+		var check_point_world = tip_world.lerp(base_world, t)
+
 		if point_in_polygon(check_point_world, body_corners):
 			# Convert hit position to target's local space for limb detection
 			var hit_local = target.to_local(check_point_world)
-			
-			# Un-rotate to align with the target's limb coordinate system
 			var hit_local_unrotated = hit_local.rotated(-target.rotation)
-			
+
 			var limb_type = target.get_limb_at_position(
 				hit_local_unrotated,
 				target.body_width,
 				target.body_height
 			)
-			
+
 			return {
 				"hit": true,
 				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier, #this might only effect cooldown, not attack speed?
+				"velocity": holder.attack_speed_multiplier,
 				"limb_type": limb_type
 			}
-			
+
 	return {"hit": false}
 	
 func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) -> Dictionary:
 	"""Collision check for items and structures using their collision shape bounds"""
-	var hit_start_local: Vector2
-	var hit_end_local: Vector2
+	var tip_world: Vector2
+	var base_world: Vector2
 
 	var current_weapon
 	if holder.current_hand == "Main":
@@ -1262,8 +1347,8 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 	if current_weapon != null and not (current_weapon is AbilityShape):
 		var tip = current_weapon.get_tip_local_position()
 		var base = current_weapon.get_blade_start_local()
-		hit_end_local = current_weapon.position + tip
-		hit_start_local = current_weapon.position + base
+		tip_world = current_weapon.to_global(tip)
+		base_world = current_weapon.to_global(base)
 	else:
 		var joints: Array[Vector2]
 		if holder.current_hand == "Main":
@@ -1272,9 +1357,10 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 			joints = holder.left_arm_joints
 		if joints.is_empty() or joints.size() < 2:
 			return {"hit": false}
-		hit_end_local = joints[-1]
+		var hand_local = joints[-1]
 		var elbow_local = joints[-2]
-		hit_start_local = hit_end_local.lerp(elbow_local, 0.2)
+		tip_world = holder.to_global(hand_local)
+		base_world = holder.to_global(hand_local.lerp(elbow_local, 0.2))
 
 	# Use the target's sprite size as a simple bounding box
 	var target_rect: Rect2
@@ -1291,8 +1377,7 @@ func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) 
 	var num_checks = 5
 	for i in range(num_checks):
 		var t = float(i) / float(num_checks - 1)
-		var check_point_local = hit_end_local.lerp(hit_start_local, t)
-		var check_point_world = holder.to_global(check_point_local)
+		var check_point_world = tip_world.lerp(base_world, t)
 
 		if target_rect.has_point(check_point_world):
 			return {
@@ -1332,26 +1417,26 @@ func check_weapon_weapon_collision(
 		weapon2 = char2.current_off_hand_item
 		holder2 = char2.off_hand_holder
 	
-	# Get blade points for both weapons
+	# Get blade points for both weapons in world space
 	var tip1_local = weapon1.get_tip_local_position()
 	var blade_start1_local = weapon1.get_blade_start_local()
 	var tip2_local = weapon2.get_tip_local_position()
 	var blade_start2_local = weapon2.get_blade_start_local()
-	
+
 	# Check multiple points along each blade against each other
 	var num_checks = 3
 	var collision_radius = 8.0  # How close blades need to be to "clash"
-	
+
 	for i in range(num_checks):
 		var t1 = float(i) / float(num_checks - 1)
 		var point1_local = tip1_local.lerp(blade_start1_local, t1)
-		var point1_world = holder1.to_global(weapon1.position + point1_local)
-		
+		var point1_world = weapon1.to_global(point1_local)
+
 		for j in range(num_checks):
 			var t2 = float(j) / float(num_checks - 1)
 			var point2_local = tip2_local.lerp(blade_start2_local, t2)
-			var point2_world = holder2.to_global(weapon2.position + point2_local)
-			
+			var point2_world = weapon2.to_global(point2_local)
+
 			if point1_world.distance_to(point2_world) < collision_radius:
 				return {
 					"collision": true,
@@ -1375,7 +1460,7 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 		var tex_size = sprite.texture.get_size()
 		var longest = max(tex_size.x, tex_size.y)
 		if longest > 0:
-			var target_size = 16.0
+			var target_size = 32.0
 			var s = target_size / longest
 			sprite.scale = Vector2(s, s)
 	else:
@@ -1385,8 +1470,8 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 		sprite.texture = ImageTexture.create_from_image(img)
 	proj.add_child(sprite)
 
-	# Spawn slightly ahead of the shooter so it doesn't immediately collide with them
-	proj.global_position = shooter.global_position + direction.normalized() * 20.0
+	# Spawn from the weapon tip so projectiles visually emerge from the weapon
+	proj.global_position = shooter.get_weapon_tip_world_position()
 	# Rotate so the sprite's up-axis points along the travel direction
 	proj.rotation = direction.angle() + PI / 2.0
 
@@ -1668,7 +1753,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["traits"] = character.traits.duplicate()
 	state["is_protagonist"] = character.is_protagonist
 	state["AI_enabled"] = character.AI_enabled
- 
+	state["is_player_controlled"] = character.is_player_controlled
+
 	# --- Core attributes ---
 	state["strength"] = character.strength
 	state["constitution"] = character.constitution
@@ -1814,7 +1900,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.is_protagonist = state["is_protagonist"]
 	if state.has("AI_enabled"):
 		character.AI_enabled = state["AI_enabled"]
- 
+	if state.has("is_player_controlled"):
+		character.is_player_controlled = state["is_player_controlled"]
+
 	# --- Core attributes ---
 	if state.has("strength"):    character.strength = state["strength"]
 	if state.has("constitution"): character.constitution = state["constitution"]

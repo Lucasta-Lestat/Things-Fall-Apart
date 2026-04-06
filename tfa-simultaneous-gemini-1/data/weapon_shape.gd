@@ -8,7 +8,7 @@ enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW, PISTOL }
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum GripStyle { ONE_HANDED, TWO_HANDED }
 
-@export var weapon_scale: float = 1.15
+@export var weapon_scale: float = 1.6
 
 @export var weight: float = 4.0
 @export var weapon_type: WeaponType = WeaponType.SWORD
@@ -445,6 +445,16 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("contents"): contents = data["contents"] if data["contents"] != null else []
 	if data.has("restricted_item_type"): restricted_item_type = str(data["restricted_item_type"]) if data["restricted_item_type"] != null else ""
 
+	# Grip Style
+	if data.has("grip_style"):
+		match str(data["grip_style"]).to_lower():
+			"two_handed", "two-handed", "2h":
+				grip_style = GripStyle.TWO_HANDED
+			_:
+				grip_style = GripStyle.ONE_HANDED
+	elif weapon_type == WeaponType.BOW:
+		grip_style = GripStyle.TWO_HANDED
+
 	# Visuals & Geometry
 	if data.get("size") == "default":
 		_apply_default_size_for_type()
@@ -517,8 +527,12 @@ func to_data() -> Dictionary:
 		"balance_point": balance_point,
 		"sprite_path": sprite_path,
 		"projectile_texture_path": projectile_texture_path,
-		"ammo_type": ammo_type
+		"ammo_type": ammo_type,
+		"grip_style": "two_handed" if grip_style == GripStyle.TWO_HANDED else "one_handed"
 	}
+
+func is_two_handed() -> bool:
+	return grip_style == GripStyle.TWO_HANDED
 
 func get_damage_type_name() -> String:
 	return primary_damage_type
