@@ -225,6 +225,21 @@ func queue_move(target_pos: Vector2) -> bool:
 		waypoints.append(target_pos)
 	return queue_action(ActionType.MOVE, {"target_position": target_pos, "waypoints": waypoints, "waypoint_index": 0})
 
+func queue_move_waypoints(waypoints: PackedVector2Array) -> bool:
+	"""Queue a move action using freeform waypoints (no A* pathfinding).
+	Used by the tactical path system for drawn paths."""
+	if waypoints.size() < 2:
+		return false
+	var wp_array: Array[Vector2] = []
+	for wp in waypoints:
+		wp_array.append(wp)
+	return queue_action(ActionType.MOVE, {
+		"target_position": waypoints[waypoints.size() - 1],
+		"waypoints": wp_array,
+		"waypoint_index": 0,
+		"freeform": true,
+	})
+
 func queue_dash(target_pos: Vector2) -> bool:
 	"""Queue a dash action (straight-line, no pathfinding)"""
 	return queue_action(ActionType.CUSTOM, {"callable": Callable(character, "dash").bind(target_pos)})
@@ -348,9 +363,27 @@ func _execute_action(action: Action) -> void:
 			character.inventory.cycle_weapon_for_hand(hand, direction)
 		
 		ActionType.USE_ITEM:
-			# Implement item usage here
-			print("attempting to use item in action queue, not implemented yet")
-			pass
+			var item_data = action.data.get("item_data", {})
+			var item_index = action.data.get("item_index", -1)
+			if item_index >= 0 and character.inventory:
+				# Apply item effects
+				var healing = item_data.get("healing", 0.0)
+				if healing > 0 and character.has_method("heal"):
+					character.heal(healing)
+				var satiety = item_data.get("satiety", 0.0)
+				if satiety > 0 and "hunger" in character:
+					character.hunger = max(0, character.hunger - satiety)
+				var condition_id = item_data.get("adds_condition_on_equip", "")
+				if condition_id is String and not condition_id.is_empty():
+					var cm = character.get_node_or_null("ConditionManager")
+					if cm:
+						cm.apply_condition(condition_id, character)
+				var use_ability_id = item_data.get("use_ability", "")
+				if use_ability_id is String and not use_ability_id.is_empty():
+					var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
+					if not ability_data.is_empty() and character.ability_manager:
+						character.ability_manager.use_ability(ability_data, character, character.global_position)
+				character.inventory.remove_item(item_index)
 		
 		ActionType.CUSTOM:
 			# Custom actions can have a callable
