@@ -147,7 +147,13 @@ func _process_damage(delta: float, game: Node) -> void:
 			# Damage the floor
 			var floor_node = _get_floor_at(tile_pos, game)
 			if floor_node and is_instance_valid(floor_node):
+				var was_alive = floor_node.current_health > 0
 				floor_node.take_damage(damage_per_tick.duplicate(), 0)
+				# Scorch immediately when the floor dies from fire
+				if was_alive and floor_node.current_health <= 0:
+					var scorch_color_arr = _surface_defs.get("fire", {}).get("scorch_color", [0.15, 0.12, 0.1, 1.0])
+					var sc = Color(scorch_color_arr[0], scorch_color_arr[1], scorch_color_arr[2], scorch_color_arr[3])
+					_scorch_floor(tile_pos, sc, game)
 
 		# Damage structures on this tile
 		if game and "structures_in_scene" in game:
@@ -199,13 +205,30 @@ func try_ignite(tile_pos: Vector2i) -> void:
 	if surface_grid.has(tile_pos):
 		return  # Already burning
 
-	# Check flammable fluid first
 	var game = _get_game()
 	var fluid_manager = _get_fluid_manager(game)
+
+	# Check flammable fluid first (flood-fill ignition)
 	if fluid_manager and fluid_manager.is_fluid_flammable(tile_pos):
 		var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
 		_ignite_fluid_body(tile_pos, fluid_type, fluid_manager)
 		return
+
+	# Non-flammable fluid blocks fire from reaching the floor (e.g. water)
+	if fluid_manager:
+		var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
+		if not fluid_type.is_empty():
+			return  # Has non-flammable fluid — can't ignite
+
+	# Non-flammable structure blocks fire
+	if game and "structures_in_scene" in game:
+		for structure in game.structures_in_scene:
+			if is_instance_valid(structure) and tile_pos in structure.occupied_tiles:
+				if not structure.flammable:
+					return
+				else:
+					_ignite_tile(tile_pos, "floor")
+					return
 
 	# Check flammable floor
 	if _is_floor_flammable(tile_pos):
@@ -330,6 +353,8 @@ func _scorch_floor(tile_pos: Vector2i, scorch_color: Color, game: Node) -> void:
 		floor_node.flammable = false
 		if floor_node.has_node("Sprite"):
 			var sprite = floor_node.get_node("Sprite")
+			# Re-show sprite if it was hidden by the floor reaching 0 HP
+			sprite.visible = true
 			var mat = ShaderMaterial.new()
 			mat.shader = SCORCH_SHADER
 			mat.set_shader_parameter("ash_color", Color(0.08, 0.06, 0.05, 1.0))
