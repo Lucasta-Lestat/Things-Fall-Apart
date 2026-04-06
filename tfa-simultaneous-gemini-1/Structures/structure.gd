@@ -29,6 +29,7 @@ func _ready():
 	_apply_structure_data()
 	# Snap to the grid
 	floating_text_label.visible = false
+	floating_text_label.z_index = 200
 	if not skip_grid_snap:
 		var grid_pos = GridManager.world_to_map(global_position)
 		global_position = GridManager.map_to_world(grid_pos)
@@ -101,7 +102,7 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
 	floating_text_label.text = formatted_text; floating_text_label.modulate = color
 	# Make critical hit text bigger too
-	var scale_multiplier = 1.3 * success_level if success_level else 1.0
+	var scale_multiplier = 0.91 * success_level if success_level else 0.7
 	floating_text_label.scale = Vector2(scale_multiplier, scale_multiplier)
 	
 	floating_text_label.visible = true
