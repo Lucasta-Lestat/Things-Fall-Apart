@@ -451,10 +451,13 @@ func _setup_action_queue() -> void:
 
 # Optional signal handlers for UI feedback
 func _on_action_queued(action: ActionQueue.Action) -> void:
+	pass
 
 func _on_action_started(action: ActionQueue.Action) -> void:
+	pass
 
 func _on_action_completed(action: ActionQueue.Action) -> void:
+	pass
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
