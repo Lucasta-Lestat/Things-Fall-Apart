@@ -337,6 +337,9 @@ func _spawn_items(item_list: Array) -> void:
 			create_item(item_id, pos)
 
 func _spawn_fluids(fluid_list: Array) -> void:
+	if not fluid_manager:
+		push_warning("FluidManager not available — skipping fluid_spawns")
+		return
 	for fluid_def in fluid_list:
 		var fluid_type: String = fluid_def.get("type", "water")
 		var pos_arr = fluid_def.get("position", [0, 0])
