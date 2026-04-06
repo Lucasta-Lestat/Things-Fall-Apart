@@ -70,6 +70,15 @@ func set_fluid_colors(water_color: Color, wave_color: Color) -> void:
 		water_sprite.material.set_shader_parameter("water_color", water_color)
 		water_sprite.material.set_shader_parameter("wave_color", wave_color)
 
+func set_custom_shader(shader_path: String) -> void:
+	"""Replace the shader with a custom one (e.g. oil sheen)."""
+	if not water_sprite:
+		return
+	if ResourceLoader.exists(shader_path):
+		var shader_material = ShaderMaterial.new()
+		shader_material.shader = load(shader_path)
+		water_sprite.material = shader_material
+
 func update_visuals():
 	"""Update the visual representation based on depth"""
 	if not water_sprite:

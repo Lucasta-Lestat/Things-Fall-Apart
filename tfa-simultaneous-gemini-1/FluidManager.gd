@@ -293,14 +293,22 @@ func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float)
 	add_child(fluid_node)
 	fluid_node.initialize(grid_pos, amount)
 
-	# Apply fluid-type-specific colors from the database
-	if _fluid_db.has(fluid_type) and fluid_node.has_method("set_fluid_colors"):
+	# Apply fluid-type-specific shader and colors from the database
+	if _fluid_db.has(fluid_type):
 		var fluid_def = _fluid_db[fluid_type]
-		var color_arr = fluid_def.get("color", [0.0, 0.4, 0.8, 0.7])
-		var wave_arr = fluid_def.get("wave_color", [0.0, 0.9, 1.0, 0.4])
-		var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
-		var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
-		fluid_node.set_fluid_colors(water_color, wave_color)
+
+		# Custom shader (e.g. oil sheen) — must be set before colors
+		var shader_path = fluid_def.get("shader", "")
+		if not shader_path.is_empty() and fluid_node.has_method("set_custom_shader"):
+			fluid_node.set_custom_shader(shader_path)
+
+		# Colors
+		if fluid_node.has_method("set_fluid_colors"):
+			var color_arr = fluid_def.get("color", [0.0, 0.4, 0.8, 0.7])
+			var wave_arr = fluid_def.get("wave_color", [0.0, 0.9, 1.0, 0.4])
+			var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
+			var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
+			fluid_node.set_fluid_colors(water_color, wave_color)
 
 	active_fluid_tiles[grid_pos] = fluid_node
 
