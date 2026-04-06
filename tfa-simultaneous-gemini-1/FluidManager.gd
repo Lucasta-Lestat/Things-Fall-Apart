@@ -39,7 +39,7 @@ func _load_fluid_database() -> void:
 	var file_path = "res://data/fluids.json"
 	if not FileAccess.file_exists(file_path):
 		push_error("FluidManager: fluids.json not found at " + file_path)
-		return
+		return 
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	var json = JSON.new()
 	if json.parse(file.get_as_text()) == OK:

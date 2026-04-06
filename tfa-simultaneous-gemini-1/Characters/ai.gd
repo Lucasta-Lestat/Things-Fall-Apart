@@ -93,6 +93,11 @@ func process_ai(delta: float) -> void:
 	reaction_timer = max(0, reaction_timer - delta)
 	state_timer += delta
 
+	# Handle unconscious — no actions possible
+	var _cm = character.get_node_or_null("ConditionManager")
+	if _cm and _cm.has_condition("unconscious"):
+		return
+
 	# Handle stunned state
 	if current_state == AIState.STUNNED:
 		if not "stunned" in character.conditions:
