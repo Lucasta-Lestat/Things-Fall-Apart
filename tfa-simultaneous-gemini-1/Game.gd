@@ -621,7 +621,6 @@ func _check_combat_collisions() -> void:
 				continue
 
 			var hit = check_weapon_body_collision(attacker, victim)
-			print("is the weaapon hitting? ", hit)
 			if hit.get("hit", false):
 				register_hit(attacker, victim)
 				
@@ -872,10 +871,6 @@ func get_selected() -> ProceduralCharacter:
 func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: Dictionary) -> void:
 	var attacker_name = "Player" if attacker == player else "Enemy"
 	var target_name = "Player" if target == player else "Enemy"
-	print("%s hit %s's %s for %d damage (blocked %d)" % [
-		attacker_name, target_name, info["limb_name"],
-		info["actual_damage"], info["blocked"]
-	])
 	
 	if info.get("limb_disabled", false):
 		print("  -> %s DISABLED!" % info["limb_name"])
@@ -883,15 +878,12 @@ func _on_damage_dealt(attacker: CharacterBody2D, target: CharacterBody2D, info: 
 		print("  -> %s SEVERED!" % info["limb_name"])
 
 func _on_weapon_bounced(attacker: CharacterBody2D, target: CharacterBody2D, limb_type: int) -> void:
-	print("Weapon bounced off armor!")
 
 func _on_weapon_clash(char1: CharacterBody2D, char2: CharacterBody2D, winner: CharacterBody2D, power_diff: float) -> void:
 	var winner_name = "Player" if winner == player else "Enemy"
-	print("Weapon clash! %s wins (power diff: %.1f)" % [winner_name, power_diff])
 
 func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 	var name = "Player" if character == player else "Enemy"
-	print("%s was DISARMED!" % name)
 
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
@@ -952,7 +944,6 @@ func spawn_character(data: Dictionary, spawn_position: Vector2) -> ProceduralCha
 
 	characters_in_scene.append(character_node)
 	
-	print("Spawned character: ", data.get("name", "Unknown"))
 	return character_node
 
 func spawn_all_characters(spacing: float = 100.0) -> void:
@@ -982,7 +973,6 @@ func _toggle_weapon_debug() -> void:
 	var weapon = player.get_current_weapon()
 	if weapon:
 		weapon.set_debug_draw(not weapon.debug_draw)
-		print("Debug visualization: %s" % ("ON" if weapon.debug_draw else "OFF"))
 
 
 # Weapon penetration states
@@ -1026,14 +1016,10 @@ func process_weapon_hit(
 		target.body_width,
 		target.body_height
 	)
-	print("processing weapon hit
-	
-	")
 	# Calculate base damage — DUPLICATE to avoid mutating the weapon's data
 	var attack_damage: Dictionary
 	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
-		print("attack_damage: ", attack_damage)
 		if weapon.get("traits") and "melee" in weapon.traits:
 			var str_bonus = attacker.strength / 10.0
 			# Get all damage type keys (e.g., ["physical", "fire"])
@@ -1050,7 +1036,6 @@ func process_weapon_hit(
 
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
 	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
-	print("final damage: ", final_damage)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
@@ -1169,14 +1154,12 @@ func process_weapon_clash(
 		SfxManager.play("clash", char1.position)
 
 		result["outcome"] = "stalemate"
-		print("weapon clash resulted in stalemate")
 		char2.apply_stagger(0.2) #REMOVE? Or make a condtions
 		char1.apply_stagger(0.2)
 	elif abs(power_diff) < 5.0:
 		# Moderate difference - loser knocked back
 		winner = char1 if power_diff > 0 else char2
 		loser = char2 if power_diff > 0 else char1
-		print("weapon clash resulted in knockback")
 		result["outcome"] = "knockback"
 		result["winner"] = winner
 		result["loser"] = loser
@@ -1184,7 +1167,6 @@ func process_weapon_clash(
 		emit_signal("weapon_clash", char1, char2, winner, abs(power_diff))
 	elif abs(power_diff) < 10.0:
 		# Large difference - weapon knocked away
-		print("weapon clash resulted in weapon being knocked away")
 		winner = char1 if power_diff > 0 else char2
 		loser = char2 if power_diff > 0 else char1
 		result["outcome"] = "knocked_away"

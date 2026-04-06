@@ -451,13 +451,10 @@ func _setup_action_queue() -> void:
 
 # Optional signal handlers for UI feedback
 func _on_action_queued(action: ActionQueue.Action) -> void:
-	print("Action queued: ", ActionQueue.ActionType.keys()[action.type])
 
 func _on_action_started(action: ActionQueue.Action) -> void:
-	print("Action started: ", ActionQueue.ActionType.keys()[action.type])
 
 func _on_action_completed(action: ActionQueue.Action) -> void:
-	print("Action completed: ", ActionQueue.ActionType.keys()[action.type])
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -557,7 +554,6 @@ func _setup_collision() -> void:
 func _update_collision_shape() -> void:
 	# Call this if body dimensions change at runtime
 	if collision_shape and collision_shape.shape is ConvexPolygonShape2D:
-		print("updating collision shape")
 		collision_shape.shape.points = _get_body_collision_points()
 
 func _get_body_collision_points() -> PackedVector2Array:
@@ -1699,7 +1695,6 @@ func _process(delta: float) -> void:
 			$AI.process_ai(delta)
 func handle_visual_shake(delta) -> void:
 	if current_shake_intensity > 0:
-		print("Im literally shaking: ", current_shake_intensity)
 		current_shake_intensity = move_toward(current_shake_intensity, 0, shake_decay_rate * delta)
 		# Generate random jitter based on intensity
 		current_shake_offset = Vector2(
@@ -1904,7 +1899,6 @@ func cast_ability(ability: AbilityShape):
 	# 5. Cleanup Visuals
 	await attack_animator.attack_finished
 	ability.activate_visuals(false)
-	print("is cast ability being called") #it isn't
 	targeting_system._end_targeting()
 
 func _handle_input() -> void:
@@ -2361,25 +2355,20 @@ func is_attacking() -> bool:
 
 func give_weapon(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	"""Give the character a weapon from data and equip it"""
-	print("give weapon being run with: ", weapon_data.get("display_name", weapon_data.get("id", "")), " in hand ", hand)
 	return inventory.equip_weapon_from_data(weapon_data, hand)
 
 func give_weapon_by_name(weapon_name: String, hand:String = "Main") -> WeaponShape:
 	"""Give the character a weapon by looking up its name in the database"""
 	var db = ItemDatabase.weapons
-	print("giving weapon by name: ", weapon_name)
 	#print("weapon database: ", db )
 	if db:
-		print("weapon database exists")
 		#print("the fucking data is structured like: ",db)
 		var data = db[weapon_name.to_lower()]
-		print("weapon data found: ",data)
 		if not data.is_empty():
 			return give_weapon(data, hand)
 	push_warning("Could not find weapon: %s" % weapon_name)
 	return null
 func give_ability_by_name(ability_name: String, hand:String= "Main"):
-	print("giving ability by name: ", ability_name)
 	inventory.equip_ability_from_id(ability_name, hand)
 	
 func give_weapon_by_type(weapon_type: String) -> WeaponShape:
@@ -2551,7 +2540,6 @@ var limbs: Dictionary = {}  # LimbType -> Limb
 
 func initialize_limbs(base_hp: int) -> void:
 	"""Initialize all limbs based on character's max HP"""
-	print("initializing limbs")
 	limbs.clear()
 	for limb_type in LimbType.values():
 		limbs[limb_type] = Limb.new(limb_type, base_hp)
@@ -2677,7 +2665,6 @@ func get_status_string() -> String:
 	return "\n".join(parts)
 func dash(target_pos: Vector2) -> void:
 	if is_dashing or dash_cooldown_timer > 0.0:
-		print("tried to dash too soon after cooldown")
 		return
 
 	var dir = (target_pos - global_position).normalized()
@@ -2761,7 +2748,6 @@ func _spawn_blood_drops(origin: Vector2, count: int, is_severing: bool) -> void:
 	"""Spawn blood drop particles at the origin"""
 	#print("Attempting to spawn blood drops")
 	if not blood_drop_texture:
-		print("The blood drop texture hasn't been set")
 		push_warning("No blood drop texture set!")
 		return
 	
@@ -2932,7 +2918,6 @@ func _update_severed_limb_visuals() -> void:
 
 func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	severed_limbs[limb_type] = true
-	print("on_limb_severed")
 	# Create extra blood spray for severing
 	var limb_pos = _get_limb_center_position(limb_type)
 	var blood_count = int((blood_drops_max * sever_blood_multiplier))

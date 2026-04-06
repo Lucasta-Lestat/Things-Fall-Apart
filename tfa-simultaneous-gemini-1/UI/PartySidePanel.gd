@@ -636,7 +636,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 			tex_rect.custom_minimum_size = COND_ICON_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-			tex_rect.mouse_filter = Control.MOUSE_FILTER_PASS
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 			if icon_tex and icon_tex is Texture2D:
 				tex_rect.texture = icon_tex
 			tex_rect.set_meta("cond_id", cond_id)
