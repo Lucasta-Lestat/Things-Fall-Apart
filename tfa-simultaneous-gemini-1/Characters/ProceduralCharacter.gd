@@ -1097,6 +1097,45 @@ func _parse_hair_style(style_name: String) -> HairStyle:
 		_:
 			return HairStyle.FULL
 
+func rebuild_visuals() -> void:
+	# Remove all existing visual body parts and recreate them
+	# Called after race/appearance data is applied post-_ready()
+	var to_remove: Array[Node] = []
+	for node_name in ["LeftLeg", "RightLeg", "FrontLeftLeg", "FrontRightLeg",
+			"RearLeftLeg", "RearRightLeg",
+			"LeftArm", "RightArm", "Body", "Head", "Snout", "TuskL", "TuskR",
+			"Tail", "HeadFeatures"]:
+		var node = get_node_or_null(node_name)
+		if node:
+			to_remove.append(node)
+	for child in get_children():
+		if child is Line2D and child.name.begins_with("Hair"):
+			to_remove.append(child)
+	for node in to_remove:
+		remove_child(node)
+		node.free()
+
+	# Reset references
+	left_leg = null
+	right_leg = null
+	front_left_leg = null
+	front_right_leg = null
+	left_arm = null
+	right_arm = null
+	body = null
+	head = null
+	hair = null
+	tail = null
+	head_features_node = null
+	left_arm_joints.clear()
+	right_arm_joints.clear()
+
+	_create_body_parts()
+	_initialize_arms()
+	_update_colors()
+	_update_hair_colors()
+	_update_collision_shape()
+
 func _create_body_parts() -> void:
 	if body_type == BodyType.QUADRUPED:
 		_create_quadruped_body()

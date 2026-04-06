@@ -102,6 +102,10 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	var appearance: Dictionary = template.get("appearance_override", {})
 	_apply_appearance_overrides(character, appearance)
 
+	# --- Rebuild visuals now that race + appearance data is set ---
+	if character.has_method("rebuild_visuals"):
+		character.rebuild_visuals()
+
 	# --- Dialogue and interaction ---
 	var dialogue_id = template.get("dialogue", "")
 	if dialogue_id and dialogue_id is String and not dialogue_id.is_empty():
