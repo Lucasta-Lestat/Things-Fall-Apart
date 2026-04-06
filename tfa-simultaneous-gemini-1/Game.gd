@@ -551,6 +551,8 @@ func _process(delta: float) -> void:
 		# Tick fluid condition effects
 		if fluid_manager:
 			fluid_manager.update_fluid_conditions(delta, characters_in_scene)
+		if surface_manager:
+			surface_manager.update_surfaces(delta, characters_in_scene, self)
 	# Update all selection indicators
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
@@ -559,14 +561,6 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
-		if surface_manager:
-			surface_manager.update_surfaces(delta, characters_in_scene, self)
-	if selected_character and is_instance_valid(selected_character) and selection_indicator:
-		selection_indicator.global_position = selected_character.global_position
-		if PauseManager.is_paused:
-			selection_indicator.visible = true
-	if selection_indicator and not PauseManager.is_paused:
-		selection_indicator.visible = false
 	# Update NPC visibility based on party line-of-sight
 	_update_npc_los_visibility()
 	# Camera follows primary selected character
