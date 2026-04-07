@@ -2323,7 +2323,9 @@
 	"cost": 5.0,
 	"equip_slot": null,
 	"use_ability": "use_alcohol",
-	"damage": null,
+	"damage": {
+	  "bludgeoning": 1
+	},
 	"damage_resitances": {
 	  "slashing": 0,
 	  "bludgeoning": 0,
@@ -2374,7 +2376,10 @@
 	  "Narcotic": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 20
+	"max_stack_size": 20,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "methryll",
@@ -2399,7 +2404,10 @@
 	  "Stimulant": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 20
+	"max_stack_size": 20,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "zip",
@@ -2424,7 +2432,10 @@
 	  "Speed": 2
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 20
+	"max_stack_size": 20,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "joy",
@@ -2449,7 +2460,10 @@
 	  "Euphoric": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 20
+	"max_stack_size": 20,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "potion_of_healing",
@@ -2475,7 +2489,10 @@
 	  "Healing": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 5
+	"max_stack_size": 5,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "draught_of_flabbiness",
@@ -2500,7 +2517,10 @@
 	  "Transformation": 2
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 5
+	"max_stack_size": 5,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "acid_flask",
@@ -2553,7 +2573,10 @@
 	  "Air": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 5
+	"max_stack_size": 5,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "bottled_storm",
@@ -2607,7 +2630,10 @@
 	  "Gross": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 10
+	"max_stack_size": 10,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "expanding_sand",
@@ -2688,7 +2714,10 @@
 	  "Light": 3
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 10
+	"max_stack_size": 10,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "beauty_cream",
@@ -2713,7 +2742,10 @@
 	  "Organic": 1
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 5
+	"max_stack_size": 5,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "poison_vial",
@@ -2766,7 +2798,10 @@
 	  "Industrial": 2
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 1
+	"max_stack_size": 1,
+	"damage": {
+	  "bludgeoning": 1
+	}
   },
   {
 	"id": "metal",
@@ -2883,7 +2918,10 @@
 	"healing": 0.0,
 	"range": 5.0,
 	"satiety": 0.0,
-	"interact_options": ["Drop", "Sheathe"],
+	"interact_options": [
+	  "Drop",
+      "Sheathe"
+	],
 	"primary_damage_type": "ranged_arrow",
 	"max_health": 20.0,
 	"current_health": 20.0,
@@ -2935,7 +2973,10 @@
 	"healing": 0.0,
 	"range": 4.0,
 	"satiety": 0.0,
-	"interact_options": ["Drop", "Sheathe"],
+	"interact_options": [
+	  "Drop",
+      "Sheathe"
+	],
 	"primary_damage_type": "ranged_bullet",
 	"max_health": 30.0,
 	"current_health": 30.0,
@@ -2979,6 +3020,9 @@
 	"num_stacks": 1,
 	"traits": {
 	  "Ammunition": 1
+	},
+	"damage": {
+	  "bludgeoning": 1
 	}
   },
   {
@@ -2996,6 +3040,9 @@
 	"num_stacks": 1,
 	"traits": {
 	  "Ammunition": 1
+	},
+	"damage": {
+	  "bludgeoning": 1
 	}
   }
 ]

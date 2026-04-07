@@ -33,21 +33,27 @@ func _ready() -> void:
 	z_index = 45
 
 func _process(_delta: float) -> void:
-	# Only redraw when drawing in progress (mouse moving)
+	# Redraw when drawing in progress or when executing (to update consumed portion)
 	if is_drawing_path or is_drawing_rotation:
+		queue_redraw()
+	elif tactical_path and tactical_path.is_executing:
 		queue_redraw()
 
 func _draw() -> void:
 	if tactical_path == null:
 		return
 
-	# Draw the completed path line
-	if tactical_path.waypoints.size() >= 2:
+	# Draw the remaining path line (from consumed index onward)
+	var remaining = tactical_path.get_remaining_waypoints()
+	if remaining.size() >= 2:
 		var color = PATH_DRAWING_COLOR if is_drawing_path else PATH_COLOR
-		draw_polyline(tactical_path.waypoints, color, PATH_WIDTH, true)
+		draw_polyline(remaining, color, PATH_WIDTH, true)
 
-	# Draw action nodes
+	# Draw action nodes (only those not yet consumed)
 	for node in tactical_path.action_nodes:
+		# Skip nodes that are behind the consumed waypoint index
+		if node.path_index < tactical_path.consumed_waypoint_index:
+			continue
 		var pos = node.world_position
 		if node.has_action() and node.icon_texture != null:
 			# Filled circle with icon

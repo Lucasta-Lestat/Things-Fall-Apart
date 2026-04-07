@@ -490,6 +490,7 @@ func _setup_tactical_path() -> void:
 	add_child(path_input_handler)
 
 	PauseManager.game_unpaused.connect(_on_game_unpaused_convert_path)
+	action_queue.action_completed.connect(_on_tactical_action_completed)
 
 func _on_game_unpaused_convert_path() -> void:
 	if tactical_path == null or tactical_path.is_empty():
@@ -499,7 +500,30 @@ func _on_game_unpaused_convert_path() -> void:
 	var actions = tactical_path.to_action_queue_actions()
 	for a in actions:
 		action_queue.queue_action(a.type, a.data)
-	tactical_path.clear()
+	tactical_path.is_executing = true
+	path_drawer.queue_redraw()
+
+func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
+	# Update path consumption as actions complete
+	if tactical_path == null or not tactical_path.is_executing:
+		return
+	if action.type == ActionQueue.ActionType.MOVE:
+		# Consume waypoints up to the end of this move segment
+		var wp = action.data.get("waypoints", [])
+		if not wp.is_empty():
+			var end_pos = wp[wp.size() - 1]
+			# Find the waypoint index closest to the end of this segment
+			for i in range(tactical_path.consumed_waypoint_index, tactical_path.waypoints.size()):
+				if tactical_path.waypoints[i].distance_to(end_pos) < 10.0:
+					tactical_path.consume_up_to_waypoint(i)
+					break
+	else:
+		# Non-move action: remove the first remaining action node
+		if not tactical_path.action_nodes.is_empty():
+			tactical_path.action_nodes.remove_at(0)
+	# Check if path is fully consumed
+	if tactical_path.is_fully_consumed():
+		tactical_path.clear()
 	path_drawer.queue_redraw()
 
 func _setup_los_visual() -> void:
@@ -3549,6 +3573,9 @@ func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> voi
 	cast_started.emit(ability, target_position)
 
 func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
+	# Clear any queued targeting indicators left over from paused planning
+	if targeting_system:
+		targeting_system.clear_all_queued_indicators()
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:

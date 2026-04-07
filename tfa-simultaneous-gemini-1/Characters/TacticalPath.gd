@@ -10,6 +10,12 @@ var waypoints: PackedVector2Array = PackedVector2Array()
 # Action nodes placed on the path (sorted by path_index, then t)
 var action_nodes: Array = []  # Array of PathActionNode
 
+# Tracks execution progress — waypoints up to this index have been consumed
+var consumed_waypoint_index: int = 0
+
+# Whether this path is currently being executed (post-unpause)
+var is_executing: bool = false
+
 # Minimum distance between waypoints during drawing (distance gating)
 const MIN_WAYPOINT_DISTANCE: float = 8.0
 
@@ -100,6 +106,22 @@ func remove_action_node(node: PathActionNode) -> void:
 func clear() -> void:
 	waypoints.clear()
 	action_nodes.clear()
+	consumed_waypoint_index = 0
+	is_executing = false
+
+func consume_up_to_waypoint(wp_index: int) -> void:
+	consumed_waypoint_index = mini(wp_index, waypoints.size())
+
+func consume_action_node(node: PathActionNode) -> void:
+	action_nodes.erase(node)
+
+func is_fully_consumed() -> bool:
+	return consumed_waypoint_index >= waypoints.size() - 1 and action_nodes.is_empty()
+
+func get_remaining_waypoints() -> PackedVector2Array:
+	if consumed_waypoint_index >= waypoints.size():
+		return PackedVector2Array()
+	return waypoints.slice(consumed_waypoint_index)
 
 func is_empty() -> bool:
 	return waypoints.size() < 2
