@@ -101,8 +101,8 @@ func _start_casting(ability: Ability, target_position: Vector2) -> void:
 
 	cast_started.emit(ability, target_position)
 
-	if character and "targeting_system" in character and character.targeting_system:
-		character.targeting_system.end_targeting()
+	# Don't end targeting here — the preview should persist until the ability
+	# actually lands (cast_completed). Cleanup happens in _on_ability_cast_completed.
 
 
 ## Process ongoing casting

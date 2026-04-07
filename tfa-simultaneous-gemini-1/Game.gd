@@ -742,7 +742,7 @@ func _add_selection_circle(character: ProceduralCharacter, color: Color) -> void
 	var indicator = Node2D.new()
 	indicator.z_index = 100
 	var circle_drawer = SelectionCircle.new()
-	circle_drawer.radius = 85
+	circle_drawer.radius = max(character.collision_radius + 8.0, 20.0)
 	circle_drawer.circle_color = color
 	circle_drawer.line_width = SELECTION_CIRCLE_WIDTH
 	indicator.add_child(circle_drawer)
@@ -1649,7 +1649,7 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 # ===== SELECTION CIRCLE DRAWER =====
 
 class SelectionCircle extends Node2D:
-	var radius: float = 85.0
+	var radius: float = 30.0
 	var circle_color: Color = Color.WHITE
 	var line_width: float = 1.0
 	var num_segments: int = 32

@@ -2226,10 +2226,9 @@ func _handle_input() -> void:
 			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 
 	# --- Middle mouse button - Move ---
-	if paused:
-		if Input.is_action_just_pressed("middle_mouse"):
-			action_queue.queue_move(mouse_pos)
-	else:
+	# When paused, middle-click is handled by PathInputHandler (A* path via tactical path system).
+	# When unpaused, middle-click drives real-time movement directly.
+	if not paused:
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 			var target_tile = GridManager.world_to_map(mouse_pos)
 			if target_tile != _last_nav_target_tile:
@@ -2304,9 +2303,6 @@ func _confirm_ability_target(paused: bool) -> void:
 
 	if result.is_empty(): return
 
-	# End targeting state so subsequent clicks go back to normal input
-	targeting_system.end_targeting()
-
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
@@ -2315,20 +2311,23 @@ func _confirm_ability_target(paused: bool) -> void:
 	target_rotation = (target_pos - global_position).angle() + PI / 2
 
 	if paused:
-		# QUEUE: Add visual indicator to world and add to action queue
-		# Matches your queue_ability signature
+		# End targeting — queued indicator takes over the visual role
+		targeting_system.end_targeting()
 		action_queue.queue_ability(ability_id, target_pos)
-		
-		# Optional: Create the persistent ghost indicator since we are paused
+
+		# Create persistent ghost indicator for the queued ability
 		targeting_system.create_queued_indicator(
-			target_pos, 
-			result.get("shape"), 
-			result.get("radius", 0), 
-			result.get("size", Vector2.ZERO), 
-			result.get("rotation", 0.0)
+			target_pos,
+			result.get("shape"),
+			result.get("radius", 0),
+			result.get("size", Vector2.ZERO),
+			result.get("rotation", 0.0),
+			result.get("caster_position", global_position)
 		)
 	else:
-		# IMMEDIATE: Cast
+		# Keep the targeting indicator visible until the ability actually lands.
+		# Disable interactivity but preserve the visual preview.
+		targeting_system.is_targeting = false
 		var ability_obj = Ability.from_dict(ability_data)
 		use_ability(ability_obj, {"position": target_pos})
 
@@ -3576,6 +3575,8 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	# Clear any queued targeting indicators left over from paused planning
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		# Also clean up any live indicator that was left visible until the ability landed
+		targeting_system.end_targeting()
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
