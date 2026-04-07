@@ -78,7 +78,8 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 	# Left click: start drawing path from character, or place action node on path
 	if Input.is_action_just_pressed("left_click"):
 		if on_character:
-			# Start drawing a new path from character position
+			# Start drawing a new path from character position — clear stale movement state
+			_clear_stale_movement()
 			tactical_path.clear()
 			tactical_path.add_waypoint(character.global_position)
 			state = PathInputState.DRAWING_PATH
@@ -111,6 +112,7 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 			return true
 		else:
 			# Middle-click on open ground: A* pathfind from character to destination
+			_clear_stale_movement()
 			var astar_waypoints = _astar_path_to_waypoints(character.global_position, mouse_pos)
 			tactical_path.clear()
 			tactical_path.set_waypoints(astar_waypoints)
@@ -261,6 +263,14 @@ func cancel_path() -> void:
 	if tactical_path:
 		tactical_path.clear()
 	path_drawer.queue_redraw()
+
+func _clear_stale_movement() -> void:
+	"""Clear any stale ActionQueue actions and nav waypoints when creating a new path."""
+	if character.action_queue:
+		character.action_queue.cancel_all()
+	character._nav_waypoints.clear()
+	character._nav_index = 0
+	character.is_moving = false
 
 func _astar_path_to_waypoints(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
 	"""Use A* pathfinding to get waypoints between two world positions."""
