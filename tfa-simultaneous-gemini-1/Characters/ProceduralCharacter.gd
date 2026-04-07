@@ -1174,8 +1174,8 @@ func rebuild_visuals() -> void:
 func _create_body_parts() -> void:
 	if body_type == BodyType.QUADRUPED:
 		_create_quadruped_body()
-		# Quadruped head is at the front of the body
-		_head_offset = Vector2(0, -body_length * 0.4 - head_length * 0.2)
+		# Quadruped head is well in front of the body
+		_head_offset = Vector2(0, -body_length * 0.4 - head_length * 0.5)
 	else:
 		_create_bipedal_body()
 		_head_offset = Vector2.ZERO
@@ -1278,9 +1278,10 @@ func _create_quad_leg(leg_name: String, x_offset: float, hip_y: float) -> Line2D
 	leg.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	leg.end_cap_mode = Line2D.LINE_CAP_ROUND
 	leg.width = leg_width
-	# Legs extend outward from the body
+	# Legs extend outward from the body using leg_length
+	var outward_dir = sign(x_offset)
 	leg.add_point(Vector2(x_offset, hip_y))  # Hip
-	leg.add_point(Vector2(x_offset * 1.5, hip_y))  # Foot (extends outward)
+	leg.add_point(Vector2(x_offset + outward_dir * leg_length, hip_y))  # Foot
 	return leg
 
 func _create_tail() -> void:
@@ -1298,7 +1299,7 @@ func _create_tail() -> void:
 	curve.add_point(Vector2(0.6, 0.4))
 	curve.add_point(Vector2(1.0, 0.15))   # Tip: thin
 	tail.width_curve = curve
-	tail.width = leg_width * 1.2
+	tail.width = max(leg_width * 2.0, body_width * 0.3)
 
 	add_child(tail)
 
@@ -1445,7 +1446,7 @@ func _create_racial_features() -> void:
 		head_features_node.queue_free()
 	head_features_node = Node2D.new()
 	head_features_node.name = "HeadFeatures"
-	head_features_node.z_index = 2
+	head_features_node.z_index = 1  # Same level as head, below hair (z=2)
 	head_features_node.position = _head_offset
 	add_child(head_features_node)
 
@@ -2080,23 +2081,23 @@ func _update_quadruped_legs(delta: float) -> void:
 	if front_left_leg:
 		front_left_leg.clear_points()
 		front_left_leg.add_point(Vector2(-leg_spacing, front_y))
-		front_left_leg.add_point(Vector2(-leg_spacing - leg_length * 0.5, front_y + swing_a))
+		front_left_leg.add_point(Vector2(-leg_spacing - leg_length, front_y + swing_a))
 
 	if right_leg:  # Rear-right
 		right_leg.clear_points()
 		right_leg.add_point(Vector2(leg_spacing, rear_y))
-		right_leg.add_point(Vector2(leg_spacing + leg_length * 0.5, rear_y + swing_a))
+		right_leg.add_point(Vector2(leg_spacing + leg_length, rear_y + swing_a))
 
 	# Front-right + Rear-left move together (swing_b)
 	if front_right_leg:
 		front_right_leg.clear_points()
 		front_right_leg.add_point(Vector2(leg_spacing, front_y))
-		front_right_leg.add_point(Vector2(leg_spacing + leg_length * 0.5, front_y + swing_b))
+		front_right_leg.add_point(Vector2(leg_spacing + leg_length, front_y + swing_b))
 
 	if left_leg:  # Rear-left
 		left_leg.clear_points()
 		left_leg.add_point(Vector2(-leg_spacing, rear_y))
-		left_leg.add_point(Vector2(-leg_spacing - leg_length * 0.5, rear_y + swing_b))
+		left_leg.add_point(Vector2(-leg_spacing - leg_length, rear_y + swing_b))
 
 func _update_tail_animation(delta: float) -> void:
 	if not tail or not has_tail:
