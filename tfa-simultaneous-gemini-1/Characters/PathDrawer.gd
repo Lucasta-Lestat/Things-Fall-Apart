@@ -34,10 +34,12 @@ func _ready() -> void:
 	z_index = 45
 
 func _process(_delta: float) -> void:
-	# Redraw when drawing in progress or when executing (to update consumed portion)
+	# Redraw when drawing in progress, executing, or when a visible path exists
 	if is_drawing_path or is_drawing_rotation:
 		queue_redraw()
 	elif tactical_path and tactical_path.is_executing:
+		queue_redraw()
+	elif tactical_path and not tactical_path.is_empty():
 		queue_redraw()
 
 func _draw() -> void:

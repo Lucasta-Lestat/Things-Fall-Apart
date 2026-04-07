@@ -241,34 +241,64 @@ func end_targeting() -> void:
 	line_indicator.visible = false
 	cone_indicator.visible = false
 
-func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0) -> Node2D:
+func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0, caster_pos: Vector2 = Vector2.ZERO) -> Node2D:
 	"""Create a persistent indicator for a queued ability"""
 	var indicator: Node2D
-	
+
 	match shape:
 		TargetShape.CIRCLE:
 			indicator = Node2D.new()
 			var drawer = CircleDrawer.new()
 			drawer.radius = radius
-			drawer.is_queued = true  # Different color for queued
+			drawer.is_queued = true
 			indicator.add_child(drawer)
-		
+
 		TargetShape.RECTANGLE:
 			indicator = Node2D.new()
 			var drawer = RectangleDrawer.new()
 			drawer.rect_size = size
 			drawer.is_queued = true
 			indicator.add_child(drawer)
-		
+
+		TargetShape.LINE:
+			indicator = Node2D.new()
+			var drawer = LineDrawer.new()
+			drawer.line_end = target_pos - caster_pos
+			drawer.line_width = size.y if size != Vector2.ZERO else 30.0
+			drawer.is_queued = true
+			indicator.add_child(drawer)
+			indicator.top_level = true
+			indicator.global_position = caster_pos
+			indicator.z_index = 49
+			add_child(indicator)
+			queued_indicators.append(indicator)
+			return indicator
+
+		TargetShape.CONE:
+			indicator = Node2D.new()
+			var drawer = ConeDrawer.new()
+			drawer.cone_radius = radius
+			drawer.cone_angle_deg = size.x if size.x > 0 else 45.0
+			drawer.is_queued = true
+			indicator.add_child(drawer)
+			indicator.top_level = true
+			indicator.global_position = caster_pos
+			indicator.rotation = (target_pos - caster_pos).angle()
+			indicator.z_index = 49
+			add_child(indicator)
+			queued_indicators.append(indicator)
+			return indicator
+
 		_:
 			return null
-	
+
+	indicator.top_level = true
 	indicator.global_position = target_pos
 	indicator.rotation = rot
 	indicator.z_index = 49  # Slightly below active indicator
 	add_child(indicator)
 	queued_indicators.append(indicator)
-	
+
 	return indicator
 
 func remove_queued_indicator(indicator: Node2D) -> void:
