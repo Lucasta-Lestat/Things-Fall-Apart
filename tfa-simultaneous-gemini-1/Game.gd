@@ -1629,9 +1629,13 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	proj.global_position = proj_data["position"]
 	proj.rotation = proj_data["velocity"].angle() + PI / 2.0
 	proj.z_index = 50
-	# Apply sprite scaling if specified (fixes oversized thrown items)
-	var sprite_scale = proj_data.get("sprite_scale", Vector2(1.0, 1.0))
-	proj.scale = sprite_scale
+	# Scale sprite to match the item's base_width/base_height (same size as held in hand)
+	if proj.texture:
+		var tex_size = proj.texture.get_size()
+		if tex_size.x > 0 and tex_size.y > 0:
+			var target_w = float(item_data.get("base_width", 16.0))
+			var target_h = float(item_data.get("base_height", 16.0))
+			proj.scale = Vector2(target_w / tex_size.x, target_h / tex_size.y)
 	get_tree().current_scene.add_child(proj)
 
 	active_projectiles.append({

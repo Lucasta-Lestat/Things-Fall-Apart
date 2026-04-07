@@ -127,8 +127,10 @@ func _apply_item_data():
 	var h = float(data.get("base_height", 16.0))
 	size = Vector2(w, h)
 
-	# Apply sprite
+	# Apply sprite and scale to base_width/base_height
 	sprite.texture = load(sprite_path)
+	if sprite.texture:
+		scale_sprite(size)
 
 func _lookup_item_data() -> Dictionary:
 	"""Find this item's data across all database categories."""

@@ -481,6 +481,7 @@ func _setup_tactical_path() -> void:
 	path_drawer = PathDrawer.new()
 	path_drawer.name = "PathDrawer"
 	path_drawer.tactical_path = tactical_path
+	path_drawer.character = self
 	add_child(path_drawer)
 
 	path_input_handler = PathInputHandler.new()
@@ -493,6 +494,9 @@ func _setup_tactical_path() -> void:
 	action_queue.action_completed.connect(_on_tactical_action_completed)
 
 func _on_game_unpaused_convert_path() -> void:
+	# Clear queued ability indicators on unpause (they've served their planning purpose)
+	if targeting_system:
+		targeting_system.clear_all_queued_indicators()
 	if tactical_path == null or tactical_path.is_empty():
 		return
 	if not is_player_controlled:
@@ -504,27 +508,30 @@ func _on_game_unpaused_convert_path() -> void:
 	path_drawer.queue_redraw()
 
 func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
-	# Update path consumption as actions complete
+	# Remove action nodes as they execute; path line trimming is handled
+	# by PathDrawer based on character position each frame.
 	if tactical_path == null or not tactical_path.is_executing:
 		return
-	if action.type == ActionQueue.ActionType.MOVE:
-		# Consume waypoints up to the end of this move segment
-		var wp = action.data.get("waypoints", [])
-		if not wp.is_empty():
-			var end_pos = wp[wp.size() - 1]
-			# Find the waypoint index closest to the end of this segment
-			for i in range(tactical_path.consumed_waypoint_index, tactical_path.waypoints.size()):
-				if tactical_path.waypoints[i].distance_to(end_pos) < 10.0:
-					tactical_path.consume_up_to_waypoint(i)
-					break
-	else:
-		# Non-move action: remove the first remaining action node
+	if action.type != ActionQueue.ActionType.MOVE:
+		# Remove the first remaining action node (they execute in order)
 		if not tactical_path.action_nodes.is_empty():
 			tactical_path.action_nodes.remove_at(0)
-	# Check if path is fully consumed
-	if tactical_path.is_fully_consumed():
-		tactical_path.clear()
+	# Defer the empty check so the action queue has time to dequeue the next action
+	call_deferred("_check_tactical_path_finished")
 	path_drawer.queue_redraw()
+
+func _check_tactical_path_finished() -> void:
+	if tactical_path == null or not tactical_path.is_executing:
+		return
+	if action_queue.current_action == null and action_queue.get_queue_size() == 0:
+		tactical_path.clear()
+		path_drawer.queue_redraw()
+
+func _clear_tactical_path_if_executing() -> void:
+	# Called when the player takes manual action that should cancel the path display
+	if tactical_path and tactical_path.is_executing:
+		tactical_path.clear()
+		path_drawer.queue_redraw()
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -2231,6 +2238,10 @@ func _handle_input() -> void:
 			action_queue.queue_move(mouse_pos)
 	else:
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
+			# Manual movement cancels any executing tactical path and queued actions
+			if action_queue.current_action != null or action_queue.get_queue_size() > 0:
+				action_queue.cancel_all()
+			_clear_tactical_path_if_executing()
 			var target_tile = GridManager.world_to_map(mouse_pos)
 			if target_tile != _last_nav_target_tile:
 				_last_nav_target_tile = target_tile
@@ -2354,8 +2365,13 @@ func _update_movement(delta: float) -> void:
 			var move_dir = to_target.normalized()
 			global_position += move_dir * min(move_speed * delta, distance)
 		else:
-			# Check if there are more waypoints to follow
-			if not _nav_waypoints.is_empty() and _nav_index < _nav_waypoints.size() - 1:
+			# If the action queue is driving movement, let it handle waypoint
+			# advancement — don't use _nav_waypoints which are for real-time input only
+			if action_queue and action_queue.current_action != null:
+				# Action queue's _is_action_complete() will advance or finish
+				pass
+			elif not _nav_waypoints.is_empty() and _nav_index < _nav_waypoints.size() - 1:
+				# Real-time nav waypoints (middle-click drag)
 				_nav_index += 1
 				target_position = _nav_waypoints[_nav_index]
 				target_rotation = (target_position - global_position).angle() + PI / 2
@@ -3579,9 +3595,13 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
+	if targeting_system:
+		targeting_system.clear_all_queued_indicators()
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
+	if targeting_system:
+		targeting_system.clear_all_queued_indicators()
 	cast_failed.emit(ability, reason)
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:

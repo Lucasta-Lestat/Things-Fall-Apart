@@ -327,6 +327,10 @@ func _execute_action(action: Action) -> void:
 	"""Begin executing an action"""
 	match action.type:
 		ActionType.MOVE:
+			# Clear any stale real-time nav waypoints so _update_movement
+			# doesn't drift to old destinations while the action queue drives movement
+			character._nav_waypoints.clear()
+			character._nav_index = 0
 			var waypoints = action.data.get("waypoints", [])
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
@@ -465,6 +469,11 @@ func _is_action_complete(action: Action) -> bool:
 func _complete_current_action() -> void:
 	"""Called when current action finishes"""
 	if current_action != null:
+		# Stop character movement when a MOVE action completes
+		if current_action.type == ActionType.MOVE:
+			character.is_moving = false
+			character._nav_waypoints.clear()
+			character._nav_index = 0
 		# Remove the reticle when action completes
 		_remove_reticle(current_action)
 		emit_signal("action_completed", current_action)
