@@ -55,7 +55,8 @@ func remove_item(index: int) -> Dictionary:
 
 	var item = items[index]
 	# Decrement stack instead of removing if stacked
-	var stacks = int(item.get("num_stacks", 1))
+	var stacks_val = item.get("num_stacks", 1)
+	var stacks = int(stacks_val) if stacks_val != null else 1
 	if stacks > 1:
 		items[index]["num_stacks"] = stacks - 1
 		emit_signal("item_removed", item)
@@ -260,6 +261,9 @@ func get_equipped_weapon_count() -> int:
 func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	if stowed_items.is_empty():
 		return
+	# Can't cycle off-hand while main holds a two-handed weapon
+	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		return
 
 	var current = _get_hand_item(hand)
 
@@ -285,11 +289,9 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 
 	emit_signal("active_weapon_changed", next_item, hand)
 
-	# Two-handed enforcement after cycling
+	# If a two-handed weapon was cycled into main hand, stow the off-hand
 	if hand == "Main" and _is_two_handed(next_item) and off_hand_item != null:
 		_stow_item(off_hand_item, "Off")
-	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
-		_stow_item(main_hand_item, "Main")
 
 ## Legacy cycle_weapon — cycles main hand by default.
 func cycle_weapon(direction: int = 1) -> void:
