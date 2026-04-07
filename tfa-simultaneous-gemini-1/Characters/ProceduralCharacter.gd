@@ -497,6 +497,10 @@ func _on_game_unpaused_convert_path() -> void:
 		return
 	if not is_player_controlled:
 		return
+	# Clear any stale actions from a previous path before queuing the new one
+	action_queue.cancel_all()
+	_nav_waypoints.clear()
+	_nav_index = 0
 	var actions = tactical_path.to_action_queue_actions()
 	for a in actions:
 		action_queue.queue_action(a.type, a.data)
