@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://bird3gevg71lu" path="res://Weapons/attack_animator.gd" id="5_atk"]
 
 [node name="ProceduralCharacter" type="CharacterBody2D" unique_id=734602895]
+z_index = 5
 script = ExtResource("1_vvvec")
 metadata/_custom_type_script = "uid://df3ts0usqktg6"
 
