@@ -356,7 +356,7 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "fear": 2, "mental": 1, "cc": 1},
 		"stackable": false,
 		"duration": 10.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/panicked.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["courage", "purify"],
 		"custom_vfx": "",
