@@ -126,6 +126,42 @@ func get_remaining_waypoints() -> PackedVector2Array:
 func is_empty() -> bool:
 	return waypoints.size() < 2
 
+func set_waypoints(new_waypoints: PackedVector2Array) -> void:
+	"""Replace all waypoints and clear action nodes."""
+	waypoints = new_waypoints
+	action_nodes.clear()
+	consumed_waypoint_index = 0
+	is_executing = false
+
+func truncate_after(snap: Dictionary) -> void:
+	"""Remove all waypoints and action nodes after a given path position.
+	snap should be a result from find_nearest_point_on_path()."""
+	var wp_index: int = snap.get("path_index", 0)
+	var t: float = snap.get("t", 1.0)
+	var split_pos: Vector2 = snap.get("position", Vector2.ZERO)
+
+	if wp_index >= waypoints.size() - 1:
+		return
+
+	# Keep waypoints up to and including wp_index, plus the interpolated split point
+	waypoints = waypoints.slice(0, wp_index + 1)
+	waypoints.append(split_pos)
+
+	# Remove action nodes that were past the truncation point
+	action_nodes = action_nodes.filter(func(n):
+		if n.path_index < wp_index:
+			return true
+		if n.path_index == wp_index and n.t <= t:
+			return true
+		return false
+	)
+
+func append_waypoints(new_waypoints: PackedVector2Array) -> void:
+	"""Append waypoints to the end of the current path."""
+	for wp in new_waypoints:
+		if waypoints.size() == 0 or wp.distance_to(waypoints[waypoints.size() - 1]) >= MIN_WAYPOINT_DISTANCE:
+			waypoints.append(wp)
+
 func get_total_length() -> float:
 	var length = 0.0
 	for i in range(waypoints.size() - 1):

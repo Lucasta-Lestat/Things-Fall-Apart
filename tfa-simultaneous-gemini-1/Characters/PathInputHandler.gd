@@ -26,6 +26,11 @@ var rotation_start_on_path: bool = false  # Whether rotation started on path vs 
 # Detection thresholds
 const CHARACTER_HIT_RADIUS := 30.0
 const PATH_HIT_DISTANCE := 15.0
+const DRAG_THRESHOLD := 10.0
+
+# Drag tracking for click-and-drag from path
+var _action_drag_start: Vector2 = Vector2.ZERO
+var _action_drag_snap: Dictionary = {}
 
 # Preloaded icons for common action types
 var _attack_icon: Texture2D = null
@@ -81,13 +86,15 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 			path_drawer.queue_redraw()
 			return true
 		elif on_path:
-			# Place an empty action node on the path
+			# Place an empty action node on the path (may become a drag — see _handle_placing_action)
 			pending_action_node = tactical_path.insert_action_node(mouse_pos)
+			_action_drag_start = mouse_pos
+			_action_drag_snap = path_snap
 			state = PathInputState.PLACING_ACTION
 			path_drawer.queue_redraw()
 			return true
 
-	# Middle click: start drawing rotation from character or path
+	# Middle click: rotation (on character/path) or A* pathfind (on open ground)
 	if Input.is_action_just_pressed("middle_mouse"):
 		if on_character or on_path:
 			if on_path and not on_character:
@@ -100,6 +107,13 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 			path_drawer.is_drawing_rotation = true
 			path_drawer.rotation_start = rotation_start
 			path_drawer.rotation_current = mouse_pos
+			path_drawer.queue_redraw()
+			return true
+		else:
+			# Middle-click on open ground: A* pathfind from character to destination
+			var astar_waypoints = _astar_path_to_waypoints(character.global_position, mouse_pos)
+			tactical_path.clear()
+			tactical_path.set_waypoints(astar_waypoints)
 			path_drawer.queue_redraw()
 			return true
 
@@ -129,6 +143,31 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	# Cancel with right click or escape
 	if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel"):
 		tactical_path.remove_action_node(pending_action_node)
+		pending_action_node = null
+		state = PathInputState.IDLE
+		path_drawer.queue_redraw()
+		return true
+
+	# Drag detection: if left mouse is still held and dragged far enough,
+	# truncate the path at the click point and start drawing new waypoints from there
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if mouse_pos.distance_to(_action_drag_start) > DRAG_THRESHOLD:
+			tactical_path.truncate_after(_action_drag_snap)
+			tactical_path.remove_action_node(pending_action_node)
+			pending_action_node = null
+			state = PathInputState.DRAWING_PATH
+			path_drawer.is_drawing_path = true
+			path_drawer.queue_redraw()
+			return true
+
+	# Middle-click: A* pathfind from this node to the destination,
+	# truncating the path after the node
+	if Input.is_action_just_pressed("middle_mouse"):
+		var node_pos = pending_action_node.world_position
+		var astar_waypoints = _astar_path_to_waypoints(node_pos, mouse_pos)
+		tactical_path.truncate_after(_action_drag_snap)
+		tactical_path.remove_action_node(pending_action_node)
+		tactical_path.append_waypoints(astar_waypoints)
 		pending_action_node = null
 		state = PathInputState.IDLE
 		path_drawer.queue_redraw()
@@ -222,3 +261,17 @@ func cancel_path() -> void:
 	if tactical_path:
 		tactical_path.clear()
 	path_drawer.queue_redraw()
+
+func _astar_path_to_waypoints(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
+	"""Use A* pathfinding to get waypoints between two world positions."""
+	var start_tile = GridManager.world_to_map(from_pos)
+	var end_tile = GridManager.world_to_map(to_pos)
+	var tile_path = GridManager.find_path(start_tile, end_tile)
+	var waypoints = PackedVector2Array()
+	for tile in tile_path:
+		waypoints.append(GridManager.map_to_world(tile))
+	if waypoints.is_empty():
+		# Fallback: direct line
+		waypoints.append(from_pos)
+		waypoints.append(to_pos)
+	return waypoints
