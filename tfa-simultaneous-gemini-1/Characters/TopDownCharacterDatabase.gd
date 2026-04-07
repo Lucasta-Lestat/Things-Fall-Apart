@@ -102,6 +102,15 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	var appearance: Dictionary = template.get("appearance_override", {})
 	_apply_appearance_overrides(character, appearance)
 
+	# --- Body part sprite overlays (bespoke art over procedural animation) ---
+	var body_sprites: Dictionary = template.get("body_sprites", {})
+	if body_sprites.is_empty():
+		# Fall back to race-level body sprites if the template doesn't define any
+		var race_data = RaceDatabase.get_race_data(race_id) if not race_id.is_empty() else {}
+		body_sprites = race_data.get("body_sprites", {})
+	if not body_sprites.is_empty():
+		_set_if_exists(character, "body_sprite_data", body_sprites)
+
 	# --- Rebuild visuals now that race + appearance data is set ---
 	if character.has_method("rebuild_visuals"):
 		character.rebuild_visuals()

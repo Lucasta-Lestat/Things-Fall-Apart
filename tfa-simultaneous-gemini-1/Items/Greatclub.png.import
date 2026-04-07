@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://8fchq1ca20sm"
-path="res://.godot/imported/Greatclub.png-c3edd6262dd011d324d851d0d720b317.ctex"
+uid="uid://do60fqg26b3ut"
+path="res://.godot/imported/greatclub.png-11087e58a379c5e1d9e5ff6df671a4e1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Greatclub.png"
-dest_files=["res://.godot/imported/Greatclub.png-c3edd6262dd011d324d851d0d720b317.ctex"]
+source_file="res://Items/greatclub.png"
+dest_files=["res://.godot/imported/greatclub.png-11087e58a379c5e1d9e5ff6df671a4e1.ctex"]
 
 [params]
 

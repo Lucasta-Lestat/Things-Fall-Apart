@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dv7t3w0e6kn7e"
-path="res://.godot/imported/Halberd.png-f39b66a2f502506aa5fda67020f3b96e.ctex"
+uid="uid://bkms4aq7icm27"
+path="res://.godot/imported/halberd.png-19f2d0aa289f0ca1703f90d1e1b1a0cd.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Halberd.png"
-dest_files=["res://.godot/imported/Halberd.png-f39b66a2f502506aa5fda67020f3b96e.ctex"]
+source_file="res://Items/halberd.png"
+dest_files=["res://.godot/imported/halberd.png-19f2d0aa289f0ca1703f90d1e1b1a0cd.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ctrv7hoomxrno"
-path="res://.godot/imported/Maul.png-a5c105e059db3d14c95a6a6b3a43973c.ctex"
+uid="uid://t54bdube16vw"
+path="res://.godot/imported/maul.png-6b8ff60ebcee1fbd588e023415b1b3b7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Maul.png"
-dest_files=["res://.godot/imported/Maul.png-a5c105e059db3d14c95a6a6b3a43973c.ctex"]
+source_file="res://Items/maul.png"
+dest_files=["res://.godot/imported/maul.png-6b8ff60ebcee1fbd588e023415b1b3b7.ctex"]
 
 [params]
 

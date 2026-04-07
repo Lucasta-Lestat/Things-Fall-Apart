@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cgrnbvk7aqphn"
-path="res://.godot/imported/Greatsword.png-9d5881faa36cf8c87adf61f830671b28.ctex"
+uid="uid://b4p1c1gbrkna4"
+path="res://.godot/imported/greatsword.png-f8ba8d7b9387f33612ac1afe70851d9a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Equipment Assets/Greatsword.png"
-dest_files=["res://.godot/imported/Greatsword.png-9d5881faa36cf8c87adf61f830671b28.ctex"]
+source_file="res://Items/Equipment Assets/greatsword.png"
+dest_files=["res://.godot/imported/greatsword.png-f8ba8d7b9387f33612ac1afe70851d9a.ctex"]
 
 [params]
 

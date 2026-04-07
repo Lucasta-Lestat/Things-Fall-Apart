@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bej2a4m80objo"
-path="res://.godot/imported/Buckler.png-8b26435d156faeb06136c0148ffe1eb1.ctex"
+uid="uid://dv15xrn8kfm8y"
+path="res://.godot/imported/buckler.png-ee0dc76c5aabc26bae96c69b28aeb381.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Buckler.png"
-dest_files=["res://.godot/imported/Buckler.png-8b26435d156faeb06136c0148ffe1eb1.ctex"]
+source_file="res://Items/buckler.png"
+dest_files=["res://.godot/imported/buckler.png-ee0dc76c5aabc26bae96c69b28aeb381.ctex"]
 
 [params]
 

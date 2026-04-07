@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://hl74fr1ko68e"
-path="res://.godot/imported/Shortsword.png-d8b798eb47782e761ecd972add665245.ctex"
+uid="uid://dnr3b6u6rancq"
+path="res://.godot/imported/shortsword.png-d7df01d26f70bd917c4ac67a753689e7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Equipment Assets/Shortsword.png"
-dest_files=["res://.godot/imported/Shortsword.png-d8b798eb47782e761ecd972add665245.ctex"]
+source_file="res://Items/Equipment Assets/shortsword.png"
+dest_files=["res://.godot/imported/shortsword.png-d7df01d26f70bd917c4ac67a753689e7.ctex"]
 
 [params]
 

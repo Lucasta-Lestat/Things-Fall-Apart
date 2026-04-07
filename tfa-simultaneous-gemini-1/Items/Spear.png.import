@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dr6xepn0x2t1i"
-path="res://.godot/imported/Spear.png-085c1ced37a9d726eb641baa7a5a9c43.ctex"
+uid="uid://bsk2eumabdnhg"
+path="res://.godot/imported/spear.png-e2289f42f7620aa9ef80c4d23492c7d4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Spear.png"
-dest_files=["res://.godot/imported/Spear.png-085c1ced37a9d726eb641baa7a5a9c43.ctex"]
+source_file="res://Items/spear.png"
+dest_files=["res://.godot/imported/spear.png-e2289f42f7620aa9ef80c4d23492c7d4.ctex"]
 
 [params]
 

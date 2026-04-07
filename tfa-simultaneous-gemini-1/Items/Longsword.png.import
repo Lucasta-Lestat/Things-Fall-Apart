@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d3qjvhffsbrop"
-path="res://.godot/imported/Longsword.png-a147fa705c2d1fc61ddac05829e47b5d.ctex"
+uid="uid://s1ly7lsj52y5"
+path="res://.godot/imported/longsword.png-f9e063c3753d7be7c5d96eb4f6559261.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Longsword.png"
-dest_files=["res://.godot/imported/Longsword.png-a147fa705c2d1fc61ddac05829e47b5d.ctex"]
+source_file="res://Items/longsword.png"
+dest_files=["res://.godot/imported/longsword.png-f9e063c3753d7be7c5d96eb4f6559261.ctex"]
 
 [params]
 

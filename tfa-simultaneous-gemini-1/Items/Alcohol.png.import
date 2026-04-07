@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bnha5q57xrfly"
-path="res://.godot/imported/Alcohol.png-7c63429b8df16fa5438e0b3913655a9c.ctex"
+uid="uid://c2l42qyio8vmd"
+path="res://.godot/imported/alcohol.png-fce1670766e912f806400167d14bed60.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Alcohol.png"
-dest_files=["res://.godot/imported/Alcohol.png-7c63429b8df16fa5438e0b3913655a9c.ctex"]
+source_file="res://Items/alcohol.png"
+dest_files=["res://.godot/imported/alcohol.png-fce1670766e912f806400167d14bed60.ctex"]
 
 [params]
 

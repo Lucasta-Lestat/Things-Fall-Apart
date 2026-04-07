@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b2326tmf4splb"
-path="res://.godot/imported/Shortbow.png-61f82938ad6dfa57ba0f545f9b33e82a.ctex"
+uid="uid://cyrvo85v1i3f2"
+path="res://.godot/imported/shortbow.png-b72facb267835ad8952bbace88f2a322.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Shortbow.png"
-dest_files=["res://.godot/imported/Shortbow.png-61f82938ad6dfa57ba0f545f9b33e82a.ctex"]
+source_file="res://Items/shortbow.png"
+dest_files=["res://.godot/imported/shortbow.png-b72facb267835ad8952bbace88f2a322.ctex"]
 
 [params]
 

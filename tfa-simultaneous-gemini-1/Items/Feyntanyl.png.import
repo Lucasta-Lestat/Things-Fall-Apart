@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dxcxxi00l7t53"
-path="res://.godot/imported/Feyntanyl.png-ad205e542212ba32738956885b21508b.ctex"
+uid="uid://cs014fya3pk5h"
+path="res://.godot/imported/feyntanyl.png-c50f9e86c40ef0de8343394cdba70335.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Feyntanyl.png"
-dest_files=["res://.godot/imported/Feyntanyl.png-ad205e542212ba32738956885b21508b.ctex"]
+source_file="res://Items/feyntanyl.png"
+dest_files=["res://.godot/imported/feyntanyl.png-c50f9e86c40ef0de8343394cdba70335.ctex"]
 
 [params]
 

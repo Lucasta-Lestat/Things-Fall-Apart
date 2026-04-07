@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gam27tvxfsnu"
-path="res://.godot/imported/Glaive.png-c89f591beb1f38ffb83d6c254118f116.ctex"
+uid="uid://h2lvf1xvhknj"
+path="res://.godot/imported/glaive.png-fa7ea4afb04ce3077c325477764dfeb9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Glaive.png"
-dest_files=["res://.godot/imported/Glaive.png-c89f591beb1f38ffb83d6c254118f116.ctex"]
+source_file="res://Items/glaive.png"
+dest_files=["res://.godot/imported/glaive.png-fa7ea4afb04ce3077c325477764dfeb9.ctex"]
 
 [params]
 

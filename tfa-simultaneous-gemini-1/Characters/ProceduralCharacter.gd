@@ -100,6 +100,11 @@ var back_slot: Node2D
 var legs_slot: Node2D
 var feet_slot: Node2D
 
+# Body part sprite overlays (bespoke art over procedural animation)
+var body_part_sprites: BodyPartSprites = null
+var use_sprite_overlays: bool = false
+var body_sprite_data: Dictionary = {}  # Paths to body part sprite textures
+
 enum HairStyle {
 	NONE,
 	HORSESHOE,      # Original balding/receding hairline
@@ -1174,7 +1179,7 @@ func rebuild_visuals() -> void:
 	for node_name in ["LeftLeg", "RightLeg", "FrontLeftLeg", "FrontRightLeg",
 			"RearLeftLeg", "RearRightLeg",
 			"LeftArm", "RightArm", "Body", "Head", "Snout", "TuskL", "TuskR",
-			"Tail", "HeadFeatures"]:
+			"Tail", "HeadFeatures", "BodyPartSprites"]:
 		var node = get_node_or_null(node_name)
 		if node:
 			to_remove.append(node)
@@ -1184,6 +1189,8 @@ func rebuild_visuals() -> void:
 	for node in to_remove:
 		remove_child(node)
 		node.free()
+	body_part_sprites = null
+	use_sprite_overlays = false
 
 	# Reset references
 	left_leg = null
@@ -1205,6 +1212,10 @@ func rebuild_visuals() -> void:
 	_update_colors()
 	_update_hair_colors()
 	_update_collision_shape()
+
+	# Set up body part sprite overlays if sprite data exists
+	if body_sprite_data and not body_sprite_data.is_empty():
+		_setup_body_part_sprites()
 
 func _create_body_parts() -> void:
 	if body_type == BodyType.QUADRUPED:
@@ -1963,6 +1974,82 @@ func _update_colors() -> void:
 		for child in head_features_node.get_children():
 			if child is Line2D and not child.name.begins_with("Tusk"):
 				child.default_color = skin_color
+	# Update body part sprite tints
+	if body_part_sprites:
+		body_part_sprites.set_skin_color(skin_color)
+
+# ===== BODY PART SPRITE OVERLAY SYSTEM =====
+
+func _setup_body_part_sprites() -> void:
+	"""Create and configure body part sprite overlays from body_sprite_data."""
+	# Remove old sprites if any
+	if body_part_sprites:
+		remove_child(body_part_sprites)
+		body_part_sprites.queue_free()
+		body_part_sprites = null
+
+	body_part_sprites = BodyPartSprites.new()
+	body_part_sprites.name = "BodyPartSprites"
+	add_child(body_part_sprites)
+
+	# Load textures from data
+	body_part_sprites.load_sprites(body_sprite_data)
+
+	# Scale sprites to match character dimensions
+	body_part_sprites.auto_scale_sprites(self)
+
+	# Position static parts initially
+	body_part_sprites.update_head(_head_offset)
+	body_part_sprites.update_torso(shoulder_y_offset)
+
+	# Apply skin color tint
+	body_part_sprites.set_skin_color(skin_color)
+
+	# Hide procedural Line2D geometry (animation still runs)
+	_set_procedural_geometry_visible(false)
+	use_sprite_overlays = true
+
+func _set_procedural_geometry_visible(is_visible: bool) -> void:
+	"""Show or hide the procedural Line2D geometry.
+	When hidden, animations still run to compute positions for sprite overlays."""
+	if body: body.visible = is_visible
+	if head: head.visible = is_visible
+	if hair: hair.visible = is_visible
+	if left_arm: left_arm.visible = is_visible
+	if right_arm: right_arm.visible = is_visible
+	if left_leg: left_leg.visible = is_visible
+	if right_leg: right_leg.visible = is_visible
+	if front_left_leg: front_left_leg.visible = is_visible
+	if front_right_leg: front_right_leg.visible = is_visible
+	if tail: tail.visible = is_visible
+	# Hide racial features (tusks, ears, snout) — they'd be part of head sprite
+	if head_features_node: head_features_node.visible = is_visible
+	var snout = get_node_or_null("Snout")
+	if snout: snout.visible = is_visible
+	var tusk_l = get_node_or_null("TuskL")
+	if tusk_l: tusk_l.visible = is_visible
+	var tusk_r = get_node_or_null("TuskR")
+	if tusk_r: tusk_r.visible = is_visible
+
+func set_body_sprites(data: Dictionary) -> void:
+	"""Public API: Set body part sprite data and rebuild visuals."""
+	body_sprite_data = data
+	rebuild_visuals()
+
+func set_sprite_overlays_enabled(enabled: bool) -> void:
+	"""Toggle between sprite overlays and procedural Line2D geometry."""
+	if enabled and body_sprite_data and not body_sprite_data.is_empty():
+		if not body_part_sprites:
+			_setup_body_part_sprites()
+		else:
+			body_part_sprites.set_all_visible(true)
+			_set_procedural_geometry_visible(false)
+		use_sprite_overlays = true
+	else:
+		if body_part_sprites:
+			body_part_sprites.set_all_visible(false)
+		_set_procedural_geometry_visible(true)
+		use_sprite_overlays = false
 
 func _process(delta: float) -> void:
 	_handle_input()
@@ -2095,6 +2182,8 @@ func _update_bipedal_legs(delta: float) -> void:
 		legs_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
 	if feet_equipment:
 		feet_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
+	if body_part_sprites:
+		body_part_sprites.update_legs(left_hip, left_foot, right_hip, right_foot)
 
 func _update_quadruped_legs(delta: float) -> void:
 	if is_moving:
@@ -2538,11 +2627,14 @@ func _update_arm_visuals() -> void:
 		left_arm.clear_points()
 		for joint in left_arm_joints:
 			left_arm.add_point(joint)
-	
+
 	if right_arm:
 		right_arm.clear_points()
 		for joint in right_arm_joints:
 			right_arm.add_point(joint)
+
+	if body_part_sprites:
+		body_part_sprites.update_arms(left_arm_joints, right_arm_joints)
 
 func _update_weapon_position() -> void:
 	# Position weapon at the right hand (last joint of right arm)

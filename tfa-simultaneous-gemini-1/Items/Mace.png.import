@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0ydldh7kfpxu"
-path="res://.godot/imported/Mace.png-96f942035304f0893b723a0da42f1032.ctex"
+uid="uid://b3sbrqhbmreox"
+path="res://.godot/imported/mace.png-4f242fb3e74e38c47d1e24e68080f0e9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Mace.png"
-dest_files=["res://.godot/imported/Mace.png-96f942035304f0893b723a0da42f1032.ctex"]
+source_file="res://Items/mace.png"
+dest_files=["res://.godot/imported/mace.png-4f242fb3e74e38c47d1e24e68080f0e9.ctex"]
 
 [params]
 

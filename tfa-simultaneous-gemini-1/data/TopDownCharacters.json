@@ -16,6 +16,13 @@
 	  },
 	  "equipment": ["breastplate_2", "longsword", "shortbow", "pistol"],
 	  "extra_items": {"arrow": 10, "bullet": 10},
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],

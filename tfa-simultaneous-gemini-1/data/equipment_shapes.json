@@ -9,7 +9,7 @@
 			"type": "helmet",
 			"base_width": 18.0,
 			"base_height": 16.0,
-			"sprite_path": "res://Items/Fancy Metal Helmet.png"
+			"sprite_path": "res://Items/fancy_metal_helmet.png"
 		},
 		{
 			"id": "full_face_helmet",
@@ -18,7 +18,7 @@
 			"type": "helmet",
 			"base_width": 18.0,
 			"base_height": 16.0,
-			"sprite_path": "res://Items/Full Face Helmet.png"
+			"sprite_path": "res://Items/full_face_helmet.png"
 		},
 		{
 			"id": "golden_crown_helm",
@@ -54,7 +54,7 @@
 			"type": "backpack",
 			"base_width": 16.0,
 			"base_height": 14.0,
-			"sprite_path": "res://Items/Leather Backpack.png"
+			"sprite_path": "res://Items/leather_backpack.png"
 		},
 		{
 			"id": "adventurer's_pack",
@@ -135,7 +135,7 @@
 			"type": "torso_armor",
 			"base_width": 64,
 			"base_height": 10.0,
-			"sprite_path": "res://Items/Breastplate 2.png"
+			"sprite_path": "res://Items/breastplate_2.png"
 		}
 	]
 }

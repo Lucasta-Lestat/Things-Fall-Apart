@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c3loj6uo8yfc2"
-path="res://.godot/imported/Handaxe.png-d431d97beae9760e937154214d8cf34e.ctex"
+uid="uid://b0xnfloxmppi4"
+path="res://.godot/imported/handaxe.png-741af697358edf758294d2e03b22933f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Handaxe.png"
-dest_files=["res://.godot/imported/Handaxe.png-d431d97beae9760e937154214d8cf34e.ctex"]
+source_file="res://Items/handaxe.png"
+dest_files=["res://.godot/imported/handaxe.png-741af697358edf758294d2e03b22933f.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://q1oxsxtka31x"
-path="res://.godot/imported/Hammer.png-6d88530ed5873fab5ac97c185dbecff7.ctex"
+uid="uid://dmhc67f7xxh12"
+path="res://.godot/imported/hammer.png-8aec74369e5830c313ec6ddbeb316570.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Hammer.png"
-dest_files=["res://.godot/imported/Hammer.png-6d88530ed5873fab5ac97c185dbecff7.ctex"]
+source_file="res://Items/hammer.png"
+dest_files=["res://.godot/imported/hammer.png-8aec74369e5830c313ec6ddbeb316570.ctex"]
 
 [params]
 
