@@ -615,6 +615,75 @@
 		{"type": "apply_condition", "condition_id": "animal_magnetism", "stacks": 1}
 	  ],
 	  "visuals": {}
+	},
+	{
+	  "id": "pounce",
+	  "display_name": "Pounce",
+	  "description": "Dash forward and slash with razor-sharp claws, dealing slashing damage in a small area.",
+	  "icon": "res://UI/UI Icons/ability_pounce.png",
+	  "cooldown": 5.0,
+	  "costs": {"stamina": 15},
+	  "cast_time": 0.0,
+	  "interruptible": false,
+	  "traits": {"physical": 2, "attack": 1, "melee": 2},
+	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 40.0},
+	  "effects": [],
+	  "steps": [
+		{
+		  "delay": 0.0,
+		  "move_to_target": true,
+		  "move_speed": 700.0,
+		  "effects": []
+		},
+		{
+		  "delay": 0.1,
+		  "effects": [
+			{"type": "damage", "damage": {"slashing": 20}}
+		  ],
+		  "targeting": {"type": "self", "shape": "circle", "radius": 40.0},
+		  "animation": "slash",
+		  "visuals": {
+			"impact_effect": "res://vfx/claw_slash.tscn",
+			"sound_impact": "res://sfx/slash.mp3"
+		  }
+		}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "ram",
+	  "display_name": "Ram",
+	  "description": "Charge forward and slam into enemies with a powerful headbutt, dealing bludgeoning damage and knocking them back.",
+	  "icon": "res://UI/UI Icons/ability_ram.png",
+	  "cooldown": 6.0,
+	  "costs": {"stamina": 20},
+	  "cast_time": 0.0,
+	  "interruptible": false,
+	  "traits": {"physical": 2, "attack": 1, "melee": 2},
+	  "targeting": {"type": "point", "range": 180.0, "shape": "circle", "radius": 35.0},
+	  "effects": [],
+	  "steps": [
+		{
+		  "delay": 0.0,
+		  "move_to_target": true,
+		  "move_speed": 600.0,
+		  "effects": []
+		},
+		{
+		  "delay": 0.0,
+		  "effects": [
+			{"type": "damage", "damage": {"bludgeoning": 25}},
+			{"type": "knockback", "strength": 600.0, "from_caster": true}
+		  ],
+		  "targeting": {"type": "self", "shape": "circle", "radius": 35.0},
+		  "animation": "bash",
+		  "visuals": {
+			"impact_effect": "res://vfx/explosion.tscn",
+			"sound_impact": "res://sfx/slash.mp3"
+		  }
+		}
+	  ],
+	  "visuals": {}
 	}
   ]
 }

@@ -14,7 +14,7 @@
 		"intelligence": 50,
 		"charisma": 50
 	  },
-	  "equipment": ["breastplate_2", "longsword", "shortbow", "pistol"],
+	  "equipment": ["breastplate_2", "full_face_helmet", "longsword", "shortbow", "pistol"],
 	  "extra_items": {"arrow": 10, "bullet": 10},
 	  "body_sprites": {
 		"head": "res://Characters/Assets/Body Parts/Male Human/head.png",

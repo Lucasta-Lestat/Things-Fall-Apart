@@ -14,7 +14,7 @@
 			"creature_type": "Humanoid",
 			"age": {
 				"base": 20,
-				"middle": 40, 
+				"middle": 40,
 				"old": 60
 			},
 			"height": {
@@ -28,14 +28,30 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [
@@ -67,6 +83,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": []
 		},
@@ -117,6 +134,22 @@
 				"leg_width": 2,
 				"leg_spacing": 5
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Halfling/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Halfling/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Halfling/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Halfling/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Halfling/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Halfling/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Halfling/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Halfling/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Halfling/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Halfling/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#F5D6B8",
@@ -145,6 +178,7 @@
 			},
 			"speed_modifier": -5,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"lucky"
@@ -223,6 +257,7 @@
 			},
 			"speed_modifier": -5,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"quixotic"
@@ -301,6 +336,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"light_cantrip"
 			],
@@ -379,6 +415,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"brutal_critical"
@@ -429,6 +466,22 @@
 				"leg_width": 2,
 				"leg_spacing": 5
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Dwarf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Dwarf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Dwarf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Dwarf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Dwarf/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Dwarf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Dwarf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Dwarf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Dwarf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Dwarf/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#D4A574",
@@ -458,6 +511,7 @@
 			},
 			"speed_modifier": -5,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"immune_to_drunken"
@@ -530,6 +584,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"swift_swim",
@@ -606,6 +661,7 @@
 			},
 			"speed_modifier": -5,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"jury_rig"
@@ -658,6 +714,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Saurian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Saurian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#6B8E23",
@@ -681,6 +753,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"tough_claws",
@@ -730,6 +803,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Mephistkin/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Mephistkin/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Mephistkin/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Mephistkin/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Mephistkin/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Mephistkin/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Mephistkin/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Mephistkin/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Mephistkin/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Mephistkin/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#8B0000",
@@ -757,6 +846,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"devilsight"
@@ -833,6 +923,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"flight"
@@ -886,6 +977,22 @@
 				"leg_width": 4,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Orc/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Orc/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Orc/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Orc/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Orc/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Orc/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Orc/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Orc/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Orc/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Orc/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#556B2F",
@@ -913,6 +1020,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"ferocity",
@@ -987,6 +1095,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"breath_weapon"
 			],
@@ -996,26 +1105,33 @@
 			"id": "goatmen",
 			"name": "Goatmen",
 			"icon": "Assets/Icons/Goatment.png",
-			"description": "The goatmen are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don\u2019t even think humans have souls and are therefore not worthy of any respect.",
+			"description": "These aristocratic humanoid goats are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don't even think humans have souls and are therefore not worthy of any respect.",
 			"cost": 2,
-			"features": [],
-			"ability_score_increases": {},
-			"traits": {},
-			"creature_type": null,
+			"features": ["beguile", "ram"],
+			"ability_score_increases": {
+				"Int": 10,
+				"Cha": 10,
+				"Str": 5
+			},
+			"traits": {
+				"Intimidation": 1,
+				"Persuasion": 1
+			},
+			"creature_type": "Humanoid",
 			"age": {
-				"base": null,
-				"middle": null,
-				"old": null
+				"base": 16,
+				"middle": 50,
+				"old": 80
 			},
 			"height": {
-				"male": null,
-				"female": null
+				"male": 185,
+				"female": 175
 			},
 			"weight": {
-				"male": null,
-				"female": null
+				"male": 90,
+				"female": 78
 			},
-			"size": null,
+			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
 				"body_width": 14,
@@ -1026,6 +1142,22 @@
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Goatman/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Goatman/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Goatman/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Goatman/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Goatman/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Goatman/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Goatman/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Goatman/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Goatman/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Goatman/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [
@@ -1054,7 +1186,8 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
-			"active_abilities": [],
+			"walking_noise": 1.5,
+			"active_abilities": ["beguile", "ram"],
 			"passive_conditions": []
 		},
 		{
@@ -1124,6 +1257,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"withdraw"
 			],
@@ -1206,6 +1340,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"poison_bite",
 				"charm_person"
@@ -1280,6 +1415,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"poisonous_skin"
@@ -1362,6 +1498,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"chilling_neigh"
@@ -1436,6 +1573,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"came_to_me_in_a_dream"
@@ -1516,6 +1654,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"quixotic",
@@ -1591,6 +1730,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"thorns"
@@ -1670,6 +1810,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"con_drain_bite"
 			],
@@ -1744,6 +1885,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 5,
+			"walking_noise": 0.5,
 			"active_abilities": [],
 			"passive_conditions": [
 				"opportunist",
@@ -1799,6 +1941,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#FAEBD7",
@@ -1827,6 +1985,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 5,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"light_cantrip",
 				"command"
@@ -1915,6 +2074,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"alter_self",
 				"phantasmal_killer",
@@ -2000,6 +2160,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [
 				"con_drain_bite",
 				"charm_person"
@@ -2079,6 +2240,7 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 5,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
 				"regen"
@@ -2153,6 +2315,7 @@
 			},
 			"speed_modifier": 10,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": []
 		},
@@ -2223,6 +2386,7 @@
 			},
 			"speed_modifier": 5,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": []
 		},
@@ -2297,6 +2461,7 @@
 			},
 			"speed_modifier": 20,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": []
 		},
@@ -2367,7 +2532,91 @@
 			},
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
 			"active_abilities": [],
+			"passive_conditions": []
+		},
+		{
+			"id": "grimalkin",
+			"name": "Grimalkin",
+			"icon": "Assets/Icons/Grimalkin.png",
+			"description": "Feline humanoids with retractable claws and an unnerving talent for moving without sound. Grimalkin are lithe and quick, preferring ambush and sudden violence to prolonged engagement. Their vertical-slit pupils see well in low light, and their padded feet leave almost no trace on any surface.",
+			"cost": 1,
+			"features": ["pounce"],
+			"ability_score_increases": {
+				"Dex": 15,
+				"Str": 5
+			},
+			"traits": {
+				"Stealthy": 2,
+				"Acrobatics": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 14,
+				"middle": 40,
+				"old": 65
+			},
+			"height": {
+				"male": 168,
+				"female": 158
+			},
+			"weight": {
+				"male": 62,
+				"female": 54
+			},
+			"size": "Medium",
+			"body": {
+				"body_size_mod": 0.9,
+				"body_width": 14,
+				"body_height": 14,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 4,
+				"leg_length": 10,
+				"leg_width": 3,
+				"leg_spacing": 6,
+				"has_tail": true,
+				"tail_length": 12
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Grimalkin/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Grimalkin/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Grimalkin/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Grimalkin/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Grimalkin/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Grimalkin/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Grimalkin/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Grimalkin/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Grimalkin/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Grimalkin/leg.png"
+				}
+			},
+			"appearance": {
+				"skin_colors": ["#C8A882", "#A0785A", "#8B6914", "#6B4423", "#3B3B3B", "#1A1A1A"],
+				"hair_colors": ["#C8A882", "#A0785A", "#3B3B3B", "#1A1A1A", "#F5F5DC"],
+				"blood_color": "#CC0000",
+				"head_shape": "HUMANOID",
+				"head_features": ["cat_ears"],
+				"hair_styles": {
+					"male": ["NONE", "SHORT"],
+					"female": ["NONE", "SHORT", "LONG"],
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 5,
+			"arm_length_bonus": 0,
+			"walking_noise": 0.3,
+			"active_abilities": ["pounce"],
 			"passive_conditions": []
 		}
 	]

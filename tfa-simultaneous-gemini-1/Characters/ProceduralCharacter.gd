@@ -294,6 +294,7 @@ var arm_length: float = 0.0
 var race_id: String = ""
 var creature_size: String = "Medium"
 var racial_features: Array = []
+var walking_noise: float = 1.0
 
 # Blood drop texture - set this in _ready or via export
 @export var blood_drop_texture: Texture2D
@@ -1083,6 +1084,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("race_id"): race_id = data["race_id"]
 	if data.has("creature_size"): creature_size = data["creature_size"]
 	if data.has("racial_features"): racial_features = data["racial_features"]
+	if data.has("walking_noise"): walking_noise = data["walking_noise"]
 	
 	# --- Combat stats ---
 	if data.has("unarmed_strike_damage_type"):
@@ -2293,6 +2295,9 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
+	# Don't process game-world input while a context menu is open
+	if game and game.context_menu_open:
+		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
@@ -2638,15 +2643,25 @@ func _update_arm_visuals() -> void:
 
 func _update_weapon_position() -> void:
 	# Position weapon at the right hand (last joint of right arm)
+	# When using sprite overlays, nudge weapon slightly toward elbow so the grip
+	# aligns with the visual hand in the forearm sprite (which ends before the joint)
+	var hand_pullback: float = 0.0
+	if body_part_sprites and use_sprite_overlays:
+		hand_pullback = 0.12  # fraction of last segment to pull back
+
 	if left_arm_joints.size() > 0:
 		var off_hand_pos = left_arm_joints[-1]
+		if hand_pullback > 0 and left_arm_joints.size() >= 2:
+			off_hand_pos = off_hand_pos.lerp(left_arm_joints[-2], hand_pullback)
 		off_hand_holder.position = off_hand_pos
 		var off_hand_attack_rotation = 0.0
 		if attack_animator and attack_animator.is_attacking:
 			off_hand_attack_rotation = attack_animator.get_weapon_rotation()
-		
+
 	if right_arm_joints.size() > 0:
 		var main_hand_pos = right_arm_joints[-1]
+		if hand_pullback > 0 and right_arm_joints.size() >= 2:
+			main_hand_pos = main_hand_pos.lerp(right_arm_joints[-2], hand_pullback)
 		main_hand_holder.position = main_hand_pos
 		
 		# Apply attack animation rotation if attacking

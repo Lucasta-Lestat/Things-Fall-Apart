@@ -433,7 +433,16 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	var item_index: int = slot.get_meta("item_index")
 	var character = panel_data["character"]
 
-	var options: Array = item_data.get("interact_options", ["Use", "Drop"])
+	var options: Array = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
+
+	# Add Equip/Unequip for equipment items (Head, Torso, Back, Legs, Feet slots)
+	var equip_slot: String = item_data.get("equip_slot", "")
+	if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
+		if item_data.get("_equipped", false):
+			options.insert(0, "Unequip")
+		else:
+			options.insert(0, "Equip")
+
 	var menu = PopupMenu.new()
 	for i in range(options.size()):
 		menu.add_item(options[i], i)
@@ -456,6 +465,10 @@ func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dict
 			_throw_item(character, item_index, item_data)
 		"Drop":
 			_drop_item(character, item_index, item_data)
+		"Equip":
+			_equip_item(character, item_index, item_data)
+		"Unequip":
+			_unequip_item(character, item_index, item_data)
 		_:
 			print("Unhandled item option: ", option_name)
 
@@ -596,11 +609,75 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
 
+	# If item is currently equipped, unequip it first
+	if item_data.get("_equipped", false):
+		_unequip_item(character, item_index, item_data)
+
 	var item = character.inventory.remove_item(item_index)
 	if item.is_empty():
 		return
 
 	game_node.create_item(item.get("id", ""), character.global_position)
+
+# Map equip_slot strings to EquipmentShape.EquipmentSlot enum values
+const _EQUIP_SLOT_MAP: Dictionary = {
+	"Head": 0,   # EquipmentShape.EquipmentSlot.HEAD
+	"Torso": 1,  # EquipmentShape.EquipmentSlot.TORSO
+	"Back": 2,   # EquipmentShape.EquipmentSlot.BACK
+	"Legs": 3,   # EquipmentShape.EquipmentSlot.LEGS
+	"Feet": 4,   # EquipmentShape.EquipmentSlot.FEET
+}
+
+func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
+	"""Equip an equipment item from inventory onto the character."""
+	var equip_slot: String = item_data.get("equip_slot", "")
+	if equip_slot.is_empty() or equip_slot not in _EQUIP_SLOT_MAP:
+		return
+
+	# Unequip whatever is currently in that slot first, returning it to inventory
+	var slot_enum: int = _EQUIP_SLOT_MAP[equip_slot]
+	_unequip_current_in_slot(character, slot_enum)
+
+	# Equip the new item
+	if character.has_method("equip_equipment"):
+		character.equip_equipment(item_data)
+
+	# Mark this inventory item as equipped
+	item_data["_equipped"] = true
+
+	# Refresh UI to show the change
+	_refresh_all_inventories()
+
+func _unequip_item(character, item_index: int, item_data: Dictionary) -> void:
+	"""Unequip an equipped item, keeping it in inventory."""
+	var equip_slot: String = item_data.get("equip_slot", "")
+	if equip_slot.is_empty() or equip_slot not in _EQUIP_SLOT_MAP:
+		return
+
+	var slot_enum: int = _EQUIP_SLOT_MAP[equip_slot]
+	if character.has_method("unequip_slot"):
+		character.unequip_slot(slot_enum)
+
+	# Clear equipped flag on the inventory item
+	item_data["_equipped"] = false
+
+	# Refresh UI
+	_refresh_all_inventories()
+
+func _unequip_current_in_slot(character, slot_enum: int) -> void:
+	"""If something is already equipped in the given slot, clear its _equipped flag."""
+	# Find any inventory item marked as equipped in this slot
+	for item in character.inventory.items:
+		if item.get("_equipped", false):
+			var item_slot_str: String = item.get("equip_slot", "")
+			if _EQUIP_SLOT_MAP.get(item_slot_str, -1) == slot_enum:
+				item["_equipped"] = false
+				break
+
+func _refresh_all_inventories() -> void:
+	"""Refresh all character inventory displays."""
+	for panel_data in _character_panels:
+		_refresh_inventory(panel_data)
 
 # ---------------------------------------------------------------------------
 # Inventory change callback

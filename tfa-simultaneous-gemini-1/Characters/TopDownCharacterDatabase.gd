@@ -108,6 +108,10 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 		# Fall back to race-level body sprites if the template doesn't define any
 		var race_data = RaceDatabase.get_race_data(race_id) if not race_id.is_empty() else {}
 		body_sprites = race_data.get("body_sprites", {})
+	# If body_sprites has gendered sub-keys (male/female), resolve to the right one
+	if body_sprites.has("male") or body_sprites.has("female"):
+		var gender: String = overrides.get("gender", race_options.get("gender", "male"))
+		body_sprites = body_sprites.get(gender, body_sprites.get("male", {}))
 	if not body_sprites.is_empty():
 		_set_if_exists(character, "body_sprite_data", body_sprites)
 
@@ -402,6 +406,11 @@ func _grant_equipment(character, equipment: Array) -> void:
 			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
 				if character.has_method("equip_equipment"):
 					character.equip_equipment(item_data)
+					# Mark the inventory copy as equipped so the UI shows "Unequip"
+					for inv_item in inventory.items:
+						if inv_item.get("id", "") == item_id and not inv_item.get("_equipped", false):
+							inv_item["_equipped"] = true
+							break
 
 		print("[CharDB] Granted %s x%d to %s" % [item_name, quantity, character.display_name])
 

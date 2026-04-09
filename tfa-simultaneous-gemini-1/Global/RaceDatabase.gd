@@ -117,6 +117,9 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	if arm_bonus != 0:
 		_add_to(character, "arm_length", arm_bonus)
 
+	# --- Walking noise (how loud footsteps are, 0.0 = silent, 1.0 = normal) ---
+	_set_if_exists(character, "walking_noise", race.get("walking_noise", 1.0))
+
 	# --- Body dimensions ---
 	var body: Dictionary = race.get("body", {})
 	_set_if_exists(character, "body_size_mod",    body.get("body_size_mod", 1.0))

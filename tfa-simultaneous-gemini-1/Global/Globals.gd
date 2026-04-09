@@ -23,7 +23,7 @@ const dmg_0_dict = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "
 # Arm IK settings (smaller for top-down proportions)
 
 
-var DEFAULT_ARM_SEGMENT_LENGTHS: Array[float] = [12.0 * default_body_scale, 10.0 * default_body_scale, 6.0 * default_body_scale]
+var DEFAULT_ARM_SEGMENT_LENGTHS: Array[float] = [11.0 * default_body_scale, 9.0 * default_body_scale, 5.5 * default_body_scale]
 const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(-135, 135),  # Shoulder
 	Vector2(0, 145),      # Elbow
