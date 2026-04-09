@@ -12,6 +12,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "cemetery_ambient",
+			"weather_group": "Scarlatti",
 			"fog_ids": ["fog"],
 			"player_spawns": {
 				"default": {
@@ -156,6 +157,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "town_theme",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {

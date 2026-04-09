@@ -98,6 +98,14 @@ func _process_spread(delta: float, game: Node) -> void:
 	var spread_chance = fire_def.get("spread_chance", 0.4)
 	var tiles_to_ignite: Array[Vector2i] = []
 
+	# Get wind from the current map's weather group
+	var wind_dir := Vector2.ZERO
+	var wind_speed := 0.0
+	var weather_group := _get_map_weather_group(game)
+	if not weather_group.is_empty():
+		wind_dir = WeatherManager.get_wind_direction(weather_group)
+		wind_speed = WeatherManager.get_wind_speed(weather_group)
+
 	for tile_pos in surface_grid:
 		if surface_grid[tile_pos]["surface_id"] != "fire":
 			continue
@@ -105,6 +113,15 @@ func _process_spread(delta: float, game: Node) -> void:
 		for neighbor in neighbors:
 			if surface_grid.has(neighbor):
 				continue  # Already burning
+
+			# Wind blocks fire from spreading against its direction
+			if wind_speed > 10.0 and wind_dir.length() > 0.01:
+				var spread_dir = Vector2(neighbor - tile_pos).normalized()
+				var dot = spread_dir.dot(wind_dir.normalized())
+				# dot < 0 means spreading against the wind — block it
+				if dot < -0.1:
+					continue
+
 			if randf() > spread_chance:
 				continue
 			# Check if neighbor is flammable
@@ -417,3 +434,10 @@ func _get_fluid_manager(game: Node) -> FluidManager:
 	if game and "fluid_manager" in game:
 		return game.fluid_manager
 	return null
+
+func _get_map_weather_group(game: Node) -> String:
+	if not game:
+		game = _get_game()
+	if game and "current_map_data" in game:
+		return game.current_map_data.get("weather_group", "")
+	return ""

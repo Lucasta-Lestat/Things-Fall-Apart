@@ -10,6 +10,9 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
 
+var weather_vfx_controller: Node = null
+var weather_debug_window: CanvasLayer = null
+
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
 @export var spawn_container: Node2D  # Where to spawn characters
@@ -81,6 +84,21 @@ func _ready() -> void:
 		Vector2(600, 800)             # world position
 	)
 	_create_selection_indicator(Globals.default_body_width+5)
+
+	# Weather VFX controller
+	var WeatherVFXScript = preload("res://vfx/WeatherVFXController.gd")
+	weather_vfx_controller = Node.new()
+	weather_vfx_controller.set_script(WeatherVFXScript)
+	weather_vfx_controller.name = "WeatherVFXController"
+	add_child(weather_vfx_controller)
+
+	# Weather debug window (F9)
+	var WeatherDebugScript = preload("res://UI/WeatherDebugWindow.gd")
+	weather_debug_window = CanvasLayer.new()
+	weather_debug_window.set_script(WeatherDebugScript)
+	weather_debug_window.name = "WeatherDebugWindow"
+	add_child(weather_debug_window)
+
 	load_map(current_map_id)
  
 func save_party_state() -> void:
@@ -205,9 +223,10 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	map_loader.structure_mask_path = images.get("structures_mask", "")
 	map_loader.generate_map()
  
-	# 3. Set up ambient effects (fog, music)
+	# 3. Set up ambient effects (fog, music, weather)
 	setup_map_fogs(current_map_data)
 	setup_map_music(current_map_data)
+	setup_map_weather(current_map_data)
 
 	# 4. Determine which spawn key to use based on where we came from
 	var spawn_key: String = "default"
@@ -265,6 +284,10 @@ func _unload_current_map() -> void:
 		surface_manager.clear_all_surfaces()
 		surface_manager.invalidate_floor_cache()
 
+	# Clear weather VFX
+	if weather_vfx_controller:
+		weather_vfx_controller.clear_all()
+
 	current_map_id = ""
 	current_map_data = {}
 
@@ -285,6 +308,16 @@ func setup_map_music(map_data: Dictionary) -> void:
 		MusicManager.play(track)
 	else:
 		MusicManager.stop()
+
+func setup_map_weather(map_data: Dictionary) -> void:
+	var weather_group: String = map_data.get("weather_group", "")
+	if weather_vfx_controller:
+		if weather_group.is_empty():
+			weather_vfx_controller.clear_all()
+		else:
+			weather_vfx_controller.setup_for_map(weather_group)
+	if weather_debug_window and weather_debug_window.has_method("set_weather_group"):
+		weather_debug_window.set_weather_group(weather_group)
 
 # ---------------------------------------------------------------------------
 # Party spawning

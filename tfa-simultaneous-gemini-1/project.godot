@@ -42,6 +42,7 @@ GameLog="*res://Global/GameLog.gd"
 SfxManager="*res://Global/SFXManager.gd"
 MusicManager="*res://Global/MusicManager.gd"
 PauseManager="*res://Global/PauseManager.gd"
+WeatherManager="*res://Global/WeatherManager.gd"
 
 [display]
 
