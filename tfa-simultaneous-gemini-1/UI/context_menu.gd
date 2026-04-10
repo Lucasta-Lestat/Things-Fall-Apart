@@ -59,7 +59,9 @@ func _on_option_selected(option: String):
 func _input(event):
 	if event is InputEventMouseButton and event.pressed:
 		if get_rect().has_point(get_local_mouse_position()):
-			print('handling input in context menu')
-			#get_viewport().set_input_as_handled()
-			#game.context_menu_open = false
-			
+			get_viewport().set_input_as_handled()
+		else:
+			# Clicked outside the menu — close it
+			queue_free()
+			game.context_menu_open = false
+			get_viewport().set_input_as_handled()

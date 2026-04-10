@@ -1509,7 +1509,7 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	proj.rotation = direction.angle() + PI / 2.0
 
 	var is_pistol = weapon.weapon_type == WeaponShape.WeaponType.PISTOL
-	var speed = 600.0 if is_pistol else 380.0
+	var speed = 1800.0 if is_pistol else 1200.0
 	var max_range = 700.0 if is_pistol else 900.0
 
 	get_tree().current_scene.add_child(proj)

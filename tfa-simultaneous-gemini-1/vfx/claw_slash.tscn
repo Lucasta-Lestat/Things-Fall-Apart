@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://vfx/claw_slash.gd" id="1_script"]
+
+[sub_resource type="Gradient" id="Gradient_claws"]
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 0.85, 0.7, 0.8, 1, 0.3, 0.2, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_claws"]
+gradient = SubResource("Gradient_claws")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_claws"]
+particle_flag_disable_z = true
+direction = Vector3(0, -1, 0)
+spread = 45.0
+initial_velocity_min = 40.0
+initial_velocity_max = 80.0
+gravity = Vector3(0, 0, 0)
+damping_min = 30.0
+damping_max = 60.0
+scale_min = 0.3
+scale_max = 0.8
+color_ramp = SubResource("GradientTexture1D_claws")
+
+[node name="ClawSlash" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 24
+one_shot = true
+explosiveness = 0.9
+lifetime = 0.35
+process_material = SubResource("ParticleProcessMaterial_claws")

@@ -49,20 +49,23 @@ func _setup_sprites() -> void:
 	# Clean up any existing sprites
 	_clear_sprites()
 
-	# Head
+	# Head (image TOP = back of head toward body, BOTTOM = face toward front)
 	head_sprite = _create_sprite("HeadSprite", 1)
 	_load_texture(head_sprite, sprite_data.get("head", ""))
 
-	# Torso
+	# Torso (image TOP = back/shoulders, BOTTOM = chest front)
 	torso_sprite = _create_sprite("TorsoSprite", -1)
 	_load_texture(torso_sprite, sprite_data.get("torso", ""))
 
-	# Left arm (two segments)
+	# Left arm (two segments) - flipped horizontally to mirror right arm
+	# so elbows bend in opposite directions
 	left_upper_arm = _create_sprite("LeftUpperArm", -2)
 	_load_texture(left_upper_arm, sprite_data.get("upper_arm", ""))
+	left_upper_arm.flip_h = true
 
 	left_forearm = _create_sprite("LeftForearm", -2)
 	_load_texture(left_forearm, sprite_data.get("forearm", ""))
+	left_forearm.flip_h = true
 
 	# Right arm (two segments)
 	right_upper_arm = _create_sprite("RightUpperArm", -2)
@@ -107,14 +110,22 @@ func _clear_sprites() -> void:
 
 func auto_scale_sprites(character) -> void:
 	"""Scale all sprites to match character body dimensions.
-	Call after load_sprites() and after character dimensions are set."""
+	Call after load_sprites() and after character dimensions are set.
+	All character dimensions are expected to already be at final game-unit scale:
+	- Body/head dims from race data are set at final scale in races.json
+	- Leg dims from Globals already include default_body_scale * body_size_mod
+	- Arm segment lengths already include default_body_scale * body_size_mod"""
+
+	# Body and head: race data provides final-scale values directly
 	_head_width = character.head_width
 	_head_length = character.head_length
 	_body_width = character.body_width
 	_body_height = character.body_height
+	# Legs: Globals defaults already include * default_body_scale * body_size_mod
 	_leg_width = character.leg_width
 	_leg_length = character.leg_length
-	_arm_width = 7.0 * Globals.default_body_scale  # Match Line2D arm width
+	# Arm thickness: raw value needs scale applied
+	_arm_width = 7.0 * Globals.default_body_scale
 	if "ARM_SEGMENT_LENGTHS" in character:
 		var segs = character.ARM_SEGMENT_LENGTHS
 		_arm_segment_lengths.clear()
@@ -163,31 +174,41 @@ func update_torso(shoulder_y_offset: float) -> void:
 
 func update_legs(left_hip: Vector2, left_foot: Vector2, right_hip: Vector2, right_foot: Vector2) -> void:
 	"""Position and rotate leg sprites to match walking animation.
-	Same pattern as EquipmentShape._update_pants_position()."""
+	-PI/2 so the wider hip end of the sprite points toward the hip joint."""
 	if left_leg_sprite:
 		var left_mid = (left_hip + left_foot) * 0.5
 		var left_dir = (left_foot - left_hip).normalized()
-		var left_angle = left_dir.angle() + PI / 2
+		var left_angle = left_dir.angle() - PI / 2
 		left_leg_sprite.position = left_mid
 		left_leg_sprite.rotation = left_angle
 
 	if right_leg_sprite:
 		var right_mid = (right_hip + right_foot) * 0.5
 		var right_dir = (right_foot - right_hip).normalized()
-		var right_angle = right_dir.angle() + PI / 2
+		var right_angle = right_dir.angle() - PI / 2
 		right_leg_sprite.position = right_mid
 		right_leg_sprite.rotation = right_angle
 
 func update_arms(left_joints: Array[Vector2], right_joints: Array[Vector2]) -> void:
 	"""Position and rotate arm segment sprites to match IK joint positions.
 	joints[0] = shoulder, joints[1] = upper arm end, joints[2] = forearm end, joints[3] = hand"""
+	# Small inward rotation offset for forearms so the hand angles toward the body
+	var forearm_inward_bias: float = 0.12  # radians (~7 degrees)
+
 	if left_joints.size() >= 4:
-		_update_arm_segment(left_upper_arm, left_joints[0], left_joints[1])
+		# Extend upper arm slightly past elbow to overlap with forearm and hide gap
+		var left_upper_end = left_joints[1].lerp(left_joints[3], 0.15)
+		_update_arm_segment(left_upper_arm, left_joints[0], left_upper_end)
 		_update_arm_segment(left_forearm, left_joints[1], left_joints[3])
+		if left_forearm:
+			left_forearm.rotation += forearm_inward_bias  # rotate toward body center
 
 	if right_joints.size() >= 4:
-		_update_arm_segment(right_upper_arm, right_joints[0], right_joints[1])
+		var right_upper_end = right_joints[1].lerp(right_joints[3], 0.15)
+		_update_arm_segment(right_upper_arm, right_joints[0], right_upper_end)
 		_update_arm_segment(right_forearm, right_joints[1], right_joints[3])
+		if right_forearm:
+			right_forearm.rotation -= forearm_inward_bias  # rotate toward body center
 
 func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2) -> void:
 	"""Position an arm segment sprite at the midpoint between two joints, rotated to align."""
@@ -195,7 +216,7 @@ func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2)
 		return
 	var mid = (start_pos + end_pos) * 0.5
 	var dir = (end_pos - start_pos).normalized()
-	var angle = dir.angle() + PI / 2  # Rotate sprite to align along segment
+	var angle = dir.angle() - PI / 2  # -PI/2 so wider end points toward start_pos (shoulder/elbow)
 
 	sprite.position = mid
 	sprite.rotation = angle
@@ -210,19 +231,11 @@ func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2)
 # ===== COLOR =====
 
 func set_skin_color(color: Color) -> void:
-	"""Tint skin-exposed sprites (head, arms) to match character skin color.
-	Torso and legs are not tinted since they show clothing."""
-	if head_sprite:
-		head_sprite.modulate = color
-	if left_upper_arm:
-		left_upper_arm.modulate = color
-	if left_forearm:
-		left_forearm.modulate = color
-	if right_upper_arm:
-		right_upper_arm.modulate = color
-	if right_forearm:
-		right_forearm.modulate = color
-	# Legs and torso keep default modulate (they show clothing, not skin)
+	"""Tint all body part sprites to match character skin color.
+	All sprites are bare skin — clothing comes from the equipment system."""
+	for child in get_children():
+		if child is Sprite2D:
+			child.modulate = color
 
 # ===== VISIBILITY =====
 
