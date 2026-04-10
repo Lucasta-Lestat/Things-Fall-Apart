@@ -378,6 +378,71 @@ func clear_all_water_tiles() -> void:
 		remove_fluid_tile(pos)
 	_condition_timers.clear()
 
+# --- Freeze / Thaw ---
+
+func freeze_fluid_at(tile_pos: Vector2i) -> Array[Vector2i]:
+	"""BFS freeze the contiguous fluid body starting at tile_pos.
+	Removes fluid visuals and data. Returns the list of frozen tiles
+	(caller should place ice surfaces via SurfaceManager)."""
+	var fluid_type = get_fluid_type_at(tile_pos)
+	if fluid_type.is_empty():
+		return []
+
+	var frozen_tiles: Array[Vector2i] = []
+	var visited: Dictionary = {}
+	var queue: Array[Vector2i] = [tile_pos]
+	visited[tile_pos] = true
+
+	while not queue.is_empty():
+		var tile = queue.pop_front()
+		var ft = get_fluid_type_at(tile)
+		if ft != fluid_type:
+			continue
+		var amount = get_fluid_amount(tile, fluid_type)
+		if amount < PUDDLE_HEIGHT:
+			continue
+
+		frozen_tiles.append(tile)
+
+		var neighbors = get_neighbors(tile)
+		for neighbor in neighbors:
+			if visited.has(neighbor):
+				continue
+			visited[neighbor] = true
+			queue.append(neighbor)
+
+	# Remove all the fluid from the frozen tiles
+	for tile in frozen_tiles:
+		remove_fluid_tile(tile)
+
+	return frozen_tiles
+
+func freeze_all_fluids() -> Dictionary:
+	"""Freeze every fluid tile currently on the map.
+	Returns Dictionary[Vector2i, Dictionary] with keys 'fluid_type' and 'amount'
+	so SurfaceManager can record what was frozen."""
+	var frozen_data: Dictionary = {}
+	var tiles_to_freeze: Array[Vector2i] = []
+
+	for tile_pos in fluid_grid.keys():
+		for fluid_type in fluid_grid[tile_pos]:
+			if fluid_grid[tile_pos][fluid_type] >= PUDDLE_HEIGHT:
+				frozen_data[tile_pos] = {
+					"fluid_type": fluid_type,
+					"amount": fluid_grid[tile_pos][fluid_type]
+				}
+				tiles_to_freeze.append(tile_pos)
+				break  # one fluid type per tile
+
+	for tile_pos in tiles_to_freeze:
+		remove_fluid_tile(tile_pos)
+
+	return frozen_data
+
+func restore_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> void:
+	"""Restore a previously frozen fluid tile (called when ice thaws)."""
+	register_fluid(tile_pos, fluid_type, amount)
+
 func update_water_tile_flows() -> void:
 	for grid_pos in active_fluid_tiles.keys():
 		var water_tile = active_fluid_tiles[grid_pos]

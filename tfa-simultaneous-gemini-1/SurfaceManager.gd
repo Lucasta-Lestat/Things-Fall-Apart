@@ -193,6 +193,10 @@ func _process_lifetime(delta: float, game: Node) -> void:
 	var tiles_to_scorch: Array[Vector2i] = []
 
 	for tile_pos in surface_grid:
+		var time_rem = surface_grid[tile_pos]["time_remaining"]
+		# Surfaces with duration -1 (ice) never expire
+		if time_rem < 0:
+			continue
 		surface_grid[tile_pos]["time_remaining"] -= delta
 		if surface_grid[tile_pos]["time_remaining"] <= 0.0:
 			tiles_to_scorch.append(tile_pos)
@@ -220,7 +224,10 @@ func try_ignite_area(center_world: Vector2, radius: float) -> void:
 func try_ignite(tile_pos: Vector2i) -> void:
 	"""Attempt to ignite a single tile. Checks fluids first (flood-fill), then floors."""
 	if surface_grid.has(tile_pos):
-		return  # Already burning
+		# Fire hitting ice → thaw the ice instead of igniting
+		if surface_grid[tile_pos]["surface_id"] == "ice":
+			thaw_ice_at(tile_pos)
+		return  # Already has a surface
 
 	var game = _get_game()
 	var fluid_manager = _get_fluid_manager(game)
@@ -294,6 +301,76 @@ func try_extinguish(tile_pos: Vector2i) -> void:
 func has_surface_at(tile_pos: Vector2i) -> bool:
 	return surface_grid.has(tile_pos)
 
+func get_surface_id_at(tile_pos: Vector2i) -> String:
+	if surface_grid.has(tile_pos):
+		return surface_grid[tile_pos].get("surface_id", "")
+	return ""
+
+func is_ice_at(tile_pos: Vector2i) -> bool:
+	return get_surface_id_at(tile_pos) == "ice"
+
+# --- Ice / Freeze API ---
+
+func try_freeze_at(tile_pos: Vector2i) -> void:
+	"""Freeze the contiguous fluid body at tile_pos into ice surfaces."""
+	var game = _get_game()
+	var fluid_manager = _get_fluid_manager(game)
+	if not fluid_manager:
+		return
+	var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
+	if fluid_type.is_empty():
+		return
+
+	var amount = fluid_manager.get_fluid_amount(tile_pos, fluid_type)
+	var frozen_tiles = fluid_manager.freeze_fluid_at(tile_pos)
+	for tile in frozen_tiles:
+		_place_ice(tile, fluid_type, amount)
+
+func try_freeze_all_fluids() -> void:
+	"""Freeze every fluid tile on the map (e.g. when snow starts)."""
+	var game = _get_game()
+	var fluid_manager = _get_fluid_manager(game)
+	if not fluid_manager:
+		return
+	var frozen_data = fluid_manager.freeze_all_fluids()
+	for tile_pos in frozen_data:
+		var data = frozen_data[tile_pos]
+		_place_ice(tile_pos, data["fluid_type"], data["amount"])
+
+func _place_ice(tile_pos: Vector2i, frozen_fluid_type: String, frozen_fluid_amount: float) -> void:
+	"""Place an ice surface on a tile, recording what fluid was frozen."""
+	if surface_grid.has(tile_pos):
+		# If there's fire here, remove it first
+		if surface_grid[tile_pos]["surface_id"] == "fire":
+			_remove_surface(tile_pos)
+		else:
+			return  # Don't overwrite other surfaces
+	var ice_def = _surface_defs.get("ice", {})
+	var vfx_node = _spawn_surface_vfx(tile_pos, ice_def)
+	surface_grid[tile_pos] = {
+		"surface_id": "ice",
+		"time_remaining": -1.0,  # Never expires naturally
+		"vfx_node": vfx_node,
+		"source_type": "frozen_fluid",
+		"frozen_fluid_type": frozen_fluid_type,
+		"frozen_fluid_amount": frozen_fluid_amount
+	}
+
+func thaw_ice_at(tile_pos: Vector2i) -> void:
+	"""Thaw an ice tile, restoring its original fluid."""
+	if not surface_grid.has(tile_pos):
+		return
+	if surface_grid[tile_pos]["surface_id"] != "ice":
+		return
+	var fluid_type = surface_grid[tile_pos].get("frozen_fluid_type", "water")
+	var fluid_amount = surface_grid[tile_pos].get("frozen_fluid_amount", 0.3)
+	_remove_surface(tile_pos)
+
+	var game = _get_game()
+	var fluid_manager = _get_fluid_manager(game)
+	if fluid_manager:
+		fluid_manager.restore_fluid(tile_pos, fluid_type, fluid_amount)
+
 func clear_all_surfaces() -> void:
 	for tile_pos in surface_grid.keys():
 		_remove_surface(tile_pos)
@@ -315,7 +392,12 @@ func _remove_surface(tile_pos: Vector2i) -> void:
 	surface_grid.erase(tile_pos)
 
 func _spawn_fire_vfx(tile_pos: Vector2i, fire_def: Dictionary) -> Node:
-	var vfx_path = fire_def.get("vfx_scene", "res://vfx/fire.tscn")
+	return _spawn_surface_vfx(tile_pos, fire_def)
+
+func _spawn_surface_vfx(tile_pos: Vector2i, surface_def: Dictionary) -> Node:
+	var vfx_path = surface_def.get("vfx_scene", "")
+	if vfx_path.is_empty():
+		return null
 	var vfx_scene = load(vfx_path)
 	if not vfx_scene:
 		return null
@@ -323,7 +405,7 @@ func _spawn_fire_vfx(tile_pos: Vector2i, fire_def: Dictionary) -> Node:
 	vfx.global_position = GridManager.map_to_world(tile_pos)
 	add_child(vfx)
 	if vfx.has_method("play"):
-		vfx.play(2.0)
+		vfx.play(1.0)
 	return vfx
 
 func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
