@@ -1306,8 +1306,16 @@
 	  "id": "jacana",
 	  "name": "Jacana",
 	  "race": "quadrelf",
+	  "gender": "female",
 	  "background": "aristocratic_envoy",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Female Half-Elf/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Half-Elf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Half-Elf/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Half-Elf/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Half-Elf/leg.png"
+	  },
 	  "stats": {
 		"strength": 45,
 		"constitution": 45,
@@ -1646,6 +1654,63 @@
 	  "combat": {},
 	  "sensory": {},
 	  "spawn_conditions": {}
+	},
+	{
+	  "id": "half_elf_wanderer",
+	  "name": "Half-Elf Wanderer",
+	  "race": "half_elf",
+	  "faction": "neutral",
+	  "stats": { "strength": 45, "constitution": 45, "dexterity": 55, "will": 50, "intelligence": 55, "charisma": 50 },
+	  "equipment": ["longsword"],
+	  "dialogue": null,
+	  "interact_options": ["Talk", "Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "carapacian_hermit",
+	  "name": "Carapacian Hermit",
+	  "race": "carapacians",
+	  "faction": "neutral",
+	  "stats": { "strength": 50, "constitution": 65, "dexterity": 30, "will": 60, "intelligence": 50, "charisma": 40 },
+	  "equipment": ["quarterstaff"],
+	  "dialogue": null,
+	  "interact_options": ["Talk", "Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "shambling_zombie",
+	  "name": "Shambling Zombie",
+	  "race": "human_undead",
+	  "faction": "undead",
+	  "stats": { "strength": 55, "constitution": 60, "dexterity": 25, "will": 10, "intelligence": 5, "charisma": 5 },
+	  "equipment": [],
+	  "dialogue": null,
+	  "interact_options": ["Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "wild_bear",
+	  "name": "Graveyard Bear",
+	  "race": "bear",
+	  "is_creature": true,
+	  "faction": "wildlife",
+	  "stats": { "strength": 70, "constitution": 65, "dexterity": 35, "will": 30, "intelligence": 10, "charisma": 10 },
+	  "equipment": [],
+	  "dialogue": null,
+	  "interact_options": ["Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "stray_horse",
+	  "name": "Stray Horse",
+	  "race": "horse",
+	  "is_creature": true,
+	  "faction": "wildlife",
+	  "stats": { "strength": 55, "constitution": 50, "dexterity": 55, "will": 25, "intelligence": 10, "charisma": 15 },
+	  "equipment": [],
+	  "dialogue": null,
+	  "interact_options": ["Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	}
   ]
 }

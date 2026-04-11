@@ -90,6 +90,7 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_apply_asi(character, "will",          asi.get("Wil", 0) + asi.get("Will", 0))
 	_apply_asi(character, "intelligence",  asi.get("Int", 0))
 	_apply_asi(character, "charisma",      asi.get("Cha", 0))
+	_apply_asi(character, "luck",          asi.get("Lck", 0))
 
 	# --- Traits ---
 	var race_traits: Dictionary = race.get("traits", {})

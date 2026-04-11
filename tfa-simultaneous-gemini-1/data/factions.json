@@ -304,8 +304,6 @@
 			"icon": "res://icons/undead.png",
 			"flag": "res://icons/undead_flag.png",
 			"allies": [
-				"wildlife",
-				"liziti"
 			],
 			"enemies": [
 				"player",
@@ -316,26 +314,17 @@
 			],
 			"equipment_traits": {
 				"required": {
-					"Necrotic": 1
 				},
 				"forbidden": {
 					"Holy": 1,
-					"Living": 1
 				}
 			},
 			"race_weights": {
-				"human": 50,
-				"half_orc": 15,
-				"orc": 10,
-				"dwarf": 10,
-				"half_elf": 5,
-				"troll": 5,
-				"saurian": 5
+				"unded-human": 100,
 			},
 			"default_backgrounds": [
 				"plague_survivor"
 			],
-			"notes": "Race here represents what the creature was before undeath"
 		},
 		{
 			"id": "wildlife",

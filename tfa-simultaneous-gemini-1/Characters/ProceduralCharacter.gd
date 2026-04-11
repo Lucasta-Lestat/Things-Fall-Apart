@@ -237,6 +237,7 @@ var right_arm_target: Vector2
 @export var will: int = 50
 @export var intelligence: int = 50
 @export var charisma: int = 50
+@export var luck: int = 0
 # --- Add these modifier variables near your other vars ---
 var strength_modifier: float = 0.0
 var constitution_modifier: float = 0.0
@@ -244,6 +245,7 @@ var dexterity_modifier: float = 0.0
 var will_modifier: float = 0.0
 var intelligence_modifier: float = 0.0
 var charisma_modifier: float = 0.0
+var luck_modifier: float = 0.0
 var sight_modifier: float = 0.0
 var hearing_modifier: float = 0.0
 var fov_modifier: float = 0.0
@@ -269,6 +271,9 @@ func effective_intelligence() -> float:
 
 func effective_charisma() -> float:
 	return charisma + charisma_modifier
+
+func effective_luck() -> float:
+	return luck + luck_modifier
 
 func effective_sight() -> float:
 	return sight + sight_modifier
@@ -744,7 +749,8 @@ func _on_stats_recalculated() -> void:
 	will_modifier = condition_manager.calculate_effective_stat(0.0, "will")
 	intelligence_modifier = condition_manager.calculate_effective_stat(0.0, "intelligence")
 	charisma_modifier = condition_manager.calculate_effective_stat(0.0, "charisma")
-	
+	luck_modifier = condition_manager.calculate_effective_stat(0.0, "luck")
+
 	# --- Sensory stats ---
 	sight_modifier = condition_manager.calculate_effective_stat(0.0, "sight")
 	hearing_modifier = condition_manager.calculate_effective_stat(0.0, "hearing")
@@ -1072,6 +1078,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("intelligence"): intelligence = data["intelligence"]
 	if data.has("will"): will = data["will"]
 	if data.has("charisma"): charisma = data["charisma"]
+	if data.has("luck"): luck = data["luck"]
 	# Short forms
 	if data.has("str"): strength = data["str"]
 	if data.has("con"): constitution = data["con"]
@@ -1079,6 +1086,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("int"): intelligence = data["int"]
 	if data.has("wil"): will = data["wil"]
 	if data.has("cha"): charisma = data["cha"]
+	if data.has("lck"): luck = data["lck"]
 	
 	# --- Identity / race ---
 	if data.has("race_id"): race_id = data["race_id"]
@@ -3704,6 +3712,8 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 		targeting_system.clear_all_queued_indicators()
 		# Also clean up any live indicator that was left visible until the ability landed
 		targeting_system.end_targeting()
+	# Check if any conditions should gain stacks based on this ability's traits
+	ability_manager._check_action_trait_stacking(ability)
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
