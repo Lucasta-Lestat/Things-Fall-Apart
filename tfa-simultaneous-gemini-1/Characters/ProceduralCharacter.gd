@@ -2303,12 +2303,18 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
-	# Don't process game-world clicks when the mouse is over any UI control
-	# (context menus, side panels, inventory, etc.). This is the universal
-	# guard — Input.is_action_just_pressed() bypasses set_input_as_handled(),
-	# so we must check the GUI layer explicitly.
-	if get_viewport().gui_get_hovered_control() != null:
-		return
+	# Don't process game-world clicks when the mouse is over interactive UI.
+	# Input.is_action_just_pressed() bypasses set_input_as_handled(), so we
+	# check the GUI layer explicitly. Only block for controls inside GameUI
+	# (the CanvasLayer that holds menus, panels, etc.) — stray in-world
+	# controls like floating text or VFX must not block game input.
+	var _hovered := get_viewport().gui_get_hovered_control()
+	if _hovered != null:
+		var node := _hovered as Node
+		while node != null:
+			if node is CanvasLayer:
+				return  # Hovered control lives in a UI layer — block game input
+			node = node.get_parent()
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
