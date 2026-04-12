@@ -2040,6 +2040,12 @@ func _set_procedural_geometry_visible(is_visible: bool) -> void:
 	if tusk_l: tusk_l.visible = is_visible
 	var tusk_r = get_node_or_null("TuskR")
 	if tusk_r: tusk_r.visible = is_visible
+	# Hide additional hair nodes created by multi-part hair styles
+	# (COMBOVER→HairBack, POMPADOUR→HairBack, BRAIDS→HairBraidR,
+	#  BUN→HairBun, PIGTAILS→HairPigtailL/R, etc.)
+	for child in get_children():
+		if child is Line2D and child.name.begins_with("Hair"):
+			child.visible = is_visible
 
 func set_body_sprites(data: Dictionary) -> void:
 	"""Public API: Set body part sprite data and rebuild visuals."""
@@ -2305,15 +2311,15 @@ func _handle_input() -> void:
 		return
 	# Don't process game-world clicks when the mouse is over interactive UI.
 	# Input.is_action_just_pressed() bypasses set_input_as_handled(), so we
-	# check the GUI layer explicitly. Only block for controls inside GameUI
-	# (the CanvasLayer that holds menus, panels, etc.) — stray in-world
-	# controls like floating text or VFX must not block game input.
+	# check the GUI layer explicitly. Block for controls inside a CanvasLayer
+	# (GameUI panels, etc.) or a Window/Popup (PopupMenu from side panel).
+	# In-world controls like floating text or VFX won't match either check.
 	var _hovered := get_viewport().gui_get_hovered_control()
 	if _hovered != null:
 		var node := _hovered as Node
 		while node != null:
-			if node is CanvasLayer:
-				return  # Hovered control lives in a UI layer — block game input
+			if node is CanvasLayer or node is Window:
+				return  # Hovered control is in UI layer or popup — block game input
 			node = node.get_parent()
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
