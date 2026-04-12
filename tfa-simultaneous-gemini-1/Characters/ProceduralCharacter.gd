@@ -2303,8 +2303,11 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
-	# Don't process game-world input while a context menu is open
-	if game and game.context_menu_open:
+	# Don't process game-world clicks when the mouse is over any UI control
+	# (context menus, side panels, inventory, etc.). This is the universal
+	# guard — Input.is_action_just_pressed() bypasses set_input_as_handled(),
+	# so we must check the GUI layer explicitly.
+	if get_viewport().gui_get_hovered_control() != null:
 		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
