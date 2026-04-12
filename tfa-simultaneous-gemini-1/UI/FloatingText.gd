@@ -4,6 +4,7 @@ var lifetime = 2.0  # how long before it disappears
 var elapsed_time = 0.0
 
 func _ready():
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	modulate.a = 1.0  # Start fully opaque
 
 func _process(delta):
