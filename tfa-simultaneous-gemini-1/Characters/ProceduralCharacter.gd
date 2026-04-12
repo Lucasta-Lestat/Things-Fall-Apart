@@ -22,6 +22,9 @@ var interact_options: Array = ["Inspect"]
 
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
+# Click flags set by _unhandled_input — only true when no UI consumed the event.
+var _left_click_this_frame: bool = false
+var _right_click_this_frame: bool = false
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -2067,8 +2070,18 @@ func set_sprite_overlays_enabled(enabled: bool) -> void:
 		_set_procedural_geometry_visible(true)
 		use_sprite_overlays = false
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_player_controlled:
+		return
+	if event.is_action_pressed("left_click"):
+		_left_click_this_frame = true
+	if event.is_action_pressed("right_click"):
+		_right_click_this_frame = true
+
 func _process(delta: float) -> void:
 	_handle_input()
+	_left_click_this_frame = false
+	_right_click_this_frame = false
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -2309,18 +2322,6 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
-	# Don't process game-world clicks when the mouse is over interactive UI.
-	# Input.is_action_just_pressed() bypasses set_input_as_handled(), so we
-	# check the GUI layer explicitly. Block for controls inside a CanvasLayer
-	# (GameUI panels, etc.) or a Window/Popup (PopupMenu from side panel).
-	# In-world controls like floating text or VFX won't match either check.
-	var _hovered := get_viewport().gui_get_hovered_control()
-	if _hovered != null:
-		var node := _hovered as Node
-		while node != null:
-			if node is CanvasLayer or node is Window:
-				return  # Hovered control is in UI layer or popup — block game input
-			node = node.get_parent()
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
@@ -2334,24 +2335,16 @@ func _handle_input() -> void:
 			return  # Path input consumed the event
 
 	# --- Right mouse button - Off hand ---
-	if paused:
-		if Input.is_action_just_pressed("right_click"):
-			current_hand = "Off"
-			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
-	else:
-		if Input.is_action_just_pressed("right_click"):
-			current_hand = "Off"
-			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
+	# Click flags are set by _unhandled_input, so they're only true when no
+	# UI element (panels, popups, context menus) consumed the event.
+	if _right_click_this_frame:
+		current_hand = "Off"
+		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 
 	# --- Left mouse button - Main hand ---
-	if paused:
-		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
-			current_hand = "Main"
-			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
-	else:
-		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
-			current_hand = "Main"
-			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
+	if _left_click_this_frame or Input.is_action_just_pressed("ui_select"):
+		current_hand = "Main"
+		_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 
 	# --- Middle mouse button - Move ---
 	# When paused, middle-click is handled by PathInputHandler (A* path via tactical path system).
