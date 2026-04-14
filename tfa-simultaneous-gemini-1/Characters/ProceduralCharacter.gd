@@ -2026,7 +2026,13 @@ func _setup_body_part_sprites() -> void:
 	body_part_sprites.auto_scale_sprites(self)
 
 	# Position static parts initially
-	body_part_sprites.update_head(_head_offset)
+	# For bipedals, shift the head sprite back toward the neck area of the torso.
+	# _head_offset is Vector2.ZERO for bipedals, but the torso center is at
+	# shoulder_y_offset — the head needs to sit partway between origin and torso.
+	var sprite_head_offset = _head_offset
+	if body_type == BodyType.BIPEDAL:
+		sprite_head_offset = _head_offset + Vector2(0, shoulder_y_offset * 0.4)
+	body_part_sprites.update_head(sprite_head_offset)
 	body_part_sprites.update_torso(shoulder_y_offset)
 
 	# Apply skin color tint
@@ -2325,6 +2331,10 @@ func _handle_input() -> void:
 		return
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
+		return
+	# Block game-world clicks when a popup menu is open (PopupMenu lives in
+	# its own Window, invisible to gui_get_hovered_control).
+	if game and game.context_menu_open:
 		return
 	# Block game-world clicks when hovering UI hosted in a CanvasLayer.
 	var _hovered := get_viewport().gui_get_hovered_control()
