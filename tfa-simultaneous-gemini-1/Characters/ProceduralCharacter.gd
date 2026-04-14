@@ -22,9 +22,6 @@ var interact_options: Array = ["Inspect"]
 
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
-# Click flags set by _unhandled_input — only true when no UI consumed the event.
-var _left_click_this_frame: bool = false
-var _right_click_this_frame: bool = false
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -508,13 +505,18 @@ func _setup_tactical_path() -> void:
 	action_queue.action_completed.connect(_on_tactical_action_completed)
 
 func _on_game_unpaused_convert_path() -> void:
-	# Clear queued ability indicators on unpause (they've served their planning purpose)
-	if targeting_system:
-		targeting_system.clear_all_queued_indicators()
 	if tactical_path == null or tactical_path.is_empty():
 		return
 	if not is_player_controlled:
 		return
+
+	# If the path was being executed (paused mid-execution), trim the consumed portion
+	# so the character continues from their current position instead of restarting.
+	if tactical_path.is_executing:
+		var snap = tactical_path.find_nearest_point_on_path(global_position)
+		if snap.distance < INF:
+			tactical_path.truncate_before(snap)
+
 	# Clear any stale actions from a previous path before queuing the new one
 	action_queue.cancel_all()
 	_nav_waypoints.clear()
@@ -530,6 +532,13 @@ func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 	# by PathDrawer based on character position each frame.
 	if tactical_path == null or not tactical_path.is_executing:
 		return
+
+	# Clean up queued targeting indicator when its ability finishes executing
+	if action.type == ActionQueue.ActionType.USE_ABILITY:
+		var indicator = action.data.get("queued_indicator", null)
+		if indicator and is_instance_valid(indicator) and targeting_system:
+			targeting_system.remove_queued_indicator(indicator)
+
 	if action.type != ActionQueue.ActionType.MOVE:
 		# Remove the first remaining action node (they execute in order)
 		if not tactical_path.action_nodes.is_empty():
@@ -542,12 +551,17 @@ func _check_tactical_path_finished() -> void:
 	if tactical_path == null or not tactical_path.is_executing:
 		return
 	if action_queue.current_action == null and action_queue.get_queue_size() == 0:
+		# Path fully complete — clean up any leftover indicators
+		if targeting_system:
+			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
 
 func _clear_tactical_path_if_executing() -> void:
 	# Called when the player takes manual action that should cancel the path display
 	if tactical_path and tactical_path.is_executing:
+		if targeting_system:
+			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
 
@@ -2070,18 +2084,8 @@ func set_sprite_overlays_enabled(enabled: bool) -> void:
 		_set_procedural_geometry_visible(true)
 		use_sprite_overlays = false
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_controlled:
-		return
-	if event.is_action_pressed("left_click"):
-		_left_click_this_frame = true
-	if event.is_action_pressed("right_click"):
-		_right_click_this_frame = true
-
 func _process(delta: float) -> void:
 	_handle_input()
-	_left_click_this_frame = false
-	_right_click_this_frame = false
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -2322,6 +2326,14 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
+	# Block game-world clicks when hovering UI hosted in a CanvasLayer.
+	var _hovered := get_viewport().gui_get_hovered_control()
+	if _hovered != null:
+		var node := _hovered as Node
+		while node != null:
+			if node is CanvasLayer:
+				return
+			node = node.get_parent()
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
@@ -2335,14 +2347,12 @@ func _handle_input() -> void:
 			return  # Path input consumed the event
 
 	# --- Right mouse button - Off hand ---
-	# Click flags are set by _unhandled_input, so they're only true when no
-	# UI element (panels, popups, context menus) consumed the event.
-	if _right_click_this_frame:
+	if Input.is_action_just_pressed("right_click"):
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 
 	# --- Left mouse button - Main hand ---
-	if _left_click_this_frame or Input.is_action_just_pressed("ui_select"):
+	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
 		current_hand = "Main"
 		_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 

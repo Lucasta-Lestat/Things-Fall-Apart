@@ -1,6 +1,9 @@
 extends PanelContainer
 
+signal option_selected(option: String)
+
 var target_character = null
+var _custom_callback: Callable
 var vbox: VBoxContainer = VBoxContainer.new()
 @onready var game = get_node("/root/Game")
 
@@ -38,20 +41,20 @@ func setup(character, options: Array):
 		vbox.add_child(button)
 
 func _on_option_selected(option: String):
-	# Handle the selected option
-	print("on option selected for context menu")
-	match option:
-		"Attack":
-			target_character.attack()
-		"Talk":
-			print("attempting to start dialogue")
-			#print("target character dialogue index: ",target_character.current_dialogue_index )
-			#print("target character dialogues: ", target_character.dialogues)
-			DialogueManager.start_dialogue(target_character.dialogues[target_character.current_dialogue_index])
-		_:
-			# Generic handler - you could call a method on the character
-			if target_character.has_method("interact"):
-				target_character.interact(option)
+	# If a custom callback was provided, use it instead of default handling
+	if _custom_callback.is_valid():
+		_custom_callback.call(option)
+	else:
+		# Default handling for world context menus
+		match option:
+			"Attack":
+				target_character.attack()
+			"Talk":
+				DialogueManager.start_dialogue(target_character.dialogues[target_character.current_dialogue_index])
+			_:
+				if target_character.has_method("interact"):
+					target_character.interact(option)
+	option_selected.emit(option)
 	# Close the menu — defer the flag reset so it stays true for the rest of
 	# this frame, preventing _process-based input polls from acting on the click.
 	queue_free()

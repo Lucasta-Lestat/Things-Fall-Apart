@@ -443,19 +443,14 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		else:
 			options.insert(0, "Equip")
 
-	var menu = PopupMenu.new()
-	for i in range(options.size()):
-		menu.add_item(options[i], i)
-	menu.id_pressed.connect(_on_item_menu_selected.bind(character, item_index, item_data, options))
+	var menu = CONTEXT_MENU_SCENE.instantiate()
+	menu.global_position = slot.get_screen_position() + Vector2(slot.size.x, 0)
+	menu._custom_callback = _on_item_menu_selected.bind(character, item_index, item_data, options)
+	menu.setup(null, options)
+	# Add under GameUI CanvasLayer so the input guard in ProceduralCharacter catches it
+	game_node.get_node("GameUI").add_child(menu)
 
-	add_child(menu)
-	menu.popup(Rect2i(
-		Vector2i(slot.get_screen_position() + Vector2(slot.size.x, 0)),
-		Vector2i.ZERO
-	))
-
-func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dictionary, options: Array) -> void:
-	var option_name = options[id] if id < options.size() else ""
+func _on_item_menu_selected(option_name: String, character, item_index: int, item_data: Dictionary, options: Array) -> void:
 	match option_name:
 		"Use":
 			_use_item(character, item_index, item_data)
