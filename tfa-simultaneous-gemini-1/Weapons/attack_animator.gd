@@ -221,7 +221,7 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	is_two_handed_attack = weapon != null and weapon is WeaponShape and weapon.is_two_handed()
 
 	weight = max(0.1, weight)
-	var speed_multiplier = clamp((character.dex / 100.0) / (weight / 4.0), 0.4, 3.0)
+	var speed_multiplier = clamp((character.dexterity / 100.0) / (weight / 4.0), 0.4, 3.0)
 	current_rotation_intensity = clamp(weight / 4.5, 0.4, 1.4)
 
 	# Adjust dynamics based on weapon weight (heavier = slower response, more momentum)

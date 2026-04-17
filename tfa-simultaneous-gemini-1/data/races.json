@@ -71,8 +71,21 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "HORSESHOE", "COMBOVER", "BUZZCUT", "MOHAWK"],
-					"female": ["FULL", "LONG", "BRAIDS", "BUN", "PIGTAILS", "POMPADOUR"]
+					"male": [
+						"FULL",
+						"HORSESHOE",
+						"COMBOVER",
+						"BUZZCUT",
+						"MOHAWK"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"BRAIDS",
+						"BUN",
+						"PIGTAILS",
+						"POMPADOUR"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -125,11 +138,11 @@
 			"size": "Small",
 			"body": {
 				"body_size_mod": 0.7,
-				"body_width": 10,
-				"body_height": 9,
-				"head_width": 10,
-				"head_length": 9,
-				"shoulder_y_offset": 4,
+				"body_width": 34,
+				"body_height": 21,
+				"head_width": 25,
+				"head_length": 22,
+				"shoulder_y_offset": 8,
 				"leg_length": 6,
 				"leg_width": 2,
 				"leg_spacing": 5
@@ -137,17 +150,17 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Male Halfling/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Halfling/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Halfling/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Halfling/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Halfling/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Female Halfling/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Halfling/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Halfling/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Halfling/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Halfling/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
 				}
 			},
 			"appearance": {
@@ -166,8 +179,15 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "COMBOVER"],
-					"female": ["FULL", "LONG", "BRAIDS"]
+					"male": [
+						"FULL",
+						"COMBOVER"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"BRAIDS"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -222,11 +242,11 @@
 			"size": "Small",
 			"body": {
 				"body_size_mod": 0.7,
-				"body_width": 10,
-				"body_height": 9,
-				"head_width": 12,
-				"head_length": 11,
-				"shoulder_y_offset": 4,
+				"body_width": 34,
+				"body_height": 21,
+				"head_width": 31,
+				"head_length": 26,
+				"shoulder_y_offset": 8,
 				"leg_length": 6,
 				"leg_width": 2,
 				"leg_spacing": 5
@@ -246,7 +266,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -299,11 +321,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -311,17 +333,17 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Male Half-Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Half-Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Half-Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Half-Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Half-Elf/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Female Half-Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Half-Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Half-Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Half-Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Half-Elf/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
 				}
 			},
 			"appearance": {
@@ -338,10 +360,20 @@
 				],
 				"blood_color": "#8B0000",
 				"head_shape": "HUMANOID",
-				"head_features": ["elf_ears"],
+				"head_features": [
+					"elf_ears"
+				],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR"],
-					"female": ["FULL", "LONG", "POMPADOUR", "BRAIDS"]
+					"male": [
+						"FULL",
+						"POMPADOUR"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"POMPADOUR",
+						"BRAIDS"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -394,11 +426,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -419,8 +451,16 @@
 				"head_shape": "ORCISH",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["MOHAWK", "BUZZCUT", "NONE"],
-					"female": ["MOHAWK", "BUZZCUT", "NONE"]
+					"male": [
+						"MOHAWK",
+						"BUZZCUT",
+						"NONE"
+					],
+					"female": [
+						"MOHAWK",
+						"BUZZCUT",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -473,11 +513,11 @@
 			"size": "Small",
 			"body": {
 				"body_size_mod": 0.7,
-				"body_width": 14,
-				"body_height": 11,
-				"head_width": 10,
-				"head_length": 8,
-				"shoulder_y_offset": 4,
+				"body_width": 48,
+				"body_height": 26,
+				"head_width": 25,
+				"head_length": 19,
+				"shoulder_y_offset": 8,
 				"leg_length": 6,
 				"leg_width": 2,
 				"leg_spacing": 5
@@ -515,8 +555,16 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "HORSESHOE", "BUZZCUT"],
-					"female": ["FULL", "BRAIDS", "BUN"]
+					"male": [
+						"FULL",
+						"HORSESHOE",
+						"BUZZCUT"
+					],
+					"female": [
+						"FULL",
+						"BRAIDS",
+						"BUN"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -568,11 +616,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 12,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 29,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -589,7 +637,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -645,11 +695,11 @@
 			"size": "Small",
 			"body": {
 				"body_size_mod": 0.7,
-				"body_width": 10,
-				"body_height": 9,
-				"head_width": 8,
-				"head_length": 9,
-				"shoulder_y_offset": 4,
+				"body_width": 34,
+				"body_height": 21,
+				"head_width": 26,
+				"head_length": 29,
+				"shoulder_y_offset": 8,
 				"leg_length": 6,
 				"leg_width": 2,
 				"leg_spacing": 5
@@ -682,7 +732,9 @@
 				"head_shape": "DRACONIC",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -737,11 +789,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 16,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 13,
-				"shoulder_y_offset": 5,
+				"body_width": 55,
+				"body_height": 28,
+				"head_width": 35,
+				"head_length": 39,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -774,7 +826,9 @@
 				"head_shape": "DRACONIC",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -826,11 +880,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 36,
+				"head_length": 31,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -838,17 +892,17 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Male Mephistkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Mephistkin/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Mephistkin/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Mephistkin/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Mephistkin/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Female Mephistkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Mephistkin/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Mephistkin/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Mephistkin/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Mephistkin/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
 				}
 			},
 			"appearance": {
@@ -866,8 +920,16 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "MOHAWK"],
-					"female": ["FULL", "POMPADOUR", "LONG"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"MOHAWK"
+					],
+					"female": [
+						"FULL",
+						"POMPADOUR",
+						"LONG"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -918,11 +980,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 12,
-				"body_height": 10,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 41,
+				"body_height": 23,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -943,8 +1005,15 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "NONE"],
-					"female": ["FULL", "LONG", "NONE"]
+					"male": [
+						"FULL",
+						"NONE"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1000,11 +1069,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 18,
-				"body_height": 16,
-				"head_width": 13,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 62,
+				"body_height": 37,
+				"head_width": 41,
+				"head_length": 30,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 4,
 				"leg_spacing": 7
@@ -1040,8 +1109,16 @@
 				"head_shape": "ORCISH",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["MOHAWK", "BUZZCUT", "NONE"],
-					"female": ["MOHAWK", "BUZZCUT", "NONE"]
+					"male": [
+						"MOHAWK",
+						"BUZZCUT",
+						"NONE"
+					],
+					"female": [
+						"MOHAWK",
+						"BUZZCUT",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1095,11 +1172,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 16,
-				"body_height": 14,
-				"head_width": 11,
-				"head_length": 14,
-				"shoulder_y_offset": 5,
+				"body_width": 55,
+				"body_height": 33,
+				"head_width": 35,
+				"head_length": 42,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1132,7 +1209,9 @@
 				"head_shape": "DRACONIC",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1155,7 +1234,10 @@
 			"icon": "Assets/Icons/Goatment.png",
 			"description": "These aristocratic humanoid goats are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don't even think humans have souls and are therefore not worthy of any respect.",
 			"cost": 2,
-			"features": ["beguile", "ram"],
+			"features": [
+				"beguile",
+				"ram"
+			],
 			"ability_score_increases": {
 				"Int": 10,
 				"Cha": 10,
@@ -1182,11 +1264,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 36,
+				"head_length": 31,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1194,16 +1276,16 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Male Goatman/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Goatman/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Goatman/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Goatman/forearm.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
 					"leg": "res://Characters/Assets/Body Parts/Male Goatman/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Female Goatman/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Goatman/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Goatman/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Goatman/forearm.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
 					"leg": "res://Characters/Assets/Body Parts/Female Goatman/leg.png"
 				}
 			},
@@ -1220,10 +1302,19 @@
 				],
 				"blood_color": "#8B0000",
 				"head_shape": "HUMANOID",
-				"head_features": ["animal_ears"],
+				"head_features": [
+					"animal_ears"
+				],
 				"hair_styles": {
-					"male": ["FULL", "NONE"],
-					"female": ["FULL", "LONG", "NONE"]
+					"male": [
+						"FULL",
+						"NONE"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1235,7 +1326,10 @@
 			"speed_modifier": 0,
 			"arm_length_bonus": 0,
 			"walking_noise": 1.5,
-			"active_abilities": ["beguile", "ram"],
+			"active_abilities": [
+				"beguile",
+				"ram"
+			],
 			"passive_conditions": []
 		},
 		{
@@ -1274,11 +1368,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 18,
-				"body_height": 16,
-				"head_width": 10,
-				"head_length": 9,
-				"shoulder_y_offset": 5,
+				"body_width": 62,
+				"body_height": 37,
+				"head_width": 25,
+				"head_length": 22,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1310,7 +1404,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1367,11 +1463,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 14,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 33,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1392,8 +1488,17 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "NONE"],
-					"female": ["FULL", "POMPADOUR", "LONG", "NONE"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"NONE"
+					],
+					"female": [
+						"FULL",
+						"POMPADOUR",
+						"LONG",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1447,11 +1552,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1468,7 +1573,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1521,16 +1628,16 @@
 			"body": {
 				"body_type": "quadruped",
 				"body_size_mod": 1.0,
-				"body_width": 16,
-				"body_height": 18,
-				"body_length": 30,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": -10,
+				"body_width": 55,
+				"body_height": 42,
+				"body_length": 70,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": -20,
 				"leg_length": 12,
 				"leg_width": 3,
 				"leg_spacing": 7,
-				"tail_length": 14,
+				"tail_length": 28,
 				"has_tail": true,
 				"has_arms": true
 			},
@@ -1566,8 +1673,17 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "MOHAWK"],
-					"female": ["FULL", "LONG", "BRAIDS", "POMPADOUR"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"MOHAWK"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"BRAIDS",
+						"POMPADOUR"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1621,11 +1737,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 10,
-				"body_height": 12,
-				"head_width": 16,
-				"head_length": 14,
-				"shoulder_y_offset": 5,
+				"body_width": 34,
+				"body_height": 28,
+				"head_width": 41,
+				"head_length": 34,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1642,7 +1758,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1696,11 +1814,11 @@
 			"size": "Tiny",
 			"body": {
 				"body_size_mod": 0.35,
-				"body_width": 6,
-				"body_height": 5,
-				"head_width": 5,
-				"head_length": 5,
-				"shoulder_y_offset": 2,
+				"body_width": 21,
+				"body_height": 12,
+				"head_width": 13,
+				"head_length": 12,
+				"shoulder_y_offset": 4,
 				"leg_length": 3,
 				"leg_width": 1,
 				"leg_spacing": 3
@@ -1722,8 +1840,15 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR"],
-					"female": ["FULL", "POMPADOUR", "PIGTAILS"]
+					"male": [
+						"FULL",
+						"POMPADOUR"
+					],
+					"female": [
+						"FULL",
+						"POMPADOUR",
+						"PIGTAILS"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1778,11 +1903,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 16,
-				"body_height": 14,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 55,
+				"body_height": 33,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1799,7 +1924,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1853,11 +1980,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -1878,8 +2005,16 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "COMBOVER"],
-					"female": ["FULL", "POMPADOUR", "LONG"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"COMBOVER"
+					],
+					"female": [
+						"FULL",
+						"POMPADOUR",
+						"LONG"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -1933,11 +2068,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 18,
-				"body_height": 16,
-				"head_width": 12,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 62,
+				"body_height": 37,
+				"head_width": 31,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 10,
 				"leg_width": 4,
 				"leg_spacing": 7
@@ -1954,7 +2089,9 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2012,11 +2149,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 18,
-				"body_height": 16,
-				"head_width": 14,
-				"head_length": 12,
-				"shoulder_y_offset": 5,
+				"body_width": 62,
+				"body_height": 37,
+				"head_width": 36,
+				"head_length": 29,
+				"shoulder_y_offset": 10,
 				"leg_length": 12,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -2051,10 +2188,19 @@
 				],
 				"blood_color": "#8B0000",
 				"head_shape": "HUMANOID",
-				"head_features": ["elf_ears"],
+				"head_features": [
+					"elf_ears"
+				],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR"],
-					"female": ["FULL", "LONG", "POMPADOUR"]
+					"male": [
+						"FULL",
+						"POMPADOUR"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"POMPADOUR"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2117,11 +2263,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 18,
-				"body_height": 16,
-				"head_width": 14,
-				"head_length": 12,
-				"shoulder_y_offset": 5,
+				"body_width": 62,
+				"body_height": 37,
+				"head_width": 36,
+				"head_length": 29,
+				"shoulder_y_offset": 10,
 				"leg_length": 12,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -2140,10 +2286,21 @@
 				],
 				"blood_color": "#4A0080",
 				"head_shape": "HUMANOID",
-				"head_features": ["elf_ears"],
+				"head_features": [
+					"elf_ears"
+				],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "NONE"],
-					"female": ["FULL", "LONG", "POMPADOUR", "NONE"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"NONE"
+					],
+					"female": [
+						"FULL",
+						"LONG",
+						"POMPADOUR",
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2204,11 +2361,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -2228,8 +2385,16 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["FULL", "POMPADOUR", "COMBOVER"],
-					"female": ["FULL", "POMPADOUR", "LONG"]
+					"male": [
+						"FULL",
+						"POMPADOUR",
+						"COMBOVER"
+					],
+					"female": [
+						"FULL",
+						"POMPADOUR",
+						"LONG"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2284,11 +2449,11 @@
 			"size": "Large",
 			"body": {
 				"body_size_mod": 1.5,
-				"body_width": 24,
-				"body_height": 22,
-				"head_width": 14,
-				"head_length": 12,
-				"shoulder_y_offset": 8,
+				"body_width": 82,
+				"body_height": 51,
+				"head_width": 36,
+				"head_length": 29,
+				"shoulder_y_offset": 16,
 				"leg_length": 14,
 				"leg_width": 5,
 				"leg_spacing": 12
@@ -2308,8 +2473,14 @@
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["NONE", "MOHAWK"],
-					"female": ["NONE", "MOHAWK"]
+					"male": [
+						"NONE",
+						"MOHAWK"
+					],
+					"female": [
+						"NONE",
+						"MOHAWK"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2359,16 +2530,16 @@
 			"body": {
 				"body_type": "quadruped",
 				"body_size_mod": 0.9,
-				"body_width": 12,
-				"body_height": 10,
-				"body_length": 28,
-				"head_width": 9,
-				"head_length": 11,
-				"shoulder_y_offset": -10,
+				"body_width": 41,
+				"body_height": 23,
+				"body_length": 65,
+				"head_width": 23,
+				"head_length": 26,
+				"shoulder_y_offset": -20,
 				"leg_length": 8,
 				"leg_width": 2,
 				"leg_spacing": 5,
-				"tail_length": 18,
+				"tail_length": 36,
 				"has_tail": true,
 				"has_arms": false
 			},
@@ -2386,7 +2557,9 @@
 			},
 			"appearance": {
 				"head_shape": "CANINE",
-				"head_features": ["animal_ears"],
+				"head_features": [
+					"animal_ears"
+				],
 				"skin_colors": [
 					"#808080",
 					"#A0A0A0",
@@ -2396,7 +2569,9 @@
 				"hair_colors": [],
 				"blood_color": "#8B0000",
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2442,16 +2617,16 @@
 			"body": {
 				"body_type": "quadruped",
 				"body_size_mod": 1.4,
-				"body_width": 18,
-				"body_height": 14,
-				"body_length": 34,
-				"head_width": 13,
-				"head_length": 12,
-				"shoulder_y_offset": -12,
+				"body_width": 62,
+				"body_height": 33,
+				"body_length": 79,
+				"head_width": 33,
+				"head_length": 29,
+				"shoulder_y_offset": -24,
 				"leg_length": 8,
 				"leg_width": 4,
 				"leg_spacing": 7,
-				"tail_length": 6,
+				"tail_length": 12,
 				"has_tail": true,
 				"has_arms": false
 			},
@@ -2469,7 +2644,9 @@
 			},
 			"appearance": {
 				"head_shape": "CANINE",
-				"head_features": ["round_ears"],
+				"head_features": [
+					"round_ears"
+				],
 				"skin_colors": [
 					"#4A3728",
 					"#2F1F14",
@@ -2479,7 +2656,9 @@
 				"hair_colors": [],
 				"blood_color": "#8B0000",
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2525,16 +2704,16 @@
 			"body": {
 				"body_type": "quadruped",
 				"body_size_mod": 1.2,
-				"body_width": 14,
-				"body_height": 12,
-				"body_length": 32,
-				"head_width": 8,
-				"head_length": 14,
-				"shoulder_y_offset": -12,
+				"body_width": 48,
+				"body_height": 28,
+				"body_length": 75,
+				"head_width": 20,
+				"head_length": 34,
+				"shoulder_y_offset": -24,
 				"leg_length": 12,
 				"leg_width": 2,
 				"leg_spacing": 5,
-				"tail_length": 22,
+				"tail_length": 44,
 				"has_tail": true,
 				"has_arms": false
 			},
@@ -2552,7 +2731,9 @@
 			},
 			"appearance": {
 				"head_shape": "EQUINE",
-				"head_features": ["horse_ears"],
+				"head_features": [
+					"horse_ears"
+				],
 				"skin_colors": [
 					"#8B7355",
 					"#4A3728",
@@ -2566,7 +2747,9 @@
 				],
 				"blood_color": "#8B0000",
 				"hair_styles": {
-					"any": ["MANE"]
+					"any": [
+						"MANE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2612,22 +2795,24 @@
 			"body": {
 				"body_type": "quadruped",
 				"body_size_mod": 0.5,
-				"body_width": 8,
-				"body_height": 7,
-				"body_length": 18,
-				"head_width": 7,
-				"head_length": 8,
-				"shoulder_y_offset": -6,
+				"body_width": 27,
+				"body_height": 16,
+				"body_length": 42,
+				"head_width": 18,
+				"head_length": 19,
+				"shoulder_y_offset": -12,
 				"leg_length": 5,
 				"leg_width": 1,
 				"leg_spacing": 3,
-				"tail_length": 20,
+				"tail_length": 40,
 				"has_tail": true,
 				"has_arms": false
 			},
 			"appearance": {
 				"head_shape": "CANINE",
-				"head_features": ["round_ears"],
+				"head_features": [
+					"round_ears"
+				],
 				"skin_colors": [
 					"#808080",
 					"#696969",
@@ -2637,7 +2822,9 @@
 				"hair_colors": [],
 				"blood_color": "#8B0000",
 				"hair_styles": {
-					"any": ["NONE"]
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2658,7 +2845,9 @@
 			"icon": "Assets/Icons/Grimalkin.png",
 			"description": "Feline humanoids with retractable claws and an unnerving talent for moving without sound. Grimalkin are lithe and quick, preferring ambush and sudden violence to prolonged engagement. Their vertical-slit pupils see well in low light, and their padded feet leave almost no trace on any surface.",
 			"cost": 1,
-			"features": ["pounce"],
+			"features": [
+				"pounce"
+			],
 			"ability_score_increases": {
 				"Dex": 15,
 				"Str": 5
@@ -2684,43 +2873,67 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 0.9,
-				"body_width": 14,
-				"body_height": 14,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 4,
+				"body_width": 48,
+				"body_height": 33,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 8,
 				"leg_length": 10,
 				"leg_width": 3,
 				"leg_spacing": 6,
 				"has_tail": true,
-				"tail_length": 12
+				"tail_length": 24
 			},
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Male Grimalkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Grimalkin/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Grimalkin/upper_arm.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
 					"forearm": "res://Characters/Assets/Body Parts/Male Grimalkin/forearm.png",
 					"leg": "res://Characters/Assets/Body Parts/Male Grimalkin/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Female Grimalkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Grimalkin/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Grimalkin/upper_arm.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
 					"forearm": "res://Characters/Assets/Body Parts/Female Grimalkin/forearm.png",
 					"leg": "res://Characters/Assets/Body Parts/Female Grimalkin/leg.png"
 				}
 			},
 			"appearance": {
-				"skin_colors": ["#C8A882", "#A0785A", "#8B6914", "#6B4423", "#3B3B3B", "#1A1A1A"],
-				"hair_colors": ["#C8A882", "#A0785A", "#3B3B3B", "#1A1A1A", "#F5F5DC"],
+				"skin_colors": [
+					"#C8A882",
+					"#A0785A",
+					"#8B6914",
+					"#6B4423",
+					"#3B3B3B",
+					"#1A1A1A"
+				],
+				"hair_colors": [
+					"#C8A882",
+					"#A0785A",
+					"#3B3B3B",
+					"#1A1A1A",
+					"#F5F5DC"
+				],
 				"blood_color": "#CC0000",
 				"head_shape": "HUMANOID",
-				"head_features": ["cat_ears"],
+				"head_features": [
+					"cat_ears"
+				],
 				"hair_styles": {
-					"male": ["NONE", "SHORT"],
-					"female": ["NONE", "SHORT", "LONG"],
-					"any": ["NONE"]
+					"male": [
+						"NONE",
+						"SHORT"
+					],
+					"female": [
+						"NONE",
+						"SHORT",
+						"LONG"
+					],
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2732,7 +2945,9 @@
 			"speed_modifier": 5,
 			"arm_length_bonus": 0,
 			"walking_noise": 0.3,
-			"active_abilities": ["pounce"],
+			"active_abilities": [
+				"pounce"
+			],
 			"passive_conditions": []
 		},
 		{
@@ -2741,7 +2956,9 @@
 			"icon": "Assets/Icons/Goblin.png",
 			"description": "Small, green-skinned scavengers with an instinct for trouble and a knack for improvised machinery. Goblins are cunning, cowardly, and endlessly inventive, preferring traps, ambushes, and underhanded tactics to a fair fight. Their societies are chaotic hierarchies where the cleverest rise to the top, usually by sabotaging everyone else.",
 			"cost": 1,
-			"features": ["thrill_of_sin"],
+			"features": [
+				"thrill_of_sin"
+			],
 			"ability_score_increases": {
 				"Dex": 10,
 				"Int": 5,
@@ -2770,25 +2987,47 @@
 			"size": "Small",
 			"body": {
 				"body_size_mod": 0.7,
-				"body_width": 10,
-				"body_height": 9,
-				"head_width": 12,
-				"head_length": 10,
-				"shoulder_y_offset": 4,
+				"body_width": 34,
+				"body_height": 21,
+				"head_width": 31,
+				"head_length": 24,
+				"shoulder_y_offset": 8,
 				"leg_length": 5,
 				"leg_width": 2,
 				"leg_spacing": 5
 			},
 			"appearance": {
-				"skin_colors": ["#6B8E23", "#556B2F", "#8B9A46", "#4A6B2A", "#3D5A1E"],
-				"hair_colors": ["#1A1A1A", "#2F2F2F", "#4A3728"],
+				"skin_colors": [
+					"#6B8E23",
+					"#556B2F",
+					"#8B9A46",
+					"#4A6B2A",
+					"#3D5A1E"
+				],
+				"hair_colors": [
+					"#1A1A1A",
+					"#2F2F2F",
+					"#4A3728"
+				],
 				"blood_color": "#8B0000",
 				"head_shape": "HUMANOID",
-				"head_features": ["pointed_ears"],
+				"head_features": [
+					"pointed_ears"
+				],
 				"hair_styles": {
-					"male": ["NONE", "MOHAWK", "SHORT"],
-					"female": ["NONE", "SHORT", "MOHAWK"],
-					"any": ["NONE"]
+					"male": [
+						"NONE",
+						"MOHAWK",
+						"SHORT"
+					],
+					"female": [
+						"NONE",
+						"SHORT",
+						"MOHAWK"
+					],
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2801,7 +3040,9 @@
 			"arm_length_bonus": 0,
 			"walking_noise": 0.8,
 			"active_abilities": [],
-			"passive_conditions": ["thrill_of_sin"]
+			"passive_conditions": [
+				"thrill_of_sin"
+			]
 		},
 		{
 			"id": "human_undead",
@@ -2809,7 +3050,9 @@
 			"icon": "Assets/Icons/Human_Undead.png",
 			"description": "A shambling corpse animated by dark magic or sheer spite. Whatever spark of humanity once lived behind these eyes is long gone, replaced by a hollow hunger and the will of whoever raised them. They feel no pain, know no fear, and carry disease in their rotting flesh.",
 			"cost": 0,
-			"features": ["undead_resilience"],
+			"features": [
+				"undead_resilience"
+			],
 			"ability_score_increases": {
 				"Str": 10,
 				"Con": 10,
@@ -2840,11 +3083,11 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 14,
-				"body_height": 12,
-				"head_width": 11,
-				"head_length": 10,
-				"shoulder_y_offset": 5,
+				"body_width": 48,
+				"body_height": 28,
+				"head_width": 28,
+				"head_length": 24,
+				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
@@ -2852,29 +3095,47 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
 				}
 			},
 			"appearance": {
-				"skin_colors": ["#7A7A6E", "#6B6B5E", "#5C5C50", "#8A8A7A", "#4A4A40"],
-				"hair_colors": ["#3B3B3B", "#2A2A2A", "#4A4A4A"],
+				"skin_colors": [
+					"#7A7A6E",
+					"#6B6B5E",
+					"#5C5C50",
+					"#8A8A7A",
+					"#4A4A40"
+				],
+				"hair_colors": [
+					"#3B3B3B",
+					"#2A2A2A",
+					"#4A4A4A"
+				],
 				"blood_color": "#2F2F1F",
 				"head_shape": "HUMANOID",
 				"head_features": [],
 				"hair_styles": {
-					"male": ["NONE", "SHORT"],
-					"female": ["NONE", "SHORT"],
-					"any": ["NONE"]
+					"male": [
+						"NONE",
+						"SHORT"
+					],
+					"female": [
+						"NONE",
+						"SHORT"
+					],
+					"any": [
+						"NONE"
+					]
 				}
 			},
 			"stat_overrides": {
@@ -2887,7 +3148,9 @@
 			"arm_length_bonus": 0,
 			"walking_noise": 1.0,
 			"active_abilities": [],
-			"passive_conditions": ["undead_resilience"]
+			"passive_conditions": [
+				"undead_resilience"
+			]
 		}
 	]
 }

@@ -156,6 +156,47 @@ func truncate_after(snap: Dictionary) -> void:
 		return false
 	)
 
+func truncate_before(snap: Dictionary) -> void:
+	"""Remove all waypoints and action nodes before a given path position.
+	The character's current position becomes the new start of the path.
+	snap should be a result from find_nearest_point_on_path()."""
+	var wp_index: int = snap.get("path_index", 0)
+	var t: float = snap.get("t", 0.0)
+	var split_pos: Vector2 = snap.get("position", Vector2.ZERO)
+
+	if wp_index <= 0 and t <= 0.001:
+		return  # Already at the start, nothing to trim
+
+	# Build new waypoint array: split_pos + remaining waypoints after the snap segment
+	var new_waypoints = PackedVector2Array()
+	new_waypoints.append(split_pos)
+	for i in range(wp_index + 1, waypoints.size()):
+		new_waypoints.append(waypoints[i])
+
+	# Adjust action nodes: discard those before the snap, shift indices for the rest
+	var new_action_nodes: Array = []
+	for node in action_nodes:
+		if node.path_index < wp_index:
+			continue  # Before the trim point — discard
+		if node.path_index == wp_index and node.t < t:
+			continue  # On the same segment but before the trim position — discard
+
+		if node.path_index == wp_index:
+			# On the split segment: remap t to [0, 1] within the new first segment
+			if t < 1.0:
+				node.t = (node.t - t) / (1.0 - t)
+			else:
+				node.t = 0.0
+			node.path_index = 0
+		else:
+			node.path_index = node.path_index - wp_index
+
+		new_action_nodes.append(node)
+
+	waypoints = new_waypoints
+	action_nodes = new_action_nodes
+	consumed_waypoint_index = 0
+
 func append_waypoints(new_waypoints: PackedVector2Array) -> void:
 	"""Append waypoints to the end of the current path."""
 	for wp in new_waypoints:

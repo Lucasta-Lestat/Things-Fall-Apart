@@ -146,12 +146,17 @@ func set_sprite_from_path(path: String) -> void:
 func _auto_scale_sprite() -> void:
 	"""Automatically scale sprite to match procedural dimensions.
 	Writes to _calculated_sprite_scale so that the user-facing sprite_scale
-	is preserved as a separate multiplier."""
+	is preserved as a separate multiplier.
+	Handles both vertical sprites (taller than wide) and horizontal sprites
+	(wider than tall) by scaling to the longest dimension and auto-rotating
+	horizontal sprites so they point up (-Y)."""
 	if sprite and sprite.texture:
 		var tex_size = sprite.texture.get_size()
-		# Scale to match total_length (sprite is assumed vertical)
 		var target_height = total_length
-		var scale_factor = target_height / tex_size.y
+		# Use the longest dimension of the texture for scaling
+		# This handles both vertical and horizontal sprites correctly
+		var max_dim = max(tex_size.x, tex_size.y)
+		var scale_factor = target_height / max_dim
 
 		# Store calculated scale separately from user sprite_scale
 		_calculated_sprite_scale = Vector2(scale_factor, scale_factor)

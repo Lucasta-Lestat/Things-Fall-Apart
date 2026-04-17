@@ -2028,10 +2028,18 @@ func _setup_body_part_sprites() -> void:
 	# Position static parts initially
 	# For bipedals, shift the head sprite back toward the neck area of the torso.
 	# _head_offset is Vector2.ZERO for bipedals, but the torso center is at
-	# shoulder_y_offset — the head needs to sit partway between origin and torso.
+	# shoulder_y_offset — the head needs to sit at the neck, roughly 85% of
+	# the way from origin to torso center. Add an extra push-back proportional
+	# to how much larger the head is than the baseline (24), so races with
+	# larger heads (elves, draconians) don't stick out too far forward.
 	var sprite_head_offset = _head_offset
 	if body_type == BodyType.BIPEDAL:
-		sprite_head_offset = _head_offset + Vector2(0, shoulder_y_offset * 0.4)
+		var baseline_head_length: float = 24.0
+		var head_size_compensation: float = max(0.0, head_length - baseline_head_length) * 0.5
+		sprite_head_offset = _head_offset + Vector2(0, shoulder_y_offset * 0.85 + head_size_compensation)
+	# Quadruped heads: keep the default offset — the push-forward adjustment
+	# separated heads from bodies because the sprite body doesn't actually
+	# extend to its full scaled edge (transparent padding in sprites).
 	body_part_sprites.update_head(sprite_head_offset)
 	body_part_sprites.update_torso(shoulder_y_offset)
 

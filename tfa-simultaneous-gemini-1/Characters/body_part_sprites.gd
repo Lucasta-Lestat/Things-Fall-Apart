@@ -32,6 +32,10 @@ var _leg_length: float = 8.0
 var _arm_segment_lengths: Array[float] = [12.0, 10.0, 6.0]
 var _arm_width: float = 7.0
 
+# Quadruped support
+var _is_quadruped: bool = false
+var _body_length: float = 0.0  # Front-to-back length for quadrupeds
+
 # ===== SETUP =====
 
 func _ready() -> void:
@@ -121,6 +125,9 @@ func auto_scale_sprites(character) -> void:
 	_head_length = character.head_length
 	_body_width = character.body_width
 	_body_height = character.body_height
+	# Quadruped: torso sprite uses body_length (front-to-back) instead of body_height
+	_is_quadruped = character.body_type == 1  # BodyType.QUADRUPED
+	_body_length = character.body_length if "body_length" in character else 0.0
 	# Legs: Globals defaults already include * default_body_scale * body_size_mod
 	_leg_width = character.leg_width
 	_leg_length = character.leg_length
@@ -138,7 +145,13 @@ func auto_scale_sprites(character) -> void:
 
 	# Scale each sprite to its target dimensions
 	_scale_sprite_to_size(head_sprite, _head_width, _head_length)
-	_scale_sprite_to_size(torso_sprite, _body_width, _body_height)
+	if _is_quadruped and _body_length > 0:
+		# Quadruped torso is rotated 90° in update_torso(), so swap axes:
+		# sprite X (becomes Y after rotation) = body_length (front-to-back)
+		# sprite Y (becomes X after rotation) = body_width (left-to-right)
+		_scale_sprite_to_size(torso_sprite, _body_length, _body_width)
+	else:
+		_scale_sprite_to_size(torso_sprite, _body_width, _body_height)
 
 	# Arm segments: width is arm thickness, height is segment length
 	if _arm_segment_lengths.size() >= 3:
@@ -168,9 +181,20 @@ func update_head(head_offset: Vector2) -> void:
 		head_sprite.position = head_offset
 
 func update_torso(shoulder_y_offset: float) -> void:
-	"""Position torso sprite at body center."""
+	"""Position torso sprite at body center.
+	Bipedal: positioned at shoulder_y_offset (horizontal body).
+	Quadruped: positioned at body midpoint, rotated 90° so the sprite
+	(drawn as top-down shoulders view) aligns with the elongated front-to-back body."""
 	if torso_sprite:
-		torso_sprite.position = Vector2(0, shoulder_y_offset)
+		if _is_quadruped and _body_length > 0:
+			# Quadruped body center: midpoint between front (-0.4*bl) and rear (+0.45*bl)
+			var body_center_y = _body_length * 0.025  # (−0.4 + 0.45) / 2
+			torso_sprite.position = Vector2(0, body_center_y)
+			# Rotate 90° so the sprite's width axis aligns with the body's front-to-back axis
+			torso_sprite.rotation = PI / 2
+		else:
+			torso_sprite.position = Vector2(0, shoulder_y_offset)
+			torso_sprite.rotation = 0.0
 
 func update_legs(left_hip: Vector2, left_foot: Vector2, right_hip: Vector2, right_foot: Vector2) -> void:
 	"""Position and rotate leg sprites to match walking animation.
@@ -191,24 +215,16 @@ func update_legs(left_hip: Vector2, left_foot: Vector2, right_hip: Vector2, righ
 
 func update_arms(left_joints: Array[Vector2], right_joints: Array[Vector2]) -> void:
 	"""Position and rotate arm segment sprites to match IK joint positions.
-	joints[0] = shoulder, joints[1] = upper arm end, joints[2] = forearm end, joints[3] = hand"""
-	# Small inward rotation offset for forearms so the hand angles toward the body
-	var forearm_inward_bias: float = 0.12  # radians (~7 degrees)
+	joints[0] = shoulder, joints[1] = elbow, joints[2] = wrist, joints[3] = hand
+	Each segment maps directly to its joint pair — no extensions or bias offsets."""
 
 	if left_joints.size() >= 4:
-		# Extend upper arm slightly past elbow to overlap with forearm and hide gap
-		var left_upper_end = left_joints[1].lerp(left_joints[3], 0.15)
-		_update_arm_segment(left_upper_arm, left_joints[0], left_upper_end)
+		_update_arm_segment(left_upper_arm, left_joints[0], left_joints[1])
 		_update_arm_segment(left_forearm, left_joints[1], left_joints[3])
-		if left_forearm:
-			left_forearm.rotation += forearm_inward_bias  # rotate toward body center
 
 	if right_joints.size() >= 4:
-		var right_upper_end = right_joints[1].lerp(right_joints[3], 0.15)
-		_update_arm_segment(right_upper_arm, right_joints[0], right_upper_end)
+		_update_arm_segment(right_upper_arm, right_joints[0], right_joints[1])
 		_update_arm_segment(right_forearm, right_joints[1], right_joints[3])
-		if right_forearm:
-			right_forearm.rotation -= forearm_inward_bias  # rotate toward body center
 
 func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2) -> void:
 	"""Position an arm segment sprite at the midpoint between two joints, rotated to align."""
@@ -221,12 +237,14 @@ func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2)
 	sprite.position = mid
 	sprite.rotation = angle
 
-	# Dynamically scale length to match actual joint distance
+	# Dynamically scale length to match actual joint distance, with a small
+	# 8% overlap beyond the segment so upper-arm and forearm sprites meet
+	# cleanly at the elbow instead of leaving a visible seam.
 	if sprite.texture:
 		var tex_size = sprite.texture.get_size()
 		var segment_length = start_pos.distance_to(end_pos)
 		if tex_size.y > 0:
-			sprite.scale.y = segment_length / tex_size.y
+			sprite.scale.y = (segment_length * 1.08) / tex_size.y
 
 # ===== COLOR =====
 

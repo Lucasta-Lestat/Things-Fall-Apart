@@ -32,6 +32,9 @@ const DRAG_THRESHOLD := 10.0
 var _action_drag_start: Vector2 = Vector2.ZERO
 var _action_drag_snap: Dictionary = {}
 
+# True when AbilityTargeting is active for the pending action node
+var _targeting_for_node: bool = false
+
 # Preloaded icons for common action types
 var _attack_icon: Texture2D = null
 var _dash_icon: Texture2D = null
@@ -142,8 +145,25 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		state = PathInputState.IDLE
 		return false
 
-	# Cancel with right click or escape
-	if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel"):
+	# --- Sub-state: targeting is active for this node ---
+	if _targeting_for_node:
+		# Escape: cancel targeting, stay in PLACING_ACTION (node still pending)
+		if Input.is_action_just_pressed("ui_cancel"):
+			character.targeting_system.cancel_targeting()
+			_targeting_for_node = false
+			return true
+
+		# Left-click or right-click while targeting: confirm targeting
+		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("right_click"):
+			_confirm_targeting_for_node(mouse_pos)
+			return true
+
+		return false  # Let targeting system update indicator position
+
+	# --- Normal PLACING_ACTION (no targeting active) ---
+
+	# Escape: cancel the pending action node
+	if Input.is_action_just_pressed("ui_cancel"):
 		tactical_path.remove_action_node(pending_action_node)
 		pending_action_node = null
 		state = PathInputState.IDLE
@@ -175,14 +195,14 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		path_drawer.queue_redraw()
 		return true
 
-	# Attack: left click (off the path) assigns attack at mouse position
+	# Right-click: assign off-hand action
+	if Input.is_action_just_pressed("right_click"):
+		_initiate_action_for_node(character.current_off_hand_item, "Off", mouse_pos)
+		return true
+
+	# Left-click (new press, not drag): assign main-hand action
 	if Input.is_action_just_pressed("left_click"):
-		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
-		pending_action_node.action_data = {"target_position": mouse_pos}
-		pending_action_node.icon_texture = _attack_icon
-		pending_action_node = null
-		state = PathInputState.IDLE
-		path_drawer.queue_redraw()
+		_initiate_action_for_node(character.current_main_hand_item, "Main", mouse_pos)
 		return true
 
 	# Dash: dash key assigns dash toward mouse position
@@ -252,10 +272,88 @@ func assign_item_to_pending_node(action_type: int, action_data: Dictionary, icon
 	path_drawer.queue_redraw()
 	return true
 
+func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -> void:
+	"""Inspect the equipped item and either start targeting or assign the action directly."""
+	if pending_action_node == null:
+		return
+
+	if item is AbilityShape:
+		var ability_data = item.get_ability_data()
+		if ability_data.get("requires_targeting", false):
+			# Start targeting UI — stay in PLACING_ACTION, wait for confirm click
+			character.targeting_system.start_targeting(hand, ability_data, mouse_pos)
+			_targeting_for_node = true
+			return
+		else:
+			# Instant ability (self-buffs, etc.) — assign directly
+			pending_action_node.action_type = ActionQueue.ActionType.USE_ABILITY
+			pending_action_node.action_data = {
+				"ability_id": item.ability_id,
+				"target_position": mouse_pos,
+				"needs_targeting": false,
+			}
+			pending_action_node.icon_texture = _attack_icon
+	elif item is WeaponShape:
+		# Weapon attack at mouse position
+		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
+		pending_action_node.action_data = {"target_position": mouse_pos}
+		pending_action_node.icon_texture = _attack_icon
+	else:
+		# Nothing equipped — basic unarmed attack
+		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
+		pending_action_node.action_data = {"target_position": mouse_pos}
+		pending_action_node.icon_texture = _attack_icon
+
+	pending_action_node = null
+	state = PathInputState.IDLE
+	path_drawer.queue_redraw()
+
+func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
+	"""Confirm the active targeting and assign the ability to the pending action node."""
+	if pending_action_node == null:
+		return
+
+	var result = character.targeting_system.confirm_targeting()
+	if result.is_empty():
+		return
+
+	var ability_data = result.get("ability", {})
+	var target_pos = result.get("position", Vector2.ZERO)
+	var ability_id = ability_data.get("id", "")
+
+	pending_action_node.action_type = ActionQueue.ActionType.USE_ABILITY
+	pending_action_node.action_data = {
+		"ability_id": ability_id,
+		"target_position": target_pos,
+		"needs_targeting": false,
+	}
+	pending_action_node.icon_texture = _attack_icon
+
+	# End targeting and create persistent queued indicator (AOE preview)
+	character.targeting_system.end_targeting()
+	var indicator = character.targeting_system.create_queued_indicator(
+		target_pos,
+		result.get("shape"),
+		result.get("radius", 0),
+		result.get("size", Vector2.ZERO),
+		result.get("rotation", 0.0),
+		result.get("caster_position", character.global_position)
+	)
+	if indicator:
+		pending_action_node.action_data["queued_indicator"] = indicator
+
+	_targeting_for_node = false
+	pending_action_node = null
+	state = PathInputState.IDLE
+	path_drawer.queue_redraw()
+
 func is_placing_action() -> bool:
 	return state == PathInputState.PLACING_ACTION
 
 func cancel_path() -> void:
+	if _targeting_for_node:
+		character.targeting_system.cancel_targeting()
+		_targeting_for_node = false
 	state = PathInputState.IDLE
 	path_drawer.is_drawing_path = false
 	path_drawer.is_drawing_rotation = false

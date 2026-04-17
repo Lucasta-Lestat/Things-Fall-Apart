@@ -320,7 +320,7 @@
 				}
 			},
 			"race_weights": {
-				"unded-human": 100,
+				"human_undead": 100
 			},
 			"default_backgrounds": [
 				"plague_survivor"
