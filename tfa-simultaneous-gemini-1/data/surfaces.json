@@ -13,6 +13,18 @@
 			"fluid_consume_rate": 0.05,
 			"vfx_scene": "res://vfx/fire.tscn",
 			"scorch_color": [0.15, 0.12, 0.1, 1.0]
+		},
+		"ice": {
+			"display_name": "Ice",
+			"condition_id": "",
+			"condition_stacks": 0,
+			"apply_interval": 1.0,
+			"base_duration": -1,
+			"vfx_scene": "res://vfx/ice_surface.tscn",
+			"frozen_fluid_type": "",
+			"frozen_fluid_amount": 0.0,
+			"causes_sliding": true,
+			"thaw_on_fire": true
 		}
 	}
 }
