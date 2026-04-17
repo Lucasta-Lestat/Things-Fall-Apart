@@ -177,6 +177,11 @@ var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
 var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 
+# Ice sliding state
+var is_ice_sliding: bool = false
+var _ice_slide_direction: Vector2 = Vector2.ZERO
+var _ice_slide_speed: float = 0.0
+
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
 var _flee_timer: float = 0.0
@@ -2496,7 +2501,12 @@ func _update_movement(delta: float) -> void:
 			is_dashing = false
 	if dash_cooldown_timer > 0.0:
 		dash_cooldown_timer -= delta
-		
+
+	# --- Ice sliding override ---
+	if is_ice_sliding:
+		_update_ice_slide(delta)
+		return
+
 	# Move toward target if moving
 	if is_moving:
 		var to_target = target_position - global_position
@@ -2505,6 +2515,8 @@ func _update_movement(delta: float) -> void:
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
 			global_position += move_dir * min(move_speed * delta, distance)
+			# Check if we just stepped onto an ice tile
+			_check_ice_entry(move_dir)
 		else:
 			# If the action queue is driving movement, let it handle waypoint
 			# advancement — don't use _nav_waypoints which are for real-time input only
@@ -2521,13 +2533,66 @@ func _update_movement(delta: float) -> void:
 				_nav_index = 0
 				is_moving = false
 				emit_signal("character_reached_target")
-	
+
 	# Apply collision separation
 	if collision_enabled:
 		var separation = get_separation_vector()
 		if separation.length() > 0.1:
 			# Apply separation force (scaled by delta for smooth movement)
 			global_position += separation * min(1.0, delta * 10.0)
+
+func _check_ice_entry(move_dir: Vector2) -> void:
+	"""Check if the character just stepped onto an ice tile and begin sliding."""
+	var current_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+	if game and "surface_manager" in game and game.surface_manager:
+		if game.surface_manager.is_ice_at(current_tile):
+			_begin_ice_slide(move_dir)
+
+func _begin_ice_slide(direction: Vector2) -> void:
+	"""Start sliding on ice in the given direction."""
+	if direction.length() < 0.01:
+		return
+	# Snap direction to cardinal (4-directional) for clean grid-based sliding
+	if abs(direction.x) >= abs(direction.y):
+		_ice_slide_direction = Vector2(sign(direction.x), 0)
+	else:
+		_ice_slide_direction = Vector2(0, sign(direction.y))
+	_ice_slide_speed = move_speed * 1.3  # Slightly faster on ice
+	is_ice_sliding = true
+	# Cancel existing pathfinding — player has lost control
+	_nav_waypoints.clear()
+	_nav_index = 0
+	if action_queue and action_queue.current_action != null:
+		action_queue.clear_queue()
+
+func _update_ice_slide(delta: float) -> void:
+	"""Move the character in a straight line while on ice. Stops when reaching
+	a non-ice tile or hitting a wall."""
+	var step = _ice_slide_direction * _ice_slide_speed * delta
+	var next_pos = global_position + step
+	var next_tile = GridManager.world_to_map(next_pos)
+
+	# Check for walls
+	if GridManager.walls.get(next_tile, true):
+		_end_ice_slide()
+		return
+
+	global_position = next_pos
+
+	# Check if we've left the ice
+	var game = get_tree().current_scene
+	if game and "surface_manager" in game and game.surface_manager:
+		if not game.surface_manager.is_ice_at(next_tile):
+			_end_ice_slide()
+
+func _end_ice_slide() -> void:
+	"""Stop ice sliding and resume normal movement control."""
+	is_ice_sliding = false
+	_ice_slide_direction = Vector2.ZERO
+	_ice_slide_speed = 0.0
+	is_moving = false
+	emit_signal("character_reached_target")
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds

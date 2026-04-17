@@ -1,0 +1,54 @@
+{
+	"weather_groups": {
+		"Scarlatti": {
+			"precipitation_table": [
+				{ "type": "clear",      "weight": 50 },
+				{ "type": "overcast",   "weight": 20 },
+				{ "type": "rain",       "weight": 15 },
+				{ "type": "heavy_rain", "weight": 8 },
+				{ "type": "snow",       "weight": 5 },
+				{ "type": "heavy_snow", "weight": 2 }
+			],
+			"wind_speed_range": [0, 100],
+			"wind_direction_angles": [0, 45, 90, 135, 180, 225, 270, 315]
+		}
+	},
+	"precipitation_types": {
+		"clear": {
+			"display_name": "Clear",
+			"vfx": "",
+			"fog_density_modifier": 0.0,
+			"visibility_modifier": 1.0
+		},
+		"overcast": {
+			"display_name": "Overcast",
+			"vfx": "",
+			"fog_density_modifier": 0.1,
+			"visibility_modifier": 0.9
+		},
+		"rain": {
+			"display_name": "Rain",
+			"vfx": "rain",
+			"fog_density_modifier": 0.15,
+			"visibility_modifier": 0.75
+		},
+		"heavy_rain": {
+			"display_name": "Heavy Rain",
+			"vfx": "heavy_rain",
+			"fog_density_modifier": 0.3,
+			"visibility_modifier": 0.5
+		},
+		"snow": {
+			"display_name": "Snow",
+			"vfx": "snow",
+			"fog_density_modifier": 0.1,
+			"visibility_modifier": 0.7
+		},
+		"heavy_snow": {
+			"display_name": "Heavy Snow",
+			"vfx": "heavy_snow",
+			"fog_density_modifier": 0.25,
+			"visibility_modifier": 0.45
+		}
+	}
+}

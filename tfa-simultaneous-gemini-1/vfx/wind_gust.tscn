@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://vfx/shaders/wind_gust.gdshader" id="1_wind"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wind"]
+shader = ExtResource("1_wind")
+shader_parameter/line_color = Color(0.9, 0.9, 0.95, 0.25)
+shader_parameter/wind_angle = 0.0
+shader_parameter/gust_speed = 3.0
+shader_parameter/line_density = 0.3
+shader_parameter/intensity = 1.0
+
+[node name="WindGust" type="CanvasLayer"]
+layer = 5
+
+[node name="ColorRect" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_wind")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

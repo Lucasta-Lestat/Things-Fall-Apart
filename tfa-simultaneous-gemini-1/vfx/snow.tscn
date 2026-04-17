@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://vfx/shaders/snow.gdshader" id="1_snow"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_snow"]
+shader = ExtResource("1_snow")
+shader_parameter/snow_color = Color(0.95, 0.95, 1.0, 0.5)
+shader_parameter/density = 0.35
+shader_parameter/speed = 0.6
+shader_parameter/sway_amount = 0.8
+shader_parameter/sway_speed = 1.5
+shader_parameter/wind_offset = 0.0
+shader_parameter/intensity = 1.0
+
+[node name="Snow" type="CanvasLayer"]
+layer = 5
+
+[node name="ColorRect" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_snow")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

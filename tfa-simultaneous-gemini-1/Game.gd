@@ -10,6 +10,9 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
 
+var weather_vfx_controller: Node = null
+var weather_debug_window: CanvasLayer = null
+
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
 @export var spawn_container: Node2D  # Where to spawn characters
@@ -81,6 +84,24 @@ func _ready() -> void:
 		Vector2(600, 800)             # world position
 	)
 	_create_selection_indicator(Globals.default_body_width+5)
+
+	# Weather VFX controller
+	var WeatherVFXScript = preload("res://vfx/WeatherVFXController.gd")
+	weather_vfx_controller = Node.new()
+	weather_vfx_controller.set_script(WeatherVFXScript)
+	weather_vfx_controller.name = "WeatherVFXController"
+	add_child(weather_vfx_controller)
+
+	# Weather debug window (F9)
+	var WeatherDebugScript = preload("res://UI/WeatherDebugWindow.gd")
+	weather_debug_window = CanvasLayer.new()
+	weather_debug_window.set_script(WeatherDebugScript)
+	weather_debug_window.name = "WeatherDebugWindow"
+	add_child(weather_debug_window)
+
+	# React to weather changes (snow → freeze, rain → puddles)
+	WeatherManager.weather_changed.connect(_on_weather_changed)
+
 	load_map(current_map_id)
  
 func save_party_state() -> void:
@@ -205,9 +226,10 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	map_loader.structure_mask_path = images.get("structures_mask", "")
 	map_loader.generate_map()
  
-	# 3. Set up ambient effects (fog, music)
+	# 3. Set up ambient effects (fog, music, weather)
 	setup_map_fogs(current_map_data)
 	setup_map_music(current_map_data)
+	setup_map_weather(current_map_data)
 
 	# 4. Determine which spawn key to use based on where we came from
 	var spawn_key: String = "default"
@@ -265,6 +287,10 @@ func _unload_current_map() -> void:
 		surface_manager.clear_all_surfaces()
 		surface_manager.invalidate_floor_cache()
 
+	# Clear weather VFX
+	if weather_vfx_controller:
+		weather_vfx_controller.clear_all()
+
 	current_map_id = ""
 	current_map_data = {}
 
@@ -285,6 +311,62 @@ func setup_map_music(map_data: Dictionary) -> void:
 		MusicManager.play(track)
 	else:
 		MusicManager.stop()
+
+func setup_map_weather(map_data: Dictionary) -> void:
+	var weather_group: String = map_data.get("weather_group", "")
+	if weather_vfx_controller:
+		if weather_group.is_empty():
+			weather_vfx_controller.clear_all()
+		else:
+			weather_vfx_controller.setup_for_map(weather_group)
+	if weather_debug_window and weather_debug_window.has_method("set_weather_group"):
+		weather_debug_window.set_weather_group(weather_group)
+	# Apply initial weather effects to fluids
+	if not weather_group.is_empty():
+		var weather = WeatherManager.get_weather(weather_group)
+		if not weather.is_empty():
+			_apply_weather_fluid_effects(weather)
+
+func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
+	var map_group = current_map_data.get("weather_group", "")
+	if group != map_group or map_group.is_empty():
+		return
+	_apply_weather_fluid_effects(weather_state)
+
+func _apply_weather_fluid_effects(weather: Dictionary) -> void:
+	var precip = weather.get("precipitation", "clear")
+	match precip:
+		"snow", "heavy_snow":
+			# Freeze all existing fluids
+			if surface_manager:
+				surface_manager.try_freeze_all_fluids()
+		"rain", "heavy_rain":
+			# Spawn random water puddles across walkable tiles
+			_spawn_rain_puddles(precip)
+
+func _spawn_rain_puddles(precip_type: String) -> void:
+	if not fluid_manager:
+		return
+	var puddle_count: int = 5 if precip_type == "rain" else 12
+	var amount: float = 0.3 if precip_type == "rain" else 0.6
+	var placed := 0
+	var attempts := 0
+	var max_attempts := puddle_count * 10
+
+	while placed < puddle_count and attempts < max_attempts:
+		attempts += 1
+		var rx = randi() % (GridManager.map_rect.size.x)
+		var ry = randi() % (GridManager.map_rect.size.y)
+		var tile = Vector2i(rx + GridManager.map_rect.position.x, ry + GridManager.map_rect.position.y)
+		# Only on walkable, non-wall, non-occupied tiles
+		if GridManager.walls.get(tile, true):
+			continue
+		if surface_manager and surface_manager.has_surface_at(tile):
+			continue
+		if fluid_manager.get_fluid_type_at(tile) != "":
+			continue
+		fluid_manager.register_fluid(tile, "water", amount)
+		placed += 1
 
 # ---------------------------------------------------------------------------
 # Party spawning
