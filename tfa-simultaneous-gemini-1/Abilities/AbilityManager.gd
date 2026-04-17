@@ -454,3 +454,38 @@ func save_cooldowns() -> Dictionary:
 ## Load cooldowns from save
 func load_cooldowns(data: Dictionary) -> void:
 	cooldowns = data.duplicate()
+
+
+## Check if any active conditions should gain stacks based on the ability's traits.
+## Called after a successful ability cast. Conditions with on_action_trait_stack
+## gain +1 stack when ALL required_traits are present in the ability's traits dict.
+func _check_action_trait_stacking(ability: Ability) -> void:
+	if not ability or ability.traits.is_empty():
+		return
+
+	var cond_mgr = _get_condition_manager()
+	if not cond_mgr:
+		return
+
+	for cond_id in cond_mgr.conditions:
+		var instance: ConditionInstance = cond_mgr.conditions[cond_id]
+		if not instance.is_active():
+			continue
+
+		var stack_config: Dictionary = instance.condition.on_action_trait_stack
+		if stack_config.is_empty():
+			continue
+
+		var required: Array = stack_config.get("required_traits", [])
+		if required.is_empty():
+			continue
+
+		# All required traits must be present on the ability
+		var all_match := true
+		for trait_name in required:
+			if trait_name not in ability.traits:
+				all_match = false
+				break
+
+		if all_match:
+			cond_mgr.apply_condition(cond_id, null, 1, -1.0)

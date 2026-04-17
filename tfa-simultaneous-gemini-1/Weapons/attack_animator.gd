@@ -204,11 +204,7 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	# Reset dynamics for fresh attack
 	_reset_dynamics()
 
-	var dex: float = 10
 	var weight: float = 4.0
-
-	if "dexterity" in character:
-		dex = character.dexterity
 
 	# Use passed weapon reference, falling back to character hand items
 	var weapon = weapon_ref
@@ -225,7 +221,7 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	is_two_handed_attack = weapon != null and weapon is WeaponShape and weapon.is_two_handed()
 
 	weight = max(0.1, weight)
-	var speed_multiplier = clamp((dex / 100.0) / (weight / 4.0), 0.4, 3.0)
+	var speed_multiplier = clamp((character.dex / 100.0) / (weight / 4.0), 0.4, 3.0)
 	current_rotation_intensity = clamp(weight / 4.5, 0.4, 1.4)
 
 	# Adjust dynamics based on weapon weight (heavier = slower response, more momentum)

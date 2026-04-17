@@ -308,6 +308,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Half-Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Half-Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Half-Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Half-Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Half-Elf/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Half-Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Half-Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Half-Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Half-Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Half-Elf/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#FAEBD7",
@@ -637,6 +653,22 @@
 				"leg_length": 6,
 				"leg_width": 2,
 				"leg_spacing": 5
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Kobold/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Kobold/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Kobold/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Kobold/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Kobold/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Kobold/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Kobold/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Kobold/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Kobold/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Kobold/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [
@@ -1072,6 +1104,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Draconian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Draconian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Draconian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Draconian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Draconian/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Draconian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Draconian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Draconian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Draconian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Draconian/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#8B0000",
@@ -1234,6 +1282,22 @@
 				"leg_length": 8,
 				"leg_width": 3,
 				"leg_spacing": 7
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [
@@ -1469,6 +1533,22 @@
 				"tail_length": 14,
 				"has_tail": true,
 				"has_arms": true
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [
@@ -2292,6 +2372,18 @@
 				"has_tail": true,
 				"has_arms": false
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Wolf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Wolf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
+				}
+			},
 			"appearance": {
 				"head_shape": "CANINE",
 				"head_features": ["animal_ears"],
@@ -2363,6 +2455,18 @@
 				"has_tail": true,
 				"has_arms": false
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Bear/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Bear/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
+				}
+			},
 			"appearance": {
 				"head_shape": "CANINE",
 				"head_features": ["round_ears"],
@@ -2433,6 +2537,18 @@
 				"tail_length": 22,
 				"has_tail": true,
 				"has_arms": false
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Horse/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Horse/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+				}
 			},
 			"appearance": {
 				"head_shape": "EQUINE",
@@ -2618,6 +2734,160 @@
 			"walking_noise": 0.3,
 			"active_abilities": ["pounce"],
 			"passive_conditions": []
+		},
+		{
+			"id": "goblin",
+			"name": "Goblin",
+			"icon": "Assets/Icons/Goblin.png",
+			"description": "Small, green-skinned scavengers with an instinct for trouble and a knack for improvised machinery. Goblins are cunning, cowardly, and endlessly inventive, preferring traps, ambushes, and underhanded tactics to a fair fight. Their societies are chaotic hierarchies where the cleverest rise to the top, usually by sabotaging everyone else.",
+			"cost": 1,
+			"features": ["thrill_of_sin"],
+			"ability_score_increases": {
+				"Dex": 10,
+				"Int": 5,
+				"Str": -10,
+				"Con": -5
+			},
+			"traits": {
+				"goblinoid": 3,
+				"technological": 1,
+				"cowardly": 1
+			},
+			"creature_type": "Humanoid",
+			"age": {
+				"base": 8,
+				"middle": 25,
+				"old": 40
+			},
+			"height": {
+				"male": 95,
+				"female": 88
+			},
+			"weight": {
+				"male": 38,
+				"female": 33
+			},
+			"size": "Small",
+			"body": {
+				"body_size_mod": 0.7,
+				"body_width": 10,
+				"body_height": 9,
+				"head_width": 12,
+				"head_length": 10,
+				"shoulder_y_offset": 4,
+				"leg_length": 5,
+				"leg_width": 2,
+				"leg_spacing": 5
+			},
+			"appearance": {
+				"skin_colors": ["#6B8E23", "#556B2F", "#8B9A46", "#4A6B2A", "#3D5A1E"],
+				"hair_colors": ["#1A1A1A", "#2F2F2F", "#4A3728"],
+				"blood_color": "#8B0000",
+				"head_shape": "HUMANOID",
+				"head_features": ["pointed_ears"],
+				"hair_styles": {
+					"male": ["NONE", "MOHAWK", "SHORT"],
+					"female": ["NONE", "SHORT", "MOHAWK"],
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 5,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": 0,
+			"arm_length_bonus": 0,
+			"walking_noise": 0.8,
+			"active_abilities": [],
+			"passive_conditions": ["thrill_of_sin"]
+		},
+		{
+			"id": "human_undead",
+			"name": "Human Undead",
+			"icon": "Assets/Icons/Human_Undead.png",
+			"description": "A shambling corpse animated by dark magic or sheer spite. Whatever spark of humanity once lived behind these eyes is long gone, replaced by a hollow hunger and the will of whoever raised them. They feel no pain, know no fear, and carry disease in their rotting flesh.",
+			"cost": 0,
+			"features": ["undead_resilience"],
+			"ability_score_increases": {
+				"Str": 10,
+				"Con": 10,
+				"Dex": -15,
+				"Int": -30,
+				"Cha": -30,
+				"Wil": -20
+			},
+			"traits": {
+				"mindless": 4,
+				"undead": 1,
+				"occult": 1
+			},
+			"creature_type": "Undead",
+			"age": {
+				"base": 0,
+				"middle": 0,
+				"old": 0
+			},
+			"height": {
+				"male": 170,
+				"female": 160
+			},
+			"weight": {
+				"male": 75,
+				"female": 63
+			},
+			"size": "Medium",
+			"body": {
+				"body_size_mod": 1.0,
+				"body_width": 14,
+				"body_height": 12,
+				"head_width": 11,
+				"head_length": 10,
+				"shoulder_y_offset": 5,
+				"leg_length": 8,
+				"leg_width": 3,
+				"leg_spacing": 7
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+				}
+			},
+			"appearance": {
+				"skin_colors": ["#7A7A6E", "#6B6B5E", "#5C5C50", "#8A8A7A", "#4A4A40"],
+				"hair_colors": ["#3B3B3B", "#2A2A2A", "#4A4A4A"],
+				"blood_color": "#2F2F1F",
+				"head_shape": "HUMANOID",
+				"head_features": [],
+				"hair_styles": {
+					"male": ["NONE", "SHORT"],
+					"female": ["NONE", "SHORT"],
+					"any": ["NONE"]
+				}
+			},
+			"stat_overrides": {
+				"crit_threshold": 5,
+				"crit_fail_threshold": 96,
+				"mp_regen_amount": 0,
+				"mp_regen_interval": 0.5
+			},
+			"speed_modifier": -10,
+			"arm_length_bonus": 0,
+			"walking_noise": 1.0,
+			"active_abilities": [],
+			"passive_conditions": ["undead_resilience"]
 		}
 	]
 }

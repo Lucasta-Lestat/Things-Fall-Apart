@@ -448,6 +448,11 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		menu.add_item(options[i], i)
 	menu.id_pressed.connect(_on_item_menu_selected.bind(character, item_index, item_data, options))
 
+	# Block game-world input while popup is open
+	if game_node:
+		game_node.context_menu_open = true
+	menu.popup_hide.connect(func(): game_node.call_deferred("set", "context_menu_open", false))
+
 	add_child(menu)
 	menu.popup(Rect2i(
 		Vector2i(slot.get_screen_position() + Vector2(slot.size.x, 0)),

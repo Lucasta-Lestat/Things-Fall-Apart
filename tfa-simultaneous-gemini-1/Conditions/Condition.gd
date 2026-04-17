@@ -51,6 +51,11 @@ extends Resource
 ## Conditions this condition transforms into under certain circumstances
 @export var transforms_into: Dictionary = {}  # {condition_id: {trigger: "condition", value: "..."}}
 
+## When non-empty, this condition gains +1 stack each time the bearer uses an
+## ability whose traits contain ALL of the listed required_traits.
+## Format: {"required_traits": ["criminal"]}
+@export var on_action_trait_stack: Dictionary = {}
+
 @export var canceled_by_trait: Array = []
 @export var custom_vfx: String = ""
 @export var custom_sfx: String = ""
@@ -69,6 +74,7 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.icon = load(data.get("icon","dummy_icon.png")) ####
 	condition.transforms_into = data.get("transforms_into", {})
 	condition.canceled_by_trait = data.get("canceled_by_trait", []) ####
+	condition.on_action_trait_stack = data.get("on_action_trait_stack", {})
 	condition.custom_vfx = data.get("custom_vfx", "no vfx scene") ####
 	condition.custom_sfx = data.get("custom_sfx", "no sfx scene") ####
 	

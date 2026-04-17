@@ -24,6 +24,7 @@ enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
 
 @export var primary_damage_type = "bludgeoning"
 @export var base_damage: Dictionary = Globals.dmg_0_dict
+@export var weight: float = 1.0
 var raw_data: Dictionary = {}
 
 var _active_visual: Node2D

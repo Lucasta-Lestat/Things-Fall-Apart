@@ -460,7 +460,7 @@ func show_context_menu(target, position: Vector2) -> void:
 		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
-	get_tree().root.add_child(context_menu)
+	$GameUI.add_child(context_menu)
 
 # ---------------------------------------------------------------------------
 # Lighting helpers

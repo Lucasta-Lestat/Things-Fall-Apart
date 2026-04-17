@@ -496,5 +496,44 @@ func get_all_conditions() -> Array:
 		],
 		"triggered_effects": [],
 		"immunities": {}
+	},
+	{
+		"id": "thrill_of_sin",
+		"display_name": "Thrill of Sin",
+		"description": "Luck increases each time a criminal action is taken.",
+		"traits": {"buff": 1, "racial": 1, "passive": 1},
+		"stackable": true,
+		"max_tier": 20,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "luck", "operation": "add", "value": 1}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {},
+		"on_action_trait_stack": {"required_traits": ["criminal"]}
+	},
+	{
+		"id": "undead_resilience",
+		"display_name": "Undead Resilience",
+		"description": "The unliving body is immune to disease.",
+		"traits": {"passive": 1, "racial": 1, "undead": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {"sickened": true, "nauseated": true}
 	}
 ]

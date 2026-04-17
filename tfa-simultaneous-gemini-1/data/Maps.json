@@ -94,6 +94,66 @@
 					"template_id": "centaur_druid",
 					"position": [200, 280],
 					"count": 1
+				},
+				{
+					"template_id": "demon_imp",
+					"position": [150, 50],
+					"count": 1
+				},
+				{
+					"template_id": "draga_centurion",
+					"position": [450, 50],
+					"count": 1
+				},
+				{
+					"template_id": "djargo",
+					"position": [300, 50],
+					"count": 1
+				},
+				{
+					"template_id": "brutus_half_off",
+					"position": [100, 150],
+					"count": 1
+				},
+				{
+					"template_id": "quillath",
+					"position": [200, 150],
+					"count": 1
+				},
+				{
+					"template_id": "stokes_carfire",
+					"position": [300, 300],
+					"count": 1
+				},
+				{
+					"template_id": "goatman_druid",
+					"position": [450, 250],
+					"count": 1
+				},
+				{
+					"template_id": "half_elf_wanderer",
+					"position": [150, 300],
+					"count": 1
+				},
+				{
+					"template_id": "carapacian_hermit",
+					"position": [350, 100],
+					"count": 1
+				},
+				{
+					"template_id": "shambling_zombie",
+					"position": [250, 250],
+					"count": 1
+				},
+				{
+					"template_id": "wild_bear",
+					"position": [450, 350],
+					"count": 1
+				},
+				{
+					"template_id": "stray_horse",
+					"position": [50, 100],
+					"count": 1
 				}
 			],
 			"fluid_spawns": [

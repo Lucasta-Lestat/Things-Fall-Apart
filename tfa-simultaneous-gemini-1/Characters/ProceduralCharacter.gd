@@ -242,6 +242,7 @@ var right_arm_target: Vector2
 @export var will: int = 50
 @export var intelligence: int = 50
 @export var charisma: int = 50
+@export var luck: int = 0
 # --- Add these modifier variables near your other vars ---
 var strength_modifier: float = 0.0
 var constitution_modifier: float = 0.0
@@ -249,6 +250,7 @@ var dexterity_modifier: float = 0.0
 var will_modifier: float = 0.0
 var intelligence_modifier: float = 0.0
 var charisma_modifier: float = 0.0
+var luck_modifier: float = 0.0
 var sight_modifier: float = 0.0
 var hearing_modifier: float = 0.0
 var fov_modifier: float = 0.0
@@ -274,6 +276,9 @@ func effective_intelligence() -> float:
 
 func effective_charisma() -> float:
 	return charisma + charisma_modifier
+
+func effective_luck() -> float:
+	return luck + luck_modifier
 
 func effective_sight() -> float:
 	return sight + sight_modifier
@@ -505,13 +510,18 @@ func _setup_tactical_path() -> void:
 	action_queue.action_completed.connect(_on_tactical_action_completed)
 
 func _on_game_unpaused_convert_path() -> void:
-	# Clear queued ability indicators on unpause (they've served their planning purpose)
-	if targeting_system:
-		targeting_system.clear_all_queued_indicators()
 	if tactical_path == null or tactical_path.is_empty():
 		return
 	if not is_player_controlled:
 		return
+
+	# If the path was being executed (paused mid-execution), trim the consumed portion
+	# so the character continues from their current position instead of restarting.
+	if tactical_path.is_executing:
+		var snap = tactical_path.find_nearest_point_on_path(global_position)
+		if snap.distance < INF:
+			tactical_path.truncate_before(snap)
+
 	# Clear any stale actions from a previous path before queuing the new one
 	action_queue.cancel_all()
 	_nav_waypoints.clear()
@@ -527,6 +537,13 @@ func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 	# by PathDrawer based on character position each frame.
 	if tactical_path == null or not tactical_path.is_executing:
 		return
+
+	# Clean up queued targeting indicator when its ability finishes executing
+	if action.type == ActionQueue.ActionType.USE_ABILITY:
+		var indicator = action.data.get("queued_indicator", null)
+		if indicator and is_instance_valid(indicator) and targeting_system:
+			targeting_system.remove_queued_indicator(indicator)
+
 	if action.type != ActionQueue.ActionType.MOVE:
 		# Remove the first remaining action node (they execute in order)
 		if not tactical_path.action_nodes.is_empty():
@@ -539,12 +556,17 @@ func _check_tactical_path_finished() -> void:
 	if tactical_path == null or not tactical_path.is_executing:
 		return
 	if action_queue.current_action == null and action_queue.get_queue_size() == 0:
+		# Path fully complete — clean up any leftover indicators
+		if targeting_system:
+			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
 
 func _clear_tactical_path_if_executing() -> void:
 	# Called when the player takes manual action that should cancel the path display
 	if tactical_path and tactical_path.is_executing:
+		if targeting_system:
+			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
 
@@ -749,7 +771,8 @@ func _on_stats_recalculated() -> void:
 	will_modifier = condition_manager.calculate_effective_stat(0.0, "will")
 	intelligence_modifier = condition_manager.calculate_effective_stat(0.0, "intelligence")
 	charisma_modifier = condition_manager.calculate_effective_stat(0.0, "charisma")
-	
+	luck_modifier = condition_manager.calculate_effective_stat(0.0, "luck")
+
 	# --- Sensory stats ---
 	sight_modifier = condition_manager.calculate_effective_stat(0.0, "sight")
 	hearing_modifier = condition_manager.calculate_effective_stat(0.0, "hearing")
@@ -1077,6 +1100,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("intelligence"): intelligence = data["intelligence"]
 	if data.has("will"): will = data["will"]
 	if data.has("charisma"): charisma = data["charisma"]
+	if data.has("luck"): luck = data["luck"]
 	# Short forms
 	if data.has("str"): strength = data["str"]
 	if data.has("con"): constitution = data["con"]
@@ -1084,6 +1108,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("int"): intelligence = data["int"]
 	if data.has("wil"): will = data["wil"]
 	if data.has("cha"): charisma = data["cha"]
+	if data.has("lck"): luck = data["lck"]
 	
 	# --- Identity / race ---
 	if data.has("race_id"): race_id = data["race_id"]
@@ -2006,7 +2031,13 @@ func _setup_body_part_sprites() -> void:
 	body_part_sprites.auto_scale_sprites(self)
 
 	# Position static parts initially
-	body_part_sprites.update_head(_head_offset)
+	# For bipedals, shift the head sprite back toward the neck area of the torso.
+	# _head_offset is Vector2.ZERO for bipedals, but the torso center is at
+	# shoulder_y_offset — the head needs to sit partway between origin and torso.
+	var sprite_head_offset = _head_offset
+	if body_type == BodyType.BIPEDAL:
+		sprite_head_offset = _head_offset + Vector2(0, shoulder_y_offset * 0.4)
+	body_part_sprites.update_head(sprite_head_offset)
 	body_part_sprites.update_torso(shoulder_y_offset)
 
 	# Apply skin color tint
@@ -2037,6 +2068,12 @@ func _set_procedural_geometry_visible(is_visible: bool) -> void:
 	if tusk_l: tusk_l.visible = is_visible
 	var tusk_r = get_node_or_null("TuskR")
 	if tusk_r: tusk_r.visible = is_visible
+	# Hide additional hair nodes created by multi-part hair styles
+	# (COMBOVER→HairBack, POMPADOUR→HairBack, BRAIDS→HairBraidR,
+	#  BUN→HairBun, PIGTAILS→HairPigtailL/R, etc.)
+	for child in get_children():
+		if child is Line2D and child.name.begins_with("Hair"):
+			child.visible = is_visible
 
 func set_body_sprites(data: Dictionary) -> void:
 	"""Public API: Set body part sprite data and rebuild visuals."""
@@ -2300,9 +2337,18 @@ func _handle_input() -> void:
 	# Block player input when panicked or frightened — movement is forced
 	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
 		return
-	# Don't process game-world input while a context menu is open
+	# Block game-world clicks when a popup menu is open (PopupMenu lives in
+	# its own Window, invisible to gui_get_hovered_control).
 	if game and game.context_menu_open:
 		return
+	# Block game-world clicks when hovering UI hosted in a CanvasLayer.
+	var _hovered := get_viewport().gui_get_hovered_control()
+	if _hovered != null:
+		var node := _hovered as Node
+		while node != null:
+			if node is CanvasLayer:
+				return
+			node = node.get_parent()
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
@@ -2316,24 +2362,14 @@ func _handle_input() -> void:
 			return  # Path input consumed the event
 
 	# --- Right mouse button - Off hand ---
-	if paused:
-		if Input.is_action_just_pressed("right_click"):
-			current_hand = "Off"
-			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
-	else:
-		if Input.is_action_just_pressed("right_click"):
-			current_hand = "Off"
-			_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
+	if Input.is_action_just_pressed("right_click"):
+		current_hand = "Off"
+		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 
 	# --- Left mouse button - Main hand ---
-	if paused:
-		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
-			current_hand = "Main"
-			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
-	else:
-		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
-			current_hand = "Main"
-			_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
+	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
+		current_hand = "Main"
+		_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 
 	# --- Middle mouse button - Move ---
 	# When paused, middle-click is handled by PathInputHandler (A* path via tactical path system).
@@ -3769,6 +3805,8 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 		targeting_system.clear_all_queued_indicators()
 		# Also clean up any live indicator that was left visible until the ability landed
 		targeting_system.end_targeting()
+	# Check if any conditions should gain stacks based on this ability's traits
+	ability_manager._check_action_trait_stacking(ability)
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
