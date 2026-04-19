@@ -26,8 +26,8 @@ void fragment() {
 		float layer_density = density * (1.0 - layer_f * 0.2);
 		float layer_alpha_scale = 1.0 - layer_f * 0.3;
 
-		// Tile the UV space into cells
-		float cell_size = 0.02 + layer_f * 0.01;
+		// Tile the UV space into cells — small cells for thin rain streaks
+		float cell_size = 0.004 + layer_f * 0.002;
 		vec2 grid = uv / cell_size;
 		grid.y -= TIME * layer_speed;
 
@@ -42,8 +42,8 @@ void fragment() {
 			float x_offset = hash(cell_id * 1.7 + layer_f * 50.0);
 			float dx = abs(cell_uv.x - x_offset);
 
-			// Thin vertical streak
-			float streak = smoothstep(0.015, 0.0, dx);
+			// Very thin vertical streak
+			float streak = smoothstep(0.04, 0.0, dx);
 
 			// Limit the vertical extent of the streak
 			float streak_start = hash(cell_id * 2.3 + layer_f * 30.0);

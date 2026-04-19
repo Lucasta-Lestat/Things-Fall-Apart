@@ -27,7 +27,7 @@ func _ready() -> void:
 	WeatherManager.weather_changed.connect(_on_weather_changed)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F9:
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_F9 or event.physical_keycode == KEY_F9):
 		_visible = !_visible
 		_panel.visible = _visible
 		if _visible:
