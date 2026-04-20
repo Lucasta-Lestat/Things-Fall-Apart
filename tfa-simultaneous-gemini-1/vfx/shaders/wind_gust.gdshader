@@ -1,71 +1,102 @@
 shader_type canvas_item;
 
-uniform vec4 line_color : source_color = vec4(0.9, 0.9, 0.95, 0.3);
+// Cartoon-style wind gust lines: thin streaks with a spiral curl at the end.
+// Each gust appears sporadically in a band, travels in the wind direction,
+// and has a logarithmic-spiral-like curl at the leading tip.
+
+uniform vec4 line_color : source_color = vec4(0.9, 0.9, 0.95, 0.55);
 uniform float wind_angle : hint_range(0.0, 6.283) = 0.0;
 uniform float gust_speed : hint_range(0.5, 10.0) = 3.0;
-uniform float line_density : hint_range(0.0, 1.0) = 0.25;
+uniform float line_density : hint_range(0.0, 1.0) = 0.4;
+uniform float line_thickness : hint_range(0.0005, 0.02) = 0.0025;
+uniform float line_length : hint_range(0.1, 0.8) = 0.45;
+uniform float curl_size : hint_range(0.01, 0.1) = 0.045;
 uniform float intensity : hint_range(0.0, 1.0) = 1.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
-void fragment() {
-	vec2 uv = UV;
+// Distance from point p to a path that starts at origin, travels along +x
+// for a straight segment, then spirals inward (counterclockwise) at the tip.
+float path_sdf(vec2 p, float total_length, float tip_curl) {
+	const int STEPS = 24;
+	float straight_frac = 0.62;
+	float min_d = 1e10;
+	for (int i = 0; i < STEPS; i++) {
+		float t = float(i) / float(STEPS - 1);
+		vec2 pt;
+		if (t < straight_frac) {
+			// Straight segment
+			float st = t / straight_frac;
+			pt = vec2(st * total_length, 0.0);
+		} else {
+			// Spiral curl at tip
+			float ct = (t - straight_frac) / (1.0 - straight_frac);
+			// ~1.6 turns, shrinking radius (log-spiral-ish)
+			float angle = ct * 3.2 * 3.14159;
+			float radius = tip_curl * (1.0 - ct * 0.55);
+			// Spiral center offset perpendicular to line direction (above in y-up-is-neg)
+			vec2 center = vec2(total_length, -tip_curl);
+			// Entry angle so spiral begins tangent to line end
+			float base_angle = 1.5707963;  // pi/2
+			pt = center + vec2(cos(base_angle + angle), sin(base_angle + angle)) * radius;
+		}
+		min_d = min(min_d, length(p - pt));
+	}
+	return min_d;
+}
 
-	// Rotate UV space so gusts travel in wind direction
+void fragment() {
+	// Rotate UV so wind blows along +x in local coords
+	vec2 centered = UV - vec2(0.5);
 	float ca = cos(-wind_angle);
 	float sa = sin(-wind_angle);
-	vec2 ruv = vec2((uv.x - 0.5) * ca - (uv.y - 0.5) * sa, (uv.x - 0.5) * sa + (uv.y - 0.5) * ca) + vec2(0.5);
+	vec2 wuv = vec2(centered.x * ca - centered.y * sa, centered.x * sa + centered.y * ca) + vec2(0.5);
 
 	float alpha = 0.0;
+	float band_count = 7.0;
+	int center_band = int(floor(wuv.y * band_count));
 
-	// Sparse cartoon gust lines across the screen
-	for (int layer = 0; layer < 2; layer++) {
-		float layer_f = float(layer);
-		float band_h = 0.12 + layer_f * 0.05;
-		float speed_mult = gust_speed * (0.8 + layer_f * 0.5);
+	// Check this band and adjacent ones (gusts can extend vertically via curl)
+	for (int offset = -1; offset <= 1; offset++) {
+		int band_int = center_band + offset;
+		float band_id = float(band_int);
+		float band_center_y = (band_id + 0.5) / band_count;
 
-		// Scroll along wind direction
-		vec2 scrolled = ruv;
-		scrolled.x -= TIME * speed_mult * 0.1;
+		// Time slot: each gust has ~1.7s lifespan, staggered per band
+		float slot_speed = 0.58 * gust_speed / 3.0;
+		float time_slot = floor(TIME * slot_speed + band_id * 1.31);
+		float appear_roll = hash(vec2(band_int, time_slot));
 
-		// Divide into horizontal bands (in rotated space)
-		float band_id = floor(scrolled.y / band_h);
-		float band_local_y = fract(scrolled.y / band_h);
+		if (appear_roll >= line_density) continue;
 
-		// Gusts appear sporadically in each band over time
-		float time_slot = floor(TIME * 0.6 + band_id * 0.7 + layer_f * 2.3);
-		float appear_roll = hash(vec2(band_id + layer_f * 97.0, time_slot));
+		// Life cycle within the slot
+		float life_frac = fract(TIME * slot_speed + band_id * 1.31);
+		float life_fade = smoothstep(0.0, 0.12, life_frac) * smoothstep(1.0, 0.85, life_frac);
 
-		if (appear_roll < line_density) {
-			// Life cycle of this gust (0 to 1 over ~1.5s)
-			float life_frac = fract(TIME * 0.6 + band_id * 0.7 + layer_f * 2.3);
-			float life_fade = smoothstep(0.0, 0.2, life_frac) * smoothstep(1.0, 0.7, life_frac);
+		// Gust travels across screen over its life
+		float progress = life_frac;
+		float start_x = -0.25 + progress * 1.4;
 
-			// Line position & length within the band
-			float line_start = hash(vec2(band_id * 1.9, time_slot)) * 0.5;
-			float line_length = 0.15 + hash(vec2(band_id * 2.7, time_slot + 5.0)) * 0.25;
-			float line_end = line_start + line_length;
+		// Small vertical jitter so lines aren't perfectly aligned to band center
+		float y_jitter = (hash(vec2(band_int * 0.37, time_slot + 3.0)) - 0.5) * 0.6 / band_count;
+		float start_y = band_center_y + y_jitter;
 
-			// Scrolled horizontal position for this gust's line
-			float gust_x = scrolled.x + hash(vec2(time_slot, band_id)) * 2.0;
-			float local_x = fract(gust_x);
+		// Per-gust variation
+		float this_length = line_length * (0.75 + hash(vec2(band_int + 7.0, time_slot)) * 0.5);
+		float this_curl = curl_size * (0.8 + hash(vec2(band_int + 13.0, time_slot)) * 0.5);
+		// Alternate curl direction so not all curls go the same way
+		float curl_flip = step(0.5, hash(vec2(band_int + 19.0, time_slot))) * 2.0 - 1.0;
 
-			// Slight sinusoidal curve for cartoon feel
-			float curve = sin((local_x - line_start) / line_length * 3.14159) * 0.03;
-			float y_offset = band_local_y - 0.5 - curve;
+		// Pixel relative to gust origin, in wind-aligned coords
+		vec2 local = wuv - vec2(start_x, start_y);
+		local.y *= curl_flip;
 
-			// Taper: sharp falloff at both ends of the line
-			float taper = smoothstep(line_start, line_start + 0.04, local_x)
-						* smoothstep(line_end, line_end - 0.04, local_x);
+		float d = path_sdf(local, this_length, this_curl);
+		float line = smoothstep(line_thickness, 0.0, d);
 
-			// Thin horizontal line with soft vertical falloff
-			float thickness = 0.12;
-			float vert = smoothstep(thickness, 0.0, abs(y_offset));
-
-			alpha += taper * vert * life_fade * 0.7;
-		}
+		alpha += line * life_fade;
 	}
 
 	alpha = clamp(alpha, 0.0, 1.0) * intensity;

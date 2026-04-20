@@ -4,10 +4,13 @@
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wind"]
 shader = ExtResource("1_wind")
-shader_parameter/line_color = Color(0.9, 0.9, 0.95, 0.25)
+shader_parameter/line_color = Color(0.9, 0.9, 0.95, 0.55)
 shader_parameter/wind_angle = 0.0
 shader_parameter/gust_speed = 3.0
-shader_parameter/line_density = 0.3
+shader_parameter/line_density = 0.4
+shader_parameter/line_thickness = 0.0025
+shader_parameter/line_length = 0.45
+shader_parameter/curl_size = 0.045
 shader_parameter/intensity = 1.0
 
 [node name="WindGust" type="CanvasLayer"]
