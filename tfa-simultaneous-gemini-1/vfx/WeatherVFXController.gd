@@ -79,9 +79,9 @@ func _show_wind(wind_speed: float, wind_angle: float) -> void:
 		var mat = rect.material.duplicate() as ShaderMaterial
 		rect.material = mat
 		mat.set_shader_parameter("wind_angle", deg_to_rad(wind_angle))
-		mat.set_shader_parameter("gust_speed", remap(wind_speed, 20.0, 100.0, 2.0, 8.0))
-		mat.set_shader_parameter("line_density", remap(wind_speed, 20.0, 100.0, 0.15, 0.5))
-		mat.set_shader_parameter("intensity", remap(wind_speed, 20.0, 100.0, 0.3, 1.0))
+		mat.set_shader_parameter("gust_speed", clamp(remap(wind_speed, 20.0, 100.0, 2.0, 6.0), 2.0, 6.0))
+		mat.set_shader_parameter("line_density", clamp(remap(wind_speed, 20.0, 100.0, 0.08, 0.25), 0.08, 0.25))
+		mat.set_shader_parameter("intensity", clamp(remap(wind_speed, 20.0, 100.0, 0.3, 0.7), 0.3, 0.7))
 
 func _clear_precipitation() -> void:
 	if _rain_node and is_instance_valid(_rain_node):
