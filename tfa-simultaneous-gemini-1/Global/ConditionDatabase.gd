@@ -519,6 +519,36 @@ func get_all_conditions() -> Array:
 		"on_action_trait_stack": {"required_traits": ["criminal"]}
 	},
 	{
+		"id": "bleeding",
+		"display_name": "Bleeding",
+		"description": "An open wound is bleeding, causing blood loss over time.",
+		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/weakened.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["bandage", "healing"],
+		"custom_vfx": "res://vfx/bleeding.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{
+				"type": "damage",
+				"value": 1,
+				"damage_type": "true",
+				"interval": 6.0
+			},
+			{
+				"type": "custom",
+				"custom_type": "bleed_puddle",
+				"interval": 2.0,
+				"custom_data": {"amount": 0.05}
+			}
+		],
+		"immunities": {}
+	},
+	{
 		"id": "undead_resilience",
 		"display_name": "Undead Resilience",
 		"description": "The unliving body is immune to disease.",

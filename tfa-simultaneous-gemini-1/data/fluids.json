@@ -36,6 +36,15 @@
 			"condition_id": "corroding",
 			"condition_stacks": 1,
 			"apply_interval": 1.5
+		},
+		"blood": {
+			"color": [0.45, 0.04, 0.06, 0.85],
+			"wave_color": [0.7, 0.1, 0.12, 0.55],
+			"conductive": true,
+			"flammable": false,
+			"condition_id": "",
+			"condition_stacks": 0,
+			"apply_interval": 1.0
 		}
 	}
 }

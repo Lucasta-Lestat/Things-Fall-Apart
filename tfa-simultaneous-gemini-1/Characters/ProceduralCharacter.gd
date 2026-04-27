@@ -306,9 +306,6 @@ var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
 
-# Blood drop texture - set this in _ready or via export
-@export var blood_drop_texture: Texture2D
-
 # Configuration
 @export_group("Wound Lines")
 @export var wound_line_color: Color = Color(0.6, 0.0, 0.0, 0.9)  # Dark red
@@ -316,26 +313,12 @@ var walking_noise: float = 1.0
 @export var wound_line_min_length: float = 8.0
 @export var wound_line_max_length: float = 20.0
 
-@export_group("Blood Drops")
-@export var blood_drops_min: int = 3
-@export var blood_drops_max: int = 8
-@export var blood_drop_min_scale: float = 0.3
-@export var blood_drop_max_scale: float = 0.8
-@export var blood_drop_speed_min: float = 50.0
-@export var blood_drop_speed_max: float = 150.0
-@export var blood_drop_fade_time: float = 1.5
-@export var blood_drop_gravity: float = 0.0  # Set > 0 for top-down gravity effect
-
 @export_group("Severing")
-@export var sever_blood_multiplier: float = 3.0  # More blood when severed
+@export var sever_blood_multiplier: float = 3.0  # Stronger bleed burst when severed
 @export var stump_color: Color = Color(0.5, 0.0, 0.0, 1.0)  # Dark red stump
 
 # Active wound lines on each limb (LimbType -> Array of Line2D)
 var wound_lines: Dictionary = {}
-
-# Pool for blood drop sprites
-var blood_pool: Array[Sprite2D] = []
-var active_blood_drops: Array[Dictionary] = []
 
 # Track severed limbs for visual updates
 var severed_limbs: Dictionary = {}  # LimbType -> bool
@@ -449,7 +432,6 @@ func _ready() -> void:
 	ability_manager.cast_failed.connect(_on_ability_cast_failed)
 	ability_manager.step_started.connect(_on_ability_step_started)
 	ability_manager.step_completed.connect(_on_ability_step_completed)
-	blood_drop_texture = load("res://vfx/blood drop.png")
 
 	_setup_condition_display()
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -841,6 +823,8 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 				_handle_vomit(instance, result.get("custom_data", {}))
 			"spawn_animal":
 				_handle_spawn_animal(instance, result.get("custom_data", {}))
+			"bleed_puddle":
+				_handle_bleed_puddle(instance, result.get("custom_data", {}))
 
 
 func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> void:
@@ -860,6 +844,22 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 				if their_cm and not their_cm.has_condition("sickened"):
 					their_cm.apply_condition("sickened", self, 1)
 					GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+
+
+func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
+	# Each tick of the bleeding condition drops a small amount of blood fluid
+	# on the victim's current tile. Amount scales with bleed stacks (tier).
+	var base_amount: float = data.get("amount", 0.05)
+	var stacks: int = instance.stacks if instance else 1
+	var amount: float = base_amount * float(max(1, stacks))
+
+	# Also leak a bit from the overall blood reserve for consciousness/death checks.
+	blood_amount = max(0, blood_amount - stacks)
+
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+	if game and "fluid_manager" in game and game.fluid_manager:
+		game.fluid_manager.register_fluid(my_tile, "blood", amount)
 
 
 func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
@@ -2116,7 +2116,6 @@ func _process(delta: float) -> void:
 		_update_arm_ik()
 		_update_arm_visuals()
 		_update_weapon_position()
-		_update_blood_drops(delta)
 		_update_severed_limb_visuals()
 		# MP regeneration (only when not stunned)
 		if true: # make stun alter mp_regen_timer
@@ -3272,113 +3271,29 @@ func _on_character_died() -> void:
 				torso.current_hp = 0
 				partner.is_alive()
 
-func _update_blood_drops(delta: float) -> void:
-	"""Update all active blood drops"""
-	var drops_to_remove: Array[int] = []
-	#print("Updating blood drops. Current active blood drops = ",active_blood_drops.size())
-	for i in range(active_blood_drops.size()):
-		var drop_data = active_blood_drops[i]
-		var sprite: Sprite2D = drop_data["sprite"]
-		
-		if not is_instance_valid(sprite):
-			drops_to_remove.append(i)
-			continue
-		
-		# Update time
-		drop_data["time"] += delta
-		var t = drop_data["time"]
-		var fade_time = drop_data["fade_time"]
-		
-		# Apply velocity with drag
-		var velocity: Vector2 = drop_data["velocity"]
-		velocity *= 0.98  # Drag
-		velocity.y += blood_drop_gravity * delta  # Optional gravity
-		drop_data["velocity"] = velocity
-		
-		# Move sprite (in parent space, not character-local)
-		sprite.global_position += velocity * delta
-		
-		# Rotate
-		sprite.rotation += drop_data["rotation_speed"] * delta
-		
-		# Fade out
-		var fade_progress = t / fade_time
-		sprite.modulate.a = 1.0 - ease(fade_progress, 0.5)
-		
-		# Check if done
-		if t >= fade_time:
-			sprite.visible = false
-			drops_to_remove.append(i)
-	
-	# Remove finished drops (reverse order to preserve indices)
-	drops_to_remove.reverse()
-	for i in drops_to_remove:
-		active_blood_drops.remove_at(i)
-
-# ===== BLOOD DROP SYSTEM =====
-
-func _spawn_blood_drops(origin: Vector2, count: int, is_severing: bool) -> void:
-	"""Spawn blood drop particles at the origin"""
-	#print("Attempting to spawn blood drops")
-	if not blood_drop_texture:
-		push_warning("No blood drop texture set!")
+# ===== BLEED VFX BURST =====
+#
+# Replaces the old cartoon-sized Sprite2D blood drop pool. Spawns a short,
+# self-destructing GPU-particle burst of the bleeding VFX scene at `origin`
+# (in character-local space). Called on hit impacts and on severing.
+func _spawn_bleed_burst(origin: Vector2, intensity: float = 1.0) -> void:
+	var scene := _load_effect_scene("res://vfx/bleeding.tscn")
+	if not scene:
 		return
-	
-	for i in range(count):
-		var drop = _get_blood_drop_sprite()
-		drop.texture = blood_drop_texture
-		drop.visible = true
-		drop.modulate = Color.WHITE
-		drop.modulate.a = 1.0
-		
-		# Random scale
-		var scale_val = randf_range(blood_drop_min_scale, blood_drop_max_scale)
-		if is_severing:
-			scale_val *= randf_range(1.0, 1.5)  # Bigger drops for severing
-		drop.scale = Vector2(scale_val, scale_val)
-		
-		# Random rotation
-		drop.rotation = randf() * TAU
-		
-		# Position at origin with slight offset
-		var offset = Vector2(randf_range(-5, 5), randf_range(-5, 5))
-		drop.position = origin + offset
-		
-		# Random velocity - away from character center
-		var base_dir = (origin - Vector2.ZERO).normalized()
-		if base_dir.length() < 0.1:
-			base_dir = Vector2.RIGHT.rotated(randf() * TAU)
-		
-		# Add randomness to direction
-		var spread = randf_range(-PI/3, PI/3)
-		var velocity_dir = base_dir.rotated(spread)
-		var speed = randf_range(blood_drop_speed_min, blood_drop_speed_max)
-		if is_severing:
-			speed *= randf_range(1.2, 2.0)  # Faster for severing
-		
-		# Track this drop
-		active_blood_drops.append({
-			"sprite": drop,
-			"velocity": velocity_dir * speed,
-			"time": 0.0,
-			"fade_time": blood_drop_fade_time * randf_range(0.8, 1.2),
-			"rotation_speed": randf_range(-3.0, 3.0)
-		})
-
-func _get_blood_drop_sprite() -> Sprite2D:
-	"""Get a sprite from pool or create new one"""
-	# Look for inactive sprite in pool
-	for sprite in blood_pool:
-		if is_instance_valid(sprite) and not sprite.visible:
-			return sprite
-	
-	# Create new sprite
-	var sprite = Sprite2D.new()
-	sprite.name = "BloodDrop"
-	sprite.z_index = 10  # Above everything
-	add_child(sprite)
-	blood_pool.append(sprite)
-	return sprite
+	var vfx := scene.instantiate()
+	vfx.z_index = 10
+	add_child(vfx)
+	vfx.position = origin
+	if vfx.has_method("burst"):
+		vfx.burst(intensity)
+	else:
+		# Fallback: play briefly, then free.
+		if vfx.has_method("play"):
+			vfx.play(intensity)
+		get_tree().create_timer(1.0).timeout.connect(func():
+			if is_instance_valid(vfx):
+				vfx.queue_free()
+		, CONNECT_ONE_SHOT)
 
 
 # ===== LIMB SEVERING =====
@@ -3491,11 +3406,11 @@ func _update_severed_limb_visuals() -> void:
 
 func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	severed_limbs[limb_type] = true
-	# Create extra blood spray for severing
+	# Apply a strong bleed to the severed limb and spawn a big one-shot burst
+	condition_manager.apply_condition("bleeding", null, int(sever_blood_multiplier), -2.0, limb_type)
 	var limb_pos = _get_limb_center_position(limb_type)
-	var blood_count = int((blood_drops_max * sever_blood_multiplier))
-	_spawn_blood_drops(limb_pos, blood_count, true)
-	
+	_spawn_bleed_burst(limb_pos, sever_blood_multiplier)
+
 	# Hide the limb visual and drop equipment
 	_handle_limb_severing(limb_type)
 
@@ -3586,30 +3501,17 @@ func reset_severed_limbs() -> void:
 		if child.name.begins_with("Stump_"):
 			child.queue_free()
 
-func _exit_tree() -> void:
-	# Clean up blood pool
-	for sprite in blood_pool:
-		if is_instance_valid(sprite):
-			sprite.queue_free()
-	blood_pool.clear()
-	active_blood_drops.clear()
-	
 func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
-				# .get(key, default) prevents a crash if the key doesn't exist yet
-				var current_tier = conditions.get("bleeding", 0)
-				conditions["bleeding"] = current_tier + 1
-				#print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
+				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
 				if damage >= 8:
 					_handle_limb_severing(limb)
-				_spawn_blood_drops(location, 3 * conditions["bleeding"],false)
+				_spawn_bleed_burst(location, 1.0)
 			"piercing":
-				var current_tier = conditions.get("bleeding", 0)
-				conditions["bleeding"] = current_tier + 1
-				print("Gained Bleeding. Current Tier: ", conditions["bleeding"])
-				_spawn_blood_drops(location, 3 * conditions["bleeding"],false)
+				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
+				_spawn_bleed_burst(location, 0.75)
 			"fire":
 				conditions["burning"] = conditions.get("burning", 0) + 1
 				
@@ -3666,34 +3568,14 @@ func clear_target() -> void:
 func get_state_name() -> String:
 	return $AI.AIState.keys()[$AI.current_state]
 	
-func _on_time_updated(_hour: int, _minute: int, second: int):
-	# 1. Check if the character is currently bleeding
-	if not conditions.has("bleeding"):
-		return
-	
-	# 2. Trigger logic every 6 seconds (at second 0, 6, 12, 18, etc.)
-	if second % 6 == 0:
-		apply_bleeding_tick()
+func _on_time_updated(_hour: int, _minute: int, _second: int):
+	# Bleeding is now driven by the ConditionManager's triggered_effects
+	# on the "bleeding" condition (damage + bleed_puddle every tick).
+	# Death from blood loss is handled by the damage triggered effect
+	# reducing torso HP (see _on_triggered_effect_fired).
+	if blood_amount <= 0 and is_alive():
+		_on_character_died()
 
-func apply_bleeding_tick():
-	var tier = conditions.get("bleeding", 0)
-	if tier > 0:
-		# Subtract 1 per tier from blood_amount
-		blood_amount -= tier
-				
-		# Optional: Clamp values so they don't drop into negative infinity
-		blood_amount = max(0, blood_amount)
-		#print("attempting to lower torso hp: ", limbs.get(LimbType.TORSO).current_hp)
-		limbs.get(LimbType.TORSO).current_hp -= tier
-		#print("after attempt to lower torso hp: ", limbs.get(LimbType.TORSO).current_hp)
-		#constitution = max(0, constitution)
-		
-		#print("Bleed Tick: Blood at ", blood_amount, " | Con at ", constitution)
-		
-		# Logic check: if constitution or blood hits 0, handle death/unconsciousness
-		if blood_amount <= 0 or constitution <= 0 and is_alive():
-			_on_character_died()
-			conditions["Bleeding"] = 0
 #Ability Checks, character.gd code
 func ability_check(stat,domain):
 	var roll = randi() % 100 + 1
