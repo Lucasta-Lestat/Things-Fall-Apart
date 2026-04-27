@@ -20,26 +20,20 @@ float hash(vec2 p) {
 // Distance from point p to a path that starts at origin, travels along +x
 // for a straight segment, then spirals inward (counterclockwise) at the tip.
 float path_sdf(vec2 p, float total_length, float tip_curl) {
-	const int STEPS = 24;
 	float straight_frac = 0.62;
 	float min_d = 1e10;
-	for (int i = 0; i < STEPS; i++) {
-		float t = float(i) / float(STEPS - 1);
+	for (int i = 0; i < 24; i++) {
+		float t = float(i) / 23.0;
 		vec2 pt;
 		if (t < straight_frac) {
-			// Straight segment
 			float st = t / straight_frac;
 			pt = vec2(st * total_length, 0.0);
 		} else {
-			// Spiral curl at tip
 			float ct = (t - straight_frac) / (1.0 - straight_frac);
-			// ~1.6 turns, shrinking radius (log-spiral-ish)
 			float angle = ct * 3.2 * 3.14159;
 			float radius = tip_curl * (1.0 - ct * 0.55);
-			// Spiral center offset perpendicular to line direction (above in y-up-is-neg)
 			vec2 center = vec2(total_length, -tip_curl);
-			// Entry angle so spiral begins tangent to line end
-			float base_angle = 1.5707963;  // pi/2
+			float base_angle = 1.5707963;
 			pt = center + vec2(cos(base_angle + angle), sin(base_angle + angle)) * radius;
 		}
 		min_d = min(min_d, length(p - pt));
@@ -56,18 +50,17 @@ void fragment() {
 
 	float alpha = 0.0;
 	float band_count = 7.0;
-	int center_band = int(floor(wuv.y * band_count));
+	float center_band = floor(wuv.y * band_count);
 
 	// Check this band and adjacent ones (gusts can extend vertically via curl)
 	for (int offset = -1; offset <= 1; offset++) {
-		int band_int = center_band + offset;
-		float band_id = float(band_int);
+		float band_id = center_band + float(offset);
 		float band_center_y = (band_id + 0.5) / band_count;
 
 		// Time slot: each gust has ~1.7s lifespan, staggered per band
 		float slot_speed = 0.58 * gust_speed / 3.0;
 		float time_slot = floor(TIME * slot_speed + band_id * 1.31);
-		float appear_roll = hash(vec2(band_int, time_slot));
+		float appear_roll = hash(vec2(band_id, time_slot));
 
 		if (appear_roll >= line_density) continue;
 
@@ -80,14 +73,13 @@ void fragment() {
 		float start_x = -0.25 + progress * 1.4;
 
 		// Small vertical jitter so lines aren't perfectly aligned to band center
-		float y_jitter = (hash(vec2(band_int * 0.37, time_slot + 3.0)) - 0.5) * 0.6 / band_count;
+		float y_jitter = (hash(vec2(band_id * 0.37, time_slot + 3.0)) - 0.5) * 0.6 / band_count;
 		float start_y = band_center_y + y_jitter;
 
 		// Per-gust variation
-		float this_length = line_length * (0.75 + hash(vec2(band_int + 7.0, time_slot)) * 0.5);
-		float this_curl = curl_size * (0.8 + hash(vec2(band_int + 13.0, time_slot)) * 0.5);
-		// Alternate curl direction so not all curls go the same way
-		float curl_flip = step(0.5, hash(vec2(band_int + 19.0, time_slot))) * 2.0 - 1.0;
+		float this_length = line_length * (0.75 + hash(vec2(band_id + 7.0, time_slot)) * 0.5);
+		float this_curl = curl_size * (0.8 + hash(vec2(band_id + 13.0, time_slot)) * 0.5);
+		float curl_flip = step(0.5, hash(vec2(band_id + 19.0, time_slot))) * 2.0 - 1.0;
 
 		// Pixel relative to gust origin, in wind-aligned coords
 		vec2 local = wuv - vec2(start_x, start_y);
