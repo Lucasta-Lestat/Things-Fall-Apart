@@ -3,6 +3,8 @@
 # Toggle visibility with Tab. Supports drag-drop and right-click context menus.
 extends PanelContainer
 
+signal panel_visibility_changed(now_visible: bool)
+
 const PANEL_WIDTH := 250.0
 const SLIDE_DURATION := 0.3
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
@@ -726,6 +728,8 @@ func _toggle_panel() -> void:
 
 	_tween = create_tween()
 	_tween.tween_property(self, "offset_left", target_x, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	emit_signal("panel_visibility_changed", panel_visible)
 
 # ---------------------------------------------------------------------------
 # Per-frame updates (MP bars etc.)
