@@ -26,6 +26,10 @@
 				"from_catacombs": {
 					"position": [480, 350],
 					"facing": 270
+				},
+				"from_colosseum": {
+					"position": [256, 20],
+					"facing": 180
 				}
 			},
 			"party_spawns": {
@@ -202,6 +206,14 @@
 					"condition": {
 						"item": "catacombs_key"
 					}
+				},
+				{
+					"id": "to_colosseum",
+					"position": [256, 10],
+					"size": [60, 20],
+					"target_map": "colosseum",
+					"target_spawn": "from_cemetery",
+					"label": "To Colosseum"
 				}
 			]
 		},
@@ -290,6 +302,54 @@
 					"target_map": "market_district",
 					"target_spawn": "from_town_square",
 					"label": "To Market District"
+				}
+			]
+		},
+		{
+			"id": "colosseum",
+			"name": "The Colosseum",
+			"description": "A vast arena of weathered stone, where blood has been spilled for the amusement of the masses since time immemorial.",
+			"images": {
+				"map": "res://Maps/colosseum.png",
+				"mask": "res://Maps/colosseum_mask.png",
+				"structures": "res://Maps/colosseum_structures.png",
+				"structures_mask": "res://Maps/colosseum_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "colosseum_theme",
+			"weather_group": "Scarlatti",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [256, 460],
+					"facing": 0
+				},
+				"from_cemetery": {
+					"position": [256, 460],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40
+				},
+				"from_cemetery": {
+					"formation": "column",
+					"offset_radius": 30,
+					"facing": 0
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_cemetery",
+					"position": [256, 480],
+					"size": [60, 20],
+					"target_map": "cemetery",
+					"target_spawn": "from_colosseum",
+					"label": "To Cemetery"
 				}
 			]
 		}
