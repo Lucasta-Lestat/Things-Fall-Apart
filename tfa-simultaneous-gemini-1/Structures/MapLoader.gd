@@ -23,6 +23,7 @@ var color_to_floor: Dictionary = {
 	Color8(139, 69, 19): "floor_dirt",       # brown
 	Color8(128, 128, 128): "floor_stone",    # gray
 	Color8(0, 0, 255): "water",        # blue
+	Color8(192, 192, 192): "stone_stairs",   # light gray
 }
 
 # How close a pixel color must be to a key to match (accounts for anti-aliasing)

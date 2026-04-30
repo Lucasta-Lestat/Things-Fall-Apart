@@ -77,7 +77,27 @@
 
 		},
 		"resources":{
-			
+
 		}
-	}	
+	},
+	"stone_stairs":
+		{
+		"id":"stone_stairs",
+		"name":"Stone Stairs",
+		"description":"Tiered stone seating, worn smooth by generations of cheering crowds.",
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"texture":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"walkability":1.0,
+		"rarity":"common",
+		"flammable":false,
+		"conductive":false,
+		"max_health":30,
+		"current_health":30,
+		"damage_resistances":{
+
+		},
+		"resources":{
+			"stone":10
+		}
+	}
 }

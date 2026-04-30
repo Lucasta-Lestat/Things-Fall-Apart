@@ -292,6 +292,36 @@
 					"label": "To Market District"
 				}
 			]
+		},
+		{
+			"id": "colosseum",
+			"name": "The Colosseum",
+			"description": "A grand arena ringed with tiered stone seating, where crowds once roared for blood and glory.",
+			"images": {
+				"map": "res://Maps/Colosseum Clean.png",
+				"mask": "res://Maps/Colosseum_mask.png",
+				"structures": "res://Maps/Colosseum.png",
+				"structures_mask": "res://Maps/Colosseum_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [768, 768],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
 		}
 	]
 }
