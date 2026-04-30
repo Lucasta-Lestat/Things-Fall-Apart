@@ -49,12 +49,27 @@ func _apply_structure_data():
 		sprite.texture = custom_texture
 		# Texture is already cropped to the correct size, no scaling needed
 		sprite.scale = Vector2(1.0, 1.0)
+		if custom_size != Vector2.ZERO:
+			size = custom_size
+		elif size == Vector2.ZERO:
+			size = sprite.texture.get_size()
 	else:
 		sprite.texture = load(data.texture)
 		size = data.size
 		var initial_texture_size = sprite.texture.get_size()
 		var size_ratio = size.x / initial_texture_size.x
 		sprite.scale = Vector2(size_ratio, size_ratio)
+
+	_setup_collision_shape()
+
+func _setup_collision_shape() -> void:
+	# layer 1 = structures, layer 3 = vision_blockers
+	collision_layer = 1 | 4
+	collision_mask = 0
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	collision_shape.shape = rect
+	collision_shape.disabled = false
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
 	var damage_multiplier = pow(1.5,success_level)
