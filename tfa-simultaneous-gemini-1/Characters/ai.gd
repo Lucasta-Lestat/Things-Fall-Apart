@@ -180,7 +180,18 @@ func is_in_line_of_sight(target_position: Vector2) -> bool:
 	if abs(angle_to_target) > half_fov:
 		return false
 
-	return true
+	return _has_clear_sight_line(target_position)
+
+func _has_clear_sight_line(target_position: Vector2) -> bool:
+	var world := character.get_world_2d()
+	if not world:
+		return true
+	var space := world.direct_space_state
+	# Mask 4 = layer 3 (vision_blockers). Structures live there; characters do not.
+	var params := PhysicsRayQueryParameters2D.create(character.global_position, target_position, 4)
+	params.collide_with_areas = false
+	params.collide_with_bodies = true
+	return space.intersect_ray(params).is_empty()
 
 func get_items_in_line_of_sight() -> Array:
 	var visible_items = []
