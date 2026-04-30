@@ -1071,8 +1071,8 @@
 				"body_size_mod": 1.0,
 				"body_width": 62,
 				"body_height": 37,
-				"head_width": 41,
-				"head_length": 30,
+				"head_width": 34,
+				"head_length": 25,
 				"shoulder_y_offset": 10,
 				"leg_length": 8,
 				"leg_width": 4,
@@ -2149,8 +2149,8 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 62,
-				"body_height": 37,
+				"body_width": 42,
+				"body_height": 28,
 				"head_width": 36,
 				"head_length": 29,
 				"shoulder_y_offset": 10,
@@ -2263,8 +2263,8 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 62,
-				"body_height": 37,
+				"body_width": 42,
+				"body_height": 28,
 				"head_width": 36,
 				"head_length": 29,
 				"shoulder_y_offset": 10,
@@ -3083,7 +3083,7 @@
 			"size": "Medium",
 			"body": {
 				"body_size_mod": 1.0,
-				"body_width": 48,
+				"body_width": 42,
 				"body_height": 28,
 				"head_width": 28,
 				"head_length": 24,
@@ -3095,17 +3095,17 @@
 			"body_sprites": {
 				"male": {
 					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
 				},
 				"female": {
 					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
+					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
 				}
 			},
 			"appearance": {

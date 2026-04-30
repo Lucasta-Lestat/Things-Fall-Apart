@@ -156,9 +156,9 @@ func auto_scale_sprites(character) -> void:
 	# Arm segments: width is arm thickness, height is segment length
 	if _arm_segment_lengths.size() >= 3:
 		_scale_sprite_to_size(left_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(left_forearm, _arm_width * 0.8, _arm_segment_lengths[1] + _arm_segment_lengths[2])
+		_scale_sprite_to_size(left_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
 		_scale_sprite_to_size(right_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(right_forearm, _arm_width * 0.8, _arm_segment_lengths[1] + _arm_segment_lengths[2])
+		_scale_sprite_to_size(right_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
 
 	# Legs: width is leg thickness, height is leg length
 	_scale_sprite_to_size(left_leg_sprite, _leg_width, _leg_length)
