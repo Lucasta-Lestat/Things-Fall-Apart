@@ -95,6 +95,18 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 
 	# --- Resolve and grant equipment ---
 	var equipment = _resolve_equipment(template, faction_data, overrides)
+	# Append any caller-supplied extra equipment (used by combat test mode for
+	# drag-dropped item loadouts that should auto-equip).
+	for ov_eq_id in overrides.get("extra_equipment", []):
+		var ov_data = ItemDatabase.get_item_data(ov_eq_id)
+		if ov_data.is_empty():
+			push_warning("extra_equipment: item '%s' not found in ItemDatabase" % str(ov_eq_id))
+			continue
+		equipment.append({
+			"id": ov_eq_id,
+			"quantity": 1,
+			"equip_slot": ov_data.get("equip_slot", ""),
+		})
 	_grant_equipment(character, equipment)
 
 	# --- Appearance overrides (skeleton bones, wolf fur, etc.) ---
@@ -127,8 +139,22 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	if not interact_opts.is_empty():
 		_set_if_exists(character, "interact_options", interact_opts)
 
+	# --- Merge template + override extras ---
+	var _tpl_items = template.get("extra_items", {})
+	var extra_items
+	if _tpl_items is Dictionary:
+		extra_items = _tpl_items.duplicate()
+	elif _tpl_items is Array:
+		extra_items = _tpl_items.duplicate()
+	else:
+		extra_items = []
+	for ov_item in overrides.get("extra_items", []):
+		if extra_items is Array:
+			extra_items.append(ov_item)
+		elif extra_items is Dictionary:
+			extra_items[ov_item] = int(extra_items.get(ov_item, 0)) + 1
+
 	# --- Extra inventory items (non-equipment) ---
-	var extra_items = template.get("extra_items", {})
 	if not extra_items.is_empty():
 		var inv = _find_child_by_name(character, "Inventory")
 		if inv:
@@ -154,7 +180,9 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 						push_warning("extra_items: item '%s' not found in ItemDatabase" % str(item_id))
 
 	# --- Extra abilities (directly equipped) ---
-	var extra_abilities = template.get("extra_abilities", [])
+	var extra_abilities = template.get("extra_abilities", []).duplicate()
+	for ov_ab in overrides.get("extra_abilities", []):
+		extra_abilities.append(ov_ab)
 	if not extra_abilities.is_empty():
 		var inv = _find_child_by_name(character, "Inventory")
 		if inv:

@@ -45,7 +45,8 @@
 			"enemies": [
 				"bandits",
 				"undead",
-				"demons"
+				"demons",
+				"rival_party"
 			],
 			"equipment_traits": {
 				"required": {},
@@ -502,6 +503,35 @@
 				"carnie",
 				"desert_explorer",
 				"escaped_slave"
+			]
+		},
+		{
+			"id": "rival_party",
+			"name": "Rival Party",
+			"color": "#E91E63",
+			"tier": 2,
+			"icon": "res://icons/neutral.png",
+			"flag": "res://icons/neutral_flag.png",
+			"allies": [],
+			"enemies": [
+				"player"
+			],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"human": 60,
+				"half_elf": 10,
+				"half_orc": 10,
+				"dwarf": 10,
+				"halfling": 5,
+				"gnome": 5
+			},
+			"default_backgrounds": [
+				"criminal",
+				"retired_adventurer",
+				"body_guard"
 			]
 		}
 	]

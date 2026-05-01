@@ -12,6 +12,9 @@ const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.
 
 var weather_vfx_controller: Node = null
 var weather_debug_window: CanvasLayer = null
+var combat_test_window: CanvasLayer = null
+var _pending_rival_spawns: Array = []
+var _pending_rival_override_faction: bool = false
 
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
@@ -99,6 +102,13 @@ func _ready() -> void:
 	weather_debug_window.name = "WeatherDebugWindow"
 	add_child(weather_debug_window)
 
+	# Combat test window (F10)
+	var CombatTestScript = preload("res://UI/CombatTestWindow.gd")
+	combat_test_window = CanvasLayer.new()
+	combat_test_window.set_script(CombatTestScript)
+	combat_test_window.name = "CombatTestWindow"
+	add_child(combat_test_window)
+
 	# React to weather changes (snow → freeze, rain → puddles)
 	WeatherManager.weather_changed.connect(_on_weather_changed)
 
@@ -161,6 +171,61 @@ func _spawn_npcs(npc_list: Array) -> void:
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
 				_add_npc_line_of_sight_light(npc)
+
+# ---------------------------------------------------------------------------
+# Combat test mode
+# ---------------------------------------------------------------------------
+
+func start_combat_test(player_configs: Array, rival_configs: Array, override_rival_faction: bool) -> void:
+	# Replace the active party so _spawn_player_and_party uses the test loadout.
+	party_state.clear()
+	for cfg in player_configs:
+		party_state.append({
+			"template_id": cfg.get("template_id", ""),
+			"overrides": {
+				"extra_abilities": cfg.get("abilities", []),
+				"extra_equipment": cfg.get("items", []),
+			},
+			"live_state": null,
+		})
+
+	# Stash rival configs for _spawn_rival_party (called from load_map).
+	_pending_rival_spawns = rival_configs.duplicate(true)
+	_pending_rival_override_faction = override_rival_faction
+
+	load_map("colosseum")
+
+func _spawn_rival_party() -> void:
+	# Anchor on the actual player spawn so we line up with whatever Maps.json says.
+	var player_anchor: Vector2 = Vector2(768, 768)
+	var spawns: Dictionary = current_map_data.get("player_spawns", {})
+	if spawns.has("default"):
+		var pos_arr = spawns["default"].get("position", [768, 768])
+		player_anchor = Vector2(pos_arr[0], pos_arr[1])
+
+	# Place rivals 232px south of the player anchor (opposite end of the arena).
+	var arc_center: Vector2 = player_anchor + Vector2(0, 232)
+	var n: int = _pending_rival_spawns.size()
+
+	for i in range(n):
+		var cfg = _pending_rival_spawns[i]
+		var t: float = (float(i) - (n - 1) / 2.0) * 60.0
+		var pos: Vector2 = arc_center + Vector2(t, 0)
+
+		var overrides: Dictionary = {
+			"extra_abilities": cfg.get("abilities", []),
+			"extra_equipment": cfg.get("items", []),
+		}
+		if _pending_rival_override_faction:
+			overrides["faction"] = "rival_party"
+
+		var rival = _spawn_character(cfg.get("template_id", ""), pos, overrides)
+		if rival:
+			rival.AI_enabled = true
+			_add_npc_line_of_sight_light(rival)
+
+	_pending_rival_spawns.clear()
+	_pending_rival_override_faction = false
 
 # ---------------------------------------------------------------------------
 # Core character spawn helper
@@ -243,6 +308,10 @@ func load_map(map_id: String, from_map: String = "") -> void:
 
 	# 6. Spawn NPCs
 	_spawn_npcs(current_map_data.get("npc_spawns", []))
+
+	# 6b. Spawn combat-test rivals if any are pending
+	if not _pending_rival_spawns.is_empty():
+		_spawn_rival_party()
 
 	# 7. Spawn items
 	_spawn_items(current_map_data.get("item_spawns", []))
