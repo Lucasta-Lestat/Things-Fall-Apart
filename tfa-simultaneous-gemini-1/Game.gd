@@ -1656,6 +1656,10 @@ func _update_projectiles(delta: float) -> void:
 		proj.global_position += move_vec
 		proj_data["distance_traveled"] += move_vec.length()
 
+		# Spin thrown items while in flight
+		if proj_data.get("thrown_item_data"):
+			proj.rotation += 12.0 * delta
+
 		if proj_data["distance_traveled"] >= proj_data["max_range"]:
 			# Drop thrown items at landing position
 			if proj_data.get("thrown_item_data"):
@@ -1780,13 +1784,23 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	proj.global_position = proj_data["position"]
 	proj.rotation = proj_data["velocity"].angle() + PI / 2.0
 	proj.z_index = 50
-	# Scale sprite to match the item's base_width/base_height (same size as held in hand)
+	# Scale sprite to match in-hand appearance:
+	# Weapons use total_length (same as WeaponShape._auto_scale_sprite)
+	# Other items use base_width (same as Item.scale_sprite)
 	if proj.texture:
 		var tex_size = proj.texture.get_size()
-		if tex_size.x > 0 and tex_size.y > 0:
-			var target_w = float(item_data.get("base_width", 16.0))
-			var target_h = float(item_data.get("base_height", 16.0))
-			proj.scale = Vector2(target_w / tex_size.x, target_h / tex_size.y)
+		var max_dim = max(tex_size.x, tex_size.y)
+		if max_dim > 0:
+			var total_length = item_data.get("total_length", 0.0)
+			if total_length is float and total_length > 0:
+				# Weapon: scale longest dimension to total_length (matches in-hand)
+				var s = total_length / max_dim
+				proj.scale = Vector2(s, s)
+			else:
+				# Non-weapon item: scale to base_width (matches world item)
+				var target_w = float(item_data.get("base_width", 16.0))
+				var s = target_w / max_dim
+				proj.scale = Vector2(s, s)
 	get_tree().current_scene.add_child(proj)
 
 	active_projectiles.append({
