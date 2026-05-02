@@ -714,7 +714,7 @@ func _update_npc_los_visibility() -> void:
 		npc.visible = seen
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
-	var world := get_world_2d()
+	var world := get_viewport().get_world_2d()
 	if not world:
 		return true
 	var space := world.direct_space_state
