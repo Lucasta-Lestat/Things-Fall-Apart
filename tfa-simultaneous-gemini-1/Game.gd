@@ -714,10 +714,10 @@ func _update_npc_los_visibility() -> void:
 		npc.visible = seen
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
-	var world := get_world_2d()
-	if not world:
+	var viewport := get_viewport()
+	if not viewport or not viewport.world_2d:
 		return true
-	var space := world.direct_space_state
+	var space := viewport.world_2d.direct_space_state
 	# Mask 4 = layer 3 (vision_blockers).
 	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, 4)
 	params.collide_with_areas = false
