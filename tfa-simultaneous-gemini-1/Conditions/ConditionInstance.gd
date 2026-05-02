@@ -90,6 +90,10 @@ func apply(game_time: float) -> void:
 	else:
 		expires_at = -1.0
 
+	if condition and condition.id == "bide" and not custom_data.has("absorbed"):
+		custom_data["absorbed"] = 0.0
+		custom_data["ratio"] = 1.0
+
 
 func is_expired(game_time: float) -> bool:
 	if expires_at < 0:

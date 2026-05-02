@@ -206,6 +206,7 @@ var fov_angle_degrees: float = 150.0  # Field of view in degrees
 		"concentration": false
 	}
 @export var bonus_damage = 0.0
+var bide_pending_bonus: float = 0.0
 @export var bonus_damage_against_trait = {
 	"giant": 0.0,
 	"draconic": 0.0,
@@ -795,6 +796,85 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
 	_refresh_condition_display()
+
+	if instance and instance.condition and instance.condition.id == "bide":
+		var absorbed = float(instance.custom_data.get("absorbed", 0.0))
+		var ratio = float(instance.custom_data.get("ratio", 1.0))
+		bide_pending_bonus += absorbed * ratio
+
+
+func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_position: Vector2) -> Dictionary:
+	var precip_type = effect.get("precipitation_type", "clear")
+	var group_id = effect.get("group_id", "Scarlatti")
+	var weather_manager = get_node_or_null("/root/WeatherManager")
+	if not weather_manager:
+		return {"success": false, "error": "WeatherManager not found"}
+	weather_manager.set_precipitation(group_id, precip_type)
+	return {"success": true, "precipitation_type": precip_type, "group_id": group_id}
+
+
+func _place_surface(effect: Dictionary, _targets: Array, _ability, target_position: Vector2) -> Dictionary:
+	var surface_id = effect.get("surface_id", "")
+	var radius = float(effect.get("radius", 80.0))
+	var duration = float(effect.get("duration", -2.0))
+	if surface_id.is_empty():
+		return {"success": false, "error": "No surface_id"}
+	var game_node = get_tree().current_scene
+	if not game_node or not "surface_manager" in game_node:
+		return {"success": false, "error": "SurfaceManager not found"}
+	var sm = game_node.surface_manager
+	if not sm:
+		return {"success": false, "error": "SurfaceManager null"}
+	var placed = sm.place_surface_in_area(surface_id, target_position, radius, duration)
+	return {"success": true, "surface_id": surface_id, "tiles_placed": placed}
+
+
+func _self_heal(effect: Dictionary, _targets: Array, _ability, _target_position: Vector2) -> Dictionary:
+	var amount = float(effect.get("amount", 0.0))
+	if amount <= 0:
+		return {"success": false, "error": "No heal amount"}
+	for limb in limbs.values():
+		limb.heal(amount)
+	return {"success": true, "healed": amount}
+
+
+func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
+	var result = {"success": true, "copied": []}
+	if targets.is_empty():
+		result["success"] = false
+		result["error"] = "No target"
+		return result
+
+	var source_target = targets[0]
+	var source_cm = null
+	if source_target.has_node("ConditionManager"):
+		source_cm = source_target.get_node("ConditionManager")
+	elif "condition_manager" in source_target:
+		source_cm = source_target.condition_manager
+	if not source_cm:
+		result["success"] = false
+		result["error"] = "Target has no ConditionManager"
+		return result
+
+	var duration = float(effect.get("duration", 12.0))
+	var filter_traits = effect.get("filter_traits", [])
+
+	for cond_id in source_cm.conditions:
+		var inst: ConditionInstance = source_cm.conditions[cond_id]
+		if not inst.is_active():
+			continue
+		if not filter_traits.is_empty():
+			var has_match = false
+			for t in filter_traits:
+				if t in inst.condition.traits:
+					has_match = true
+					break
+			if not has_match:
+				continue
+		condition_manager.apply_condition(cond_id, source_target, inst.stacks, duration)
+		result["copied"].append(cond_id)
+
+	return result
 
 
 func _on_stats_recalculated() -> void:
@@ -2908,6 +2988,9 @@ func get_weapon_tip_world_position() -> Vector2:
 
 func attack(Ability:String= "Main") -> void:
 	"""Perform an attack with current weapon"""
+	# Apathetic / stunned: cannot act except for movement
+	if condition_manager.has_active_condition("apathetic") or condition_manager.has_active_condition("stunned"):
+		return
 	# Infatuated: refuse to swing if infatuation source is in front and in melee range
 	if condition_manager.has_active_condition("infatuated"):
 		var inf_instance = condition_manager.conditions.get("infatuated")
@@ -3204,23 +3287,49 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	if not limb:
 		return {}
 	# 1. Get the resistance dictionary for this specific limb
-	var armor_dr = get_limb_armor(limb_type) 
+	var armor_dr = get_limb_armor(limb_type)
 	var total_damage = 0
+	var physical_damage_taken: float = 0.0
 	var raw_val
 	var dr_val
+
+	# Character-level DR pool (from conditions like physically_resistant, shielded).
+	# Consumed across physical damage types in this hit.
+	var character_dr_remaining: float = 0.0
+	if condition_manager:
+		character_dr_remaining = max(0.0, condition_manager.calculate_effective_stat(0.0, "dr"))
+
 # 2. Calculate damage for each type after resistances
 	for damage_type in damage:
 		raw_val = damage[damage_type]
 		dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
-		if raw_val - dr_val > 0:
-			handle_damage_effect_based_on_type(raw_val-dr_val,damage_type, limb_type, location)
-		# Ensure damage for a specific type doesn't go below zero
-		
-		total_damage += max(0, raw_val - dr_val)
-		
+		var after_armor = max(0, raw_val - dr_val)
+		var char_dr_used: float = 0.0
+		if character_dr_remaining > 0 and damage_type in ["slashing", "bludgeoning", "piercing"]:
+			char_dr_used = min(character_dr_remaining, after_armor)
+			character_dr_remaining -= char_dr_used
+		var dealt = after_armor - char_dr_used
+		if dealt > 0:
+			handle_damage_effect_based_on_type(dealt, damage_type, limb_type, location)
+		total_damage += dealt
+		if damage_type in ["slashing", "bludgeoning", "piercing"]:
+			physical_damage_taken += dealt
+
+	# Bide: track actual physical damage that hit HP, for delayed payoff
+	if condition_manager and condition_manager.has_active_condition("bide") and physical_damage_taken > 0:
+		var bide_inst = condition_manager.get_condition("bide")
+		if bide_inst:
+			bide_inst.custom_data["absorbed"] = bide_inst.custom_data.get("absorbed", 0.0) + physical_damage_taken
+
 	# 3. Apply the damage to the limb
-	
-	limb.current_hp = clamp(limb.current_hp - total_damage, 0, limb.max_hp)
+	var prospective_hp = limb.current_hp - total_damage
+	# Deny Ending: refuses to die. Clamp lethal-limb HP to 1 while active.
+	var is_lethal_limb = (limb_type == LimbType.TORSO or limb_type == LimbType.HEAD)
+	if is_lethal_limb and prospective_hp < 1 and condition_manager and condition_manager.has_active_condition("deny_ending"):
+		prospective_hp = 1
+		total_damage = limb.current_hp - prospective_hp
+
+	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
 	return total_damage
 
 func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:

@@ -684,6 +684,173 @@
 		}
 	  ],
 	  "visuals": {}
+	},
+	{
+	  "id": "bide",
+	  "display_name": "Bide",
+	  "description": "Brace yourself for incoming blows, gaining resistance to physical damage. After 10 seconds, your next attack deals bonus base damage equal to the physical damage you absorbed.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 12.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 0.5,
+	  "interruptible": true,
+	  "traits": {"Arcane": 1, "Primal": 1, "Somatic": 1, "Verbal": 1, "buff": 1, "self": 1, "delayed": 1},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "physically_resistant", "stacks": 1, "duration": 10.0},
+		{"type": "apply_condition", "condition_id": "bide", "stacks": 1, "duration": 10.0}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "rain",
+	  "display_name": "Rain",
+	  "description": "Call down a steady rain over the area.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 30.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.5,
+	  "interruptible": true,
+	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
+	  "effects": [
+		{"type": "custom", "method": "_change_weather", "precipitation_type": "rain", "group_id": "Scarlatti"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "acid_rain",
+	  "display_name": "Acid Rain",
+	  "description": "Summon a corrosive acid rain that eats at everything caught in the open.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 30.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.5,
+	  "interruptible": true,
+	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1, "acid": 2},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
+	  "effects": [
+		{"type": "custom", "method": "_change_weather", "precipitation_type": "acid_rain", "group_id": "Scarlatti"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "freezing_rain",
+	  "display_name": "Freezing Rain",
+	  "description": "Summon a freezing rain that chills everyone caught in the open.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 30.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.5,
+	  "interruptible": true,
+	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1, "cold": 2},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
+	  "effects": [
+		{"type": "custom", "method": "_change_weather", "precipitation_type": "freezing_rain", "group_id": "Scarlatti"}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "wave_of_dysthymia",
+	  "display_name": "Wave of Dysthymia",
+	  "description": "Project a cone of crushing apathy. Affected creatures cannot take any actions except movement.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 12.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": {"Arcane": 1, "Occult": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "mental": 2, "control": 2, "aoe": 2},
+	  "targeting": {"type": "direction", "range": 250.0, "shape": "cone", "radius": 250.0, "angle": 75.0},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "apathetic", "stacks": 1, "duration": 8.0}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "deny_ending",
+	  "display_name": "Deny Ending",
+	  "description": "Refuse the target's death. They cannot drop below 1 HP for 6 seconds per stack.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 10.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": {"Occult": 1, "Holy": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "buff": 1, "support": 2},
+	  "targeting": {"type": "target", "range": 200.0, "shape": "single"},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "deny_ending", "stacks": 1, "duration": 6.0}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "psych_up",
+	  "display_name": "Psych Up",
+	  "description": "Copy all of the target's active conditions onto yourself. Each copy lasts 12 seconds.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 15.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": {"Arcane": 1, "Holy": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "support": 2},
+	  "targeting": {"type": "target", "range": 200.0, "shape": "single"},
+	  "effects": [
+		{"type": "custom", "method": "_copy_conditions", "duration": 12.0}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "fire_spin",
+	  "display_name": "Fire Spin",
+	  "description": "Wreathe a 15 ft area in clinging flame. Creatures caught inside burn and cannot move.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 10.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.0,
+	  "interruptible": true,
+	  "traits": {"Arcane": 1, "Fire": 2, "Somatic": 1, "Verbal": 1, "spell": 1, "aoe": 2, "control": 2},
+	  "targeting": {"type": "point", "range": 350.0, "shape": "circle", "radius": 100.0},
+	  "effects": [
+		{"type": "custom", "method": "_place_surface", "surface_id": "fire_spin", "radius": 100.0, "duration": 6.0}
+	  ],
+	  "visuals": {
+		"in_hand_effect": "res://vfx/fire.tscn",
+		"impact_effect": "res://vfx/fire.tscn",
+		"sound_cast": "res://sfx/fire_cast.wav"
+	  }
+	},
+	{
+	  "id": "bumper_crop",
+	  "display_name": "Bumper Crop",
+	  "description": "Cause a 15 ft sphere to bloom with lush grass. The terrain becomes difficult, but creatures standing in it are mended over time.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 12.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 1.5,
+	  "interruptible": true,
+	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "support": 2, "aoe": 2, "nature": 2},
+	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 100.0},
+	  "effects": [
+		{"type": "custom", "method": "_place_surface", "surface_id": "grassy", "radius": 100.0, "duration": 30.0}
+	  ],
+	  "visuals": {}
+	},
+	{
+	  "id": "alms_of_the_vein",
+	  "display_name": "Alms of the Vein",
+	  "description": "Drain the target's lifeblood. They take 6 necrotic damage and start bleeding; you recover 3 health.",
+	  "icon": "res://UI/UI Icons/dummy_icon.png",
+	  "cooldown": 6.0,
+	  "costs": {"MP": 1},
+	  "cast_time": 0.75,
+	  "interruptible": true,
+	  "traits": {"Holy": 1, "Occult": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "necrotic": 2, "drain": 1},
+	  "targeting": {"type": "target", "range": 150.0, "shape": "single"},
+	  "effects": [
+		{"type": "damage", "damage": {"necrotic": 6}},
+		{"type": "apply_condition", "condition_id": "bleeding", "stacks": 1},
+		{"type": "custom", "method": "_self_heal", "amount": 3}
+	  ],
+	  "visuals": {}
 	}
   ]
 }

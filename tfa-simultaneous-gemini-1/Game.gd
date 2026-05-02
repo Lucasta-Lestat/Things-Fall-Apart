@@ -1202,6 +1202,13 @@ func process_weapon_hit(
 				attacker.unarmed_strike_damage + attacker.strength / 10.0
 		}
 
+	# Bide payoff: add accumulated bonus to the first damage type and consume it
+	if "bide_pending_bonus" in attacker and attacker.bide_pending_bonus > 0.0:
+		var dt_keys = attack_damage.keys()
+		if dt_keys.size() > 0:
+			attack_damage[dt_keys[0]] += attacker.bide_pending_bonus
+			attacker.bide_pending_bonus = 0.0
+
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
 	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
 	var limb = target.get_limb(limb_type)

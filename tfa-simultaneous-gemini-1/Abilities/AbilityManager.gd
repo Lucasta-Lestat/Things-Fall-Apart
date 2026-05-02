@@ -315,6 +315,10 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 	if is_on_cooldown(ability.id):
 		return {"success": false, "reason": "On cooldown"}
 
+	var cm = _get_condition_manager()
+	if cm and (cm.has_active_condition("apathetic") or cm.has_active_condition("stunned")):
+		return {"success": false, "reason": "Cannot act"}
+
 	for resource_name in ability.costs:
 		var cost = ability.costs[resource_name]
 		if character.has_method("_get_character_resource"):

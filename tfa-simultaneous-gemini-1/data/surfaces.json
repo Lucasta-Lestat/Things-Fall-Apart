@@ -25,6 +25,22 @@
 			"frozen_fluid_amount": 0.0,
 			"causes_sliding": true,
 			"thaw_on_fire": true
+		},
+		"fire_spin": {
+			"display_name": "Fire Spin",
+			"condition_id": "stuck_in_fire",
+			"condition_stacks": 1,
+			"apply_interval": 0.5,
+			"base_duration": 6.0,
+			"vfx_scene": "res://vfx/fire.tscn"
+		},
+		"grassy": {
+			"display_name": "Grassy",
+			"condition_id": "verdant_blessing",
+			"condition_stacks": 1,
+			"apply_interval": 1.0,
+			"base_duration": 30.0,
+			"vfx_scene": "res://vfx/grassy_surface.tscn"
 		}
 	}
 }

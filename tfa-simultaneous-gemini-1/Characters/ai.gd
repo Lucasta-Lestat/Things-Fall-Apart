@@ -120,6 +120,13 @@ func process_ai(delta: float) -> void:
 	# Update combat target
 	_update_target()
 
+	# Handle apathetic — movement only, no combat. Suppress targeting and force IDLE
+	# AFTER _update_target so reacquisition can't override it.
+	if _cm and _cm.has_active_condition("apathetic"):
+		current_target = null
+		if current_state != AIState.DEAD and current_state != AIState.IDLE:
+			_change_state(AIState.IDLE)
+
 	# Combat state machine
 	match current_state:
 		AIState.DEAD:

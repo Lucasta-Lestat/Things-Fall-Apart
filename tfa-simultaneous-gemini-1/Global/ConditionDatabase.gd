@@ -565,5 +565,123 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [],
 		"conditional_modifiers": [],
 		"immunities": {"sickened": true, "nauseated": true}
+	},
+	{
+		"id": "bide",
+		"display_name": "Bide",
+		"description": "Storing up energy from incoming attacks. The next attack after this expires deals bonus base damage equal to the physical damage absorbed.",
+		"traits": {"buff": 1, "self": 1, "delayed": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 10.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "physically_resistant",
+		"display_name": "Physically Resistant",
+		"description": "Hardened against physical blows; reduces incoming physical damage.",
+		"traits": {"buff": 1, "physical_resistance": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 10.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "dr", "operation": "add", "value": 25}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "apathetic",
+		"display_name": "Apathetic",
+		"description": "Overcome with dysthymia. Cannot take any actions except movement.",
+		"traits": {"debuff": 1, "mental": 1, "cc": 2, "incapacitate": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 8.0,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["clarity", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "deny_ending",
+		"display_name": "Deny Ending",
+		"description": "Refuses to die. HP cannot drop below 1 while this is active.",
+		"traits": {"buff": 1, "occult": 1, "holy": 1, "death_ward": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 6.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "stuck_in_fire",
+		"display_name": "Stuck in Fire",
+		"description": "Mired in clinging flames. Cannot move and burns over time.",
+		"traits": {"debuff": 1, "fire": 1, "dot": 1, "elemental": 1, "immobilize": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 2.0,
+		"icon": "res://UI/UI Icons/burning.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["water", "cold"],
+		"custom_vfx": "res://vfx/fire.tscn",
+		"custom_sfx": "res://sfx/burning_flesh.mp3",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "set", "value": -1.0}
+		],
+		"triggered_effects": [
+			{"type": "damage", "value": 5, "damage_type": "fire", "interval": 1.0}
+		],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "verdant_blessing",
+		"display_name": "Verdant Blessing",
+		"description": "Standing in lush growth. Movement is slower but the green restores vitality.",
+		"traits": {"buff": 1, "primal": 1, "nature": 1, "regeneration": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 7.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": -0.5}
+		],
+		"triggered_effects": [
+			{"type": "heal", "value": 3, "interval": 6.0}
+		],
+		"conditional_modifiers": [],
+		"immunities": {}
 	}
 ]
