@@ -74,17 +74,19 @@ func _create_indicators() -> void:
 	rectangle_indicator.visible = false
 	add_child(rectangle_indicator)
 
-	# Line indicator
+	# Line indicator — top_level so it doesn't inherit character rotation
 	line_indicator = Node2D.new()
 	line_indicator.name = "LineIndicator"
+	line_indicator.top_level = true
 	var line_drawer = LineDrawer.new()
 	line_indicator.add_child(line_drawer)
 	line_indicator.visible = false
 	add_child(line_indicator)
 
-	# Cone indicator
+	# Cone indicator — top_level so it doesn't inherit character rotation
 	cone_indicator = Node2D.new()
 	cone_indicator.name = "ConeIndicator"
+	cone_indicator.top_level = true
 	var cone_drawer = ConeDrawer.new()
 	cone_indicator.add_child(cone_drawer)
 	cone_indicator.visible = false
