@@ -314,7 +314,7 @@ var walking_noise: float = 1.0
 @export var wound_line_max_length: float = 20.0
 
 @export_group("Severing")
-@export var sever_blood_multiplier: float = 3.0  # Stronger bleed burst when severed
+@export var sever_blood_multiplier: float = 5.0  # Stronger bleed burst when severed
 @export var stump_color: Color = Color(0.5, 0.0, 0.0, 1.0)  # Dark red stump
 
 # Active wound lines on each limb (LimbType -> Array of Line2D)
@@ -3508,10 +3508,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
 				if damage >= 8:
 					_handle_limb_severing(limb)
-				_spawn_bleed_burst(location, 1.0)
+				_spawn_bleed_burst(location, 2.0)
 			"piercing":
 				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
-				_spawn_bleed_burst(location, 0.75)
+				_spawn_bleed_burst(location, 1.5)
 			"fire":
 				conditions["burning"] = conditions.get("burning", 0) + 1
 				
