@@ -221,6 +221,35 @@ func try_ignite_area(center_world: Vector2, radius: float) -> void:
 			if center_world.distance_to(tile_world) <= radius:
 				try_ignite(tile_pos)
 
+func place_surface_in_area(surface_id: String, center_world: Vector2, radius: float, duration_override: float = -2.0) -> int:
+	"""Place a surface (other than fire — use try_ignite for that) on every tile in radius.
+	Overwrites nothing already occupied. Returns the number of tiles placed."""
+	var surface_def = _surface_defs.get(surface_id, {})
+	if surface_def.is_empty():
+		push_warning("SurfaceManager: unknown surface_id '%s'" % surface_id)
+		return 0
+	var duration: float = duration_override if duration_override > -2.0 else surface_def.get("base_duration", 10.0)
+	var center_tile = GridManager.world_to_map(center_world)
+	var tile_radius = int(ceil(radius / GridManager.TILE_SIZE))
+	var placed: int = 0
+	for dx in range(-tile_radius, tile_radius + 1):
+		for dy in range(-tile_radius, tile_radius + 1):
+			var tile_pos = center_tile + Vector2i(dx, dy)
+			var tile_world = GridManager.map_to_world(tile_pos)
+			if center_world.distance_to(tile_world) > radius:
+				continue
+			if surface_grid.has(tile_pos):
+				continue
+			var vfx_node = _spawn_surface_vfx(tile_pos, surface_def)
+			surface_grid[tile_pos] = {
+				"surface_id": surface_id,
+				"time_remaining": duration,
+				"vfx_node": vfx_node,
+				"source_type": "direct"
+			}
+			placed += 1
+	return placed
+
 func try_ignite(tile_pos: Vector2i) -> void:
 	"""Attempt to ignite a single tile. Checks fluids first (flood-fill), then floors."""
 	if surface_grid.has(tile_pos):

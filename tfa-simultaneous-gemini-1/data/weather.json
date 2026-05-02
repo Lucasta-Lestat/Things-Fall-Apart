@@ -49,6 +49,24 @@
 			"vfx": "heavy_snow",
 			"fog_density_modifier": 0.25,
 			"visibility_modifier": 0.45
+		},
+		"acid_rain": {
+			"display_name": "Acid Rain",
+			"vfx": "rain",
+			"fog_density_modifier": 0.2,
+			"visibility_modifier": 0.7,
+			"tint": [0.6, 0.9, 0.4, 1.0],
+			"applies_condition": "corroding",
+			"apply_interval": 3.0
+		},
+		"freezing_rain": {
+			"display_name": "Freezing Rain",
+			"vfx": "rain",
+			"fog_density_modifier": 0.2,
+			"visibility_modifier": 0.65,
+			"tint": [0.7, 0.85, 1.0, 1.0],
+			"applies_condition": "chilled",
+			"apply_interval": 4.0
 		}
 	}
 }

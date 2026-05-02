@@ -26,7 +26,7 @@
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
-	  "extra_abilities": ["fireball", "cloud_kill", "ice_storm", "lightning_bolt", "creepy_beam", "acid_splash", "thunderwave", "beguile", "confess", "hitch", "fatal_attraction", "test_confused", "test_frightened", "test_panicked", "test_sickened", "test_nauseated", "test_animal_magnetism"],
+	  "extra_abilities": ["fireball", "cloud_kill", "ice_storm", "lightning_bolt", "creepy_beam", "acid_splash", "thunderwave", "beguile", "confess", "hitch", "fatal_attraction", "test_confused", "test_frightened", "test_panicked", "test_sickened", "test_nauseated", "test_animal_magnetism", "bide", "rain", "acid_rain", "freezing_rain", "wave_of_dysthymia", "deny_ending", "psych_up", "fire_spin", "bumper_crop", "alms_of_the_vein"],
 	  "extra_conditions": [],
 	  "extra_traits": {},
 	  "combat": {},
