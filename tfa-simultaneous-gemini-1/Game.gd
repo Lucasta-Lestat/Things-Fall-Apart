@@ -685,7 +685,8 @@ func _toggle_npc_los_cones() -> void:
 			npc_los.visible = stealth_mode
 
 func _update_npc_los_visibility() -> void:
-	"""NPCs are only visible when inside a party member's sight cone.
+	"""NPCs are only visible when inside a party member's sight cone
+	AND the line between them isn't blocked by a vision_blocker (layer 3).
 	NPC LOS lights are children of the NPC, so they hide when the NPC hides."""
 	for npc in characters_in_scene:
 		if not is_instance_valid(npc):
@@ -707,10 +708,21 @@ func _update_npc_los_visibility() -> void:
 			var facing_dir = Vector2.UP.rotated(ally.rotation)
 			var angle_to_npc = facing_dir.angle_to(to_npc.normalized())
 			var half_fov = deg_to_rad(ally.fov_angle_degrees * 0.5)
-			if abs(angle_to_npc) <= half_fov:
+			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
 		npc.visible = seen
+
+func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
+	var world := get_world_2d()
+	if not world:
+		return true
+	var space := world.direct_space_state
+	# Mask 4 = layer 3 (vision_blockers).
+	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, 4)
+	params.collide_with_areas = false
+	params.collide_with_bodies = true
+	return space.intersect_ray(params).is_empty()
 
 func _process(delta: float) -> void:
 	# Check for combat collisions / Update clash cooldowns

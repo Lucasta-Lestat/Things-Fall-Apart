@@ -249,6 +249,7 @@ func _generate_structures(struct_img: Image, mask_img: Image, width: int, height
 			struct_instance.structure_id = structure_id
 			struct_instance.use_custom_texture = true
 			struct_instance.custom_texture = region_tex
+			struct_instance.custom_size = Vector2(region_width, region_height)
 			struct_instance.skip_grid_snap = true
 			struct_instance.position = Vector2(center_x, center_y)
 			struct_instance.z_index = -3
