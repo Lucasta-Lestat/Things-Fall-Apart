@@ -21,10 +21,6 @@ const HP_LOW_THRESHOLD := 0.25
 
 var game_node: Node = null
 var panel_visible: bool = true
-
-# Pending throw state: when the player selects "Throw" from context menu,
-# we wait for the next left-click to choose the throw direction
-var _pending_throw: Dictionary = {}  # {character, item_index, item_data} or empty
 var _shown_x: float = 0.0
 var _hidden_x: float = 0.0
 var _tween: Tween = null
@@ -571,12 +567,8 @@ func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
 			)
 		return
 
-	# Unpaused: enter throw targeting mode — next left-click chooses direction
-	_pending_throw = {
-		"character": character,
-		"item_index": item_index,
-		"item_data": item_data,
-	}
+	# Unpaused: enter throw targeting mode on the character
+	character.start_throw_targeting(item_index, item_data)
 
 func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
@@ -703,21 +695,7 @@ func _input(event: InputEvent) -> void:
 			_toggle_panel()
 			get_viewport().set_input_as_handled()
 
-	# Handle pending throw: next left-click in world executes the throw
-	if not _pending_throw.is_empty():
-		if event is InputEventMouseButton and event.pressed:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				var character = _pending_throw.get("character")
-				var item_index = _pending_throw.get("item_index", -1)
-				var item_data = _pending_throw.get("item_data", {})
-				_pending_throw = {}
-				if character and is_instance_valid(character):
-					_execute_throw(character, item_index, item_data)
-				get_viewport().set_input_as_handled()
-			elif event.button_index == MOUSE_BUTTON_RIGHT:
-				# Cancel throw
-				_pending_throw = {}
-				get_viewport().set_input_as_handled()
+
 
 func _toggle_panel() -> void:
 	if _tween and _tween.is_running():

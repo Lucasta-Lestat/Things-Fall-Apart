@@ -23,6 +23,10 @@ var interact_options: Array = ["Inspect"]
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
+# Throw targeting state — set by PartySidePanel when "Throw" is selected
+var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
+var _throw_reticle_line: Line2D = null
+
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
 var path_drawer: PathDrawer = null
@@ -551,6 +555,68 @@ func _clear_tactical_path_if_executing() -> void:
 			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
+
+# --- Throw targeting helpers ---
+
+func start_throw_targeting(item_index: int, item_data: Dictionary) -> void:
+	pending_throw = {"item_index": item_index, "item_data": item_data}
+	# Create a simple line reticle from character to mouse
+	if _throw_reticle_line == null:
+		_throw_reticle_line = Line2D.new()
+		_throw_reticle_line.width = 1.5
+		_throw_reticle_line.default_color = Color(1, 1, 1, 0.5)
+		_throw_reticle_line.z_index = 45
+		_throw_reticle_line.top_level = true
+		_throw_reticle_line.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(_throw_reticle_line)
+	_throw_reticle_line.visible = true
+	_throw_reticle_line.clear_points()
+	_throw_reticle_line.add_point(global_position)
+	_throw_reticle_line.add_point(global_position)
+
+func _update_throw_reticle(mouse_pos: Vector2) -> void:
+	if _throw_reticle_line and _throw_reticle_line.visible:
+		_throw_reticle_line.set_point_position(0, global_position)
+		_throw_reticle_line.set_point_position(1, mouse_pos)
+
+func _execute_pending_throw(mouse_pos: Vector2) -> void:
+	var item_index = pending_throw.get("item_index", -1)
+	var item_data = pending_throw.get("item_data", {})
+	pending_throw = {}
+	_hide_throw_reticle()
+
+	if item_index < 0:
+		return
+
+	var item = inventory.remove_item(item_index)
+	if item.is_empty():
+		return
+
+	var direction = (mouse_pos - global_position).normalized()
+	var speed = 600.0
+
+	var projectile = {
+		"type": "thrown_item",
+		"item_data": item,
+		"position": global_position,
+		"velocity": direction * speed,
+		"shooter": self,
+		"max_range": 400.0,
+		"distance_traveled": 0.0,
+		"damage": item.get("damage", {"bludgeoning": 1}),
+		"size": Vector2(8, 8),
+	}
+
+	if game and game.has_method("_add_thrown_projectile"):
+		game._add_thrown_projectile(projectile)
+
+func _cancel_pending_throw() -> void:
+	pending_throw = {}
+	_hide_throw_reticle()
+
+func _hide_throw_reticle() -> void:
+	if _throw_reticle_line:
+		_throw_reticle_line.visible = false
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -2367,6 +2433,17 @@ func _handle_input() -> void:
 	if paused and path_input_handler != null:
 		if path_input_handler.handle_input(mouse_pos):
 			return  # Path input consumed the event
+
+	# --- Throw targeting mode ---
+	if not pending_throw.is_empty():
+		_update_throw_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_throw(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel"):
+			_cancel_pending_throw()
+			return
+		return  # Block all other input while throw targeting
 
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
