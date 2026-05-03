@@ -289,6 +289,9 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 
 	emit_signal("active_weapon_changed", next_item, hand)
 
+	if next_item is WeaponShape and is_instance_valid(possessor):
+		SfxManager.play("draw-steel", possessor.global_position)
+
 	# If a two-handed weapon was cycled into main hand, stow the off-hand
 	if hand == "Main" and _is_two_handed(next_item) and off_hand_item != null:
 		_stow_item(off_hand_item, "Off")
@@ -307,6 +310,8 @@ func draw_weapon() -> void:
 		main_hand_item = item
 		possessor.current_main_hand_item = item
 		emit_signal("active_weapon_changed", item, "Main")
+		if item is WeaponShape and is_instance_valid(possessor):
+			SfxManager.play("draw-steel", possessor.global_position)
 
 # Legacy compatibility property for save/load and Game.gd references
 var active_weapon_index: int:

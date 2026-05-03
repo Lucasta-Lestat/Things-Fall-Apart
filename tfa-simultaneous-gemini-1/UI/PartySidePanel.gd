@@ -458,6 +458,7 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	))
 
 func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dictionary, options: Array) -> void:
+	SfxManager.play_ui("ui-click")
 	var option_name = options[id] if id < options.size() else ""
 	match option_name:
 		"Use":
@@ -618,6 +619,9 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	game_node.create_item(item.get("id", ""), character.global_position)
 
+	if item.has("primary_damage_type"):
+		SfxManager.play("sword-fall", character.global_position)
+
 # Map equip_slot strings to EquipmentShape.EquipmentSlot enum values
 const _EQUIP_SLOT_MAP: Dictionary = {
 	"Head": 0,   # EquipmentShape.EquipmentSlot.HEAD
@@ -706,6 +710,8 @@ func _toggle_panel() -> void:
 
 	_tween = create_tween()
 	_tween.tween_property(self, "offset_left", target_x, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	SfxManager.play_ui("ui-navigation")
 
 	emit_signal("panel_visibility_changed", panel_visible)
 

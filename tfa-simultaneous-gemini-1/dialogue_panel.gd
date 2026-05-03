@@ -83,6 +83,7 @@ func _on_choices_available(choices: Array):
 		choices_container.add_child(button)
 
 func _on_choice_selected(choice_index: int):
+	SfxManager.play_ui("ui-click")
 	# Tell dialogue manager which choice was selected
 	if dialogue_manager:
 		dialogue_manager.select_choice(choice_index)
