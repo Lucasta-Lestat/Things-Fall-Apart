@@ -35,7 +35,7 @@
 		"cast_effect": "",
 		"projectile": "res://vfx/fire.tscn",
 		"impact_effect": "res://vfx/fire.tscn",
-		"sound_cast": "res://sfx/fire_cast.wav",
+		"sound_cast": "res://sfx/fire_cast.mp3",
 		"sound_impact": "res://sfx/explosion.mp3"
 	  }
 	},
@@ -815,7 +815,7 @@
 	  "visuals": {
 		"in_hand_effect": "res://vfx/fire.tscn",
 		"impact_effect": "res://vfx/fire.tscn",
-		"sound_cast": "res://sfx/fire_cast.wav"
+		"sound_cast": "res://sfx/fire_cast.mp3"
 	  }
 	},
 	{

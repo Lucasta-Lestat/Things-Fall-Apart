@@ -1685,6 +1685,7 @@ func _update_projectiles(delta: float) -> void:
 				var item_id = proj_data["thrown_item_data"].get("id", "")
 				if not item_id.is_empty():
 					create_item(item_id, proj.global_position)
+				SfxManager.play("sword-fall", proj.global_position)
 			proj.queue_free()
 			to_remove.append(proj_data)
 			continue
@@ -1741,6 +1742,7 @@ func _update_projectiles(delta: float) -> void:
 					var item_id = proj_data["thrown_item_data"].get("id", "")
 					if not item_id.is_empty():
 						create_item(item_id, proj.global_position)
+					SfxManager.play("sword-fall", proj.global_position)
 				proj.queue_free()
 				to_remove.append(proj_data)
 				hit = true
