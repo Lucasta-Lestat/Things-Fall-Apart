@@ -1,0 +1,61 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://vfx/rage_hand.gd" id="1_script"]
+
+[sub_resource type="Gradient" id="Gradient_rage_ramp"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 0.6, 0.1, 1, 0.95, 0.18, 0.05, 0.95, 0.6, 0.05, 0.05, 0.7, 0.2, 0.0, 0.0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rage"]
+gradient = SubResource("Gradient_rage_ramp")
+
+[sub_resource type="Curve" id="Curve_rage_scale"]
+_data = [Vector2(0, 0.5), 0.0, 0.0, 0, 0, Vector2(0.3, 1.1), 0.0, 0.0, 0, 0, Vector2(1, 0.2), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_rage_scale"]
+curve = SubResource("Curve_rage_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_rage"]
+particle_flag_disable_z = true
+emission_shape = 1
+emission_sphere_radius = 7.0
+direction = Vector3(0, -1, 0)
+spread = 70.0
+initial_velocity_min = 25.0
+initial_velocity_max = 55.0
+gravity = Vector3(0, -25, 0)
+damping_min = 4.0
+damping_max = 8.0
+scale_min = 0.6
+scale_max = 1.2
+scale_curve = SubResource("CurveTexture_rage_scale")
+color_ramp = SubResource("GradientTexture1D_rage")
+turbulence_enabled = true
+turbulence_noise_strength = 4.0
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_light"]
+colors = PackedColorArray(1, 0.25, 0.1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_light"]
+gradient = SubResource("Gradient_light")
+width = 16
+height = 16
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[node name="RageHand" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+amount = 32
+amount_ratio = 0.9
+lifetime = 0.9
+process_material = SubResource("ParticleProcessMaterial_rage")
+
+[node name="PointLight2D" type="PointLight2D" parent="."]
+color = Color(1, 0.25, 0.1, 1)
+energy = 0.55
+texture = SubResource("GradientTexture2D_light")
+texture_scale = 2.5
