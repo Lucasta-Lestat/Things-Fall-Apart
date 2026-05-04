@@ -1626,11 +1626,14 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	var sprite = Sprite2D.new()
 	if weapon.projectile_texture_path != "" and ResourceLoader.exists(weapon.projectile_texture_path):
 		sprite.texture = load(weapon.projectile_texture_path)
-		# Scale the texture so the longest side fits ~16 pixels
+		# Scale the texture so the longest side fits the target pixel size.
+		# Bullets use a near-square texture, so the longest-side normalization that
+		# works for long/thin projectiles (arrows) makes them appear oversized;
+		# use a smaller target for pistol bullets.
 		var tex_size = sprite.texture.get_size()
 		var longest = max(tex_size.x, tex_size.y)
 		if longest > 0:
-			var target_size = 32.0
+			var target_size = 12.0 if weapon.weapon_type == WeaponShape.WeaponType.PISTOL else 32.0
 			var s = target_size / longest
 			sprite.scale = Vector2(s, s)
 	else:
