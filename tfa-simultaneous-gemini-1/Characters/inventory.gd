@@ -144,9 +144,9 @@ func equip_item(item: Node2D, hand: String = "Main") -> bool:
 	emit_signal("active_weapon_changed", item, hand)
 	return true
 
-## Stow an item from a hand into the stowed_items pool (no visual, no hand ref).
+## Stow an item from a hand. Weapons go back to stowed_items. Ability copies are
+## queue_free'd because the canonical AbilityShape always lives in stowed_items.
 func _stow_item(item: Node2D, hand: String) -> void:
-	# Remove from visual holder via signal (null = nothing in that hand now)
 	if hand == "Main":
 		main_hand_item = null
 		possessor.current_main_hand_item = null
@@ -155,29 +155,54 @@ func _stow_item(item: Node2D, hand: String) -> void:
 		possessor.current_off_hand_item = null
 	emit_signal("active_weapon_changed", null, hand)
 
-	stowed_items.append(item)
+	if item is AbilityShape:
+		item.queue_free()
+	else:
+		stowed_items.append(item)
 	emit_signal("weapon_unequipped", item)
 
-## Add an ability: equip to a hand if one is free, otherwise stow it.
+## Public: move whatever is in the given hand back to stowed (or discard if ability copy).
+func stow_hand(hand: String) -> void:
+	var item = _get_hand_item(hand)
+	if item != null:
+		_stow_item(item, hand)
+
+## Spawn a fresh AbilityShape clone of the given canonical ability. Used so the same
+## ability can be wielded in both hands while a single canonical instance lives in stowed.
+func _spawn_ability_copy(source: AbilityShape) -> AbilityShape:
+	var copy = AbilityShape.new()
+	copy.name = source.name
+	copy.setup_from_database(source.raw_data)
+	return copy
+
+## Add an ability to the inventory. The canonical AbilityShape is appended to stowed_items;
+## if the preferred hand is empty, a fresh copy is spawned and equipped there.
 func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
 	var data = AbilityDatabase.get_ability_data(ability_id)
 	if data.is_empty():
 		return false
 
-	var ability_node = AbilityShape.new()
-	ability_node.name = data.get("display_name", "Ability")
-	ability_node.setup_from_database(data)
+	var canonical = AbilityShape.new()
+	canonical.name = data.get("display_name", "Ability")
+	canonical.setup_from_database(data)
+	stowed_items.append(canonical)
+	emit_signal("weapon_equipped", canonical)
 
-	# If both hands are occupied, stow instead of displacing
-	if not _hand_is_empty(hand):
-		var other = "Off" if hand == "Main" else "Main"
-		if not _hand_is_empty(other):
-			stowed_items.append(ability_node)
-			return true
-	return equip_item(ability_node, hand)
+	if _hand_is_empty(hand):
+		var copy = _spawn_ability_copy(canonical)
+		equip_item(copy, hand)
+	return true
 
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	return add_ability_by_id(ability_id, hand)
+
+## Equip a fresh copy of an existing canonical ability (already in stowed_items) to a hand.
+## Used when the player wants the same ability in both hands.
+func equip_ability_to_hand(canonical: AbilityShape, hand: String) -> bool:
+	if canonical == null:
+		return false
+	var copy = _spawn_ability_copy(canonical)
+	return equip_item(copy, hand)
 
 func equip_weapon_from_data(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	var weapon = WeaponShape.new()
@@ -187,6 +212,15 @@ func equip_weapon_from_data(weapon_data: Dictionary, hand = "Main") -> WeaponSha
 	else:
 		weapon.queue_free()
 		return null
+
+## Reconstruct a WeaponShape from data and append it to stowed_items without auto-equipping.
+## Used for cross-character weapon transfer via drag-drop in the side panel.
+func stow_weapon_from_data(weapon_data: Dictionary) -> WeaponShape:
+	var weapon = WeaponShape.new()
+	weapon.load_from_data(weapon_data)
+	stowed_items.append(weapon)
+	emit_signal("weapon_equipped", weapon)
+	return weapon
 
 ## Remove the item in a specific hand and return it.
 func unequip_hand(hand: String) -> Node2D:
@@ -257,7 +291,9 @@ func get_equipped_weapon_count() -> int:
 
 # ===== CYCLING =====
 
-## Cycle the item in a hand: stow the current item, pull next stowed item in.
+## Cycle the item in a hand. Weapons rotate exclusively (move from stowed → hand → stowed).
+## Abilities behave differently: the canonical AbilityShape stays in stowed and a fresh
+## copy is spawned for the hand, so the same ability can occupy both hands at once.
 func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	if stowed_items.is_empty():
 		return
@@ -267,33 +303,45 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 
 	var current = _get_hand_item(hand)
 
-	# Pick the next stowed item (direction determines which end we pull from)
 	var pick_index = 0 if direction >= 0 else stowed_items.size() - 1
-	var next_item = stowed_items[pick_index]
+	var picked = stowed_items[pick_index]
 	stowed_items.remove_at(pick_index)
 
-	# Stow current hand item (if any) — add to opposite end for round-robin
+	# Outgoing hand item first: weapons rotate back into stowed, ability copies are
+	# discarded (canonical lives in stowed).
 	if current != null:
-		if direction >= 0:
-			stowed_items.append(current)
+		if current is AbilityShape:
+			current.queue_free()
 		else:
-			stowed_items.insert(0, current)
+			if direction >= 0:
+				stowed_items.append(current)
+			else:
+				stowed_items.insert(0, current)
 
-	# Update hand slot reference — DON'T set possessor references here,
-	# the signal handler (_on_active_weapon_changed) manages visual attach/detach
-	# and sets possessor.current_*_hand_item.
+	# Then the picked item: abilities re-insert the canonical at the rotation tail
+	# (so the next press advances past it) and equip a fresh copy. Weapons go to the hand.
+	var to_equip: Node2D = picked
+	if picked is AbilityShape:
+		if direction >= 0:
+			stowed_items.append(picked)
+		else:
+			stowed_items.insert(0, picked)
+		to_equip = _spawn_ability_copy(picked)
+
+	# Update hand slot reference — possessor.current_*_hand_item is set by the
+	# active_weapon_changed signal handler.
 	if hand == "Main":
-		main_hand_item = next_item
+		main_hand_item = to_equip
 	else:
-		off_hand_item = next_item
+		off_hand_item = to_equip
 
-	emit_signal("active_weapon_changed", next_item, hand)
+	emit_signal("active_weapon_changed", to_equip, hand)
 
-	if next_item is WeaponShape and is_instance_valid(possessor):
+	if to_equip is WeaponShape and is_instance_valid(possessor):
 		SfxManager.play("draw-steel", possessor.global_position)
 
 	# If a two-handed weapon was cycled into main hand, stow the off-hand
-	if hand == "Main" and _is_two_handed(next_item) and off_hand_item != null:
+	if hand == "Main" and _is_two_handed(to_equip) and off_hand_item != null:
 		_stow_item(off_hand_item, "Off")
 
 ## Legacy cycle_weapon — cycles main hand by default.
@@ -306,12 +354,20 @@ func holster_weapon() -> void:
 
 func draw_weapon() -> void:
 	if main_hand_item == null and not stowed_items.is_empty():
-		var item = stowed_items.pop_front()
-		main_hand_item = item
-		possessor.current_main_hand_item = item
-		emit_signal("active_weapon_changed", item, "Main")
-		if item is WeaponShape and is_instance_valid(possessor):
-			SfxManager.play("draw-steel", possessor.global_position)
+		var item = stowed_items[0]
+		if item is AbilityShape:
+			# Canonical stays in stowed; spawn a fresh copy for the hand.
+			var copy = _spawn_ability_copy(item)
+			main_hand_item = copy
+			possessor.current_main_hand_item = copy
+			emit_signal("active_weapon_changed", copy, "Main")
+		else:
+			stowed_items.pop_front()
+			main_hand_item = item
+			possessor.current_main_hand_item = item
+			emit_signal("active_weapon_changed", item, "Main")
+			if is_instance_valid(possessor):
+				SfxManager.play("draw-steel", possessor.global_position)
 
 # Legacy compatibility property for save/load and Game.gd references
 var active_weapon_index: int:

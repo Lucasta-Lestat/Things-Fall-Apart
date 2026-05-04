@@ -204,10 +204,13 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"inv_grid": inv_grid,
 	}
 
-	# Connect inventory signals
+	# Connect inventory signals — any change refreshes the unified grid
 	if character.inventory:
 		character.inventory.item_added.connect(_on_inventory_changed.bind(data))
 		character.inventory.item_removed.connect(_on_inventory_changed.bind(data))
+		character.inventory.weapon_equipped.connect(_on_inventory_changed.bind(data))
+		character.inventory.weapon_unequipped.connect(_on_inventory_changed.bind(data))
+		character.inventory.active_weapon_changed.connect(_on_active_weapon_changed.bind(data))
 
 	_refresh_inventory(data)
 	return data
@@ -258,24 +261,116 @@ func _refresh_inventory(data: Dictionary) -> void:
 	if not character.inventory:
 		return
 
-	for i in range(character.inventory.items.size()):
-		var item = character.inventory.items[i]
-		var slot = _create_item_slot(item, i, data)
+	var entries = _build_inventory_entries(character.inventory)
+	for entry in entries:
+		var slot = _create_item_slot(entry, data)
 		grid.add_child(slot)
 
-func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dictionary) -> PanelContainer:
+# Builds a unified list of display entries covering inventory.items, hand-equipped
+# weapons/abilities, and stowed weapons/abilities. Abilities are deduped by ability_id
+# so the same ability in both hands collapses to one slot with hand="Both".
+func _build_inventory_entries(inventory) -> Array:
+	var entries: Array = []
+
+	# 1. Dictionary items
+	for i in range(inventory.items.size()):
+		var item: Dictionary = inventory.items[i]
+		var raw_stacks = item.get("num_stacks", 1)
+		entries.append({
+			"kind": "item",
+			"display_name": item.get("display_name", item.get("id", "?")),
+			"sprite_path": str(item.get("sprite_path", "")) if item.get("sprite_path") != null else "",
+			"num_stacks": int(raw_stacks) if raw_stacks != null else 1,
+			"equipped": bool(item.get("_equipped", false)),
+			"hand": "",
+			"source_index": i,
+			"raw": item,
+		})
+
+	var main = inventory.main_hand_item
+	var off = inventory.off_hand_item
+
+	# 2. Abilities — dedupe by ability_id across stowed + hands
+	var ability_entries: Dictionary = {}  # ability_id -> entry dict
+	var ability_order: Array = []          # preserves first-seen order
+	for shape in inventory.stowed_items:
+		if shape is AbilityShape:
+			_ensure_ability_entry(shape, ability_entries, ability_order, false, "")
+	if main is AbilityShape:
+		_ensure_ability_entry(main, ability_entries, ability_order, true, "Main")
+	if off is AbilityShape:
+		_ensure_ability_entry(off, ability_entries, ability_order, true, "Off")
+	for aid in ability_order:
+		entries.append(ability_entries[aid])
+
+	# 3. Weapons — one entry per WeaponShape instance
+	if main is WeaponShape:
+		var hand_label = "Both" if main.is_two_handed() else "Main"
+		entries.append(_make_weapon_entry(main, hand_label, true))
+	if off is WeaponShape:
+		entries.append(_make_weapon_entry(off, "Off", true))
+	for shape in inventory.stowed_items:
+		if shape is WeaponShape:
+			entries.append(_make_weapon_entry(shape, "", false))
+
+	return entries
+
+func _ensure_ability_entry(node: AbilityShape, entries: Dictionary, order: Array, equipped: bool, hand: String) -> void:
+	var aid: String = node.ability_id
+	if not entries.has(aid):
+		var icon_path: String = ""
+		if node.raw_data is Dictionary and node.raw_data.has("icon"):
+			icon_path = str(node.raw_data["icon"])
+		entries[aid] = {
+			"kind": "ability",
+			"display_name": node.display_name,
+			"sprite_path": icon_path,
+			"num_stacks": 1,
+			"equipped": equipped,
+			"hand": hand,
+			"source_index": -1,
+			"raw": node,
+		}
+		order.append(aid)
+		return
+
+	var entry: Dictionary = entries[aid]
+	if equipped:
+		entry["equipped"] = true
+		if entry["hand"] == "":
+			entry["hand"] = hand
+		elif entry["hand"] != hand:
+			entry["hand"] = "Both"
+
+func _make_weapon_entry(node: WeaponShape, hand: String, equipped: bool) -> Dictionary:
+	var sprite_path = node.sprite_path if "sprite_path" in node else ""
+	return {
+		"kind": "weapon",
+		"display_name": node.display_name,
+		"sprite_path": str(sprite_path) if sprite_path != null else "",
+		"num_stacks": 1,
+		"equipped": equipped,
+		"hand": hand,
+		"source_index": -1,
+		"raw": node,
+	}
+
+func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContainer:
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = item_data.get("display_name", item_data.get("id", "Unknown"))
+	slot.tooltip_text = entry.get("display_name", "Unknown")
 
 	var bg = StyleBoxFlat.new()
 	bg.bg_color = Color(0.2, 0.2, 0.25, 0.8)
 	bg.set_corner_radius_all(4)
+	if entry.get("equipped", false):
+		bg.set_border_width_all(2)
+		bg.border_color = Color(1.0, 0.85, 0.2, 1.0)  # gold equipped highlight
 	slot.add_theme_stylebox_override("panel", bg)
 
-	# Show item sprite icon, scaled to fit the slot
-	var sprite_path: String = str(item_data.get("sprite_path", "")) if item_data.get("sprite_path") != null else ""
+	# Icon, scaled to fit the slot
+	var sprite_path: String = str(entry.get("sprite_path", ""))
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		var tex_rect = TextureRect.new()
 		tex_rect.texture = load(sprite_path)
@@ -285,18 +380,16 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(tex_rect)
 	else:
-		# Fallback: show abbreviated text if no sprite
 		var label = Label.new()
-		label.text = _get_item_short_name(item_data)
+		label.text = _get_entry_short_name(entry)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 9)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(label)
 
-	# Show stack count badge for stacked items
-	var raw_stacks = item_data.get("num_stacks", 1)
-	var num_stacks: int = int(raw_stacks) if raw_stacks != null else 1
+	# Stack count badge
+	var num_stacks: int = int(entry.get("num_stacks", 1))
 	if num_stacks > 1:
 		var stack_label = Label.new()
 		stack_label.text = str(num_stacks)
@@ -311,18 +404,34 @@ func _create_item_slot(item_data: Dictionary, item_index: int, panel_data: Dicti
 		stack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(stack_label)
 
-	# Store metadata for drag-drop and right-click
-	slot.set_meta("item_index", item_index)
-	slot.set_meta("item_data", item_data)
+	# L/R hand markers — overlay labels pinned to the slot's left/right edges
+	var hand: String = entry.get("hand", "")
+	if hand == "Main" or hand == "Both":
+		slot.add_child(_make_hand_label("L", HORIZONTAL_ALIGNMENT_LEFT))
+	if hand == "Off" or hand == "Both":
+		slot.add_child(_make_hand_label("R", HORIZONTAL_ALIGNMENT_RIGHT))
+
+	slot.set_meta("entry", entry)
 	slot.set_meta("panel_data", panel_data)
-
-	# Connect input for right-click context menu
 	slot.gui_input.connect(_on_slot_gui_input.bind(slot))
-
 	return slot
 
-func _get_item_short_name(item_data: Dictionary) -> String:
-	var n = item_data.get("display_name", item_data.get("id", "?"))
+func _make_hand_label(text: String, alignment: int) -> Label:
+	var label = Label.new()
+	label.text = text
+	label.horizontal_alignment = alignment
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	label.custom_minimum_size = ITEM_SLOT_SIZE
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+func _get_entry_short_name(entry: Dictionary) -> String:
+	var n: String = entry.get("display_name", "?")
 	if n.length() > 5:
 		return n.substr(0, 4) + "."
 	return n
@@ -332,28 +441,27 @@ func _get_item_short_name(item_data: Dictionary) -> String:
 # ---------------------------------------------------------------------------
 
 func _get_drag_data(at_position: Vector2):
-	# Find which slot is under the cursor
 	var slot = _find_slot_at(at_position)
 	if not slot:
 		return null
 
-	var item_data = slot.get_meta("item_data")
+	var entry: Dictionary = slot.get_meta("entry")
 	var panel_data = slot.get_meta("panel_data")
-	var item_index = slot.get_meta("item_index")
 
-	# Create drag preview with item icon
-	var preview = _create_drag_preview(item_data)
-	set_drag_preview(preview)
+	# Abilities are not draggable between characters
+	if entry.get("kind", "") == "ability":
+		return null
+
+	set_drag_preview(_create_drag_preview_from_entry(entry))
 
 	return {
 		"source_character": panel_data["character"],
-		"item_index": item_index,
-		"item_data": item_data,
+		"entry": entry,
 		"source_panel": panel_data,
 	}
 
-func _create_drag_preview(item_data: Dictionary) -> Control:
-	var sprite_path: String = str(item_data.get("sprite_path", "")) if item_data.get("sprite_path") != null else ""
+func _create_drag_preview_from_entry(entry: Dictionary) -> Control:
+	var sprite_path: String = str(entry.get("sprite_path", ""))
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		var tex = TextureRect.new()
 		tex.texture = load(sprite_path)
@@ -361,18 +469,16 @@ func _create_drag_preview(item_data: Dictionary) -> Control:
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 		return tex
-	else:
-		var label = Label.new()
-		label.text = item_data.get("display_name", item_data.get("id", "Item"))
-		label.add_theme_font_size_override("font_size", 12)
-		return label
+	var label = Label.new()
+	label.text = entry.get("display_name", "Item")
+	label.add_theme_font_size_override("font_size", 12)
+	return label
 
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
 	if not data.has("source_character"):
 		return false
-	# Find which character panel we're over
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return false
@@ -386,15 +492,30 @@ func _drop_data(at_position: Vector2, data) -> void:
 
 	var source_char = data["source_character"]
 	var target_char = target_panel["character"]
-	var item_index = data["item_index"]
+	var entry: Dictionary = data["entry"]
 
-	# Remove from source
-	var item = source_char.inventory.remove_item(item_index)
-	if item.is_empty():
+	match entry.get("kind", ""):
+		"item":
+			var item = source_char.inventory.remove_item(entry.get("source_index", -1))
+			if not item.is_empty():
+				target_char.inventory.add_item(item)
+		"weapon":
+			_transfer_weapon(source_char, target_char, entry.get("raw"))
+
+func _transfer_weapon(source_char, target_char, weapon) -> void:
+	if weapon == null or not is_instance_valid(weapon):
 		return
-
-	# Add to target
-	target_char.inventory.add_item(item)
+	var weapon_data = weapon.to_data()
+	var src_inv = source_char.inventory
+	if weapon == src_inv.main_hand_item:
+		src_inv.unequip_hand("Main")
+	elif weapon == src_inv.off_hand_item:
+		src_inv.unequip_hand("Off")
+	else:
+		src_inv.stowed_items.erase(weapon)
+		src_inv.emit_signal("weapon_unequipped", weapon)
+	weapon.queue_free()
+	target_char.inventory.stow_weapon_from_data(weapon_data)
 
 func _find_slot_at(pos: Vector2) -> PanelContainer:
 	for panel_data in _character_panels:
@@ -426,27 +547,43 @@ func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
 		# MOUSE_FILTER_STOP already prevents them from reaching the world.
 
 func _show_item_context_menu(slot: PanelContainer) -> void:
-	var item_data: Dictionary = slot.get_meta("item_data")
+	var entry: Dictionary = slot.get_meta("entry")
 	var panel_data: Dictionary = slot.get_meta("panel_data")
-	var item_index: int = slot.get_meta("item_index")
 	var character = panel_data["character"]
 
-	var options: Array = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
+	var options: Array = []
+	var kind: String = entry.get("kind", "")
 
-	# Add Equip/Unequip for equipment items (Head, Torso, Back, Legs, Feet slots)
-	var equip_slot: String = item_data.get("equip_slot", "")
-	if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
-		if item_data.get("_equipped", false):
-			options.insert(0, "Unequip")
+	if kind == "item":
+		var item_data: Dictionary = entry.get("raw", {})
+		options = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
+		var equip_slot: String = item_data.get("equip_slot", "")
+		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
+			if item_data.get("_equipped", false):
+				options.insert(0, "Unequip")
+			else:
+				options.insert(0, "Equip")
+	elif kind == "weapon" or kind == "ability":
+		if entry.get("equipped", false):
+			var hand: String = entry.get("hand", "")
+			if hand == "Both":
+				options.append("Stow Main")
+				options.append("Stow Off")
+				options.append("Stow Both")
+			else:
+				options.append("Stow")
 		else:
-			options.insert(0, "Equip")
+			options.append("Equip to Main")
+			options.append("Equip to Off")
+
+	if options.is_empty():
+		return
 
 	var menu = PopupMenu.new()
 	for i in range(options.size()):
 		menu.add_item(options[i], i)
-	menu.id_pressed.connect(_on_item_menu_selected.bind(character, item_index, item_data, options))
+	menu.id_pressed.connect(_on_item_menu_selected.bind(character, entry, options))
 
-	# Block game-world input while popup is open
 	if game_node:
 		game_node.context_menu_open = true
 	menu.popup_hide.connect(func(): game_node.call_deferred("set", "context_menu_open", false))
@@ -457,24 +594,62 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		Vector2i.ZERO
 	))
 
-func _on_item_menu_selected(id: int, character, item_index: int, item_data: Dictionary, options: Array) -> void:
+func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Array) -> void:
 	SfxManager.play_ui("ui-click")
 	var option_name = options[id] if id < options.size() else ""
-	match option_name:
-		"Use":
-			_use_item(character, item_index, item_data)
-		"Consume":
-			_consume_item(character, item_index, item_data)
-		"Throw":
-			_throw_item(character, item_index, item_data)
-		"Drop":
-			_drop_item(character, item_index, item_data)
-		"Equip":
-			_equip_item(character, item_index, item_data)
-		"Unequip":
-			_unequip_item(character, item_index, item_data)
-		_:
-			print("Unhandled item option: ", option_name)
+	var kind: String = entry.get("kind", "")
+
+	if kind == "item":
+		var item_index: int = entry.get("source_index", -1)
+		var item_data: Dictionary = entry.get("raw", {})
+		match option_name:
+			"Use":
+				_use_item(character, item_index, item_data)
+			"Consume":
+				_consume_item(character, item_index, item_data)
+			"Throw":
+				_throw_item(character, item_index, item_data)
+			"Drop":
+				_drop_item(character, item_index, item_data)
+			"Equip":
+				_equip_item(character, item_index, item_data)
+			"Unequip":
+				_unequip_item(character, item_index, item_data)
+			_:
+				print("Unhandled item option: ", option_name)
+		return
+
+	if kind == "weapon" or kind == "ability":
+		match option_name:
+			"Stow":
+				var hand: String = entry.get("hand", "")
+				if hand == "Main" or hand == "Off":
+					character.inventory.stow_hand(hand)
+			"Stow Main":
+				character.inventory.stow_hand("Main")
+			"Stow Off":
+				character.inventory.stow_hand("Off")
+			"Stow Both":
+				character.inventory.stow_hand("Main")
+				character.inventory.stow_hand("Off")
+			"Equip to Main":
+				_equip_shape_to_hand(character, entry, "Main")
+			"Equip to Off":
+				_equip_shape_to_hand(character, entry, "Off")
+			_:
+				print("Unhandled shape option: ", option_name)
+
+func _equip_shape_to_hand(character, entry: Dictionary, hand: String) -> void:
+	var node = entry.get("raw")
+	if node == null or not is_instance_valid(node):
+		return
+	if entry.get("kind", "") == "ability":
+		# entry.raw is the canonical AbilityShape — spawn a copy for the hand
+		character.inventory.equip_ability_to_hand(node, hand)
+	else:  # weapon
+		if node in character.inventory.stowed_items:
+			character.inventory.stowed_items.erase(node)
+		character.inventory.equip_item(node, hand)
 
 func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 	var use_ability_id = item_data.get("use_ability", "")
@@ -686,7 +861,10 @@ func _refresh_all_inventories() -> void:
 # Inventory change callback
 # ---------------------------------------------------------------------------
 
-func _on_inventory_changed(_item_data: Dictionary, panel_data: Dictionary) -> void:
+func _on_inventory_changed(_payload, panel_data: Dictionary) -> void:
+	_refresh_inventory(panel_data)
+
+func _on_active_weapon_changed(_weapon, _hand, panel_data: Dictionary) -> void:
 	_refresh_inventory(panel_data)
 
 # ---------------------------------------------------------------------------
