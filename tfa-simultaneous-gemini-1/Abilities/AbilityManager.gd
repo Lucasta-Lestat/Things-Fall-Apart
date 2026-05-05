@@ -247,21 +247,14 @@ func _finish_step_sequence() -> void:
 		cast_completed.emit(ability, all_results)
 
 
-## Dash/move character to a position, then call a callback
+## Dash/move character to a position, then call a callback. Routes through
+## ProceduralCharacter.dash_to so the dash uses move_and_slide and respects
+## structures (no more wall-phasing).
 func _dash_to_position(target_pos: Vector2, speed: float, on_complete: Callable) -> void:
-	if not character or not character is Node2D:
+	if not character or not character.has_method("dash_to"):
 		on_complete.call()
 		return
-
-	var distance = character.global_position.distance_to(target_pos)
-	if distance < 1.0:
-		on_complete.call()
-		return
-
-	var duration = distance / speed
-	var tween = create_tween()
-	tween.tween_property(character, "global_position", target_pos, duration)
-	tween.finished.connect(on_complete, CONNECT_ONE_SHOT)
+	character.dash_to(target_pos, speed, on_complete)
 
 
 ## Resolve an array of effects against targets

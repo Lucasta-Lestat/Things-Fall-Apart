@@ -196,6 +196,16 @@ var knockback_velocity: Vector2 = Vector2.ZERO
 var knockback_friction: float = 150.0
 var knockback_active: bool = false
 
+# Scripted dash state (ability move_to_target). Drives velocity through
+# move_and_slide so the dash respects walls instead of phasing through them.
+var _dash_motion_active: bool = false
+var _dash_motion_dir: Vector2 = Vector2.ZERO
+var _dash_motion_speed: float = 0.0
+var _dash_motion_remaining: float = 0.0
+var _dash_motion_max_time: float = 0.0
+var _dash_motion_elapsed: float = 0.0
+var _dash_motion_on_complete: Callable
+
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
 var _flee_timer: float = 0.0
@@ -2694,6 +2704,11 @@ func _update_movement(delta: float) -> void:
 		_update_knockback(delta)
 		return
 
+	# --- Scripted dash override (ability move_to_target) ---
+	if _dash_motion_active:
+		_update_dash_motion(delta)
+		return
+
 	# Move toward target if moving
 	if is_moving:
 		var to_target = target_position - global_position
@@ -2809,6 +2824,52 @@ func _update_knockback(delta: float) -> void:
 	else:
 		knockback_active = false
 		knockback_velocity = Vector2.ZERO
+
+func dash_to(target_pos: Vector2, speed: float, on_complete: Callable = Callable()) -> void:
+	"""Drive the character at `speed` toward `target_pos` via move_and_slide
+	(so walls actually stop the dash). Calls `on_complete` when the target is
+	reached, when blocked against a wall, or when a duration safety net
+	fires."""
+	var to_target := target_pos - global_position
+	var distance := to_target.length()
+	if distance < 1.0 or speed <= 0.0:
+		if on_complete.is_valid():
+			on_complete.call()
+		return
+	_dash_motion_dir = to_target / distance
+	_dash_motion_speed = speed
+	_dash_motion_remaining = distance
+	# Safety timeout — 50% over the no-obstruction transit time. Belt-and-
+	# suspenders against the stuck-on-wall detection missing an edge case.
+	_dash_motion_max_time = (distance / speed) * 1.5
+	_dash_motion_elapsed = 0.0
+	_dash_motion_on_complete = on_complete
+	_dash_motion_active = true
+
+func _update_dash_motion(delta: float) -> void:
+	_dash_motion_elapsed += delta
+	velocity = _dash_motion_dir * _dash_motion_speed
+	var prev_pos := global_position
+	move_and_slide()
+	var actual_motion := (global_position - prev_pos).length()
+	_dash_motion_remaining -= actual_motion
+	var arrived := _dash_motion_remaining <= 0.0
+	var blocked := is_on_wall() and actual_motion < 0.5
+	var timed_out := _dash_motion_elapsed >= _dash_motion_max_time
+	if arrived or blocked or timed_out:
+		_end_dash_motion()
+
+func _end_dash_motion() -> void:
+	_dash_motion_active = false
+	_dash_motion_dir = Vector2.ZERO
+	_dash_motion_speed = 0.0
+	_dash_motion_remaining = 0.0
+	_dash_motion_max_time = 0.0
+	_dash_motion_elapsed = 0.0
+	var cb := _dash_motion_on_complete
+	_dash_motion_on_complete = Callable()
+	if cb.is_valid():
+		cb.call()
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds
