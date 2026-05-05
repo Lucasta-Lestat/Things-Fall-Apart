@@ -2487,13 +2487,23 @@ func cast_ability(ability: AbilityShape):
 	# 2. Trigger Animation (Straight arm push)
 	attack_animator.start_cast()
 
-	# 3. Wait for hit frame (via signal) to spawn actual projectile
-	await attack_animator.attack_hit_frame
+	# 3. Wait for hit frame (via signal) to spawn actual projectile.
+	# If the cast was interrupted (knockback, stagger, etc.) the hit frame
+	# never fires — bail out with cleanup so the coroutine doesn't orphan
+	# and resume on a future cast's hit_frame.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		ability.activate_visuals(false)
+		targeting_system._end_targeting()
+		return
 
 	# 4. Execute Logic (Spawn fireball, etc)
-	
+
 	# 5. Cleanup Visuals
-	await attack_animator.attack_finished
+	# interrupt_attack() also emits attack_finished, so this resolves on both
+	# natural completion and interruption mid-recovery.
+	if attack_animator.is_attacking:
+		await attack_animator.attack_finished
 	ability.activate_visuals(false)
 	targeting_system._end_targeting()
 
@@ -3061,7 +3071,12 @@ func attack(Ability:String= "Main") -> void:
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
-	await attack_animator.attack_hit_frame
+	# Bail if the attack ends (interrupted) before the release frame —
+	# otherwise the orphaned coroutine resumes on a future attack's hit_frame
+	# and spawns a phantom projectile.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		return
 	if not is_instance_valid(weapon):
 		return
 	# Consume ammo if the weapon requires it
