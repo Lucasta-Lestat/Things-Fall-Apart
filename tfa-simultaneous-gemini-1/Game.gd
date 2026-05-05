@@ -854,13 +854,14 @@ func process_object_hit(
 ) -> Dictionary:
 	# Build damage dict — duplicate to avoid mutating weapon data
 	var attack_damage: Dictionary
-	if weapon:
+	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
 		if weapon.get("traits") and "melee" in weapon.traits:
 			var str_bonus = attacker.strength / 10.0
 			for dtype in attack_damage:
 				attack_damage[dtype] += str_bonus
 	else:
+		# Unarmed (or AbilityShape held while combat collision detection runs).
 		attack_damage = {
 			attacker.unarmed_strike_damage_type:
 				attacker.unarmed_strike_damage + attacker.strength / 10.0
@@ -875,7 +876,10 @@ func process_object_hit(
 	for dtype in attack_damage:
 		total_damage += max(0.0, attack_damage[dtype] - dr.get(dtype, 0))
 
-	var penetration_result = _calculate_penetration(total_damage, attack_velocity, weapon)
+	# Pass null for non-weapon items (e.g., AbilityShape) so penetration math
+	# doesn't try to read weapon-specific properties.
+	var actual_weapon = weapon if weapon is WeaponShape else null
+	var penetration_result = _calculate_penetration(total_damage, attack_velocity, actual_weapon)
 
 	if penetration_result.state == PenetrationState.BOUNCED:
 		SfxManager.play("clash", target.global_position)
