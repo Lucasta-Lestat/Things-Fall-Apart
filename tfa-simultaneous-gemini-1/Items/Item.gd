@@ -2,6 +2,12 @@
 extends AnimatableBody2D
 class_name Item
 
+# TODO(phase-b): switch to RigidBody2D with gravity_scale = 0 so items can be
+# moved by force fields and projectile impacts as part of the KE-based gameplay
+# pass. AnimatableBody2D is kinematic — forces don't affect it without a custom
+# velocity loop. The collision layer below stays the same; only the base class
+# changes.
+
 signal destroyed(item)
 signal health_changed(current_health, max_health, item)
 signal stack_changed(count, item)
@@ -50,6 +56,10 @@ var options: Array = []
 var _grid_pos: Vector2i = Vector2i.ZERO
 
 func _ready():
+	# Items are walkable and don't block vision, but should be detectable by
+	# projectiles, force fields, and other items via the ITEMS layer.
+	collision_layer = CollisionLayers.ITEMS
+	collision_mask = CollisionLayers.ITEM_PHYSICS_MASK
 	_apply_item_data()
 	floating_text_label.visible = false
 	floating_text_label.z_index = 200

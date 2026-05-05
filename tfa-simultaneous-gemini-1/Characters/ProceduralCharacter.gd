@@ -176,6 +176,9 @@ func _main_hand_is_two_handed() -> bool:
 var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
+# Time the character has been blocked against a wall while is_moving; once it
+# exceeds the threshold, _update_movement gives up so the action queue advances.
+var _movement_stuck_time: float = 0.0
 # Waypoint-based pathfinding for real-time movement
 var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
@@ -700,11 +703,12 @@ func _setup_collision() -> void:
 	if not collision_enabled:
 		return
 
-	# Body-level collision: lets projectiles and other physics queries hit the
-	# character. Mask is 0 — the body does not actively detect anything yet;
-	# step 5 will switch movement to move_and_slide and mask STRUCTURES.
+	# Body-level collision: structures block movement (move_and_slide), and
+	# other physics queries (projectiles, raycasts) can hit this body.
+	# Char-on-char remains the soft Area2D separation below — Phase B will
+	# revisit this if hard char-on-char collision is desired.
 	collision_layer = CollisionLayers.CHARACTERS
-	collision_mask = 0
+	collision_mask = CollisionLayers.STRUCTURES
 
 	# Shared shape resource: one ConvexPolygonShape2D backs both the body and
 	# the Area2D, so _update_collision_shape() mutating .points keeps them in
@@ -2685,10 +2689,28 @@ func _update_movement(delta: float) -> void:
 
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
-			global_position += move_dir * min(move_speed * delta, distance)
+			velocity = move_dir * move_speed
+			var prev_pos := global_position
+			move_and_slide()
+			# If we are pressed against a wall and made no real progress for
+			# longer than a short threshold, abandon the move so the action
+			# queue (whose MOVE-complete check reads is_moving) can advance.
+			var actual_motion := (global_position - prev_pos).length()
+			if is_on_wall() and actual_motion < 0.5:
+				_movement_stuck_time += delta
+				if _movement_stuck_time > 0.5:
+					_movement_stuck_time = 0.0
+					_nav_waypoints.clear()
+					_nav_index = 0
+					is_moving = false
+					emit_signal("character_reached_target")
+					return
+			else:
+				_movement_stuck_time = 0.0
 			# Check if we just stepped onto an ice tile
 			_check_ice_entry(move_dir)
 		else:
+			_movement_stuck_time = 0.0
 			# If the action queue is driving movement, let it handle waypoint
 			# advancement — don't use _nav_waypoints which are for real-time input only
 			if action_queue and action_queue.current_action != null:
@@ -2737,24 +2759,18 @@ func _begin_ice_slide(direction: Vector2) -> void:
 	if action_queue and action_queue.current_action != null:
 		action_queue.clear_queue()
 
-func _update_ice_slide(delta: float) -> void:
-	"""Move the character in a straight line while on ice. Stops when reaching
-	a non-ice tile or hitting a wall."""
-	var step = _ice_slide_direction * _ice_slide_speed * delta
-	var next_pos = global_position + step
-	var next_tile = GridManager.world_to_map(next_pos)
-
-	# Check for walls
-	if GridManager.walls.get(next_tile, true):
+func _update_ice_slide(_delta: float) -> void:
+	"""Move the character in a straight line while on ice. Stops on hitting a
+	wall (via physics) or on reaching a non-ice tile."""
+	velocity = _ice_slide_direction * _ice_slide_speed
+	move_and_slide()
+	if is_on_wall():
 		_end_ice_slide()
 		return
-
-	global_position = next_pos
-
-	# Check if we've left the ice
+	var current_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
 	if game and "surface_manager" in game and game.surface_manager:
-		if not game.surface_manager.is_ice_at(next_tile):
+		if not game.surface_manager.is_ice_at(current_tile):
 			_end_ice_slide()
 
 func _end_ice_slide() -> void:
