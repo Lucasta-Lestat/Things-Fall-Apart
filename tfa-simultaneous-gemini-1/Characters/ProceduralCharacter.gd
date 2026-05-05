@@ -702,8 +702,8 @@ func _setup_collision() -> void:
 	# Create Area2D for collision detection
 	collision_area = Area2D.new()
 	collision_area.name = "CollisionArea"
-	collision_area.collision_layer = 2  # Character collision layer
-	collision_area.collision_mask = 2   # Detect other characters
+	collision_area.collision_layer = CollisionLayers.CHARACTERS
+	collision_area.collision_mask = CollisionLayers.CHARACTERS
 	add_child(collision_area)
 	
 	# Create polygon collision shape based on body dimensions

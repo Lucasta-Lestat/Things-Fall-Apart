@@ -718,8 +718,7 @@ func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	if not viewport or not viewport.world_2d:
 		return true
 	var space := viewport.world_2d.direct_space_state
-	# Mask 4 = layer 3 (vision_blockers).
-	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, 4)
+	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
 	params.collide_with_areas = false
 	params.collide_with_bodies = true
 	return space.intersect_ray(params).is_empty()
@@ -1884,8 +1883,11 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.add_child(shape)
  
 		# Set collision to detect the player for proximity checks
+		# TODO(phase-a/step-5): comment claims "player is on layer 1" but characters
+		# are actually on CHARACTERS layer — investigate whether warp detection
+		# currently works at all and fix when migrating character movement.
 		area.collision_layer = 0
-		area.collision_mask = 1  # Assumes player is on layer 1
+		area.collision_mask = CollisionLayers.STRUCTURES
 		# Warp zones are interacted with via right-click context menu,
 		# not by walking into them. The input manager detects clicks on
 		# Area2Ds and calls show_context_menu().
