@@ -1813,15 +1813,11 @@ func _create_warp_zones(warp_list: Array) -> void:
 		shape.shape = rect_shape
 		area.add_child(shape)
  
-		# Set collision to detect the player for proximity checks
-		# TODO(phase-a/step-5): comment claims "player is on layer 1" but characters
-		# are actually on CHARACTERS layer — investigate whether warp detection
-		# currently works at all and fix when migrating character movement.
+		# Warp zones are interacted with via right-click context menu, not by
+		# walking into them — input_pickable + input_event is the entire
+		# detection path, so no collision_layer/_mask is needed.
 		area.collision_layer = 0
-		area.collision_mask = CollisionLayers.STRUCTURES
-		# Warp zones are interacted with via right-click context menu,
-		# not by walking into them. The input manager detects clicks on
-		# Area2Ds and calls show_context_menu().
+		area.collision_mask = 0
 		area.input_pickable = true
 		area.input_event.connect(_on_warp_input.bind(area))
  
