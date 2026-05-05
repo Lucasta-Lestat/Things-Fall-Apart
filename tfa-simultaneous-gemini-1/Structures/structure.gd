@@ -63,8 +63,7 @@ func _apply_structure_data():
 	_setup_collision_shape()
 
 func _setup_collision_shape() -> void:
-	# layer 1 = structures, layer 3 = vision_blockers
-	collision_layer = 1 | 4
+	collision_layer = CollisionLayers.STRUCTURE_LAYERS
 	collision_mask = 0
 	var rect := RectangleShape2D.new()
 	rect.size = size
