@@ -869,15 +869,15 @@ static func _resolve_knockback(
 		
 		var direction = (target.global_position - knockback_origin).normalized()
 		var force = direction * strength
-		
-		if target is CharacterBody2D:
-			if "velocity" in target:
-				target.velocity += force
-			if target.has_method("apply_external_force"):
-				target.apply_external_force(force, 0.1)
+
+		# CharacterBody2D characters expose apply_external_force (defined on
+		# ProceduralCharacter) which integrates the force into knockback
+		# velocity. RigidBody2D targets receive a direct impulse.
+		if target.has_method("apply_external_force"):
+			target.apply_external_force(force, 0.1)
 		elif target is RigidBody2D:
 			target.apply_central_impulse(force)
-		
+
 		result["targets_affected"].append({
 			"target": target,
 			"force": force

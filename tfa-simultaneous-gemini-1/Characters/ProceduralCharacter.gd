@@ -189,6 +189,13 @@ var is_ice_sliding: bool = false
 var _ice_slide_direction: Vector2 = Vector2.ZERO
 var _ice_slide_speed: float = 0.0
 
+# Knockback / external force state. apply_external_force integrates force over
+# its duration into knockback_velocity; _update_knockback drains it via
+# friction each frame and overrides regular movement until it reaches zero.
+var knockback_velocity: Vector2 = Vector2.ZERO
+var knockback_friction: float = 150.0
+var knockback_active: bool = false
+
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
 var _flee_timer: float = 0.0
@@ -2682,6 +2689,11 @@ func _update_movement(delta: float) -> void:
 		_update_ice_slide(delta)
 		return
 
+	# --- Knockback / external force override ---
+	if knockback_active:
+		_update_knockback(delta)
+		return
+
 	# Move toward target if moving
 	if is_moving:
 		var to_target = target_position - global_position
@@ -2780,6 +2792,23 @@ func _end_ice_slide() -> void:
 	_ice_slide_speed = 0.0
 	is_moving = false
 	emit_signal("character_reached_target")
+
+func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
+	"""Canonical entry point for non-melee force application (force fields,
+	ability knockbacks, etc.). Integrates `force` over `duration` seconds
+	into knockback_velocity; the knockback update loop drains it via friction
+	and overrides regular movement until it reaches zero."""
+	knockback_velocity += force * duration
+	knockback_active = true
+
+func _update_knockback(delta: float) -> void:
+	if knockback_velocity.length() > 0.0:
+		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
+		velocity = knockback_velocity
+		move_and_slide()
+	else:
+		knockback_active = false
+		knockback_velocity = Vector2.ZERO
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds
