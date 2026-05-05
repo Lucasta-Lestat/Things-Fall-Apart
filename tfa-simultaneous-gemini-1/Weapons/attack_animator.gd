@@ -51,6 +51,11 @@ var animated_left_arm_offset: Vector2:
 # Knockback state lives on ProceduralCharacter — see apply_external_force /
 # _update_knockback. push_character below routes through that API.
 
+# WeaponShape whose hitbox is currently active for the in-progress swing.
+# Tracked across the swing so _finish_attack and interrupt_attack can find
+# it without re-resolving the active hand or current_*_hand_item.
+var _active_hitbox_weapon: WeaponShape = null
+
 # ===== SECOND ORDER DYNAMICS =====
 # Spring-damper system for realistic motion with overshoot and settling
 # Based on: https://www.youtube.com/watch?v=KPoeNZZ6H4s (t3ssel8r)
@@ -215,6 +220,13 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 	# Detect two-handed weapon
 	is_two_handed_attack = weapon != null and weapon is WeaponShape and weapon.is_two_handed()
 
+	# Activate the weapon's Area2D hitbox for the swing. Skipped for ranged
+	# weapons (bow, pistol) which use the projectile system.
+	_disable_active_hitbox()
+	if weapon is WeaponShape and weapon.is_melee() and weapon.hitbox:
+		weapon.hitbox.monitoring = true
+		_active_hitbox_weapon = weapon
+
 	weight = max(0.1, weight)
 	var speed_multiplier = clamp((character.dexterity / 100.0) / (weight / 4.0), 0.4, 3.0)
 	current_rotation_intensity = clamp(weight / 4.5, 0.4, 1.4)
@@ -255,6 +267,7 @@ func get_weapon_for_appropriate_hand():
 	return weapon
 	
 func _finish_attack() -> void:
+	_disable_active_hitbox()
 	current_state = AttackState.IDLE
 	attack_timer = 0.0
 	_reset_offsets()
@@ -264,6 +277,11 @@ func _finish_attack() -> void:
 		combat_manager.register_attack_end(character)
 	is_attacking = false
 	emit_signal("attack_finished")
+
+func _disable_active_hitbox() -> void:
+	if _active_hitbox_weapon and is_instance_valid(_active_hitbox_weapon) and _active_hitbox_weapon.hitbox:
+		_active_hitbox_weapon.hitbox.monitoring = false
+	_active_hitbox_weapon = null
 
 # ===== FEEDBACK FUNCTIONS =====
 
@@ -653,6 +671,7 @@ func await_hit_frame_or_end() -> bool:
 
 func interrupt_attack() -> void:
 	if current_state != AttackState.IDLE or is_attacking or is_casting:
+		_disable_active_hitbox()
 		current_state = AttackState.IDLE
 		attack_timer = 0.0
 		_reset_offsets()

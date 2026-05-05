@@ -755,7 +755,9 @@ func _update_item_los_visibility() -> void:
 		item.visible = _is_position_visible_to_party(item.global_position)
 
 func _process(delta: float) -> void:
-	# Check for combat collisions / Update clash cooldowns
+	# Update clash cooldowns. Combat collisions are now driven by the
+	# Area2D weapon hitbox on each WeaponShape (data/weapon_shape.gd) —
+	# no per-frame iteration here.
 	if not PauseManager.is_paused:
 		var to_remove = []
 		for key in clash_cooldowns:
@@ -764,7 +766,6 @@ func _process(delta: float) -> void:
 				to_remove.append(key)
 		for key in to_remove:
 			clash_cooldowns.erase(key)
-		_check_combat_collisions()
 	# Tick fog effects
 		if fog_manager:
 			fog_manager.update_fogs(delta, characters_in_scene)
@@ -790,61 +791,6 @@ func _process(delta: float) -> void:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
 
-func _check_combat_collisions() -> void:
-	var all_characters = characters_in_scene
-
-	for attacker in all_characters:
-		if not attacker.is_alive() or not attacker.is_attacking():
-			continue
-
-		var weapon
-		if attacker.current_hand == "Main":
-			weapon = attacker.current_main_hand_item
-		else:
-			weapon = attacker.current_off_hand_item
-
-		# Ranged weapons use the projectile system — skip melee collision entirely
-		if weapon is WeaponShape and weapon.weapon_type in [WeaponShape.WeaponType.BOW, WeaponShape.WeaponType.PISTOL]:
-			continue
-
-		# Check against other characters
-		#print("how many characters? ", all_characters)
-		for victim in all_characters:
-			if attacker == victim:
-				continue
-			if not victim.is_alive():
-				continue
-			if not can_hit_target(attacker, victim):
-				continue
-
-			var hit = check_weapon_body_collision(attacker, victim)
-			if hit.get("hit", false):
-				register_hit(attacker, victim)
-				
-				process_weapon_hit(attacker, victim, hit["position"], weapon, hit["velocity"])
-
-		# Check against items
-		for item in items_in_scene:
-			if not is_instance_valid(item):
-				continue
-			if not can_hit_target(attacker, item):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, item)
-			if hit.get("hit", false):
-				process_object_hit(attacker, item, hit["position"], weapon, hit["velocity"])
-
-		# Check against structures
-		for structure in structures_in_scene:
-			if not is_instance_valid(structure):
-				continue
-			if not can_hit_target(attacker, structure):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, structure)
-			if hit.get("hit", false):
-				process_object_hit(attacker, structure, hit["position"], weapon, hit["velocity"])
-				
 func process_object_hit(
 	attacker: ProceduralCharacter,
 	target: Node2D,
@@ -1429,172 +1375,6 @@ func register_hit(attacker: Node2D, target: Node2D) -> void:
 	active_hits[attacker_id][target_id] = true
 # ===== COLLISION DETECTION HELPERS =====
 
-func get_body_hitbox_corners(character: ProceduralCharacter) -> Array:
-	"""Get character's body hitbox as 4 world-space corners (handles rotation)"""
-	var half_width = character.body_width / 2
-	
-	# The character origin is at the center of the head
-	# Head front is at -head_length * 0.35
-	# Legs end at shoulder_y_offset + leg_length
-	var top = -character.head_length * 0.35
-	var bottom = character.shoulder_y_offset + character.leg_length
-	
-	# Local space corners
-	var local_corners = [
-		Vector2(-half_width, top),      # top-left
-		Vector2(half_width, top),       # top-right
-		Vector2(half_width, bottom),    # bottom-right
-		Vector2(-half_width, bottom)    # bottom-left
-	]
-	
-	# Transform each corner to world space (applying rotation)
-	var world_corners = []
-	for corner in local_corners:
-		world_corners.append(character.global_position + corner.rotated(character.rotation))
-	
-	return world_corners
-
-func point_in_polygon(point: Vector2, polygon: Array) -> bool:
-	"""Check if a point is inside a convex polygon using cross product method"""
-	var n = polygon.size()
-	if n < 3:
-		return false
-	
-	for i in range(n):
-		var a = polygon[i]
-		var b = polygon[(i + 1) % n]
-		var cross = (b - a).cross(point - a)
-		if cross < 0:
-			return false
-	return true
-
-func check_weapon_body_collision(holder, target: ProceduralCharacter):
-	# TODO(post-phase-a): replace with an Area2D weapon hitbox driven by
-	# attack_animator's swing window. Current 5-sample point-in-polygon check
-	# misses hits when (a) the blade rotates past the target between _process
-	# frames and (b) the visual blade extends past the hitbox quad built from
-	# body_width/body_height. See docs/melee_hitbox_plan.md for the migration
-	# plan.
-	# 1. Determine the start and end points of the "hit line" in WORLD space
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	# Check if the holder is actually holding a weapon in the active hand
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		# --- WEAPON LOGIC ---
-		# Use to_global() on the weapon node itself -- this correctly chains through
-		# weapon -> holder Node2D -> character -> world, including holder rotation/scale
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		# --- UNARMED / FIST LOGIC ---
-		# Arm joints are in character-local space, so holder.to_global() is correct
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		var fist_start_local = hand_local.lerp(elbow_local, 0.2)
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(fist_start_local)
-
-	# 2. Perform the Interpolation Check in world space
-	var body_corners = get_body_hitbox_corners(target)
-	var num_checks = 5
-
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if point_in_polygon(check_point_world, body_corners):
-			# Convert hit position to target's local space for limb detection
-			var hit_local = target.to_local(check_point_world)
-			var hit_local_unrotated = hit_local.rotated(-target.rotation)
-
-			var limb_type = target.get_limb_at_position(
-				hit_local_unrotated,
-				target.body_width,
-				target.body_height
-			)
-
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier,
-				"limb_type": limb_type
-			}
-
-	return {"hit": false}
-	
-func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) -> Dictionary:
-	"""Collision check for items and structures using their collision shape bounds"""
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(hand_local.lerp(elbow_local, 0.2))
-
-	# Use the target's sprite size as a simple bounding box
-	var target_rect: Rect2
-	if "sprite" in target and target.sprite and target.sprite.texture:
-		var tex_size = target.sprite.texture.get_size() * target.sprite.scale
-		var half = tex_size / 2.0
-		target_rect = Rect2(target.global_position - half, tex_size)
-	elif "size" in target:
-		var half = target.size / 2.0
-		target_rect = Rect2(target.global_position - half, target.size)
-	else:
-		return {"hit": false}
-
-	var num_checks = 5
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if target_rect.has_point(check_point_world):
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier
-			}
-
-	return {"hit": false}
-	
 func check_weapon_weapon_collision(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter
