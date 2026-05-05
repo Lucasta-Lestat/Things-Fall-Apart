@@ -4363,8 +4363,14 @@ func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.
 	print("DID FIND ABILITY VFX SCENE at scene path: ", scene_path)
 
 	var instance = scene.instantiate()
-	instance.global_position = position
-	instance.z_index = 3
+	# Only positionable nodes get global_position/z_index — CanvasLayer-rooted
+	# scenes (e.g. full-screen weather shaders) live in screen space and don't
+	# expose those properties; setting them would crash.
+	if instance is Node2D:
+		instance.global_position = position
+		instance.z_index = 3
+	else:
+		push_warning("VFX scene '%s' has non-Node2D root (%s); spawning at screen-space position only." % [scene_path, instance.get_class()])
 
 	var scene_root = get_tree().current_scene
 	scene_root.add_child(instance)
