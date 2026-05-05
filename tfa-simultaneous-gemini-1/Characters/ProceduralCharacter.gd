@@ -25,7 +25,8 @@ var _was_paused: bool = false
 
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
-var _throw_reticle_line: Line2D = null
+var pending_dash: bool = false
+var _aim_line: AimLine = null
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -582,24 +583,13 @@ func _clear_tactical_path_if_executing() -> void:
 
 func start_throw_targeting(item_index: int, item_data: Dictionary) -> void:
 	pending_throw = {"item_index": item_index, "item_data": item_data}
-	# Create a simple line reticle from character to mouse
-	if _throw_reticle_line == null:
-		_throw_reticle_line = Line2D.new()
-		_throw_reticle_line.width = 1.5
-		_throw_reticle_line.default_color = Color(1, 1, 1, 0.5)
-		_throw_reticle_line.z_index = 45
-		_throw_reticle_line.top_level = true
-		_throw_reticle_line.process_mode = Node.PROCESS_MODE_ALWAYS
-		add_child(_throw_reticle_line)
-	_throw_reticle_line.visible = true
-	_throw_reticle_line.clear_points()
-	_throw_reticle_line.add_point(global_position)
-	_throw_reticle_line.add_point(global_position)
+	_ensure_aim_line()
+	_aim_line.default_color = Color(1, 1, 1, 0.5)
+	_aim_line.show_aim(global_position, global_position, 0)
 
 func _update_throw_reticle(mouse_pos: Vector2) -> void:
-	if _throw_reticle_line and _throw_reticle_line.visible:
-		_throw_reticle_line.set_point_position(0, global_position)
-		_throw_reticle_line.set_point_position(1, mouse_pos)
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, 0)
 
 func _execute_pending_throw(mouse_pos: Vector2) -> void:
 	var item_index = pending_throw.get("item_index", -1)
@@ -634,11 +624,48 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 
 func _cancel_pending_throw() -> void:
 	pending_throw = {}
-	_hide_throw_reticle()
+	_hide_aim_line()
 
 func _hide_throw_reticle() -> void:
-	if _throw_reticle_line:
-		_throw_reticle_line.visible = false
+	_hide_aim_line()
+
+# --- Dash targeting helpers (mirror the throw flow) ---
+
+func start_dash_targeting() -> void:
+	"""Enter dash-targeting mode. Aim line follows the cursor (truncated at the
+	first wall) until the player commits with left-click or cancels with
+	right-click / escape / shift."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
+		return
+	pending_dash = true
+	_ensure_aim_line()
+	# Yellow-tinted to distinguish from throw aim.
+	_aim_line.default_color = Color(1.0, 0.85, 0.3, 0.6)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES)
+
+func _update_dash_reticle(mouse_pos: Vector2) -> void:
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES)
+
+func _execute_pending_dash(mouse_pos: Vector2) -> void:
+	pending_dash = false
+	_hide_aim_line()
+	dash(mouse_pos)
+
+func _cancel_pending_dash() -> void:
+	pending_dash = false
+	_hide_aim_line()
+
+# --- Shared AimLine plumbing ---
+
+func _ensure_aim_line() -> void:
+	if _aim_line == null:
+		_aim_line = AimLine.new()
+		add_child(_aim_line)
+
+func _hide_aim_line() -> void:
+	if _aim_line:
+		_aim_line.hide_aim()
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -2571,6 +2598,17 @@ func _handle_input() -> void:
 			return
 		return  # Block all other input while throw targeting
 
+	# --- Dash targeting mode ---
+	if pending_dash:
+		_update_dash_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_dash(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("dash"):
+			_cancel_pending_dash()
+			return
+		return  # Block all other input while dash targeting
+
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
 		current_hand = "Off"
@@ -2640,7 +2678,9 @@ func _handle_input() -> void:
 		if paused:
 			action_queue.queue_dash(mouse_pos)
 		else:
-			dash(mouse_pos)
+			# Enter the dash-targeting mode handled above; the targeting block
+			# itself listens for the click that commits the dash.
+			start_dash_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
