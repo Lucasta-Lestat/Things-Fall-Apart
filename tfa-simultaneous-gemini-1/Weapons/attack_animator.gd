@@ -656,14 +656,17 @@ func _second_order_float(from: float, to: float, t: float) -> float:
 # ===== UTILS =====
 
 func interrupt_attack() -> void:
-	if current_state != AttackState.IDLE:
+	if current_state != AttackState.IDLE or is_attacking or is_casting:
 		current_state = AttackState.IDLE
 		attack_timer = 0.0
 		_reset_offsets()
-		
+		is_two_handed_attack = false
+		is_attacking = false
+		is_casting = false
+
 		if combat_manager and character is ProceduralCharacter:
 			combat_manager.register_attack_end(character)
-		
+
 		emit_signal("attack_finished")
 
 func _reset_offsets() -> void:
