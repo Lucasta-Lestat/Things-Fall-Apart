@@ -57,7 +57,7 @@
 		  "slot": "body"
 		}
 	  ],
-	  "icon": "res://icons/characters/default_human.png",
+	  "icon": "res://Icons/default_human_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -84,7 +84,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/town_guard.png",
+	  "icon": "res://Icons/town_guard_icon.png",
 	  "dialogue": "guard_generic",
 	  "interact_options": [
 		"Talk",
@@ -125,7 +125,7 @@
 		  "quantity": 20
 		}
 	  ],
-	  "icon": "res://icons/characters/merchant.png",
+	  "icon": "res://Icons/merchant_icon.png",
 	  "dialogue": "merchant_generic",
 	  "interact_options": [
 		"Talk",
@@ -154,7 +154,7 @@
 		"charisma": 35
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/bandit.png",
+	  "icon": "res://Icons/bandit_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -194,7 +194,7 @@
 		  "quantity": 5
 		}
 	  ],
-	  "icon": "res://icons/characters/bandit_chief.png",
+	  "icon": "res://Icons/bandit_chief_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -230,7 +230,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/rebel_fighter.png",
+	  "icon": "res://Icons/rebel_fighter_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -266,7 +266,7 @@
 		  "slot": "body"
 		}
 	  ],
-	  "icon": "res://icons/characters/forest_elf.png",
+	  "icon": "res://Icons/forest_elf_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -293,7 +293,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/cultist.png",
+	  "icon": "res://Icons/cultist_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -324,7 +324,7 @@
 		"hair_color": "#E0E0D1"
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/skeleton_warrior.png",
+	  "icon": "res://Icons/skeleton_warrior_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -364,7 +364,7 @@
 		  "slot": "main_hand"
 		}
 	  ],
-	  "icon": "res://icons/characters/demon_imp.png",
+	  "icon": "res://Icons/demon_imp_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -401,7 +401,7 @@
 		"charisma": 70
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/noble_lord.png",
+	  "icon": "res://Icons/noble_lord_icon.png",
 	  "dialogue": "castellan_intro",
 	  "interact_options": [
 		"Talk",
@@ -438,7 +438,7 @@
 		"body_height": 16.0
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/wild_wolf.png",
+	  "icon": "res://Icons/wild_wolf_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -472,7 +472,7 @@
 		"charisma": 35
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/liziti_thug.png",
+	  "icon": "res://Icons/liziti_thug_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -512,7 +512,7 @@
 		  "quantity": 8
 		}
 	  ],
-	  "icon": "res://icons/characters/liziti_don.png",
+	  "icon": "res://Icons/liziti_don_icon.png",
 	  "dialogue": "liziti_don_intro",
 	  "interact_options": [
 		"Talk",
@@ -545,7 +545,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/draga_legionnaire.png",
+	  "icon": "res://Icons/draga_legionnaire_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -589,7 +589,7 @@
 		  "slot": "head"
 		}
 	  ],
-	  "icon": "res://icons/characters/draga_centurion.png",
+	  "icon": "res://Icons/draga_centurion_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -624,7 +624,7 @@
 		"charisma": 35
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/tort_enforcer.png",
+	  "icon": "res://Icons/tort_enforcer_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -651,7 +651,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/pirate_buccaneer.png",
+	  "icon": "res://Icons/pirate_buccaneer_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -699,7 +699,7 @@
 		  "quantity": 15
 		}
 	  ],
-	  "icon": "res://icons/characters/pirate_captain.png",
+	  "icon": "res://Icons/pirate_captain_icon.png",
 	  "dialogue": "pirate_captain_intro",
 	  "interact_options": [
 		"Talk",
@@ -730,7 +730,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/guild_hunter.png",
+	  "icon": "res://Icons/guild_hunter_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -757,7 +757,7 @@
 		"charisma": 55
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/patrician_knight.png",
+	  "icon": "res://Icons/patrician_knight_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -784,7 +784,7 @@
 		"charisma": 60
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/djargo.png",
+	  "icon": "res://Icons/djargo_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -814,7 +814,7 @@
 		"charisma": 65
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/hadrian.png",
+	  "icon": "res://Icons/hadrian_rosemerrow_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -844,7 +844,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/sunder.png",
+	  "icon": "res://Icons/sunder_havelton_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -873,7 +873,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/brutus.png",
+	  "icon": "res://Icons/brutus_half_off_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -902,7 +902,7 @@
 		"charisma": 45
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/quillath.png",
+	  "icon": "res://Icons/quillath_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -933,7 +933,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/stokes.png",
+	  "icon": "res://Icons/stokes_carfire_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -964,7 +964,7 @@
 		"charisma": 65
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/morgan.png",
+	  "icon": "res://Icons/captain_morgan_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -994,7 +994,7 @@
 		"charisma": 60
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/jameson.png",
+	  "icon": "res://Icons/captain_jameson_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1024,7 +1024,7 @@
 		"charisma": 50
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/earl_grey.png",
+	  "icon": "res://Icons/earl_grey_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1054,7 +1054,7 @@
 		"charisma": 75
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/dryad.png",
+	  "icon": "res://Icons/dryad_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1086,7 +1086,7 @@
 		"charisma": 50
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/nude_elf.png",
+	  "icon": "res://Icons/nude_elf_icon.png",
 	  "dialogue": "amnesiac_elf_intro",
 	  "interact_options": [
 		"Talk",
@@ -1116,7 +1116,7 @@
 		"charisma": 35
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/keeper.png",
+	  "icon": "res://Icons/lighthouse_keeper_brother_icon.png",
 	  "dialogue": "lighthouse_dialogue",
 	  "interact_options": [
 		"Talk",
@@ -1144,7 +1144,7 @@
 		"charisma": 60
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/iguana_don.png",
+	  "icon": "res://Icons/iguana_don_icon.png",
 	  "dialogue": "liziti_boss_dialogue",
 	  "interact_options": [
 		"Talk",
@@ -1174,7 +1174,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/roy.png",
+	  "icon": "res://Icons/roy_demonitor_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1202,7 +1202,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/andrew.png",
+	  "icon": "res://Icons/andrew_tuatara_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -1229,7 +1229,7 @@
 		"charisma": 70
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/gordon.png",
+	  "icon": "res://Icons/gordon_gecko_icon.png",
 	  "dialogue": "gordon_dialogue",
 	  "interact_options": [
 		"Talk",
@@ -1260,7 +1260,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/dusk.png",
+	  "icon": "res://Icons/dusk_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -1287,7 +1287,7 @@
 		"charisma": 50
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/paglia.png",
+	  "icon": "res://Icons/chameleon_paglia_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1356,7 +1356,7 @@
 		"charisma": 80
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/siren.png",
+	  "icon": "res://Icons/siren_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1388,7 +1388,7 @@
 		"charisma": 40
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/pesto.png",
+	  "icon": "res://Icons/pesto_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -1417,7 +1417,7 @@
 		"charisma": 45
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/tommy.png",
+	  "icon": "res://Icons/tommy_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -1446,7 +1446,7 @@
 		"charisma": 75
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/prosecco.png",
+	  "icon": "res://Icons/prosecco_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1476,7 +1476,7 @@
 		"charisma": 55
 	  },
 	  "equipment": "from_faction",
-	  "icon": "res://icons/characters/boa.png",
+	  "icon": "res://Icons/boa_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1506,7 +1506,7 @@
 		"charisma": 50
 	  },
 	  "equipment": [],
-	  "icon": "res://icons/characters/rodney.png",
+	  "icon": "res://Icons/rodney_the_rat_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1538,7 +1538,7 @@
 	  "equipment": [
         "vermin_bag"
 	  ],
-	  "icon": "res://icons/characters/joey.png",
+	  "icon": "res://Icons/joey_feritas_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1573,7 +1573,7 @@
 		  "slot": "main_hand"
 		}
 	  ],
-	  "icon": "res://icons/characters/orc_warrior.png",
+	  "icon": "res://Icons/orc_warrior_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
         "Inspect"
@@ -1605,7 +1605,7 @@
 		  "slot": "main_hand"
 		}
 	  ],
-	  "icon": "res://icons/characters/centaur_druid.png",
+	  "icon": "res://Icons/centaur_druid_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1640,7 +1640,7 @@
 		  "slot": "main_hand"
 		}
 	  ],
-	  "icon": "res://icons/characters/goatman_druid.png",
+	  "icon": "res://Icons/goatman_druid_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
 		"Talk",
@@ -1658,6 +1658,7 @@
 	{
 	  "id": "half_elf_wanderer",
 	  "name": "Half-Elf Wanderer",
+	  "icon": "res://Icons/half_elf_wanderer_icon.png",
 	  "race": "half_elf",
 	  "faction": "neutral",
 	  "stats": { "strength": 45, "constitution": 45, "dexterity": 55, "will": 50, "intelligence": 55, "charisma": 50 },
@@ -1669,6 +1670,7 @@
 	{
 	  "id": "carapacian_hermit",
 	  "name": "Carapacian Hermit",
+	  "icon": "res://Icons/carapacian_hermit_icon.png",
 	  "race": "carapacians",
 	  "faction": "neutral",
 	  "stats": { "strength": 50, "constitution": 65, "dexterity": 30, "will": 60, "intelligence": 50, "charisma": 40 },
@@ -1680,6 +1682,7 @@
 	{
 	  "id": "shambling_zombie",
 	  "name": "Shambling Zombie",
+	  "icon": "res://Icons/shambling_zombie_icon.png",
 	  "race": "human_undead",
 	  "faction": "undead",
 	  "stats": { "strength": 55, "constitution": 60, "dexterity": 25, "will": 10, "intelligence": 5, "charisma": 5 },
@@ -1691,6 +1694,7 @@
 	{
 	  "id": "wild_bear",
 	  "name": "Graveyard Bear",
+	  "icon": "res://Icons/wild_bear_icon.png",
 	  "race": "bear",
 	  "is_creature": true,
 	  "faction": "wildlife",
@@ -1703,6 +1707,7 @@
 	{
 	  "id": "stray_horse",
 	  "name": "Stray Horse",
+	  "icon": "res://Icons/stray_horse_icon.png",
 	  "race": "horse",
 	  "is_creature": true,
 	  "faction": "wildlife",
