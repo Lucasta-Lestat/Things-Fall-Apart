@@ -571,19 +571,17 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 			else:
 				options.insert(0, "Equip")
 	elif kind == "weapon" or kind == "ability":
-		# Menu wording mirrors the L/R markers: "Main" hand is the character's right
-		# hand, "Off" is the left.
 		if entry.get("equipped", false):
 			var hand: String = entry.get("hand", "")
 			if hand == "Both":
-				options.append("Stow Right Hand")
-				options.append("Stow Left Hand")
+				options.append("Stow Main")
+				options.append("Stow Off")
 				options.append("Stow Both")
 			else:
 				options.append("Stow")
 		else:
-			options.append("Equip to Right Hand")
-			options.append("Equip to Left Hand")
+			options.append("Equip to Main")
+			options.append("Equip to Off")
 
 	if options.is_empty():
 		return
@@ -629,23 +627,21 @@ func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Arra
 		return
 
 	if kind == "weapon" or kind == "ability":
-		# "Right Hand" maps to the inventory's "Main" slot (right_arm_joints);
-		# "Left Hand" maps to "Off" (left_arm_joints).
 		match option_name:
 			"Stow":
 				var hand: String = entry.get("hand", "")
 				if hand == "Main" or hand == "Off":
 					character.inventory.stow_hand(hand)
-			"Stow Right Hand":
+			"Stow Main":
 				character.inventory.stow_hand("Main")
-			"Stow Left Hand":
+			"Stow Off":
 				character.inventory.stow_hand("Off")
 			"Stow Both":
 				character.inventory.stow_hand("Main")
 				character.inventory.stow_hand("Off")
-			"Equip to Right Hand":
+			"Equip to Main":
 				_equip_shape_to_hand(character, entry, "Main")
-			"Equip to Left Hand":
+			"Equip to Off":
 				_equip_shape_to_hand(character, entry, "Off")
 			_:
 				print("Unhandled shape option: ", option_name)
