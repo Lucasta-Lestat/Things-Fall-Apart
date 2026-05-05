@@ -31,6 +31,10 @@ var caster_position: Vector2 = Vector2.ZERO
 var cone_radius: float = 150.0
 var cone_angle: float = 45.0  # Degrees
 
+# When true, the targeting indicator is anchored to the caster (self-targeted abilities)
+# instead of following the mouse cursor
+var lock_to_caster: bool = false
+
 # Visual settings
 const INDICATOR_COLOR = Color(1, 1, 1, 0.5)  # Semi-transparent white
 const INDICATOR_COLOR_VALID = Color(0, 1, 0, 0.5)  # Green when valid
@@ -47,8 +51,13 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
-		# Update target position to mouse
-		target_position = _get_mouse_world_position()
+		if lock_to_caster:
+			# Self-targeted: anchor the indicator to the caster's (possibly moving) position
+			caster_position = get_parent().global_position if get_parent() else caster_position
+			target_position = caster_position
+		else:
+			# Update target position to mouse
+			target_position = _get_mouse_world_position()
 
 		# For line and cone, keep caster_position in sync with the character
 		if target_shape == TargetShape.LINE or target_shape == TargetShape.CONE:
@@ -166,10 +175,18 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 	is_targeting = true
 	current_hand = hand
 	current_ability = ability
-	
-	# Set initial position immediately so it doesn't jump from (0,0)
-	target_position = mouse_pos
-	
+
+	# Self-targeted abilities anchor the AoE preview to the caster instead of the cursor
+	var target_type_str = ability.get("target_type", "point")
+	lock_to_caster = (target_type_str == "self")
+
+	if lock_to_caster:
+		caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+		target_position = caster_position
+	else:
+		# Set initial position immediately so it doesn't jump from (0,0)
+		target_position = mouse_pos
+
 	# Set shape from ability data
 	var shape_str = ability.get("target_shape", "none")
 	print("ability shape for this ability: ", shape_str)
@@ -238,6 +255,7 @@ func end_targeting() -> void:
 	is_targeting = false
 	current_ability = {}
 	target_shape = TargetShape.NONE
+	lock_to_caster = false
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
 	line_indicator.visible = false
