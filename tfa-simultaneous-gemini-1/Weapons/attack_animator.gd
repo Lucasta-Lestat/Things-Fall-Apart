@@ -48,9 +48,8 @@ var animated_right_arm_offset: Vector2:
 var animated_left_arm_offset: Vector2:
 	get: return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
 
-var knockback_velocity: Vector2 = Vector2.ZERO
-var knockback_friction: float = 150.0
-var knockback_active: bool = false
+# Knockback state lives on ProceduralCharacter — see apply_external_force /
+# _update_knockback. push_character below routes through that API.
 
 # ===== SECOND ORDER DYNAMICS =====
 # Spring-damper system for realistic motion with overshoot and settling
@@ -177,10 +176,6 @@ func _init_dynamics() -> void:
 	off_arm_dynamics = SecondOrderDynamics.new(8.0, 0.6, 1.5, Vector2.ZERO)
 
 func _process(delta: float) -> void:
-	if knockback_active:
-		_update_knockback_physics(delta)
-		return
-
 	if current_state == AttackState.IDLE:
 		return
 	
@@ -273,32 +268,19 @@ func _finish_attack() -> void:
 # ===== FEEDBACK FUNCTIONS =====
 
 func push_character(direction: Vector2, force: float) -> void:
+	"""Apply melee-style knockback. `force` is a generic strength scalar that
+	is scaled down by character weight. Routes to character.apply_external_force
+	so the knockback mechanism is unified with non-melee forces."""
 	interrupt_attack()
-	knockback_active = true
-
-	var char_weight: float = 70.0
-	if "weight" in character:
-		char_weight = float(character.weight)
-
-	char_weight = max(1.0, char_weight)
-
-	var impulse_speed = force / char_weight
-	var game_unit_multiplier = 50.0 
-	knockback_velocity = direction.normalized() * (impulse_speed * game_unit_multiplier)
-
-	if character is CharacterBody2D:
-		character.velocity = knockback_velocity
-
-func _update_knockback_physics(delta: float) -> void:
-	if knockback_velocity.length() > 0:
-		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
-		
-		if character is CharacterBody2D:
-			character.velocity = knockback_velocity
-			character.move_and_slide()
-	else:
-		knockback_active = false
-		knockback_velocity = Vector2.ZERO
+	if not character.has_method("apply_external_force"):
+		return
+	var char_weight: float = max(1.0, float(character.weight) if "weight" in character else 70.0)
+	var impulse_speed: float = force / char_weight
+	var game_unit_multiplier: float = 50.0
+	var force_vector: Vector2 = direction.normalized() * (impulse_speed * game_unit_multiplier)
+	# Integrate over a unit second so the resulting knockback_velocity matches
+	# the previous direct-velocity formulation.
+	character.apply_external_force(force_vector, 1.0)
 
 # attack_animator.gd
 
@@ -741,4 +723,6 @@ func get_body_rotation() -> float:
 	return animated_body_rotation
 
 func get_knockback_velocity() -> Vector2:
-	return knockback_velocity
+	if "knockback_velocity" in character:
+		return character.knockback_velocity
+	return Vector2.ZERO
