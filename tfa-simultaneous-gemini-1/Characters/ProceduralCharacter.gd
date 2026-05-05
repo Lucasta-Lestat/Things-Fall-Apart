@@ -3528,15 +3528,23 @@ func get_status_string() -> String:
 			parts.append(status)
 	return "\n".join(parts)
 func dash(target_pos: Vector2) -> void:
-	if is_dashing or dash_cooldown_timer > 0.0:
+	"""Player-input dash. Drives motion through dash_to (move_and_slide), so
+	walls actually stop the dash. Distance is clamped to one dash_duration
+	worth of dash-speed travel so abilities and shift-dash share the same
+	bounded burst feel."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
 		return
-
-	var dir = (target_pos - global_position).normalized()
-	if dir.length() < 0.1:
+	var to_target = target_pos - global_position
+	var distance = to_target.length()
+	if distance < 1.0:
 		return
-	is_dashing = true
-	dash_timer = dash_duration
+	var dash_speed: float = move_speed * dash_speed_multiplier
+	var max_distance: float = dash_speed * dash_duration
+	var clamped_target := target_pos
+	if distance > max_distance:
+		clamped_target = global_position + to_target / distance * max_distance
 	dash_cooldown_timer = dash_cooldown
+	dash_to(clamped_target, dash_speed)
 
 # ===== EVENTS =====
 
