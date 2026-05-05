@@ -44,7 +44,7 @@ func _ready() -> void:
 	character = get_parent() as ProceduralCharacter
 	# Try to load action icons (graceful fallback if not found)
 	_attack_icon = _try_load("res://targeting icon.png")
-	_dash_icon = _try_load("res://targeting icon.png")  # Reuse targeting icon for dash
+	_dash_icon = _try_load("res://UI/UI Icons/Dash.png")
 
 func _try_load(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
