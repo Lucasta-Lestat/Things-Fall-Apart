@@ -1469,6 +1469,12 @@ func point_in_polygon(point: Vector2, polygon: Array) -> bool:
 	return true
 
 func check_weapon_body_collision(holder, target: ProceduralCharacter):
+	# TODO(post-phase-a): replace with an Area2D weapon hitbox driven by
+	# attack_animator's swing window. Current 5-sample point-in-polygon check
+	# misses hits when (a) the blade rotates past the target between _process
+	# frames and (b) the visual blade extends past the hitbox quad built from
+	# body_width/body_height. See docs/melee_hitbox_plan.md for the migration
+	# plan.
 	# 1. Determine the start and end points of the "hit line" in WORLD space
 	var tip_world: Vector2
 	var base_world: Vector2
