@@ -2829,9 +2829,19 @@ func _update_arm_ik() -> void:
 				left_arm_target = right_arm_target + Vector2(-6, 4)
 
 	else:
-		# Rest positions: arms curling forward and inward (hands near front of body)
-		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
-		right_arm_target = right_shoulder + Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		# Rest positions: arms curling forward and inward (hands near front of body).
+		# The offset is in body-local coords (forward = -Y), so rotate it by
+		# body_rotation so the rest pose tracks the torso's facing direction.
+		# No-op when body_rotation == 0 (currently always the case in this
+		# branch since it requires no-weapon-and-not-attacking), but keeps the
+		# stance correct if body_rotation is ever set outside attacks.
+		var left_rest_offset = Vector2(arm_length * 0.3, -arm_length * 0.6)
+		var right_rest_offset = Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		if body_rotation != 0.0:
+			left_rest_offset = left_rest_offset.rotated(body_rotation)
+			right_rest_offset = right_rest_offset.rotated(body_rotation)
+		left_arm_target = left_shoulder + left_rest_offset
+		right_arm_target = right_shoulder + right_rest_offset
 	
 	# Solve IK for both arms
 	_solve_arm_ik(left_arm_joints, left_arm_target, true)
