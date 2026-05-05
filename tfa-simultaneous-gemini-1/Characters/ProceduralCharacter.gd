@@ -3067,9 +3067,12 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_main_hand_item)
+		# start_attack must run before _fire_ranged_async so is_attacking=true
+		# is set before await_hit_frame_or_end polls it; otherwise the helper
+		# bails on its first check and the projectile never spawns.
 		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_main_hand_item)
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -3081,9 +3084,9 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_off_hand_item)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_off_hand_item)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
