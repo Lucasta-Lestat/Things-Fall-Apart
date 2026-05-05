@@ -723,6 +723,37 @@ func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	params.collide_with_bodies = true
 	return space.intersect_ray(params).is_empty()
 
+
+func _is_position_visible_to_party(target_pos: Vector2) -> bool:
+	"""True if any non-blinded party member has the position in sight range,
+	inside their FOV cone, and on a clear LOS line. Mirrors the per-ally
+	checks in _update_npc_los_visibility."""
+	for ally in party_chars:
+		if not is_instance_valid(ally) or not ally.is_alive():
+			continue
+		var cm = ally.get_node_or_null("ConditionManager")
+		if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+			continue
+		var to_target = target_pos - ally.global_position
+		var dist = to_target.length()
+		if dist > 1440.0 * ally.sight:
+			continue
+		var facing_dir = Vector2.UP.rotated(ally.rotation)
+		var angle = facing_dir.angle_to(to_target.normalized())
+		if abs(angle) > deg_to_rad(ally.fov_angle_degrees * 0.5):
+			continue
+		if _sight_line_clear(ally.global_position, target_pos):
+			return true
+	return false
+
+
+func _update_item_los_visibility() -> void:
+	"""Items follow the same visibility rule as NPCs."""
+	for item in items_in_scene:
+		if not is_instance_valid(item):
+			continue
+		item.visible = _is_position_visible_to_party(item.global_position)
+
 func _process(delta: float) -> void:
 	# Check for combat collisions / Update clash cooldowns
 	if not PauseManager.is_paused:
@@ -751,8 +782,9 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
-	# Update NPC visibility based on party line-of-sight
+	# Update NPC and item visibility based on party line-of-sight
 	_update_npc_los_visibility()
+	_update_item_los_visibility()
 	# Camera follows primary selected character
 	if primary_selected and is_instance_valid(primary_selected) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
