@@ -3940,63 +3940,50 @@ func _spawn_projectile(ability: Ability, target_position: Vector2) -> void:
 	var scene = _load_effect_scene(projectile_path)
 	if not scene:
 		print("Did not find projectile scene at path: ", projectile_path)
-		var results = ability_manager._resolve_effects(ability, ability.effects, target_position)
-		_spawn_ability_visuals(ability, target_position)
-		ability_manager.cast_completed.emit(ability, results)
+		_resolve_ability_at(ability, target_position)
 		return
-	
-	var projectile = scene.instantiate()
-	
-	# Position at caster
-	var spawn_offset = ability.visuals.get("projectile_spawn_offset", Vector2(0, -20))
-	projectile.global_position = global_position + spawn_offset
-	projectile.z_index = 3
-	
-	# Add to scene
-	var scene_root = get_tree().current_scene
-	scene_root.add_child(projectile)
-	
-	# Configure projectile movement
-	var speed = ability.visuals.get("projectile_speed", 400.0)
-	var max_lifetime = ability.visuals.get("projectile_max_lifetime", 5.0)
-	
-	# Rotate to face target
-	var direction = (target_position - projectile.global_position).normalized()
-	projectile.rotation = direction.angle()
-	
-	# Start projectile movement
-	_move_projectile(projectile, target_position, speed, max_lifetime, ability)
+
+	var spawn_offset: Vector2 = ability.visuals.get("projectile_spawn_offset", Vector2(0, -20))
+	var spawn_pos: Vector2 = global_position + spawn_offset
+	var direction: Vector2 = (target_position - spawn_pos).normalized()
+	var distance: float = spawn_pos.distance_to(target_position)
+	var speed: float = ability.visuals.get("projectile_speed", 400.0)
+	var max_lifetime: float = ability.visuals.get("projectile_max_lifetime", 5.0)
+
+	var proj := Projectile.new()
+	proj.name = "AbilityProjectile"
+	proj.z_index = 3
+	proj.speed = speed
+	# Range = aim distance, so unblocked shots expire at the original target
+	# point (matches the previous tween-to-target behavior for clear paths).
+	proj.max_range = distance
+	proj.max_lifetime = max_lifetime
+
+	# Loaded scene is a Node2D-based visual; add it as a visual child. Its local
+	# rotation stays 0 so its world rotation matches the Projectile body's
+	# direction-aligned rotation.
+	var visual = scene.instantiate()
+	proj.add_child(visual)
+
+	proj.hit.connect(_on_ability_projectile_hit.bind(ability))
+	proj.expired.connect(_on_ability_projectile_expired.bind(ability))
+
+	get_tree().current_scene.add_child(proj)
+	proj.launch(spawn_pos, direction, self)
 
 
-## Move projectile toward target (using a tween or manual process)
-func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float, max_lifetime: float, ability: Ability) -> void:
-	var distance = projectile.global_position.distance_to(target_position)
-	var duration = distance / speed
-	
-	# Clamp duration to max lifetime
-	duration = min(duration, max_lifetime)
-	
-	var tween = create_tween()
-	tween.tween_property(projectile, "global_position", target_position, duration)
-	
-	# When projectile arrives (or times out), resolve effects
-	tween.finished.connect(func():
-		var final_position = projectile.global_position
-		projectile.queue_free()
-		var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
-		_spawn_ability_visuals(ability, final_position)
-		ability_manager.cast_completed.emit(ability, results)
-	)
+func _on_ability_projectile_hit(collision: KinematicCollision2D, ability: Ability) -> void:
+	_resolve_ability_at(ability, collision.get_position())
 
-	# Safety timeout in case tween fails
-	get_tree().create_timer(max_lifetime + 0.1).timeout.connect(func():
-		if is_instance_valid(projectile):
-			var final_position = projectile.global_position
-			projectile.queue_free()
-			var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
-			_spawn_ability_visuals(ability, final_position)
-			ability_manager.cast_completed.emit(ability, results)
-	, CONNECT_ONE_SHOT)
+
+func _on_ability_projectile_expired(final_position: Vector2, ability: Ability) -> void:
+	_resolve_ability_at(ability, final_position)
+
+
+func _resolve_ability_at(ability: Ability, pos: Vector2) -> void:
+	var results = ability_manager._resolve_effects(ability, ability.effects, pos)
+	_spawn_ability_visuals(ability, pos)
+	ability_manager.cast_completed.emit(ability, results)
 func _get_modified_visual_duration(ability: Ability) -> float:
 	var base_duration = ability.visual_duration
 	var traits = ability.traits  # assuming this is an Array of strings like ["spell", "fire", "aoe"]
