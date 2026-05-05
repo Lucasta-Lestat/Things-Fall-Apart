@@ -402,6 +402,7 @@ var collision_radius: float:
 @export var minimum_separation: float = 5.0  # Extra buffer between characters
 var collision_shape: CollisionShape2D
 var collision_area: Area2D
+var body_collision_shape: CollisionShape2D
 
 const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 var targeting_system: Node2D
@@ -698,19 +699,33 @@ func _setup_attack_system() -> void:
 func _setup_collision() -> void:
 	if not collision_enabled:
 		return
-	
-	# Create Area2D for collision detection
+
+	# Body-level collision: lets projectiles and other physics queries hit the
+	# character. Mask is 0 — the body does not actively detect anything yet;
+	# step 5 will switch movement to move_and_slide and mask STRUCTURES.
+	collision_layer = CollisionLayers.CHARACTERS
+	collision_mask = 0
+
+	# Shared shape resource: one ConvexPolygonShape2D backs both the body and
+	# the Area2D, so _update_collision_shape() mutating .points keeps them in
+	# sync automatically.
+	var polygon = ConvexPolygonShape2D.new()
+	polygon.points = _get_body_collision_points()
+
+	body_collision_shape = CollisionShape2D.new()
+	body_collision_shape.name = "BodyShape"
+	body_collision_shape.shape = polygon
+	add_child(body_collision_shape)
+
+	# Area2D for soft character-on-character separation (the existing system).
 	collision_area = Area2D.new()
 	collision_area.name = "CollisionArea"
 	collision_area.collision_layer = CollisionLayers.CHARACTERS
 	collision_area.collision_mask = CollisionLayers.CHARACTERS
 	add_child(collision_area)
-	
-	# Create polygon collision shape based on body dimensions
+
 	collision_shape = CollisionShape2D.new()
 	collision_shape.name = "CollisionShape"
-	var polygon = ConvexPolygonShape2D.new()
-	polygon.points = _get_body_collision_points()
 	collision_shape.shape = polygon
 	collision_area.add_child(collision_shape)
 
