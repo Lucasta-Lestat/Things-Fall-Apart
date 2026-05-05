@@ -3456,6 +3456,12 @@ func _on_character_died() -> void:
 	$AI.die()
 	character_died.emit()
 	set_process(false)
+	# Corpses do not block projectiles or move_and_slide queries (matches the
+	# pre-physics behavior where _update_projectiles skipped dead characters).
+	# The Area2D soft-separation shape stays enabled so live characters still
+	# bump off corpses naturally.
+	if body_collision_shape:
+		body_collision_shape.disabled = true
 
 	# Fatal Attraction: linked death — if partner is still alive, kill them too
 	if condition_manager.has_condition("fatal_attraction"):

@@ -24,6 +24,7 @@ signal expired(final_position: Vector2)
 @export var max_range: float = 900.0
 @export var max_lifetime: float = 5.0
 @export var collision_radius: float = 4.0
+@export var spin_rate: float = 0.0  # rad/s; non-zero to override direction-aligned rotation each frame
 
 var direction: Vector2 = Vector2.RIGHT
 var distance_traveled: float = 0.0
@@ -68,6 +69,8 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	distance_traveled += step.length()
+	if spin_rate != 0.0:
+		rotation += spin_rate * delta
 	if distance_traveled >= max_range:
 		_expire()
 
