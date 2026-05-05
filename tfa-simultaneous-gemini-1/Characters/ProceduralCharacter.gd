@@ -4052,11 +4052,13 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_failed.emit(ability, reason)
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:

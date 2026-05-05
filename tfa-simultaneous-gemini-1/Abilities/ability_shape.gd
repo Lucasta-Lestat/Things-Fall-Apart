@@ -76,6 +76,7 @@ func get_ability_data() -> Dictionary:
 	# Pull range from raw targeting data
 	var ability_range = raw_data.get("targeting", {}).get("range", 500.0)
 	var ability_angle = raw_data.get("targeting", {}).get("angle", 45.0)
+	var ability_target_type = raw_data.get("targeting", {}).get("type", "point")
 	var targeting_override = {
 		"shape": shape_str,
 		"radius": target_radius,
@@ -84,6 +85,7 @@ func get_ability_data() -> Dictionary:
 		"angle": ability_angle,
 		"requires_targeting": requires_targeting,
 		"target_shape": shape_str,
+		"target_type": ability_target_type,
 	}
 	
 	#
