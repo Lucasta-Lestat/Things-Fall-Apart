@@ -71,6 +71,10 @@ func _physics_process(delta: float) -> void:
 	distance_traveled += step.length()
 	if spin_rate != 0.0:
 		rotation += spin_rate * delta
+	# TODO(future): max_range is checked AFTER moving, so an unblocked projectile
+	# overshoots its target by up to one physics step (~7 px for the 400 px/s
+	# ability default at 60 Hz, ~30 px for an 1800 px/s pistol). Clamp the final
+	# step to land exactly at max_range when precision matters.
 	if distance_traveled >= max_range:
 		_expire()
 
