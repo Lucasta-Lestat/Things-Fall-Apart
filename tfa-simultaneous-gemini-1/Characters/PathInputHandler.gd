@@ -208,7 +208,15 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	# Dash: dash key assigns dash toward mouse position
 	if Input.is_action_just_pressed("dash"):
 		pending_action_node.action_type = ActionQueue.ActionType.CUSTOM
-		pending_action_node.action_data = {"callable": Callable(character, "dash").bind(mouse_pos)}
+		# dash_target / dash_max_range are read by PathDrawer to render the aim
+		# line preview from the node out to the (clamped, wall-truncated)
+		# endpoint. The action queue itself only consumes "callable".
+		var dash_range: float = character.get_dash_range() if character.has_method("get_dash_range") else 0.0
+		pending_action_node.action_data = {
+			"callable": Callable(character, "dash").bind(mouse_pos),
+			"dash_target": mouse_pos,
+			"dash_max_range": dash_range,
+		}
 		pending_action_node.icon_texture = _dash_icon
 		pending_action_node = null
 		state = PathInputState.IDLE
