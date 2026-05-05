@@ -8,6 +8,7 @@ const CHARACTERS := 2        # Layer 2 — characters (CharacterBody2D body + Ar
 const VISION_BLOCKERS := 4   # Layer 3 — vision blockers; queried by LOS raycasts
 const PROJECTILES := 8       # Layer 4 — projectiles in flight
 const ITEMS := 16            # Layer 5 — world items (walkable, force-affectable)
+const WEAPON_HITBOXES := 32  # Layer 6 — active melee weapon hitbox during a swing
 
 # Composite masks — name describes the intent, not the bits, so callsites read clearly.
 
@@ -22,6 +23,9 @@ const PROJECTILE_HIT_MASK := STRUCTURES | CHARACTERS
 # characters — the last is groundwork for Phase B when items become RigidBody2D
 # and can actually move under forces).
 const ITEM_PHYSICS_MASK := STRUCTURES | ITEMS | CHARACTERS
+
+# What an active melee weapon hitbox should detect during a swing.
+const WEAPON_HITBOX_MASK := CHARACTERS | ITEMS | STRUCTURES
 
 # Mask passed to PhysicsRayQueryParameters2D for line-of-sight checks.
 const VISION_RAY_MASK := VISION_BLOCKERS

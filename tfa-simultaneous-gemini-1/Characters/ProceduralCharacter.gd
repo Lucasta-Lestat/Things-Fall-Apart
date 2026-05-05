@@ -3083,6 +3083,12 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 
 	# Remove ALL children from the holder (the old item). Don't free — still in inventory.
 	for child in holder.get_children():
+		# If the previous child was a WeaponShape, deactivate its hitbox and
+		# clear its holder back-reference so it can't fire any further hits.
+		if child is WeaponShape:
+			if child.hitbox:
+				child.hitbox.monitoring = false
+			child.holder = null
 		holder.remove_child(child)
 
 	# Update the character reference
@@ -3094,6 +3100,8 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 	# Add new weapon/ability to holder
 	if weapon != null:
 		holder.add_child(weapon)
+		if weapon is WeaponShape:
+			weapon.holder = self
 		var grip_offset = weapon.get_grip_offset_for_hand()
 		weapon.position = grip_offset
 		# Render below the forearm/hand sprites (z = -2) so the hand visually grips the weapon
