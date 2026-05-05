@@ -2965,7 +2965,8 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 		holder.add_child(weapon)
 		var grip_offset = weapon.get_grip_offset_for_hand()
 		weapon.position = grip_offset
-		weapon.z_index = 2  # Above character
+		# Render below the forearm/hand sprites (z = -2) so the hand visually grips the weapon
+		weapon.z_index = -3
 	emit_signal("weapon_changed", weapon)
 
 func _on_attack_hit(hand) -> void:
