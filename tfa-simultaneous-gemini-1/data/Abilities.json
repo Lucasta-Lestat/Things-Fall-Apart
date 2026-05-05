@@ -189,7 +189,7 @@
 		  "damage": { "force": 15 }
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_gust.tscn", "impact_effect": "res://effects/shockwave.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://effects/shockwave.tscn" }
 	},
 	{
 	  "id": "gravity_well",
@@ -253,7 +253,7 @@
 		  "damage": { "bludgeoning": 5 }
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_gust.tscn", "impact_effect": "res://effects/vortex.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://effects/vortex.tscn" }
 	},
 	{
 	  "id": "heal",
@@ -716,7 +716,7 @@
 	  "effects": [
 		{"type": "custom", "method": "_change_weather", "precipitation_type": "rain", "group_id": "Scarlatti"}
 	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/weather_hand.tscn", "impact_effect": "res://vfx/rain.tscn"}
+	  "visuals": {"in_hand_effect": "res://vfx/weather_hand.tscn"}
 	},
 	{
 	  "id": "acid_rain",
@@ -732,7 +732,7 @@
 	  "effects": [
 		{"type": "custom", "method": "_change_weather", "precipitation_type": "acid_rain", "group_id": "Scarlatti"}
 	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/acid_hand.tscn", "impact_effect": "res://vfx/rain.tscn"}
+	  "visuals": {"in_hand_effect": "res://vfx/acid_hand.tscn"}
 	},
 	{
 	  "id": "freezing_rain",
@@ -748,7 +748,7 @@
 	  "effects": [
 		{"type": "custom", "method": "_change_weather", "precipitation_type": "freezing_rain", "group_id": "Scarlatti"}
 	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/ice_storm.tscn", "in_hand_scale": 0.15, "impact_effect": "res://vfx/snow.tscn"}
+	  "visuals": {"in_hand_effect": "res://vfx/ice_storm.tscn", "in_hand_scale": 0.15}
 	},
 	{
 	  "id": "wave_of_dysthymia",

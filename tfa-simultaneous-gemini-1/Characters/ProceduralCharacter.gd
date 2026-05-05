@@ -2508,13 +2508,23 @@ func cast_ability(ability: AbilityShape):
 	# 2. Trigger Animation (Straight arm push)
 	attack_animator.start_cast()
 
-	# 3. Wait for hit frame (via signal) to spawn actual projectile
-	await attack_animator.attack_hit_frame
+	# 3. Wait for hit frame (via signal) to spawn actual projectile.
+	# If the cast was interrupted (knockback, stagger, etc.) the hit frame
+	# never fires — bail out with cleanup so the coroutine doesn't orphan
+	# and resume on a future cast's hit_frame.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		ability.activate_visuals(false)
+		targeting_system._end_targeting()
+		return
 
 	# 4. Execute Logic (Spawn fireball, etc)
-	
+
 	# 5. Cleanup Visuals
-	await attack_animator.attack_finished
+	# interrupt_attack() also emits attack_finished, so this resolves on both
+	# natural completion and interruption mid-recovery.
+	if attack_animator.is_attacking:
+		await attack_animator.attack_finished
 	ability.activate_visuals(false)
 	targeting_system._end_targeting()
 
@@ -2950,9 +2960,19 @@ func _update_arm_ik() -> void:
 				left_arm_target = right_arm_target + Vector2(-6, 4)
 
 	else:
-		# Rest positions: arms curling forward and inward (hands near front of body)
-		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
-		right_arm_target = right_shoulder + Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		# Rest positions: arms curling forward and inward (hands near front of body).
+		# The offset is in body-local coords (forward = -Y), so rotate it by
+		# body_rotation so the rest pose tracks the torso's facing direction.
+		# No-op when body_rotation == 0 (currently always the case in this
+		# branch since it requires no-weapon-and-not-attacking), but keeps the
+		# stance correct if body_rotation is ever set outside attacks.
+		var left_rest_offset = Vector2(arm_length * 0.3, -arm_length * 0.6)
+		var right_rest_offset = Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		if body_rotation != 0.0:
+			left_rest_offset = left_rest_offset.rotated(body_rotation)
+			right_rest_offset = right_rest_offset.rotated(body_rotation)
+		left_arm_target = left_shoulder + left_rest_offset
+		right_arm_target = right_shoulder + right_rest_offset
 	
 	# Solve IK for both arms
 	_solve_arm_ik(left_arm_joints, left_arm_target, true)
@@ -3137,9 +3157,12 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_main_hand_item)
+		# start_attack must run before _fire_ranged_async so is_attacking=true
+		# is set before await_hit_frame_or_end polls it; otherwise the helper
+		# bails on its first check and the projectile never spawns.
 		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_main_hand_item)
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -3151,13 +3174,18 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_off_hand_item)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_off_hand_item)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
-	await attack_animator.attack_hit_frame
+	# Bail if the attack ends (interrupted) before the release frame —
+	# otherwise the orphaned coroutine resumes on a future attack's hit_frame
+	# and spawns a phantom projectile.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		return
 	if not is_instance_valid(weapon):
 		return
 	# Consume ammo if the weapon requires it
@@ -4486,8 +4514,14 @@ func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.
 	print("DID FIND ABILITY VFX SCENE at scene path: ", scene_path)
 
 	var instance = scene.instantiate()
-	instance.global_position = position
-	instance.z_index = 3
+	# Only positionable nodes get global_position/z_index — CanvasLayer-rooted
+	# scenes (e.g. full-screen weather shaders) live in screen space and don't
+	# expose those properties; setting them would crash.
+	if instance is Node2D:
+		instance.global_position = position
+		instance.z_index = 3
+	else:
+		push_warning("VFX scene '%s' has non-Node2D root (%s); spawning at screen-space position only." % [scene_path, instance.get_class()])
 
 	var scene_root = get_tree().current_scene
 	scene_root.add_child(instance)

@@ -637,15 +637,32 @@ func _second_order_float(from: float, to: float, t: float) -> float:
 
 # ===== UTILS =====
 
+# Awaits the next attack_hit_frame, returning true if it fired naturally,
+# or false if the attack ended (interrupted or otherwise) before the hit frame.
+# Use this instead of `await attack_hit_frame` directly so callers don't orphan
+# their coroutine when interrupt_attack() fires before the hit frame.
+func await_hit_frame_or_end() -> bool:
+	var hit_received: Array[bool] = [false]
+	var handler := func(_hand): hit_received[0] = true
+	attack_hit_frame.connect(handler, CONNECT_ONE_SHOT)
+	while is_attacking and not hit_received[0]:
+		await get_tree().process_frame
+	if attack_hit_frame.is_connected(handler):
+		attack_hit_frame.disconnect(handler)
+	return hit_received[0]
+
 func interrupt_attack() -> void:
-	if current_state != AttackState.IDLE:
+	if current_state != AttackState.IDLE or is_attacking or is_casting:
 		current_state = AttackState.IDLE
 		attack_timer = 0.0
 		_reset_offsets()
-		
+		is_two_handed_attack = false
+		is_attacking = false
+		is_casting = false
+
 		if combat_manager and character is ProceduralCharacter:
 			combat_manager.register_attack_end(character)
-		
+
 		emit_signal("attack_finished")
 
 func _reset_offsets() -> void:

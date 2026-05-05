@@ -27,14 +27,16 @@ enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
 @export var weight: float = 1.0
 var raw_data: Dictionary = {}
 
-# Typed as Node (not Node2D) because some in-hand visual scenes are rooted in
-# CanvasLayer or other non-Node2D types. Code below that touches Node2D-only
-# properties (e.g. .scale) guards on `is Node2D`.
-var _active_visual: Node
+var _active_visual: Node2D
 
 func _ready() -> void:
 	if visual_scene:
-		_active_visual = visual_scene.instantiate()
+		var instance = visual_scene.instantiate()
+		if not instance is Node2D:
+			push_warning("AbilityShape '%s': visual_scene root must be Node2D (got %s) — skipping in-hand visual." % [ability_id, instance.get_class()])
+			instance.queue_free()
+			return
+		_active_visual = instance
 		add_child(_active_visual)
 		activate_visuals(true)
 
@@ -103,16 +105,20 @@ func setup_from_database(data: Dictionary) -> void:
 		# Load the particle scene dynamically
 		visual_scene = load(vfx_path)
 		if visual_scene:
-			# Instantiate immediately for the equipment system
-			_active_visual = visual_scene.instantiate()
-			add_child(_active_visual)
-			# Scale down for in-hand display (configurable per ability, default 0.25).
-			# Only Node2D-rooted scenes have a Vector2 scale; CanvasLayer-rooted
-			# visuals (e.g. fullscreen shader overlays) ignore this.
-			var in_hand_scale = visuals.get("in_hand_scale", 0.25)
-			if _active_visual is Node2D:
+			# Instantiate and validate root type — in-hand visuals must follow the
+			# character via Node2D transform. Full-screen overlays (CanvasLayer)
+			# would crash the typed assignment below and be visually wrong.
+			var instance = visual_scene.instantiate()
+			if not instance is Node2D:
+				push_warning("Ability '%s': in_hand_effect '%s' must have Node2D root (got %s) — skipping." % [ability_id, vfx_path, instance.get_class()])
+				instance.queue_free()
+			else:
+				_active_visual = instance
+				add_child(_active_visual)
+				# Scale down for in-hand display (configurable per ability, default 0.25)
+				var in_hand_scale = visuals.get("in_hand_scale", 0.25)
 				_active_visual.scale = Vector2(in_hand_scale, in_hand_scale)
-			activate_visuals(false) # Start turned off
+				activate_visuals(false) # Start turned off
 
 	# 3. Targeting Configuration
 	var targeting = data.get("targeting", {})

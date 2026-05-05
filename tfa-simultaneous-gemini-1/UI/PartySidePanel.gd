@@ -272,9 +272,15 @@ func _refresh_inventory(data: Dictionary) -> void:
 func _build_inventory_entries(inventory) -> Array:
 	var entries: Array = []
 
-	# 1. Dictionary items
+	# 1. Dictionary items. Skip ghost dict entries for hand-slot equipment — those
+	# are also represented by a WeaponShape/AbilityShape in main_hand/off_hand/stowed
+	# (TopDownCharacterDatabase calls add_item AND equip_weapon_from_data for starter
+	# weapons), and we don't want both rows.
 	for i in range(inventory.items.size()):
 		var item: Dictionary = inventory.items[i]
+		var equip_slot: String = str(item.get("equip_slot", ""))
+		if equip_slot == "Main Hand" or equip_slot == "Off Hand":
+			continue
 		var raw_stacks = item.get("num_stacks", 1)
 		entries.append({
 			"kind": "item",
@@ -404,11 +410,12 @@ func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContai
 		stack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(stack_label)
 
-	# L/R hand markers — overlay labels pinned to the slot's left/right edges
+	# L/R hand markers — overlay labels pinned to the slot's left/right edges.
+	# "Main" is the character's right hand (right_arm_joints); "Off" is the left.
 	var hand: String = entry.get("hand", "")
-	if hand == "Main" or hand == "Both":
-		slot.add_child(_make_hand_label("L", HORIZONTAL_ALIGNMENT_LEFT))
 	if hand == "Off" or hand == "Both":
+		slot.add_child(_make_hand_label("L", HORIZONTAL_ALIGNMENT_LEFT))
+	if hand == "Main" or hand == "Both":
 		slot.add_child(_make_hand_label("R", HORIZONTAL_ALIGNMENT_RIGHT))
 
 	slot.set_meta("entry", entry)
