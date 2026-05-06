@@ -485,6 +485,8 @@ func update_water_tile_flows() -> void:
 			var flow_dir = flow_directions.get(grid_pos, Vector2.ZERO)
 			var flow_speed = flow_speeds.get(grid_pos, 0.0)
 			water_tile.set_flow_direction(flow_dir, flow_speed)
-			var water_amount = get_fluid_amount(grid_pos, FLUID_TYPE_WATER)
-			if water_amount > 0:
-				water_tile.set_water_depth(water_amount)
+			var fluid_type = get_fluid_type_at(grid_pos)
+			if not fluid_type.is_empty():
+				var amount = get_fluid_amount(grid_pos, fluid_type)
+				if amount > 0:
+					water_tile.set_water_depth(amount)
