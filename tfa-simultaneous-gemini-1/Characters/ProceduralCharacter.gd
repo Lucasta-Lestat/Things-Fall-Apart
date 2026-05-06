@@ -954,7 +954,7 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		# Use global position as fallback for visual location
 		var hit_location = global_position
 		damage_limb(limb_type, damage_dict, hit_location)
-		is_alive()  # Check death
+		_check_death()
 	
 	if result.has("heal"):
 		var heal_amount = result["heal"]
@@ -3312,15 +3312,20 @@ func get_total_hp() -> int:
 	return total
 
 func is_alive() -> bool:
-	"""Character dies if torso or head HP <= 0 or blood is 0"""
+	"""Pure alive check — no side effects. Use _check_death() to actually
+	trigger death side effects when state warrants it. Treating this as
+	side-effectful caused silent freezes: external callers (other characters
+	scanning targets, condition tick handlers, etc.) would unexpectedly drive
+	a character into _on_character_died() — which calls set_process(false) —
+	just by querying alive status when blood_amount had drained to 0."""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
-	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
-	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
-	var is_alive = (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
-	if not is_alive:
-		_on_character_died()
 	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+
+func _check_death() -> void:
+	"""Trigger death side effects if the character should be dead."""
+	if not is_alive():
+		_on_character_died()
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
@@ -3502,7 +3507,7 @@ func _on_character_died() -> void:
 			var torso = partner.limbs.get(partner.LimbType.TORSO)
 			if torso:
 				torso.current_hp = 0
-				partner.is_alive()
+				partner._check_death()
 
 # ===== BLEED VFX BURST =====
 #
@@ -3806,8 +3811,8 @@ func _on_time_updated(_hour: int, _minute: int, _second: int):
 	# on the "bleeding" condition (damage + bleed_puddle every tick).
 	# Death from blood loss is handled by the damage triggered effect
 	# reducing torso HP (see _on_triggered_effect_fired).
-	if blood_amount <= 0 and is_alive():
-		_on_character_died()
+	if blood_amount <= 0:
+		_check_death()
 
 #Ability Checks, character.gd code
 func ability_check(stat,domain):
