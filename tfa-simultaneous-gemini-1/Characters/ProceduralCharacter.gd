@@ -9,7 +9,7 @@ var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-var traits = {"Male":1}
+var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
 var is_protagonist = false
@@ -307,6 +307,8 @@ func effective_crit_fail_threshold() -> float:
 var speed_modifier: float = 0.0
 var arm_length: float = 0.0
 var race_id: String = ""
+var creature_type: String = "Humanoid"
+var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
@@ -1016,6 +1018,7 @@ func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void
 
 	# Also leak a bit from the overall blood reserve for consciousness/death checks.
 	blood_amount = max(0, blood_amount - stacks)
+	_check_consciousness()
 
 	var my_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
@@ -3327,6 +3330,18 @@ func _check_death() -> void:
 	if not is_alive():
 		_on_character_died()
 
+func _check_consciousness() -> void:
+	"""Apply the unconscious condition when consciousness drops to 0 or below.
+	consciousness = blood_amount + effective_will (see line ~350), so blood
+	loss naturally drives this. The unconscious condition has its own duration
+	so it auto-clears if the character recovers."""
+	if not is_alive():
+		return
+	if condition_manager.has_active_condition("unconscious"):
+		return
+	if consciousness <= 0:
+		condition_manager.apply_condition("unconscious")
+
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
 	var limb = limbs.get(limb_type)
@@ -3479,10 +3494,11 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
-	if "Male" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("man-death-scream",global_position)
-	elif "Female" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("woman-death-scream",global_position)
+	if creature_type == "Humanoid":
+		if gender == "female":
+			SfxManager.play("woman-death-scream", global_position)
+		else:
+			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
 	set_process(false)
@@ -3811,6 +3827,7 @@ func _on_time_updated(_hour: int, _minute: int, _second: int):
 	# on the "bleeding" condition (damage + bleed_puddle every tick).
 	# Death from blood loss is handled by the damage triggered effect
 	# reducing torso HP (see _on_triggered_effect_fired).
+	_check_consciousness()
 	if blood_amount <= 0:
 		_check_death()
 
