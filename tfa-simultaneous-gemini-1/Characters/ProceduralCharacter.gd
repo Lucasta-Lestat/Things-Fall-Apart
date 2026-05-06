@@ -2858,12 +2858,21 @@ func _end_ice_slide() -> void:
 	is_moving = false
 	emit_signal("character_reached_target")
 
+## Defensive cap on knockback velocity. Prevents runaway acceleration from
+## per-frame force fields (e.g. INVERSE_SQUARE near a singularity) launching
+## characters off the map at thousands of pixels per frame. Tuned for
+## visible-but-bounded knockback distance under knockback_friction=150.
+const MAX_KNOCKBACK_SPEED: float = 800.0
+
 func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
 	"""Canonical entry point for non-melee force application (force fields,
 	ability knockbacks, etc.). Integrates `force` over `duration` seconds
 	into knockback_velocity; the knockback update loop drains it via friction
-	and overrides regular movement until it reaches zero."""
+	and overrides regular movement until it reaches zero. Velocity is clamped
+	to MAX_KNOCKBACK_SPEED so accumulated forces can't reach escape velocity."""
 	knockback_velocity += force * duration
+	if knockback_velocity.length() > MAX_KNOCKBACK_SPEED:
+		knockback_velocity = knockback_velocity.normalized() * MAX_KNOCKBACK_SPEED
 	knockback_active = true
 
 func _update_knockback(delta: float) -> void:

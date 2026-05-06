@@ -235,10 +235,14 @@ func _calculate_magnitude(entity: Node2D) -> float:
 			var t = 1.0 - clamp(distance / max_distance, 0.0, 1.0)
 			return force_magnitude * t
 		ForceType.INVERSE_SQUARE:
-			var normalized_dist = distance / max_distance
+			# Floor at 25% of max_distance to avoid the 1/r² singularity at
+			# center; peak force is 16× force_magnitude. Otherwise the force
+			# explodes to millions of px/s² as distance approaches 0 and
+			# launches anything near the center to escape velocity.
+			var normalized_dist = max(0.25, distance / max_distance)
 			return force_magnitude / (normalized_dist * normalized_dist)
 		ForceType.INVERSE_LINEAR:
-			var normalized_dist = distance / max_distance
+			var normalized_dist = max(0.25, distance / max_distance)
 			return force_magnitude / normalized_dist
 		ForceType.EDGE_PUSH:
 			# Stronger near edges, weaker in center
