@@ -128,7 +128,7 @@ void fragment() {
     float wi2 = (sin(wave_coord2 * 6.28318) * 0.25 + 0.25) * wave_amplitude;
 
     float wave_highlight = smoothstep(0.1, 0.15, wi + wi2) * wave_brightness;
-    float flow_alpha = mix(0.8, 1.0, flow_magnitude * flow_speed);
+    float flow_alpha = 1.0;
 
     vec3 final_color = mix(water_color.rgb, wave_color.rgb, wave_highlight);
 
