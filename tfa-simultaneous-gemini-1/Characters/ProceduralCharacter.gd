@@ -633,19 +633,19 @@ func _hide_throw_reticle() -> void:
 
 func start_dash_targeting() -> void:
 	"""Enter dash-targeting mode. Aim line follows the cursor (truncated at the
-	first wall) until the player commits with left-click or cancels with
-	right-click / escape / shift."""
+	first wall, clamped to get_dash_range()) until the player commits with
+	left-click or cancels with right-click / escape / shift."""
 	if dash_cooldown_timer > 0.0 or _dash_motion_active:
 		return
 	pending_dash = true
 	_ensure_aim_line()
 	# Yellow-tinted to distinguish from throw aim.
 	_aim_line.default_color = Color(1.0, 0.85, 0.3, 0.6)
-	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, get_dash_range())
 
 func _update_dash_reticle(mouse_pos: Vector2) -> void:
 	if _aim_line:
-		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES)
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, get_dash_range())
 
 func _execute_pending_dash(mouse_pos: Vector2) -> void:
 	pending_dash = false
@@ -3603,6 +3603,12 @@ func get_status_string() -> String:
 				status += " (DR:%d)" % limb.armor_dr
 			parts.append(status)
 	return "\n".join(parts)
+func get_dash_range() -> float:
+	"""Maximum world-space distance a single dash() can cover, derived from
+	dash_speed × dash_duration. Exposed so the path planner and the aim-line
+	preview can clamp to the same reach the dash itself enforces."""
+	return move_speed * dash_speed_multiplier * dash_duration
+
 func dash(target_pos: Vector2) -> void:
 	"""Player-input dash. Drives motion through dash_to (move_and_slide), so
 	walls actually stop the dash. Distance is clamped to one dash_duration
@@ -3615,7 +3621,7 @@ func dash(target_pos: Vector2) -> void:
 	if distance < 1.0:
 		return
 	var dash_speed: float = move_speed * dash_speed_multiplier
-	var max_distance: float = dash_speed * dash_duration
+	var max_distance: float = get_dash_range()
 	var clamped_target := target_pos
 	if distance > max_distance:
 		clamped_target = global_position + to_target / distance * max_distance
