@@ -23,9 +23,22 @@ var interact_options: Array = ["Inspect"]
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
+# Consciousness scale: blood_amount × effective_will normalized to a 0..100
+# range, with WILL_BASELINE as the will value at which a full-blood character
+# sits at MAX_CONSCIOUSNESS. Higher will buffers consciousness against blood
+# loss; lower will causes earlier blackout. Falling below the threshold
+# applies the "unconscious" condition.
+const CONSCIOUSNESS_WILL_BASELINE: float = 50.0
+const MAX_CONSCIOUSNESS: int = 100
+const UNCONSCIOUS_THRESHOLD: int = 25  # 25% of MAX_CONSCIOUSNESS
+
+const DEATH_MARKER_TEXTURE_PATH := "res://Icons/tombstone.png"
+
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
 var _throw_reticle_line: Line2D = null
+
+var _death_marker: Sprite2D = null
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -349,7 +362,12 @@ var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
 
 var consciousness: int:
-	get: return blood_amount + int(effective_will())
+	get:
+		if max_blood_amount <= 0:
+			return 0
+		var blood_ratio: float = float(blood_amount) / float(max_blood_amount)
+		var will_ratio: float = float(max(0, effective_will())) / CONSCIOUSNESS_WILL_BASELINE
+		return clampi(int(round(blood_ratio * will_ratio * MAX_CONSCIOUSNESS)), 0, MAX_CONSCIOUSNESS)
 
 var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
@@ -3331,16 +3349,39 @@ func _check_death() -> void:
 		_on_character_died()
 
 func _check_consciousness() -> void:
-	"""Apply the unconscious condition when consciousness drops to 0 or below.
-	consciousness = blood_amount + effective_will (see line ~350), so blood
-	loss naturally drives this. The unconscious condition has its own duration
-	so it auto-clears if the character recovers."""
+	"""Apply the unconscious condition when consciousness drops below
+	UNCONSCIOUS_THRESHOLD (25% of MAX_CONSCIOUSNESS). Blood loss drives
+	consciousness down; the unconscious condition has its own duration so it
+	auto-clears if the character recovers."""
 	if not is_alive():
 		return
 	if condition_manager.has_active_condition("unconscious"):
 		return
-	if consciousness <= 0:
+	if consciousness < UNCONSCIOUS_THRESHOLD:
 		condition_manager.apply_condition("unconscious")
+
+func _hide_living_visuals() -> void:
+	"""Hide all living-character visuals so a death marker can replace them."""
+	_set_procedural_geometry_visible(false)
+	if body_part_sprites:
+		body_part_sprites.set_all_visible(false)
+	if main_hand_holder:
+		main_hand_holder.visible = false
+	if off_hand_holder:
+		off_hand_holder.visible = false
+
+func _show_death_marker() -> void:
+	"""Lazily create and show a tombstone sprite at the character's position."""
+	if _death_marker and is_instance_valid(_death_marker):
+		_death_marker.visible = true
+		return
+	if not ResourceLoader.exists(DEATH_MARKER_TEXTURE_PATH):
+		return
+	_death_marker = Sprite2D.new()
+	_death_marker.name = "DeathMarker"
+	_death_marker.texture = load(DEATH_MARKER_TEXTURE_PATH)
+	_death_marker.z_index = 5
+	add_child(_death_marker)
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
@@ -3501,6 +3542,8 @@ func _on_character_died() -> void:
 			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
+	_hide_living_visuals()
+	_show_death_marker()
 	set_process(false)
 	# Corpses do not block projectiles or move_and_slide queries (matches the
 	# pre-physics behavior where _update_projectiles skipped dead characters).

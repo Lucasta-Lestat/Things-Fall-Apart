@@ -913,6 +913,11 @@ func _process(_delta: float) -> void:
 			else:
 				container.modulate = Color(0.6, 0.6, 0.6, 1.0)
 
+		# Red-tint the portrait when the character is dead
+		var icon: TextureRect = data.get("icon")
+		if icon:
+			icon.modulate = Color(1.0, 0.3, 0.3, 1.0) if not character.is_alive() else Color.WHITE
+
 		# Update health bars
 		_update_health_bar(data, "head_bar", "head_fill", 0, character)
 		_update_health_bar(data, "torso_bar", "torso_fill", 1, character)
