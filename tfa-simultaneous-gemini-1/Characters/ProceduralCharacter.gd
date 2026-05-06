@@ -23,7 +23,7 @@ var interact_options: Array = ["Inspect"]
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
-const DEATH_MARKER_TEXTURE_PATH := "res://Icons/tombstone.png"
+const DEATH_MARKER_TEXTURE_PATH := "res://Items/tombstone.png"
 
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
@@ -3327,14 +3327,16 @@ func _check_death() -> void:
 		_on_character_died()
 
 func _hide_living_visuals() -> void:
-	"""Hide all living-character visuals so a death marker can replace them."""
+	"""Hide all living-character visuals so a death marker can replace them.
+	Equipment slot holders are hidden too — otherwise armored characters
+	(usually party members) leave their gear floating after death while
+	bare-handed NPCs disappear cleanly."""
 	_set_procedural_geometry_visible(false)
 	if body_part_sprites:
 		body_part_sprites.set_all_visible(false)
-	if main_hand_holder:
-		main_hand_holder.visible = false
-	if off_hand_holder:
-		off_hand_holder.visible = false
+	for holder in [main_hand_holder, off_hand_holder, head_slot, torso_slot, back_slot, legs_slot, feet_slot]:
+		if holder:
+			holder.visible = false
 
 func _show_death_marker() -> void:
 	"""Lazily create and show a tombstone sprite at the character's position."""
