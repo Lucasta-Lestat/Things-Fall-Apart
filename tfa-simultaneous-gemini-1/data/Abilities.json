@@ -162,7 +162,7 @@
 		  "affected_traits": ["metal", "armored"]
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://effects/magnetic_field.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://vfx/magnetic_field.tscn" }
 	},
 	{
 	  "id": "repulsion_wave",
@@ -189,7 +189,7 @@
 		  "damage": { "force": 15 }
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://effects/shockwave.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://vfx/shockwave.tscn" }
 	},
 	{
 	  "id": "gravity_well",
@@ -221,7 +221,7 @@
 		  "chance": 0.6
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/necrotic_hand.tscn", "impact_effect": "res://effects/gravity_well.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/necrotic_hand.tscn", "impact_effect": "res://vfx/gravity_well.tscn" }
 	},
 	{
 	  "id": "vortex",
@@ -253,7 +253,7 @@
 		  "damage": { "bludgeoning": 5 }
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://effects/vortex.tscn" }
+	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://vfx/vortex.tscn" }
 	},
 	{
 	  "id": "heal",
@@ -335,7 +335,7 @@
 		  "chance": 0.7
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://effects/impact_metal.tscn" },
+	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://vfx/impact_metal.tscn" },
 	  "animation": "shield_bash"
 	},
 	{
@@ -358,7 +358,7 @@
 		  "duration": 15.0
 		}
 	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/rage_hand.tscn", "cast_effect": "res://effects/rage_aura.tscn", "impact_effect": "res://vfx/rage_hand.tscn" },
+	  "visuals": { "in_hand_effect": "res://vfx/rage_hand.tscn", "cast_effect": "res://vfx/rage_hand.tscn", "impact_effect": "res://vfx/rage_hand.tscn" },
 	  "animation": "rage_roar"
 	},
 	{
