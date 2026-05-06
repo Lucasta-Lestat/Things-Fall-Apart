@@ -1332,7 +1332,7 @@
 		"Talk",
         "Inspect"
 	  ],
-	  "extra_abilities": ["repulsion_wave"],
+	  "extra_abilities": ["repulsion_wave", "gravity_well"],
 	  "extra_conditions": [],
 	  "extra_traits": {
 		"Noble": 1
