@@ -23,15 +23,6 @@ var interact_options: Array = ["Inspect"]
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
-# Consciousness scale: blood_amount × effective_will normalized to a 0..100
-# range, with WILL_BASELINE as the will value at which a full-blood character
-# sits at MAX_CONSCIOUSNESS. Higher will buffers consciousness against blood
-# loss; lower will causes earlier blackout. Falling below the threshold
-# applies the "unconscious" condition.
-const CONSCIOUSNESS_WILL_BASELINE: float = 50.0
-const MAX_CONSCIOUSNESS: int = 100
-const UNCONSCIOUS_THRESHOLD: int = 25  # 25% of MAX_CONSCIOUSNESS
-
 const DEATH_MARKER_TEXTURE_PATH := "res://Icons/tombstone.png"
 
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
@@ -347,27 +338,16 @@ var conditions = {}
 @onready var condition_manager: ConditionManager = $ConditionManager
 # Derived stats (calculated from attributes)
 
-var max_blood_amount = max_hp
-var blood_amount = max_hp
-
 # --- Update your existing getters to use effective values ---
 
 var max_hp: int:
 	get: return 6 + int(effective_constitution()) / 10
 
 var max_MP: int:
-	get: return int(effective_will()) * consciousness
+	get: return int(effective_will())
 
 var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
-
-var consciousness: int:
-	get:
-		if max_blood_amount <= 0:
-			return 0
-		var blood_ratio: float = float(blood_amount) / float(max_blood_amount)
-		var will_ratio: float = float(max(0, effective_will())) / CONSCIOUSNESS_WILL_BASELINE
-		return clampi(int(round(blood_ratio * will_ratio * MAX_CONSCIOUSNESS)), 0, MAX_CONSCIOUSNESS)
 
 var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
@@ -967,7 +947,11 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var damage_amount = result["damage"]
 		var damage_type = result.get("damage_type", "true")
 		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
-		
+		# Bleeding always wears down the torso, regardless of which limb the
+		# wound is on — death from blood loss is just torso HP reaching 0.
+		if instance.condition and instance.condition.id == "bleeding":
+			limb_type = LimbType.TORSO
+
 		# Build damage dict matching your damage_limb format
 		var damage_dict = {damage_type: damage_amount}
 		
@@ -1030,13 +1014,11 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
 	# Each tick of the bleeding condition drops a small amount of blood fluid
 	# on the victim's current tile. Amount scales with bleed stacks (tier).
+	# Damage is handled by the bleeding condition's separate "damage"
+	# triggered_effect (routed to the torso in _on_triggered_effect_fired).
 	var base_amount: float = data.get("amount", 0.05)
 	var stacks: int = instance.stacks if instance else 1
 	var amount: float = base_amount * float(max(1, stacks))
-
-	# Also leak a bit from the overall blood reserve for consciousness/death checks.
-	blood_amount = max(0, blood_amount - stacks)
-	_check_consciousness()
 
 	var my_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
@@ -3334,31 +3316,15 @@ func get_total_hp() -> int:
 
 func is_alive() -> bool:
 	"""Pure alive check — no side effects. Use _check_death() to actually
-	trigger death side effects when state warrants it. Treating this as
-	side-effectful caused silent freezes: external callers (other characters
-	scanning targets, condition tick handlers, etc.) would unexpectedly drive
-	a character into _on_character_died() — which calls set_process(false) —
-	just by querying alive status when blood_amount had drained to 0."""
+	trigger death side effects when state warrants it."""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
 
 func _check_death() -> void:
 	"""Trigger death side effects if the character should be dead."""
 	if not is_alive():
 		_on_character_died()
-
-func _check_consciousness() -> void:
-	"""Apply the unconscious condition when consciousness drops below
-	UNCONSCIOUS_THRESHOLD (25% of MAX_CONSCIOUSNESS). Blood loss drives
-	consciousness down; the unconscious condition has its own duration so it
-	auto-clears if the character recovers."""
-	if not is_alive():
-		return
-	if condition_manager.has_active_condition("unconscious"):
-		return
-	if consciousness < UNCONSCIOUS_THRESHOLD:
-		condition_manager.apply_condition("unconscious")
 
 func _hide_living_visuals() -> void:
 	"""Hide all living-character visuals so a death marker can replace them."""
@@ -3866,13 +3832,12 @@ func get_state_name() -> String:
 	return $AI.AIState.keys()[$AI.current_state]
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
-	# Bleeding is now driven by the ConditionManager's triggered_effects
-	# on the "bleeding" condition (damage + bleed_puddle every tick).
-	# Death from blood loss is handled by the damage triggered effect
-	# reducing torso HP (see _on_triggered_effect_fired).
-	_check_consciousness()
-	if blood_amount <= 0:
-		_check_death()
+	# Bleeding is driven by the ConditionManager's triggered_effects on the
+	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
+	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
+	# HP reaching 0.
+	pass
 
 #Ability Checks, character.gd code
 func ability_check(stat,domain):
