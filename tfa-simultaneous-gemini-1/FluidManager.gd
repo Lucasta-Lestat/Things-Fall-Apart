@@ -372,13 +372,33 @@ func update_edge_masks() -> void:
 		var bottom = Vector2i(tile_pos.x, tile_pos.y + 1)
 		var top = Vector2i(tile_pos.x, tile_pos.y - 1)
 
+		var right_open = not _has_compatible_fluid_at(right, my_type)
+		var left_open = not _has_compatible_fluid_at(left, my_type)
+		var bottom_open = not _has_compatible_fluid_at(bottom, my_type)
+		var top_open = not _has_compatible_fluid_at(top, my_type)
+
 		var mask = Vector4(
-			0.0 if _has_compatible_fluid_at(right, my_type) else 1.0,
-			0.0 if _has_compatible_fluid_at(left, my_type) else 1.0,
-			0.0 if _has_compatible_fluid_at(bottom, my_type) else 1.0,
-			0.0 if _has_compatible_fluid_at(top, my_type) else 1.0
+			1.0 if right_open else 0.0,
+			1.0 if left_open else 0.0,
+			1.0 if bottom_open else 0.0,
+			1.0 if top_open else 0.0
 		)
 		fluid_node.set_edge_mask(mask)
+
+		# Inside-corner fade: when both adjacent edges have neighbors but the diagonal
+		# is missing, the corner pixel would otherwise stick out into the gap.
+		var tr_diag = Vector2i(tile_pos.x + 1, tile_pos.y - 1)
+		var tl_diag = Vector2i(tile_pos.x - 1, tile_pos.y - 1)
+		var bl_diag = Vector2i(tile_pos.x - 1, tile_pos.y + 1)
+		var br_diag = Vector2i(tile_pos.x + 1, tile_pos.y + 1)
+		var corner_mask = Vector4(
+			1.0 if not right_open and not top_open and not _has_compatible_fluid_at(tr_diag, my_type) else 0.0,
+			1.0 if not left_open and not top_open and not _has_compatible_fluid_at(tl_diag, my_type) else 0.0,
+			1.0 if not left_open and not bottom_open and not _has_compatible_fluid_at(bl_diag, my_type) else 0.0,
+			1.0 if not right_open and not bottom_open and not _has_compatible_fluid_at(br_diag, my_type) else 0.0
+		)
+		if fluid_node.has_method("set_corner_mask"):
+			fluid_node.set_corner_mask(corner_mask)
 
 func _has_compatible_fluid_at(tile_pos: Vector2i, fluid_type: String) -> bool:
 	"""True only if neighbor has the same fluid type with > PUDDLE_HEIGHT amount."""

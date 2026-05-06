@@ -28,6 +28,11 @@ uniform vec4 edge_mask = vec4(0.0);
 uniform float edge_fade_width = 0.4;
 uniform float edge_noise_scale = 6.0;
 
+// Inside-corner fade — vec4(top-right, top-left, bottom-left, bottom-right)
+// 1.0 = both adjacent edges have neighbors but the diagonal tile is missing,
+// so the corner pixel would otherwise stick out into the gap.
+uniform vec4 corner_mask = vec4(0.0);
+
 // --- Noise functions ---
 float hash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -85,6 +90,31 @@ float compute_edge_alpha(vec2 uv, vec2 world_uv) {
 
     // Multiply edges together — corners (2 edges meeting) get much stronger erosion
     alpha = right_a * left_a * bottom_a * top_a;
+
+    // Inside-corner fade: round off any corner whose two adjacent edges are closed
+    // but whose diagonal tile is missing, so the corner doesn't poke into the gap.
+    if (corner_mask.x > 0.5) { // top-right (UV (1,0))
+        float dx = 1.0 - uv.x;
+        float dy = uv.y;
+        float n = fbm(noise_pos + vec2(43.0, 197.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+    }
+    if (corner_mask.y > 0.5) { // top-left (UV (0,0))
+        float n = fbm(noise_pos + vec2(53.0, 91.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, length(uv));
+    }
+    if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
+        float dx = uv.x;
+        float dy = 1.0 - uv.y;
+        float n = fbm(noise_pos + vec2(107.0, 211.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+    }
+    if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
+        float dx = 1.0 - uv.x;
+        float dy = 1.0 - uv.y;
+        float n = fbm(noise_pos + vec2(67.0, 179.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+    }
     return alpha;
 }
 
