@@ -19,6 +19,10 @@ uniform float edge_noise_scale = 6.0;
 // Inside-corner fade — vec4(top-right, top-left, bottom-left, bottom-right)
 uniform vec4 corner_mask = vec4(0.0);
 
+// Directional fill — see water_flow.gdshader for full notes.
+uniform float fill_ratio = 1.0;
+uniform vec2 inflow_direction = vec2(0.0);
+
 float hash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
@@ -79,25 +83,42 @@ float compute_edge_alpha(vec2 uv, vec2 world_uv) {
         float dx = 1.0 - uv.x;
         float dy = uv.y;
         float n = fbm(noise_pos + vec2(43.0, 197.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.y > 0.5) { // top-left (UV (0,0))
         float n = fbm(noise_pos + vec2(53.0, 91.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, length(uv));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, length(uv));
     }
     if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
         float dx = uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(107.0, 211.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
         float dx = 1.0 - uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(67.0, 179.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
     }
     return alpha;
+}
+
+float compute_fill_alpha(vec2 uv, vec2 world_uv) {
+    if (fill_ratio >= 0.999) return 1.0;
+    vec2 noise_pos = world_uv * edge_noise_scale;
+    float in_len = length(inflow_direction);
+    if (in_len < 0.05) {
+        float n = fbm(noise_pos * 0.7);
+        return smoothstep(1.0 - fill_ratio - 0.1, 1.0 - fill_ratio + 0.1, n);
+    }
+    vec2 in_dir = inflow_direction / in_len;
+    float p = dot(uv - 0.5, in_dir);
+    float half_range = 0.5 * (abs(in_dir.x) + abs(in_dir.y));
+    float front_p = mix(-half_range, half_range, fill_ratio);
+    float n = fbm(noise_pos * 0.8 + vec2(13.0, 29.0));
+    front_p += (n - 0.5) * 0.08;
+    return 1.0 - smoothstep(front_p - 0.04, front_p + 0.04, p);
 }
 
 void fragment() {
@@ -131,5 +152,6 @@ void fragment() {
     final_color += vec3(spec);
 
     float edge_alpha = compute_edge_alpha(uv, world_uv);
-    COLOR = vec4(final_color, water_color.a * edge_alpha);
+    float fill_alpha = compute_fill_alpha(uv, world_uv);
+    COLOR = vec4(final_color, water_color.a * edge_alpha * fill_alpha);
 }
