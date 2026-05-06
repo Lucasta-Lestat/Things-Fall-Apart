@@ -91,11 +91,12 @@ func set_custom_shader(shader_path: String) -> void:
 		shader_material.set_shader_parameter("tile_position", Vector2(grid_position.x, grid_position.y))
 
 func update_visuals():
-	"""Update the visual representation based on depth"""
+	# Alpha lives in the shader (water_color.a * edge_alpha) so all tiles of the
+	# same fluid type render consistently. Per-tile depth-based modulate.a was
+	# stamping visible rectangles around tiles whose amount diverged from neighbors'.
 	if not water_sprite:
 		return
-	var alpha = clamp(water_depth / 4.0, 0.3, 0.9)
-	modulate.a = alpha
+	modulate.a = 1.0
 
 func set_flow_direction(flow_dir: Vector2, flow_speed: float):
 	"""Called by FluidManager to update flow visualization"""
