@@ -70,53 +70,58 @@ signal force_applied(entity: Node, force: Vector2)
 
 
 func _ready() -> void:
-	# Connect area signals
-	body_entered.connect(_on_body_entered)
-	body_exited.connect(_on_body_exited)
-	
+	# Force fields don't sit on any physics layer (they're not solids); they
+	# only detect bodies. Mask CHARACTERS so character bodies are picked up,
+	# and ITEMS so future RigidBody2D items can be pushed too. Detection is
+	# per-frame poll in _physics_process below — body_entered / body_exited
+	# signals can miss fast-moving bodies that cross the field in a single
+	# physics step.
+	collision_layer = 0
+	collision_mask = CollisionLayers.CHARACTERS | CollisionLayers.ITEMS
+
 	# Try to find game singleton
 	if not game:
 		game = get_node_or_null("/root/Game")
-	
+
 	_field_center = global_position
 
 
 func _physics_process(delta: float) -> void:
 	if not is_active:
 		return
-	
+
 	_field_center = global_position
-	
-	# Apply forces to all affected entities
-	for entity in _entities_in_field.keys():
-		if not is_instance_valid(entity):
-			_entities_in_field.erase(entity)
+
+	# Broadphase poll: rebuild the currently-affected set from the actual
+	# overlap result and apply force in one pass. Bodies that crossed the
+	# field in a single physics step still get force this frame.
+	var current_set: Dictionary = {}
+	for body in get_overlapping_bodies():
+		if not _should_affect_entity(body):
 			continue
-		
-		if entity is CharacterBody2D:
-			var force = calculate_force(entity)
-			_apply_force_to_character(entity, force, delta)
-			force_applied.emit(entity, force)
-		elif entity is RigidBody2D:
-			var force = calculate_force(entity)
-			entity.apply_central_force(force)
-			force_applied.emit(entity, force)
-	
+		current_set[body] = true
+		if not _entities_in_field.has(body):
+			_entities_in_field[body] = {"last_condition_time": -INF}
+			entity_entered_field.emit(body)
+		var force = calculate_force(body)
+		if body.has_method("apply_external_force"):
+			body.apply_external_force(force, delta)
+			force_applied.emit(body, force)
+		elif body is RigidBody2D:
+			body.apply_central_force(force)
+			force_applied.emit(body, force)
+
+	# Drop entities that are no longer overlapping (or are no longer valid).
+	for entity in _entities_in_field.keys():
+		if current_set.has(entity):
+			continue
+		_entities_in_field.erase(entity)
+		if is_instance_valid(entity):
+			entity_exited_field.emit(entity)
+
 	# Handle condition application
 	if not conditions_to_apply.is_empty():
 		_process_condition_application()
-
-
-func _on_body_entered(body: Node) -> void:
-	if _should_affect_entity(body):
-		_entities_in_field[body] = {"last_condition_time": -INF}
-		entity_entered_field.emit(body)
-
-
-func _on_body_exited(body: Node) -> void:
-	if body in _entities_in_field:
-		_entities_in_field.erase(body)
-		entity_exited_field.emit(body)
 
 
 ## Check if an entity should be affected by this field based on traits
@@ -250,17 +255,6 @@ func _get_field_radius() -> float:
 	return 100.0  # Default fallback
 
 
-## Apply force to a CharacterBody2D (they don't have apply_force)
-func _apply_force_to_character(character: CharacterBody2D, force: Vector2, delta: float) -> void:
-	# Option 1: Direct velocity modification
-	if "velocity" in character:
-		character.velocity += force * delta
-	
-	# Option 2: If character has a custom method for external forces
-	if character.has_method("apply_external_force"):
-		character.apply_external_force(force, delta)
-
-
 ## Process condition application on interval
 func _process_condition_application() -> void:
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -310,7 +304,10 @@ func get_affected_entities() -> Array:
 func set_active(active: bool) -> void:
 	is_active = active
 	if not active:
-		# Clear entities when deactivated (they'll re-enter when reactivated)
+		# Fire exit signals so listeners can react to the field stopping.
+		for entity in _entities_in_field.keys():
+			if is_instance_valid(entity):
+				entity_exited_field.emit(entity)
 		_entities_in_field.clear()
 
 
