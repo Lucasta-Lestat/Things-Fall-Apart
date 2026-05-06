@@ -79,6 +79,11 @@ func set_edge_mask(mask: Vector4) -> void:
 	if water_sprite and water_sprite.material is ShaderMaterial:
 		water_sprite.material.set_shader_parameter("edge_mask", mask)
 
+func set_corner_mask(mask: Vector4) -> void:
+	"""Set which inside corners need rounding. vec4(top-right, top-left, bottom-left, bottom-right)."""
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("corner_mask", mask)
+
 func set_custom_shader(shader_path: String) -> void:
 	"""Replace the shader with a custom one (e.g. oil sheen)."""
 	if not water_sprite:
