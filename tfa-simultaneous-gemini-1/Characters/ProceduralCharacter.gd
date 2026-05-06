@@ -3936,6 +3936,10 @@ func reset_severed_limbs() -> void:
 			child.queue_free()
 
 func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
+		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
+		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
+		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
+		Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
