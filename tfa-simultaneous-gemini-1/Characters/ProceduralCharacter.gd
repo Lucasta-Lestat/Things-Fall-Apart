@@ -9,7 +9,7 @@ var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-var traits = {"Male":1}
+var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
 var is_protagonist = false
@@ -23,10 +23,14 @@ var interact_options: Array = ["Inspect"]
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
+const DEATH_MARKER_TEXTURE_PATH := "res://Icons/tombstone.png"
+
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
 var pending_dash: bool = false
 var _aim_line: AimLine = null
+
+var _death_marker: Sprite2D = null
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -328,6 +332,8 @@ func effective_crit_fail_threshold() -> float:
 var speed_modifier: float = 0.0
 var arm_length: float = 0.0
 var race_id: String = ""
+var creature_type: String = "Humanoid"
+var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
@@ -353,22 +359,16 @@ var conditions = {}
 @onready var condition_manager: ConditionManager = $ConditionManager
 # Derived stats (calculated from attributes)
 
-var max_blood_amount = max_hp
-var blood_amount = max_hp
-
 # --- Update your existing getters to use effective values ---
 
 var max_hp: int:
 	get: return 6 + int(effective_constitution()) / 10
 
 var max_MP: int:
-	get: return int(effective_will()) * consciousness
+	get: return int(effective_will())
 
 var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
-
-var consciousness: int:
-	get: return blood_amount + int(effective_will())
 
 var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
@@ -995,14 +995,18 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var damage_amount = result["damage"]
 		var damage_type = result.get("damage_type", "true")
 		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
-		
+		# Bleeding always wears down the torso, regardless of which limb the
+		# wound is on — death from blood loss is just torso HP reaching 0.
+		if instance.condition and instance.condition.id == "bleeding":
+			limb_type = LimbType.TORSO
+
 		# Build damage dict matching your damage_limb format
 		var damage_dict = {damage_type: damage_amount}
 		
 		# Use global position as fallback for visual location
 		var hit_location = global_position
 		damage_limb(limb_type, damage_dict, hit_location)
-		is_alive()  # Check death
+		_check_death()
 	
 	if result.has("heal"):
 		var heal_amount = result["heal"]
@@ -1058,12 +1062,11 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
 	# Each tick of the bleeding condition drops a small amount of blood fluid
 	# on the victim's current tile. Amount scales with bleed stacks (tier).
+	# Damage is handled by the bleeding condition's separate "damage"
+	# triggered_effect (routed to the torso in _on_triggered_effect_fired).
 	var base_amount: float = data.get("amount", 0.05)
 	var stacks: int = instance.stacks if instance else 1
 	var amount: float = base_amount * float(max(1, stacks))
-
-	# Also leak a bit from the overall blood reserve for consciousness/death checks.
-	blood_amount = max(0, blood_amount - stacks)
 
 	var my_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
@@ -3469,15 +3472,39 @@ func get_total_hp() -> int:
 	return total
 
 func is_alive() -> bool:
-	"""Character dies if torso or head HP <= 0 or blood is 0"""
+	"""Pure alive check — no side effects. Use _check_death() to actually
+	trigger death side effects when state warrants it."""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
-	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
-	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
-	var is_alive = (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
-	if not is_alive:
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+
+func _check_death() -> void:
+	"""Trigger death side effects if the character should be dead."""
+	if not is_alive():
 		_on_character_died()
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+
+func _hide_living_visuals() -> void:
+	"""Hide all living-character visuals so a death marker can replace them."""
+	_set_procedural_geometry_visible(false)
+	if body_part_sprites:
+		body_part_sprites.set_all_visible(false)
+	if main_hand_holder:
+		main_hand_holder.visible = false
+	if off_hand_holder:
+		off_hand_holder.visible = false
+
+func _show_death_marker() -> void:
+	"""Lazily create and show a tombstone sprite at the character's position."""
+	if _death_marker and is_instance_valid(_death_marker):
+		_death_marker.visible = true
+		return
+	if not ResourceLoader.exists(DEATH_MARKER_TEXTURE_PATH):
+		return
+	_death_marker = Sprite2D.new()
+	_death_marker.name = "DeathMarker"
+	_death_marker.texture = load(DEATH_MARKER_TEXTURE_PATH)
+	_death_marker.z_index = 5
+	add_child(_death_marker)
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
@@ -3645,12 +3672,15 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
-	if "Male" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("man-death-scream",global_position)
-	elif "Female" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("woman-death-scream",global_position)
+	if creature_type == "Humanoid":
+		if gender == "female":
+			SfxManager.play("woman-death-scream", global_position)
+		else:
+			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
+	_hide_living_visuals()
+	_show_death_marker()
 	set_process(false)
 	# Corpses do not block projectiles or move_and_slide queries (matches the
 	# pre-physics behavior where _update_projectiles skipped dead characters).
@@ -3673,7 +3703,7 @@ func _on_character_died() -> void:
 			var torso = partner.limbs.get(partner.LimbType.TORSO)
 			if torso:
 				torso.current_hp = 0
-				partner.is_alive()
+				partner._check_death()
 
 # ===== BLEED VFX BURST =====
 #
@@ -3973,12 +4003,12 @@ func get_state_name() -> String:
 	return $AI.AIState.keys()[$AI.current_state]
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
-	# Bleeding is now driven by the ConditionManager's triggered_effects
-	# on the "bleeding" condition (damage + bleed_puddle every tick).
-	# Death from blood loss is handled by the damage triggered effect
-	# reducing torso HP (see _on_triggered_effect_fired).
-	if blood_amount <= 0 and is_alive():
-		_on_character_died()
+	# Bleeding is driven by the ConditionManager's triggered_effects on the
+	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
+	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
+	# HP reaching 0.
+	pass
 
 #Ability Checks, character.gd code
 func ability_check(stat,domain):

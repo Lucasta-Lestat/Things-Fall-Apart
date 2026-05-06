@@ -81,6 +81,7 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 
 	# --- Core identity ---
 	_set_if_exists(character, "race_id", race_id)
+	_set_if_exists(character, "gender", gender)
 
 	# --- Ability Score Increases ---
 	var asi: Dictionary = race.get("ability_score_increases", {})

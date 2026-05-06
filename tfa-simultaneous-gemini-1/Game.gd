@@ -1724,9 +1724,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["crit_threshold_modifier"] = character.crit_threshold_modifier
 	state["crit_fail_modifier"] = character.crit_fail_modifier
 	state["speed_modifier"] = character.speed_modifier
- 
+
 	# --- Vitals ---
-	state["blood_amount"] = character.blood_amount
 	state["MP"] = character.MP
  
 	# --- Appearance ---
@@ -1874,7 +1873,6 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("speed_modifier"):        character.speed_modifier = state["speed_modifier"]
  
 	# --- Vitals ---
-	if state.has("blood_amount"): character.blood_amount = state["blood_amount"]
 	if state.has("MP"):           character.MP = state["MP"]
  
 	# --- Appearance ---
