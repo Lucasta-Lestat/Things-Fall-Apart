@@ -8,9 +8,18 @@ extends Node2D
 # Grid position
 var grid_position: Vector2i = Vector2i.ZERO
 
-# Flow data
+# Flow data — current is what the shader sees this frame; target is what the
+# fluid sim last reported. Sim updates every SIM_INTERVAL (~2s); we lerp the
+# shader-facing values toward the target each frame so flow direction and
+# speed transitions look continuous instead of snapping every sim tick.
 var current_flow_direction: Vector2 = Vector2.ZERO
 var current_flow_speed: float = 0.0
+var target_flow_direction: Vector2 = Vector2.ZERO
+var target_flow_speed: float = 0.0
+
+# Time constant for the exponential lerp (higher = snappier). 1.5 ~= ~70%
+# of the way to target after 1 second, fully settled well before the next sim tick.
+const FLOW_LERP_RATE: float = 1.5
 
 # Depth
 var water_depth: float = 1.0
@@ -103,14 +112,22 @@ func update_visuals():
 		return
 	modulate.a = 1.0
 
-func set_flow_direction(flow_dir: Vector2, flow_speed: float):
-	"""Called by FluidManager to update flow visualization"""
-	current_flow_direction = flow_dir
-	current_flow_speed = flow_speed
-
+func _process(delta: float) -> void:
+	# Skip when already at target — most tiles most of the time.
+	if current_flow_direction.is_equal_approx(target_flow_direction) \
+			and is_equal_approx(current_flow_speed, target_flow_speed):
+		return
+	var t = 1.0 - exp(-FLOW_LERP_RATE * delta)
+	current_flow_direction = current_flow_direction.lerp(target_flow_direction, t)
+	current_flow_speed = lerp(current_flow_speed, target_flow_speed, t)
 	if water_sprite and water_sprite.material is ShaderMaterial:
-		water_sprite.material.set_shader_parameter("flow_direction", flow_dir)
-		water_sprite.material.set_shader_parameter("flow_speed", flow_speed)
+		water_sprite.material.set_shader_parameter("flow_direction", current_flow_direction)
+		water_sprite.material.set_shader_parameter("flow_speed", current_flow_speed)
+
+func set_flow_direction(flow_dir: Vector2, flow_speed: float):
+	"""Called by FluidManager to update flow visualization. Lerped toward via _process."""
+	target_flow_direction = flow_dir
+	target_flow_speed = flow_speed
 
 func set_water_depth(new_depth: float):
 	"""Update water depth and visuals"""

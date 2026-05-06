@@ -79,23 +79,23 @@ float compute_edge_alpha(vec2 uv, vec2 world_uv) {
         float dx = 1.0 - uv.x;
         float dy = uv.y;
         float n = fbm(noise_pos + vec2(43.0, 197.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.y > 0.5) { // top-left (UV (0,0))
         float n = fbm(noise_pos + vec2(53.0, 91.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, length(uv));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, length(uv));
     }
     if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
         float dx = uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(107.0, 211.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
         float dx = 1.0 - uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(67.0, 179.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     return alpha;
 }

@@ -97,23 +97,23 @@ float compute_edge_alpha(vec2 uv, vec2 world_uv) {
         float dx = 1.0 - uv.x;
         float dy = uv.y;
         float n = fbm(noise_pos + vec2(43.0, 197.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.y > 0.5) { // top-left (UV (0,0))
         float n = fbm(noise_pos + vec2(53.0, 91.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, length(uv));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, length(uv));
     }
     if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
         float dx = uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(107.0, 211.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
         float dx = 1.0 - uv.x;
         float dy = 1.0 - uv.y;
         float n = fbm(noise_pos + vec2(67.0, 179.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, sqrt(dx*dx + dy*dy));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.9 + 0.05, sqrt(dx*dx + dy*dy));
     }
     return alpha;
 }
@@ -132,41 +132,44 @@ void fragment() {
     );
     vec2 wuv_d = world_uv + distort_offset;
 
-    float wave_coord;
+    // Wave orientation: perpendicular to flow when flowing, diagonal otherwise.
+    // Time advance is a slow base plus a flow-driven component.
+    vec2 wave_perp;
+    float wave_time_speed;
     if (flow_magnitude > 0.001) {
-        vec2 perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord = dot(wuv_d, perp) * wave_frequency;
-        wave_coord -= time * wave_speed * flow_speed * flow_magnitude;
+        wave_perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
+        wave_time_speed = wave_speed * (0.25 + flow_speed * flow_magnitude * 0.5);
     } else {
-        wave_coord = (wuv_d.x + wuv_d.y) * wave_frequency * 0.5;
-        wave_coord -= time * wave_speed * 0.3;
+        wave_perp = vec2(0.7071, 0.7071);
+        wave_time_speed = wave_speed * 0.25;
     }
 
-    float wp = sin(wave_coord * 6.28318);
-    wp = pow(abs(wp), 1.0 / wave_sharpness) * sign(wp);
-    float wi = (wp * 0.5 + 0.5) * wave_amplitude;
+    // Two wave layers at different frequencies — softer than the previous
+    // pow(abs(sin),1/wave_sharpness) which produced sharp peaks.
+    float wave_coord = dot(wuv_d, wave_perp) * wave_frequency - time * wave_time_speed;
+    float wi = (sin(wave_coord * 6.28318) * 0.5 + 0.5) * wave_amplitude;
 
-    float wave_coord2;
-    if (flow_magnitude > 0.001) {
-        vec2 perp2 = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord2 = dot(wuv_d, perp2) * wave_frequency * 1.7;
-        wave_coord2 -= time * wave_speed * flow_speed * flow_magnitude * 0.7;
-    } else {
-        wave_coord2 = (wuv_d.x - wuv_d.y) * wave_frequency * 0.7;
-        wave_coord2 -= time * wave_speed * 0.2;
-    }
-    float wi2 = (sin(wave_coord2 * 6.28318) * 0.25 + 0.25) * wave_amplitude;
+    float wave_coord2 = dot(wuv_d, wave_perp) * wave_frequency * 1.7 - time * wave_time_speed * 0.6;
+    float wi2 = (sin(wave_coord2 * 6.28318) * 0.5 + 0.5) * wave_amplitude * 0.5;
 
-    float wave_highlight = smoothstep(0.1, 0.15, wi + wi2) * wave_brightness;
-    float flow_alpha = 1.0;
-
+    // Wider smoothstep range = soft gradient highlights instead of near-binary stripes.
+    float wave_highlight = smoothstep(0.03, 0.13, wi + wi2) * wave_brightness;
     vec3 final_color = mix(water_color.rgb, wave_color.rgb, wave_highlight);
 
+    // Flow visualization: scrolling FBM noise drifting in the flow direction.
+    // Replaces the previous pow(abs(sin),8) streaks that read as a strobe.
     if (flow_magnitude > 0.001) {
-        float sc = dot(wuv_d, flow_dir_norm) * 8.0 - time * 3.0;
-        final_color += vec3(pow(abs(sin(sc * 6.28318)), 8.0) * 0.2 * flow_magnitude);
+        vec2 scroll_uv = wuv_d - flow_dir_norm * time * (0.15 + flow_speed * 0.25);
+        float current = fbm(scroll_uv * 3.5);
+        // Soft falloff — a shimmer, not a pulse
+        current = smoothstep(0.45, 0.72, current) * 0.13 * flow_magnitude;
+        // Add a second slower-scrolling layer for depth
+        vec2 scroll_uv2 = wuv_d - flow_dir_norm * time * (0.08 + flow_speed * 0.15);
+        float current2 = fbm(scroll_uv2 * 1.8 + vec2(73.0, 41.0));
+        current += smoothstep(0.5, 0.8, current2) * 0.08 * flow_magnitude;
+        final_color += vec3(current);
     }
 
     float edge_alpha = compute_edge_alpha(uv, world_uv);
-    COLOR = vec4(final_color, water_color.a * flow_alpha * edge_alpha);
+    COLOR = vec4(final_color, water_color.a * edge_alpha);
 }
