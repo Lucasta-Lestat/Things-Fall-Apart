@@ -16,6 +16,14 @@ const EVAPORATION_RATE = 0.01
 var flow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 var flow_speeds: Dictionary = {}  # Dictionary[Vector2i, float]
 
+# Average direction fluid moves AS IT ENTERS each tile (per most-recent sim tick).
+# Used by the shader to draw a directional fill front. Cleared each sim tick.
+var inflow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
+
+# Amount at which a tile is considered visually "full". Below this it renders
+# with a partial fill mask growing from the inflow side.
+const FULL_THRESHOLD: float = 0.5
+
 # Fluid data: Dictionary[Vector2i, Dictionary[String, float]]
 var fluid_grid: Dictionary = {}
 
@@ -33,7 +41,8 @@ var _edge_mask_update_pending: bool = false
 
 # Real-time fluid simulation
 var _sim_timer: float = 0.0
-const SIM_INTERVAL: float = 2.0  # Simulate flow every 2 seconds
+const SIM_INTERVAL: float = 0.5  # Simulate flow every 0.5 seconds (was 2.0).
+                                 # Lower interval = more responsive fill animations.
 
 func _ready() -> void:
 	_load_fluid_database()
@@ -202,6 +211,10 @@ func update_fluid_simulation() -> void:
 	var flow_deltas: Dictionary = {}
 	flow_directions.clear()
 	flow_speeds.clear()
+	inflow_directions.clear()
+	# Accumulators for averaging inflow vectors across all sources per tile this tick.
+	var inflow_vectors: Dictionary = {}
+	var inflow_amounts: Dictionary = {}
 
 	var tiles_to_process = active_fluid_tiles.duplicate()
 
@@ -245,6 +258,14 @@ func update_fluid_simulation() -> void:
 						total_flow_vector += direction_to_neighbor * flow_amount
 						total_flow_amount += flow_amount
 
+						# direction_to_neighbor is the velocity of the fluid as it
+						# enters the neighbor — i.e., the neighbor's inflow direction.
+						if not inflow_vectors.has(neighbor_pos):
+							inflow_vectors[neighbor_pos] = Vector2.ZERO
+							inflow_amounts[neighbor_pos] = 0.0
+						inflow_vectors[neighbor_pos] += direction_to_neighbor * flow_amount
+						inflow_amounts[neighbor_pos] += flow_amount
+
 			if total_flow_amount > 0.0:
 				flow_directions[tile_pos] = total_flow_vector.normalized()
 				flow_speeds[tile_pos] = clamp(total_flow_amount / amount, 0.0, 1.0)
@@ -258,6 +279,13 @@ func update_fluid_simulation() -> void:
 				if not flow_deltas[tile_pos].has(fluid_type):
 					flow_deltas[tile_pos][fluid_type] = 0.0
 				flow_deltas[tile_pos][fluid_type] -= EVAPORATION_RATE
+
+	# Average and normalize per-tile inflow direction.
+	for pos in inflow_vectors.keys():
+		if inflow_amounts[pos] > 0.0:
+			var avg = inflow_vectors[pos] / inflow_amounts[pos]
+			if avg.length_squared() > 0.0001:
+				inflow_directions[pos] = avg.normalized()
 
 	apply_flow_deltas(flow_deltas)
 	update_water_tile_flows()
@@ -338,6 +366,12 @@ func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float)
 			var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
 			var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
 			fluid_node.set_fluid_colors(water_color, wave_color)
+
+	# Snap initial fill state so a freshly-spawned partial tile doesn't render
+	# at full opacity for a frame and then lerp down. inflow_directions has
+	# already been populated for this tick before apply_flow_deltas runs.
+	if fluid_node.has_method("snap_fill_state"):
+		fluid_node.snap_fill_state(amount / FULL_THRESHOLD, inflow_directions.get(grid_pos, Vector2.ZERO))
 
 	active_fluid_tiles[grid_pos] = fluid_node
 	# Defer edge mask update so all tiles in a batch are created first
@@ -510,3 +544,7 @@ func update_water_tile_flows() -> void:
 				var amount = get_fluid_amount(grid_pos, fluid_type)
 				if amount > 0:
 					water_tile.set_water_depth(amount)
+				if water_tile.has_method("set_fill_ratio"):
+					water_tile.set_fill_ratio(clamp(amount / FULL_THRESHOLD, 0.0, 1.0))
+			if water_tile.has_method("set_inflow_direction"):
+				water_tile.set_inflow_direction(inflow_directions.get(grid_pos, Vector2.ZERO))

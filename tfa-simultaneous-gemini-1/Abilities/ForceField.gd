@@ -155,18 +155,25 @@ func _should_affect_entity(entity: Node) -> bool:
 	return false
 
 
-## Get traits from an entity (override if your trait system differs)
+## Get traits from an entity (override if your trait system differs).
+## Normalizes Dictionary trait stores (ProceduralCharacter.traits is a
+## Dictionary keyed by trait name) to an Array of trait keys, since the
+## membership / is_empty checks downstream want a flat list.
 func _get_entity_traits(entity: Node) -> Array:
-	# Try common trait storage patterns
+	var raw: Variant = null
 	if entity.has_method("get_traits"):
-		return entity.get_traits()
-	if "traits" in entity:
-		return entity.traits
-	if entity.has_node("CharacterStats"):
-		return entity.get_node("CharacterStats").traits
-	if entity.has_meta("traits"):
-		return entity.get_meta("traits")
-	
+		raw = entity.get_traits()
+	elif "traits" in entity:
+		raw = entity.traits
+	elif entity.has_node("CharacterStats"):
+		raw = entity.get_node("CharacterStats").traits
+	elif entity.has_meta("traits"):
+		raw = entity.get_meta("traits")
+
+	if raw is Dictionary:
+		return raw.keys()
+	if raw is Array:
+		return raw
 	return []
 
 
@@ -228,10 +235,14 @@ func _calculate_magnitude(entity: Node2D) -> float:
 			var t = 1.0 - clamp(distance / max_distance, 0.0, 1.0)
 			return force_magnitude * t
 		ForceType.INVERSE_SQUARE:
-			var normalized_dist = distance / max_distance
+			# Floor at 25% of max_distance to avoid the 1/r² singularity at
+			# center; peak force is 16× force_magnitude. Otherwise the force
+			# explodes to millions of px/s² as distance approaches 0 and
+			# launches anything near the center to escape velocity.
+			var normalized_dist = max(0.25, distance / max_distance)
 			return force_magnitude / (normalized_dist * normalized_dist)
 		ForceType.INVERSE_LINEAR:
-			var normalized_dist = distance / max_distance
+			var normalized_dist = max(0.25, distance / max_distance)
 			return force_magnitude / normalized_dist
 		ForceType.EDGE_PUSH:
 			# Stronger near edges, weaker in center
