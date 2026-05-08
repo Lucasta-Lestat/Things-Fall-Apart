@@ -42,7 +42,7 @@ var _edge_mask_update_pending: bool = false
 # Real-time fluid simulation
 var _sim_timer: float = 0.0
 const SIM_INTERVAL: float = 0.5  # Simulate flow every 0.5 seconds (was 2.0).
-                                 # Lower interval = more responsive fill animations.
+								 # Lower interval = more responsive fill animations.
 
 func _ready() -> void:
 	_load_fluid_database()
