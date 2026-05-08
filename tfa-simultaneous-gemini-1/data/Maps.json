@@ -26,6 +26,10 @@
 				"from_catacombs": {
 					"position": [480, 350],
 					"facing": 270
+				},
+				"from_venonan_chapel": {
+					"position": [2700, 700],
+					"facing": 180
 				}
 			},
 			"party_spawns": {
@@ -207,6 +211,14 @@
 					"condition": {
 						"item": "catacombs_key"
 					}
+				},
+				{
+					"id": "to_venonan_chapel",
+					"position": [2700, 700],
+					"size": [40, 80],
+					"target_map": "venonan_chapel",
+					"target_spawn": "from_cemetery",
+					"label": "To Venonan Chapel"
 				}
 			]
 		},
@@ -215,9 +227,9 @@
 			"name": "Town Square",
 			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
 			"images": {
-				"map": "res://Maps/town_square.png",
+				"map": "res://Maps/town_square_clean.png",
 				"mask": "res://Maps/town_square_mask.png",
-				"structures": "res://Maps/town_square_structures.png",
+				"structures": "res://Maps/town_square.jpg",
 				"structures_mask": "res://Maps/town_square_structures_mask.png"
 			},
 			"tile_size": 64,
@@ -226,20 +238,24 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [256, 400],
+					"position": [1750, 1750],
 					"facing": 0
 				},
 				"from_cemetery": {
-					"position": [490, 256],
+					"position": [3400, 1750],
 					"facing": 180
 				},
-				"from_tavern": {
-					"position": [200, 100],
+				"from_venonan_chapel": {
+					"position": [100, 1750],
+					"facing": 0
+				},
+				"from_perrow_tavern": {
+					"position": [1750, 100],
 					"facing": 90
 				},
-				"from_market": {
-					"position": [100, 256],
-					"facing": 0
+				"from_dock_tavern": {
+					"position": [1750, 3400],
+					"facing": 270
 				}
 			},
 			"party_spawns": {
@@ -274,27 +290,35 @@
 			"warp_points": [
 				{
 					"id": "to_cemetery",
-					"position": [500, 256],
-					"size": [20, 60],
+					"position": [3460, 1750],
+					"size": [40, 80],
 					"target_map": "cemetery",
 					"target_spawn": "from_town_square",
 					"label": "To Cemetery"
 				},
 				{
-					"id": "to_tavern",
-					"position": [200, 20],
-					"size": [40, 20],
-					"target_map": "tavern",
+					"id": "to_venonan_chapel",
+					"position": [40, 1750],
+					"size": [40, 80],
+					"target_map": "venonan_chapel",
 					"target_spawn": "from_town_square",
-					"label": "Enter Tavern"
+					"label": "To Venonan Chapel"
 				},
 				{
-					"id": "to_market",
-					"position": [20, 256],
-					"size": [20, 80],
-					"target_map": "market_district",
+					"id": "to_perrow_tavern",
+					"position": [1750, 40],
+					"size": [80, 40],
+					"target_map": "perrow_tavern",
 					"target_spawn": "from_town_square",
-					"label": "To Market District"
+					"label": "Enter Perrow Tavern"
+				},
+				{
+					"id": "to_dock_tavern",
+					"position": [1750, 3460],
+					"size": [80, 40],
+					"target_map": "dock_tavern",
+					"target_spawn": "from_town_square",
+					"label": "Enter Dock Tavern"
 				}
 			]
 		},
@@ -322,6 +346,262 @@
 				"default": {
 					"formation": "cluster",
 					"offset_radius": 40
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "venonan_chapel",
+			"name": "Venonan Chapel",
+			"description": "A weathered chapel of grey stone outside Venonan, its bells long silenced by neglect.",
+			"images": {
+				"map": "res://Maps/venonan_chapel_clean.png",
+				"mask": "res://Maps/venonan_chapel_mask.png",
+				"structures": "res://Maps/Venonan_chapel.png",
+				"structures_mask": "res://Maps/venonan_chapel_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [436, 578],
+					"facing": 0
+				},
+				"from_cemetery": {
+					"position": [40, 578],
+					"facing": 0
+				},
+				"from_town_square": {
+					"position": [820, 578],
+					"facing": 180
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_cemetery",
+					"position": [20, 578],
+					"size": [40, 80],
+					"target_map": "cemetery",
+					"target_spawn": "from_venonan_chapel",
+					"label": "To Cemetery"
+				},
+				{
+					"id": "to_town_square",
+					"position": [840, 578],
+					"size": [40, 80],
+					"target_map": "town_square",
+					"target_spawn": "from_venonan_chapel",
+					"label": "To Town Square"
+				}
+			]
+		},
+		{
+			"id": "perrow_tavern",
+			"name": "Perrow Tavern",
+			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
+			"images": {
+				"map": "res://Maps/perrow_tavern_clean.png",
+				"mask": "res://Maps/perrow_tavern_mask.png",
+				"structures": "res://Maps/perrow_tavern.png",
+				"structures_mask": "res://Maps/perrow_tavern_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "tavern_theme",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [1024, 1900],
+					"facing": 270
+				},
+				"from_town_square": {
+					"position": [1024, 1900],
+					"facing": 270
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_town_square",
+					"position": [1024, 2000],
+					"size": [80, 40],
+					"target_map": "town_square",
+					"target_spawn": "from_perrow_tavern",
+					"label": "Out to Town Square"
+				}
+			]
+		},
+		{
+			"id": "dock_tavern",
+			"name": "Dock Tavern",
+			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
+			"images": {
+				"map": "res://Maps/dock_tavern_clean.png",
+				"mask": "res://Maps/dock_tavern_mask.png",
+				"structures": "res://Maps/dock-tavern.png",
+				"structures_mask": "res://Maps/dock_tavern_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "tavern_theme",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [421, 578],
+					"facing": 90
+				},
+				"from_town_square": {
+					"position": [421, 1100],
+					"facing": 270
+				},
+				"from_don_manor": {
+					"position": [800, 578],
+					"facing": 180
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_town_square",
+					"position": [421, 1130],
+					"size": [80, 40],
+					"target_map": "town_square",
+					"target_spawn": "from_dock_tavern",
+					"label": "Out to Town Square"
+				},
+				{
+					"id": "to_don_manor",
+					"position": [820, 578],
+					"size": [40, 80],
+					"target_map": "don_manor",
+					"target_spawn": "from_dock_tavern",
+					"label": "To Don Manor"
+				}
+			]
+		},
+		{
+			"id": "don_manor",
+			"name": "Don Manor",
+			"description": "An imposing manor house that serves as the seat of the local Don, ringed by guards and rumor.",
+			"images": {
+				"map": "res://Maps/don-manor-clean.png",
+				"mask": "res://Maps/don_manor_mask.png",
+				"structures": "res://Maps/don-manor.png",
+				"structures_mask": "res://Maps/don_manor_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [465, 578],
+					"facing": 270
+				},
+				"from_dock_tavern": {
+					"position": [40, 578],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_dock_tavern",
+					"position": [20, 578],
+					"size": [40, 80],
+					"target_map": "dock_tavern",
+					"target_spawn": "from_don_manor",
+					"label": "To Dock Tavern"
+				}
+			]
+		},
+		{
+			"id": "minschaleft_university",
+			"name": "Minschaleft University",
+			"description": "A sprawling university whose halls have lately grown unsettlingly quiet.",
+			"images": {
+				"map": "res://Maps/minschaleft_university_clean.png",
+				"mask": "res://Maps/minschaleft_university_mask.png",
+				"structures": "res://Maps/minschaleft_university.png",
+				"structures_mask": "res://Maps/minschaleft_university_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [418, 668],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "eeler_floor_two",
+			"name": "Eeler Floor Two",
+			"description": "The second floor of the Eeler, dim and close, with low ceilings that swallow sound.",
+			"images": {
+				"map": "res://Maps/eeler floor two.png",
+				"mask": "res://Maps/eeler_floor_two_mask.png",
+				"structures": "res://Maps/eeler floor two.png",
+				"structures_mask": "res://Maps/eeler_floor_two_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [421, 578],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
 				}
 			},
 			"npc_spawns": [],
