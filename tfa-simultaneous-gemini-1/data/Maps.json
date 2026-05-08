@@ -181,6 +181,11 @@
 					"position": [320, 280],
 					"count": 3,
 					"container": "chest"
+				},
+				{
+					"id": "treasure_chest",
+					"position": [200, 100],
+					"count": 1
 				}
 			],
 			"warp_points": [

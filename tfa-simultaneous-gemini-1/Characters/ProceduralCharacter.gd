@@ -2614,6 +2614,13 @@ func _handle_input() -> void:
 
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
+		# Probe for a context-menu target (chest in world, non-hostile NPC).
+		# If hit, open menu instead of firing off-hand. Hostile NPCs and empty
+		# space fall through to the existing off-hand attack.
+		var ctx_target = _find_context_menu_target_at(mouse_pos)
+		if ctx_target != null and game:
+			game.show_context_menu(ctx_target, get_viewport().get_mouse_position())
+			return
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 
@@ -2686,6 +2693,38 @@ func _handle_input() -> void:
 			start_dash_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
+## Probe the world at mouse_pos for a right-click context-menu target. Returns the
+## first Item or non-hostile ProceduralCharacter under the cursor, or null.
+## Hostile characters and empty space return null so the existing right-click
+## (off-hand attack) flow continues.
+func _find_context_menu_target_at(world_pos: Vector2) -> Node:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS
+	# exclude expects an Array[RID], not a node — use this character's body RID.
+	query.exclude = [self.get_rid()]
+	var hits = space.intersect_point(query, 8)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider == null:
+			continue
+		if collider is Item:
+			return collider
+		if collider is ProceduralCharacter and collider != self:
+			# Only non-hostile NPCs get a context menu; hostile characters
+			# fall through to the off-hand attack path. We check vs the player
+			# faction (not the controlling character's own faction) so the
+			# decision matches show_context_menu's Trade injection — the menu
+			# represents the party's perspective, not an individual member's.
+			if not FactionDatabase.are_enemies("player", collider.faction_id):
+				return collider
+	return null
+
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
 	if targeting_system.is_targeting:
 		if targeting_system.current_hand == hand:
