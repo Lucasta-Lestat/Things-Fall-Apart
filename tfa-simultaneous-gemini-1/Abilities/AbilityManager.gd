@@ -56,6 +56,7 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		return false
 
 	var target_position = target_data.get("position", character.global_position)
+	var explicit_targets: Array = target_data.get("targets", [])
 
 	# Infatuated: block offensive abilities that would hit the charm source
 	if _would_hit_infatuation_source(ability, target_position):
@@ -73,19 +74,20 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	_start_cooldown(ability)
 
 	if ability.cast_time <= 0:
-		_execute_ability(ability, target_position)
+		_execute_ability(ability, target_position, explicit_targets)
 		return true
 
-	_start_casting(ability, target_position)
+	_start_casting(ability, target_position, explicit_targets)
 	return true
 
 
 ## Start the casting process (windup before execution)
-func _start_casting(ability: Ability, target_position: Vector2) -> void:
+func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "casting",
 		"target_position": target_position,
+		"explicit_targets": explicit_targets,
 		"cast_progress": 0.0,
 		"cast_time": ability.cast_time
 	}
@@ -115,32 +117,36 @@ func _process_casting(delta: float) -> void:
 	if current_cast["cast_progress"] >= current_cast["cast_time"]:
 		var ability = current_cast["ability"] as Ability
 		var target_pos = current_cast["target_position"]
+		var carried_targets: Array = current_cast.get("explicit_targets", [])
 		current_cast.clear()
-		_execute_ability(ability, target_pos)
+		_execute_ability(ability, target_pos, carried_targets)
 
 
 ## Execute the ability after casting completes
-func _execute_ability(ability: Ability, target_position: Vector2) -> void:
+func _execute_ability(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
 	if ability.is_multi_step():
-		_start_step_sequence(ability, target_position)
+		_start_step_sequence(ability, target_position, explicit_targets)
 	else:
-		# Single-step: check for projectile or resolve immediately
+		# When the ability targets specific characters, skip the projectile path
+		# and resolve effects directly against the chosen targets.
 		var projectile_path = ability.visuals.get("projectile", "")
-		if projectile_path != "" and character.has_method("_spawn_projectile"):
+		var has_explicit = not explicit_targets.is_empty()
+		if not has_explicit and projectile_path != "" and character.has_method("_spawn_projectile"):
 			character._spawn_projectile(ability, target_position)
 		else:
-			var results = _resolve_effects(ability, ability.effects, target_position)
+			var results = _resolve_effects(ability, ability.effects, target_position, explicit_targets)
 			if character.has_method("_spawn_ability_visuals"):
 				character._spawn_ability_visuals(ability, target_position)
 			cast_completed.emit(ability, results)
 
 
 ## Start a multi-step ability sequence
-func _start_step_sequence(ability: Ability, target_position: Vector2) -> void:
+func _start_step_sequence(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "stepping",
 		"target_position": target_position,
+		"explicit_targets": explicit_targets,
 		"step_results": [],
 	}
 	_current_step_index = -1
@@ -215,8 +221,9 @@ func _resolve_step_and_advance(ability: Ability, step: Dictionary, target_pos: V
 	if step_anim != "" and character.has_method("play_animation"):
 		character.play_animation(step_anim)
 
-	# Resolve effects
-	var results = _resolve_effects(ability, step_effects, target_pos)
+	# Resolve effects (carry explicit targets through multi-step sequences)
+	var step_explicit_targets: Array = current_cast.get("explicit_targets", [])
+	var results = _resolve_effects(ability, step_effects, target_pos, step_explicit_targets)
 
 	# Per-step visuals
 	var step_visuals = step.get("visuals", {})
@@ -258,9 +265,14 @@ func _dash_to_position(target_pos: Vector2, speed: float, on_complete: Callable)
 
 
 ## Resolve an array of effects against targets
-func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2) -> Array:
+func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2, explicit_targets: Array = []) -> Array:
 	var targets = []
-	if character.has_method("_find_targets_in_area"):
+	if not explicit_targets.is_empty():
+		# Player explicitly picked these targets — skip area sweep
+		for t in explicit_targets:
+			if is_instance_valid(t):
+				targets.append(t)
+	elif character.has_method("_find_targets_in_area"):
 		targets = character._find_targets_in_area(ability, target_position)
 
 	var results: Array = []

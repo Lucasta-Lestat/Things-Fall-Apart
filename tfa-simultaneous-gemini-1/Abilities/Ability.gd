@@ -113,6 +113,8 @@ static func _parse_targeting(data: Dictionary) -> Dictionary:
 		"radius": data.get("radius", 0.0),
 		"size": _parse_vector2(data.get("size", {})),
 		"angle": data.get("angle", 0.0),
+		"target_count": data.get("target_count", 1),
+		"target_filter": data.get("target_filter", "any"),
 	}
 
 

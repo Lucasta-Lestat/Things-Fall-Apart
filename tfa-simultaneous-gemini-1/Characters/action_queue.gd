@@ -261,11 +261,12 @@ func queue_cycle_weapon(direction: int, hand: String = "Main") -> bool:
 	"""Queue a weapon switch for a specific hand"""
 	return queue_action(ActionType.CYCLE_WEAPON, {"direction": direction, "hand": hand})
 
-func queue_ability(ability_id: String, target_position: Vector2 = Vector2.INF) -> bool:
-	"""Queue an ability to be used"""
+func queue_ability(ability_id: String, target_position: Vector2 = Vector2.INF, targets: Array = []) -> bool:
+	"""Queue an ability to be used. `targets` is the explicit character list for character-targeting abilities."""
 	return queue_action(ActionType.USE_ABILITY, {
 		"ability_id": ability_id,
 		"target_position": target_position,
+		"targets": targets,
 		"needs_targeting": target_position == Vector2.INF
 	})
 
@@ -400,10 +401,11 @@ func _execute_action(action: Action) -> void:
 			var ability_id = action.data.get("ability_id", "")
 			var target_pos = action.data.get("target_position", Vector2.INF)
 			var needs_targeting = action.data.get("needs_targeting", false)
+			var queued_targets: Array = action.data.get("targets", [])
 			var ability = AbilityDatabase.get_ability_data(ability_id)
 			var ability_obj = Ability.from_dict(ability)
 			if ability:
-				character.use_ability(ability_obj, {"position": target_pos})
+				character.use_ability(ability_obj, {"position": target_pos, "targets": queued_targets})
 
 func _execute_action_immediate(type: ActionType, data: Dictionary) -> void:
 	"""Execute an action immediately without queueing"""
