@@ -484,22 +484,61 @@ func _create_drag_preview_from_entry(entry: Dictionary) -> Control:
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
-	if not data.has("source_character"):
-		return false
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return false
-	# Can't drop onto same character
-	return target_panel["character"] != data["source_character"]
+	if data.has("source_character"):
+		# Can't drop onto same character
+		return target_panel["character"] != data["source_character"]
+	if data.has("source_chest"):
+		return true
+	if data.has("source_npc"):
+		# Trade window's NPC side -> party member
+		return target_panel["character"] != data["source_npc"]
+	return false
 
 func _drop_data(at_position: Vector2, data) -> void:
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return
 
-	var source_char = data["source_character"]
 	var target_char = target_panel["character"]
-	var entry: Dictionary = data["entry"]
+	var entry: Dictionary = data.get("entry", {})
+
+	# Drop from a chest window: pull from chest_item.contents into target inventory.
+	if data.has("source_chest"):
+		var chest_item = data["source_chest"]
+		if not is_instance_valid(chest_item):
+			return
+		var item_dict: Dictionary = entry.get("raw", {})
+		if chest_item.contents is Array:
+			chest_item.contents.erase(item_dict)
+		if entry.get("kind", "") == "weapon":
+			target_char.inventory.stow_weapon_from_data(item_dict)
+		else:
+			target_char.inventory.add_item(item_dict)
+		SfxManager.play_ui("chest_item_out")
+		var src_window = data.get("source_window")
+		if src_window != null and is_instance_valid(src_window) and src_window.has_method("_populate_grid"):
+			src_window._populate_grid()
+		return
+
+	# Drop from a trade window's NPC grid: pull from npc.inventory into target.
+	if data.has("source_npc"):
+		var npc = data["source_npc"]
+		if not is_instance_valid(npc):
+			return
+		match entry.get("kind", ""):
+			"item":
+				var item = npc.inventory.remove_item(entry.get("source_index", -1))
+				if not item.is_empty():
+					target_char.inventory.add_item(item)
+			"weapon":
+				_transfer_weapon(npc, target_char, entry.get("raw"))
+		return
+
+	# Drop from another party member (existing behavior).
+	var source_char = data["source_character"]
 
 	match entry.get("kind", ""):
 		"item":
@@ -564,6 +603,9 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	if kind == "item":
 		var item_data: Dictionary = entry.get("raw", {})
 		options = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
+		# Containers are openable only via right-click in the world; suppress
+		# "Open" from the inventory context menu.
+		options.erase("Open")
 		var equip_slot: String = item_data.get("equip_slot", "")
 		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
 			if item_data.get("_equipped", false):

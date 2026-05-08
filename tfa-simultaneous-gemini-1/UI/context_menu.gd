@@ -43,6 +43,12 @@ func _on_option_selected(option: String):
 			target_character.attack()
 		"Talk":
 			DialogueManager.start_dialogue(target_character.dialogues[target_character.current_dialogue_index])
+		"Trade":
+			if target_character is ProceduralCharacter:
+				game.show_trade_window(target_character)
+		"Open":
+			if target_character is Item:
+				game.show_chest_inventory(target_character)
 		_:
 			if target_character.has_method("interact"):
 				target_character.interact(option)

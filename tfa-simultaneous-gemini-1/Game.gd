@@ -521,15 +521,51 @@ func show_context_menu(target, position: Vector2) -> void:
 
 	var options: Array = []
 	if target is ProceduralCharacter:
-		options = target.get("interact_options") if "interact_options" in target else ["Inspect"]
+		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
+		# Inject "Trade" for any non-hostile character. FactionDatabase is the
+		# authoritative relationship source (Game.factions is unused in current
+		# code paths). Treat allies/neutrals as tradeable; only true enemies
+		# are blocked.
+		if not FactionDatabase.are_enemies("player", target.faction_id) and not "Trade" in options:
+			options.append("Trade")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
+	elif target is Item:
+		# World item context menu — use the options array loaded from the item's JSON data.
+		var raw_options: Array = target.options if target.options else []
+		options = raw_options.duplicate()
+		if options.is_empty():
+			options.append("Inspect")
 	elif target is Dictionary:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
 	$GameUI.add_child(context_menu)
+
+# ---------------------------------------------------------------------------
+# Chest inventory + Trade windows
+# ---------------------------------------------------------------------------
+
+func show_chest_inventory(item: Item) -> void:
+	if not is_instance_valid(item):
+		return
+	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
+	var w = ChestWindow.instantiate()
+	w.chest_item = item
+	$GameUI.add_child(w)
+
+func show_trade_window(npc) -> void:
+	if not is_instance_valid(npc):
+		return
+	# Make the party side panel visible so the player can drag from it during trade.
+	var party_panel = $GameUI.get_node_or_null("PartySidePanel")
+	if party_panel:
+		party_panel.visible = true
+	var TradeWindow = preload("res://UI/TradeWindow.tscn")
+	var w = TradeWindow.instantiate()
+	w.npc = npc
+	$GameUI.add_child(w)
 
 # ---------------------------------------------------------------------------
 # Lighting helpers
