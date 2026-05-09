@@ -302,7 +302,7 @@
 			"item_spawns": [
 				{
 					"id": "treasure_chest",
-					"position": [800, 600],
+					"position": [1700, 1700],
 					"count": 1,
 					"controlling_faction": "liziti",
 					"value": 100
