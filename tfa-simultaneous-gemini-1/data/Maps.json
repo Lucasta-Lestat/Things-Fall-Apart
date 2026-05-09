@@ -238,23 +238,23 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [1750, 1750],
+					"position": [1024, 1024],
 					"facing": 0
 				},
 				"from_cemetery": {
-					"position": [3400, 1750],
+					"position": [2000, 1024],
 					"facing": 180
 				},
 				"from_venonan_chapel": {
-					"position": [100, 1750],
+					"position": [60, 1024],
 					"facing": 0
 				},
 				"from_perrow_tavern": {
-					"position": [1750, 100],
+					"position": [1024, 60],
 					"facing": 90
 				},
 				"from_dock_tavern": {
-					"position": [1750, 3400],
+					"position": [1024, 2000],
 					"facing": 270
 				}
 			},
@@ -290,7 +290,7 @@
 			"warp_points": [
 				{
 					"id": "to_cemetery",
-					"position": [3460, 1750],
+					"position": [2010, 1024],
 					"size": [40, 80],
 					"target_map": "cemetery",
 					"target_spawn": "from_town_square",
@@ -298,7 +298,7 @@
 				},
 				{
 					"id": "to_venonan_chapel",
-					"position": [40, 1750],
+					"position": [40, 1024],
 					"size": [40, 80],
 					"target_map": "venonan_chapel",
 					"target_spawn": "from_town_square",
@@ -306,7 +306,7 @@
 				},
 				{
 					"id": "to_perrow_tavern",
-					"position": [1750, 40],
+					"position": [1024, 40],
 					"size": [80, 40],
 					"target_map": "perrow_tavern",
 					"target_spawn": "from_town_square",
@@ -314,7 +314,7 @@
 				},
 				{
 					"id": "to_dock_tavern",
-					"position": [1750, 3460],
+					"position": [1024, 2010],
 					"size": [80, 40],
 					"target_map": "dock_tavern",
 					"target_spawn": "from_town_square",
