@@ -116,12 +116,14 @@ anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -250.0
+offset_top = 64.0
 grow_horizontal = 0
 script = ExtResource("8_party")
 
 [node name="TownServicesPanel" type="PanelContainer" parent="GameUI" unique_id=596651258]
 anchors_preset = 9
 anchor_bottom = 1.0
+offset_top = 64.0
 offset_right = 250.0
 grow_horizontal = 1
 script = ExtResource("12_townsvc")
