@@ -1188,33 +1188,6 @@
 	  "spawn_conditions": {}
 	},
 	{
-	  "id": "andrew_tuatara",
-	  "name": "Andrew Tuatara",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "stats": {
-		"strength": 50,
-		"constitution": 50,
-		"dexterity": 50,
-		"will": 50,
-		"intelligence": 50,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://Icons/andrew_tuatara_icon.png",
-	  "dialogue": null,
-	  "interact_options": [
-        "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {},
-	  "spawn_conditions": {}
-	},
-	{
 	  "id": "gordon_gecko",
 	  "name": "Gordon Gecko",
 	  "race": "saurian",
