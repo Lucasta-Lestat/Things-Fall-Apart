@@ -610,7 +610,7 @@
 	  "costs": {},
 	  "cast_time": 0.0,
 	  "traits": {"spell": 1, "nature": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
 	  "effects": [
 		{"type": "apply_condition", "condition_id": "animal_magnetism", "stacks": 1}
 	  ],
