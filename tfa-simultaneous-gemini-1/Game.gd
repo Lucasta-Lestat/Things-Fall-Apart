@@ -3,6 +3,8 @@
 extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
+const WARP_ARROW_TEXTURE: Texture2D = preload("res://UI/UI Icons/warp_arrow.png")
+const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var fluid_manager: FluidManager = $FluidManager
@@ -76,6 +78,16 @@ var party_state: Array = [
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
 ]
 
+# Service-NPC state per region. Lets trades and inventory changes survive
+# map transitions and saves. Keyed by region_id -> npc_uid -> live_state dict
+# (same shape as party_state[i].live_state).
+var npc_state_per_region: Dictionary = {}
+
+# Set of npc_uids the party has discovered, per region. Drives whether a
+# service that's illegal under the controlling faction's laws shows up in
+# the TownServicesPanel.
+var known_services_per_region: Dictionary = {}
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(
@@ -129,6 +141,74 @@ func save_party_state() -> void:
 func load_party_state_from_save(saved: Array) -> void:
 	## Called when loading a save file. Replaces party_state entirely.
 	party_state = saved
+
+
+# ---------------------------------------------------------------------------
+# Service NPC state persistence (per-region, survives map transitions)
+# ---------------------------------------------------------------------------
+
+func _build_npc_uid(template_id: String, unique_name: String) -> String:
+	## Mirror of RegionDatabase._build_npc_uid — duplicated to avoid coupling.
+	if unique_name.is_empty():
+		return template_id
+	return template_id + "/" + unique_name
+
+func _is_service_npc(character) -> bool:
+	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
+
+func _save_service_npc_states() -> void:
+	## Walk the live scene; for any NPC with titles, snapshot its runtime state
+	## into npc_state_per_region[region][uid].
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	if not npc_state_per_region.has(region_id):
+		npc_state_per_region[region_id] = {}
+	for c in characters_in_scene:
+		if c in party_chars:
+			continue
+		if not _is_service_npc(c):
+			continue
+		var template_id: String = str(c.get_meta("template_id", ""))
+		if template_id.is_empty():
+			# Fallback: derive from display_name (won't survive renames but is rare)
+			template_id = str(c.display_name).to_lower().replace(" ", "_")
+		var unique_name: String = str(c.get_meta("unique_name", ""))
+		var uid: String = _build_npc_uid(template_id, unique_name)
+		npc_state_per_region[region_id][uid] = _serialize_character(c)
+
+func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
+	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
+	## Also tags the live node with template_id + unique_name for save-on-unload.
+	if not is_instance_valid(npc):
+		return
+	npc.set_meta("template_id", template_id)
+	npc.set_meta("unique_name", unique_name)
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var bucket: Dictionary = npc_state_per_region.get(region_id, {})
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if bucket.has(uid):
+		_deserialize_character(npc, bucket[uid])
+
+func mark_service_seen(npc) -> void:
+	## Records discovery so an illegal service shows up in the panel even
+	## after the party leaves the map.
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var template_id: String = str(npc.get_meta("template_id", ""))
+	var unique_name: String = str(npc.get_meta("unique_name", ""))
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if not known_services_per_region.has(region_id):
+		known_services_per_region[region_id] = []
+	if uid not in known_services_per_region[region_id]:
+		known_services_per_region[region_id].append(uid)
  
  
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
@@ -152,21 +232,38 @@ func _spawn_npcs(npc_list: Array) -> void:
 		# Check spawn conditions
 		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
 			continue
- 
+
 		var template_id: String = npc_def.get("template_id", "")
 		var pos_arr = npc_def.get("position", [0, 0])
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = npc_def.get("count", 1)
 		var spread: float = npc_def.get("spread_radius", 0)
- 
+		# Per-spawn overrides for unique NPCs, faction, titles, and dialogue.
+		var spawn_overrides: Dictionary = {}
+		if npc_def.has("unique_name"):
+			spawn_overrides["unique_name"] = npc_def["unique_name"]
+		if npc_def.has("titles"):
+			spawn_overrides["titles"] = npc_def["titles"]
+		if npc_def.has("faction"):
+			spawn_overrides["faction"] = npc_def["faction"]
+		if npc_def.has("dialogue"):
+			spawn_overrides["dialogue"] = npc_def["dialogue"]
+
 		for i in range(count):
 			var pos = base_pos
 			if spread > 0 and i > 0:
 				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
- 
-			var npc = _spawn_character(template_id, pos)
+
+			var npc = _spawn_character(template_id, pos, spawn_overrides)
 			if npc:
 				npc.AI_enabled = true
+				# Per-spawn dialogue override (TopDownCharacterDatabase only reads
+				# template.dialogue; we wire the spawn-level override here).
+				if spawn_overrides.has("dialogue") and "dialogues" in npc:
+					npc.dialogues = [str(spawn_overrides["dialogue"])]
+				# Restore persisted live_state for service NPCs whose region we've
+				# visited before (lets trades stick across map transitions).
+				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
 				# NPCs hidden by default; made visible when inside party LOS
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
@@ -329,6 +426,9 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
 
 func _unload_current_map() -> void:
+	# Snapshot any service-NPC live state so trades stick across map transitions.
+	_save_service_npc_states()
+
 	# Remove all spawned characters
 	for character in characters_in_scene:
 		if is_instance_valid(character):
@@ -766,7 +866,12 @@ func _update_npc_los_visibility() -> void:
 			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
+		var was_visible: bool = npc.visible
 		npc.visible = seen
+		# Discovery: first time we lay eyes on a service NPC, mark them known
+		# so they appear in the TownServicesPanel even after leaving the map.
+		if seen and not was_visible:
+			mark_service_seen(npc)
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	var viewport := get_viewport()
@@ -1670,12 +1775,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 		# Check warp conditions (e.g. need a key)
 		if warp_def.has("condition") and not check_spawn_conditions(warp_def["condition"]):
 			continue
- 
+
 		var pos_arr = warp_def.get("position", [0, 0])
 		var size_arr = warp_def.get("size", [30, 30])
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var size = Vector2(size_arr[0], size_arr[1])
- 
+
 		# Create an Area2D with a collision shape
 		var area = Area2D.new()
 		area.name = "Warp_" + warp_def.get("id", "unknown")
@@ -1683,13 +1788,46 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.set_meta("target_map", warp_def.get("target_map", ""))
 		area.set_meta("target_spawn", warp_def.get("target_spawn", "default"))
 		area.set_meta("label", warp_def.get("label", ""))
- 
+
+		# Visible arrow sprite, scaled to a consistent display height
+		var arrow := Sprite2D.new()
+		arrow.texture = WARP_ARROW_TEXTURE
+		var tex_size = arrow.texture.get_size()
+		if tex_size.y > 0:
+			var scale_factor = WARP_ARROW_DISPLAY_HEIGHT / tex_size.y
+			arrow.scale = Vector2(scale_factor, scale_factor)
+		arrow.rotation = _warp_arrow_rotation(warp_def, pos)
+		arrow.z_index = 100
+		area.add_child(arrow)
+
+		# Hover label with the destination map's name (falls back to warp label)
+		var hover_label := Label.new()
+		hover_label.name = "HoverLabel"
+		hover_label.text = _warp_hover_text(warp_def)
+		hover_label.add_theme_color_override("font_color", Color(1, 1, 1))
+		hover_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		hover_label.add_theme_constant_override("outline_size", 6)
+		hover_label.add_theme_font_size_override("font_size", 20)
+		hover_label.visible = false
+		hover_label.z_index = 101
+		hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Position label just above the arrow, roughly centered
+		hover_label.position = Vector2(-80, -WARP_ARROW_DISPLAY_HEIGHT * 0.75)
+		hover_label.size = Vector2(160, 24)
+		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		area.add_child(hover_label)
+
 		var shape = CollisionShape2D.new()
 		var rect_shape = RectangleShape2D.new()
-		rect_shape.size = size
+		# Make sure the clickable region is at least as big as the arrow sprite
+		var arrow_world_size = tex_size * arrow.scale
+		rect_shape.size = Vector2(
+			max(size.x, arrow_world_size.x),
+			max(size.y, arrow_world_size.y)
+		)
 		shape.shape = rect_shape
 		area.add_child(shape)
- 
+
 		# Warp zones are interacted with via right-click context menu, not by
 		# walking into them — input_pickable + input_event is the entire
 		# detection path, so no collision_layer/_mask is needed.
@@ -1697,13 +1835,57 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.collision_mask = 0
 		area.input_pickable = true
 		area.input_event.connect(_on_warp_input.bind(area))
- 
+		area.mouse_entered.connect(func(): hover_label.visible = true)
+		area.mouse_exited.connect(func(): hover_label.visible = false)
+
 		add_child(area)
 		warp_zones.append(area)
- 
+
 func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 		show_context_menu(area, event.global_position)
+
+# Rotation in radians for the warp arrow sprite. The texture points east (+x),
+# so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
+func _warp_arrow_rotation(warp_def: Dictionary, pos: Vector2) -> float:
+	# 1. Explicit direction wins
+	if warp_def.has("direction"):
+		match String(warp_def["direction"]).to_lower():
+			"east", "right":  return 0.0
+			"south", "down":  return PI / 2.0
+			"west", "left":   return PI
+			"north", "up":    return -PI / 2.0
+
+	# 2. Otherwise, infer from the warp's position relative to the map center:
+	#    point toward the nearest edge.
+	var map_size = Vector2(
+		GridManager.map_rect.size.x * GridManager.TILE_SIZE,
+		GridManager.map_rect.size.y * GridManager.TILE_SIZE
+	)
+	if map_size.x <= 0 or map_size.y <= 0:
+		return 0.0
+	var dx_left   = pos.x
+	var dx_right  = map_size.x - pos.x
+	var dy_top    = pos.y
+	var dy_bottom = map_size.y - pos.y
+	var min_dist = min(min(dx_left, dx_right), min(dy_top, dy_bottom))
+	if min_dist == dx_right:
+		return 0.0
+	elif min_dist == dy_bottom:
+		return PI / 2.0
+	elif min_dist == dx_left:
+		return PI
+	else:
+		return -PI / 2.0
+
+func _warp_hover_text(warp_def: Dictionary) -> String:
+	var target_id: String = warp_def.get("target_map", "")
+	if not target_id.is_empty() and MapDatabase.get_all_map_ids().has(target_id):
+		var target_data: Dictionary = MapDatabase.get_map_data(target_id)
+		var map_name: String = target_data.get("name", "")
+		if not map_name.is_empty():
+			return map_name
+	return warp_def.get("label", "")
 		
 func _check_condition(condition_key: String, condition_value = true) -> bool:
 	if not Globals.world_state.has(condition_key):

@@ -499,13 +499,13 @@
 	{
 	  "id": "hitch",
 	  "display_name": "Hitch",
-	  "description": "The two targets closest to the target point become infatuated with each other.",
+	  "description": "Pick two characters; they become infatuated with each other.",
 	  "icon": "res://UI/UI Icons/ability_hitch.png",
 	  "cooldown": 8.0,
 	  "costs": {},
 	  "cast_time": 0.0,
 	  "traits": {"spell": 1, "mental": 1, "charm": 1},
-	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 80.0},
+	  "targeting": {"type": "characters", "range": 300.0, "shape": "characters", "target_count": 2, "target_filter": "any"},
 	  "effects": [
 		{"type": "custom", "method": "_hitch"}
 	  ],
@@ -514,13 +514,13 @@
 	{
 	  "id": "fatal_attraction",
 	  "display_name": "Fatal Attraction",
-	  "description": "Two targets become infatuated with each other. If one dies, the other dies too.",
+	  "description": "Pick two characters; they become infatuated and their fates are linked.",
 	  "icon": "res://UI/UI Icons/ability_fatal_attraction.png",
 	  "cooldown": 12.0,
 	  "costs": {},
 	  "cast_time": 0.0,
 	  "traits": {"spell": 1, "mental": 1, "charm": 1, "curse": 1},
-	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 80.0},
+	  "targeting": {"type": "characters", "range": 300.0, "shape": "characters", "target_count": 2, "target_filter": "any"},
 	  "effects": [
 		{"type": "custom", "method": "_fatal_attraction"}
 	  ],
@@ -610,7 +610,7 @@
 	  "costs": {},
 	  "cast_time": 0.0,
 	  "traits": {"spell": 1, "nature": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
+	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
 	  "effects": [
 		{"type": "apply_condition", "condition_id": "animal_magnetism", "stacks": 1}
 	  ],

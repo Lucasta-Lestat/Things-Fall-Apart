@@ -20,6 +20,10 @@ var dialogues: Array = []
 var current_dialogue_index: int = 0
 var interact_options: Array = ["Inspect"]
 
+# Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
+# is shown above the speaker name in dialogue. The first title is the primary.
+var titles: Array = []
+
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
@@ -1129,18 +1133,13 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 	return {"success": false}
 
 func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Hitch: two targets in the area become infatuated with each other."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Hitch: the two chosen characters become infatuated with each other."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Hitch!")
 		return {"success": false}
-	# Pick the two closest to the center
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1151,18 +1150,13 @@ func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector
 	return {"success": true}
 
 func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Fatal Attraction: two targets become infatuated and their fates are linked."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Fatal Attraction: the two chosen characters become infatuated and their fates are linked."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Fatal Attraction!")
 		return {"success": false}
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
-	# Apply infatuation
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1173,6 +1167,25 @@ func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_posit
 		cm_b.apply_condition("fatal_attraction", target_a, 1)
 	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
 	return {"success": true}
+
+func _validate_pair_targets(targets: Array) -> Array:
+	"""Return the first two valid, alive, non-self ProceduralCharacters in `targets`, or [] if there aren't two."""
+	var valid: Array = []
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		if not (target is ProceduralCharacter):
+			continue
+		if target == self:
+			continue
+		if target.has_method("is_alive") and not target.is_alive():
+			continue
+		valid.append(target)
+		if valid.size() == 2:
+			break
+	if valid.size() < 2:
+		return []
+	return valid
 
 
 func _process_condition_movement_overrides(delta: float) -> void:
@@ -2728,7 +2741,13 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
 	if targeting_system.is_targeting:
 		if targeting_system.current_hand == hand:
-			# 2nd click: confirm the target and cast
+			# Character-targeting mode: every click picks/toggles a character
+			# until N are selected (auto-confirm fires the targeting_confirmed
+			# signal, which is handled below in _on_targeting_confirmed).
+			if targeting_system.target_shape == targeting_system.TargetShape.CHARACTERS:
+				targeting_system._handle_character_click(mouse_pos)
+				return
+			# AoE shapes: 2nd click confirms the target and casts
 			_confirm_ability_target(paused)
 		else:
 			# Clicked the other hand while targeting — cancel current targeting
@@ -2748,6 +2767,8 @@ func _confirm_ability_target(paused: bool) -> void:
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
+	var explicit_targets: Array = result.get("targets", [])
+	var is_character_mode = result.get("shape") == targeting_system.TargetShape.CHARACTERS
 
 	# Face the target when confirming an ability
 	target_rotation = (target_pos - global_position).angle() + PI / 2
@@ -2755,23 +2776,29 @@ func _confirm_ability_target(paused: bool) -> void:
 	if paused:
 		# End targeting — queued indicator takes over the visual role
 		targeting_system.end_targeting()
-		action_queue.queue_ability(ability_id, target_pos)
+		action_queue.queue_ability(ability_id, target_pos, explicit_targets)
 
-		# Create persistent ghost indicator for the queued ability
-		targeting_system.create_queued_indicator(
-			target_pos,
-			result.get("shape"),
-			result.get("radius", 0),
-			result.get("size", Vector2.ZERO),
-			result.get("rotation", 0.0),
-			result.get("caster_position", global_position)
-		)
+		if not is_character_mode:
+			# Create persistent ghost indicator for the queued ability
+			targeting_system.create_queued_indicator(
+				target_pos,
+				result.get("shape"),
+				result.get("radius", 0),
+				result.get("size", Vector2.ZERO),
+				result.get("rotation", 0.0),
+				result.get("caster_position", global_position)
+			)
 	else:
 		# Keep the targeting indicator visible until the ability actually lands.
 		# Disable interactivity but preserve the visual preview.
-		targeting_system.is_targeting = false
+		# For character-targeting we end immediately — the chosen targets are
+		# locked in and there's no AoE preview to hold open.
+		if is_character_mode:
+			targeting_system.end_targeting()
+		else:
+			targeting_system.is_targeting = false
 		var ability_obj = Ability.from_dict(ability_data)
-		use_ability(ability_obj, {"position": target_pos})
+		use_ability(ability_obj, {"position": target_pos, "targets": explicit_targets})
 
 
 func _update_movement(delta: float) -> void:
