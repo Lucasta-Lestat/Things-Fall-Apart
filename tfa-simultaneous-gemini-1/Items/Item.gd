@@ -198,7 +198,8 @@ func _generate_chest_contents(faction_id: String, target_value: float) -> Array:
 	var candidates := _gather_faction_filtered_items(faction_id)
 	candidates.shuffle()
 	for pick in candidates:
-		var pick_cost := float(pick.get("cost", 1.0))
+		var cost_val = pick.get("cost", 1.0)
+		var pick_cost: float = float(cost_val) if cost_val != null else 1.0
 		generated.append(pick.duplicate(true))
 		total += pick_cost
 		if total > target_value:
@@ -219,7 +220,11 @@ func _gather_faction_filtered_items(faction_id: String) -> Array:
 	for db in [ItemDatabase.weapons, ItemDatabase.equipment, ItemDatabase.items]:
 		for item_key in db.keys():
 			var data: Dictionary = db[item_key]
-			if int(data.get("num_slots", 0)) > 0:
+			# num_slots in JSON is often `null` rather than missing — int(null) is
+			# illegal in GDScript, so coerce defensively.
+			var slots_val = data.get("num_slots", 0)
+			var slots: int = int(slots_val) if slots_val != null else 0
+			if slots > 0:
 				continue  # don't nest chests inside chests
 			if str(data.get("id", "")) == "gold":
 				continue  # gold is the remainder filler, never drawn as loot
