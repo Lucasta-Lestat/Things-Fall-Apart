@@ -793,6 +793,8 @@ func _update_item_los_visibility() -> void:
 		item.visible = _is_position_visible_to_party(item.global_position)
 
 func _process(delta: float) -> void:
+	_update_warp_interactions()
+
 	# Update clash cooldowns. Combat collisions are now driven by the
 	# Area2D weapon hitbox on each WeaponShape (data/weapon_shape.gd) —
 	# no per-frame iteration here.
@@ -1709,29 +1711,64 @@ func _create_warp_zones(warp_list: Array) -> void:
 		shape.shape = rect_shape
 		area.add_child(shape)
 
-		# Warp zones are interacted with via mouse only, not physics — but
-		# mouse_entered/mouse_exited only fire if the area sits on a non-zero
-		# collision_layer (input_event works at layer 0 but hover does not).
-		# Bit 20 is unused by CollisionLayers so warps don't collide with
-		# anything (projectiles, items, characters, vision rays).
-		area.collision_layer = 1 << 19
+		# Hover and click handling is done by polling in _process, not via
+		# Area2D's mouse_entered/mouse_exited/input_event signals — those
+		# misbehave when picking shapes overlap or other code marks the
+		# event handled. The CollisionShape2D above is reused for hit-testing
+		# but we don't need physics picking.
+		area.collision_layer = 0
 		area.collision_mask = 0
-		area.input_pickable = true
-		area.input_event.connect(_on_warp_input.bind(area))
-		area.mouse_entered.connect(func(): hover_label.visible = true)
-		area.mouse_exited.connect(func(): hover_label.visible = false)
+		area.input_pickable = false
 
 		add_child(area)
 		warp_zones.append(area)
 
-func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			var target_map: String = area.get_meta("target_map", "")
-			if not target_map.is_empty():
-				load_map(target_map, current_map_id)
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			show_context_menu(area, event.global_position)
+func _update_warp_interactions() -> void:
+	if warp_zones.is_empty():
+		return
+	if context_menu_open:
+		# Don't drive warps while a context menu is open — let it handle the click.
+		for area in warp_zones:
+			if not is_instance_valid(area):
+				continue
+			var lbl: Label = area.get_node_or_null("HoverLabel")
+			if lbl != null:
+				lbl.visible = false
+		return
+
+	var hovered: Area2D = null
+	for area in warp_zones:
+		if not is_instance_valid(area):
+			continue
+		var hover_label: Label = area.get_node_or_null("HoverLabel")
+		if hover_label == null:
+			continue
+		var shape_node: CollisionShape2D = null
+		for c in area.get_children():
+			if c is CollisionShape2D:
+				shape_node = c
+				break
+		if shape_node == null or not (shape_node.shape is RectangleShape2D):
+			hover_label.visible = false
+			continue
+		var rect_size: Vector2 = (shape_node.shape as RectangleShape2D).size
+		var local_mouse: Vector2 = area.get_local_mouse_position()
+		var inside: bool = (
+			abs(local_mouse.x) <= rect_size.x * 0.5
+			and abs(local_mouse.y) <= rect_size.y * 0.5
+		)
+		hover_label.visible = inside
+		if inside and hovered == null:
+			hovered = area
+
+	if hovered == null:
+		return
+	if Input.is_action_just_pressed("left_click"):
+		var target_map: String = hovered.get_meta("target_map", "")
+		if not target_map.is_empty():
+			load_map(target_map, current_map_id)
+	elif Input.is_action_just_pressed("right_click"):
+		show_context_menu(hovered, get_viewport().get_mouse_position())
 
 # Rotation in radians for the warp arrow sprite. The texture points east (+x),
 # so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
