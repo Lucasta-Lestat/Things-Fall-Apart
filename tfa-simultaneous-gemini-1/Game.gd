@@ -1679,17 +1679,19 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.add_child(arrow)
 
 		# Hover label with the destination map's name (falls back to warp label)
-		var hover_label := Label2D.new()
+		var hover_label := Label.new()
 		hover_label.name = "HoverLabel"
 		hover_label.text = _warp_hover_text(warp_def)
-		hover_label.modulate = Color(1, 1, 1)
-		hover_label.outline_modulate = Color(0, 0, 0)
-		hover_label.outline_size = 6
-		hover_label.font_size = 20
+		hover_label.add_theme_color_override("font_color", Color(1, 1, 1))
+		hover_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		hover_label.add_theme_constant_override("outline_size", 6)
+		hover_label.add_theme_font_size_override("font_size", 20)
 		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hover_label.position = Vector2(0, -WARP_ARROW_DISPLAY_HEIGHT * 0.75)
+		hover_label.size = Vector2(200, 28)
+		hover_label.position = Vector2(-100, -WARP_ARROW_DISPLAY_HEIGHT * 0.75 - 14)
 		hover_label.visible = false
 		hover_label.z_index = 101
+		hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		area.add_child(hover_label)
 
 		var shape = CollisionShape2D.new()
@@ -1703,10 +1705,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 		shape.shape = rect_shape
 		area.add_child(shape)
 
-		# Warp zones are interacted with via right-click context menu, not by
-		# walking into them — input_pickable + input_event is the entire
-		# detection path, so no collision_layer/_mask is needed.
-		area.collision_layer = 0
+		# Warp zones are interacted with via mouse only, not physics — but
+		# mouse_entered/mouse_exited only fire if the area sits on a non-zero
+		# collision_layer (input_event works at layer 0 but hover does not).
+		# Bit 20 is unused by CollisionLayers so warps don't collide with
+		# anything (projectiles, items, characters, vision rays).
+		area.collision_layer = 1 << 19
 		area.collision_mask = 0
 		area.input_pickable = true
 		area.input_event.connect(_on_warp_input.bind(area))
