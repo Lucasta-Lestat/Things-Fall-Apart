@@ -68,7 +68,18 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 
 	# --- Set faction ---
 	character.faction_id = faction_id
-	character.display_name = template.get("name", "Unknown")
+	# Per-spawn unique_name override > template name. Lets one template back
+	# many uniquely-named NPCs (e.g. "Reverend Mother Liana").
+	var unique_name: String = str(overrides.get("unique_name", ""))
+	if not unique_name.is_empty():
+		character.display_name = unique_name
+	else:
+		character.display_name = template.get("name", "Unknown")
+
+	# --- Titles (per-spawn override wins, else template) ---
+	var override_titles: Array = overrides.get("titles", [])
+	var template_titles: Array = template.get("titles", [])
+	character.titles = (override_titles if not override_titles.is_empty() else template_titles).duplicate()
 
 	# --- Resolve race ---
 	var race_id: String = _resolve_race(template, faction_data, overrides)

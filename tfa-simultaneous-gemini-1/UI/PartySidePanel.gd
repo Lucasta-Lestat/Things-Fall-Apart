@@ -523,11 +523,45 @@ func _drop_data(at_position: Vector2, data) -> void:
 			src_window._populate_grid()
 		return
 
-	# Drop from a trade window's NPC grid: pull from npc.inventory into target.
+	# Drop from a trade window's NPC grid OR from TownServicesPanel.
+	# When source_npc is null we're in TownServicesPanel snapshot mode and
+	# the source_window owns the persisted inventory.
 	if data.has("source_npc"):
 		var npc = data["source_npc"]
+		var source_window = data.get("source_window")
+
+		# Snapshot mode: NPC isn't on this map. Pull from the persisted
+		# snapshot via the source window. Enforce TradeWindow's value-balance
+		# rule per-drop so players can't drain a service without giving first.
 		if not is_instance_valid(npc):
+			if source_window == null or not is_instance_valid(source_window):
+				return
+			if not source_window.has_method("remove_snapshot_item"):
+				return
+			var uid: String = str(data.get("snapshot_uid", ""))
+			var region_id: String = str(data.get("snapshot_region", ""))
+			if uid.is_empty() or region_id.is_empty():
+				return
+			# Value balance check (snapshot path).
+			var item_cost: float = float(entry.get("raw", {}).get("cost", 0.0)) * max(1, int(entry.get("num_stacks", 1)))
+			if source_window.has_method("can_accept_value_loss") \
+					and not source_window.can_accept_value_loss(uid, item_cost):
+				SfxManager.play_ui("trade_decline")
+				return
+			var snap_item = source_window.remove_snapshot_item(uid, region_id, entry.get("source_index", -1))
+			if not snap_item.is_empty():
+				target_char.inventory.add_item(snap_item)
 			return
+
+		# Live NPC path. If the source window enforces a per-drop balance
+		# (TownServicesPanel does), respect it. TradeWindow doesn't and the
+		# call is a no-op safe-default.
+		if source_window and is_instance_valid(source_window) and source_window.has_method("can_accept_value_loss"):
+			var item_cost_live: float = float(entry.get("raw", {}).get("cost", 0.0)) * max(1, int(entry.get("num_stacks", 1)))
+			var uid_live: String = str(data.get("snapshot_uid", ""))
+			if not uid_live.is_empty() and not source_window.can_accept_value_loss(uid_live, item_cost_live):
+				SfxManager.play_ui("trade_decline")
+				return
 		match entry.get("kind", ""):
 			"item":
 				var item = npc.inventory.remove_item(entry.get("source_index", -1))

@@ -76,6 +76,16 @@ var party_state: Array = [
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
 ]
 
+# Service-NPC state per region. Lets trades and inventory changes survive
+# map transitions and saves. Keyed by region_id -> npc_uid -> live_state dict
+# (same shape as party_state[i].live_state).
+var npc_state_per_region: Dictionary = {}
+
+# Set of npc_uids the party has discovered, per region. Drives whether a
+# service that's illegal under the controlling faction's laws shows up in
+# the TownServicesPanel.
+var known_services_per_region: Dictionary = {}
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(
@@ -129,6 +139,74 @@ func save_party_state() -> void:
 func load_party_state_from_save(saved: Array) -> void:
 	## Called when loading a save file. Replaces party_state entirely.
 	party_state = saved
+
+
+# ---------------------------------------------------------------------------
+# Service NPC state persistence (per-region, survives map transitions)
+# ---------------------------------------------------------------------------
+
+func _build_npc_uid(template_id: String, unique_name: String) -> String:
+	## Mirror of RegionDatabase._build_npc_uid — duplicated to avoid coupling.
+	if unique_name.is_empty():
+		return template_id
+	return template_id + "/" + unique_name
+
+func _is_service_npc(character) -> bool:
+	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
+
+func _save_service_npc_states() -> void:
+	## Walk the live scene; for any NPC with titles, snapshot its runtime state
+	## into npc_state_per_region[region][uid].
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	if not npc_state_per_region.has(region_id):
+		npc_state_per_region[region_id] = {}
+	for c in characters_in_scene:
+		if c in party_chars:
+			continue
+		if not _is_service_npc(c):
+			continue
+		var template_id: String = str(c.get_meta("template_id", ""))
+		if template_id.is_empty():
+			# Fallback: derive from display_name (won't survive renames but is rare)
+			template_id = str(c.display_name).to_lower().replace(" ", "_")
+		var unique_name: String = str(c.get_meta("unique_name", ""))
+		var uid: String = _build_npc_uid(template_id, unique_name)
+		npc_state_per_region[region_id][uid] = _serialize_character(c)
+
+func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
+	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
+	## Also tags the live node with template_id + unique_name for save-on-unload.
+	if not is_instance_valid(npc):
+		return
+	npc.set_meta("template_id", template_id)
+	npc.set_meta("unique_name", unique_name)
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var bucket: Dictionary = npc_state_per_region.get(region_id, {})
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if bucket.has(uid):
+		_deserialize_character(npc, bucket[uid])
+
+func mark_service_seen(npc) -> void:
+	## Records discovery so an illegal service shows up in the panel even
+	## after the party leaves the map.
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var template_id: String = str(npc.get_meta("template_id", ""))
+	var unique_name: String = str(npc.get_meta("unique_name", ""))
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if not known_services_per_region.has(region_id):
+		known_services_per_region[region_id] = []
+	if uid not in known_services_per_region[region_id]:
+		known_services_per_region[region_id].append(uid)
  
  
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
@@ -152,21 +230,38 @@ func _spawn_npcs(npc_list: Array) -> void:
 		# Check spawn conditions
 		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
 			continue
- 
+
 		var template_id: String = npc_def.get("template_id", "")
 		var pos_arr = npc_def.get("position", [0, 0])
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = npc_def.get("count", 1)
 		var spread: float = npc_def.get("spread_radius", 0)
- 
+		# Per-spawn overrides for unique NPCs, faction, titles, and dialogue.
+		var spawn_overrides: Dictionary = {}
+		if npc_def.has("unique_name"):
+			spawn_overrides["unique_name"] = npc_def["unique_name"]
+		if npc_def.has("titles"):
+			spawn_overrides["titles"] = npc_def["titles"]
+		if npc_def.has("faction"):
+			spawn_overrides["faction"] = npc_def["faction"]
+		if npc_def.has("dialogue"):
+			spawn_overrides["dialogue"] = npc_def["dialogue"]
+
 		for i in range(count):
 			var pos = base_pos
 			if spread > 0 and i > 0:
 				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
- 
-			var npc = _spawn_character(template_id, pos)
+
+			var npc = _spawn_character(template_id, pos, spawn_overrides)
 			if npc:
 				npc.AI_enabled = true
+				# Per-spawn dialogue override (TopDownCharacterDatabase only reads
+				# template.dialogue; we wire the spawn-level override here).
+				if spawn_overrides.has("dialogue") and "dialogues" in npc:
+					npc.dialogues = [str(spawn_overrides["dialogue"])]
+				# Restore persisted live_state for service NPCs whose region we've
+				# visited before (lets trades stick across map transitions).
+				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
 				# NPCs hidden by default; made visible when inside party LOS
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
@@ -329,6 +424,9 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
 
 func _unload_current_map() -> void:
+	# Snapshot any service-NPC live state so trades stick across map transitions.
+	_save_service_npc_states()
+
 	# Remove all spawned characters
 	for character in characters_in_scene:
 		if is_instance_valid(character):
@@ -747,7 +845,12 @@ func _update_npc_los_visibility() -> void:
 			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
+		var was_visible: bool = npc.visible
 		npc.visible = seen
+		# Discovery: first time we lay eyes on a service NPC, mark them known
+		# so they appear in the TownServicesPanel even after leaving the map.
+		if seen and not was_visible:
+			mark_service_seen(npc)
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	var viewport := get_viewport()

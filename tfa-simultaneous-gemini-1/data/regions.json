@@ -1,0 +1,19 @@
+{
+	"regions": [
+		{
+			"id": "perrow",
+			"name": "Perrow",
+			"description": "A run-down town under the iron grip of the Liziti, sprawling from a crumbling cemetery in the hills down to the docks at the river's edge.",
+			"controlling_faction": "liziti",
+			"member_maps": [
+				"cemetery",
+				"town_square",
+				"venonan_chapel",
+				"perrow_tavern",
+				"dock_tavern",
+				"don_manor",
+				"minschaleft_university"
+			]
+		}
+	]
+}
