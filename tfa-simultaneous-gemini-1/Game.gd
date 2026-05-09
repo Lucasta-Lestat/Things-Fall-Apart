@@ -1679,20 +1679,17 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.add_child(arrow)
 
 		# Hover label with the destination map's name (falls back to warp label)
-		var hover_label := Label.new()
+		var hover_label := Label2D.new()
 		hover_label.name = "HoverLabel"
 		hover_label.text = _warp_hover_text(warp_def)
-		hover_label.add_theme_color_override("font_color", Color(1, 1, 1))
-		hover_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-		hover_label.add_theme_constant_override("outline_size", 6)
-		hover_label.add_theme_font_size_override("font_size", 20)
+		hover_label.modulate = Color(1, 1, 1)
+		hover_label.outline_modulate = Color(0, 0, 0)
+		hover_label.outline_size = 6
+		hover_label.font_size = 20
+		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hover_label.position = Vector2(0, -WARP_ARROW_DISPLAY_HEIGHT * 0.75)
 		hover_label.visible = false
 		hover_label.z_index = 101
-		hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# Position label just above the arrow, roughly centered
-		hover_label.position = Vector2(-80, -WARP_ARROW_DISPLAY_HEIGHT * 0.75)
-		hover_label.size = Vector2(160, 24)
-		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		area.add_child(hover_label)
 
 		var shape = CollisionShape2D.new()
@@ -1720,8 +1717,13 @@ func _create_warp_zones(warp_list: Array) -> void:
 		warp_zones.append(area)
 
 func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
-		show_context_menu(area, event.global_position)
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			var target_map: String = area.get_meta("target_map", "")
+			if not target_map.is_empty():
+				load_map(target_map, current_map_id)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			show_context_menu(area, event.global_position)
 
 # Rotation in radians for the warp arrow sprite. The texture points east (+x),
 # so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
