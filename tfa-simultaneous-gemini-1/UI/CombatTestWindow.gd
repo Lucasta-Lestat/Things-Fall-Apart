@@ -28,6 +28,31 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 	_outer_panel.visible = false
+	# Master debug toggle (F12) shows/hides the window without forcing the
+	# pause-and-edit flow that F10 invokes — pausing on every F12 would be
+	# too disruptive. F10 still pauses + opens for the focused setup mode.
+	if typeof(DebugManager) != TYPE_NIL:
+		_set_panel_visible_no_pause(DebugManager.enabled)
+		if not DebugManager.enabled_changed.is_connected(_on_debug_enabled_changed):
+			DebugManager.enabled_changed.connect(_on_debug_enabled_changed)
+
+func _on_debug_enabled_changed(value: bool) -> void:
+	_set_panel_visible_no_pause(value)
+
+func _set_panel_visible_no_pause(v: bool) -> void:
+	# Show/hide the window without touching get_tree().paused or the
+	# population of template/ability/item lists. Lazy-populate on demand.
+	if _outer_panel == null:
+		return
+	_is_open = v
+	_outer_panel.visible = v
+	if v:
+		_populate_template_list()
+		_populate_ability_list()
+		_populate_item_list()
+		_refresh_rosters()
+		if _status_label:
+			_status_label.text = ""
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:

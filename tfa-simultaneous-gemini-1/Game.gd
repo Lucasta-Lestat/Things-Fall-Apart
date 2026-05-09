@@ -11,6 +11,7 @@ const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 @onready var surface_manager: SurfaceManager = $SurfaceManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
+@onready var collision_visualizer: Node2D = $CollisionVisualizer
 
 var weather_vfx_controller: Node = null
 var weather_debug_window: CanvasLayer = null
@@ -1010,6 +1011,9 @@ func process_object_hit(
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			KEY_F12:
+				if not event.echo:
+					DebugManager.toggle()
 			KEY_R:
 				# Restart
 				get_tree().reload_current_scene()
@@ -1381,6 +1385,17 @@ func process_weapon_hit(
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
 		SfxManager.play("sword-on-flesh", target.position)
+
+	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):
+		var penetrated: bool = penetration_result.state != PenetrationState.BOUNCED
+		var damage_total: float = 0.0
+		if final_damage is Dictionary:
+			for k in final_damage.keys():
+				damage_total += float(final_damage[k])
+		else:
+			damage_total = float(final_damage)
+		collision_visualizer.record_hit(hit_position, result.limb_name, penetrated, damage_total)
+		print("[debug] weapon hit: ", attacker.name if attacker else "?", " -> ", target.name if target else "?", " limb=", result.limb_name, " dmg=", damage_total, " state=", PenetrationState.keys()[penetration_result.state])
 
 	return result
 
