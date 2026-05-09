@@ -12,6 +12,7 @@
 			"damage_interval": 1.0,
 			"fluid_consume_rate": 0.05,
 			"vfx_scene": "res://vfx/fire.tscn",
+			"vfx_scale": 1.8,
 			"scorch_color": [0.15, 0.12, 0.1, 1.0]
 		},
 		"ice": {
@@ -32,7 +33,8 @@
 			"condition_stacks": 1,
 			"apply_interval": 0.5,
 			"base_duration": 6.0,
-			"vfx_scene": "res://vfx/fire.tscn"
+			"vfx_scene": "res://vfx/fire.tscn",
+			"vfx_scale": 1.8
 		},
 		"grassy": {
 			"display_name": "Grassy",

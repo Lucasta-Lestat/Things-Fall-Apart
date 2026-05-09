@@ -432,6 +432,9 @@ func _spawn_surface_vfx(tile_pos: Vector2i, surface_def: Dictionary) -> Node:
 		return null
 	var vfx = vfx_scene.instantiate()
 	vfx.global_position = GridManager.map_to_world(tile_pos)
+	var vfx_scale = float(surface_def.get("vfx_scale", 1.0))
+	if vfx is Node2D and vfx_scale != 1.0:
+		vfx.scale = Vector2(vfx_scale, vfx_scale)
 	add_child(vfx)
 	if vfx.has_method("play"):
 		vfx.play(1.0)
