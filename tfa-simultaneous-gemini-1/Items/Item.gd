@@ -65,6 +65,11 @@ func _ready():
 	# projectiles, force fields, and other items via the ITEMS layer.
 	collision_layer = CollisionLayers.ITEMS
 	collision_mask = CollisionLayers.ITEM_PHYSICS_MASK
+	# Render above structures (z=-3), floors (z=-4), and the cemetery's tile
+	# layer; below characters (z=5) so they can stand on top. Without this,
+	# items inherit z=0 from the .tscn, which is in the same render bucket as
+	# anything else with no explicit z and can flicker behind unrelated nodes.
+	z_index = 1
 	_apply_item_data()
 	floating_text_label.visible = false
 	floating_text_label.z_index = 200

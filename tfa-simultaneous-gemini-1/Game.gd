@@ -887,9 +887,13 @@ func _is_position_visible_to_party(target_pos: Vector2) -> bool:
 
 
 func _update_item_los_visibility() -> void:
-	"""Items follow the same visibility rule as NPCs."""
+	"""Items follow the same visibility rule as NPCs, except containers
+	(num_slots > 0) which are world props and stay visible regardless of LOS."""
 	for item in items_in_scene:
 		if not is_instance_valid(item):
+			continue
+		if "num_slots" in item and int(item.num_slots) > 0:
+			item.visible = true
 			continue
 		item.visible = _is_position_visible_to_party(item.global_position)
 
