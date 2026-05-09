@@ -466,14 +466,51 @@ func get_character_portrait(speaker_name: String) -> Texture:
 	for character in game.characters_in_scene:
 		if character.character_id == speaker_name:
 			return load(character["icon"])
-		else: 
+		else:
 			push_warning("Character not found for dialogue")
 	#var key = speaker_name.to_lower()
 	#var character = game.characters_in_scene(key)
-	
-	
+
+
 	push_warning("Character portrait not found for: " + speaker_name)
 	return null
+
+# Get the array of speaking-animation frame textures for a character, or [] if
+# the character has no entry in data/portrait_animations.json. Index 0 is the
+# rest pose (typically the original portrait); indices 1..N are mouth-open
+# variants. The manifest is loaded once and cached; pass force_reload=true to
+# pick up changes during a session.
+const _SPEAK_FRAMES_MANIFEST_PATH := "res://data/portrait_animations.json"
+var _speak_frames_manifest: Dictionary = {}
+var _speak_frames_manifest_loaded: bool = false
+
+func _load_speak_frames_manifest(force_reload: bool = false) -> void:
+	if _speak_frames_manifest_loaded and not force_reload:
+		return
+	_speak_frames_manifest = {}
+	_speak_frames_manifest_loaded = true
+	if not FileAccess.file_exists(_SPEAK_FRAMES_MANIFEST_PATH):
+		return
+	var f := FileAccess.open(_SPEAK_FRAMES_MANIFEST_PATH, FileAccess.READ)
+	if f == null:
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	if parsed is Dictionary:
+		_speak_frames_manifest = parsed
+
+func get_character_speak_frames(speaker_name: String) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	_load_speak_frames_manifest()
+	var entry: Variant = _speak_frames_manifest.get(speaker_name, null)
+	if entry is Dictionary:
+		var paths: Variant = entry.get("frames", null)
+		if paths is Array:
+			for p in paths:
+				if typeof(p) == TYPE_STRING and ResourceLoader.exists(p):
+					var tex := load(p)
+					if tex is Texture2D:
+						frames.append(tex)
+	return frames
 
 # End current dialogue
 func end_dialogue():
