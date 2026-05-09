@@ -2429,8 +2429,8 @@
 	"sprite_path": "res://Items/gold.png",
 	"weight": 0.05,
 	"cost": 1.0,
-	"equip_slot": null,
-	"use_ability": null,
+	"equip_slot": "",
+	"use_ability": "",
 	"damage": {},
 	"damage_resitances": {
 	  "slashing": 0,
