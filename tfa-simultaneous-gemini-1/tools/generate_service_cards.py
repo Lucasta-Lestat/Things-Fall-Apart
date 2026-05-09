@@ -31,6 +31,7 @@ MODEL = "gemini-2.5-flash-image"
 # service_id -> (prompt-fragment-icon, prompt-fragment-flavor)
 # service_id matches RegionDatabase.title_to_id(title).
 SERVICES = {
+    "_parchment_base": ("ABSOLUTELY NOTHING in the center — the center must remain pure empty parchment with no marks, no rings, no stains, no symbols", "completely blank empty parchment paper, no central feature at all, only the natural paper texture and a few small ink splotches near the corners — never the center"),
     "smith":           ("a single blacksmith's anvil",                              "iron, sturdy, a hammer resting on it"),
     "alchemist":       ("a single glass alembic with a curling neck above a flame", "wisps of smoke, mortar and pestle nearby"),
     "peddler":         ("a wooden handcart laden with bundles of goods",            "rope, sacks, dried herbs hanging"),
