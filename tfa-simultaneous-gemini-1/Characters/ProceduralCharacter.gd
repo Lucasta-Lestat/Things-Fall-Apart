@@ -20,6 +20,10 @@ var dialogues: Array = []
 var current_dialogue_index: int = 0
 var interact_options: Array = ["Inspect"]
 
+# Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
+# is shown above the speaker name in dialogue. The first title is the primary.
+var titles: Array = []
+
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 

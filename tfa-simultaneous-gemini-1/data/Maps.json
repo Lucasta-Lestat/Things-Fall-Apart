@@ -4,6 +4,7 @@
 			"id": "cemetery",
 			"name": "Old Cemetery",
 			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/cemetery.png",
 				"mask": "res://Maps/cemetery_mask.png",
@@ -226,6 +227,7 @@
 			"id": "town_square",
 			"name": "Town Square",
 			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/town_square_clean.png",
 				"mask": "res://Maps/town_square_mask.png",
@@ -256,6 +258,10 @@
 				"from_dock_tavern": {
 					"position": [1024, 2000],
 					"facing": 270
+				},
+				"from_minschaleft_university": {
+					"position": [2000, 200],
+					"facing": 180
 				}
 			},
 			"party_spawns": {
@@ -284,6 +290,11 @@
 					"count": 1,
 					"unique_name": "Lord Castellan",
 					"dialogue": "castellan_intro"
+				},
+				{
+					"template_id": "smith_darcy",
+					"position": [800, 800],
+					"count": 1
 				}
 			],
 			"item_spawns": [],
@@ -319,6 +330,14 @@
 					"target_map": "dock_tavern",
 					"target_spawn": "from_town_square",
 					"label": "Enter Dock Tavern"
+				},
+				{
+					"id": "to_minschaleft_university",
+					"position": [2010, 200],
+					"size": [40, 80],
+					"target_map": "minschaleft_university",
+					"target_spawn": "from_town_square",
+					"label": "To Minschaleft University"
 				}
 			]
 		},
@@ -356,6 +375,7 @@
 			"id": "venonan_chapel",
 			"name": "Venonan Chapel",
 			"description": "A weathered chapel of grey stone outside Venonan, its bells long silenced by neglect.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/venonan_chapel_clean.png",
 				"mask": "res://Maps/venonan_chapel_mask.png",
@@ -386,7 +406,53 @@
 					"offset_radius": 30
 				}
 			},
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "reverend_mother_liana",
+					"position": [400, 400],
+					"count": 1
+				},
+				{
+					"template_id": "mother_inferior_macaria",
+					"position": [500, 400],
+					"count": 1
+				},
+				{
+					"template_id": "pit_monitor",
+					"position": [600, 600],
+					"count": 1
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [620, 620],
+					"count": 1,
+					"unique_name": "Julius"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [640, 620],
+					"count": 1,
+					"unique_name": "Augustus"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [660, 620],
+					"count": 1,
+					"unique_name": "Octavius"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [680, 620],
+					"count": 1,
+					"unique_name": "Cleopatra"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [700, 620],
+					"count": 1,
+					"unique_name": "Philbert"
+				}
+			],
 			"item_spawns": [],
 			"warp_points": [
 				{
@@ -411,6 +477,7 @@
 			"id": "perrow_tavern",
 			"name": "Perrow Tavern",
 			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/perrow_tavern_clean.png",
 				"mask": "res://Maps/perrow_tavern_mask.png",
@@ -437,7 +504,18 @@
 					"offset_radius": 30
 				}
 			},
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "austache_jongle",
+					"position": [800, 1000],
+					"count": 1
+				},
+				{
+					"template_id": "mostlemyre_drouge",
+					"position": [1200, 1000],
+					"count": 1
+				}
+			],
 			"item_spawns": [],
 			"warp_points": [
 				{
@@ -454,6 +532,7 @@
 			"id": "dock_tavern",
 			"name": "Dock Tavern",
 			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/dock_tavern_clean.png",
 				"mask": "res://Maps/dock_tavern_mask.png",
@@ -484,7 +563,68 @@
 					"offset_radius": 30
 				}
 			},
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "alewife_juturna",
+					"position": [421, 700],
+					"count": 1
+				},
+				{
+					"template_id": "mary_guana",
+					"position": [500, 750],
+					"count": 1
+				},
+				{
+					"template_id": "hunter_john",
+					"position": [350, 800],
+					"count": 1
+				},
+				{
+					"template_id": "centurion_marcus",
+					"position": [600, 700],
+					"count": 1
+				},
+				{
+					"template_id": "deputy_gleg",
+					"position": [650, 700],
+					"count": 1
+				},
+				{
+					"template_id": "hedge_witch_magda",
+					"position": [300, 900],
+					"count": 1
+				},
+				{
+					"template_id": "lot_lizard_zillah",
+					"position": [421, 950],
+					"count": 1
+				},
+				{
+					"template_id": "andrew_tuatara",
+					"position": [500, 950],
+					"count": 1
+				},
+				{
+					"template_id": "alligator_capone",
+					"position": [700, 800],
+					"count": 1
+				},
+				{
+					"template_id": "cletus_samson",
+					"position": [350, 950],
+					"count": 1
+				},
+				{
+					"template_id": "obediah",
+					"position": [200, 900],
+					"count": 1
+				},
+				{
+					"template_id": "jezebel",
+					"position": [220, 900],
+					"count": 1
+				}
+			],
 			"item_spawns": [],
 			"warp_points": [
 				{
@@ -509,6 +649,7 @@
 			"id": "don_manor",
 			"name": "Don Manor",
 			"description": "An imposing manor house that serves as the seat of the local Don, ringed by guards and rumor.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/don-manor-clean.png",
 				"mask": "res://Maps/don_manor_mask.png",
@@ -535,7 +676,25 @@
 					"offset_radius": 30
 				}
 			},
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "liziti_don",
+					"position": [465, 400],
+					"count": 1,
+					"unique_name": "Iguana Don",
+					"titles": ["Don"]
+				},
+				{
+					"template_id": "saul_laelia",
+					"position": [600, 600],
+					"count": 1
+				},
+				{
+					"template_id": "big_al_samson",
+					"position": [700, 700],
+					"count": 1
+				}
+			],
 			"item_spawns": [],
 			"warp_points": [
 				{
@@ -552,6 +711,7 @@
 			"id": "minschaleft_university",
 			"name": "Minschaleft University",
 			"description": "A sprawling university whose halls have lately grown unsettlingly quiet.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/minschaleft_university_clean.png",
 				"mask": "res://Maps/minschaleft_university_mask.png",
@@ -566,6 +726,10 @@
 				"default": {
 					"position": [418, 668],
 					"facing": 0
+				},
+				"from_town_square": {
+					"position": [60, 668],
+					"facing": 0
 				}
 			},
 			"party_spawns": {
@@ -574,9 +738,34 @@
 					"offset_radius": 30
 				}
 			},
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "professor_circino",
+					"position": [400, 600],
+					"count": 1
+				},
+				{
+					"template_id": "professor_easton",
+					"position": [500, 600],
+					"count": 1
+				},
+				{
+					"template_id": "zakariah",
+					"position": [450, 700],
+					"count": 1
+				}
+			],
 			"item_spawns": [],
-			"warp_points": []
+			"warp_points": [
+				{
+					"id": "to_town_square",
+					"position": [40, 668],
+					"size": [40, 80],
+					"target_map": "town_square",
+					"target_spawn": "from_minschaleft_university",
+					"label": "Out to Town Square"
+				}
+			]
 		},
 		{
 			"id": "eeler_floor_two",

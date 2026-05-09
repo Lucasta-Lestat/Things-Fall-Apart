@@ -1716,6 +1716,424 @@
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "reverend_mother_liana",
+	  "name": "Reverend Mother Liana",
+	  "race": "human",
+	  "background": "clergy_preacher",
+	  "faction": "patriciate",
+	  "titles": ["Reverend Mother"],
+	  "stats": { "strength": 30, "constitution": 40, "dexterity": 35, "will": 80, "intelligence": 70, "charisma": 65 },
+	  "equipment": [
+		{ "id": "potion_of_healing", "quantity": 2 },
+		{ "id": "gold", "quantity": 30 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Holy": 2 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "mother_inferior_macaria",
+	  "name": "Mother Inferior Macaria",
+	  "race": "human",
+	  "background": "mystery_cult_initiate",
+	  "faction": "patriciate",
+	  "titles": ["Hierophant"],
+	  "stats": { "strength": 35, "constitution": 50, "dexterity": 40, "will": 85, "intelligence": 75, "charisma": 60 },
+	  "equipment": [
+		{ "id": "dagger", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 50 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Cursed": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "pit_monitor",
+	  "name": "Pit Monitor",
+	  "race": "human",
+	  "background": "carnie",
+	  "faction": "liziti",
+	  "titles": ["Houndmaster"],
+	  "stats": { "strength": 65, "constitution": 60, "dexterity": 50, "will": 55, "intelligence": 45, "charisma": 40 },
+	  "equipment": [
+		{ "id": "great_club", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 25 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Intimidating": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "pit_hound",
+	  "name": "Pit Hound",
+	  "race": "wolf",
+	  "is_creature": true,
+	  "faction": "wildlife",
+	  "stats": { "strength": 50, "constitution": 45, "dexterity": 60, "will": 25, "intelligence": 8, "charisma": 5 },
+	  "equipment": [],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": null,
+	  "interact_options": ["Inspect"],
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "alewife_juturna",
+	  "name": "Alewife Juturna",
+	  "race": "half_elf",
+	  "background": "bar_keep",
+	  "faction": "liziti",
+	  "titles": ["Alewife"],
+	  "stats": { "strength": 40, "constitution": 50, "dexterity": 55, "will": 50, "intelligence": 50, "charisma": 60 },
+	  "equipment": [
+		{ "id": "alcohol", "quantity": 8 },
+		{ "id": "gold", "quantity": 15 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "mary_guana",
+	  "name": "Mary Guana",
+	  "race": "saurian",
+	  "background": "criminal",
+	  "faction": "liziti",
+	  "titles": ["Venefica"],
+	  "stats": { "strength": 35, "constitution": 45, "dexterity": 65, "will": 50, "intelligence": 65, "charisma": 50 },
+	  "equipment": [
+		{ "id": "joy", "quantity": 5 },
+		{ "id": "feyntanyl", "quantity": 3 },
+		{ "id": "zip", "quantity": 4 },
+		{ "id": "gold", "quantity": 10 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Criminal": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "hunter_john",
+	  "name": "Hunter John",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "neutral",
+	  "titles": ["Peddler"],
+	  "stats": { "strength": 75, "constitution": 70, "dexterity": 55, "will": 50, "intelligence": 35, "charisma": 30 },
+	  "equipment": [
+		{ "id": "handaxe", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 20 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "centurion_marcus",
+	  "name": "Centurion Marcus",
+	  "race": "human",
+	  "background": "golden_legion_basic_training_graduate",
+	  "faction": "golden_guard",
+	  "stats": { "strength": 70, "constitution": 65, "dexterity": 55, "will": 60, "intelligence": 50, "charisma": 50 },
+	  "equipment": [
+		{ "id": "longsword", "slot": "main_hand" },
+		{ "id": "kettle_helm", "slot": "head" }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "deputy_gleg",
+	  "name": "Deputy Gleg",
+	  "race": "human",
+	  "background": "golden_legion_basic_training_graduate",
+	  "faction": "golden_guard",
+	  "stats": { "strength": 60, "constitution": 55, "dexterity": 60, "will": 35, "intelligence": 35, "charisma": 35 },
+	  "equipment": [
+		{ "id": "mace", "slot": "main_hand" }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "hedge_witch_magda",
+	  "name": "Hedge-Witch Magda",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "neutral",
+	  "titles": ["Hedge-Witch"],
+	  "stats": { "strength": 35, "constitution": 50, "dexterity": 50, "will": 70, "intelligence": 70, "charisma": 50 },
+	  "equipment": [
+		{ "id": "potion_of_healing", "quantity": 2 },
+		{ "id": "draught_of_flabbiness", "quantity": 3 },
+		{ "id": "poison_vial", "quantity": 2 },
+		{ "id": "gold", "quantity": 15 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "lot_lizard_zillah",
+	  "name": "Zillah",
+	  "race": "saurian",
+	  "background": "urchin",
+	  "faction": "liziti",
+	  "stats": { "strength": 30, "constitution": 35, "dexterity": 50, "will": 30, "intelligence": 35, "charisma": 60 },
+	  "equipment": [
+		{ "id": "gold", "quantity": 35 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "andrew_tuatara",
+	  "name": "Andrew Tuatara",
+	  "race": "saurian",
+	  "background": "academic",
+	  "faction": "liziti",
+	  "titles": ["Whoremonger"],
+	  "stats": { "strength": 45, "constitution": 50, "dexterity": 55, "will": 60, "intelligence": 70, "charisma": 65 },
+	  "equipment": [
+		{ "id": "stilleto", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 50 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Criminal": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "alligator_capone",
+	  "name": "Alligator Capone",
+	  "race": "saurian",
+	  "background": "carnie",
+	  "faction": "liziti",
+	  "titles": ["Skipper"],
+	  "stats": { "strength": 70, "constitution": 70, "dexterity": 50, "will": 55, "intelligence": 45, "charisma": 50 },
+	  "equipment": [
+		{ "id": "great_club", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 40 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Intimidating": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "cletus_samson",
+	  "name": "Cletus Samson",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "titles": ["Slavecatcher"],
+	  "stats": { "strength": 75, "constitution": 70, "dexterity": 50, "will": 45, "intelligence": 25, "charisma": 25 },
+	  "equipment": [
+		{ "id": "maul", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 15 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Intimidating": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "obediah",
+	  "name": "Obediah",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "neutral",
+	  "stats": { "strength": 50, "constitution": 45, "dexterity": 35, "will": 40, "intelligence": 35, "charisma": 45 },
+	  "equipment": [
+		{ "id": "alcohol", "quantity": 2 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "jezebel",
+	  "name": "Jezebel",
+	  "race": "human",
+	  "background": "urchin",
+	  "faction": "neutral",
+	  "stats": { "strength": 35, "constitution": 40, "dexterity": 55, "will": 35, "intelligence": 45, "charisma": 65 },
+	  "equipment": [],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "austache_jongle",
+	  "name": "Austache Jongle",
+	  "race": "human",
+	  "background": "carnie",
+	  "faction": "neutral",
+	  "stats": { "strength": 50, "constitution": 50, "dexterity": 50, "will": 30, "intelligence": 40, "charisma": 50 },
+	  "equipment": [
+		{ "id": "dagger", "slot": "main_hand" },
+		{ "id": "alcohol", "quantity": 3 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "mostlemyre_drouge",
+	  "name": "Mostlemyre Drouge",
+	  "race": "human",
+	  "background": "academic",
+	  "faction": "patriciate",
+	  "titles": ["Hierophant"],
+	  "stats": { "strength": 35, "constitution": 45, "dexterity": 40, "will": 75, "intelligence": 85, "charisma": 60 },
+	  "equipment": [
+		{ "id": "staff", "slot": "main_hand" },
+		{ "id": "bottled_cloud", "quantity": 1 },
+		{ "id": "bottled_storm", "quantity": 1 },
+		{ "id": "gold", "quantity": 100 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Arcane": 2 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "smith_darcy",
+	  "name": "Smith Darcy",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "neutral",
+	  "titles": ["Smith"],
+	  "stats": { "strength": 60, "constitution": 60, "dexterity": 50, "will": 35, "intelligence": 35, "charisma": 30 },
+	  "equipment": [
+		{ "id": "hammer", "slot": "main_hand" },
+		{ "id": "dagger", "quantity": 2 },
+		{ "id": "spear", "quantity": 2 },
+		{ "id": "mace", "quantity": 1 },
+		{ "id": "gold", "quantity": 20 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "professor_circino",
+	  "name": "Professor Circino",
+	  "race": "human",
+	  "background": "academic",
+	  "faction": "patriciate",
+	  "titles": ["Librarian"],
+	  "stats": { "strength": 30, "constitution": 40, "dexterity": 45, "will": 65, "intelligence": 80, "charisma": 55 },
+	  "equipment": [
+		{ "id": "gold", "quantity": 60 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "professor_easton",
+	  "name": "Professor Easton",
+	  "race": "human",
+	  "background": "academic",
+	  "faction": "patriciate",
+	  "titles": ["Professor"],
+	  "stats": { "strength": 35, "constitution": 45, "dexterity": 45, "will": 70, "intelligence": 80, "charisma": 60 },
+	  "equipment": [
+		{ "id": "gold", "quantity": 80 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "zakariah",
+	  "name": "Zakariah",
+	  "race": "human",
+	  "background": "academic",
+	  "faction": "neutral",
+	  "stats": { "strength": 40, "constitution": 45, "dexterity": 50, "will": 50, "intelligence": 65, "charisma": 50 },
+	  "equipment": [],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "saul_laelia",
+	  "name": "Saul Laelia",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "neutral",
+	  "stats": { "strength": 55, "constitution": 55, "dexterity": 55, "will": 45, "intelligence": 45, "charisma": 50 },
+	  "equipment": [
+		{ "id": "spear", "slot": "main_hand" },
+		{ "id": "gold", "quantity": 10 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "big_al_samson",
+	  "name": "Big Al Samson",
+	  "race": "human",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "titles": ["Whoremonger"],
+	  "stats": { "strength": 95, "constitution": 40, "dexterity": 35, "will": 40, "intelligence": 25, "charisma": 25 },
+	  "equipment": [
+		{ "id": "spear", "slot": "main_hand" },
+		{ "id": "handaxe", "quantity": 1 },
+		{ "id": "gold", "quantity": 5 }
+	  ],
+	  "icon": "res://Icons/dummy_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Intimidating": 2, "Criminal": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	}
   ]
 }
