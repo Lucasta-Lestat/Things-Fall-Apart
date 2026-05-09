@@ -1,8 +1,8 @@
 [gd_resource type="ParticleProcessMaterial" format=3 uid="uid://dc7u4o8mypemi"]
 
 [sub_resource type="Gradient" id="Gradient_2fdrf"]
-offsets = PackedFloat32Array(0, 0.5, 1)
-colors = PackedColorArray(1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0)
+offsets = PackedFloat32Array(0, 0.35, 0.75, 1)
+colors = PackedColorArray(1, 0.95, 0.6, 1, 1, 0.55, 0.1, 1, 0.6, 0.05, 0, 0.7, 0.05, 0.02, 0, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_dxjn5"]
 gradient = SubResource("Gradient_2fdrf")
@@ -21,7 +21,10 @@ spread = 20.0
 initial_velocity_min = 100.0
 initial_velocity_max = 150.0
 gravity = Vector3(0, 0, 0)
+damping_min = 30.0
+damping_max = 60.0
 scale_min = 0.5
+scale_max = 0.8
 scale_curve = SubResource("CurveTexture_yygjg")
 color_ramp = SubResource("GradientTexture1D_dxjn5")
 turbulence_enabled = true
