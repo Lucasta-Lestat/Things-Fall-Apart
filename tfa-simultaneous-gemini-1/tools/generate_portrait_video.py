@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_character_icons import ICONS_DIR, init_client  # noqa: E402
 
 ANIM_DIR = ICONS_DIR / "anim"
-DEFAULT_MODEL = "veo-3.0-fast-generate-preview"
+DEFAULT_MODEL = "veo-3.1-fast-generate-preview"
 
 
 def build_prompt(char_id: str) -> str:
@@ -83,13 +83,15 @@ def main():
 
     print("Submitting Veo job (this can take a couple minutes)...")
     image_part = types.Image(image_bytes=src.read_bytes(), mime_type="image/png")
+    # Veo only supports 16:9 / 9:16 aspect ratios. We use 9:16 (vertical) since
+    # the source is a head-and-shoulders bust; the output is center-cropped to
+    # square in the ffmpeg step below to match the original portrait shape.
     operation = client.models.generate_videos(
         model=args.model,
         prompt=prompt,
         image=image_part,
         config=types.GenerateVideosConfig(
-            duration_seconds=args.duration,
-            aspect_ratio="1:1",
+            aspect_ratio="9:16",
             number_of_videos=1,
         ),
     )
@@ -129,9 +131,13 @@ def main():
         print("WARNING: ffmpeg not on PATH; skipping .ogv conversion. "
               "Install ffmpeg or pass --no-ogv to silence this.")
         return
-    print(f"Converting to {ogv_path}...")
+    print(f"Converting to {ogv_path} (center-cropped to square)...")
+    # Veo outputs 9:16; center-crop to square (height x height starting at the
+    # horizontal center) to match the original 1:1 portrait shape, then encode
+    # to Theora for Godot's built-in VideoStreamPlayer.
     subprocess.run(
         ["ffmpeg", "-y", "-i", str(mp4_path),
+         "-vf", "crop=iw:iw:0:(ih-iw)/2,scale=256:256",
          "-c:v", "libtheora", "-q:v", "8", "-an", str(ogv_path)],
         check=True,
     )
