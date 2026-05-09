@@ -28,6 +28,18 @@ uniform vec4 edge_mask = vec4(0.0);
 uniform float edge_fade_width = 0.4;
 uniform float edge_noise_scale = 6.0;
 
+// Inside-corner fade — vec4(top-right, top-left, bottom-left, bottom-right)
+// 1.0 = both adjacent edges have neighbors but the diagonal tile is missing,
+// so the corner pixel would otherwise stick out into the gap.
+uniform vec4 corner_mask = vec4(0.0);
+
+// Directional fill — visualizes fluid flowing into a partially-filled tile.
+// fill_ratio: 0 = empty, 1 = full (renders as solid).
+// inflow_direction: direction fluid moves AS IT ENTERS this tile (unit-ish vector).
+// When (0,0), fill uses an organic noise mask instead of a directional front.
+uniform float fill_ratio = 1.0;
+uniform vec2 inflow_direction = vec2(0.0);
+
 // --- Noise functions ---
 float hash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -85,7 +97,55 @@ float compute_edge_alpha(vec2 uv, vec2 world_uv) {
 
     // Multiply edges together — corners (2 edges meeting) get much stronger erosion
     alpha = right_a * left_a * bottom_a * top_a;
+
+    // Inside-corner fade: round off any corner whose two adjacent edges are closed
+    // but whose diagonal tile is missing, so the corner doesn't poke into the gap.
+    if (corner_mask.x > 0.5) { // top-right (UV (1,0))
+        float dx = 1.0 - uv.x;
+        float dy = uv.y;
+        float n = fbm(noise_pos + vec2(43.0, 197.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
+    }
+    if (corner_mask.y > 0.5) { // top-left (UV (0,0))
+        float n = fbm(noise_pos + vec2(53.0, 91.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, length(uv));
+    }
+    if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
+        float dx = uv.x;
+        float dy = 1.0 - uv.y;
+        float n = fbm(noise_pos + vec2(107.0, 211.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
+    }
+    if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
+        float dx = 1.0 - uv.x;
+        float dy = 1.0 - uv.y;
+        float n = fbm(noise_pos + vec2(67.0, 179.0));
+        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
+    }
     return alpha;
+}
+
+// Directional fill mask: 1 where fluid is "present" given fill_ratio + inflow.
+// When inflow is meaningful, the fill front is perpendicular to inflow_direction
+// and advances from the entry side as fill_ratio grows. When inflow is near zero,
+// fall back to an organic noise-shaped mask so static partial puddles don't look
+// like a hard rectangle.
+float compute_fill_alpha(vec2 uv, vec2 world_uv) {
+    if (fill_ratio >= 0.999) return 1.0;
+    vec2 noise_pos = world_uv * edge_noise_scale;
+    float in_len = length(inflow_direction);
+    if (in_len < 0.05) {
+        float n = fbm(noise_pos * 0.7);
+        return smoothstep(1.0 - fill_ratio - 0.1, 1.0 - fill_ratio + 0.1, n);
+    }
+    vec2 in_dir = inflow_direction / in_len;
+    float p = dot(uv - 0.5, in_dir);
+    float half_range = 0.5 * (abs(in_dir.x) + abs(in_dir.y));
+    float front_p = mix(-half_range, half_range, fill_ratio);
+    // Wobble the front with low-frequency noise for an organic edge.
+    float n = fbm(noise_pos * 0.8 + vec2(13.0, 29.0));
+    front_p += (n - 0.5) * 0.08;
+    return 1.0 - smoothstep(front_p - 0.04, front_p + 0.04, p);
 }
 
 void fragment() {
@@ -102,41 +162,35 @@ void fragment() {
     );
     vec2 wuv_d = world_uv + distort_offset;
 
-    float wave_coord;
+    // Wave orientation: perpendicular to flow when flowing, diagonal otherwise.
+    // Time advance is a slow base plus a flow-driven component.
+    vec2 wave_perp;
+    float wave_time_speed;
     if (flow_magnitude > 0.001) {
-        vec2 perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord = dot(wuv_d, perp) * wave_frequency;
-        wave_coord -= time * wave_speed * flow_speed * flow_magnitude;
+        wave_perp = vec2(-flow_dir_norm.y, flow_dir_norm.x);
+        wave_time_speed = wave_speed * (0.25 + flow_speed * flow_magnitude * 0.5);
     } else {
-        wave_coord = (wuv_d.x + wuv_d.y) * wave_frequency * 0.5;
-        wave_coord -= time * wave_speed * 0.3;
+        wave_perp = vec2(0.7071, 0.7071);
+        wave_time_speed = wave_speed * 0.25;
     }
 
-    float wp = sin(wave_coord * 6.28318);
-    wp = pow(abs(wp), 1.0 / wave_sharpness) * sign(wp);
-    float wi = (wp * 0.5 + 0.5) * wave_amplitude;
+    // Two wave layers at different frequencies — softer than the previous
+    // pow(abs(sin),1/wave_sharpness) which produced sharp peaks.
+    float wave_coord = dot(wuv_d, wave_perp) * wave_frequency - time * wave_time_speed;
+    float wi = (sin(wave_coord * 6.28318) * 0.5 + 0.5) * wave_amplitude;
 
-    float wave_coord2;
-    if (flow_magnitude > 0.001) {
-        vec2 perp2 = vec2(-flow_dir_norm.y, flow_dir_norm.x);
-        wave_coord2 = dot(wuv_d, perp2) * wave_frequency * 1.7;
-        wave_coord2 -= time * wave_speed * flow_speed * flow_magnitude * 0.7;
-    } else {
-        wave_coord2 = (wuv_d.x - wuv_d.y) * wave_frequency * 0.7;
-        wave_coord2 -= time * wave_speed * 0.2;
-    }
-    float wi2 = (sin(wave_coord2 * 6.28318) * 0.25 + 0.25) * wave_amplitude;
+    float wave_coord2 = dot(wuv_d, wave_perp) * wave_frequency * 1.7 - time * wave_time_speed * 0.6;
+    float wi2 = (sin(wave_coord2 * 6.28318) * 0.5 + 0.5) * wave_amplitude * 0.5;
 
-    float wave_highlight = smoothstep(0.1, 0.15, wi + wi2) * wave_brightness;
-    float flow_alpha = mix(0.8, 1.0, flow_magnitude * flow_speed);
-
+    // Wider smoothstep range = soft gradient highlights instead of near-binary stripes.
+    float wave_highlight = smoothstep(0.03, 0.13, wi + wi2) * wave_brightness;
     vec3 final_color = mix(water_color.rgb, wave_color.rgb, wave_highlight);
 
-    if (flow_magnitude > 0.001) {
-        float sc = dot(wuv_d, flow_dir_norm) * 8.0 - time * 3.0;
-        final_color += vec3(pow(abs(sin(sc * 6.28318)), 8.0) * 0.2 * flow_magnitude);
-    }
+    // Flow visualization is now carried by the directional fill mask
+    // (see compute_fill_alpha) — no per-tile scrolling noise here, which
+    // had a tile-locked discontinuity when adjacent tiles' flow values diverged.
 
     float edge_alpha = compute_edge_alpha(uv, world_uv);
-    COLOR = vec4(final_color, water_color.a * flow_alpha * edge_alpha);
+    float fill_alpha = compute_fill_alpha(uv, world_uv);
+    COLOR = vec4(final_color, water_color.a * edge_alpha * fill_alpha);
 }

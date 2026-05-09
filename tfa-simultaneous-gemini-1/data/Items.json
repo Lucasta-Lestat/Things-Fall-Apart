@@ -1751,6 +1751,68 @@
 	"display_name": "Adventurer's Pack"
   },
   {
+	"id": "treasure_chest",
+	"type": "chest",
+	"base_width": 48.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/Treasure Chest.png",
+	"weight": 15.0,
+	"cost": 50.0,
+	"equip_slot": "",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 0
+	},
+	"damage_resitances": {
+	  "slashing": 2,
+	  "bludgeoning": 2,
+	  "piercing": 2,
+	  "fire": 0,
+	  "cold": 0,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": 0,
+	  "necrotic": 0
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Open",
+	  "Inspect"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 80.0,
+	"current_health": 80.0,
+	"walkability": 0.5,
+	"damage_modifiers": null,
+	"traits": {
+	  "Storage": 3,
+	  "Wood": 2
+	},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": 20,
+	"key": null,
+	"contents": [],
+	"restricted_item_type": null,
+	"resources": {
+	  "wood": 8,
+	  "metal": 2
+	},
+	"display_name": "Treasure Chest"
+  },
+  {
 	"id": "red_travel_cape",
 	"type": "cape",
 	"base_width": 28.0,

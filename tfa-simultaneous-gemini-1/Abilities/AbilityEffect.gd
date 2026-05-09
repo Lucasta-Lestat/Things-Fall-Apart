@@ -869,15 +869,19 @@ static func _resolve_knockback(
 		
 		var direction = (target.global_position - knockback_origin).normalized()
 		var force = direction * strength
-		
-		if target is CharacterBody2D:
-			if "velocity" in target:
-				target.velocity += force
-			if target.has_method("apply_external_force"):
-				target.apply_external_force(force, 0.1)
+
+		# CharacterBody2D characters expose apply_external_force (defined on
+		# ProceduralCharacter) which integrates the force into knockback
+		# velocity. RigidBody2D targets receive a direct impulse.
+		# Duration of 0.25s converts a JSON `strength` (in px/s² of impulse)
+		# to ~0.25 × strength of velocity change — at strength=800 that's
+		# ~200 px/s, decaying to zero in ~1.3s under knockback_friction=150
+		# for ~130 px of total displacement. Tunable per-ability via JSON.
+		if target.has_method("apply_external_force"):
+			target.apply_external_force(force, 0.25)
 		elif target is RigidBody2D:
 			target.apply_central_impulse(force)
-		
+
 		result["targets_affected"].append({
 			"target": target,
 			"force": force

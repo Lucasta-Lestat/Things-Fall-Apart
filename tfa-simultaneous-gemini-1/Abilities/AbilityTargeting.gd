@@ -2,7 +2,7 @@
 # Handles AoE targeting visualization and input
 extends Node2D
 
-enum TargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
+enum TargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE, CHARACTERS }
 
 signal targeting_started(hand: String, ability: Dictionary)
 signal targeting_confirmed(hand: String, ability: Dictionary, target_position: Vector2)
@@ -31,6 +31,19 @@ var caster_position: Vector2 = Vector2.ZERO
 var cone_radius: float = 150.0
 var cone_angle: float = 45.0  # Degrees
 
+# Character-targeting state
+var target_count: int = 1
+var target_filter: String = "any"  # "any" | "allies" | "enemies"
+var character_range: float = 0.0  # 0 = unlimited
+var selected_targets: Array = []
+var target_highlights: Array[Node2D] = []
+var count_label: Label = null
+var count_label_layer: CanvasLayer = null
+
+# When true, the targeting indicator is anchored to the caster (self-targeted abilities)
+# instead of following the mouse cursor
+var lock_to_caster: bool = false
+
 # Visual settings
 const INDICATOR_COLOR = Color(1, 1, 1, 0.5)  # Semi-transparent white
 const INDICATOR_COLOR_VALID = Color(0, 1, 0, 0.5)  # Green when valid
@@ -47,14 +60,23 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_targeting:
-		# Update target position to mouse
-		target_position = _get_mouse_world_position()
+		if lock_to_caster:
+			# Self-targeted: anchor the indicator to the caster's (possibly moving) position
+			caster_position = get_parent().global_position if get_parent() else caster_position
+			target_position = caster_position
+		else:
+			# Update target position to mouse
+			target_position = _get_mouse_world_position()
 
 		# For line and cone, keep caster_position in sync with the character
 		if target_shape == TargetShape.LINE or target_shape == TargetShape.CONE:
 			caster_position = get_parent().global_position if get_parent() else caster_position
 
-		_update_active_indicator()
+		if target_shape == TargetShape.CHARACTERS:
+			caster_position = get_parent().global_position if get_parent() else caster_position
+			_update_character_targeting_visuals()
+		else:
+			_update_active_indicator()
 
 func _create_indicators() -> void:
 	"""Create the targeting indicator nodes"""
@@ -166,10 +188,18 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 	is_targeting = true
 	current_hand = hand
 	current_ability = ability
-	
-	# Set initial position immediately so it doesn't jump from (0,0)
-	target_position = mouse_pos
-	
+
+	# Self-targeted abilities anchor the AoE preview to the caster instead of the cursor
+	var target_type_str = ability.get("target_type", "point")
+	lock_to_caster = (target_type_str == "self")
+
+	if lock_to_caster:
+		caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+		target_position = caster_position
+	else:
+		# Set initial position immediately so it doesn't jump from (0,0)
+		target_position = mouse_pos
+
 	# Set shape from ability data
 	var shape_str = ability.get("target_shape", "none")
 	print("ability shape for this ability: ", shape_str)
@@ -191,19 +221,52 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 			cone_radius = ability.get("radius", 150.0)
 			cone_angle = ability.get("angle", 45.0)
 			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+		"characters":
+			target_shape = TargetShape.CHARACTERS
+			target_count = int(ability.get("target_count", 1))
+			target_filter = String(ability.get("target_filter", "any"))
+			character_range = float(ability.get("range", 0.0))
+			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+			selected_targets.clear()
+			_clear_target_highlights()
+			_ensure_count_label()
+			count_label.visible = true
 		_:
 			target_shape = TargetShape.NONE
-	
+
 	# Force an immediate update to ensure visual appears this frame
-	_update_active_indicator()
-	
+	if target_shape == TargetShape.CHARACTERS:
+		_update_character_targeting_visuals()
+	else:
+		_update_active_indicator()
+
 	emit_signal("targeting_started", hand, ability)
 
 func confirm_targeting() -> Dictionary:
 	"""Confirm the current target and return targeting data"""
 	if not is_targeting:
 		return {}
-	
+
+	if target_shape == TargetShape.CHARACTERS:
+		if selected_targets.size() != target_count:
+			return {}  # Not yet ready to confirm
+		var centroid = Vector2.ZERO
+		for t in selected_targets:
+			if is_instance_valid(t):
+				centroid += t.global_position
+		if not selected_targets.is_empty():
+			centroid /= selected_targets.size()
+		var result_chars = {
+			"hand": current_hand,
+			"ability": current_ability,
+			"position": centroid,
+			"shape": target_shape,
+			"targets": selected_targets.duplicate(),
+			"caster_position": caster_position,
+		}
+		emit_signal("targeting_confirmed", current_hand, current_ability, centroid)
+		return result_chars
+
 	# For line targeting, clamp the target position to range
 	var final_position = target_position
 	if target_shape == TargetShape.LINE:
@@ -238,10 +301,15 @@ func end_targeting() -> void:
 	is_targeting = false
 	current_ability = {}
 	target_shape = TargetShape.NONE
+	lock_to_caster = false
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
 	line_indicator.visible = false
 	cone_indicator.visible = false
+	_clear_target_highlights()
+	selected_targets.clear()
+	if count_label:
+		count_label.visible = false
 
 func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0, caster_pos: Vector2 = Vector2.ZERO) -> Node2D:
 	"""Create a persistent indicator for a queued ability"""
@@ -315,6 +383,156 @@ func clear_all_queued_indicators() -> void:
 		if is_instance_valid(indicator):
 			indicator.queue_free()
 	queued_indicators.clear()
+
+
+# ===== CHARACTER TARGETING =====
+
+func _ensure_count_label() -> void:
+	if count_label and is_instance_valid(count_label):
+		return
+	count_label_layer = CanvasLayer.new()
+	count_label_layer.layer = 100
+	add_child(count_label_layer)
+	count_label = Label.new()
+	count_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	count_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	count_label.add_theme_constant_override("outline_size", 4)
+	count_label.add_theme_font_size_override("font_size", 18)
+	count_label.text = "0/0"
+	count_label_layer.add_child(count_label)
+
+func _update_character_targeting_visuals() -> void:
+	# Update each highlight's position to follow its character
+	for i in range(target_highlights.size() - 1, -1, -1):
+		var hl = target_highlights[i]
+		if not is_instance_valid(hl):
+			target_highlights.remove_at(i)
+			continue
+		var tgt = hl.get_meta("target") if hl.has_meta("target") else null
+		if tgt == null or not is_instance_valid(tgt):
+			hl.queue_free()
+			target_highlights.remove_at(i)
+			continue
+		hl.global_position = tgt.global_position
+
+	# Drop any selected targets that became invalid
+	for j in range(selected_targets.size() - 1, -1, -1):
+		if not is_instance_valid(selected_targets[j]):
+			selected_targets.remove_at(j)
+
+	# Update count label position and text
+	if count_label and is_instance_valid(count_label):
+		var viewport = get_viewport()
+		var mouse_screen = viewport.get_mouse_position() if viewport else Vector2.ZERO
+		count_label.position = mouse_screen + Vector2(18, 18)
+		count_label.text = "%d/%d" % [selected_targets.size(), target_count]
+
+func _handle_character_click(world_pos: Vector2) -> bool:
+	"""Try to add/remove a character from the selection. Returns true if click was consumed."""
+	if not is_targeting or target_shape != TargetShape.CHARACTERS:
+		return false
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return false
+	var caster = get_parent()
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.CHARACTERS
+	if caster and caster.has_method("get_rid"):
+		query.exclude = [caster.get_rid()]
+	var hits = space.intersect_point(query, 8)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider == null or not is_instance_valid(collider):
+			continue
+		if not (collider is ProceduralCharacter):
+			continue
+		if collider == caster:
+			continue
+		# Toggle off if already selected
+		if collider in selected_targets:
+			var idx = selected_targets.find(collider)
+			selected_targets.remove_at(idx)
+			_remove_highlight_for(collider)
+			_update_character_targeting_visuals()
+			return true
+		# Validate range
+		if character_range > 0.0 and caster:
+			var dist = caster.global_position.distance_to(collider.global_position)
+			if dist > character_range:
+				return true  # consumed but rejected
+		# Validate filter
+		if not _passes_filter(collider, caster):
+			return true
+		# Validate alive
+		if collider.has_method("is_alive") and not collider.is_alive():
+			return true
+		selected_targets.append(collider)
+		_add_highlight_for(collider)
+		_update_character_targeting_visuals()
+		# Auto-confirm when count reached
+		if selected_targets.size() >= target_count:
+			# Defer to next idle so input handler can complete this frame's work
+			call_deferred("_emit_auto_confirm")
+		return true
+	return false
+
+func _passes_filter(target: Node, caster: Node) -> bool:
+	if target_filter == "any":
+		return true
+	if not caster or not ("faction_id" in caster) or not ("faction_id" in target):
+		return true
+	var caster_faction = caster.faction_id
+	var target_faction = target.faction_id
+	var enemies = FactionDatabase.are_enemies(caster_faction, target_faction)
+	if target_filter == "enemies":
+		return enemies
+	if target_filter == "allies":
+		return not enemies and target != caster
+	return true
+
+func _add_highlight_for(target: Node) -> void:
+	var indicator = Node2D.new()
+	indicator.top_level = true
+	indicator.z_index = 51
+	var drawer = CharacterHighlightDrawer.new()
+	indicator.add_child(drawer)
+	indicator.set_meta("target", target)
+	indicator.global_position = target.global_position
+	add_child(indicator)
+	target_highlights.append(indicator)
+
+func _remove_highlight_for(target: Node) -> void:
+	for i in range(target_highlights.size() - 1, -1, -1):
+		var hl = target_highlights[i]
+		if not is_instance_valid(hl):
+			target_highlights.remove_at(i)
+			continue
+		var t = hl.get_meta("target") if hl.has_meta("target") else null
+		if t == target:
+			hl.queue_free()
+			target_highlights.remove_at(i)
+			return
+
+func _clear_target_highlights() -> void:
+	for hl in target_highlights:
+		if is_instance_valid(hl):
+			hl.queue_free()
+	target_highlights.clear()
+
+func _emit_auto_confirm() -> void:
+	if not is_targeting or target_shape != TargetShape.CHARACTERS:
+		return
+	if selected_targets.size() != target_count:
+		return
+	# Drive the cast directly through the caster's confirm flow. We skip emitting
+	# `targeting_confirmed` here because confirm_targeting() emits it itself, and
+	# routing through a single entry point avoids re-entrancy.
+	var caster = get_parent()
+	if caster and caster.has_method("_confirm_ability_target"):
+		caster._confirm_ability_target(PauseManager.is_paused)
 
 
 # ===== DRAWER CLASSES =====
@@ -415,3 +633,25 @@ class ConeDrawer extends Node2D:
 		# Border (lines along edges)
 		for i in range(points.size()):
 			draw_line(points[i], points[(i + 1) % points.size()], border_color, 2.0, true)
+
+
+class CharacterHighlightDrawer extends Node2D:
+	var radius: float = 32.0
+	var is_queued: bool = false
+	var _t: float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var pulse = 0.85 + 0.15 * sin(_t * 4.0)
+		var r = radius * pulse
+		var color = Color(0.5, 0.8, 1.0, 0.9) if is_queued else Color(1.0, 0.9, 0.3, 0.9)
+		var num_segments := 32
+		var points = PackedVector2Array()
+		for i in range(num_segments + 1):
+			var angle = (float(i) / num_segments) * TAU
+			points.append(Vector2(cos(angle), sin(angle)) * r)
+		for i in range(num_segments):
+			draw_line(points[i], points[i + 1], color, 3.0, true)

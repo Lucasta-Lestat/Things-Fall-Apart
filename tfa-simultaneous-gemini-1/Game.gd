@@ -76,6 +76,16 @@ var party_state: Array = [
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
 ]
 
+# Service-NPC state per region. Lets trades and inventory changes survive
+# map transitions and saves. Keyed by region_id -> npc_uid -> live_state dict
+# (same shape as party_state[i].live_state).
+var npc_state_per_region: Dictionary = {}
+
+# Set of npc_uids the party has discovered, per region. Drives whether a
+# service that's illegal under the controlling faction's laws shows up in
+# the TownServicesPanel.
+var known_services_per_region: Dictionary = {}
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(
@@ -129,6 +139,74 @@ func save_party_state() -> void:
 func load_party_state_from_save(saved: Array) -> void:
 	## Called when loading a save file. Replaces party_state entirely.
 	party_state = saved
+
+
+# ---------------------------------------------------------------------------
+# Service NPC state persistence (per-region, survives map transitions)
+# ---------------------------------------------------------------------------
+
+func _build_npc_uid(template_id: String, unique_name: String) -> String:
+	## Mirror of RegionDatabase._build_npc_uid — duplicated to avoid coupling.
+	if unique_name.is_empty():
+		return template_id
+	return template_id + "/" + unique_name
+
+func _is_service_npc(character) -> bool:
+	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
+
+func _save_service_npc_states() -> void:
+	## Walk the live scene; for any NPC with titles, snapshot its runtime state
+	## into npc_state_per_region[region][uid].
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	if not npc_state_per_region.has(region_id):
+		npc_state_per_region[region_id] = {}
+	for c in characters_in_scene:
+		if c in party_chars:
+			continue
+		if not _is_service_npc(c):
+			continue
+		var template_id: String = str(c.get_meta("template_id", ""))
+		if template_id.is_empty():
+			# Fallback: derive from display_name (won't survive renames but is rare)
+			template_id = str(c.display_name).to_lower().replace(" ", "_")
+		var unique_name: String = str(c.get_meta("unique_name", ""))
+		var uid: String = _build_npc_uid(template_id, unique_name)
+		npc_state_per_region[region_id][uid] = _serialize_character(c)
+
+func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
+	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
+	## Also tags the live node with template_id + unique_name for save-on-unload.
+	if not is_instance_valid(npc):
+		return
+	npc.set_meta("template_id", template_id)
+	npc.set_meta("unique_name", unique_name)
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var bucket: Dictionary = npc_state_per_region.get(region_id, {})
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if bucket.has(uid):
+		_deserialize_character(npc, bucket[uid])
+
+func mark_service_seen(npc) -> void:
+	## Records discovery so an illegal service shows up in the panel even
+	## after the party leaves the map.
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var template_id: String = str(npc.get_meta("template_id", ""))
+	var unique_name: String = str(npc.get_meta("unique_name", ""))
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if not known_services_per_region.has(region_id):
+		known_services_per_region[region_id] = []
+	if uid not in known_services_per_region[region_id]:
+		known_services_per_region[region_id].append(uid)
  
  
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
@@ -152,21 +230,38 @@ func _spawn_npcs(npc_list: Array) -> void:
 		# Check spawn conditions
 		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
 			continue
- 
+
 		var template_id: String = npc_def.get("template_id", "")
 		var pos_arr = npc_def.get("position", [0, 0])
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = npc_def.get("count", 1)
 		var spread: float = npc_def.get("spread_radius", 0)
- 
+		# Per-spawn overrides for unique NPCs, faction, titles, and dialogue.
+		var spawn_overrides: Dictionary = {}
+		if npc_def.has("unique_name"):
+			spawn_overrides["unique_name"] = npc_def["unique_name"]
+		if npc_def.has("titles"):
+			spawn_overrides["titles"] = npc_def["titles"]
+		if npc_def.has("faction"):
+			spawn_overrides["faction"] = npc_def["faction"]
+		if npc_def.has("dialogue"):
+			spawn_overrides["dialogue"] = npc_def["dialogue"]
+
 		for i in range(count):
 			var pos = base_pos
 			if spread > 0 and i > 0:
 				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
- 
-			var npc = _spawn_character(template_id, pos)
+
+			var npc = _spawn_character(template_id, pos, spawn_overrides)
 			if npc:
 				npc.AI_enabled = true
+				# Per-spawn dialogue override (TopDownCharacterDatabase only reads
+				# template.dialogue; we wire the spawn-level override here).
+				if spawn_overrides.has("dialogue") and "dialogues" in npc:
+					npc.dialogues = [str(spawn_overrides["dialogue"])]
+				# Restore persisted live_state for service NPCs whose region we've
+				# visited before (lets trades stick across map transitions).
+				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
 				# NPCs hidden by default; made visible when inside party LOS
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
@@ -329,6 +424,9 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
 
 func _unload_current_map() -> void:
+	# Snapshot any service-NPC live state so trades stick across map transitions.
+	_save_service_npc_states()
+
 	# Remove all spawned characters
 	for character in characters_in_scene:
 		if is_instance_valid(character):
@@ -521,15 +619,51 @@ func show_context_menu(target, position: Vector2) -> void:
 
 	var options: Array = []
 	if target is ProceduralCharacter:
-		options = target.get("interact_options") if "interact_options" in target else ["Inspect"]
+		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
+		# Inject "Trade" for any non-hostile character. FactionDatabase is the
+		# authoritative relationship source (Game.factions is unused in current
+		# code paths). Treat allies/neutrals as tradeable; only true enemies
+		# are blocked.
+		if not FactionDatabase.are_enemies("player", target.faction_id) and not "Trade" in options:
+			options.append("Trade")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
+	elif target is Item:
+		# World item context menu — use the options array loaded from the item's JSON data.
+		var raw_options: Array = target.options if target.options else []
+		options = raw_options.duplicate()
+		if options.is_empty():
+			options.append("Inspect")
 	elif target is Dictionary:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
 	$GameUI.add_child(context_menu)
+
+# ---------------------------------------------------------------------------
+# Chest inventory + Trade windows
+# ---------------------------------------------------------------------------
+
+func show_chest_inventory(item: Item) -> void:
+	if not is_instance_valid(item):
+		return
+	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
+	var w = ChestWindow.instantiate()
+	w.chest_item = item
+	$GameUI.add_child(w)
+
+func show_trade_window(npc) -> void:
+	if not is_instance_valid(npc):
+		return
+	# Make the party side panel visible so the player can drag from it during trade.
+	var party_panel = $GameUI.get_node_or_null("PartySidePanel")
+	if party_panel:
+		party_panel.visible = true
+	var TradeWindow = preload("res://UI/TradeWindow.tscn")
+	var w = TradeWindow.instantiate()
+	w.npc = npc
+	$GameUI.add_child(w)
 
 # ---------------------------------------------------------------------------
 # Lighting helpers
@@ -711,21 +845,58 @@ func _update_npc_los_visibility() -> void:
 			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
+		var was_visible: bool = npc.visible
 		npc.visible = seen
+		# Discovery: first time we lay eyes on a service NPC, mark them known
+		# so they appear in the TownServicesPanel even after leaving the map.
+		if seen and not was_visible:
+			mark_service_seen(npc)
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	var viewport := get_viewport()
 	if not viewport or not viewport.world_2d:
 		return true
 	var space := viewport.world_2d.direct_space_state
-	# Mask 4 = layer 3 (vision_blockers).
-	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, 4)
+	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
 	params.collide_with_areas = false
 	params.collide_with_bodies = true
 	return space.intersect_ray(params).is_empty()
 
+
+func _is_position_visible_to_party(target_pos: Vector2) -> bool:
+	"""True if any non-blinded party member has the position in sight range,
+	inside their FOV cone, and on a clear LOS line. Mirrors the per-ally
+	checks in _update_npc_los_visibility."""
+	for ally in party_chars:
+		if not is_instance_valid(ally) or not ally.is_alive():
+			continue
+		var cm = ally.get_node_or_null("ConditionManager")
+		if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+			continue
+		var to_target = target_pos - ally.global_position
+		var dist = to_target.length()
+		if dist > 1440.0 * ally.sight:
+			continue
+		var facing_dir = Vector2.UP.rotated(ally.rotation)
+		var angle = facing_dir.angle_to(to_target.normalized())
+		if abs(angle) > deg_to_rad(ally.fov_angle_degrees * 0.5):
+			continue
+		if _sight_line_clear(ally.global_position, target_pos):
+			return true
+	return false
+
+
+func _update_item_los_visibility() -> void:
+	"""Items follow the same visibility rule as NPCs."""
+	for item in items_in_scene:
+		if not is_instance_valid(item):
+			continue
+		item.visible = _is_position_visible_to_party(item.global_position)
+
 func _process(delta: float) -> void:
-	# Check for combat collisions / Update clash cooldowns
+	# Update clash cooldowns. Combat collisions are now driven by the
+	# Area2D weapon hitbox on each WeaponShape (data/weapon_shape.gd) —
+	# no per-frame iteration here.
 	if not PauseManager.is_paused:
 		var to_remove = []
 		for key in clash_cooldowns:
@@ -734,8 +905,6 @@ func _process(delta: float) -> void:
 				to_remove.append(key)
 		for key in to_remove:
 			clash_cooldowns.erase(key)
-		_check_combat_collisions()
-		_update_projectiles(delta)
 	# Tick fog effects
 		if fog_manager:
 			fog_manager.update_fogs(delta, characters_in_scene)
@@ -753,68 +922,14 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
-	# Update NPC visibility based on party line-of-sight
+	# Update NPC and item visibility based on party line-of-sight
 	_update_npc_los_visibility()
+	_update_item_los_visibility()
 	# Camera follows primary selected character
 	if primary_selected and is_instance_valid(primary_selected) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
 
-func _check_combat_collisions() -> void:
-	var all_characters = characters_in_scene
-
-	for attacker in all_characters:
-		if not attacker.is_alive() or not attacker.is_attacking():
-			continue
-
-		var weapon
-		if attacker.current_hand == "Main":
-			weapon = attacker.current_main_hand_item
-		else:
-			weapon = attacker.current_off_hand_item
-
-		# Ranged weapons use the projectile system — skip melee collision entirely
-		if weapon is WeaponShape and weapon.weapon_type in [WeaponShape.WeaponType.BOW, WeaponShape.WeaponType.PISTOL]:
-			continue
-
-		# Check against other characters
-		#print("how many characters? ", all_characters)
-		for victim in all_characters:
-			if attacker == victim:
-				continue
-			if not victim.is_alive():
-				continue
-			if not can_hit_target(attacker, victim):
-				continue
-
-			var hit = check_weapon_body_collision(attacker, victim)
-			if hit.get("hit", false):
-				register_hit(attacker, victim)
-				
-				process_weapon_hit(attacker, victim, hit["position"], weapon, hit["velocity"])
-
-		# Check against items
-		for item in items_in_scene:
-			if not is_instance_valid(item):
-				continue
-			if not can_hit_target(attacker, item):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, item)
-			if hit.get("hit", false):
-				process_object_hit(attacker, item, hit["position"], weapon, hit["velocity"])
-
-		# Check against structures
-		for structure in structures_in_scene:
-			if not is_instance_valid(structure):
-				continue
-			if not can_hit_target(attacker, structure):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, structure)
-			if hit.get("hit", false):
-				process_object_hit(attacker, structure, hit["position"], weapon, hit["velocity"])
-				
 func process_object_hit(
 	attacker: ProceduralCharacter,
 	target: Node2D,
@@ -824,13 +939,14 @@ func process_object_hit(
 ) -> Dictionary:
 	# Build damage dict — duplicate to avoid mutating weapon data
 	var attack_damage: Dictionary
-	if weapon:
+	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
 		if weapon.get("traits") and "melee" in weapon.traits:
 			var str_bonus = attacker.strength / 10.0
 			for dtype in attack_damage:
 				attack_damage[dtype] += str_bonus
 	else:
+		# Unarmed (or AbilityShape held while combat collision detection runs).
 		attack_damage = {
 			attacker.unarmed_strike_damage_type:
 				attacker.unarmed_strike_damage + attacker.strength / 10.0
@@ -845,7 +961,10 @@ func process_object_hit(
 	for dtype in attack_damage:
 		total_damage += max(0.0, attack_damage[dtype] - dr.get(dtype, 0))
 
-	var penetration_result = _calculate_penetration(total_damage, attack_velocity, weapon)
+	# Pass null for non-weapon items (e.g., AbilityShape) so penetration math
+	# doesn't try to read weapon-specific properties.
+	var actual_weapon = weapon if weapon is WeaponShape else null
+	var penetration_result = _calculate_penetration(total_damage, attack_velocity, actual_weapon)
 
 	if penetration_result.state == PenetrationState.BOUNCED:
 		SfxManager.play("clash", target.global_position)
@@ -1155,9 +1274,6 @@ enum PenetrationState {
 # Active hit tracking (prevents multiple hits per swing)
 var active_hits: Dictionary = {}  # attacker_id -> { target_id -> hit_data }
 
-# Live projectiles spawned by ranged weapons
-var active_projectiles: Array = []
-
 # Weapon clash cooldowns
 var clash_cooldowns: Dictionary = {}  # "id1_id2" -> time_remaining
 
@@ -1398,166 +1514,6 @@ func register_hit(attacker: Node2D, target: Node2D) -> void:
 	active_hits[attacker_id][target_id] = true
 # ===== COLLISION DETECTION HELPERS =====
 
-func get_body_hitbox_corners(character: ProceduralCharacter) -> Array:
-	"""Get character's body hitbox as 4 world-space corners (handles rotation)"""
-	var half_width = character.body_width / 2
-	
-	# The character origin is at the center of the head
-	# Head front is at -head_length * 0.35
-	# Legs end at shoulder_y_offset + leg_length
-	var top = -character.head_length * 0.35
-	var bottom = character.shoulder_y_offset + character.leg_length
-	
-	# Local space corners
-	var local_corners = [
-		Vector2(-half_width, top),      # top-left
-		Vector2(half_width, top),       # top-right
-		Vector2(half_width, bottom),    # bottom-right
-		Vector2(-half_width, bottom)    # bottom-left
-	]
-	
-	# Transform each corner to world space (applying rotation)
-	var world_corners = []
-	for corner in local_corners:
-		world_corners.append(character.global_position + corner.rotated(character.rotation))
-	
-	return world_corners
-
-func point_in_polygon(point: Vector2, polygon: Array) -> bool:
-	"""Check if a point is inside a convex polygon using cross product method"""
-	var n = polygon.size()
-	if n < 3:
-		return false
-	
-	for i in range(n):
-		var a = polygon[i]
-		var b = polygon[(i + 1) % n]
-		var cross = (b - a).cross(point - a)
-		if cross < 0:
-			return false
-	return true
-
-func check_weapon_body_collision(holder, target: ProceduralCharacter):
-	# 1. Determine the start and end points of the "hit line" in WORLD space
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	# Check if the holder is actually holding a weapon in the active hand
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		# --- WEAPON LOGIC ---
-		# Use to_global() on the weapon node itself -- this correctly chains through
-		# weapon -> holder Node2D -> character -> world, including holder rotation/scale
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		# --- UNARMED / FIST LOGIC ---
-		# Arm joints are in character-local space, so holder.to_global() is correct
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		var fist_start_local = hand_local.lerp(elbow_local, 0.2)
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(fist_start_local)
-
-	# 2. Perform the Interpolation Check in world space
-	var body_corners = get_body_hitbox_corners(target)
-	var num_checks = 5
-
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if point_in_polygon(check_point_world, body_corners):
-			# Convert hit position to target's local space for limb detection
-			var hit_local = target.to_local(check_point_world)
-			var hit_local_unrotated = hit_local.rotated(-target.rotation)
-
-			var limb_type = target.get_limb_at_position(
-				hit_local_unrotated,
-				target.body_width,
-				target.body_height
-			)
-
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier,
-				"limb_type": limb_type
-			}
-
-	return {"hit": false}
-	
-func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) -> Dictionary:
-	"""Collision check for items and structures using their collision shape bounds"""
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(hand_local.lerp(elbow_local, 0.2))
-
-	# Use the target's sprite size as a simple bounding box
-	var target_rect: Rect2
-	if "sprite" in target and target.sprite and target.sprite.texture:
-		var tex_size = target.sprite.texture.get_size() * target.sprite.scale
-		var half = tex_size / 2.0
-		target_rect = Rect2(target.global_position - half, tex_size)
-	elif "size" in target:
-		var half = target.size / 2.0
-		target_rect = Rect2(target.global_position - half, target.size)
-	else:
-		return {"hit": false}
-
-	var num_checks = 5
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if target_rect.has_point(check_point_world):
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier
-			}
-
-	return {"hit": false}
-	
 func check_weapon_weapon_collision(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter
@@ -1618,136 +1574,55 @@ func check_weapon_weapon_collision(
 # ===== PROJECTILE SYSTEM =====
 
 func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: WeaponShape) -> Node2D:
-	"""Create a projectile node and register it for per-frame collision tracking."""
-	var proj = Node2D.new()
+	"""Spawn a unified Projectile for a ranged weapon shot."""
+	var is_pistol := weapon.weapon_type == WeaponShape.WeaponType.PISTOL
+
+	var proj := Projectile.new()
 	proj.name = "Projectile"
 	proj.z_index = 3
+	proj.speed = 1800.0 if is_pistol else 1200.0
+	proj.max_range = 700.0 if is_pistol else 900.0
 
-	var sprite = Sprite2D.new()
+	var sprite := Sprite2D.new()
 	if weapon.projectile_texture_path != "" and ResourceLoader.exists(weapon.projectile_texture_path):
 		sprite.texture = load(weapon.projectile_texture_path)
-		# Scale the texture so the longest side fits ~16 pixels
-		var tex_size = sprite.texture.get_size()
-		var longest = max(tex_size.x, tex_size.y)
+		# Scale so the longest side fits the target size; pistol bullets use a
+		# smaller target than arrows because their textures are near-square.
+		var tex_size: Vector2 = sprite.texture.get_size()
+		var longest: float = max(tex_size.x, tex_size.y)
 		if longest > 0:
-			var target_size = 32.0
-			var s = target_size / longest
+			var target_size: float = 12.0 if is_pistol else 32.0
+			var s: float = target_size / longest
 			sprite.scale = Vector2(s, s)
 	else:
-		# Fallback: draw a small rectangle so something is visible
-		var img = Image.create(4, 12, false, Image.FORMAT_RGBA8)
+		var img := Image.create(4, 12, false, Image.FORMAT_RGBA8)
 		img.fill(Color.WHITE)
 		sprite.texture = ImageTexture.create_from_image(img)
+	# Local +PI/2 puts the sprite's "up" axis along the parent body's +X (which
+	# Projectile.launch aligns with travel direction), matching the previous
+	# parent-rotation of direction.angle() + PI/2.
+	sprite.rotation = PI / 2.0
 	proj.add_child(sprite)
 
-	# Spawn from the weapon tip so projectiles visually emerge from the weapon
-	proj.global_position = shooter.get_weapon_tip_world_position()
-	# Rotate so the sprite's up-axis points along the travel direction
-	proj.rotation = direction.angle() + PI / 2.0
-
-	var is_pistol = weapon.weapon_type == WeaponShape.WeaponType.PISTOL
-	var speed = 1800.0 if is_pistol else 1200.0
-	var max_range = 700.0 if is_pistol else 900.0
+	proj.hit.connect(_on_weapon_projectile_hit.bind(shooter, weapon))
 
 	get_tree().current_scene.add_child(proj)
-
-	active_projectiles.append({
-		"node": proj,
-		"shooter": shooter,
-		"direction": direction.normalized(),
-		"weapon": weapon,
-		"speed": speed,
-		"max_range": max_range,
-		"distance_traveled": 0.0,
-	})
+	proj.launch(shooter.get_weapon_tip_world_position(), direction, shooter)
 	return proj
 
-func _update_projectiles(delta: float) -> void:
-	var to_remove: Array = []
 
-	for proj_data in active_projectiles:
-		var proj: Node2D = proj_data["node"]
-		if not is_instance_valid(proj):
-			to_remove.append(proj_data)
-			continue
+func _on_weapon_projectile_hit(collision: KinematicCollision2D, shooter: ProceduralCharacter, weapon: WeaponShape) -> void:
+	var collider := collision.get_collider()
+	var hit_pos: Vector2 = collision.get_position()
+	if collider is ProceduralCharacter:
+		# body_collision_shape is disabled on death, so live collisions imply a
+		# living target — but guard anyway in case of mid-frame state changes.
+		if not collider.is_alive():
+			return
+		_process_projectile_hit_character(shooter, collider, hit_pos, weapon)
+	elif collider != null:
+		_process_projectile_hit_object(shooter, collider, hit_pos, weapon)
 
-		var move_vec: Vector2 = proj_data["direction"] * proj_data["speed"] * delta
-		proj.global_position += move_vec
-		proj_data["distance_traveled"] += move_vec.length()
-
-		# Spin thrown items while in flight
-		if proj_data.get("thrown_item_data"):
-			proj.rotation += 12.0 * delta
-
-		if proj_data["distance_traveled"] >= proj_data["max_range"]:
-			# Drop thrown items at landing position
-			if proj_data.get("thrown_item_data"):
-				var item_id = proj_data["thrown_item_data"].get("id", "")
-				if not item_id.is_empty():
-					create_item(item_id, proj.global_position)
-			proj.queue_free()
-			to_remove.append(proj_data)
-			continue
-
-		var hit := false
-
-		# --- Character collision ---
-		for target in characters_in_scene:
-			if not is_instance_valid(target) or not target.is_alive():
-				continue
-			if target == proj_data["shooter"]:
-				continue
-			var body_corners = get_body_hitbox_corners(target)
-			if point_in_polygon(proj.global_position, body_corners):
-				if proj_data["weapon"]:
-					_process_projectile_hit_character(proj_data["shooter"], target, proj.global_position, proj_data["weapon"])
-				elif proj_data.get("thrown_item_data"):
-					# Thrown item hit
-					var dmg = proj_data.get("thrown_damage", {"bludgeoning": 2})
-					var local_hit = target.to_local(proj.global_position)
-					var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
-					target.damage_limb(limb_type, dmg.duplicate(), local_hit)
-					# Drop the item at hit location
-					var item_id = proj_data["thrown_item_data"].get("id", "")
-					if not item_id.is_empty():
-						create_item(item_id, proj.global_position)
-				proj.queue_free()
-				to_remove.append(proj_data)
-				hit = true
-				break
-
-		if hit:
-			continue
-
-		# --- Structure collision ---
-		for structure in structures_in_scene:
-			if not is_instance_valid(structure):
-				continue
-			var target_rect: Rect2
-			if "sprite" in structure and structure.sprite and structure.sprite.texture:
-				var tex_size = structure.sprite.texture.get_size() * structure.sprite.scale
-				target_rect = Rect2(structure.global_position - tex_size / 2.0, tex_size)
-			elif "size" in structure:
-				target_rect = Rect2(structure.global_position - structure.size / 2.0, structure.size)
-			else:
-				continue
-			if target_rect.has_point(proj.global_position):
-				if proj_data["weapon"]:
-					_process_projectile_hit_object(proj_data["shooter"], structure, proj.global_position, proj_data["weapon"])
-				elif proj_data.get("thrown_item_data"):
-					var dmg = proj_data.get("thrown_damage", {"bludgeoning": 2})
-					if structure.has_method("take_damage"):
-						structure.take_damage(dmg.duplicate(), 0)
-					var item_id = proj_data["thrown_item_data"].get("id", "")
-					if not item_id.is_empty():
-						create_item(item_id, proj.global_position)
-				proj.queue_free()
-				to_remove.append(proj_data)
-				hit = true
-				break
-
-	for proj_data in to_remove:
-		active_projectiles.erase(proj_data)
 
 func _process_projectile_hit_character(
 	shooter: ProceduralCharacter,
@@ -1782,57 +1657,78 @@ func _process_projectile_hit_object(
 # ===== THROWN ITEM PROJECTILES =====
 
 func _add_thrown_projectile(proj_data: Dictionary) -> void:
-	# Create a simple visual for the thrown item
-	var proj = Sprite2D.new()
-	var item_data = proj_data.get("item_data", {})
-	var item_id = item_data.get("id", "")
+	"""Spawn a unified Projectile for a thrown item; spins in flight and drops the item on hit/expire."""
+	var item_data: Dictionary = proj_data.get("item_data", {})
+	var item_id: String = item_data.get("id", "")
+	var thrown_damage: Dictionary = proj_data.get("damage", {"bludgeoning": 2})
+	var velocity_vec: Vector2 = proj_data["velocity"]
 
-	# Try to load a sprite for the item
-	var sprite_path = item_data.get("sprite_path", "")
+	var proj := Projectile.new()
+	proj.name = "ThrownProjectile"
+	proj.z_index = 50
+	proj.speed = velocity_vec.length()
+	proj.max_range = proj_data.get("max_range", 400.0)
+	proj.spin_rate = 12.0  # rad/s, matches the previous _update_projectiles spin
+
+	var sprite := Sprite2D.new()
+	var sprite_path: String = item_data.get("sprite_path", "")
 	if sprite_path.is_empty():
-		var item_db_data = _lookup_any_item(item_id)
+		var item_db_data: Dictionary = _lookup_any_item(item_id)
 		sprite_path = item_db_data.get("sprite_path", "")
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
-		proj.texture = load(sprite_path)
+		sprite.texture = load(sprite_path)
 	else:
-		# Fallback: small colored square
-		var img = Image.create(12, 12, false, Image.FORMAT_RGBA8)
+		var img := Image.create(12, 12, false, Image.FORMAT_RGBA8)
 		img.fill(Color(0.7, 0.5, 0.3))
-		proj.texture = ImageTexture.create_from_image(img)
-
-	proj.global_position = proj_data["position"]
-	proj.rotation = proj_data["velocity"].angle() + PI / 2.0
-	proj.z_index = 50
-	# Scale sprite to match in-hand appearance:
-	# Weapons use total_length (same as WeaponShape._auto_scale_sprite)
-	# Other items use base_width (same as Item.scale_sprite)
-	if proj.texture:
-		var tex_size = proj.texture.get_size()
-		var max_dim = max(tex_size.x, tex_size.y)
+		sprite.texture = ImageTexture.create_from_image(img)
+	# Scale to match in-hand appearance: weapons use total_length (matches
+	# WeaponShape._auto_scale_sprite); other items use base_width (matches
+	# Item.scale_sprite).
+	if sprite.texture:
+		var tex_size: Vector2 = sprite.texture.get_size()
+		var max_dim: float = max(tex_size.x, tex_size.y)
 		if max_dim > 0:
 			var total_length = item_data.get("total_length", 0.0)
 			if total_length is float and total_length > 0:
-				# Weapon: scale longest dimension to total_length (matches in-hand)
-				var s = total_length / max_dim
-				proj.scale = Vector2(s, s)
+				var s: float = total_length / max_dim
+				sprite.scale = Vector2(s, s)
 			else:
-				# Non-weapon item: scale to base_width (matches world item)
-				var target_w = float(item_data.get("base_width", 16.0))
-				var s = target_w / max_dim
-				proj.scale = Vector2(s, s)
-	get_tree().current_scene.add_child(proj)
+				var target_w: float = float(item_data.get("base_width", 16.0))
+				var s: float = target_w / max_dim
+				sprite.scale = Vector2(s, s)
+	sprite.rotation = PI / 2.0
+	proj.add_child(sprite)
 
-	active_projectiles.append({
-		"node": proj,
-		"shooter": proj_data["shooter"],
-		"direction": proj_data["velocity"].normalized(),
-		"speed": proj_data["velocity"].length(),
-		"max_range": proj_data.get("max_range", 400.0),
-		"distance_traveled": 0.0,
-		"weapon": null,
-		"thrown_item_data": item_data,
-		"thrown_damage": proj_data.get("damage", {"bludgeoning": 2}),
-	})
+	proj.hit.connect(_on_thrown_projectile_hit.bind(item_id, thrown_damage))
+	proj.expired.connect(_on_thrown_projectile_expired.bind(item_id))
+
+	get_tree().current_scene.add_child(proj)
+	proj.launch(proj_data["position"], velocity_vec, proj_data["shooter"])
+
+
+func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary) -> void:
+	var collider := collision.get_collider()
+	var hit_pos: Vector2 = collision.get_position()
+	if collider is ProceduralCharacter:
+		if collider.is_alive():
+			var local_hit: Vector2 = collider.to_local(hit_pos)
+			var limb_type: int = collider.get_limb_at_position(local_hit, collider.body_width, collider.body_height)
+			collider.damage_limb(limb_type, thrown_damage.duplicate(), local_hit)
+		# Item drops at the hit point regardless of target liveness.
+		if not item_id.is_empty():
+			create_item(item_id, hit_pos)
+	elif collider != null:
+		if collider.has_method("take_damage"):
+			collider.take_damage(thrown_damage.duplicate(), 0)
+		if not item_id.is_empty():
+			create_item(item_id, hit_pos)
+		SfxManager.play("sword-fall", hit_pos)
+
+
+func _on_thrown_projectile_expired(final_position: Vector2, item_id: String) -> void:
+	if not item_id.is_empty():
+		create_item(item_id, final_position)
+	SfxManager.play("sword-fall", final_position)
 
 # ===== SELECTION CIRCLE DRAWER =====
 
@@ -1878,12 +1774,11 @@ func _create_warp_zones(warp_list: Array) -> void:
 		shape.shape = rect_shape
 		area.add_child(shape)
  
-		# Set collision to detect the player for proximity checks
+		# Warp zones are interacted with via right-click context menu, not by
+		# walking into them — input_pickable + input_event is the entire
+		# detection path, so no collision_layer/_mask is needed.
 		area.collision_layer = 0
-		area.collision_mask = 1  # Assumes player is on layer 1
-		# Warp zones are interacted with via right-click context menu,
-		# not by walking into them. The input manager detects clicks on
-		# Area2Ds and calls show_context_menu().
+		area.collision_mask = 0
 		area.input_pickable = true
 		area.input_event.connect(_on_warp_input.bind(area))
  
@@ -1968,9 +1863,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["crit_threshold_modifier"] = character.crit_threshold_modifier
 	state["crit_fail_modifier"] = character.crit_fail_modifier
 	state["speed_modifier"] = character.speed_modifier
- 
+
 	# --- Vitals ---
-	state["blood_amount"] = character.blood_amount
 	state["MP"] = character.MP
  
 	# --- Appearance ---
@@ -2118,7 +2012,6 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("speed_modifier"):        character.speed_modifier = state["speed_modifier"]
  
 	# --- Vitals ---
-	if state.has("blood_amount"): character.blood_amount = state["blood_amount"]
 	if state.has("MP"):           character.MP = state["MP"]
  
 	# --- Appearance ---

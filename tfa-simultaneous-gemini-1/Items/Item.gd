@@ -2,6 +2,12 @@
 extends AnimatableBody2D
 class_name Item
 
+# TODO(phase-b): switch to RigidBody2D with gravity_scale = 0 so items can be
+# moved by force fields and projectile impacts as part of the KE-based gameplay
+# pass. AnimatableBody2D is kinematic — forces don't affect it without a custom
+# velocity loop. The collision layer below stays the same; only the base class
+# changes.
+
 signal destroyed(item)
 signal health_changed(current_health, max_health, item)
 signal stack_changed(count, item)
@@ -48,8 +54,17 @@ var options: Array = []
 @onready var stack_label: RichTextLabel = $StackLabel
 
 var _grid_pos: Vector2i = Vector2i.ZERO
+var _cursor_active: bool = false
+
+const PICKUP_CURSOR_TEXTURE := preload("res://UI/pickup-cursor.png")
+# First-interact options that should swap the cursor to the pickup cursor while hovered.
+const _PICKUP_CURSOR_OPTIONS := ["Open", "Pickup"]
 
 func _ready():
+	# Items are walkable and don't block vision, but should be detectable by
+	# projectiles, force fields, and other items via the ITEMS layer.
+	collision_layer = CollisionLayers.ITEMS
+	collision_mask = CollisionLayers.ITEM_PHYSICS_MASK
 	_apply_item_data()
 	floating_text_label.visible = false
 	floating_text_label.z_index = 200
@@ -58,6 +73,27 @@ func _ready():
 	_grid_pos = GridManager.world_to_map(global_position)
 	global_position = GridManager.map_to_world(_grid_pos)
 	GridManager.register_object(_grid_pos, self)
+	# Enable mouse hover signals so we can swap the cursor for pickup-style items.
+	input_pickable = true
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+
+func _on_mouse_entered() -> void:
+	if options.size() > 0 and options[0] in _PICKUP_CURSOR_OPTIONS:
+		Input.set_custom_mouse_cursor(PICKUP_CURSOR_TEXTURE)
+		_cursor_active = true
+
+func _on_mouse_exited() -> void:
+	if _cursor_active:
+		Input.set_custom_mouse_cursor(null)
+		_cursor_active = false
+
+func _exit_tree() -> void:
+	# Reset the cursor if this item was the active hover target when freed —
+	# otherwise the pickup cursor would persist after the item disappears.
+	if _cursor_active:
+		Input.set_custom_mouse_cursor(null)
+		_cursor_active = false
 
 func _apply_item_data():
 	var data = _lookup_item_data()
@@ -118,9 +154,10 @@ func _apply_item_data():
 		for key_name in res_dict:
 			damage_resistances[key_name] = res_dict[key_name]
 
-	# Traits and options
+	# Traits and options. JSON uses "interact_options" as the canonical key;
+	# "options" is accepted as a legacy fallback.
 	traits = data.get("traits", {})
-	options = data.get("options", [])
+	options = data.get("interact_options", data.get("options", []))
 
 	# Size (equipment has base_width/base_height, others may not)
 	var w = float(data.get("base_width", 16.0))

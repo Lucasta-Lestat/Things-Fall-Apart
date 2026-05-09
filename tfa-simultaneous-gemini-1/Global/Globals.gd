@@ -30,11 +30,21 @@ const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(-45, 45)      # Wrist
 ]
 # === GLOBAL FUNCTIONS ===
-func show_floating_text(text: String, pos: Vector2, parent: Node):
-	var floating_text = FloatingTextScene.instantiate()
-	floating_text.text = text
-	floating_text.position = pos
-	parent.add_child(floating_text)
+func show_floating_text(text: String, world_pos: Vector2, parent: Node, color: Color = Color.WHITE, success_level: int = 0) -> void:
+	var ft := FloatingTextScene.instantiate()
+	parent.add_child(ft)
+	ft.setup(text, color, success_level, world_pos)
+
+func damage_color(damage_type: String) -> Color:
+	match damage_type:
+		"fire": return Color.CRIMSON
+		"electric": return Color.YELLOW
+		"cold": return Color.ALICE_BLUE
+		"acid": return Color.DARK_GREEN
+		"radiant": return Color.LIGHT_GOLDENROD
+		"necrotic": return Color.BLACK
+		"poison": return Color.BLUE_VIOLET
+		_: return Color.WHITE_SMOKE
 
 func clamp_to_screen(pos: Vector2, screen_size: Vector2) -> Vector2:
 	return Vector2(

@@ -16,6 +16,14 @@ const EVAPORATION_RATE = 0.01
 var flow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 var flow_speeds: Dictionary = {}  # Dictionary[Vector2i, float]
 
+# Average direction fluid moves AS IT ENTERS each tile (per most-recent sim tick).
+# Used by the shader to draw a directional fill front. Cleared each sim tick.
+var inflow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
+
+# Amount at which a tile is considered visually "full". Below this it renders
+# with a partial fill mask growing from the inflow side.
+const FULL_THRESHOLD: float = 0.5
+
 # Fluid data: Dictionary[Vector2i, Dictionary[String, float]]
 var fluid_grid: Dictionary = {}
 
@@ -28,9 +36,13 @@ var _fluid_db: Dictionary = {}
 # Condition application timer per fluid type per tile
 var _condition_timers: Dictionary = {}  # Dictionary[Vector2i, float]
 
+# Coalesce repeated edge-mask refresh requests within a frame
+var _edge_mask_update_pending: bool = false
+
 # Real-time fluid simulation
 var _sim_timer: float = 0.0
-const SIM_INTERVAL: float = 2.0  # Simulate flow every 2 seconds
+const SIM_INTERVAL: float = 0.5  # Simulate flow every 0.5 seconds (was 2.0).
+								 # Lower interval = more responsive fill animations.
 
 func _ready() -> void:
 	_load_fluid_database()
@@ -104,6 +116,20 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> void:
 	if amount <= 0:
 		return
+
+	# Overwrite: if a different fluid type currently occupies this tile, wipe it.
+	var existing_type = get_fluid_type_at(tile_pos)
+	var type_changed = not existing_type.is_empty() and existing_type != fluid_type
+	if type_changed:
+		fluid_grid[tile_pos] = {}
+		var old_visual = active_fluid_tiles.get(tile_pos)
+		if old_visual and not (old_visual is bool) and is_instance_valid(old_visual):
+			old_visual.queue_free()
+		active_fluid_tiles.erase(tile_pos)
+		flow_directions.erase(tile_pos)
+		flow_speeds.erase(tile_pos)
+		_condition_timers.erase(tile_pos)
+
 	if not fluid_grid.has(tile_pos):
 		fluid_grid[tile_pos] = {}
 	var is_new_tile = not fluid_grid[tile_pos].has(fluid_type) or fluid_grid[tile_pos].get(fluid_type, 0.0) < PUDDLE_HEIGHT
@@ -121,6 +147,9 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> vo
 
 	# Also update GridManager's fluids dict for pathfinding awareness
 	GridManager.fluids[tile_pos] = fluid_type
+
+	if type_changed:
+		_request_edge_mask_update()
 
 func get_fluid_amount(tile_pos: Vector2i, fluid_type: String) -> float:
 	if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
@@ -182,6 +211,10 @@ func update_fluid_simulation() -> void:
 	var flow_deltas: Dictionary = {}
 	flow_directions.clear()
 	flow_speeds.clear()
+	inflow_directions.clear()
+	# Accumulators for averaging inflow vectors across all sources per tile this tick.
+	var inflow_vectors: Dictionary = {}
+	var inflow_amounts: Dictionary = {}
 
 	var tiles_to_process = active_fluid_tiles.duplicate()
 
@@ -225,6 +258,14 @@ func update_fluid_simulation() -> void:
 						total_flow_vector += direction_to_neighbor * flow_amount
 						total_flow_amount += flow_amount
 
+						# direction_to_neighbor is the velocity of the fluid as it
+						# enters the neighbor — i.e., the neighbor's inflow direction.
+						if not inflow_vectors.has(neighbor_pos):
+							inflow_vectors[neighbor_pos] = Vector2.ZERO
+							inflow_amounts[neighbor_pos] = 0.0
+						inflow_vectors[neighbor_pos] += direction_to_neighbor * flow_amount
+						inflow_amounts[neighbor_pos] += flow_amount
+
 			if total_flow_amount > 0.0:
 				flow_directions[tile_pos] = total_flow_vector.normalized()
 				flow_speeds[tile_pos] = clamp(total_flow_amount / amount, 0.0, 1.0)
@@ -239,6 +280,13 @@ func update_fluid_simulation() -> void:
 					flow_deltas[tile_pos][fluid_type] = 0.0
 				flow_deltas[tile_pos][fluid_type] -= EVAPORATION_RATE
 
+	# Average and normalize per-tile inflow direction.
+	for pos in inflow_vectors.keys():
+		if inflow_amounts[pos] > 0.0:
+			var avg = inflow_vectors[pos] / inflow_amounts[pos]
+			if avg.length_squared() > 0.0001:
+				inflow_directions[pos] = avg.normalized()
+
 	apply_flow_deltas(flow_deltas)
 	update_water_tile_flows()
 	cleanup_inactive_tiles()
@@ -248,19 +296,22 @@ func apply_flow_deltas(flow_deltas: Dictionary) -> void:
 	for tile_pos in flow_deltas.keys():
 		for fluid_type in flow_deltas[tile_pos].keys():
 			var delta = flow_deltas[tile_pos][fluid_type]
-			if not fluid_grid.has(tile_pos):
-				fluid_grid[tile_pos] = {}
-			if not fluid_grid[tile_pos].has(fluid_type):
-				fluid_grid[tile_pos][fluid_type] = 0.0
-			fluid_grid[tile_pos][fluid_type] += delta
-			fluid_grid[tile_pos][fluid_type] = max(0.0, fluid_grid[tile_pos][fluid_type])
+			if delta > 0.0:
+				# Positive delta: route through register_fluid so type-overwrite,
+				# correct visual spawn, and GridManager.fluids stay consistent.
+				register_fluid(tile_pos, fluid_type, delta)
+			elif delta < 0.0:
+				# Negative delta: decrement existing amount of this exact type.
+				if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
+					var prev = fluid_grid[tile_pos][fluid_type]
+					var new_amount = max(0.0, prev + delta)
+					fluid_grid[tile_pos][fluid_type] = new_amount
+					if prev > PUDDLE_HEIGHT and new_amount <= PUDDLE_HEIGHT:
+						_request_edge_mask_update()
 
-			if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT and not active_fluid_tiles.has(tile_pos):
-				active_fluid_tiles[tile_pos] = true
-				spawn_fluid_tile(tile_pos, fluid_grid[tile_pos][fluid_type])
-
-			# Water flowing into a tile extinguishes fire
-			if fluid_type == FLUID_TYPE_WATER and fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
+			# Water present at this tile extinguishes fire
+			if fluid_type == FLUID_TYPE_WATER and fluid_grid.has(tile_pos) \
+					and fluid_grid[tile_pos].get(fluid_type, 0.0) > PUDDLE_HEIGHT:
 				var game = get_tree().get_first_node_in_group("game")
 				if not game:
 					game = get_tree().current_scene
@@ -316,12 +367,29 @@ func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float)
 			var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
 			fluid_node.set_fluid_colors(water_color, wave_color)
 
+	# Snap initial fill state so a freshly-spawned partial tile doesn't render
+	# at full opacity for a frame and then lerp down. inflow_directions has
+	# already been populated for this tick before apply_flow_deltas runs.
+	if fluid_node.has_method("snap_fill_state"):
+		fluid_node.snap_fill_state(amount / FULL_THRESHOLD, inflow_directions.get(grid_pos, Vector2.ZERO))
+
 	active_fluid_tiles[grid_pos] = fluid_node
 	# Defer edge mask update so all tiles in a batch are created first
-	call_deferred("update_edge_masks")
+	_request_edge_mask_update()
+
+func _request_edge_mask_update() -> void:
+	"""Coalesce edge-mask refreshes within a frame to avoid running update_edge_masks N times."""
+	if _edge_mask_update_pending:
+		return
+	_edge_mask_update_pending = true
+	call_deferred("_run_edge_mask_update")
+
+func _run_edge_mask_update() -> void:
+	_edge_mask_update_pending = false
+	update_edge_masks()
 
 func update_edge_masks() -> void:
-	"""Recompute edge masks for all active fluid tiles based on neighbor presence."""
+	"""Recompute edge masks for all active fluid tiles based on same-type neighbor presence."""
 	for tile_pos in active_fluid_tiles:
 		var fluid_node = active_fluid_tiles[tile_pos]
 		if not fluid_node or not is_instance_valid(fluid_node) or fluid_node is bool:
@@ -329,28 +397,48 @@ func update_edge_masks() -> void:
 		if not fluid_node.has_method("set_edge_mask"):
 			continue
 
-		# Check 4 cardinal neighbors for fluid presence
+		var my_type = get_fluid_type_at(tile_pos)
+		if my_type.is_empty():
+			continue
+
 		var right = Vector2i(tile_pos.x + 1, tile_pos.y)
 		var left = Vector2i(tile_pos.x - 1, tile_pos.y)
 		var bottom = Vector2i(tile_pos.x, tile_pos.y + 1)
 		var top = Vector2i(tile_pos.x, tile_pos.y - 1)
 
+		var right_open = not _has_compatible_fluid_at(right, my_type)
+		var left_open = not _has_compatible_fluid_at(left, my_type)
+		var bottom_open = not _has_compatible_fluid_at(bottom, my_type)
+		var top_open = not _has_compatible_fluid_at(top, my_type)
+
 		var mask = Vector4(
-			0.0 if _has_fluid_at(right) else 1.0,  # right exposed
-			0.0 if _has_fluid_at(left) else 1.0,   # left exposed
-			0.0 if _has_fluid_at(bottom) else 1.0,  # bottom exposed
-			0.0 if _has_fluid_at(top) else 1.0      # top exposed
+			1.0 if right_open else 0.0,
+			1.0 if left_open else 0.0,
+			1.0 if bottom_open else 0.0,
+			1.0 if top_open else 0.0
 		)
 		fluid_node.set_edge_mask(mask)
 
-func _has_fluid_at(tile_pos: Vector2i) -> bool:
-	"""Check if there's meaningful fluid at a tile position."""
+		# Inside-corner fade: when both adjacent edges have neighbors but the diagonal
+		# is missing, the corner pixel would otherwise stick out into the gap.
+		var tr_diag = Vector2i(tile_pos.x + 1, tile_pos.y - 1)
+		var tl_diag = Vector2i(tile_pos.x - 1, tile_pos.y - 1)
+		var bl_diag = Vector2i(tile_pos.x - 1, tile_pos.y + 1)
+		var br_diag = Vector2i(tile_pos.x + 1, tile_pos.y + 1)
+		var corner_mask = Vector4(
+			1.0 if not right_open and not top_open and not _has_compatible_fluid_at(tr_diag, my_type) else 0.0,
+			1.0 if not left_open and not top_open and not _has_compatible_fluid_at(tl_diag, my_type) else 0.0,
+			1.0 if not left_open and not bottom_open and not _has_compatible_fluid_at(bl_diag, my_type) else 0.0,
+			1.0 if not right_open and not bottom_open and not _has_compatible_fluid_at(br_diag, my_type) else 0.0
+		)
+		if fluid_node.has_method("set_corner_mask"):
+			fluid_node.set_corner_mask(corner_mask)
+
+func _has_compatible_fluid_at(tile_pos: Vector2i, fluid_type: String) -> bool:
+	"""True only if neighbor has the same fluid type with > PUDDLE_HEIGHT amount."""
 	if not fluid_grid.has(tile_pos):
 		return false
-	for fluid_type in fluid_grid[tile_pos]:
-		if fluid_grid[tile_pos][fluid_type] > PUDDLE_HEIGHT:
-			return true
-	return false
+	return fluid_grid[tile_pos].get(fluid_type, 0.0) > PUDDLE_HEIGHT
 
 func spawn_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 	register_fluid(grid_pos, "water", water_amount)
@@ -372,6 +460,7 @@ func remove_fluid_tile(grid_pos: Vector2i) -> void:
 	flow_directions.erase(grid_pos)
 	flow_speeds.erase(grid_pos)
 	_condition_timers.erase(grid_pos)
+	_request_edge_mask_update()
 
 func clear_all_water_tiles() -> void:
 	for pos in active_fluid_tiles.keys():
@@ -450,6 +539,12 @@ func update_water_tile_flows() -> void:
 			var flow_dir = flow_directions.get(grid_pos, Vector2.ZERO)
 			var flow_speed = flow_speeds.get(grid_pos, 0.0)
 			water_tile.set_flow_direction(flow_dir, flow_speed)
-			var water_amount = get_fluid_amount(grid_pos, FLUID_TYPE_WATER)
-			if water_amount > 0:
-				water_tile.set_water_depth(water_amount)
+			var fluid_type = get_fluid_type_at(grid_pos)
+			if not fluid_type.is_empty():
+				var amount = get_fluid_amount(grid_pos, fluid_type)
+				if amount > 0:
+					water_tile.set_water_depth(amount)
+				if water_tile.has_method("set_fill_ratio"):
+					water_tile.set_fill_ratio(clamp(amount / FULL_THRESHOLD, 0.0, 1.0))
+			if water_tile.has_method("set_inflow_direction"):
+				water_tile.set_inflow_direction(inflow_directions.get(grid_pos, Vector2.ZERO))

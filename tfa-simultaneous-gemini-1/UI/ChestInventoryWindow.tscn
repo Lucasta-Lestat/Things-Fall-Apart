@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://b1chestinvwin01"]
+
+[ext_resource type="Script" path="res://UI/ChestInventoryWindow.gd" id="1_chestinv"]
+
+[node name="ChestInventoryWindow" type="PanelContainer"]
+mouse_filter = 0
+script = ExtResource("1_chestinv")

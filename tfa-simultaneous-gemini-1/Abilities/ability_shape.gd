@@ -3,7 +3,7 @@ extends Node2D
 class_name AbilityShape
 
 # Matches your AbilityTargeting enum strings
-enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE }
+enum AbilityTargetShape { NONE, CIRCLE, RECTANGLE, LINE, CONE, CHARACTERS }
 
 @export_group("Identity")
 @export var ability_id: String = "fireball_shape"
@@ -31,7 +31,12 @@ var _active_visual: Node2D
 
 func _ready() -> void:
 	if visual_scene:
-		_active_visual = visual_scene.instantiate()
+		var instance = visual_scene.instantiate()
+		if not instance is Node2D:
+			push_warning("AbilityShape '%s': visual_scene root must be Node2D (got %s) — skipping in-hand visual." % [ability_id, instance.get_class()])
+			instance.queue_free()
+			return
+		_active_visual = instance
 		add_child(_active_visual)
 		activate_visuals(true)
 
@@ -66,11 +71,14 @@ func get_ability_data() -> Dictionary:
 		AbilityTargetShape.RECTANGLE: shape_str = "rectangle"
 		AbilityTargetShape.LINE: shape_str = "line"
 		AbilityTargetShape.CONE: shape_str = "cone"
-	
+		AbilityTargetShape.CHARACTERS: shape_str = "characters"
+
 	# We construct the specific targeting block expected by the system
 	# Pull range from raw targeting data
-	var ability_range = raw_data.get("targeting", {}).get("range", 500.0)
-	var ability_angle = raw_data.get("targeting", {}).get("angle", 45.0)
+	var raw_targeting = raw_data.get("targeting", {})
+	var ability_range = raw_targeting.get("range", 500.0)
+	var ability_angle = raw_targeting.get("angle", 45.0)
+	var ability_target_type = raw_targeting.get("type", "point")
 	var targeting_override = {
 		"shape": shape_str,
 		"radius": target_radius,
@@ -79,6 +87,9 @@ func get_ability_data() -> Dictionary:
 		"angle": ability_angle,
 		"requires_targeting": requires_targeting,
 		"target_shape": shape_str,
+		"target_type": ability_target_type,
+		"target_count": raw_targeting.get("target_count", 1),
+		"target_filter": raw_targeting.get("target_filter", "any"),
 	}
 	
 	#
@@ -100,13 +111,20 @@ func setup_from_database(data: Dictionary) -> void:
 		# Load the particle scene dynamically
 		visual_scene = load(vfx_path)
 		if visual_scene:
-			# Instantiate immediately for the equipment system
-			_active_visual = visual_scene.instantiate()
-			add_child(_active_visual)
-			# Scale down for in-hand display (configurable per ability, default 0.25)
-			var in_hand_scale = visuals.get("in_hand_scale", 0.25)
-			_active_visual.scale = Vector2(in_hand_scale, in_hand_scale)
-			activate_visuals(false) # Start turned off
+			# Instantiate and validate root type — in-hand visuals must follow the
+			# character via Node2D transform. Full-screen overlays (CanvasLayer)
+			# would crash the typed assignment below and be visually wrong.
+			var instance = visual_scene.instantiate()
+			if not instance is Node2D:
+				push_warning("Ability '%s': in_hand_effect '%s' must have Node2D root (got %s) — skipping." % [ability_id, vfx_path, instance.get_class()])
+				instance.queue_free()
+			else:
+				_active_visual = instance
+				add_child(_active_visual)
+				# Scale down for in-hand display (configurable per ability, default 0.25)
+				var in_hand_scale = visuals.get("in_hand_scale", 0.25)
+				_active_visual.scale = Vector2(in_hand_scale, in_hand_scale)
+				activate_visuals(false) # Start turned off
 
 	# 3. Targeting Configuration
 	var targeting = data.get("targeting", {})
@@ -117,6 +135,7 @@ func setup_from_database(data: Dictionary) -> void:
 		"rectangle": target_shape = AbilityTargetShape.RECTANGLE
 		"line": target_shape = AbilityTargetShape.LINE
 		"cone": target_shape = AbilityTargetShape.CONE
+		"characters": target_shape = AbilityTargetShape.CHARACTERS
 		_: target_shape = AbilityTargetShape.NONE
 		
 	target_radius = targeting.get("radius", 50.0)

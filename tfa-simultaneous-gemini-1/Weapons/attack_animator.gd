@@ -48,9 +48,13 @@ var animated_right_arm_offset: Vector2:
 var animated_left_arm_offset: Vector2:
 	get: return animated_arm_offset if character.current_hand == "Off" else Vector2.ZERO
 
-var knockback_velocity: Vector2 = Vector2.ZERO
-var knockback_friction: float = 150.0
-var knockback_active: bool = false
+# Knockback state lives on ProceduralCharacter — see apply_external_force /
+# _update_knockback. push_character below routes through that API.
+
+# WeaponShape whose hitbox is currently active for the in-progress swing.
+# Tracked across the swing so _finish_attack and interrupt_attack can find
+# it without re-resolving the active hand or current_*_hand_item.
+var _active_hitbox_weapon: WeaponShape = null
 
 # ===== SECOND ORDER DYNAMICS =====
 # Spring-damper system for realistic motion with overshoot and settling
@@ -177,10 +181,6 @@ func _init_dynamics() -> void:
 	off_arm_dynamics = SecondOrderDynamics.new(8.0, 0.6, 1.5, Vector2.ZERO)
 
 func _process(delta: float) -> void:
-	if knockback_active:
-		_update_knockback_physics(delta)
-		return
-
 	if current_state == AttackState.IDLE:
 		return
 	
@@ -219,6 +219,13 @@ func start_attack(damage_type: String, direction: Vector2 = Vector2.UP, hand: St
 
 	# Detect two-handed weapon
 	is_two_handed_attack = weapon != null and weapon is WeaponShape and weapon.is_two_handed()
+
+	# Activate the weapon's Area2D hitbox for the swing. Skipped for ranged
+	# weapons (bow, pistol) which use the projectile system.
+	_disable_active_hitbox()
+	if weapon is WeaponShape and weapon.is_melee() and weapon.hitbox:
+		weapon.hitbox.monitoring = true
+		_active_hitbox_weapon = weapon
 
 	weight = max(0.1, weight)
 	var speed_multiplier = clamp((character.dexterity / 100.0) / (weight / 4.0), 0.4, 3.0)
@@ -260,6 +267,7 @@ func get_weapon_for_appropriate_hand():
 	return weapon
 	
 func _finish_attack() -> void:
+	_disable_active_hitbox()
 	current_state = AttackState.IDLE
 	attack_timer = 0.0
 	_reset_offsets()
@@ -270,35 +278,27 @@ func _finish_attack() -> void:
 	is_attacking = false
 	emit_signal("attack_finished")
 
+func _disable_active_hitbox() -> void:
+	if _active_hitbox_weapon and is_instance_valid(_active_hitbox_weapon) and _active_hitbox_weapon.hitbox:
+		_active_hitbox_weapon.hitbox.monitoring = false
+	_active_hitbox_weapon = null
+
 # ===== FEEDBACK FUNCTIONS =====
 
 func push_character(direction: Vector2, force: float) -> void:
+	"""Apply melee-style knockback. `force` is a generic strength scalar that
+	is scaled down by character weight. Routes to character.apply_external_force
+	so the knockback mechanism is unified with non-melee forces."""
 	interrupt_attack()
-	knockback_active = true
-
-	var char_weight: float = 70.0
-	if "weight" in character:
-		char_weight = float(character.weight)
-
-	char_weight = max(1.0, char_weight)
-
-	var impulse_speed = force / char_weight
-	var game_unit_multiplier = 50.0 
-	knockback_velocity = direction.normalized() * (impulse_speed * game_unit_multiplier)
-
-	if character is CharacterBody2D:
-		character.velocity = knockback_velocity
-
-func _update_knockback_physics(delta: float) -> void:
-	if knockback_velocity.length() > 0:
-		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
-		
-		if character is CharacterBody2D:
-			character.velocity = knockback_velocity
-			character.move_and_slide()
-	else:
-		knockback_active = false
-		knockback_velocity = Vector2.ZERO
+	if not character.has_method("apply_external_force"):
+		return
+	var char_weight: float = max(1.0, float(character.weight) if "weight" in character else 70.0)
+	var impulse_speed: float = force / char_weight
+	var game_unit_multiplier: float = 50.0
+	var force_vector: Vector2 = direction.normalized() * (impulse_speed * game_unit_multiplier)
+	# Integrate over a unit second so the resulting knockback_velocity matches
+	# the previous direct-velocity formulation.
+	character.apply_external_force(force_vector, 1.0)
 
 # attack_animator.gd
 
@@ -655,15 +655,33 @@ func _second_order_float(from: float, to: float, t: float) -> float:
 
 # ===== UTILS =====
 
+# Awaits the next attack_hit_frame, returning true if it fired naturally,
+# or false if the attack ended (interrupted or otherwise) before the hit frame.
+# Use this instead of `await attack_hit_frame` directly so callers don't orphan
+# their coroutine when interrupt_attack() fires before the hit frame.
+func await_hit_frame_or_end() -> bool:
+	var hit_received: Array[bool] = [false]
+	var handler := func(_hand): hit_received[0] = true
+	attack_hit_frame.connect(handler, CONNECT_ONE_SHOT)
+	while is_attacking and not hit_received[0]:
+		await get_tree().process_frame
+	if attack_hit_frame.is_connected(handler):
+		attack_hit_frame.disconnect(handler)
+	return hit_received[0]
+
 func interrupt_attack() -> void:
-	if current_state != AttackState.IDLE:
+	if current_state != AttackState.IDLE or is_attacking or is_casting:
+		_disable_active_hitbox()
 		current_state = AttackState.IDLE
 		attack_timer = 0.0
 		_reset_offsets()
-		
+		is_two_handed_attack = false
+		is_attacking = false
+		is_casting = false
+
 		if combat_manager and character is ProceduralCharacter:
 			combat_manager.register_attack_end(character)
-		
+
 		emit_signal("attack_finished")
 
 func _reset_offsets() -> void:
@@ -724,4 +742,6 @@ func get_body_rotation() -> float:
 	return animated_body_rotation
 
 func get_knockback_velocity() -> Vector2:
-	return knockback_velocity
+	if "knockback_velocity" in character:
+		return character.knockback_velocity
+	return Vector2.ZERO

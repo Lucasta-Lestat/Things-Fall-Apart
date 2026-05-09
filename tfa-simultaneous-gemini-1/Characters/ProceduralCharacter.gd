@@ -9,7 +9,7 @@ var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-var traits = {"Male":1}
+var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
 var is_protagonist = false
@@ -20,12 +20,21 @@ var dialogues: Array = []
 var current_dialogue_index: int = 0
 var interact_options: Array = ["Inspect"]
 
+# Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
+# is shown above the speaker name in dialogue. The first title is the primary.
+var titles: Array = []
+
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
+const DEATH_MARKER_TEXTURE_PATH := "res://Items/tombstone.png"
+
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
-var _throw_reticle_line: Line2D = null
+var pending_dash: bool = false
+var _aim_line: AimLine = null
+
+var _death_marker: Sprite2D = null
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -176,6 +185,9 @@ func _main_hand_is_two_handed() -> bool:
 var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
+# Time the character has been blocked against a wall while is_moving; once it
+# exceeds the threshold, _update_movement gives up so the action queue advances.
+var _movement_stuck_time: float = 0.0
 # Waypoint-based pathfinding for real-time movement
 var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
@@ -185,6 +197,23 @@ var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 var is_ice_sliding: bool = false
 var _ice_slide_direction: Vector2 = Vector2.ZERO
 var _ice_slide_speed: float = 0.0
+
+# Knockback / external force state. apply_external_force integrates force over
+# its duration into knockback_velocity; _update_knockback drains it via
+# friction each frame and overrides regular movement until it reaches zero.
+var knockback_velocity: Vector2 = Vector2.ZERO
+var knockback_friction: float = 150.0
+var knockback_active: bool = false
+
+# Scripted dash state (ability move_to_target). Drives velocity through
+# move_and_slide so the dash respects walls instead of phasing through them.
+var _dash_motion_active: bool = false
+var _dash_motion_dir: Vector2 = Vector2.ZERO
+var _dash_motion_speed: float = 0.0
+var _dash_motion_remaining: float = 0.0
+var _dash_motion_max_time: float = 0.0
+var _dash_motion_elapsed: float = 0.0
+var _dash_motion_on_complete: Callable
 
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
@@ -307,6 +336,8 @@ func effective_crit_fail_threshold() -> float:
 var speed_modifier: float = 0.0
 var arm_length: float = 0.0
 var race_id: String = ""
+var creature_type: String = "Humanoid"
+var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
@@ -332,22 +363,16 @@ var conditions = {}
 @onready var condition_manager: ConditionManager = $ConditionManager
 # Derived stats (calculated from attributes)
 
-var max_blood_amount = max_hp
-var blood_amount = max_hp
-
 # --- Update your existing getters to use effective values ---
 
 var max_hp: int:
 	get: return 6 + int(effective_constitution()) / 10
 
 var max_MP: int:
-	get: return int(effective_will()) * consciousness
+	get: return int(effective_will())
 
 var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
-
-var consciousness: int:
-	get: return blood_amount + int(effective_will())
 
 var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
@@ -402,6 +427,7 @@ var collision_radius: float:
 @export var minimum_separation: float = 5.0  # Extra buffer between characters
 var collision_shape: CollisionShape2D
 var collision_area: Area2D
+var body_collision_shape: CollisionShape2D
 
 const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 var targeting_system: Node2D
@@ -561,24 +587,13 @@ func _clear_tactical_path_if_executing() -> void:
 
 func start_throw_targeting(item_index: int, item_data: Dictionary) -> void:
 	pending_throw = {"item_index": item_index, "item_data": item_data}
-	# Create a simple line reticle from character to mouse
-	if _throw_reticle_line == null:
-		_throw_reticle_line = Line2D.new()
-		_throw_reticle_line.width = 1.5
-		_throw_reticle_line.default_color = Color(1, 1, 1, 0.5)
-		_throw_reticle_line.z_index = 45
-		_throw_reticle_line.top_level = true
-		_throw_reticle_line.process_mode = Node.PROCESS_MODE_ALWAYS
-		add_child(_throw_reticle_line)
-	_throw_reticle_line.visible = true
-	_throw_reticle_line.clear_points()
-	_throw_reticle_line.add_point(global_position)
-	_throw_reticle_line.add_point(global_position)
+	_ensure_aim_line()
+	_aim_line.default_color = Color(1, 1, 1, 0.5)
+	_aim_line.show_aim(global_position, global_position, 0)
 
 func _update_throw_reticle(mouse_pos: Vector2) -> void:
-	if _throw_reticle_line and _throw_reticle_line.visible:
-		_throw_reticle_line.set_point_position(0, global_position)
-		_throw_reticle_line.set_point_position(1, mouse_pos)
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, 0)
 
 func _execute_pending_throw(mouse_pos: Vector2) -> void:
 	var item_index = pending_throw.get("item_index", -1)
@@ -613,11 +628,48 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 
 func _cancel_pending_throw() -> void:
 	pending_throw = {}
-	_hide_throw_reticle()
+	_hide_aim_line()
 
 func _hide_throw_reticle() -> void:
-	if _throw_reticle_line:
-		_throw_reticle_line.visible = false
+	_hide_aim_line()
+
+# --- Dash targeting helpers (mirror the throw flow) ---
+
+func start_dash_targeting() -> void:
+	"""Enter dash-targeting mode. Aim line follows the cursor (truncated at the
+	first wall, clamped to get_dash_range()) until the player commits with
+	left-click or cancels with right-click / escape / shift."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
+		return
+	pending_dash = true
+	_ensure_aim_line()
+	# Yellow-tinted to distinguish from throw aim.
+	_aim_line.default_color = Color(1.0, 0.85, 0.3, 0.6)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, get_dash_range())
+
+func _update_dash_reticle(mouse_pos: Vector2) -> void:
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, get_dash_range())
+
+func _execute_pending_dash(mouse_pos: Vector2) -> void:
+	pending_dash = false
+	_hide_aim_line()
+	dash(mouse_pos)
+
+func _cancel_pending_dash() -> void:
+	pending_dash = false
+	_hide_aim_line()
+
+# --- Shared AimLine plumbing ---
+
+func _ensure_aim_line() -> void:
+	if _aim_line == null:
+		_aim_line = AimLine.new()
+		add_child(_aim_line)
+
+func _hide_aim_line() -> void:
+	if _aim_line:
+		_aim_line.hide_aim()
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -698,19 +750,34 @@ func _setup_attack_system() -> void:
 func _setup_collision() -> void:
 	if not collision_enabled:
 		return
-	
-	# Create Area2D for collision detection
-	collision_area = Area2D.new()
-	collision_area.name = "CollisionArea"
-	collision_area.collision_layer = 2  # Character collision layer
-	collision_area.collision_mask = 2   # Detect other characters
-	add_child(collision_area)
-	
-	# Create polygon collision shape based on body dimensions
-	collision_shape = CollisionShape2D.new()
-	collision_shape.name = "CollisionShape"
+
+	# Body-level collision: structures block movement (move_and_slide), and
+	# other physics queries (projectiles, raycasts) can hit this body.
+	# Char-on-char remains the soft Area2D separation below — Phase B will
+	# revisit this if hard char-on-char collision is desired.
+	collision_layer = CollisionLayers.CHARACTERS
+	collision_mask = CollisionLayers.STRUCTURES
+
+	# Shared shape resource: one ConvexPolygonShape2D backs both the body and
+	# the Area2D, so _update_collision_shape() mutating .points keeps them in
+	# sync automatically.
 	var polygon = ConvexPolygonShape2D.new()
 	polygon.points = _get_body_collision_points()
+
+	body_collision_shape = CollisionShape2D.new()
+	body_collision_shape.name = "BodyShape"
+	body_collision_shape.shape = polygon
+	add_child(body_collision_shape)
+
+	# Area2D for soft character-on-character separation (the existing system).
+	collision_area = Area2D.new()
+	collision_area.name = "CollisionArea"
+	collision_area.collision_layer = CollisionLayers.CHARACTERS
+	collision_area.collision_mask = CollisionLayers.CHARACTERS
+	add_child(collision_area)
+
+	collision_shape = CollisionShape2D.new()
+	collision_shape.name = "CollisionShape"
 	collision_shape.shape = polygon
 	collision_area.add_child(collision_shape)
 
@@ -932,14 +999,18 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var damage_amount = result["damage"]
 		var damage_type = result.get("damage_type", "true")
 		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
-		
+		# Bleeding always wears down the torso, regardless of which limb the
+		# wound is on — death from blood loss is just torso HP reaching 0.
+		if instance.condition and instance.condition.id == "bleeding":
+			limb_type = LimbType.TORSO
+
 		# Build damage dict matching your damage_limb format
 		var damage_dict = {damage_type: damage_amount}
 		
 		# Use global position as fallback for visual location
 		var hit_location = global_position
 		damage_limb(limb_type, damage_dict, hit_location)
-		is_alive()  # Check death
+		_check_death()
 	
 	if result.has("heal"):
 		var heal_amount = result["heal"]
@@ -995,12 +1066,11 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
 	# Each tick of the bleeding condition drops a small amount of blood fluid
 	# on the victim's current tile. Amount scales with bleed stacks (tier).
+	# Damage is handled by the bleeding condition's separate "damage"
+	# triggered_effect (routed to the torso in _on_triggered_effect_fired).
 	var base_amount: float = data.get("amount", 0.05)
 	var stacks: int = instance.stacks if instance else 1
 	var amount: float = base_amount * float(max(1, stacks))
-
-	# Also leak a bit from the overall blood reserve for consciousness/death checks.
-	blood_amount = max(0, blood_amount - stacks)
 
 	var my_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
@@ -1063,18 +1133,13 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 	return {"success": false}
 
 func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Hitch: two targets in the area become infatuated with each other."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Hitch: the two chosen characters become infatuated with each other."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Hitch!")
 		return {"success": false}
-	# Pick the two closest to the center
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1085,18 +1150,13 @@ func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector
 	return {"success": true}
 
 func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Fatal Attraction: two targets become infatuated and their fates are linked."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Fatal Attraction: the two chosen characters become infatuated and their fates are linked."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Fatal Attraction!")
 		return {"success": false}
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
-	# Apply infatuation
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1107,6 +1167,25 @@ func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_posit
 		cm_b.apply_condition("fatal_attraction", target_a, 1)
 	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
 	return {"success": true}
+
+func _validate_pair_targets(targets: Array) -> Array:
+	"""Return the first two valid, alive, non-self ProceduralCharacters in `targets`, or [] if there aren't two."""
+	var valid: Array = []
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		if not (target is ProceduralCharacter):
+			continue
+		if target == self:
+			continue
+		if target.has_method("is_alive") and not target.is_alive():
+			continue
+		valid.append(target)
+		if valid.size() == 2:
+			break
+	if valid.size() < 2:
+		return []
+	return valid
 
 
 func _process_condition_movement_overrides(delta: float) -> void:
@@ -2472,13 +2551,23 @@ func cast_ability(ability: AbilityShape):
 	# 2. Trigger Animation (Straight arm push)
 	attack_animator.start_cast()
 
-	# 3. Wait for hit frame (via signal) to spawn actual projectile
-	await attack_animator.attack_hit_frame
+	# 3. Wait for hit frame (via signal) to spawn actual projectile.
+	# If the cast was interrupted (knockback, stagger, etc.) the hit frame
+	# never fires — bail out with cleanup so the coroutine doesn't orphan
+	# and resume on a future cast's hit_frame.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		ability.activate_visuals(false)
+		targeting_system._end_targeting()
+		return
 
 	# 4. Execute Logic (Spawn fireball, etc)
-	
+
 	# 5. Cleanup Visuals
-	await attack_animator.attack_finished
+	# interrupt_attack() also emits attack_finished, so this resolves on both
+	# natural completion and interruption mid-recovery.
+	if attack_animator.is_attacking:
+		await attack_animator.attack_finished
 	ability.activate_visuals(false)
 	targeting_system._end_targeting()
 
@@ -2525,8 +2614,26 @@ func _handle_input() -> void:
 			return
 		return  # Block all other input while throw targeting
 
+	# --- Dash targeting mode ---
+	if pending_dash:
+		_update_dash_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_dash(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("dash"):
+			_cancel_pending_dash()
+			return
+		return  # Block all other input while dash targeting
+
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
+		# Probe for a context-menu target (chest in world, non-hostile NPC).
+		# If hit, open menu instead of firing off-hand. Hostile NPCs and empty
+		# space fall through to the existing off-hand attack.
+		var ctx_target = _find_context_menu_target_at(mouse_pos)
+		if ctx_target != null and game:
+			game.show_context_menu(ctx_target, get_viewport().get_mouse_position())
+			return
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
 
@@ -2594,13 +2701,53 @@ func _handle_input() -> void:
 		if paused:
 			action_queue.queue_dash(mouse_pos)
 		else:
-			dash(mouse_pos)
+			# Enter the dash-targeting mode handled above; the targeting block
+			# itself listens for the click that commits the dash.
+			start_dash_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
+## Probe the world at mouse_pos for a right-click context-menu target. Returns the
+## first Item or non-hostile ProceduralCharacter under the cursor, or null.
+## Hostile characters and empty space return null so the existing right-click
+## (off-hand attack) flow continues.
+func _find_context_menu_target_at(world_pos: Vector2) -> Node:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS
+	# exclude expects an Array[RID], not a node — use this character's body RID.
+	query.exclude = [self.get_rid()]
+	var hits = space.intersect_point(query, 8)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider == null:
+			continue
+		if collider is Item:
+			return collider
+		if collider is ProceduralCharacter and collider != self:
+			# Only non-hostile NPCs get a context menu; hostile characters
+			# fall through to the off-hand attack path. We check vs the player
+			# faction (not the controlling character's own faction) so the
+			# decision matches show_context_menu's Trade injection — the menu
+			# represents the party's perspective, not an individual member's.
+			if not FactionDatabase.are_enemies("player", collider.faction_id):
+				return collider
+	return null
+
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
 	if targeting_system.is_targeting:
 		if targeting_system.current_hand == hand:
-			# 2nd click: confirm the target and cast
+			# Character-targeting mode: every click picks/toggles a character
+			# until N are selected (auto-confirm fires the targeting_confirmed
+			# signal, which is handled below in _on_targeting_confirmed).
+			if targeting_system.target_shape == targeting_system.TargetShape.CHARACTERS:
+				targeting_system._handle_character_click(mouse_pos)
+				return
+			# AoE shapes: 2nd click confirms the target and casts
 			_confirm_ability_target(paused)
 		else:
 			# Clicked the other hand while targeting — cancel current targeting
@@ -2620,6 +2767,8 @@ func _confirm_ability_target(paused: bool) -> void:
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
+	var explicit_targets: Array = result.get("targets", [])
+	var is_character_mode = result.get("shape") == targeting_system.TargetShape.CHARACTERS
 
 	# Face the target when confirming an ability
 	target_rotation = (target_pos - global_position).angle() + PI / 2
@@ -2627,23 +2776,29 @@ func _confirm_ability_target(paused: bool) -> void:
 	if paused:
 		# End targeting — queued indicator takes over the visual role
 		targeting_system.end_targeting()
-		action_queue.queue_ability(ability_id, target_pos)
+		action_queue.queue_ability(ability_id, target_pos, explicit_targets)
 
-		# Create persistent ghost indicator for the queued ability
-		targeting_system.create_queued_indicator(
-			target_pos,
-			result.get("shape"),
-			result.get("radius", 0),
-			result.get("size", Vector2.ZERO),
-			result.get("rotation", 0.0),
-			result.get("caster_position", global_position)
-		)
+		if not is_character_mode:
+			# Create persistent ghost indicator for the queued ability
+			targeting_system.create_queued_indicator(
+				target_pos,
+				result.get("shape"),
+				result.get("radius", 0),
+				result.get("size", Vector2.ZERO),
+				result.get("rotation", 0.0),
+				result.get("caster_position", global_position)
+			)
 	else:
 		# Keep the targeting indicator visible until the ability actually lands.
 		# Disable interactivity but preserve the visual preview.
-		targeting_system.is_targeting = false
+		# For character-targeting we end immediately — the chosen targets are
+		# locked in and there's no AoE preview to hold open.
+		if is_character_mode:
+			targeting_system.end_targeting()
+		else:
+			targeting_system.is_targeting = false
 		var ability_obj = Ability.from_dict(ability_data)
-		use_ability(ability_obj, {"position": target_pos})
+		use_ability(ability_obj, {"position": target_pos, "targets": explicit_targets})
 
 
 func _update_movement(delta: float) -> void:
@@ -2663,6 +2818,16 @@ func _update_movement(delta: float) -> void:
 		_update_ice_slide(delta)
 		return
 
+	# --- Knockback / external force override ---
+	if knockback_active:
+		_update_knockback(delta)
+		return
+
+	# --- Scripted dash override (ability move_to_target) ---
+	if _dash_motion_active:
+		_update_dash_motion(delta)
+		return
+
 	# Move toward target if moving
 	if is_moving:
 		var to_target = target_position - global_position
@@ -2670,10 +2835,28 @@ func _update_movement(delta: float) -> void:
 
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
-			global_position += move_dir * min(move_speed * delta, distance)
+			velocity = move_dir * move_speed
+			var prev_pos := global_position
+			move_and_slide()
+			# If we are pressed against a wall and made no real progress for
+			# longer than a short threshold, abandon the move so the action
+			# queue (whose MOVE-complete check reads is_moving) can advance.
+			var actual_motion := (global_position - prev_pos).length()
+			if is_on_wall() and actual_motion < 0.5:
+				_movement_stuck_time += delta
+				if _movement_stuck_time > 0.5:
+					_movement_stuck_time = 0.0
+					_nav_waypoints.clear()
+					_nav_index = 0
+					is_moving = false
+					emit_signal("character_reached_target")
+					return
+			else:
+				_movement_stuck_time = 0.0
 			# Check if we just stepped onto an ice tile
 			_check_ice_entry(move_dir)
 		else:
+			_movement_stuck_time = 0.0
 			# If the action queue is driving movement, let it handle waypoint
 			# advancement — don't use _nav_waypoints which are for real-time input only
 			if action_queue and action_queue.current_action != null:
@@ -2722,24 +2905,18 @@ func _begin_ice_slide(direction: Vector2) -> void:
 	if action_queue and action_queue.current_action != null:
 		action_queue.clear_queue()
 
-func _update_ice_slide(delta: float) -> void:
-	"""Move the character in a straight line while on ice. Stops when reaching
-	a non-ice tile or hitting a wall."""
-	var step = _ice_slide_direction * _ice_slide_speed * delta
-	var next_pos = global_position + step
-	var next_tile = GridManager.world_to_map(next_pos)
-
-	# Check for walls
-	if GridManager.walls.get(next_tile, true):
+func _update_ice_slide(_delta: float) -> void:
+	"""Move the character in a straight line while on ice. Stops on hitting a
+	wall (via physics) or on reaching a non-ice tile."""
+	velocity = _ice_slide_direction * _ice_slide_speed
+	move_and_slide()
+	if is_on_wall():
 		_end_ice_slide()
 		return
-
-	global_position = next_pos
-
-	# Check if we've left the ice
+	var current_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
 	if game and "surface_manager" in game and game.surface_manager:
-		if not game.surface_manager.is_ice_at(next_tile):
+		if not game.surface_manager.is_ice_at(current_tile):
 			_end_ice_slide()
 
 func _end_ice_slide() -> void:
@@ -2749,6 +2926,78 @@ func _end_ice_slide() -> void:
 	_ice_slide_speed = 0.0
 	is_moving = false
 	emit_signal("character_reached_target")
+
+## Defensive cap on knockback velocity. Prevents runaway acceleration from
+## per-frame force fields (e.g. INVERSE_SQUARE near a singularity) launching
+## characters off the map at thousands of pixels per frame. Tuned for
+## visible-but-bounded knockback distance under knockback_friction=150.
+const MAX_KNOCKBACK_SPEED: float = 800.0
+
+func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
+	"""Canonical entry point for non-melee force application (force fields,
+	ability knockbacks, etc.). Integrates `force` over `duration` seconds
+	into knockback_velocity; the knockback update loop drains it via friction
+	and overrides regular movement until it reaches zero. Velocity is clamped
+	to MAX_KNOCKBACK_SPEED so accumulated forces can't reach escape velocity."""
+	knockback_velocity += force * duration
+	if knockback_velocity.length() > MAX_KNOCKBACK_SPEED:
+		knockback_velocity = knockback_velocity.normalized() * MAX_KNOCKBACK_SPEED
+	knockback_active = true
+
+func _update_knockback(delta: float) -> void:
+	if knockback_velocity.length() > 0.0:
+		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
+		velocity = knockback_velocity
+		move_and_slide()
+	else:
+		knockback_active = false
+		knockback_velocity = Vector2.ZERO
+
+func dash_to(target_pos: Vector2, speed: float, on_complete: Callable = Callable()) -> void:
+	"""Drive the character at `speed` toward `target_pos` via move_and_slide
+	(so walls actually stop the dash). Calls `on_complete` when the target is
+	reached, when blocked against a wall, or when a duration safety net
+	fires."""
+	var to_target := target_pos - global_position
+	var distance := to_target.length()
+	if distance < 1.0 or speed <= 0.0:
+		if on_complete.is_valid():
+			on_complete.call()
+		return
+	_dash_motion_dir = to_target / distance
+	_dash_motion_speed = speed
+	_dash_motion_remaining = distance
+	# Safety timeout — 50% over the no-obstruction transit time. Belt-and-
+	# suspenders against the stuck-on-wall detection missing an edge case.
+	_dash_motion_max_time = (distance / speed) * 1.5
+	_dash_motion_elapsed = 0.0
+	_dash_motion_on_complete = on_complete
+	_dash_motion_active = true
+
+func _update_dash_motion(delta: float) -> void:
+	_dash_motion_elapsed += delta
+	velocity = _dash_motion_dir * _dash_motion_speed
+	var prev_pos := global_position
+	move_and_slide()
+	var actual_motion := (global_position - prev_pos).length()
+	_dash_motion_remaining -= actual_motion
+	var arrived := _dash_motion_remaining <= 0.0
+	var blocked := is_on_wall() and actual_motion < 0.5
+	var timed_out := _dash_motion_elapsed >= _dash_motion_max_time
+	if arrived or blocked or timed_out:
+		_end_dash_motion()
+
+func _end_dash_motion() -> void:
+	_dash_motion_active = false
+	_dash_motion_dir = Vector2.ZERO
+	_dash_motion_speed = 0.0
+	_dash_motion_remaining = 0.0
+	_dash_motion_max_time = 0.0
+	_dash_motion_elapsed = 0.0
+	var cb := _dash_motion_on_complete
+	_dash_motion_on_complete = Callable()
+	if cb.is_valid():
+		cb.call()
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds
@@ -2829,9 +3078,19 @@ func _update_arm_ik() -> void:
 				left_arm_target = right_arm_target + Vector2(-6, 4)
 
 	else:
-		# Rest positions: arms curling forward and inward (hands near front of body)
-		left_arm_target = left_shoulder + Vector2(arm_length * 0.3, -arm_length * 0.6)
-		right_arm_target = right_shoulder + Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		# Rest positions: arms curling forward and inward (hands near front of body).
+		# The offset is in body-local coords (forward = -Y), so rotate it by
+		# body_rotation so the rest pose tracks the torso's facing direction.
+		# No-op when body_rotation == 0 (currently always the case in this
+		# branch since it requires no-weapon-and-not-attacking), but keeps the
+		# stance correct if body_rotation is ever set outside attacks.
+		var left_rest_offset = Vector2(arm_length * 0.3, -arm_length * 0.6)
+		var right_rest_offset = Vector2(-arm_length * 0.3, -arm_length * 0.6)
+		if body_rotation != 0.0:
+			left_rest_offset = left_rest_offset.rotated(body_rotation)
+			right_rest_offset = right_rest_offset.rotated(body_rotation)
+		left_arm_target = left_shoulder + left_rest_offset
+		right_arm_target = right_shoulder + right_rest_offset
 	
 	# Solve IK for both arms
 	_solve_arm_ik(left_arm_joints, left_arm_target, true)
@@ -2942,6 +3201,12 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 
 	# Remove ALL children from the holder (the old item). Don't free — still in inventory.
 	for child in holder.get_children():
+		# If the previous child was a WeaponShape, deactivate its hitbox and
+		# clear its holder back-reference so it can't fire any further hits.
+		if child is WeaponShape:
+			if child.hitbox:
+				child.hitbox.monitoring = false
+			child.holder = null
 		holder.remove_child(child)
 
 	# Update the character reference
@@ -2953,9 +3218,12 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 	# Add new weapon/ability to holder
 	if weapon != null:
 		holder.add_child(weapon)
+		if weapon is WeaponShape:
+			weapon.holder = self
 		var grip_offset = weapon.get_grip_offset_for_hand()
 		weapon.position = grip_offset
-		weapon.z_index = 2  # Above character
+		# Render below the forearm/hand sprites (z = -2) so the hand visually grips the weapon
+		weapon.z_index = -3
 	emit_signal("weapon_changed", weapon)
 
 func _on_attack_hit(hand) -> void:
@@ -3015,9 +3283,12 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_main_hand_item)
+		# start_attack must run before _fire_ranged_async so is_attacking=true
+		# is set before await_hit_frame_or_end polls it; otherwise the helper
+		# bails on its first check and the projectile never spawns.
 		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_main_hand_item)
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
@@ -3029,13 +3300,18 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		elif damage_type in ["ranged_arrow", "ranged_bullet"]:
-			_fire_ranged_async(current_off_hand_item)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
+		if damage_type in ["ranged_arrow", "ranged_bullet"]:
+			_fire_ranged_async(current_off_hand_item)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
-	await attack_animator.attack_hit_frame
+	# Bail if the attack ends (interrupted) before the release frame —
+	# otherwise the orphaned coroutine resumes on a future attack's hit_frame
+	# and spawns a phantom projectile.
+	var hit = await attack_animator.await_hit_frame_or_end()
+	if not hit:
+		return
 	if not is_instance_valid(weapon):
 		return
 	# Consume ammo if the weapon requires it
@@ -3271,15 +3547,41 @@ func get_total_hp() -> int:
 	return total
 
 func is_alive() -> bool:
-	"""Character dies if torso or head HP <= 0 or blood is 0"""
+	"""Pure alive check — no side effects. Use _check_death() to actually
+	trigger death side effects when state warrants it."""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
-	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
-	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
-	var is_alive = (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
-	if not is_alive:
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+
+func _check_death() -> void:
+	"""Trigger death side effects if the character should be dead."""
+	if not is_alive():
 		_on_character_died()
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+
+func _hide_living_visuals() -> void:
+	"""Hide all living-character visuals so a death marker can replace them.
+	Equipment slot holders are hidden too — otherwise armored characters
+	(usually party members) leave their gear floating after death while
+	bare-handed NPCs disappear cleanly."""
+	_set_procedural_geometry_visible(false)
+	if body_part_sprites:
+		body_part_sprites.set_all_visible(false)
+	for holder in [main_hand_holder, off_hand_holder, head_slot, torso_slot, back_slot, legs_slot, feet_slot]:
+		if holder:
+			holder.visible = false
+
+func _show_death_marker() -> void:
+	"""Lazily create and show a tombstone sprite at the character's position."""
+	if _death_marker and is_instance_valid(_death_marker):
+		_death_marker.visible = true
+		return
+	if not ResourceLoader.exists(DEATH_MARKER_TEXTURE_PATH):
+		return
+	_death_marker = Sprite2D.new()
+	_death_marker.name = "DeathMarker"
+	_death_marker.texture = load(DEATH_MARKER_TEXTURE_PATH)
+	_death_marker.z_index = 5
+	add_child(_death_marker)
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
@@ -3405,16 +3707,30 @@ func get_status_string() -> String:
 				status += " (DR:%d)" % limb.armor_dr
 			parts.append(status)
 	return "\n".join(parts)
-func dash(target_pos: Vector2) -> void:
-	if is_dashing or dash_cooldown_timer > 0.0:
-		return
+func get_dash_range() -> float:
+	"""Maximum world-space distance a single dash() can cover, derived from
+	dash_speed × dash_duration. Exposed so the path planner and the aim-line
+	preview can clamp to the same reach the dash itself enforces."""
+	return move_speed * dash_speed_multiplier * dash_duration
 
-	var dir = (target_pos - global_position).normalized()
-	if dir.length() < 0.1:
+func dash(target_pos: Vector2) -> void:
+	"""Player-input dash. Drives motion through dash_to (move_and_slide), so
+	walls actually stop the dash. Distance is clamped to one dash_duration
+	worth of dash-speed travel so abilities and shift-dash share the same
+	bounded burst feel."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
 		return
-	is_dashing = true
-	dash_timer = dash_duration
+	var to_target = target_pos - global_position
+	var distance = to_target.length()
+	if distance < 1.0:
+		return
+	var dash_speed: float = move_speed * dash_speed_multiplier
+	var max_distance: float = get_dash_range()
+	var clamped_target := target_pos
+	if distance > max_distance:
+		clamped_target = global_position + to_target / distance * max_distance
 	dash_cooldown_timer = dash_cooldown
+	dash_to(clamped_target, dash_speed)
 
 # ===== EVENTS =====
 
@@ -3433,13 +3749,22 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
-	if "Male" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("man-death-scream",global_position)
-	elif "Female" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("woman-death-scream",global_position)
+	if creature_type == "Humanoid":
+		if gender == "female":
+			SfxManager.play("woman-death-scream", global_position)
+		else:
+			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
+	_hide_living_visuals()
+	_show_death_marker()
 	set_process(false)
+	# Corpses do not block projectiles or move_and_slide queries (matches the
+	# pre-physics behavior where _update_projectiles skipped dead characters).
+	# The Area2D soft-separation shape stays enabled so live characters still
+	# bump off corpses naturally.
+	if body_collision_shape:
+		body_collision_shape.disabled = true
 
 	# Fatal Attraction: linked death — if partner is still alive, kill them too
 	if condition_manager.has_condition("fatal_attraction"):
@@ -3455,7 +3780,7 @@ func _on_character_died() -> void:
 			var torso = partner.limbs.get(partner.LimbType.TORSO)
 			if torso:
 				torso.current_hp = 0
-				partner.is_alive()
+				partner._check_death()
 
 # ===== BLEED VFX BURST =====
 #
@@ -3688,6 +4013,10 @@ func reset_severed_limbs() -> void:
 			child.queue_free()
 
 func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
+		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
+		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
+		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
+		Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
@@ -3755,12 +4084,12 @@ func get_state_name() -> String:
 	return $AI.AIState.keys()[$AI.current_state]
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
-	# Bleeding is now driven by the ConditionManager's triggered_effects
-	# on the "bleeding" condition (damage + bleed_puddle every tick).
-	# Death from blood loss is handled by the damage triggered effect
-	# reducing torso HP (see _on_triggered_effect_fired).
-	if blood_amount <= 0 and is_alive():
-		_on_character_died()
+	# Bleeding is driven by the ConditionManager's triggered_effects on the
+	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
+	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
+	# HP reaching 0.
+	pass
 
 #Ability Checks, character.gd code
 func ability_check(stat,domain):
@@ -3888,11 +4217,13 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_failed.emit(ability, reason)
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:
@@ -3908,63 +4239,50 @@ func _spawn_projectile(ability: Ability, target_position: Vector2) -> void:
 	var scene = _load_effect_scene(projectile_path)
 	if not scene:
 		print("Did not find projectile scene at path: ", projectile_path)
-		var results = ability_manager._resolve_effects(ability, ability.effects, target_position)
-		_spawn_ability_visuals(ability, target_position)
-		ability_manager.cast_completed.emit(ability, results)
+		_resolve_ability_at(ability, target_position)
 		return
-	
-	var projectile = scene.instantiate()
-	
-	# Position at caster
-	var spawn_offset = ability.visuals.get("projectile_spawn_offset", Vector2(0, -20))
-	projectile.global_position = global_position + spawn_offset
-	projectile.z_index = 3
-	
-	# Add to scene
-	var scene_root = get_tree().current_scene
-	scene_root.add_child(projectile)
-	
-	# Configure projectile movement
-	var speed = ability.visuals.get("projectile_speed", 400.0)
-	var max_lifetime = ability.visuals.get("projectile_max_lifetime", 5.0)
-	
-	# Rotate to face target
-	var direction = (target_position - projectile.global_position).normalized()
-	projectile.rotation = direction.angle()
-	
-	# Start projectile movement
-	_move_projectile(projectile, target_position, speed, max_lifetime, ability)
+
+	var spawn_offset: Vector2 = ability.visuals.get("projectile_spawn_offset", Vector2(0, -20))
+	var spawn_pos: Vector2 = global_position + spawn_offset
+	var direction: Vector2 = (target_position - spawn_pos).normalized()
+	var distance: float = spawn_pos.distance_to(target_position)
+	var speed: float = ability.visuals.get("projectile_speed", 400.0)
+	var max_lifetime: float = ability.visuals.get("projectile_max_lifetime", 5.0)
+
+	var proj := Projectile.new()
+	proj.name = "AbilityProjectile"
+	proj.z_index = 3
+	proj.speed = speed
+	# Range = aim distance, so unblocked shots expire at the original target
+	# point (matches the previous tween-to-target behavior for clear paths).
+	proj.max_range = distance
+	proj.max_lifetime = max_lifetime
+
+	# Loaded scene is a Node2D-based visual; add it as a visual child. Its local
+	# rotation stays 0 so its world rotation matches the Projectile body's
+	# direction-aligned rotation.
+	var visual = scene.instantiate()
+	proj.add_child(visual)
+
+	proj.hit.connect(_on_ability_projectile_hit.bind(ability))
+	proj.expired.connect(_on_ability_projectile_expired.bind(ability))
+
+	get_tree().current_scene.add_child(proj)
+	proj.launch(spawn_pos, direction, self)
 
 
-## Move projectile toward target (using a tween or manual process)
-func _move_projectile(projectile: Node2D, target_position: Vector2, speed: float, max_lifetime: float, ability: Ability) -> void:
-	var distance = projectile.global_position.distance_to(target_position)
-	var duration = distance / speed
-	
-	# Clamp duration to max lifetime
-	duration = min(duration, max_lifetime)
-	
-	var tween = create_tween()
-	tween.tween_property(projectile, "global_position", target_position, duration)
-	
-	# When projectile arrives (or times out), resolve effects
-	tween.finished.connect(func():
-		var final_position = projectile.global_position
-		projectile.queue_free()
-		var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
-		_spawn_ability_visuals(ability, final_position)
-		ability_manager.cast_completed.emit(ability, results)
-	)
+func _on_ability_projectile_hit(collision: KinematicCollision2D, ability: Ability) -> void:
+	_resolve_ability_at(ability, collision.get_position())
 
-	# Safety timeout in case tween fails
-	get_tree().create_timer(max_lifetime + 0.1).timeout.connect(func():
-		if is_instance_valid(projectile):
-			var final_position = projectile.global_position
-			projectile.queue_free()
-			var results = ability_manager._resolve_effects(ability, ability.effects, final_position)
-			_spawn_ability_visuals(ability, final_position)
-			ability_manager.cast_completed.emit(ability, results)
-	, CONNECT_ONE_SHOT)
+
+func _on_ability_projectile_expired(final_position: Vector2, ability: Ability) -> void:
+	_resolve_ability_at(ability, final_position)
+
+
+func _resolve_ability_at(ability: Ability, pos: Vector2) -> void:
+	var results = ability_manager._resolve_effects(ability, ability.effects, pos)
+	_spawn_ability_visuals(ability, pos)
+	ability_manager.cast_completed.emit(ability, results)
 func _get_modified_visual_duration(ability: Ability) -> float:
 	var base_duration = ability.visual_duration
 	var traits = ability.traits  # assuming this is an Array of strings like ["spell", "fire", "aoe"]
@@ -4363,8 +4681,14 @@ func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.
 	print("DID FIND ABILITY VFX SCENE at scene path: ", scene_path)
 
 	var instance = scene.instantiate()
-	instance.global_position = position
-	instance.z_index = 3
+	# Only positionable nodes get global_position/z_index — CanvasLayer-rooted
+	# scenes (e.g. full-screen weather shaders) live in screen space and don't
+	# expose those properties; setting them would crash.
+	if instance is Node2D:
+		instance.global_position = position
+		instance.z_index = 3
+	else:
+		push_warning("VFX scene '%s' has non-Node2D root (%s); spawning at screen-space position only." % [scene_path, instance.get_class()])
 
 	var scene_root = get_tree().current_scene
 	scene_root.add_child(instance)

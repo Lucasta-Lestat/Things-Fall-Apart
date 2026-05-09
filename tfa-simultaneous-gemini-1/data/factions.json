@@ -120,6 +120,15 @@
 			"enemies": [
 				"bandits"
 			],
+			"laws": [
+				"whoremonger",
+				"venefica",
+				"veneficus",
+				"hierophant",
+				"pit_monitor",
+				"slavecatcher",
+				"hedge_witch"
+			],
 			"equipment_traits": {
 				"required": {
 					"Metal": 1,
@@ -158,6 +167,7 @@
 			"enemies": [
 				"golden_guard"
 			],
+			"laws": [],
 			"equipment_traits": {
 				"required": {
 					"Simple": 1
@@ -195,6 +205,14 @@
 				"rebels",
 				"bandits",
 				"golden_guard"
+			],
+			"laws": [
+				"whoremonger",
+				"venefica",
+				"veneficus",
+				"hierophant",
+				"pit_monitor",
+				"slavecatcher"
 			],
 			"equipment_traits": {
 				"required": {
