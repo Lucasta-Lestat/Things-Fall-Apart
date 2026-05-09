@@ -432,9 +432,13 @@ func _grant_equipment(character, equipment: Array) -> void:
 			single["quantity"] = 1
 			inventory.add_item(single)
 
-		# Auto-equip items that have an equip_slot defined
-		var equip_slot: String = item_data.get("equip_slot", "")
-		var item_name: String = item_data.get("display_name", item_id)
+		# Auto-equip items that have an equip_slot defined.
+		# Items.json fields are sometimes literal `null` (e.g. alcohol, gold) —
+		# coerce to "" so the typed assignment doesn't crash.
+		var equip_slot_raw = item_data.get("equip_slot", "")
+		var equip_slot: String = "" if equip_slot_raw == null else str(equip_slot_raw)
+		var item_name_raw = item_data.get("display_name", item_id)
+		var item_name: String = str(item_id) if item_name_raw == null else str(item_name_raw)
 		if not equip_slot.is_empty() and not item_name.is_empty():
 			if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 				var hand = "Main" if equip_slot == "Main Hand" else "Off"
