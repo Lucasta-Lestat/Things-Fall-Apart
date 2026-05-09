@@ -43,7 +43,7 @@ func _ready():
 		apply_blend_shader()
 
 func apply_floor_data():
-	var data = FloorDatabase.floor_definitions[self.floor_id]
+	var data = FloorDatabase.floor_definitions.get(self.floor_id)
 	if not data:
 		printerr("Failed to get data for floor_id: ", floor_id)
 		return
