@@ -107,15 +107,21 @@ func _on_party_panel_toggled(now_visible: bool) -> void:
 	_set_panel_open(now_visible, true)
 
 func _set_panel_open(open: bool, animate: bool) -> void:
+	# Panel is anchored to the left edge with both offset_left and offset_right
+	# in screen-space. Both must move by the same delta or the panel resizes
+	# instead of sliding.
 	panel_visible = open
-	var target_x: float = _shown_x if open else _hidden_x
+	var target_left: float = 0.0 if open else -PANEL_WIDTH
+	var target_right: float = PANEL_WIDTH if open else 0.0
 	if not animate:
-		offset_left = target_x
+		offset_left = target_left
+		offset_right = target_right
 		return
 	if _tween and _tween.is_running():
 		_tween.kill()
-	_tween = create_tween()
-	_tween.tween_property(self, "offset_left", target_x, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween = create_tween().set_parallel(true)
+	_tween.tween_property(self, "offset_left", target_left, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween.tween_property(self, "offset_right", target_right, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _on_map_loaded(_map_id: String) -> void:
 	# Defer one frame so NPCs are fully spawned before we look them up.
@@ -155,8 +161,13 @@ func _repopulate() -> void:
 	var known: Array = game_node.known_services_per_region.get(region_id, [])
 
 	for entry in entries:
+		# A service shows up only when BOTH conditions are met:
+		#   1. legal under the controlling faction's laws, AND
+		#   2. the player has personally seen the NPC at least once.
+		# Either failure hides the entry from the panel.
 		var legal: bool = RegionDatabase.is_service_legal(entry["titles"], region_id)
-		if not legal and entry["npc_uid"] not in known:
+		var seen: bool = entry["npc_uid"] in known
+		if not legal or not seen:
 			continue
 		var card = _build_service_card(entry)
 		if card:
@@ -343,10 +354,12 @@ func _refresh_inventory(card_data: Dictionary) -> void:
 	var entry: Dictionary = card_data["entry"]
 	var live_npc = card_data["live_npc"]
 	var items: Array = _get_service_inventory(entry, live_npc)
+
+	# 1) Plain items. Skip ghost dicts that mirror equipped weapons — those are
+	#    rendered separately below as WeaponShape entries.
 	for i in range(items.size()):
 		var item: Dictionary = items[i]
 		var equip_slot: String = str(item.get("equip_slot", ""))
-		# Skip ghost dicts that mirror equipped weapons (matches PartySidePanel).
 		if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 			continue
 		var raw_stacks = item.get("num_stacks", 1)
@@ -362,11 +375,37 @@ func _refresh_inventory(card_data: Dictionary) -> void:
 		}
 		grid.add_child(_create_slot(slot_entry, card_data))
 
+	# 2) Weapons. Live NPCs hold WeaponShape nodes in main_hand/off_hand/stowed.
+	#    Mirror TradeWindow so service NPCs (e.g. Smith with a rack of weapons)
+	#    actually display them.
+	if live_npc and live_npc.inventory:
+		var inv = live_npc.inventory
+		if inv.main_hand_item is WeaponShape:
+			grid.add_child(_create_slot(_make_weapon_slot_entry(inv.main_hand_item, "Main", true), card_data))
+		if inv.off_hand_item is WeaponShape:
+			grid.add_child(_create_slot(_make_weapon_slot_entry(inv.off_hand_item, "Off", true), card_data))
+		for w in inv.stowed_items:
+			if w is WeaponShape:
+				grid.add_child(_create_slot(_make_weapon_slot_entry(w, "", false), card_data))
+
+func _make_weapon_slot_entry(node: WeaponShape, hand: String, equipped: bool) -> Dictionary:
+	var sprite_path = node.sprite_path if "sprite_path" in node else ""
+	return {
+		"kind": "weapon",
+		"display_name": node.display_name,
+		"sprite_path": str(sprite_path) if sprite_path != null else "",
+		"num_stacks": 1,
+		"equipped": equipped,
+		"hand": hand,
+		"source_index": -1,
+		"raw": node,
+	}
+
 func _create_slot(slot_entry: Dictionary, card_data: Dictionary) -> PanelContainer:
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = "%s (%.0f gold)" % [slot_entry.get("display_name", "?"), float(slot_entry.get("raw", {}).get("cost", 0.0))]
+	slot.tooltip_text = "%s (%.0f gold)" % [slot_entry.get("display_name", "?"), _entry_cost(slot_entry)]
 
 	# Subtle dark frame on translucent fill so the parchment shows through
 	# but item icons still pop visually.
@@ -534,6 +573,20 @@ func _compute_inventory_value(items: Array) -> float:
 		var stacks: int = int(stacks_val) if stacks_val != null else 1
 		total += float(item.get("cost", 0.0)) * max(stacks, 1)
 	return total
+
+func _entry_cost(slot_entry: Dictionary) -> float:
+	## Slot costs differ between item dicts and WeaponShape Nodes.
+	if slot_entry.get("kind", "") == "weapon":
+		var w = slot_entry.get("raw")
+		if w != null and "cost" in w:
+			return float(w.cost)
+		return 0.0
+	var raw = slot_entry.get("raw", {})
+	if raw is Dictionary:
+		var stacks_val = raw.get("num_stacks", 1)
+		var stacks: int = int(stacks_val) if stacks_val != null else 1
+		return float(raw.get("cost", 0.0)) * max(stacks, 1)
+	return 0.0
 
 # ---------------------------------------------------------------------------
 # Click handling on portrait header

@@ -543,7 +543,7 @@ func _drop_data(at_position: Vector2, data) -> void:
 			if uid.is_empty() or region_id.is_empty():
 				return
 			# Value balance check (snapshot path).
-			var item_cost: float = float(entry.get("raw", {}).get("cost", 0.0)) * max(1, int(entry.get("num_stacks", 1)))
+			var item_cost: float = _entry_cost_for_balance(entry)
 			if source_window.has_method("can_accept_value_loss") \
 					and not source_window.can_accept_value_loss(uid, item_cost):
 				SfxManager.play_ui("trade_decline")
@@ -557,7 +557,7 @@ func _drop_data(at_position: Vector2, data) -> void:
 		# (TownServicesPanel does), respect it. TradeWindow doesn't and the
 		# call is a no-op safe-default.
 		if source_window and is_instance_valid(source_window) and source_window.has_method("can_accept_value_loss"):
-			var item_cost_live: float = float(entry.get("raw", {}).get("cost", 0.0)) * max(1, int(entry.get("num_stacks", 1)))
+			var item_cost_live: float = _entry_cost_for_balance(entry)
 			var uid_live: String = str(data.get("snapshot_uid", ""))
 			if not uid_live.is_empty() and not source_window.can_accept_value_loss(uid_live, item_cost_live):
 				SfxManager.play_ui("trade_decline")
@@ -581,6 +581,19 @@ func _drop_data(at_position: Vector2, data) -> void:
 				target_char.inventory.add_item(item)
 		"weapon":
 			_transfer_weapon(source_char, target_char, entry.get("raw"))
+
+func _entry_cost_for_balance(entry: Dictionary) -> float:
+	## Cost lookup safe for both item dicts and WeaponShape Nodes.
+	if entry.get("kind", "") == "weapon":
+		var w = entry.get("raw")
+		if w != null and "cost" in w:
+			return float(w.cost)
+		return 0.0
+	var raw = entry.get("raw", {})
+	if raw is Dictionary:
+		var stacks: int = max(1, int(entry.get("num_stacks", 1)))
+		return float(raw.get("cost", 0.0)) * stacks
+	return 0.0
 
 func _transfer_weapon(source_char, target_char, weapon) -> void:
 	if weapon == null or not is_instance_valid(weapon):
