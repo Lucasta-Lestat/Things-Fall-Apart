@@ -490,6 +490,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/liziti_don/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 60,
 		"constitution": 60,
@@ -775,6 +782,13 @@
 	  "race": "grimalkin",
 	  "background": "pauper",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/djargo/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Grimalkin/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Grimalkin/leg.png"
+	  },
 	  "stats": {
 		"strength": 35,
 		"constitution": 40,
@@ -805,6 +819,13 @@
 	  "race": "human",
 	  "background": "noble",
 	  "faction": "spider_party",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/hadrian_rosemerrow/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 45,
@@ -835,6 +856,13 @@
 	  "race": "human",
 	  "background": "soldier",
 	  "faction": "spider_party",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/sunder_havelton/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 65,
 		"constitution": 60,
@@ -900,6 +928,13 @@
 	  "race": "halfling",
 	  "background": "outlander",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/quillath/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 55,
 		"constitution": 55,
@@ -931,6 +966,13 @@
 	  "race": "kobold",
 	  "background": "from_faction",
 	  "faction": "dragatini",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/stokes_carfire/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Kobold/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Kobold/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Kobold/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Kobold/leg.png"
+	  },
 	  "stats": {
 		"strength": 35,
 		"constitution": 40,
@@ -962,6 +1004,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "pirates",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/captain_morgan/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 55,
 		"constitution": 55,
@@ -992,6 +1041,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "pirates",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/captain_jameson/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 50,
 		"constitution": 60,
@@ -1091,6 +1147,13 @@
 	  "race": "elf",
 	  "background": "amnesiac",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/nude_elf/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+	  },
 	  "stats": {
 		"strength": 45,
 		"constitution": 40,
@@ -1121,6 +1184,13 @@
 	  "race": "human",
 	  "background": "hermit",
 	  "faction": "none",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/lighthouse_keeper_brother/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 50,
 		"constitution": 55,
@@ -1186,6 +1256,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/roy_demonitor/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 55,
 		"constitution": 55,
@@ -1214,6 +1291,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/andrew_tuatara/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 50,
 		"constitution": 50,
@@ -1241,6 +1325,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/gordon_gecko/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 40,
@@ -1272,6 +1363,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/dusk/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 50,
 		"constitution": 45,
@@ -1299,6 +1397,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/chameleon_paglia/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 45,
@@ -1400,6 +1505,13 @@
 	  "race": "carapacian",
 	  "background": "from_faction",
 	  "faction": "tortellini",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/pesto/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+	  },
 	  "stats": {
 		"strength": 60,
 		"constitution": 75,
@@ -1429,6 +1541,13 @@
 	  "race": "carapacian",
 	  "background": "from_faction",
 	  "faction": "tortellini",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/tommy/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+	  },
 	  "stats": {
 		"strength": 55,
 		"constitution": 70,
@@ -1458,6 +1577,13 @@
 	  "race": "human",
 	  "background": "aristocratic_envoy",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/prosecco/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 40,
@@ -1488,6 +1614,13 @@
 	  "race": "saurian",
 	  "background": "aristocratic_envoy",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/boa/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 60,
 		"constitution": 55,
@@ -1518,6 +1651,13 @@
 	  "race": "rodentkin",
 	  "background": "pauper",
 	  "faction": "vermincelli",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/rodney_the_rat/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 35,
 		"constitution": 40,
@@ -1548,6 +1688,13 @@
 	  "race": "human",
 	  "background": "pauper",
 	  "faction": "none",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/joey_feritas/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 45,
@@ -1744,6 +1891,13 @@
 	  "race": "human",
 	  "background": "clergy_preacher",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/reverend_mother_liana/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "titles": ["Reverend Mother"],
 	  "stats": { "strength": 30, "constitution": 40, "dexterity": 35, "will": 80, "intelligence": 70, "charisma": 65 },
 	  "equipment": [
@@ -1761,6 +1915,13 @@
 	  "race": "human",
 	  "background": "mystery_cult_initiate",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/mother_inferior_macaria/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "titles": ["Hierophant"],
 	  "stats": { "strength": 35, "constitution": 50, "dexterity": 40, "will": 85, "intelligence": 75, "charisma": 60 },
 	  "equipment": [
@@ -1808,6 +1969,13 @@
 	  "race": "half_elf",
 	  "background": "bar_keep",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/alewife_juturna/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "titles": ["Alewife"],
 	  "stats": { "strength": 40, "constitution": 50, "dexterity": 55, "will": 50, "intelligence": 50, "charisma": 60 },
 	  "equipment": [
@@ -1828,6 +1996,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/mary_guana/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
+	  },
 	  "titles": ["Venefica"],
 	  "stats": { "strength": 35, "constitution": 45, "dexterity": 65, "will": 50, "intelligence": 65, "charisma": 50 },
 	  "equipment": [
@@ -1847,6 +2022,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/hunter_john/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Peddler"],
 	  "stats": { "strength": 75, "constitution": 70, "dexterity": 55, "will": 50, "intelligence": 35, "charisma": 30 },
 	  "equipment": [
@@ -1864,6 +2046,13 @@
 	  "race": "human",
 	  "background": "golden_legion_basic_training_graduate",
 	  "faction": "golden_guard",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/centurion_marcus/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 70, "constitution": 65, "dexterity": 55, "will": 60, "intelligence": 50, "charisma": 50 },
 	  "equipment": [
 		{ "id": "longsword", "slot": "main_hand" },
@@ -1881,6 +2070,13 @@
 	  "race": "human",
 	  "background": "golden_legion_basic_training_graduate",
 	  "faction": "golden_guard",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/deputy_gleg/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 60, "constitution": 55, "dexterity": 60, "will": 35, "intelligence": 35, "charisma": 35 },
 	  "equipment": [
 		{ "id": "mace", "slot": "main_hand" }
@@ -1897,6 +2093,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/hedge_witch_magda/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "titles": ["Hedge-Witch"],
 	  "stats": { "strength": 35, "constitution": 50, "dexterity": 50, "will": 70, "intelligence": 70, "charisma": 50 },
 	  "equipment": [
@@ -1916,6 +2119,13 @@
 	  "race": "saurian",
 	  "background": "urchin",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/lot_lizard_zillah/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
+	  },
 	  "stats": { "strength": 30, "constitution": 35, "dexterity": 50, "will": 30, "intelligence": 35, "charisma": 60 },
 	  "equipment": [],
 	  "icon": "res://Icons/dummy_icon.png",
@@ -1930,6 +2140,13 @@
 	  "race": "saurian",
 	  "background": "academic",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/andrew_tuatara/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "titles": ["Whoremonger"],
 	  "stats": { "strength": 45, "constitution": 50, "dexterity": 55, "will": 60, "intelligence": 70, "charisma": 65 },
 	  "equipment": [
@@ -1947,6 +2164,13 @@
 	  "race": "saurian",
 	  "background": "carnie",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/alligator_capone/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "titles": ["Skipper"],
 	  "stats": { "strength": 70, "constitution": 70, "dexterity": 50, "will": 55, "intelligence": 45, "charisma": 50 },
 	  "equipment": [
@@ -1964,6 +2188,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "bandits",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/cletus_samson/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Slavecatcher"],
 	  "stats": { "strength": 75, "constitution": 70, "dexterity": 50, "will": 45, "intelligence": 25, "charisma": 25 },
 	  "equipment": [
@@ -1982,6 +2213,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/obediah/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 50, "constitution": 45, "dexterity": 35, "will": 40, "intelligence": 35, "charisma": 45 },
 	  "equipment": [
 		{ "id": "alcohol", "quantity": 2 }
@@ -1998,6 +2236,13 @@
 	  "race": "human",
 	  "background": "urchin",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/jezebel/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+	  },
 	  "stats": { "strength": 35, "constitution": 40, "dexterity": 55, "will": 35, "intelligence": 45, "charisma": 65 },
 	  "equipment": [],
 	  "icon": "res://Icons/dummy_icon.png",
@@ -2012,6 +2257,13 @@
 	  "race": "human",
 	  "background": "carnie",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/austache_jongle/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 50, "constitution": 50, "dexterity": 50, "will": 30, "intelligence": 40, "charisma": 50 },
 	  "equipment": [
 		{ "id": "dagger", "slot": "main_hand" },
@@ -2029,6 +2281,13 @@
 	  "race": "human",
 	  "background": "academic",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/mostlemyre_drouge/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Hierophant"],
 	  "stats": { "strength": 35, "constitution": 45, "dexterity": 40, "will": 75, "intelligence": 85, "charisma": 60 },
 	  "equipment": [
@@ -2049,6 +2308,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/smith_darcy/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Smith"],
 	  "stats": { "strength": 60, "constitution": 60, "dexterity": 50, "will": 35, "intelligence": 35, "charisma": 30 },
 	  "equipment": [
@@ -2077,6 +2343,13 @@
 	  "race": "human",
 	  "background": "academic",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/professor_circino/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Librarian"],
 	  "stats": { "strength": 30, "constitution": 40, "dexterity": 45, "will": 65, "intelligence": 80, "charisma": 55 },
 	  "equipment": [],
@@ -2092,6 +2365,13 @@
 	  "race": "human",
 	  "background": "academic",
 	  "faction": "patriciate",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/professor_easton/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Professor"],
 	  "stats": { "strength": 35, "constitution": 45, "dexterity": 45, "will": 70, "intelligence": 80, "charisma": 60 },
 	  "equipment": [],
@@ -2107,6 +2387,13 @@
 	  "race": "human",
 	  "background": "academic",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/zakariah/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 40, "constitution": 45, "dexterity": 50, "will": 50, "intelligence": 65, "charisma": 50 },
 	  "equipment": [],
 	  "icon": "res://Icons/dummy_icon.png",
@@ -2121,6 +2408,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/saul_laelia/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "stats": { "strength": 55, "constitution": 55, "dexterity": 55, "will": 45, "intelligence": 45, "charisma": 50 },
 	  "equipment": [
 		{ "id": "spear", "slot": "main_hand" }
@@ -2137,6 +2431,13 @@
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "bandits",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/big_al_samson/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+	  },
 	  "titles": ["Whoremonger"],
 	  "stats": { "strength": 95, "constitution": 40, "dexterity": 35, "will": 40, "intelligence": 25, "charisma": 25 },
 	  "equipment": [

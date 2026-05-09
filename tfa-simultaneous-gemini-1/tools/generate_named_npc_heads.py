@@ -75,11 +75,14 @@ TARGET_IDS = {
 }
 
 # TopDownCharacters.json uses some race ids that don't exist in races.json
-# under that exact spelling. Map to the actual race entry.
+# (or do exist but lack humanoid body_sprites). Map to the actual race entry
+# we want to use for body-part path resolution.
 RACE_ID_ALIASES = {
     "elf":         "high_elf",
     "carapacian":  "carapacians",
-    "rodentkin":   "rat",
+    # `rat` exists in races.json but is an animal race without humanoid
+    # body_sprites — use halfling (closest small humanoid) for torso/arms/legs.
+    "rodentkin":   "halfling",
 }
 
 # Gender per NPC. Used to (1) drop the right word into the prompt and
