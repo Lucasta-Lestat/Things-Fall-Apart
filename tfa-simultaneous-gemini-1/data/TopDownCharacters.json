@@ -864,6 +864,13 @@
 	  "race": "dwarf",
 	  "background": "mercenary",
 	  "faction": "spider_party",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/brutus_half_off/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Dwarf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Dwarf/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Dwarf/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Dwarf/leg.png"
+	  },
 	  "stats": {
 		"strength": 60,
 		"constitution": 70,
@@ -1012,9 +1019,16 @@
 	{
 	  "id": "earl_grey",
 	  "name": "Earl Grey",
-	  "race": "human",
+	  "race": "elf",
 	  "background": "hermit",
 	  "faction": "druids",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/earl_grey/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+	  },
 	  "stats": {
 		"strength": 40,
 		"constitution": 50,
@@ -1135,6 +1149,13 @@
 	  "race": "saurian",
 	  "background": "criminal",
 	  "faction": "liziti",
+	  "body_sprites": {
+		"head": "res://Characters/Assets/Body Parts/Named/iguana_don/head.png",
+		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+	  },
 	  "stats": {
 		"strength": 55,
 		"constitution": 60,
