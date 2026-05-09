@@ -2574,6 +2574,8 @@ func cast_ability(ability: AbilityShape):
 func _handle_input() -> void:
 	if not is_player_controlled:
 		return
+	if not is_alive():
+		return
 	if condition_manager.has_condition("unconscious"):
 		return
 	# Block player input when panicked or frightened — movement is forced
@@ -3632,6 +3634,7 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		total_damage = limb.current_hp - prospective_hp
 
 	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	_check_death()
 	return total_damage
 
 func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
