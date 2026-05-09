@@ -24,6 +24,12 @@ var _damage_timer: float = 0.0
 var _floor_cache: Dictionary = {}
 var _floor_cache_dirty: bool = true
 
+# Electrified tiles live on a parallel grid so they can coexist with fire/ice
+# and never overwrite an active surface. Same per-tile shape as surface_grid.
+var electrified_grid: Dictionary = {}  # Dictionary[Vector2i, Dictionary]
+# Per-character apply cooldowns for the electrified system (separate from fire's).
+var _electrified_condition_timers: Dictionary = {}  # Dictionary[int, float]
+
 func _ready() -> void:
 	_load_surface_database()
 
@@ -42,12 +48,14 @@ func _load_surface_database() -> void:
 # --- Main Update (called from Game._process) ---
 
 func update_surfaces(delta: float, characters: Array, game: Node) -> void:
-	if surface_grid.is_empty():
-		return
-	_apply_conditions_to_characters(delta, characters)
-	_process_spread(delta, game)
-	_process_damage(delta, game)
-	_process_lifetime(delta, game)
+	if not surface_grid.is_empty():
+		_apply_conditions_to_characters(delta, characters)
+		_process_spread(delta, game)
+		_process_damage(delta, game)
+		_process_lifetime(delta, game)
+	if not electrified_grid.is_empty():
+		_apply_electrified_to_characters(delta, characters)
+		_process_electrified_lifetime(delta)
 
 # --- Condition Application ---
 
@@ -403,7 +411,10 @@ func thaw_ice_at(tile_pos: Vector2i) -> void:
 func clear_all_surfaces() -> void:
 	for tile_pos in surface_grid.keys():
 		_remove_surface(tile_pos)
+	for tile_pos in electrified_grid.keys():
+		_remove_electrified(tile_pos)
 	_condition_timers.clear()
+	_electrified_condition_timers.clear()
 	_spread_timer = 0.0
 	_damage_timer = 0.0
 	_floor_cache.clear()
@@ -552,3 +563,177 @@ func _get_map_weather_group(game: Node) -> String:
 	if game and "current_map_data" in game:
 		return game.current_map_data.get("weather_group", "")
 	return ""
+
+# --- Electrified API ---
+
+func try_electrify(tile_pos: Vector2i) -> int:
+	"""Electrify a tile and flood-fill across any contiguous conductive matter
+	(same-type conductive fluid, or contiguous conductive floor). Instantaneous
+	BFS. Re-hits refresh the duration of every tile in the connected region.
+	Returns the number of tiles newly electrified (already-electrified tiles
+	are refreshed but not counted)."""
+	var game = _get_game()
+	var fluid_manager = _get_fluid_manager(game)
+
+	# Conductive fluid → flood-fill the contiguous body of that fluid type.
+	# BFS refreshes any already-electrified tiles it visits.
+	if fluid_manager and fluid_manager.is_conductive(tile_pos):
+		var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
+		return _electrify_fluid_body(tile_pos, fluid_type, fluid_manager)
+
+	# Conductive floor → flood-fill across contiguous conductive floor.
+	if _is_floor_conductive(tile_pos):
+		return _electrify_floor_region(tile_pos)
+
+	# Bare ground arc: refresh if already electrified, else place a single tile.
+	if electrified_grid.has(tile_pos):
+		var elec_def = _surface_defs.get("electrified", {})
+		electrified_grid[tile_pos]["time_remaining"] = elec_def.get("base_duration", 1.2)
+		return 0
+	_electrify_tile(tile_pos, "direct")
+	return 1
+
+func _electrify_fluid_body(start_tile: Vector2i, fluid_type: String, fluid_manager: FluidManager) -> int:
+	"""BFS flood-fill to electrify an entire contiguous body of conductive fluid
+	of the same type. Mirrors _ignite_fluid_body."""
+	var visited: Dictionary = {}
+	var queue: Array[Vector2i] = [start_tile]
+	visited[start_tile] = true
+	var count: int = 0
+
+	while not queue.is_empty():
+		var tile = queue.pop_front()
+		if not electrified_grid.has(tile):
+			_electrify_tile(tile, "fluid")
+			count += 1
+		else:
+			# Refresh duration even if already electrified.
+			var elec_def = _surface_defs.get("electrified", {})
+			electrified_grid[tile]["time_remaining"] = elec_def.get("base_duration", 1.2)
+
+		var neighbors = GridManager.get_neighboring_coords(tile)
+		for neighbor in neighbors:
+			if visited.has(neighbor):
+				continue
+			visited[neighbor] = true
+			var neighbor_fluid = fluid_manager.get_fluid_type_at(neighbor)
+			if neighbor_fluid == fluid_type:
+				queue.append(neighbor)
+	return count
+
+func _electrify_floor_region(start_tile: Vector2i) -> int:
+	"""BFS flood-fill across contiguous conductive floor tiles."""
+	var visited: Dictionary = {}
+	var queue: Array[Vector2i] = [start_tile]
+	visited[start_tile] = true
+	var count: int = 0
+
+	while not queue.is_empty():
+		var tile = queue.pop_front()
+		if not electrified_grid.has(tile):
+			_electrify_tile(tile, "floor")
+			count += 1
+		else:
+			var elec_def = _surface_defs.get("electrified", {})
+			electrified_grid[tile]["time_remaining"] = elec_def.get("base_duration", 1.2)
+
+		var neighbors = GridManager.get_neighboring_coords(tile)
+		for neighbor in neighbors:
+			if visited.has(neighbor):
+				continue
+			visited[neighbor] = true
+			if _is_floor_conductive(neighbor):
+				queue.append(neighbor)
+	return count
+
+func _electrify_tile(tile_pos: Vector2i, source_type: String) -> void:
+	"""Place an electrified surface on a single tile (parallel to _ignite_tile)."""
+	if electrified_grid.has(tile_pos):
+		return
+	var elec_def = _surface_defs.get("electrified", {})
+	if elec_def.is_empty():
+		return
+	var duration: float = elec_def.get("base_duration", 1.2)
+	var vfx_node = _spawn_surface_vfx(tile_pos, elec_def)
+	electrified_grid[tile_pos] = {
+		"surface_id": "electrified",
+		"time_remaining": duration,
+		"vfx_node": vfx_node,
+		"source_type": source_type
+	}
+
+func _remove_electrified(tile_pos: Vector2i) -> void:
+	if not electrified_grid.has(tile_pos):
+		return
+	var tile_data = electrified_grid[tile_pos]
+	var vfx = tile_data.get("vfx_node")
+	if vfx and is_instance_valid(vfx):
+		vfx.queue_free()
+	electrified_grid.erase(tile_pos)
+
+func _apply_electrified_to_characters(delta: float, characters: Array) -> void:
+	"""For each electrified tile, apply 'shocked' to characters on it (drives
+	the per-tick electric damage via the condition's triggered_effects), and
+	roll a CON save against being stunned."""
+	var elec_def = _surface_defs.get("electrified", {})
+	var condition_id: String = elec_def.get("condition_id", "shocked")
+	var apply_interval: float = elec_def.get("apply_interval", 0.3)
+	var stacks: int = int(elec_def.get("condition_stacks", 1))
+
+	for tile_pos in electrified_grid:
+		for character in characters:
+			if not is_instance_valid(character):
+				continue
+			if character.has_method("is_alive") and not character.is_alive():
+				continue
+			var char_tile = GridManager.world_to_map(character.global_position)
+			if char_tile != tile_pos:
+				continue
+
+			var char_id = character.get_instance_id()
+			if not _electrified_condition_timers.has(char_id):
+				_electrified_condition_timers[char_id] = 0.0
+			_electrified_condition_timers[char_id] += delta
+			if _electrified_condition_timers[char_id] < apply_interval:
+				continue
+			_electrified_condition_timers[char_id] = 0.0
+
+			var cm = character.get_node_or_null("ConditionManager")
+			if not cm and character.has_method("get_condition_manager"):
+				cm = character.get_condition_manager()
+			if cm and not condition_id.is_empty():
+				cm.apply_condition(condition_id, null, stacks)
+
+			# CON save: roll d100. If roll >= effective_constitution, apply stunned.
+			var con: float = 50.0
+			if character.has_method("effective_constitution"):
+				con = character.effective_constitution()
+			elif "constitution" in character:
+				con = float(character.constitution)
+			var roll: int = randi() % 100 + 1
+			if roll >= con and cm:
+				cm.apply_condition("stunned", null, 1)
+
+func _process_electrified_lifetime(delta: float) -> void:
+	var to_remove: Array[Vector2i] = []
+	for tile_pos in electrified_grid:
+		electrified_grid[tile_pos]["time_remaining"] -= delta
+		if electrified_grid[tile_pos]["time_remaining"] <= 0.0:
+			to_remove.append(tile_pos)
+	for tile_pos in to_remove:
+		_remove_electrified(tile_pos)
+
+func _is_floor_conductive(tile_pos: Vector2i) -> bool:
+	"""Mirror of _is_floor_flammable but checks the 'conductive' field."""
+	if not GridManager.floors.has(tile_pos):
+		return false
+	var game = _get_game()
+	var floor_node = _get_floor_at(tile_pos, game)
+	if floor_node and is_instance_valid(floor_node):
+		if "conductive" in floor_node:
+			return floor_node.conductive
+	var floor_id = GridManager.floors[tile_pos]
+	if not FloorDatabase.floor_definitions.has(floor_id):
+		return false
+	var floor_data = FloorDatabase.floor_definitions[floor_id]
+	return floor_data.get("conductive", false)
