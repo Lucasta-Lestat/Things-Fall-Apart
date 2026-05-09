@@ -38,6 +38,15 @@ func setup(character, options: Array):
 		vbox.add_child(button)
 
 func _on_option_selected(option: String):
+	# Warp Area2Ds carry their destination in metadata; don't try to interact
+	# with them like a character.
+	if target_character is Area2D and target_character.has_meta("target_map"):
+		var target_map: String = target_character.get_meta("target_map", "")
+		if not target_map.is_empty():
+			game.load_map(target_map, game.current_map_id)
+		queue_free()
+		game.call_deferred("set", "context_menu_open", false)
+		return
 	match option:
 		"Attack":
 			target_character.attack()
