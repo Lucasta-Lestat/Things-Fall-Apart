@@ -1753,8 +1753,8 @@
   {
 	"id": "treasure_chest",
 	"type": "chest",
-	"base_width": 24.0,
-	"base_height": 18.0,
+	"base_width": 48.0,
+	"base_height": 40.0,
 	"sprite_path": "res://Items/Treasure Chest.png",
 	"weight": 15.0,
 	"cost": 50.0,

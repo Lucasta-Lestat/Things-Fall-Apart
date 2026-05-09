@@ -184,7 +184,7 @@
 				},
 				{
 					"id": "treasure_chest",
-					"position": [200, 100],
+					"position": [120, 80],
 					"count": 1
 				}
 			],
