@@ -1729,7 +1729,7 @@
 		{ "id": "potion_of_healing", "quantity": 2 },
 		{ "id": "gold", "quantity": 30 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/reverend_mother_liana_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Holy": 2 },
@@ -1747,7 +1747,7 @@
 		{ "id": "dagger", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 50 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mother_inferior_macaria_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Cursed": 1 },
@@ -1765,7 +1765,7 @@
 		{ "id": "great_club", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 25 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/pit_monitor_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -1779,7 +1779,7 @@
 	  "faction": "wildlife",
 	  "stats": { "strength": 50, "constitution": 45, "dexterity": 60, "will": 25, "intelligence": 8, "charisma": 5 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/pit_hound_icon.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
@@ -1796,7 +1796,7 @@
 		{ "id": "alcohol", "quantity": 8 },
 		{ "id": "gold", "quantity": 15 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/alewife_juturna_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1816,7 +1816,7 @@
 		{ "id": "zip", "quantity": 4 },
 		{ "id": "gold", "quantity": 10 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mary_guana_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Criminal": 1 },
@@ -1834,7 +1834,7 @@
 		{ "id": "handaxe", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 20 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/hunter_john_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1851,7 +1851,7 @@
 		{ "id": "longsword", "slot": "main_hand" },
 		{ "id": "kettle_helm", "slot": "head" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/centurion_marcus_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1867,7 +1867,7 @@
 	  "equipment": [
 		{ "id": "mace", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/deputy_gleg_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1887,7 +1887,7 @@
 		{ "id": "poison_vial", "quantity": 2 },
 		{ "id": "gold", "quantity": 15 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/hedge_witch_magda_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1903,7 +1903,7 @@
 	  "equipment": [
 		{ "id": "gold", "quantity": 35 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/lot_lizard_zillah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1921,7 +1921,7 @@
 		{ "id": "stilleto", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 50 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/andrew_tuatara_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Criminal": 1 },
@@ -1939,7 +1939,7 @@
 		{ "id": "great_club", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 40 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/alligator_capone_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -1957,7 +1957,7 @@
 		{ "id": "maul", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 15 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/cletus_samson_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -1973,7 +1973,7 @@
 	  "equipment": [
 		{ "id": "alcohol", "quantity": 2 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/obediah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -1987,7 +1987,7 @@
 	  "faction": "neutral",
 	  "stats": { "strength": 35, "constitution": 40, "dexterity": 55, "will": 35, "intelligence": 45, "charisma": 65 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/jezebel_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2004,7 +2004,7 @@
 		{ "id": "dagger", "slot": "main_hand" },
 		{ "id": "alcohol", "quantity": 3 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/austache_jongle_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2024,7 +2024,7 @@
 		{ "id": "bottled_storm", "quantity": 1 },
 		{ "id": "gold", "quantity": 100 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mostlemyre_drouge_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Arcane": 2 },
@@ -2045,7 +2045,7 @@
 		{ "id": "mace", "quantity": 1 },
 		{ "id": "gold", "quantity": 20 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/smith_darcy_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2062,7 +2062,7 @@
 	  "equipment": [
 		{ "id": "gold", "quantity": 60 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/professor_circino_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2079,7 +2079,7 @@
 	  "equipment": [
 		{ "id": "gold", "quantity": 80 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/professor_easton_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2093,7 +2093,7 @@
 	  "faction": "neutral",
 	  "stats": { "strength": 40, "constitution": 45, "dexterity": 50, "will": 50, "intelligence": 65, "charisma": 50 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/zakariah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2110,7 +2110,7 @@
 		{ "id": "spear", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 10 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/saul_laelia_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2129,7 +2129,7 @@
 		{ "id": "handaxe", "quantity": 1 },
 		{ "id": "gold", "quantity": 5 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/big_al_samson_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 2, "Criminal": 1 },
