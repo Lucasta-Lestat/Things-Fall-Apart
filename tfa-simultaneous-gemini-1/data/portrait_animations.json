@@ -1,0 +1,23 @@
+{
+  "andrew_tuatara": {
+    "frames": [
+      "res://Icons/andrew_tuatara_icon.png",
+      "res://Icons/anim/andrew_tuatara/frame_1.png",
+      "res://Icons/anim/andrew_tuatara/frame_2.png"
+    ]
+  },
+  "iguana_don": {
+    "frames": [
+      "res://Icons/iguana_don_icon.png",
+      "res://Icons/anim/iguana_don/frame_1.png",
+      "res://Icons/anim/iguana_don/frame_2.png"
+    ]
+  },
+  "jacana": {
+    "frames": [
+      "res://Icons/jacana_icon.png",
+      "res://Icons/anim/jacana/frame_1.png",
+      "res://Icons/anim/jacana/frame_2.png"
+    ]
+  }
+}
