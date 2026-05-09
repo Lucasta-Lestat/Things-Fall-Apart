@@ -1696,11 +1696,15 @@ func _create_warp_zones(warp_list: Array) -> void:
 
 		var shape = CollisionShape2D.new()
 		var rect_shape = RectangleShape2D.new()
-		# Make sure the clickable region is at least as big as the arrow sprite
-		var arrow_world_size = tex_size * arrow.scale
+		# The arrow sprite rotates with the warp's direction, so its bounding
+		# box width/height swap for north/south arrows. Use the larger of
+		# (texture width, texture height) for both axes so the picking rect
+		# fully covers the sprite at any rotation.
+		var arrow_world_size: Vector2 = tex_size * arrow.scale
+		var max_arrow_dim = max(arrow_world_size.x, arrow_world_size.y)
 		rect_shape.size = Vector2(
-			max(size.x, arrow_world_size.x),
-			max(size.y, arrow_world_size.y)
+			max(size.x, max_arrow_dim),
+			max(size.y, max_arrow_dim)
 		)
 		shape.shape = rect_shape
 		area.add_child(shape)
