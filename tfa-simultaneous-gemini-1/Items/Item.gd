@@ -48,6 +48,13 @@ var primary_damage_type: String = "bludgeoning"
 var traits: Dictionary = {}
 var options: Array = []
 
+# Container/chest spawn-time loot generation. Set by Game.create_item from per-spawn data
+# in Maps.json before _ready runs. If controlling_faction is set and contents are empty,
+# _apply_item_data fills the chest with random faction-appropriate items + gold totalling
+# loot_value (which falls back to cost when not overridden).
+var controlling_faction: String = ""
+var loot_value: float = -1.0  # sentinel: <0 means "use cost"
+
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -173,6 +180,61 @@ func _apply_item_data():
 	sprite.texture = load(sprite_path)
 	if sprite.texture:
 		scale_sprite(size)
+
+	# Default loot_value to this item's cost if no per-spawn override was provided.
+	if loot_value < 0.0:
+		loot_value = cost
+
+	# Faction-controlled chests: if no explicit contents were defined, fill the
+	# chest with random faction-appropriate items + gold totalling loot_value.
+	if num_slots > 0 and controlling_faction != "":
+		var has_explicit_contents := contents is Array and not (contents as Array).is_empty()
+		if not has_explicit_contents:
+			contents = _generate_chest_contents(controlling_faction, loot_value)
+
+func _generate_chest_contents(faction_id: String, target_value: float) -> Array:
+	var generated: Array = []
+	var total: float = 0.0
+	var candidates := _gather_faction_filtered_items(faction_id)
+	candidates.shuffle()
+	for pick in candidates:
+		var pick_cost := float(pick.get("cost", 1.0))
+		generated.append(pick.duplicate(true))
+		total += pick_cost
+		if total > target_value:
+			generated.pop_back()
+			total -= pick_cost
+			break
+	var gold_needed := target_value - total
+	if gold_needed > 0.0:
+		var gold_data := _lookup_item_data_by_id("gold")
+		if not gold_data.is_empty():
+			var gold_entry := gold_data.duplicate(true)
+			gold_entry["num_stacks"] = int(round(gold_needed))
+			generated.append(gold_entry)
+	return generated
+
+func _gather_faction_filtered_items(faction_id: String) -> Array:
+	var pool: Array = []
+	for db in [ItemDatabase.weapons, ItemDatabase.equipment, ItemDatabase.items]:
+		for item_key in db.keys():
+			var data: Dictionary = db[item_key]
+			if int(data.get("num_slots", 0)) > 0:
+				continue  # don't nest chests inside chests
+			if str(data.get("id", "")) == "gold":
+				continue  # gold is the remainder filler, never drawn as loot
+			if FactionDatabase.item_passes_faction_filter(data, faction_id):
+				pool.append(data)
+	return pool
+
+func _lookup_item_data_by_id(item_id: String) -> Dictionary:
+	if ItemDatabase.items.has(item_id):
+		return ItemDatabase.items[item_id]
+	if ItemDatabase.weapons.has(item_id):
+		return ItemDatabase.weapons[item_id]
+	if ItemDatabase.equipment.has(item_id):
+		return ItemDatabase.equipment[item_id]
+	return {}
 
 func _lookup_item_data() -> Dictionary:
 	"""Find this item's data across all database categories."""

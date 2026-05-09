@@ -587,8 +587,16 @@ func _spawn_items(item_list: Array) -> void:
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = item_def.get("count", 1)
 
+		# Per-spawn extras (only applied when present): controlling_faction triggers
+		# faction-filtered auto-loot for chests, value overrides the loot target.
+		var extras: Dictionary = {}
+		if item_def.has("controlling_faction"):
+			extras["controlling_faction"] = item_def["controlling_faction"]
+		if item_def.has("value"):
+			extras["value"] = float(item_def["value"])
+
 		for j in range(count):
-			create_item(item_id, pos)
+			create_item(item_id, pos, 1, extras)
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:
@@ -711,8 +719,12 @@ func _apply_material_recursive(node: Node, material: Material) -> void:
 	for child in node.get_children():
 		_apply_material_recursive(child, material)
 
-func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item:
-	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world."""
+func create_item(item_id: String, world_position: Vector2, stack_count: int = 1, extras: Dictionary = {}) -> Item:
+	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world.
+
+	The optional `extras` dict can carry per-spawn overrides set on the Item before
+	_ready runs — currently `controlling_faction` and `value` (float, used as the
+	auto-fill loot target on chests). Existing 3-arg callers continue to work."""
 	var item_instance = item_scene.instantiate() as Item
 	item_instance.id = item_id
 	item_instance.global_position = world_position
@@ -720,6 +732,13 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1)
 	# Set stack count before _ready applies data
 	if stack_count > 1:
 		item_instance.stack_count = stack_count
+
+	# Apply per-spawn extras BEFORE add_child so they're set when _ready runs
+	# and _apply_item_data can use them (e.g. faction-controlled chest fill).
+	if extras.has("controlling_faction"):
+		item_instance.controlling_faction = String(extras["controlling_faction"])
+	if extras.has("value"):
+		item_instance.loot_value = float(extras["value"])
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -889,13 +908,9 @@ func _is_position_visible_to_party(target_pos: Vector2) -> bool:
 
 
 func _update_item_los_visibility() -> void:
-	"""Items follow the same visibility rule as NPCs, except containers
-	(num_slots > 0) which are world props and stay visible regardless of LOS."""
+	"""Items follow the same visibility rule as NPCs."""
 	for item in items_in_scene:
 		if not is_instance_valid(item):
-			continue
-		if "num_slots" in item and int(item.num_slots) > 0:
-			item.visible = true
 			continue
 		item.visible = _is_position_visible_to_party(item.global_position)
 
