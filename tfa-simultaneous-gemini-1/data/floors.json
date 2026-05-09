@@ -39,7 +39,7 @@
 			"wood":10
 		}
 	},
-	"stone_floor": 
+	"floor_stone":
 		{
 		"id":"floor_stone",
 		"name":"Stone Floor",

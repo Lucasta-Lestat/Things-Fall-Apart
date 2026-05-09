@@ -497,7 +497,8 @@
 	"traits": {
 	  "Metal": 1,
 	  "Organic": 1,
-	  "Light": 1
+	  "Light": 1,
+	  "Simple": 1
 	},
 	"is_cursed": 0.0,
 	"damage_modifier_changes": null,
@@ -554,7 +555,8 @@
 	"traits": {
 	  "Organic": 3,
 	  "Reach": 1,
-	  "Melee": 1
+	  "Melee": 1,
+	  "Simple": 1
 	},
 	"is_cursed": 0.0,
 	"damage_modifier_changes": null,
@@ -952,7 +954,8 @@
 	"traits": {
 	  "Metal": 1,
 	  "Light": 2,
-	  "Melee": 1
+	  "Melee": 1,
+	  "Simple": 1
 	},
 	"is_cursed": 0.0,
 	"damage_modifier_changes": null,
@@ -2414,6 +2417,43 @@
 	"resources": {
 	  "glass": 1
 	}
+  },
+  {
+	"id": "gold",
+	"display_name": "Gold",
+	"type": "item",
+	"description": "A pile of gold coins. Standard currency across the continent.",
+	"base_width": 2.0,
+	"base_height": 2.0,
+	"base_damage": 0,
+	"sprite_path": "res://Items/gold.png",
+	"weight": 0.05,
+	"cost": 1.0,
+	"equip_slot": null,
+	"use_ability": null,
+	"damage": {},
+	"damage_resitances": {
+	  "slashing": 0,
+	  "bludgeoning": 0,
+	  "piercing": 0,
+	  "fire": 0
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_hp": 1.0,
+	"hp": 1.0,
+	"walkability": 1.0,
+	"traits": {
+	  "Currency": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 9999,
+	"resources": {}
   },
   {
 	"id": "feyntanyl",
