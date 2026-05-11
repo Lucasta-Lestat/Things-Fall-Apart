@@ -1913,6 +1913,11 @@ func _warp_hover_text(warp_def: Dictionary) -> String:
 	return warp_def.get("label", "")
 		
 func _check_condition(condition_key: String, condition_value = true) -> bool:
+	# Time-of-day conditions read TimeManager directly. v1: no wrap-around (use both min/max for ranges within a single day).
+	if condition_key == "time_hour_min":
+		return TimeManager.current_hour >= int(condition_value)
+	if condition_key == "time_hour_max":
+		return TimeManager.current_hour <= int(condition_value)
 	if not Globals.world_state.has(condition_key):
 		push_warning("Missing world_state condition: " + condition_key)
 		return false

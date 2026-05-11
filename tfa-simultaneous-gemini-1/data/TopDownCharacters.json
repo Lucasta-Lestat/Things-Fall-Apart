@@ -2100,6 +2100,36 @@
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 2, "Criminal": 1 },
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "surgeon_captain_federica",
+	  "name": "Surgeon Captain Federica",
+	  "race": "half_orc",
+	  "gender": "female",
+	  "background": "from_faction",
+	  "faction": "waldau",
+	  "titles": ["Surgeon Captain"],
+	  "body_sprites": {
+		"head":      "res://Characters/Assets/Body Parts/Female Orc/head.png",
+		"torso":     "res://Characters/Assets/Body Parts/Female Orc/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Orc/upper_arm.png",
+		"forearm":   "res://Characters/Assets/Body Parts/Female Orc/forearm.png",
+		"leg":       "res://Characters/Assets/Body Parts/Female Orc/leg.png"
+	  },
+	  "stats": { "strength": 65, "constitution": 60, "dexterity": 55, "will": 60, "intelligence": 65, "charisma": 50 },
+	  "equipment": [
+		{ "id": "greatsword", "slot": "main_hand" },
+		{ "id": "leather_armor", "slot": "body" },
+		{ "id": "potion_of_healing", "quantity": 1 },
+		{ "id": "gold", "quantity": 15 }
+	  ],
+	  "icon": "res://Icons/surgeon-captain federica_icon.png",
+	  "dialogue": "Federica_greet",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": { "Occult": 2, "Technological": 1, "Martial": 2 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	}
   ]
 }
