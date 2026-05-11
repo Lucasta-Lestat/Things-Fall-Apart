@@ -3305,6 +3305,7 @@
 	"range": 2.0,
 	"satiety": 0.0,
 	"interact_options": [
+	  "Throw",
 	  "Drop",
 	  "Sheathe"
 	],
