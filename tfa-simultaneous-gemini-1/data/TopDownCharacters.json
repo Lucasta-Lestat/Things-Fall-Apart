@@ -1692,15 +1692,14 @@
 	},
 	{
 	  "id": "reverend_mother_liana",
-	  "name": "Reverend Mother Liana",
+	  "name": "Liana",
 	  "race": "human",
 	  "background": "clergy_preacher",
 	  "faction": "patriciate",
 	  "titles": ["Reverend Mother"],
 	  "stats": { "strength": 30, "constitution": 40, "dexterity": 35, "will": 80, "intelligence": 70, "charisma": 65 },
 	  "equipment": [
-		{ "id": "potion_of_healing", "quantity": 2 },
-		{ "id": "gold", "quantity": 30 }
+		{ "id": "potion_of_healing", "quantity": 2 }
 	  ],
 	  "icon": "res://Icons/reverend_mother_liana_icon.png",
 	  "dialogue": "",
@@ -1717,8 +1716,7 @@
 	  "titles": ["Hierophant"],
 	  "stats": { "strength": 35, "constitution": 50, "dexterity": 40, "will": 85, "intelligence": 75, "charisma": 60 },
 	  "equipment": [
-		{ "id": "dagger", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 50 }
+		{ "id": "dagger", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/mother_inferior_macaria_icon.png",
 	  "dialogue": "",
@@ -1735,8 +1733,7 @@
 	  "titles": ["Houndmaster"],
 	  "stats": { "strength": 65, "constitution": 60, "dexterity": 50, "will": 55, "intelligence": 45, "charisma": 40 },
 	  "equipment": [
-		{ "id": "great_club", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 25 }
+		{ "id": "great_club", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/pit_monitor_icon.png",
 	  "dialogue": "",
@@ -1759,7 +1756,7 @@
 	},
 	{
 	  "id": "alewife_juturna",
-	  "name": "Alewife Juturna",
+	  "name": "Juturna",
 	  "race": "half_elf",
 	  "background": "bar_keep",
 	  "faction": "liziti",
@@ -1767,7 +1764,9 @@
 	  "stats": { "strength": 40, "constitution": 50, "dexterity": 55, "will": 50, "intelligence": 50, "charisma": 60 },
 	  "equipment": [
 		{ "id": "alcohol", "quantity": 8 },
-		{ "id": "gold", "quantity": 15 }
+		{ "id": "feyntanyl", "quantity": 4 },
+		{ "id": "joy", "quantity": 3 },
+		{ "id": "zip", "quantity": 3 }
 	  ],
 	  "icon": "res://Icons/alewife_juturna_icon.png",
 	  "dialogue": "",
@@ -1786,8 +1785,7 @@
 	  "equipment": [
 		{ "id": "joy", "quantity": 5 },
 		{ "id": "feyntanyl", "quantity": 3 },
-		{ "id": "zip", "quantity": 4 },
-		{ "id": "gold", "quantity": 10 }
+		{ "id": "zip", "quantity": 4 }
 	  ],
 	  "icon": "res://Icons/mary_guana_icon.png",
 	  "dialogue": "",
@@ -1804,8 +1802,7 @@
 	  "titles": ["Peddler"],
 	  "stats": { "strength": 75, "constitution": 70, "dexterity": 55, "will": 50, "intelligence": 35, "charisma": 30 },
 	  "equipment": [
-		{ "id": "handaxe", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 20 }
+		{ "id": "handaxe", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/hunter_john_icon.png",
 	  "dialogue": "",
@@ -1848,7 +1845,7 @@
 	},
 	{
 	  "id": "hedge_witch_magda",
-	  "name": "Hedge-Witch Magda",
+	  "name": "Magda",
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
@@ -1857,8 +1854,7 @@
 	  "equipment": [
 		{ "id": "potion_of_healing", "quantity": 2 },
 		{ "id": "draught_of_flabbiness", "quantity": 3 },
-		{ "id": "poison_vial", "quantity": 2 },
-		{ "id": "gold", "quantity": 15 }
+		{ "id": "poison_vial", "quantity": 2 }
 	  ],
 	  "icon": "res://Icons/hedge_witch_magda_icon.png",
 	  "dialogue": "",
@@ -1873,9 +1869,7 @@
 	  "background": "urchin",
 	  "faction": "liziti",
 	  "stats": { "strength": 30, "constitution": 35, "dexterity": 50, "will": 30, "intelligence": 35, "charisma": 60 },
-	  "equipment": [
-		{ "id": "gold", "quantity": 35 }
-	  ],
+	  "equipment": [],
 	  "icon": "res://Icons/lot_lizard_zillah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
@@ -1891,8 +1885,7 @@
 	  "titles": ["Whoremonger"],
 	  "stats": { "strength": 45, "constitution": 50, "dexterity": 55, "will": 60, "intelligence": 70, "charisma": 65 },
 	  "equipment": [
-		{ "id": "stilleto", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 50 }
+		{ "id": "stilleto", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/andrew_tuatara_icon.png",
 	  "dialogue": "",
@@ -1909,8 +1902,7 @@
 	  "titles": ["Skipper"],
 	  "stats": { "strength": 70, "constitution": 70, "dexterity": 50, "will": 55, "intelligence": 45, "charisma": 50 },
 	  "equipment": [
-		{ "id": "great_club", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 40 }
+		{ "id": "great_club", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/alligator_capone_icon.png",
 	  "dialogue": "",
@@ -1995,7 +1987,7 @@
 		{ "id": "staff", "slot": "main_hand" },
 		{ "id": "bottled_cloud", "quantity": 1 },
 		{ "id": "bottled_storm", "quantity": 1 },
-		{ "id": "gold", "quantity": 100 }
+		{ "id": "potion_of_healing", "quantity": 1 }
 	  ],
 	  "icon": "res://Icons/mostlemyre_drouge_icon.png",
 	  "dialogue": "",
@@ -2005,18 +1997,25 @@
 	},
 	{
 	  "id": "smith_darcy",
-	  "name": "Smith Darcy",
+	  "name": "Darcy",
 	  "race": "human",
 	  "background": "criminal",
 	  "faction": "neutral",
 	  "titles": ["Smith"],
 	  "stats": { "strength": 60, "constitution": 60, "dexterity": 50, "will": 35, "intelligence": 35, "charisma": 30 },
 	  "equipment": [
-		{ "id": "hammer", "slot": "main_hand" },
-		{ "id": "dagger", "quantity": 2 },
-		{ "id": "spear", "quantity": 2 },
-		{ "id": "mace", "quantity": 1 },
-		{ "id": "gold", "quantity": 20 }
+		{ "id": "hammer" },
+		{ "id": "dagger" },
+		{ "id": "spear" },
+		{ "id": "mace" },
+		{ "id": "handaxe" },
+		{ "id": "longsword" },
+		{ "id": "sickle" },
+		{ "id": "staff" },
+		{ "id": "great_club" },
+		{ "id": "pike" },
+		{ "id": "glaive" },
+		{ "id": "rapier" }
 	  ],
 	  "icon": "res://Icons/smith_darcy_icon.png",
 	  "dialogue": "",
@@ -2032,9 +2031,7 @@
 	  "faction": "patriciate",
 	  "titles": ["Librarian"],
 	  "stats": { "strength": 30, "constitution": 40, "dexterity": 45, "will": 65, "intelligence": 80, "charisma": 55 },
-	  "equipment": [
-		{ "id": "gold", "quantity": 60 }
-	  ],
+	  "equipment": [],
 	  "icon": "res://Icons/professor_circino_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
@@ -2043,15 +2040,13 @@
 	},
 	{
 	  "id": "professor_easton",
-	  "name": "Professor Easton",
+	  "name": "Easton",
 	  "race": "human",
 	  "background": "academic",
 	  "faction": "patriciate",
 	  "titles": ["Professor"],
 	  "stats": { "strength": 35, "constitution": 45, "dexterity": 45, "will": 70, "intelligence": 80, "charisma": 60 },
-	  "equipment": [
-		{ "id": "gold", "quantity": 80 }
-	  ],
+	  "equipment": [],
 	  "icon": "res://Icons/professor_easton_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
@@ -2080,8 +2075,7 @@
 	  "faction": "neutral",
 	  "stats": { "strength": 55, "constitution": 55, "dexterity": 55, "will": 45, "intelligence": 45, "charisma": 50 },
 	  "equipment": [
-		{ "id": "spear", "slot": "main_hand" },
-		{ "id": "gold", "quantity": 10 }
+		{ "id": "spear", "slot": "main_hand" }
 	  ],
 	  "icon": "res://Icons/saul_laelia_icon.png",
 	  "dialogue": "",
@@ -2099,8 +2093,7 @@
 	  "stats": { "strength": 95, "constitution": 40, "dexterity": 35, "will": 40, "intelligence": 25, "charisma": 25 },
 	  "equipment": [
 		{ "id": "spear", "slot": "main_hand" },
-		{ "id": "handaxe", "quantity": 1 },
-		{ "id": "gold", "quantity": 5 }
+		{ "id": "handaxe", "quantity": 1 }
 	  ],
 	  "icon": "res://Icons/big_al_samson_icon.png",
 	  "dialogue": "",

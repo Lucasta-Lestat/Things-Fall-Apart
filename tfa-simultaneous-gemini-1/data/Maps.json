@@ -189,8 +189,10 @@
 				},
 				{
 					"id": "treasure_chest",
-					"position": [120, 80],
-					"count": 1
+					"position": [2400, 1100],
+					"count": 1,
+					"controlling_faction": "cultists",
+					"value": 80
 				}
 			],
 			"warp_points": [
@@ -297,7 +299,15 @@
 					"count": 1
 				}
 			],
-			"item_spawns": [],
+			"item_spawns": [
+				{
+					"id": "treasure_chest",
+					"position": [1700, 1700],
+					"count": 1,
+					"controlling_faction": "liziti",
+					"value": 100
+				}
+			],
 			"warp_points": [
 				{
 					"id": "to_cemetery",
@@ -368,7 +378,15 @@
 				}
 			},
 			"npc_spawns": [],
-			"item_spawns": [],
+			"item_spawns": [
+				{
+					"id": "treasure_chest",
+					"position": [1300, 200],
+					"count": 1,
+					"controlling_faction": "dragatini",
+					"value": 120
+				}
+			],
 			"warp_points": []
 		},
 		{

@@ -3,6 +3,8 @@
 extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
+const WARP_ARROW_TEXTURE: Texture2D = preload("res://UI/UI Icons/warp_arrow.png")
+const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var fluid_manager: FluidManager = $FluidManager
@@ -585,8 +587,16 @@ func _spawn_items(item_list: Array) -> void:
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = item_def.get("count", 1)
 
+		# Per-spawn extras (only applied when present): controlling_faction triggers
+		# faction-filtered auto-loot for chests, value overrides the loot target.
+		var extras: Dictionary = {}
+		if item_def.has("controlling_faction"):
+			extras["controlling_faction"] = item_def["controlling_faction"]
+		if item_def.has("value"):
+			extras["value"] = float(item_def["value"])
+
 		for j in range(count):
-			create_item(item_id, pos)
+			create_item(item_id, pos, 1, extras)
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:
@@ -709,8 +719,12 @@ func _apply_material_recursive(node: Node, material: Material) -> void:
 	for child in node.get_children():
 		_apply_material_recursive(child, material)
 
-func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item:
-	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world."""
+func create_item(item_id: String, world_position: Vector2, stack_count: int = 1, extras: Dictionary = {}) -> Item:
+	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world.
+
+	The optional `extras` dict can carry per-spawn overrides set on the Item before
+	_ready runs — currently `controlling_faction` and `value` (float, used as the
+	auto-fill loot target on chests). Existing 3-arg callers continue to work."""
 	var item_instance = item_scene.instantiate() as Item
 	item_instance.id = item_id
 	item_instance.global_position = world_position
@@ -718,6 +732,13 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1)
 	# Set stack count before _ready applies data
 	if stack_count > 1:
 		item_instance.stack_count = stack_count
+
+	# Apply per-spawn extras BEFORE add_child so they're set when _ready runs
+	# and _apply_item_data can use them (e.g. faction-controlled chest fill).
+	if extras.has("controlling_faction"):
+		item_instance.controlling_faction = String(extras["controlling_faction"])
+	if extras.has("value"):
+		item_instance.loot_value = float(extras["value"])
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -1754,12 +1775,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 		# Check warp conditions (e.g. need a key)
 		if warp_def.has("condition") and not check_spawn_conditions(warp_def["condition"]):
 			continue
- 
+
 		var pos_arr = warp_def.get("position", [0, 0])
 		var size_arr = warp_def.get("size", [30, 30])
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var size = Vector2(size_arr[0], size_arr[1])
- 
+
 		# Create an Area2D with a collision shape
 		var area = Area2D.new()
 		area.name = "Warp_" + warp_def.get("id", "unknown")
@@ -1767,27 +1788,114 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.set_meta("target_map", warp_def.get("target_map", ""))
 		area.set_meta("target_spawn", warp_def.get("target_spawn", "default"))
 		area.set_meta("label", warp_def.get("label", ""))
- 
+
+		# Visible arrow sprite, scaled to a consistent display height
+		var arrow := Sprite2D.new()
+		arrow.texture = WARP_ARROW_TEXTURE
+		var tex_size = arrow.texture.get_size()
+		if tex_size.y > 0:
+			var scale_factor = WARP_ARROW_DISPLAY_HEIGHT / tex_size.y
+			arrow.scale = Vector2(scale_factor, scale_factor)
+		arrow.rotation = _warp_arrow_rotation(warp_def, pos)
+		arrow.z_index = 100
+		area.add_child(arrow)
+
+		# Hover label with the destination map's name (falls back to warp label)
+		var hover_label := Label.new()
+		hover_label.name = "HoverLabel"
+		hover_label.text = _warp_hover_text(warp_def)
+		hover_label.add_theme_color_override("font_color", Color(1, 1, 1))
+		hover_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		hover_label.add_theme_constant_override("outline_size", 6)
+		hover_label.add_theme_font_size_override("font_size", 20)
+		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hover_label.size = Vector2(200, 28)
+		hover_label.position = Vector2(-100, -WARP_ARROW_DISPLAY_HEIGHT * 0.75 - 14)
+		hover_label.visible = false
+		hover_label.z_index = 101
+		hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		area.add_child(hover_label)
+
 		var shape = CollisionShape2D.new()
 		var rect_shape = RectangleShape2D.new()
-		rect_shape.size = size
+		# The arrow sprite rotates with the warp's direction, so its bounding
+		# box width/height swap for north/south arrows. Use the larger of
+		# (texture width, texture height) for both axes so the picking rect
+		# fully covers the sprite at any rotation.
+		var arrow_world_size: Vector2 = tex_size * arrow.scale
+		var max_arrow_dim = max(arrow_world_size.x, arrow_world_size.y)
+		rect_shape.size = Vector2(
+			max(size.x, max_arrow_dim),
+			max(size.y, max_arrow_dim)
+		)
 		shape.shape = rect_shape
 		area.add_child(shape)
- 
-		# Warp zones are interacted with via right-click context menu, not by
-		# walking into them — input_pickable + input_event is the entire
-		# detection path, so no collision_layer/_mask is needed.
-		area.collision_layer = 0
+
+		# Warp zones are interacted with via mouse only, not physics — but
+		# mouse_entered/mouse_exited only fire if the area sits on a non-zero
+		# collision_layer (input_event works at layer 0 but hover does not).
+		# Bit 20 is unused by CollisionLayers so warps don't collide with
+		# anything (projectiles, items, characters, vision rays).
+		area.collision_layer = 1 << 19
 		area.collision_mask = 0
 		area.input_pickable = true
 		area.input_event.connect(_on_warp_input.bind(area))
- 
+		area.mouse_entered.connect(func(): hover_label.visible = true)
+		area.mouse_exited.connect(func(): hover_label.visible = false)
+
 		add_child(area)
 		warp_zones.append(area)
- 
+
 func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
-		show_context_menu(area, event.global_position)
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			var target_map: String = area.get_meta("target_map", "")
+			if not target_map.is_empty():
+				load_map(target_map, current_map_id)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			show_context_menu(area, event.global_position)
+
+# Rotation in radians for the warp arrow sprite. The texture points east (+x),
+# so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
+func _warp_arrow_rotation(warp_def: Dictionary, pos: Vector2) -> float:
+	# 1. Explicit direction wins
+	if warp_def.has("direction"):
+		match String(warp_def["direction"]).to_lower():
+			"east", "right":  return 0.0
+			"south", "down":  return PI / 2.0
+			"west", "left":   return PI
+			"north", "up":    return -PI / 2.0
+
+	# 2. Otherwise, infer from the warp's position relative to the map center:
+	#    point toward the nearest edge.
+	var map_size = Vector2(
+		GridManager.map_rect.size.x * GridManager.TILE_SIZE,
+		GridManager.map_rect.size.y * GridManager.TILE_SIZE
+	)
+	if map_size.x <= 0 or map_size.y <= 0:
+		return 0.0
+	var dx_left   = pos.x
+	var dx_right  = map_size.x - pos.x
+	var dy_top    = pos.y
+	var dy_bottom = map_size.y - pos.y
+	var min_dist = min(min(dx_left, dx_right), min(dy_top, dy_bottom))
+	if min_dist == dx_right:
+		return 0.0
+	elif min_dist == dy_bottom:
+		return PI / 2.0
+	elif min_dist == dx_left:
+		return PI
+	else:
+		return -PI / 2.0
+
+func _warp_hover_text(warp_def: Dictionary) -> String:
+	var target_id: String = warp_def.get("target_map", "")
+	if not target_id.is_empty() and MapDatabase.get_all_map_ids().has(target_id):
+		var target_data: Dictionary = MapDatabase.get_map_data(target_id)
+		var map_name: String = target_data.get("name", "")
+		if not map_name.is_empty():
+			return map_name
+	return warp_def.get("label", "")
 		
 func _check_condition(condition_key: String, condition_value = true) -> bool:
 	if not Globals.world_state.has(condition_key):

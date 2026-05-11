@@ -390,7 +390,7 @@
 	  ],
 	  "visuals": {
 		"in_hand_effect": "res://vfx/necrotic_hand.tscn",
-		"impact_effect": "res://vfx/necrotic.tscn"
+		"impact_effect": "res://vfx/creepy_beam.tscn"
 	  }
 	},
 	{

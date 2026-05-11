@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d07k26huvnvd0"
-path="res://.godot/imported/leather_armor.png.png-7e504830bfb02dd3911b9e3067248457.ctex"
+uid="uid://b1v74koj26yhv"
+path="res://.godot/imported/Legionnaire's Armor.png-f936bde2034ca47970057888ae4f6b21.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/leather_armor.png.png"
-dest_files=["res://.godot/imported/leather_armor.png.png-7e504830bfb02dd3911b9e3067248457.ctex"]
+source_file="res://Items/legionnaires_armor.png"
+dest_files=["res://.godot/imported/Legionnaire's Armor.png-f936bde2034ca47970057888ae4f6b21.ctex"]
 
 [params]
 

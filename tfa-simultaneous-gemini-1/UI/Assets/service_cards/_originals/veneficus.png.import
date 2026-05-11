@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b1v74koj26yhv"
-path="res://.godot/imported/Legionnaire's Armor.png-f936bde2034ca47970057888ae4f6b21.ctex"
+uid="uid://bgcs4kf2eirxy"
+path="res://.godot/imported/veneficus.png-c40dc1c794f708affeb4b86f3ad39438.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Items/Legionnaire's Armor.png"
-dest_files=["res://.godot/imported/Legionnaire's Armor.png-f936bde2034ca47970057888ae4f6b21.ctex"]
+source_file="res://UI/Assets/service_cards/_originals/veneficus.png"
+dest_files=["res://.godot/imported/veneficus.png-c40dc1c794f708affeb4b86f3ad39438.ctex"]
 
 [params]
 
