@@ -4039,8 +4039,17 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 			"cold":
 				conditions["chilled"] = conditions.get("chilled", 0) + 1
 
-			_: 
-				# This is the 'default' case (wildcard) 
+			"electric", "lightning":
+				# Propagate the hit through any contiguous conductive surface
+				# or fluid the character is standing on (water, blood, etc.).
+				# The electrified surface itself ticks shocked + CON-save stun.
+				var game = get_tree().current_scene
+				if game and "surface_manager" in game and game.surface_manager:
+					var tile = GridManager.world_to_map(global_position)
+					game.surface_manager.try_electrify(tile)
+
+			_:
+				# This is the 'default' case (wildcard)
 				# useful for damage types that don't have conditions yet
 				pass
 					
