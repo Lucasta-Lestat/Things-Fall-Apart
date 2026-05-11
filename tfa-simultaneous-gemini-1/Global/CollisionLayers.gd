@@ -9,6 +9,7 @@ const VISION_BLOCKERS := 4   # Layer 3 — vision blockers; queried by LOS rayca
 const PROJECTILES := 8       # Layer 4 — projectiles in flight
 const ITEMS := 16            # Layer 5 — world items (walkable, force-affectable)
 const WEAPON_HITBOXES := 32  # Layer 6 — active melee weapon hitbox during a swing
+const WARPS := 1 << 19       # Layer 20 — clickable warp Area2Ds (probed from input handlers)
 
 # Composite masks — name describes the intent, not the bits, so callsites read clearly.
 
