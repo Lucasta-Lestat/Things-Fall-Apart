@@ -2574,6 +2574,8 @@ func cast_ability(ability: AbilityShape):
 func _handle_input() -> void:
 	if not is_player_controlled:
 		return
+	if not is_alive():
+		return
 	if condition_manager.has_condition("unconscious"):
 		return
 	# Block player input when panicked or frightened — movement is forced
@@ -2627,6 +2629,12 @@ func _handle_input() -> void:
 
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
+		# Warps get a context menu of their own (handled in show_context_menu via
+		# the target_map metadata branch).
+		var warp_target = _find_warp_at(mouse_pos)
+		if warp_target != null and game:
+			game.show_context_menu(warp_target, get_viewport().get_mouse_position())
+			return
 		# Probe for a context-menu target (chest in world, non-hostile NPC).
 		# If hit, open menu instead of firing off-hand. Hostile NPCs and empty
 		# space fall through to the existing off-hand attack.
@@ -2636,6 +2644,17 @@ func _handle_input() -> void:
 			return
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
+
+	# --- Left mouse button - probe warp first ---
+	# A warp click teleports immediately; bail before the main-hand swing so the
+	# player doesn't visibly attack the cursor on the same frame as the load.
+	if Input.is_action_just_pressed("left_click"):
+		var warp = _find_warp_at(mouse_pos)
+		if warp != null and game:
+			var target_map: String = warp.get_meta("target_map", "")
+			if not target_map.is_empty():
+				game.load_map(target_map, game.current_map_id)
+				return
 
 	# --- Left mouse button - Main hand ---
 	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
@@ -2736,6 +2755,25 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 			# represents the party's perspective, not an individual member's.
 			if not FactionDatabase.are_enemies("player", collider.faction_id):
 				return collider
+	return null
+
+## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
+## layer (CollisionLayers.WARPS) and carry their destination in the
+## "target_map" metadata key.
+func _find_warp_at(world_pos: Vector2) -> Area2D:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	query.collision_mask = CollisionLayers.WARPS
+	var hits = space.intersect_point(query, 4)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Area2D and collider.has_meta("target_map"):
+			return collider
 	return null
 
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
@@ -3632,6 +3670,7 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		total_damage = limb.current_hp - prospective_hp
 
 	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	_check_death()
 	return total_damage
 
 func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
@@ -4036,8 +4075,17 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 			"cold":
 				conditions["chilled"] = conditions.get("chilled", 0) + 1
 
-			_: 
-				# This is the 'default' case (wildcard) 
+			"electric", "lightning":
+				# Propagate the hit through any contiguous conductive surface
+				# or fluid the character is standing on (water, blood, etc.).
+				# The electrified surface itself ticks shocked + CON-save stun.
+				var game = get_tree().current_scene
+				if game and "surface_manager" in game and game.surface_manager:
+					var tile = GridManager.world_to_map(global_position)
+					game.surface_manager.try_electrify(tile)
+
+			_:
+				# This is the 'default' case (wildcard)
 				# useful for damage types that don't have conditions yet
 				pass
 					

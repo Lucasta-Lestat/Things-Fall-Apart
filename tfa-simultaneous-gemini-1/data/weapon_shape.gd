@@ -53,8 +53,9 @@ var sprite: Sprite2D = null
 # Calculated sprite scale (from auto-scaling to match weapon dimensions)
 var _calculated_sprite_scale: Vector2 = Vector2.ONE
 
-# Debug visualization
-@export var debug_draw: bool = true
+# Debug visualization — gated by DebugManager (F12). Default off; the
+# manager flips this on for every weapon when debug mode is active.
+@export var debug_draw: bool = false
 var debug_lines: Array[Line2D] = []
 
 # Calculated values
@@ -113,8 +114,16 @@ var restricted_item_type: String = ""
 func _ready() -> void:
 	_setup_sprite()
 	_setup_hitbox()
+	# Sync debug draw to global DebugManager state and listen for toggles.
+	if typeof(DebugManager) != TYPE_NIL:
+		debug_draw = DebugManager.enabled
+		if not DebugManager.enabled_changed.is_connected(_on_debug_enabled_changed):
+			DebugManager.enabled_changed.connect(_on_debug_enabled_changed)
 	if debug_draw:
 		_create_debug_visualization()
+
+func _on_debug_enabled_changed(value: bool) -> void:
+	set_debug_draw(value)
 
 func _setup_sprite() -> void:
 	# Create sprite node

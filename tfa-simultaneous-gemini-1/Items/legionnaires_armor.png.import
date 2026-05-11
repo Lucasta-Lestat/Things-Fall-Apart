@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://Items/Legionnaire's Armor.png"
+source_file="res://Items/legionnaires_armor.png"
 dest_files=["res://.godot/imported/Legionnaire's Armor.png-f936bde2034ca47970057888ae4f6b21.ctex"]
 
 [params]

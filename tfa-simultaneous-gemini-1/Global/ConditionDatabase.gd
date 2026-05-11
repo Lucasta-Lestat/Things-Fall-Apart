@@ -97,6 +97,29 @@ func get_all_conditions() -> Array:
 		"immunities": {}
 	},
 	{
+		"id": "shocked",
+		"display_name": "Shocked",
+		"description": "Electricity arcs through your body.",
+		"traits": {"debuff": 1, "electric": 1, "dot": 1, "elemental": 1},
+		"stackable": true,
+		"max_tier": 3,
+		"duration": 1.5,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "res://vfx/lightning.tscn",
+		"custom_sfx": "",
+		"triggered_effects": [
+			{
+				"type": "damage",
+				"value": 5,
+				"damage_type": "electric",
+				"interval": 0.3
+			}
+		],
+		"immunities": {}
+	},
+	{
 		"id": "stunned",
 		"display_name": "Stunned",
 		"description": "Cannot take actions.",

@@ -11,6 +11,7 @@ const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 @onready var surface_manager: SurfaceManager = $SurfaceManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
+@onready var collision_visualizer: Node2D = $CollisionVisualizer
 
 var weather_vfx_controller: Node = null
 var weather_debug_window: CanvasLayer = null
@@ -950,6 +951,30 @@ func _process(delta: float) -> void:
 	if primary_selected and is_instance_valid(primary_selected) and player_camera:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
+	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
+	# unreliable when overlapping pickable areas exist (characters, items).
+	_update_warp_hover_labels()
+
+func _update_warp_hover_labels() -> void:
+	var mouse_pos: Vector2 = get_global_mouse_position()
+	for area in warp_zones:
+		if not is_instance_valid(area):
+			continue
+		var hover_label: Label = area.get_node_or_null("HoverLabel")
+		if hover_label == null:
+			continue
+		var shape_node: CollisionShape2D = null
+		for child in area.get_children():
+			if child is CollisionShape2D:
+				shape_node = child
+				break
+		if shape_node == null or not (shape_node.shape is RectangleShape2D):
+			hover_label.visible = false
+			continue
+		var rect_size: Vector2 = (shape_node.shape as RectangleShape2D).size
+		var local: Vector2 = area.to_local(mouse_pos) - shape_node.position
+		var inside: bool = absf(local.x) <= rect_size.x * 0.5 and absf(local.y) <= rect_size.y * 0.5
+		hover_label.visible = inside
 
 func process_object_hit(
 	attacker: ProceduralCharacter,
@@ -1010,6 +1035,9 @@ func process_object_hit(
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			KEY_F12:
+				if not event.echo:
+					DebugManager.toggle()
 			KEY_R:
 				# Restart
 				get_tree().reload_current_scene()
@@ -1381,6 +1409,17 @@ func process_weapon_hit(
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
 		SfxManager.play("sword-on-flesh", target.position)
+
+	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):
+		var penetrated: bool = penetration_result.state != PenetrationState.BOUNCED
+		var damage_total: float = 0.0
+		if final_damage is Dictionary:
+			for k in final_damage.keys():
+				damage_total += float(final_damage[k])
+		else:
+			damage_total = float(final_damage)
+		collision_visualizer.record_hit(hit_position, result.limb_name, penetrated, damage_total)
+		print("[debug] weapon hit: ", attacker.name if attacker else "?", " -> ", target.name if target else "?", " limb=", result.limb_name, " dmg=", damage_total, " state=", PenetrationState.keys()[penetration_result.state])
 
 	return result
 
@@ -1831,29 +1870,17 @@ func _create_warp_zones(warp_list: Array) -> void:
 		shape.shape = rect_shape
 		area.add_child(shape)
 
-		# Warp zones are interacted with via mouse only, not physics — but
-		# mouse_entered/mouse_exited only fire if the area sits on a non-zero
-		# collision_layer (input_event works at layer 0 but hover does not).
-		# Bit 20 is unused by CollisionLayers so warps don't collide with
-		# anything (projectiles, items, characters, vision rays).
-		area.collision_layer = 1 << 19
+		# Warps are detected via PhysicsPointQueryParameters2D from
+		# ProceduralCharacter._handle_input — point probes against
+		# CollisionLayers.WARPS find them for both left-click (teleport) and
+		# right-click (context menu). Hover labels are toggled by per-frame
+		# polling in _update_warp_hover_labels(). collision_mask = 0 keeps
+		# warps non-colliding with characters, projectiles, vision rays, etc.
+		area.collision_layer = CollisionLayers.WARPS
 		area.collision_mask = 0
-		area.input_pickable = true
-		area.input_event.connect(_on_warp_input.bind(area))
-		area.mouse_entered.connect(func(): hover_label.visible = true)
-		area.mouse_exited.connect(func(): hover_label.visible = false)
 
 		add_child(area)
 		warp_zones.append(area)
-
-func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			var target_map: String = area.get_meta("target_map", "")
-			if not target_map.is_empty():
-				load_map(target_map, current_map_id)
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			show_context_menu(area, event.global_position)
 
 # Rotation in radians for the warp arrow sprite. The texture points east (+x),
 # so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
@@ -1898,6 +1925,11 @@ func _warp_hover_text(warp_def: Dictionary) -> String:
 	return warp_def.get("label", "")
 		
 func _check_condition(condition_key: String, condition_value = true) -> bool:
+	# Time-of-day conditions read TimeManager directly. v1: no wrap-around (use both min/max for ranges within a single day).
+	if condition_key == "time_hour_min":
+		return TimeManager.current_hour >= int(condition_value)
+	if condition_key == "time_hour_max":
+		return TimeManager.current_hour <= int(condition_value)
 	if not Globals.world_state.has(condition_key):
 		push_warning("Missing world_state condition: " + condition_key)
 		return false
