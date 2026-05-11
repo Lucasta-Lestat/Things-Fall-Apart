@@ -955,7 +955,11 @@ func _process(delta: float) -> void:
 	_update_warp_hover_labels()
 
 func _update_warp_hover_labels() -> void:
-	var mouse_pos: Vector2 = get_global_mouse_position()
+	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
+	# available here. Compute world-space mouse position via the viewport's
+	# canvas transform instead.
+	var viewport := get_viewport()
+	var mouse_pos: Vector2 = viewport.get_canvas_transform().affine_inverse() * viewport.get_mouse_position()
 	for area in warp_zones:
 		if not is_instance_valid(area):
 			continue
