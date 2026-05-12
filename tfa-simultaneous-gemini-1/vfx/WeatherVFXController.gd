@@ -11,10 +11,32 @@ var _rain_node: CanvasLayer = null
 var _snow_node: CanvasLayer = null
 var _wind_node: CanvasLayer = null
 
+var _weather_audio: AudioStreamPlayer = null
+var _wind_audio: AudioStreamPlayer = null
+
+# Maps a precipitation type to the looped audio stream + playback volume.
+# heavy_rain / heavy_snow reuse the gentler stream at higher volume.
+const PRECIP_LOOPS := {
+	"rain":          {"path": "res://sfx/weather_rain_loop.mp3",          "volume_db": -8.0},
+	"heavy_rain":    {"path": "res://sfx/weather_rain_loop.mp3",          "volume_db": -2.0},
+	"snow":          {"path": "res://sfx/weather_snow_loop.mp3",          "volume_db": -10.0},
+	"heavy_snow":    {"path": "res://sfx/weather_snow_loop.mp3",          "volume_db": -4.0},
+	"acid_rain":     {"path": "res://sfx/weather_acid_rain_loop.mp3",     "volume_db": -6.0},
+	"freezing_rain": {"path": "res://sfx/weather_freezing_rain_loop.mp3", "volume_db": -6.0},
+}
+const WIND_LOOP_PATH := "res://sfx/weather_wind_loop.mp3"
+
 var _current_group: String = ""
+var _audio_cache: Dictionary = {}
 
 func _ready() -> void:
 	WeatherManager.weather_changed.connect(_on_weather_changed)
+	_weather_audio = AudioStreamPlayer.new()
+	_weather_audio.bus = "SFX"
+	add_child(_weather_audio)
+	_wind_audio = AudioStreamPlayer.new()
+	_wind_audio.bus = "SFX"
+	add_child(_wind_audio)
 
 func setup_for_map(weather_group: String) -> void:
 	_current_group = weather_group
@@ -48,6 +70,58 @@ func _apply_weather(weather: Dictionary) -> void:
 	_clear_wind()
 	if wind_speed > 20.0:
 		_show_wind(wind_speed, wind_angle)
+
+	_apply_weather_audio(precip, wind_speed)
+
+
+func _apply_weather_audio(precip: String, wind_speed: float) -> void:
+	# Precipitation loop
+	if PRECIP_LOOPS.has(precip):
+		var entry: Dictionary = PRECIP_LOOPS[precip]
+		var stream := _get_looped_stream(entry["path"])
+		if stream:
+			if _weather_audio.stream != stream:
+				_weather_audio.stop()
+				_weather_audio.stream = stream
+				_weather_audio.volume_db = entry["volume_db"]
+				_weather_audio.play()
+			else:
+				_weather_audio.volume_db = entry["volume_db"]
+				if not _weather_audio.playing:
+					_weather_audio.play()
+	else:
+		_weather_audio.stop()
+
+	# Wind loop, scaled by speed
+	if wind_speed > 20.0:
+		var wind_stream := _get_looped_stream(WIND_LOOP_PATH)
+		if wind_stream:
+			if _wind_audio.stream != wind_stream:
+				_wind_audio.stop()
+				_wind_audio.stream = wind_stream
+			if not _wind_audio.playing:
+				_wind_audio.play()
+			_wind_audio.volume_db = lerp(-18.0, -4.0, clamp((wind_speed - 20.0) / 80.0, 0.0, 1.0))
+	else:
+		_wind_audio.stop()
+
+
+func _get_looped_stream(path: String) -> AudioStream:
+	if _audio_cache.has(path):
+		return _audio_cache[path]
+	if not ResourceLoader.exists(path):
+		push_warning("WeatherVFXController: missing audio %s" % path)
+		_audio_cache[path] = null
+		return null
+	var stream := load(path) as AudioStream
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+	elif stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
+	elif stream is AudioStreamWAV:
+		(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	_audio_cache[path] = stream
+	return stream
 
 func _show_rain(density: float, wind_angle: float) -> void:
 	_rain_node = _rain_scene.instantiate()
@@ -99,4 +173,8 @@ func _clear_wind() -> void:
 func clear_all() -> void:
 	_clear_precipitation()
 	_clear_wind()
+	if _weather_audio:
+		_weather_audio.stop()
+	if _wind_audio:
+		_wind_audio.stop()
 	_current_group = ""

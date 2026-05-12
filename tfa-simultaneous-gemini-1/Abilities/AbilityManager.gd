@@ -101,6 +101,10 @@ func _start_casting(ability: Ability, target_position: Vector2, explicit_targets
 	if cast_effect_path != "" and character.has_method("_spawn_effect"):
 		character._spawn_effect(cast_effect_path, character.global_position, 1.0)
 
+	var sound_cast_path = ability.visuals.get("sound_cast", "")
+	if sound_cast_path != "" and character.has_method("_play_sfx_at"):
+		character._play_sfx_at(sound_cast_path, character.global_position)
+
 	cast_started.emit(ability, target_position)
 
 	# Don't end targeting here — the preview should persist until the ability
