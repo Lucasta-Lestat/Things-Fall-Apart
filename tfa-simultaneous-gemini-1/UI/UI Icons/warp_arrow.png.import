@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bwarpa1arr0w001"
-path="res://.godot/imported/warp_arrow.png-warpa1arr0w0010000000000000000000.ctex"
+uid="uid://c7y3sijt5ge6s"
+path="res://.godot/imported/warp_arrow.png-443c059714db76382b7655c1f946cdc3.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://UI/UI Icons/warp_arrow.png"
-dest_files=["res://.godot/imported/warp_arrow.png-warpa1arr0w0010000000000000000000.ctex"]
+dest_files=["res://.godot/imported/warp_arrow.png-443c059714db76382b7655c1f946cdc3.ctex"]
 
 [params]
 
