@@ -653,13 +653,23 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		# Containers are openable only via right-click in the world; suppress
 		# "Open" from the inventory context menu.
 		options.erase("Open")
-		var equip_slot: String = item_data.get("equip_slot", "")
+		var equip_slot: String = str(item_data.get("equip_slot", ""))
 		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
 			if item_data.get("_equipped", false):
 				options.insert(0, "Unequip")
 			else:
 				options.insert(0, "Equip")
 	elif kind == "weapon" or kind == "ability":
+		# Pull declared interact_options off the weapon node first (e.g. "Throw",
+		# "Drop"). "Sheathe"/"Equip"/"Stow" are synonyms for the state-dependent
+		# entries appended below, so filter them out to avoid duplicates.
+		var node = entry.get("raw")
+		if kind == "weapon" and node is WeaponShape:
+			for opt in node.options:
+				if opt in ["Sheathe", "Equip", "Stow"]:
+					continue
+				if not options.has(opt):
+					options.append(opt)
 		if entry.get("equipped", false):
 			var hand: String = entry.get("hand", "")
 			if hand == "Both":
@@ -732,6 +742,10 @@ func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Arra
 				_equip_shape_to_hand(character, entry, "Main")
 			"Equip to Off":
 				_equip_shape_to_hand(character, entry, "Off")
+			"Throw":
+				_throw_weapon(character, entry)
+			"Drop":
+				_drop_weapon(character, entry)
 			_:
 				print("Unhandled shape option: ", option_name)
 
@@ -846,8 +860,13 @@ func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
 
-	# Remove from inventory
-	var item = character.inventory.remove_item(item_index)
+	# item_index == -1 means the projectile data is already fully in item_data
+	# (e.g. a weapon node was removed from inventory before queueing).
+	var item: Dictionary
+	if item_index >= 0:
+		item = character.inventory.remove_item(item_index)
+	else:
+		item = item_data
 	if item.is_empty():
 		return
 
@@ -892,6 +911,75 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	if item.has("primary_damage_type"):
 		SfxManager.play("sword-fall", character.global_position)
+
+# Remove a WeaponShape node from wherever it lives in the inventory
+# (main hand, off hand, or stowed). Returns true if found and removed.
+func _remove_weapon_from_inventory(inventory, weapon) -> bool:
+	if weapon == inventory.main_hand_item:
+		inventory.unequip_hand("Main")
+		return true
+	if weapon == inventory.off_hand_item:
+		inventory.unequip_hand("Off")
+		return true
+	if weapon in inventory.stowed_items:
+		inventory.stowed_items.erase(weapon)
+		return true
+	return false
+
+func _throw_weapon(character, entry: Dictionary) -> void:
+	if not game_node:
+		return
+	var node = entry.get("raw")
+	if node == null or not is_instance_valid(node) or not (node is WeaponShape):
+		return
+
+	var weapon_data: Dictionary = node.to_data()
+	# to_data() doesn't include id by default — make sure projectile/respawn keys work.
+	weapon_data["id"] = node.id
+
+	if PauseManager.is_paused:
+		var icon: Texture2D = null
+		var sprite_path = str(weapon_data.get("sprite_path", ""))
+		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+			icon = load(sprite_path)
+
+		# Paused: pre-remove so the inventory display updates immediately, then
+		# queue the throw. (Unqueueing the action won't restore the weapon —
+		# same trade-off as the paused item-throw path that pre-captures index.)
+		if not _remove_weapon_from_inventory(character.inventory, node):
+			return
+		node.queue_free()
+
+		if character.path_input_handler and character.path_input_handler.is_placing_action():
+			character.path_input_handler.assign_item_to_pending_node(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)},
+				icon
+			)
+		else:
+			character.action_queue.queue_action(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)}
+			)
+		return
+
+	# Unpaused: hand the node to the character so it removes the weapon only
+	# when the player commits the throw. Cancelling targeting leaves the
+	# weapon in inventory.
+	character.start_throw_targeting(-1, weapon_data, node)
+
+func _drop_weapon(character, entry: Dictionary) -> void:
+	if not game_node:
+		return
+	var node = entry.get("raw")
+	if node == null or not is_instance_valid(node) or not (node is WeaponShape):
+		return
+	var weapon_id: String = node.id
+	if not _remove_weapon_from_inventory(character.inventory, node):
+		return
+	node.queue_free()
+	game_node.create_item(weapon_id, character.global_position)
+	SfxManager.play("sword-fall", character.global_position)
 
 # Map equip_slot strings to EquipmentShape.EquipmentSlot enum values
 const _EQUIP_SLOT_MAP: Dictionary = {

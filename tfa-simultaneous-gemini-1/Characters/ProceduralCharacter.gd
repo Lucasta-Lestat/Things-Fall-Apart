@@ -585,8 +585,15 @@ func _clear_tactical_path_if_executing() -> void:
 
 # --- Throw targeting helpers ---
 
-func start_throw_targeting(item_index: int, item_data: Dictionary) -> void:
-	pending_throw = {"item_index": item_index, "item_data": item_data}
+func start_throw_targeting(item_index: int, item_data: Dictionary, source_node = null) -> void:
+	# source_node is an optional WeaponShape (or similar) to remove from
+	# inventory at commit time. When provided, item_index should be -1 and
+	# item_data should already contain the full payload to throw.
+	pending_throw = {
+		"item_index": item_index,
+		"item_data": item_data,
+		"source_node": source_node,
+	}
 	_ensure_aim_line()
 	_aim_line.default_color = Color(1, 1, 1, 0.5)
 	_aim_line.show_aim(global_position, global_position, 0)
@@ -598,13 +605,28 @@ func _update_throw_reticle(mouse_pos: Vector2) -> void:
 func _execute_pending_throw(mouse_pos: Vector2) -> void:
 	var item_index = pending_throw.get("item_index", -1)
 	var item_data = pending_throw.get("item_data", {})
+	var source_node = pending_throw.get("source_node", null)
 	pending_throw = {}
 	_hide_throw_reticle()
 
-	if item_index < 0:
-		return
-
-	var item = inventory.remove_item(item_index)
+	# Three source modes:
+	#   1) item_index >= 0  → remove a dict item from inventory.items by index.
+	#   2) source_node set  → remove a WeaponShape node from main/off/stowed.
+	#   3) neither          → use item_data directly (caller pre-removed).
+	var item: Dictionary
+	if item_index >= 0:
+		item = inventory.remove_item(item_index)
+	elif source_node != null and is_instance_valid(source_node):
+		if source_node == inventory.main_hand_item:
+			inventory.unequip_hand("Main")
+		elif source_node == inventory.off_hand_item:
+			inventory.unequip_hand("Off")
+		else:
+			inventory.stowed_items.erase(source_node)
+		source_node.queue_free()
+		item = item_data
+	else:
+		item = item_data
 	if item.is_empty():
 		return
 

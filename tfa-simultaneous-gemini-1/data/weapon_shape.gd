@@ -523,8 +523,11 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("healing"): healing = data["healing"]
 	if data.has("walkability"): walkability = data["walkability"]
 	
-	# Logic & Arrays
-	if data.has("options"): options = data["options"]
+	# Logic & Arrays. JSON canonical key is "interact_options" (renamed from
+	# the legacy "options"); accept either for backwards compatibility.
+	var raw_options = data.get("interact_options", data.get("options", null))
+	if raw_options is Array:
+		options = raw_options
 	if data.has("traits"): traits = data["traits"]
 	if data.has("resources"): resources = data["resources"]
 	
