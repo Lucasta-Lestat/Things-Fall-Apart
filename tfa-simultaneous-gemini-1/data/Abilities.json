@@ -1,856 +1,1508 @@
 {
-  "abilities": [
-	{
-	  "id": "fireball",
-	  "display_name": "Fireball",
-	  "description": "Hurl a ball of fire that explodes on impact, dealing fire damage to all enemies in the area.",
-	  "icon": "res://UI/UI Icons/ability_fireball.png",
-	  "cooldown": 2.0,
-	  "visual_duration": 1.5,
-	  "costs": { "MP": 25 },
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": { "spell": 1, "fire": 3, "magical": 1, "attack": 1, "aoe": 2 },
-	  "target_shape": "circle",
-	  "targeting": {
-		"type": "point",
-		"range": 400.0,
-		"shape": "circle",
-		"radius": 80.0
-	  },
-	  "projectile_speed": 50.0,
-	  "effects": [
+	"abilities": [
 		{
-		  "type": "damage",
-		  "damage": { "fire": 35 }
+			"id": "fireball",
+			"display_name": "Fireball",
+			"description": "Hurl a ball of fire that explodes on impact, dealing fire damage to all enemies in the area.",
+			"icon": "res://UI/UI Icons/ability_fireball.png",
+			"cooldown": 2.0,
+			"visual_duration": 1.5,
+			"costs": {
+				"MP": 25
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"spell": 1,
+				"fire": 3,
+				"magical": 1,
+				"attack": 1,
+				"aoe": 2
+			},
+			"target_shape": "circle",
+			"targeting": {
+				"type": "point",
+				"range": 400.0,
+				"shape": "circle",
+				"radius": 80.0
+			},
+			"projectile_speed": 50.0,
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"fire": 35
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "burning",
+					"stacks": 2
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/fire.tscn",
+				"cast_effect": "",
+				"projectile": "res://vfx/fire.tscn",
+				"impact_effect": "res://vfx/fire.tscn",
+				"sound_cast": "res://sfx/fire_cast.mp3",
+				"sound_impact": "res://sfx/explosion.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "burning",
-		  "stacks": 2
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/fire.tscn",
-		"cast_effect": "",
-		"projectile": "res://vfx/fire.tscn",
-		"impact_effect": "res://vfx/fire.tscn",
-		"sound_cast": "res://sfx/fire_cast.mp3",
-		"sound_impact": "res://sfx/explosion.mp3"
-	  }
-	},
-	{
-	"id": "cloud_kill",
-	 "display_name": "Cloud Kill",
-	  "description": "Conjure a cloud of deadly poison.",
-	  "icon": "res://UI/UI Icons/ability_cloud_kill.png",
-	  "cooldown": 2.0,
-	  "visual_duration": 1.5,
-	  "costs": { "MP": 25 },
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": { "spell": 1, "poison": 3, "magical": 1, "attack": 1, "aoe": 2 },
-	  "target_shape": "circle",
-	  "targeting": {
-		"type": "point",
-		"range": 400.0,
-		"shape": "circle",
-		"radius": 80.0
-	  },
-	"projectile_speed": 50.0,
-	"effects": {
-		"type": "cloud",
-		"radius": 80,
-		"duration": 15.0,
-		"color": "#40804020",
-		"condition_id": "poisoned",
-		"condition_stacks": 1,
-		"apply_interval": 2.0,
-		"density": 0.99
-		},
-	  "visuals": {
-		"in_hand_effect": "res://vfx/poison_cloud.tscn",
-		"projectile": "res://vfx/poison_cloud.tscn",
-		"impact_effect": "res://vfx/poison_cloud.tscn"
-	  }
-	},
-
-	{
-	  "id": "ice_storm",
-	  "display_name": "Ice Storm",
-	  "description": "Conjure a storm of ice that damages and slows all enemies in the area.",
-	  "icon": "res://UI/UI Icons/ability_ice_storm.png",
-	  "cooldown": 12.0,
-	  "costs": { "MP": 35 },
-	  "cast_time": 1.5,
-	  "traits": { "spell": 1, "cold": 3, "magical": 1, "attack": 1, "aoe": 2, "control": 2 },
-	  "targeting": {
-		"type": "point",
-		"range": 350.0,
-		"shape": "circle",
-		"radius": 100.0
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "cold": 25, "bludgeoning": 10 }
+			"id": "cloud_kill",
+			"display_name": "Cloud Kill",
+			"description": "Conjure a cloud of deadly poison.",
+			"icon": "res://UI/UI Icons/ability_cloud_kill.png",
+			"cooldown": 2.0,
+			"visual_duration": 1.5,
+			"costs": {
+				"MP": 25
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"spell": 1,
+				"poison": 3,
+				"magical": 1,
+				"attack": 1,
+				"aoe": 2
+			},
+			"target_shape": "circle",
+			"targeting": {
+				"type": "point",
+				"range": 400.0,
+				"shape": "circle",
+				"radius": 80.0
+			},
+			"projectile_speed": 50.0,
+			"effects": {
+				"type": "cloud",
+				"radius": 80,
+				"duration": 15.0,
+				"color": "#40804020",
+				"condition_id": "poisoned",
+				"condition_stacks": 1,
+				"apply_interval": 2.0,
+				"density": 0.99
+			},
+			"visuals": {
+				"in_hand_effect": "res://vfx/poison_cloud.tscn",
+				"projectile": "res://vfx/poison_cloud.tscn",
+				"impact_effect": "res://vfx/poison_cloud.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/poison_cloud.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "chilled",
-		  "stacks": 2,
-		  "chance": 0.8
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/ice_storm.tscn",
-		"in_hand_scale": 0.15,
-		"impact_effect": "res://vfx/ice_storm.tscn"
-	  }
-	},
-	{
-	  "id": "lightning_bolt",
-	  "display_name": "Lightning Bolt",
-	  "description": "Fire a bolt of lightning in a line, damaging all enemies it passes through.",
-	  "icon": "res://UI/UI Icons/ability_lightning_bolt.png",
-	  "cooldown": 6.0,
-	  "costs": { "MP": 20 },
-	  "cast_time": 0.5,
-	  "traits": { "spell": 1, "lightning": 3, "magical": 1, "attack": 2, "line": 2 },
-	  "targeting": {
-		"type": "direction",
-		"range": 500.0,
-		"shape": "line",
-		"size": { "x": 500, "y": 30 }
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "lightning": 40 },
-		  "target_traits": [],
-		  "immune_traits": ["lightning_immune"]
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/lightning_hand.tscn",
-		"in_hand_scale": 0.4,
-		"impact_effect": "res://vfx/lightning.tscn"
-	  }
-	},
-	{
-	  "id": "magnetic_pull",
-	  "display_name": "Magnetic Pull",
-	  "description": "Create a magnetic field that pulls all metal objects and armored enemies toward the center.",
-	  "icon": "res://UI/UI Icons/ability_magnetic_pull.png",
-	  "cooldown": 15.0,
-	  "costs": { "MP": 30 },
-	  "cast_time": 0.0,
-	  "traits": { "spell": 1, "force": 3, "magical": 1, "control": 3 },
-	  "targeting": {
-		"type": "point",
-		"range": 300.0,
-		"shape": "circle",
-		"radius": 120.0
-	  },
-	  "effects": [
-		{
-		  "type": "force_field",
-		  "field_type": "magnetic_attract",
-		  "radius": 120.0,
-		  "strength": 600.0,
-		  "duration": 4.0,
-		  "affected_traits": ["metal", "armored"]
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://vfx/magnetic_field.tscn" }
-	},
-	{
-	  "id": "repulsion_wave",
-	  "display_name": "Repulsion Wave",
-	  "description": "Release a wave of force that pushes all nearby enemies away.",
-	  "icon": "res://UI/UI Icons/ability_repulsion_wave.png",
-	  "cooldown": 10.0,
-	  "costs": { "MP": 20, "stamina": 10 },
-	  "cast_time": 0.0,
-	  "traits": { "spell": 1, "force": 2, "magical": 1, "control": 2, "defensive": 3 },
-	  "targeting": {
-		"type": "self",
-		"shape": "circle",
-		"radius": 100.0
-	  },
-	  "effects": [
-		{
-		  "type": "knockback",
-		  "strength": 800.0,
-		  "from_caster": true
+			"id": "ice_storm",
+			"display_name": "Ice Storm",
+			"description": "Conjure a storm of ice that damages and slows all enemies in the area.",
+			"icon": "res://UI/UI Icons/ability_ice_storm.png",
+			"cooldown": 12.0,
+			"costs": {
+				"MP": 35
+			},
+			"cast_time": 1.5,
+			"traits": {
+				"spell": 1,
+				"cold": 3,
+				"magical": 1,
+				"attack": 1,
+				"aoe": 2,
+				"control": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 350.0,
+				"shape": "circle",
+				"radius": 100.0
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"cold": 25,
+						"bludgeoning": 10
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "chilled",
+					"stacks": 2,
+					"chance": 0.8
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/ice_storm.tscn",
+				"in_hand_scale": 0.15,
+				"impact_effect": "res://vfx/ice_storm.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/ice_storm_impact.mp3"
+			}
 		},
 		{
-		  "type": "damage",
-		  "damage": { "force": 15 }
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://vfx/shockwave.tscn" }
-	},
-	{
-	  "id": "gravity_well",
-	  "display_name": "Gravity Well",
-	  "description": "Create a point of intense gravity that pulls all enemies toward it.",
-	  "icon": "res://UI/UI Icons/ability_gravity_well.png",
-	  "cooldown": 20.0,
-	  "costs": { "MP": 45 },
-	  "cast_time": 2.0,
-	  "traits": { "spell": 1, "force": 4, "magical": 1, "control": 3, "aoe": 2 },
-	  "targeting": {
-		"type": "point",
-		"range": 350.0,
-		"shape": "circle",
-		"radius": 150.0
-	  },
-	  "effects": [
-		{
-		  "type": "force_field",
-		  "field_type": "gravity",
-		  "radius": 150.0,
-		  "strength": 400.0,
-		  "duration": 5.0,
-		  "affected_traits": []
+			"id": "lightning_bolt",
+			"display_name": "Lightning Bolt",
+			"description": "Fire a bolt of lightning in a line, damaging all enemies it passes through.",
+			"icon": "res://UI/UI Icons/ability_lightning_bolt.png",
+			"cooldown": 6.0,
+			"costs": {
+				"MP": 20
+			},
+			"cast_time": 0.5,
+			"traits": {
+				"spell": 1,
+				"lightning": 3,
+				"magical": 1,
+				"attack": 2,
+				"line": 2
+			},
+			"targeting": {
+				"type": "direction",
+				"range": 500.0,
+				"shape": "line",
+				"size": {
+					"x": 500,
+					"y": 30
+				}
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"lightning": 40
+					},
+					"target_traits": [],
+					"immune_traits": [
+						"lightning_immune"
+					]
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/lightning_hand.tscn",
+				"in_hand_scale": 0.4,
+				"impact_effect": "res://vfx/lightning.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/lightning_strike.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "slowed",
-		  "chance": 0.6
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/necrotic_hand.tscn", "impact_effect": "res://vfx/gravity_well.tscn" }
-	},
-	{
-	  "id": "vortex",
-	  "display_name": "Vortex",
-	  "description": "Create a swirling vortex that spins enemies around and pulls them inward.",
-	  "icon": "res://UI/UI Icons/ability_vortex.png",
-	  "cooldown": 18.0,
-	  "costs": { "MP": 40 },
-	  "cast_time": 1.0,
-	  "traits": { "spell": 1, "wind": 3, "magical": 1, "control": 3 },
-	  "targeting": {
-		"type": "point",
-		"range": 300.0,
-		"shape": "circle",
-		"radius": 120.0
-	  },
-	  "effects": [
-		{
-		  "type": "force_field",
-		  "field_type": "vortex",
-		  "radius": 120.0,
-		  "strength": 500.0,
-		  "duration": 4.0,
-		  "clockwise": true,
-		  "inward_pull": 0.4
+			"id": "magnetic_pull",
+			"display_name": "Magnetic Pull",
+			"description": "Create a magnetic field that pulls all metal objects and armored enemies toward the center.",
+			"icon": "res://UI/UI Icons/ability_magnetic_pull.png",
+			"cooldown": 15.0,
+			"costs": {
+				"MP": 30
+			},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"force": 3,
+				"magical": 1,
+				"control": 3
+			},
+			"targeting": {
+				"type": "point",
+				"range": 300.0,
+				"shape": "circle",
+				"radius": 120.0
+			},
+			"effects": [
+				{
+					"type": "force_field",
+					"field_type": "magnetic_attract",
+					"radius": 120.0,
+					"strength": 600.0,
+					"duration": 4.0,
+					"affected_traits": [
+						"metal",
+						"armored"
+					]
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/metal_hand.tscn",
+				"impact_effect": "res://vfx/magnetic_field.tscn",
+				"sound_impact": "res://sfx/magnetic_pull.mp3"
+			}
 		},
 		{
-		  "type": "damage",
-		  "damage": { "bludgeoning": 5 }
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/wind_hand.tscn", "impact_effect": "res://vfx/vortex.tscn" }
-	},
-	{
-	  "id": "heal",
-	  "display_name": "Heal",
-	  "description": "Restore health to yourself or an ally.",
-	  "icon": "res://UI/UI Icons/ability_heal.png",
-	  "cooldown": 5.0,
-	  "costs": { "MP": 15 },
-	  "cast_time": 1.0,
-	  "traits": { "spell": 1, "healing": 4, "magical": 1, "support": 3 },
-	  "targeting": {
-		"type": "target",
-		"range": 200.0,
-		"shape": "single"
-	  },
-	  "effects": [
-		{
-		  "type": "heal",
-		  "amount": 40
+			"id": "repulsion_wave",
+			"display_name": "Repulsion Wave",
+			"description": "Release a wave of force that pushes all nearby enemies away.",
+			"icon": "res://UI/UI Icons/ability_repulsion_wave.png",
+			"cooldown": 10.0,
+			"costs": {
+				"MP": 20,
+				"stamina": 10
+			},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"force": 2,
+				"magical": 1,
+				"control": 2,
+				"defensive": 3
+			},
+			"targeting": {
+				"type": "self",
+				"shape": "circle",
+				"radius": 100.0
+			},
+			"effects": [
+				{
+					"type": "knockback",
+					"strength": 800.0,
+					"from_caster": true
+				},
+				{
+					"type": "damage",
+					"damage": {
+						"force": 15
+					}
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/wind_hand.tscn",
+				"impact_effect": "res://vfx/shockwave.tscn",
+				"sound_impact": "res://sfx/force_blast.mp3"
+			}
 		},
 		{
-		  "type": "remove_condition",
-		  "trait": "poison"
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/heal_hand.tscn",
-		"impact_effect": "res://vfx/heal.tscn"
-	  }
-	},
-	{
-	  "id": "chasten",
-	  "display_name": "Chasten",
-	  "description": "End a creature's current infatuation",
-	  "icon": "res://UI/UI Icons/chasten.png",
-	  "cooldown": 5.0,
-	  "costs": { "MP": 15 },
-	  "cast_time": 1.0,
-	  "traits": { "holy":1, "support": 1 },
-	  "targeting": {
-		"type": "target",
-		"range": 200.0,
-		"shape": "single"
-	  },
-	  "effects": [
-		{
-		  "type": "remove_condition",
-		  "trait": "infatuated"
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/radiant_hand.tscn", "impact_effect": "res://vfx/heartbreak.tscn" }
-	},
-	
-	{
-	  "id": "shield_bash",
-	  "display_name": "Shield Bash",
-	  "description": "Bash an enemy with your shield, dealing damage and stunning them.",
-	  "icon": "res://UI/UI Icons/ability_shield_bash.png",
-	  "cooldown": 6.0,
-	  "costs": { "stamina": 20 },
-	  "cast_time": 0.0,
-	  "traits": { "physical": 2, "attack": 1, "melee": 2, "stun": 3 },
-	  "requirements": { "traits": ["has_shield"] },
-	  "targeting": {
-		"type": "point",
-		"range": 50.0,
-		"shape": "circle",
-		"radius": 40.0
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "bludgeoning": 25 }
+			"id": "gravity_well",
+			"display_name": "Gravity Well",
+			"description": "Create a point of intense gravity that pulls all enemies toward it.",
+			"icon": "res://UI/UI Icons/ability_gravity_well.png",
+			"cooldown": 20.0,
+			"costs": {
+				"MP": 45
+			},
+			"cast_time": 2.0,
+			"traits": {
+				"spell": 1,
+				"force": 4,
+				"magical": 1,
+				"control": 3,
+				"aoe": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 350.0,
+				"shape": "circle",
+				"radius": 150.0
+			},
+			"effects": [
+				{
+					"type": "force_field",
+					"field_type": "gravity",
+					"radius": 150.0,
+					"strength": 400.0,
+					"duration": 5.0,
+					"affected_traits": []
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "slowed",
+					"chance": 0.6
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/necrotic_hand.tscn",
+				"impact_effect": "res://vfx/gravity_well.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/gravity_well.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "stunned",
-		  "duration": 2.0,
-		  "chance": 0.7
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/metal_hand.tscn", "impact_effect": "res://vfx/impact_metal.tscn" },
-	  "animation": "shield_bash"
-	},
-	{
-	  "id": "rage",
-	  "display_name": "Rage",
-	  "description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
-	  "icon": "res://UI/UI Icons/ability_rage.png",
-	  "cooldown": 30.0,
-	  "costs": { "HP": 10 },
-	  "cast_time": 0.0,
-	  "traits": { "physical": 1, "buff": 3, "self": 1, "rage": 4 },
-	  "targeting": {
-		"type": "self",
-		"shape": "none"
-	  },
-	  "effects": [
-		{
-		  "type": "apply_condition",
-		  "condition_id": "berserker_rage",
-		  "duration": 15.0
-		}
-	  ],
-	  "visuals": { "in_hand_effect": "res://vfx/rage_hand.tscn", "cast_effect": "res://vfx/rage_hand.tscn", "impact_effect": "res://vfx/rage_hand.tscn" },
-	  "animation": "rage_roar"
-	},
-	{
-	  "id": "creepy_beam",
-	  "display_name": "Creepy Beam",
-	  "description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
-	  "icon": "res://UI/UI Icons/ability_creepy_beam.png",
-	  "cooldown": 7.0,
-	  "costs": { "MP": 22 },
-	  "cast_time": 0.6,
-	  "traits": { "spell": 1, "necrotic": 3, "magical": 1, "attack": 2, "line": 2 },
-	  "targeting": {
-		"type": "direction",
-		"range": 400.0,
-		"shape": "line",
-		"size": { "x": 400, "y": 24 }
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "necrotic": 30 }
+			"id": "vortex",
+			"display_name": "Vortex",
+			"description": "Create a swirling vortex that spins enemies around and pulls them inward.",
+			"icon": "res://UI/UI Icons/ability_vortex.png",
+			"cooldown": 18.0,
+			"costs": {
+				"MP": 40
+			},
+			"cast_time": 1.0,
+			"traits": {
+				"spell": 1,
+				"wind": 3,
+				"magical": 1,
+				"control": 3
+			},
+			"targeting": {
+				"type": "point",
+				"range": 300.0,
+				"shape": "circle",
+				"radius": 120.0
+			},
+			"effects": [
+				{
+					"type": "force_field",
+					"field_type": "vortex",
+					"radius": 120.0,
+					"strength": 500.0,
+					"duration": 4.0,
+					"clockwise": true,
+					"inward_pull": 0.4
+				},
+				{
+					"type": "damage",
+					"damage": {
+						"bludgeoning": 5
+					}
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/wind_hand.tscn",
+				"impact_effect": "res://vfx/vortex.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/vortex_wind.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "weakened",
-		  "stacks": 1,
-		  "chance": 0.5
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/necrotic_hand.tscn",
-		"impact_effect": "res://vfx/creepy_beam.tscn"
-	  }
-	},
-	{
-	  "id": "acid_splash",
-	  "display_name": "Acid Splash",
-	  "description": "Hurl a glob of acid that splashes on impact, corroding everything in the area and leaving behind a pool of acid.",
-	  "icon": "res://UI/UI Icons/ability_acid_splash.png",
-	  "cooldown": 5.0,
-	  "costs": { "MP": 18 },
-	  "cast_time": 0.5,
-	  "visual_duration": 2.0,
-	  "traits": { "spell": 1, "acid": 3, "magical": 1, "attack": 1, "aoe": 1 },
-	  "targeting": {
-		"type": "point",
-		"range": 350.0,
-		"shape": "circle",
-		"radius": 50.0
-	  },
-	  "projectile_speed": 60.0,
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "acid": 20 }
+			"id": "heal",
+			"display_name": "Heal",
+			"description": "Restore health to yourself or an ally.",
+			"icon": "res://UI/UI Icons/ability_heal.png",
+			"cooldown": 5.0,
+			"costs": {
+				"MP": 15
+			},
+			"cast_time": 1.0,
+			"traits": {
+				"spell": 1,
+				"healing": 4,
+				"magical": 1,
+				"support": 3
+			},
+			"targeting": {
+				"type": "target",
+				"range": 200.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "heal",
+					"amount": 40
+				},
+				{
+					"type": "remove_condition",
+					"trait": "poison"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/heal_hand.tscn",
+				"impact_effect": "res://vfx/heal.tscn",
+				"sound_cast": "res://sfx/holy_cast.mp3",
+				"sound_impact": "res://sfx/heal_chime.mp3"
+			}
 		},
 		{
-		  "type": "apply_condition",
-		  "condition_id": "corroding",
-		  "stacks": 1
+			"id": "chasten",
+			"display_name": "Chasten",
+			"description": "End a creature's current infatuation",
+			"icon": "res://UI/UI Icons/chasten.png",
+			"cooldown": 5.0,
+			"costs": {
+				"MP": 15
+			},
+			"cast_time": 1.0,
+			"traits": {
+				"holy": 1,
+				"support": 1
+			},
+			"targeting": {
+				"type": "target",
+				"range": 200.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "remove_condition",
+					"trait": "infatuated"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/radiant_hand.tscn",
+				"impact_effect": "res://vfx/heartbreak.tscn",
+				"sound_cast": "res://sfx/holy_cast.mp3",
+				"sound_impact": "res://sfx/holy_cleanse.mp3"
+			}
 		},
 		{
-		  "type": "spawn_fluid",
-		  "fluid_type": "acid",
-		  "amount": 0.5,
-		  "spread": 2
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/acid_hand.tscn",
-		"projectile": "res://vfx/acid_hand.tscn",
-		"impact_effect": "res://vfx/acid.tscn"
-	  }
-	},
-	{
-	  "id": "thunderwave",
-	  "display_name": "Thunderwave",
-	  "description": "Unleash a cone of thunderous force that damages and pushes back all enemies caught in the blast.",
-	  "icon": "res://UI/UI Icons/ability_thunderwave.png",
-	  "cooldown": 8.0,
-	  "costs": { "MP": 25 },
-	  "cast_time": 0.3,
-	  "visual_duration": 1.0,
-	  "traits": { "spell": 1, "sonic": 3, "magical": 1, "attack": 2, "aoe": 2, "control": 1 },
-	  "targeting": {
-		"type": "direction",
-		"range": 150.0,
-		"shape": "cone",
-		"radius": 150.0,
-		"angle": 60.0
-	  },
-	  "effects": [
-		{
-		  "type": "damage",
-		  "damage": { "sonic": 25 }
+			"id": "shield_bash",
+			"display_name": "Shield Bash",
+			"description": "Bash an enemy with your shield, dealing damage and stunning them.",
+			"icon": "res://UI/UI Icons/ability_shield_bash.png",
+			"cooldown": 6.0,
+			"costs": {
+				"stamina": 20
+			},
+			"cast_time": 0.0,
+			"traits": {
+				"physical": 2,
+				"attack": 1,
+				"melee": 2,
+				"stun": 3
+			},
+			"requirements": {
+				"traits": [
+					"has_shield"
+				]
+			},
+			"targeting": {
+				"type": "point",
+				"range": 50.0,
+				"shape": "circle",
+				"radius": 40.0
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"bludgeoning": 25
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "stunned",
+					"duration": 2.0,
+					"chance": 0.7
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/metal_hand.tscn",
+				"impact_effect": "res://vfx/impact_metal.tscn",
+				"sound_impact": "res://sfx/armor-impact.mp3"
+			},
+			"animation": "shield_bash"
 		},
 		{
-		  "type": "knockback",
-		  "strength": 600.0,
-		  "from_caster": true
-		}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/sonic_hand.tscn",
-		"impact_effect": "res://vfx/sonic.tscn"
-	  }
-	},
-	{
-	  "id": "beguile",
-	  "display_name": "Beguile",
-	  "description": "Charms a target, making them infatuated with the caster and unable to attack them.",
-	  "icon": "res://UI/UI Icons/ability_beguile.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "charm": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "infatuated", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/mental_hand.tscn", "impact_effect": "res://vfx/infatuated_hearts.tscn"}
-	},
-	{
-	  "id": "confess",
-	  "display_name": "Confess",
-	  "description": "The caster and target become mutually infatuated, unable to harm each other.",
-	  "icon": "res://UI/UI Icons/ability_confess.png",
-	  "cooldown": 8.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "charm": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "custom", "method": "_confess"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/mental_hand.tscn", "impact_effect": "res://vfx/charm.tscn"}
-	},
-	{
-	  "id": "hitch",
-	  "display_name": "Hitch",
-	  "description": "Pick two characters; they become infatuated with each other.",
-	  "icon": "res://UI/UI Icons/ability_hitch.png",
-	  "cooldown": 8.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "charm": 1},
-	  "targeting": {"type": "characters", "range": 300.0, "shape": "characters", "target_count": 2, "target_filter": "any"},
-	  "effects": [
-		{"type": "custom", "method": "_hitch"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/mental_hand.tscn", "impact_effect": "res://vfx/charm.tscn"}
-	},
-	{
-	  "id": "fatal_attraction",
-	  "display_name": "Fatal Attraction",
-	  "description": "Pick two characters; they become infatuated and their fates are linked.",
-	  "icon": "res://UI/UI Icons/ability_fatal_attraction.png",
-	  "cooldown": 12.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "charm": 1, "curse": 1},
-	  "targeting": {"type": "characters", "range": 300.0, "shape": "characters", "target_count": 2, "target_filter": "any"},
-	  "effects": [
-		{"type": "custom", "method": "_fatal_attraction"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/mental_hand.tscn", "cast_effect": "res://vfx/bleeding.tscn", "impact_effect": "res://vfx/infatuated_hearts.tscn"}
-	},
-	{
-	  "id": "test_confused",
-	  "display_name": "Confuse",
-	  "description": "Confuses a target, causing them to attack random creatures.",
-	  "icon": "res://UI/UI Icons/ability_test_confused.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "confused", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/mental_hand.tscn", "impact_effect": "res://vfx/unconscious.tscn"}
-	},
-	{
-	  "id": "test_frightened",
-	  "display_name": "Frighten",
-	  "description": "Frightens a target, forcing them to flee from the caster.",
-	  "icon": "res://UI/UI Icons/ability_test_frightened.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "fear": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "frightened", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/fear_hand.tscn", "impact_effect": "res://vfx/fear.tscn"}
-	},
-	{
-	  "id": "test_panicked",
-	  "display_name": "Panic",
-	  "description": "Causes a target to panic, running in random directions.",
-	  "icon": "res://UI/UI Icons/ability_test_panicked.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "mental": 1, "fear": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "panicked", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/fear_hand.tscn", "impact_effect": "res://vfx/fear.tscn"}
-	},
-	{
-	  "id": "test_sickened",
-	  "display_name": "Sicken",
-	  "description": "Inflicts disease on a target, reducing STR/CON and possibly spreading.",
-	  "icon": "res://UI/UI Icons/ability_test_sickened.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "disease": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "sickened", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/disease_hand.tscn", "impact_effect": "res://vfx/disease.tscn"}
-	},
-	{
-	  "id": "test_nauseated",
-	  "display_name": "Nauseate",
-	  "description": "Nauseates a target, slowing them and causing acid vomiting.",
-	  "icon": "res://UI/UI Icons/ability_test_nauseated.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "disease": 1},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 30.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "nauseated", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/disease_hand.tscn", "impact_effect": "res://vfx/disease.tscn"}
-	},
-	{
-	  "id": "test_animal_magnetism",
-	  "display_name": "Animal Magnetism",
-	  "description": "Grants an aura that randomly spawns wild animals nearby.",
-	  "icon": "res://UI/UI Icons/ability_test_animal_magnetism.png",
-	  "cooldown": 5.0,
-	  "costs": {},
-	  "cast_time": 0.0,
-	  "traits": {"spell": 1, "nature": 1},
-	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "animal_magnetism", "stacks": 1}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/nature_hand.tscn", "impact_effect": "res://vfx/grassy_surface.tscn"}
-	},
-	{
-	  "id": "pounce",
-	  "display_name": "Pounce",
-	  "description": "Dash forward and slash with razor-sharp claws, dealing slashing damage in a small area.",
-	  "icon": "res://UI/UI Icons/ability_pounce.png",
-	  "cooldown": 5.0,
-	  "costs": {"stamina": 15},
-	  "cast_time": 0.0,
-	  "interruptible": false,
-	  "traits": {"physical": 2, "attack": 1, "melee": 2},
-	  "targeting": {"type": "point", "range": 200.0, "shape": "circle", "radius": 40.0},
-	  "effects": [],
-	  "steps": [
-		{
-		  "delay": 0.0,
-		  "move_to_target": true,
-		  "move_speed": 700.0,
-		  "effects": []
+			"id": "rage",
+			"display_name": "Rage",
+			"description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
+			"icon": "res://UI/UI Icons/ability_rage.png",
+			"cooldown": 30.0,
+			"costs": {
+				"HP": 10
+			},
+			"cast_time": 0.0,
+			"traits": {
+				"physical": 1,
+				"buff": 3,
+				"self": 1,
+				"rage": 4
+			},
+			"targeting": {
+				"type": "self",
+				"shape": "none"
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "berserker_rage",
+					"duration": 15.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/rage_hand.tscn",
+				"cast_effect": "res://vfx/rage_hand.tscn",
+				"impact_effect": "res://vfx/rage_hand.tscn",
+				"sound_impact": "res://sfx/rage_roar.mp3"
+			},
+			"animation": "rage_roar"
 		},
 		{
-		  "delay": 0.1,
-		  "effects": [
-			{"type": "damage", "damage": {"slashing": 20}}
-		  ],
-		  "targeting": {"type": "self", "shape": "circle", "radius": 40.0},
-		  "animation": "slash",
-		  "visuals": {
-			"impact_effect": "res://vfx/claw_slash.tscn",
-			"sound_impact": "res://sfx/slash.mp3"
-		  }
-		}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/claw_hand.tscn"}
-	},
-	{
-	  "id": "ram",
-	  "display_name": "Ram",
-	  "description": "Charge forward and slam into enemies with a powerful headbutt, dealing bludgeoning damage and knocking them back.",
-	  "icon": "res://UI/UI Icons/ability_ram.png",
-	  "cooldown": 6.0,
-	  "costs": {"stamina": 20},
-	  "cast_time": 0.0,
-	  "interruptible": false,
-	  "traits": {"physical": 2, "attack": 1, "melee": 2},
-	  "targeting": {"type": "point", "range": 180.0, "shape": "circle", "radius": 35.0},
-	  "effects": [],
-	  "steps": [
-		{
-		  "delay": 0.0,
-		  "move_to_target": true,
-		  "move_speed": 600.0,
-		  "effects": []
+			"id": "creepy_beam",
+			"display_name": "Creepy Beam",
+			"description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
+			"icon": "res://UI/UI Icons/ability_creepy_beam.png",
+			"cooldown": 7.0,
+			"costs": {
+				"MP": 22
+			},
+			"cast_time": 0.6,
+			"traits": {
+				"spell": 1,
+				"necrotic": 3,
+				"magical": 1,
+				"attack": 2,
+				"line": 2
+			},
+			"targeting": {
+				"type": "direction",
+				"range": 400.0,
+				"shape": "line",
+				"size": {
+					"x": 400,
+					"y": 24
+				}
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"necrotic": 30
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "weakened",
+					"stacks": 1,
+					"chance": 0.5
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/necrotic_hand.tscn",
+				"impact_effect": "res://vfx/necrotic.tscn",
+				"sound_cast": "res://sfx/necrotic_cast.mp3",
+				"sound_impact": "res://sfx/necrotic_drain.mp3"
+			}
 		},
 		{
-		  "delay": 0.0,
-		  "effects": [
-			{"type": "damage", "damage": {"bludgeoning": 25}},
-			{"type": "knockback", "strength": 600.0, "from_caster": true}
-		  ],
-		  "targeting": {"type": "self", "shape": "circle", "radius": 35.0},
-		  "animation": "bash",
-		  "visuals": {
-			"impact_effect": "res://vfx/explosion.tscn",
-			"sound_impact": "res://sfx/slash.mp3"
-		  }
+			"id": "acid_splash",
+			"display_name": "Acid Splash",
+			"description": "Hurl a glob of acid that splashes on impact, corroding everything in the area and leaving behind a pool of acid.",
+			"icon": "res://UI/UI Icons/ability_acid_splash.png",
+			"cooldown": 5.0,
+			"costs": {
+				"MP": 18
+			},
+			"cast_time": 0.5,
+			"visual_duration": 2.0,
+			"traits": {
+				"spell": 1,
+				"acid": 3,
+				"magical": 1,
+				"attack": 1,
+				"aoe": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 350.0,
+				"shape": "circle",
+				"radius": 50.0
+			},
+			"projectile_speed": 60.0,
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"acid": 20
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "corroding",
+					"stacks": 1
+				},
+				{
+					"type": "spawn_fluid",
+					"fluid_type": "acid",
+					"amount": 0.5,
+					"spread": 2
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/acid_hand.tscn",
+				"projectile": "res://vfx/acid_hand.tscn",
+				"impact_effect": "res://vfx/acid.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/acid_splash.mp3"
+			}
+		},
+		{
+			"id": "thunderwave",
+			"display_name": "Thunderwave",
+			"description": "Unleash a cone of thunderous force that damages and pushes back all enemies caught in the blast.",
+			"icon": "res://UI/UI Icons/ability_thunderwave.png",
+			"cooldown": 8.0,
+			"costs": {
+				"MP": 25
+			},
+			"cast_time": 0.3,
+			"visual_duration": 1.0,
+			"traits": {
+				"spell": 1,
+				"sonic": 3,
+				"magical": 1,
+				"attack": 2,
+				"aoe": 2,
+				"control": 1
+			},
+			"targeting": {
+				"type": "direction",
+				"range": 150.0,
+				"shape": "cone",
+				"radius": 150.0,
+				"angle": 60.0
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"sonic": 25
+					}
+				},
+				{
+					"type": "knockback",
+					"strength": 600.0,
+					"from_caster": true
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/sonic_hand.tscn",
+				"impact_effect": "res://vfx/sonic.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/sonic_boom.mp3"
+			}
+		},
+		{
+			"id": "beguile",
+			"display_name": "Beguile",
+			"description": "Charms a target, making them infatuated with the caster and unable to attack them.",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"charm": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "infatuated",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"impact_effect": "res://vfx/infatuated_hearts.tscn",
+				"sound_impact": "res://sfx/charm_chime.mp3"
+			}
+		},
+		{
+			"id": "confess",
+			"display_name": "Confess",
+			"description": "The caster and target become mutually infatuated, unable to harm each other.",
+			"icon": "res://UI/UI Icons/ability_confess.png",
+			"cooldown": 8.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"charm": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_confess"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"impact_effect": "res://vfx/charm.tscn",
+				"sound_impact": "res://sfx/charm_chime.mp3"
+			}
+		},
+		{
+			"id": "hitch",
+			"display_name": "Hitch",
+			"description": "Pick two characters; they become infatuated with each other.",
+			"icon": "res://UI/UI Icons/ability_hitch.png",
+			"cooldown": 8.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"charm": 1
+			},
+			"targeting": {
+				"type": "characters",
+				"range": 300.0,
+				"shape": "characters",
+				"target_count": 2,
+				"target_filter": "any"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_hitch"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"impact_effect": "res://vfx/charm.tscn",
+				"sound_impact": "res://sfx/charm_chime.mp3"
+			}
+		},
+		{
+			"id": "fatal_attraction",
+			"display_name": "Fatal Attraction",
+			"description": "Pick two characters; they become infatuated and their fates are linked.",
+			"icon": "res://UI/UI Icons/ability_fatal_attraction.png",
+			"cooldown": 12.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"charm": 1,
+				"curse": 1
+			},
+			"targeting": {
+				"type": "characters",
+				"range": 300.0,
+				"shape": "characters",
+				"target_count": 2,
+				"target_filter": "any"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_fatal_attraction"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"cast_effect": "res://vfx/bleeding.tscn",
+				"impact_effect": "res://vfx/infatuated_hearts.tscn",
+				"sound_impact": "res://sfx/charm_chime.mp3"
+			}
+		},
+		{
+			"id": "test_confused",
+			"display_name": "Confuse",
+			"description": "Confuses a target, causing them to attack random creatures.",
+			"icon": "res://UI/UI Icons/ability_test_confused.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "confused",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"impact_effect": "res://vfx/unconscious.tscn",
+				"sound_impact": "res://sfx/mental_confuse.mp3"
+			}
+		},
+		{
+			"id": "test_frightened",
+			"display_name": "Frighten",
+			"description": "Frightens a target, forcing them to flee from the caster.",
+			"icon": "res://UI/UI Icons/ability_test_frightened.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"fear": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "frightened",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/fear_hand.tscn",
+				"impact_effect": "res://vfx/fear.tscn",
+				"sound_impact": "res://sfx/fear_shriek.mp3"
+			}
+		},
+		{
+			"id": "test_panicked",
+			"display_name": "Panic",
+			"description": "Causes a target to panic, running in random directions.",
+			"icon": "res://UI/UI Icons/ability_test_panicked.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"mental": 1,
+				"fear": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "panicked",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/fear_hand.tscn",
+				"impact_effect": "res://vfx/fear.tscn",
+				"sound_impact": "res://sfx/fear_shriek.mp3"
+			}
+		},
+		{
+			"id": "test_sickened",
+			"display_name": "Sicken",
+			"description": "Inflicts disease on a target, reducing STR/CON and possibly spreading.",
+			"icon": "res://UI/UI Icons/ability_test_sickened.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"disease": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "sickened",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/disease_hand.tscn",
+				"impact_effect": "res://vfx/disease.tscn",
+				"sound_impact": "res://sfx/disease_cough.mp3"
+			}
+		},
+		{
+			"id": "test_nauseated",
+			"display_name": "Nauseate",
+			"description": "Nauseates a target, slowing them and causing acid vomiting.",
+			"icon": "res://UI/UI Icons/ability_test_nauseated.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"disease": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "nauseated",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/disease_hand.tscn",
+				"impact_effect": "res://vfx/disease.tscn",
+				"sound_impact": "res://sfx/nausea_retch.mp3"
+			}
+		},
+		{
+			"id": "test_animal_magnetism",
+			"display_name": "Animal Magnetism",
+			"description": "Grants an aura that randomly spawns wild animals nearby.",
+			"icon": "res://UI/UI Icons/ability_test_animal_magnetism.png",
+			"cooldown": 5.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {
+				"spell": 1,
+				"nature": 1
+			},
+			"targeting": {
+				"type": "self",
+				"range": 0.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "animal_magnetism",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/nature_hand.tscn",
+				"impact_effect": "res://vfx/grassy_surface.tscn",
+				"sound_impact": "res://sfx/animal_call.mp3"
+			}
+		},
+		{
+			"id": "pounce",
+			"display_name": "Pounce",
+			"description": "Dash forward and slash with razor-sharp claws, dealing slashing damage in a small area.",
+			"icon": "res://UI/UI Icons/ability_pounce.png",
+			"cooldown": 5.0,
+			"costs": {
+				"stamina": 15
+			},
+			"cast_time": 0.0,
+			"interruptible": false,
+			"traits": {
+				"physical": 2,
+				"attack": 1,
+				"melee": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 200.0,
+				"shape": "circle",
+				"radius": 40.0
+			},
+			"effects": [],
+			"steps": [
+				{
+					"delay": 0.0,
+					"move_to_target": true,
+					"move_speed": 700.0,
+					"effects": []
+				},
+				{
+					"delay": 0.1,
+					"effects": [
+						{
+							"type": "damage",
+							"damage": {
+								"slashing": 20
+							}
+						}
+					],
+					"targeting": {
+						"type": "self",
+						"shape": "circle",
+						"radius": 40.0
+					},
+					"animation": "slash",
+					"visuals": {
+						"impact_effect": "res://vfx/claw_slash.tscn",
+						"sound_impact": "res://sfx/slash.mp3"
+					}
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/claw_hand.tscn"
+			}
+		},
+		{
+			"id": "ram",
+			"display_name": "Ram",
+			"description": "Charge forward and slam into enemies with a powerful headbutt, dealing bludgeoning damage and knocking them back.",
+			"icon": "res://UI/UI Icons/ability_ram.png",
+			"cooldown": 6.0,
+			"costs": {
+				"stamina": 20
+			},
+			"cast_time": 0.0,
+			"interruptible": false,
+			"traits": {
+				"physical": 2,
+				"attack": 1,
+				"melee": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 180.0,
+				"shape": "circle",
+				"radius": 35.0
+			},
+			"effects": [],
+			"steps": [
+				{
+					"delay": 0.0,
+					"move_to_target": true,
+					"move_speed": 600.0,
+					"effects": []
+				},
+				{
+					"delay": 0.0,
+					"effects": [
+						{
+							"type": "damage",
+							"damage": {
+								"bludgeoning": 25
+							}
+						},
+						{
+							"type": "knockback",
+							"strength": 600.0,
+							"from_caster": true
+						}
+					],
+					"targeting": {
+						"type": "self",
+						"shape": "circle",
+						"radius": 35.0
+					},
+					"animation": "bash",
+					"visuals": {
+						"impact_effect": "res://vfx/explosion.tscn",
+						"sound_impact": "res://sfx/slash.mp3"
+					}
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/claw_hand.tscn"
+			}
+		},
+		{
+			"id": "bide",
+			"display_name": "Bide",
+			"description": "Brace yourself for incoming blows, gaining resistance to physical damage. After 10 seconds, your next attack deals bonus base damage equal to the physical damage you absorbed.",
+			"icon": "res://UI/UI Icons/ability_bide.png",
+			"cooldown": 12.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 0.5,
+			"interruptible": true,
+			"traits": {
+				"Arcane": 1,
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"buff": 1,
+				"self": 1,
+				"delayed": 1
+			},
+			"targeting": {
+				"type": "self",
+				"range": 0.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "physically_resistant",
+					"stacks": 1,
+					"duration": 10.0
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "bide",
+					"stacks": 1,
+					"duration": 10.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/defensive_hand.tscn",
+				"impact_effect": "res://vfx/radiant.tscn",
+				"sound_cast": "res://sfx/defensive_cast.mp3",
+				"sound_impact": "res://sfx/shield_brace.mp3"
+			}
+		},
+		{
+			"id": "rain",
+			"display_name": "Rain",
+			"description": "Call down a steady rain over the area.",
+			"icon": "res://UI/UI Icons/ability_rain.png",
+			"cooldown": 30.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.5,
+			"interruptible": true,
+			"traits": {
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"weather": 1
+			},
+			"targeting": {
+				"type": "self",
+				"range": 0.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_change_weather",
+					"precipitation_type": "rain",
+					"group_id": "Scarlatti"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/weather_hand.tscn",
+				"sound_cast": "res://sfx/weather_cast.mp3"
+			}
+		},
+		{
+			"id": "acid_rain",
+			"display_name": "Acid Rain",
+			"description": "Summon a corrosive acid rain that eats at everything caught in the open.",
+			"icon": "res://UI/UI Icons/ability_acid_rain.png",
+			"cooldown": 30.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.5,
+			"interruptible": true,
+			"traits": {
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"weather": 1,
+				"acid": 2
+			},
+			"targeting": {
+				"type": "self",
+				"range": 0.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_change_weather",
+					"precipitation_type": "acid_rain",
+					"group_id": "Scarlatti"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/acid_hand.tscn",
+				"sound_cast": "res://sfx/weather_cast.mp3"
+			}
+		},
+		{
+			"id": "freezing_rain",
+			"display_name": "Freezing Rain",
+			"description": "Summon a freezing rain that chills everyone caught in the open.",
+			"icon": "res://UI/UI Icons/ability_freezing_rain.png",
+			"cooldown": 30.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.5,
+			"interruptible": true,
+			"traits": {
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"weather": 1,
+				"cold": 2
+			},
+			"targeting": {
+				"type": "self",
+				"range": 0.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_change_weather",
+					"precipitation_type": "freezing_rain",
+					"group_id": "Scarlatti"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/ice_storm.tscn",
+				"in_hand_scale": 0.15,
+				"sound_cast": "res://sfx/weather_cast.mp3"
+			}
+		},
+		{
+			"id": "wave_of_dysthymia",
+			"display_name": "Wave of Dysthymia",
+			"description": "Project a cone of crushing apathy. Affected creatures cannot take any actions except movement.",
+			"icon": "res://UI/UI Icons/ability_wave_of_dysthymia.png",
+			"cooldown": 12.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"Arcane": 1,
+				"Occult": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"mental": 2,
+				"control": 2,
+				"aoe": 2
+			},
+			"targeting": {
+				"type": "direction",
+				"range": 250.0,
+				"shape": "cone",
+				"radius": 250.0,
+				"angle": 75.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "apathetic",
+					"stacks": 1,
+					"duration": 8.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/apathy_hand.tscn",
+				"impact_effect": "res://vfx/apathy.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/apathy_wave.mp3"
+			}
+		},
+		{
+			"id": "deny_ending",
+			"display_name": "Deny Ending",
+			"description": "Refuse the target's death. They cannot drop below 1 HP for 6 seconds per stack.",
+			"icon": "res://UI/UI Icons/ability_deny_ending.png",
+			"cooldown": 10.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"Occult": 1,
+				"Holy": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"buff": 1,
+				"support": 2
+			},
+			"targeting": {
+				"type": "target",
+				"range": 200.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "deny_ending",
+					"stacks": 1,
+					"duration": 6.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/radiant_hand.tscn",
+				"impact_effect": "res://vfx/radiant.tscn",
+				"sound_cast": "res://sfx/holy_cast.mp3",
+				"sound_impact": "res://sfx/holy_cleanse.mp3"
+			}
+		},
+		{
+			"id": "psych_up",
+			"display_name": "Psych Up",
+			"description": "Copy all of the target's active conditions onto yourself. Each copy lasts 12 seconds.",
+			"icon": "res://UI/UI Icons/ability_psych_up.png",
+			"cooldown": 15.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"Arcane": 1,
+				"Holy": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"support": 2
+			},
+			"targeting": {
+				"type": "target",
+				"range": 200.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_copy_conditions",
+					"duration": 12.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/radiant_hand.tscn",
+				"impact_effect": "res://vfx/radiant.tscn",
+				"sound_cast": "res://sfx/holy_cast.mp3",
+				"sound_impact": "res://sfx/holy_cleanse.mp3"
+			}
+		},
+		{
+			"id": "fire_spin",
+			"display_name": "Fire Spin",
+			"description": "Wreathe a 15 ft area in clinging flame. Creatures caught inside burn and cannot move.",
+			"icon": "res://UI/UI Icons/ability_fire_spin.png",
+			"cooldown": 10.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"Arcane": 1,
+				"Fire": 2,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"aoe": 2,
+				"control": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 350.0,
+				"shape": "circle",
+				"radius": 100.0
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_place_surface",
+					"surface_id": "fire_spin",
+					"radius": 100.0,
+					"duration": 6.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/fire.tscn",
+				"impact_effect": "res://vfx/fire.tscn",
+				"sound_cast": "res://sfx/fire_cast.mp3",
+				"sound_impact": "res://sfx/fire_roar.mp3"
+			}
+		},
+		{
+			"id": "bumper_crop",
+			"display_name": "Bumper Crop",
+			"description": "Cause a 15 ft sphere to bloom with lush grass. The terrain becomes difficult, but creatures standing in it are mended over time.",
+			"icon": "res://UI/UI Icons/ability_bumper_crop.png",
+			"cooldown": 12.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 1.5,
+			"interruptible": true,
+			"traits": {
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"support": 2,
+				"aoe": 2,
+				"nature": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 300.0,
+				"shape": "circle",
+				"radius": 100.0
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "_place_surface",
+					"surface_id": "grassy",
+					"radius": 100.0,
+					"duration": 30.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/nature_hand.tscn",
+				"impact_effect": "res://vfx/grassy_surface.tscn",
+				"sound_cast": "res://sfx/nature_cast.mp3",
+				"sound_impact": "res://sfx/nature_bloom.mp3"
+			}
+		},
+		{
+			"id": "alms_of_the_vein",
+			"display_name": "Alms of the Vein",
+			"description": "Drain the target's lifeblood. They take 6 necrotic damage and start bleeding; you recover 3 health.",
+			"icon": "res://UI/UI Icons/ability_alms_of_the_vein.png",
+			"cooldown": 6.0,
+			"costs": {
+				"MP": 1
+			},
+			"cast_time": 0.75,
+			"interruptible": true,
+			"traits": {
+				"Holy": 1,
+				"Occult": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"necrotic": 2,
+				"drain": 1
+			},
+			"targeting": {
+				"type": "target",
+				"range": 150.0,
+				"shape": "single"
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"necrotic": 6
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "bleeding",
+					"stacks": 1
+				},
+				{
+					"type": "custom",
+					"method": "_self_heal",
+					"amount": 3
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/necrotic_hand.tscn",
+				"impact_effect": "res://vfx/bleeding.tscn",
+				"sound_cast": "res://sfx/necrotic_cast.mp3",
+				"sound_impact": "res://sfx/necrotic_drain.mp3"
+			}
 		}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/claw_hand.tscn"}
-	},
-	{
-	  "id": "bide",
-	  "display_name": "Bide",
-	  "description": "Brace yourself for incoming blows, gaining resistance to physical damage. After 10 seconds, your next attack deals bonus base damage equal to the physical damage you absorbed.",
-	  "icon": "res://UI/UI Icons/ability_bide.png",
-	  "cooldown": 12.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 0.5,
-	  "interruptible": true,
-	  "traits": {"Arcane": 1, "Primal": 1, "Somatic": 1, "Verbal": 1, "buff": 1, "self": 1, "delayed": 1},
-	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "physically_resistant", "stacks": 1, "duration": 10.0},
-		{"type": "apply_condition", "condition_id": "bide", "stacks": 1, "duration": 10.0}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/defensive_hand.tscn", "impact_effect": "res://vfx/radiant.tscn"}
-	},
-	{
-	  "id": "rain",
-	  "display_name": "Rain",
-	  "description": "Call down a steady rain over the area.",
-	  "icon": "res://UI/UI Icons/ability_rain.png",
-	  "cooldown": 30.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.5,
-	  "interruptible": true,
-	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1},
-	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
-	  "effects": [
-		{"type": "custom", "method": "_change_weather", "precipitation_type": "rain", "group_id": "Scarlatti"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/weather_hand.tscn"}
-	},
-	{
-	  "id": "acid_rain",
-	  "display_name": "Acid Rain",
-	  "description": "Summon a corrosive acid rain that eats at everything caught in the open.",
-	  "icon": "res://UI/UI Icons/ability_acid_rain.png",
-	  "cooldown": 30.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.5,
-	  "interruptible": true,
-	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1, "acid": 2},
-	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
-	  "effects": [
-		{"type": "custom", "method": "_change_weather", "precipitation_type": "acid_rain", "group_id": "Scarlatti"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/acid_hand.tscn"}
-	},
-	{
-	  "id": "freezing_rain",
-	  "display_name": "Freezing Rain",
-	  "description": "Summon a freezing rain that chills everyone caught in the open.",
-	  "icon": "res://UI/UI Icons/ability_freezing_rain.png",
-	  "cooldown": 30.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.5,
-	  "interruptible": true,
-	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "weather": 1, "cold": 2},
-	  "targeting": {"type": "self", "range": 0.0, "shape": "single"},
-	  "effects": [
-		{"type": "custom", "method": "_change_weather", "precipitation_type": "freezing_rain", "group_id": "Scarlatti"}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/ice_storm.tscn", "in_hand_scale": 0.15}
-	},
-	{
-	  "id": "wave_of_dysthymia",
-	  "display_name": "Wave of Dysthymia",
-	  "description": "Project a cone of crushing apathy. Affected creatures cannot take any actions except movement.",
-	  "icon": "res://UI/UI Icons/ability_wave_of_dysthymia.png",
-	  "cooldown": 12.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": {"Arcane": 1, "Occult": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "mental": 2, "control": 2, "aoe": 2},
-	  "targeting": {"type": "direction", "range": 250.0, "shape": "cone", "radius": 250.0, "angle": 75.0},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "apathetic", "stacks": 1, "duration": 8.0}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/apathy_hand.tscn", "impact_effect": "res://vfx/apathy.tscn"}
-	},
-	{
-	  "id": "deny_ending",
-	  "display_name": "Deny Ending",
-	  "description": "Refuse the target's death. They cannot drop below 1 HP for 6 seconds per stack.",
-	  "icon": "res://UI/UI Icons/ability_deny_ending.png",
-	  "cooldown": 10.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": {"Occult": 1, "Holy": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "buff": 1, "support": 2},
-	  "targeting": {"type": "target", "range": 200.0, "shape": "single"},
-	  "effects": [
-		{"type": "apply_condition", "condition_id": "deny_ending", "stacks": 1, "duration": 6.0}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/radiant_hand.tscn", "impact_effect": "res://vfx/radiant.tscn"}
-	},
-	{
-	  "id": "psych_up",
-	  "display_name": "Psych Up",
-	  "description": "Copy all of the target's active conditions onto yourself. Each copy lasts 12 seconds.",
-	  "icon": "res://UI/UI Icons/ability_psych_up.png",
-	  "cooldown": 15.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": {"Arcane": 1, "Holy": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "support": 2},
-	  "targeting": {"type": "target", "range": 200.0, "shape": "single"},
-	  "effects": [
-		{"type": "custom", "method": "_copy_conditions", "duration": 12.0}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/radiant_hand.tscn", "impact_effect": "res://vfx/radiant.tscn"}
-	},
-	{
-	  "id": "fire_spin",
-	  "display_name": "Fire Spin",
-	  "description": "Wreathe a 15 ft area in clinging flame. Creatures caught inside burn and cannot move.",
-	  "icon": "res://UI/UI Icons/ability_fire_spin.png",
-	  "cooldown": 10.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.0,
-	  "interruptible": true,
-	  "traits": {"Arcane": 1, "Fire": 2, "Somatic": 1, "Verbal": 1, "spell": 1, "aoe": 2, "control": 2},
-	  "targeting": {"type": "point", "range": 350.0, "shape": "circle", "radius": 100.0},
-	  "effects": [
-		{"type": "custom", "method": "_place_surface", "surface_id": "fire_spin", "radius": 100.0, "duration": 6.0}
-	  ],
-	  "visuals": {
-		"in_hand_effect": "res://vfx/fire.tscn",
-		"impact_effect": "res://vfx/fire.tscn",
-		"sound_cast": "res://sfx/fire_cast.mp3"
-	  }
-	},
-	{
-	  "id": "bumper_crop",
-	  "display_name": "Bumper Crop",
-	  "description": "Cause a 15 ft sphere to bloom with lush grass. The terrain becomes difficult, but creatures standing in it are mended over time.",
-	  "icon": "res://UI/UI Icons/ability_bumper_crop.png",
-	  "cooldown": 12.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 1.5,
-	  "interruptible": true,
-	  "traits": {"Primal": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "support": 2, "aoe": 2, "nature": 2},
-	  "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 100.0},
-	  "effects": [
-		{"type": "custom", "method": "_place_surface", "surface_id": "grassy", "radius": 100.0, "duration": 30.0}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/nature_hand.tscn", "impact_effect": "res://vfx/grassy_surface.tscn"}
-	},
-	{
-	  "id": "alms_of_the_vein",
-	  "display_name": "Alms of the Vein",
-	  "description": "Drain the target's lifeblood. They take 6 necrotic damage and start bleeding; you recover 3 health.",
-	  "icon": "res://UI/UI Icons/ability_alms_of_the_vein.png",
-	  "cooldown": 6.0,
-	  "costs": {"MP": 1},
-	  "cast_time": 0.75,
-	  "interruptible": true,
-	  "traits": {"Holy": 1, "Occult": 1, "Somatic": 1, "Verbal": 1, "spell": 1, "necrotic": 2, "drain": 1},
-	  "targeting": {"type": "target", "range": 150.0, "shape": "single"},
-	  "effects": [
-		{"type": "damage", "damage": {"necrotic": 6}},
-		{"type": "apply_condition", "condition_id": "bleeding", "stacks": 1},
-		{"type": "custom", "method": "_self_heal", "amount": 3}
-	  ],
-	  "visuals": {"in_hand_effect": "res://vfx/necrotic_hand.tscn", "impact_effect": "res://vfx/bleeding.tscn"}
-	}
-  ]
+	]
 }
