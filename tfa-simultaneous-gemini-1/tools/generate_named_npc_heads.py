@@ -225,12 +225,55 @@ def call_gemini_image(client, model, prompt, reference_bytes):
     raise RuntimeError("No image returned by Gemini.")
 
 
-def downscale_to_head(image_bytes, size=OUTPUT_SIZE, flip_vertical=True):
+def _strip_white_background(img, tolerance=40):
+    """Flood-fill from the four corners, making near-corner-color pixels
+    fully transparent. Gemini consistently produces solid white-ish
+    backgrounds even when the prompt asks for transparent; this strips
+    them so the heads composite cleanly over the in-game world.
+
+    Tolerance is RGB Euclidean distance (0-441). 40 strips clean
+    white backgrounds without eating into painted features.
+    """
+    import collections
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    corners = [px[0, 0], px[w - 1, 0], px[0, h - 1], px[w - 1, h - 1]]
+    # Use the BRIGHTEST corner as the bg reference — most reliable
+    # since Gemini's background is typically near-white.
+    bg = max(corners, key=lambda c: sum(c[:3]))[:3]
+    visited = bytearray(w * h)
+    q = collections.deque((x, y) for x, y in
+                          [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)])
+    tol_sq = tolerance * tolerance
+    while q:
+        x, y = q.popleft()
+        if not (0 <= x < w and 0 <= y < h):
+            continue
+        i = y * w + x
+        if visited[i]:
+            continue
+        c = px[x, y]
+        if (c[0] - bg[0]) ** 2 + (c[1] - bg[1]) ** 2 + (c[2] - bg[2]) ** 2 > tol_sq:
+            continue
+        visited[i] = 1
+        px[x, y] = (c[0], c[1], c[2], 0)
+        q.append((x - 1, y)); q.append((x + 1, y))
+        q.append((x, y - 1)); q.append((x, y + 1))
+    return img
+
+
+def downscale_to_head(image_bytes, size=OUTPUT_SIZE, flip_vertical=True,
+                      strip_background=True):
     """Resize the AI output to the canonical 68x60 RGBA head sprite size.
 
     Gemini consistently produces these heads in an orientation that ends up
     facing opposite to the existing race-default heads when used in-game,
     so we vertically flip (top<->bottom) by default. Pass flip_vertical=False
+    to opt out.
+
+    Also strips the solid (near-white) background that Gemini bakes in
+    despite prompt instructions for transparency. Pass strip_background=False
     to opt out.
     """
     from PIL import Image
@@ -238,6 +281,8 @@ def downscale_to_head(image_bytes, size=OUTPUT_SIZE, flip_vertical=True):
     img = img.resize(size, Image.LANCZOS)
     if flip_vertical:
         img = img.transpose(Image.FLIP_TOP_BOTTOM)
+    if strip_background:
+        img = _strip_white_background(img)
     out = io.BytesIO()
     img.save(out, format="PNG")
     return out.getvalue()
@@ -481,6 +526,8 @@ def parse_args():
                    help="Generate PNGs only; do NOT touch TopDownCharacters.json")
     p.add_argument("--no-flip", action="store_true",
                    help="Skip the default vertical flip applied after downscale.")
+    p.add_argument("--no-strip-bg", action="store_true",
+                   help="Skip the default near-white background stripping.")
     p.add_argument("--model", default=DEFAULT_MODEL,
                    help=f"Gemini image model id. Default {DEFAULT_MODEL}.")
     return p.parse_args()
@@ -559,7 +606,11 @@ def main():
                 raw_dir.mkdir(parents=True, exist_ok=True)
                 raw = call_gemini_image(client, args.model, prompt, reference_bytes)
                 raw_path.write_bytes(raw)
-                final = downscale_to_head(raw, OUTPUT_SIZE, flip_vertical=not args.no_flip)
+                final = downscale_to_head(
+                    raw, OUTPUT_SIZE,
+                    flip_vertical=not args.no_flip,
+                    strip_background=not args.no_strip_bg,
+                )
                 out_path.write_bytes(final)
                 print(f"  saved: {out_path.relative_to(ROOT)}  ({OUTPUT_SIZE[0]}x{OUTPUT_SIZE[1]})")
             except Exception as e:
