@@ -368,15 +368,15 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [436, 578],
+					"position": [896, 1190],
 					"facing": 0
 				},
 				"from_cemetery": {
-					"position": [40, 578],
+					"position": [80, 1190],
 					"facing": 0
 				},
 				"from_town_square": {
-					"position": [820, 578],
+					"position": [1712, 1190],
 					"facing": 180
 				}
 			},
@@ -391,16 +391,16 @@
 			"warp_points": [
 				{
 					"id": "to_cemetery",
-					"position": [20, 578],
-					"size": [40, 80],
+					"position": [40, 1190],
+					"size": [80, 160],
 					"target_map": "cemetery",
 					"target_spawn": "from_venonan_chapel",
 					"label": "To Cemetery"
 				},
 				{
 					"id": "to_town_square",
-					"position": [840, 578],
-					"size": [40, 80],
+					"position": [1752, 1190],
+					"size": [80, 160],
 					"target_map": "town_square",
 					"target_spawn": "from_venonan_chapel",
 					"label": "To Town Square"
@@ -466,15 +466,15 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [421, 578],
+					"position": [880, 1210],
 					"facing": 90
 				},
 				"from_town_square": {
-					"position": [421, 1100],
+					"position": [880, 2300],
 					"facing": 270
 				},
 				"from_don_manor": {
-					"position": [800, 578],
+					"position": [1672, 1210],
 					"facing": 180
 				}
 			},
@@ -489,16 +489,16 @@
 			"warp_points": [
 				{
 					"id": "to_town_square",
-					"position": [421, 1130],
-					"size": [80, 40],
+					"position": [880, 2360],
+					"size": [160, 80],
 					"target_map": "town_square",
 					"target_spawn": "from_dock_tavern",
 					"label": "Out to Town Square"
 				},
 				{
 					"id": "to_don_manor",
-					"position": [820, 578],
-					"size": [40, 80],
+					"position": [1714, 1210],
+					"size": [80, 160],
 					"target_map": "don_manor",
 					"target_spawn": "from_dock_tavern",
 					"label": "To Don Manor"
