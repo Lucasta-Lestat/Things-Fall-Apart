@@ -41,6 +41,15 @@
 			"apply_interval": 1.0,
 			"base_duration": 30.0,
 			"vfx_scene": "res://vfx/grassy_surface.tscn"
+		},
+		"electrified": {
+			"display_name": "Electrified",
+			"condition_id": "shocked",
+			"condition_stacks": 1,
+			"apply_interval": 0.3,
+			"base_duration": 1.2,
+			"vfx_scene": "res://vfx/lightning.tscn",
+			"stun_save_stat": "constitution"
 		}
 	}
 }

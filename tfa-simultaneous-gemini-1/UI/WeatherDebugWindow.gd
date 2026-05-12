@@ -25,6 +25,21 @@ func _ready() -> void:
 	_build_ui()
 	_panel.visible = false
 	WeatherManager.weather_changed.connect(_on_weather_changed)
+	# Master debug toggle (F12) opens/closes this window in addition to F9.
+	if typeof(DebugManager) != TYPE_NIL:
+		_set_panel_visible(DebugManager.enabled)
+		if not DebugManager.enabled_changed.is_connected(_on_debug_enabled_changed):
+			DebugManager.enabled_changed.connect(_on_debug_enabled_changed)
+
+func _on_debug_enabled_changed(value: bool) -> void:
+	_set_panel_visible(value)
+
+func _set_panel_visible(v: bool) -> void:
+	_visible = v
+	if _panel:
+		_panel.visible = v
+		if v:
+			_refresh()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_F9 or event.physical_keycode == KEY_F9):

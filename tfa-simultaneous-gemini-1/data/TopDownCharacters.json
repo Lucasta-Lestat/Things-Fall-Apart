@@ -1286,40 +1286,6 @@
 	  "spawn_conditions": {}
 	},
 	{
-	  "id": "andrew_tuatara",
-	  "name": "Andrew Tuatara",
-	  "race": "saurian",
-	  "background": "criminal",
-	  "faction": "liziti",
-	  "body_sprites": {
-		"head": "res://Characters/Assets/Body Parts/Named/andrew_tuatara/head.png",
-		"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
-		"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
-		"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
-		"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
-	  },
-	  "stats": {
-		"strength": 50,
-		"constitution": 50,
-		"dexterity": 50,
-		"will": 50,
-		"intelligence": 50,
-		"charisma": 40
-	  },
-	  "equipment": "from_faction",
-	  "icon": "res://Icons/andrew_tuatara_icon.png",
-	  "dialogue": null,
-	  "interact_options": [
-        "Inspect"
-	  ],
-	  "extra_abilities": [],
-	  "extra_conditions": [],
-	  "extra_traits": {},
-	  "combat": {},
-	  "sensory": {},
-	  "spawn_conditions": {}
-	},
-	{
 	  "id": "gordon_gecko",
 	  "name": "Gordon Gecko",
 	  "race": "saurian",
@@ -1903,7 +1869,7 @@
 	  "equipment": [
 		{ "id": "potion_of_healing", "quantity": 2 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/reverend_mother_liana_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Holy": 2 },
@@ -1927,7 +1893,7 @@
 	  "equipment": [
 		{ "id": "dagger", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mother_inferior_macaria_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Cursed": 1 },
@@ -1944,7 +1910,7 @@
 	  "equipment": [
 		{ "id": "great_club", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/pit_monitor_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -1958,7 +1924,7 @@
 	  "faction": "wildlife",
 	  "stats": { "strength": 50, "constitution": 45, "dexterity": 60, "will": 25, "intelligence": 8, "charisma": 5 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/pit_hound_icon.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
@@ -1984,7 +1950,7 @@
 		{ "id": "joy", "quantity": 3 },
 		{ "id": "zip", "quantity": 3 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/alewife_juturna_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2010,7 +1976,7 @@
 		{ "id": "feyntanyl", "quantity": 3 },
 		{ "id": "zip", "quantity": 4 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mary_guana_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Criminal": 1 },
@@ -2034,7 +2000,7 @@
 	  "equipment": [
 		{ "id": "handaxe", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/hunter_john_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2058,7 +2024,7 @@
 		{ "id": "longsword", "slot": "main_hand" },
 		{ "id": "kettle_helm", "slot": "head" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/centurion_marcus_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2081,7 +2047,7 @@
 	  "equipment": [
 		{ "id": "mace", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/deputy_gleg_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2107,7 +2073,7 @@
 		{ "id": "draught_of_flabbiness", "quantity": 3 },
 		{ "id": "poison_vial", "quantity": 2 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/hedge_witch_magda_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2128,7 +2094,7 @@
 	  },
 	  "stats": { "strength": 30, "constitution": 35, "dexterity": 50, "will": 30, "intelligence": 35, "charisma": 60 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/lot_lizard_zillah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2152,7 +2118,7 @@
 	  "equipment": [
 		{ "id": "stilleto", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/andrew_tuatara_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Criminal": 1 },
@@ -2176,7 +2142,7 @@
 	  "equipment": [
 		{ "id": "great_club", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/alligator_capone_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -2201,7 +2167,7 @@
 		{ "id": "maul", "slot": "main_hand" },
 		{ "id": "gold", "quantity": 15 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/cletus_samson_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 1 },
@@ -2224,7 +2190,7 @@
 	  "equipment": [
 		{ "id": "alcohol", "quantity": 2 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/obediah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2245,7 +2211,7 @@
 	  },
 	  "stats": { "strength": 35, "constitution": 40, "dexterity": 55, "will": 35, "intelligence": 45, "charisma": 65 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/jezebel_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2269,7 +2235,7 @@
 		{ "id": "dagger", "slot": "main_hand" },
 		{ "id": "alcohol", "quantity": 3 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/austache_jongle_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2296,7 +2262,7 @@
 		{ "id": "bottled_storm", "quantity": 1 },
 		{ "id": "potion_of_healing", "quantity": 1 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/mostlemyre_drouge_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Arcane": 2 },
@@ -2331,7 +2297,7 @@
 		{ "id": "glaive" },
 		{ "id": "rapier" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/smith_darcy_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2353,7 +2319,7 @@
 	  "titles": ["Librarian"],
 	  "stats": { "strength": 30, "constitution": 40, "dexterity": 45, "will": 65, "intelligence": 80, "charisma": 55 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/professor_circino_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2375,7 +2341,7 @@
 	  "titles": ["Professor"],
 	  "stats": { "strength": 35, "constitution": 45, "dexterity": 45, "will": 70, "intelligence": 80, "charisma": 60 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/professor_easton_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2396,7 +2362,7 @@
 	  },
 	  "stats": { "strength": 40, "constitution": 45, "dexterity": 50, "will": 50, "intelligence": 65, "charisma": 50 },
 	  "equipment": [],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/zakariah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2419,7 +2385,7 @@
 	  "equipment": [
 		{ "id": "spear", "slot": "main_hand" }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/saul_laelia_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},
@@ -2444,10 +2410,40 @@
 		{ "id": "spear", "slot": "main_hand" },
 		{ "id": "handaxe", "quantity": 1 }
 	  ],
-	  "icon": "res://Icons/dummy_icon.png",
+	  "icon": "res://Icons/big_al_samson_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": { "Intimidating": 2, "Criminal": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "surgeon_captain_federica",
+	  "name": "Surgeon Captain Federica",
+	  "race": "half_orc",
+	  "gender": "female",
+	  "background": "from_faction",
+	  "faction": "waldau",
+	  "titles": ["Surgeon Captain"],
+	  "body_sprites": {
+		"head":      "res://Characters/Assets/Body Parts/Female Orc/head.png",
+		"torso":     "res://Characters/Assets/Body Parts/Female Orc/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Female Orc/upper_arm.png",
+		"forearm":   "res://Characters/Assets/Body Parts/Female Orc/forearm.png",
+		"leg":       "res://Characters/Assets/Body Parts/Female Orc/leg.png"
+	  },
+	  "stats": { "strength": 65, "constitution": 60, "dexterity": 55, "will": 60, "intelligence": 65, "charisma": 50 },
+	  "equipment": [
+		{ "id": "greatsword", "slot": "main_hand" },
+		{ "id": "leather_armor", "slot": "body" },
+		{ "id": "potion_of_healing", "quantity": 1 },
+		{ "id": "gold", "quantity": 15 }
+	  ],
+	  "icon": "res://Icons/surgeon-captain federica_icon.png",
+	  "dialogue": "Federica_greet",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": { "Occult": 2, "Technological": 1, "Martial": 2 },
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	}
   ]
