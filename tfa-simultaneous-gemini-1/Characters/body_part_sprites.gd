@@ -152,7 +152,12 @@ func auto_scale_sprites(character) -> void:
 	# Uniform-scale mode (opt-in via race body.body_scale). All head/torso/arm
 	# sprites use the same scale factor so their source-art relative proportions
 	# are preserved exactly. Per-part race dimensions are ignored for these.
-	_body_scale = character.body_scale if "body_scale" in character else 0.0
+	# Use Object.get() rather than `in character` — the `in` operator misses
+	# @export properties on some Godot 4 builds, which was silently dropping
+	# us to legacy per-anchor scaling.
+	var bs = character.get("body_scale")
+	_body_scale = float(bs) if bs != null else 0.0
+	print("[BodyPartSprites] character=%s body_scale=%s -> _body_scale=%f" % [character.name, str(bs), _body_scale])
 
 	if _body_scale > 0.0:
 		var uniform = Vector2(_body_scale, _body_scale)
