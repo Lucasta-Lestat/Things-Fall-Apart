@@ -511,12 +511,19 @@ func _drop_data(at_position: Vector2, data) -> void:
 		if not is_instance_valid(chest_item):
 			return
 		var item_dict: Dictionary = entry.get("raw", {})
-		if chest_item.contents is Array:
-			chest_item.contents.erase(item_dict)
+		# Transfer first; only erase from the chest if the target accepted it
+		# (full inventory shouldn't lose the dragged item).
+		var transferred := false
 		if entry.get("kind", "") == "weapon":
 			target_char.inventory.stow_weapon_from_data(item_dict)
+			transferred = true
 		else:
-			target_char.inventory.add_item(item_dict)
+			# add_stack transfers the full num_stacks (add_item would only +1).
+			transferred = target_char.inventory.add_stack(item_dict)
+		if not transferred:
+			return
+		if chest_item.contents is Array:
+			chest_item.contents.erase(item_dict)
 		SfxManager.play_ui("chest_item_out")
 		var src_window = data.get("source_window")
 		if src_window != null and is_instance_valid(src_window) and src_window.has_method("_populate_grid"):
