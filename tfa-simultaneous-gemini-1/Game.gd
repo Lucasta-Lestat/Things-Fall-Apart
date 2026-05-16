@@ -947,8 +947,9 @@ func _process(delta: float) -> void:
 	# Update NPC and item visibility based on party line-of-sight
 	_update_npc_los_visibility()
 	_update_item_los_visibility()
-	# Camera follows primary selected character
-	if primary_selected and is_instance_valid(primary_selected) and player_camera:
+	# Camera follows primary selected character (unless user is WASD-panning)
+	if primary_selected and is_instance_valid(primary_selected) and player_camera \
+			and not player_camera.manual_pan_active:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
 	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
@@ -1131,6 +1132,8 @@ func select_character(character: ProceduralCharacter, index: int = -1) -> void:
 
 	# Select new
 	primary_selected = character
+	if player_camera:
+		player_camera.manual_pan_active = false  # re-engage follow
 	primary_index = index if index >= 0 else get_party().find(character)
 	selected_characters.append(character)
 	_sync_character_flags()
@@ -1148,6 +1151,8 @@ func toggle_character_selection(character: ProceduralCharacter) -> void:
 			# Promote another character to primary
 			selected_characters.erase(character)
 			primary_selected = selected_characters[0]
+			if player_camera:
+				player_camera.manual_pan_active = false  # re-engage follow on promoted primary
 			primary_index = get_party().find(primary_selected)
 			emit_signal("character_selected", primary_selected, primary_index)
 		else:

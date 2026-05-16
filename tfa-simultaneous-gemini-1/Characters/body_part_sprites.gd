@@ -143,35 +143,50 @@ func auto_scale_sprites(character) -> void:
 		for s in Globals.DEFAULT_ARM_SEGMENT_LENGTHS:
 			_arm_segment_lengths.append(s)
 
-	# Scale each sprite to its target dimensions
-	_scale_sprite_to_size(head_sprite, _head_width, _head_length)
+	# Scale each sprite to its target dimensions.
+	# "width" anchor: scale.x = target_width / tex.x, scale.y = same (preserves
+	#                 source aspect ratio; height becomes whatever the source dictates).
+	# "height" anchor: same idea but scaled to fit target_height.
+	# Heads and torsos anchor on width (silhouette is shoulder-driven). Limbs anchor
+	# on length (height) since IK relies on segment lengths matching joint spans.
+	_scale_sprite_to_size(head_sprite, _head_width, _head_length, "width")
 	if _is_quadruped and _body_length > 0:
 		# Quadruped torso is rotated 90° in update_torso(), so swap axes:
 		# sprite X (becomes Y after rotation) = body_length (front-to-back)
 		# sprite Y (becomes X after rotation) = body_width (left-to-right)
-		_scale_sprite_to_size(torso_sprite, _body_length, _body_width)
+		_scale_sprite_to_size(torso_sprite, _body_length, _body_width, "width")
 	else:
-		_scale_sprite_to_size(torso_sprite, _body_width, _body_height)
+		_scale_sprite_to_size(torso_sprite, _body_width, _body_height, "width")
 
 	# Arm segments: width is arm thickness, height is segment length
 	if _arm_segment_lengths.size() >= 3:
-		_scale_sprite_to_size(left_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(left_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
-		_scale_sprite_to_size(right_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(right_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
+		_scale_sprite_to_size(left_upper_arm, _arm_width, _arm_segment_lengths[0], "height")
+		_scale_sprite_to_size(left_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2], "height")
+		_scale_sprite_to_size(right_upper_arm, _arm_width, _arm_segment_lengths[0], "height")
+		_scale_sprite_to_size(right_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2], "height")
 
 	# Legs: width is leg thickness, height is leg length
-	_scale_sprite_to_size(left_leg_sprite, _leg_width, _leg_length)
-	_scale_sprite_to_size(right_leg_sprite, _leg_width, _leg_length)
+	_scale_sprite_to_size(left_leg_sprite, _leg_width, _leg_length, "height")
+	_scale_sprite_to_size(right_leg_sprite, _leg_width, _leg_length, "height")
 
-func _scale_sprite_to_size(sprite: Sprite2D, target_width: float, target_height: float) -> void:
-	"""Scale a sprite so it fits the target dimensions in game units."""
+func _scale_sprite_to_size(sprite: Sprite2D, target_width: float, target_height: float, anchor: String = "width") -> void:
+	"""Uniformly scale a sprite (scale.x == scale.y) so its art proportions are
+	preserved. `anchor` picks which target axis drives the scale:
+	  - "width":  scale = target_width / tex.x   (head, torso — silhouette led)
+	  - "height": scale = target_height / tex.y  (limbs — IK length led)
+	The non-anchor target is informational; the actual rendered size on that axis
+	is dictated by the source PNG's aspect ratio."""
 	if not sprite or not sprite.texture:
 		return
 	var tex_size = sprite.texture.get_size()
 	if tex_size.x <= 0 or tex_size.y <= 0:
 		return
-	sprite.scale = Vector2(target_width / tex_size.x, target_height / tex_size.y)
+	var s: float
+	if anchor == "height":
+		s = target_height / tex_size.y
+	else:
+		s = target_width / tex_size.x
+	sprite.scale = Vector2(s, s)
 
 # ===== PER-FRAME UPDATES (called by ProceduralCharacter) =====
 
@@ -239,12 +254,15 @@ func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2)
 
 	# Dynamically scale length to match actual joint distance, with a small
 	# 8% overlap beyond the segment so upper-arm and forearm sprites meet
-	# cleanly at the elbow instead of leaving a visible seam.
+	# cleanly at the elbow instead of leaving a visible seam. Keep scale.x
+	# locked to scale.y so the arm stays uniformly scaled (preserves source
+	# aspect ratio) as the IK stretches or compresses the segment.
 	if sprite.texture:
 		var tex_size = sprite.texture.get_size()
 		var segment_length = start_pos.distance_to(end_pos)
 		if tex_size.y > 0:
-			sprite.scale.y = (segment_length * 1.08) / tex_size.y
+			var s = (segment_length * 1.08) / tex_size.y
+			sprite.scale = Vector2(s, s)
 
 # ===== COLOR =====
 
