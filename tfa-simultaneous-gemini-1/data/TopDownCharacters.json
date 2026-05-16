@@ -2450,7 +2450,7 @@
 	  "id": "test_male_elf",
 	  "name": "Test Male Elf",
 	  "race": "elf",
-	  "background": "amnesiac",
+	  "background": "",
 	  "faction": "neutral",
 	  "body_sprites": {
 		"head":      "res://Characters/Assets/Body Parts/Male Elf/head.png",
