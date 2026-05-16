@@ -2231,15 +2231,21 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			var hand: String = weapon_entry.get("hand", "Main")
 			var wtype: String = weapon_entry.get("type", "unknown")
 			var data: Dictionary = weapon_entry.get("data", {})
- 
+
 			match wtype:
 				"weapon":
 					if not data.is_empty():
-						character.inventory.equip_weapon_from_data(data, hand)
+						if hand == "Stowed":
+							character.inventory.stow_weapon_from_data(data)
+						else:
+							character.inventory.equip_weapon_from_data(data, hand)
 				"ability":
 					var ability_id = data.get("ability_id", "")
 					if ability_id != "":
-						character.inventory.equip_ability_from_id(ability_id, hand)
+						if hand == "Stowed":
+							character.inventory.stow_ability_from_id(ability_id)
+						else:
+							character.inventory.equip_ability_from_id(ability_id, hand)
  
 		# Restore active weapon selection
 		if state.has("active_weapon_index"):
