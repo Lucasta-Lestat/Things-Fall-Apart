@@ -2678,6 +2678,16 @@ func _handle_input() -> void:
 				game.load_map(target_map, game.current_map_id)
 				return
 
+	# --- Left mouse button - probe openable item (chest) ---
+	# Chests show a pickup cursor on hover; clicking should open their inventory,
+	# not swing the main hand. Items whose first interact_option is "Open"
+	# (chests, per Items.json) take this fast path.
+	if Input.is_action_just_pressed("left_click"):
+		var openable = _find_openable_at(mouse_pos)
+		if openable != null and game:
+			game.show_chest_inventory(openable)
+			return
+
 	# --- Left mouse button - Main hand ---
 	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
 		current_hand = "Main"
@@ -2777,6 +2787,25 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 			# represents the party's perspective, not an individual member's.
 			if not FactionDatabase.are_enemies("player", collider.faction_id):
 				return collider
+	return null
+
+## Probe the world for an "openable" Item (chest-style) at mouse_pos. The
+## chest's first interact_option is "Open" (see Items.json) — clicking it
+## should display its inventory, not swing the main hand.
+func _find_openable_at(world_pos: Vector2) -> Item:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS
+	var hits = space.intersect_point(query, 4)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Item and collider.options.size() > 0 and collider.options[0] == "Open":
+			return collider
 	return null
 
 ## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated

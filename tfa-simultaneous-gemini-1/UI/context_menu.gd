@@ -65,13 +65,13 @@ func _on_option_selected(option: String):
 	# this frame, preventing _process-based input polls from acting on the click.
 	queue_free()
 	game.call_deferred("set", "context_menu_open", false)
-# Optional: close menu when clicking elsewhere
-func _input(event):
+# Close the menu when the user clicks outside it. Use _unhandled_input rather
+# than _input so the menu's own Buttons get the click first via GUI dispatch
+# — calling set_input_as_handled() from _input on a click inside the rect
+# previously swallowed the event before the Button could fire its `pressed`
+# signal, so "Open" never opened the chest.
+func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed:
-		if get_rect().has_point(get_local_mouse_position()):
-			get_viewport().set_input_as_handled()
-		else:
-			# Clicked outside the menu — close it
-			queue_free()
-			game.call_deferred("set", "context_menu_open", false)
-			get_viewport().set_input_as_handled()
+		queue_free()
+		game.call_deferred("set", "context_menu_open", false)
+		get_viewport().set_input_as_handled()
