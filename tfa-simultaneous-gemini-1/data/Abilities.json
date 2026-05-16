@@ -1503,6 +1503,48 @@
 				"sound_cast": "res://sfx/necrotic_cast.mp3",
 				"sound_impact": "res://sfx/necrotic_drain.mp3"
 			}
+		},
+		{
+			"id": "natural_bite",
+			"display_name": "Bite",
+			"description": "Sink your fangs into a foe. Mutated maw bearers also apply bleeding scaled by the tier of The Jaws That Bite.",
+			"icon": "res://UI/UI Icons/dummy_icon.png",
+			"cooldown": 2.0,
+			"costs": {
+				"stamina": 5
+			},
+			"cast_time": 0.0,
+			"traits": {
+				"physical": 1,
+				"attack": 1,
+				"melee": 2,
+				"bite": 1,
+				"natural_weapon": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 60.0,
+				"shape": "circle",
+				"radius": 30.0
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"piercing": 6
+					}
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "bleeding",
+					"stacks": 1,
+					"scale_stacks_by_caster_condition": "the_jaws_that_bite"
+				}
+			],
+			"visuals": {
+				"impact_effect": "res://vfx/bleeding.tscn",
+				"sound_impact": "res://sfx/sword-on-flesh.mp3"
+			}
 		}
 	]
 }
