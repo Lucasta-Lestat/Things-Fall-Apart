@@ -301,11 +301,17 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
 		return
 
-	var current = _get_hand_item(hand)
-
 	var pick_index = 0 if direction >= 0 else stowed_items.size() - 1
 	var picked = stowed_items[pick_index]
 	stowed_items.remove_at(pick_index)
+
+	# Two-handed weapons must live in the main hand. If the player cycled the
+	# off-hand but the picked item is two-handed, redirect this whole cycle to
+	# the main hand so the off-hand is properly emptied below.
+	if hand == "Off" and _is_two_handed(picked):
+		hand = "Main"
+
+	var current = _get_hand_item(hand)
 
 	# Outgoing hand item first: weapons rotate back into stowed, ability copies are
 	# discarded (canonical lives in stowed).
@@ -368,6 +374,8 @@ func draw_weapon() -> void:
 			emit_signal("active_weapon_changed", item, "Main")
 			if is_instance_valid(possessor):
 				SfxManager.play("draw-steel", possessor.global_position)
+		if _is_two_handed(main_hand_item) and off_hand_item != null:
+			_stow_item(off_hand_item, "Off")
 
 # Legacy compatibility property for save/load and Game.gd references
 var active_weapon_index: int:
@@ -384,6 +392,9 @@ func set_active_weapon(index: int, hand: String = "") -> void:
 	var weapon = all[index]
 	if weapon in stowed_items:
 		var target_hand = hand if hand != "" else "Main"
+		# Two-handed weapons must live in the main hand.
+		if target_hand == "Off" and _is_two_handed(weapon):
+			target_hand = "Main"
 		stowed_items.erase(weapon)
 		var current = _get_hand_item(target_hand)
 		if current:
@@ -395,6 +406,9 @@ func set_active_weapon(index: int, hand: String = "") -> void:
 			off_hand_item = weapon
 			possessor.current_off_hand_item = weapon
 		emit_signal("active_weapon_changed", weapon, target_hand)
+		# If a two-handed weapon ended up in the main hand, stow the off-hand.
+		if target_hand == "Main" and _is_two_handed(weapon) and off_hand_item != null:
+			_stow_item(off_hand_item, "Off")
 
 # ===== SERIALIZATION =====
 
