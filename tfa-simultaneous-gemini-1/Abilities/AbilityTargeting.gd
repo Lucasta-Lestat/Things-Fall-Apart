@@ -394,6 +394,10 @@ func _ensure_count_label() -> void:
 	count_label_layer.layer = 100
 	add_child(count_label_layer)
 	count_label = Label.new()
+	# Critical: the label must not intercept mouse input — ProceduralCharacter
+	# bails out of _handle_input when the cursor hovers any CanvasLayer-hosted
+	# Control, which would block character picking entirely.
+	count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	count_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	count_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	count_label.add_theme_constant_override("outline_size", 4)
