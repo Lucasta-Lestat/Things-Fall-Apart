@@ -418,6 +418,11 @@ func to_data() -> Dictionary:
 @export var head_width: float = Globals.default_head_width   # Head width (left-right)
 @export var head_length: float = Globals.default_head_length  # Head length (front-back, oval shape)
 @export var shoulder_y_offset: float = Globals.default_shoulder_y_offset # How far back shoulders are from head center (positive = back)
+# When > 0, BodyPartSprites scales head/torso/arms by this single uniform factor
+# (preserving the source PNGs' relative proportions) instead of stretching each
+# sprite to per-axis race dimensions. Legs still use legacy scaling. Set in race
+# data via `body.body_scale` (see races.json).
+@export var body_scale: float = 0.0
 
 
 # Collision settings
