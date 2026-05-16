@@ -2445,6 +2445,29 @@
 	  "extra_conditions": [],
 	  "extra_traits": { "Occult": 2, "Technological": 1, "Martial": 2 },
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "test_male_elf",
+	  "name": "Test Male Elf",
+	  "race": "elf",
+	  "background": "amnesiac",
+	  "faction": "neutral",
+	  "body_sprites": {
+		"head":      "res://Characters/Assets/Body Parts/Male Elf/head.png",
+		"torso":     "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+		"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+		"forearm":   "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+		"leg":       "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+	  },
+	  "stats": { "strength": 50, "constitution": 50, "dexterity": 50, "will": 50, "intelligence": 50, "charisma": 50 },
+	  "equipment": [],
+	  "icon": "res://Icons/nude_elf_icon.png",
+	  "dialogue": null,
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	}
   ]
 }
