@@ -142,6 +142,10 @@ func _is_two_handed(item: Node2D) -> bool:
 
 ## Picks the best hand: prefers the requested hand, uses the other if occupied.
 func _pick_hand(preferred: String) -> String:
+	# Normalize any unknown hand string (e.g. "Stowed" leaking in from save data)
+	# to "Main" so we never silently equip to the off-hand for an unrelated label.
+	if preferred != "Main" and preferred != "Off":
+		preferred = "Main"
 	# Can't use off-hand when main hand holds a two-handed weapon
 	if preferred == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
 		return "Main"
@@ -241,6 +245,19 @@ func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
 
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	return add_ability_by_id(ability_id, hand)
+
+## Add an ability to stowed without equipping it. Used by save/load restore so
+## an ability serialized as "Stowed" doesn't get auto-equipped to a hand.
+func stow_ability_from_id(ability_id: String) -> bool:
+	var data = AbilityDatabase.get_ability_data(ability_id)
+	if data.is_empty():
+		return false
+	var canonical = AbilityShape.new()
+	canonical.name = data.get("display_name", "Ability")
+	canonical.setup_from_database(data)
+	stowed_items.append(canonical)
+	emit_signal("weapon_equipped", canonical)
+	return true
 
 ## Equip a fresh copy of an existing canonical ability (already in stowed_items) to a hand.
 ## Used when the player wants the same ability in both hands.
