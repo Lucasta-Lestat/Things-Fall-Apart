@@ -240,15 +240,23 @@ func _get_ability_pool_for_category(category: String) -> Array:
 
 func _get_condition_pool_for_category(category: String) -> Array:
 	## Filters the ConditionManager registry for conditions matching category.
+	## ConditionManager stores Condition Resource objects (not Dictionaries), so we
+	## must read their typed fields directly instead of going through the generic
+	## _entry_matches_category() helper (which is Dictionary-typed and would crash).
 	var pool: Array = []
 	var cat_lower = category.to_lower()
 
-	# Directly access the static dictionary on the class
 	for cond_id in ConditionManager.condition_registry:
-		var template = ConditionManager.condition_registry[cond_id]
-		if template and _entry_matches_category(template, cat_lower):
-			pool.append(cond_id)        
+		var template: Condition = ConditionManager.condition_registry[cond_id]
+		if template and _condition_matches_category(template, cat_lower):
+			pool.append(cond_id)
 	return pool
+
+func _condition_matches_category(template: Condition, cat_lower: String) -> bool:
+	for trait_key in template.traits:
+		if str(trait_key).to_lower() == cat_lower:
+			return true
+	return false
 
 func _entry_matches_category(data: Dictionary, cat_lower: String) -> bool:
 	## Checks if a database entry matches a category by examining its
@@ -312,15 +320,21 @@ func get_chooseable_abilities(category: String) -> Array:
 	return results
 
 func get_chooseable_conditions(category: String) -> Array:
-	## Same but for conditions (e.g. Mutations).
+	## Same but for conditions (e.g. Mutations). Returns display-ready dicts
+	## (not raw Condition resources) so UI callers can use .get() uniformly.
 	var pool = _get_condition_pool_for_category(category)
 	var results: Array = []
-	
+
 	for cond_id in pool:
-		# Directly grab the template from the static registry
-		var template = ConditionManager.condition_registry.get(cond_id)
+		var template: Condition = ConditionManager.condition_registry.get(cond_id)
 		if template:
-			results.append(template)        
+			results.append({
+				"id": template.id,
+				"display_name": template.display_name,
+				"description": template.description,
+				"icon": template.icon,
+				"traits": template.traits,
+			})
 	return results
 
 # ---------------------------------------------------------------------------

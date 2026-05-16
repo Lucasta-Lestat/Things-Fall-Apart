@@ -32,6 +32,7 @@ const DEATH_MARKER_TEXTURE_PATH := "res://Items/tombstone.png"
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
 var pending_dash: bool = false
+var pending_bite: bool = false
 var _aim_line: AimLine = null
 
 var _death_marker: Sprite2D = null
@@ -686,6 +687,43 @@ func _execute_pending_dash(mouse_pos: Vector2) -> void:
 func _cancel_pending_dash() -> void:
 	pending_dash = false
 	_hide_aim_line()
+
+# --- Bite (mutation-granted natural attack, bound to Z) ---
+
+func has_bite_attack() -> bool:
+	return condition_manager and condition_manager.has_condition("the_jaws_that_bite")
+
+func start_bite_targeting() -> void:
+	if not has_bite_attack():
+		return
+	pending_bite = true
+	_ensure_aim_line()
+	# Reddish tint to distinguish from yellow dash and other reticles.
+	_aim_line.default_color = Color(0.95, 0.2, 0.2, 0.6)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, _get_bite_range())
+
+func _update_bite_reticle(mouse_pos: Vector2) -> void:
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range())
+
+func _execute_pending_bite(mouse_pos: Vector2) -> void:
+	pending_bite = false
+	_hide_aim_line()
+	var data: Dictionary = AbilityDatabase.get_ability_data("natural_bite")
+	if data.is_empty():
+		return
+	var ability := Ability.from_dict(data)
+	use_ability(ability, {"position": mouse_pos})
+
+func _cancel_pending_bite() -> void:
+	pending_bite = false
+	_hide_aim_line()
+
+func _get_bite_range() -> float:
+	var data: Dictionary = AbilityDatabase.get_ability_data("natural_bite")
+	if data.is_empty():
+		return 60.0
+	return float(data.get("targeting", {}).get("range", 60.0))
 
 # --- Shared AimLine plumbing ---
 
@@ -2654,6 +2692,17 @@ func _handle_input() -> void:
 			return
 		return  # Block all other input while dash targeting
 
+	# --- Bite targeting mode (Z) ---
+	if pending_bite:
+		_update_bite_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_bite(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("bite_attack"):
+			_cancel_pending_bite()
+			return
+		return  # Block all other input while bite targeting
+
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
 		# Warps get a context menu of their own (handled in show_context_menu via
@@ -2760,6 +2809,11 @@ func _handle_input() -> void:
 			# Enter the dash-targeting mode handled above; the targeting block
 			# itself listens for the click that commits the dash.
 			start_dash_targeting()
+	if Input.is_action_just_pressed("bite_attack") and has_bite_attack():
+		# Z is a real-time bite — fire-and-target, not queued. The pending_bite
+		# block above commits on the next left-click. Mutation gating means
+		# pressing Z without The Jaws That Bite does nothing.
+		start_bite_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
 ## Probe the world at mouse_pos for a right-click context-menu target. Returns the
@@ -4207,12 +4261,39 @@ func ability_check(stat,domain):
 		success_target += bonus
 		
 	var success_level = _calculate_success_level(roll, success_target)
-func get_stat_by_name(stat_name: StringName) -> int:
-	match stat_name:
-		&"str": return strength
-		&"dex": return dexterity
-		&"con": return constitution
+func get_stat_by_name(stat_name) -> int:
+	# Accept either String or StringName; normalize so callers don't have to care.
+	var key := StringName(str(stat_name).to_lower())
+	match key:
+		&"str", &"strength": return strength
+		&"dex", &"dexterity": return dexterity
+		&"con", &"constitution": return constitution
+		&"int", &"intelligence": return intelligence
+		&"cha", &"charisma": return charisma
 	return 50
+
+## Roll a saving throw against `stat_name` and return the tier delta to apply to
+## an incoming condition's stack count.
+##   margin = stat - d100
+##   margin >= 0  → success.  Crit success (margin >= 50 OR roll <= CRIT_THRESHOLD) → -2, else -1.
+##   margin <  0  → failure.  Crit fail   (margin <= -50 OR roll >= CRIT_FAIL_THRESHOLD) → +1, else 0.
+## Crit thresholds compose with the margin rule: either alone is enough to crit.
+## In the success branch the crit_fail check is intentionally ignored (margin
+## determines pass/fail first; the crit rules only intensify the outcome).
+func saving_throw(stat_name) -> int:
+	var stat := get_stat_by_name(stat_name)
+	var roll := randi() % 100 + 1
+	var margin := stat - roll
+	var crit_success := roll <= CRIT_THRESHOLD
+	var crit_fail := roll >= CRIT_FAIL_THRESHOLD
+	if margin >= 0:
+		if margin >= 50 or crit_success:
+			return -2
+		return -1
+	else:
+		if margin <= -50 or crit_fail:
+			return 1
+		return 0
 func _calculate_success_level(roll: int, target: int) -> int:
 	var margin = target - roll
 	var level = 0
