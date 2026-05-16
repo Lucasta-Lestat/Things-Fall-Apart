@@ -104,11 +104,12 @@ def fill_outline_interior(outline_mask: np.ndarray) -> np.ndarray:
 
 def extract_head(source_rgb: np.ndarray, head_outline_mask: np.ndarray) -> Image.Image:
     """Crop the head bbox, fill the outline's interior column-by-column, keep only
-    pixels inside.
+    pixels inside, then FLIP VERTICALLY.
 
     The green outline traces the full head perimeter (top of hair, sides, chin).
     For each column, "inside" is the span from the topmost outline pixel to the
-    bottommost. This is robust to outline gaps where binary_fill_holes would fail.
+    bottommost. The vertical flip puts the face/chin at the TOP of the sprite,
+    matching the engine convention that the proximal/face-side end is up.
     """
     x0, y0, x1, y1 = HEAD_BBOX
     rgb_crop = source_rgb[y0:y1, x0:x1].copy()
@@ -119,11 +120,15 @@ def extract_head(source_rgb: np.ndarray, head_outline_mask: np.ndarray) -> Image
     rgba[~interior, 3] = 0           # erase anything outside the head boundary
 
     rgba = autocrop(rgba, pad=4)
-    return Image.fromarray(rgba, mode="RGBA")
+    img = Image.fromarray(rgba, mode="RGBA")
+    return img.transpose(Image.FLIP_TOP_BOTTOM)
 
 
 def extract_torso(headless_rgb: np.ndarray) -> Image.Image:
-    """Crop the shoulders + upper body block from the HEADLESS source.
+    """Crop the shoulders + upper body block from the HEADLESS source, then
+    FLIP VERTICALLY so the chest/abs end is at the TOP of the sprite
+    (matching the engine convention so the torso faces the same direction
+    as the legs/feet end of the body).
 
     Bounds: x between the two shoulder cuts (670..1378), y from where the
     shoulders begin tapering inward (~870) down to just above the feet (1218).
@@ -135,7 +140,8 @@ def extract_torso(headless_rgb: np.ndarray) -> Image.Image:
     rgb_crop = headless_rgb[y_top:y_bottom, SHOULDER_X:SHOULDER_X_RIGHT].copy()
     rgba = remove_background(rgb_crop)
     rgba = autocrop(rgba, pad=4)
-    return Image.fromarray(rgba, mode="RGBA")
+    img = Image.fromarray(rgba, mode="RGBA")
+    return img.transpose(Image.FLIP_TOP_BOTTOM)
 
 
 def extract_arm_segment(source_rgb: np.ndarray, x0: int, x1: int) -> Image.Image:
