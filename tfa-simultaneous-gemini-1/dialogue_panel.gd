@@ -84,12 +84,31 @@ func _on_choices_available(choices: Array):
 	for i in range(choices.size()):
 		var choice = choices[i]
 		var button = CHOICE_BUTTON.instantiate()
-		button.text = choice["text"]
-		
+		button.text = choice["text"] + _format_reactions(choice.get("ally_reactions", []))
+
 		# Connect button press to choice selection
 		button.pressed.connect(_on_choice_selected.bind(i))
-		
+
 		choices_container.add_child(button)
+
+# Format ally reactions as a short suffix on the choice button, e.g.
+#   [Karim -2, Federica +3]
+# Zeros are omitted. Returns "" if there are no nonzero reactions so existing
+# trait-less choices look identical to before.
+func _format_reactions(reactions: Array) -> String:
+	if reactions.is_empty():
+		return ""
+	var parts: Array = []
+	for r in reactions:
+		var rating: int = int(r.get("net_rating", 0))
+		if rating == 0:
+			continue
+		var name: String = str(r.get("display_name", "?"))
+		var sign: String = "+" if rating > 0 else "−"  # unicode minus
+		parts.append("%s %s%d" % [name, sign, abs(rating)])
+	if parts.is_empty():
+		return ""
+	return "   [" + ", ".join(parts) + "]"
 
 func _on_choice_selected(choice_index: int):
 	SfxManager.play_ui("ui-click")

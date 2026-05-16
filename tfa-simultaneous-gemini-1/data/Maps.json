@@ -131,6 +131,32 @@
 					"target_spawn": "from_cemetery",
 					"label": "To Venonan Chapel"
 				}
+			],
+			"dialogue_triggers_on_load": [
+				{
+					"id": "demo_cemetery_arrival",
+					"dialogue": "demo_cemetery_on_load",
+					"one_shot": true
+				}
+			],
+			"dialogue_zones": [
+				{
+					"id": "demo_altar_zone",
+					"dialogue": "demo_cemetery_zone",
+					"position": [600, 300],
+					"radius": 80,
+					"trigger_on": "protagonist",
+					"one_shot": true
+				}
+			],
+			"dialogue_time_triggers": [
+				{
+					"id": "demo_midnight_bell",
+					"dialogue": "demo_scheduled_dialogue",
+					"when": { "hour": 0, "minute": 0 },
+					"recurrence": "daily",
+					"scope": { "map": "cemetery" }
+				}
 			]
 		},
 		{

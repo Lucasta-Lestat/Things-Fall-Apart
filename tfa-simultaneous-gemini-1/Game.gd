@@ -420,15 +420,65 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# 8. Create warp zones
 	_create_warp_zones(current_map_data.get("warp_points", []))
 
+	# 8b. Install dialogue zone controller and process on-load dialogue triggers.
+	# Order matters: zones go in first so an on-load dialogue that ends quickly
+	# can immediately notice the player standing inside a zone on the next frame.
+	_install_dialogue_zones(current_map_data)
+	_process_on_load_dialogue_triggers(current_map_data)
+
+	# 8c. Hand the time-based dialogue triggers for this map to the scheduler.
+	var scheduler = get_node_or_null("/root/EventScheduler")
+	if scheduler:
+		scheduler.on_map_entered(map_id, current_map_data.get("dialogue_time_triggers", []))
+
 	# 9. Select the player
 	call_deferred("_select_initial_character")
- 
+
 	emit_signal("map_loaded", map_id)
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
+
+# Map-bound dialogue trigger plumbing -------------------------------------
+
+func _install_dialogue_zones(map_data: Dictionary) -> void:
+	var zones: Array = map_data.get("dialogue_zones", [])
+	if zones.is_empty():
+		return
+	var DZC = preload("res://Structures/DialogueZoneController.gd")
+	var controller = DZC.new()
+	controller.name = "DialogueZoneController"
+	# Parent under map_loader so _unload_current_map's child-clear sweeps it up.
+	map_loader.add_child(controller)
+	controller.configure(current_map_id, zones)
+
+func _process_on_load_dialogue_triggers(map_data: Dictionary) -> void:
+	var triggers: Array = map_data.get("dialogue_triggers_on_load", [])
+	if triggers.is_empty():
+		return
+	var trigger_state = get_node_or_null("/root/MapTriggerState")
+	for t in triggers:
+		var tid := str(t.get("id", ""))
+		var dialogue_id := str(t.get("dialogue", ""))
+		if dialogue_id.is_empty():
+			continue
+		var one_shot: bool = bool(t.get("one_shot", true))
+		if one_shot and trigger_state and trigger_state.has_fired(current_map_id, tid):
+			continue
+		var prereqs = t.get("prerequisites", [])
+		if not DialogueManager.evaluate_prerequisites(prereqs):
+			continue
+		DialogueManager.start_dialogue(dialogue_id)
+		if one_shot and trigger_state and not tid.is_empty():
+			trigger_state.mark_fired(current_map_id, tid)
 
 func _unload_current_map() -> void:
 	# Snapshot any service-NPC live state so trades stick across map transitions.
 	_save_service_npc_states()
+
+	# Drop map-scoped scheduled dialogue triggers so they don't fire on the
+	# next map. Global triggers are unaffected.
+	var scheduler = get_node_or_null("/root/EventScheduler")
+	if scheduler:
+		scheduler.on_map_exited(current_map_id)
 
 	# Remove all spawned characters
 	for character in characters_in_scene:

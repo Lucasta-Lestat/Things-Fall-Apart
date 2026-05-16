@@ -20,6 +20,30 @@ var dialogues: Array = []
 var current_dialogue_index: int = 0
 var interact_options: Array = ["Inspect"]
 
+# Favorability toward the protagonist. Shifted by dialogue choices whose
+# preferred/disliked traits match this character's `traits`. Clamped to
+# [-100, 100]. Protagonist's own value is unused (skipped on apply).
+var favorability: int = 0
+signal favorability_changed(delta: int, total: int, reason: String)
+
+# Net trait rating for a dialogue choice: sum of preferred trait tiers minus
+# sum of disliked trait tiers, both pulled from this character's `traits`.
+# Missing traits contribute 0. Used both for choice-button reaction display
+# and the favorability delta applied on selection.
+func rate_choice(preferred: Array, disliked: Array) -> int:
+	var score: int = 0
+	for t in preferred:
+		score += int(traits.get(t, 0))
+	for t in disliked:
+		score -= int(traits.get(t, 0))
+	return score
+
+func apply_favorability_delta(delta: int, reason: String = "") -> void:
+	if delta == 0:
+		return
+	favorability = clamp(favorability + delta, -100, 100)
+	favorability_changed.emit(delta, favorability, reason)
+
 # Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
 # is shown above the speaker name in dialogue. The first title is the primary.
 var titles: Array = []

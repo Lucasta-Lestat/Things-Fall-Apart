@@ -9,6 +9,14 @@ var current_dialogue_id: String = ""
 var current_node_id: String = ""
 var current_line_index: int = 0
 var current_node_lines: Array = []
+# Most recently emitted choices, so select_choice() can resolve by index without
+# the panel having to track them. Each entry carries trait metadata and
+# precomputed ally reactions used to apply favorability deltas on selection.
+var current_choices: Array = []
+# Pending dialogue ids to start once the active one ends. Map/zone/time
+# triggers funnel through start_dialogue() which appends here if a dialogue
+# is already in progress.
+var _pending_dialogues: Array = []
 @onready var game = get_node_or_null("/root/Game")
 
 
@@ -49,13 +57,20 @@ func load_dialogues():
 	dialogues = json.data
 	#print("Dialogues loaded successfully: ", dialogues)
 
-# Start a dialogue by its ID
+# Whether a dialogue is currently playing.
+func is_active() -> bool:
+	return current_dialogue_id != ""
+
+# Start a dialogue by its ID. If another dialogue is already active, queue this
+# one and start it when the current one ends.
 func start_dialogue(dialogue_id: String):
-	print("starting dialouges dialogues: ", dialogues[dialogue_id])
 	if not dialogues.has(dialogue_id):
 		push_error("Dialogue not found: " + dialogue_id)
 		return
-	
+	if is_active():
+		_pending_dialogues.append(dialogue_id)
+		return
+	print("starting dialouges dialogues: ", dialogues[dialogue_id])
 	current_dialogue_id = dialogue_id
 	var dialogue_data = dialogues[dialogue_id]
 	
@@ -83,12 +98,15 @@ func show_node(node_id: String):
 	var node = nodes[node_id]
 	current_node_id = node_id
 	current_line_index = 0
+	# Clear any choices left over from the previous node so a stale list can't
+	# be selected against.
+	current_choices = []
 	
 	# Check prerequisites if they exist
 	if node.has("prerequisites"):
 		if not evaluate_prerequisites(node["prerequisites"]):
 			push_warning("Prerequisites not met for node: " + node_id)
-			dialogue_ended.emit()
+			end_dialogue()
 			return
 	
 	# Parse all dialogue lines from the node (excluding reserved keywords)
@@ -151,20 +169,27 @@ func handle_node_navigation(node: Dictionary):
 		if next_node != "":
 			show_node(next_node)
 		else:
-			dialogue_ended.emit()
+			end_dialogue()
 		return
 	
 	# Check for choices
 	if node.has("choices"):
 		var processed_choices = []
 		for choice in node["choices"]:
+			var preferred: Array = choice.get("preferred_traits", [])
+			var disliked: Array = choice.get("disliked_traits", [])
 			var choice_data = {
 				"text": process_text(choice["text"]),
 				"nextNode": choice.get("nextNode", ""),
-				"branch": choice.get("branch", null)
+				"branch": choice.get("branch", null),
+				"preferred_traits": preferred,
+				"disliked_traits": disliked,
+				"favorability_weight": float(choice.get("favorability_weight", 1.0)),
+				"ally_reactions": _compute_ally_reactions(preferred, disliked),
 			}
 			processed_choices.append(choice_data)
-		
+
+		current_choices = processed_choices
 		choices_available.emit(processed_choices)
 		return
 	
@@ -174,7 +199,7 @@ func handle_node_navigation(node: Dictionary):
 		return
 	
 	# No navigation found, end dialogue
-	dialogue_ended.emit()
+	end_dialogue()
 
 # Evaluate a branch to determine which node to go to
 func evaluate_branch(branch_data) -> String:
@@ -296,26 +321,67 @@ func parse_arg_value(arg: String):
 	
 	return arg
 
-# Handle player's choice selection
-func select_choice(choice_index: int, choices: Array):
-	if choice_index < 0 or choice_index >= choices.size():
+# Handle player's choice selection. Reads from the choices most recently
+# emitted via `choices_available` (stored in current_choices), so the UI only
+# needs the index. Applies trait-based favorability deltas to present party
+# members before navigating to the chosen branch/nextNode.
+func select_choice(choice_index: int):
+	if choice_index < 0 or choice_index >= current_choices.size():
 		push_error("Invalid choice index: " + str(choice_index))
 		return
-	
-	var choice = choices[choice_index]
-	
+
+	var choice = current_choices[choice_index]
+	_apply_choice_favorability(choice)
+	# Consume the list so a late double-click can't re-apply the same delta.
+	current_choices = []
+
 	# Check if choice has a branch
 	if choice["branch"] != null:
 		var next_node = evaluate_branch(choice["branch"])
 		if next_node != "":
 			show_node(next_node)
 		else:
-			dialogue_ended.emit()
+			end_dialogue()
 	# Otherwise use nextNode
 	elif choice["nextNode"] != "":
 		show_node(choice["nextNode"])
 	else:
-		dialogue_ended.emit()
+		end_dialogue()
+
+# Build the per-ally net-rating list for one choice. Iterates the party
+# (excluding the protagonist) and runs each ally's `rate_choice`. Returns
+# [] when the choice has no trait metadata so existing dialogues are
+# completely unaffected.
+func _compute_ally_reactions(preferred: Array, disliked: Array) -> Array:
+	if preferred.is_empty() and disliked.is_empty():
+		return []
+	var out: Array = []
+	var party: Array = []
+	if game and game.has_method("get_party"):
+		party = game.get_party()
+	for ally in party:
+		if not is_instance_valid(ally):
+			continue
+		if "is_protagonist" in ally and ally.is_protagonist:
+			continue
+		if not ally.has_method("rate_choice"):
+			continue
+		out.append({
+			"character": ally,
+			"display_name": ally.display_name if "display_name" in ally else str(ally),
+			"net_rating": ally.rate_choice(preferred, disliked),
+		})
+	return out
+
+func _apply_choice_favorability(choice: Dictionary) -> void:
+	var weight: float = float(choice.get("favorability_weight", 1.0))
+	for reaction in choice.get("ally_reactions", []):
+		var delta: int = int(round(float(reaction.get("net_rating", 0)) * weight))
+		if delta == 0:
+			continue
+		var ally = reaction.get("character", null)
+		if ally and is_instance_valid(ally) and ally.has_method("apply_favorability_delta"):
+			ally.apply_favorability_delta(delta, "dialogue:" + current_dialogue_id)
 
 # Process text for variable substitution and markdown formatting
 func process_text(text: String) -> String:
@@ -481,4 +547,9 @@ func end_dialogue():
 	current_node_id = ""
 	current_line_index = 0
 	current_node_lines = []
+	current_choices = []
 	dialogue_ended.emit()
+	# Flush queued dialogues triggered while this one was active.
+	if not _pending_dialogues.is_empty():
+		var next_id: String = _pending_dialogues.pop_front()
+		call_deferred("start_dialogue", next_id)
