@@ -1433,10 +1433,24 @@ func process_weapon_hit(
 			attack_damage[dt_keys[0]] += attacker.bide_pending_bonus
 			attacker.bide_pending_bonus = 0.0
 
+	# Track whether this swing was an unarmed strike so post-damage mutation
+	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
+	var is_unarmed: bool = weapon == null or weapon is AbilityShape
+
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
 	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
+
+	# Mutation proc: The Claws That Catch — every unarmed strike attempts a grapple.
+	# Whether it lands is purely the target's STR save (grappled.save_stat = "str").
+	# Incoming stacks scale with mutation tier so higher-tier claws are both harder
+	# to fully resist on application AND persist longer (the periodic tick-save
+	# can only chip one stack at a time).
+	if is_unarmed and attacker.condition_manager and target.condition_manager:
+		var claws: ConditionInstance = attacker.condition_manager.conditions.get("the_claws_that_catch")
+		if claws and claws.is_active():
+			target.condition_manager.apply_condition("grappled", attacker, claws.stacks, -2.0)
 
 	# Penetration uses the post-DR damage (pass null for non-weapon items like AbilityShape)
 	var actual_weapon = weapon if weapon is WeaponShape else null

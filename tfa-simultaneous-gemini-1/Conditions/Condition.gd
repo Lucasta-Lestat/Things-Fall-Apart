@@ -60,6 +60,23 @@ extends Resource
 @export var custom_vfx: String = ""
 @export var custom_sfx: String = ""
 
+## Optional saving throw. If non-empty, the bearer rolls a save against this stat
+## ("str", "dex", "con", "int", "wis", "cha") when the condition is applied;
+## see ProceduralCharacter.saving_throw for the success-level rules. The returned
+## tier delta is added to incoming stacks — fully successful saves reduce stacks
+## to 0 and the application is skipped entirely.
+@export var save_stat: String = ""
+
+## If > 0 and save_stat is set, the bearer re-rolls a save every save_interval
+## seconds while the condition is active. Negative delta removes stacks (and the
+## condition entirely if stacks fall to 0); positive delta adds stacks (capped at max_tier).
+@export var save_interval: float = 0.0
+
+## Ability ID that should be added to the bearer's inventory the first time this
+## condition is applied (used by mutations like The Jaws That Bite that grant a
+## new attack option). Empty string = no ability granted.
+@export var grants_ability: String = ""
+
 # Helper function to create a condition instance from data
 static func create_from_data(data: Dictionary) -> Condition:
 	var condition = Condition.new()
@@ -82,5 +99,8 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.triggered_effects = data.get("triggered_effects", [])
 	condition.conditional_modifiers = data.get("conditional_modifiers", [])
 	condition.immunities = data.get("immunities", [])
-	
+	condition.save_stat = data.get("save_stat", "")
+	condition.save_interval = data.get("save_interval", 0.0)
+	condition.grants_ability = data.get("grants_ability", "")
+
 	return condition

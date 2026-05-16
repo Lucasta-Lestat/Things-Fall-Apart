@@ -48,6 +48,52 @@ func add_item(item_data: Dictionary) -> bool:
 	emit_signal("item_added", item_data)
 	return true
 
+# Like add_item, but transfers the full num_stacks count from item_data
+# rather than always adding 1. Use this when receiving an item dict that
+# already represents a multi-count stack (chest loot, NPC drops, etc.) so
+# the receiving inventory gets all the stacks, merging into existing
+# matching stacks first and appending the remainder as a new stack.
+#
+# Returns false only when the inventory is full AND no merge happened.
+# Otherwise returns true; partial overflow into max_slots is treated as
+# success (we'd rather drop a few stacks than lose all of them).
+func add_stack(item_data: Dictionary) -> bool:
+	var stacks := int(item_data.get("num_stacks", 1))
+	if stacks < 1:
+		stacks = 1
+	var is_stackable := bool(item_data.get("is_stackable", false))
+	var item_id := String(item_data.get("id", ""))
+
+	if is_stackable:
+		var max_stack := int(item_data.get("max_stack_size", 20))
+		for i in range(items.size()):
+			if stacks <= 0:
+				break
+			if String(items[i].get("id", "")) != item_id:
+				continue
+			var current := int(items[i].get("num_stacks", 1))
+			var space := max_stack - current
+			if space <= 0:
+				continue
+			var add_now: int = min(stacks, space)
+			items[i]["num_stacks"] = current + add_now
+			stacks -= add_now
+		if stacks <= 0:
+			emit_signal("item_added", item_data)
+			return true
+
+	if items.size() >= max_slots:
+		push_warning("Inventory full")
+		return false
+
+	# Append the (possibly partial) remainder. Mutate item_data in place —
+	# the caller is transferring ownership of this dict to the inventory.
+	if is_stackable:
+		item_data["num_stacks"] = stacks
+	items.append(item_data)
+	emit_signal("item_added", item_data)
+	return true
+
 func remove_item(index: int) -> Dictionary:
 	if index < 0 or index >= items.size():
 		push_warning("Invalid inventory index")

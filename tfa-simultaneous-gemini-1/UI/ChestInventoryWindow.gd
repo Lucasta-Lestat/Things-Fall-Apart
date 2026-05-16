@@ -200,22 +200,50 @@ func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
 func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	if not is_instance_valid(chest_item) or game == null:
 		return
-	var selected = game.get("primary_selected")
-	if not is_instance_valid(selected) or not ("inventory" in selected):
+	var selected = _resolve_target_character()
+	if selected == null:
+		push_warning("ChestInventoryWindow: no party character available to receive item")
 		return
 	var entry: Dictionary = slot.get_meta("entry")
 	var item_dict = entry.get("raw")
 	if not (item_dict is Dictionary) or (item_dict as Dictionary).is_empty():
 		return
-	if chest_item.contents is Array:
-		chest_item.contents.erase(item_dict)
+	# Transfer first; only erase from chest on success so a full inventory
+	# doesn't lose the item.
+	var transferred := false
 	if entry.get("kind", "") == "weapon":
 		if selected.inventory.has_method("stow_weapon_from_data"):
 			selected.inventory.stow_weapon_from_data(item_dict)
+			transferred = true
 	else:
-		selected.inventory.add_item(item_dict)
+		# add_stack transfers the full num_stacks (chest gold piles can be
+		# 50+, and add_item would only increment by 1).
+		transferred = selected.inventory.add_stack(item_dict)
+	if not transferred:
+		return
+	if chest_item.contents is Array:
+		chest_item.contents.erase(item_dict)
 	SfxManager.play_ui("chest_item_out")
 	_populate_grid()
+
+# Pick the party character that should receive a clicked item. Primary-selected
+# wins; falls back to the first valid party member so the click still works
+# when nobody has been actively selected yet.
+func _resolve_target_character() -> Node:
+	if game == null:
+		return null
+	var candidate = game.get("primary_selected")
+	if _has_inventory(candidate):
+		return candidate
+	var party = game.get("party_chars")
+	if party is Array:
+		for c in party:
+			if _has_inventory(c):
+				return c
+	return null
+
+func _has_inventory(c) -> bool:
+	return is_instance_valid(c) and ("inventory" in c) and c.inventory != null
 
 # ---------------------------------------------------------------------------
 # Drag and drop

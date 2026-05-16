@@ -367,15 +367,26 @@ static func _resolve_apply_condition(
 	var stacks = effect.get("stacks", 1)
 	var duration_override = effect.get("duration", -2.0)
 	var target_limb = effect.get("target_limb", null)
-	
+	var chance: float = float(effect.get("chance", 1.0))
+	# When set, the stacks applied equal the caster's current stack count of the
+	# named condition (used for mutation-tier-scales-effect, e.g. The Jaws That Bite).
+	var scale_by: String = str(effect.get("scale_stacks_by_caster_condition", ""))
+	if scale_by != "" and caster and "condition_manager" in caster and caster.condition_manager:
+		var src = caster.condition_manager.conditions.get(scale_by)
+		if src:
+			stacks = src.stacks
+
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-			
+
+		if chance < 1.0 and randf() >= chance:
+			continue
+
 		var target_cond_manager = _get_condition_manager(target)
 		if not target_cond_manager:
 			continue
-			
+
 		# The ConditionManager scales durations internally based on target traits
 		var instance = target_cond_manager.apply_condition(
 			condition_id,
