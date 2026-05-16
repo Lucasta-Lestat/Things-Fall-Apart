@@ -159,12 +159,72 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 		slot.add_child(stack_label)
 
 	slot.set_meta("entry", entry)
+	# Per-slot input: short clicks pick up to the selected character; drags
+	# are forwarded to the window's existing _get_drag_data / _drop_data so
+	# all transfer paths share one implementation.
+	slot.gui_input.connect(_on_slot_gui_input.bind(slot))
+	slot.set_drag_forwarding(
+		Callable(self, "_slot_get_drag_data").bind(entry),
+		Callable(self, "_slot_can_drop_data"),
+		Callable(self, "_slot_drop_data"),
+	)
 	return slot
+
+# ---------------------------------------------------------------------------
+# Click vs. drag (per-slot input)
+# ---------------------------------------------------------------------------
+
+# Pixels the cursor may move between press and release before we treat the
+# interaction as a drag rather than a click. Matches Godot's own drag-start
+# threshold loosely; small enough that intentional drags always exceed it.
+const _CLICK_DRAG_THRESHOLD := 8.0
+var _press_global_pos: Vector2 = Vector2.ZERO
+var _press_slot: PanelContainer = null
+
+func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			# Don't consume — Godot's drag detection needs the press to flow
+			# through, and we decide click-vs-drag on release.
+			_press_global_pos = event.global_position
+			_press_slot = slot
+		else:
+			# Release: if the cursor barely moved, treat as a tap and transfer
+			# this slot's item to the currently primary-selected character.
+			# A real drag releases on the drop target's _drop_data instead.
+			if _press_slot == slot and event.global_position.distance_to(_press_global_pos) < _CLICK_DRAG_THRESHOLD:
+				_transfer_slot_to_selected(slot)
+				get_viewport().set_input_as_handled()
+			_press_slot = null
+
+func _transfer_slot_to_selected(slot: PanelContainer) -> void:
+	if not is_instance_valid(chest_item) or game == null:
+		return
+	var selected = game.get("primary_selected")
+	if not is_instance_valid(selected) or not ("inventory" in selected):
+		return
+	var entry: Dictionary = slot.get_meta("entry")
+	var item_dict = entry.get("raw")
+	if not (item_dict is Dictionary) or (item_dict as Dictionary).is_empty():
+		return
+	if chest_item.contents is Array:
+		chest_item.contents.erase(item_dict)
+	if entry.get("kind", "") == "weapon":
+		if selected.inventory.has_method("stow_weapon_from_data"):
+			selected.inventory.stow_weapon_from_data(item_dict)
+	else:
+		selected.inventory.add_item(item_dict)
+	SfxManager.play_ui("chest_item_out")
+	_populate_grid()
 
 # ---------------------------------------------------------------------------
 # Drag and drop
 # ---------------------------------------------------------------------------
 
+# Window-level _get_drag_data is kept as a fallback for drags that originate
+# on the chest window's empty areas (between slots). Slot drags are handled
+# by _slot_get_drag_data via set_drag_forwarding so each slot's `entry` is
+# bound directly — avoids needing _find_slot_at to re-derive it from coords.
 func _get_drag_data(at_position: Vector2):
 	var slot = _find_slot_at(at_position)
 	if not slot:
@@ -176,6 +236,20 @@ func _get_drag_data(at_position: Vector2):
 		"entry": entry,
 		"source_window": self,
 	}
+
+func _slot_get_drag_data(at_position: Vector2, entry: Dictionary) -> Variant:
+	set_drag_preview(_create_drag_preview(entry))
+	return {
+		"source_chest": chest_item,
+		"entry": entry,
+		"source_window": self,
+	}
+
+func _slot_can_drop_data(at_position: Vector2, data) -> bool:
+	return _can_drop_data(at_position, data)
+
+func _slot_drop_data(at_position: Vector2, data) -> void:
+	_drop_data(at_position, data)
 
 func _create_drag_preview(entry: Dictionary) -> Control:
 	var sprite_path: String = str(entry.get("sprite_path", ""))
