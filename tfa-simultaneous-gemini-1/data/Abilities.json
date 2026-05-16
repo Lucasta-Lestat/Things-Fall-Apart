@@ -851,6 +851,23 @@
 		{"type": "custom", "method": "_self_heal", "amount": 3}
 	  ],
 	  "visuals": {"in_hand_effect": "res://vfx/necrotic_hand.tscn", "impact_effect": "res://vfx/bleeding.tscn"}
+	},
+	{
+	  "id": "use_alcohol",
+	  "display_name": "Drink Alcohol",
+	  "description": "Take a swig from the bottle. Become Drunken (one stack per drink, up to 5).",
+	  "icon": "",
+	  "cooldown": 0.0,
+	  "visual_duration": 0.0,
+	  "costs": {},
+	  "cast_time": 0.0,
+	  "interruptible": false,
+	  "traits": {"consume": 1, "self": 1, "mundane": 1},
+	  "targeting": {"type": "self", "shape": "none"},
+	  "effects": [
+		{"type": "apply_condition", "condition_id": "drunken", "stacks": 1}
+	  ],
+	  "visuals": {}
 	}
   ]
 }

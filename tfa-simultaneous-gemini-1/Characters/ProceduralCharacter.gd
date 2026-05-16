@@ -218,6 +218,10 @@ var _dash_motion_on_complete: Callable
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
 var _flee_timer: float = 0.0
+# Drunken sway phase — advanced in _apply_drunken_wobble each frame the
+# "drunken" condition is active. Persists across stack changes so the sway
+# remains continuous if the player drinks again mid-effect.
+var _drunken_wobble_phase: float = 0.0
 
 @export var sight: float = 1.0  # Base sight stat
 var fov_angle_degrees: float = 150.0  # Field of view in degrees
@@ -540,6 +544,11 @@ func _on_game_unpaused_convert_path() -> void:
 	_nav_waypoints.clear()
 	_nav_index = 0
 	var actions = tactical_path.to_action_queue_actions()
+	# Drunken: stray the planned waypoints a little before they're queued.
+	# The final waypoint of each segment is preserved so the character still
+	# arrives at the intended destination/action node — only the in-between
+	# points wander.
+	_apply_drunken_path_wobble(actions)
 	for a in actions:
 		action_queue.queue_action(a.type, a.data)
 	tactical_path.is_executing = true
@@ -1134,6 +1143,60 @@ func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> voi
 			GameLog.add_entry("A " + template_id.replace("_", " ") + " appears near " + Name + "!")
 			return
 		attempts -= 1
+
+
+# ---- Drunken sway and stagger ----
+# Both helpers are no-ops unless the "drunken" condition is active, so they're
+# safe to call unconditionally from _process / _on_game_unpaused_convert_path.
+# Amplitude scales with the condition's stack count (its "tier").
+
+func _apply_drunken_wobble(delta: float) -> void:
+	# Adds a small angular drift to `rotation` each frame. The drift fights
+	# with the target_rotation lerp inside _update_movement, producing a
+	# continuous sway rather than discrete jitter. Because we add a per-frame
+	# delta (not a hard rotation override), the lerp still drags the body
+	# back toward where it's "supposed" to be facing — so the character
+	# wavers without spinning out.
+	if condition_manager == null:
+		return
+	var inst = condition_manager.get_condition("drunken")
+	if inst == null or not inst.is_active():
+		return
+	var tier: int = max(1, inst.stacks)
+	# Sway period shortens slightly as the character gets drunker.
+	_drunken_wobble_phase += delta * (1.2 + 0.2 * float(tier))
+	# Per-second angular rates; the *delta keeps the magnitude framerate-
+	# independent. 0.4 rad/sec peak sway at tier 1, scaled linearly by tier.
+	var sway_rate: float = sin(_drunken_wobble_phase) * 0.4 * float(tier)
+	var noise_rate: float = randf_range(-1.0, 1.0) * 0.15 * float(tier)
+	rotation += (sway_rate + noise_rate) * delta
+
+
+func _apply_drunken_path_wobble(actions: Array) -> void:
+	# Perturbs the in-between waypoints of each MOVE action so a drunken
+	# character staggers along their planned path. The first waypoint (start)
+	# and last waypoint (destination / action node anchor) of each segment
+	# are preserved — only the points the character passes THROUGH wander.
+	if condition_manager == null:
+		return
+	var inst = condition_manager.get_condition("drunken")
+	if inst == null or not inst.is_active():
+		return
+	var tier: int = max(1, inst.stacks)
+	var max_shift: float = GridManager.TILE_SIZE * 0.12 * float(tier)
+	for a in actions:
+		if a.get("type", -1) != ActionQueue.ActionType.MOVE:
+			continue
+		var data: Dictionary = a.get("data", {})
+		var wps: Array = data.get("waypoints", [])
+		if wps.size() <= 2:
+			continue
+		for i in range(1, wps.size() - 1):
+			var jitter = Vector2(
+				randf_range(-max_shift, max_shift),
+				randf_range(-max_shift, max_shift)
+			)
+			wps[i] = wps[i] + jitter
 
 
 # ===== CUSTOM ABILITY METHODS (called via "custom" effect type) =====
@@ -2360,6 +2423,10 @@ func _process(delta: float) -> void:
 		_update_movement(delta)
 		_update_leg_animation(delta)
 		_update_body_rotation()
+		# Drunken sway: applied AFTER rotation has been lerped toward
+		# target_rotation in _update_movement so the wobble fights with the
+		# correction lerp, producing a natural sway rather than pure jitter.
+		_apply_drunken_wobble(delta)
 		_update_arm_ik()
 		_update_arm_visuals()
 		_update_weapon_position()

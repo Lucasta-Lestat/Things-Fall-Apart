@@ -706,5 +706,33 @@ func get_all_conditions() -> Array:
 		],
 		"conditional_modifiers": [],
 		"immunities": {}
+	},
+	# Drunken: intoxication that wobbles the body and strays the steps.
+	# Stat modifiers scale by stacks via ConditionInstance.get_scaled_stat_modifiers().
+	# Visual wobble (rotation + path waypoint shifts) is implemented in
+	# ProceduralCharacter._apply_drunken_wobble / _apply_drunken_path_wobble;
+	# amplitude scales with stacks there too.
+	{
+		"id": "drunken",
+		"display_name": "Drunken",
+		"description": "Intoxicated. The world sways and your steps stray. Dex and Int suffer; Will and Cha rise.",
+		"traits": {"debuff": 1, "buff": 1, "mental": 1, "drunken": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 120.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "dexterity", "operation": "add", "value": -5},
+			{"stat": "intelligence", "operation": "add", "value": -5},
+			{"stat": "will", "operation": "add", "value": 3},
+			{"stat": "charisma", "operation": "add", "value": 3}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
 	}
 ]
