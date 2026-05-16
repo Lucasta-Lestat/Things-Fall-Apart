@@ -62,6 +62,11 @@
 					"condition": {
 						"time_hour_min": 20
 					}
+				},
+				{
+					"template_id": "test_male_elf",
+					"position": [150, 100],
+					"count": 1
 				}
 			],
 			"fluid_spawns": [
