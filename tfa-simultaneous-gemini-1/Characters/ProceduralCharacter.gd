@@ -4305,11 +4305,14 @@ func get_stat_by_name(stat_name) -> int:
 ## In the success branch the crit_fail check is intentionally ignored (margin
 ## determines pass/fail first; the crit rules only intensify the outcome).
 func saving_throw(stat_name) -> int:
-	var stat := get_stat_by_name(stat_name)
-	var roll := randi() % 100 + 1
-	var margin := stat - roll
-	var crit_success := roll <= CRIT_THRESHOLD
-	var crit_fail := roll >= CRIT_FAIL_THRESHOLD
+	var stat: int = get_stat_by_name(stat_name)
+	var roll: int = randi() % 100 + 1
+	var margin: int = stat - roll
+	# Explicit `: bool` rather than `:=` — CRIT_THRESHOLD / CRIT_FAIL_THRESHOLD
+	# are declared untyped (var CRIT_THRESHOLD = 5), so the comparison result
+	# can't be type-inferred and the parser rejects `var x := …` here.
+	var crit_success: bool = roll <= CRIT_THRESHOLD
+	var crit_fail: bool = roll >= CRIT_FAIL_THRESHOLD
 	if margin >= 0:
 		if margin >= 50 or crit_success:
 			return -2
