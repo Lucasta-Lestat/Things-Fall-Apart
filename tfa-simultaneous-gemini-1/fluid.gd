@@ -27,10 +27,12 @@ var target_fill_ratio: float = 1.0
 var current_inflow_direction: Vector2 = Vector2.ZERO
 var target_inflow_direction: Vector2 = Vector2.ZERO
 
-# Exponential lerp rates. Higher = snappier convergence.
-const FLOW_LERP_RATE: float = 3.0    # was 1.5 (when sim ran every 2s); sim is now 0.5s
-const FILL_LERP_RATE: float = 4.0    # snappier so fill-in animation tracks the sim
-const INFLOW_LERP_RATE: float = 3.0
+# Exponential lerp rates. Tuned so visuals settle to ~95% within one SIM_INTERVAL
+# (0.25s) — half-life ~ ln(2)/rate ~ 0.058s for rate 12. Avoids the always-lagging-
+# behind look that smaller rates produce when the sim ticks rapidly.
+const FLOW_LERP_RATE: float = 12.0
+const FILL_LERP_RATE: float = 12.0
+const INFLOW_LERP_RATE: float = 12.0
 
 # Depth
 var water_depth: float = 1.0

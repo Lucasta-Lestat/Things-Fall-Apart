@@ -9,8 +9,13 @@ const WaterTile = preload("res://Fluid.tscn")
 const FLUID_TYPE_WATER = "water"
 const PUDDLE_HEIGHT = 0.01
 const PRESSURE_COEFFICIENT = 1.0
-const FLOW_RATE = 0.1
-const EVAPORATION_RATE = 0.01
+# Per-second rates (multiplied by SIM_INTERVAL each tick) so changing SIM_INTERVAL
+# doesn't accidentally change how fast fluids flow or evaporate.
+const FLOW_RATE_PER_SEC: float = 0.05      # matches the pre-tickrate-change behavior
+const EVAPORATION_RATE_PER_SEC: float = 0.002  # was effectively 0.005/sec; slower per user feedback
+# Minimum flow_amount per tick to apply. Lower than PUDDLE_HEIGHT so small puddles
+# can still flow at higher tick rates (where per-tick amounts are small).
+const MIN_FLOW_AMOUNT: float = 0.001
 
 # Flow tracking for visualization
 var flow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
@@ -21,8 +26,10 @@ var flow_speeds: Dictionary = {}  # Dictionary[Vector2i, float]
 var inflow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 
 # Amount at which a tile is considered visually "full". Below this it renders
-# with a partial fill mask growing from the inflow side.
-const FULL_THRESHOLD: float = 0.5
+# with a partial fill mask growing from the inflow side. Kept small so that
+# typical puddles/blood/oil render solidly and evaporation only affects the
+# visual at the very end of a tile's lifetime.
+const FULL_THRESHOLD: float = 0.1
 
 # Fluid data: Dictionary[Vector2i, Dictionary[String, float]]
 var fluid_grid: Dictionary = {}
@@ -41,8 +48,8 @@ var _edge_mask_update_pending: bool = false
 
 # Real-time fluid simulation
 var _sim_timer: float = 0.0
-const SIM_INTERVAL: float = 0.5  # Simulate flow every 0.5 seconds (was 2.0).
-								 # Lower interval = more responsive fill animations.
+const SIM_INTERVAL: float = 0.25  # Simulate flow 4x/sec. Lerp rates in fluid.gd
+                                  # are tuned to settle within one tick at this rate.
 
 func _ready() -> void:
 	_load_fluid_database()
@@ -208,6 +215,10 @@ func update_fluid_simulation() -> void:
 	if active_fluid_tiles.is_empty():
 		return
 
+	# Per-tick scaling of the per-second rates so behavior is independent of SIM_INTERVAL.
+	var flow_rate_tick: float = FLOW_RATE_PER_SEC * SIM_INTERVAL
+	var evap_rate_tick: float = EVAPORATION_RATE_PER_SEC * SIM_INTERVAL
+
 	var flow_deltas: Dictionary = {}
 	flow_directions.clear()
 	flow_speeds.clear()
@@ -238,10 +249,10 @@ func update_fluid_simulation() -> void:
 
 				if pressure_diff > 0:
 					var flow_amount = min(
-						amount * FLOW_RATE * (pressure_diff / (pressure + 0.1)),
+						amount * flow_rate_tick * (pressure_diff / (pressure + 0.1)),
 						amount - PUDDLE_HEIGHT
 					)
-					if flow_amount > PUDDLE_HEIGHT:
+					if flow_amount > MIN_FLOW_AMOUNT:
 						if not flow_deltas.has(tile_pos):
 							flow_deltas[tile_pos] = {}
 						if not flow_deltas[tile_pos].has(fluid_type):
@@ -278,7 +289,7 @@ func update_fluid_simulation() -> void:
 					flow_deltas[tile_pos] = {}
 				if not flow_deltas[tile_pos].has(fluid_type):
 					flow_deltas[tile_pos][fluid_type] = 0.0
-				flow_deltas[tile_pos][fluid_type] -= EVAPORATION_RATE
+				flow_deltas[tile_pos][fluid_type] -= evap_rate_tick
 
 	# Average and normalize per-tile inflow direction.
 	for pos in inflow_vectors.keys():
