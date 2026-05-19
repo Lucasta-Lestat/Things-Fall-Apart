@@ -68,7 +68,18 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 
 	# --- Set faction ---
 	character.faction_id = faction_id
-	character.display_name = template.get("name", "Unknown")
+	# Per-spawn unique_name override > template name. Lets one template back
+	# many uniquely-named NPCs (e.g. "Reverend Mother Liana").
+	var unique_name: String = str(overrides.get("unique_name", ""))
+	if not unique_name.is_empty():
+		character.display_name = unique_name
+	else:
+		character.display_name = template.get("name", "Unknown")
+
+	# --- Titles (per-spawn override wins, else template) ---
+	var override_titles: Array = overrides.get("titles", [])
+	var template_titles: Array = template.get("titles", [])
+	character.titles = (override_titles if not override_titles.is_empty() else template_titles).duplicate()
 
 	# --- Resolve race ---
 	var race_id: String = _resolve_race(template, faction_data, overrides)
@@ -421,9 +432,13 @@ func _grant_equipment(character, equipment: Array) -> void:
 			single["quantity"] = 1
 			inventory.add_item(single)
 
-		# Auto-equip items that have an equip_slot defined
-		var equip_slot: String = item_data.get("equip_slot", "")
-		var item_name: String = item_data.get("display_name", item_id)
+		# Auto-equip items that have an equip_slot defined.
+		# Items.json fields are sometimes literal `null` (e.g. alcohol, gold) —
+		# coerce to "" so the typed assignment doesn't crash.
+		var equip_slot_raw = item_data.get("equip_slot", "")
+		var equip_slot: String = "" if equip_slot_raw == null else str(equip_slot_raw)
+		var item_name_raw = item_data.get("display_name", item_id)
+		var item_name: String = str(item_id) if item_name_raw == null else str(item_name_raw)
 		if not equip_slot.is_empty() and not item_name.is_empty():
 			if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 				var hand = "Main" if equip_slot == "Main Hand" else "Off"

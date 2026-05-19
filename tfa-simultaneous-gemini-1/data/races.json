@@ -2156,7 +2156,8 @@
 				"shoulder_y_offset": 10,
 				"leg_length": 12,
 				"leg_width": 3,
-				"leg_spacing": 7
+				"leg_spacing": 7,
+				"body_scale": 0.065
 			},
 			"body_sprites": {
 				"male": {

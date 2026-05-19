@@ -48,6 +48,52 @@ func add_item(item_data: Dictionary) -> bool:
 	emit_signal("item_added", item_data)
 	return true
 
+# Like add_item, but transfers the full num_stacks count from item_data
+# rather than always adding 1. Use this when receiving an item dict that
+# already represents a multi-count stack (chest loot, NPC drops, etc.) so
+# the receiving inventory gets all the stacks, merging into existing
+# matching stacks first and appending the remainder as a new stack.
+#
+# Returns false only when the inventory is full AND no merge happened.
+# Otherwise returns true; partial overflow into max_slots is treated as
+# success (we'd rather drop a few stacks than lose all of them).
+func add_stack(item_data: Dictionary) -> bool:
+	var stacks := int(item_data.get("num_stacks", 1))
+	if stacks < 1:
+		stacks = 1
+	var is_stackable := bool(item_data.get("is_stackable", false))
+	var item_id := String(item_data.get("id", ""))
+
+	if is_stackable:
+		var max_stack := int(item_data.get("max_stack_size", 20))
+		for i in range(items.size()):
+			if stacks <= 0:
+				break
+			if String(items[i].get("id", "")) != item_id:
+				continue
+			var current := int(items[i].get("num_stacks", 1))
+			var space := max_stack - current
+			if space <= 0:
+				continue
+			var add_now: int = min(stacks, space)
+			items[i]["num_stacks"] = current + add_now
+			stacks -= add_now
+		if stacks <= 0:
+			emit_signal("item_added", item_data)
+			return true
+
+	if items.size() >= max_slots:
+		push_warning("Inventory full")
+		return false
+
+	# Append the (possibly partial) remainder. Mutate item_data in place —
+	# the caller is transferring ownership of this dict to the inventory.
+	if is_stackable:
+		item_data["num_stacks"] = stacks
+	items.append(item_data)
+	emit_signal("item_added", item_data)
+	return true
+
 func remove_item(index: int) -> Dictionary:
 	if index < 0 or index >= items.size():
 		push_warning("Invalid inventory index")
@@ -96,6 +142,10 @@ func _is_two_handed(item: Node2D) -> bool:
 
 ## Picks the best hand: prefers the requested hand, uses the other if occupied.
 func _pick_hand(preferred: String) -> String:
+	# Normalize any unknown hand string (e.g. "Stowed" leaking in from save data)
+	# to "Main" so we never silently equip to the off-hand for an unrelated label.
+	if preferred != "Main" and preferred != "Off":
+		preferred = "Main"
 	# Can't use off-hand when main hand holds a two-handed weapon
 	if preferred == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
 		return "Main"
@@ -195,6 +245,19 @@ func add_ability_by_id(ability_id: String, hand: String = "Main") -> bool:
 
 func equip_ability_from_id(ability_id: String, hand: String = "Main") -> bool:
 	return add_ability_by_id(ability_id, hand)
+
+## Add an ability to stowed without equipping it. Used by save/load restore so
+## an ability serialized as "Stowed" doesn't get auto-equipped to a hand.
+func stow_ability_from_id(ability_id: String) -> bool:
+	var data = AbilityDatabase.get_ability_data(ability_id)
+	if data.is_empty():
+		return false
+	var canonical = AbilityShape.new()
+	canonical.name = data.get("display_name", "Ability")
+	canonical.setup_from_database(data)
+	stowed_items.append(canonical)
+	emit_signal("weapon_equipped", canonical)
+	return true
 
 ## Equip a fresh copy of an existing canonical ability (already in stowed_items) to a hand.
 ## Used when the player wants the same ability in both hands.
@@ -301,11 +364,17 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
 		return
 
-	var current = _get_hand_item(hand)
-
 	var pick_index = 0 if direction >= 0 else stowed_items.size() - 1
 	var picked = stowed_items[pick_index]
 	stowed_items.remove_at(pick_index)
+
+	# Two-handed weapons must live in the main hand. If the player cycled the
+	# off-hand but the picked item is two-handed, redirect this whole cycle to
+	# the main hand so the off-hand is properly emptied below.
+	if hand == "Off" and _is_two_handed(picked):
+		hand = "Main"
+
+	var current = _get_hand_item(hand)
 
 	# Outgoing hand item first: weapons rotate back into stowed, ability copies are
 	# discarded (canonical lives in stowed).
@@ -368,6 +437,8 @@ func draw_weapon() -> void:
 			emit_signal("active_weapon_changed", item, "Main")
 			if is_instance_valid(possessor):
 				SfxManager.play("draw-steel", possessor.global_position)
+		if _is_two_handed(main_hand_item) and off_hand_item != null:
+			_stow_item(off_hand_item, "Off")
 
 # Legacy compatibility property for save/load and Game.gd references
 var active_weapon_index: int:
@@ -384,6 +455,9 @@ func set_active_weapon(index: int, hand: String = "") -> void:
 	var weapon = all[index]
 	if weapon in stowed_items:
 		var target_hand = hand if hand != "" else "Main"
+		# Two-handed weapons must live in the main hand.
+		if target_hand == "Off" and _is_two_handed(weapon):
+			target_hand = "Main"
 		stowed_items.erase(weapon)
 		var current = _get_hand_item(target_hand)
 		if current:
@@ -395,6 +469,9 @@ func set_active_weapon(index: int, hand: String = "") -> void:
 			off_hand_item = weapon
 			possessor.current_off_hand_item = weapon
 		emit_signal("active_weapon_changed", weapon, target_hand)
+		# If a two-handed weapon ended up in the main hand, stow the off-hand.
+		if target_hand == "Main" and _is_two_handed(weapon) and off_hand_item != null:
+			_stow_item(off_hand_item, "Off")
 
 # ===== SERIALIZATION =====
 

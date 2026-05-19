@@ -94,6 +94,16 @@ func _draw_action_node(node) -> void:
 	else:
 		draw_arc(pos, NODE_RADIUS, 0, TAU, 32, NODE_OUTLINE_COLOR, NODE_OUTLINE_WIDTH)
 
+	# Dash aim line: persistent preview of where the queued dash will land,
+	# clamped to the dash's range and truncated at the first wall.
+	if node.has_action() and node.action_data.has("dash_target"):
+		var dash_target: Vector2 = node.action_data["dash_target"]
+		var dash_max_range: float = node.action_data.get("dash_max_range", 0.0)
+		var endpoint: Vector2 = AimLine.compute_endpoint(
+			get_world_2d(), pos, dash_target, CollisionLayers.STRUCTURES, dash_max_range
+		)
+		draw_line(pos, endpoint, Color(1.0, 0.85, 0.3, 0.6), 1.5, true)
+
 	if node.has_facing():
 		_draw_arrow(pos, node.facing_angle - PI / 2, ARROW_COLOR)
 

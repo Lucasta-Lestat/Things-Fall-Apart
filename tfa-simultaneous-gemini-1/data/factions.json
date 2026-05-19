@@ -120,6 +120,15 @@
 			"enemies": [
 				"bandits"
 			],
+			"laws": [
+				"whoremonger",
+				"venefica",
+				"veneficus",
+				"hierophant",
+				"pit_monitor",
+				"slavecatcher",
+				"hedge_witch"
+			],
 			"equipment_traits": {
 				"required": {
 					"Metal": 1,
@@ -158,6 +167,7 @@
 			"enemies": [
 				"golden_guard"
 			],
+			"laws": [],
 			"equipment_traits": {
 				"required": {
 					"Simple": 1
@@ -195,6 +205,14 @@
 				"rebels",
 				"bandits",
 				"golden_guard"
+			],
+			"laws": [
+				"whoremonger",
+				"venefica",
+				"veneficus",
+				"hierophant",
+				"pit_monitor",
+				"slavecatcher"
 			],
 			"equipment_traits": {
 				"required": {
@@ -532,6 +550,35 @@
 				"criminal",
 				"retired_adventurer",
 				"body_guard"
+			]
+		},
+		{
+			"id": "waldau",
+			"name": "Waldau",
+			"color": "#7A6E54",
+			"tier": 1,
+			"icon": "res://icons/waldau.png",
+			"flag": "res://icons/waldau_flag.png",
+			"allies": [],
+			"enemies": [],
+			"traits": {
+				"Rationalist": 2,
+				"Subtle": 1,
+				"Occult": 1
+			},
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"human": 50,
+				"half_orc": 25,
+				"half_elf": 15,
+				"dwarf": 10
+			},
+			"default_backgrounds": [
+				"academic",
+				"retired_adventurer"
 			]
 		}
 	]

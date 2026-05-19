@@ -9,7 +9,7 @@ var Name = ""
 var skin_color: Color = Color.BEIGE
 var hair_color: Color = Color("#4a3728")  # Default brown hair
 var body_color: Color  # Derived from skin_color, slightly darker
-var traits = {"Male":1}
+var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
 var is_protagonist = false
@@ -20,12 +20,46 @@ var dialogues: Array = []
 var current_dialogue_index: int = 0
 var interact_options: Array = ["Inspect"]
 
+# Favorability toward the protagonist. Shifted by dialogue choices whose
+# preferred/disliked traits match this character's `traits`. Clamped to
+# [-100, 100]. Protagonist's own value is unused (skipped on apply).
+var favorability: int = 0
+signal favorability_changed(delta: int, total: int, reason: String)
+
+# Net trait rating for a dialogue choice: sum of preferred trait tiers minus
+# sum of disliked trait tiers, both pulled from this character's `traits`.
+# Missing traits contribute 0. Used both for choice-button reaction display
+# and the favorability delta applied on selection.
+func rate_choice(preferred: Array, disliked: Array) -> int:
+	var score: int = 0
+	for t in preferred:
+		score += int(traits.get(t, 0))
+	for t in disliked:
+		score -= int(traits.get(t, 0))
+	return score
+
+func apply_favorability_delta(delta: int, reason: String = "") -> void:
+	if delta == 0:
+		return
+	favorability = clamp(favorability + delta, -100, 100)
+	favorability_changed.emit(delta, favorability, reason)
+
+# Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
+# is shown above the speaker name in dialogue. The first title is the primary.
+var titles: Array = []
+
 var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
+const DEATH_MARKER_TEXTURE_PATH := "res://Items/tombstone.png"
+
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
-var _throw_reticle_line: Line2D = null
+var pending_dash: bool = false
+var pending_bite: bool = false
+var _aim_line: AimLine = null
+
+var _death_marker: Sprite2D = null
 
 # Tactical path planning (Doorkickers 2-style)
 var tactical_path: TacticalPath = null
@@ -327,6 +361,8 @@ func effective_crit_fail_threshold() -> float:
 var speed_modifier: float = 0.0
 var arm_length: float = 0.0
 var race_id: String = ""
+var creature_type: String = "Humanoid"
+var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
@@ -352,22 +388,16 @@ var conditions = {}
 @onready var condition_manager: ConditionManager = $ConditionManager
 # Derived stats (calculated from attributes)
 
-var max_blood_amount = max_hp
-var blood_amount = max_hp
-
 # --- Update your existing getters to use effective values ---
 
 var max_hp: int:
 	get: return 6 + int(effective_constitution()) / 10
 
 var max_MP: int:
-	get: return int(effective_will()) * consciousness
+	get: return int(effective_will())
 
 var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
-
-var consciousness: int:
-	get: return blood_amount + int(effective_will())
 
 var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
@@ -413,6 +443,11 @@ func to_data() -> Dictionary:
 @export var head_width: float = Globals.default_head_width   # Head width (left-right)
 @export var head_length: float = Globals.default_head_length  # Head length (front-back, oval shape)
 @export var shoulder_y_offset: float = Globals.default_shoulder_y_offset # How far back shoulders are from head center (positive = back)
+# When > 0, BodyPartSprites scales head/torso/arms by this single uniform factor
+# (preserving the source PNGs' relative proportions) instead of stretching each
+# sprite to per-axis race dimensions. Legs still use legacy scaling. Set in race
+# data via `body.body_scale` (see races.json).
+@export var body_scale: float = 0.0
 
 
 # Collision settings
@@ -580,37 +615,48 @@ func _clear_tactical_path_if_executing() -> void:
 
 # --- Throw targeting helpers ---
 
-func start_throw_targeting(item_index: int, item_data: Dictionary) -> void:
-	pending_throw = {"item_index": item_index, "item_data": item_data}
-	# Create a simple line reticle from character to mouse
-	if _throw_reticle_line == null:
-		_throw_reticle_line = Line2D.new()
-		_throw_reticle_line.width = 1.5
-		_throw_reticle_line.default_color = Color(1, 1, 1, 0.5)
-		_throw_reticle_line.z_index = 45
-		_throw_reticle_line.top_level = true
-		_throw_reticle_line.process_mode = Node.PROCESS_MODE_ALWAYS
-		add_child(_throw_reticle_line)
-	_throw_reticle_line.visible = true
-	_throw_reticle_line.clear_points()
-	_throw_reticle_line.add_point(global_position)
-	_throw_reticle_line.add_point(global_position)
+func start_throw_targeting(item_index: int, item_data: Dictionary, source_node = null) -> void:
+	# source_node is an optional WeaponShape (or similar) to remove from
+	# inventory at commit time. When provided, item_index should be -1 and
+	# item_data should already contain the full payload to throw.
+	pending_throw = {
+		"item_index": item_index,
+		"item_data": item_data,
+		"source_node": source_node,
+	}
+	_ensure_aim_line()
+	_aim_line.default_color = Color(1, 1, 1, 0.5)
+	_aim_line.show_aim(global_position, global_position, 0)
 
 func _update_throw_reticle(mouse_pos: Vector2) -> void:
-	if _throw_reticle_line and _throw_reticle_line.visible:
-		_throw_reticle_line.set_point_position(0, global_position)
-		_throw_reticle_line.set_point_position(1, mouse_pos)
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, 0)
 
 func _execute_pending_throw(mouse_pos: Vector2) -> void:
 	var item_index = pending_throw.get("item_index", -1)
 	var item_data = pending_throw.get("item_data", {})
+	var source_node = pending_throw.get("source_node", null)
 	pending_throw = {}
 	_hide_throw_reticle()
 
-	if item_index < 0:
-		return
-
-	var item = inventory.remove_item(item_index)
+	# Three source modes:
+	#   1) item_index >= 0  → remove a dict item from inventory.items by index.
+	#   2) source_node set  → remove a WeaponShape node from main/off/stowed.
+	#   3) neither          → use item_data directly (caller pre-removed).
+	var item: Dictionary
+	if item_index >= 0:
+		item = inventory.remove_item(item_index)
+	elif source_node != null and is_instance_valid(source_node):
+		if source_node == inventory.main_hand_item:
+			inventory.unequip_hand("Main")
+		elif source_node == inventory.off_hand_item:
+			inventory.unequip_hand("Off")
+		else:
+			inventory.stowed_items.erase(source_node)
+		source_node.queue_free()
+		item = item_data
+	else:
+		item = item_data
 	if item.is_empty():
 		return
 
@@ -634,11 +680,85 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 
 func _cancel_pending_throw() -> void:
 	pending_throw = {}
-	_hide_throw_reticle()
+	_hide_aim_line()
 
 func _hide_throw_reticle() -> void:
-	if _throw_reticle_line:
-		_throw_reticle_line.visible = false
+	_hide_aim_line()
+
+# --- Dash targeting helpers (mirror the throw flow) ---
+
+func start_dash_targeting() -> void:
+	"""Enter dash-targeting mode. Aim line follows the cursor (truncated at the
+	first wall, clamped to get_dash_range()) until the player commits with
+	left-click or cancels with right-click / escape / shift."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
+		return
+	pending_dash = true
+	_ensure_aim_line()
+	# Yellow-tinted to distinguish from throw aim.
+	_aim_line.default_color = Color(1.0, 0.85, 0.3, 0.6)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, get_dash_range())
+
+func _update_dash_reticle(mouse_pos: Vector2) -> void:
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, get_dash_range())
+
+func _execute_pending_dash(mouse_pos: Vector2) -> void:
+	pending_dash = false
+	_hide_aim_line()
+	dash(mouse_pos)
+
+func _cancel_pending_dash() -> void:
+	pending_dash = false
+	_hide_aim_line()
+
+# --- Bite (mutation-granted natural attack, bound to Z) ---
+
+func has_bite_attack() -> bool:
+	return condition_manager and condition_manager.has_condition("the_jaws_that_bite")
+
+func start_bite_targeting() -> void:
+	if not has_bite_attack():
+		return
+	pending_bite = true
+	_ensure_aim_line()
+	# Reddish tint to distinguish from yellow dash and other reticles.
+	_aim_line.default_color = Color(0.95, 0.2, 0.2, 0.6)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, _get_bite_range())
+
+func _update_bite_reticle(mouse_pos: Vector2) -> void:
+	if _aim_line:
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range())
+
+func _execute_pending_bite(mouse_pos: Vector2) -> void:
+	pending_bite = false
+	_hide_aim_line()
+	var data: Dictionary = AbilityDatabase.get_ability_data("natural_bite")
+	if data.is_empty():
+		return
+	var ability := Ability.from_dict(data)
+	use_ability(ability, {"position": mouse_pos})
+
+func _cancel_pending_bite() -> void:
+	pending_bite = false
+	_hide_aim_line()
+
+func _get_bite_range() -> float:
+	var data: Dictionary = AbilityDatabase.get_ability_data("natural_bite")
+	if data.is_empty():
+		return 60.0
+	return float(data.get("targeting", {}).get("range", 60.0))
+
+# --- Shared AimLine plumbing ---
+
+func _ensure_aim_line() -> void:
+	if _aim_line == null:
+		_aim_line = AimLine.new()
+		add_child(_aim_line)
+
+func _hide_aim_line() -> void:
+	if _aim_line:
+		_aim_line.hide_aim()
 
 func _setup_los_visual() -> void:
 	var light = PointLight2D.new()
@@ -968,14 +1088,18 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var damage_amount = result["damage"]
 		var damage_type = result.get("damage_type", "true")
 		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
-		
+		# Bleeding always wears down the torso, regardless of which limb the
+		# wound is on — death from blood loss is just torso HP reaching 0.
+		if instance.condition and instance.condition.id == "bleeding":
+			limb_type = LimbType.TORSO
+
 		# Build damage dict matching your damage_limb format
 		var damage_dict = {damage_type: damage_amount}
 		
 		# Use global position as fallback for visual location
 		var hit_location = global_position
 		damage_limb(limb_type, damage_dict, hit_location)
-		is_alive()  # Check death
+		_check_death()
 	
 	if result.has("heal"):
 		var heal_amount = result["heal"]
@@ -1031,12 +1155,11 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
 	# Each tick of the bleeding condition drops a small amount of blood fluid
 	# on the victim's current tile. Amount scales with bleed stacks (tier).
+	# Damage is handled by the bleeding condition's separate "damage"
+	# triggered_effect (routed to the torso in _on_triggered_effect_fired).
 	var base_amount: float = data.get("amount", 0.05)
 	var stacks: int = instance.stacks if instance else 1
 	var amount: float = base_amount * float(max(1, stacks))
-
-	# Also leak a bit from the overall blood reserve for consciousness/death checks.
-	blood_amount = max(0, blood_amount - stacks)
 
 	var my_tile = GridManager.world_to_map(global_position)
 	var game = get_tree().current_scene
@@ -1099,18 +1222,13 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 	return {"success": false}
 
 func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Hitch: two targets in the area become infatuated with each other."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Hitch: the two chosen characters become infatuated with each other."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Hitch!")
 		return {"success": false}
-	# Pick the two closest to the center
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1121,18 +1239,13 @@ func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector
 	return {"success": true}
 
 func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
-	"""Fatal Attraction: two targets become infatuated and their fates are linked."""
-	var valid_targets: Array = []
-	for target in targets:
-		if is_instance_valid(target) and target is ProceduralCharacter and target != self and target.is_alive():
-			valid_targets.append(target)
-	if valid_targets.size() < 2:
+	"""Fatal Attraction: the two chosen characters become infatuated and their fates are linked."""
+	var pair = _validate_pair_targets(targets)
+	if pair.is_empty():
 		GameLog.add_entry("Not enough targets for Fatal Attraction!")
 		return {"success": false}
-	valid_targets.sort_custom(func(a, b): return a.global_position.distance_to(target_position) < b.global_position.distance_to(target_position))
-	var target_a = valid_targets[0]
-	var target_b = valid_targets[1]
-	# Apply infatuation
+	var target_a = pair[0]
+	var target_b = pair[1]
 	var cm_a = target_a.get_node_or_null("ConditionManager")
 	var cm_b = target_b.get_node_or_null("ConditionManager")
 	if cm_a:
@@ -1143,6 +1256,25 @@ func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_posit
 		cm_b.apply_condition("fatal_attraction", target_a, 1)
 	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
 	return {"success": true}
+
+func _validate_pair_targets(targets: Array) -> Array:
+	"""Return the first two valid, alive, non-self ProceduralCharacters in `targets`, or [] if there aren't two."""
+	var valid: Array = []
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		if not (target is ProceduralCharacter):
+			continue
+		if target == self:
+			continue
+		if target.has_method("is_alive") and not target.is_alive():
+			continue
+		valid.append(target)
+		if valid.size() == 2:
+			break
+	if valid.size() < 2:
+		return []
+	return valid
 
 
 func _process_condition_movement_overrides(delta: float) -> void:
@@ -2531,6 +2663,8 @@ func cast_ability(ability: AbilityShape):
 func _handle_input() -> void:
 	if not is_player_controlled:
 		return
+	if not is_alive():
+		return
 	if condition_manager.has_condition("unconscious"):
 		return
 	# Block player input when panicked or frightened — movement is forced
@@ -2571,10 +2705,66 @@ func _handle_input() -> void:
 			return
 		return  # Block all other input while throw targeting
 
+	# --- Dash targeting mode ---
+	if pending_dash:
+		_update_dash_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_dash(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("dash"):
+			_cancel_pending_dash()
+			return
+		return  # Block all other input while dash targeting
+
+	# --- Bite targeting mode (Z) ---
+	if pending_bite:
+		_update_bite_reticle(mouse_pos)
+		if Input.is_action_just_pressed("left_click"):
+			_execute_pending_bite(mouse_pos)
+			return
+		if Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("bite_attack"):
+			_cancel_pending_bite()
+			return
+		return  # Block all other input while bite targeting
+
 	# --- Right mouse button - Off hand ---
 	if Input.is_action_just_pressed("right_click"):
+		# Warps get a context menu of their own (handled in show_context_menu via
+		# the target_map metadata branch).
+		var warp_target = _find_warp_at(mouse_pos)
+		if warp_target != null and game:
+			game.show_context_menu(warp_target, get_viewport().get_mouse_position())
+			return
+		# Probe for a context-menu target (chest in world, non-hostile NPC).
+		# If hit, open menu instead of firing off-hand. Hostile NPCs and empty
+		# space fall through to the existing off-hand attack.
+		var ctx_target = _find_context_menu_target_at(mouse_pos)
+		if ctx_target != null and game:
+			game.show_context_menu(ctx_target, get_viewport().get_mouse_position())
+			return
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
+
+	# --- Left mouse button - probe warp first ---
+	# A warp click teleports immediately; bail before the main-hand swing so the
+	# player doesn't visibly attack the cursor on the same frame as the load.
+	if Input.is_action_just_pressed("left_click"):
+		var warp = _find_warp_at(mouse_pos)
+		if warp != null and game:
+			var target_map: String = warp.get_meta("target_map", "")
+			if not target_map.is_empty():
+				game.load_map(target_map, game.current_map_id)
+				return
+
+	# --- Left mouse button - probe openable item (chest) ---
+	# Chests show a pickup cursor on hover; clicking should open their inventory,
+	# not swing the main hand. Items whose first interact_option is "Open"
+	# (chests, per Items.json) take this fast path.
+	if Input.is_action_just_pressed("left_click"):
+		var openable = _find_openable_at(mouse_pos)
+		if openable != null and game:
+			game.show_chest_inventory(openable)
+			return
 
 	# --- Left mouse button - Main hand ---
 	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
@@ -2640,13 +2830,96 @@ func _handle_input() -> void:
 		if paused:
 			action_queue.queue_dash(mouse_pos)
 		else:
-			dash(mouse_pos)
+			# Enter the dash-targeting mode handled above; the targeting block
+			# itself listens for the click that commits the dash.
+			start_dash_targeting()
+	if Input.is_action_just_pressed("bite_attack") and has_bite_attack():
+		# Z is a real-time bite — fire-and-target, not queued. The pending_bite
+		# block above commits on the next left-click. Mutation gating means
+		# pressing Z without The Jaws That Bite does nothing.
+		start_bite_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
+## Probe the world at mouse_pos for a right-click context-menu target. Returns the
+## first Item or non-hostile ProceduralCharacter under the cursor, or null.
+## Hostile characters and empty space return null so the existing right-click
+## (off-hand attack) flow continues.
+func _find_context_menu_target_at(world_pos: Vector2) -> Node:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS
+	# exclude expects an Array[RID], not a node — use this character's body RID.
+	query.exclude = [self.get_rid()]
+	var hits = space.intersect_point(query, 8)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider == null:
+			continue
+		if collider is Item:
+			return collider
+		if collider is ProceduralCharacter and collider != self:
+			# Only non-hostile NPCs get a context menu; hostile characters
+			# fall through to the off-hand attack path. We check vs the player
+			# faction (not the controlling character's own faction) so the
+			# decision matches show_context_menu's Trade injection — the menu
+			# represents the party's perspective, not an individual member's.
+			if not FactionDatabase.are_enemies("player", collider.faction_id):
+				return collider
+	return null
+
+## Probe the world for an "openable" Item (chest-style) at mouse_pos. The
+## chest's first interact_option is "Open" (see Items.json) — clicking it
+## should display its inventory, not swing the main hand.
+func _find_openable_at(world_pos: Vector2) -> Item:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS
+	var hits = space.intersect_point(query, 4)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Item and collider.options.size() > 0 and collider.options[0] == "Open":
+			return collider
+	return null
+
+## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
+## layer (CollisionLayers.WARPS) and carry their destination in the
+## "target_map" metadata key.
+func _find_warp_at(world_pos: Vector2) -> Area2D:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	query.collision_mask = CollisionLayers.WARPS
+	var hits = space.intersect_point(query, 4)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Area2D and collider.has_meta("target_map"):
+			return collider
+	return null
+
 func _handle_hand_input(hand: String, item, mouse_pos: Vector2, paused: bool) -> void:
 	if targeting_system.is_targeting:
 		if targeting_system.current_hand == hand:
-			# 2nd click: confirm the target and cast
+			# Character-targeting mode: every click picks/toggles a character
+			# until N are selected (auto-confirm fires the targeting_confirmed
+			# signal, which is handled below in _on_targeting_confirmed).
+			if targeting_system.target_shape == targeting_system.TargetShape.CHARACTERS:
+				targeting_system._handle_character_click(mouse_pos)
+				return
+			# AoE shapes: 2nd click confirms the target and casts
 			_confirm_ability_target(paused)
 		else:
 			# Clicked the other hand while targeting — cancel current targeting
@@ -2666,6 +2939,8 @@ func _confirm_ability_target(paused: bool) -> void:
 	var ability_data = result.get("ability", {})
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
+	var explicit_targets: Array = result.get("targets", [])
+	var is_character_mode = result.get("shape") == targeting_system.TargetShape.CHARACTERS
 
 	# Face the target when confirming an ability
 	target_rotation = (target_pos - global_position).angle() + PI / 2
@@ -2673,23 +2948,29 @@ func _confirm_ability_target(paused: bool) -> void:
 	if paused:
 		# End targeting — queued indicator takes over the visual role
 		targeting_system.end_targeting()
-		action_queue.queue_ability(ability_id, target_pos)
+		action_queue.queue_ability(ability_id, target_pos, explicit_targets)
 
-		# Create persistent ghost indicator for the queued ability
-		targeting_system.create_queued_indicator(
-			target_pos,
-			result.get("shape"),
-			result.get("radius", 0),
-			result.get("size", Vector2.ZERO),
-			result.get("rotation", 0.0),
-			result.get("caster_position", global_position)
-		)
+		if not is_character_mode:
+			# Create persistent ghost indicator for the queued ability
+			targeting_system.create_queued_indicator(
+				target_pos,
+				result.get("shape"),
+				result.get("radius", 0),
+				result.get("size", Vector2.ZERO),
+				result.get("rotation", 0.0),
+				result.get("caster_position", global_position)
+			)
 	else:
 		# Keep the targeting indicator visible until the ability actually lands.
 		# Disable interactivity but preserve the visual preview.
-		targeting_system.is_targeting = false
+		# For character-targeting we end immediately — the chosen targets are
+		# locked in and there's no AoE preview to hold open.
+		if is_character_mode:
+			targeting_system.end_targeting()
+		else:
+			targeting_system.is_targeting = false
 		var ability_obj = Ability.from_dict(ability_data)
-		use_ability(ability_obj, {"position": target_pos})
+		use_ability(ability_obj, {"position": target_pos, "targets": explicit_targets})
 
 
 func _update_movement(delta: float) -> void:
@@ -2818,12 +3099,21 @@ func _end_ice_slide() -> void:
 	is_moving = false
 	emit_signal("character_reached_target")
 
+## Defensive cap on knockback velocity. Prevents runaway acceleration from
+## per-frame force fields (e.g. INVERSE_SQUARE near a singularity) launching
+## characters off the map at thousands of pixels per frame. Tuned for
+## visible-but-bounded knockback distance under knockback_friction=150.
+const MAX_KNOCKBACK_SPEED: float = 800.0
+
 func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
 	"""Canonical entry point for non-melee force application (force fields,
 	ability knockbacks, etc.). Integrates `force` over `duration` seconds
 	into knockback_velocity; the knockback update loop drains it via friction
-	and overrides regular movement until it reaches zero."""
+	and overrides regular movement until it reaches zero. Velocity is clamped
+	to MAX_KNOCKBACK_SPEED so accumulated forces can't reach escape velocity."""
 	knockback_velocity += force * duration
+	if knockback_velocity.length() > MAX_KNOCKBACK_SPEED:
+		knockback_velocity = knockback_velocity.normalized() * MAX_KNOCKBACK_SPEED
 	knockback_active = true
 
 func _update_knockback(delta: float) -> void:
@@ -3083,6 +3373,12 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 
 	# Remove ALL children from the holder (the old item). Don't free — still in inventory.
 	for child in holder.get_children():
+		# If the previous child was a WeaponShape, deactivate its hitbox and
+		# clear its holder back-reference so it can't fire any further hits.
+		if child is WeaponShape:
+			if child.hitbox:
+				child.hitbox.monitoring = false
+			child.holder = null
 		holder.remove_child(child)
 
 	# Update the character reference
@@ -3094,6 +3390,8 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 	# Add new weapon/ability to holder
 	if weapon != null:
 		holder.add_child(weapon)
+		if weapon is WeaponShape:
+			weapon.holder = self
 		var grip_offset = weapon.get_grip_offset_for_hand()
 		weapon.position = grip_offset
 		# Render below the forearm/hand sprites (z = -2) so the hand visually grips the weapon
@@ -3421,15 +3719,41 @@ func get_total_hp() -> int:
 	return total
 
 func is_alive() -> bool:
-	"""Character dies if torso or head HP <= 0 or blood is 0"""
+	"""Pure alive check — no side effects. Use _check_death() to actually
+	trigger death side effects when state warrants it."""
 	var torso = limbs.get(LimbType.TORSO)
 	var head = limbs.get(LimbType.HEAD)
-	#print("limbs and head based is_alive() returns: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0))
-	#print("is alive should return: ", (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0)
-	var is_alive = (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
-	if not is_alive:
+	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+
+func _check_death() -> void:
+	"""Trigger death side effects if the character should be dead."""
+	if not is_alive():
 		_on_character_died()
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0) and blood_amount > 0
+
+func _hide_living_visuals() -> void:
+	"""Hide all living-character visuals so a death marker can replace them.
+	Equipment slot holders are hidden too — otherwise armored characters
+	(usually party members) leave their gear floating after death while
+	bare-handed NPCs disappear cleanly."""
+	_set_procedural_geometry_visible(false)
+	if body_part_sprites:
+		body_part_sprites.set_all_visible(false)
+	for holder in [main_hand_holder, off_hand_holder, head_slot, torso_slot, back_slot, legs_slot, feet_slot]:
+		if holder:
+			holder.visible = false
+
+func _show_death_marker() -> void:
+	"""Lazily create and show a tombstone sprite at the character's position."""
+	if _death_marker and is_instance_valid(_death_marker):
+		_death_marker.visible = true
+		return
+	if not ResourceLoader.exists(DEATH_MARKER_TEXTURE_PATH):
+		return
+	_death_marker = Sprite2D.new()
+	_death_marker.name = "DeathMarker"
+	_death_marker.texture = load(DEATH_MARKER_TEXTURE_PATH)
+	_death_marker.z_index = 5
+	add_child(_death_marker)
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	"""Apply damage to a specific limb"""
@@ -3480,6 +3804,7 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		total_damage = limb.current_hp - prospective_hp
 
 	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	_check_death()
 	return total_damage
 
 func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
@@ -3555,16 +3880,30 @@ func get_status_string() -> String:
 				status += " (DR:%d)" % limb.armor_dr
 			parts.append(status)
 	return "\n".join(parts)
-func dash(target_pos: Vector2) -> void:
-	if is_dashing or dash_cooldown_timer > 0.0:
-		return
+func get_dash_range() -> float:
+	"""Maximum world-space distance a single dash() can cover, derived from
+	dash_speed × dash_duration. Exposed so the path planner and the aim-line
+	preview can clamp to the same reach the dash itself enforces."""
+	return move_speed * dash_speed_multiplier * dash_duration
 
-	var dir = (target_pos - global_position).normalized()
-	if dir.length() < 0.1:
+func dash(target_pos: Vector2) -> void:
+	"""Player-input dash. Drives motion through dash_to (move_and_slide), so
+	walls actually stop the dash. Distance is clamped to one dash_duration
+	worth of dash-speed travel so abilities and shift-dash share the same
+	bounded burst feel."""
+	if dash_cooldown_timer > 0.0 or _dash_motion_active:
 		return
-	is_dashing = true
-	dash_timer = dash_duration
+	var to_target = target_pos - global_position
+	var distance = to_target.length()
+	if distance < 1.0:
+		return
+	var dash_speed: float = move_speed * dash_speed_multiplier
+	var max_distance: float = get_dash_range()
+	var clamped_target := target_pos
+	if distance > max_distance:
+		clamped_target = global_position + to_target / distance * max_distance
 	dash_cooldown_timer = dash_cooldown
+	dash_to(clamped_target, dash_speed)
 
 # ===== EVENTS =====
 
@@ -3583,12 +3922,15 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
-	if "Male" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("man-death-scream",global_position)
-	elif "Female" in self.traits and not "Beast" in self.traits:
-		SfxManager.play("woman-death-scream",global_position)
+	if creature_type == "Humanoid":
+		if gender == "female":
+			SfxManager.play("woman-death-scream", global_position)
+		else:
+			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
+	_hide_living_visuals()
+	_show_death_marker()
 	set_process(false)
 	# Corpses do not block projectiles or move_and_slide queries (matches the
 	# pre-physics behavior where _update_projectiles skipped dead characters).
@@ -3611,7 +3953,7 @@ func _on_character_died() -> void:
 			var torso = partner.limbs.get(partner.LimbType.TORSO)
 			if torso:
 				torso.current_hp = 0
-				partner.is_alive()
+				partner._check_death()
 
 # ===== BLEED VFX BURST =====
 #
@@ -3844,6 +4186,10 @@ func reset_severed_limbs() -> void:
 			child.queue_free()
 
 func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
+		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
+		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
+		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
+		Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
@@ -3863,8 +4209,17 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 			"cold":
 				conditions["chilled"] = conditions.get("chilled", 0) + 1
 
-			_: 
-				# This is the 'default' case (wildcard) 
+			"electric", "lightning":
+				# Propagate the hit through any contiguous conductive surface
+				# or fluid the character is standing on (water, blood, etc.).
+				# The electrified surface itself ticks shocked + CON-save stun.
+				var game = get_tree().current_scene
+				if game and "surface_manager" in game and game.surface_manager:
+					var tile = GridManager.world_to_map(global_position)
+					game.surface_manager.try_electrify(tile)
+
+			_:
+				# This is the 'default' case (wildcard)
 				# useful for damage types that don't have conditions yet
 				pass
 					
@@ -3911,12 +4266,12 @@ func get_state_name() -> String:
 	return $AI.AIState.keys()[$AI.current_state]
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
-	# Bleeding is now driven by the ConditionManager's triggered_effects
-	# on the "bleeding" condition (damage + bleed_puddle every tick).
-	# Death from blood loss is handled by the damage triggered effect
-	# reducing torso HP (see _on_triggered_effect_fired).
-	if blood_amount <= 0 and is_alive():
-		_on_character_died()
+	# Bleeding is driven by the ConditionManager's triggered_effects on the
+	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
+	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
+	# HP reaching 0.
+	pass
 
 #Ability Checks, character.gd code
 func ability_check(stat,domain):
@@ -3930,12 +4285,42 @@ func ability_check(stat,domain):
 		success_target += bonus
 		
 	var success_level = _calculate_success_level(roll, success_target)
-func get_stat_by_name(stat_name: StringName) -> int:
-	match stat_name:
-		&"str": return strength
-		&"dex": return dexterity
-		&"con": return constitution
+func get_stat_by_name(stat_name) -> int:
+	# Accept either String or StringName; normalize so callers don't have to care.
+	var key := StringName(str(stat_name).to_lower())
+	match key:
+		&"str", &"strength": return strength
+		&"dex", &"dexterity": return dexterity
+		&"con", &"constitution": return constitution
+		&"int", &"intelligence": return intelligence
+		&"cha", &"charisma": return charisma
 	return 50
+
+## Roll a saving throw against `stat_name` and return the tier delta to apply to
+## an incoming condition's stack count.
+##   margin = stat - d100
+##   margin >= 0  → success.  Crit success (margin >= 50 OR roll <= CRIT_THRESHOLD) → -2, else -1.
+##   margin <  0  → failure.  Crit fail   (margin <= -50 OR roll >= CRIT_FAIL_THRESHOLD) → +1, else 0.
+## Crit thresholds compose with the margin rule: either alone is enough to crit.
+## In the success branch the crit_fail check is intentionally ignored (margin
+## determines pass/fail first; the crit rules only intensify the outcome).
+func saving_throw(stat_name) -> int:
+	var stat: int = get_stat_by_name(stat_name)
+	var roll: int = randi() % 100 + 1
+	var margin: int = stat - roll
+	# Explicit `: bool` rather than `:=` — CRIT_THRESHOLD / CRIT_FAIL_THRESHOLD
+	# are declared untyped (var CRIT_THRESHOLD = 5), so the comparison result
+	# can't be type-inferred and the parser rejects `var x := …` here.
+	var crit_success: bool = roll <= CRIT_THRESHOLD
+	var crit_fail: bool = roll >= CRIT_FAIL_THRESHOLD
+	if margin >= 0:
+		if margin >= 50 or crit_success:
+			return -2
+		return -1
+	else:
+		if margin <= -50 or crit_fail:
+			return 1
+		return 0
 func _calculate_success_level(roll: int, target: int) -> int:
 	var margin = target - roll
 	var level = 0
@@ -4044,11 +4429,13 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
+		targeting_system.end_targeting()
 	cast_failed.emit(ability, reason)
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:

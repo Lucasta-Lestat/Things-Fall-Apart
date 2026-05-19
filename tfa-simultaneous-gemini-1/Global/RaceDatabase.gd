@@ -81,6 +81,7 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 
 	# --- Core identity ---
 	_set_if_exists(character, "race_id", race_id)
+	_set_if_exists(character, "gender", gender)
 
 	# --- Ability Score Increases ---
 	var asi: Dictionary = race.get("ability_score_increases", {})
@@ -129,6 +130,9 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_set_if_exists(character, "head_width",        body.get("head_width"))
 	_set_if_exists(character, "head_length",       body.get("head_length"))
 	_set_if_exists(character, "shoulder_y_offset", body.get("shoulder_y_offset"))
+	# Uniform-scale mode: when set, BodyPartSprites uses this single scale factor
+	# for head/torso/arms so source-art relative proportions are preserved.
+	_set_if_exists(character, "body_scale",        body.get("body_scale"))
 	_set_if_exists(character, "leg_length",        body.get("leg_length"))
 	_set_if_exists(character, "leg_width",         body.get("leg_width"))
 	_set_if_exists(character, "leg_spacing",       body.get("leg_spacing"))

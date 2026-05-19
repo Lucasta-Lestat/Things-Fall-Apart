@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://bpy7odstcw6wr" path="res://dialogue_panel.gd" id="6_dialogue"]
 [ext_resource type="Script" uid="uid://dp40gruhvt3ml" path="res://time.gd" id="7_time"]
 [ext_resource type="Script" uid="uid://q252g8rcccm4" path="res://UI/PartySidePanel.gd" id="8_party"]
+[ext_resource type="Script" path="res://UI/TownServicesPanel.gd" id="12_townsvc"]
 [ext_resource type="Texture2D" uid="uid://domvlsmqeq8il" path="res://Dialogue Background.png" id="9_dlgbg"]
 [ext_resource type="Script" uid="uid://c8xs1n57qavwq" path="res://SurfaceManager.gd" id="10_surface"]
 [ext_resource type="Script" uid="uid://bp2c05iq6wsx5" path="res://FluidManager.gd" id="11_fluid"]
@@ -85,6 +86,12 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="TitleLabel" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox" unique_id=8473201955]
+layout_mode = 2
+visible = false
+theme_override_colors/font_color = Color(0.78, 0.7, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+
 [node name="SpeakerName" type="Label" parent="GameUI/DialoguePanel/MarginContainer/HBoxContainer/DialogueVBox" unique_id=73457130]
 layout_mode = 2
 
@@ -109,5 +116,14 @@ anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -250.0
+offset_top = 64.0
 grow_horizontal = 0
 script = ExtResource("8_party")
+
+[node name="TownServicesPanel" type="PanelContainer" parent="GameUI" unique_id=596651258]
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_top = 64.0
+offset_right = 250.0
+grow_horizontal = 1
+script = ExtResource("12_townsvc")

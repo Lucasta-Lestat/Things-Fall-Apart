@@ -484,22 +484,102 @@ func _create_drag_preview_from_entry(entry: Dictionary) -> Control:
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
-	if not data.has("source_character"):
-		return false
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return false
-	# Can't drop onto same character
-	return target_panel["character"] != data["source_character"]
+	if data.has("source_character"):
+		# Can't drop onto same character
+		return target_panel["character"] != data["source_character"]
+	if data.has("source_chest"):
+		return true
+	if data.has("source_npc"):
+		# Trade window's NPC side -> party member
+		return target_panel["character"] != data["source_npc"]
+	return false
 
 func _drop_data(at_position: Vector2, data) -> void:
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return
 
-	var source_char = data["source_character"]
 	var target_char = target_panel["character"]
-	var entry: Dictionary = data["entry"]
+	var entry: Dictionary = data.get("entry", {})
+
+	# Drop from a chest window: pull from chest_item.contents into target inventory.
+	if data.has("source_chest"):
+		var chest_item = data["source_chest"]
+		if not is_instance_valid(chest_item):
+			return
+		var item_dict: Dictionary = entry.get("raw", {})
+		# Transfer first; only erase from the chest if the target accepted it
+		# (full inventory shouldn't lose the dragged item).
+		var transferred := false
+		if entry.get("kind", "") == "weapon":
+			target_char.inventory.stow_weapon_from_data(item_dict)
+			transferred = true
+		else:
+			# add_stack transfers the full num_stacks (add_item would only +1).
+			transferred = target_char.inventory.add_stack(item_dict)
+		if not transferred:
+			return
+		if chest_item.contents is Array:
+			chest_item.contents.erase(item_dict)
+		SfxManager.play_ui("chest_item_out")
+		var src_window = data.get("source_window")
+		if src_window != null and is_instance_valid(src_window) and src_window.has_method("_populate_grid"):
+			src_window._populate_grid()
+		return
+
+	# Drop from a trade window's NPC grid OR from TownServicesPanel.
+	# When source_npc is null we're in TownServicesPanel snapshot mode and
+	# the source_window owns the persisted inventory.
+	if data.has("source_npc"):
+		var npc = data["source_npc"]
+		var source_window = data.get("source_window")
+
+		# Snapshot mode: NPC isn't on this map. Pull from the persisted
+		# snapshot via the source window. Enforce TradeWindow's value-balance
+		# rule per-drop so players can't drain a service without giving first.
+		if not is_instance_valid(npc):
+			if source_window == null or not is_instance_valid(source_window):
+				return
+			if not source_window.has_method("remove_snapshot_item"):
+				return
+			var uid: String = str(data.get("snapshot_uid", ""))
+			var region_id: String = str(data.get("snapshot_region", ""))
+			if uid.is_empty() or region_id.is_empty():
+				return
+			# Value balance check (snapshot path).
+			var item_cost: float = _entry_cost_for_balance(entry)
+			if source_window.has_method("can_accept_value_loss") \
+					and not source_window.can_accept_value_loss(uid, item_cost):
+				SfxManager.play_ui("trade_decline")
+				return
+			var snap_item = source_window.remove_snapshot_item(uid, region_id, entry.get("source_index", -1))
+			if not snap_item.is_empty():
+				target_char.inventory.add_item(snap_item)
+			return
+
+		# Live NPC path. If the source window enforces a per-drop balance
+		# (TownServicesPanel does), respect it. TradeWindow doesn't and the
+		# call is a no-op safe-default.
+		if source_window and is_instance_valid(source_window) and source_window.has_method("can_accept_value_loss"):
+			var item_cost_live: float = _entry_cost_for_balance(entry)
+			var uid_live: String = str(data.get("snapshot_uid", ""))
+			if not uid_live.is_empty() and not source_window.can_accept_value_loss(uid_live, item_cost_live):
+				SfxManager.play_ui("trade_decline")
+				return
+		match entry.get("kind", ""):
+			"item":
+				var item = npc.inventory.remove_item(entry.get("source_index", -1))
+				if not item.is_empty():
+					target_char.inventory.add_item(item)
+			"weapon":
+				_transfer_weapon(npc, target_char, entry.get("raw"))
+		return
+
+	# Drop from another party member (existing behavior).
+	var source_char = data["source_character"]
 
 	match entry.get("kind", ""):
 		"item":
@@ -508,6 +588,19 @@ func _drop_data(at_position: Vector2, data) -> void:
 				target_char.inventory.add_item(item)
 		"weapon":
 			_transfer_weapon(source_char, target_char, entry.get("raw"))
+
+func _entry_cost_for_balance(entry: Dictionary) -> float:
+	## Cost lookup safe for both item dicts and WeaponShape Nodes.
+	if entry.get("kind", "") == "weapon":
+		var w = entry.get("raw")
+		if w != null and "cost" in w:
+			return float(w.cost)
+		return 0.0
+	var raw = entry.get("raw", {})
+	if raw is Dictionary:
+		var stacks: int = max(1, int(entry.get("num_stacks", 1)))
+		return float(raw.get("cost", 0.0)) * stacks
+	return 0.0
 
 func _transfer_weapon(source_char, target_char, weapon) -> void:
 	if weapon == null or not is_instance_valid(weapon):
@@ -564,13 +657,26 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	if kind == "item":
 		var item_data: Dictionary = entry.get("raw", {})
 		options = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
-		var equip_slot: String = item_data.get("equip_slot", "")
+		# Containers are openable only via right-click in the world; suppress
+		# "Open" from the inventory context menu.
+		options.erase("Open")
+		var equip_slot: String = str(item_data.get("equip_slot", ""))
 		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
 			if item_data.get("_equipped", false):
 				options.insert(0, "Unequip")
 			else:
 				options.insert(0, "Equip")
 	elif kind == "weapon" or kind == "ability":
+		# Pull declared interact_options off the weapon node first (e.g. "Throw",
+		# "Drop"). "Sheathe"/"Equip"/"Stow" are synonyms for the state-dependent
+		# entries appended below, so filter them out to avoid duplicates.
+		var node = entry.get("raw")
+		if kind == "weapon" and node is WeaponShape:
+			for opt in node.options:
+				if opt in ["Sheathe", "Equip", "Stow"]:
+					continue
+				if not options.has(opt):
+					options.append(opt)
 		if entry.get("equipped", false):
 			var hand: String = entry.get("hand", "")
 			if hand == "Both":
@@ -643,6 +749,10 @@ func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Arra
 				_equip_shape_to_hand(character, entry, "Main")
 			"Equip to Off":
 				_equip_shape_to_hand(character, entry, "Off")
+			"Throw":
+				_throw_weapon(character, entry)
+			"Drop":
+				_drop_weapon(character, entry)
 			_:
 				print("Unhandled shape option: ", option_name)
 
@@ -757,8 +867,13 @@ func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
 
-	# Remove from inventory
-	var item = character.inventory.remove_item(item_index)
+	# item_index == -1 means the projectile data is already fully in item_data
+	# (e.g. a weapon node was removed from inventory before queueing).
+	var item: Dictionary
+	if item_index >= 0:
+		item = character.inventory.remove_item(item_index)
+	else:
+		item = item_data
 	if item.is_empty():
 		return
 
@@ -803,6 +918,75 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	if item.has("primary_damage_type"):
 		SfxManager.play("sword-fall", character.global_position)
+
+# Remove a WeaponShape node from wherever it lives in the inventory
+# (main hand, off hand, or stowed). Returns true if found and removed.
+func _remove_weapon_from_inventory(inventory, weapon) -> bool:
+	if weapon == inventory.main_hand_item:
+		inventory.unequip_hand("Main")
+		return true
+	if weapon == inventory.off_hand_item:
+		inventory.unequip_hand("Off")
+		return true
+	if weapon in inventory.stowed_items:
+		inventory.stowed_items.erase(weapon)
+		return true
+	return false
+
+func _throw_weapon(character, entry: Dictionary) -> void:
+	if not game_node:
+		return
+	var node = entry.get("raw")
+	if node == null or not is_instance_valid(node) or not (node is WeaponShape):
+		return
+
+	var weapon_data: Dictionary = node.to_data()
+	# to_data() doesn't include id by default — make sure projectile/respawn keys work.
+	weapon_data["id"] = node.id
+
+	if PauseManager.is_paused:
+		var icon: Texture2D = null
+		var sprite_path = str(weapon_data.get("sprite_path", ""))
+		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+			icon = load(sprite_path)
+
+		# Paused: pre-remove so the inventory display updates immediately, then
+		# queue the throw. (Unqueueing the action won't restore the weapon —
+		# same trade-off as the paused item-throw path that pre-captures index.)
+		if not _remove_weapon_from_inventory(character.inventory, node):
+			return
+		node.queue_free()
+
+		if character.path_input_handler and character.path_input_handler.is_placing_action():
+			character.path_input_handler.assign_item_to_pending_node(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)},
+				icon
+			)
+		else:
+			character.action_queue.queue_action(
+				ActionQueue.ActionType.CUSTOM,
+				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)}
+			)
+		return
+
+	# Unpaused: hand the node to the character so it removes the weapon only
+	# when the player commits the throw. Cancelling targeting leaves the
+	# weapon in inventory.
+	character.start_throw_targeting(-1, weapon_data, node)
+
+func _drop_weapon(character, entry: Dictionary) -> void:
+	if not game_node:
+		return
+	var node = entry.get("raw")
+	if node == null or not is_instance_valid(node) or not (node is WeaponShape):
+		return
+	var weapon_id: String = node.id
+	if not _remove_weapon_from_inventory(character.inventory, node):
+		return
+	node.queue_free()
+	game_node.create_item(weapon_id, character.global_position)
+	SfxManager.play("sword-fall", character.global_position)
 
 # Map equip_slot strings to EquipmentShape.EquipmentSlot enum values
 const _EQUIP_SLOT_MAP: Dictionary = {
@@ -919,6 +1103,11 @@ func _process(_delta: float) -> void:
 				container.modulate = Color(0.8, 0.9, 1.0, 1.0)
 			else:
 				container.modulate = Color(0.6, 0.6, 0.6, 1.0)
+
+		# Red-tint the portrait when the character is dead
+		var icon: TextureRect = data.get("icon")
+		if icon:
+			icon.modulate = Color(1.0, 0.3, 0.3, 1.0) if not character.is_alive() else Color.WHITE
 
 		# Update health bars
 		_update_health_bar(data, "head_bar", "head_fill", 0, character)

@@ -17,6 +17,10 @@ var character: Node
 ## For non-stackable, this is the instance itself
 var conditions: Dictionary = {}  # condition_id -> ConditionInstance
 
+## Last game_time a periodic save was rolled, keyed by condition_id.
+## Only populated for conditions with save_stat != "" and save_interval > 0.
+var last_save_times: Dictionary = {}  # condition_id -> float
+
 ## Registry of all known condition templates
 ## Should be populated from your data files
 static var condition_registry: Dictionary = {}  # condition_id -> Condition
@@ -50,28 +54,74 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not time_manager:
 		return
-	
+
 	var current_time = time_manager.game_time
 	var expired_conditions: Array[String] = []
-	
+	var saved_off_conditions: Array[String] = []
+
 	# Check for expirations and process triggered effects
 	for condition_id in conditions:
 		var instance: ConditionInstance = conditions[condition_id]
-		
+
 		# Check expiration
 		if instance.is_expired(current_time):
 			expired_conditions.append(condition_id)
 			continue
-		
+
 		# Process triggered effects if active
 		if instance.is_active():
 			_process_triggered_effects(instance, current_time)
-	
+
+		# --- Periodic save: re-roll while the condition is on the bearer ---
+		if _try_periodic_save(instance, current_time):
+			# saving_throw drove stacks to 0; collect for post-loop removal so
+			# we don't mutate the dictionary we're iterating.
+			saved_off_conditions.append(condition_id)
+
 	# Remove expired conditions
 	for condition_id in expired_conditions:
 		var instance = conditions[condition_id]
 		_remove_condition_internal(condition_id)
 		condition_expired.emit(instance)
+
+	# Remove conditions fully saved off this frame
+	for condition_id in saved_off_conditions:
+		var instance = conditions.get(condition_id)
+		if instance:
+			_remove_condition_internal(condition_id)
+			condition_removed.emit(instance)
+
+
+## Roll a tick save for `instance` if it's due. Returns true iff the save
+## reduced stacks to 0 (caller is responsible for removing the condition).
+func _try_periodic_save(instance: ConditionInstance, current_time: float) -> bool:
+	var template := instance.condition
+	if not template or template.save_stat == "" or template.save_interval <= 0.0:
+		return false
+	if not character or not character.has_method("saving_throw"):
+		return false
+
+	var cond_id := template.id
+	var last := float(last_save_times.get(cond_id, current_time))
+	if current_time - last < template.save_interval:
+		return false
+	last_save_times[cond_id] = current_time
+
+	var delta: int = character.saving_throw(template.save_stat)
+	if delta == 0:
+		return false
+
+	var old_stacks := instance.stacks
+	if delta > 0:
+		instance.add_stacks(delta)
+		condition_stacks_changed.emit(instance, old_stacks, instance.stacks)
+	else:
+		# delta is negative; remove_stacks expects a positive amount.
+		instance.remove_stacks(-delta)
+		condition_stacks_changed.emit(instance, old_stacks, instance.stacks)
+		if instance.stacks <= 0:
+			return true
+	return false
 
 
 func _process_triggered_effects(instance: ConditionInstance, current_time: float) -> void:
@@ -144,10 +194,20 @@ func apply_condition(
 	if not template:
 		push_warning("Unknown condition: %s" % condition_id)
 		return null
-		
+
 	if _is_immune_to(condition_id):
 		return null
-		
+
+	# --- Saving throw (apply-time) ---
+	# If the condition has a save_stat, the bearer rolls once when it lands.
+	# Negative delta reduces incoming stacks (and aborts entirely if it reaches 0);
+	# positive delta (crit fail) adds a stack. See ProceduralCharacter.saving_throw.
+	if template.save_stat != "" and character and character.has_method("saving_throw"):
+		var save_delta: int = character.saving_throw(template.save_stat)
+		stacks += save_delta
+		if stacks <= 0:
+			return null
+
 	var current_time = time_manager.game_time if time_manager else 0.0
 	var existing = conditions.get(condition_id)
 	
@@ -187,10 +247,20 @@ func apply_condition(
 			
 	instance.apply(current_time)
 	conditions[condition_id] = instance
-	
+
+	if template.save_stat != "" and template.save_interval > 0.0:
+		last_save_times[condition_id] = current_time
+
+	# Grant any ability this condition bestows (e.g. The Jaws That Bite → natural_bite).
+	# Done on first application only; we don't re-grant when stacks merely change.
+	if template.grants_ability != "" and character:
+		var inv = character.get_node_or_null("Inventory")
+		if inv and inv.has_method("add_ability_by_id"):
+			inv.add_ability_by_id(template.grants_ability)
+
 	condition_applied.emit(instance)
 	stats_recalculated.emit()
-	
+
 	return instance
 ## Remove a condition completely
 func remove_condition(condition_id: String) -> bool:
@@ -205,6 +275,7 @@ func remove_condition(condition_id: String) -> bool:
 
 func _remove_condition_internal(condition_id: String) -> void:
 	conditions.erase(condition_id)
+	last_save_times.erase(condition_id)
 	stats_recalculated.emit()
 
 

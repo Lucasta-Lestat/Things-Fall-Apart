@@ -97,6 +97,29 @@ func get_all_conditions() -> Array:
 		"immunities": {}
 	},
 	{
+		"id": "shocked",
+		"display_name": "Shocked",
+		"description": "Electricity arcs through your body.",
+		"traits": {"debuff": 1, "electric": 1, "dot": 1, "elemental": 1},
+		"stackable": true,
+		"max_tier": 3,
+		"duration": 1.5,
+		"icon": "res://UI/UI Icons/stunned.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "res://vfx/lightning.tscn",
+		"custom_sfx": "",
+		"triggered_effects": [
+			{
+				"type": "damage",
+				"value": 5,
+				"damage_type": "electric",
+				"interval": 0.3
+			}
+		],
+		"immunities": {}
+	},
+	{
 		"id": "stunned",
 		"display_name": "Stunned",
 		"description": "Cannot take actions.",
@@ -521,11 +544,13 @@ func get_all_conditions() -> Array:
 	{
 		"id": "bleeding",
 		"display_name": "Bleeding",
-		"description": "An open wound is bleeding, causing blood loss over time.",
+		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another save fires every damage tick.",
 		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
 		"stackable": true,
 		"max_tier": 5,
 		"duration": 30.0,
+		"save_stat": "con",
+		"save_interval": 6.0,
 		"icon": "res://UI/UI Icons/weakened.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["bandage", "healing"],
@@ -659,6 +684,65 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{"type": "damage", "value": 5, "damage_type": "fire", "interval": 1.0}
 		],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "the_jaws_that_bite",
+		"display_name": "The Jaws That Bite",
+		"description": "Mutated maw. Your bite attacks (bound to Z) have a chance to cause bleeding; the tier of bleeding applied scales with the tier of this mutation.",
+		"traits": {"mutation": 1, "mutations": 1, "passive": 1, "racial": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"grants_ability": "natural_bite",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "the_claws_that_catch",
+		"display_name": "The Claws That Catch",
+		"description": "Mutated talons. Your unarmed strikes have a chance to grapple, halting your foes (Str save resists).",
+		"traits": {"mutation": 1, "mutations": 1, "passive": 1, "racial": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "grappled",
+		"display_name": "Grappled",
+		"description": "Held fast. Cannot move until you break free. STR save on application reduces tier; another save fires every 2s while held.",
+		"traits": {"debuff": 1, "physical": 1, "cc": 1, "immobilize": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 6.0,
+		"save_stat": "str",
+		"save_interval": 2.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "set", "value": -1.0}
+		],
+		"triggered_effects": [],
 		"conditional_modifiers": [],
 		"immunities": {}
 	},

@@ -110,15 +110,21 @@ You would be within your rights. I won't insult you with denials — the evidenc
 			"choices": [
 				{
 					"text": "**You've seen enough to know whatever they're doing isn't ethical.  You shout for the guard.**",
-					"nextNode": "Federica-intro-guard-fight"
+					"nextNode": "Federica-intro-guard-fight",
+					"preferred_traits": ["Pious", "Compassionate"],
+					"disliked_traits": ["Cruel", "Criminal"]
 				},
 				{
 					"text": "**You decide to keep playing along, out of morbid curiousity**",
-					"nextNode": "Federica-intro-interrogation-continued"
+					"nextNode": "Federica-intro-interrogation-continued",
+					"preferred_traits": ["Curious"],
+					"disliked_traits": []
 				},
 				{
 					"text": "**You decide to keep aiding the Surgeon-Captain in her task, believing the rigteousness of her cause justifies this callous cruelty. The three of you continue digging.**",
-					"nextNode": "Federica-intro-interrogation-continued"
+					"nextNode": "Federica-intro-interrogation-continued",
+					"preferred_traits": ["Cruel", "Savage"],
+					"disliked_traits": ["Pious", "Compassionate"]
 				}
 			],
 			},
@@ -304,6 +310,27 @@ You would be within your rights. I won't insult you with denials — the evidenc
 	  "unworthy_path": {
 		"wizard": "You are *not* ready. Return when you have proven yourself.",
 		"narrator": "The wizard dismisses you."
+	  }
+	}
+  },
+  "demo_cemetery_on_load": {
+	"dialogueNodes": {
+	  "demo_cemetery_on_load": {
+		"narrator": "*DEMO trigger:* The cemetery gate creaks open before you. (This dialogue is a placeholder demonstrating Maps.json dialogue_triggers_on_load — safe to delete.)"
+	  }
+	}
+  },
+  "demo_cemetery_zone": {
+	"dialogueNodes": {
+	  "demo_cemetery_zone": {
+		"narrator": "*DEMO trigger:* You step into the marked zone. (Placeholder demonstrating Maps.json dialogue_zones — safe to delete.)"
+	  }
+	}
+  },
+  "demo_scheduled_dialogue": {
+	"dialogueNodes": {
+	  "demo_scheduled_dialogue": {
+		"narrator": "*DEMO trigger:* The bells toll the hour. (Placeholder demonstrating Maps.json dialogue_time_triggers — safe to delete.)"
 	  }
 	}
   }

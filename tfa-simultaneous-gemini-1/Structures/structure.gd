@@ -26,6 +26,8 @@ var occupied_tiles: Array[Vector2i] = []
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
 func _ready():
+	# Group used by CollisionDebugVisualizer to draw structure colliders.
+	add_to_group("structures")
 	_apply_structure_data()
 	# Snap to the grid
 	floating_text_label.visible = false

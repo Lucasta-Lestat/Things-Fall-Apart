@@ -32,6 +32,15 @@ enum GripStyle { ONE_HANDED, TWO_HANDED }
 # Collision shape points (optional, for complex shapes like axes)
 var collision_points: PackedVector2Array = []
 
+# Active weapon hitbox (Area2D + CollisionShape2D children, created in _ready).
+# monitoring is toggled by attack_animator across the swing lifecycle.
+var hitbox: Area2D = null
+var hitbox_shape: CollisionShape2D = null
+# Set by ProceduralCharacter._on_active_weapon_changed when this weapon is
+# equipped, cleared on unequip. Read by _on_hitbox_body_entered to identify
+# the attacker. Typed as Node to avoid a cross-class import cycle.
+var holder: Node = null
+
 # Sprite overlay
 var sprite: Sprite2D = null
 @export var sprite_path: String = ""			# Path to sprite texture
@@ -44,8 +53,9 @@ var sprite: Sprite2D = null
 # Calculated sprite scale (from auto-scaling to match weapon dimensions)
 var _calculated_sprite_scale: Vector2 = Vector2.ONE
 
-# Debug visualization
-@export var debug_draw: bool = true
+# Debug visualization — gated by DebugManager (F12). Default off; the
+# manager flips this on for every weapon when debug mode is active.
+@export var debug_draw: bool = false
 var debug_lines: Array[Line2D] = []
 
 # Calculated values
@@ -103,8 +113,17 @@ var restricted_item_type: String = ""
 
 func _ready() -> void:
 	_setup_sprite()
+	_setup_hitbox()
+	# Sync debug draw to global DebugManager state and listen for toggles.
+	if typeof(DebugManager) != TYPE_NIL:
+		debug_draw = DebugManager.enabled
+		if not DebugManager.enabled_changed.is_connected(_on_debug_enabled_changed):
+			DebugManager.enabled_changed.connect(_on_debug_enabled_changed)
 	if debug_draw:
 		_create_debug_visualization()
+
+func _on_debug_enabled_changed(value: bool) -> void:
+	set_debug_draw(value)
 
 func _setup_sprite() -> void:
 	# Create sprite node
@@ -224,6 +243,80 @@ func get_blade_collision_rect() -> Rect2:
 func is_point_on_blade(local_point: Vector2) -> bool:
 	"""Check if a point is within the blade area"""
 	return get_blade_collision_rect().has_point(local_point)
+
+func is_melee() -> bool:
+	"""Ranged weapons (bow, pistol) use the projectile system, not the
+	melee hitbox. attack_animator skips monitoring=true for these."""
+	return weapon_type not in [WeaponType.BOW, WeaponType.PISTOL]
+
+# ===== ACTIVE HITBOX =====
+
+func _setup_hitbox() -> void:
+	hitbox = Area2D.new()
+	hitbox.name = "Hitbox"
+	hitbox.collision_layer = CollisionLayers.WEAPON_HITBOXES
+	hitbox.collision_mask = CollisionLayers.WEAPON_HITBOX_MASK
+	hitbox.monitoring = false
+	hitbox.monitorable = false
+	add_child(hitbox)
+
+	hitbox_shape = CollisionShape2D.new()
+	hitbox_shape.shape = RectangleShape2D.new()
+	hitbox.add_child(hitbox_shape)
+	_refresh_hitbox_shape()
+
+	hitbox.body_entered.connect(_on_hitbox_body_entered)
+
+func _refresh_hitbox_shape() -> void:
+	# Sized from the visible blade rect — keeps the hitbox in sync with
+	# blade_width / total_length / grip_position even after load_from_data
+	# reassigns dimensions.
+	if hitbox_shape == null or hitbox_shape.shape == null:
+		return
+	var blade: Rect2 = get_blade_collision_rect()
+	(hitbox_shape.shape as RectangleShape2D).size = blade.size
+	hitbox_shape.position = blade.get_center()
+
+func _on_hitbox_body_entered(body: Node2D) -> void:
+	if holder == null or body == null:
+		return
+	if body == holder:
+		return
+	var combat_manager: Node = get_tree().current_scene
+	if combat_manager == null or not combat_manager.has_method("can_hit_target"):
+		return
+	if not combat_manager.can_hit_target(holder, body):
+		return
+	combat_manager.register_hit(holder, body)
+
+	var contact_pos: Vector2 = _compute_contact_point(body)
+	var attack_velocity: float = 0.0
+	if "attack_animator" in holder and holder.attack_animator:
+		attack_velocity = abs(holder.attack_animator.get_weapon_rotation()) * total_length
+
+	# Dispatch by target type. ProceduralCharacter targets go through the
+	# limb-resolution path; everything else (items, structures) through
+	# process_object_hit.
+	if body.has_method("get_limb_at_position"):
+		combat_manager.process_weapon_hit(holder, body, contact_pos, self, attack_velocity)
+	else:
+		combat_manager.process_object_hit(holder, body, contact_pos, self, attack_velocity)
+
+func _compute_contact_point(body: Node2D) -> Vector2:
+	"""World-space contact: project the body's center onto the blade
+	segment (tip → blade start), clamped to the segment. Because
+	body_entered fires only when the blade and body geometrically overlap,
+	this point is inside the body and is the deepest penetration point of
+	the blade — the right input for limb selection in process_weapon_hit."""
+	var blade_tip: Vector2 = tip_world_position
+	var blade_base: Vector2 = to_global(get_blade_start_local())
+	var seg: Vector2 = blade_base - blade_tip
+	var seg_len_sq: float = seg.length_squared()
+	if seg_len_sq <= 0.0001:
+		return blade_tip
+	var to_body: Vector2 = body.global_position - blade_tip
+	var t: float = clampf(to_body.dot(seg) / seg_len_sq, 0.0, 1.0)
+	return blade_tip + seg * t
 
 # ===== DEBUG VISUALIZATION =====
 
@@ -430,8 +523,11 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("healing"): healing = data["healing"]
 	if data.has("walkability"): walkability = data["walkability"]
 	
-	# Logic & Arrays
-	if data.has("options"): options = data["options"]
+	# Logic & Arrays. JSON canonical key is "interact_options" (renamed from
+	# the legacy "options"); accept either for backwards compatibility.
+	var raw_options = data.get("interact_options", data.get("options", null))
+	if raw_options is Array:
+		options = raw_options
 	if data.has("traits"): traits = data["traits"]
 	if data.has("resources"): resources = data["resources"]
 	
@@ -485,6 +581,7 @@ func load_from_data(data: Dictionary) -> void:
 			sprite_scale = Vector2(data["sprite_scale"], data["sprite_scale"])
 
 	_update_sprite_transform()
+	_refresh_hitbox_shape()
 	if debug_draw:
 		_create_debug_visualization()
 

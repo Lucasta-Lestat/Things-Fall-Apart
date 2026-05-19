@@ -3,12 +3,15 @@
 extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
+const WARP_ARROW_TEXTURE: Texture2D = preload("res://UI/UI Icons/warp_arrow.png")
+const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 
 @onready var fog_manager: FogManager = $FogManager
 @onready var fluid_manager: FluidManager = $FluidManager
 @onready var surface_manager: SurfaceManager = $SurfaceManager
 @onready var map_loader: Node2D = $MapLoader
 @onready var player_camera: Camera2D = $PlayerCamera
+@onready var collision_visualizer: Node2D = $CollisionVisualizer
 
 var weather_vfx_controller: Node = null
 var weather_debug_window: CanvasLayer = null
@@ -76,6 +79,16 @@ var party_state: Array = [
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
 ]
 
+# Service-NPC state per region. Lets trades and inventory changes survive
+# map transitions and saves. Keyed by region_id -> npc_uid -> live_state dict
+# (same shape as party_state[i].live_state).
+var npc_state_per_region: Dictionary = {}
+
+# Set of npc_uids the party has discovered, per region. Drives whether a
+# service that's illegal under the controlling faction's laws shows up in
+# the TownServicesPanel.
+var known_services_per_region: Dictionary = {}
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(
@@ -129,6 +142,74 @@ func save_party_state() -> void:
 func load_party_state_from_save(saved: Array) -> void:
 	## Called when loading a save file. Replaces party_state entirely.
 	party_state = saved
+
+
+# ---------------------------------------------------------------------------
+# Service NPC state persistence (per-region, survives map transitions)
+# ---------------------------------------------------------------------------
+
+func _build_npc_uid(template_id: String, unique_name: String) -> String:
+	## Mirror of RegionDatabase._build_npc_uid — duplicated to avoid coupling.
+	if unique_name.is_empty():
+		return template_id
+	return template_id + "/" + unique_name
+
+func _is_service_npc(character) -> bool:
+	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
+
+func _save_service_npc_states() -> void:
+	## Walk the live scene; for any NPC with titles, snapshot its runtime state
+	## into npc_state_per_region[region][uid].
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	if not npc_state_per_region.has(region_id):
+		npc_state_per_region[region_id] = {}
+	for c in characters_in_scene:
+		if c in party_chars:
+			continue
+		if not _is_service_npc(c):
+			continue
+		var template_id: String = str(c.get_meta("template_id", ""))
+		if template_id.is_empty():
+			# Fallback: derive from display_name (won't survive renames but is rare)
+			template_id = str(c.display_name).to_lower().replace(" ", "_")
+		var unique_name: String = str(c.get_meta("unique_name", ""))
+		var uid: String = _build_npc_uid(template_id, unique_name)
+		npc_state_per_region[region_id][uid] = _serialize_character(c)
+
+func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
+	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
+	## Also tags the live node with template_id + unique_name for save-on-unload.
+	if not is_instance_valid(npc):
+		return
+	npc.set_meta("template_id", template_id)
+	npc.set_meta("unique_name", unique_name)
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var bucket: Dictionary = npc_state_per_region.get(region_id, {})
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if bucket.has(uid):
+		_deserialize_character(npc, bucket[uid])
+
+func mark_service_seen(npc) -> void:
+	## Records discovery so an illegal service shows up in the panel even
+	## after the party leaves the map.
+	if not _is_service_npc(npc):
+		return
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	if region_id.is_empty():
+		return
+	var template_id: String = str(npc.get_meta("template_id", ""))
+	var unique_name: String = str(npc.get_meta("unique_name", ""))
+	var uid: String = _build_npc_uid(template_id, unique_name)
+	if not known_services_per_region.has(region_id):
+		known_services_per_region[region_id] = []
+	if uid not in known_services_per_region[region_id]:
+		known_services_per_region[region_id].append(uid)
  
  
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
@@ -152,21 +233,38 @@ func _spawn_npcs(npc_list: Array) -> void:
 		# Check spawn conditions
 		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
 			continue
- 
+
 		var template_id: String = npc_def.get("template_id", "")
 		var pos_arr = npc_def.get("position", [0, 0])
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = npc_def.get("count", 1)
 		var spread: float = npc_def.get("spread_radius", 0)
- 
+		# Per-spawn overrides for unique NPCs, faction, titles, and dialogue.
+		var spawn_overrides: Dictionary = {}
+		if npc_def.has("unique_name"):
+			spawn_overrides["unique_name"] = npc_def["unique_name"]
+		if npc_def.has("titles"):
+			spawn_overrides["titles"] = npc_def["titles"]
+		if npc_def.has("faction"):
+			spawn_overrides["faction"] = npc_def["faction"]
+		if npc_def.has("dialogue"):
+			spawn_overrides["dialogue"] = npc_def["dialogue"]
+
 		for i in range(count):
 			var pos = base_pos
 			if spread > 0 and i > 0:
 				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
- 
-			var npc = _spawn_character(template_id, pos)
+
+			var npc = _spawn_character(template_id, pos, spawn_overrides)
 			if npc:
 				npc.AI_enabled = true
+				# Per-spawn dialogue override (TopDownCharacterDatabase only reads
+				# template.dialogue; we wire the spawn-level override here).
+				if spawn_overrides.has("dialogue") and "dialogues" in npc:
+					npc.dialogues = [str(spawn_overrides["dialogue"])]
+				# Restore persisted live_state for service NPCs whose region we've
+				# visited before (lets trades stick across map transitions).
+				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
 				# NPCs hidden by default; made visible when inside party LOS
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
@@ -322,13 +420,66 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# 8. Create warp zones
 	_create_warp_zones(current_map_data.get("warp_points", []))
 
+	# 8b. Install dialogue zone controller and process on-load dialogue triggers.
+	# Order matters: zones go in first so an on-load dialogue that ends quickly
+	# can immediately notice the player standing inside a zone on the next frame.
+	_install_dialogue_zones(current_map_data)
+	_process_on_load_dialogue_triggers(current_map_data)
+
+	# 8c. Hand the time-based dialogue triggers for this map to the scheduler.
+	var scheduler = get_node_or_null("/root/EventScheduler")
+	if scheduler:
+		scheduler.on_map_entered(map_id, current_map_data.get("dialogue_time_triggers", []))
+
 	# 9. Select the player
 	call_deferred("_select_initial_character")
- 
+
 	emit_signal("map_loaded", map_id)
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
 
+# Map-bound dialogue trigger plumbing -------------------------------------
+
+func _install_dialogue_zones(map_data: Dictionary) -> void:
+	var zones: Array = map_data.get("dialogue_zones", [])
+	if zones.is_empty():
+		return
+	var DZC = preload("res://Structures/DialogueZoneController.gd")
+	var controller = DZC.new()
+	controller.name = "DialogueZoneController"
+	# Parent under map_loader so _unload_current_map's child-clear sweeps it up.
+	map_loader.add_child(controller)
+	controller.configure(current_map_id, zones)
+
+func _process_on_load_dialogue_triggers(map_data: Dictionary) -> void:
+	var triggers: Array = map_data.get("dialogue_triggers_on_load", [])
+	if triggers.is_empty():
+		return
+	var trigger_state = get_node_or_null("/root/MapTriggerState")
+	for t in triggers:
+		var tid := str(t.get("id", ""))
+		var dialogue_id := str(t.get("dialogue", ""))
+		if dialogue_id.is_empty():
+			continue
+		var one_shot: bool = bool(t.get("one_shot", true))
+		if one_shot and trigger_state and trigger_state.has_fired(current_map_id, tid):
+			continue
+		var prereqs = t.get("prerequisites", [])
+		if not DialogueManager.evaluate_prerequisites(prereqs):
+			continue
+		DialogueManager.start_dialogue(dialogue_id)
+		if one_shot and trigger_state and not tid.is_empty():
+			trigger_state.mark_fired(current_map_id, tid)
+
 func _unload_current_map() -> void:
+	# Snapshot any service-NPC live state so trades stick across map transitions.
+	_save_service_npc_states()
+
+	# Drop map-scoped scheduled dialogue triggers so they don't fire on the
+	# next map. Global triggers are unaffected.
+	var scheduler = get_node_or_null("/root/EventScheduler")
+	if scheduler:
+		scheduler.on_map_exited(current_map_id)
+
 	# Remove all spawned characters
 	for character in characters_in_scene:
 		if is_instance_valid(character):
@@ -487,8 +638,16 @@ func _spawn_items(item_list: Array) -> void:
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = item_def.get("count", 1)
 
+		# Per-spawn extras (only applied when present): controlling_faction triggers
+		# faction-filtered auto-loot for chests, value overrides the loot target.
+		var extras: Dictionary = {}
+		if item_def.has("controlling_faction"):
+			extras["controlling_faction"] = item_def["controlling_faction"]
+		if item_def.has("value"):
+			extras["value"] = float(item_def["value"])
+
 		for j in range(count):
-			create_item(item_id, pos)
+			create_item(item_id, pos, 1, extras)
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:
@@ -521,15 +680,51 @@ func show_context_menu(target, position: Vector2) -> void:
 
 	var options: Array = []
 	if target is ProceduralCharacter:
-		options = target.get("interact_options") if "interact_options" in target else ["Inspect"]
+		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
+		# Inject "Trade" for any non-hostile character. FactionDatabase is the
+		# authoritative relationship source (Game.factions is unused in current
+		# code paths). Treat allies/neutrals as tradeable; only true enemies
+		# are blocked.
+		if not FactionDatabase.are_enemies("player", target.faction_id) and not "Trade" in options:
+			options.append("Trade")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
+	elif target is Item:
+		# World item context menu — use the options array loaded from the item's JSON data.
+		var raw_options: Array = target.options if target.options else []
+		options = raw_options.duplicate()
+		if options.is_empty():
+			options.append("Inspect")
 	elif target is Dictionary:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
 	$GameUI.add_child(context_menu)
+
+# ---------------------------------------------------------------------------
+# Chest inventory + Trade windows
+# ---------------------------------------------------------------------------
+
+func show_chest_inventory(item: Item) -> void:
+	if not is_instance_valid(item):
+		return
+	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
+	var w = ChestWindow.instantiate()
+	w.chest_item = item
+	$GameUI.add_child(w)
+
+func show_trade_window(npc) -> void:
+	if not is_instance_valid(npc):
+		return
+	# Make the party side panel visible so the player can drag from it during trade.
+	var party_panel = $GameUI.get_node_or_null("PartySidePanel")
+	if party_panel:
+		party_panel.visible = true
+	var TradeWindow = preload("res://UI/TradeWindow.tscn")
+	var w = TradeWindow.instantiate()
+	w.npc = npc
+	$GameUI.add_child(w)
 
 # ---------------------------------------------------------------------------
 # Lighting helpers
@@ -575,8 +770,12 @@ func _apply_material_recursive(node: Node, material: Material) -> void:
 	for child in node.get_children():
 		_apply_material_recursive(child, material)
 
-func create_item(item_id: String, world_position: Vector2, stack_count: int = 1) -> Item:
-	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world."""
+func create_item(item_id: String, world_position: Vector2, stack_count: int = 1, extras: Dictionary = {}) -> Item:
+	"""Create any item (weapon, equipment, or general item) by its ID and place it in the world.
+
+	The optional `extras` dict can carry per-spawn overrides set on the Item before
+	_ready runs — currently `controlling_faction` and `value` (float, used as the
+	auto-fill loot target on chests). Existing 3-arg callers continue to work."""
 	var item_instance = item_scene.instantiate() as Item
 	item_instance.id = item_id
 	item_instance.global_position = world_position
@@ -584,6 +783,13 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1)
 	# Set stack count before _ready applies data
 	if stack_count > 1:
 		item_instance.stack_count = stack_count
+
+	# Apply per-spawn extras BEFORE add_child so they're set when _ready runs
+	# and _apply_item_data can use them (e.g. faction-controlled chest fill).
+	if extras.has("controlling_faction"):
+		item_instance.controlling_faction = String(extras["controlling_faction"])
+	if extras.has("value"):
+		item_instance.loot_value = float(extras["value"])
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -711,7 +917,12 @@ func _update_npc_los_visibility() -> void:
 			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
+		var was_visible: bool = npc.visible
 		npc.visible = seen
+		# Discovery: first time we lay eyes on a service NPC, mark them known
+		# so they appear in the TownServicesPanel even after leaving the map.
+		if seen and not was_visible:
+			mark_service_seen(npc)
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	var viewport := get_viewport()
@@ -755,7 +966,9 @@ func _update_item_los_visibility() -> void:
 		item.visible = _is_position_visible_to_party(item.global_position)
 
 func _process(delta: float) -> void:
-	# Check for combat collisions / Update clash cooldowns
+	# Update clash cooldowns. Combat collisions are now driven by the
+	# Area2D weapon hitbox on each WeaponShape (data/weapon_shape.gd) —
+	# no per-frame iteration here.
 	if not PauseManager.is_paused:
 		var to_remove = []
 		for key in clash_cooldowns:
@@ -764,7 +977,6 @@ func _process(delta: float) -> void:
 				to_remove.append(key)
 		for key in to_remove:
 			clash_cooldowns.erase(key)
-		_check_combat_collisions()
 	# Tick fog effects
 		if fog_manager:
 			fog_manager.update_fogs(delta, characters_in_scene)
@@ -785,66 +997,40 @@ func _process(delta: float) -> void:
 	# Update NPC and item visibility based on party line-of-sight
 	_update_npc_los_visibility()
 	_update_item_los_visibility()
-	# Camera follows primary selected character
-	if primary_selected and is_instance_valid(primary_selected) and player_camera:
+	# Camera follows primary selected character (unless user is WASD-panning)
+	if primary_selected and is_instance_valid(primary_selected) and player_camera \
+			and not player_camera.manual_pan_active:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
+	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
+	# unreliable when overlapping pickable areas exist (characters, items).
+	_update_warp_hover_labels()
 
-func _check_combat_collisions() -> void:
-	var all_characters = characters_in_scene
-
-	for attacker in all_characters:
-		if not attacker.is_alive() or not attacker.is_attacking():
+func _update_warp_hover_labels() -> void:
+	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
+	# available here. Compute world-space mouse position via the viewport's
+	# canvas transform instead.
+	var viewport := get_viewport()
+	var mouse_pos: Vector2 = viewport.get_canvas_transform().affine_inverse() * viewport.get_mouse_position()
+	for area in warp_zones:
+		if not is_instance_valid(area):
 			continue
-
-		var weapon
-		if attacker.current_hand == "Main":
-			weapon = attacker.current_main_hand_item
-		else:
-			weapon = attacker.current_off_hand_item
-
-		# Ranged weapons use the projectile system — skip melee collision entirely
-		if weapon is WeaponShape and weapon.weapon_type in [WeaponShape.WeaponType.BOW, WeaponShape.WeaponType.PISTOL]:
+		var hover_label: Label = area.get_node_or_null("HoverLabel")
+		if hover_label == null:
 			continue
+		var shape_node: CollisionShape2D = null
+		for child in area.get_children():
+			if child is CollisionShape2D:
+				shape_node = child
+				break
+		if shape_node == null or not (shape_node.shape is RectangleShape2D):
+			hover_label.visible = false
+			continue
+		var rect_size: Vector2 = (shape_node.shape as RectangleShape2D).size
+		var local: Vector2 = area.to_local(mouse_pos) - shape_node.position
+		var inside: bool = absf(local.x) <= rect_size.x * 0.5 and absf(local.y) <= rect_size.y * 0.5
+		hover_label.visible = inside
 
-		# Check against other characters
-		#print("how many characters? ", all_characters)
-		for victim in all_characters:
-			if attacker == victim:
-				continue
-			if not victim.is_alive():
-				continue
-			if not can_hit_target(attacker, victim):
-				continue
-
-			var hit = check_weapon_body_collision(attacker, victim)
-			if hit.get("hit", false):
-				register_hit(attacker, victim)
-				
-				process_weapon_hit(attacker, victim, hit["position"], weapon, hit["velocity"])
-
-		# Check against items
-		for item in items_in_scene:
-			if not is_instance_valid(item):
-				continue
-			if not can_hit_target(attacker, item):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, item)
-			if hit.get("hit", false):
-				process_object_hit(attacker, item, hit["position"], weapon, hit["velocity"])
-
-		# Check against structures
-		for structure in structures_in_scene:
-			if not is_instance_valid(structure):
-				continue
-			if not can_hit_target(attacker, structure):
-				continue
-
-			var hit = check_weapon_object_collision(attacker, structure)
-			if hit.get("hit", false):
-				process_object_hit(attacker, structure, hit["position"], weapon, hit["velocity"])
-				
 func process_object_hit(
 	attacker: ProceduralCharacter,
 	target: Node2D,
@@ -904,6 +1090,9 @@ func process_object_hit(
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			KEY_F12:
+				if not event.echo:
+					DebugManager.toggle()
 			KEY_R:
 				# Restart
 				get_tree().reload_current_scene()
@@ -993,6 +1182,8 @@ func select_character(character: ProceduralCharacter, index: int = -1) -> void:
 
 	# Select new
 	primary_selected = character
+	if player_camera:
+		player_camera.manual_pan_active = false  # re-engage follow
 	primary_index = index if index >= 0 else get_party().find(character)
 	selected_characters.append(character)
 	_sync_character_flags()
@@ -1010,6 +1201,8 @@ func toggle_character_selection(character: ProceduralCharacter) -> void:
 			# Promote another character to primary
 			selected_characters.erase(character)
 			primary_selected = selected_characters[0]
+			if player_camera:
+				player_camera.manual_pan_active = false  # re-engage follow on promoted primary
 			primary_index = get_party().find(primary_selected)
 			emit_signal("character_selected", primary_selected, primary_index)
 		else:
@@ -1240,10 +1433,24 @@ func process_weapon_hit(
 			attack_damage[dt_keys[0]] += attacker.bide_pending_bonus
 			attacker.bide_pending_bonus = 0.0
 
+	# Track whether this swing was an unarmed strike so post-damage mutation
+	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
+	var is_unarmed: bool = weapon == null or weapon is AbilityShape
+
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
 	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
+
+	# Mutation proc: The Claws That Catch — every unarmed strike attempts a grapple.
+	# Whether it lands is purely the target's STR save (grappled.save_stat = "str").
+	# Incoming stacks scale with mutation tier so higher-tier claws are both harder
+	# to fully resist on application AND persist longer (the periodic tick-save
+	# can only chip one stack at a time).
+	if is_unarmed and attacker.condition_manager and target.condition_manager:
+		var claws: ConditionInstance = attacker.condition_manager.conditions.get("the_claws_that_catch")
+		if claws and claws.is_active():
+			target.condition_manager.apply_condition("grappled", attacker, claws.stacks, -2.0)
 
 	# Penetration uses the post-DR damage (pass null for non-weapon items like AbilityShape)
 	var actual_weapon = weapon if weapon is WeaponShape else null
@@ -1275,6 +1482,17 @@ func process_weapon_hit(
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
 		SfxManager.play("sword-on-flesh", target.position)
+
+	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):
+		var penetrated: bool = penetration_result.state != PenetrationState.BOUNCED
+		var damage_total: float = 0.0
+		if final_damage is Dictionary:
+			for k in final_damage.keys():
+				damage_total += float(final_damage[k])
+		else:
+			damage_total = float(final_damage)
+		collision_visualizer.record_hit(hit_position, result.limb_name, penetrated, damage_total)
+		print("[debug] weapon hit: ", attacker.name if attacker else "?", " -> ", target.name if target else "?", " limb=", result.limb_name, " dmg=", damage_total, " state=", PenetrationState.keys()[penetration_result.state])
 
 	return result
 
@@ -1429,172 +1647,6 @@ func register_hit(attacker: Node2D, target: Node2D) -> void:
 	active_hits[attacker_id][target_id] = true
 # ===== COLLISION DETECTION HELPERS =====
 
-func get_body_hitbox_corners(character: ProceduralCharacter) -> Array:
-	"""Get character's body hitbox as 4 world-space corners (handles rotation)"""
-	var half_width = character.body_width / 2
-	
-	# The character origin is at the center of the head
-	# Head front is at -head_length * 0.35
-	# Legs end at shoulder_y_offset + leg_length
-	var top = -character.head_length * 0.35
-	var bottom = character.shoulder_y_offset + character.leg_length
-	
-	# Local space corners
-	var local_corners = [
-		Vector2(-half_width, top),      # top-left
-		Vector2(half_width, top),       # top-right
-		Vector2(half_width, bottom),    # bottom-right
-		Vector2(-half_width, bottom)    # bottom-left
-	]
-	
-	# Transform each corner to world space (applying rotation)
-	var world_corners = []
-	for corner in local_corners:
-		world_corners.append(character.global_position + corner.rotated(character.rotation))
-	
-	return world_corners
-
-func point_in_polygon(point: Vector2, polygon: Array) -> bool:
-	"""Check if a point is inside a convex polygon using cross product method"""
-	var n = polygon.size()
-	if n < 3:
-		return false
-	
-	for i in range(n):
-		var a = polygon[i]
-		var b = polygon[(i + 1) % n]
-		var cross = (b - a).cross(point - a)
-		if cross < 0:
-			return false
-	return true
-
-func check_weapon_body_collision(holder, target: ProceduralCharacter):
-	# TODO(post-phase-a): replace with an Area2D weapon hitbox driven by
-	# attack_animator's swing window. Current 5-sample point-in-polygon check
-	# misses hits when (a) the blade rotates past the target between _process
-	# frames and (b) the visual blade extends past the hitbox quad built from
-	# body_width/body_height. See docs/melee_hitbox_plan.md for the migration
-	# plan.
-	# 1. Determine the start and end points of the "hit line" in WORLD space
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	# Check if the holder is actually holding a weapon in the active hand
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		# --- WEAPON LOGIC ---
-		# Use to_global() on the weapon node itself -- this correctly chains through
-		# weapon -> holder Node2D -> character -> world, including holder rotation/scale
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		# --- UNARMED / FIST LOGIC ---
-		# Arm joints are in character-local space, so holder.to_global() is correct
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		var fist_start_local = hand_local.lerp(elbow_local, 0.2)
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(fist_start_local)
-
-	# 2. Perform the Interpolation Check in world space
-	var body_corners = get_body_hitbox_corners(target)
-	var num_checks = 5
-
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if point_in_polygon(check_point_world, body_corners):
-			# Convert hit position to target's local space for limb detection
-			var hit_local = target.to_local(check_point_world)
-			var hit_local_unrotated = hit_local.rotated(-target.rotation)
-
-			var limb_type = target.get_limb_at_position(
-				hit_local_unrotated,
-				target.body_width,
-				target.body_height
-			)
-
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier,
-				"limb_type": limb_type
-			}
-
-	return {"hit": false}
-	
-func check_weapon_object_collision(holder: ProceduralCharacter, target: Node2D) -> Dictionary:
-	"""Collision check for items and structures using their collision shape bounds"""
-	var tip_world: Vector2
-	var base_world: Vector2
-
-	var current_weapon
-	if holder.current_hand == "Main":
-		current_weapon = holder.current_main_hand_item
-	else:
-		current_weapon = holder.current_off_hand_item
-
-	if current_weapon != null and not (current_weapon is AbilityShape):
-		var tip = current_weapon.get_tip_local_position()
-		var base = current_weapon.get_blade_start_local()
-		tip_world = current_weapon.to_global(tip)
-		base_world = current_weapon.to_global(base)
-	else:
-		var joints: Array[Vector2]
-		if holder.current_hand == "Main":
-			joints = holder.right_arm_joints
-		else:
-			joints = holder.left_arm_joints
-		if joints.is_empty() or joints.size() < 2:
-			return {"hit": false}
-		var hand_local = joints[-1]
-		var elbow_local = joints[-2]
-		tip_world = holder.to_global(hand_local)
-		base_world = holder.to_global(hand_local.lerp(elbow_local, 0.2))
-
-	# Use the target's sprite size as a simple bounding box
-	var target_rect: Rect2
-	if "sprite" in target and target.sprite and target.sprite.texture:
-		var tex_size = target.sprite.texture.get_size() * target.sprite.scale
-		var half = tex_size / 2.0
-		target_rect = Rect2(target.global_position - half, tex_size)
-	elif "size" in target:
-		var half = target.size / 2.0
-		target_rect = Rect2(target.global_position - half, target.size)
-	else:
-		return {"hit": false}
-
-	var num_checks = 5
-	for i in range(num_checks):
-		var t = float(i) / float(num_checks - 1)
-		var check_point_world = tip_world.lerp(base_world, t)
-
-		if target_rect.has_point(check_point_world):
-			return {
-				"hit": true,
-				"position": check_point_world,
-				"velocity": holder.attack_speed_multiplier
-			}
-
-	return {"hit": false}
-	
 func check_weapon_weapon_collision(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter
@@ -1835,12 +1887,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 		# Check warp conditions (e.g. need a key)
 		if warp_def.has("condition") and not check_spawn_conditions(warp_def["condition"]):
 			continue
- 
+
 		var pos_arr = warp_def.get("position", [0, 0])
 		var size_arr = warp_def.get("size", [30, 30])
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var size = Vector2(size_arr[0], size_arr[1])
- 
+
 		# Create an Area2D with a collision shape
 		var area = Area2D.new()
 		area.name = "Warp_" + warp_def.get("id", "unknown")
@@ -1848,29 +1900,109 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.set_meta("target_map", warp_def.get("target_map", ""))
 		area.set_meta("target_spawn", warp_def.get("target_spawn", "default"))
 		area.set_meta("label", warp_def.get("label", ""))
- 
+
+		# Visible arrow sprite, scaled to a consistent display height
+		var arrow := Sprite2D.new()
+		arrow.texture = WARP_ARROW_TEXTURE
+		var tex_size = arrow.texture.get_size()
+		if tex_size.y > 0:
+			var scale_factor = WARP_ARROW_DISPLAY_HEIGHT / tex_size.y
+			arrow.scale = Vector2(scale_factor, scale_factor)
+		arrow.rotation = _warp_arrow_rotation(warp_def, pos)
+		arrow.z_index = 100
+		area.add_child(arrow)
+
+		# Hover label with the destination map's name (falls back to warp label)
+		var hover_label := Label.new()
+		hover_label.name = "HoverLabel"
+		hover_label.text = _warp_hover_text(warp_def)
+		hover_label.add_theme_color_override("font_color", Color(1, 1, 1))
+		hover_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		hover_label.add_theme_constant_override("outline_size", 6)
+		hover_label.add_theme_font_size_override("font_size", 20)
+		hover_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hover_label.size = Vector2(200, 28)
+		hover_label.position = Vector2(-100, -WARP_ARROW_DISPLAY_HEIGHT * 0.75 - 14)
+		hover_label.visible = false
+		hover_label.z_index = 101
+		hover_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		area.add_child(hover_label)
+
 		var shape = CollisionShape2D.new()
 		var rect_shape = RectangleShape2D.new()
-		rect_shape.size = size
+		# The arrow sprite rotates with the warp's direction, so its bounding
+		# box width/height swap for north/south arrows. Use the larger of
+		# (texture width, texture height) for both axes so the picking rect
+		# fully covers the sprite at any rotation.
+		var arrow_world_size: Vector2 = tex_size * arrow.scale
+		var max_arrow_dim = max(arrow_world_size.x, arrow_world_size.y)
+		rect_shape.size = Vector2(
+			max(size.x, max_arrow_dim),
+			max(size.y, max_arrow_dim)
+		)
 		shape.shape = rect_shape
 		area.add_child(shape)
- 
-		# Warp zones are interacted with via right-click context menu, not by
-		# walking into them — input_pickable + input_event is the entire
-		# detection path, so no collision_layer/_mask is needed.
-		area.collision_layer = 0
+
+		# Warps are detected via PhysicsPointQueryParameters2D from
+		# ProceduralCharacter._handle_input — point probes against
+		# CollisionLayers.WARPS find them for both left-click (teleport) and
+		# right-click (context menu). Hover labels are toggled by per-frame
+		# polling in _update_warp_hover_labels(). collision_mask = 0 keeps
+		# warps non-colliding with characters, projectiles, vision rays, etc.
+		area.collision_layer = CollisionLayers.WARPS
 		area.collision_mask = 0
-		area.input_pickable = true
-		area.input_event.connect(_on_warp_input.bind(area))
- 
+
 		add_child(area)
 		warp_zones.append(area)
- 
-func _on_warp_input(viewport: Node, event: InputEvent, shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
-		show_context_menu(area, event.global_position)
+
+# Rotation in radians for the warp arrow sprite. The texture points east (+x),
+# so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
+func _warp_arrow_rotation(warp_def: Dictionary, pos: Vector2) -> float:
+	# 1. Explicit direction wins
+	if warp_def.has("direction"):
+		match String(warp_def["direction"]).to_lower():
+			"east", "right":  return 0.0
+			"south", "down":  return PI / 2.0
+			"west", "left":   return PI
+			"north", "up":    return -PI / 2.0
+
+	# 2. Otherwise, infer from the warp's position relative to the map center:
+	#    point toward the nearest edge.
+	var map_size = Vector2(
+		GridManager.map_rect.size.x * GridManager.TILE_SIZE,
+		GridManager.map_rect.size.y * GridManager.TILE_SIZE
+	)
+	if map_size.x <= 0 or map_size.y <= 0:
+		return 0.0
+	var dx_left   = pos.x
+	var dx_right  = map_size.x - pos.x
+	var dy_top    = pos.y
+	var dy_bottom = map_size.y - pos.y
+	var min_dist = min(min(dx_left, dx_right), min(dy_top, dy_bottom))
+	if min_dist == dx_right:
+		return 0.0
+	elif min_dist == dy_bottom:
+		return PI / 2.0
+	elif min_dist == dx_left:
+		return PI
+	else:
+		return -PI / 2.0
+
+func _warp_hover_text(warp_def: Dictionary) -> String:
+	var target_id: String = warp_def.get("target_map", "")
+	if not target_id.is_empty() and MapDatabase.get_all_map_ids().has(target_id):
+		var target_data: Dictionary = MapDatabase.get_map_data(target_id)
+		var map_name: String = target_data.get("name", "")
+		if not map_name.is_empty():
+			return map_name
+	return warp_def.get("label", "")
 		
 func _check_condition(condition_key: String, condition_value = true) -> bool:
+	# Time-of-day conditions read TimeManager directly. v1: no wrap-around (use both min/max for ranges within a single day).
+	if condition_key == "time_hour_min":
+		return TimeManager.current_hour >= int(condition_value)
+	if condition_key == "time_hour_max":
+		return TimeManager.current_hour <= int(condition_value)
 	if not Globals.world_state.has(condition_key):
 		push_warning("Missing world_state condition: " + condition_key)
 		return false
@@ -1944,9 +2076,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["crit_threshold_modifier"] = character.crit_threshold_modifier
 	state["crit_fail_modifier"] = character.crit_fail_modifier
 	state["speed_modifier"] = character.speed_modifier
- 
+
 	# --- Vitals ---
-	state["blood_amount"] = character.blood_amount
 	state["MP"] = character.MP
  
 	# --- Appearance ---
@@ -2094,7 +2225,6 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("speed_modifier"):        character.speed_modifier = state["speed_modifier"]
  
 	# --- Vitals ---
-	if state.has("blood_amount"): character.blood_amount = state["blood_amount"]
 	if state.has("MP"):           character.MP = state["MP"]
  
 	# --- Appearance ---
@@ -2174,11 +2304,17 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			match wtype:
 				"weapon":
 					if not data.is_empty():
-						character.inventory.equip_weapon_from_data(data, hand)
+						if hand == "Stowed":
+							character.inventory.stow_weapon_from_data(data)
+						else:
+							character.inventory.equip_weapon_from_data(data, hand)
 				"ability":
 					var ability_id = data.get("ability_id", "")
 					if ability_id != "":
-						character.inventory.equip_ability_from_id(ability_id, hand)
+						if hand == "Stowed":
+							character.inventory.stow_ability_from_id(ability_id)
+						else:
+							character.inventory.equip_ability_from_id(ability_id, hand)
  
 		# Restore active weapon selection
 		if state.has("active_weapon_index"):

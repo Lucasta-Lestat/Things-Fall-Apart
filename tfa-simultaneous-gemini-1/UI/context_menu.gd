@@ -38,11 +38,26 @@ func setup(character, options: Array):
 		vbox.add_child(button)
 
 func _on_option_selected(option: String):
+	# Warp Area2Ds carry their destination in metadata; don't try to interact
+	# with them like a character.
+	if target_character is Area2D and target_character.has_meta("target_map"):
+		var target_map: String = target_character.get_meta("target_map", "")
+		if not target_map.is_empty():
+			game.load_map(target_map, game.current_map_id)
+		queue_free()
+		game.call_deferred("set", "context_menu_open", false)
+		return
 	match option:
 		"Attack":
 			target_character.attack()
 		"Talk":
 			DialogueManager.start_dialogue(target_character.dialogues[target_character.current_dialogue_index])
+		"Trade":
+			if target_character is ProceduralCharacter:
+				game.show_trade_window(target_character)
+		"Open":
+			if target_character is Item:
+				game.show_chest_inventory(target_character)
 		_:
 			if target_character.has_method("interact"):
 				target_character.interact(option)
@@ -50,13 +65,13 @@ func _on_option_selected(option: String):
 	# this frame, preventing _process-based input polls from acting on the click.
 	queue_free()
 	game.call_deferred("set", "context_menu_open", false)
-# Optional: close menu when clicking elsewhere
-func _input(event):
+# Close the menu when the user clicks outside it. Use _unhandled_input rather
+# than _input so the menu's own Buttons get the click first via GUI dispatch
+# — calling set_input_as_handled() from _input on a click inside the rect
+# previously swallowed the event before the Button could fire its `pressed`
+# signal, so "Open" never opened the chest.
+func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed:
-		if get_rect().has_point(get_local_mouse_position()):
-			get_viewport().set_input_as_handled()
-		else:
-			# Clicked outside the menu — close it
-			queue_free()
-			game.call_deferred("set", "context_menu_open", false)
-			get_viewport().set_input_as_handled()
+		queue_free()
+		game.call_deferred("set", "context_menu_open", false)
+		get_viewport().set_input_as_handled()

@@ -8,5 +8,12 @@ flagged as needing further iteration. They function as placeholders.
 | `orc_warrior` | WWI gas-mask orc — current Ultra+patrician version is the best of several attempts but goggles still aren't perfectly flat-black discs. |
 | `joey_feritas` | Toned-down version (Ultra+patrician) — character now reads slightly too generic; needs a different angle on the "sleazy pied-piper drifter" without going back to bug-eyed creep. |
 | `half_elf_wanderer` | Semi-divine pale elf wanderer (Ultra+patrician) — captures the brief but the face still reads as somewhat haggard rather than mythic-beautiful. May want a younger, more luminous take. |
+| `mary_guana` | Iguana-saurian drug dealer — needs another pass for stronger character. |
+| `peggy_samson` | Spider-mouth afflicted figure — first attempt hit Imagen's safety filter; second attempt landed but the disfigurement could read as more clearly arachnid. |
+| `mother_inferior_macaria` | Cultist with angel-head peck-mark scars — needs another pass to make the angelic-head pattern in the scars more recognisable. |
 
-To re-run a single one: `python tools/generate_character_icons.py --model imagen-4.0-ultra-generate-001 --style-block patrician --only <id> --overwrite`
+To re-run a single one for the original 55-character set:
+`python tools/generate_character_icons.py --model imagen-4.0-ultra-generate-001 --style-block patrician --only <id> --overwrite`
+
+For the named NPC set:
+`python tools/_generate_named_npcs.py --only <id> --overwrite`

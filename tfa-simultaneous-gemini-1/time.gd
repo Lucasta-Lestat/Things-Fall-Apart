@@ -1,8 +1,12 @@
 extends Label
 
+const TimePickerWindowScript = preload("res://UI/TimePickerWindow.gd")
+
 @export var show_seconds: bool = false
 @export var use_12_hour_format: bool = false
 @export var show_date: bool = true
+
+var _picker: CanvasLayer = null
 
 func _ready() -> void:
 	TimeManager.connect("time_updated", _on_time_updated)
@@ -18,12 +22,36 @@ func _ready() -> void:
 	grow_horizontal = Control.GROW_DIRECTION_END
 	grow_vertical = Control.GROW_DIRECTION_END
 
+	# Allow click events to land on the label so debug-mode users can
+	# open the time picker. Labels default to MOUSE_FILTER_IGNORE.
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	if not gui_input.is_connected(_on_gui_input):
+		gui_input.connect(_on_gui_input)
+
 	var panel := _find_party_panel()
 	if panel:
 		visible = panel.panel_visible
 		panel.connect("panel_visibility_changed", _on_party_panel_toggled)
 
 	update_display()
+
+func _on_gui_input(event: InputEvent) -> void:
+	# Only act when DebugManager is on; stay invisible/inert in normal play.
+	if typeof(DebugManager) == TYPE_NIL or not DebugManager.enabled:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_open_time_picker()
+		accept_event()
+
+func _open_time_picker() -> void:
+	if _picker and is_instance_valid(_picker):
+		# Already open — bring forward by recreating.
+		_picker.queue_free()
+		_picker = null
+	_picker = CanvasLayer.new()
+	_picker.set_script(TimePickerWindowScript)
+	_picker.name = "TimePickerWindow"
+	get_tree().current_scene.add_child(_picker)
 
 func _find_party_panel() -> Node:
 	var parent := get_parent()

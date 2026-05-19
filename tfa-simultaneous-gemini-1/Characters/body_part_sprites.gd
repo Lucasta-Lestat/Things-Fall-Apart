@@ -36,6 +36,12 @@ var _arm_width: float = 7.0
 var _is_quadruped: bool = false
 var _body_length: float = 0.0  # Front-to-back length for quadrupeds
 
+# Uniform-scale mode. When > 0, head/torso/arms all use this single scale factor
+# (preserving source-art relative proportions). Set from character.body_scale,
+# which comes from race data (body.body_scale in races.json). Legs still use
+# legacy per-axis scaling because the existing leg sprite predates this mode.
+var _body_scale: float = 0.0
+
 # ===== SETUP =====
 
 func _ready() -> void:
@@ -143,35 +149,66 @@ func auto_scale_sprites(character) -> void:
 		for s in Globals.DEFAULT_ARM_SEGMENT_LENGTHS:
 			_arm_segment_lengths.append(s)
 
-	# Scale each sprite to its target dimensions
-	_scale_sprite_to_size(head_sprite, _head_width, _head_length)
-	if _is_quadruped and _body_length > 0:
-		# Quadruped torso is rotated 90° in update_torso(), so swap axes:
-		# sprite X (becomes Y after rotation) = body_length (front-to-back)
-		# sprite Y (becomes X after rotation) = body_width (left-to-right)
-		_scale_sprite_to_size(torso_sprite, _body_length, _body_width)
+	# Uniform-scale mode (opt-in via race body.body_scale). All head/torso/arm
+	# sprites use the same scale factor so their source-art relative proportions
+	# are preserved exactly. Per-part race dimensions are ignored for these.
+	# Use Object.get() rather than `in character` — the `in` operator misses
+	# @export properties on some Godot 4 builds, which was silently dropping
+	# us to legacy per-anchor scaling.
+	var bs = character.get("body_scale")
+	_body_scale = float(bs) if bs != null else 0.0
+	print("[BodyPartSprites] character=%s body_scale=%s -> _body_scale=%f" % [character.name, str(bs), _body_scale])
+
+	if _body_scale > 0.0:
+		var uniform = Vector2(_body_scale, _body_scale)
+		for sprite in [head_sprite, torso_sprite,
+				left_upper_arm, left_forearm,
+				right_upper_arm, right_forearm]:
+			if sprite and sprite.texture:
+				sprite.scale = uniform
 	else:
-		_scale_sprite_to_size(torso_sprite, _body_width, _body_height)
+		# Legacy per-anchor scaling. Heads and torsos anchor on width
+		# (silhouette is shoulder-driven); limbs anchor on length (IK relies
+		# on segment lengths matching joint spans).
+		_scale_sprite_to_size(head_sprite, _head_width, _head_length, "width")
+		if _is_quadruped and _body_length > 0:
+			# Quadruped torso is rotated 90° in update_torso(), so swap axes:
+			# sprite X (becomes Y after rotation) = body_length (front-to-back)
+			# sprite Y (becomes X after rotation) = body_width (left-to-right)
+			_scale_sprite_to_size(torso_sprite, _body_length, _body_width, "width")
+		else:
+			_scale_sprite_to_size(torso_sprite, _body_width, _body_height, "width")
 
-	# Arm segments: width is arm thickness, height is segment length
-	if _arm_segment_lengths.size() >= 3:
-		_scale_sprite_to_size(left_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(left_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
-		_scale_sprite_to_size(right_upper_arm, _arm_width, _arm_segment_lengths[0])
-		_scale_sprite_to_size(right_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2])
+		# Arm segments: width is arm thickness, height is segment length
+		if _arm_segment_lengths.size() >= 3:
+			_scale_sprite_to_size(left_upper_arm, _arm_width, _arm_segment_lengths[0], "height")
+			_scale_sprite_to_size(left_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2], "height")
+			_scale_sprite_to_size(right_upper_arm, _arm_width, _arm_segment_lengths[0], "height")
+			_scale_sprite_to_size(right_forearm, _arm_width * 0.9, _arm_segment_lengths[1] + _arm_segment_lengths[2], "height")
 
-	# Legs: width is leg thickness, height is leg length
-	_scale_sprite_to_size(left_leg_sprite, _leg_width, _leg_length)
-	_scale_sprite_to_size(right_leg_sprite, _leg_width, _leg_length)
+	# Legs always use legacy per-axis scaling: existing leg sprites predate
+	# uniform mode, and the new isolated-parts pipeline hasn't covered legs yet.
+	_scale_sprite_to_size(left_leg_sprite, _leg_width, _leg_length, "height")
+	_scale_sprite_to_size(right_leg_sprite, _leg_width, _leg_length, "height")
 
-func _scale_sprite_to_size(sprite: Sprite2D, target_width: float, target_height: float) -> void:
-	"""Scale a sprite so it fits the target dimensions in game units."""
+func _scale_sprite_to_size(sprite: Sprite2D, target_width: float, target_height: float, anchor: String = "width") -> void:
+	"""Uniformly scale a sprite (scale.x == scale.y) so its art proportions are
+	preserved. `anchor` picks which target axis drives the scale:
+	  - "width":  scale = target_width / tex.x   (head, torso — silhouette led)
+	  - "height": scale = target_height / tex.y  (limbs — IK length led)
+	The non-anchor target is informational; the actual rendered size on that axis
+	is dictated by the source PNG's aspect ratio."""
 	if not sprite or not sprite.texture:
 		return
 	var tex_size = sprite.texture.get_size()
 	if tex_size.x <= 0 or tex_size.y <= 0:
 		return
-	sprite.scale = Vector2(target_width / tex_size.x, target_height / tex_size.y)
+	var s: float
+	if anchor == "height":
+		s = target_height / tex_size.y
+	else:
+		s = target_width / tex_size.x
+	sprite.scale = Vector2(s, s)
 
 # ===== PER-FRAME UPDATES (called by ProceduralCharacter) =====
 
@@ -237,14 +274,22 @@ func _update_arm_segment(sprite: Sprite2D, start_pos: Vector2, end_pos: Vector2)
 	sprite.position = mid
 	sprite.rotation = angle
 
-	# Dynamically scale length to match actual joint distance, with a small
-	# 8% overlap beyond the segment so upper-arm and forearm sprites meet
-	# cleanly at the elbow instead of leaving a visible seam.
+	# Scale handling:
+	# - Uniform mode (body_scale > 0): pin scale to body_scale every frame so the
+	#   arm renders at its source-art length regardless of where IK puts the joints.
+	#   No stretching — proportions stay faithful to the source.
+	# - Legacy mode: dynamically scale length to match actual joint distance, with a
+	#   small 8% overlap so upper-arm and forearm sprites meet cleanly at the elbow.
+	#   scale.x locked to scale.y to preserve aspect.
 	if sprite.texture:
-		var tex_size = sprite.texture.get_size()
-		var segment_length = start_pos.distance_to(end_pos)
-		if tex_size.y > 0:
-			sprite.scale.y = (segment_length * 1.08) / tex_size.y
+		if _body_scale > 0.0:
+			sprite.scale = Vector2(_body_scale, _body_scale)
+		else:
+			var tex_size = sprite.texture.get_size()
+			var segment_length = start_pos.distance_to(end_pos)
+			if tex_size.y > 0:
+				var s = (segment_length * 1.08) / tex_size.y
+				sprite.scale = Vector2(s, s)
 
 # ===== COLOR =====
 
