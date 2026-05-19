@@ -298,14 +298,27 @@ func _apply_asi(character, stat_name: String, modifier: int) -> void:
 		character.set(stat_name, character.get(stat_name) + modifier)
 
 func _add_to(character, property: String, amount: float) -> void:
-	if property in character:
+	if _has_property(character, property):
 		character.set(property, character.get(property) + amount)
 
 func _set_if_exists(character, property: String, value) -> void:
 	if value == null:
 		return
-	if property in character:
+	if _has_property(character, property):
 		character.set(property, value)
+
+# Reliable property-existence check. The `prop in object` operator is the usual
+# idiom but silently misses some @export properties on Godot 4 — body_scale on
+# ProceduralCharacter was hitting this and never getting set from race data,
+# leaving body parts at wildly mismatched scales. Walking get_property_list()
+# enumerates every script-declared property including @export'd ones.
+func _has_property(obj, property: String) -> bool:
+	if obj == null:
+		return false
+	for p in obj.get_property_list():
+		if p.name == property:
+			return true
+	return false
 
 func _find_child_by_name(node: Node, child_name: String) -> Node:
 	for child in node.get_children():
