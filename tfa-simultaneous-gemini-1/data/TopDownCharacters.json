@@ -2365,6 +2365,7 @@
 	  "icon": "res://Icons/zakariah_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
+	  "hidden_character_reference": "An abrasive hyper-rational obsessively legalistic mind that never ever gets tired and never ever gives up and seems to grow more obsessive and more narrowly legalistic the deeper the stress and rage of the war. A man who thinks the problem with the battle of Verdun is that neither side really gave it their all. Highly intelligent, deeply manipulative narcissist who rules through a combination of building little systems of control and absolute sustained aggression for anyone who opposes or steps out of line for even a second.\n\nVery (excessively) open about sexuality. Promoter of wenching and the rights of Wenches. Supporter of the Gnommunist Revolution in Raskov.\n\nAbsolutely unwilling to acknowledge any flaws with the new Revolutionary Government. Extremely anti-clerical. Studying art and engineering at the local university. He is creating fake people, homunculi, just to agree with him, to take his side in arguments, make it appear he has sympathizers.\n\nSeems to be two people in one. There's this person who's such a great guy, and so interested in you personally, so talented, intelligent, charming and funny, with rare good taste. And then there is this other guy. This guy is condescending, aggressive, clever and manipulative. This guy will say anything to win some fucking argument and never, ever, ever admits wrong, backs down, or recognizes the humanity in his opponents. If you are inside his networks you are inside his little system of power and loyalty. The second person might seem like a flaw in the first, but it is the real him. The first person is a mask.",
 	  "extra_traits": {},
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	},
@@ -2664,7 +2665,7 @@
 	{
 	  "id": "barthes",
 	  "name": "Barthes",
-	  "race": "from_faction",
+	  "race": "elf",
 	  "background": "academic",
 	  "faction": "neutral",
 	  "stats": { "strength": 45, "constitution": 50, "dexterity": 55, "will": 65, "intelligence": 80, "charisma": 60 },
@@ -2675,6 +2676,7 @@
 	  "extra_abilities": [],
 	  "extra_conditions": [],
 	  "extra_traits": {},
+	  "hidden_character_reference": "A kindly old elven druid, renowned a millennium ago for his skills as a healer and veterinarian. Fell from grace when he was revealed to be a pedophile and zoophile, though this is long forgotten. Wants to be liked, uses his extensive erudition and charm to ingratiate himself to the player character. Socially skilled enough to avoid obviously coming off as desperate. Never mentions his true age. Is arguably one of the best allies from the get go. With an animal companion for scouting, healing, and knowledge and skills for the overworld. Exceptionally kind and always takes the PC's side. If the PC makes an evil choice, he refers to the way of nature, the survival of the fittest and law of the jungle. For a morally good choice, he's always awestruck by how righteous and good the PC can be despite trying times. Speaks in an idiom like that of Keith Boeseley's Kalevala.\n\nDesigner conversation (5/20/2026, paraphrased and preserved as in-character lore seeds):\n- 50 Cent General [SHDW]: \"In the animal kingdom, it's actually quite common. Encouraged in fact. Gotta keep things in the family. I think this is how he gets away with it.\"\n- ABlankFace: \"Maybe he lived as a termite for a thousand years and got used to their sexual habits. And legitimately forgot there was another way.\"\n- 50 Cent General [SHDW]: \"I like to think he spends several years as different animals and it just so happens that he's being human now to experience what they have to offer.\"\n- ABlankFace: \"'Among the beasts of the Earth they call it Wincest.'\"\n- 50 Cent General [SHDW]: \"Oh I love the idea that he has a nature catalogue that's just his sexploits.\"\n- ABlankFace: \"He could drop other insane lore about animals too.\"\n- 50 Cent General [SHDW]: \"If the character ever asks why he never brought it up: 'You don't go around telling everyone your sexual preferences do you, you deviant?'\"\n- ABlankFace: \"'The fox is known in Elfland. A fox will be fluent in Fairy and at least conversational in Troll.' I toyed with the idea that elves are biologically immortal. And considered implications/nerfs of what the elf race would have. Mostly affecting memory. But not sure how to balance it out without just making elves ridiculously op.\"\n- 50 Cent General [SHDW]: \"I mean how op is it in game? It's just immunity to aging effects. I liked to think they are immortal but in mixing with the conquered they've fallen a bit. Some characters might have a single human in their family tree and for that fact they age just a tiny bit.\"\n- ABlankFace: \"I really wanted to make elves seem and feel alien. Not just pretty humans.\"",
 	  "combat": {}, "sensory": {}, "spawn_conditions": {}
 	},
 	{
