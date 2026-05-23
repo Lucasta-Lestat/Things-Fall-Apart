@@ -89,6 +89,24 @@ var npc_state_per_region: Dictionary = {}
 # the TownServicesPanel.
 var known_services_per_region: Dictionary = {}
 
+# Downtime mode: toggled by the crescent-moon button next to TimeLabel.
+# When true, the town services panel swaps to a downtime activity board,
+# the party panel hides, the camp panel appears on the right, and party
+# portraits show in the centre to be dragged onto activities.
+var downtime_mode_active: bool = false
+signal downtime_mode_changed(active: bool)
+
+# Per-character downtime cooldown bookkeeping. Keyed by a stable character
+# uid (template_id, or display_name for protagonist) -> Array of dicts
+# {"result_id": String, "day_abs": int}. DowntimeDatabase reads/writes this.
+var downtime_recent_events: Dictionary = {}
+
+func set_downtime_mode(active: bool) -> void:
+	if downtime_mode_active == active:
+		return
+	downtime_mode_active = active
+	downtime_mode_changed.emit(active)
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	fog_manager.create_fog_from_params(

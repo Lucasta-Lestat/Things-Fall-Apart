@@ -9,6 +9,9 @@
 [ext_resource type="Script" uid="uid://dp40gruhvt3ml" path="res://time.gd" id="7_time"]
 [ext_resource type="Script" uid="uid://q252g8rcccm4" path="res://UI/PartySidePanel.gd" id="8_party"]
 [ext_resource type="Script" path="res://UI/TownServicesPanel.gd" id="12_townsvc"]
+[ext_resource type="Script" path="res://UI/MoonToggleButton.gd" id="13_moon"]
+[ext_resource type="Script" path="res://UI/CenterPartyPortraits.gd" id="14_portraits"]
+[ext_resource type="Script" path="res://UI/CampDowntimePanel.gd" id="15_camp"]
 [ext_resource type="Texture2D" uid="uid://domvlsmqeq8il" path="res://Dialogue Background.png" id="9_dlgbg"]
 [ext_resource type="Script" uid="uid://c8xs1n57qavwq" path="res://SurfaceManager.gd" id="10_surface"]
 [ext_resource type="Script" uid="uid://bp2c05iq6wsx5" path="res://FluidManager.gd" id="11_fluid"]
@@ -127,3 +130,14 @@ offset_top = 64.0
 offset_right = 250.0
 grow_horizontal = 1
 script = ExtResource("12_townsvc")
+
+[node name="MoonToggleButton" type="TextureButton" parent="GameUI" unique_id=596651259]
+script = ExtResource("13_moon")
+
+[node name="CampDowntimePanel" type="PanelContainer" parent="GameUI" unique_id=596651260]
+visible = false
+script = ExtResource("15_camp")
+
+[node name="CenterPartyPortraits" type="Control" parent="GameUI" unique_id=596651261]
+visible = false
+script = ExtResource("14_portraits")

@@ -313,6 +313,109 @@ You would be within your rights. I won't insult you with denials — the evidenc
 	  }
 	}
   },
+  "downtime_carousing_brawl": {
+	"dialogueNodes": {
+	  "downtime_carousing_brawl": {
+		"narrator": "The tavern smells of spilled ale and pipe smoke. Someone at the next table says the wrong word at the wrong moment.",
+		"next": "downtime_carousing_brawl_drunk"
+	  },
+	  "downtime_carousing_brawl_drunk": {
+		"Drunk": "Say that again and I'll plant you in the floorboards.",
+		"next": "downtime_carousing_brawl_end"
+	  },
+	  "downtime_carousing_brawl_end": {
+		"narrator": "The first chair goes through the window. You wake up in the gutter at first light — lighter in the purse, heavier around the eyes. The barkeep will mutter about damages next time you come in."
+	  }
+	}
+  },
+  "downtime_carousing_partied_hard": {
+	"dialogueNodes": {
+	  "downtime_carousing_partied_hard": {
+		"narrator": "The night opens like a door. Strangers buy you drinks. A fiddle starts up. A merchant in a soft hat presses silver into your hand and says he likes the cut of your story.",
+		"next": "downtime_carousing_partied_hard_toast"
+	  },
+	  "downtime_carousing_partied_hard_toast": {
+		"Stranger": "To better days! And to whatever brought us all under one roof tonight.",
+		"next": "downtime_carousing_partied_hard_end"
+	  },
+	  "downtime_carousing_partied_hard_end": {
+		"narrator": "You wake on a bench with a flower behind one ear, the taste of honey-mead, and a clean head — for the first time in weeks."
+	  }
+	}
+  },
+  "downtime_devotion_faith_healing": {
+	"dialogueNodes": {
+	  "downtime_devotion_faith_healing": {
+		"narrator": "You kneel on cold flagstones. The censer swings, the chant rises, and something in you that had been knotted for a long time gently lets go.",
+		"next": "downtime_devotion_faith_healing_blessing"
+	  },
+	  "downtime_devotion_faith_healing_blessing": {
+		"Priest": "Be at peace, child. The body remembers what the soul forgives.",
+		"next": "downtime_devotion_faith_healing_end"
+	  },
+	  "downtime_devotion_faith_healing_end": {
+		"narrator": "You leave the chapel walking easier than you came in. The old ache is gone."
+	  }
+	}
+  },
+  "downtime_devotion_dark_night": {
+	"dialogueNodes": {
+	  "downtime_devotion_dark_night": {
+		"narrator": "You kneel and wait. You wait a long time. The candle gutters and your knees go numb and no answer comes — not even silence's quiet shape. You leave the chapel lonelier than when you came in."
+	  }
+	}
+  },
+  "downtime_gambling_big_win": {
+	"dialogueNodes": {
+	  "downtime_gambling_big_win": {
+		"narrator": "The dice talk to you tonight. Three passes, four, five — the table has gone quiet around you and the stack of coin in front of you keeps growing.",
+		"next": "downtime_gambling_big_win_dealer"
+	  },
+	  "downtime_gambling_big_win_dealer": {
+		"Dealer": "Perhaps you would like to walk your winnings home before the wheel turns?",
+		"next": "downtime_gambling_big_win_end"
+	  },
+	  "downtime_gambling_big_win_end": {
+		"narrator": "You take the hint. You leave before anyone can decide to be unhappy about it."
+	  }
+	}
+  },
+  "downtime_gambling_caught_cheating": {
+	"dialogueNodes": {
+	  "downtime_gambling_caught_cheating": {
+		"narrator": "The card never quite makes it back into the deck. A heavy hand closes on your wrist before you can clear the table.",
+		"next": "downtime_gambling_caught_cheating_bouncer"
+	  },
+	  "downtime_gambling_caught_cheating_bouncer": {
+		"Bouncer": "Now then. Now then. Let's have a little chat about house rules.",
+		"next": "downtime_gambling_caught_cheating_end"
+	  },
+	  "downtime_gambling_caught_cheating_end": {
+		"narrator": "They take you out the back. They take everything. You crawl home in the dark."
+	  }
+	}
+  },
+  "downtime_meditation_clarity": {
+	"dialogueNodes": {
+	  "downtime_meditation_clarity": {
+		"narrator": "You sit. You breathe. Thoughts arrive and you let them pass, like fish under a bridge. After a long while the chatter quiets to a hum, and the hum to a clean, hollow feeling — the feeling of something properly put down."
+	  }
+	}
+  },
+  "downtime_rest_deep_sleep": {
+	"dialogueNodes": {
+	  "downtime_rest_deep_sleep": {
+		"narrator": "You sleep for the first time in a long time without anything chasing you in the dark. You wake clear-headed, with the kind of appetite that wants bread and butter and nothing more complicated than that."
+	  }
+	}
+  },
+  "downtime_hunting_good_kill": {
+	"dialogueNodes": {
+	  "downtime_hunting_good_kill": {
+		"narrator": "You move slow against the wind and the buck never sees you. The shot is clean. The deer takes two steps and lies down in the leaves like it was tired. Field-dressing takes the better part of an hour. You bring back enough meat to feed the party twice over and a hide worth selling."
+	  }
+	}
+  },
   "demo_cemetery_on_load": {
 	"dialogueNodes": {
 	  "demo_cemetery_on_load": {
@@ -334,5 +437,4 @@ You would be within your rights. I won't insult you with denials — the evidenc
 	  }
 	}
   }
-}
 }

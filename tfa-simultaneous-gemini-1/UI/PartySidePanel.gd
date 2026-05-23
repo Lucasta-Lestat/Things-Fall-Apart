@@ -26,6 +26,10 @@ var _hidden_x: float = 0.0
 var _tween: Tween = null
 var _character_panels: Array = []  # Array of dictionaries with UI references
 
+# Downtime mode: panel hides while active and restores prior state on exit.
+var _saved_panel_visible_pre_downtime: bool = true
+var _in_downtime_hide: bool = false
+
 # Scroll container for the character list
 var scroll: ScrollContainer
 var vbox: VBoxContainer
@@ -52,6 +56,24 @@ func _ready() -> void:
 
 	# Populate after a frame so characters exist
 	call_deferred("_populate_party")
+
+	# Hide while downtime mode is active so the CampDowntimePanel can take
+	# the right side. Restore prior state when downtime ends.
+	if game_node and game_node.has_signal("downtime_mode_changed"):
+		game_node.connect("downtime_mode_changed", _on_downtime_mode_changed)
+
+func _on_downtime_mode_changed(active: bool) -> void:
+	if active:
+		_saved_panel_visible_pre_downtime = panel_visible
+		_in_downtime_hide = true
+		if panel_visible:
+			_toggle_panel()
+		_in_downtime_hide = false
+	else:
+		if not panel_visible and _saved_panel_visible_pre_downtime:
+			_in_downtime_hide = true
+			_toggle_panel()
+			_in_downtime_hide = false
 
 func _populate_party() -> void:
 	if not game_node:
@@ -1082,7 +1104,11 @@ func _toggle_panel() -> void:
 
 	SfxManager.play_ui("ui-navigation")
 
-	emit_signal("panel_visibility_changed", panel_visible)
+	# Suppress the visibility signal while downtime mode is force-hiding us,
+	# so the TownServicesPanel (which mirrors this signal) doesn't think the
+	# player pressed Tab and start animating its own slide as well.
+	if not _in_downtime_hide:
+		emit_signal("panel_visibility_changed", panel_visible)
 
 # ---------------------------------------------------------------------------
 # Per-frame updates (MP bars etc.)

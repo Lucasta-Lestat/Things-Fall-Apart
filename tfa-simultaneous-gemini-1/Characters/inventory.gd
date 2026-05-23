@@ -123,6 +123,12 @@ func find_item_by_name(item_name: String) -> int:
 			return i
 	return -1
 
+func find_item_by_id(item_id: String) -> int:
+	for i in range(items.size()):
+		if String(items[i].get("id", "")) == item_id:
+			return i
+	return -1
+
 func get_all_items() -> Array:
 	return items
 
