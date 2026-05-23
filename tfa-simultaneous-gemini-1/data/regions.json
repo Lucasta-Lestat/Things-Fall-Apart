@@ -5,6 +5,7 @@
 			"name": "Perrow",
 			"description": "A run-down town under the iron grip of the Liziti, sprawling from a crumbling cemetery in the hills down to the docks at the river's edge.",
 			"controlling_faction": "liziti",
+			"is_urban": true,
 			"member_maps": [
 				"cemetery",
 				"town_square",

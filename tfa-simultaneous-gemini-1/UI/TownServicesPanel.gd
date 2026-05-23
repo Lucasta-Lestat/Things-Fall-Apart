@@ -24,6 +24,13 @@ const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 # tools/generate_service_cards.py based on the NPC's primary title id.
 const SERVICE_CARDS_DIR := "res://UI/Assets/service_cards/"
 const DEFAULT_SERVICE_CARD := "res://UI/Assets/service_cards/default.png"
+# Downtime mode reuses this panel as a board of downtime activities,
+# loading per-activity parchment from a sibling assets directory.
+const DOWNTIME_CARDS_DIR := "res://UI/Assets/downtime_cards/"
+const DEFAULT_DOWNTIME_CARD := "res://UI/Assets/downtime_cards/default.png"
+
+# "services" (default) or "downtime"; flipped by Game.downtime_mode_changed.
+var mode: String = "services"
 
 var game_node: Node = null
 var party_panel: Node = null
@@ -33,6 +40,8 @@ var _hidden_x: float = -PANEL_WIDTH
 var _tween: Tween = null
 
 # Per-card UI references; rebuilt on every _repopulate.
+# In services mode each entry is the original {entry, live_npc, ...} dict.
+# In downtime mode each entry is {activity_id, container}.
 var _cards: Array = []  # Array of dictionaries
 
 var scroll: ScrollContainer
@@ -91,9 +100,17 @@ func _ready() -> void:
 	if game_node and game_node.has_signal("map_loaded"):
 		game_node.connect("map_loaded", _on_map_loaded)
 
+	# Swap into downtime mode when the moon button toggles it.
+	if game_node and game_node.has_signal("downtime_mode_changed"):
+		game_node.connect("downtime_mode_changed", _on_downtime_mode_changed)
+
 	# Sync with PartySidePanel's Tab toggle.
 	call_deferred("_hook_party_panel_visibility")
 	call_deferred("_repopulate")
+
+func _on_downtime_mode_changed(active: bool) -> void:
+	mode = "downtime" if active else "services"
+	_repopulate()
 
 func _hook_party_panel_visibility() -> void:
 	if game_node:
@@ -139,6 +156,10 @@ func _repopulate() -> void:
 
 	if not game_node:
 		visible = false
+		return
+
+	if mode == "downtime":
+		_repopulate_downtime()
 		return
 
 	var current_map_id: String = str(game_node.get("current_map_id"))
@@ -273,6 +294,86 @@ func _build_service_card(entry: Dictionary):
 		live_npc.inventory.item_removed.connect(_on_live_inventory_changed.bind(card_data))
 
 	return card_panel
+
+func _repopulate_downtime() -> void:
+	visible = true
+	var current_map_id: String = str(game_node.get("current_map_id"))
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	header_label.text = "Downtime — %s" % (RegionDatabase.get_region_data(region_id).get("name", "Wilderness") if not region_id.is_empty() else "Wilderness")
+
+	var ids: Array = DowntimeDatabase.get_activities_for_region(region_id)
+	for aid in ids:
+		var activity: Dictionary = DowntimeDatabase.get_activity(String(aid))
+		if activity.is_empty():
+			continue
+		var card := _build_downtime_card(String(aid), activity)
+		if card:
+			vbox.add_child(card)
+
+func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
+	var card_panel := PanelContainer.new()
+	card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var card_tex: Texture2D = _get_downtime_card_texture(activity_id)
+	if card_tex != null:
+		var sb := StyleBoxTexture.new()
+		sb.texture = card_tex
+		sb.texture_margin_left = 16
+		sb.texture_margin_right = 16
+		sb.texture_margin_top = 16
+		sb.texture_margin_bottom = 16
+		sb.set_content_margin_all(8)
+		card_panel.add_theme_stylebox_override("panel", sb)
+
+	var container := VBoxContainer.new()
+	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.mouse_filter = Control.MOUSE_FILTER_STOP
+	card_panel.add_child(container)
+
+	var title_label := Label.new()
+	title_label.text = String(activity.get("name", activity_id))
+	title_label.add_theme_font_size_override("font_size", 13)
+	title_label.add_theme_color_override("font_color", Color(0.15, 0.10, 0.05))
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(title_label)
+
+	var desc_label := Label.new()
+	desc_label.text = String(activity.get("description", "")).left(140)
+	desc_label.add_theme_font_size_override("font_size", 10)
+	desc_label.add_theme_color_override("font_color", Color(0.30, 0.22, 0.10))
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(desc_label)
+
+	var meta_parts: Array = []
+	var check: String = String(activity.get("ability_check", ""))
+	if not check.is_empty():
+		meta_parts.append("Check: %s" % check)
+	var hours: float = float(activity.get("duration_hours", 0))
+	if hours > 0.0:
+		meta_parts.append("%dh" % int(hours))
+	if not meta_parts.is_empty():
+		var meta_label := Label.new()
+		meta_label.text = "  ".join(meta_parts)
+		meta_label.add_theme_font_size_override("font_size", 9)
+		meta_label.add_theme_color_override("font_color", Color(0.40, 0.28, 0.10))
+		meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		container.add_child(meta_label)
+
+	_cards.append({"activity_id": activity_id, "container": card_panel})
+	return card_panel
+
+func _get_downtime_card_texture(activity_id: String) -> Texture2D:
+	var path: String = DOWNTIME_CARDS_DIR + activity_id + ".png"
+	if ResourceLoader.exists(path):
+		return load(path)
+	if ResourceLoader.exists(DEFAULT_DOWNTIME_CARD):
+		return load(DEFAULT_DOWNTIME_CARD)
+	# Fall back to the service-card default so the panel still draws.
+	if ResourceLoader.exists(DEFAULT_SERVICE_CARD):
+		return load(DEFAULT_SERVICE_CARD)
+	return null
 
 func _get_service_card_texture(entry: Dictionary) -> Texture2D:
 	## Pick the parchment card whose engraved icon matches this NPC's primary
@@ -495,7 +596,16 @@ func _can_drop_data(at_position: Vector2, data) -> bool:
 	if not data.has("source_character"):
 		return false
 	var card_data = _find_card_at(at_position)
-	return not card_data.is_empty()
+	if card_data.is_empty():
+		return false
+	# Downtime cards accept portrait drops; service cards reject them.
+	if mode == "downtime":
+		return String(data.get("kind", "")) == "portrait"
+	# Service mode: reject portrait drops (those belong on activity cards in
+	# downtime mode); accept the existing item-drop dicts.
+	if String(data.get("kind", "")) == "portrait":
+		return false
+	return true
 
 func _drop_data(at_position: Vector2, data) -> void:
 	var card_data = _find_card_at(at_position)
@@ -504,6 +614,17 @@ func _drop_data(at_position: Vector2, data) -> void:
 	var source_char = data.get("source_character")
 	if not is_instance_valid(source_char):
 		return
+
+	# Downtime-mode portrait drop: hand off to the resolver and stop.
+	if mode == "downtime":
+		var activity_id: String = String(card_data.get("activity_id", ""))
+		if activity_id.is_empty():
+			return
+		var current_map_id: String = str(game_node.get("current_map_id"))
+		var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+		DowntimeResolver.begin_drop(source_char, activity_id, region_id)
+		return
+
 	var entry: Dictionary = card_data["entry"]
 	var slot_entry: Dictionary = data.get("entry", {})
 
@@ -664,7 +785,9 @@ func _find_slot_at(local_pos: Vector2) -> PanelContainer:
 func _find_card_at(local_pos: Vector2) -> Dictionary:
 	var global_pos = get_global_transform() * local_pos
 	for card in _cards:
-		var c: Control = card["container"]
-		if c.get_global_rect().has_point(global_pos):
+		# Card dicts are either service cards (with "container") or downtime
+		# cards (also "container"). Both keys are populated identically.
+		var c = card.get("container")
+		if c is Control and c.get_global_rect().has_point(global_pos):
 			return card
 	return {}
