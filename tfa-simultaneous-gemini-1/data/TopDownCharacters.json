@@ -2473,7 +2473,7 @@
 	{
 	  "id": "queen_madeline_du_belmonte",
 	  "name": "Queen Madeline du Belmonte",
-	  "race": "from_faction",
+	  "race": "elf",
 	  "background": "noble",
 	  "faction": "patriciate",
 	  "stats": { "strength": 50, "constitution": 55, "dexterity": 55, "will": 75, "intelligence": 70, "charisma": 85 },
