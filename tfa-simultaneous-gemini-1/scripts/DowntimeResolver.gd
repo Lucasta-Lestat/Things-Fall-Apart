@@ -36,8 +36,8 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 		score = int(character.rate_choice(preferred, disliked))
 
 	# Refusal check (protagonist is never asked).
-	var is_protagonist := bool(character.is_protagonist) if "is_protagonist" in character else false
-	var refused := false
+	var is_protagonist: bool = bool(character.is_protagonist) if "is_protagonist" in character else false
+	var refused: bool = false
 	if not is_protagonist and score < 0:
 		var min_favor: int = -score * 10
 		if int(character.favorability) < min_favor:

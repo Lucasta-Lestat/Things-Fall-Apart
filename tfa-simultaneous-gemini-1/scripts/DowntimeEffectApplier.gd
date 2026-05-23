@@ -95,26 +95,29 @@ static func _apply_hp(character, amount: int) -> void:
 		torso.current_hp = max(0, torso.current_hp - abs(amount))
 
 static func _apply_money(character, value, success_tier: int) -> void:
-	var inv = character.get_node_or_null("Inventory")
+	# `Inventory` has a class_name, so typing the local lets the parser see
+	# add_stack / find_item_by_id and stops "cannot infer type" on the
+	# return-value assignments below.
+	var inv: Inventory = character.get_node_or_null("Inventory")
 	if inv == null:
 		return
 	# "all" means lost everything.
 	if typeof(value) == TYPE_STRING and String(value).to_lower() == "all":
-		var idx = inv.find_item_by_id(GOLD_ID)
-		if idx >= 0:
-			inv.items[idx]["num_stacks"] = 0
+		var idx_all: int = inv.find_item_by_id(GOLD_ID)
+		if idx_all >= 0:
+			inv.items[idx_all]["num_stacks"] = 0
 		return
-	var amount := int(value)
+	var amount: int = int(value)
 	if amount == 0:
 		return
 	if amount > 0:
-		var scaled = amount * max(success_tier, 1)
+		var scaled: int = amount * max(success_tier, 1)
 		inv.add_stack({"id": GOLD_ID, "is_stackable": true, "num_stacks": scaled, "name": "Gold", "max_stack_size": 9999})
 	else:
-		var idx := inv.find_item_by_id(GOLD_ID)
+		var idx: int = inv.find_item_by_id(GOLD_ID)
 		if idx < 0:
 			return
-		var current := int(inv.items[idx].get("num_stacks", 0))
+		var current: int = int(inv.items[idx].get("num_stacks", 0))
 		inv.items[idx]["num_stacks"] = max(0, current - abs(amount))
 
 static func _remove_with_trait(character, trait_tag: String) -> int:
