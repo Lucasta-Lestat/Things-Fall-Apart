@@ -580,6 +580,77 @@
 				"academic",
 				"retired_adventurer"
 			]
+		},
+		{
+			"id": "skarsgaard",
+			"name": "Skarsgaard",
+			"color": "#3E5A78",
+			"tier": 2,
+			"icon": "res://icons/skarsgaard.png",
+			"flag": "res://icons/skarsgaard_flag.png",
+			"allies": [],
+			"enemies": ["patriciate", "player"],
+			"traits": {},
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"human": 80,
+				"half_orc": 20
+			},
+			"default_backgrounds": [
+				"body_guard",
+				"retired_adventurer"
+			]
+		},
+		{
+			"id": "vermincelli",
+			"name": "Vermincelli Family",
+			"color": "#5C3317",
+			"tier": 1,
+			"icon": "res://icons/vermincelli.png",
+			"flag": "res://icons/vermincelli_flag.png",
+			"allies": [],
+			"enemies": ["liziti", "dragatini", "tortellini"],
+			"traits": {},
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"human": 70,
+				"halfling": 15,
+				"kobold": 15
+			},
+			"default_backgrounds": [
+				"criminal",
+				"urchin"
+			]
+		},
+		{
+			"id": "alamoneans",
+			"name": "Alamoneans",
+			"color": "#7C3AED",
+			"tier": 1,
+			"icon": "res://icons/alamoneans.png",
+			"flag": "res://icons/alamoneans_flag.png",
+			"allies": [],
+			"enemies": [],
+			"traits": {
+				"Occult": 2
+			},
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"human": 80,
+				"half_elf": 20
+			},
+			"default_backgrounds": [
+				"academic"
+			]
 		}
 	]
 }
