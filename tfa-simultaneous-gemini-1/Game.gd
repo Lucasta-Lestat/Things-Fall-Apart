@@ -353,6 +353,11 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 
 	# Track in scene
 	characters_in_scene.append(character)
+
+	# Quest hooks: subscribes to death + inventory.item_added and seeds
+	# char_at::<template_id> for this character.
+	if QuestManager:
+		QuestManager.register_character(character)
  
 	return character
  
@@ -2046,6 +2051,7 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["Name"] = character.Name
 	state["display_name"] = character.display_name
 	state["faction_id"] = character.faction_id
+	state["template_id"] = character.template_id
 	state["race_id"] = character.race_id
 	state["creature_size"] = character.creature_size
 	state["racial_features"] = character.racial_features.duplicate()
@@ -2186,6 +2192,8 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.display_name = state["display_name"]
 	if state.has("faction_id"):
 		character.faction_id = state["faction_id"]
+	if state.has("template_id"):
+		character.template_id = state["template_id"]
 	if state.has("race_id"):
 		character.race_id = state["race_id"]
 	if state.has("creature_size"):

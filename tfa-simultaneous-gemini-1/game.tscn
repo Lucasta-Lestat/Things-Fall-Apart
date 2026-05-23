@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" uid="uid://domvlsmqeq8il" path="res://Dialogue Background.png" id="9_dlgbg"]
 [ext_resource type="Script" uid="uid://c8xs1n57qavwq" path="res://SurfaceManager.gd" id="10_surface"]
 [ext_resource type="Script" uid="uid://bp2c05iq6wsx5" path="res://FluidManager.gd" id="11_fluid"]
+[ext_resource type="Script" path="res://UI/QuestLogPanel.gd" id="13_questlog"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dlg"]
 texture = ExtResource("9_dlgbg")
@@ -127,3 +128,6 @@ offset_top = 64.0
 offset_right = 250.0
 grow_horizontal = 1
 script = ExtResource("12_townsvc")
+
+[node name="QuestLogPanel" type="PanelContainer" parent="GameUI" unique_id=596651259]
+script = ExtResource("13_questlog")

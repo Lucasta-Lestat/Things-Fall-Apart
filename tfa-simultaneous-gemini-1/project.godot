@@ -47,6 +47,8 @@ MusicManager="*res://Global/MusicManager.gd"
 PauseManager="*res://Global/PauseManager.gd"
 WeatherManager="*res://Global/WeatherManager.gd"
 DebugManager="*res://Global/DebugManager.gd"
+QuestDatabase="*res://Global/QuestDatabase.gd"
+QuestManager="*res://Global/QuestManager.gd"
 
 [display]
 

@@ -1,0 +1,39 @@
+{
+  "quests": [
+    {
+      "id": "tutorial_quest",
+      "icon": "res://Icons/Guard.png",
+      "display_name": "The Town Guard's Plea",
+      "start_stage": "find_guard",
+      "auto_start": true,
+      "stages": [
+        {
+          "id": "find_guard",
+          "name": "Find the Town Guard",
+          "description": "Travel to the town square to meet the guard.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "retrieve_sword" }
+          ]
+        },
+        {
+          "id": "retrieve_sword",
+          "name": "Acquire a Longsword",
+          "description": "Find a longsword somewhere in the world.",
+          "transitions": [
+            { "conditions": { "item_picked::longsword": true }, "next_stage": "deliver" },
+            { "conditions": { "char_dead::town_guard": true }, "next_stage": "__fail__" }
+          ]
+        },
+        {
+          "id": "deliver",
+          "name": "Return to the Town Square",
+          "description": "Bring the longsword back to the guard.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "__complete__" },
+            { "conditions": { "quest_days::tutorial_quest": ">=7" }, "next_stage": "__fail__" }
+          ]
+        }
+      ]
+    }
+  ]
+}
