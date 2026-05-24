@@ -45,7 +45,7 @@ BASE_DESCRIPTION = (
     "in the middle of that meadow. Thick stone perimeter walls drawn as light "
     "grey blocks with dark ink outlines enclose the compound; the wall hugs "
     "the outer edge of the meadow with a single wooden gatehouse on one side. "
-    "Inside the walls there are only three freestanding buildings, each "
+    "Inside the walls there are only two freestanding buildings, each "
     "separated from the perimeter walls and from each other by open grass: "
     "(1) a large prominent central main hall that dominates the middle of "
     "the compound and takes up roughly a quarter of the entire picture, drawn "
@@ -53,12 +53,8 @@ BASE_DESCRIPTION = (
     "red-tile floor running its length, two rows of long wooden dining tables "
     "and benches, a tall stone hearth at one end, a raised dais with a wooden "
     "chair at the other end, banners hanging on the inner walls; "
-    "(2) a small stone kitchen building to one side, also cutaway with no "
-    "roof, showing an oven, a long worktable, sacks, barrels, hanging pots; "
-    "(3) a small wooden stable on the opposite side, also cutaway with no "
-    "roof, showing straw piles, stalls, a water trough. "
-    "One fenced garden plot in an unused corner of the compound, shown as a "
-    "green rectangle with three or four rows of leafy vegetables. "
+    "(2) a small wooden stable off to one side, also cutaway with no roof, "
+    "showing straw piles, stalls, a water trough. "
     "A cobbled courtyard with a single stone well sits in front of the "
     "central hall. A clear medium-blue river flows along the right edge of "
     "the picture outside the walls with a sandy beige bank. Warm earthy "
@@ -148,10 +144,10 @@ VARIANTS: list[tuple[str, str, str]] = [
         ULTRA,
         "tighter_composition",
         BASE_DESCRIPTION.replace(
-            "Inside the walls there are only three freestanding buildings, "
+            "Inside the walls there are only two freestanding buildings, "
             "each separated from the perimeter walls and from each other by "
             "open grass: ",
-            "Inside the walls there are only three freestanding buildings, "
+            "Inside the walls there are only two freestanding buildings, "
             "each surrounded on every side by at least one building's width "
             "of open grass so nothing touches anything else: ",
         )
