@@ -1,3 +1,5 @@
 .env
 .env.*
 tools/map_outputs/
+__pycache__/
+*.pyc
