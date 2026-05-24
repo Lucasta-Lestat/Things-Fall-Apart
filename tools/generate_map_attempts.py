@@ -49,8 +49,7 @@ BASE_DESCRIPTION = (
     "carts and crates scattered around. A clear medium-blue river flows along "
     "the right edge with sandy beige banks, crossed by small wooden "
     "footbridges. Lush green grass between buildings. Warm earthy palette: "
-    "terracotta, ochre, moss, soft blue. Flat white background outside the "
-    "scene."
+    "terracotta, ochre, moss, soft blue."
 )
 
 VARIANTS: list[tuple[str, str]] = [
