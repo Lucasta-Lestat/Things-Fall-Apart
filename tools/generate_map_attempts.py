@@ -34,19 +34,23 @@ OUT_DIR = Path(__file__).resolve().parent / "map_outputs"
 OUT_DIR.mkdir(exist_ok=True)
 
 BASE_DESCRIPTION = (
-    "Top-down fantasy tabletop battlemap of a small fortified medieval compound, "
-    "hand-painted watercolor on parchment in the style of Dyson Logos / 2-Minute "
-    "Tabletop. Thick stone perimeter walls form a rectangular enclosure with "
-    "corner towers and a wooden gatehouse. Inside: a central main hall with a "
-    "red tile roof, smaller stone-and-timber outbuildings, a chapel, a stable, "
-    "barracks, and a kitchen. Several fenced garden plots with rows of crops "
-    "(cabbages, onions, herbs) and an orchard with neatly spaced fruit trees. "
-    "A cobbled courtyard with a well, wooden carts and barrels scattered "
-    "around. A clear blue river flows along the right edge, crossed by small "
-    "wooden footbridges. Sandy beaches and reed banks where land meets water. "
-    "Lush green grass between buildings. Furniture visible from above: tables, "
-    "beds, chairs, fireplaces. Warm earthy palette: terracotta, ochre, moss, "
-    "soft blue. Soft hand-drawn linework, no text, no labels, no grid, no UI."
+    "Top-down digital battlemap illustration in the 2-Minute Tabletop / Czepeku "
+    "style. Clean crisp ink linework with flat watercolor fills, bright "
+    "saturated colors, soft drop shadows under walls. Bird's-eye orthographic "
+    "view of a small fortified medieval compound. Thick stone perimeter walls "
+    "drawn as light grey blocks with dark ink outlines form a rectangular "
+    "enclosure with corner towers and a wooden gatehouse. Inside: a central "
+    "main hall with a red tile roof, smaller stone-and-timber outbuildings, a "
+    "chapel, a stable, barracks, and a kitchen, all shown roofless so the "
+    "furniture is visible from above (beds, tables, chairs, fireplaces, "
+    "barrels). Several fenced garden plots laid out as neat green rectangles "
+    "with rows of vegetables (cabbages, onions, herbs) and an orchard with "
+    "neatly spaced fruit trees. A cobbled courtyard with a stone well, wooden "
+    "carts and crates scattered around. A clear medium-blue river flows along "
+    "the right edge with sandy beige banks, crossed by small wooden "
+    "footbridges. Lush green grass between buildings. Warm earthy palette: "
+    "terracotta, ochre, moss, soft blue. Flat white background outside the "
+    "scene."
 )
 
 VARIANTS: list[tuple[str, str]] = [
@@ -75,7 +79,7 @@ VARIANTS: list[tuple[str, str]] = [
         "imagen-4.0-ultra-generate-001",
         "fortified_compound_ultra",
         BASE_DESCRIPTION
-        + " Highly detailed brushwork, visible parchment texture, subtle shadows.",
+        + " Highly detailed ink linework with painterly watercolor washes inside the shapes.",
     ),
     (
         "imagen-4.0-ultra-generate-001",
@@ -84,7 +88,7 @@ VARIANTS: list[tuple[str, str]] = [
             "small fortified medieval compound",
             "noble manor estate enclosed by a low stone wall",
         )
-        + " Highly detailed brushwork, painterly watercolor washes.",
+        + " Highly detailed ink linework with painterly watercolor washes inside the shapes.",
     ),
     (
         "imagen-4.0-fast-generate-001",
