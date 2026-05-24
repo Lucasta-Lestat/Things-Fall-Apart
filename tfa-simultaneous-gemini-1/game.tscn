@@ -138,6 +138,6 @@ script = ExtResource("13_moon")
 visible = false
 script = ExtResource("15_camp")
 
-[node name="CenterPartyPortraits" type="Control" parent="GameUI" unique_id=596651261]
+[node name="CenterPartyPortraits" type="PanelContainer" parent="GameUI" unique_id=596651261]
 visible = false
 script = ExtResource("14_portraits")

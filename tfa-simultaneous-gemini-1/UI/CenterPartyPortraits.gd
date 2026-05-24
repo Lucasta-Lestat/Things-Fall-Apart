@@ -5,7 +5,12 @@
 ##   { "kind": "portrait", "source_character": <ProceduralCharacter> }
 ## — TownServicesPanel and CampDowntimePanel inspect "kind" to distinguish
 ## portrait drops from existing inventory drops.
-extends Control
+##
+## Extends PanelContainer (not Control) so the node auto-sizes to fit its
+## HBox of portraits. A bare Control anchored centre with no offsets is
+## zero-width, which silently breaks drag pick-up — _get_drag_data is only
+## called when the cursor is inside the Control's rect.
+extends PanelContainer
 
 const PORTRAIT_SIZE := Vector2(64, 64)
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
@@ -18,32 +23,30 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 
-	# Centred horizontal strip near the top of the viewport.
+	# Centred horizontal strip near the top of the viewport. PanelContainer
+	# sizes to fit its child HBox so the clickable rect actually covers the
+	# visible portraits.
 	anchor_left = 0.5
 	anchor_right = 0.5
 	anchor_top = 0.0
 	anchor_bottom = 0.0
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	offset_top = 80
-	offset_bottom = 80 + PORTRAIT_SIZE.y + 16
 
-	var bg := PanelContainer.new()
-	bg.mouse_filter = Control.MOUSE_FILTER_STOP
-	bg.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	bg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.10, 0.12, 0.16, 0.85)
 	sb.set_corner_radius_all(6)
 	sb.set_border_width_all(1)
 	sb.border_color = Color(0.6, 0.45, 0.2, 1.0)
 	sb.set_content_margin_all(8)
-	bg.add_theme_stylebox_override("panel", sb)
-	add_child(bg)
+	add_theme_stylebox_override("panel", sb)
 
 	_row = HBoxContainer.new()
 	_row.add_theme_constant_override("separation", 8)
-	_row.mouse_filter = Control.MOUSE_FILTER_STOP
-	bg.add_child(_row)
+	# IGNORE so clicks fall through the HBox to the PanelContainer above,
+	# where _get_drag_data is defined.
+	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_row)
 
 	game_node = get_node_or_null("/root/Game")
 	if game_node:

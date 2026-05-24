@@ -14,16 +14,14 @@ func _ready() -> void:
 	ignore_texture_size = true
 	custom_minimum_size = Vector2(28, 28)
 
-	# Pin to the top-left, just to the right of the TimeLabel (which lives at
-	# offset_left=16 and is two text lines tall).
+	# Pin to the top-left, just to the right of the TimeLabel. We position
+	# dynamically via _reposition() because the label's width changes with the
+	# date string (e.g. "PRIMIDAY, WITHERUMNAL 1, 1945" is much wider than
+	# "DECIDAY, THAW 5, 1945").
 	anchor_left = 0.0
 	anchor_top = 0.0
 	anchor_right = 0.0
 	anchor_bottom = 0.0
-	offset_left = 120
-	offset_top = 16
-	offset_right = offset_left + 28
-	offset_bottom = offset_top + 28
 	grow_horizontal = Control.GROW_DIRECTION_END
 	grow_vertical = Control.GROW_DIRECTION_END
 
@@ -43,6 +41,36 @@ func _ready() -> void:
 		visible = bool(panel.panel_visible)
 		if panel.has_signal("panel_visibility_changed"):
 			panel.connect("panel_visibility_changed", _on_party_panel_toggled)
+
+	# Track the time label's bounding box so we always sit just to its right
+	# even when the date string lengthens (TimeManager re-renders text every
+	# minute, which triggers Label.resized).
+	var time_label: Label = _find_time_label()
+	if time_label:
+		if not time_label.resized.is_connected(_reposition):
+			time_label.resized.connect(_reposition)
+	call_deferred("_reposition")
+
+func _find_time_label() -> Label:
+	var parent := get_parent()
+	if parent and parent.has_node("TimeLabel"):
+		return parent.get_node("TimeLabel") as Label
+	return null
+
+func _reposition() -> void:
+	var time_label: Label = _find_time_label()
+	if time_label == null:
+		# Fall back to a generous fixed offset that clears most date strings.
+		offset_left = 310
+		offset_top = 16
+	else:
+		var label_rect: Rect2 = time_label.get_global_rect()
+		offset_left = label_rect.position.x + label_rect.size.x + 8
+		# Centre vertically on the label so the icon doesn't sit above the
+		# first line.
+		offset_top = label_rect.position.y + (label_rect.size.y - 28) * 0.5
+	offset_right = offset_left + 28
+	offset_bottom = offset_top + 28
 
 func _on_pressed() -> void:
 	if _game == null:
