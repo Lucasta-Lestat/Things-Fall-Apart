@@ -36,8 +36,11 @@ OUT_DIR.mkdir(exist_ok=True)
 BASE_DESCRIPTION = (
     "Top-down digital battlemap illustration in the 2-Minute Tabletop / Czepeku "
     "style. Clean crisp ink linework with flat watercolor fills, bright "
-    "saturated colors, soft drop shadows under walls. Straight overhead "
-    "orthographic angle. A grassy meadow extends to every corner and the very "
+    "saturated colors, soft drop shadows under walls. Architectural floor plan "
+    "view: the camera is positioned directly above the scene at exactly 90 "
+    "degrees looking straight down, like a satellite photo, so every wall is "
+    "drawn as a thin outlined rectangle and every roof opening reveals the "
+    "floor below. A grassy meadow extends to every corner and the very "
     "edges of the picture, with a small fortified medieval compound sitting "
     "in the middle of that meadow. Thick stone perimeter walls drawn as light "
     "grey blocks with dark ink outlines enclose the compound; the wall hugs "
@@ -62,82 +65,97 @@ BASE_DESCRIPTION = (
     "palette: terracotta, ochre, moss, soft blue."
 )
 
-VARIANTS: list[tuple[str, str]] = [
+ULTRA = "imagen-4.0-ultra-generate-001"
+DETAIL_SUFFIX = (
+    " Highly detailed ink linework with painterly watercolor washes inside "
+    "the shapes."
+)
+
+VARIANTS: list[tuple[str, str, str]] = [
     (
-        "imagen-4.0-generate-001",
-        "fortified_compound_v1",
-        BASE_DESCRIPTION,
+        ULTRA,
+        "base_v6a",
+        BASE_DESCRIPTION + DETAIL_SUFFIX,
     ),
     (
-        "imagen-4.0-generate-001",
-        "monastery_v1",
-        BASE_DESCRIPTION.replace(
-            "small fortified medieval compound",
-            "small walled monastery with cloister courtyard",
-        ),
+        ULTRA,
+        "base_v6b",
+        BASE_DESCRIPTION + DETAIL_SUFFIX,
     ),
     (
-        "imagen-4.0-generate-001",
-        "frontier_keep_v1",
-        BASE_DESCRIPTION.replace(
-            "small fortified medieval compound",
-            "frontier border keep with a great hall and watchtowers",
-        ),
-    ),
-    (
-        "imagen-4.0-ultra-generate-001",
-        "fortified_compound_ultra",
+        ULTRA,
+        "floorplan_emphasis",
         BASE_DESCRIPTION
-        + " Highly detailed ink linework with painterly watercolor washes inside the shapes.",
+        + " Composition reads as an architectural floor plan or game map, "
+          "completely flat, no three-dimensional rendering of building sides."
+        + DETAIL_SUFFIX,
     ),
     (
-        "imagen-4.0-ultra-generate-001",
-        "manor_estate_ultra",
+        ULTRA,
+        "satellite_emphasis",
+        BASE_DESCRIPTION
+        + " The image looks like a top-down hand-painted version of a "
+          "satellite photograph, every element seen from directly above."
+        + DETAIL_SUFFIX,
+    ),
+    (
+        ULTRA,
+        "larger_hall",
         BASE_DESCRIPTION.replace(
-            "small fortified medieval compound",
-            "noble manor estate enclosed by a low stone wall",
+            "takes up roughly a quarter of the entire picture",
+            "takes up roughly a third of the entire picture and is clearly "
+            "the largest single feature in the scene",
         )
-        + " Highly detailed ink linework with painterly watercolor washes inside the shapes.",
+        + DETAIL_SUFFIX,
     ),
     (
-        "imagen-4.0-fast-generate-001",
-        "village_hamlet_fast",
+        ULTRA,
+        "no_river",
+        BASE_DESCRIPTION.replace(
+            "A clear medium-blue river flows along the right edge of "
+            "the picture outside the walls with a sandy beige bank. ",
+            "",
+        )
+        + DETAIL_SUFFIX,
+    ),
+    (
+        ULTRA,
+        "monastery",
         BASE_DESCRIPTION.replace(
             "small fortified medieval compound",
-            "small walled village hamlet",
-        ),
+            "small walled monastery",
+        )
+        + DETAIL_SUFFIX,
     ),
     (
-        "imagen-4.0-fast-generate-001",
-        "trading_post_fast",
+        ULTRA,
+        "manor_estate",
         BASE_DESCRIPTION.replace(
             "small fortified medieval compound",
-            "remote trading post with merchant stalls and warehouses",
-        ),
+            "noble manor estate inside a low stone wall",
+        )
+        + DETAIL_SUFFIX,
     ),
     (
-        "gemini-2.5-flash-image",
-        "fortified_compound_flash",
-        BASE_DESCRIPTION,
+        ULTRA,
+        "warm_palette_push",
+        BASE_DESCRIPTION
+        + " Warm sunlit afternoon palette, soft cream stone, deep red roof "
+          "accents, lush emerald grass, gentle painterly shading."
+        + DETAIL_SUFFIX,
     ),
     (
-        "gemini-2.5-flash-image",
-        "abbey_garden_flash",
+        ULTRA,
+        "tighter_composition",
         BASE_DESCRIPTION.replace(
-            "small fortified medieval compound",
-            "small walled abbey with extensive herb and vegetable gardens",
-        ),
-    ),
-    (
-        "gemini-2.5-flash-image",
-        "river_outpost_flash",
-        BASE_DESCRIPTION.replace(
-            "A clear blue river flows along the right edge",
-            "A wide clear river dominates the right third of the map",
-        ).replace(
-            "small fortified medieval compound",
-            "riverside outpost built around a stone bridge",
-        ),
+            "Inside the walls there are only three freestanding buildings, "
+            "each separated from the perimeter walls and from each other by "
+            "open grass: ",
+            "Inside the walls there are only three freestanding buildings, "
+            "each surrounded on every side by at least one building's width "
+            "of open grass so nothing touches anything else: ",
+        )
+        + DETAIL_SUFFIX,
     ),
 ]
 
