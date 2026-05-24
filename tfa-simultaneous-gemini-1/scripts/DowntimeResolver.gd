@@ -66,7 +66,8 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 	dlg.populate(character, activity, score, refused)
 	dlg.confirmed.connect(_on_confirmed)
 	dlg.canceled.connect(_on_canceled)
-	dlg.popup_hide.connect(dlg.queue_free)
+	# Godot 4: no popup_hide signal. Free on close via visibility_changed.
+	_attach_dialog_autofree(dlg)
 	get_tree().root.add_child(dlg)
 	dlg.popup_centered()
 
@@ -159,9 +160,17 @@ func _show_fallback_dialogue(character, event_text: String) -> void:
 	# Either signal fires once per close (close button vs OK) — guard via _pending.
 	dlg.confirmed.connect(_finish_resolution)
 	dlg.canceled.connect(_finish_resolution)
-	dlg.popup_hide.connect(dlg.queue_free)
+	_attach_dialog_autofree(dlg)
 	get_tree().root.add_child(dlg)
 	dlg.popup_centered()
+
+# Frees the dialog the first time its visibility flips from shown to hidden.
+# Godot 4 has no popup_hide signal; visibility_changed is the equivalent.
+func _attach_dialog_autofree(dlg: Window) -> void:
+	dlg.visibility_changed.connect(func():
+		if not dlg.visible:
+			dlg.queue_free()
+	, CONNECT_ONE_SHOT)
 
 func _on_dialogue_ended() -> void:
 	if _pending.is_empty():
