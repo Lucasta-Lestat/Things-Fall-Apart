@@ -578,7 +578,8 @@
 			"walking_noise": 1.0,
 			"active_abilities": [],
 			"passive_conditions": [
-				"immune_to_drunken"
+				"immune_to_drunken",
+				"stone_body"
 			]
 		},
 		{
@@ -1226,7 +1227,9 @@
 			"active_abilities": [
 				"breath_weapon"
 			],
-			"passive_conditions": []
+			"passive_conditions": [
+				"anti_miser"
+			]
 		},
 		{
 			"id": "goatmen",

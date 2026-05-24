@@ -2361,8 +2361,26 @@
 		"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
 	  },
 	  "stats": { "strength": 40, "constitution": 45, "dexterity": 50, "will": 50, "intelligence": 65, "charisma": 50 },
-	  "equipment": [],
+	  "equipment": [
+		{ "id": "hammer", "slot": "main_hand" }
+	  ],
 	  "icon": "res://Icons/zakariah_icon.png",
+	  "dialogue": "",
+	  "interact_options": ["Talk", "Inspect"],
+	  "extra_traits": { "Crafty": 1, "Engineer": 1 },
+	  "combat": {}, "sensory": {}, "spawn_conditions": {}
+	},
+	{
+	  "id": "stonewall",
+	  "name": "Stonewall",
+	  "race": "dwarf",
+	  "background": "pauper",
+	  "faction": "neutral",
+	  "stats": { "strength": 70, "constitution": 70, "dexterity": 35, "will": 55, "intelligence": 45, "charisma": 40 },
+	  "equipment": [
+		{ "id": "warhammer", "slot": "main_hand" }
+	  ],
+	  "icon": "res://Icons/default_human_icon.png",
 	  "dialogue": "",
 	  "interact_options": ["Talk", "Inspect"],
 	  "extra_traits": {},

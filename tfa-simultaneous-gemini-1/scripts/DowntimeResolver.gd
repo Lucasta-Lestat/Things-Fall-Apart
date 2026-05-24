@@ -31,6 +31,13 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 		push_warning("DowntimeResolver: unknown activity '%s'" % activity_id)
 		print("[Downtime] begin_drop: activity '%s' not in DowntimeDatabase" % activity_id)
 		return
+	# Activity-level character gates (required_traits / any_required_traits /
+	# required_items). Reject the drop with a notification rather than opening
+	# the confirm dialog so the user gets immediate feedback.
+	if not DowntimeDatabase.passes_character_gates(activity, character):
+		push_warning("%s cannot do %s (missing required traits or items)" % [String(character.name), String(activity.get("name", activity_id))])
+		print("[Downtime] begin_drop: '%s' failed character gates for '%s'" % [String(character.name), activity_id])
+		return
 	print("[Downtime] begin_drop: activity loaded, showing confirm dialog")
 
 	var preferred: Array = activity.get("preferred_traits", [])

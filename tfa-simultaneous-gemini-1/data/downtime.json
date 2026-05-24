@@ -629,6 +629,38 @@
 					}
 				}
 			}
+		},
+		"repair": {
+			"name": "Repair",
+			"description": "Chisel, file, and hammer-work to mend stone bodies.",
+			"duration_hours": 4,
+			"urban": true,
+			"rural": true,
+			"preferred_traits": ["Crafty", "Engineer", "Patient"],
+			"disliked_traits": ["Brash"],
+			"ability_check": "Intelligence",
+			"any_required_traits": ["Crafty", "Engineer"],
+			"required_items": ["hammer"],
+			"results": {
+				"any_map": {
+					"solid_repair": {
+						"weight": 4,
+						"event_description": " patched cracked granite with steady hands.",
+						"effects": {"repair": 8}
+					},
+					"masterful_repair": {
+						"weight": 1,
+						"min_success_tier": 2,
+						"event_description": " worked seams so fine the joins disappeared.",
+						"effects": {"repair": 20}
+					},
+					"botched_repair": {
+						"weight": 2,
+						"event_description": " mis-struck and skinned a knuckle.",
+						"effects": {"hp": -2}
+					}
+				}
+			}
 		}
 	},
 	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp"]

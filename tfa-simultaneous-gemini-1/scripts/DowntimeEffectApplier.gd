@@ -34,6 +34,8 @@ static func apply(character, effects: Dictionary, success_tier: int = 1) -> void
 		match String(key):
 			"hp":
 				_apply_hp(character, int(value))
+			"repair":
+				_apply_repair(character, int(value))
 			"money":
 				_apply_money(character, value, success_tier)
 			"favorability":
@@ -71,19 +73,24 @@ static func _apply_hp(character, amount: int) -> void:
 	if not ("limbs" in character) or character.limbs == null or character.limbs.is_empty():
 		return
 	if amount > 0:
-		var limbs: Array = character.limbs.values()
-		limbs.sort_custom(func(a, b): return float(a.current_hp) / float(max(1, a.max_hp)) < float(b.current_hp) / float(max(1, b.max_hp)))
-		var remaining := amount
-		# First pass: top off the most-damaged limbs by up to their deficit.
-		for limb in limbs:
-			if remaining <= 0:
-				break
-			var deficit: int = max(0, limb.max_hp - limb.current_hp)
-			if deficit <= 0:
-				continue
-			var heal: int = min(deficit, remaining)
-			limb.heal(heal)
-			remaining -= heal
+		# Route positive HP through the character-level heal() so the
+		# heal_resist stat (e.g. dwarven Stone Body) gates downtime healing
+		# the same as ability healing.
+		if character.has_method("heal"):
+			character.heal(amount)
+		else:
+			var limbs: Array = character.limbs.values()
+			limbs.sort_custom(func(a, b): return float(a.current_hp) / float(max(1, a.max_hp)) < float(b.current_hp) / float(max(1, b.max_hp)))
+			var remaining := amount
+			for limb in limbs:
+				if remaining <= 0:
+					break
+				var deficit: int = max(0, limb.max_hp - limb.current_hp)
+				if deficit <= 0:
+					continue
+				var heal: int = min(deficit, remaining)
+				limb.heal(heal)
+				remaining -= heal
 	else:
 		var torso = character.limbs.values()[0]
 		# LimbType.TORSO is enum index 1. Look it up explicitly so the order
@@ -93,6 +100,12 @@ static func _apply_hp(character, amount: int) -> void:
 				torso = character.limbs[k]
 				break
 		torso.current_hp = max(0, torso.current_hp - abs(amount))
+
+static func _apply_repair(character, amount: int) -> void:
+	if amount <= 0 or character == null:
+		return
+	if character.has_method("repair"):
+		character.repair(amount)
 
 static func _apply_money(character, value, success_tier: int) -> void:
 	# `Inventory` has a class_name, so typing the local lets the parser see

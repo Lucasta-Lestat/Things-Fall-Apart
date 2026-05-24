@@ -77,6 +77,8 @@ const SELECTION_CIRCLE_WIDTH = 1.0
 var party_state: Array = [
 	{"template_id": "protagonist", "overrides": {}, "live_state": null},
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
+	{"template_id": "zakariah", "overrides": {"faction": "player"}, "live_state": null},
+	{"template_id": "stonewall", "overrides": {"faction": "player"}, "live_state": null},
 ]
 
 # Service-NPC state per region. Lets trades and inventory changes survive

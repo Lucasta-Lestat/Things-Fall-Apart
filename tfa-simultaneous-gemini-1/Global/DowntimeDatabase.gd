@@ -137,6 +137,66 @@ static func passes_trait_filter(character_traits: Dictionary, required, forbidde
 			return false
 	return true
 
+
+## Activity-level character gates. Checked at drop time by DowntimeResolver.
+## Supports three optional fields on an activity:
+##   required_traits      — AND (every named trait present at tier).
+##   any_required_traits  — OR  (at least one named trait present at tier).
+##   required_items       — Array of item ids; passes iff the character
+##                          carries at least one, scanning both regular
+##                          inventory items and weapon containers
+##                          (stowed_items / main / off hand) since weapons
+##                          like hammers live as WeaponShape nodes, not dicts.
+static func passes_character_gates(activity: Dictionary, character) -> bool:
+	if character == null:
+		return false
+	var char_traits: Dictionary = character.traits if "traits" in character else {}
+	var required = activity.get("required_traits", {})
+	var any_required = activity.get("any_required_traits", [])
+	var required_items: Array = activity.get("required_items", [])
+
+	if not passes_trait_filter(char_traits, required, {}):
+		return false
+
+	var any_keys: Array = _trait_keys(any_required)
+	if not any_keys.is_empty():
+		var ok := false
+		for k in any_keys:
+			var key := String(k)
+			var req_tier: int = max(1, _trait_value(any_required, key))
+			if int(char_traits.get(key, 0)) >= req_tier:
+				ok = true
+				break
+		if not ok:
+			return false
+
+	if not required_items.is_empty():
+		if not _character_has_any_item(character, required_items):
+			return false
+
+	return true
+
+static func _character_has_any_item(character, item_ids: Array) -> bool:
+	var inv = character.get_node_or_null("Inventory") if character.has_method("get_node_or_null") else null
+	if inv == null:
+		return false
+	for id_any in item_ids:
+		var id_str := String(id_any)
+		if id_str.is_empty():
+			continue
+		# Regular inventory items (dicts).
+		for entry in inv.items:
+			if String(entry.get("id", "")) == id_str:
+				return true
+		# Weapon containers (Node2D with an `id` property).
+		for slot in [inv.main_hand_item, inv.off_hand_item]:
+			if slot != null and "id" in slot and String(slot.id) == id_str:
+				return true
+		for stowed in inv.stowed_items:
+			if stowed != null and "id" in stowed and String(stowed.id) == id_str:
+				return true
+	return false
+
 # ---------------------------------------------------------------------------
 # Result picker
 # ---------------------------------------------------------------------------

@@ -1267,5 +1267,45 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [],
 		"conditional_modifiers": [],
 		"immunities": {}
+	},
+	{
+		"id": "stone_body",
+		"display_name": "Stone Body",
+		"description": "Flesh of granite. Immune to ordinary healing; can be repaired.",
+		"traits": {"buff": 1, "stone": 1, "passive": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "heal_resist",  "operation": "add", "value": 100},
+			{"stat": "natural_dr",   "operation": "add", "value": 3},
+			{"stat": "max_hp_bonus", "operation": "add", "value": 10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "anti_miser",
+		"display_name": "Anti-miser",
+		"description": "Refuses to pick up or carry gold.",
+		"traits": {"flaw": 1, "psychological": 1, "passive": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
 	}
 ]

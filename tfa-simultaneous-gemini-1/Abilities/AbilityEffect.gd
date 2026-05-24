@@ -26,6 +26,7 @@ const DAMAGE_TYPES = [
 const EFFECT_TYPES = [
 	"damage",           # Deal damage
 	"heal",             # Restore health
+	"repair",           # Restore HP on Stone-trait creatures (bypasses heal_resist)
 	"apply_condition",  # Apply a condition
 	"remove_condition", # Remove a condition
 	"force_field",      # Create a force field
@@ -64,6 +65,8 @@ static func resolve_effect(
 			result = _resolve_damage(effect, caster, targets, ability)
 		"heal":
 			result = _resolve_healing(effect, caster, targets, ability)
+		"repair":
+			result = _resolve_repair(effect, caster, targets, ability)
 		"apply_condition":
 			print("applying condition in resolve_effect")
 			result = _resolve_apply_condition(effect, caster, targets, ability)
@@ -562,6 +565,40 @@ static func _heal_target(target: Node, amount: float) -> float:
 	if target.has_method("heal"):
 		return target.heal(amount)
 	return 0.0
+
+
+## Resolve repair effect — restores HP on Stone-trait targets, bypassing heal_resist.
+static func _resolve_repair(
+	effect: Dictionary,
+	caster: Node,
+	targets: Array,
+	_ability: Ability
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "repair",
+		"targets_affected": [],
+		"total_repaired": 0,
+	}
+	var amount: int = int(effect.get("amount", 0))
+	if amount <= 0:
+		result["success"] = false
+		result["error"] = "No repair amount"
+		return result
+
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		var target_traits = _get_entity_traits(target)
+		if int(target_traits.get("Stone", 0)) <= 0:
+			continue
+		if not target.has_method("repair"):
+			continue
+		var repaired: int = target.repair(amount)
+		result["targets_affected"].append({"target": target, "repaired": repaired})
+		result["total_repaired"] += repaired
+
+	return result
 
 
 ## Resolve remove condition effect

@@ -25,9 +25,23 @@ var possessor: Node2D
 func _ready() -> void:
 	possessor = get_parent()
 
+# Anti-miser gate: characters with the "anti_miser" condition refuse gold.
+func _rejects_gold(item_data: Dictionary) -> bool:
+	if String(item_data.get("id", "")) != "gold":
+		return false
+	if not possessor or not ("condition_manager" in possessor):
+		return false
+	var cm = possessor.condition_manager
+	if cm == null or not cm.has_active_condition("anti_miser"):
+		return false
+	push_warning("%s refuses gold (Anti-miser)" % String(possessor.name))
+	return true
+
 # ===== INVENTORY MANAGEMENT =====
 
 func add_item(item_data: Dictionary) -> bool:
+	if _rejects_gold(item_data):
+		return false
 	# Try to stack with an existing item of the same id
 	if item_data.get("is_stackable", false):
 		var item_id = item_data.get("id", "")
@@ -58,6 +72,8 @@ func add_item(item_data: Dictionary) -> bool:
 # Otherwise returns true; partial overflow into max_slots is treated as
 # success (we'd rather drop a few stacks than lose all of them).
 func add_stack(item_data: Dictionary) -> bool:
+	if _rejects_gold(item_data):
+		return false
 	var stacks := int(item_data.get("num_stacks", 1))
 	if stacks < 1:
 		stacks = 1

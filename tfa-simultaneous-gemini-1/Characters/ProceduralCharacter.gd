@@ -391,7 +391,11 @@ var conditions = {}
 # --- Update your existing getters to use effective values ---
 
 var max_hp: int:
-	get: return 6 + int(effective_constitution()) / 10
+	get:
+		var base := 6 + int(effective_constitution()) / 10
+		if condition_manager:
+			base += int(condition_manager.calculate_effective_stat(0.0, "max_hp_bonus"))
+		return base
 
 var max_MP: int:
 	get: return int(effective_will())
@@ -989,9 +993,57 @@ func _self_heal(effect: Dictionary, _targets: Array, _ability, _target_position:
 	var amount = float(effect.get("amount", 0.0))
 	if amount <= 0:
 		return {"success": false, "error": "No heal amount"}
-	for limb in limbs.values():
-		limb.heal(amount)
-	return {"success": true, "healed": amount}
+	var healed := heal(int(amount))
+	return {"success": true, "healed": healed}
+
+
+# Public character-level heal. Respects the `heal_resist` stat (0..100 %).
+# Distributes HP across the most-damaged limbs first; severed limbs are skipped
+# by Limb.heal. Returns the actual amount applied (post-resistance).
+func heal(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	var pct: float = 0.0
+	if condition_manager:
+		pct = clamp(condition_manager.calculate_effective_stat(0.0, "heal_resist"), 0.0, 100.0)
+	var effective := int(round(float(amount) * (1.0 - pct / 100.0)))
+	if effective <= 0:
+		return 0
+	return _distribute_hp(effective)
+
+
+# Repair: stone-body restoration. Bypasses heal_resist; same distribution as heal.
+# Caller (AbilityEffect._resolve_repair / DowntimeEffectApplier) is responsible
+# for the "Stone trait only" target filter.
+func repair(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	return _distribute_hp(amount)
+
+
+# Top off the most-damaged limbs first. Mirrors the algorithm used by
+# DowntimeEffectApplier._apply_hp so heal/repair behave consistently with
+# downtime healing. Returns total HP applied.
+func _distribute_hp(amount: int) -> int:
+	if limbs.is_empty():
+		return 0
+	var ordered: Array = limbs.values()
+	ordered.sort_custom(func(a, b): return float(a.current_hp) / float(max(1, a.max_hp)) < float(b.current_hp) / float(max(1, b.max_hp)))
+	var remaining := amount
+	var applied := 0
+	for limb in ordered:
+		if remaining <= 0:
+			break
+		if limb.is_severed:
+			continue
+		var deficit: int = max(0, limb.max_hp - limb.current_hp)
+		if deficit <= 0:
+			continue
+		var give: int = min(deficit, remaining)
+		limb.heal(give)
+		remaining -= give
+		applied += give
+	return applied
 
 
 func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
@@ -3770,14 +3822,20 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	# Character-level DR pool (from conditions like physically_resistant, shielded).
 	# Consumed across physical damage types in this hit.
 	var character_dr_remaining: float = 0.0
+	# Natural DR (e.g. dwarven Stone Body): flat per-type reduction applied to
+	# every damage type except psychic and true.
+	var natural_dr: float = 0.0
 	if condition_manager:
 		character_dr_remaining = max(0.0, condition_manager.calculate_effective_stat(0.0, "dr"))
+		natural_dr = max(0.0, condition_manager.calculate_effective_stat(0.0, "natural_dr"))
 
 # 2. Calculate damage for each type after resistances
 	for damage_type in damage:
 		raw_val = damage[damage_type]
 		dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
 		var after_armor = max(0, raw_val - dr_val)
+		if natural_dr > 0 and damage_type != "psychic" and damage_type != "true":
+			after_armor = max(0.0, after_armor - natural_dr)
 		var char_dr_used: float = 0.0
 		if character_dr_remaining > 0 and damage_type in ["slashing", "bludgeoning", "piercing"]:
 			char_dr_used = min(character_dr_remaining, after_armor)
