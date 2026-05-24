@@ -39,6 +39,8 @@ RegionDatabase="*res://Global/RegionDatabase.gd"
 DowntimeDatabase="*res://Global/DowntimeDatabase.gd"
 DowntimeResolver="*res://scripts/DowntimeResolver.gd"
 FloorDatabase="*res://Global/FloorDatabase.gd"
+HexTileDatabase="*res://Global/HexTileDatabase.gd"
+HexIconDatabase="*res://Global/HexIconDatabase.gd"
 TimeManager="*res://Global/TimeManager.gd"
 MapTriggerState="*res://Global/MapTriggerState.gd"
 EventScheduler="*res://Global/EventScheduler.gd"
@@ -57,7 +59,7 @@ window/size/viewport_height=1080
 
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/hex_world_editor/plugin.cfg")
 
 [file_customization]
 
