@@ -93,9 +93,14 @@ func _repopulate() -> void:
 func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 	var card_panel := PanelContainer.new()
 	card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# IGNORE so portrait-drag events fall through to the outer
-	# CampDowntimePanel where _can_drop_data / _drop_data live.
-	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Godot 4 does NOT bubble _can_drop_data past STOP controls. Use
+	# set_drag_forwarding to attach per-card drag-drop callbacks directly.
+	card_panel.set_drag_forwarding(
+		Callable(),
+		_card_can_drop_data.bind(activity_id),
+		_card_drop_data.bind(activity_id),
+	)
 
 	var card_tex: Texture2D = _get_downtime_card_texture(activity_id)
 	if card_tex != null:
@@ -139,6 +144,29 @@ func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 
 	_cards.append({"activity_id": activity_id, "container": card_panel})
 	return card_panel
+
+# ---------------------------------------------------------------------------
+# Per-card drag-drop callbacks. Attached via set_drag_forwarding so they fire
+# on the specific card without depending on _can_drop_data bubbling up.
+# ---------------------------------------------------------------------------
+
+func _card_can_drop_data(_at_position: Vector2, data, activity_id: String) -> bool:
+	if typeof(data) != TYPE_DICTIONARY:
+		return false
+	if String(data.get("kind", "")) != "portrait":
+		return false
+	print("[Downtime] CampDowntimePanel._card_can_drop_data accept on '%s'" % activity_id)
+	return true
+
+func _card_drop_data(_at_position: Vector2, data, activity_id: String) -> void:
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	var source_char = data.get("source_character")
+	if not is_instance_valid(source_char):
+		return
+	print("[Downtime] CampDowntimePanel._card_drop_data routing: activity='%s'" % activity_id)
+	# Camp activities are always available regardless of region; pass "".
+	DowntimeResolver.begin_drop(source_char, activity_id, "")
 
 func _get_downtime_card_texture(activity_id: String) -> Texture2D:
 	var path := DOWNTIME_CARDS_DIR + activity_id + ".png"

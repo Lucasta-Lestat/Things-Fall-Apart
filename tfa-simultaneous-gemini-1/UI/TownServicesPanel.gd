@@ -313,11 +313,15 @@ func _repopulate_downtime() -> void:
 func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 	var card_panel := PanelContainer.new()
 	card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# IGNORE so portrait-drag events fall through to the outer
-	# TownServicesPanel where _can_drop_data / _drop_data live. With STOP on
-	# the card_panel, the card's default _can_drop_data returns false and the
-	# drop is rejected before reaching the panel.
-	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Godot 4 does NOT bubble _can_drop_data past STOP controls, so the
+	# panel-level override never fires for drops on a card. Explicitly attach
+	# per-card drag-drop callbacks via set_drag_forwarding instead.
+	card_panel.set_drag_forwarding(
+		Callable(),
+		_card_can_drop_data.bind(activity_id),
+		_card_drop_data.bind(activity_id),
+	)
 
 	var card_tex: Texture2D = _get_downtime_card_texture(activity_id)
 	if card_tex != null:
@@ -367,6 +371,32 @@ func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 
 	_cards.append({"activity_id": activity_id, "container": card_panel})
 	return card_panel
+
+# ---------------------------------------------------------------------------
+# Per-card drag-drop callbacks (downtime mode only). Attached via
+# set_drag_forwarding so they fire on the specific card the user drops on
+# without depending on Godot bubbling _can_drop_data up the parent chain.
+# ---------------------------------------------------------------------------
+
+func _card_can_drop_data(_at_position: Vector2, data, activity_id: String) -> bool:
+	if typeof(data) != TYPE_DICTIONARY:
+		return false
+	if String(data.get("kind", "")) != "portrait":
+		return false
+	print("[Downtime] _card_can_drop_data accept on '%s'" % activity_id)
+	return true
+
+func _card_drop_data(_at_position: Vector2, data, activity_id: String) -> void:
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	var source_char = data.get("source_character")
+	if not is_instance_valid(source_char):
+		print("[Downtime] _card_drop_data: invalid source_character")
+		return
+	var current_map_id: String = str(game_node.get("current_map_id"))
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	print("[Downtime] _card_drop_data routing to resolver: activity='%s'" % activity_id)
+	DowntimeResolver.begin_drop(source_char, activity_id, region_id)
 
 func _get_downtime_card_texture(activity_id: String) -> Texture2D:
 	var path: String = DOWNTIME_CARDS_DIR + activity_id + ".png"
