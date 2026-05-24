@@ -93,7 +93,9 @@ func _repopulate() -> void:
 func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 	var card_panel := PanelContainer.new()
 	card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# IGNORE so portrait-drag events fall through to the outer
+	# CampDowntimePanel where _can_drop_data / _drop_data live.
+	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var card_tex: Texture2D = _get_downtime_card_texture(activity_id)
 	if card_tex != null:
@@ -108,7 +110,7 @@ func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 
 	var container := VBoxContainer.new()
 	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	container.mouse_filter = Control.MOUSE_FILTER_STOP
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_panel.add_child(container)
 
 	var title_label := Label.new()

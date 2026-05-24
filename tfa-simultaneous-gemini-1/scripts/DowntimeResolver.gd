@@ -22,12 +22,16 @@ func _ready() -> void:
 
 ## Called by the activity card / camp card when a portrait is dropped on it.
 func begin_drop(character, activity_id: String, region_id: String) -> void:
+	print("[Downtime] DowntimeResolver.begin_drop entered: activity='%s' region='%s'" % [activity_id, region_id])
 	if character == null or activity_id.is_empty():
+		print("[Downtime] begin_drop early-return: character or activity_id missing")
 		return
 	var activity: Dictionary = DowntimeDatabase.get_activity(activity_id)
 	if activity.is_empty():
 		push_warning("DowntimeResolver: unknown activity '%s'" % activity_id)
+		print("[Downtime] begin_drop: activity '%s' not in DowntimeDatabase" % activity_id)
 		return
+	print("[Downtime] begin_drop: activity loaded, showing confirm dialog")
 
 	var preferred: Array = activity.get("preferred_traits", [])
 	var disliked: Array = activity.get("disliked_traits", [])

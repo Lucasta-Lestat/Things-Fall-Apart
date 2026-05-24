@@ -313,7 +313,11 @@ func _repopulate_downtime() -> void:
 func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 	var card_panel := PanelContainer.new()
 	card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# IGNORE so portrait-drag events fall through to the outer
+	# TownServicesPanel where _can_drop_data / _drop_data live. With STOP on
+	# the card_panel, the card's default _can_drop_data returns false and the
+	# drop is rejected before reaching the panel.
+	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var card_tex: Texture2D = _get_downtime_card_texture(activity_id)
 	if card_tex != null:
@@ -328,7 +332,7 @@ func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 
 	var container := VBoxContainer.new()
 	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	container.mouse_filter = Control.MOUSE_FILTER_STOP
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_panel.add_child(container)
 
 	var title_label := Label.new()
@@ -597,10 +601,15 @@ func _can_drop_data(at_position: Vector2, data) -> bool:
 		return false
 	var card_data = _find_card_at(at_position)
 	if card_data.is_empty():
+		if mode == "downtime":
+			print("[Downtime] TownServicesPanel._can_drop_data: no card at ", at_position)
 		return false
 	# Downtime cards accept portrait drops; service cards reject them.
 	if mode == "downtime":
-		return String(data.get("kind", "")) == "portrait"
+		var is_portrait := String(data.get("kind", "")) == "portrait"
+		print("[Downtime] TownServicesPanel._can_drop_data on '%s', kind='%s' -> %s" % [
+			String(card_data.get("activity_id", "?")), String(data.get("kind", "")), is_portrait])
+		return is_portrait
 	# Service mode: reject portrait drops (those belong on activity cards in
 	# downtime mode); accept the existing item-drop dicts.
 	if String(data.get("kind", "")) == "portrait":
@@ -618,6 +627,8 @@ func _drop_data(at_position: Vector2, data) -> void:
 	# Downtime-mode portrait drop: hand off to the resolver and stop.
 	if mode == "downtime":
 		var activity_id: String = String(card_data.get("activity_id", ""))
+		print("[Downtime] TownServicesPanel._drop_data routing to resolver: activity='%s' char='%s'" % [
+			activity_id, String(source_char.display_name) if "display_name" in source_char else String(source_char.name)])
 		if activity_id.is_empty():
 			return
 		var current_map_id: String = str(game_node.get("current_map_id"))
