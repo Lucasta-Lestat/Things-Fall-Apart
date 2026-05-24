@@ -1,0 +1,215 @@
+"""Generate 10 fantasy-battlemap attempts across multiple Gemini image models.
+
+The reference is a top-down hand-drawn fantasy compound: stone walls enclosing
+a courtyard, multiple wooden-roofed buildings, fenced gardens with crops, a
+river along one edge, all painted in warm watercolor over parchment.
+
+Outputs go to tools/map_outputs/ as 01_<model>_<variant>.png with a sidecar
+JSON of the prompt used. Errors are logged but never abort the batch.
+
+Run from repo root:
+    python tools/generate_map_attempts.py
+"""
+from __future__ import annotations
+
+import base64
+import json
+import os
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+load_dotenv()
+
+API_KEY = os.environ.get("GEMINI_API_KEY")
+if not API_KEY:
+    sys.exit("GEMINI_API_KEY not set (check .env)")
+
+OUT_DIR = Path(__file__).resolve().parent / "map_outputs"
+OUT_DIR.mkdir(exist_ok=True)
+
+BASE_DESCRIPTION = (
+    "Top-down fantasy tabletop battlemap of a small fortified medieval compound, "
+    "hand-painted watercolor on parchment in the style of Dyson Logos / 2-Minute "
+    "Tabletop. Thick stone perimeter walls form a rectangular enclosure with "
+    "corner towers and a wooden gatehouse. Inside: a central main hall with a "
+    "red tile roof, smaller stone-and-timber outbuildings, a chapel, a stable, "
+    "barracks, and a kitchen. Several fenced garden plots with rows of crops "
+    "(cabbages, onions, herbs) and an orchard with neatly spaced fruit trees. "
+    "A cobbled courtyard with a well, wooden carts and barrels scattered "
+    "around. A clear blue river flows along the right edge, crossed by small "
+    "wooden footbridges. Sandy beaches and reed banks where land meets water. "
+    "Lush green grass between buildings. Furniture visible from above: tables, "
+    "beds, chairs, fireplaces. Warm earthy palette: terracotta, ochre, moss, "
+    "soft blue. Soft hand-drawn linework, no text, no labels, no grid, no UI."
+)
+
+VARIANTS: list[tuple[str, str]] = [
+    (
+        "imagen-4.0-generate-001",
+        "fortified_compound_v1",
+        BASE_DESCRIPTION,
+    ),
+    (
+        "imagen-4.0-generate-001",
+        "monastery_v1",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "small walled monastery with cloister courtyard",
+        ),
+    ),
+    (
+        "imagen-4.0-generate-001",
+        "frontier_keep_v1",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "frontier border keep with a great hall and watchtowers",
+        ),
+    ),
+    (
+        "imagen-4.0-ultra-generate-001",
+        "fortified_compound_ultra",
+        BASE_DESCRIPTION
+        + " Highly detailed brushwork, visible parchment texture, subtle shadows.",
+    ),
+    (
+        "imagen-4.0-ultra-generate-001",
+        "manor_estate_ultra",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "noble manor estate enclosed by a low stone wall",
+        )
+        + " Highly detailed brushwork, painterly watercolor washes.",
+    ),
+    (
+        "imagen-4.0-fast-generate-001",
+        "village_hamlet_fast",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "small walled village hamlet",
+        ),
+    ),
+    (
+        "imagen-4.0-fast-generate-001",
+        "trading_post_fast",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "remote trading post with merchant stalls and warehouses",
+        ),
+    ),
+    (
+        "gemini-2.5-flash-image",
+        "fortified_compound_flash",
+        BASE_DESCRIPTION,
+    ),
+    (
+        "gemini-2.5-flash-image",
+        "abbey_garden_flash",
+        BASE_DESCRIPTION.replace(
+            "small fortified medieval compound",
+            "small walled abbey with extensive herb and vegetable gardens",
+        ),
+    ),
+    (
+        "gemini-2.5-flash-image",
+        "river_outpost_flash",
+        BASE_DESCRIPTION.replace(
+            "A clear blue river flows along the right edge",
+            "A wide clear river dominates the right third of the map",
+        ).replace(
+            "small fortified medieval compound",
+            "riverside outpost built around a stone bridge",
+        ),
+    ),
+]
+
+
+@dataclass
+class Result:
+    index: int
+    model: str
+    variant: str
+    status: str
+    path: str | None = None
+    error: str | None = None
+
+
+def save_imagen(client: genai.Client, model: str, prompt: str, out_path: Path) -> None:
+    resp = client.models.generate_images(
+        model=model,
+        prompt=prompt,
+        config=types.GenerateImagesConfig(
+            number_of_images=1,
+            aspect_ratio="4:3",
+            person_generation="dont_allow",
+        ),
+    )
+    if not resp.generated_images:
+        raise RuntimeError("no images returned")
+    img = resp.generated_images[0].image
+    data = img.image_bytes
+    out_path.write_bytes(data)
+
+
+def save_gemini_image(client: genai.Client, model: str, prompt: str, out_path: Path) -> None:
+    resp = client.models.generate_content(
+        model=model,
+        contents=prompt,
+    )
+    for cand in resp.candidates or []:
+        for part in cand.content.parts or []:
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data:
+                data = inline.data
+                if isinstance(data, str):
+                    data = base64.b64decode(data)
+                out_path.write_bytes(data)
+                return
+    raise RuntimeError("no image part in response")
+
+
+def main() -> None:
+    client = genai.Client(api_key=API_KEY)
+    results: list[Result] = []
+
+    for i, (model, variant, prompt) in enumerate(VARIANTS, start=1):
+        stem = f"{i:02d}_{model.replace('.', '-').replace('/', '-')}_{variant}"
+        out_path = OUT_DIR / f"{stem}.png"
+        meta_path = OUT_DIR / f"{stem}.json"
+
+        print(f"[{i:02d}/10] {model} :: {variant}")
+        t0 = time.time()
+        try:
+            if model.startswith("imagen"):
+                save_imagen(client, model, prompt, out_path)
+            else:
+                save_gemini_image(client, model, prompt, out_path)
+            dt = time.time() - t0
+            print(f"        OK  {out_path.name}  ({dt:.1f}s, {out_path.stat().st_size} bytes)")
+            results.append(Result(i, model, variant, "ok", str(out_path)))
+        except Exception as e:
+            dt = time.time() - t0
+            print(f"        ERR ({dt:.1f}s) {type(e).__name__}: {e}")
+            results.append(Result(i, model, variant, "error", error=f"{type(e).__name__}: {e}"))
+
+        meta_path.write_text(json.dumps({
+            "index": i,
+            "model": model,
+            "variant": variant,
+            "prompt": prompt,
+        }, indent=2))
+
+    summary_path = OUT_DIR / "_summary.json"
+    summary_path.write_text(json.dumps([r.__dict__ for r in results], indent=2))
+    print(f"\nSummary written to {summary_path}")
+    ok = sum(1 for r in results if r.status == "ok")
+    print(f"{ok}/{len(results)} succeeded")
+
+
+if __name__ == "__main__":
+    main()
