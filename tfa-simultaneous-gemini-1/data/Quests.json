@@ -1,0 +1,448 @@
+{
+  "quests": [
+    {
+      "id": "tutorial_quest",
+      "icon": "res://Icons/Guard.png",
+      "display_name": "The Town Guard's Plea",
+      "start_stage": "find_guard",
+      "auto_start": true,
+      "stages": [
+        {
+          "id": "find_guard",
+          "name": "Find the Town Guard",
+          "description": "Travel to the town square to meet the guard.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "retrieve_sword" }
+          ]
+        },
+        {
+          "id": "retrieve_sword",
+          "name": "Acquire a Longsword",
+          "description": "Find a longsword somewhere in the world.",
+          "transitions": [
+            { "conditions": { "item_picked::longsword": true }, "next_stage": "deliver" },
+            { "conditions": { "char_dead::town_guard": true }, "next_stage": "__fail__" }
+          ]
+        },
+        {
+          "id": "deliver",
+          "name": "Return to the Town Square",
+          "description": "Bring the longsword back to the guard.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "__complete__" },
+            { "conditions": { "quest_days::tutorial_quest": ">=7" }, "next_stage": "__fail__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "king_in_the_north",
+      "icon": "res://Icons/quests/king_in_the_north.png",
+      "display_name": "The King in the North",
+      "start_stage": "march_north",
+      "stages": [
+        {
+          "id": "march_north",
+          "name": "March on Skarsgaard",
+          "description": "Queen Madeline du Belmonte has declared a High Quest: bring her the head of Skarsgaard's King and she will set her own crown upon your brow. Travel to his hall.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "skarsgaard_throne" }, "next_stage": "slay_king" }
+          ]
+        },
+        {
+          "id": "slay_king",
+          "name": "Slay the King of Skarsgaard",
+          "description": "Cut him down on his own throne.",
+          "transitions": [
+            { "conditions": { "char_dead::king_skarsgaard": true }, "next_stage": "take_head" }
+          ]
+        },
+        {
+          "id": "take_head",
+          "name": "Take the King's Head",
+          "description": "Claim the grisly trophy.",
+          "transitions": [
+            { "conditions": { "item_picked::skarsgaard_king_head": true }, "next_stage": "return_to_queen" }
+          ]
+        },
+        {
+          "id": "return_to_queen",
+          "name": "Return to Queen Madeline",
+          "description": "Lay the head before her at Don Manor and receive her crown.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "don_manor" }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "rapture_of_the_maidens",
+      "icon": "res://Icons/quests/rapture_of_the_maidens.png",
+      "display_name": "The Rapture of the Maidens",
+      "start_stage": "track_beast",
+      "stages": [
+        {
+          "id": "track_beast",
+          "name": "Track the Tunneling Beast",
+          "description": "A finned worm churns through the earth and drives every male around it into a killing heat. Hunt it down in the wilds.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "cemetery" }, "next_stage": "slay_beast" }
+          ]
+        },
+        {
+          "id": "slay_beast",
+          "name": "Slay the Beast",
+          "description": "Kill the rapture beast before more virgins are taken.",
+          "transitions": [
+            { "conditions": { "char_dead::rapture_beast": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "the_commision",
+      "icon": "res://Icons/quests/the_commision.png",
+      "display_name": "The Commision",
+      "start_stage": "earn_their_trust",
+      "stages": [
+        {
+          "id": "earn_their_trust",
+          "name": "Earn the Mafia's Trust",
+          "description": "Run jobs for the families until one of them counts you as a friend. The mafia's code is honest enterprise; the Empire's law is theft dressed in robes.",
+          "transitions": [
+            { "conditions": { "faction_tier::liziti": ">=3" }, "next_stage": "consolidate" },
+            { "conditions": { "faction_tier::dragatini": ">=3" }, "next_stage": "consolidate" },
+            { "conditions": { "faction_tier::tortellini": ">=3" }, "next_stage": "consolidate" }
+          ]
+        },
+        {
+          "id": "consolidate",
+          "name": "Make Them Sovereign",
+          "description": "Push a single family to the top of Scarlatti so their code can replace the Empire's law.",
+          "transitions": [
+            { "conditions": { "faction_tier::liziti": ">=5" }, "next_stage": "__complete__" },
+            { "conditions": { "faction_tier::dragatini": ">=5" }, "next_stage": "__complete__" },
+            { "conditions": { "faction_tier::tortellini": ">=5" }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "southrons_mill",
+      "icon": "res://Icons/quests/southrons_mill.png",
+      "display_name": "Southron's Mill",
+      "start_stage": "find_the_mill",
+      "stages": [
+        {
+          "id": "find_the_mill",
+          "name": "Find the Wandering Mill",
+          "description": "It moves through the night like an owl and through the earth like a worm. Track it down.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "southrons_mill" }, "next_stage": "knock_some_sense" }
+          ]
+        },
+        {
+          "id": "knock_some_sense",
+          "name": "Knock Some Sense Into the Southron",
+          "description": "He pays no taxes and no honest workers are seen at his mill. Have a word with him.",
+          "transitions": [
+            { "conditions": { "char_dead::the_southron": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "quest_for_quorum",
+      "icon": "res://Icons/quests/quest_for_quorum.png",
+      "display_name": "The Quest for Quorum",
+      "start_stage": "find_marius",
+      "stages": [
+        {
+          "id": "find_marius",
+          "name": "Find Senator Marius",
+          "description": "He has not been seen in public for months. Bring him home to the Curia.",
+          "transitions": [
+            { "conditions": { "char_at::senator_marius": "curia" }, "next_stage": "find_titus" }
+          ]
+        },
+        {
+          "id": "find_titus",
+          "name": "Find Senator Titus",
+          "description": "Bring the next absent senator to the Curia.",
+          "transitions": [
+            { "conditions": { "char_at::senator_titus": "curia" }, "next_stage": "find_clodia" }
+          ]
+        },
+        {
+          "id": "find_clodia",
+          "name": "Find Senator Clodia",
+          "description": "One last absent voice to restore.",
+          "transitions": [
+            { "conditions": { "char_at::senator_clodia": "curia" }, "next_stage": "reassemble" }
+          ]
+        },
+        {
+          "id": "reassemble",
+          "name": "Reassert the Senate's Authority",
+          "description": "Stand with them in the Curia as the Senate is called back to order.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "curia" }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "rats_hostage_sausage",
+      "icon": "res://Icons/quests/rats_hostage_sausage.png",
+      "display_name": "The Rats Are Making Hostage Sausage",
+      "start_stage": "infiltrate",
+      "stages": [
+        {
+          "id": "infiltrate",
+          "name": "Infiltrate the Vermincelli Hideout",
+          "description": "A drug deal went bad and the Vermincelli are holding Made men from the other families. Get inside.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "vermincelli_hideout" }, "next_stage": "kill_capo" },
+            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__" }
+          ]
+        },
+        {
+          "id": "kill_capo",
+          "name": "Cut Down the Vermincelli Capo",
+          "description": "End the standoff at the top.",
+          "transitions": [
+            { "conditions": { "char_dead::vermincelli_capo": true }, "next_stage": "__complete__" },
+            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "sacred_grove",
+      "icon": "res://Icons/quests/sacred_grove.png",
+      "display_name": "The Sacred Grove",
+      "start_stage": "approach",
+      "stages": [
+        {
+          "id": "approach",
+          "name": "Approach the Sacred Grove",
+          "description": "Only those who have not lain with a woman or child may enter. Find the grove.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "sacred_grove" }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "cheese_it",
+      "icon": "res://Icons/quests/cheese_it.png",
+      "display_name": "Cheese It!",
+      "start_stage": "intervene",
+      "stages": [
+        {
+          "id": "intervene",
+          "name": "Save the Cheesemonger",
+          "description": "A cheesemonger slave is fleeing his chef-master, who pursues him brandishing a rolling pin. Stop the chef before the slave is killed.",
+          "transitions": [
+            { "conditions": { "char_dead::chef_master": true }, "next_stage": "__complete__" },
+            { "conditions": { "char_dead::cheese_monger": true }, "next_stage": "__fail__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "river_to_the_see",
+      "icon": "res://Icons/quests/river_to_the_see.png",
+      "display_name": "From the River to the See",
+      "start_stage": "visit_village",
+      "stages": [
+        {
+          "id": "visit_village",
+          "name": "Visit the River-Elf Village",
+          "description": "Elves emerge naked from the river each day with no memory of who they are. Their idyllic village hides a darker truth.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "river_elf_village" }, "next_stage": "confront_trees" }
+          ]
+        },
+        {
+          "id": "confront_trees",
+          "name": "Stop the Trees Training Them for War",
+          "description": "The dryad is shaping the amnesiac elves into soldiers. Put a stop to it.",
+          "transitions": [
+            { "conditions": { "char_dead::dryad": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "the_last_laugh",
+      "icon": "res://Icons/quests/the_last_laugh.png",
+      "display_name": "The Last Laugh",
+      "start_stage": "enter_catacombs",
+      "stages": [
+        {
+          "id": "enter_catacombs",
+          "name": "Enter the Bortelinian Catacombs",
+          "description": "An Alamonean magician has offered you his weight in gold and three of his daughters for an ancient relic buried here.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "bortelinian_catacombs" }, "next_stage": "retrieve_relic" }
+          ]
+        },
+        {
+          "id": "retrieve_relic",
+          "name": "Retrieve the Ancient Relic",
+          "description": "Find the relic somewhere in the catacombs.",
+          "transitions": [
+            { "conditions": { "item_picked::ancient_relic_bortelin": true }, "next_stage": "deliver_relic" }
+          ]
+        },
+        {
+          "id": "deliver_relic",
+          "name": "Return to the Alamonean Magician",
+          "description": "Claim your reward at his tower.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "alamonean_tower" }, "next_stage": "__complete__" },
+            { "conditions": { "char_dead::alamonean_magician": true }, "next_stage": "__fail__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "companion_zakariah",
+      "icon": "res://Icons/quests/companion_zakariah.png",
+      "display_name": "Zakariah: An Old Debt",
+      "start_stage": "hear_him_out",
+      "stages": [
+        {
+          "id": "hear_him_out",
+          "name": "Hear Zakariah Out",
+          "description": "Zakariah wants a quiet word at the tavern.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "perrow_tavern" }, "next_stage": "settle_debt" }
+          ]
+        },
+        {
+          "id": "settle_debt",
+          "name": "Settle Zakariah's Debt",
+          "description": "The bandit chief holds his marker. Kill him or pay him off.",
+          "transitions": [
+            { "conditions": { "char_dead::bandit_chief": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "companion_jacana",
+      "icon": "res://Icons/quests/companion_jacana.png",
+      "display_name": "Jacana: A Patrician Grudge",
+      "start_stage": "private_word",
+      "stages": [
+        {
+          "id": "private_word",
+          "name": "A Private Word with Jacana",
+          "description": "Jacana has unfinished business at Don Manor.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "don_manor" }, "next_stage": "settle_grudge" }
+          ]
+        },
+        {
+          "id": "settle_grudge",
+          "name": "Cut Down the Liziti Don",
+          "description": "End the line that ruined her family.",
+          "transitions": [
+            { "conditions": { "char_dead::liziti_don": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "companion_barthes",
+      "icon": "res://Icons/quests/companion_barthes.png",
+      "display_name": "Barthes: The Reading List",
+      "start_stage": "meet_at_university",
+      "stages": [
+        {
+          "id": "meet_at_university",
+          "name": "Meet Barthes at the University",
+          "description": "Barthes is hunting a forbidden volume rumoured to be in the Minschaleft stacks.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "minschaleft_university" }, "next_stage": "recover_relic" }
+          ]
+        },
+        {
+          "id": "recover_relic",
+          "name": "Recover the Forbidden Volume",
+          "description": "Lift the relic from the Bortelinian Catacombs for him.",
+          "transitions": [
+            { "conditions": { "item_picked::ancient_relic_bortelin": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "companion_gnaeus",
+      "icon": "res://Icons/quests/companion_gnaeus.png",
+      "display_name": "Gnaeus: A Senator's Honour",
+      "start_stage": "stand_with_him",
+      "stages": [
+        {
+          "id": "stand_with_him",
+          "name": "Stand with Gnaeus at the Curia",
+          "description": "He cannot reclaim his seat alone.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "curia" }, "next_stage": "restore_quorum" }
+          ]
+        },
+        {
+          "id": "restore_quorum",
+          "name": "Restore the Quorum",
+          "description": "Help him drag at least one missing senator back to the chamber.",
+          "transitions": [
+            { "conditions": { "char_at::senator_marius": "curia" }, "next_stage": "__complete__" },
+            { "conditions": { "char_at::senator_titus": "curia" }, "next_stage": "__complete__" },
+            { "conditions": { "char_at::senator_clodia": "curia" }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "companion_gleg",
+      "icon": "res://Icons/quests/companion_gleg.png",
+      "display_name": "Gleg: A Deputy's Investigation",
+      "start_stage": "ride_along",
+      "stages": [
+        {
+          "id": "ride_along",
+          "name": "Ride Along with Deputy Gleg",
+          "description": "Gleg suspects something rotten in the cemetery.",
+          "transitions": [
+            { "conditions": { "char_at::protagonist": "cemetery" }, "next_stage": "close_the_case" }
+          ]
+        },
+        {
+          "id": "close_the_case",
+          "name": "Close the Case",
+          "description": "Put down the cultist ringleader.",
+          "transitions": [
+            { "conditions": { "char_dead::cultist": true }, "next_stage": "__complete__" }
+          ]
+        }
+      ]
+    }
+  ]
+}
