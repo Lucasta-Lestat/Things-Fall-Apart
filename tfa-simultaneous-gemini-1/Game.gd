@@ -38,6 +38,13 @@ var warp_zones: Array = []
 var context_menu_open: bool = false
 var stealth_mode: bool = false
 
+# World-map state. When the player presses M from a local map we remember
+# which map they came from and where their protagonist stood, so M again
+# returns them to that exact spot.
+var _world_map_origin_map_id: String = ""
+var _world_map_origin_position: Vector2 = Vector2.ZERO
+const WORLD_MAP_ID: String = "scarlatti_world"
+
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
@@ -361,33 +368,55 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 
 	
 func load_map(map_id: String, from_map: String = "") -> void:
+	# Validate target before tearing down the current map so a missing asset
+	# (e.g. world-map PNG not yet pushed) leaves us on the current map
+	# instead of in a broken empty state.
+	var new_map_data: Dictionary = MapDatabase.get_map_data(map_id)
+	if new_map_data.is_empty():
+		push_error("Unknown map: " + map_id)
+		return
+	var new_images: Dictionary = new_map_data.get("images", {})
+	var validate_path: String = new_images.get("structures", "")
+	if validate_path.is_empty() or not ResourceLoader.exists(validate_path):
+		validate_path = new_images.get("map", "")
+	if validate_path.is_empty() or not ResourceLoader.exists(validate_path):
+		push_error("Map '%s' has no loadable image (looked for %s); aborting load." % [map_id, new_images])
+		return
+
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
 	if not party_chars.is_empty():
 		save_party_state()
- 
+
 	# Clean up previous map
 	_unload_current_map()
- 
-	# Load map data from the maps JSON
-	current_map_data = MapDatabase.get_map_data(map_id)
-	if current_map_data.is_empty():
-		push_error("Unknown map: " + map_id)
-		return
+
+	current_map_data = new_map_data
 	current_map_id = map_id
- 
-	# 1. Configure GridManager tile size and initialize the grid
+
+	# 1. Configure GridManager tile size and initialize the grid.
+	# World maps have no structures layer — fall back to the main map image.
 	GridManager.TILE_SIZE = current_map_data.get("tile_size", 64)
 	var images: Dictionary = current_map_data.get("images", {})
-	# Load structure map to get pixel dimensions for grid initialization
-	var struct_img: Image = load(images.get("structures", "")).get_image()
-	GridManager.initialize(struct_img.get_width(), struct_img.get_height())
+	var dim_src_path: String = images.get("structures", "")
+	if dim_src_path.is_empty() or not ResourceLoader.exists(dim_src_path):
+		dim_src_path = images.get("map", "")
+	var dim_img: Image = load(dim_src_path).get_image()
+	GridManager.initialize(dim_img.get_width(), dim_img.get_height())
 
-	# 2. Tell the MapLoader to build the visual map (floors, structures)
+	# 2. Tell the MapLoader to build the visual map (floors, structures).
+	#    World maps skip the structures pass and use the world-terrain palette.
+	var is_world_map: bool = current_map_data.get("is_world_map", false)
+	map_loader.world_map_mode = is_world_map
 	map_loader.map_image_path = images.get("map", "")
 	map_loader.mask_image_path = images.get("mask", "")
 	map_loader.structure_map_image_path = images.get("structures", "")
 	map_loader.structure_mask_path = images.get("structures_mask", "")
 	map_loader.generate_map()
+
+	# Apply time-scale multiplier. World maps run game time much faster so
+	# hunger, hours-of-day, and weather advance on the strategic scale; local
+	# maps default to 1.0 which restores realtime pacing on return.
+	TimeManager.time_scale = float(current_map_data.get("time_scale_multiplier", 1.0))
  
 	# 3. Set up ambient effects (fog, music, weather)
 	setup_map_fogs(current_map_data)
@@ -598,9 +627,16 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 	var base_pos_arr = spawn_data.get("position", [400, 400])
 	var base_pos = Vector2(base_pos_arr[0], base_pos_arr[1])
 
-	for i in range(party_state.size()):
+	# On the world map the whole party collapses into a single "banner" unit
+	# representing the player faction. The rest of the party's live state
+	# stays in party_state and is restored intact when we return to a local
+	# map. The protagonist's runtime entity stands in for the group.
+	var is_world_map: bool = current_map_data.get("is_world_map", false)
+	var spawn_count: int = 1 if is_world_map else party_state.size()
+
+	for i in range(spawn_count):
 		var entry = party_state[i]
-		var offset = Vector2(i * 40, 0)
+		var offset = Vector2(i * 40, 0) if not is_world_map else Vector2.ZERO
 		var character = _spawn_character(entry["template_id"], base_pos + offset, entry.get("overrides", {}))
 		if not character:
 			continue
@@ -1005,6 +1041,9 @@ func _process(delta: float) -> void:
 	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
 	# unreliable when overlapping pickable areas exist (characters, items).
 	_update_warp_hover_labels()
+	# On the world map, reveal city warps only when the banner unit is near.
+	if current_map_data.get("is_world_map", false):
+		_update_world_warp_reveal()
 
 func _update_warp_hover_labels() -> void:
 	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
@@ -1103,6 +1142,13 @@ func _input(event: InputEvent) -> void:
 				if not event.echo:
 					stealth_mode = not stealth_mode
 					_toggle_npc_los_cones()
+
+	# World-map toggle (M) and water gathering (G). Use action lookups so the
+	# bindings stay editable from project.godot.
+	if event.is_action_pressed("world_map") and not event.is_echo():
+		toggle_world_map()
+	if event.is_action_pressed("gather_water") and not event.is_echo():
+		gather_water_at_party()
 	# Number keys 1-9 to select party members (Ctrl+number to toggle multi-select)
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key = event.keycode
@@ -1882,6 +1928,100 @@ class SelectionCircle extends Node2D:
 			draw_line(points[i], points[i + 1], circle_color, line_width, true)
 			
 			
+# ---------------------------------------------------------------------------
+# World map: toggle, hidden warp reveal, water gathering
+# ---------------------------------------------------------------------------
+
+func toggle_world_map() -> void:
+	"""Press M to flip between the active local map and the Scarlatti world map.
+
+	From a local map: remember where the protagonist stood and load the world
+	map (the rest of the party rides along in party_state).
+	From the world map: load back into the remembered local map and restore
+	the protagonist's exact pre-trip position so the trip is invisible."""
+	if current_map_data.get("is_world_map", false):
+		# Returning to local map.
+		var return_to: String = _world_map_origin_map_id
+		if return_to.is_empty():
+			return_to = "cemetery"
+		var return_pos: Vector2 = _world_map_origin_position
+		_world_map_origin_map_id = ""
+		load_map(return_to)
+		# After load, snap protagonist to where they left off.
+		if return_pos != Vector2.ZERO and player and is_instance_valid(player):
+			player.global_position = return_pos
+			player.target_position = return_pos
+			if player_camera:
+				player_camera.global_position = return_pos
+	else:
+		# Entering world map. Remember where we left.
+		_world_map_origin_map_id = current_map_id
+		if player and is_instance_valid(player):
+			_world_map_origin_position = player.global_position
+		else:
+			_world_map_origin_position = Vector2.ZERO
+		load_map(WORLD_MAP_ID)
+
+func _update_world_warp_reveal() -> void:
+	"""Show world-map warps only when the banner unit is within reveal_radius_px."""
+	if not player or not is_instance_valid(player):
+		return
+	var banner_pos: Vector2 = player.global_position
+	for area in warp_zones:
+		if not is_instance_valid(area):
+			continue
+		if not area.get_meta("world_warp", false):
+			continue
+		var radius: float = float(area.get_meta("reveal_radius_px", 200.0))
+		var dist: float = banner_pos.distance_to(area.global_position)
+		var revealed: bool = dist <= radius
+		area.visible = revealed
+		# Toggling the collision_layer also gates left-click teleport probing.
+		area.collision_layer = CollisionLayers.WARPS if revealed else 0
+
+func gather_water_at_party() -> void:
+	"""Press G: if the player's current character stands adjacent to a water
+	tile (a 'world_water' floor on the world map, or a registered water fluid
+	on any map), gather a waterskin into their inventory."""
+	if not primary_selected or not is_instance_valid(primary_selected):
+		return
+	var actor: ProceduralCharacter = primary_selected
+	var actor_tile: Vector2i = GridManager.world_to_map(actor.global_position)
+	if not _is_water_adjacent(actor_tile):
+		GameLog.add_entry("No water within reach.")
+		return
+	if not actor.inventory:
+		return
+	var added: bool = actor.inventory.add_item({
+		"display_name": "Waterskin",
+		"id": "waterskin",
+		"is_stackable": true,
+		"max_stack_size": 10,
+	})
+	if added:
+		GameLog.add_entry(actor.Name + " gathers water into a waterskin.")
+		SfxManager.play("pickup", actor.global_position)
+	else:
+		GameLog.add_entry("Inventory full — can't carry more water.")
+
+func _is_water_adjacent(tile: Vector2i) -> bool:
+	# Checks the tile itself plus 8 neighbours. Counts a 'world_water' floor
+	# or any registered water fluid as a valid water source.
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			var t = tile + Vector2i(dx, dy)
+			if _is_water_at_tile(t):
+				return true
+	return false
+
+func _is_water_at_tile(tile: Vector2i) -> bool:
+	var fid: String = GridManager.floors.get(tile, "")
+	if fid == "world_water" or fid == "water":
+		return true
+	if fluid_manager and fluid_manager.get_fluid_type_at(tile) == "water":
+		return true
+	return false
+
 func _create_warp_zones(warp_list: Array) -> void:
 	for warp_def in warp_list:
 		# Check warp conditions (e.g. need a key)
@@ -1900,6 +2040,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.set_meta("target_map", warp_def.get("target_map", ""))
 		area.set_meta("target_spawn", warp_def.get("target_spawn", "default"))
 		area.set_meta("label", warp_def.get("label", ""))
+		# World-map warps stay hidden + unclickable until the party banner
+		# gets within reveal_radius_px. _update_world_warp_reveal() flips the
+		# arrow visibility and collision_layer each frame.
+		if warp_def.get("world_warp", false):
+			area.set_meta("world_warp", true)
+			area.set_meta("reveal_radius_px", float(warp_def.get("reveal_radius_px", 200.0)))
 
 		# Visible arrow sprite, scaled to a consistent display height
 		var arrow := Sprite2D.new()
@@ -1954,6 +2100,12 @@ func _create_warp_zones(warp_list: Array) -> void:
 
 		add_child(area)
 		warp_zones.append(area)
+
+		# World-map warps spawn hidden and non-pickable until the party banner
+		# closes within reveal_radius_px (see _update_world_warp_reveal).
+		if area.get_meta("world_warp", false):
+			area.visible = false
+			area.collision_layer = 0
 
 # Rotation in radians for the warp arrow sprite. The texture points east (+x),
 # so 0 = east, PI/2 = south, PI = west, -PI/2 = north.
