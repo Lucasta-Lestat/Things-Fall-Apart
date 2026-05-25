@@ -1460,10 +1460,10 @@ func process_weapon_hit(
 	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
 	var is_unarmed: bool = weapon == null or weapon is AbilityShape
 
-	# damage_limb applies limb-specific armor DR internally and returns total dealt
-	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
+	# take_damage applies character armor and condition DR internally and returns total dealt
+	var final_damage = target.take_damage(attack_damage, local_hit, limb_type)
 	var limb = target.get_limb(limb_type)
-	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
+	var armor_dr = target.armor_dr.duplicate()
 
 	# Mutation proc: The Claws That Catch — every unarmed strike attempts a grapple.
 	# Whether it lands is purely the target's STR save (grappled.save_stat = "str").
@@ -1789,7 +1789,7 @@ func _process_projectile_hit_character(
 	var local_hit = target.to_local(hit_position)
 	var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
 	var attack_damage = weapon.damage.duplicate()
-	target.damage_limb(limb_type, attack_damage, local_hit)
+	target.take_damage(attack_damage, local_hit, limb_type)
 
 	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
@@ -1869,7 +1869,7 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
 			var limb_type: int = collider.get_limb_at_position(local_hit, collider.body_width, collider.body_height)
-			collider.damage_limb(limb_type, thrown_damage.duplicate(), local_hit)
+			collider.take_damage(thrown_damage.duplicate(), local_hit, limb_type)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
@@ -2103,7 +2103,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 
 	# --- Vitals ---
 	state["MP"] = character.MP
- 
+	state["current_hp"] = character.current_hp
+
 	# --- Appearance ---
 	state["skin_color"] = character.skin_color.to_html()
 	state["hair_color"] = character.hair_color.to_html()
@@ -2252,7 +2253,10 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
  
 	# --- Vitals ---
 	if state.has("MP"):           character.MP = state["MP"]
- 
+	if state.has("current_hp"):
+		character.current_hp = clamp(int(state["current_hp"]), 0, character.max_hp)
+		character._check_death()
+
 	# --- Appearance ---
 	if state.has("skin_color"):
 		character.skin_color = Color.html(state["skin_color"])

@@ -397,6 +397,11 @@ var conditions = {}
 var max_hp: int:
 	get: return 6 + int(effective_constitution()) / 10
 
+var current_hp: int = 0
+
+# Character-wide armor damage resistance, summed from all equipped pieces.
+var armor_dr: Dictionary = Globals.DR_0.duplicate()
+
 var max_MP: int:
 	get: return int(effective_will())
 
@@ -508,7 +513,9 @@ func _ready() -> void:
 	_setup_collision()
 	_create_body_parts()
 	_initialize_arms()
-	initialize_limbs(constitution)
+	initialize_limbs()
+	current_hp = max_hp
+	_recompute_armor_dr()
 	TimeManager.time_updated.connect(_on_time_updated)
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 	_on_stats_recalculated() # Initialize the effective stats
@@ -993,9 +1000,8 @@ func _self_heal(effect: Dictionary, _targets: Array, _ability, _target_position:
 	var amount = float(effect.get("amount", 0.0))
 	if amount <= 0:
 		return {"success": false, "error": "No heal amount"}
-	for limb in limbs.values():
-		limb.heal(amount)
-	return {"success": true, "healed": amount}
+	var healed: int = heal(int(amount))
+	return {"success": true, "healed": healed}
 
 
 func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
@@ -1091,35 +1097,16 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 	if result.has("damage"):
 		var damage_amount = result["damage"]
 		var damage_type = result.get("damage_type", "true")
-		var limb_type = instance.target_limb if instance.target_limb != null else LimbType.TORSO
-		# Bleeding always wears down the torso, regardless of which limb the
-		# wound is on — death from blood loss is just torso HP reaching 0.
-		if instance.condition and instance.condition.id == "bleeding":
-			limb_type = LimbType.TORSO
-
-		# Build damage dict matching your damage_limb format
 		var damage_dict = {damage_type: damage_amount}
-		
-		# Use global position as fallback for visual location
-		var hit_location = global_position
-		damage_limb(limb_type, damage_dict, hit_location)
-		_check_death()
-	
+		take_damage(damage_dict, global_position)
+
 	if result.has("heal"):
-		var heal_amount = result["heal"]
-		if instance.target_limb != null:
-			var limb = get_limb(instance.target_limb)
-			if limb:
-				limb.heal(heal_amount)
-		else:
-			# Whole body heal — distribute across all limbs
-			for limb in limbs.values():
-				limb.heal(heal_amount)
-	
+		var heal_amount = int(result["heal"])
+		heal(heal_amount)
+
 	if result.has("condition_id") and effect.get("type") == "apply_condition":
 		if randf() <= result.get("chance", 1.0):
-			# Chain-applied conditions inherit the same limb
-			condition_manager.apply_condition(result["condition_id"], instance.source, 1, -2.0, instance.target_limb)
+			condition_manager.apply_condition(result["condition_id"], instance.source, 1, -2.0)
 	
 	if result.has("condition_id") and effect.get("type") == "remove_condition":
 		condition_manager.remove_condition(result["condition_id"])
@@ -3607,7 +3594,8 @@ func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 	
 	if holder:
 		holder.add_child(equipment)
-	
+
+	_recompute_armor_dr()
 	return equipment
 
 func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
@@ -3638,6 +3626,7 @@ func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 				feet_slot.remove_child(feet_equipment)
 				feet_equipment.queue_free()
 				feet_equipment = null
+	_recompute_armor_dr()
 
 func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 	"""Equip equipment by looking up its name in the database"""
@@ -3664,73 +3653,34 @@ func get_relationship_with(other_character: ProceduralCharacter) -> Faction.Rela
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
 
-# Limb data structure
+# Tracks per-limb severed/disabled state. HP lives on the character (current_hp),
+# not the limb. Limbs are removed/disabled only by explicit ability/condition
+# effects, never as a side effect of HP loss.
 class Limb:
 	var limb_type: LimbType
 	var name: String
-	var max_hp: int
-	var current_hp: int
-	var armor_dr: Dictionary = Globals.DR_0  # Damage Resistance from armor
 	var is_disabled: bool = false
 	var is_severed: bool = false
-	
-	# Limb-specific HP multipliers (relative to base)
-	const HP_MULTIPLIERS = {
-		LimbType.HEAD: 0.4,       # Head is fragile
-		LimbType.TORSO: 1.0,      # Torso is the base
-		LimbType.LEFT_ARM: 0.5,
-		LimbType.RIGHT_ARM: 0.5,
-		LimbType.LEFT_LEG: 0.6,
-		LimbType.RIGHT_LEG: 0.6
-	}
-	
-	func _init(type: LimbType, base_hp: int) -> void:
+
+	func _init(type: LimbType) -> void:
 		limb_type = type
 		name = LimbType.keys()[type].capitalize().replace("_", " ")
-		max_hp = int(base_hp * HP_MULTIPLIERS[type])
-		current_hp = max_hp
-	
-	
-	func heal(amount: int) -> void:
-		if not is_severed:
-			current_hp = min(current_hp + amount, max_hp)
-			if current_hp > 0:
-				is_disabled = false
-	
-	func set_armor(dr: Dictionary) -> void:
-		armor_dr = dr
-	
-	func get_hp_percent() -> float:
-		return float(current_hp) / float(max_hp) if max_hp > 0 else 0.0
 
 # All limbs
 var limbs: Dictionary = {}  # LimbType -> Limb
 
-func initialize_limbs(base_hp: int) -> void:
-	"""Initialize all limbs based on character's max HP"""
+func initialize_limbs() -> void:
 	limbs.clear()
 	for limb_type in LimbType.values():
-		limbs[limb_type] = Limb.new(limb_type, base_hp)
+		limbs[limb_type] = Limb.new(limb_type)
 
 func get_limb(limb_type: LimbType) -> Limb:
 	return limbs.get(limb_type)
 
-func get_total_hp() -> int:
-	"""Get combined HP of all limbs"""
-	var total = 0
-	for limb in limbs.values():
-		total += max(0, limb.current_hp)
-	return total
-
 func is_alive() -> bool:
-	"""Pure alive check — no side effects. Use _check_death() to actually
-	trigger death side effects when state warrants it."""
-	var torso = limbs.get(LimbType.TORSO)
-	var head = limbs.get(LimbType.HEAD)
-	return (torso and torso.current_hp > 0) and (head and head.current_hp > 0)
+	return current_hp > 0
 
 func _check_death() -> void:
-	"""Trigger death side effects if the character should be dead."""
 	if not is_alive():
 		_on_character_died()
 
@@ -3759,17 +3709,12 @@ func _show_death_marker() -> void:
 	_death_marker.z_index = 5
 	add_child(_death_marker)
 
-func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
-	"""Apply damage to a specific limb"""
-	var limb = limbs.get(limb_type)
-	if not limb:
-		return {}
-	# 1. Get the resistance dictionary for this specific limb
-	var armor_dr = get_limb_armor(limb_type)
-	var total_damage = 0
+func take_damage(damage: Dictionary, location: Vector2, limb_type: int = -1) -> int:
+	"""Apply damage to the character's single HP pool. `limb_type` is a cosmetic
+	hint for floating numbers, blood spatter, and slashing-severing — it no
+	longer routes to a per-limb HP value."""
+	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
-	var raw_val
-	var dr_val
 
 	# Character-level DR pool (from conditions like physically_resistant, shielded).
 	# Consumed across physical damage types in this hit.
@@ -3777,16 +3722,15 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 	if condition_manager:
 		character_dr_remaining = max(0.0, condition_manager.calculate_effective_stat(0.0, "dr"))
 
-# 2. Calculate damage for each type after resistances
 	for damage_type in damage:
-		raw_val = damage[damage_type]
-		dr_val = armor_dr.get(damage_type, 0) # Default to 0 if type not in DR
+		var raw_val = damage[damage_type]
+		var dr_val = armor_dr.get(damage_type, 0)
 		var after_armor = max(0, raw_val - dr_val)
 		var char_dr_used: float = 0.0
 		if character_dr_remaining > 0 and damage_type in ["slashing", "bludgeoning", "piercing"]:
 			char_dr_used = min(character_dr_remaining, after_armor)
 			character_dr_remaining -= char_dr_used
-		var dealt = after_armor - char_dr_used
+		var dealt = int(after_armor - char_dr_used)
 		if dealt > 0:
 			handle_damage_effect_based_on_type(dealt, damage_type, limb_type, location)
 		total_damage += dealt
@@ -3799,44 +3743,38 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		if bide_inst:
 			bide_inst.custom_data["absorbed"] = bide_inst.custom_data.get("absorbed", 0.0) + physical_damage_taken
 
-	# 3. Apply the damage to the limb
-	var prospective_hp = limb.current_hp - total_damage
-	# Deny Ending: refuses to die. Clamp lethal-limb HP to 1 while active.
-	var is_lethal_limb = (limb_type == LimbType.TORSO or limb_type == LimbType.HEAD)
-	if is_lethal_limb and prospective_hp < 1 and condition_manager and condition_manager.has_active_condition("deny_ending"):
+	var prospective_hp: int = current_hp - total_damage
+	# Deny Ending: refuses to die. Clamp HP to 1 while active.
+	if prospective_hp < 1 and condition_manager and condition_manager.has_active_condition("deny_ending"):
 		prospective_hp = 1
-		total_damage = limb.current_hp - prospective_hp
+		total_damage = current_hp - prospective_hp
 
-	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	current_hp = clamp(prospective_hp, 0, max_hp)
 	_check_death()
 	return total_damage
 
-func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
-	"""Set armor DR for a limb"""
-	var limb = limbs.get(limb_type)
-	if limb:
-		limb.set_armor(dr)
+func heal(amount: int) -> int:
+	"""Restore HP. Returns the amount actually healed."""
+	if amount <= 0 or not is_alive():
+		return 0
+	var before: int = current_hp
+	current_hp = clamp(current_hp + amount, 0, max_hp)
+	return current_hp - before
 
-func get_limb_armor(limb_type: LimbType) -> Dictionary:
-	"""Get current armor DR for a limb"""
-	var limb = limbs.get(limb_type)
-	return limb.armor_dr if limb else Globals.DR_0 #DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
-
-
-# Map equipment slots to limb types for armor
-static func get_limb_for_equipment_slot(slot: int) -> Array[LimbType]:
-	# EquipmentShape.EquipmentSlot values
-	match slot:
-		0:  # HEAD
-			return [LimbType.HEAD]
-		1:  # TORSO
-			return [LimbType.TORSO, LimbType.LEFT_ARM, LimbType.RIGHT_ARM]
-		3:  # LEGS
-			return [LimbType.LEFT_LEG, LimbType.RIGHT_LEG]
-		4:  # FEET
-			return [LimbType.LEFT_LEG, LimbType.RIGHT_LEG]  # Feet armor protects legs too
-		_:
-			return []
+func _recompute_armor_dr() -> void:
+	"""Rebuild armor_dr by summing DR from every equipped piece. Called on
+	equip/unequip. Equipment's flat `DR` int contributes to physical damage
+	types (slashing/bludgeoning/piercing)."""
+	armor_dr = Globals.DR_0.duplicate()
+	for piece in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
+		if piece == null:
+			continue
+		var piece_dr: int = int(piece.DR) if "DR" in piece else 0
+		if piece_dr <= 0:
+			continue
+		armor_dr["slashing"] = armor_dr.get("slashing", 0) + piece_dr
+		armor_dr["bludgeoning"] = armor_dr.get("bludgeoning", 0) + piece_dr
+		armor_dr["piercing"] = armor_dr.get("piercing", 0) + piece_dr
 # Determine which limb was hit based on local hit position
 func get_limb_at_position(local_pos: Vector2, body_width: float, body_height: float) -> LimbType:
 	"""Determine which limb is at a local position relative to character center"""
@@ -3870,19 +3808,16 @@ func set_stats(str_val: int, con_val: int, dex_val: int) -> void:
 	dexterity = dex_val
 	
 func get_status_string() -> String:
-	"""Get a debug string showing all limb status"""
-	var parts = []
+	"""Get a debug string showing HP and limb state"""
+	var parts: Array = ["HP: %d/%d" % [current_hp, max_hp]]
 	for limb_type in LimbType.values():
-		var limb = limbs.get(limb_type)
-		if limb:
-			var status = "%s: %d/%d" % [limb.name, limb.current_hp, limb.max_hp]
-			if limb.is_severed:
-				status += " [SEVERED]"
-			elif limb.is_disabled:
-				status += " [DISABLED]"
-			if limb.armor_dr > 0:
-				status += " (DR:%d)" % limb.armor_dr
-			parts.append(status)
+		var limb: Limb = limbs.get(limb_type)
+		if not limb:
+			continue
+		if limb.is_severed:
+			parts.append("%s [SEVERED]" % limb.name)
+		elif limb.is_disabled:
+			parts.append("%s [DISABLED]" % limb.name)
 	return "\n".join(parts)
 func get_dash_range() -> float:
 	"""Maximum world-space distance a single dash() can cover, derived from
@@ -3911,18 +3846,16 @@ func dash(target_pos: Vector2) -> void:
 
 # ===== EVENTS =====
 
-func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
+func _on_limb_damaged(_limb_type: int, damage_info: Dictionary) -> void:
 	# React to being hit
 	if damage_info.get("actual_damage", 0) > 0:
 		# Stun briefly
 		if not "stunned" in conditions:
 			condition_manager.apply_condition("stunned")
-		
-		# Check if should retreat (low health)
-		var torso_hp_percent = self.get_limb(LimbType.TORSO).get_hp_percent()
-		
+
 		#TODO: Will Check for retreat using ability check function
-		
+
+
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
@@ -3953,11 +3886,8 @@ func _on_character_died() -> void:
 			var partner_cm = partner.get_node_or_null("ConditionManager")
 			if partner_cm:
 				partner_cm.remove_condition("fatal_attraction")
-			# Kill the partner by destroying their torso
-			var torso = partner.limbs.get(partner.LimbType.TORSO)
-			if torso:
-				torso.current_hp = 0
-				partner._check_death()
+			partner.current_hp = 0
+			partner._check_death()
 
 # ===== BLEED VFX BURST =====
 #
@@ -4094,8 +4024,8 @@ func _update_severed_limb_visuals() -> void:
 
 func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	severed_limbs[limb_type] = true
-	# Apply a strong bleed to the severed limb and spawn a big one-shot burst
-	condition_manager.apply_condition("bleeding", null, int(sever_blood_multiplier), -2.0, limb_type)
+	# Apply a strong bleed and spawn a big one-shot burst at the stump
+	condition_manager.apply_condition("bleeding", null, int(sever_blood_multiplier), -2.0)
 	var limb_pos = _get_limb_center_position(limb_type)
 	_spawn_bleed_burst(limb_pos, sever_blood_multiplier)
 
@@ -4189,20 +4119,21 @@ func reset_severed_limbs() -> void:
 		if child.name.begins_with("Stump_"):
 			child.queue_free()
 
-func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
+func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: int, location: Vector2):
 		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
 		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
 		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
 		Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
-		#match statement for adding conditions, or knockback for force
+		# A heavy slashing hit can sever the limb it landed on; -1 means "no
+		# specific limb" (e.g. condition tick) and skips severing.
 		match damage_type:
 			"slashing":
-				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
-				if damage >= 8:
+				condition_manager.apply_condition("bleeding", null, 1, -2.0)
+				if damage >= 8 and limb >= 0:
 					_handle_limb_severing(limb)
 				_spawn_bleed_burst(location, 2.0)
 			"piercing":
-				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
+				condition_manager.apply_condition("bleeding", null, 1, -2.0)
 				_spawn_bleed_burst(location, 1.5)
 			"fire":
 				conditions["burning"] = conditions.get("burning", 0) + 1
@@ -4761,11 +4692,7 @@ func _spawn_condition_vfx(instance: ConditionInstance) -> void:
 	# Attach as child of character so it follows movement
 	add_child(vfx)
 	
-	# Offset to the target limb if applicable
-	if instance.target_limb != null:
-		vfx.position = _get_limb_vfx_offset(instance.target_limb)
-	else:
-		vfx.position = Vector2.ZERO
+	vfx.position = Vector2.ZERO
 	
 	# Start playing if the effect supports it
 	if vfx.has_method("play"):
@@ -4802,32 +4729,6 @@ func _remove_condition_vfx(instance: ConditionInstance) -> void:
 		, CONNECT_ONE_SHOT)
 	else:
 		vfx.queue_free()
-
-
-## Approximate visual offset for a limb — 
-## Position VFX relative to the procedural body layout
-func _get_limb_vfx_offset(limb_type) -> Vector2:
-	match limb_type:
-		LimbType.HEAD:
-			# Head center is at origin, face points -Y
-			return Vector2(0, -head_length * 0.1)
-		LimbType.TORSO:
-			# Body line runs at shoulder_y_offset
-			return Vector2(0, shoulder_y_offset)
-		LimbType.LEFT_ARM:
-			# Left shoulder is at (-body_width/2, shoulder_y_offset)
-			# Mid-arm is a bit further left
-			return Vector2(-body_width / 2 - 5, shoulder_y_offset)
-		LimbType.RIGHT_ARM:
-			return Vector2(body_width / 2 + 5, shoulder_y_offset)
-		LimbType.LEFT_LEG:
-			# Legs start at shoulder_y_offset+2, extend by leg_length
-			# Place VFX at mid-leg
-			return Vector2(-leg_spacing, shoulder_y_offset + 2 + leg_length * 0.5)
-		LimbType.RIGHT_LEG:
-			return Vector2(leg_spacing, shoulder_y_offset + 2 + leg_length * 0.5)
-		_:
-			return Vector2.ZERO
 
 
 # ============================================================

@@ -182,13 +182,11 @@ static func register_conditions(conditions_array: Array) -> void:
 
 
 ## Apply a condition to this character
-# Update apply_condition signature and the instance creation:
 func apply_condition(
 	condition_id: String,
 	source: Node = null,
 	stacks: int = 1,
-	duration_override: float = -2.0,
-	target_limb = null
+	duration_override: float = -2.0
 ) -> ConditionInstance:
 	var template = condition_registry.get(condition_id)
 	if not template:
@@ -236,7 +234,7 @@ func apply_condition(
 			return existing
 			
 	# Create new instance
-	var instance = ConditionInstance.new(template, source, target_limb)
+	var instance = ConditionInstance.new(template, source)
 	instance.stacks = min(stacks, template.max_tier) if template.stackable else 1
 	
 	if final_duration > -2.0:

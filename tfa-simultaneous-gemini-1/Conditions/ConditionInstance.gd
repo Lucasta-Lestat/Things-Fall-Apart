@@ -32,21 +32,16 @@ var instance_id: String = ""
 
 static var _next_id: int = 0
 
-var target_limb = null  # LimbType enum value or null
-
-# Update _init to accept it:
-func _init(p_condition: Condition = null, p_source: Node = null, p_target_limb = null) -> void:
+func _init(p_condition: Condition = null, p_source: Node = null) -> void:
 	condition = p_condition
 	source = p_source
-	target_limb = p_target_limb
 	instance_id = "cond_%d_%d" % [_next_id, randi()]
 	_next_id += 1
-	
+
 	if condition:
 		for i in range(condition.triggered_effects.size()):
 			last_trigger_times[i] = -INF
 
-# Update to_dict:
 func to_dict() -> Dictionary:
 	return {
 		"condition_id": condition.id if condition else "",
@@ -57,22 +52,17 @@ func to_dict() -> Dictionary:
 		"custom_data": custom_data,
 		"last_trigger_times": last_trigger_times,
 		"instance_id": instance_id,
-		"target_limb": target_limb if target_limb != null else -1
 	}
 
-# Update from_dict:
 static func from_dict(data: Dictionary, condition_registry: Dictionary) -> ConditionInstance:
 	var condition_id = data.get("condition_id", "")
 	var condition_template = condition_registry.get(condition_id)
-	
+
 	if not condition_template:
 		push_warning("Unknown condition ID: %s" % condition_id)
 		return null
-	
-	var saved_limb = data.get("target_limb", -1)
-	var limb_value = null if saved_limb == -1 else saved_limb
-	
-	var instance = ConditionInstance.new(condition_template, null, limb_value)
+
+	var instance = ConditionInstance.new(condition_template, null)
 	instance.stacks = data.get("stacks", 1)
 	instance.is_suppressed = data.get("is_suppressed", false)
 	instance.applied_at = data.get("applied_at", 0.0)

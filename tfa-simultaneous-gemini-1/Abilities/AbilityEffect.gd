@@ -338,7 +338,7 @@ static func _resolve_damage(
 			caster_conditions
 		)
 		
-		# DR is skipped here. target.damage_limb and target.take_damage handle it natively!
+		# DR is skipped here. target.take_damage handles armor and condition DR natively.
 		var damage_dealt = _deal_damage_to_target(target, final_damage)
 		
 		result["targets_affected"].append({
@@ -366,7 +366,6 @@ static func _resolve_apply_condition(
 	var condition_id = effect.get("condition_id", "")
 	var stacks = effect.get("stacks", 1)
 	var duration_override = effect.get("duration", -2.0)
-	var target_limb = effect.get("target_limb", null)
 	var chance: float = float(effect.get("chance", 1.0))
 	# When set, the stacks applied equal the caster's current stack count of the
 	# named condition (used for mutation-tier-scales-effect, e.g. The Jaws That Bite).
@@ -392,8 +391,7 @@ static func _resolve_apply_condition(
 			condition_id,
 			caster,
 			stacks,
-			duration_override,
-			target_limb
+			duration_override
 		)
 		
 		if instance:
@@ -464,33 +462,24 @@ static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> flo
 	if total <= 0.0:
 		return 0.0
 
-	# Characters with limb system — pick a random limb if no hit position
-	if target.has_method("damage_limb"):
-		var limb_type = _pick_random_limb(target)
-		# damage_limb applies its own limb-specific armor DR, so we pass
-		# the already-general-DR-reduced dict. To avoid double-dipping,
-		# we skip _apply_target_defenses for limbed targets upstream,
-		# OR we pass the raw damage here and let damage_limb handle DR.
-		# Since we already reduced by torso DR above, just call damage_limb
-		# with the dict and accept minor DR approximation for abilities.
-		target.damage_limb(limb_type, damage_dict, target.global_position)
-	# Items use take_damage(damage_dict, success_level)
+	# Items and structures take damage through their own signature
+	if target is Item or target is Structure:
+		target.take_damage(damage_dict, 0)
 	elif target.has_method("take_damage"):
-		if target is Item or target is Structure:
-			target.take_damage(damage_dict, 0)
-		else:
-			# Unknown type with take_damage — try dict signature
-			target.take_damage(damage_dict, 0)
+		# Characters use take_damage(damage_dict, location, limb_hint).
+		# Pick a random limb purely as a cosmetic hint for floating text /
+		# blood spatter / slashing-sever placement.
+		var limb_hint: int = _pick_random_limb()
+		target.take_damage(damage_dict, target.global_position, limb_hint)
 	elif "HP_CURRENT" in target:
 		target.HP_CURRENT = max(0, target.HP_CURRENT - total)
 
 	return total
 
 
-## Pick a random limb weighted by size (for abilities without a specific hit position)
-static func _pick_random_limb(target: Node) -> int:
+## Pick a random limb (cosmetic hint only — biases toward torso since it's the biggest target)
+static func _pick_random_limb() -> int:
 	# LimbType enum: HEAD=0, TORSO=1, LEFT_ARM=2, RIGHT_ARM=3, LEFT_LEG=4, RIGHT_LEG=5
-	# Weight torso highest since it's the biggest target
 	var weights = [0.1, 0.35, 0.1, 0.1, 0.175, 0.175]
 	var roll = randf()
 	var cumulative = 0.0
@@ -498,7 +487,7 @@ static func _pick_random_limb(target: Node) -> int:
 		cumulative += weights[i]
 		if roll <= cumulative:
 			return i
-	return 1  # Default to torso
+	return 1
 
 
 ## Resolve healing effect
