@@ -18,6 +18,12 @@ var hex_tile_data_path: String = "res://data/hex_tiles.json"
 func _ready() -> void:
 	load_hex_tile_definitions()
 
+# Idempotent: lazily loads if the dict is still empty. Useful for editor docks
+# that may instantiate before this autoload's _ready has run.
+func ensure_loaded() -> void:
+	if hex_tile_definitions.is_empty():
+		load_hex_tile_definitions()
+
 func load_hex_tile_definitions() -> void:
 	var file = FileAccess.open(hex_tile_data_path, FileAccess.READ)
 	if file == null:
@@ -35,6 +41,7 @@ func load_hex_tile_definitions() -> void:
 
 	hex_tile_definitions.clear()
 	hex_tile_definitions = json.data
+	print("HexTileDatabase: loaded %d tile definitions" % hex_tile_definitions.size())
 	emit_signal("hex_tile_definitions_loaded")
 
 func get_all_tile_ids() -> Array[String]:

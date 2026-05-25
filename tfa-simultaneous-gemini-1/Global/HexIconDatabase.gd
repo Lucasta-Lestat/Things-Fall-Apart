@@ -17,6 +17,10 @@ var hex_icon_data_path: String = "res://data/hex_icons.json"
 func _ready() -> void:
 	load_hex_icon_definitions()
 
+func ensure_loaded() -> void:
+	if hex_icon_definitions.is_empty():
+		load_hex_icon_definitions()
+
 func load_hex_icon_definitions() -> void:
 	var file = FileAccess.open(hex_icon_data_path, FileAccess.READ)
 	if file == null:
@@ -34,6 +38,7 @@ func load_hex_icon_definitions() -> void:
 
 	hex_icon_definitions.clear()
 	hex_icon_definitions = json.data
+	print("HexIconDatabase: loaded %d icon definitions" % hex_icon_definitions.size())
 	emit_signal("hex_icon_definitions_loaded")
 
 func get_all_icon_ids() -> Array[String]:

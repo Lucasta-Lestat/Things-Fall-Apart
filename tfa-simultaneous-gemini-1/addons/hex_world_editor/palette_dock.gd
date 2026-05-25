@@ -28,14 +28,26 @@ func _ready() -> void:
 	_icon_group = ButtonGroup.new()
 	_tile_group.allow_unpress = true
 	_icon_group.allow_unpress = true
-	_rebuild_all()
-	# In case databases finish loading after we did, rebuild on signal.
+
+	# Connect to load signals first (they may fire after we build).
 	var tdb := _singleton("HexTileDatabase")
 	if tdb and tdb.has_signal("hex_tile_definitions_loaded"):
 		tdb.hex_tile_definitions_loaded.connect(_rebuild_tiles)
 	var idb := _singleton("HexIconDatabase")
 	if idb and idb.has_signal("hex_icon_definitions_loaded"):
 		idb.hex_icon_definitions_loaded.connect(_rebuild_icons)
+
+	# Build now; deferred-build catches any DB still loading; visibility hook
+	# is the last-resort retry the first time the user opens the dock.
+	_rebuild_all()
+	call_deferred("_rebuild_all")
+
+
+func _notification(what: int) -> void:
+	# Refresh the palette whenever the dock becomes visible — handles the case
+	# where the editor instantiated us before the autoloads finished.
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_visible_in_tree():
+		_rebuild_all()
 
 
 func _singleton(n: String) -> Node:
@@ -49,12 +61,19 @@ func _rebuild_all() -> void:
 
 
 func _rebuild_tiles() -> void:
+	if tile_grid == null:
+		return
 	for child in tile_grid.get_children():
 		child.queue_free()
 	var db = _singleton("HexTileDatabase")
 	if db == null:
+		print("HexPalette: HexTileDatabase singleton not found yet")
 		return
+	# Force load if the autoload's _ready hasn't fired yet.
+	if db.has_method("ensure_loaded"):
+		db.ensure_loaded()
 	var ids: Array = db.get_all_tile_ids()
+	print("HexPalette: rebuilding tile palette with %d entries" % ids.size())
 	ids.sort()
 	for tile_id in ids:
 		var def = db.get_definition(tile_id)
@@ -66,12 +85,18 @@ func _rebuild_tiles() -> void:
 
 
 func _rebuild_icons() -> void:
+	if icon_grid == null:
+		return
 	for child in icon_grid.get_children():
 		child.queue_free()
 	var db = _singleton("HexIconDatabase")
 	if db == null:
+		print("HexPalette: HexIconDatabase singleton not found yet")
 		return
+	if db.has_method("ensure_loaded"):
+		db.ensure_loaded()
 	var ids: Array = db.get_all_icon_ids()
+	print("HexPalette: rebuilding icon palette with %d entries" % ids.size())
 	ids.sort()
 	for icon_id in ids:
 		var def = db.get_definition(icon_id)
