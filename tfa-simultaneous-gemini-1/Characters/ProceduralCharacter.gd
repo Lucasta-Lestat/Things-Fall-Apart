@@ -4278,17 +4278,37 @@ func _on_time_updated(_hour: int, _minute: int, _second: int):
 	pass
 
 #Ability Checks, character.gd code
-func ability_check(stat,domain):
+# `domain` is a flexible parameter for historical reasons:
+#   Dictionary {"advantages": [...], "disadvantages": [...]}
+#   Array — treated as advantages only (matches existing dialogue calls like
+#     `protagonist.ability_check('charisma', ['secular', 'occult'])`)
+#   int / float — treated as a static DC; replaces the default stat-derived target
+#   Object with .advantages / .disadvantages fields
+func ability_check(stat, domain) -> int:
 	var roll = randi() % 100 + 1
 	var success_target = get_stat_by_name(stat)
 	var bonus = 0
-	for trait_id in domain.advantages:
+	var advs: Array = []
+	var disadvs: Array = []
+	if domain is Dictionary:
+		advs = domain.get("advantages", [])
+		disadvs = domain.get("disadvantages", [])
+	elif domain is Array:
+		advs = domain
+	elif typeof(domain) == TYPE_INT or typeof(domain) == TYPE_FLOAT:
+		success_target = int(domain)
+	elif domain != null:
+		if "advantages" in domain:
+			advs = domain.advantages
+		if "disadvantages" in domain:
+			disadvs = domain.disadvantages
+	for trait_id in advs:
 		if traits.has(trait_id): bonus += 20 * traits[trait_id]
-	for trait_id in domain.disadvantages:
+	for trait_id in disadvs:
 		if traits.has(trait_id): bonus -= 20 * traits[trait_id]
-		success_target += bonus
-		
-	var success_level = _calculate_success_level(roll, success_target)
+	success_target += bonus
+	return _calculate_success_level(roll, success_target)
+
 func get_stat_by_name(stat_name) -> int:
 	# Accept either String or StringName; normalize so callers don't have to care.
 	var key := StringName(str(stat_name).to_lower())

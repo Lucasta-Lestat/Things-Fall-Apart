@@ -767,5 +767,505 @@ func get_all_conditions() -> Array:
 		],
 		"conditional_modifiers": [],
 		"immunities": {}
+	},
+	# -----------------------------------------------------------------------
+	# Stress-response conditions (d100 roll table). Negative entries are tagged
+	# with {"affliction": 1, "mental": 1} so the Carousing downtime activity's
+	# `remove_mental_affliction` effect — which dispatches to
+	# ConditionManager.remove_conditions_with_trait("mental") — can clear them.
+	# -----------------------------------------------------------------------
+	{
+		"id": "fearful",
+		"display_name": "Fearful",
+		"description": "Easily shaken. Penalty to checks made against fear or panic.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration", "courage"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "fear_save", "operation": "add", "value": -20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "lethargic",
+		"display_name": "Lethargic",
+		"description": "Heavy-limbed. Movement is sluggish.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": -0.25}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "masochistic",
+		"display_name": "Masochistic",
+		"description": "Seeks pain. Disadvantage on CON checks. Prayer and prostitution relieve more stress.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "constitution", "operation": "add", "value": -20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "irrational",
+		"display_name": "Irrational",
+		"description": "Reasoning frays. Disadvantage on INT checks.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "intelligence", "operation": "add", "value": -20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "paranoid",
+		"display_name": "Paranoid",
+		"description": "Sees enemies in friends. May lash out and shove nearby allies.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "selfish",
+		"display_name": "Selfish",
+		"description": "All for me. Disadvantage on CHA checks and saves.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "charisma", "operation": "add", "value": -20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "panic",
+		"display_name": "Panic",
+		"description": "Blind, mindless flight. Cannot act sensibly until the panic passes.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1, "cc": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 12.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration", "courage"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": 0.25}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "hopelessness",
+		"display_name": "Hopelessness",
+		"description": "Nothing matters. Disadvantage on Will checks.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "will", "operation": "add", "value": -20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "mania",
+		"display_name": "Mania",
+		"description": "Manic episode. Unequips all gear and throws gold at the nearest creature. Cannot be dysthymic at the same time.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {"dysthymia": true}
+	},
+	{
+		"id": "anxiety",
+		"display_name": "Anxiety",
+		"description": "Wound tight. Gain stress more quickly than usual.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "stress_gain_multiplier", "operation": "add", "value": 0.5}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "hypochondria",
+		"display_name": "Hypochondria",
+		"description": "Convinced of looming illness. Hit point maximum is halved.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "max_hp_multiplier", "operation": "add", "value": -0.5}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "narcissistic",
+		"display_name": "Narcissistic",
+		"description": "Always knows better. Challenges other characters' decisions when in disagreement.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	# ----- Positive stress responses (not afflictions) ---------------------
+	{
+		"id": "powerful",
+		"display_name": "Powerful",
+		"description": "Steel in the spine. +2 to all damage rolls.",
+		"traits": {"buff": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "damage_bonus", "operation": "add", "value": 2}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "focused",
+		"display_name": "Focused",
+		"description": "Clear-headed. +1 to maximum focus.",
+		"traits": {"buff": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "max_focus", "operation": "add", "value": 1}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "stalwart",
+		"display_name": "Stalwart",
+		"description": "Inured to harm. +1 DR against all damage types.",
+		"traits": {"buff": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "damage_resistance", "operation": "add", "value": 1}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "acute",
+		"display_name": "Acute",
+		"description": "Sharply observant. Advantage on INT checks.",
+		"traits": {"buff": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "intelligence", "operation": "add", "value": 20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "perceptive",
+		"display_name": "Perceptive",
+		"description": "Sees further than most. Extended line of sight.",
+		"traits": {"buff": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "line_of_sight", "operation": "add", "value": 2}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "courageous",
+		"display_name": "Courageous",
+		"description": "Fearless. Advantage on Will checks. Suppresses the next affliction that would be rolled when going down.",
+		"traits": {"buff": 1, "mental": 1, "courage": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "will", "operation": "add", "value": 20}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	# ----- Conditions referenced by downtime.json result effects -----------
+	{
+		"id": "hungover",
+		"display_name": "Hungover",
+		"description": "Pounding head, sour stomach. Disadvantage on perception until shaken off.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1, "fatigue": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 240.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "constitution", "operation": "add", "value": -10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "pox",
+		"display_name": "Pox",
+		"description": "An itch, a sore, a slow regret. A physical affliction worth treating.",
+		"traits": {"debuff": 1, "affliction": 1, "physical": 1, "disease": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration", "purify"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "charisma", "operation": "add", "value": -10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "scarred",
+		"display_name": "Scarred",
+		"description": "Disfiguring wounds that ordinary healing cannot fully undo.",
+		"traits": {"debuff": 1, "affliction": 1, "physical": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["remove_curse"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "charisma", "operation": "add", "value": -10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "blessed",
+		"display_name": "Blessed",
+		"description": "Charged with quiet meaning. The world feels significant for a day.",
+		"traits": {"buff": 1, "mental": 1, "blessing": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 86400.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "will", "operation": "add", "value": 10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "fatigued",
+		"display_name": "Fatigued",
+		"description": "Worn down by lost sleep or hard watch. Lighter version of exhausted.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1, "fatigue": 1},
+		"stackable": true,
+		"max_tier": 3,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {"id": "exhausted", "required_tier": 3},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "constitution", "operation": "add", "value": -5}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "haunted",
+		"display_name": "Haunted",
+		"description": "Something you read or saw will not leave you. Sleep is poor.",
+		"traits": {"debuff": 1, "affliction": 1, "mental": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["restoration"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "will", "operation": "add", "value": -10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "wanted",
+		"display_name": "Wanted",
+		"description": "The watch has your description. Guards in this region are hostile on sight.",
+		"traits": {"debuff": 1, "affliction": 1, "social": 1, "legal": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["pardon"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
 	}
 ]
