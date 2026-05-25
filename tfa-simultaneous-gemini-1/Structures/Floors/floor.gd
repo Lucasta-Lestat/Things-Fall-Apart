@@ -15,6 +15,8 @@ var size: Vector2 = Vector2(64,64)
 var walkability: float = 1.0
 var flammable: bool = false
 var conductive: bool = false
+var base_sound_level: float = 0.5  # loudness emitted per step on this floor (0.0..1.0+)
+var footstep_sfx: String = ""       # SfxManager key prefix, e.g. "footstep_stone"
 var resources: Dictionary = {} #e.g. Wood:10 for a wooden floor
 var damage_resistances = {"slashing": 0, "bludgeoning": 0, "piercing": 0, "fire": 0, "cold": 0, "electric": 0, "sonic":0, "poison":0, "acid":0, "radiant":0, "necrotic":0 }
 var damage: Dictionary = {"Bludgeoning": 1}
@@ -54,6 +56,8 @@ func apply_floor_data():
 	walkability = data.walkability
 	flammable = data.flammable
 	conductive = data.conductive
+	base_sound_level = float(data.get("base_sound_level", 0.5))
+	footstep_sfx = String(data.get("footstep_sfx", ""))
 
 	if use_custom_texture and custom_texture:
 		sprite.texture = custom_texture

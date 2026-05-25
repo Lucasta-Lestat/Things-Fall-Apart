@@ -7,6 +7,7 @@
 			"tier": 0,
 			"icon": "res://icons/neutral.png",
 			"flag": "res://icons/neutral_flag.png",
+			"default_alertness": "at_ease",
 			"allies": [],
 			"enemies": [],
 			"equipment_traits": {
@@ -559,6 +560,7 @@
 			"tier": 1,
 			"icon": "res://icons/waldau.png",
 			"flag": "res://icons/waldau_flag.png",
+			"default_alertness": "at_ease",
 			"allies": [],
 			"enemies": [],
 			"traits": {
@@ -635,6 +637,7 @@
 			"tier": 1,
 			"icon": "res://icons/alamoneans.png",
 			"flag": "res://icons/alamoneans_flag.png",
+			"default_alertness": "at_ease",
 			"allies": [],
 			"enemies": [],
 			"traits": {

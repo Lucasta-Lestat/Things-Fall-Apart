@@ -12,6 +12,13 @@ var body_color: Color  # Derived from skin_color, slightly darker
 var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
+# Spawn-time default alertness for this character's AI. Cascade:
+#   1. Maps.json npc_spawn override
+#   2. factions.json default_alertness for our faction
+#   3. "unaware" fallback
+# Set by TopDownCharacterDatabase.build_character and applied to $AI via
+# ai.apply_default_alertness(). Empty string until build_character runs.
+var default_alertness: String = ""
 # Stable id from data/TopDownCharacters.json - assigned by build_character.
 # Used by QuestManager (and PartySidePanel's icon lookup) to identify a
 # character independently of their (mutable) display_name.
@@ -248,6 +255,11 @@ var _dash_motion_on_complete: Callable
 var _panic_timer: float = 0.0
 var _flee_timer: float = 0.0
 
+# Footstep tracking: emit one footstep sound + hearing event per
+# FOOTSTEP_DISTANCE pixels of accumulated motion.
+const FOOTSTEP_DISTANCE: float = 32.0
+var _distance_since_last_step: float = 0.0
+
 @export var sight: float = 1.0  # Base sight stat
 var fov_angle_degrees: float = 150.0  # Field of view in degrees
 @export var hearing: float = 1.0 #base hearing stat
@@ -472,6 +484,11 @@ signal character_reached_target
 signal character_died
 signal weapon_changed(weapon: WeaponShape)
 signal attack_hit(damage: int, damage_type: int)
+# Fires whenever this character takes any damage (via damage_limb). The
+# attacker may be null for condition-driven damage (poison ticks, etc.).
+# Game.gd subscribes to broadcast a "witnessed attack" event to nearby AI;
+# this character's own AI also self-bumps from AT_EASE.
+signal damaged_by(attacker, location: Vector2, total_damage: float)
 
 func _ready() -> void:
 	target_position = global_position
@@ -512,6 +529,7 @@ func _ready() -> void:
 	TimeManager.time_updated.connect(_on_time_updated)
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 	_on_stats_recalculated() # Initialize the effective stats
+	_setup_alertness_indicator()
 	# LOS light is added by Game.gd after spawn (not here) to control
 	# per-character settings like cull masks and NPC visibility
 func _setup_action_queue() -> void:
@@ -915,6 +933,62 @@ func _setup_condition_display() -> void:
 	_condition_display.z_index = 100
 	_condition_display.add_theme_constant_override("separation", 2)
 	add_child(_condition_display)
+
+
+# Yellow "?" when AI is SEARCHING; red flashing "!" when AI enters HOSTILE.
+# Inherits parent modulate so it fades with the hearing-pulse visibility.
+var _alertness_indicator: Label = null
+var _alertness_flash_tween: Tween = null
+
+func _setup_alertness_indicator() -> void:
+	var ai_node := get_node_or_null("AI")
+	if not ai_node or not ai_node.has_signal("alertness_changed"):
+		return
+	_alertness_indicator = Label.new()
+	_alertness_indicator.name = "AlertnessIndicator"
+	_alertness_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alertness_indicator.z_index = 110
+	_alertness_indicator.add_theme_font_size_override("font_size", 28)
+	_alertness_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
+	_alertness_indicator.add_theme_constant_override("outline_size", 4)
+	_alertness_indicator.position = Vector2(-8, COND_DISPLAY_OFFSET_Y - 28)
+	_alertness_indicator.visible = false
+	add_child(_alertness_indicator)
+	ai_node.alertness_changed.connect(_on_alertness_changed)
+
+
+func _on_alertness_changed(_old: int, new_alertness: int) -> void:
+	if not _alertness_indicator:
+		return
+	# Cancel any flash currently running — entering a new state resets it.
+	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
+		_alertness_flash_tween.kill()
+		_alertness_flash_tween = null
+
+	# AI.Alertness enum order: AT_EASE=0, UNAWARE=1, SUSPICIOUS=2, SEARCHING=3, HOSTILE=4.
+	match new_alertness:
+		4:  # HOSTILE — red ! that flashes briefly
+			_alertness_indicator.text = "!"
+			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.15, 0.15))
+			_alertness_indicator.visible = true
+			_alertness_flash_tween = create_tween().set_loops(6)
+			_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, 0.12)
+			_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 1.0, 0.12)
+			# After the flash, drop the indicator (HOSTILE state is implied by
+			# the enemy actively chasing — no need for a persistent icon).
+			_alertness_flash_tween.finished.connect(func():
+				if is_instance_valid(_alertness_indicator):
+					_alertness_indicator.visible = false
+					_alertness_indicator.modulate.a = 1.0
+			)
+		3:  # SEARCHING — steady yellow ?
+			_alertness_indicator.text = "?"
+			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.9, 0.2))
+			_alertness_indicator.modulate.a = 1.0
+			_alertness_indicator.visible = true
+		_:  # AT_EASE / UNAWARE / SUSPICIOUS — hide
+			_alertness_indicator.visible = false
+			_alertness_indicator.modulate.a = 1.0
 
 func _refresh_condition_display() -> void:
 	if not _condition_display:
@@ -3031,6 +3105,8 @@ func _update_movement(delta: float) -> void:
 				_movement_stuck_time = 0.0
 			# Check if we just stepped onto an ice tile
 			_check_ice_entry(move_dir)
+			# Emit footstep sound + hearing event every FOOTSTEP_DISTANCE
+			_accumulate_step(actual_motion)
 		else:
 			_movement_stuck_time = 0.0
 			# If the action queue is driving movement, let it handle waypoint
@@ -3055,6 +3131,56 @@ func _update_movement(delta: float) -> void:
 		if separation.length() > 0.1:
 			# Apply separation force (scaled by delta for smooth movement)
 			global_position += separation * min(1.0, delta * 10.0)
+
+func _accumulate_step(distance_moved: float) -> void:
+	_distance_since_last_step += distance_moved
+	if _distance_since_last_step >= FOOTSTEP_DISTANCE:
+		_distance_since_last_step = 0.0
+		_emit_footstep()
+
+
+func _emit_footstep() -> void:
+	var tile := GridManager.world_to_map(global_position)
+	var floor_id := ""
+	if "floors" in GridManager:
+		floor_id = String(GridManager.floors.get(tile, ""))
+	# Standing in a fluid (e.g. water) overrides the underlying floor for
+	# footstep purposes.
+	if "fluids" in GridManager:
+		var fluid_id := String(GridManager.fluids.get(tile, ""))
+		if fluid_id != "":
+			floor_id = "shallow_water"
+
+	var floor_data: Dictionary = {}
+	if floor_id != "":
+		floor_data = FloorDatabase.floor_definitions.get(floor_id, {})
+
+	var base_sound: float = float(floor_data.get("base_sound_level", 0.5))
+	var sfx_key: String = String(floor_data.get("footstep_sfx", ""))
+
+	var wears_boots := feet_equipment != null
+	var footwear_suffix := "boots" if wears_boots else "bare"
+	# Bare feet are notably quieter on the same surface; boots = 1.0 baseline.
+	var footwear_mult := 1.0 if wears_boots else 0.5
+
+	# Worn-item noise sums across all 5 equipment slots. Each EquipmentShape
+	# exposes noise_per_step, defaulted from its type/name if not set in data.
+	var item_noise := 0.0
+	for slot in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
+		if slot and "noise_per_step" in slot:
+			var n: float = slot.noise_per_step
+			if n > 0.0:
+				item_noise += n
+
+	var loudness: float = base_sound * footwear_mult + item_noise
+
+	if sfx_key != "":
+		var full_key := "%s_%s" % [sfx_key, footwear_suffix]
+		# Map loudness to a reasonable dB range: ~1.0 -> 0dB, ~0.25 -> -12dB.
+		var vol_db: float = linear_to_db(clamp(loudness, 0.05, 1.5))
+		SfxManager.play(full_key, global_position, Vector2(0.9, 1.1), vol_db)
+	HearingManager.emit(global_position, loudness, self)
+
 
 func _check_ice_entry(move_dir: Vector2) -> void:
 	"""Check if the character just stepped onto an ice tile and begin sliding."""
@@ -3459,6 +3585,8 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
+		# Swing makes noise even on miss — broadcast for AI hearing.
+		HearingManager.emit(global_position, 0.5, self)
 		# start_attack must run before _fire_ranged_async so is_attacking=true
 		# is set before await_hit_frame_or_end polls it; otherwise the helper
 		# bails on its first check and the projectile never spawns.
@@ -3476,6 +3604,7 @@ func attack(Ability:String= "Main") -> void:
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
+		HearingManager.emit(global_position, 0.5, self)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
 		if damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_off_hand_item)
@@ -3759,8 +3888,10 @@ func _show_death_marker() -> void:
 	_death_marker.z_index = 5
 	add_child(_death_marker)
 
-func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
-	"""Apply damage to a specific limb"""
+func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2, attacker = null):
+	"""Apply damage to a specific limb. `attacker` is optional but should be
+	passed for any character-sourced damage so the witness/wake-from-AT_EASE
+	pipeline can attribute the attack."""
 	var limb = limbs.get(limb_type)
 	if not limb:
 		return {}
@@ -3808,6 +3939,10 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		total_damage = limb.current_hp - prospective_hp
 
 	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	# Broadcast for the AT_EASE wake / witness systems. attacker may be null
+	# for condition-driven damage; subscribers handle that gracefully.
+	if total_damage > 0:
+		emit_signal("damaged_by", attacker, location, float(total_damage))
 	_check_death()
 	return total_damage
 
@@ -4438,6 +4573,15 @@ func on_targeting_cancelled() -> void:
 
 ## AbilityManager signal handlers
 func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> void:
+	# Casting an ability is a sound source. Loudness picks up from the ability
+	# definition if present; otherwise a moderate default that suggests focused
+	# activity without being a shout.
+	var cast_loudness: float = 0.6
+	if ability and ability.has_method("get"):
+		var override = ability.get("cast_loudness")
+		if override != null:
+			cast_loudness = float(override)
+	HearingManager.emit(global_position, cast_loudness, self)
 	cast_started.emit(ability, target_position)
 
 func _on_ability_cast_completed(ability: Ability, results: Array) -> void:

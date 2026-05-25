@@ -15,6 +15,9 @@ enum EquipmentSlot { HEAD, TORSO, BACK, LEGS, FEET }
 @export var base_height: float = 16.0
 @export var attachment_offset: Vector2 = Vector2.ZERO  # Offset from slot position
 @export var DR: int = 1
+# Per-step noise contribution while equipped. Set from item data when known,
+# otherwise inferred from equipment_type + name in _default_noise_per_step().
+@export var noise_per_step: float = -1.0
 # Sprite overlay
 var sprite: Sprite2D = null
 var left_sprite: Sprite2D = null   # For paired equipment (boots, pants legs)
@@ -35,7 +38,45 @@ var _loaded_from_data: bool = false
 func _ready() -> void:
 	if not _loaded_from_data:
 		_determine_equipment_properties()
+	if noise_per_step < 0.0:
+		noise_per_step = _default_noise_per_step()
 	_setup_sprites()
+
+
+func _default_noise_per_step() -> float:
+	# Falls back when load_from_data didn't carry a noise value. Mirrors the
+	# heuristic in Item.gd so equipped shapes and inventory items agree.
+	var lname := equipment_name.to_lower()
+	match equipment_type:
+		EquipmentType.BOOTS:
+			if lname.contains("plate") or lname.contains("iron") or lname.contains("steel"):
+				return 0.30
+			if lname.contains("leather") or lname.contains("hide"):
+				return 0.10
+			if lname.contains("cloth") or lname.contains("soft") or lname.contains("slipper"):
+				return 0.03
+			return 0.15
+		EquipmentType.TORSO_ARMOR:
+			if lname.contains("plate") or lname.contains("iron") or lname.contains("steel"):
+				return 0.40
+			if lname.contains("mail") or lname.contains("chain") or lname.contains("scale"):
+				return 0.30
+			if lname.contains("leather") or lname.contains("hide"):
+				return 0.06
+			return 0.05
+		EquipmentType.PANTS:
+			if lname.contains("plate") or lname.contains("greave"):
+				return 0.20
+			if lname.contains("mail") or lname.contains("chain"):
+				return 0.15
+			return 0.02
+		EquipmentType.HELMET:
+			return 0.05
+		EquipmentType.BACKPACK:
+			return 0.05
+		EquipmentType.CAPE, EquipmentType.HOOD:
+			return 0.0
+	return 0.0
 
 func _determine_equipment_properties() -> void:
 	match equipment_type:

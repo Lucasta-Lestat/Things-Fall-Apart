@@ -121,18 +121,14 @@ func _toggle_panel() -> void:
 # ---------------------------------------------------------------------------
 
 func _refresh() -> void:
-	print("[QuestLogPanel] _refresh BEGIN")
 	if _content_vbox == null:
-		print("[QuestLogPanel] _refresh: _content_vbox is null, bail")
 		return
 	if not is_inside_tree():
-		print("[QuestLogPanel] _refresh: not in tree, bail")
 		return
 	for child in _content_vbox.get_children():
 		child.queue_free()
 
 	if QuestManager == null or QuestDatabase == null:
-		print("[QuestLogPanel] _refresh: QM/QD null, bail")
 		return
 
 	var active_ids: Array = QuestManager.get_active_quests()
@@ -183,7 +179,12 @@ func _build_quest_block(quest_id: String, group: String) -> Control:
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(40, 40)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	# NOTE: TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL crashes Godot 4.6 when
+	# placed in an HBoxContainer next to an expanding RichTextLabel sibling
+	# (triggers ~89 "Object was deleted while awaiting a callback" errors
+	# then SIGSEGV in the deferred layout pass). Using EXPAND_IGNORE_SIZE
+	# with a custom_minimum_size achieves the same visual result safely.
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		icon.texture = load(icon_path)
 	elif ResourceLoader.exists(DEFAULT_ICON_PATH):

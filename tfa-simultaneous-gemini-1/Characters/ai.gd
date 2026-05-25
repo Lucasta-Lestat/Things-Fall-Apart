@@ -13,8 +13,58 @@ enum AIState {
 	APPROACH,
 	ATTACK,
 	RETREAT,
-	STUNNED
+	STUNNED,
+	SEARCHING  # Investigating a sound; no confirmed enemy yet
 }
+
+# ===== ALERTNESS METER =====
+# Orthogonal to AIState. Drives the UI ?/! indicators and gates whether sound
+# alone is enough to chase. Per the design: sound bumps the meter but can
+# never *confirm* an enemy — only LOS unlocks HOSTILE. Once HOSTILE, the AI
+# assumes follow-up sounds are the known enemy.
+#
+# AT_EASE is a "civilian default" mode — ambient noise is ignored entirely.
+# Only specific stimuli wake an AT_EASE NPC: being attacked, witnessing an
+# attack in LOS, seeing a stealth-mode party member, or hearing a very loud
+# sound (gunshot, explosion). Once woken this map session, never auto-returns
+# to AT_EASE — the only way back is map reload.
+enum Alertness { AT_EASE, UNAWARE, SUSPICIOUS, SEARCHING, HOSTILE }
+
+const ALERTNESS_MAX: float = 100.0
+const ALERTNESS_SUSPICIOUS_THRESHOLD: float = 25.0
+const ALERTNESS_SEARCHING_THRESHOLD: float = 60.0
+const ALERTNESS_HOSTILE_THRESHOLD: float = 90.0
+# Cap on sound-driven gains so audio alone can't unlock HOSTILE.
+const ALERTNESS_SOUND_CAP: float = ALERTNESS_HOSTILE_THRESHOLD - 5.0
+# Per-second decay applied when no recent stimulus.
+const ALERTNESS_DECAY_PER_SEC: float = 4.0
+# Multiplier: loudness=1.0 sound adds this much to the meter.
+const ALERTNESS_SOUND_GAIN: float = 55.0
+# How long the meter sits at peak after a stimulus before decay kicks in.
+const ALERTNESS_DECAY_GRACE: float = 1.5
+# Ally alertness sharing — only meaningful when allies are in LOS.
+const ALLY_SHARE_INTERVAL: float = 0.75
+const ALLY_SHARE_FACTOR: float = 0.5
+# When SEARCHING and arrived at last_heard_position, rotate-scan for this many
+# seconds before giving up.
+const SEARCH_LOOK_AROUND_DURATION: float = 2.5
+# Alertness value an AT_EASE NPC is bumped to when woken — just into UNAWARE
+# (paying attention but not alarmed). Far below SUSPICIOUS to avoid
+# immediately panicking.
+const WAKE_FROM_AT_EASE_VALUE: float = 5.0
+
+var alertness_value: float = 0.0
+var current_alertness: Alertness = Alertness.UNAWARE
+# AT_EASE is a one-way flag (true at spawn for civilians; cleared on first
+# meaningful stimulus). Separate from alertness_value so we can preserve the
+# value-based state machine while still gating noise reactivity.
+var is_at_ease: bool = false
+var last_heard_position: Vector2 = Vector2.ZERO
+var time_since_last_stimulus: float = 999.0
+var ally_share_timer: float = 0.0
+var _search_look_timer: float = 0.0
+
+signal alertness_changed(old_alertness: Alertness, new_alertness: Alertness)
 
 # Current state
 var current_state: AIState = AIState.IDLE
@@ -83,8 +133,66 @@ func _ready():
 	attack_range = 70.0 * character.body_size_mod
 	preferred_range = 40.0 * character.body_size_mod
 	too_close_range = 20.0 * character.body_size_mod
+	# Default to UNAWARE; build_character calls apply_default_alertness after
+	# faction is set, which may flip us to AT_EASE for civilian factions.
+	# (_ready fires before build_character runs, so we can't resolve here.)
+	is_at_ease = false
+	current_alertness = Alertness.UNAWARE
+	# When this character takes damage, wake from AT_EASE and bump alertness.
+	# Being attacked is a strong stimulus — straight to SEARCHING-level so we
+	# immediately start heading toward the strike location.
+	if character.has_signal("damaged_by"):
+		character.damaged_by.connect(_on_self_damaged)
 
 
+# Called by build_character after faction is set, OR by Game.gd when reviving
+# a character from save data. Accepts "at_ease" or "unaware"; anything else
+# falls through to UNAWARE.
+func apply_default_alertness(alertness_str: String) -> void:
+	if alertness_str.to_lower() == "at_ease":
+		is_at_ease = true
+		var old: Alertness = current_alertness
+		current_alertness = Alertness.AT_EASE
+		if old != current_alertness:
+			emit_signal("alertness_changed", old, current_alertness)
+	else:
+		is_at_ease = false
+		var old2: Alertness = current_alertness
+		current_alertness = Alertness.UNAWARE
+		if old2 != current_alertness:
+			emit_signal("alertness_changed", old2, current_alertness)
+
+
+func _check_stealth_wake() -> void:
+	# Called from process_ai only when is_at_ease is true. If global stealth
+	# mode is on and ANY party member is in our LOS, that's enough to break
+	# the trance — we wake to UNAWARE (not SEARCHING — they're not behaving
+	# violently, just suspiciously).
+	if not game or not ("stealth_mode" in game) or not game.stealth_mode:
+		return
+	var party = game.party_chars if "party_chars" in game else []
+	for pc in party:
+		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
+			continue
+		if is_in_line_of_sight(pc.global_position):
+			wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, pc.global_position)
+			return  # is_at_ease is now false; caller's early-out blocks re-entry
+
+
+func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void:
+	# Strong wake — SEARCHING threshold + a bit. last_heard_position points to
+	# the attack location so SEARCHING behavior will path there if the
+	# attacker isn't in LOS yet.
+	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
+	# If the attacker is in LOS right now, normal _update_target will pick
+	# them up as a target next tick — no special handling needed.
+	if attacker:
+		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
+
+
+# Reads `default_alertness` from the character (set by spawn flow from Maps
+# override or faction default in factions.json). Defaults to UNAWARE if
+# neither was set. Called once in _ready.
 # ===== MAIN AI LOOP =====
 
 func process_ai(delta: float) -> void:
@@ -92,6 +200,15 @@ func process_ai(delta: float) -> void:
 	attack_cooldown_timer = max(0, attack_cooldown_timer - delta)
 	reaction_timer = max(0, reaction_timer - delta)
 	state_timer += delta
+	time_since_last_stimulus += delta
+	ally_share_timer -= delta
+
+	# Alertness decay + ally sharing
+	_update_alertness(delta)
+	# AT_EASE NPCs notice party members who are sneaking — but only when they
+	# actually see them. Cheap early-out keeps the cost off non-civilians.
+	if is_at_ease:
+		_check_stealth_wake()
 
 	# Handle unconscious — no actions possible
 	var _cm = character.get_node_or_null("ConditionManager")
@@ -127,6 +244,14 @@ func process_ai(delta: float) -> void:
 		if current_state != AIState.DEAD and current_state != AIState.IDLE:
 			_change_state(AIState.IDLE)
 
+	# If alertness has crossed into SEARCHING and we have no confirmed target,
+	# leave goal/idle behavior and head to the last heard position. HOSTILE
+	# alertness without a target also routes through SEARCHING — the AI heads
+	# to last_heard_position and acquires-by-LOS along the way.
+	if current_target == null and alertness_value >= ALERTNESS_SEARCHING_THRESHOLD:
+		if current_state == AIState.IDLE or current_state == AIState.PATROL:
+			_change_state(AIState.SEARCHING)
+
 	# Combat state machine
 	match current_state:
 		AIState.DEAD:
@@ -141,6 +266,8 @@ func process_ai(delta: float) -> void:
 			_process_attack(delta)
 		AIState.RETREAT:
 			_process_retreat(delta)
+		AIState.SEARCHING:
+			_process_searching(delta)
 
 	# Goal system runs when idle with no combat target
 	if current_state == AIState.IDLE and current_target == null:
@@ -313,6 +440,9 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	current_target = target
 	last_known_target_pos = target.global_position
 	emit_signal("target_acquired", target)
+	# Visual identification locks alertness to HOSTILE — sound alone can't do
+	# this, only LOS via _update_target reaches here.
+	_set_alertness_value(ALERTNESS_MAX)
 	# Clear any wander/seek path
 	nav_path.clear()
 	current_goal = "idle"
@@ -729,3 +859,153 @@ func is_tile_walkable(tile: Vector2i) -> bool:
 			if GridManager.world_to_map(c.global_position) == tile:
 				return false
 	return true
+
+
+# ===== ALERTNESS =====
+
+func _update_alertness(delta: float) -> void:
+	# Decay only after a grace period so brief stimuli don't immediately reset.
+	if time_since_last_stimulus > ALERTNESS_DECAY_GRACE and alertness_value > 0.0:
+		_set_alertness_value(alertness_value - ALERTNESS_DECAY_PER_SEC * delta)
+
+	# Periodic ally alertness sync (only if I'm at all alert — no point waking
+	# up an UNAWARE neighbor with my own UNAWARE).
+	if ally_share_timer <= 0.0:
+		ally_share_timer = ALLY_SHARE_INTERVAL
+		if alertness_value > ALERTNESS_SUSPICIOUS_THRESHOLD * 0.5:
+			_share_alertness_with_allies()
+
+
+func _set_alertness_value(new_value: float) -> void:
+	alertness_value = clamp(new_value, 0.0, ALERTNESS_MAX)
+	var new_state := _classify_alertness(alertness_value)
+	if new_state != current_alertness:
+		var old = current_alertness
+		current_alertness = new_state
+		emit_signal("alertness_changed", old, new_state)
+
+
+func _classify_alertness(v: float) -> Alertness:
+	if v >= ALERTNESS_HOSTILE_THRESHOLD:
+		return Alertness.HOSTILE
+	if v >= ALERTNESS_SEARCHING_THRESHOLD:
+		return Alertness.SEARCHING
+	if v >= ALERTNESS_SUSPICIOUS_THRESHOLD:
+		return Alertness.SUSPICIOUS
+	# Below SUSPICIOUS threshold: still AT_EASE if we've never been woken.
+	if is_at_ease:
+		return Alertness.AT_EASE
+	return Alertness.UNAWARE
+
+
+# Public entry point for the AT_EASE wake triggers (damage, witness, stealth,
+# loud sound). Clears the is_at_ease flag if set and bumps alertness to at
+# least `target_value` (defaults to just-into-UNAWARE). Optional `location`
+# updates last_heard_position so SEARCHING behavior can pick it up later if
+# the meter climbs further.
+func wake_from_at_ease(target_value: float = WAKE_FROM_AT_EASE_VALUE, location: Vector2 = Vector2.INF) -> void:
+	if is_at_ease:
+		is_at_ease = false
+	if location != Vector2.INF:
+		last_heard_position = location
+		time_since_last_stimulus = 0.0
+	if alertness_value < target_value:
+		_set_alertness_value(target_value)
+	else:
+		# Force reclassification in case clearing is_at_ease alone changes state.
+		_set_alertness_value(alertness_value)
+
+
+# Called by HearingManager when this character hears a sound it should react
+# to. Sound never confirms enemy identity — it caps below HOSTILE. If we are
+# already HOSTILE with a known target, sounds also update where we expect
+# that enemy to be.
+func on_sound_heard(world_pos: Vector2, loudness: float, _source = null) -> void:
+	if current_state == AIState.DEAD:
+		return
+
+	# AT_EASE civilians ignore ambient noise entirely. Only an unusually loud
+	# sound (gunshot, explosion) cuts through — and then we wake to UNAWARE
+	# rather than jumping straight to SEARCHING. Anything quieter is filed
+	# away as "city ambience".
+	if is_at_ease:
+		if loudness < HearingManager.LOUD_SOUND_THRESHOLD:
+			return
+		wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, world_pos)
+		return
+
+	last_heard_position = world_pos
+	time_since_last_stimulus = 0.0
+
+	var gain := loudness * ALERTNESS_SOUND_GAIN
+	if current_alertness == Alertness.HOSTILE:
+		# Already alarmed and probably chasing — sounds inform position but
+		# don't need to bump meter further.
+		if current_target:
+			last_known_target_pos = world_pos
+		return
+
+	var new_value: float = min(alertness_value + gain, ALERTNESS_SOUND_CAP)
+	_set_alertness_value(max(alertness_value, new_value))
+
+
+func _share_alertness_with_allies() -> void:
+	for other_char in game.characters_in_scene:
+		if other_char == character or not is_instance_valid(other_char):
+			continue
+		if not other_char.has_method("is_alive") or not other_char.is_alive():
+			continue
+		if other_char.faction_id != character.faction_id:
+			continue
+		var other_ai = other_char.get_node_or_null("AI")
+		if not other_ai:
+			continue
+		# LOS required — eye contact, not telepathy.
+		if not is_in_line_of_sight(other_char.global_position):
+			continue
+		if alertness_value > other_ai.alertness_value:
+			# Transfer half the gap; tag last_heard_position so they look the
+			# same direction we were looking. Sharing never pushes another AI
+			# above the audio-only cap unless they already saw an enemy.
+			var transfer: float = (alertness_value - float(other_ai.alertness_value)) * ALLY_SHARE_FACTOR
+			var cap: float = ALERTNESS_SOUND_CAP if other_ai.current_alertness != Alertness.HOSTILE else ALERTNESS_MAX
+			var new_val: float = min(float(other_ai.alertness_value) + transfer, cap)
+			other_ai.last_heard_position = last_heard_position
+			other_ai.time_since_last_stimulus = 0.0
+			other_ai._set_alertness_value(new_val)
+
+
+# ===== SEARCHING STATE =====
+
+func _process_searching(delta: float) -> void:
+	# Acquired a real target while heading over there — switch to combat.
+	if current_target:
+		_change_state(AIState.CHASE)
+		return
+
+	# Alertness decayed below the threshold — give up and return to normal.
+	if alertness_value < ALERTNESS_SEARCHING_THRESHOLD * 0.6:
+		_change_state(AIState.IDLE)
+		return
+
+	var dist = character.global_position.distance_to(last_heard_position)
+	if dist > GridManager.TILE_SIZE * 0.75:
+		# Still en route to the noise.
+		if not character.is_moving and nav_path.is_empty():
+			navigate_to(last_heard_position)
+		else:
+			_check_path_progress()
+		_search_look_timer = 0.0
+		return
+
+	# Arrived — rotate slowly to scan, give LOS a chance to find the enemy.
+	character.is_moving = false
+	_search_look_timer += delta
+	character.target_rotation += delta * 1.8  # slow continuous turn
+
+	if _search_look_timer >= SEARCH_LOOK_AROUND_DURATION:
+		# Found nothing — decay alertness faster and stand down.
+		_search_look_timer = 0.0
+		_set_alertness_value(alertness_value - 15.0)
+		if alertness_value < ALERTNESS_SEARCHING_THRESHOLD:
+			_change_state(AIState.IDLE)
