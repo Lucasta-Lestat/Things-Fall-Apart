@@ -12,6 +12,10 @@ var body_color: Color  # Derived from skin_color, slightly darker
 var traits: Dictionary = {}
 # Faction
 var faction_id: String = "neutral"
+# Stable id from data/TopDownCharacters.json - assigned by build_character.
+# Used by QuestManager (and PartySidePanel's icon lookup) to identify a
+# character independently of their (mutable) display_name.
+var template_id: String = ""
 var is_protagonist = false
 var AI_enabled = false
 var is_player_controlled: bool = false
