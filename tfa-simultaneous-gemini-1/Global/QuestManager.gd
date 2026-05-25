@@ -179,11 +179,19 @@ func register_character(character) -> void:
 		var game := get_node_or_null("/root/Game")
 		if game and "current_map_id" in game:
 			_write_world_state("char_at::" + template_id, str(game.current_map_id))
-	if character.has_signal("character_died") and not character.character_died.is_connected(_on_character_died):
-		character.character_died.connect(_on_character_died.bind(character))
+	# Bind by stable String (template_id) instead of Object. Binding the character
+	# itself created stale Callables when the character was freed before/without
+	# emitting character_died (e.g. queue_free from despawn paths), which produced
+	# storms of "Object was deleted while awaiting a callback" warnings and a
+	# downstream SIGSEGV during the initial scene's first frame.
+	# Also: is_connected(_on_character_died_by_id) now matches the actual bound
+	# callable so we don't double-wire on re-registration.
+	if character.has_signal("character_died"):
+		var cb := Callable(self, "_on_character_died_by_id").bind(template_id)
+		if not character.character_died.is_connected(cb):
+			character.character_died.connect(cb)
 	var inv = character.get("inventory") if "inventory" in character else null
 	if inv != null and is_instance_valid(inv) and inv.has_signal("item_added"):
-		# Drop freed entries before checking membership so the list stays bounded.
 		_wired_inventories = _wired_inventories.filter(func(x): return is_instance_valid(x))
 		if not (inv in _wired_inventories):
 			inv.item_added.connect(_on_item_added.bind(template_id))
@@ -193,13 +201,7 @@ func register_character(character) -> void:
 # Signal handlers
 # ---------------------------------------------------------------------------
 
-func _on_character_died(character) -> void:
-	if character == null or not is_instance_valid(character):
-		return
-	var template_id: String = str(character.get("template_id")) if "template_id" in character else ""
-	if template_id.is_empty():
-		# Fall back to display_name slug so quests can still target by name.
-		template_id = Globals.name_to_id(str(character.get("display_name")) if "display_name" in character else "")
+func _on_character_died_by_id(template_id: String) -> void:
 	if template_id.is_empty():
 		return
 	_write_world_state("char_dead::" + template_id, true)
