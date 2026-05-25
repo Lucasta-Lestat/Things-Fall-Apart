@@ -65,6 +65,7 @@ func _start_auto_start_quests() -> void:
 # ---------------------------------------------------------------------------
 
 func start_quest(quest_id: String) -> void:
+	print("[QuestManager] start_quest BEGIN id=", quest_id)
 	var q: Dictionary = QuestDatabase.get_quest(quest_id) if QuestDatabase else {}
 	if q.is_empty():
 		push_warning("QuestManager.start_quest: unknown quest_id " + quest_id)
@@ -80,8 +81,11 @@ func start_quest(quest_id: String) -> void:
 	_quest_start_day[quest_id] = _today_stamp()
 	if GameLog:
 		GameLog.add_entry("Quest started: " + str(q.get("display_name", quest_id)))
+	print("[QuestManager] start_quest about to emit quest_updated id=", quest_id)
 	emit_signal("quest_updated", quest_id)
+	print("[QuestManager] start_quest about to reevaluate id=", quest_id)
 	_reevaluate(quest_id)
+	print("[QuestManager] start_quest END id=", quest_id)
 
 func get_active_quests() -> Array:
 	return active.keys()

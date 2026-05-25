@@ -85,10 +85,13 @@ func _connect_quest_manager() -> void:
 		QuestManager.quest_failed.connect(_on_quest_event)
 
 func _on_quest_event(_quest_id: String) -> void:
-	_refresh()
+	# Defer to next frame: the signal often fires mid-init (autoload deferred
+	# auto-start), and rebuilding RichTextLabel trees during scene setup has
+	# caused engine-side layout crashes.
+	call_deferred("_refresh")
 
 func _on_quest_stage_changed(_quest_id: String, _old: String, _new: String) -> void:
-	_refresh()
+	call_deferred("_refresh")
 
 # ---------------------------------------------------------------------------
 # Toggle (J key)
@@ -118,12 +121,18 @@ func _toggle_panel() -> void:
 # ---------------------------------------------------------------------------
 
 func _refresh() -> void:
+	print("[QuestLogPanel] _refresh BEGIN")
 	if _content_vbox == null:
+		print("[QuestLogPanel] _refresh: _content_vbox is null, bail")
+		return
+	if not is_inside_tree():
+		print("[QuestLogPanel] _refresh: not in tree, bail")
 		return
 	for child in _content_vbox.get_children():
 		child.queue_free()
 
 	if QuestManager == null or QuestDatabase == null:
+		print("[QuestLogPanel] _refresh: QM/QD null, bail")
 		return
 
 	var active_ids: Array = QuestManager.get_active_quests()
@@ -149,11 +158,13 @@ func _refresh() -> void:
 		return
 
 	for qid in active_ids:
+		print("[QuestLogPanel] _refresh build active=", qid)
 		_content_vbox.add_child(_build_quest_block(qid, "active"))
 	for qid in completed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "completed"))
 	for qid in failed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "failed"))
+	print("[QuestLogPanel] _refresh END (built ", active_ids.size(), " active)")
 
 func _build_quest_block(quest_id: String, group: String) -> Control:
 	var q: Dictionary = QuestDatabase.get_quest(quest_id)
