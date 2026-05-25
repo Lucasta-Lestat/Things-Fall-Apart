@@ -5,11 +5,8 @@
 			"display_name": "Fireball",
 			"description": "Hurl a ball of fire that explodes on impact, dealing fire damage to all enemies in the area.",
 			"icon": "res://UI/UI Icons/ability_fireball.png",
-			"cooldown": 2.0,
 			"visual_duration": 1.5,
-			"costs": {
-				"MP": 25
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -17,7 +14,8 @@
 				"fire": 3,
 				"magical": 1,
 				"attack": 1,
-				"aoe": 2
+				"aoe": 2,
+				"Arcane": 1
 			},
 			"target_shape": "circle",
 			"targeting": {
@@ -54,11 +52,8 @@
 			"display_name": "Cloud Kill",
 			"description": "Conjure a cloud of deadly poison.",
 			"icon": "res://UI/UI Icons/ability_cloud_kill.png",
-			"cooldown": 2.0,
 			"visual_duration": 1.5,
-			"costs": {
-				"MP": 25
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -66,7 +61,8 @@
 				"poison": 3,
 				"magical": 1,
 				"attack": 1,
-				"aoe": 2
+				"aoe": 2,
+				"Arcane": 2
 			},
 			"target_shape": "circle",
 			"targeting": {
@@ -99,10 +95,7 @@
 			"display_name": "Ice Storm",
 			"description": "Conjure a storm of ice that damages and slows all enemies in the area.",
 			"icon": "res://UI/UI Icons/ability_ice_storm.png",
-			"cooldown": 12.0,
-			"costs": {
-				"MP": 35
-			},
+			"costs": {},
 			"cast_time": 1.5,
 			"traits": {
 				"spell": 1,
@@ -110,7 +103,8 @@
 				"magical": 1,
 				"attack": 1,
 				"aoe": 2,
-				"control": 2
+				"control": 2,
+				"Arcane": 2
 			},
 			"targeting": {
 				"type": "point",
@@ -146,17 +140,15 @@
 			"display_name": "Lightning Bolt",
 			"description": "Fire a bolt of lightning in a line, damaging all enemies it passes through.",
 			"icon": "res://UI/UI Icons/ability_lightning_bolt.png",
-			"cooldown": 6.0,
-			"costs": {
-				"MP": 20
-			},
+			"costs": {},
 			"cast_time": 0.5,
 			"traits": {
 				"spell": 1,
 				"lightning": 3,
 				"magical": 1,
 				"attack": 2,
-				"line": 2
+				"line": 2,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "direction",
@@ -192,16 +184,14 @@
 			"display_name": "Magnetic Pull",
 			"description": "Create a magnetic field that pulls all metal objects and armored enemies toward the center.",
 			"icon": "res://UI/UI Icons/ability_magnetic_pull.png",
-			"cooldown": 15.0,
-			"costs": {
-				"MP": 30
-			},
+			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"force": 3,
 				"magical": 1,
-				"control": 3
+				"control": 3,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -233,9 +223,7 @@
 			"display_name": "Repulsion Wave",
 			"description": "Release a wave of force that pushes all nearby enemies away.",
 			"icon": "res://UI/UI Icons/ability_repulsion_wave.png",
-			"cooldown": 10.0,
 			"costs": {
-				"MP": 20,
 				"stamina": 10
 			},
 			"cast_time": 0.0,
@@ -244,7 +232,8 @@
 				"force": 2,
 				"magical": 1,
 				"control": 2,
-				"defensive": 3
+				"defensive": 3,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "self",
@@ -275,17 +264,15 @@
 			"display_name": "Gravity Well",
 			"description": "Create a point of intense gravity that pulls all enemies toward it.",
 			"icon": "res://UI/UI Icons/ability_gravity_well.png",
-			"cooldown": 20.0,
-			"costs": {
-				"MP": 45
-			},
+			"costs": {},
 			"cast_time": 2.0,
 			"traits": {
 				"spell": 1,
 				"force": 4,
 				"magical": 1,
 				"control": 3,
-				"aoe": 2
+				"aoe": 2,
+				"Arcane": 2
 			},
 			"targeting": {
 				"type": "point",
@@ -320,16 +307,14 @@
 			"display_name": "Vortex",
 			"description": "Create a swirling vortex that spins enemies around and pulls them inward.",
 			"icon": "res://UI/UI Icons/ability_vortex.png",
-			"cooldown": 18.0,
-			"costs": {
-				"MP": 40
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"traits": {
 				"spell": 1,
 				"wind": 3,
 				"magical": 1,
-				"control": 3
+				"control": 3,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -366,16 +351,14 @@
 			"display_name": "Heal",
 			"description": "Restore health to yourself or an ally.",
 			"icon": "res://UI/UI Icons/ability_heal.png",
-			"cooldown": 5.0,
-			"costs": {
-				"MP": 15
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"traits": {
 				"spell": 1,
 				"healing": 4,
 				"magical": 1,
-				"support": 3
+				"support": 3,
+				"Holy": 1
 			},
 			"targeting": {
 				"type": "target",
@@ -404,14 +387,12 @@
 			"display_name": "Chasten",
 			"description": "End a creature's current infatuation",
 			"icon": "res://UI/UI Icons/chasten.png",
-			"cooldown": 5.0,
-			"costs": {
-				"MP": 15
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"traits": {
 				"holy": 1,
-				"support": 1
+				"support": 1,
+				"Holy": 1
 			},
 			"targeting": {
 				"type": "target",
@@ -436,7 +417,6 @@
 			"display_name": "Shield Bash",
 			"description": "Bash an enemy with your shield, dealing damage and stunning them.",
 			"icon": "res://UI/UI Icons/ability_shield_bash.png",
-			"cooldown": 6.0,
 			"costs": {
 				"stamina": 20
 			},
@@ -445,7 +425,8 @@
 				"physical": 2,
 				"attack": 1,
 				"melee": 2,
-				"stun": 3
+				"stun": 3,
+				"Martial": 1
 			},
 			"requirements": {
 				"traits": [
@@ -484,7 +465,6 @@
 			"display_name": "Rage",
 			"description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
 			"icon": "res://UI/UI Icons/ability_rage.png",
-			"cooldown": 30.0,
 			"costs": {
 				"HP": 10
 			},
@@ -493,7 +473,8 @@
 				"physical": 1,
 				"buff": 3,
 				"self": 1,
-				"rage": 4
+				"rage": 4,
+				"Martial": 1
 			},
 			"targeting": {
 				"type": "self",
@@ -519,17 +500,15 @@
 			"display_name": "Creepy Beam",
 			"description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
 			"icon": "res://UI/UI Icons/ability_creepy_beam.png",
-			"cooldown": 7.0,
-			"costs": {
-				"MP": 22
-			},
+			"costs": {},
 			"cast_time": 0.6,
 			"traits": {
 				"spell": 1,
 				"necrotic": 3,
 				"magical": 1,
 				"attack": 2,
-				"line": 2
+				"line": 2,
+				"Occult": 1
 			},
 			"targeting": {
 				"type": "direction",
@@ -566,10 +545,7 @@
 			"display_name": "Acid Splash",
 			"description": "Hurl a glob of acid that splashes on impact, corroding everything in the area and leaving behind a pool of acid.",
 			"icon": "res://UI/UI Icons/ability_acid_splash.png",
-			"cooldown": 5.0,
-			"costs": {
-				"MP": 18
-			},
+			"costs": {},
 			"cast_time": 0.5,
 			"visual_duration": 2.0,
 			"traits": {
@@ -577,7 +553,8 @@
 				"acid": 3,
 				"magical": 1,
 				"attack": 1,
-				"aoe": 1
+				"aoe": 1,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -618,10 +595,7 @@
 			"display_name": "Thunderwave",
 			"description": "Unleash a cone of thunderous force that damages and pushes back all enemies caught in the blast.",
 			"icon": "res://UI/UI Icons/ability_thunderwave.png",
-			"cooldown": 8.0,
-			"costs": {
-				"MP": 25
-			},
+			"costs": {},
 			"cast_time": 0.3,
 			"visual_duration": 1.0,
 			"traits": {
@@ -630,7 +604,8 @@
 				"magical": 1,
 				"attack": 2,
 				"aoe": 2,
-				"control": 1
+				"control": 1,
+				"Arcane": 1
 			},
 			"targeting": {
 				"type": "direction",
@@ -664,13 +639,13 @@
 			"display_name": "Beguile",
 			"description": "Charms a target, making them infatuated with the caster and unable to attack them.",
 			"icon": "res://UI/UI Icons/ability_beguile.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
-				"charm": 1
+				"charm": 1,
+				"Occult": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -696,13 +671,13 @@
 			"display_name": "Confess",
 			"description": "The caster and target become mutually infatuated, unable to harm each other.",
 			"icon": "res://UI/UI Icons/ability_confess.png",
-			"cooldown": 8.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
-				"charm": 1
+				"charm": 1,
+				"Occult": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -727,13 +702,13 @@
 			"display_name": "Hitch",
 			"description": "Pick two characters; they become infatuated with each other.",
 			"icon": "res://UI/UI Icons/ability_hitch.png",
-			"cooldown": 8.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
-				"charm": 1
+				"charm": 1,
+				"Occult": 1
 			},
 			"targeting": {
 				"type": "characters",
@@ -759,14 +734,14 @@
 			"display_name": "Fatal Attraction",
 			"description": "Pick two characters; they become infatuated and their fates are linked.",
 			"icon": "res://UI/UI Icons/ability_fatal_attraction.png",
-			"cooldown": 12.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
 				"charm": 1,
-				"curse": 1
+				"curse": 1,
+				"Occult": 1
 			},
 			"targeting": {
 				"type": "characters",
@@ -793,12 +768,12 @@
 			"display_name": "Confuse",
 			"description": "Confuses a target, causing them to attack random creatures.",
 			"icon": "res://UI/UI Icons/ability_test_confused.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
-				"mental": 1
+				"mental": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "point",
@@ -824,13 +799,13 @@
 			"display_name": "Frighten",
 			"description": "Frightens a target, forcing them to flee from the caster.",
 			"icon": "res://UI/UI Icons/ability_test_frightened.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
-				"fear": 1
+				"fear": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "point",
@@ -856,13 +831,13 @@
 			"display_name": "Panic",
 			"description": "Causes a target to panic, running in random directions.",
 			"icon": "res://UI/UI Icons/ability_test_panicked.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
 				"mental": 1,
-				"fear": 1
+				"fear": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "point",
@@ -888,12 +863,12 @@
 			"display_name": "Sicken",
 			"description": "Inflicts disease on a target, reducing STR/CON and possibly spreading.",
 			"icon": "res://UI/UI Icons/ability_test_sickened.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
-				"disease": 1
+				"disease": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "point",
@@ -919,12 +894,12 @@
 			"display_name": "Nauseate",
 			"description": "Nauseates a target, slowing them and causing acid vomiting.",
 			"icon": "res://UI/UI Icons/ability_test_nauseated.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
-				"disease": 1
+				"disease": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "point",
@@ -950,12 +925,12 @@
 			"display_name": "Animal Magnetism",
 			"description": "Grants an aura that randomly spawns wild animals nearby.",
 			"icon": "res://UI/UI Icons/ability_test_animal_magnetism.png",
-			"cooldown": 5.0,
 			"costs": {},
 			"cast_time": 0.0,
 			"traits": {
 				"spell": 1,
-				"nature": 1
+				"nature": 1,
+				"Occult": 0
 			},
 			"targeting": {
 				"type": "self",
@@ -980,7 +955,6 @@
 			"display_name": "Pounce",
 			"description": "Dash forward and slash with razor-sharp claws, dealing slashing damage in a small area.",
 			"icon": "res://UI/UI Icons/ability_pounce.png",
-			"cooldown": 5.0,
 			"costs": {
 				"stamina": 15
 			},
@@ -989,7 +963,8 @@
 			"traits": {
 				"physical": 2,
 				"attack": 1,
-				"melee": 2
+				"melee": 2,
+				"Primal": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -1036,7 +1011,6 @@
 			"display_name": "Ram",
 			"description": "Charge forward and slam into enemies with a powerful headbutt, dealing bludgeoning damage and knocking them back.",
 			"icon": "res://UI/UI Icons/ability_ram.png",
-			"cooldown": 6.0,
 			"costs": {
 				"stamina": 20
 			},
@@ -1045,7 +1019,8 @@
 			"traits": {
 				"physical": 2,
 				"attack": 1,
-				"melee": 2
+				"melee": 2,
+				"Primal": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -1097,10 +1072,7 @@
 			"display_name": "Bide",
 			"description": "Brace yourself for incoming blows, gaining resistance to physical damage. After 10 seconds, your next attack deals bonus base damage equal to the physical damage you absorbed.",
 			"icon": "res://UI/UI Icons/ability_bide.png",
-			"cooldown": 12.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 0.5,
 			"interruptible": true,
 			"traits": {
@@ -1143,10 +1115,7 @@
 			"display_name": "Rain",
 			"description": "Call down a steady rain over the area.",
 			"icon": "res://UI/UI Icons/ability_rain.png",
-			"cooldown": 30.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.5,
 			"interruptible": true,
 			"traits": {
@@ -1179,10 +1148,7 @@
 			"display_name": "Acid Rain",
 			"description": "Summon a corrosive acid rain that eats at everything caught in the open.",
 			"icon": "res://UI/UI Icons/ability_acid_rain.png",
-			"cooldown": 30.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.5,
 			"interruptible": true,
 			"traits": {
@@ -1216,10 +1182,7 @@
 			"display_name": "Freezing Rain",
 			"description": "Summon a freezing rain that chills everyone caught in the open.",
 			"icon": "res://UI/UI Icons/ability_freezing_rain.png",
-			"cooldown": 30.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.5,
 			"interruptible": true,
 			"traits": {
@@ -1254,10 +1217,7 @@
 			"display_name": "Wave of Dysthymia",
 			"description": "Project a cone of crushing apathy. Affected creatures cannot take any actions except movement.",
 			"icon": "res://UI/UI Icons/ability_wave_of_dysthymia.png",
-			"cooldown": 12.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -1297,10 +1257,7 @@
 			"display_name": "Deny Ending",
 			"description": "Refuse the target's death. They cannot drop below 1 HP for 6 seconds per stack.",
 			"icon": "res://UI/UI Icons/ability_deny_ending.png",
-			"cooldown": 10.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -1337,10 +1294,7 @@
 			"display_name": "Psych Up",
 			"description": "Copy all of the target's active conditions onto yourself. Each copy lasts 12 seconds.",
 			"icon": "res://UI/UI Icons/ability_psych_up.png",
-			"cooldown": 15.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -1375,10 +1329,7 @@
 			"display_name": "Fire Spin",
 			"description": "Wreathe a 15 ft area in clinging flame. Creatures caught inside burn and cannot move.",
 			"icon": "res://UI/UI Icons/ability_fire_spin.png",
-			"cooldown": 10.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.0,
 			"interruptible": true,
 			"traits": {
@@ -1417,10 +1368,7 @@
 			"display_name": "Bumper Crop",
 			"description": "Cause a 15 ft sphere to bloom with lush grass. The terrain becomes difficult, but creatures standing in it are mended over time.",
 			"icon": "res://UI/UI Icons/ability_bumper_crop.png",
-			"cooldown": 12.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 1.5,
 			"interruptible": true,
 			"traits": {
@@ -1459,10 +1407,7 @@
 			"display_name": "Alms of the Vein",
 			"description": "Drain the target's lifeblood. They take 6 necrotic damage and start bleeding; you recover 3 health.",
 			"icon": "res://UI/UI Icons/ability_alms_of_the_vein.png",
-			"cooldown": 6.0,
-			"costs": {
-				"MP": 1
-			},
+			"costs": {},
 			"cast_time": 0.75,
 			"interruptible": true,
 			"traits": {
@@ -1509,7 +1454,6 @@
 			"display_name": "Bite",
 			"description": "Sink your fangs into a foe. Mutated maw bearers also apply bleeding scaled by the tier of The Jaws That Bite.",
 			"icon": "res://UI/UI Icons/dummy_icon.png",
-			"cooldown": 2.0,
 			"costs": {
 				"stamina": 5
 			},
@@ -1519,7 +1463,8 @@
 				"attack": 1,
 				"melee": 2,
 				"bite": 1,
-				"natural_weapon": 1
+				"natural_weapon": 1,
+				"Primal": 1
 			},
 			"targeting": {
 				"type": "point",
@@ -1544,6 +1489,39 @@
 			"visuals": {
 				"impact_effect": "res://vfx/bleeding.tscn",
 				"sound_impact": "res://sfx/sword-on-flesh.mp3"
+			}
+		},
+		{
+			"id": "bind_soul",
+			"display_name": "Bind Soul",
+			"description": "Reach into the recently dead within range and tether their souls to you. Souls beyond what you can carry overflow into your inventory as soul-bound items.",
+			"icon": "res://UI/UI Icons/soul icon.png",
+			"visual_duration": 2.0,
+			"costs": {},
+			"cast_time": 2.0,
+			"interruptible": true,
+			"traits": {
+				"Occult": 0,
+				"Verbal": 1,
+				"Somatic": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 250.0,
+				"shape": "circle",
+				"radius": 96.0
+			},
+			"effects": [
+				{
+					"type": "custom",
+					"method": "bind_soul_effect"
+				}
+			],
+			"visuals": {
+				"cast_effect": "res://vfx/bind_soul.tscn",
+				"impact_effect": "res://vfx/bind_soul.tscn",
+				"sound_cast": "",
+				"sound_impact": ""
 			}
 		}
 	]

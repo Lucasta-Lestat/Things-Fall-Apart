@@ -208,6 +208,51 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	if template.get("is_creature", false):
 		_set_if_exists(character, "is_creature", true)
 
+	# --- School trait tiers (Martial/Arcane/Occult/Holy/Primal) ---
+	# Merge any extra_traits dict from the template into character.traits, so a
+	# template can grant school tiers (e.g. {"Martial": 2, "Arcane": 1}).
+	var extra_traits: Dictionary = template.get("extra_traits", {})
+	if not extra_traits.is_empty() and "traits" in character:
+		for k in extra_traits.keys():
+			character.traits[String(k)] = int(extra_traits[k])
+
+	# --- School resources: initialize current = max so a fresh fighter spawns
+	# with full adrenaline (it would otherwise have to wait to be hit).
+	_init_school_resources(character)
+
+	# --- NPC opt-out for the school-resource cost gate ---
+	# Templates that opt in (via "use_school_resources": true) play by the new
+	# rules. Everyone else (legacy NPCs without school tiers) keeps casting
+	# their existing kit without resource gating.
+	var use_schools: bool = bool(template.get("use_school_resources", false))
+	if not use_schools and "npc_unlimited_resources" in character:
+		character.npc_unlimited_resources = true
+
+	# Patron pact (Occult): templates may declare their devotion.
+	var patron_id: String = String(template.get("patron_id", ""))
+	if not patron_id.is_empty() and "patron_id" in character:
+		character.patron_id = patron_id
+
+	# Starting vows (rare — templates can declare default vows).
+	var starting_vows: Array = template.get("active_vows", [])
+	if not starting_vows.is_empty() and "active_vows" in character:
+		for vow_id in starting_vows:
+			character.active_vows[String(vow_id)] = {"days_maintained": 0, "broken": false}
+
+
+# Set each school resource to its current maximum so newly-built characters
+# don't have to wait an entire combat to fill their pools.
+func _init_school_resources(character) -> void:
+	if "adrenaline" in character and "max_adrenaline" in character:
+		character.adrenaline = int(character.max_adrenaline)
+	if "focus" in character and "max_focus" in character:
+		character.focus = int(character.max_focus)
+	if "harmony" in character and "max_harmony" in character:
+		character.harmony = int(character.max_harmony)
+	if "devotion" in character and "max_devotion" in character:
+		character.devotion = int(character.max_devotion)
+	# Souls don't refill automatically — they start at 0 always.
+
 # ---------------------------------------------------------------------------
 # Race resolution
 # ---------------------------------------------------------------------------

@@ -1,15 +1,24 @@
 # AbilityManager.gd
-# Component that manages ability execution, cooldowns, and multi-step sequencing.
+# Component that manages ability execution and multi-step sequencing.
+# Costs are paid from per-school resources derived from `ability.traits`
+# (Martial→adrenaline, Arcane→focus, Primal→harmony, Holy→devotion,
+# Occult→souls). Cooldowns have been removed — once a cast completes the
+# next cast is gated only by resource availability.
 # Attach as a child node of your character (similar to ConditionManager).
 class_name AbilityManager
 extends Node
 
+const SCHOOL_RESOURCE_MAP := {
+	"Martial": "adrenaline",
+	"Arcane": "focus",
+	"Primal": "harmony",
+	"Holy": "devotion",
+	"Occult": "souls",
+}
+
 ## Reference to the character this manager belongs to
 @export var character_path: NodePath = ".."
 var character: Node
-
-## All active cooldowns: ability_id -> expiry timestamp
-var cooldowns: Dictionary = {}
 
 ## Current cast state
 var current_cast: Dictionary = {}
@@ -70,8 +79,6 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
-
-	_start_cooldown(ability)
 
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position, explicit_targets)
@@ -319,21 +326,36 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 	return results
 
 
+## Build the per-school resource cost dict for an ability from its trait tags.
+## { "Arcane": 2, "Fire": 3 } → { "focus": 2 } (Fire is not a school tag).
+static func school_costs_for(ability: Ability) -> Dictionary:
+	var costs: Dictionary = {}
+	for trait_name in ability.traits:
+		if SCHOOL_RESOURCE_MAP.has(trait_name):
+			var tier := int(ability.traits[trait_name])
+			if tier > 0:
+				costs[SCHOOL_RESOURCE_MAP[trait_name]] = tier
+	return costs
+
+
 ## Check if ability can be used
 func _check_ability_usable(ability: Ability) -> Dictionary:
-	if is_on_cooldown(ability.id):
-		return {"success": false, "reason": "On cooldown"}
-
 	var cm = _get_condition_manager()
 	if cm and (cm.has_active_condition("apathetic") or cm.has_active_condition("stunned")):
 		return {"success": false, "reason": "Cannot act"}
 
-	for resource_name in ability.costs:
-		var cost = ability.costs[resource_name]
-		if character.has_method("_get_character_resource"):
-			var current = character._get_character_resource(resource_name)
-			if current < cost:
-				return {"success": false, "reason": "Not enough %s" % resource_name}
+	# NPCs without school tiers opt out of the cost gate so legacy enemies
+	# don't lose their kit until their data is hand-tagged.
+	var skip_resource_gate: bool = "npc_unlimited_resources" in character and character.npc_unlimited_resources
+
+	if not skip_resource_gate:
+		var costs := school_costs_for(ability)
+		for resource_name in costs:
+			var cost: int = int(costs[resource_name])
+			if character.has_method("_get_character_resource"):
+				var current = character._get_character_resource(resource_name)
+				if current < cost:
+					return {"success": false, "reason": "Not enough %s" % resource_name}
 
 	var reqs = ability.requirements
 	var required_conditions = reqs.get("conditions", [])
@@ -398,34 +420,23 @@ func _would_hit_infatuation_source(ability: Ability, target_position: Vector2) -
 	return false
 
 
-## Pay the costs for an ability
+## Pay the costs for an ability — drains the school resources implied by the
+## ability's traits (Martial→adrenaline, Arcane→focus, ...). NPCs flagged
+## with `npc_unlimited_resources` pay nothing.
 func _pay_ability_costs(ability: Ability) -> bool:
-	for resource_name in ability.costs:
-		var cost = ability.costs[resource_name]
+	if "npc_unlimited_resources" in character and character.npc_unlimited_resources:
+		return true
+	var costs := school_costs_for(ability)
+	# Concentration spells lock the focus they pay until the spell ends.
+	var concentration: bool = ability.traits.has("Concentration") or ability.traits.has("concentration")
+	for resource_name in costs:
+		var cost: int = int(costs[resource_name])
 		if character.has_method("_spend_character_resource"):
 			if not character._spend_character_resource(resource_name, cost):
 				return false
+	if concentration and costs.has("focus") and character.has_method("_begin_concentration"):
+		character._begin_concentration(ability.id, int(costs["focus"]))
 	return true
-
-
-## Start cooldown for ability
-func _start_cooldown(ability: Ability) -> void:
-	if ability.cooldown > 0:
-		cooldowns[ability.id] = Time.get_ticks_msec() / 1000.0 + ability.cooldown
-
-
-## Check if ability is on cooldown
-func is_on_cooldown(ability_id: String) -> bool:
-	if ability_id not in cooldowns:
-		return false
-	return Time.get_ticks_msec() / 1000.0 < cooldowns[ability_id]
-
-
-## Get remaining cooldown time
-func get_cooldown_remaining(ability_id: String) -> float:
-	if ability_id not in cooldowns:
-		return 0.0
-	return max(0.0, cooldowns[ability_id] - Time.get_ticks_msec() / 1000.0)
 
 
 ## Interrupt current cast

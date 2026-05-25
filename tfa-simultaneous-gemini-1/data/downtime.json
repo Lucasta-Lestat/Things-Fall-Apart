@@ -173,13 +173,13 @@
 					"faith_healing": {
 						"weight": 6,
 						"event_description": " felt the warm light of the divine knit broken flesh. A weight long carried lifts.",
-						"effects": {"remove_physical_affliction": 1, "hp": 5}
+						"effects": {"remove_physical_affliction": 1, "hp": 5, "holy_tier_next_day": 1}
 					},
 					"vision": {
 						"weight": 2,
 						"min_success_tier": 2,
 						"event_description": " was granted a fleeting vision. The world feels charged with meaning for a day.",
-						"effects": {"remove_physical_affliction": 1, "add_condition": "blessed"}
+						"effects": {"remove_physical_affliction": 1, "add_condition": "blessed", "holy_tier_next_day": 2}
 					},
 					"dark_night": {
 						"weight": 3,
@@ -373,7 +373,7 @@
 						"weight": 2,
 						"min_success_tier": 2,
 						"event_description": " entered a state of unusual stillness. The next day's tasks will sit lightly.",
-						"effects": {"remove_mental_affliction": 1, "add_condition": "focused"}
+						"effects": {"remove_mental_affliction": 1, "add_condition": "focused", "holy_tier_next_day": 1}
 					},
 					"restless": {
 						"weight": 3,
@@ -629,7 +629,97 @@
 					}
 				}
 			}
+		},
+
+		"self_flagellation": {
+			"name": "Self-Flagellation",
+			"description": "Mortify the flesh. Strike again, until the body remembers it is the servant and not the master.",
+			"duration_hours": 1,
+			"urban": true,
+			"rural": true,
+			"preferred_traits": ["Pious", "Chaste"],
+			"disliked_traits": ["Hedonist"],
+			"ability_check": "Will",
+			"default_effects": {"hp": -2},
+			"results": {
+				"any_map": {
+					"transcendent": {
+						"weight": 2,
+						"min_success_tier": 2,
+						"event_description": " passed through pain into clarity. The Holy fire walks with them tomorrow.",
+						"effects": {"hp": -3, "holy_tier_next_day": 2}
+					},
+					"penitent": {
+						"weight": 5,
+						"event_description": " accepted the lash and felt the weight of sin lift a measure.",
+						"effects": {"hp": -2, "holy_tier_next_day": 1}
+					},
+					"merely_bloodied": {
+						"weight": 3,
+						"event_description": " came away sore and no closer to the divine.",
+						"effects": {"hp": -2}
+					}
+				}
+			}
+		},
+
+		"burn_ration": {
+			"name": "Burn a Ration",
+			"description": "Throw a ration into the campfire as offering. Hunger is the prayer; the smoke carries it upward.",
+			"duration_hours": 0,
+			"urban": false,
+			"rural": true,
+			"preferred_traits": ["Pious"],
+			"disliked_traits": ["Greedy"],
+			"ability_check": "Will",
+			"default_effects": {"ration_delta": -1},
+			"results": {
+				"any_map": {
+					"accepted": {
+						"weight": 6,
+						"event_description": " burned a ration as offering. The smoke rose straight and clean.",
+						"effects": {"ration_delta": -1, "holy_tier_next_day": 1}
+					},
+					"smoldering": {
+						"weight": 3,
+						"event_description": " burned a ration as offering. The smoke curled flat and the gesture felt small.",
+						"effects": {"ration_delta": -1}
+					}
+				}
+			}
+		},
+
+		"offer_souls_to_patron": {
+			"name": "Offer Souls to Patron",
+			"description": "Spend captured souls with your Occult patron. They take what suits their taste; you take what they grant in return.",
+			"duration_hours": 1,
+			"urban": true,
+			"rural": true,
+			"preferred_traits": ["Cunning"],
+			"disliked_traits": ["Pious"],
+			"ability_check": "Charisma",
+			"default_effects": {"soul_exchange": {"count": 1}},
+			"results": {
+				"any_map": {
+					"satisfied": {
+						"weight": 5,
+						"event_description": " offered souls to their patron and received a measured boon.",
+						"effects": {"soul_exchange": {"count": 2}}
+					},
+					"generous": {
+						"weight": 2,
+						"min_success_tier": 2,
+						"event_description": " presented their tribute with theatre and was answered in kind.",
+						"effects": {"soul_exchange": {"count": 4}}
+					},
+					"meagre": {
+						"weight": 3,
+						"event_description": " presented what was at hand. The patron took without comment.",
+						"effects": {"soul_exchange": {"count": 1}}
+					}
+				}
+			}
 		}
 	},
-	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp"]
+	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp", "burn_ration"]
 }

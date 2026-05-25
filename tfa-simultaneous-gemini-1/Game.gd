@@ -372,12 +372,32 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 	# Track in scene
 	characters_in_scene.append(character)
 
+	# Visible-ally adrenaline: wire bi-directional witness connections so any
+	# character who shares this character's faction grants them +1 adrenaline
+	# when wounded/severed/killed within vision range. Cheap on spawn; resource
+	# logic is gated inside the character on max_adrenaline > 0.
+	_wire_ally_witness(character)
+
+	# Vow of Poverty: VowManager listens for gold pickups via Inventory.
+	if VowManager and VowManager.has_method("register_inventory"):
+		VowManager.register_inventory(character)
+
 	# Quest hooks: subscribes to death + inventory.item_added and seeds
 	# char_at::<template_id> for this character.
 	if QuestManager:
 		QuestManager.register_character(character)
- 
+
 	return character
+
+
+func _wire_ally_witness(new_char) -> void:
+	if new_char == null or not is_instance_valid(new_char):
+		return
+	for existing in characters_in_scene:
+		if existing == new_char or not is_instance_valid(existing):
+			continue
+		new_char.connect_ally_witness(existing)
+		existing.connect_ally_witness(new_char)
  
 
 
@@ -643,6 +663,9 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 
 		# All party members share the player faction so AI won't target allies
 		character.faction_id = "player"
+		# Re-wire ally-witness now that faction_id is final (spawn-time wiring
+		# happens before this assignment, so no party connections form there).
+		_wire_ally_witness(character)
 
 		# Add line-of-sight light
 		_add_line_of_sight_light(character)

@@ -1,6 +1,7 @@
 # UI/PartySidePanel.gd
-# Side panel showing party character portraits, MP bars, and inventories.
-# Toggle visibility with Tab. Supports drag-drop and right-click context menus.
+# Side panel showing party character portraits, school-resource icons, and
+# inventories. Toggle visibility with Tab. Supports drag-drop and right-click
+# context menus.
 extends PanelContainer
 
 signal panel_visibility_changed(now_visible: bool)
@@ -11,6 +12,18 @@ const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 const CONTEXT_MENU_SCENE := preload("res://UI/ContextMenu.tscn")
 const ITEM_SLOT_SIZE := Vector2(40, 40)
 const COND_ICON_SIZE := Vector2(16, 16)
+const RESOURCE_ICON_SIZE := Vector2(28, 28)
+
+# School trait → (resource_field, icon_path, fill_color). Icons live in
+# UI/UI Icons/. A Devotion-specific icon does not yet exist; we fall back to a
+# Holy ability icon so the panel still renders without a missing-asset crash.
+const SCHOOL_RESOURCES := [
+	{"school": "Martial", "resource": "adrenaline", "icon": "res://UI/UI Icons/Adrenaline Icon.png", "color": Color(0.9, 0.2, 0.2)},
+	{"school": "Arcane", "resource": "focus", "icon": "res://UI/UI Icons/Focus Icon.png", "color": Color(0.3, 0.5, 0.95)},
+	{"school": "Primal", "resource": "harmony", "icon": "res://UI/UI Icons/Harmony Icon.png", "color": Color(0.3, 0.8, 0.4)},
+	{"school": "Holy", "resource": "devotion", "icon": "res://UI/UI Icons/Devotion Icon.png", "color": Color(0.95, 0.85, 0.45), "fallback_icon": "res://UI/UI Icons/ability_alms_of_the_vein.png"},
+	{"school": "Occult", "resource": "souls", "icon": "res://UI/UI Icons/soul icon.png", "color": Color(0.5, 0.2, 0.6)},
+]
 
 # Health bar color thresholds (matching old dual_health_bars style)
 const HP_COLOR_FULL := Color(0.2, 0.8, 0.2)
@@ -168,27 +181,16 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	torso_bar.add_theme_stylebox_override("background", torso_bg)
 	container.add_child(torso_bar)
 
-	# --- MP Bar ---
-	var mp_bar = ProgressBar.new()
-	mp_bar.custom_minimum_size = Vector2(0, 14)
-	mp_bar.max_value = character.max_MP
-	mp_bar.value = character.MP
-	mp_bar.show_percentage = false
-	mp_bar.mouse_filter = Control.MOUSE_FILTER_STOP
-	# Style the bar blue
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.2, 0.4, 0.9, 0.9)
-	mp_bar.add_theme_stylebox_override("fill", fill_style)
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.15, 0.15, 0.2, 0.8)
-	mp_bar.add_theme_stylebox_override("background", bg_style)
-	container.add_child(mp_bar)
-
-	var mp_label = Label.new()
-	mp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mp_label.add_theme_font_size_override("font_size", 10)
-	mp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	container.add_child(mp_label)
+	# --- School Resources Row ---
+	# One TextureProgressBar per school in which the character has tier > 0.
+	# The icon fills left-to-right as the resource recovers; missing resources
+	# are hidden entirely (a pure Martial fighter sees only the Adrenaline icon).
+	var resource_row = HBoxContainer.new()
+	resource_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	resource_row.add_theme_constant_override("separation", 4)
+	resource_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(resource_row)
+	var resource_bars := _build_resource_bars(character, resource_row)
 
 	# --- Inventory Grid ---
 	var inv_label = Label.new()
@@ -221,8 +223,8 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"torso_bar": torso_bar,
 		"torso_fill": torso_fill,
 		"condition_container": cond_container,
-		"mp_bar": mp_bar,
-		"mp_label": mp_label,
+		"resource_row": resource_row,
+		"resource_bars": resource_bars,
 		"inv_grid": inv_grid,
 	}
 
@@ -1142,12 +1144,7 @@ func _process(_delta: float) -> void:
 		# Update conditions display
 		_update_conditions(data, character)
 
-		var mp_bar: ProgressBar = data["mp_bar"]
-		mp_bar.max_value = character.max_MP
-		mp_bar.value = character.MP
-
-		var mp_label: Label = data["mp_label"]
-		mp_label.text = "%d / %d MP" % [character.MP, character.max_MP]
+		_update_resource_bars(data, character)
 
 func _update_health_bar(data: Dictionary, bar_key: String, fill_key: String, limb_type: int, character) -> void:
 	var bar: ProgressBar = data[bar_key]
@@ -1161,6 +1158,53 @@ func _update_health_bar(data: Dictionary, bar_key: String, fill_key: String, lim
 			fill_style.bg_color = HP_COLOR_MID
 		else:
 			fill_style.bg_color = HP_COLOR_FULL
+
+
+# Build one TextureProgressBar per school resource for which the character has
+# tier > 0. Returns a list of dicts the per-frame updater consumes.
+func _build_resource_bars(character, row: HBoxContainer) -> Array:
+	var bars: Array = []
+	for entry in SCHOOL_RESOURCES:
+		var school: String = entry["school"]
+		var tier: int = int(character.traits.get(school, 0))
+		if tier <= 0:
+			continue
+		var icon_path: String = entry["icon"]
+		if not ResourceLoader.exists(icon_path):
+			# Use the fallback icon (only Devotion currently needs one)
+			icon_path = entry.get("fallback_icon", DUMMY_ICON_PATH)
+			if not ResourceLoader.exists(icon_path):
+				continue
+		var tex: Texture2D = load(icon_path)
+		var bar := TextureProgressBar.new()
+		bar.texture_under = tex
+		bar.texture_progress = tex
+		bar.tint_under = Color(0.3, 0.3, 0.3, 1.0)
+		bar.tint_progress = entry["color"]
+		bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+		bar.min_value = 0
+		bar.max_value = tier
+		bar.value = int(character.get(entry["resource"]))
+		bar.custom_minimum_size = RESOURCE_ICON_SIZE
+		bar.tooltip_text = "%s (%s)" % [entry["resource"].capitalize(), school]
+		bar.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.add_child(bar)
+		bars.append({"bar": bar, "resource": entry["resource"], "school": school})
+	return bars
+
+
+func _update_resource_bars(data: Dictionary, character) -> void:
+	var bars: Array = data.get("resource_bars", [])
+	for entry in bars:
+		var bar: TextureProgressBar = entry["bar"]
+		var resource_name: String = entry["resource"]
+		var school: String = entry["school"]
+		var max_val: int = int(character.traits.get(school, 0))
+		# Devotion's max can be boosted by the Vow of Chastity bonus.
+		if resource_name == "devotion" and "vow_holy_bonus" in character:
+			max_val += int(character.vow_holy_bonus)
+		bar.max_value = max(1, max_val)
+		bar.value = int(character.get(resource_name))
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]

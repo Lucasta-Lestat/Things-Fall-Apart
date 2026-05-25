@@ -92,12 +92,13 @@ var current_cast: Dictionary:
 		if ability_manager:
 			ability_manager.current_cast = value
 
-## Cooldowns for abilities — delegates to ability_manager.cooldowns
+## Cooldowns are no longer tracked — the school-resource system replaces them.
+## Reads return an empty dict so any lingering save/load code that touches this
+## property doesn't crash.
 var cooldowns: Dictionary:
-	get: return ability_manager.cooldowns if ability_manager else {}
-	set(value):
-		if ability_manager:
-			ability_manager.cooldowns = value
+	get: return {}
+	set(_value):
+		pass
 
 var MODIFY_DURATION_BY_TRAIT: Dictionary = {
 	"fire": 1.2,
@@ -423,11 +424,90 @@ var attack_speed_multiplier: float:
 
 var clash_power: float:
 	get: return effective_strength() + (effective_constitution() * 0.3)
-#MP
-@export var MP = max_MP	
+#MP — retained for backwards compat (some legacy abilities/conditions still
+# reference it). New ability costs flow through the school resources below.
+@export var MP = max_MP
 @export var mp_regen_amount: int = 5
 @export var mp_regen_interval: float = 0.5
 var mp_regen_timer: float = 0.0
+
+# ===== School Resources =====
+# Five school-tied resources. Max for each comes from the matching character
+# trait tier (Martial→adrenaline, Arcane→focus, Primal→harmony, Holy→devotion,
+# Occult→souls). When a character has tier 0 in a school, that pool is zero
+# and the side panel hides its icon.
+const SCHOOL_RESOURCE_MAP := {
+	"Martial": "adrenaline",
+	"Arcane": "focus",
+	"Primal": "harmony",
+	"Holy": "devotion",
+	"Occult": "souls",
+}
+const RESOURCE_SCHOOL_MAP := {
+	"adrenaline": "Martial",
+	"focus": "Arcane",
+	"harmony": "Primal",
+	"devotion": "Holy",
+	"souls": "Occult",
+}
+
+var adrenaline: int = 0
+var focus: int = 0
+var harmony: int = 0
+var devotion: int = 0
+var souls: int = 0
+
+# Focus paid into an active Concentration spell stays locked until the spell ends.
+var concentration_locked_focus: int = 0
+# Concentration tracking: ability_id -> locked_focus_amount
+var active_concentrations: Dictionary = {}
+
+# Rich soul records captured by bind_soul. Each entry is a Dictionary describing
+# the source victim (name, race, gender, intelligence, traits...). Overflow beyond
+# `max_souls` is placed into the inventory as Soul items.
+var captured_souls: Array = []
+
+# Holy Vow state.
+var active_vows: Dictionary = {}      # vow_id -> { days_maintained: int, broken: bool }
+var vow_holy_bonus: int = 0           # daily Holy tier bonus from vows
+var vow_poverty_points: int = 0       # accumulated Poverty points
+var holy_tier_next_day_pending: int = 0  # queued from meditation/devotion/flagellation/ration burn
+
+# Patron pact (Occult). Empty string = no patron.
+var patron_id: String = ""
+
+# NPC opt-out for the school-resource cost gate. NPCs without school tiers
+# would otherwise be locked out of every school-tagged ability. Set true on
+# legacy NPC templates so their existing kit keeps firing.
+var npc_unlimited_resources: bool = false
+
+# Resource tick state
+const RESOURCE_TICK_INTERVAL := 0.5
+const ADRENALINE_DECAY_DELAY := 5.0
+var _resource_tick_timer: float = 0.0
+var _adrenaline_decay_delay_remaining: float = 0.0
+var _focus_regen_accum: float = 0.0
+var _harmony_regen_accum: float = 0.0
+var _devotion_regen_accum: float = 0.0
+var _adrenaline_decay_accum: float = 0.0
+
+# Visible-ally adrenaline trigger radius (px).
+const ALLY_VISION_RADIUS := 500.0
+
+var max_adrenaline: int:
+	get: return int(traits.get("Martial", 0))
+var max_focus: int:
+	get: return int(traits.get("Arcane", 0))
+var max_harmony: int:
+	get: return int(traits.get("Primal", 0))
+var max_devotion: int:
+	get: return int(traits.get("Holy", 0)) + vow_holy_bonus
+var max_souls: int:
+	get: return int(traits.get("Occult", 0))
+
+# Spendable focus excludes the portion locked by an active Concentration spell.
+var spendable_focus: int:
+	get: return max(0, focus - concentration_locked_focus)
 
 # Load from dictionary
 
@@ -472,6 +552,9 @@ signal character_reached_target
 signal character_died
 signal weapon_changed(weapon: WeaponShape)
 signal attack_hit(damage: int, damage_type: int)
+signal limb_severed_event(character, limb_type)
+signal took_damage(character, amount)
+signal resource_changed(resource_name: String, current: int, max_value: int)
 
 func _ready() -> void:
 	target_position = global_position
@@ -2441,6 +2524,7 @@ func _process(delta: float) -> void:
 			if mp_regen_timer >= mp_regen_interval:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
+		_tick_school_resources(delta)
 		# Delegate to AI child node
 		if AI_enabled:
 			$AI.process_ai(delta)
@@ -3808,6 +3892,9 @@ func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2):
 		total_damage = limb.current_hp - prospective_hp
 
 	limb.current_hp = clamp(prospective_hp, 0, limb.max_hp)
+	if total_damage > 0:
+		_on_self_damaged(int(total_damage))
+		emit_signal("took_damage", self, int(total_damage))
 	_check_death()
 	return total_damage
 
@@ -3926,6 +4013,9 @@ func _on_limb_damaged(limb_type: int, damage_info: Dictionary) -> void:
 func _on_character_died() -> void:
 	if $AI.current_state == $AI.AIState.DEAD:
 		return  # Already dead, don't re-trigger
+	# Death releases any active Concentration spells (they end with the caster).
+	if not active_concentrations.is_empty():
+		_release_concentration_all()
 	if creature_type == "Humanoid":
 		if gender == "female":
 			SfxManager.play("woman-death-scream", global_position)
@@ -4094,6 +4184,7 @@ func _update_severed_limb_visuals() -> void:
 
 func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	severed_limbs[limb_type] = true
+	emit_signal("limb_severed_event", self, limb_type)
 	# Apply a strong bleed to the severed limb and spawn a big one-shot burst
 	condition_manager.apply_condition("bleeding", null, int(sever_blood_multiplier), -2.0, limb_type)
 	var limb_pos = _get_limb_center_position(limb_type)
@@ -4977,12 +5068,6 @@ func _load_effect_scene(path: String) -> PackedScene:
 
 
 ## Delegates to AbilityManager
-func is_on_cooldown(ability_id: String) -> bool:
-	return ability_manager.is_on_cooldown(ability_id)
-
-func get_cooldown_remaining(ability_id: String) -> float:
-	return ability_manager.get_cooldown_remaining(ability_id)
-
 func interrupt_cast(reason: String = "Interrupted") -> bool:
 	return ability_manager.interrupt_cast(reason)
 
@@ -4993,34 +5078,284 @@ func _cancel_current() -> void:
 	ability_manager.current_cast.clear()
 
 
-## Get character resource value
+## Get character resource value. For school resources, returns the current pool;
+## for focus, returns the spendable amount (excluding concentration-locked).
 func _get_character_resource(resource_name: String) -> float:
-	# Try common patterns
-	var stat_name = resource_name 
-	
+	if resource_name == "focus":
+		return float(spendable_focus)
+	var stat_name = resource_name
 	if stat_name in self:
 		return self.get(stat_name)
-	
 	if resource_name in self:
 		return self.get(resource_name)
 	print("Did not find resource ", resource_name, "in get_character_resource")
 	return 0.0
 
 
-## Spend character resource
+## Spend character resource. School resources clamp to [0, max].
 func _spend_character_resource(resource_name: String, amount: float) -> bool:
-	var stat_name = resource_name 
-	
+	if RESOURCE_SCHOOL_MAP.has(resource_name):
+		var current: int = int(self.get(resource_name))
+		var new_val: int = max(0, current - int(amount))
+		self.set(resource_name, new_val)
+		emit_signal("resource_changed", resource_name, new_val, int(_get_resource_max(resource_name)))
+		return true
+	var stat_name = resource_name
 	if stat_name in self:
 		self.set(stat_name, self.get(stat_name) - amount)
 		return true
-	
 	if resource_name in self:
 		self.set(resource_name, self.get(resource_name) - amount)
 		return true
-		print("Did not find resource ", resource_name, "in spend_character_resource")
-
+	print("Did not find resource ", resource_name, "in spend_character_resource")
 	return false
+
+
+## Grant a character resource, clamped to its max. Returns the new value.
+## For souls: overflow above max is routed into the inventory as Soul items
+## (callers passing rich soul records should use `_grant_soul` instead).
+func _grant_character_resource(resource_name: String, amount: int) -> int:
+	if RESOURCE_SCHOOL_MAP.has(resource_name):
+		var max_val: int = int(_get_resource_max(resource_name))
+		var current: int = int(self.get(resource_name))
+		var new_val: int = clamp(current + amount, 0, max_val)
+		self.set(resource_name, new_val)
+		emit_signal("resource_changed", resource_name, new_val, max_val)
+		return new_val
+	if resource_name in self:
+		self.set(resource_name, self.get(resource_name) + amount)
+		return int(self.get(resource_name))
+	return 0
+
+
+func _get_resource_max(resource_name: String) -> int:
+	match resource_name:
+		"adrenaline": return max_adrenaline
+		"focus": return max_focus
+		"harmony": return max_harmony
+		"devotion": return max_devotion
+		"souls": return max_souls
+	return 0
+
+
+# Per-frame tick for the five school resources.
+# Recovery scales with the matching attribute; adrenaline decays (after a delay)
+# instead of recovering, since it is GAINED on combat events, not regenerated.
+func _tick_school_resources(delta: float) -> void:
+	# Focus regen scales with Intelligence. Cap at spendable max (locked focus
+	# can never be regenerated past, it stays locked).
+	if max_focus > 0 and focus < max_focus:
+		_focus_regen_accum += delta * (effective_intelligence() / 50.0)
+		while _focus_regen_accum >= 1.0:
+			_focus_regen_accum -= 1.0
+			if focus < max_focus:
+				focus += 1
+				emit_signal("resource_changed", "focus", focus, max_focus)
+
+	# Harmony regen scales with Will.
+	if max_harmony > 0 and harmony < max_harmony:
+		_harmony_regen_accum += delta * (effective_will() / 50.0)
+		while _harmony_regen_accum >= 1.0:
+			_harmony_regen_accum -= 1.0
+			if harmony < max_harmony:
+				harmony += 1
+				emit_signal("resource_changed", "harmony", harmony, max_harmony)
+
+	# Devotion regen scales with Will.
+	if max_devotion > 0 and devotion < max_devotion:
+		_devotion_regen_accum += delta * (effective_will() / 50.0)
+		while _devotion_regen_accum >= 1.0:
+			_devotion_regen_accum -= 1.0
+			if devotion < max_devotion:
+				devotion += 1
+				emit_signal("resource_changed", "devotion", devotion, max_devotion)
+
+	# Adrenaline decays after a delay since the last gain. Decay rate scales
+	# with Constitution (calmer characters shed adrenaline faster).
+	if adrenaline > 0:
+		if _adrenaline_decay_delay_remaining > 0.0:
+			_adrenaline_decay_delay_remaining -= delta
+		else:
+			_adrenaline_decay_accum += delta * (effective_constitution() / 50.0)
+			while _adrenaline_decay_accum >= 1.0:
+				_adrenaline_decay_accum -= 1.0
+				if adrenaline > 0:
+					adrenaline -= 1
+					emit_signal("resource_changed", "adrenaline", adrenaline, max_adrenaline)
+
+
+# Damage-side hooks: increment adrenaline, decrement focus, break concentration
+# if pressure pushes focus below the locked threshold.
+func _on_self_damaged(amount: int) -> void:
+	if amount <= 0:
+		return
+	_grant_character_resource("adrenaline", 1)
+	_adrenaline_decay_delay_remaining = ADRENALINE_DECAY_DELAY
+	# Focus loss never drops the locked portion; instead it breaks concentration.
+	if max_focus > 0:
+		if focus - 1 < concentration_locked_focus:
+			_break_concentration_under_pressure()
+		else:
+			focus = max(0, focus - 1)
+			emit_signal("resource_changed", "focus", focus, max_focus)
+
+
+# Begin a concentration lock on `focus_amount`. Replaces any existing
+# concentration (only one active per character).
+func _begin_concentration(ability_id: String, focus_amount: int) -> void:
+	if not active_concentrations.is_empty():
+		_release_concentration_all()
+	active_concentrations[ability_id] = focus_amount
+	concentration_locked_focus = focus_amount
+	emit_signal("resource_changed", "focus", focus, max_focus)
+
+
+# Release a concentration spell by id. Unlocks the focus it held.
+func _release_concentration(ability_id: String) -> void:
+	if not active_concentrations.has(ability_id):
+		return
+	var locked: int = int(active_concentrations[ability_id])
+	active_concentrations.erase(ability_id)
+	concentration_locked_focus = max(0, concentration_locked_focus - locked)
+	emit_signal("resource_changed", "focus", focus, max_focus)
+
+
+func _release_concentration_all() -> void:
+	active_concentrations.clear()
+	concentration_locked_focus = 0
+	emit_signal("resource_changed", "focus", focus, max_focus)
+
+
+func _break_concentration_under_pressure() -> void:
+	if active_concentrations.is_empty():
+		return
+	# End every active concentration spell. ConditionManager-side cleanup
+	# happens via the existing condition lifecycle if the spell installed one.
+	_release_concentration_all()
+
+
+# Called by allies' signal handlers when they take damage / lose a limb / die
+# within vision range. Each event grants one adrenaline.
+func _on_visible_ally_event(other) -> void:
+	if other == self or not is_instance_valid(other):
+		return
+	if max_adrenaline <= 0:
+		return
+	if global_position.distance_to(other.global_position) > ALLY_VISION_RADIUS:
+		return
+	_grant_character_resource("adrenaline", 1)
+	_adrenaline_decay_delay_remaining = ADRENALINE_DECAY_DELAY
+
+
+# Connect to another character so ally-witness events grant this character
+# adrenaline when the other suffers. Idempotent via _wired_witnesses dedup set.
+var _wired_witnesses: Dictionary = {}  # other.get_instance_id() -> true
+
+func connect_ally_witness(other) -> void:
+	if other == null or other == self or not is_instance_valid(other):
+		return
+	if not FactionDatabase.are_allies(faction_id, other.faction_id):
+		return
+	var key: int = other.get_instance_id()
+	if _wired_witnesses.has(key):
+		return
+	_wired_witnesses[key] = true
+	# took_damage and limb_severed_event both pass `other` as first arg, so
+	# their handlers are reusable across allies.
+	if not other.took_damage.is_connected(_on_ally_took_damage):
+		other.took_damage.connect(_on_ally_took_damage)
+	if not other.limb_severed_event.is_connected(_on_ally_limb_severed):
+		other.limb_severed_event.connect(_on_ally_limb_severed)
+	# character_died is the legacy zero-arg signal; bind the source explicitly
+	# so the handler knows whose death triggered it.
+	other.character_died.connect(_on_ally_died.bind(other))
+
+
+func _on_ally_took_damage(other, _amount: int) -> void:
+	_on_visible_ally_event(other)
+
+
+func _on_ally_limb_severed(other, _limb_type) -> void:
+	_on_visible_ally_event(other)
+
+
+func _on_ally_died(other) -> void:
+	_on_visible_ally_event(other)
+
+
+# Custom-effect entry point for the bind_soul ability. Invoked by
+# AbilityEffect._resolve_custom() with the targets array (any character whose
+# HEAD or TORSO is dead and whose soul has not yet been bound). For each
+# eligible target, captures a rich soul record.
+func bind_soul_effect(_effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
+	var captured: Array = []
+	for t in targets:
+		if not is_instance_valid(t):
+			continue
+		if t == self:
+			continue
+		# Only the dead surrender souls.
+		if t.has_method("is_alive") and t.is_alive():
+			continue
+		# Don't double-bind: tag the corpse so a second bind_soul over the same
+		# AOE doesn't replicate the soul.
+		if "soul_bound" in t and t.get("soul_bound"):
+			continue
+		var soul := _build_soul_record(t)
+		_grant_soul(soul)
+		if "soul_bound" in t:
+			t.set("soul_bound", true)
+		else:
+			# Attach as meta so corpses without a soul_bound field still mark.
+			t.set_meta("soul_bound", true)
+		captured.append(soul)
+	return {"souls_captured": captured.size()}
+
+
+# Build the rich soul record for a victim. Patron exchange logic filters on
+# these fields (Lilith → gender == "male", Lucifer → intelligence above a
+# threshold, etc.).
+func _build_soul_record(victim) -> Dictionary:
+	var soul := {
+		"id": "%s_%d" % [String(victim.get("template_id")), Time.get_ticks_msec()],
+		"name": String(victim.get("Name")) if "Name" in victim else "Unknown",
+		"race": String(victim.get("race_id")) if "race_id" in victim else "",
+		"gender": String(victim.get("gender")) if "gender" in victim else "",
+		"intelligence": int(victim.get("intelligence")) if "intelligence" in victim else 0,
+		"strength": int(victim.get("strength")) if "strength" in victim else 0,
+		"will": int(victim.get("will")) if "will" in victim else 0,
+		"charisma": int(victim.get("charisma")) if "charisma" in victim else 0,
+		"template_id": String(victim.get("template_id")) if "template_id" in victim else "",
+		"traits": victim.get("traits", {}).duplicate() if "traits" in victim else {},
+		"captured_at": Time.get_ticks_msec(),
+	}
+	return soul
+
+
+# Grant a captured soul. Souls beyond `max_souls` overflow into the inventory.
+func _grant_soul(soul_record: Dictionary) -> void:
+	captured_souls.append(soul_record)
+	if souls < max_souls:
+		souls += 1
+		emit_signal("resource_changed", "souls", souls, max_souls)
+		return
+	# Overflow → inventory item
+	var inv = get_node_or_null("Inventory")
+	if inv == null:
+		return
+	var victim_name: String = String(soul_record.get("name", "Unknown"))
+	var item := {
+		"id": "soul_" + String(soul_record.get("id", str(Time.get_ticks_msec()))),
+		"display_name": "Soul of %s" % victim_name,
+		"sprite_path": "res://UI/UI Icons/soul icon.png",
+		"is_stackable": false,
+		"max_stack_size": null,
+		"num_stacks": null,
+		"weight": 0.0,
+		"interact_options": ["Offer to Patron", "Drop"],
+		"soul_record": soul_record,
+	}
+	inv.add_item(item)
 
 func _on_targeting_confirmed(_hand, _ability, _pos):
 	# Signal listener if you need audio/UI feedback outside the input flow

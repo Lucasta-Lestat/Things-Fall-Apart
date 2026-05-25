@@ -15,6 +15,15 @@
 ##   learn_spell        : String. "random_spell" picks a not-yet-known spell-tagged ability.
 ##   add_trait          : Dict {trait_name: tier} OR String (defaults tier 1).
 ##   remove_trait       : String.
+##   soul_exchange      : Dict {"patron": "<id>", "count": int}. Offers up to
+##                        `count` of the character's captured souls (those whose
+##                        patron preference score is positive); each consumed
+##                        soul applies the patron's rewards once.
+##   holy_tier_next_day : int. Queues a Holy tier bonus that VowManager applies
+##                        on the next date_changed rollover.
+##   vow_set            : Dict {"vow_id": String, "active": bool}. Toggles a vow.
+##   ration_delta       : int. Adjusts the character's ration stack (used by the
+##                        burn-ration camp action).
 ##
 ## Money is the only effect that scales with success_tier (per design comment in
 ## the original downtime.json draft).
@@ -55,6 +64,14 @@ static func apply(character, effects: Dictionary, success_tier: int = 1) -> void
 				_apply_add_trait(character, value)
 			"remove_trait":
 				_apply_remove_trait(character, String(value))
+			"soul_exchange":
+				_apply_soul_exchange(character, value, success_tier)
+			"holy_tier_next_day":
+				_apply_holy_tier_next_day(character, int(value))
+			"vow_set":
+				_apply_vow_set(character, value)
+			"ration_delta":
+				_apply_ration_delta(character, int(value))
 			_:
 				push_warning("DowntimeEffectApplier: unknown effect key '%s'" % String(key))
 
@@ -209,3 +226,96 @@ static func _apply_remove_trait(character, trait_name: String) -> void:
 	if trait_name.is_empty() or not ("traits" in character):
 		return
 	character.traits.erase(trait_name)
+
+# ---------------------------------------------------------------------------
+# Soul exchange (Occult patrons)
+# ---------------------------------------------------------------------------
+
+static func _apply_soul_exchange(character, value, success_tier: int) -> void:
+	if typeof(value) != TYPE_DICTIONARY:
+		return
+	if not ("captured_souls" in character):
+		return
+	var patron_id := String(value.get("patron", ""))
+	if patron_id.is_empty() and "patron_id" in character:
+		patron_id = String(character.patron_id)
+	if patron_id.is_empty():
+		return
+	var max_count := int(value.get("count", 1))
+	if max_count <= 0:
+		return
+	var eligible: Array = PatronDatabase.eligible_souls(patron_id, character.captured_souls)
+	if eligible.is_empty():
+		return
+	var consumed_count := 0
+	for soul in eligible:
+		if consumed_count >= max_count:
+			break
+		character.captured_souls.erase(soul)
+		if "souls" in character and int(character.souls) > 0:
+			character.souls = int(character.souls) - 1
+		_apply_patron_rewards(character, patron_id, consumed_count + 1, success_tier)
+		consumed_count += 1
+
+static func _apply_patron_rewards(character, patron_id: String, souls_offered: int, success_tier: int) -> void:
+	var patron := PatronDatabase.get_patron(patron_id)
+	if patron.is_empty():
+		return
+	var rewards: Array = patron.get("rewards_per_soul", [])
+	for reward in rewards:
+		if typeof(reward) != TYPE_DICTIONARY:
+			continue
+		if souls_offered < int(reward.get("min_souls", 1)):
+			continue
+		var reward_type := String(reward.get("type", ""))
+		match reward_type:
+			"trait":
+				var trait_name := String(reward.get("trait", ""))
+				var amount := int(reward.get("amount", 1))
+				if not trait_name.is_empty() and "traits" in character:
+					character.traits[trait_name] = int(character.traits.get(trait_name, 0)) + amount
+			"grant_ability":
+				_apply_grant_ability(character, String(reward.get("ability_id", "")))
+			"money":
+				_apply_money(character, int(reward.get("amount", 0)), success_tier)
+			"condition":
+				_apply_add_condition(character, reward.get("condition", ""))
+
+# ---------------------------------------------------------------------------
+# Holy Vows
+# ---------------------------------------------------------------------------
+
+static func _apply_holy_tier_next_day(character, amount: int) -> void:
+	if amount == 0 or not ("holy_tier_next_day_pending" in character):
+		return
+	character.holy_tier_next_day_pending = int(character.holy_tier_next_day_pending) + amount
+
+static func _apply_vow_set(character, value) -> void:
+	if typeof(value) != TYPE_DICTIONARY:
+		return
+	if not ("active_vows" in character):
+		return
+	var vow_id := String(value.get("vow_id", ""))
+	if vow_id.is_empty():
+		return
+	var active := bool(value.get("active", true))
+	if active:
+		character.active_vows[vow_id] = {"days_maintained": 0, "broken": false}
+	else:
+		character.active_vows.erase(vow_id)
+
+static func _apply_ration_delta(character, amount: int) -> void:
+	if amount == 0:
+		return
+	var inv: Inventory = character.get_node_or_null("Inventory")
+	if inv == null:
+		return
+	var idx: int = inv.find_item_by_id("ration")
+	if idx < 0:
+		# Try the plural / alternate id used by some content
+		idx = inv.find_item_by_id("rations")
+	if idx < 0:
+		return
+	var current: int = int(inv.items[idx].get("num_stacks", 1))
+	inv.items[idx]["num_stacks"] = max(0, current + amount)
+	inv.emit_signal("item_removed", inv.items[idx])

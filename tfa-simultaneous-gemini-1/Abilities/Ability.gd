@@ -15,12 +15,17 @@ extends Resource
 ## Icon for UI
 @export var icon: Texture2D
 
-## Cooldown in seconds
+## Cooldown in seconds. DEPRECATED — kept for JSON compat; the school-resource
+## system replaces cooldowns. Ability availability is now gated only on the
+## per-school resource costs derived from `traits`.
 @export var cooldown: float = 0.0
 
 @export var visual_duration: float = 1.5
 
-## Resource costs (e.g., {"MP": 10, "stamina": 5})
+## Resource costs (e.g., {"MP": 10, "stamina": 5}). DEPRECATED — costs are now
+## derived from `traits` (Martial→adrenaline, Arcane→focus, Primal→harmony,
+## Holy→devotion, Occult→souls). Legacy entries here are ignored by
+## AbilityManager.
 @export var costs: Dictionary = {}
 
 ## Casting time in seconds (0 = instant)

@@ -1,0 +1,68 @@
+{
+	"patrons": {
+		"lilith": {
+			"display_name": "Lilith, Queen of the Night",
+			"description": "First wife of Adam, she takes the souls of men and gives strength of will in return.",
+			"prefers": {
+				"gender": "male"
+			},
+			"rewards_per_soul": [
+				{
+					"min_souls": 1,
+					"type": "trait",
+					"trait": "Will",
+					"amount": 1
+				},
+				{
+					"min_souls": 3,
+					"type": "grant_ability",
+					"ability_id": "beguile"
+				},
+				{
+					"min_souls": 5,
+					"type": "trait",
+					"trait": "Charisma",
+					"amount": 2
+				}
+			]
+		},
+		"lucifer": {
+			"display_name": "Lucifer, the Morning Star",
+			"description": "Brilliant and proud, he hungers for the souls of the clever and rewards his servants with arcane insight.",
+			"prefers": {
+				"min_intelligence": 60
+			},
+			"rewards_per_soul": [
+				{
+					"min_souls": 1,
+					"type": "trait",
+					"trait": "Intelligence",
+					"amount": 1
+				},
+				{
+					"min_souls": 3,
+					"type": "grant_ability",
+					"ability_id": "fireball"
+				},
+				{
+					"min_souls": 5,
+					"type": "trait",
+					"trait": "Arcane",
+					"amount": 1
+				}
+			]
+		},
+		"mammon": {
+			"display_name": "Mammon, Lord of Greed",
+			"description": "Indifferent to the source, he pays in coin for any soul brought to him.",
+			"prefers": {},
+			"rewards_per_soul": [
+				{
+					"min_souls": 1,
+					"type": "money",
+					"amount": 25
+				}
+			]
+		}
+	}
+}
