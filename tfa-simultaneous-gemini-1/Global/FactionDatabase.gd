@@ -2,6 +2,8 @@
 # Autoload singleton - add to Project > AutoLoad as "FactionDatabase"
 extends Node
 
+signal faction_tier_changed(faction_id: String, old_tier: int, new_tier: int)
+
 var _factions: Dictionary = {}
 
 func _ready() -> void:
@@ -39,6 +41,29 @@ func get_faction_data(faction_id: String) -> Dictionary:
 
 func get_all_faction_ids() -> Array:
 	return _factions.keys()
+
+# ---------------------------------------------------------------------------
+# Tier mutation (emits faction_tier_changed for QuestManager etc.)
+# ---------------------------------------------------------------------------
+
+func get_faction_tier(faction_id: String) -> int:
+	return int(get_faction_data(faction_id).get("tier", 0))
+
+func set_faction_tier(faction_id: String, tier: int) -> void:
+	if not _factions.has(faction_id):
+		push_error("set_faction_tier: unknown faction " + faction_id)
+		return
+	var old_tier: int = int(_factions[faction_id].get("tier", 0))
+	if old_tier == tier:
+		return
+	_factions[faction_id]["tier"] = tier
+	emit_signal("faction_tier_changed", faction_id, old_tier, tier)
+
+func adjust_faction_tier(faction_id: String, delta: int) -> void:
+	if not _factions.has(faction_id):
+		push_error("adjust_faction_tier: unknown faction " + faction_id)
+		return
+	set_faction_tier(faction_id, int(_factions[faction_id].get("tier", 0)) + delta)
 
 # ---------------------------------------------------------------------------
 # Relationship queries
@@ -122,3 +147,14 @@ func item_passes_faction_filter(item_data: Dictionary, faction_id: String) -> bo
 func get_default_backgrounds(faction_id: String) -> Array:
 	var data = get_faction_data(faction_id)
 	return data.get("default_backgrounds", [])
+
+
+# Returns the spawn-time default alertness state for this faction as a
+# string: "at_ease" or "unaware". Civilian factions (neutral, academics,
+# tradespeople) opt in via a `default_alertness` field in factions.json;
+# everything else (guards, hostile factions, wildlife) defaults to "unaware"
+# so they pay attention to ambient noise normally.
+func get_default_alertness(faction_id: String) -> String:
+	if not _factions.has(faction_id):
+		return "unaware"
+	return String(_factions[faction_id].get("default_alertness", "unaware"))

@@ -37,7 +37,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 MAPS_DIR = PROJECT_ROOT / "Maps"
 
-SOURCE = MAPS_DIR / "Scarlatti World Map.png"
+SOURCE = MAPS_DIR / "Scarlatti World Map (3).png"
 MASK_OUT = MAPS_DIR / "scarlatti_world_mask.png"
 
 # Palette must match MapLoader.gd's color_to_world_floor exactly.

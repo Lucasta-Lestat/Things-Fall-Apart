@@ -36,6 +36,8 @@ VfxSystem="*res://Global/VFXSystem.gd"
 DialogueManager="*res://Global/Dialogue_Manager.gd"
 MapDatabase="*res://Global/MapDatabase.gd"
 RegionDatabase="*res://Global/RegionDatabase.gd"
+DowntimeDatabase="*res://Global/DowntimeDatabase.gd"
+DowntimeResolver="*res://scripts/DowntimeResolver.gd"
 FloorDatabase="*res://Global/FloorDatabase.gd"
 TimeManager="*res://Global/TimeManager.gd"
 MapTriggerState="*res://Global/MapTriggerState.gd"
@@ -47,6 +49,11 @@ MusicManager="*res://Global/MusicManager.gd"
 PauseManager="*res://Global/PauseManager.gd"
 WeatherManager="*res://Global/WeatherManager.gd"
 DebugManager="*res://Global/DebugManager.gd"
+HexTileDatabase="*res://Global/HexTileDatabase.gd"
+HexIconDatabase="*res://Global/HexIconDatabase.gd"
+QuestDatabase="*res://Global/QuestDatabase.gd"
+QuestManager="*res://Global/QuestManager.gd"
+HearingManager="*res://Global/HearingManager.gd"
 
 [display]
 
@@ -55,7 +62,7 @@ window/size/viewport_height=1080
 
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/hex_world_editor/plugin.cfg")
 
 [file_customization]
 

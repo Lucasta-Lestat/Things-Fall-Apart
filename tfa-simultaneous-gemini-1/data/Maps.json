@@ -750,6 +750,110 @@
 			"warp_points": []
 		},
 		{
+			"id": "skarsgaard_throne",
+			"name": "Skarsgaard Throne Hall",
+			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
+			"region": "skarsgaard",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "southrons_mill",
+			"name": "Southron's Mill",
+			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "vermincelli_hideout",
+			"name": "Vermincelli Hideout",
+			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "sacred_grove",
+			"name": "The Sacred Grove",
+			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
+			"region": "wilderness",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "bortelinian_catacombs",
+			"name": "Bortelinian Catacombs",
+			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "alamonean_tower",
+			"name": "Alamonean Magician's Tower",
+			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"region": "alamone",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "river_elf_village",
+			"name": "River-Elf Village",
+			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
+			"region": "wilderness",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "curia",
+			"name": "The Scarlattin Curia",
+			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
+			"region": "scarlatti",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": { "default": { "position": [40, 40], "facing": 90 } },
+			"party_spawns": { "default": { "formation": "cluster", "offset_radius": 30 } },
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
 			"id": "scarlatti_world",
 			"name": "Scarlatti",
 			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
@@ -757,7 +861,7 @@
 			"is_world_map": true,
 			"time_scale_multiplier": 60.0,
 			"images": {
-				"map": "res://Maps/Scarlatti World Map.png",
+				"map": "res://Maps/Scarlatti World Map (3).png",
 				"mask": "res://Maps/scarlatti_world_mask.png"
 			},
 			"tile_size": 64,
@@ -766,7 +870,7 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [200, 200],
+					"position": [600, 400],
 					"facing": 90
 				}
 			},
@@ -779,13 +883,13 @@
 			"npc_spawns": [
 				{
 					"template_id": "cultist",
-					"position": [800, 600],
+					"position": [1200, 1100],
 					"count": 1,
 					"faction": "cultists"
 				},
 				{
 					"template_id": "cultist",
-					"position": [1400, 900],
+					"position": [1500, 700],
 					"count": 1,
 					"faction": "cultists"
 				}
@@ -795,7 +899,7 @@
 			"warp_points": [
 				{
 					"id": "to_perrow",
-					"position": [400, 400],
+					"position": [1100, 700],
 					"size": [64, 64],
 					"target_map": "cemetery",
 					"target_spawn": "default",
@@ -805,7 +909,7 @@
 				},
 				{
 					"id": "to_town_square",
-					"position": [700, 350],
+					"position": [1300, 1100],
 					"size": [64, 64],
 					"target_map": "town_square",
 					"target_spawn": "default",

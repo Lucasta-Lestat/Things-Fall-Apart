@@ -68,6 +68,20 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 
 	# --- Set faction ---
 	character.faction_id = faction_id
+	# --- Resolve and apply default alertness (AT_EASE for civilian factions) ---
+	# Cascade: spawn override > template default > faction default > "unaware".
+	var alertness_str: String = String(overrides.get(
+		"default_alertness",
+		template.get("default_alertness",
+			FactionDatabase.get_default_alertness(faction_id))))
+	character.default_alertness = alertness_str
+	var ai_node = character.get_node_or_null("AI")
+	if ai_node and ai_node.has_method("apply_default_alertness"):
+		ai_node.apply_default_alertness(alertness_str)
+	# Stable template id (from data/TopDownCharacters.json) for QuestManager
+	# and PartySidePanel icon lookup. Set before display_name so any code that
+	# observes either field sees a consistent identity.
+	character.template_id = template_id
 	# Per-spawn unique_name override > template name. Lets one template back
 	# many uniquely-named NPCs (e.g. "Reverend Mother Liana").
 	var unique_name: String = str(overrides.get("unique_name", ""))

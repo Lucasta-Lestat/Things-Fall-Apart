@@ -1,0 +1,51 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/hex_world_editor/palette_dock.gd" id="1_palette"]
+
+[node name="HexPalette" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_palette")
+
+[node name="Tabs" type="TabContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Tiles" type="MarginContainer" parent="Tabs"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Tabs/Tiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Grid" type="GridContainer" parent="Tabs/Tiles/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 2
+
+[node name="Icons" type="MarginContainer" parent="Tabs"]
+visible = false
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Tabs/Icons"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Grid" type="GridContainer" parent="Tabs/Icons/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 2
+
+[node name="Hint" type="Label" parent="."]
+layout_mode = 2
+text = "Select a tile or icon to paint."
+horizontal_alignment = 1
+autowrap_mode = 3
