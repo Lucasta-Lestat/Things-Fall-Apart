@@ -15,13 +15,12 @@ const COND_ICON_SIZE := Vector2(16, 16)
 const RESOURCE_ICON_SIZE := Vector2(28, 28)
 
 # School trait → (resource_field, icon_path, fill_color). Icons live in
-# UI/UI Icons/. A Devotion-specific icon does not yet exist; we fall back to a
-# Holy ability icon so the panel still renders without a missing-asset crash.
+# UI/UI Icons/.
 const SCHOOL_RESOURCES := [
 	{"school": "Martial", "resource": "adrenaline", "icon": "res://UI/UI Icons/Adrenaline Icon.png", "color": Color(0.9, 0.2, 0.2)},
 	{"school": "Arcane", "resource": "focus", "icon": "res://UI/UI Icons/Focus Icon.png", "color": Color(0.3, 0.5, 0.95)},
 	{"school": "Primal", "resource": "harmony", "icon": "res://UI/UI Icons/Harmony Icon.png", "color": Color(0.3, 0.8, 0.4)},
-	{"school": "Holy", "resource": "devotion", "icon": "res://UI/UI Icons/Devotion Icon.png", "color": Color(0.95, 0.85, 0.45), "fallback_icon": "res://UI/UI Icons/ability_alms_of_the_vein.png"},
+	{"school": "Holy", "resource": "devotion", "icon": "res://UI/UI Icons/Devotion Icon.png", "color": Color(0.95, 0.85, 0.45)},
 	{"school": "Occult", "resource": "souls", "icon": "res://UI/UI Icons/soul icon.png", "color": Color(0.5, 0.2, 0.6)},
 ]
 
@@ -1171,10 +1170,7 @@ func _build_resource_bars(character, row: HBoxContainer) -> Array:
 			continue
 		var icon_path: String = entry["icon"]
 		if not ResourceLoader.exists(icon_path):
-			# Use the fallback icon (only Devotion currently needs one)
-			icon_path = entry.get("fallback_icon", DUMMY_ICON_PATH)
-			if not ResourceLoader.exists(icon_path):
-				continue
+			continue
 		var tex: Texture2D = load(icon_path)
 		var bar := TextureProgressBar.new()
 		bar.texture_under = tex

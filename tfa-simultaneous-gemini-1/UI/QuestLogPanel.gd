@@ -85,10 +85,13 @@ func _connect_quest_manager() -> void:
 		QuestManager.quest_failed.connect(_on_quest_event)
 
 func _on_quest_event(_quest_id: String) -> void:
-	_refresh()
+	# Defer to next frame: the signal often fires mid-init (autoload deferred
+	# auto-start), and rebuilding RichTextLabel trees during scene setup has
+	# caused engine-side layout crashes.
+	call_deferred("_refresh")
 
 func _on_quest_stage_changed(_quest_id: String, _old: String, _new: String) -> void:
-	_refresh()
+	call_deferred("_refresh")
 
 # ---------------------------------------------------------------------------
 # Toggle (J key)
@@ -120,6 +123,8 @@ func _toggle_panel() -> void:
 func _refresh() -> void:
 	if _content_vbox == null:
 		return
+	if not is_inside_tree():
+		return
 	for child in _content_vbox.get_children():
 		child.queue_free()
 
@@ -149,11 +154,13 @@ func _refresh() -> void:
 		return
 
 	for qid in active_ids:
+		print("[QuestLogPanel] _refresh build active=", qid)
 		_content_vbox.add_child(_build_quest_block(qid, "active"))
 	for qid in completed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "completed"))
 	for qid in failed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "failed"))
+	print("[QuestLogPanel] _refresh END (built ", active_ids.size(), " active)")
 
 func _build_quest_block(quest_id: String, group: String) -> Control:
 	var q: Dictionary = QuestDatabase.get_quest(quest_id)
@@ -172,7 +179,12 @@ func _build_quest_block(quest_id: String, group: String) -> Control:
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(40, 40)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	# NOTE: TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL crashes Godot 4.6 when
+	# placed in an HBoxContainer next to an expanding RichTextLabel sibling
+	# (triggers ~89 "Object was deleted while awaiting a callback" errors
+	# then SIGSEGV in the deferred layout pass). Using EXPAND_IGNORE_SIZE
+	# with a custom_minimum_size achieves the same visual result safely.
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		icon.texture = load(icon_path)
 	elif ResourceLoader.exists(DEFAULT_ICON_PATH):

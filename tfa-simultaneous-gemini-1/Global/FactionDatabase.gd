@@ -147,3 +147,14 @@ func item_passes_faction_filter(item_data: Dictionary, faction_id: String) -> bo
 func get_default_backgrounds(faction_id: String) -> Array:
 	var data = get_faction_data(faction_id)
 	return data.get("default_backgrounds", [])
+
+
+# Returns the spawn-time default alertness state for this faction as a
+# string: "at_ease" or "unaware". Civilian factions (neutral, academics,
+# tradespeople) opt in via a `default_alertness` field in factions.json;
+# everything else (guards, hostile factions, wildlife) defaults to "unaware"
+# so they pay attention to ambient noise normally.
+func get_default_alertness(faction_id: String) -> String:
+	if not _factions.has(faction_id):
+		return "unaware"
+	return String(_factions[faction_id].get("default_alertness", "unaware"))

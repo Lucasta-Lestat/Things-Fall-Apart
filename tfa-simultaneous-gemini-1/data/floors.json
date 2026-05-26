@@ -8,6 +8,8 @@
 		"alternate_textures":["res:\/\/Structures\/Floors\/Floor Dirt.png"],
 		"texture":"res:\/\/Structures\/Floors\/Floor Dirt.png",
 		"walkability":0.9,
+		"base_sound_level":0.35,
+		"footstep_sfx":"footstep_dirt",
 		"rarity":"common",
 		"flammable":false,
 		"conductive":false,
@@ -27,6 +29,8 @@
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Wood.png",
 		"texture":"res:\/\/Structures\/Floors\/Floor Wood.png",
 		"walkability":1.0,
+		"base_sound_level":0.65,
+		"footstep_sfx":"footstep_wood",
 		"rarity":"common",
 		"flammable":true,
 		"conductive":false,
@@ -47,6 +51,8 @@
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
 		"texture":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
 		"walkability":1.0,
+		"base_sound_level":0.8,
+		"footstep_sfx":"footstep_stone",
 		"rarity":"common",
 		"flammable":false,
 		"conductive":false,
@@ -68,6 +74,8 @@
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Grass.png",
 		"texture":"res:\/\/Structures\/Floors\/Floor Grass.png",
 		"walkability":0.8,
+		"base_sound_level":0.25,
+		"footstep_sfx":"footstep_grass",
 		"rarity":"common",
 		"flammable":true,
 		"conductive":false,
@@ -88,6 +96,8 @@
 		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
 		"texture":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
 		"walkability":1.0,
+		"base_sound_level":0.8,
+		"footstep_sfx":"footstep_stone",
 		"rarity":"common",
 		"flammable":false,
 		"conductive":false,
@@ -98,6 +108,28 @@
 		},
 		"resources":{
 			"stone":10
+		}
+	},
+	"shallow_water":
+		{
+		"id":"shallow_water",
+		"name":"Shallow Water",
+		"description":"Ankle-deep water; sloshes loudly with every step.",
+		"icon_path":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"texture":"res:\/\/Structures\/Floors\/Floor Cobblestone.png",
+		"walkability":0.6,
+		"base_sound_level":0.9,
+		"footstep_sfx":"footstep_shallow_water",
+		"rarity":"common",
+		"flammable":false,
+		"conductive":true,
+		"max_health":1000,
+		"current_health":1000,
+		"damage_resistances":{
+
+		},
+		"resources":{
+
 		}
 	}
 }

@@ -368,6 +368,9 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 
 	# Connect signals
 	character.character_died.connect(_on_character_died.bind(character))
+	# Witnessing system: when this character is damaged, ping nearby NPCs so
+	# AT_EASE civilians flip to UNAWARE and head over to investigate.
+	character.damaged_by.connect(_on_character_damaged.bind(character))
 
 	# Track in scene
 	characters_in_scene.append(character)
@@ -407,7 +410,14 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
 	if not party_chars.is_empty():
 		save_party_state()
- 
+
+	# Reset the "ever seen" radar memory — fresh map means fresh dread.
+	# Pulse/sighting dicts also get cleared so stale references don't linger.
+	_npc_ever_seen.clear()
+	_npc_was_truly_seen.clear()
+	_npc_pulse_remaining.clear()
+	_npc_radar_cooldown.clear()
+
 	# Clean up previous map
 	_unload_current_map()
  
@@ -936,9 +946,172 @@ func _toggle_npc_los_cones() -> void:
 		if npc_los:
 			npc_los.visible = stealth_mode
 
+# ===== Hearing visibility pulse =====
+# When a party member can HEAR an NPC (but doesn't see them), the NPC briefly
+# flashes at low alpha so the player gets a momentary fix on their location.
+# Tuned to feel like a ghost glimpse, not a solid reveal.
+const PULSE_ALPHA: float = 0.45
+const PULSE_DURATION: float = 1.0
+# Fraction of PULSE_DURATION the alpha holds near PULSE_ALPHA before decaying.
+# Non-linear: plateau then cubic falloff (see _hearing_pulse_curve).
+const PULSE_PLATEAU_FRAC: float = 0.35
+
+# NPC -> seconds remaining on the most recent hearing pulse.
+var _npc_pulse_remaining: Dictionary = {}
+# NPC -> was the NPC truly seen on the last LOS pass (for service discovery
+# tracking). Replaces reading npc.visible, which is now used for the pulse.
+var _npc_was_truly_seen: Dictionary = {}
+# NPC -> true if this NPC has EVER been directly seen by a party member this
+# map session. First-contact hearing produces a radar ping at the heard
+# position; subsequent hearings (once seen at least once) produce the alpha
+# sprite pulse. Cleared on map load to restore dread on revisits.
+var _npc_ever_seen: Dictionary = {}
+# NPC -> cooldown seconds remaining before another radar ping can spawn for
+# them. Stops a walking unseen enemy from spawning a ping every footstep.
+var _npc_radar_cooldown: Dictionary = {}
+const RADAR_PING_COOLDOWN: float = 0.9
+
+
+# Preloaded scene for the first-contact radar ping. Loaded lazily on first
+# use so editor reloads don't crash if the file is missing during dev.
+var _radar_ping_scene: PackedScene = null
+
+
+# Called by HearingManager when any party member hears a sound this NPC made.
+# Branches on whether the player has ever directly seen this NPC:
+#   - Seen before: restart the alpha sprite pulse (NPC is briefly visible).
+#   - Never seen:  spawn a radar ping VFX at the heard position. The sprite
+#                  stays invisible — you only know *something* is there.
+func trigger_hearing_pulse(npc) -> void:
+	if not is_instance_valid(npc):
+		return
+	if _npc_ever_seen.get(npc, false):
+		_npc_pulse_remaining[npc] = PULSE_DURATION
+	else:
+		# Throttle: each NPC can spawn at most one ping per RADAR_PING_COOLDOWN
+		# seconds. Otherwise a walking enemy floods the screen with pings.
+		var cd: float = _npc_radar_cooldown.get(npc, 0.0)
+		if cd > 0.0:
+			return
+		_npc_radar_cooldown[npc] = RADAR_PING_COOLDOWN
+		_spawn_radar_ping(npc.global_position)
+
+
+func _spawn_radar_ping(world_pos: Vector2) -> void:
+	if _radar_ping_scene == null:
+		var path := "res://vfx/radar_ping.tscn"
+		if ResourceLoader.exists(path):
+			_radar_ping_scene = load(path)
+	if _radar_ping_scene == null:
+		return
+	var ping: Node2D = _radar_ping_scene.instantiate()
+	add_child(ping)
+	ping.global_position = world_pos
+	if ping.has_method("play"):
+		ping.play()
+	# Soft sonar-blip sound to reinforce the visual ping. Mixed quiet so it
+	# reads as a UI feedback layer, not a world event.
+	if SfxManager.sound_library.has("radar_ping"):
+		SfxManager.play("radar_ping", world_pos, Vector2(0.95, 1.05), -10.0)
+
+
+# Subscribed to every spawned character's `damaged_by` signal (see
+# `_spawn_character`). Broadcasts a "witnessed attack" event to all OTHER
+# characters that currently have LOS on the victim, so AT_EASE civilians wake
+# up. Bumps to just past the SEARCHING threshold so witnesses immediately
+# start heading toward the victim — they saw violence, they're not just
+# vaguely suspicious.
+func _on_character_damaged(attacker, location: Vector2, _total_damage: float, victim: ProceduralCharacter) -> void:
+	if not is_instance_valid(victim):
+		return
+	# The victim's own AI wake-up is handled in ai.gd via the same signal —
+	# this function only handles witnesses.
+	for c in characters_in_scene:
+		if c == victim or c == attacker:
+			continue
+		if not is_instance_valid(c) or not c.has_method("is_alive") or not c.is_alive():
+			continue
+		var ai_node = c.get_node_or_null("AI")
+		if not ai_node or not ai_node.has_method("wake_from_at_ease"):
+			continue
+		# LOS on the victim required — must literally see the attack.
+		if not _has_visual_los(c, victim.global_position):
+			continue
+		# 65 = SEARCHING threshold (60) + a bit; witnesses move out
+		# immediately, but the source identity still has to be confirmed via
+		# LOS for HOSTILE (handled by existing target acquisition).
+		ai_node.wake_from_at_ease(65.0, location)
+
+
+# Shared LOS check helper: position visible to `from_char` given their FOV,
+# sight range, and any wall occlusion. Mirrors the per-ally checks already
+# inlined in `_update_npc_los_visibility`.
+func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2) -> bool:
+	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
+		return false
+	var cm = from_char.get_node_or_null("ConditionManager")
+	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+		return false
+	var to_target: Vector2 = target_pos - from_char.global_position
+	var dist: float = to_target.length()
+	if dist > 1440.0 * from_char.sight:
+		return false
+	var facing_dir: Vector2 = Vector2.UP.rotated(from_char.rotation)
+	var angle: float = facing_dir.angle_to(to_target.normalized())
+	if abs(angle) > deg_to_rad(from_char.fov_angle_degrees * 0.5):
+		return false
+	return _sight_line_clear(from_char.global_position, target_pos)
+
+
+# Non-linear pulse curve. t in [0, 1] where 0 = fresh pulse, 1 = expired.
+# Returns alpha multiplier (0..1) applied to PULSE_ALPHA.
+# Holds near 1.0 for PULSE_PLATEAU_FRAC of the duration, then cubic decay
+# to 0.0 — visible long enough to register, then fades fast.
+func _hearing_pulse_curve(t: float) -> float:
+	t = clamp(t, 0.0, 1.0)
+	if t < PULSE_PLATEAU_FRAC:
+		return 1.0
+	var decay_t: float = (t - PULSE_PLATEAU_FRAC) / (1.0 - PULSE_PLATEAU_FRAC)
+	return pow(1.0 - decay_t, 3.0)
+
+
+func _tick_hearing_pulses(delta: float) -> void:
+	# Decay radar ping cooldowns alongside sprite-pulse timers. Cheap and
+	# bounded by the number of NPCs with active cooldowns.
+	if not _npc_radar_cooldown.is_empty():
+		var radar_expired: Array = []
+		for npc in _npc_radar_cooldown.keys():
+			if not is_instance_valid(npc):
+				radar_expired.append(npc)
+				continue
+			var v: float = _npc_radar_cooldown[npc] - delta
+			if v <= 0.0:
+				radar_expired.append(npc)
+			else:
+				_npc_radar_cooldown[npc] = v
+		for npc in radar_expired:
+			_npc_radar_cooldown.erase(npc)
+
+	if _npc_pulse_remaining.is_empty():
+		return
+	var expired: Array = []
+	for npc in _npc_pulse_remaining.keys():
+		if not is_instance_valid(npc):
+			expired.append(npc)
+			continue
+		var t: float = _npc_pulse_remaining[npc] - delta
+		if t <= 0.0:
+			expired.append(npc)
+		else:
+			_npc_pulse_remaining[npc] = t
+	for npc in expired:
+		_npc_pulse_remaining.erase(npc)
+
+
 func _update_npc_los_visibility() -> void:
 	"""NPCs are only visible when inside a party member's sight cone
 	AND the line between them isn't blocked by a vision_blocker (layer 3).
+	Unseen NPCs may still flash briefly via the hearing pulse system.
 	NPC LOS lights are children of the NPC, so they hide when the NPC hides."""
 	for npc in characters_in_scene:
 		if not is_instance_valid(npc):
@@ -963,12 +1136,31 @@ func _update_npc_los_visibility() -> void:
 			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
 				seen = true
 				break
-		var was_visible: bool = npc.visible
-		npc.visible = seen
-		# Discovery: first time we lay eyes on a service NPC, mark them known
-		# so they appear in the TownServicesPanel even after leaving the map.
-		if seen and not was_visible:
-			mark_service_seen(npc)
+
+		var was_truly_seen: bool = _npc_was_truly_seen.get(npc, false)
+		_npc_was_truly_seen[npc] = seen
+
+		if seen:
+			# Direct line of sight overrides any pulse.
+			npc.visible = true
+			npc.modulate.a = 1.0
+			_npc_pulse_remaining.erase(npc)
+			# Mark as "ever seen" for the radar-vs-sprite-pulse branch in
+			# trigger_hearing_pulse. Persists for the map session.
+			_npc_ever_seen[npc] = true
+			# Discovery: first time we lay eyes on a service NPC, mark them
+			# known so they appear in the TownServicesPanel even after leaving.
+			if not was_truly_seen:
+				mark_service_seen(npc)
+		elif _npc_pulse_remaining.has(npc):
+			var t_remaining: float = _npc_pulse_remaining[npc]
+			var t_norm: float = clamp(1.0 - (t_remaining / PULSE_DURATION), 0.0, 1.0)
+			var alpha: float = _hearing_pulse_curve(t_norm) * PULSE_ALPHA
+			npc.visible = true
+			npc.modulate.a = alpha
+		else:
+			npc.visible = false
+			npc.modulate.a = 0.0
 
 func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
 	var viewport := get_viewport()
@@ -1040,6 +1232,9 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
+	# Tick hearing pulse timers before applying visibility, so freshly-expired
+	# pulses go fully transparent this frame instead of next.
+	_tick_hearing_pulses(delta)
 	# Update NPC and item visibility based on party line-of-sight
 	_update_npc_los_visibility()
 	_update_item_los_visibility()
@@ -1115,8 +1310,10 @@ func process_object_hit(
 
 	if penetration_result.state == PenetrationState.BOUNCED:
 		SfxManager.play("clash", target.global_position)
+		HearingManager.emit(target.global_position, 0.9, attacker)
 	else:
 		SfxManager.play("impact", target.global_position)
+		HearingManager.emit(target.global_position, 0.8, attacker)
 
 	# Trigger weapon ability on non-bounced hits
 	if weapon and penetration_result.state != PenetrationState.BOUNCED:
@@ -1484,7 +1681,7 @@ func process_weapon_hit(
 	var is_unarmed: bool = weapon == null or weapon is AbilityShape
 
 	# damage_limb applies limb-specific armor DR internally and returns total dealt
-	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit)
+	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit, attacker)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
@@ -1525,9 +1722,11 @@ func process_weapon_hit(
 	if penetration_result.state == PenetrationState.BOUNCED:
 		result["blocked"] = attack_damage
 		SfxManager.play("clash", attacker.position)
+		HearingManager.emit(attacker.position, 0.9, attacker)
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
 		SfxManager.play("sword-on-flesh", target.position)
+		HearingManager.emit(target.position, 0.7, attacker)
 
 	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):
 		var penetrated: bool = penetration_result.state != PenetrationState.BOUNCED
@@ -1622,6 +1821,7 @@ func process_weapon_clash(
 	if abs(power_diff) < 2.0:
 		# Close match - both stagger slightly
 		SfxManager.play("clash", char1.position)
+		HearingManager.emit(char1.position, 0.9, char1)
 
 		result["outcome"] = "stalemate"
 		char2.apply_stagger(0.2) #REMOVE? Or make a condtions
@@ -1812,12 +2012,14 @@ func _process_projectile_hit_character(
 	var local_hit = target.to_local(hit_position)
 	var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
 	var attack_damage = weapon.damage.duplicate()
-	target.damage_limb(limb_type, attack_damage, local_hit)
+	target.damage_limb(limb_type, attack_damage, local_hit, shooter)
 
 	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
+		HearingManager.emit(hit_position, 1.5, shooter)  # gunshot — very loud
 	else:
 		SfxManager.play("arrow-body-impact", hit_position)
+		HearingManager.emit(hit_position, 0.4, shooter)
 
 func _process_projectile_hit_object(
 	_shooter: ProceduralCharacter,
@@ -1830,8 +2032,10 @@ func _process_projectile_hit_object(
 
 	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("armor-impact", hit_position)
+		HearingManager.emit(hit_position, 1.5, _shooter)  # gunshot
 	else:
 		SfxManager.play("arrow-wall-impact", hit_position)
+		HearingManager.emit(hit_position, 0.4, _shooter)
 
 # ===== THROWN ITEM PROJECTILES =====
 
@@ -1878,21 +2082,21 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	sprite.rotation = PI / 2.0
 	proj.add_child(sprite)
 
-	proj.hit.connect(_on_thrown_projectile_hit.bind(item_id, thrown_damage))
+	proj.hit.connect(_on_thrown_projectile_hit.bind(item_id, thrown_damage, proj_data["shooter"]))
 	proj.expired.connect(_on_thrown_projectile_expired.bind(item_id))
 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(proj_data["position"], velocity_vec, proj_data["shooter"])
 
 
-func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary) -> void:
+func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary, shooter) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
 	if collider is ProceduralCharacter:
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
 			var limb_type: int = collider.get_limb_at_position(local_hit, collider.body_width, collider.body_height)
-			collider.damage_limb(limb_type, thrown_damage.duplicate(), local_hit)
+			collider.damage_limb(limb_type, thrown_damage.duplicate(), local_hit, shooter)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
