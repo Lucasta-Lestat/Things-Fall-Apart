@@ -63,36 +63,25 @@ static func apply(character, effects: Dictionary, success_tier: int = 1) -> void
 # ---------------------------------------------------------------------------
 
 static func _apply_hp(character, amount: int) -> void:
+	# Single-bar HP: downtime heals/damage just push current_health up or down.
+	# `take_damage` would apply DR — downtime mishaps are abstract, not weapon
+	# hits, so we bypass it and subtract directly. Still routes through the
+	# health_changed signal so UI updates.
 	if amount == 0:
 		return
-	# Healing distributes across the most-damaged limbs first (so a +8 heal on
-	# a battered party member spreads rather than topping off a single limb).
-	# Damage hits the torso — downtime mishaps are minor and shouldn't sever.
-	if not ("limbs" in character) or character.limbs == null or character.limbs.is_empty():
+	if not ("current_health" in character) or not ("max_health" in character):
 		return
 	if amount > 0:
-		var limbs: Array = character.limbs.values()
-		limbs.sort_custom(func(a, b): return float(a.current_hp) / float(max(1, a.max_hp)) < float(b.current_hp) / float(max(1, b.max_hp)))
-		var remaining := amount
-		# First pass: top off the most-damaged limbs by up to their deficit.
-		for limb in limbs:
-			if remaining <= 0:
-				break
-			var deficit: int = max(0, limb.max_hp - limb.current_hp)
-			if deficit <= 0:
-				continue
-			var heal: int = min(deficit, remaining)
-			limb.heal(heal)
-			remaining -= heal
+		if character.has_method("heal"):
+			character.heal(amount)
+		else:
+			character.current_health = min(character.current_health + amount, character.max_health)
+			character.health_changed.emit(character.current_health, character.max_health, character)
 	else:
-		var torso = character.limbs.values()[0]
-		# LimbType.TORSO is enum index 1. Look it up explicitly so the order
-		# of limbs.values() doesn't matter.
-		for k in character.limbs.keys():
-			if int(k) == 1:  # TORSO
-				torso = character.limbs[k]
-				break
-		torso.current_hp = max(0, torso.current_hp - abs(amount))
+		character.current_health = max(0, character.current_health - abs(amount))
+		character.health_changed.emit(character.current_health, character.max_health, character)
+		if character.has_method("_check_death"):
+			character._check_death()
 
 static func _apply_money(character, value, success_tier: int) -> void:
 	# `Inventory` has a class_name, so typing the local lets the parser see

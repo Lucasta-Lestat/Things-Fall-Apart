@@ -27,7 +27,8 @@ enum EffectType {
 	# --- NEW EFFECTS ---
 	FORCE_UNEQUIP,          # Force a piece of gear to be unequipped.
 	SCRAMBLE_TARGET,        # Cause attacks to target a random nearby tile.
-	RESTRICT_ACTION_TRAIT   # Prevent actions with a specific trait (e.g., "auditory").
+	RESTRICT_ACTION_TRAIT,  # Prevent actions with a specific trait (e.g., "auditory").
+	SEVER_LIMB              # Remove a limb (HEAD/TORSO kills the bearer).
 }
 
 @export var type: EffectType

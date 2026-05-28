@@ -1513,7 +1513,9 @@ func _on_character_died(character: ProceduralCharacter) -> void:
 func _print_status() -> void:
 	print("\n=== STATUS ===")
 	print("Player: %s" % player.get_stats_string())
-	print(player.limb_system.get_status_string())
+	# get_status_string now lives on ProceduralCharacter itself and prints
+	# the single HP pool plus any severed/disabled limbs.
+	print(player.get_status_string())
 	print("")
 	for i in range(enemies.size()):
 		var enemy = enemies[i]
@@ -1657,8 +1659,9 @@ func process_weapon_hit(
 	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
 	var is_unarmed: bool = weapon == null or weapon is AbilityShape
 
-	# damage_limb applies limb-specific armor DR internally and returns total dealt
-	var final_damage = target.damage_limb(limb_type, attack_damage, local_hit, attacker)
+	# take_damage applies limb-specific armor DR (via hit_limb) then subtracts
+	# from the character's single HP pool. Returns total damage dealt.
+	var final_damage = target.take_damage(attack_damage, local_hit, attacker, limb_type)
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
@@ -1989,7 +1992,7 @@ func _process_projectile_hit_character(
 	var local_hit = target.to_local(hit_position)
 	var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
 	var attack_damage = weapon.damage.duplicate()
-	target.damage_limb(limb_type, attack_damage, local_hit, shooter)
+	target.take_damage(attack_damage, local_hit, shooter, limb_type)
 
 	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
@@ -2073,7 +2076,7 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
 			var limb_type: int = collider.get_limb_at_position(local_hit, collider.body_width, collider.body_height)
-			collider.damage_limb(limb_type, thrown_damage.duplicate(), local_hit, shooter)
+			collider.take_damage(thrown_damage.duplicate(), local_hit, shooter, limb_type)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
@@ -2344,6 +2347,9 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	# --- Dialogue ---
 	state["dialogue_id"] = character.get("dialogue_id") if "dialogue_id" in character else ""
  
+	# --- HP (single bar replaces the old per-limb HP) ---
+	state["current_health"] = character.current_health
+
 	# --- Severed limbs / wound state ---
 	state["severed_limbs"] = character.severed_limbs.duplicate()
  
@@ -2508,9 +2514,21 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("dialogue_id") and "dialogue_id" in character:
 		character.dialogue_id = state["dialogue_id"]
  
+	# --- HP (single bar) ---
+	# Restored AFTER attributes so max_health (derived from constitution) is
+	# already correct when we clamp. Falls back to max_health if missing.
+	if state.has("current_health"):
+		character.current_health = clamp(int(state["current_health"]), 0, character.max_health)
+		character.health_changed.emit(character.current_health, character.max_health, character)
+
 	# --- Severed limbs ---
 	if state.has("severed_limbs"):
 		character.severed_limbs = state["severed_limbs"]
+		# Mirror the dict into each Limb's is_severed flag so the visual
+		# update + equipment-drop logic stays consistent on reload.
+		for limb_type in character.severed_limbs:
+			if character.severed_limbs[limb_type] and character.limbs.has(limb_type):
+				character.limbs[limb_type].is_severed = true
  
 	# --- Inventory: clear template items, restore saved ones ---
 	if character.inventory and state.has("inventory_items"):

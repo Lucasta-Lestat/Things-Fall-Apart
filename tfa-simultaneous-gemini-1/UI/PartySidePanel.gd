@@ -126,47 +126,26 @@ func _create_character_panel(character, index: int) -> Dictionary:
 
 	container.add_child(header)
 
-	# --- Head Health Bar ---
-	var head_label = Label.new()
-	head_label.text = "Head"
-	head_label.add_theme_font_size_override("font_size", 9)
-	head_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	container.add_child(head_label)
+	# --- Health Bar (single bar replaces the old head + torso pair) ---
+	var hp_label = Label.new()
+	hp_label.text = "HP"
+	hp_label.add_theme_font_size_override("font_size", 9)
+	hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(hp_label)
 
-	var head_bar = ProgressBar.new()
-	head_bar.custom_minimum_size = Vector2(0, 10)
-	head_bar.max_value = 100
-	head_bar.value = 100
-	head_bar.show_percentage = false
-	head_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var head_fill = StyleBoxFlat.new()
-	head_fill.bg_color = HP_COLOR_FULL
-	head_bar.add_theme_stylebox_override("fill", head_fill)
-	var head_bg = StyleBoxFlat.new()
-	head_bg.bg_color = Color(0.3, 0.1, 0.1, 0.6)
-	head_bar.add_theme_stylebox_override("background", head_bg)
-	container.add_child(head_bar)
-
-	# --- Torso Health Bar ---
-	var torso_label = Label.new()
-	torso_label.text = "Torso"
-	torso_label.add_theme_font_size_override("font_size", 9)
-	torso_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	container.add_child(torso_label)
-
-	var torso_bar = ProgressBar.new()
-	torso_bar.custom_minimum_size = Vector2(0, 10)
-	torso_bar.max_value = 100
-	torso_bar.value = 100
-	torso_bar.show_percentage = false
-	torso_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var torso_fill = StyleBoxFlat.new()
-	torso_fill.bg_color = HP_COLOR_FULL
-	torso_bar.add_theme_stylebox_override("fill", torso_fill)
-	var torso_bg = StyleBoxFlat.new()
-	torso_bg.bg_color = Color(0.3, 0.1, 0.1, 0.6)
-	torso_bar.add_theme_stylebox_override("background", torso_bg)
-	container.add_child(torso_bar)
+	var health_bar = ProgressBar.new()
+	health_bar.custom_minimum_size = Vector2(0, 12)
+	health_bar.max_value = 100
+	health_bar.value = 100
+	health_bar.show_percentage = false
+	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var health_fill = StyleBoxFlat.new()
+	health_fill.bg_color = HP_COLOR_FULL
+	health_bar.add_theme_stylebox_override("fill", health_fill)
+	var health_bg = StyleBoxFlat.new()
+	health_bg.bg_color = Color(0.3, 0.1, 0.1, 0.6)
+	health_bar.add_theme_stylebox_override("background", health_bg)
+	container.add_child(health_bar)
 
 	# --- MP Bar ---
 	var mp_bar = ProgressBar.new()
@@ -216,10 +195,8 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"container": container,
 		"icon": icon,
 		"name_label": name_label,
-		"head_bar": head_bar,
-		"head_fill": head_fill,
-		"torso_bar": torso_bar,
-		"torso_fill": torso_fill,
+		"health_bar": health_bar,
+		"health_fill": health_fill,
 		"condition_container": cond_container,
 		"mp_bar": mp_bar,
 		"mp_label": mp_label,
@@ -1135,9 +1112,8 @@ func _process(_delta: float) -> void:
 		if icon:
 			icon.modulate = Color(1.0, 0.3, 0.3, 1.0) if not character.is_alive() else Color.WHITE
 
-		# Update health bars
-		_update_health_bar(data, "head_bar", "head_fill", 0, character)
-		_update_health_bar(data, "torso_bar", "torso_fill", 1, character)
+		# Update the single character HP bar
+		_update_health_bar(data, character)
 
 		# Update conditions display
 		_update_conditions(data, character)
@@ -1149,18 +1125,18 @@ func _process(_delta: float) -> void:
 		var mp_label: Label = data["mp_label"]
 		mp_label.text = "%d / %d MP" % [character.MP, character.max_MP]
 
-func _update_health_bar(data: Dictionary, bar_key: String, fill_key: String, limb_type: int, character) -> void:
-	var bar: ProgressBar = data[bar_key]
-	var fill_style: StyleBoxFlat = data[fill_key]
-	if character.limbs.has(limb_type):
-		var pct: float = character.limbs[limb_type].get_hp_percent()
-		bar.value = pct * 100.0
-		if pct <= HP_LOW_THRESHOLD:
-			fill_style.bg_color = HP_COLOR_LOW
-		elif pct <= HP_MID_THRESHOLD:
-			fill_style.bg_color = HP_COLOR_MID
-		else:
-			fill_style.bg_color = HP_COLOR_FULL
+func _update_health_bar(data: Dictionary, character) -> void:
+	var bar: ProgressBar = data["health_bar"]
+	var fill_style: StyleBoxFlat = data["health_fill"]
+	var max_hp: int = max(1, character.max_health)
+	var pct: float = float(character.current_health) / float(max_hp)
+	bar.value = pct * 100.0
+	if pct <= HP_LOW_THRESHOLD:
+		fill_style.bg_color = HP_COLOR_LOW
+	elif pct <= HP_MID_THRESHOLD:
+		fill_style.bg_color = HP_COLOR_MID
+	else:
+		fill_style.bg_color = HP_COLOR_FULL
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]

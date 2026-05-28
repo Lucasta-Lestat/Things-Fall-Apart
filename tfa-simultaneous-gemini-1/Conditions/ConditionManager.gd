@@ -160,6 +160,11 @@ func _execute_triggered_effect(instance: ConditionInstance, effect: Dictionary) 
 			result["chance"] = effect.get("chance", 1.0)
 		"remove_condition":
 			result["condition_id"] = effect.get("condition_id", "")
+		"sever_limb":
+			# Removes a limb from the bearer. The character handler reads
+			# instance.target_limb (the limb this condition is pinned to) and
+			# falls back to a random non-lethal limb if unset.
+			result["sever_limb"] = true
 		"custom":
 			result["custom_type"] = effect.get("custom_type", "")
 			result["custom_data"] = effect.get("custom_data", {})
