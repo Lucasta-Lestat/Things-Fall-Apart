@@ -12,7 +12,7 @@ const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 const CONTEXT_MENU_SCENE := preload("res://UI/ContextMenu.tscn")
 const ITEM_SLOT_SIZE := Vector2(40, 40)
 const COND_ICON_SIZE := Vector2(16, 16)
-const RESOURCE_ICON_SIZE := Vector2(28, 28)
+const RESOURCE_ICON_SIZE := Vector2(32, 32)
 
 # School trait → (resource_field, icon_path, fill_color). Icons live in
 # UI/UI Icons/.
@@ -37,6 +37,11 @@ var _shown_x: float = 0.0
 var _hidden_x: float = 0.0
 var _tween: Tween = null
 var _character_panels: Array = []  # Array of dictionaries with UI references
+
+# TextureProgressBar.custom_minimum_size is only a floor; the bar's real
+# minimum is max(floor, texture.get_size()). The source PNGs are 1k+ so
+# we resize once at first use and cache.
+var _resource_icon_cache: Dictionary = {}  # "path@WxH" -> Texture2D
 
 # Downtime mode: panel hides while active and restores prior state on exit.
 var _saved_panel_visible_pre_downtime: bool = true
@@ -1147,7 +1152,9 @@ func _build_resource_bars(character, row: HBoxContainer) -> Array:
 		var icon_path: String = entry["icon"]
 		if not ResourceLoader.exists(icon_path):
 			continue
-		var tex: Texture2D = load(icon_path)
+		var tex: Texture2D = _get_scaled_icon(icon_path, RESOURCE_ICON_SIZE)
+		if tex == null:
+			continue
 		var bar := TextureProgressBar.new()
 		bar.texture_under = tex
 		bar.texture_progress = tex
@@ -1163,6 +1170,25 @@ func _build_resource_bars(character, row: HBoxContainer) -> Array:
 		row.add_child(bar)
 		bars.append({"bar": bar, "resource": entry["resource"], "school": school})
 	return bars
+
+
+# Returns a downsampled copy of an icon at the requested size, cached so we
+# don't reload + resize on every panel rebuild. Returns null if the source
+# can't be read as an Image (e.g. a streaming-only texture).
+func _get_scaled_icon(icon_path: String, target: Vector2) -> Texture2D:
+	var key := "%s@%dx%d" % [icon_path, int(target.x), int(target.y)]
+	if _resource_icon_cache.has(key):
+		return _resource_icon_cache[key]
+	var raw: Texture2D = load(icon_path)
+	if raw == null:
+		return null
+	var img: Image = raw.get_image()
+	if img == null:
+		return raw
+	img.resize(int(target.x), int(target.y), Image.INTERPOLATE_LANCZOS)
+	var scaled := ImageTexture.create_from_image(img)
+	_resource_icon_cache[key] = scaled
+	return scaled
 
 
 func _update_resource_bars(data: Dictionary, character) -> void:
