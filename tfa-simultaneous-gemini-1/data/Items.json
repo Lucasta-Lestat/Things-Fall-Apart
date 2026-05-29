@@ -2625,6 +2625,28 @@
 	}
   },
   {
+	"id": "waterskin",
+	"display_name": "Waterskin",
+	"type": "item",
+	"description": "A leather skin full of fresh water. Drink to quench thirst, or pour out as a fire-quenching splash.",
+	"base_width": 2.5,
+	"base_height": 4.5,
+	"sprite_path": "res://Items/acid_flask.png",
+	"weight": 1.0,
+	"cost": 1.0,
+	"satiety": 5.0,
+	"calories": 0.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
 	"id": "acid_flask",
 	"display_name": "Acid Flask",
 	"type": "item",

@@ -7,6 +7,11 @@ extends Node2D
 @export var structure_mask_path: String = "res://maps/cemetery_structures_mask.png"
 @export var blend_margin: int = 16  # pixels of blending around structure edges
 
+# When true, generate_map() skips the structure pass entirely and uses the
+# world-map terrain palette (plains/forest/mountain/water/city/farm). Mountains
+# are registered as impassable obstacles directly with GridManager.
+@export var world_map_mode: bool = false
+
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 
 # Map mask colors to structure IDs
@@ -26,6 +31,23 @@ var color_to_floor: Dictionary = {
 	Color8(192, 192, 192): "stone_stairs",   # light gray
 }
 
+# World-map terrain palette. The mask PNG should use these exact RGB values
+# (anti-aliased pixels within color_tolerance still match):
+#   (170, 220,  90) light green -> world_plains
+#   ( 20, 100,  30) deep green  -> world_forest
+#   (110,  85,  60) brown/gray  -> world_mountain
+#   ( 40,  90, 200) blue        -> world_water
+#   (220,  60,  40) red         -> world_city
+#   (210, 180,  90) golden tan  -> world_farm
+var color_to_world_floor: Dictionary = {
+	Color8(170, 220, 90): "world_plains",
+	Color8(20, 100, 30): "world_forest",
+	Color8(110, 85, 60): "world_mountain",
+	Color8(40, 90, 200): "world_water",
+	Color8(220, 60, 40): "world_city",
+	Color8(210, 180, 90): "world_farm",
+}
+
 # How close a pixel color must be to a key to match (accounts for anti-aliasing)
 @export var color_tolerance: float = 0.15
 
@@ -36,6 +58,10 @@ func _ready():
 	pass
 
 func generate_map():
+	if world_map_mode:
+		_generate_world_map()
+		return
+
 	var tile_size = GridManager.TILE_SIZE
 
 	var struct_map_img: Image = load(structure_map_image_path).get_image()
@@ -328,3 +354,79 @@ func color_distance(a: Color, b: Color) -> float:
 		pow(a.g - b.g, 2) +
 		pow(a.b - b.b, 2)
 	)
+
+# ---------------------------------------------------------------------------
+# World-map generation
+# ---------------------------------------------------------------------------
+# The world-map pipeline skips structures entirely. Tile texture is sampled
+# from the source map image. The mask defines terrain type per tile;
+# world_mountain tiles register as impassable with GridManager. Unmapped
+# terrain (alpha 0) falls back to world_plains so a fresh authoring pass
+# doesn't leave gaps. If the mask file is missing the loader still renders
+# the source image as a flat plain.
+func _generate_world_map():
+	var tile_size = GridManager.TILE_SIZE
+	if not ResourceLoader.exists(map_image_path):
+		push_error("[MapLoader] World map source image not found: %s" % map_image_path)
+		return
+	var clean_map_img: Image = load(map_image_path).get_image()
+	var map_width: int = clean_map_img.get_width()
+	var map_height: int = clean_map_img.get_height()
+
+	var has_mask: bool = ResourceLoader.exists(mask_image_path)
+	var mask_img: Image
+	if has_mask:
+		mask_img = load(mask_image_path).get_image()
+	else:
+		push_warning("[MapLoader] World-map mask missing (%s) — defaulting all tiles to world_plains." % mask_image_path)
+
+	var cols: int = map_width / tile_size
+	var rows: int = map_height / tile_size
+
+	for row in rows:
+		for col in cols:
+			var px = col * tile_size
+			var py = row * tile_size
+			var sample_x = px + tile_size / 2
+			var sample_y = py + tile_size / 2
+
+			var floor_id: String = "world_plains"
+			if has_mask and sample_x < mask_img.get_width() and sample_y < mask_img.get_height():
+				var mask_color: Color = mask_img.get_pixel(sample_x, sample_y)
+				if mask_color.a >= 0.5:
+					var matched := _match_world_floor(mask_color)
+					if matched != "":
+						floor_id = matched
+
+			var tile_rect = Rect2i(px, py, tile_size, tile_size)
+			var tile_img = clean_map_img.get_region(tile_rect)
+			var tile_tex = ImageTexture.create_from_image(tile_img)
+
+			var floor_instance = floor_scene.instantiate()
+			floor_instance.floor_id = floor_id
+			floor_instance.use_custom_texture = true
+			floor_instance.custom_texture = tile_tex
+			floor_instance.skip_grid_snap = true
+			floor_instance.position = Vector2(px + tile_size / 2, py + tile_size / 2)
+			floor_instance.z_index = -4
+			add_child(floor_instance)
+
+			var tile_pos = Vector2i(col, row)
+			GridManager.register_floor(tile_pos, floor_instance)
+
+			# Mountains are impassable: register as obstacle so pathfinding
+			# avoids them and characters can't move through them.
+			if floor_id == "world_mountain":
+				GridManager.register_obstacle(tile_pos)
+
+	emit_signal("map_loaded")
+
+func _match_world_floor(color: Color) -> String:
+	var best_match := ""
+	var best_dist := color_tolerance
+	for key_color in color_to_world_floor:
+		var dist = color_distance(color, key_color)
+		if dist < best_dist:
+			best_dist = dist
+			best_match = color_to_world_floor[key_color]
+	return best_match
