@@ -5561,13 +5561,3 @@ func _get_condition_manager():
 	if self.has_node("ConditionManager"):
 		return self.get_node("ConditionManager")
 	return null
-
-
-## Serialize cooldowns for saving
-func save_cooldowns() -> Dictionary:
-	return ability_manager.save_cooldowns()
-
-
-## Load cooldowns from save
-func load_cooldowns(data: Dictionary) -> void:
-	ability_manager.load_cooldowns(data)

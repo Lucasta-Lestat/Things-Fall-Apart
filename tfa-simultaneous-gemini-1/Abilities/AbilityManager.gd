@@ -470,16 +470,6 @@ func _get_condition_manager():
 	return null
 
 
-## Serialize cooldowns for saving
-func save_cooldowns() -> Dictionary:
-	return cooldowns.duplicate()
-
-
-## Load cooldowns from save
-func load_cooldowns(data: Dictionary) -> void:
-	cooldowns = data.duplicate()
-
-
 ## Check if any active conditions should gain stacks based on the ability's traits.
 ## Called after a successful ability cast. Conditions with on_action_trait_stack
 ## gain +1 stack when ALL required_traits are present in the ability's traits dict.
