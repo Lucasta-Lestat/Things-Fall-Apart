@@ -1154,6 +1154,11 @@ func _update_health_bar(data: Dictionary, character) -> void:
 # Build one TextureProgressBar per school resource for which the character has
 # tier > 0. Returns a list of dicts the per-frame updater consumes.
 func _build_resource_bars(character, row: HBoxContainer) -> Array:
+	# One pip (TextureRect) per point of the resource's current maximum.
+	# Pips are coloured by the school's tint when "filled" and grey when empty,
+	# so a Holy:2 character with devotion=1 sees [filled][grey] devotion icons.
+	# Pips for the same school are grouped in their own inner HBox so they sit
+	# together; schools are then laid out side by side in `row`.
 	var bars: Array = []
 	for entry in SCHOOL_RESOURCES:
 		var school: String = entry["school"]
@@ -1166,21 +1171,53 @@ func _build_resource_bars(character, row: HBoxContainer) -> Array:
 		var tex: Texture2D = _get_scaled_icon(icon_path, RESOURCE_ICON_SIZE)
 		if tex == null:
 			continue
-		var bar := TextureProgressBar.new()
-		bar.texture_under = tex
-		bar.texture_progress = tex
-		bar.tint_under = Color(0.3, 0.3, 0.3, 1.0)
-		bar.tint_progress = entry["color"]
-		bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
-		bar.min_value = 0
-		bar.max_value = tier
-		bar.value = int(character.get(entry["resource"]))
-		bar.custom_minimum_size = RESOURCE_ICON_SIZE
-		bar.tooltip_text = "%s (%s)" % [entry["resource"].capitalize(), school]
-		bar.mouse_filter = Control.MOUSE_FILTER_STOP
-		row.add_child(bar)
-		bars.append({"bar": bar, "resource": entry["resource"], "school": school})
+		var resource_name: String = entry["resource"]
+		var pip_box := HBoxContainer.new()
+		pip_box.add_theme_constant_override("separation", 2)
+		pip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(pip_box)
+		var pips: Array = _rebuild_pips(pip_box, tex, _resource_max(character, resource_name), entry["color"], int(character.get(resource_name)), resource_name, school)
+		bars.append({
+			"pip_box": pip_box,
+			"pips": pips,
+			"icon": tex,
+			"resource": resource_name,
+			"school": school,
+			"color": entry["color"],
+		})
 	return bars
+
+
+# Creates `max_val` TextureRect pips inside `pip_box`, returns the array.
+# Pips with index < current are tinted with the school colour; the rest grey.
+func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: Color, current: int, resource_name: String, school: String) -> Array:
+	for child in pip_box.get_children():
+		child.queue_free()
+	var pips: Array = []
+	for i in range(max(0, max_val)):
+		var pip := TextureRect.new()
+		pip.texture = tex
+		pip.custom_minimum_size = RESOURCE_ICON_SIZE
+		pip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pip.mouse_filter = Control.MOUSE_FILTER_STOP
+		pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
+		pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
+		pip_box.add_child(pip)
+		pips.append(pip)
+	return pips
+
+
+# Per-school resource cap (mirrors max_<resource> getters on ProceduralCharacter,
+# falls back to the trait tier if those properties don't exist on whatever node
+# we're handed).
+func _resource_max(character, resource_name: String) -> int:
+	var max_prop := "max_" + resource_name
+	if max_prop in character:
+		return int(character.get(max_prop))
+	for entry in SCHOOL_RESOURCES:
+		if String(entry["resource"]) == resource_name:
+			return int(character.traits.get(entry["school"], 0))
+	return 0
 
 
 # Returns a downsampled copy of an icon at the requested size, cached so we
@@ -1205,15 +1242,22 @@ func _get_scaled_icon(icon_path: String, target: Vector2) -> Texture2D:
 func _update_resource_bars(data: Dictionary, character) -> void:
 	var bars: Array = data.get("resource_bars", [])
 	for entry in bars:
-		var bar: TextureProgressBar = entry["bar"]
 		var resource_name: String = entry["resource"]
 		var school: String = entry["school"]
-		var max_val: int = int(character.traits.get(school, 0))
-		# Devotion's max can be boosted by the Vow of Chastity bonus.
-		if resource_name == "devotion" and "vow_holy_bonus" in character:
-			max_val += int(character.vow_holy_bonus)
-		bar.max_value = max(1, max_val)
-		bar.value = int(character.get(resource_name))
+		var current: int = int(character.get(resource_name))
+		var max_val: int = _resource_max(character, resource_name)
+		var pips: Array = entry["pips"]
+		# Max can grow mid-run (vow_holy_bonus from Chastity, saint-day bonuses,
+		# etc.) so rebuild the pip row if the displayed count is stale.
+		if pips.size() != max_val:
+			pips = _rebuild_pips(entry["pip_box"], entry["icon"], max_val, entry["color"], current, resource_name, school)
+			entry["pips"] = pips
+			continue
+		var color: Color = entry["color"]
+		for i in range(pips.size()):
+			var pip: TextureRect = pips[i]
+			pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
+			pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]

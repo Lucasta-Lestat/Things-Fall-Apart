@@ -491,6 +491,7 @@ var captured_souls: Array = []
 # Holy Vow state.
 var active_vows: Dictionary = {}      # vow_id -> { days_maintained: int, broken: bool }
 var vow_holy_bonus: int = 0           # daily Holy tier bonus from vows
+var saint_day_devotion_bonus: int = 0  # +1 today if any observed saint's feast falls today
 var vow_poverty_points: int = 0       # accumulated Poverty points
 var holy_tier_next_day_pending: int = 0  # queued from meditation/devotion/flagellation/ration burn
 
@@ -522,7 +523,7 @@ var max_focus: int:
 var max_harmony: int:
 	get: return int(traits.get("Primal", 0))
 var max_devotion: int:
-	get: return int(traits.get("Holy", 0)) + vow_holy_bonus
+	get: return int(traits.get("Holy", 0)) + vow_holy_bonus + saint_day_devotion_bonus
 var max_souls: int:
 	get: return int(traits.get("Occult", 0))
 

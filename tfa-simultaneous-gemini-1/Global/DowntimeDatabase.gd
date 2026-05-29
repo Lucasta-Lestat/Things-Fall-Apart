@@ -77,6 +77,14 @@ func get_activities_for_region(region_id: String) -> Array:
 		if not legal_title.is_empty() and not in_wilderness:
 			if not RegionDatabase.is_service_legal([legal_title], region_id):
 				continue
+		# Saint-day gate: activities tagged `requires_saint_day` only show on
+		# days when SaintCalendar.is_saint_day() is true. The Feasting activity
+		# uses this so the temple feast only appears when there's a feast to
+		# attend.
+		if bool(a.get("requires_saint_day", false)):
+			var saint_cal = get_node_or_null("/root/SaintCalendar")
+			if saint_cal == null or not saint_cal.is_saint_day():
+				continue
 		out.append(activity_id)
 	return out
 
