@@ -659,6 +659,11 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			continue
 
 		party_chars.append(character)
+		# Party members always play by school-resource rules. TopDownCharacterDatabase
+		# defaults to npc_unlimited_resources = true for any template that hasn't
+		# opted into the new system; party characters override that here so casts
+		# actually drain adrenaline/focus/etc.
+		character.npc_unlimited_resources = false
 		character.AI_enabled = true
 		character.is_player_controlled = false
 

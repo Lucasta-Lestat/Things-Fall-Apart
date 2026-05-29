@@ -1428,7 +1428,10 @@
 	  "extra_abilities": ["repulsion_wave", "gravity_well"],
 	  "extra_conditions": [],
 	  "extra_traits": {
-		"Noble": 1
+		"Noble": 1,
+		"Holy": 2,
+		"Orthodox": 1,
+		"Catholic": 1
 	  },
 	  "combat": {},
 	  "sensory": {},
