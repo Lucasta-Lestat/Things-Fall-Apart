@@ -5381,7 +5381,7 @@ func _tick_school_resources(delta: float) -> void:
 		if _adrenaline_decay_delay_remaining > 0.0:
 			_adrenaline_decay_delay_remaining -= delta
 		else:
-			_adrenaline_decay_accum += delta * (effective_constitution() / 50.0)
+			_adrenaline_decay_accum += delta * (effective_constitution() / 150.0)
 			while _adrenaline_decay_accum >= 1.0:
 				_adrenaline_decay_accum -= 1.0
 				if adrenaline > 0:
@@ -5531,7 +5531,9 @@ func _build_soul_record(victim) -> Dictionary:
 		"will": int(victim.get("will")) if "will" in victim else 0,
 		"charisma": int(victim.get("charisma")) if "charisma" in victim else 0,
 		"template_id": String(victim.get("template_id")) if "template_id" in victim else "",
-		"traits": victim.get("traits", {}).duplicate() if "traits" in victim else {},
+		# victim may be a Node (Object.get takes only the property name) or a
+		# Dictionary; use a guarded read so the call site works for both.
+		"traits": (victim.get("traits") if "traits" in victim else {}).duplicate(),
 		"captured_at": Time.get_ticks_msec(),
 	}
 	return soul

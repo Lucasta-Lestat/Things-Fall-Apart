@@ -707,6 +707,10 @@ func is_hungry() -> bool:
 	return hunger >= HUNGER_THRESHOLD
 
 func execute_current_goal():
+	# Player-controlled characters (e.g. the world-map banner) shouldn't auto-
+	# wander or auto-pick up — the human drives those decisions.
+	if character.is_player_controlled:
+		return
 	match current_goal:
 		"idle":
 			pass

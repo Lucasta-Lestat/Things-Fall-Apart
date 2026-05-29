@@ -852,6 +852,72 @@
 			"npc_spawns": [],
 			"item_spawns": [],
 			"warp_points": []
+		},
+		{
+			"id": "scarlatti_world",
+			"name": "Scarlatti",
+			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
+			"region": "scarlatti",
+			"is_world_map": true,
+			"time_scale_multiplier": 60.0,
+			"images": {
+				"map": "res://Maps/Scarlatti World Map (3).png",
+				"mask": "res://Maps/scarlatti_world_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "Scarlatti",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [600, 400],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "single",
+					"offset_radius": 0
+				}
+			},
+			"npc_spawns": [
+				{
+					"template_id": "cultist",
+					"position": [1200, 1100],
+					"count": 1,
+					"faction": "cultists"
+				},
+				{
+					"template_id": "cultist",
+					"position": [1500, 700],
+					"count": 1,
+					"faction": "cultists"
+				}
+			],
+			"item_spawns": [],
+			"fluid_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_perrow",
+					"position": [1100, 700],
+					"size": [64, 64],
+					"target_map": "cemetery",
+					"target_spawn": "default",
+					"label": "Perrow",
+					"world_warp": true,
+					"reveal_radius_px": 220
+				},
+				{
+					"id": "to_town_square",
+					"position": [1300, 1100],
+					"size": [64, 64],
+					"target_map": "town_square",
+					"target_spawn": "default",
+					"label": "Town Square",
+					"world_warp": true,
+					"reveal_radius_px": 220
+				}
+			]
 		}
 	]
 }
