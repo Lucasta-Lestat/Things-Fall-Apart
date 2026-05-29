@@ -79,6 +79,12 @@ func _ready() -> void:
 	if game_node and game_node.has_signal("downtime_mode_changed"):
 		game_node.connect("downtime_mode_changed", _on_downtime_mode_changed)
 
+	# A map warp frees the old party nodes and respawns fresh ones, so the
+	# cached character references in _character_panels go stale. Rebuild from
+	# the new party_chars once the map has finished loading.
+	if game_node and game_node.has_signal("map_loaded"):
+		game_node.connect("map_loaded", _on_map_loaded)
+
 func _on_downtime_mode_changed(active: bool) -> void:
 	if active:
 		_saved_panel_visible_pre_downtime = panel_visible
@@ -91,6 +97,11 @@ func _on_downtime_mode_changed(active: bool) -> void:
 			_in_downtime_hide = true
 			_toggle_panel()
 			_in_downtime_hide = false
+
+func _on_map_loaded(_map_id: String) -> void:
+	# Defer so the freed old party nodes are fully gone and the respawned ones
+	# are settled before we read game_node.party_chars.
+	call_deferred("_populate_party")
 
 func _populate_party() -> void:
 	if not game_node:

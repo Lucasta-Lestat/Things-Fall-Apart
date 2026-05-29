@@ -1031,6 +1031,11 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 			continue
 		if not is_instance_valid(c) or not c.has_method("is_alive") or not c.is_alive():
 			continue
+		# Skip party members — they're player-controlled, not AI-driven. Bumping
+		# their alertness puts a "?" over their head every time the player swings
+		# a sword, which is just noise.
+		if c in party_chars:
+			continue
 		var ai_node = c.get_node_or_null("AI")
 		if not ai_node or not ai_node.has_method("wake_from_at_ease"):
 			continue
