@@ -83,6 +83,8 @@ static func resolve_effect(
 			result = _resolve_cloud(effect, caster, target_position, ability)
 		"spawn_fluid":
 			result = _resolve_spawn_fluid(effect, caster, target_position, ability)
+		"sever_limb":
+			result = _resolve_sever_limb(effect, caster, targets, ability)
 		_:
 			result["success"] = false
 			result["error"] = "Unknown effect type: %s" % effect_type
@@ -338,7 +340,7 @@ static func _resolve_damage(
 			caster_conditions
 		)
 		
-		# DR is skipped here. target.damage_limb and target.take_damage handle it natively!
+		# DR is skipped here. target.take_damage handles armor + character DR natively.
 		var damage_dealt = _deal_damage_to_target(target, final_damage)
 		
 		result["targets_affected"].append({
@@ -403,11 +405,73 @@ static func _resolve_apply_condition(
 				"condition": condition_id,
 				"stacks": instance.stacks
 			})
-			
+
 	return result
-	
-	
-	
+
+
+## Sever a limb on each target. Effect schema:
+##   {"type": "sever_limb", "target_limb": "RIGHT_ARM"}     # specific limb
+##   {"type": "sever_limb", "random": true, "exclude_lethal": true}
+##   {"type": "sever_limb"}                                 # defaults: random non-lethal
+##
+## HEAD/TORSO severs kill the target — enforced inside
+## ProceduralCharacter._on_limb_severed, not duplicated here.
+static func _resolve_sever_limb(
+	effect: Dictionary,
+	_caster: Node,
+	targets: Array,
+	_ability: Ability
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "sever_limb",
+		"targets_affected": [],
+		"limbs_severed": [],
+	}
+
+	# Parse target_limb: accept either a LimbType int or a string name like "RIGHT_ARM".
+	var raw_target_limb = effect.get("target_limb", null)
+	var explicit_limb = -1
+	if raw_target_limb != null:
+		if typeof(raw_target_limb) == TYPE_INT:
+			explicit_limb = int(raw_target_limb)
+		elif typeof(raw_target_limb) == TYPE_STRING:
+			var keys: Array = ProceduralCharacter.LimbType.keys()
+			var idx: int = keys.find(String(raw_target_limb).to_upper())
+			if idx >= 0:
+				explicit_limb = idx
+
+	var exclude_lethal: bool = bool(effect.get("exclude_lethal", true))
+
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		if not target.has_method("_on_limb_severed"):
+			continue
+
+		var limb_type: int = explicit_limb
+		if limb_type < 0:
+			# Random pick. _pick_random_severable_limb already excludes lethal
+			# limbs and already-severed limbs.
+			if target.has_method("_pick_random_severable_limb"):
+				limb_type = target._pick_random_severable_limb()
+			else:
+				limb_type = ProceduralCharacter.LimbType.RIGHT_ARM
+
+		if exclude_lethal and (limb_type == ProceduralCharacter.LimbType.HEAD or limb_type == ProceduralCharacter.LimbType.TORSO):
+			# Caller asked for non-lethal but pointed at a lethal limb — skip.
+			continue
+
+		target._on_limb_severed(limb_type)
+		result["targets_affected"].append(target)
+		result["limbs_severed"].append({
+			"target": target,
+			"limb_type": limb_type,
+		})
+
+	return result
+
+
 static func _calculate_modified_damage(
 	base_damage: Dictionary,
 	caster: Node,
@@ -464,17 +528,15 @@ static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> flo
 	if total <= 0.0:
 		return 0.0
 
-	# Characters with limb system — pick a random limb if no hit position
-	if target.has_method("damage_limb"):
-		var limb_type = _pick_random_limb(target)
-		# damage_limb applies its own limb-specific armor DR, so we pass
-		# the already-general-DR-reduced dict. To avoid double-dipping,
-		# we skip _apply_target_defenses for limbed targets upstream,
-		# OR we pass the raw damage here and let damage_limb handle DR.
-		# Since we already reduced by torso DR above, just call damage_limb
-		# with the dict and accept minor DR approximation for abilities.
-		target.damage_limb(limb_type, damage_dict, target.global_position)
-	# Items use take_damage(damage_dict, success_level)
+	# Characters with the single-HP-pool system — pick a random limb for armor
+	# DR / flavor (which armor piece resists this hit), then route through
+	# take_damage which applies DR + bide + deny_ending and subtracts from
+	# current_health. We check has_method("take_damage") + has("limbs") to
+	# disambiguate from Item.take_damage (which takes a different signature).
+	if target.has_method("take_damage") and "limbs" in target:
+		var hit_limb = _pick_random_limb(target)
+		target.take_damage(damage_dict, target.global_position, null, hit_limb)
+	# Items / Structures use take_damage(damage_dict, success_level)
 	elif target.has_method("take_damage"):
 		if target is Item or target is Structure:
 			target.take_damage(damage_dict, 0)
