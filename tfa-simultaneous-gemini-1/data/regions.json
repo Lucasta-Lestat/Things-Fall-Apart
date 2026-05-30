@@ -15,6 +15,18 @@
 				"don_manor",
 				"minschaleft_university"
 			]
+		},
+		{
+			"id": "argentiara",
+			"name": "Argentiara",
+			"description": "A silver-mining town hacked into the foothills, its streets grey with rock dust and its fortunes bound to the seams that thread the mountain below.",
+			"controlling_faction": "patriciate",
+			"is_urban": true,
+			"member_maps": [
+				"argentiara_square",
+				"argentiara_mine",
+				"argentiara_deep_shaft"
+			]
 		}
 	]
 }

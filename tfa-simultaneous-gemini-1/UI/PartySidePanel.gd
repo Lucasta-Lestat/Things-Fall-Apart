@@ -98,6 +98,28 @@ func _on_downtime_mode_changed(active: bool) -> void:
 			_toggle_panel()
 			_in_downtime_hide = false
 
+func _disconnect_panel_signals(data: Dictionary) -> void:
+	# A warp frees the character (and its inventory), so guard validity first.
+	var character = data.get("character")
+	if not is_instance_valid(character):
+		return
+	var inv = character.inventory
+	if not is_instance_valid(inv):
+		return
+	var on_changed: Callable = data.get("_sig_on_changed", Callable())
+	var on_active: Callable = data.get("_sig_on_active", Callable())
+	if on_changed.is_valid():
+		if inv.item_added.is_connected(on_changed):
+			inv.item_added.disconnect(on_changed)
+		if inv.item_removed.is_connected(on_changed):
+			inv.item_removed.disconnect(on_changed)
+		if inv.weapon_equipped.is_connected(on_changed):
+			inv.weapon_equipped.disconnect(on_changed)
+		if inv.weapon_unequipped.is_connected(on_changed):
+			inv.weapon_unequipped.disconnect(on_changed)
+	if on_active.is_valid() and inv.active_weapon_changed.is_connected(on_active):
+		inv.active_weapon_changed.disconnect(on_active)
+
 func _on_map_loaded(_map_id: String) -> void:
 	# Defer so the freed old party nodes are fully gone and the respawned ones
 	# are settled before we read game_node.party_chars.
@@ -107,6 +129,11 @@ func _populate_party() -> void:
 	if not game_node:
 		return
 
+	# Tear down old connections before freeing the panels, otherwise a surviving
+	# inventory keeps firing into freed grids (e.g. on a non-warp repopulate where
+	# the character node persists).
+	for old_data in _character_panels:
+		_disconnect_panel_signals(old_data)
 	for child in vbox.get_children():
 		child.queue_free()
 	_character_panels.clear()
@@ -220,13 +247,22 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"inv_grid": inv_grid,
 	}
 
-	# Connect inventory signals — any change refreshes the unified grid
+	# Connect inventory signals — any change refreshes the unified grid.
+	# Stash the bound Callables so a later repopulate can disconnect the exact
+	# same connections (see _disconnect_panel_signals). Without this, rebuilding
+	# the panels frees their grids but leaves these connections live on a
+	# still-alive inventory, so the next change fires _refresh_inventory on a
+	# freed grid and crashes.
+	var on_changed: Callable = _on_inventory_changed.bind(data)
+	var on_active: Callable = _on_active_weapon_changed.bind(data)
+	data["_sig_on_changed"] = on_changed
+	data["_sig_on_active"] = on_active
 	if character.inventory:
-		character.inventory.item_added.connect(_on_inventory_changed.bind(data))
-		character.inventory.item_removed.connect(_on_inventory_changed.bind(data))
-		character.inventory.weapon_equipped.connect(_on_inventory_changed.bind(data))
-		character.inventory.weapon_unequipped.connect(_on_inventory_changed.bind(data))
-		character.inventory.active_weapon_changed.connect(_on_active_weapon_changed.bind(data))
+		character.inventory.item_added.connect(on_changed)
+		character.inventory.item_removed.connect(on_changed)
+		character.inventory.weapon_equipped.connect(on_changed)
+		character.inventory.weapon_unequipped.connect(on_changed)
+		character.inventory.active_weapon_changed.connect(on_active)
 
 	_refresh_inventory(data)
 	return data

@@ -752,7 +752,56 @@
 					}
 				}
 			}
+		},
+
+		"mining": {
+			"name": "Mining",
+			"description": "Take pick and lantern to the rock face. Honest, back-breaking work — the seams pay in ore, gems, and the occasional collapsed gallery.",
+			"duration_hours": 4,
+			"urban": true,
+			"rural": true,
+			"preferred_traits": ["Patient", "Skilled", "Outdoorsman"],
+			"disliked_traits": ["Lazy", "Sheltered"],
+			"ability_check": "Strength",
+			"available_maps": ["argentiara_mine", "argentiara_deep_shaft"],
+			"results": {
+				"any_map": {
+					"rich_vein": {
+						"weight": 2,
+						"min_success_tier": 2,
+						"event_description": " struck a fat vein of silver ore and hauled it up before the shift bell. The assayer paid well.",
+						"effects": {"money": 25}
+					},
+					"steady_haul": {
+						"weight": 4,
+						"min_success_tier": 1,
+						"event_description": " worked the seam steadily and brought up a respectable load of ore.",
+						"effects": {"money": 12}
+					},
+					"gemstone": {
+						"weight": 1,
+						"min_success_tier": 2,
+						"event_description": " chipped loose a raw gemstone glittering in the lantern light — a rare find the buyers will fight over.",
+						"effects": {"money": 40}
+					},
+					"meager_ore": {
+						"weight": 4,
+						"event_description": " swung the pick all shift for a thin pocket of low-grade ore. Coin enough for a hot meal.",
+						"effects": {"money": 4}
+					},
+					"cave_in": {
+						"weight": 2,
+						"event_description": " was caught by a sudden gallery collapse. Dug out alive, but battered and choking on rock dust.",
+						"effects": {"hp": -10}
+					},
+					"dry_seam": {
+						"weight": 3,
+						"event_description": " followed a promising seam into bare rock. A long shift for nothing but sore arms.",
+						"effects": {}
+					}
+				}
+			}
 		}
 	},
-	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp", "burn_ration"]
+	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp", "burn_ration", "mining"]
 }

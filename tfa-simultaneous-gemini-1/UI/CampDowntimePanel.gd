@@ -81,7 +81,10 @@ func _repopulate() -> void:
 	for child in _vbox.get_children():
 		child.queue_free()
 	_cards.clear()
-	var ids: Array = DowntimeDatabase.get_camp_activities()
+	var map_id: String = ""
+	if game_node and "current_map_id" in game_node:
+		map_id = String(game_node.current_map_id)
+	var ids: Array = DowntimeDatabase.get_camp_activities_for_map(map_id)
 	for aid in ids:
 		var activity: Dictionary = DowntimeDatabase.get_activity(String(aid))
 		if activity.is_empty():
