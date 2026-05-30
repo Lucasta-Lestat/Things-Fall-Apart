@@ -39,11 +39,6 @@ var warp_zones: Array = []
 var context_menu_open: bool = false
 var stealth_mode: bool = false
 
-# World-map state. When the player presses M from a local map we remember
-# which map they came from and where their protagonist stood, so M again
-# returns them to that exact spot.
-var _world_map_origin_map_id: String = ""
-var _world_map_origin_position: Vector2 = Vector2.ZERO
 const WORLD_MAP_ID: String = "scarlatti_world"
 # Active WorldMapOverlay (only present while we're on a world map). Used by
 # set_city_controller() to flip ownership at runtime, civ-style.
@@ -452,18 +447,26 @@ func load_map(map_id: String, from_map: String = "") -> void:
 
 	# 1. Configure GridManager tile size and initialize the grid.
 	# World maps have no structures layer — fall back to the main map image.
-	GridManager.TILE_SIZE = current_map_data.get("tile_size", 64)
+	# When world_render_scale > 1 the grid (tile size + total dimensions)
+	# expands to match the visually-scaled-up world.
+	var raw_tile_size: int = current_map_data.get("tile_size", 64)
+	var is_world_map: bool = current_map_data.get("is_world_map", false)
+	var world_render_scale: float = float(current_map_data.get("world_render_scale", 1.0)) if is_world_map else 1.0
+	GridManager.TILE_SIZE = int(round(float(raw_tile_size) * world_render_scale))
 	var images: Dictionary = current_map_data.get("images", {})
 	var dim_src_path: String = images.get("structures", "")
 	if dim_src_path.is_empty() or not ResourceLoader.exists(dim_src_path):
 		dim_src_path = images.get("map", "")
 	var dim_img: Image = load(dim_src_path).get_image()
-	GridManager.initialize(dim_img.get_width(), dim_img.get_height())
+	GridManager.initialize(
+		int(round(dim_img.get_width() * world_render_scale)),
+		int(round(dim_img.get_height() * world_render_scale))
+	)
 
 	# 2. Tell the MapLoader to build the visual map (floors, structures).
 	#    World maps skip the structures pass and use the world-terrain palette.
-	var is_world_map: bool = current_map_data.get("is_world_map", false)
 	map_loader.world_map_mode = is_world_map
+	map_loader.world_render_scale = world_render_scale
 	map_loader.map_image_path = images.get("map", "")
 	map_loader.mask_image_path = images.get("mask", "")
 	map_loader.structure_map_image_path = images.get("structures", "")
@@ -2216,34 +2219,45 @@ class SelectionCircle extends Node2D:
 # ---------------------------------------------------------------------------
 
 func toggle_world_map() -> void:
-	"""Press M to flip between the active local map and the Scarlatti world map.
+	"""Press M.
 
-	From a local map: remember where the protagonist stood and load the world
-	map (the rest of the party rides along in party_state).
-	From the world map: load back into the remembered local map and restore
-	the protagonist's exact pre-trip position so the trip is invisible."""
+	From a local map: enter the Scarlatti world map at its default spawn (the
+	rest of the party rides along inside party_state).
+	From the world map: if the banner unit stands within any revealed warp's
+	reveal_radius_px, take that warp. Otherwise no-op — the player must walk
+	closer to a settlement before they can enter it. This makes M the
+	"enter this place" hotkey rather than a free toggle."""
 	if current_map_data.get("is_world_map", false):
-		# Returning to local map.
-		var return_to: String = _world_map_origin_map_id
-		if return_to.is_empty():
-			return_to = "cemetery"
-		var return_pos: Vector2 = _world_map_origin_position
-		_world_map_origin_map_id = ""
-		load_map(return_to)
-		# After load, snap protagonist to where they left off.
-		if return_pos != Vector2.ZERO and player and is_instance_valid(player):
-			player.global_position = return_pos
-			player.target_position = return_pos
-			if player_camera:
-				player_camera.global_position = return_pos
+		var nearest = _nearest_revealed_warp()
+		if nearest == null:
+			GameLog.add_entry("No settlement within reach.")
+			return
+		var target_map: String = String(nearest.get_meta("target_map", ""))
+		if target_map.is_empty():
+			return
+		load_map(target_map, current_map_id)
 	else:
-		# Entering world map. Remember where we left.
-		_world_map_origin_map_id = current_map_id
-		if player and is_instance_valid(player):
-			_world_map_origin_position = player.global_position
-		else:
-			_world_map_origin_position = Vector2.ZERO
 		load_map(WORLD_MAP_ID)
+
+func _nearest_revealed_warp() -> Area2D:
+	"""Returns the closest world_warp Area2D within its reveal_radius_px of
+	the banner unit, or null if none are in range."""
+	if not player or not is_instance_valid(player):
+		return null
+	var banner_pos: Vector2 = player.global_position
+	var best: Area2D = null
+	var best_dist: float = INF
+	for area in warp_zones:
+		if not is_instance_valid(area):
+			continue
+		if not area.get_meta("world_warp", false):
+			continue
+		var radius: float = float(area.get_meta("reveal_radius_px", 200.0))
+		var dist: float = banner_pos.distance_to(area.global_position)
+		if dist <= radius and dist < best_dist:
+			best_dist = dist
+			best = area
+	return best
 
 func _update_world_warp_reveal() -> void:
 	"""Show world-map warps only when the banner unit is within reveal_radius_px."""

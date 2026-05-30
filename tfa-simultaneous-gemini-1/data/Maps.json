@@ -859,7 +859,8 @@
 			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
 			"region": "scarlatti",
 			"is_world_map": true,
-			"time_scale_multiplier": 60.0,
+			"world_render_scale": 1.5,
+			"time_scale_multiplier": 7200.0,
 			"images": {
 				"map": "res://Maps/Scarlatti World Map (3).png",
 				"mask": "res://Maps/scarlatti_world_mask.png"
@@ -870,7 +871,7 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [1500, 220],
+					"position": [2250, 330],
 					"facing": 180
 				}
 			},
@@ -883,13 +884,13 @@
 			"npc_spawns": [
 				{
 					"template_id": "cultist",
-					"position": [1200, 1100],
+					"position": [1800, 1650],
 					"count": 1,
 					"faction": "cultists"
 				},
 				{
 					"template_id": "cultist",
-					"position": [1500, 700],
+					"position": [2250, 1050],
 					"count": 1,
 					"faction": "cultists"
 				}
@@ -900,52 +901,52 @@
 				{
 					"id": "perrow",
 					"name": "Perrow",
-					"position": [1500, 180],
+					"position": [2250, 270],
 					"controller": "liziti",
-					"territory_radius_px": 320
+					"territory_radius_px": 480
 				},
 				{
 					"id": "alamone",
 					"name": "Alamone",
-					"position": [614, 444],
+					"position": [921, 666],
 					"controller": "tortellini",
-					"territory_radius_px": 280
+					"territory_radius_px": 420
 				},
 				{
-					"id": "agentiara",
-					"name": "Agentiara",
-					"position": [1024, 1092],
-					"controller": "neutral",
-					"territory_radius_px": 240
+					"id": "argentiara",
+					"name": "Argentiara",
+					"position": [1536, 1638],
+					"controller": "dragatini",
+					"territory_radius_px": 360
 				},
 				{
 					"id": "bortellini",
 					"name": "Bortellini",
-					"position": [511, 1638],
+					"position": [767, 2457],
 					"controller": "dragatini",
-					"territory_radius_px": 360
+					"territory_radius_px": 540
 				}
 			],
 			"warp_points": [
 				{
 					"id": "to_perrow",
-					"position": [1500, 180],
-					"size": [64, 64],
+					"position": [2250, 270],
+					"size": [96, 96],
 					"target_map": "cemetery",
 					"target_spawn": "default",
 					"label": "Perrow",
 					"world_warp": true,
-					"reveal_radius_px": 220
+					"reveal_radius_px": 330
 				},
 				{
 					"id": "to_alamone",
-					"position": [614, 444],
-					"size": [64, 64],
+					"position": [921, 666],
+					"size": [96, 96],
 					"target_map": "town_square",
 					"target_spawn": "default",
 					"label": "Alamone",
 					"world_warp": true,
-					"reveal_radius_px": 220
+					"reveal_radius_px": 330
 				}
 			]
 		},

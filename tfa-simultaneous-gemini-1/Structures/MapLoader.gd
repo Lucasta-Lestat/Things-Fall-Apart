@@ -12,6 +12,12 @@ extends Node2D
 # are registered as impassable obstacles directly with GridManager.
 @export var world_map_mode: bool = false
 
+# Multiplies tile position + rendered size when world_map_mode is true so the
+# world is physically bigger in world coordinates without changing the source
+# image. Game.gd reads this off Maps.json and sets it before generate_map().
+# 1.0 = source pixels and world units are 1:1 (legacy behaviour).
+@export var world_render_scale: float = 1.0
+
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 
 # Map mask colors to structure IDs
@@ -365,7 +371,11 @@ func color_distance(a: Color, b: Color) -> float:
 # doesn't leave gaps. If the mask file is missing the loader still renders
 # the source image as a flat plain.
 func _generate_world_map():
-	var tile_size = GridManager.TILE_SIZE
+	# Sample source in `source_tile_size`-px blocks but render / position each
+	# tile at `world_tile_size` world units. With world_render_scale = 1.5 the
+	# rendered world is 1.5× as wide and tall as the source image.
+	var source_tile_size: int = 64
+	var world_tile_size: int = int(round(float(source_tile_size) * world_render_scale))
 	if not ResourceLoader.exists(map_image_path):
 		push_error("[MapLoader] World map source image not found: %s" % map_image_path)
 		return
@@ -380,15 +390,15 @@ func _generate_world_map():
 	else:
 		push_warning("[MapLoader] World-map mask missing (%s) — defaulting all tiles to world_plains." % mask_image_path)
 
-	var cols: int = map_width / tile_size
-	var rows: int = map_height / tile_size
+	var cols: int = map_width / source_tile_size
+	var rows: int = map_height / source_tile_size
 
 	for row in rows:
 		for col in cols:
-			var px = col * tile_size
-			var py = row * tile_size
-			var sample_x = px + tile_size / 2
-			var sample_y = py + tile_size / 2
+			var sample_px = col * source_tile_size
+			var sample_py = row * source_tile_size
+			var sample_x = sample_px + source_tile_size / 2
+			var sample_y = sample_py + source_tile_size / 2
 
 			var floor_id: String = "world_plains"
 			if has_mask and sample_x < mask_img.get_width() and sample_y < mask_img.get_height():
@@ -398,7 +408,7 @@ func _generate_world_map():
 					if matched != "":
 						floor_id = matched
 
-			var tile_rect = Rect2i(px, py, tile_size, tile_size)
+			var tile_rect = Rect2i(sample_px, sample_py, source_tile_size, source_tile_size)
 			var tile_img = clean_map_img.get_region(tile_rect)
 			var tile_tex = ImageTexture.create_from_image(tile_img)
 
@@ -407,7 +417,13 @@ func _generate_world_map():
 			floor_instance.use_custom_texture = true
 			floor_instance.custom_texture = tile_tex
 			floor_instance.skip_grid_snap = true
-			floor_instance.position = Vector2(px + tile_size / 2, py + tile_size / 2)
+			# Position and visually scale each tile so the world becomes
+			# world_render_scale times bigger in world coordinates.
+			var world_px = col * world_tile_size
+			var world_py = row * world_tile_size
+			floor_instance.position = Vector2(world_px + world_tile_size / 2, world_py + world_tile_size / 2)
+			if world_render_scale != 1.0:
+				floor_instance.scale = Vector2(world_render_scale, world_render_scale)
 			floor_instance.z_index = -4
 			add_child(floor_instance)
 
