@@ -98,6 +98,28 @@ func _on_downtime_mode_changed(active: bool) -> void:
 			_toggle_panel()
 			_in_downtime_hide = false
 
+func _disconnect_panel_signals(data: Dictionary) -> void:
+	# A warp frees the character (and its inventory), so guard validity first.
+	var character = data.get("character")
+	if not is_instance_valid(character):
+		return
+	var inv = character.inventory
+	if not is_instance_valid(inv):
+		return
+	var on_changed: Callable = data.get("_sig_on_changed", Callable())
+	var on_active: Callable = data.get("_sig_on_active", Callable())
+	if on_changed.is_valid():
+		if inv.item_added.is_connected(on_changed):
+			inv.item_added.disconnect(on_changed)
+		if inv.item_removed.is_connected(on_changed):
+			inv.item_removed.disconnect(on_changed)
+		if inv.weapon_equipped.is_connected(on_changed):
+			inv.weapon_equipped.disconnect(on_changed)
+		if inv.weapon_unequipped.is_connected(on_changed):
+			inv.weapon_unequipped.disconnect(on_changed)
+	if on_active.is_valid() and inv.active_weapon_changed.is_connected(on_active):
+		inv.active_weapon_changed.disconnect(on_active)
+
 func _on_map_loaded(_map_id: String) -> void:
 	# Defer so the freed old party nodes are fully gone and the respawned ones
 	# are settled before we read game_node.party_chars.
@@ -107,6 +129,11 @@ func _populate_party() -> void:
 	if not game_node:
 		return
 
+	# Tear down old connections before freeing the panels, otherwise a surviving
+	# inventory keeps firing into freed grids (e.g. on a non-warp repopulate where
+	# the character node persists).
+	for old_data in _character_panels:
+		_disconnect_panel_signals(old_data)
 	for child in vbox.get_children():
 		child.queue_free()
 	_character_panels.clear()
@@ -220,13 +247,22 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"inv_grid": inv_grid,
 	}
 
-	# Connect inventory signals — any change refreshes the unified grid
+	# Connect inventory signals — any change refreshes the unified grid.
+	# Stash the bound Callables so a later repopulate can disconnect the exact
+	# same connections (see _disconnect_panel_signals). Without this, rebuilding
+	# the panels frees their grids but leaves these connections live on a
+	# still-alive inventory, so the next change fires _refresh_inventory on a
+	# freed grid and crashes.
+	var on_changed: Callable = _on_inventory_changed.bind(data)
+	var on_active: Callable = _on_active_weapon_changed.bind(data)
+	data["_sig_on_changed"] = on_changed
+	data["_sig_on_active"] = on_active
 	if character.inventory:
-		character.inventory.item_added.connect(_on_inventory_changed.bind(data))
-		character.inventory.item_removed.connect(_on_inventory_changed.bind(data))
-		character.inventory.weapon_equipped.connect(_on_inventory_changed.bind(data))
-		character.inventory.weapon_unequipped.connect(_on_inventory_changed.bind(data))
-		character.inventory.active_weapon_changed.connect(_on_active_weapon_changed.bind(data))
+		character.inventory.item_added.connect(on_changed)
+		character.inventory.item_removed.connect(on_changed)
+		character.inventory.weapon_equipped.connect(on_changed)
+		character.inventory.weapon_unequipped.connect(on_changed)
+		character.inventory.active_weapon_changed.connect(on_active)
 
 	_refresh_inventory(data)
 	return data
@@ -278,6 +314,16 @@ func _refresh_inventory(data: Dictionary) -> void:
 		return
 
 	var entries = _build_inventory_entries(character.inventory)
+	# On the world map, show only abilities that carry the "overworld" trait
+	# (e.g. Force March). Items and weapons are unaffected — they're still
+	# visible. Game.gd tracks current_map_data.is_world_map for this gate.
+	if game_node and game_node.current_map_data.get("is_world_map", false):
+		entries = entries.filter(func(e):
+			if e.get("kind", "") != "ability":
+				return true
+			var aid: String = str(e.get("ability_id", ""))
+			var ability_data: Dictionary = AbilityDatabase.get_ability_data(aid)
+			return ability_data.get("traits", {}).has("overworld"))
 	for entry in entries:
 		var slot = _create_item_slot(entry, data)
 		grid.add_child(slot)
@@ -345,6 +391,7 @@ func _ensure_ability_entry(node: AbilityShape, entries: Dictionary, order: Array
 			icon_path = str(node.raw_data["icon"])
 		entries[aid] = {
 			"kind": "ability",
+			"ability_id": aid,
 			"display_name": node.display_name,
 			"sprite_path": icon_path,
 			"num_stacks": 1,
@@ -1154,6 +1201,11 @@ func _update_health_bar(data: Dictionary, character) -> void:
 # Build one TextureProgressBar per school resource for which the character has
 # tier > 0. Returns a list of dicts the per-frame updater consumes.
 func _build_resource_bars(character, row: HBoxContainer) -> Array:
+	# One pip (TextureRect) per point of the resource's current maximum.
+	# Pips are coloured by the school's tint when "filled" and grey when empty,
+	# so a Holy:2 character with devotion=1 sees [filled][grey] devotion icons.
+	# Pips for the same school are grouped in their own inner HBox so they sit
+	# together; schools are then laid out side by side in `row`.
 	var bars: Array = []
 	for entry in SCHOOL_RESOURCES:
 		var school: String = entry["school"]
@@ -1166,21 +1218,53 @@ func _build_resource_bars(character, row: HBoxContainer) -> Array:
 		var tex: Texture2D = _get_scaled_icon(icon_path, RESOURCE_ICON_SIZE)
 		if tex == null:
 			continue
-		var bar := TextureProgressBar.new()
-		bar.texture_under = tex
-		bar.texture_progress = tex
-		bar.tint_under = Color(0.3, 0.3, 0.3, 1.0)
-		bar.tint_progress = entry["color"]
-		bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
-		bar.min_value = 0
-		bar.max_value = tier
-		bar.value = int(character.get(entry["resource"]))
-		bar.custom_minimum_size = RESOURCE_ICON_SIZE
-		bar.tooltip_text = "%s (%s)" % [entry["resource"].capitalize(), school]
-		bar.mouse_filter = Control.MOUSE_FILTER_STOP
-		row.add_child(bar)
-		bars.append({"bar": bar, "resource": entry["resource"], "school": school})
+		var resource_name: String = entry["resource"]
+		var pip_box := HBoxContainer.new()
+		pip_box.add_theme_constant_override("separation", 2)
+		pip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(pip_box)
+		var pips: Array = _rebuild_pips(pip_box, tex, _resource_max(character, resource_name), entry["color"], int(character.get(resource_name)), resource_name, school)
+		bars.append({
+			"pip_box": pip_box,
+			"pips": pips,
+			"icon": tex,
+			"resource": resource_name,
+			"school": school,
+			"color": entry["color"],
+		})
 	return bars
+
+
+# Creates `max_val` TextureRect pips inside `pip_box`, returns the array.
+# Pips with index < current are tinted with the school colour; the rest grey.
+func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: Color, current: int, resource_name: String, school: String) -> Array:
+	for child in pip_box.get_children():
+		child.queue_free()
+	var pips: Array = []
+	for i in range(max(0, max_val)):
+		var pip := TextureRect.new()
+		pip.texture = tex
+		pip.custom_minimum_size = RESOURCE_ICON_SIZE
+		pip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pip.mouse_filter = Control.MOUSE_FILTER_STOP
+		pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
+		pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
+		pip_box.add_child(pip)
+		pips.append(pip)
+	return pips
+
+
+# Per-school resource cap (mirrors max_<resource> getters on ProceduralCharacter,
+# falls back to the trait tier if those properties don't exist on whatever node
+# we're handed).
+func _resource_max(character, resource_name: String) -> int:
+	var max_prop := "max_" + resource_name
+	if max_prop in character:
+		return int(character.get(max_prop))
+	for entry in SCHOOL_RESOURCES:
+		if String(entry["resource"]) == resource_name:
+			return int(character.traits.get(entry["school"], 0))
+	return 0
 
 
 # Returns a downsampled copy of an icon at the requested size, cached so we
@@ -1205,15 +1289,22 @@ func _get_scaled_icon(icon_path: String, target: Vector2) -> Texture2D:
 func _update_resource_bars(data: Dictionary, character) -> void:
 	var bars: Array = data.get("resource_bars", [])
 	for entry in bars:
-		var bar: TextureProgressBar = entry["bar"]
 		var resource_name: String = entry["resource"]
 		var school: String = entry["school"]
-		var max_val: int = int(character.traits.get(school, 0))
-		# Devotion's max can be boosted by the Vow of Chastity bonus.
-		if resource_name == "devotion" and "vow_holy_bonus" in character:
-			max_val += int(character.vow_holy_bonus)
-		bar.max_value = max(1, max_val)
-		bar.value = int(character.get(resource_name))
+		var current: int = int(character.get(resource_name))
+		var max_val: int = _resource_max(character, resource_name)
+		var pips: Array = entry["pips"]
+		# Max can grow mid-run (vow_holy_bonus from Chastity, saint-day bonuses,
+		# etc.) so rebuild the pip row if the displayed count is stale.
+		if pips.size() != max_val:
+			pips = _rebuild_pips(entry["pip_box"], entry["icon"], max_val, entry["color"], current, resource_name, school)
+			entry["pips"] = pips
+			continue
+		var color: Color = entry["color"]
+		for i in range(pips.size()):
+			var pip: TextureRect = pips[i]
+			pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
+			pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]

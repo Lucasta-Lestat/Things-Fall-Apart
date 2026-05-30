@@ -3,6 +3,7 @@
 extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
+const WORLD_MAP_OVERLAY_SCRIPT = preload("res://WorldMap/WorldMapOverlay.gd")
 const WARP_ARROW_TEXTURE: Texture2D = preload("res://UI/UI Icons/warp_arrow.png")
 const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 
@@ -44,6 +45,9 @@ var stealth_mode: bool = false
 var _world_map_origin_map_id: String = ""
 var _world_map_origin_position: Vector2 = Vector2.ZERO
 const WORLD_MAP_ID: String = "scarlatti_world"
+# Active WorldMapOverlay (only present while we're on a world map). Used by
+# set_city_controller() to flip ownership at runtime, civ-style.
+var _world_map_overlay: Node2D = null
 
 var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
@@ -515,6 +519,22 @@ func load_map(map_id: String, from_map: String = "") -> void:
 
 	# 9. Select the player
 	call_deferred("_select_initial_character")
+
+	# Flag every spawned character with whether it's on the world map. The
+	# move_speed getter folds in overland_speed_modifier when this is true.
+	for c in characters_in_scene:
+		if is_instance_valid(c) and "on_world_map" in c:
+			c.on_world_map = is_world_map
+
+	# Build the world-map labels + territory overlay. Parented under map_loader
+	# so _unload_current_map's child-clear sweeps it up automatically.
+	if is_world_map:
+		_world_map_overlay = WORLD_MAP_OVERLAY_SCRIPT.new()
+		_world_map_overlay.name = "WorldMapOverlay"
+		map_loader.add_child(_world_map_overlay)
+		_world_map_overlay.configure(current_map_data.get("world_labels", []))
+	else:
+		_world_map_overlay = null
 
 	emit_signal("map_loaded", map_id)
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
@@ -2241,6 +2261,14 @@ func _update_world_warp_reveal() -> void:
 		area.visible = revealed
 		# Toggling the collision_layer also gates left-click teleport probing.
 		area.collision_layer = CollisionLayers.WARPS if revealed else 0
+
+func set_city_controller(city_id: String, faction_id: String) -> void:
+	"""Quest hooks / scripted events call this to flip a city's territory color
+	on the world map. Silently no-ops on local maps (the overlay isn't loaded).
+	Returning to the world map later doesn't preserve the flip yet — the source
+	of truth lives in current_map_data; persistence is a follow-up."""
+	if _world_map_overlay and is_instance_valid(_world_map_overlay):
+		_world_map_overlay.set_city_controller(city_id, faction_id)
 
 func gather_water_at_party() -> void:
 	"""Press G: if the player's current character stands adjacent to a water

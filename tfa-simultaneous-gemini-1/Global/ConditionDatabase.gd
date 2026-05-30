@@ -35,9 +35,10 @@ func get_all_conditions() -> Array:
 	{
 		"id": "exhausted",
 		"display_name": "Exhausted",
-		"description": "Severely fatigued, reducing constitution.",
+		"description": "Severely fatigued, reducing constitution. Stacks tier by tier from sustained exertion.",
 		"traits": {"debuff": 1, "fatigue": 2},
-		"stackable": false,
+		"stackable": true,
+		"max_tier": 5,
 		"duration": 60.0,
 		"icon": "res://UI/UI Icons/exhausted.png",
 		"transforms_into": {},
@@ -46,6 +47,21 @@ func get_all_conditions() -> Array:
 		"custom_sfx": "res://sfx/heavy_breathing.mp3",
 		"stat_modifiers": [
 			{"stat": "constitution", "operation": "add", "value": -7}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "force_marching",
+		"display_name": "Force-marching",
+		"description": "Pushing on without rest — much faster overland travel.",
+		"traits": {"buff": 1, "fatigue": 1, "overworld": 1},
+		"stackable": false,
+		"duration": 120.0,
+		"icon": "res://UI/UI Icons/exhausted.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"stat_modifiers": [
+			{"stat": "overland_speed_modifier", "operation": "add", "value": 1.0}
 		],
 		"immunities": {}
 	},

@@ -1,0 +1,282 @@
+{
+  "_comment": "Auto-generated saint days. Each saint's feast day grants observers (characters whose traits include any of `observer_traits`) +1 max Devotion for that day and unlocks the 'Feasting' downtime activity in urban regions. Day-of-year is 1..360 across the 10 regular months (Yearturn excluded).",
+  "observer_traits": [
+    "Catholic",
+    "Orthodox",
+    "Fanatical"
+  ],
+  "saints": [
+    {
+      "id": "severian_the_unblemished",
+      "name": "Severian the unblemished",
+      "day_of_year": 1,
+      "month": 1,
+      "day": 1,
+      "month_name": "Frostiem"
+    },
+    {
+      "id": "wulfreda_of_the_woods",
+      "name": "Wulfreda of the woods",
+      "day_of_year": 8,
+      "month": 1,
+      "day": 8,
+      "month_name": "Frostiem"
+    },
+    {
+      "id": "iustinian_god_friend",
+      "name": "Iustinian, God-friend",
+      "day_of_year": 9,
+      "month": 1,
+      "day": 9,
+      "month_name": "Frostiem"
+    },
+    {
+      "id": "quintilian_ever_loyal",
+      "name": "Quintilian, ever-loyal",
+      "day_of_year": 27,
+      "month": 1,
+      "day": 27,
+      "month_name": "Frostiem"
+    },
+    {
+      "id": "hyperion_the_puissant",
+      "name": "Hyperion the puissant",
+      "day_of_year": 76,
+      "month": 3,
+      "day": 4,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "theophania_of_the_solitudes",
+      "name": "Theophania of the solitudes",
+      "day_of_year": 83,
+      "month": 3,
+      "day": 11,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "basileios_the_right_believing",
+      "name": "Basileios the right-believing",
+      "day_of_year": 84,
+      "month": 3,
+      "day": 12,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "fortunius_of_the_cup",
+      "name": "Fortunius of the cup",
+      "day_of_year": 96,
+      "month": 3,
+      "day": 24,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "aurelius_ever_lustrous",
+      "name": "Aurelius, ever-lustrous",
+      "day_of_year": 98,
+      "month": 3,
+      "day": 26,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "wulfstan_the_benignant",
+      "name": "Wulfstan the benignant",
+      "day_of_year": 100,
+      "month": 3,
+      "day": 28,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "eutropius_the_troglodyte",
+      "name": "Eutropius the troglodyte",
+      "day_of_year": 105,
+      "month": 3,
+      "day": 33,
+      "month_name": "Thaw"
+    },
+    {
+      "id": "theodorus_faith_smith",
+      "name": "Theodorus, faith-smith",
+      "day_of_year": 148,
+      "month": 5,
+      "day": 4,
+      "month_name": "Dewyvern"
+    },
+    {
+      "id": "germanus_the_hearty",
+      "name": "Germanus the hearty",
+      "day_of_year": 149,
+      "month": 5,
+      "day": 5,
+      "month_name": "Dewyvern"
+    },
+    {
+      "id": "galatea_the_maiden",
+      "name": "Galatea the maiden",
+      "day_of_year": 193,
+      "month": 6,
+      "day": 13,
+      "month_name": "Parchestal"
+    },
+    {
+      "id": "valerian_thrice_hanged",
+      "name": "Valerian, thrice hanged",
+      "day_of_year": 219,
+      "month": 7,
+      "day": 3,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "lysandra_of_the_sugared_breath",
+      "name": "Lysandra of the sugared breath",
+      "day_of_year": 224,
+      "month": 7,
+      "day": 8,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "wilibrord_the_wide",
+      "name": "Wilibrord the wide",
+      "day_of_year": 229,
+      "month": 7,
+      "day": 13,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "dorian_of_the_thorn",
+      "name": "Dorian of the thorn",
+      "day_of_year": 236,
+      "month": 7,
+      "day": 20,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "kallistos_the_chronicler",
+      "name": "Kallistos the chronicler",
+      "day_of_year": 243,
+      "month": 7,
+      "day": 27,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "pulcheria_the_beneficent",
+      "name": "Pulcheria the beneficent",
+      "day_of_year": 251,
+      "month": 7,
+      "day": 35,
+      "month_name": "Burnestal"
+    },
+    {
+      "id": "prudentius_the_prudent",
+      "name": "Prudentius the prudent",
+      "day_of_year": 264,
+      "month": 8,
+      "day": 12,
+      "month_name": "Harvest"
+    },
+    {
+      "id": "chrysander_the_refulgent",
+      "name": "Chrysander the refulgent",
+      "day_of_year": 266,
+      "month": 8,
+      "day": 14,
+      "month_name": "Harvest"
+    },
+    {
+      "id": "gallus_the_forthright",
+      "name": "Gallus the forthright",
+      "day_of_year": 271,
+      "month": 8,
+      "day": 19,
+      "month_name": "Harvest"
+    },
+    {
+      "id": "galenus_the_wonderworker",
+      "name": "Galenus the wonderworker",
+      "day_of_year": 273,
+      "month": 8,
+      "day": 21,
+      "month_name": "Harvest"
+    },
+    {
+      "id": "hilaria_the_jubilant",
+      "name": "Hilaria the jubilant",
+      "day_of_year": 288,
+      "month": 8,
+      "day": 36,
+      "month_name": "Harvest"
+    },
+    {
+      "id": "hephaestion_cloud_head",
+      "name": "Hephaestion, cloud-head",
+      "day_of_year": 295,
+      "month": 9,
+      "day": 7,
+      "month_name": "Witherumnal"
+    },
+    {
+      "id": "caelius_of_the_angels",
+      "name": "Caelius of the angels",
+      "day_of_year": 315,
+      "month": 9,
+      "day": 27,
+      "month_name": "Witherumnal"
+    },
+    {
+      "id": "silvanus_the_silent",
+      "name": "Silvanus the silent",
+      "day_of_year": 319,
+      "month": 9,
+      "day": 31,
+      "month_name": "Witherumnal"
+    },
+    {
+      "id": "phaestus_the_penitent",
+      "name": "Phaestus the penitent",
+      "day_of_year": 323,
+      "month": 9,
+      "day": 35,
+      "month_name": "Witherumnal"
+    },
+    {
+      "id": "walburga_of_the_sack",
+      "name": "Walburga of the sack",
+      "day_of_year": 324,
+      "month": 9,
+      "day": 36,
+      "month_name": "Witherumnal"
+    },
+    {
+      "id": "eulalia_balm_gusher",
+      "name": "Eulalia, balm-gusher",
+      "day_of_year": 329,
+      "month": 10,
+      "day": 5,
+      "month_name": "Mistumnal"
+    },
+    {
+      "id": "polydorus_butter_monger",
+      "name": "Polydorus, butter-monger",
+      "day_of_year": 335,
+      "month": 10,
+      "day": 11,
+      "month_name": "Mistumnal"
+    },
+    {
+      "id": "wenceslaus_the_venerable",
+      "name": "Wenceslaus the venerable",
+      "day_of_year": 347,
+      "month": 10,
+      "day": 23,
+      "month_name": "Mistumnal"
+    },
+    {
+      "id": "gennadios_converter_of_kings",
+      "name": "Gennadios, converter of kings",
+      "day_of_year": 360,
+      "month": 10,
+      "day": 36,
+      "month_name": "Mistumnal"
+    }
+  ]
+}

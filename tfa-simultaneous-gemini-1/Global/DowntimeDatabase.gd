@@ -77,11 +77,32 @@ func get_activities_for_region(region_id: String) -> Array:
 		if not legal_title.is_empty() and not in_wilderness:
 			if not RegionDatabase.is_service_legal([legal_title], region_id):
 				continue
+		# Saint-day gate: activities tagged `requires_saint_day` only show on
+		# days when SaintCalendar.is_saint_day() is true. The Feasting activity
+		# uses this so the temple feast only appears when there's a feast to
+		# attend.
+		if bool(a.get("requires_saint_day", false)):
+			var saint_cal = get_node_or_null("/root/SaintCalendar")
+			if saint_cal == null or not saint_cal.is_saint_day():
+				continue
 		out.append(activity_id)
 	return out
 
 func get_camp_activities() -> Array:
 	return camp_activity_ids.duplicate()
+
+## Camp-stack activities available on a given map. An activity that declares
+## a non-empty "available_maps" list only appears when the current map_id is in
+## that list (e.g. mining at Argentiara's shafts); activities without the field
+## remain available everywhere, preserving the previous behaviour.
+func get_camp_activities_for_map(map_id: String) -> Array:
+	var out: Array = []
+	for aid in camp_activity_ids:
+		var a: Dictionary = activities.get(String(aid), {})
+		var allowed: Array = a.get("available_maps", [])
+		if allowed.is_empty() or map_id in allowed:
+			out.append(aid)
+	return out
 
 ## Walks a character's inventory abilities and returns the set of downtime
 ## activity ids granted by any of them (via the optional "grants_downtime_activity"

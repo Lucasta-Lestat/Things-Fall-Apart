@@ -1989,6 +1989,22 @@
 				"leg_width": 3,
 				"leg_spacing": 7
 			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+				}
+			},
 			"appearance": {
 				"skin_colors": [
 					"#F5F5DC",
@@ -2272,6 +2288,22 @@
 				"leg_length": 12,
 				"leg_width": 3,
 				"leg_spacing": 7
+			},
+			"body_sprites": {
+				"male": {
+					"head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+				},
+				"female": {
+					"head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
+					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
+					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
+				}
 			},
 			"appearance": {
 				"skin_colors": [

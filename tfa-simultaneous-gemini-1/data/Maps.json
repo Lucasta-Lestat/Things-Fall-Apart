@@ -870,8 +870,8 @@
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
-					"position": [600, 400],
-					"facing": 90
+					"position": [1500, 220],
+					"facing": 180
 				}
 			},
 			"party_spawns": {
@@ -896,10 +896,40 @@
 			],
 			"item_spawns": [],
 			"fluid_spawns": [],
+			"world_labels": [
+				{
+					"id": "perrow",
+					"name": "Perrow",
+					"position": [1500, 180],
+					"controller": "liziti",
+					"territory_radius_px": 320
+				},
+				{
+					"id": "alamone",
+					"name": "Alamone",
+					"position": [614, 444],
+					"controller": "tortellini",
+					"territory_radius_px": 280
+				},
+				{
+					"id": "agentiara",
+					"name": "Agentiara",
+					"position": [1024, 1092],
+					"controller": "neutral",
+					"territory_radius_px": 240
+				},
+				{
+					"id": "bortellini",
+					"name": "Bortellini",
+					"position": [511, 1638],
+					"controller": "dragatini",
+					"territory_radius_px": 360
+				}
+			],
 			"warp_points": [
 				{
 					"id": "to_perrow",
-					"position": [1100, 700],
+					"position": [1500, 180],
 					"size": [64, 64],
 					"target_map": "cemetery",
 					"target_spawn": "default",
@@ -908,14 +938,158 @@
 					"reveal_radius_px": 220
 				},
 				{
-					"id": "to_town_square",
-					"position": [1300, 1100],
+					"id": "to_alamone",
+					"position": [614, 444],
 					"size": [64, 64],
 					"target_map": "town_square",
 					"target_spawn": "default",
-					"label": "Town Square",
+					"label": "Alamone",
 					"world_warp": true,
 					"reveal_radius_px": 220
+				}
+			]
+		},
+		{
+			"id": "argentiara_square",
+			"name": "Argentiara Square",
+			"description": "The dusty heart of the mining town, where ore-carts rattle past the assayer's office and miners trade silver for bread and drink.",
+			"region": "argentiara",
+			"images": {
+				"map": "res://Maps/argentiara_square_clean.png",
+				"mask": "res://Maps/argentiara_square_mask.png",
+				"structures": "res://Maps/argentiara_square.png",
+				"structures_mask": "res://Maps/argentiara_square_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [512, 512],
+					"facing": 0
+				},
+				"from_argentiara_mine": {
+					"position": [900, 512],
+					"facing": 180
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_argentiara_mine",
+					"position": [960, 512],
+					"size": [40, 80],
+					"target_map": "argentiara_mine",
+					"target_spawn": "from_argentiara_square",
+					"label": "To the Mine"
+				}
+			]
+		},
+		{
+			"id": "argentiara_mine",
+			"name": "Argentiara Mine",
+			"description": "The mouth of the great silver mine. Timbered galleries swallow the lantern light, and the rock face waits for any back strong enough to work it.",
+			"region": "argentiara",
+			"images": {
+				"map": "res://Maps/argentiara_mine_clean.png",
+				"mask": "res://Maps/argentiara_mine_mask.png",
+				"structures": "res://Maps/argentiara_mine.png",
+				"structures_mask": "res://Maps/argentiara_mine_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [512, 512],
+					"facing": 0
+				},
+				"from_argentiara_square": {
+					"position": [80, 512],
+					"facing": 0
+				},
+				"from_argentiara_deep_shaft": {
+					"position": [900, 512],
+					"facing": 180
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_argentiara_square",
+					"position": [60, 512],
+					"size": [40, 80],
+					"target_map": "argentiara_square",
+					"target_spawn": "from_argentiara_mine",
+					"label": "To the Square"
+				},
+				{
+					"id": "to_argentiara_deep_shaft",
+					"position": [960, 512],
+					"size": [40, 80],
+					"target_map": "argentiara_deep_shaft",
+					"target_spawn": "from_argentiara_mine",
+					"label": "Descend the Deep Shaft"
+				}
+			]
+		},
+		{
+			"id": "argentiara_deep_shaft",
+			"name": "Argentiara Deep Shaft",
+			"description": "The lowest worked level of the mine, hot and close, where the richest seams run — and where the rock is most apt to come down on the unwary.",
+			"region": "argentiara",
+			"images": {
+				"map": "res://Maps/argentiara_deep_shaft_clean.png",
+				"mask": "res://Maps/argentiara_deep_shaft_mask.png",
+				"structures": "res://Maps/argentiara_deep_shaft.png",
+				"structures_mask": "res://Maps/argentiara_deep_shaft_structures_mask.png"
+			},
+			"tile_size": 64,
+			"music_track": "",
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [512, 512],
+					"facing": 0
+				},
+				"from_argentiara_mine": {
+					"position": [80, 512],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": [
+				{
+					"id": "to_argentiara_mine",
+					"position": [60, 512],
+					"size": [40, 80],
+					"target_map": "argentiara_mine",
+					"target_spawn": "from_argentiara_deep_shaft",
+					"label": "Ascend to the Mine"
 				}
 			]
 		}
