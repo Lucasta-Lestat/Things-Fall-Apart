@@ -719,6 +719,39 @@
 					}
 				}
 			}
+		},
+
+		"feasting": {
+			"name": "Feasting",
+			"description": "Join the parish feast in the saint's honour. The temple lays out bread, broth, and a place at the long table for any passing traveller — observers especially.",
+			"duration_hours": 3,
+			"urban": true,
+			"rural": false,
+			"requires_saint_day": true,
+			"preferred_traits": ["Catholic", "Orthodox", "Fanatical", "Pious"],
+			"disliked_traits": ["Cynical"],
+			"ability_check": "",
+			"default_effects": {"ration_delta": 1},
+			"results": {
+				"any_map": {
+					"shared_table": {
+						"weight": 6,
+						"event_description": " took a seat at the parish table and walked out with their pack a little heavier.",
+						"effects": {"ration_delta": 1}
+					},
+					"sermon_at_the_long_table": {
+						"weight": 3,
+						"event_description": " sat through the sermon between courses. The priests pressed a wrapped meal into their hand for the road.",
+						"effects": {"ration_delta": 1, "holy_tier_next_day": 1},
+						"required_traits": ["Catholic", "Orthodox", "Fanatical"]
+					},
+					"too_much_wine": {
+						"weight": 1,
+						"event_description": " forgot themselves at the feast. The priests were kind about it.",
+						"effects": {"ration_delta": 1, "hp": -2}
+					}
+				}
+			}
 		}
 	},
 	"camp_activities": ["rest", "watch", "cook", "bushcraft", "hunting", "meditation", "camp", "burn_ration"]

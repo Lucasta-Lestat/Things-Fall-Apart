@@ -502,6 +502,7 @@ var captured_souls: Array = []
 # Holy Vow state.
 var active_vows: Dictionary = {}      # vow_id -> { days_maintained: int, broken: bool }
 var vow_holy_bonus: int = 0           # daily Holy tier bonus from vows
+var saint_day_devotion_bonus: int = 0  # +1 today if any observed saint's feast falls today
 var vow_poverty_points: int = 0       # accumulated Poverty points
 var holy_tier_next_day_pending: int = 0  # queued from meditation/devotion/flagellation/ration burn
 
@@ -533,7 +534,7 @@ var max_focus: int:
 var max_harmony: int:
 	get: return int(traits.get("Primal", 0))
 var max_devotion: int:
-	get: return int(traits.get("Holy", 0)) + vow_holy_bonus
+	get: return int(traits.get("Holy", 0)) + vow_holy_bonus + saint_day_devotion_bonus
 var max_souls: int:
 	get: return int(traits.get("Occult", 0))
 
@@ -1064,10 +1065,28 @@ func _setup_alertness_indicator() -> void:
 	_alertness_indicator.visible = false
 	add_child(_alertness_indicator)
 	ai_node.alertness_changed.connect(_on_alertness_changed)
+	# Hide the indicator on death so ? / ! don't linger over corpses/graves.
+	character_died.connect(_on_alertness_character_died)
+
+
+func _on_alertness_character_died() -> void:
+	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
+		_alertness_flash_tween.kill()
+		_alertness_flash_tween = null
+	if _alertness_indicator and is_instance_valid(_alertness_indicator):
+		_alertness_indicator.visible = false
 
 
 func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
+		return
+	# Player-controlled characters (party) don't use the AI alertness UI.
+	# Their AI_enabled flag is false — only AI-driven NPCs get ? / !. This is
+	# a belt-and-suspenders pair with the party_chars skip in
+	# Game._on_character_damaged so incidental alertness bumps still don't
+	# surface as icons on PCs.
+	if not AI_enabled:
+		_alertness_indicator.visible = false
 		return
 	# Cancel any flash currently running — entering a new state resets it.
 	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
