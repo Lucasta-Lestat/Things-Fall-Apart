@@ -4192,15 +4192,7 @@ func _on_character_died() -> void:
 			SfxManager.play("man-death-scream", global_position)
 	$AI.die()
 	character_died.emit()
-	_hide_living_visuals()
-	_show_death_marker()
-	set_process(false)
-	# Corpses do not block projectiles or move_and_slide queries (matches the
-	# pre-physics behavior where _update_projectiles skipped dead characters).
-	# The Area2D soft-separation shape stays enabled so live characters still
-	# bump off corpses naturally.
-	if body_collision_shape:
-		body_collision_shape.disabled = true
+	_enter_corpse_state()
 
 	# Fatal Attraction: linked death — if partner is still alive, kill them too
 	if condition_manager.has_condition("fatal_attraction"):
@@ -4217,6 +4209,28 @@ func _on_character_died() -> void:
 			partner.current_health = 0
 			partner.health_changed.emit(partner.current_health, partner.max_health, partner)
 			partner._check_death()
+
+func _enter_corpse_state() -> void:
+	## Visual + physics state of a corpse, with no death events. Shared by
+	## _on_character_died and restore_dead_state.
+	_hide_living_visuals()
+	_show_death_marker()
+	set_process(false)
+	# Corpses do not block projectiles or move_and_slide queries (matches the
+	# pre-physics behavior where _update_projectiles skipped dead characters).
+	# The Area2D soft-separation shape stays enabled so live characters still
+	# bump off corpses naturally.
+	if body_collision_shape:
+		body_collision_shape.disabled = true
+
+func restore_dead_state() -> void:
+	## Re-enter the corpse state for a character respawned at 0 HP after a map
+	## transition or save load. Deliberately skips the death scream,
+	## character_died signal, and Fatal Attraction chain so those one-shot
+	## events don't re-fire every time we re-enter a map.
+	if has_node("AI") and $AI.current_state != $AI.AIState.DEAD:
+		$AI.die()
+	_enter_corpse_state()
 
 # ===== BLEED VFX BURST =====
 #

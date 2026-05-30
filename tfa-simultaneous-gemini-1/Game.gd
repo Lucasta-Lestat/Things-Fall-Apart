@@ -2771,3 +2771,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# Refresh visuals after all state is restored
 	if character.has_method("_update_colors"):
 		character._update_colors()
+
+	# A character saved at 0 HP is dead: re-enter the corpse state so it doesn't
+	# respawn walking around. restore_dead_state skips the death scream/signal so
+	# one-shot death events don't re-fire on every map transition.
+	if character.current_health <= 0 and character.has_method("restore_dead_state"):
+		character.restore_dead_state()
