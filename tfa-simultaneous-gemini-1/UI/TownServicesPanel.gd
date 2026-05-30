@@ -158,6 +158,11 @@ func _repopulate() -> void:
 		visible = false
 		return
 
+	# Hide entirely on the world map — settlement services live on local maps.
+	if game_node.current_map_data.get("is_world_map", false):
+		visible = false
+		return
+
 	if mode == "downtime":
 		_repopulate_downtime()
 		return
