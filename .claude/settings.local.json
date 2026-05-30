@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(/c/Users/Nolan/Downloads/Godot_v4.6-stable_win64.exe/Godot_v4.6-stable_win64_console.exe:*)",
       "Bash(xargs grep -l \"AudioManager\\\\|play_sound\\\\|SFXManager\")",
       "Bash(xargs grep -l \"Inventory\\\\|equipment\\\\|equip\\\\|item\")",
       "Bash(xargs grep -l \"health_bar\\\\|status.*icon\\\\|indicator\")",

@@ -721,6 +721,7 @@
 			}
 		},
 
+
 		"feasting": {
 			"name": "Feasting",
 			"description": "Join the parish feast in the saint's honour. The temple lays out bread, broth, and a place at the long table for any passing traveller — observers especially.",
@@ -753,6 +754,7 @@
 				}
 			}
 		},
+
 
 		"mining": {
 			"name": "Mining",
