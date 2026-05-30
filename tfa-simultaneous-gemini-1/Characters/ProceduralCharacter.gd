@@ -1385,7 +1385,14 @@ func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> voi
 		var target_tile = my_tile + Vector2i(dx, dy)
 		if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
 			var spawn_pos = GridManager.map_to_world(target_tile)
-			game._spawn_character(template_id, spawn_pos)
+			var animal = game._spawn_character(template_id, spawn_pos)
+			if animal:
+				# _spawn_character leaves AI_enabled = false; without this the
+				# animal just stands still. Match the NPC spawn path in Game.gd.
+				animal.AI_enabled = true
+				animal.visible = false
+				if game.has_method("_add_npc_line_of_sight_light"):
+					game._add_npc_line_of_sight_light(animal)
 			GameLog.add_entry("A " + template_id.replace("_", " ") + " appears near " + Name + "!")
 			return
 		attempts -= 1
