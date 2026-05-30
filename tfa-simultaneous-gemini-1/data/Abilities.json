@@ -1523,6 +1523,42 @@
 				"sound_cast": "",
 				"sound_impact": ""
 			}
+		},
+		{
+			"id": "force_march",
+			"display_name": "Force March",
+			"description": "Push the party on without rest. Doubles overland travel speed for two minutes; gain a tier of Exhausted as the price.",
+			"icon": "res://UI/UI Icons/exhausted.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"interruptible": false,
+			"traits": {
+				"martial": 2,
+				"overworld": 1
+			},
+			"targeting": {
+				"type": "self",
+				"shape": "circle",
+				"radius": 0.0
+			},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "force_marching",
+					"stacks": 1
+				},
+				{
+					"type": "apply_condition",
+					"condition_id": "exhausted",
+					"stacks": 1
+				}
+			],
+			"visuals": {
+				"cast_effect": "",
+				"impact_effect": "",
+				"sound_cast": "",
+				"sound_impact": ""
+			}
 		}
 	]
 }

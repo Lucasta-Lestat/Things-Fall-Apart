@@ -376,6 +376,13 @@ func effective_crit_fail_threshold() -> float:
 	
 	
 var speed_modifier: float = 0.0
+# Additional speed bonus that applies *only* on the world map. Conditions like
+# "force_marching" stack onto this and never affect tactical-map movement.
+# Game.gd sets `on_world_map = true` for every character it spawns into a map
+# with is_world_map; the move_speed getter folds this bonus in when that flag
+# is set.
+var overland_speed_modifier: float = 0.0
+var on_world_map: bool = false
 var arm_length: float = 0.0
 var race_id: String = ""
 var creature_type: String = "Humanoid"
@@ -429,7 +436,11 @@ var damage_multiplier: float:
 	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
 
 var move_speed: float:
-	get: return GridManager.TILE_SIZE * (0.7 + (effective_dexterity() / 100.0)) * (1.0 + speed_modifier)
+	get:
+		var bonus := speed_modifier
+		if on_world_map:
+			bonus += overland_speed_modifier
+		return GridManager.TILE_SIZE * (0.7 + (effective_dexterity() / 100.0)) * (1.0 + bonus)
 @export var dash_speed_multiplier: float = 5.0
 @export var dash_duration: float = 0.2
 @export var dash_cooldown: float = 0.8
@@ -1220,6 +1231,7 @@ func _on_stats_recalculated() -> void:
 	
 	# --- Simple modifier stats (base is 0.0, conditions add/multiply onto them) ---
 	speed_modifier = condition_manager.calculate_effective_stat(0.0, "speed_modifier")
+	overland_speed_modifier = condition_manager.calculate_effective_stat(0.0, "overland_speed_modifier")
 	bonus_damage = condition_manager.calculate_effective_stat(0.0, "bonus_damage")
 	
 	# --- Attribute modifiers (applied on top of base attributes) ---

@@ -267,6 +267,16 @@ func _refresh_inventory(data: Dictionary) -> void:
 		return
 
 	var entries = _build_inventory_entries(character.inventory)
+	# On the world map, show only abilities that carry the "overworld" trait
+	# (e.g. Force March). Items and weapons are unaffected — they're still
+	# visible. Game.gd tracks current_map_data.is_world_map for this gate.
+	if game_node and game_node.current_map_data.get("is_world_map", false):
+		entries = entries.filter(func(e):
+			if e.get("kind", "") != "ability":
+				return true
+			var aid: String = str(e.get("ability_id", ""))
+			var ability_data: Dictionary = AbilityDatabase.get_ability_data(aid)
+			return ability_data.get("traits", {}).has("overworld"))
 	for entry in entries:
 		var slot = _create_item_slot(entry, data)
 		grid.add_child(slot)
@@ -334,6 +344,7 @@ func _ensure_ability_entry(node: AbilityShape, entries: Dictionary, order: Array
 			icon_path = str(node.raw_data["icon"])
 		entries[aid] = {
 			"kind": "ability",
+			"ability_id": aid,
 			"display_name": node.display_name,
 			"sprite_path": icon_path,
 			"num_stacks": 1,
