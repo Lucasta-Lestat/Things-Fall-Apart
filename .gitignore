@@ -1,0 +1,6 @@
+# Claude Code tooling / worktrees
+.claude/
+
+# Editor & temp backup files
+*.bak
+*~
