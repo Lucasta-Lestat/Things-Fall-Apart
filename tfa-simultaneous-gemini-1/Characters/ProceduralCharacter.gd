@@ -1166,13 +1166,16 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 
 
 func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_position: Vector2) -> Dictionary:
-	var precip_type = effect.get("precipitation_type", "clear")
-	var group_id = effect.get("group_id", "Scarlatti")
-	var weather_manager = get_node_or_null("/root/WeatherManager")
-	if not weather_manager:
-		return {"success": false, "error": "WeatherManager not found"}
-	weather_manager.set_precipitation(group_id, precip_type)
-	return {"success": true, "precipitation_type": precip_type, "group_id": group_id}
+	# Drive the weather on whatever map the caster is standing on. Previously this
+	# hardcoded the "Scarlatti" weather group, so the change was ignored on every
+	# other map (and on the many maps with no weather group at all). Game.force_weather
+	# resolves the current map and renders the precipitation regardless of its group.
+	var precip_type: String = effect.get("precipitation_type", "clear")
+	var game_node = get_tree().current_scene
+	if not game_node or not game_node.has_method("force_weather"):
+		return {"success": false, "error": "force_weather not available on current scene"}
+	game_node.force_weather(precip_type)
+	return {"success": true, "precipitation_type": precip_type}
 
 
 func _place_surface(effect: Dictionary, _targets: Array, _ability, target_position: Vector2) -> Dictionary:

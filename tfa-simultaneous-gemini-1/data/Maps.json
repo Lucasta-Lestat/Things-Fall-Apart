@@ -297,7 +297,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -336,7 +336,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -438,7 +438,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "tavern_theme",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -493,7 +493,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "tavern_theme",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -610,7 +610,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -672,7 +672,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -731,7 +731,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -962,7 +962,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -1006,7 +1006,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {
@@ -1062,7 +1062,7 @@
 			},
 			"tile_size": 64,
 			"music_track": "",
-			"weather_group": "",
+			"weather_group": "Scarlatti",
 			"fog_ids": [],
 			"player_spawns": {
 				"default": {

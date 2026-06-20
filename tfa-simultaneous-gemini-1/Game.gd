@@ -649,6 +649,21 @@ func setup_map_weather(map_data: Dictionary) -> void:
 		if not weather.is_empty():
 			_apply_weather_fluid_effects(weather)
 
+## Force a precipitation type onto the current map, e.g. from a weather spell.
+## Works regardless of the map's configured weather_group (most maps have none).
+func force_weather(precip_type: String) -> void:
+	var map_group: String = current_map_data.get("weather_group", "")
+	if not map_group.is_empty():
+		# Map has a real weather group: update it normally. The resulting
+		# weather_changed signal drives both the VFX controller and fluid effects.
+		WeatherManager.set_precipitation(map_group, precip_type)
+		return
+	# Map has no weather group (interiors/dungeons): drive the VFX and fluid
+	# effects directly, since no group state exists for the signal path to use.
+	if weather_vfx_controller and weather_vfx_controller.has_method("force_precipitation"):
+		weather_vfx_controller.force_precipitation(precip_type)
+	_apply_weather_fluid_effects({"precipitation": precip_type})
+
 func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 	var map_group = current_map_data.get("weather_group", "")
 	if group != map_group or map_group.is_empty():
@@ -658,11 +673,11 @@ func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 	var precip = weather.get("precipitation", "clear")
 	match precip:
-		"snow", "heavy_snow":
+		"snow", "heavy_snow", "freezing_rain":
 			# Freeze all existing fluids
 			if surface_manager:
 				surface_manager.try_freeze_all_fluids()
-		"rain", "heavy_rain":
+		"rain", "heavy_rain", "acid_rain":
 			# Spawn random water puddles across walkable tiles
 			_spawn_rain_puddles(precip)
 

@@ -48,6 +48,15 @@ func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 	if group == _current_group:
 		_apply_weather(weather_state)
 
+## Force a precipitation type to render immediately, bypassing the weather-group
+## gate. Used by weather spells so they show on maps with no weather group.
+func force_precipitation(precip_type: String, wind_speed: float = 0.0, wind_angle: float = 0.0) -> void:
+	_apply_weather({
+		"precipitation": precip_type,
+		"wind_speed": wind_speed,
+		"wind_angle": wind_angle,
+	})
+
 func _apply_weather(weather: Dictionary) -> void:
 	var precip = weather.get("precipitation", "clear")
 	var wind_speed = weather.get("wind_speed", 0.0)
@@ -61,6 +70,10 @@ func _apply_weather(weather: Dictionary) -> void:
 			_show_rain(0.4, wind_angle)
 		"heavy_rain":
 			_show_rain(0.8, wind_angle)
+		"acid_rain":
+			_show_rain(0.5, wind_angle, _precip_tint(precip))
+		"freezing_rain":
+			_show_rain(0.5, wind_angle, _precip_tint(precip))
 		"snow":
 			_show_snow(0.35, wind_angle)
 		"heavy_snow":
@@ -123,7 +136,7 @@ func _get_looped_stream(path: String) -> AudioStream:
 	_audio_cache[path] = stream
 	return stream
 
-func _show_rain(density: float, wind_angle: float) -> void:
+func _show_rain(density: float, wind_angle: float, tint: Color = Color(0.7, 0.75, 0.85, 0.55)) -> void:
 	_rain_node = _rain_scene.instantiate()
 	add_child(_rain_node)
 	var rect = _rain_node.get_node("ColorRect")
@@ -133,6 +146,17 @@ func _show_rain(density: float, wind_angle: float) -> void:
 		mat.set_shader_parameter("density", density)
 		mat.set_shader_parameter("wind_angle", sin(deg_to_rad(wind_angle)) * 0.5)
 		mat.set_shader_parameter("intensity", clamp(density * 2.0, 0.3, 1.0))
+		mat.set_shader_parameter("rain_color", tint)
+
+## Read a precipitation type's tint from weather.json (e.g. acid_rain green,
+## freezing_rain pale blue), preserving the rain overlay's translucency.
+func _precip_tint(precip: String) -> Color:
+	var data: Dictionary = WeatherManager.get_precipitation_data(precip)
+	if data.has("tint"):
+		var t: Array = data["tint"]
+		if t.size() >= 3:
+			return Color(t[0], t[1], t[2], 0.55)
+	return Color(0.7, 0.75, 0.85, 0.55)
 
 func _show_snow(density: float, wind_angle: float) -> void:
 	_snow_node = _snow_scene.instantiate()
