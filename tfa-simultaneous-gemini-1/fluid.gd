@@ -96,6 +96,35 @@ func set_fluid_colors(water_color: Color, wave_color: Color) -> void:
 		water_sprite.material.set_shader_parameter("water_color", water_color)
 		water_sprite.material.set_shader_parameter("wave_color", wave_color)
 
+func apply_fluid_style(def: Dictionary) -> void:
+	"""Apply data-driven visual params from fluids.json. Only keys present are
+	set; the shader's own defaults cover the rest. Unknown params on a custom
+	shader (e.g. oil_sheen) are harmlessly ignored by Godot."""
+	if not (water_sprite and water_sprite.material is ShaderMaterial):
+		return
+	var mat: ShaderMaterial = water_sprite.material
+	if def.has("foam_color"):
+		var f = def["foam_color"]
+		var fa: float = f[3] if f.size() > 3 else 1.0
+		mat.set_shader_parameter("foam_color", Color(f[0], f[1], f[2], fa))
+	# Every tunable float uniform the water shader exposes — set only the keys
+	# present in the fluid's JSON entry; the shader's defaults cover the rest.
+	for key in ["wave_amplitude", "wave_frequency", "wave_speed", "wave_brightness",
+			"normal_strength", "shading_contrast", "shininess",
+			"specular_intensity", "sparkle_intensity",
+			"caustic_intensity", "caustic_scale",
+			"foam_amount", "foam_width", "depth_width",
+			"distortion_strength", "distortion_speed",
+			"emissive", "viscosity", "refraction_strength"]:
+		if def.has(key):
+			mat.set_shader_parameter(key, float(def[key]))
+
+func set_effects_quality(q: float) -> void:
+	"""Global quality scale for the expensive water effects (caustics, sun-glitter,
+	refraction). 1.0 = full, 0.0 = off. Set by FluidManager.water_quality."""
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("effects_quality", clampf(q, 0.0, 1.0))
+
 func set_edge_mask(mask: Vector4) -> void:
 	"""Set which edges are exposed boundaries. vec4(right, left, bottom, top), 1.0 = exposed."""
 	if water_sprite and water_sprite.material is ShaderMaterial:
@@ -165,6 +194,13 @@ func set_fill_ratio(ratio: float) -> void:
 func set_inflow_direction(direction: Vector2) -> void:
 	"""Called by FluidManager. Direction fluid moves AS IT ENTERS this tile."""
 	target_inflow_direction = direction
+
+func set_ripples(packed: Array, count: int) -> void:
+	"""Called by FluidManager each frame while ripples are active. `packed` is a
+	6-element Array of Vector4(center.x, center.y, age, strength) in grid space."""
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("u_ripples", packed)
+		water_sprite.material.set_shader_parameter("u_ripple_count", count)
 
 func snap_fill_state(ratio: float, inflow: Vector2) -> void:
 	"""Used at tile creation to set the initial fill state without a fade-in

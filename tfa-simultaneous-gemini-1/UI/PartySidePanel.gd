@@ -26,6 +26,7 @@ const SCHOOL_RESOURCES := [
 
 # Health bar color thresholds (matching old dual_health_bars style)
 const HP_COLOR_FULL := Color(0.2, 0.8, 0.2)
+const STRESS_COLOR := Color(0.6, 0.3, 0.8)
 const HP_COLOR_MID := Color(0.9, 0.8, 0.1)
 const HP_COLOR_LOW := Color(0.8, 0.1, 0.1)
 const HP_MID_THRESHOLD := 0.5
@@ -202,6 +203,27 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	health_bar.add_theme_stylebox_override("background", health_bg)
 	container.add_child(health_bar)
 
+	# --- Stress meter (below health; max scales with Will) ---
+	var stress_label = Label.new()
+	stress_label.text = "Stress"
+	stress_label.add_theme_font_size_override("font_size", 9)
+	stress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(stress_label)
+
+	var stress_bar = ProgressBar.new()
+	stress_bar.custom_minimum_size = Vector2(0, 10)
+	stress_bar.max_value = 100
+	stress_bar.value = 0
+	stress_bar.show_percentage = false
+	stress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var stress_fill = StyleBoxFlat.new()
+	stress_fill.bg_color = STRESS_COLOR
+	stress_bar.add_theme_stylebox_override("fill", stress_fill)
+	var stress_bg = StyleBoxFlat.new()
+	stress_bg.bg_color = Color(0.12, 0.1, 0.18, 0.6)
+	stress_bar.add_theme_stylebox_override("background", stress_bg)
+	container.add_child(stress_bar)
+
 	# --- School Resources Row ---
 	# One TextureProgressBar per school in which the character has tier > 0.
 	# The icon fills left-to-right as the resource recovers; missing resources
@@ -241,6 +263,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"name_label": name_label,
 		"health_bar": health_bar,
 		"health_fill": health_fill,
+		"stress_bar": stress_bar,
 		"condition_container": cond_container,
 		"resource_row": resource_row,
 		"resource_bars": resource_bars,
@@ -723,6 +746,18 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		# Containers are openable only via right-click in the world; suppress
 		# "Open" from the inventory context menu.
 		options.erase("Open")
+		# Inventory invariant: items can always be dropped, never "picked up".
+		options.erase("Pick Up")
+		if not options.has("Drop"):
+			options.append("Drop")
+		# Stack drop controls: whole stack + a slider split.
+		var ns_val = item_data.get("num_stacks", 1)
+		var ns_count: int = int(ns_val) if ns_val != null else 1
+		if ns_count > 1:
+			if not options.has("Drop All"):
+				options.append("Drop All")
+			if not options.has("Split"):
+				options.append("Split")
 		var equip_slot: String = str(item_data.get("equip_slot", ""))
 		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
 			if item_data.get("_equipped", false):
@@ -751,6 +786,9 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		else:
 			options.append("Equip to Main")
 			options.append("Equip to Off")
+		# Inventory invariant: weapons can always be dropped.
+		if kind == "weapon" and not options.has("Drop"):
+			options.append("Drop")
 
 	if options.is_empty():
 		return
@@ -787,6 +825,10 @@ func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Arra
 				_throw_item(character, item_index, item_data)
 			"Drop":
 				_drop_item(character, item_index, item_data)
+			"Drop All":
+				_drop_item_amount(character, item_index, item_data, int(item_data.get("num_stacks", 1)))
+			"Split":
+				_show_split_popup(character, item_index, item_data)
 			"Equip":
 				_equip_item(character, item_index, item_data)
 			"Unequip":
@@ -981,6 +1023,93 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	if item.has("primary_damage_type"):
 		SfxManager.play("sword-fall", character.global_position)
+
+# Drop a chosen quantity from a stacked inventory item. Spawns a single world
+# item carrying the dropped stack count.
+func _drop_item_amount(character, item_index: int, item_data: Dictionary, amount: int) -> void:
+	if not game_node:
+		return
+	var ns_val = item_data.get("num_stacks", 1)
+	var total: int = int(ns_val) if ns_val != null else 1
+	amount = clampi(amount, 1, total)
+	# Equipped items are single (num_stacks 1), but guard anyway.
+	if item_data.get("_equipped", false):
+		_unequip_item(character, item_index, item_data)
+	var item = character.inventory.remove_amount(item_index, amount)
+	if item.is_empty():
+		return
+	var world_item = game_node.create_item(item.get("id", ""), character.global_position)
+	# create_item's stack_count is overwritten by _apply_item_data, so set the
+	# dropped count after it exists in the world.
+	if world_item != null and amount > 1:
+		world_item.stack_count = amount
+		if world_item.has_method("_update_stack_label"):
+			world_item._update_stack_label()
+	if item.has("primary_damage_type"):
+		SfxManager.play("sword-fall", character.global_position)
+
+# Compact slider popup to drop part of a stack. "Drop" commits the slider value.
+func _show_split_popup(character, item_index: int, item_data: Dictionary) -> void:
+	var ns_val = item_data.get("num_stacks", 1)
+	var total: int = int(ns_val) if ns_val != null else 1
+	if total <= 1:
+		_drop_item(character, item_index, item_data)
+		return
+
+	var popup := PopupPanel.new()
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	vbox.custom_minimum_size = Vector2(220, 0)
+	popup.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Split %s" % str(item_data.get("display_name", item_data.get("id", "item")))
+	vbox.add_child(title)
+
+	var slider := HSlider.new()
+	slider.min_value = 1
+	slider.max_value = total
+	slider.step = 1
+	slider.value = int(max(1, total / 2))
+	slider.custom_minimum_size = Vector2(200, 0)
+	vbox.add_child(slider)
+
+	var value_label := Label.new()
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	value_label.text = "Drop %d of %d" % [int(slider.value), total]
+	vbox.add_child(value_label)
+	slider.value_changed.connect(func(v: float): value_label.text = "Drop %d of %d" % [int(v), total])
+
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 8)
+	vbox.add_child(buttons)
+
+	var drop_btn := Button.new()
+	drop_btn.text = "Drop"
+	drop_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	drop_btn.pressed.connect(_drop_split.bind(character, item_index, item_data, slider, popup))
+	buttons.add_child(drop_btn)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cancel_btn.pressed.connect(popup.queue_free)
+	buttons.add_child(cancel_btn)
+
+	if game_node:
+		game_node.context_menu_open = true
+	# Free on click-outside, and clear the world-input guard on any close path.
+	popup.popup_hide.connect(popup.queue_free)
+	popup.tree_exiting.connect(func(): game_node.call_deferred("set", "context_menu_open", false))
+
+	add_child(popup)
+	popup.popup_centered()
+
+# Commit a split-drop from the popup, then close it.
+func _drop_split(character, item_index: int, item_data: Dictionary, slider: HSlider, popup: PopupPanel) -> void:
+	_drop_item_amount(character, item_index, item_data, int(slider.value))
+	popup.queue_free()
 
 # Remove a WeaponShape node from wherever it lives in the inventory
 # (main hand, off hand, or stowed). Returns true if found and removed.
@@ -1178,6 +1307,7 @@ func _process(_delta: float) -> void:
 
 		# Update the single character HP bar
 		_update_health_bar(data, character)
+		_update_stress_bar(data, character)
 
 		# Update conditions display
 		_update_conditions(data, character)
@@ -1196,6 +1326,17 @@ func _update_health_bar(data: Dictionary, character) -> void:
 		fill_style.bg_color = HP_COLOR_MID
 	else:
 		fill_style.bg_color = HP_COLOR_FULL
+
+
+func _update_stress_bar(data: Dictionary, character) -> void:
+	if not data.has("stress_bar"):
+		return
+	var bar: ProgressBar = data["stress_bar"]
+	if not is_instance_valid(bar):
+		return
+	var cap: int = max(1, int(character.max_stress)) if "max_stress" in character else 1
+	var cur: int = int(character.stress) if "stress" in character else 0
+	bar.value = clamp(float(cur) / float(cap) * 100.0, 0.0, 100.0)
 
 
 # Build one TextureProgressBar per school resource for which the character has

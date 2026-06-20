@@ -112,6 +112,24 @@ func remove_item(index: int) -> Dictionary:
 	emit_signal("item_removed", item)
 	return item
 
+# Remove `amount` stacks from the item at `index`. Returns the item dict (so the
+# caller can spawn a world stack), or {} if invalid. If amount >= current stacks
+# the whole slot is removed. Quantity-aware sibling of remove_item.
+func remove_amount(index: int, amount: int) -> Dictionary:
+	if index < 0 or index >= items.size():
+		push_warning("Invalid inventory index")
+		return {}
+	var item = items[index]
+	var stacks_val = item.get("num_stacks", 1)
+	var stacks = int(stacks_val) if stacks_val != null else 1
+	amount = clampi(amount, 1, stacks)
+	if amount >= stacks:
+		items.remove_at(index)
+	else:
+		items[index]["num_stacks"] = stacks - amount
+	emit_signal("item_removed", item)
+	return item
+
 func get_item(index: int) -> Dictionary:
 	if index < 0 or index >= items.size():
 		return {}

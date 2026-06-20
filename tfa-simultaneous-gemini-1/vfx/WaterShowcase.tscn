@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://crbenb2guvbvd"]
+
+[ext_resource type="Script" uid="uid://mqt0v4earexx" path="res://vfx/water_showcase.gd" id="1_show"]
+
+[node name="WaterShowcase" type="Node2D" unique_id=279049771]
+script = ExtResource("1_show")

@@ -1,0 +1,28 @@
+{
+	"readables": [
+		{
+			"id": "torn_journal_page",
+			"title": "A Torn Journal Page",
+			"kind": "note",
+			"body": "[i]The ink has run in the damp, and half the words are gone.[/i]\n\nThey buried the last of the Liziti dead at dusk, but the ground would not lie still. By the third night I heard scratching beneath the Perrow stones, soft as a cat at a door.\n\nIf you are reading this — and if the fog has not yet taken your wits — do not dig.",
+			"icon": "res://Icons/dummy_icon.png",
+			"world_sprite_path": "res://Items/readable_note.png",
+			"world_width": 18.0,
+			"world_height": 18.0
+		},
+		{
+			"id": "chronicle_of_perrow",
+			"title": "Chronicle of Perrow",
+			"kind": "book",
+			"pages": [
+				"[b]Chronicle of Perrow[/b]\n[i]Volume the First[/i]\n\nIn the years before the fog, Perrow was a town of bells and bargains — small, and well content to be small. Its graves were tended, its saints were sung, and no traveller thought it strange.",
+				"[b]The Long Autumn[/b]\n\nThen came the season that would not turn. The wells went brackish; the bells cracked one by one; and the saints, when called upon, did not answer. The living grew few, and the buried grew restless.",
+				"[b]What Remains[/b]\n\nWhat remains of Perrow is written in its graves. Read them, traveller, and count yourself among the warned — for a town can fall apart as surely as any man, and just as quietly."
+			],
+			"icon": "res://Icons/dummy_icon.png",
+			"world_sprite_path": "res://Items/readable_book.png",
+			"world_width": 20.0,
+			"world_height": 20.0
+		}
+	]
+}

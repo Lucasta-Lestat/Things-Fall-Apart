@@ -35,6 +35,17 @@ var _action_drag_snap: Dictionary = {}
 # True when AbilityTargeting is active for the pending action node
 var _targeting_for_node: bool = false
 
+# True from the moment a node is placed until the creating click is released.
+# Lets us distinguish that initial click (which only places the node) from a
+# later click (which uses the ability) and from a drag (which redraws the path).
+var _awaiting_node_press_release: bool = false
+
+# True only once the handler has witnessed a left press over the world (i.e. NOT
+# the node-creating one, and NOT a press that began over UI — the character skips
+# us while the cursor is over a Control). Required before a release executes the
+# ability or a hold redraws, so a menu click can't leak in via a later release.
+var _use_press_armed: bool = false
+
 # Preloaded icons for common action types
 var _attack_icon: Texture2D = null
 var _dash_icon: Texture2D = null
@@ -50,6 +61,18 @@ func _try_load(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
 		return load(path)
 	return null
+
+func _resolve_ability_icon(ability_data: Dictionary) -> Texture2D:
+	# Prefer the ability's own icon (a Texture2D or a res:// path in the data);
+	# fall back to the generic targeting icon so a node is never left blank.
+	var icon_val = ability_data.get("icon", null)
+	if icon_val is Texture2D:
+		return icon_val
+	if icon_val is String and icon_val != "" and ResourceLoader.exists(icon_val):
+		var res = load(icon_val)
+		if res is Texture2D:
+			return res
+	return _attack_icon
 
 func handle_input(mouse_pos: Vector2) -> bool:
 	# Returns true if input was consumed (caller should skip further input processing).
@@ -94,6 +117,8 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 			pending_action_node = tactical_path.insert_action_node(mouse_pos)
 			_action_drag_start = mouse_pos
 			_action_drag_snap = path_snap
+			_awaiting_node_press_release = true
+			_use_press_armed = false
 			state = PathInputState.PLACING_ACTION
 			path_drawer.queue_redraw()
 			return true
@@ -170,17 +195,54 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		path_drawer.queue_redraw()
 		return true
 
-	# Drag detection: if left mouse is still held and dragged far enough,
-	# truncate the path at the click point and start drawing new waypoints from there
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+	# A fresh left press (NOT the click that created the node) re-arms drag
+	# detection from its own location, so a click made away from the node is
+	# never mistaken for a drag. The gesture resolves on release (a click → use
+	# the ability) or once the cursor moves past the threshold (a drag → redraw).
+	var fresh_left_press: bool = false
+	if Input.is_action_just_pressed("left_click") and not _awaiting_node_press_release:
+		_action_drag_start = mouse_pos
+		_use_press_armed = true
+		fresh_left_press = true
+
+	# Drag-to-redraw: while the left button is held and the cursor leaves the
+	# threshold, discard the path after the node and resume free drawing from it.
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not fresh_left_press and (_awaiting_node_press_release or _use_press_armed):
 		if mouse_pos.distance_to(_action_drag_start) > DRAG_THRESHOLD:
 			tactical_path.truncate_after(_action_drag_snap)
 			tactical_path.remove_action_node(pending_action_node)
 			pending_action_node = null
+			_awaiting_node_press_release = false
+			_use_press_armed = false
 			state = PathInputState.DRAWING_PATH
 			path_drawer.is_drawing_path = true
 			path_drawer.queue_redraw()
 			return true
+
+	# Left release resolves the click: the node-creating click only keeps the
+	# node pending; any later in-place click uses the main-hand ability AT the
+	# node (the character walks to the node, then casts/fires there).
+	if Input.is_action_just_released("left_click"):
+		if _awaiting_node_press_release:
+			_awaiting_node_press_release = false
+			return true
+		if _use_press_armed:
+			# A click whose press the handler saw over the world: use the
+			# main-hand ability at the node.
+			_use_press_armed = false
+			_initiate_action_for_node(character.current_main_hand_item, "Main", mouse_pos)
+			return true
+		# Release of a press we never saw (it began over UI, e.g. a menu click) —
+		# ignore it so equipping/menu clicks don't leak in as a planned action.
+		return false
+
+	if fresh_left_press:
+		return true  # consume the press; wait for the release or a drag
+
+	# No left press in flight (button up) — drop any stale arm so a later release
+	# whose press began over UI can't be mistaken for a world click.
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_use_press_armed = false
 
 	# Middle-click: A* pathfind from this node to the destination,
 	# truncating the path after the node
@@ -198,11 +260,6 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	# Right-click: assign off-hand action
 	if Input.is_action_just_pressed("right_click"):
 		_initiate_action_for_node(character.current_off_hand_item, "Off", mouse_pos)
-		return true
-
-	# Left-click (new press, not drag): assign main-hand action
-	if Input.is_action_just_pressed("left_click"):
-		_initiate_action_for_node(character.current_main_hand_item, "Main", mouse_pos)
 		return true
 
 	# Dash: dash key assigns dash toward mouse position
@@ -288,19 +345,24 @@ func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -
 	if item is AbilityShape:
 		var ability_data = item.get_ability_data()
 		if ability_data.get("requires_targeting", false):
-			# Start targeting UI — stay in PLACING_ACTION, wait for confirm click
-			character.targeting_system.start_targeting(hand, ability_data, mouse_pos)
+			# Start targeting UI — stay in PLACING_ACTION, wait for confirm click.
+			# Anchor the preview origin to the node so line/cone AoE previews start
+			# from where the ability will be cast, not the character's live position.
+			character.targeting_system.start_targeting(hand, ability_data, mouse_pos, pending_action_node.world_position)
 			_targeting_for_node = true
 			return
 		else:
-			# Instant ability (self-buffs, etc.) — assign directly
+			# Instant ability (self-buffs, etc.) — assign directly. The cast
+			# happens when the character reaches the node, so anchor it there.
+			# Self-targeted abilities re-resolve to the live body position at
+			# execution time (see AbilityManager.use_ability).
 			pending_action_node.action_type = ActionQueue.ActionType.USE_ABILITY
 			pending_action_node.action_data = {
 				"ability_id": item.ability_id,
-				"target_position": mouse_pos,
+				"target_position": pending_action_node.world_position,
 				"needs_targeting": false,
 			}
-			pending_action_node.icon_texture = _attack_icon
+			pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
 	elif item is WeaponShape:
 		# Weapon attack at mouse position
 		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
@@ -335,7 +397,7 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 		"target_position": target_pos,
 		"needs_targeting": false,
 	}
-	pending_action_node.icon_texture = _attack_icon
+	pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
 
 	# End targeting and create persistent queued indicator (AOE preview)
 	character.targeting_system.end_targeting()
@@ -362,6 +424,8 @@ func cancel_path() -> void:
 	if _targeting_for_node:
 		character.targeting_system.cancel_targeting()
 		_targeting_for_node = false
+	_awaiting_node_press_release = false
+	_use_press_armed = false
 	state = PathInputState.IDLE
 	path_drawer.is_drawing_path = false
 	path_drawer.is_drawing_rotation = false

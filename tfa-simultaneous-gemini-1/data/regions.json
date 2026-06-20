@@ -13,7 +13,16 @@
 				"perrow_tavern",
 				"dock_tavern",
 				"don_manor",
-				"minschaleft_university"
+				"minschaleft_university",
+				"perrow_heart_village",
+				"perrow_village_market",
+				"perrow_vale_tavern",
+				"perrow_adventurers_guild",
+				"perrow_eeler_tavern",
+				"perrow_river_stronghold",
+				"perrow_forest_pass",
+				"perrow_goblin_fortress",
+				"lighthouse"
 			]
 		},
 		{
@@ -25,7 +34,36 @@
 			"member_maps": [
 				"argentiara_square",
 				"argentiara_mine",
-				"argentiara_deep_shaft"
+				"argentiara_deep_shaft",
+				"argentiara_mine_town",
+				"argentiara_wild_west_town"
+			]
+		},
+		{
+			"id": "bortellini",
+			"name": "Bortellini",
+			"description": "A grand river city of races and spectacle, its amphitheatre and hippodrome drawing crowds along the banks of the tidal river.",
+			"controlling_faction": "patriciate",
+			"is_urban": true,
+			"member_maps": [
+				"bortellini_city_market",
+				"bortellini_amphitheatre",
+				"bortellini_hippodrome",
+				"bortellini_royal_stables",
+				"bortellini_training_camp",
+				"bortellini_adventurers_guild"
+			]
+		},
+		{
+			"id": "alamone",
+			"name": "Alamone",
+			"description": "A maze of druidic islands threaded by floating markets and shadowed back-channels, where commerce and secrets drift between the verdant islets.",
+			"controlling_faction": "patriciate",
+			"is_urban": true,
+			"member_maps": [
+				"alamone_floating_market",
+				"alamone_black_market",
+				"alamone_adventurers_guild"
 			]
 		}
 	]

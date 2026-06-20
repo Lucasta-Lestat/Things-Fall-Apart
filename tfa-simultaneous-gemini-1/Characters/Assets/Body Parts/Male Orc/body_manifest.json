@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "source": "male orc contiguous.png",
+  "canvas": [
+    2734,
+    1536
+  ],
+  "unit_px": 620.0,
+  "tuning": {
+    "head_overlap_px": 320.0,
+    "rot_offset_deg": {
+      "head": 0.0,
+      "torso": 0.0,
+      "upper_arm": 0.0,
+      "forearm": 0.0
+    },
+    "arm_flip_left": false
+  },
+  "parts": {
+    "head": {
+      "file": "head_rig.png",
+      "size": [
+        372,
+        404
+      ],
+      "pivot": [
+        186.0,
+        403.0
+      ],
+      "joints": {
+        "neck": [
+          186.0,
+          403.0
+        ],
+        "crown": [
+          186.0,
+          1.0
+        ]
+      }
+    },
+    "torso": {
+      "file": "torso_rig.png",
+      "size": [
+        620,
+        460
+      ],
+      "pivot": [
+        318.5,
+        0.0
+      ],
+      "joints": {
+        "neck": [
+          318.5,
+          0.0
+        ],
+        "shoulder_l": [
+          0.0,
+          176.5
+        ],
+        "shoulder_r": [
+          620.0,
+          176.5
+        ],
+        "hip_l": [
+          190.5,
+          459.0
+        ],
+        "hip_r": [
+          451.5,
+          459.0
+        ]
+      }
+    },
+    "upper_arm": {
+      "file": "upper_arm.png",
+      "size": [
+        345,
+        315
+      ],
+      "pivot": [
+        174.0,
+        -1.0
+      ],
+      "joints": {
+        "shoulder": [
+          174.0,
+          -1.0
+        ],
+        "elbow": [
+          174.0,
+          314.0
+        ]
+      }
+    },
+    "forearm": {
+      "file": "forearm.png",
+      "size": [
+        218,
+        587
+      ],
+      "pivot": [
+        110.5,
+        -1.0
+      ],
+      "joints": {
+        "elbow": [
+          110.5,
+          -1.0
+        ],
+        "wrist": [
+          110.5,
+          582.0
+        ]
+      }
+    }
+  },
+  "attach": [
+    [
+      "torso",
+      "neck",
+      "head",
+      "neck"
+    ],
+    [
+      "torso",
+      "shoulder_l",
+      "upper_arm_l",
+      "shoulder"
+    ],
+    [
+      "upper_arm_l",
+      "elbow",
+      "forearm_l",
+      "elbow"
+    ],
+    [
+      "torso",
+      "shoulder_r",
+      "upper_arm_r",
+      "shoulder"
+    ],
+    [
+      "upper_arm_r",
+      "elbow",
+      "forearm_r",
+      "elbow"
+    ]
+  ],
+  "arm_sprites": {
+    "upper_arm_l": "upper_arm.png",
+    "upper_arm_r": "upper_arm.png",
+    "forearm_l": "forearm.png",
+    "forearm_r": "forearm.png"
+  }
+}

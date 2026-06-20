@@ -154,6 +154,12 @@ var feet_slot: Node2D
 var body_part_sprites: BodyPartSprites = null
 var use_sprite_overlays: bool = false
 var body_sprite_data: Dictionary = {}  # Paths to body part sprite textures
+# Manifest-driven rig (Option B): when the body_sprite_data's head sprite has a
+# sibling body_manifest.json, head/torso/arms are driven by SkeletalBodyRig
+# (gap-free, proportion-preserving) instead of legacy BodyPartSprites. Legs stay
+# procedural in both paths. Mutually exclusive with body_part_sprites.
+var skeletal_rig: SkeletalBodyRig = null
+var use_skeletal_rig: bool = false
 
 enum HairStyle {
 	NONE,
@@ -488,6 +494,7 @@ var focus: int = 0
 var harmony: int = 0
 var devotion: int = 0
 var souls: int = 0
+var stress: int = 0  # Will-based stress meter; at max it rolls an affliction
 
 # Focus paid into an active Concentration spell stays locked until the spell ends.
 var concentration_locked_focus: int = 0
@@ -537,6 +544,8 @@ var max_devotion: int:
 	get: return int(traits.get("Holy", 0)) + vow_holy_bonus + saint_day_devotion_bonus
 var max_souls: int:
 	get: return int(traits.get("Occult", 0))
+var max_stress: int:
+	get: return max(1, int(effective_will()))
 
 # Spendable focus excludes the portion locked by an active Concentration spell.
 var spendable_focus: int:
@@ -551,7 +560,8 @@ func to_data() -> Dictionary:
 		"dexterity": dexterity,
 		"will": will,  
 		"intelligence": intelligence, 
-		"charisma": charisma
+		"charisma": charisma,
+		"stress": stress
 	}
 
 # Body dimensions (top-down view: width is left-right, height is front-back)
@@ -1309,6 +1319,9 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var heal_amount = int(result["heal"])
 		heal(heal_amount)
 
+	if result.has("stress"):
+		gain_stress(int(result["stress"]))
+
 	if result.has("sever_limb"):
 		# Condition asked us to remove a limb. If the condition wasn't pinned
 		# to a specific limb, pick one at random (excluding lethal). HEAD/TORSO
@@ -1624,6 +1637,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("dexterity"): dexterity = data["dexterity"]
 	if data.has("intelligence"): intelligence = data["intelligence"]
 	if data.has("will"): will = data["will"]
+	if data.has("stress"): stress = data["stress"]
 	if data.has("charisma"): charisma = data["charisma"]
 	if data.has("luck"): luck = data["luck"]
 	# Short forms
@@ -1736,7 +1750,7 @@ func rebuild_visuals() -> void:
 	for node_name in ["LeftLeg", "RightLeg", "FrontLeftLeg", "FrontRightLeg",
 			"RearLeftLeg", "RearRightLeg",
 			"LeftArm", "RightArm", "Body", "Head", "Snout", "TuskL", "TuskR",
-			"Tail", "HeadFeatures", "BodyPartSprites"]:
+			"Tail", "HeadFeatures", "BodyPartSprites", "SkeletalBodyRig"]:
 		var node = get_node_or_null(node_name)
 		if node:
 			to_remove.append(node)
@@ -1747,7 +1761,9 @@ func rebuild_visuals() -> void:
 		remove_child(node)
 		node.free()
 	body_part_sprites = null
+	skeletal_rig = null
 	use_sprite_overlays = false
+	use_skeletal_rig = false
 
 	# Reset references
 	left_leg = null
@@ -2534,11 +2550,20 @@ func _update_colors() -> void:
 	# Update body part sprite tints
 	if body_part_sprites:
 		body_part_sprites.set_skin_color(skin_color)
+	if skeletal_rig:
+		skeletal_rig.set_skin_color(skin_color)
 
 # ===== BODY PART SPRITE OVERLAY SYSTEM =====
 
 func _setup_body_part_sprites() -> void:
-	"""Create and configure body part sprite overlays from body_sprite_data."""
+	"""Create and configure body part sprite overlays from body_sprite_data.
+	Prefers the manifest-driven SkeletalBodyRig when a body_manifest.json sits
+	next to the part sprites; otherwise falls back to legacy BodyPartSprites."""
+	var head_path: String = body_sprite_data.get("head", "")
+	if head_path != "" and SkeletalBodyRig.has_manifest(head_path):
+		_setup_skeletal_rig(head_path)
+		return
+
 	# Remove old sprites if any
 	if body_part_sprites:
 		remove_child(body_part_sprites)
@@ -2580,6 +2605,53 @@ func _setup_body_part_sprites() -> void:
 	_set_procedural_geometry_visible(false)
 	use_sprite_overlays = true
 
+func _setup_skeletal_rig(head_path: String) -> void:
+	"""Manifest-driven rig path (Option B). Builds head/torso/arms from
+	body_manifest.json so proportions are preserved and joints connect gap-free.
+	Legs stay procedural. Uniform scale comes from race body_scale when set, else
+	is auto-derived so the art's shoulder span matches the character's body_width."""
+	# Tear down any prior overlay of either kind.
+	if body_part_sprites:
+		remove_child(body_part_sprites)
+		body_part_sprites.queue_free()
+		body_part_sprites = null
+	if skeletal_rig:
+		remove_child(skeletal_rig)
+		skeletal_rig.queue_free()
+		skeletal_rig = null
+
+	skeletal_rig = SkeletalBodyRig.new()
+	skeletal_rig.name = "SkeletalBodyRig"
+	add_child(skeletal_rig)
+
+	if not skeletal_rig.load_manifest(SkeletalBodyRig.manifest_path_for(head_path)):
+		# Manifest unreadable — abandon rig, leave procedural geometry visible.
+		remove_child(skeletal_rig)
+		skeletal_rig.queue_free()
+		skeletal_rig = null
+		push_warning("[ProceduralCharacter] body_manifest.json failed to load; using procedural body")
+		return
+
+	# Uniform render scale: explicit race body_scale wins; otherwise derive it so
+	# the art's shoulder-to-shoulder span equals body_width (auto, no hand tuning).
+	var bs = get("body_scale")
+	var scale_val: float
+	if bs != null and float(bs) > 0.0:
+		scale_val = float(bs)
+	else:
+		var unit: float = skeletal_rig.get_unit_px()
+		scale_val = (body_width / unit) if unit > 0.0 else 0.065
+	skeletal_rig.render_scale = scale_val
+
+	skeletal_rig.shoulder_y = shoulder_y_offset
+	skeletal_rig.build(body_sprite_data.get("leg", ""))
+	skeletal_rig.set_skin_color(skin_color)
+
+	# Hide procedural Line2D geometry (animation still runs to drive the rig).
+	_set_procedural_geometry_visible(false)
+	use_skeletal_rig = true
+	use_sprite_overlays = true
+
 func _set_procedural_geometry_visible(is_visible: bool) -> void:
 	"""Show or hide the procedural Line2D geometry.
 	When hidden, animations still run to compute positions for sprite overlays."""
@@ -2614,22 +2686,29 @@ func set_body_sprites(data: Dictionary) -> void:
 	rebuild_visuals()
 
 func set_sprite_overlays_enabled(enabled: bool) -> void:
-	"""Toggle between sprite overlays and procedural Line2D geometry."""
+	"""Toggle between sprite overlays (rig or legacy) and procedural Line2D geometry."""
 	if enabled and body_sprite_data and not body_sprite_data.is_empty():
-		if not body_part_sprites:
+		if not body_part_sprites and not skeletal_rig:
 			_setup_body_part_sprites()
 		else:
-			body_part_sprites.set_all_visible(true)
+			if body_part_sprites:
+				body_part_sprites.set_all_visible(true)
+			if skeletal_rig:
+				skeletal_rig.set_all_visible(true)
 			_set_procedural_geometry_visible(false)
 		use_sprite_overlays = true
 	else:
 		if body_part_sprites:
 			body_part_sprites.set_all_visible(false)
+		if skeletal_rig:
+			skeletal_rig.set_all_visible(false)
 		_set_procedural_geometry_visible(true)
 		use_sprite_overlays = false
+		use_skeletal_rig = false
 
 func _process(delta: float) -> void:
 	_handle_input()
+	_update_hover_cursor()
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -2761,6 +2840,8 @@ func _update_bipedal_legs(delta: float) -> void:
 		feet_equipment.update_leg_positions(left_hip, left_foot, right_hip, right_foot)
 	if body_part_sprites:
 		body_part_sprites.update_legs(left_hip, left_foot, right_hip, right_foot)
+	if skeletal_rig:
+		skeletal_rig.update_legs(left_hip, left_foot, right_hip, right_foot)
 
 func _update_quadruped_legs(delta: float) -> void:
 	if is_moving:
@@ -2872,6 +2953,18 @@ func cast_ability(ability: AbilityShape):
 	ability.activate_visuals(false)
 	targeting_system._end_targeting()
 
+## DEBUG: live body-rig tuning. Press F9 (any player-controlled char with a
+## SkeletalBodyRig) to re-read body_manifest.json's `tuning` block from disk and
+## re-apply rotations / overlap / flips WITHOUT respawning. Edit the JSON, press
+## F9, see the change instantly. Logs the values so you can record the final set.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_F9 and skeletal_rig:
+		var t: Dictionary = skeletal_rig.reload_tuning()
+		if not t.is_empty():
+			print("[rig reload] ", JSON.stringify(t))
+
 func _handle_input() -> void:
 	if not is_player_controlled:
 		return
@@ -2968,6 +3061,16 @@ func _handle_input() -> void:
 				game.load_map(target_map, game.current_map_id)
 				return
 
+	# --- Left mouse button - probe readable (note/book) ---
+	# Readables open a reading window on click and are filed into the journal,
+	# not the inventory. Probe before the chest/main-hand paths so a readable
+	# never falls through to them.
+	if Input.is_action_just_pressed("left_click"):
+		var readable = _find_readable_at(mouse_pos)
+		if readable != null and game:
+			readable.interact("Read")
+			return
+
 	# --- Left mouse button - probe openable item (chest) ---
 	# Chests show a pickup cursor on hover; clicking should open their inventory,
 	# not swing the main hand. Items whose first interact_option is "Open"
@@ -2976,6 +3079,15 @@ func _handle_input() -> void:
 		var openable = _find_openable_at(mouse_pos)
 		if openable != null and game:
 			game.show_chest_inventory(openable)
+			return
+
+	# --- Left mouse button - loose item (default action = Pick Up) ---
+	# Left-clicking a loose world item performs its default interaction (pick it
+	# up) instead of swinging at it. Readables and containers are handled above.
+	if Input.is_action_just_pressed("left_click"):
+		var pickup_target = _find_pickup_item_at(mouse_pos)
+		if pickup_target != null and game:
+			pickup_target.interact("Pick Up")
 			return
 
 	# --- Left mouse button - Main hand ---
@@ -3102,6 +3214,92 @@ func _find_openable_at(world_pos: Vector2) -> Item:
 		if collider is Item and collider.options.size() > 0 and collider.options[0] == "Open":
 			return collider
 	return null
+
+## Probe the world at mouse_pos for a "readable" Item (note/book). Left-clicking
+## one opens its reading window instead of swinging the main hand.
+func _find_readable_at(world_pos: Vector2) -> Item:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS
+	var hits = space.intersect_point(query, 4)
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Item and (collider.item_type == "readable" or (collider.options.size() > 0 and str(collider.options[0]) == "Read")):
+			return collider
+	return null
+
+## Topmost world Item under the cursor (any item), used to pick the hover cursor.
+func _find_world_item_at(world_pos: Vector2) -> Item:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.ITEMS
+	var hits = space.intersect_point(query, 8)
+	var best: Item = null
+	for hit in hits:
+		var collider = hit.get("collider")
+		if collider is Item:
+			if best == null or collider.z_index >= best.z_index:
+				best = collider
+	return best
+
+## Probe for a loose, pick-up-able world Item (not a readable, not a container).
+## Used by the left-click "default interaction" fast-path.
+func _find_pickup_item_at(world_pos: Vector2) -> Item:
+	var item := _find_world_item_at(world_pos)
+	if item == null:
+		return null
+	if item.item_type == "readable":
+		return null
+	if item.num_slots > 0 or (item.options.size() > 0 and str(item.options[0]) == "Open"):
+		return null
+	return item
+
+# Tracks whether we currently own a custom hover cursor, so we only reset to the
+# default when we were the one that set it.
+var _hover_cursor_active: bool = false
+
+## Per-frame hover cursor for world items. Polling-based: the Item mouse_entered
+## signal doesn't fire reliably because the GUI layer consumes mouse motion, so
+## we reuse the same point-query the click probes use. Only the primary-selected
+## player character drives the shared hardware cursor.
+func _update_hover_cursor() -> void:
+	if not is_player_controlled or not is_alive():
+		return
+	if game != null and game.primary_selected != null and game.primary_selected != self:
+		return
+	var desired: Texture2D = null
+	var blocked: bool = false
+	if game != null and game.context_menu_open:
+		blocked = true
+	if not blocked:
+		var hovered: Control = get_viewport().gui_get_hovered_control()
+		if hovered != null:
+			var n: Node = hovered
+			while n != null:
+				if n is CanvasLayer:
+					blocked = true
+					break
+				n = n.get_parent()
+	if not blocked:
+		var item: Item = _find_world_item_at(get_global_mouse_position())
+		if item != null:
+			desired = item.get_hover_cursor_texture()
+	if desired != null:
+		Input.set_custom_mouse_cursor(desired)
+		_hover_cursor_active = true
+	elif _hover_cursor_active:
+		Input.set_custom_mouse_cursor(null)
+		_hover_cursor_active = false
 
 ## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
 ## layer (CollisionLayers.WARPS) and carry their destination in the
@@ -3314,6 +3512,12 @@ func _emit_footstep() -> void:
 		var vol_db: float = linear_to_db(clamp(loudness, 0.05, 1.5))
 		SfxManager.play(full_key, global_position, Vector2(0.9, 1.1), vol_db)
 	HearingManager.emit(global_position, loudness, self)
+
+	# Wading ripple: a character moving through a fluid tile pushes out a ring.
+	if floor_id == "shallow_water":
+		var game := get_tree().current_scene
+		if game and "fluid_manager" in game and game.fluid_manager:
+			game.fluid_manager.add_ripple(global_position, 0.55)
 
 
 func _check_ice_entry(move_dir: Vector2) -> void:
@@ -3600,6 +3804,12 @@ func _update_arm_visuals() -> void:
 
 	if body_part_sprites:
 		body_part_sprites.update_arms(left_arm_joints, right_arm_joints)
+
+	if skeletal_rig:
+		var brot: float = 0.0
+		if attack_animator and attack_animator.is_attacking:
+			brot = attack_animator.get_body_rotation()
+		skeletal_rig.update_pose(brot, left_arm_joints, right_arm_joints)
 
 func _update_weapon_position() -> void:
 	# Position weapon at the right hand (last joint of right arm)
@@ -3996,6 +4206,8 @@ func _hide_living_visuals() -> void:
 	_set_procedural_geometry_visible(false)
 	if body_part_sprites:
 		body_part_sprites.set_all_visible(false)
+	if skeletal_rig:
+		skeletal_rig.set_all_visible(false)
 	for holder in [main_hand_holder, off_hand_holder, head_slot, torso_slot, back_slot, legs_slot, feet_slot]:
 		if holder:
 			holder.visible = false
@@ -4652,10 +4864,10 @@ func get_stat_by_name(stat_name) -> int:
 ## Crit thresholds compose with the margin rule: either alone is enough to crit.
 ## In the success branch the crit_fail check is intentionally ignored (margin
 ## determines pass/fail first; the crit rules only intensify the outcome).
-func saving_throw(stat_name) -> int:
+func saving_throw(stat_name, save_bonus: int = 0) -> int:
 	var stat: int = get_stat_by_name(stat_name)
 	var roll: int = randi() % 100 + 1
-	var margin: int = stat - roll
+	var margin: int = stat + save_bonus - roll
 	# Explicit `: bool` rather than `:=` — CRIT_THRESHOLD / CRIT_FAIL_THRESHOLD
 	# are declared untyped (var CRIT_THRESHOLD = 5), so the comparison result
 	# can't be type-inferred and the parser rejects `var x := …` here.
@@ -5426,11 +5638,68 @@ func _tick_school_resources(delta: float) -> void:
 					emit_signal("resource_changed", "adrenaline", adrenaline, max_adrenaline)
 
 
+# === Stress / affliction system ===
+# Stress accrues like adrenaline (combat damage + witnessing allies suffer)
+# and does not decay passively; it is shed by conditions and downtime. Near
+# max, Will saves gate a breakdown; at max a breakdown is automatic. A
+# breakdown rolls one of ConditionDatabase's stress responses, then resets.
+const STRESS_DANGER_RATIO := 0.75
+
+func gain_stress(amount: int) -> void:
+	if amount == 0:
+		return
+	var cap: int = max_stress
+	if cap <= 0:
+		return
+	var gained: int = amount
+	if amount > 0:
+		var mult: float = 1.0 + condition_manager.calculate_effective_stat(0.0, "stress_gain_multiplier")
+		gained = max(1, int(round(amount * mult)))
+	stress = clamp(stress + gained, 0, cap)
+	emit_signal("resource_changed", "stress", stress, cap)
+	if gained <= 0:
+		return
+	if stress >= cap:
+		_resolve_stress_breakdown(true)
+	elif float(stress) / float(cap) >= STRESS_DANGER_RATIO:
+		_resolve_stress_breakdown(false)
+
+
+func reduce_stress(amount: int) -> void:
+	gain_stress(-abs(amount))
+
+
+# auto=true: at/over max -> guaranteed affliction. auto=false: danger zone ->
+# Will save; failure -> affliction, strong success -> virtue, else endure.
+func _resolve_stress_breakdown(auto: bool) -> void:
+	var give_virtue: bool = false
+	if not auto:
+		var roll: int = randi() % 100 + 1
+		var w: float = effective_will()
+		if roll <= w:
+			if w - roll >= 50:
+				give_virtue = true
+			else:
+				return
+	if not give_virtue and condition_manager.has_condition("courageous"):
+		condition_manager.remove_condition("courageous")
+		stress = 0
+		emit_signal("resource_changed", "stress", stress, max_stress)
+		return
+	var pool: Array = ConditionDatabase.get_stress_virtue_ids() if give_virtue else ConditionDatabase.get_stress_affliction_ids()
+	if not pool.is_empty():
+		var cid: String = String(pool[randi() % pool.size()])
+		condition_manager.call_deferred("apply_condition", cid, self, 1, -2.0, null)
+	stress = 0
+	emit_signal("resource_changed", "stress", stress, max_stress)
+
+
 # Damage-side hooks: increment adrenaline, decrement focus, break concentration
 # if pressure pushes focus below the locked threshold.
 func _on_self_damaged(amount: int) -> void:
 	if amount <= 0:
 		return
+	gain_stress(1)
 	_grant_character_resource("adrenaline", 1)
 	_adrenaline_decay_delay_remaining = ADRENALINE_DECAY_DELAY
 	# Focus loss never drops the locked portion; instead it breaks concentration.
@@ -5481,6 +5750,8 @@ func _break_concentration_under_pressure() -> void:
 func _on_visible_ally_event(other) -> void:
 	if other == self or not is_instance_valid(other):
 		return
+	if global_position.distance_to(other.global_position) <= ALLY_VISION_RADIUS:
+		gain_stress(1)
 	if max_adrenaline <= 0:
 		return
 	if global_position.distance_to(other.global_position) > ALLY_VISION_RADIUS:

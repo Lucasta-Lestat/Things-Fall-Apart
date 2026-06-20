@@ -1,0 +1,245 @@
+{
+  "schema": 2,
+  "source": "contiguous elf 2.png",
+  "canvas": [
+    2048,
+    2048
+  ],
+  "unit_px": 707.0,
+  "tuning": {
+    "head_overlap_px": 320.0,
+    "rot_offset_deg": {
+      "head": 0.0,
+      "torso": 0.0,
+      "upper_arm": 0.0,
+      "forearm": 0.0
+    },
+    "leg_reverse": false
+  },
+  "parts": {
+    "head": {
+      "file": "head_rig.png",
+      "size": [
+        673,
+        645
+      ],
+      "pivot": [
+        335.0,
+        644.0
+      ],
+      "joints": {
+        "neck": [
+          335.0,
+          644.0
+        ],
+        "crown": [
+          335.0,
+          1.0
+        ]
+      }
+    },
+    "torso": {
+      "file": "torso_rig.png",
+      "size": [
+        707,
+        380
+      ],
+      "pivot": [
+        356.5,
+        0.0
+      ],
+      "joints": {
+        "neck": [
+          356.5,
+          0.0
+        ],
+        "shoulder_l": [
+          0.0,
+          120.0
+        ],
+        "shoulder_r": [
+          707.0,
+          120.0
+        ],
+        "hip_l": [
+          263.5,
+          379.0
+        ],
+        "hip_r": [
+          448.5,
+          379.0
+        ]
+      }
+    },
+    "upper_arm_l": {
+      "file": "upper_arm_l.png",
+      "size": [
+        225,
+        206
+      ],
+      "pivot": [
+        112.0,
+        -1.0
+      ],
+      "joints": {
+        "shoulder": [
+          112.0,
+          -1.0
+        ],
+        "elbow": [
+          112.0,
+          205.0
+        ]
+      }
+    },
+    "forearm_l": {
+      "file": "forearm_l.png",
+      "size": [
+        203,
+        448
+      ],
+      "pivot": [
+        103.0,
+        -1.0
+      ],
+      "joints": {
+        "elbow": [
+          103.0,
+          -1.0
+        ],
+        "wrist": [
+          103.0,
+          443.0
+        ]
+      }
+    },
+    "upper_arm_r": {
+      "file": "upper_arm_r.png",
+      "size": [
+        227,
+        208
+      ],
+      "pivot": [
+        113.0,
+        0.0
+      ],
+      "joints": {
+        "shoulder": [
+          113.0,
+          0.0
+        ],
+        "elbow": [
+          113.0,
+          208.0
+        ]
+      }
+    },
+    "forearm_r": {
+      "file": "forearm_r.png",
+      "size": [
+        202,
+        448
+      ],
+      "pivot": [
+        98.5,
+        0.0
+      ],
+      "joints": {
+        "elbow": [
+          98.5,
+          0.0
+        ],
+        "wrist": [
+          98.5,
+          443.0
+        ]
+      }
+    },
+    "leg_l": {
+      "file": "leg_l.png",
+      "size": [
+        90,
+        49
+      ],
+      "pivot": [
+        45.0,
+        0.0
+      ],
+      "joints": {
+        "ankle": [
+          45.0,
+          0.0
+        ],
+        "toe": [
+          59.0,
+          44.0
+        ]
+      }
+    },
+    "leg_r": {
+      "file": "leg_r.png",
+      "size": [
+        91,
+        50
+      ],
+      "pivot": [
+        45.5,
+        0.0
+      ],
+      "joints": {
+        "ankle": [
+          45.5,
+          0.0
+        ],
+        "toe": [
+          32.5,
+          45.0
+        ]
+      }
+    }
+  },
+  "attach": [
+    [
+      "torso",
+      "neck",
+      "head",
+      "neck"
+    ],
+    [
+      "torso",
+      "shoulder_l",
+      "upper_arm_l",
+      "shoulder"
+    ],
+    [
+      "upper_arm_l",
+      "elbow",
+      "forearm_l",
+      "elbow"
+    ],
+    [
+      "torso",
+      "shoulder_r",
+      "upper_arm_r",
+      "shoulder"
+    ],
+    [
+      "upper_arm_r",
+      "elbow",
+      "forearm_r",
+      "elbow"
+    ],
+    [
+      "torso",
+      "hip_l",
+      "leg_l",
+      "ankle"
+    ],
+    [
+      "torso",
+      "hip_r",
+      "leg_r",
+      "ankle"
+    ]
+  ]
+}

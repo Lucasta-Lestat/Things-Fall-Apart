@@ -1,0 +1,82 @@
+{
+  "_README": [
+    "Per-race config for scripts/extract_body_parts.py (the generalized body-part",
+    "slicer). Keys are race folder names under Characters/Assets/Body Parts/.",
+    "",
+    "Every contiguous source shares the same top-down, arms-spread pose on a flat",
+    "gray backdrop. The slicer cuts head + torso + upper_arm + forearm and emits a",
+    "body_manifest.json so the part auto-activates SkeletalBodyRig. Legs stay",
+    "procedural (top-down foreshortening) and are NOT cut.",
+    "",
+    "CUT GEOMETRY can come two ways; explicit config values always win over derived:",
+    "  1. A green cutline-annotation PNG ('cutlines'). Paint, over the source:",
+    "       - the head outline (a closed-ish green curve around head+hair), and",
+    "       - two short vertical green strokes across ONE arm marking the shoulder",
+    "         cut (inner, nearer the body) and the elbow cut (outer, nearer the hand).",
+    "     The slicer derives shoulder_x, elbow_x, head_bbox and the arm_y band from",
+    "     these automatically (connected-component split: largest green blob = head",
+    "     outline; vertical strokes = cut lines). See extract_body_parts.py.",
+    "  2. Explicit numbers below (shoulder_x, elbow_x, head_bbox, arm_y, torso_y).",
+    "",
+    "'headless' is OPTIONAL: a copy of the source with the head/hair painted over in",
+    "skin tone so the torso crop reads as one clean shoulder block. If omitted the",
+    "plain source is used (fine when the head does not overhang the shoulders).",
+    "",
+    "FIELDS (all optional unless noted):",
+    "  source*    : contiguous art filename (required)",
+    "  cutlines   : annotation PNG filename (enables auto-derivation)",
+    "  annotation_detect : how to find the strokes vs the source - 'diff' (default;",
+    "                 plain colour difference, works for any stroke colour on any",
+    "                 skin, e.g. green-on-green orc) or 'green' (green-shift; only",
+    "                 robust on non-green skin - Male Elf uses it for byte-identity)",
+    "  annotation_diff_threshold : 'diff' sensitivity, sum|cut-src| (default 18)",
+    "  headless   : head-painted-out PNG filename (cleaner torso/head)",
+    "  shoulder_x : canvas-x of the shoulder cut on the LEFT arm",
+    "  shoulder_x_right : canvas-x of the right shoulder cut (default: width - shoulder_x)",
+    "  elbow_x    : canvas-x of the elbow cut on the LEFT arm",
+    "  head_bbox  : [x0,y0,x1,y1] crop window around head+hair",
+    "  torso_y    : [top,bottom] crop window rows for the torso (default: derived)",
+    "  arm_y      : [top,bottom] crop window rows for the arm strip (default: derived)",
+    "  pad        : autocrop padding px (default 4)",
+    "  tuning     : SkeletalBodyRig calibration, preserved across re-runs:",
+    "                 head_overlap_px, rot_offset_deg{head,torso,upper_arm,forearm},",
+    "                 arm_flip_left (false: arm art cut from the char's LEFT side)"
+  ],
+
+  "Male Elf": {
+    "source": "contiguous elf 2.png",
+    "headless": "contiguous elf 2 headless.png",
+    "cutlines": "contiguous elf 2 cutlines Markup.png",
+    "annotation_detect": "diff",
+    "annotation_diff_threshold": 40,
+    "shoulder_x": 670,
+    "elbow_x": 464,
+    "shoulder_x_right": 1377,
+    "elbow_x_right": 1585,
+    "head_bbox": [686, 554, 1362, 1199],
+    "torso_y": [870, 1250],
+    "arm_y": [860, 1120],
+    "foot_bbox_l": [846, 1296, 936, 1346],
+    "foot_bbox_r": [1112, 1296, 1203, 1347],
+    "pad": 4,
+    "tuning": {
+      "head_overlap_px": 320.0,
+      "rot_offset_deg": {"head": 0.0, "torso": 0.0, "upper_arm": 0.0, "forearm": 0.0},
+      "leg_reverse": false
+    }
+  },
+
+  "Male Orc": {
+    "source": "male orc contiguous.png",
+    "cutlines": "male orc contiguous cutlines.png",
+    "annotation_detect": "diff",
+    "torso_y": null,
+    "arm_y": null,
+    "pad": 4,
+    "tuning": {
+      "head_overlap_px": 320.0,
+      "rot_offset_deg": {"head": 0.0, "torso": 0.0, "upper_arm": 0.0, "forearm": 0.0},
+      "arm_flip_left": false
+    }
+  }
+}

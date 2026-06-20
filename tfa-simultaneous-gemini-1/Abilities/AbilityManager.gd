@@ -67,6 +67,13 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	var target_position = target_data.get("position", character.global_position)
 	var explicit_targets: Array = target_data.get("targets", [])
 
+	# Self-targeted abilities always resolve at the caster's live position. A
+	# queued target_position (captured while planning, where the cursor was)
+	# would otherwise land the effect at a stale spot once the caster has walked
+	# to the cast point. Mirrors the per-step "self" override in _execute_current_step.
+	if ability.targeting.get("type", "") == "self":
+		target_position = character.global_position
+
 	# Infatuated: block offensive abilities that would hit the charm source
 	if _would_hit_infatuation_source(ability, target_position):
 		var cond_mgr = _get_condition_manager()

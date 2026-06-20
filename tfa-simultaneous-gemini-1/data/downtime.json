@@ -9,7 +9,7 @@
 			"preferred_traits": ["Sociable", "Aggressive"],
 			"disliked_traits": ["Chaste", "Reclusive"],
 			"ability_check": "",
-			"default_effects": {"remove_mental_affliction": 1},
+			"default_effects": {"remove_mental_affliction": 1, "stress": -15},
 			"legal_title": "",
 			"results": {
 				"any_map": {
@@ -361,7 +361,7 @@
 			"preferred_traits": ["Calm", "Patient"],
 			"disliked_traits": ["Anxious", "Restless"],
 			"ability_check": "Will",
-			"default_effects": {"remove_mental_affliction": 1},
+			"default_effects": {"remove_mental_affliction": 1, "stress": -15},
 			"results": {
 				"any_map": {
 					"clarity": {

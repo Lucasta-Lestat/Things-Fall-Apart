@@ -44,6 +44,12 @@ var count_label_layer: CanvasLayer = null
 # instead of following the mouse cursor
 var lock_to_caster: bool = false
 
+# When set (not INF), the preview's origin (line/cone start, self/circle anchor)
+# is this world position — the planned action-node position — instead of the live
+# character position. Cleared on end_targeting. The ability still EXECUTES from
+# the body's real position; this only corrects the planning-phase preview.
+var caster_origin_override: Vector2 = Vector2.INF
+
 # Visual settings
 const INDICATOR_COLOR = Color(1, 1, 1, 0.5)  # Semi-transparent white
 const INDICATOR_COLOR_VALID = Color(0, 1, 0, 0.5)  # Green when valid
@@ -62,7 +68,7 @@ func _process(_delta: float) -> void:
 	if is_targeting:
 		if lock_to_caster:
 			# Self-targeted: anchor the indicator to the caster's (possibly moving) position
-			caster_position = get_parent().global_position if get_parent() else caster_position
+			caster_position = _origin_pos()
 			target_position = caster_position
 		else:
 			# Update target position to mouse
@@ -70,10 +76,10 @@ func _process(_delta: float) -> void:
 
 		# For line and cone, keep caster_position in sync with the character
 		if target_shape == TargetShape.LINE or target_shape == TargetShape.CONE:
-			caster_position = get_parent().global_position if get_parent() else caster_position
+			caster_position = _origin_pos()
 
 		if target_shape == TargetShape.CHARACTERS:
-			caster_position = get_parent().global_position if get_parent() else caster_position
+			caster_position = _origin_pos()
 			_update_character_targeting_visuals()
 		else:
 			_update_active_indicator()
@@ -179,22 +185,29 @@ func _get_mouse_world_position() -> Vector2:
 	"""Get mouse position in world coordinates"""
 	return get_global_mouse_position()
 
+func _origin_pos() -> Vector2:
+	# Preview origin: the planned node position when overridden, else the live caster.
+	if caster_origin_override != Vector2.INF:
+		return caster_origin_override
+	return get_parent().global_position if get_parent() else caster_position
+
 # ===== PUBLIC API =====
 
-func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> void:
-	
+func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origin_override: Vector2 = Vector2.INF) -> void:
+
 	"""Begin targeting for an ability"""
 	print("start_targeting called for ability ", ability.display_name)
 	is_targeting = true
 	current_hand = hand
 	current_ability = ability
+	caster_origin_override = origin_override
 
 	# Self-targeted abilities anchor the AoE preview to the caster instead of the cursor
 	var target_type_str = ability.get("target_type", "point")
 	lock_to_caster = (target_type_str == "self")
 
 	if lock_to_caster:
-		caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+		caster_position = _origin_pos()
 		target_position = caster_position
 	else:
 		# Set initial position immediately so it doesn't jump from (0,0)
@@ -215,18 +228,18 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2) -> vo
 			line_range = ability.get("range", 500.0)
 			var size_data = ability.get("size", Vector2(500, 30))
 			line_width = size_data.y if size_data is Vector2 else float(size_data.get("y", 30))
-			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+			caster_position = _origin_pos()
 		"cone":
 			target_shape = TargetShape.CONE
 			cone_radius = ability.get("radius", 150.0)
 			cone_angle = ability.get("angle", 45.0)
-			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+			caster_position = _origin_pos()
 		"characters":
 			target_shape = TargetShape.CHARACTERS
 			target_count = int(ability.get("target_count", 1))
 			target_filter = String(ability.get("target_filter", "any"))
 			character_range = float(ability.get("range", 0.0))
-			caster_position = get_parent().global_position if get_parent() else Vector2.ZERO
+			caster_position = _origin_pos()
 			selected_targets.clear()
 			_clear_target_highlights()
 			_ensure_count_label()
@@ -302,6 +315,7 @@ func end_targeting() -> void:
 	current_ability = {}
 	target_shape = TargetShape.NONE
 	lock_to_caster = false
+	caster_origin_override = Vector2.INF
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
 	line_indicator.visible = false

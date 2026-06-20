@@ -7,6 +7,7 @@
 ##   hp                 : int. Positive heals (apply "healing_pulse"); negative damages (apply "bleed").
 ##   money              : int or "all". Positive adds gold (× max(success_tier, 1)); negative removes.
 ##   favorability       : int. Delta applied via apply_favorability_delta.
+##   stress             : int. Added to the stress meter (negative relieves it).
 ##   remove_mental_affliction   : int (truthy). Removes conditions tagged with the "mental" trait.
 ##   remove_physical_affliction : int (truthy). Removes conditions tagged with "physical".
 ##   add_condition      : String (condition id) OR Dict {"id": ..., "stacks": ...}.
@@ -48,6 +49,9 @@ static func apply(character, effects: Dictionary, success_tier: int = 1) -> void
 			"favorability":
 				if character.has_method("apply_favorability_delta"):
 					character.apply_favorability_delta(int(value), "downtime")
+			"stress":
+				if character.has_method("gain_stress"):
+					character.gain_stress(int(value))
 			"remove_mental_affliction":
 				_remove_with_trait(character, "mental")
 			"remove_physical_affliction":

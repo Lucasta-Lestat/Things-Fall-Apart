@@ -382,7 +382,8 @@
 	"traits": {
 	  "Metal": 1,
 	  "Light": 1,
-	  "Melee": 1
+	  "Melee": 1,
+	  "Noble": 1
 	},
 	"is_cursed": 0.0,
 	"damage_modifier_changes": null,
@@ -1878,14 +1879,14 @@
 	"display_name": "Red Travel Cape"
   },
   {
-	"id": "red_travel_cape",
-	"type": "cape",
+	"id": "venonan_vestments",
+	"type": "armor",
 	"base_width": 36.0,
 	"base_height": 20.0,
 	"sprite_path": "res://Items/venonan_vestament.png",
 	"weight": 1.0,
 	"cost": 15.0,
-	"equip_slot": "torso",
+	"equip_slot": "Torso",
 	"use_ability": "chasten",
 	"damage": {
 	  "bludgeoning": 0
@@ -1938,7 +1939,7 @@
 	"resources": {
 	  "cloth": 12
 	},
-	"display_name": "Red Travel Cape"
+	"display_name": "Venonan Vestments"
   },
   {
 	"id": "shadow_cloak",
@@ -3165,7 +3166,8 @@
 	"traits": {
 	  "Metal": 1,
 	  "Ranged": 1,
-	  "Firearm": 1
+	  "Firearm": 1,
+	  "Noble": 1
 	},
 	"is_cursed": 0.0,
 	"damage_modifier_changes": null,
@@ -3628,7 +3630,7 @@
 	"walkability": 1.0,
 	"damage_modifiers": null,
 	"traits": {
-	  "Natural": 1,
+	  "Organic": 1,
 	  "Simple": 1
 	},
 	"is_cursed": 0.0,
@@ -3786,5 +3788,257 @@
 	"restricted_item_type": null,
 	"resources": {},
 	"display_name": "Ancient Relic of Bortelin"
+  },
+  {
+	"id": "dark_robes",
+	"type": "armor",
+	"display_name": "Dark Robes",
+	"base_width": 32.0,
+	"base_height": 24.0,
+	"sprite_path": "res://Items/dark_robes.png",
+	"weight": 3.0,
+	"cost": 45.0,
+	"equip_slot": "Torso",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 0
+	},
+	"damage_resitances": {
+	  "slashing": 1,
+	  "bludgeoning": 1,
+	  "piercing": 0,
+	  "fire": 0,
+	  "cold": 1,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": -1,
+	  "necrotic": 2
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Drop",
+	  "Equip",
+	  "Throw"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 40.0,
+	"current_health": 40.0,
+	"walkability": 1.0,
+	"damage_modifiers": null,
+	"traits": {
+	  "Organic": 1,
+	  "Occult": 1
+	},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {
+	  "cloth": 14
+	}
+  },
+  {
+	"id": "padded_vest",
+	"type": "armor",
+	"display_name": "Padded Vest",
+	"base_width": 30.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/padded_vest.png",
+	"weight": 4.0,
+	"cost": 35.0,
+	"equip_slot": "Torso",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 0
+	},
+	"damage_resitances": {
+	  "slashing": 1,
+	  "bludgeoning": 2,
+	  "piercing": 1,
+	  "fire": 0,
+	  "cold": 1,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": 0,
+	  "necrotic": 0
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Drop",
+	  "Equip",
+	  "Throw"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 55.0,
+	"current_health": 55.0,
+	"walkability": 1.0,
+	"damage_modifiers": null,
+	"traits": {
+	  "Organic": 1,
+	  "Simple": 1,
+	  "Crude": 1
+	},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {
+	  "leather": 6,
+	  "cloth": 6
+	}
+  },
+  {
+	"id": "peasant's_stained_shirt",
+	"type": "armor",
+	"display_name": "Peasant's Stained Shirt",
+	"base_width": 30.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/peasants_stained_shirt.png",
+	"weight": 1.0,
+	"cost": 5.0,
+	"equip_slot": "Torso",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 0
+	},
+	"damage_resitances": {
+	  "slashing": 0,
+	  "bludgeoning": 0,
+	  "piercing": 0,
+	  "fire": 0,
+	  "cold": 1,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": 0,
+	  "necrotic": 0
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Drop",
+	  "Equip",
+	  "Throw"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 25.0,
+	"current_health": 25.0,
+	"walkability": 1.0,
+	"damage_modifiers": null,
+	"traits": {
+	  "Organic": 1,
+	  "Simple": 1,
+	  "Crude": 1
+	},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {
+	  "cloth": 6
+	}
+  },
+  {
+	"id": "noble's_blouse",
+	"type": "armor",
+	"display_name": "Noble's Blouse",
+	"base_width": 30.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/nobles_blouse.png",
+	"weight": 1.0,
+	"cost": 120.0,
+	"equip_slot": "Torso",
+	"use_ability": null,
+	"damage": {
+	  "bludgeoning": 0
+	},
+	"damage_resitances": {
+	  "slashing": 0,
+	  "bludgeoning": 0,
+	  "piercing": 0,
+	  "fire": 0,
+	  "cold": 1,
+	  "electric": 0,
+	  "sonic": 0,
+	  "poison": 0,
+	  "acid": 0,
+	  "radiant": 0,
+	  "necrotic": 0
+	},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": [
+	  "Drop",
+	  "Equip",
+	  "Throw"
+	],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 25.0,
+	"current_health": 25.0,
+	"walkability": 1.0,
+	"damage_modifiers": null,
+	"traits": {
+	  "Organic": 1,
+	  "Noble": 1,
+	  "Social": 1
+	},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {
+	  "cloth": 8
+	}
   }
 ]

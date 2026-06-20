@@ -132,8 +132,7 @@
 			],
 			"equipment_traits": {
 				"required": {
-					"Metal": 1,
-					"Military": 1
+					"Metal": 1
 				},
 				"forbidden": {
 					"Crude": 1,
@@ -218,7 +217,7 @@
 			],
 			"equipment_traits": {
 				"required": {
-					"Ornate": 1
+					"Noble": 1
 				},
 				"forbidden": {
 					"Crude": 1,
@@ -259,7 +258,7 @@
 				"required": {},
 				"forbidden": {
 					"Holy": 1,
-					"Ornate": 1,
+					"Noble": 2,
 					"Military": 2
 				}
 			},
@@ -296,7 +295,6 @@
 			"equipment_traits": {
 				"required": {},
 				"forbidden": {
-					"Ornate": 1,
 					"Noble": 1
 				}
 			},
@@ -357,18 +355,41 @@
 			"allies": [],
 			"enemies": [],
 			"equipment_traits": {
-				"required": {
-					"Natural": 1
-				},
+				"required": {},
 				"forbidden": {
-					"Metal": 1,
-					"Crafted": 1,
+					"Agility": 1,
 					"Arcane": 1,
-					"Simple": 1,
+					"Blessed": 1,
+					"Cold": 1,
 					"Complex": 1,
+					"Crafted": 1,
+					"Crude": 1,
+					"Cursed": 1,
+					"Defensive": 1,
+					"Durable": 1,
+					"Fire": 1,
+					"Firearm": 1,
+					"Heavy": 1,
+					"Holy": 1,
+					"Industrial": 1,
+					"Light": 1,
+					"Martial": 1,
+					"Melee": 1,
+					"Metal": 1,
 					"Military": 1,
-					"Ornate": 1,
-					"Firearm": 1
+					"Nature": 1,
+					"Noble": 1,
+					"Occult": 1,
+					"Organic": 1,
+					"Precision": 1,
+					"Ranged": 1,
+					"Reach": 1,
+					"Simple": 1,
+					"Social": 1,
+					"Stealth": 1,
+					"Storage": 1,
+					"Two-Handed": 1,
+					"Wood": 1
 				}
 			},
 			"race_weights": {},
@@ -391,9 +412,7 @@
 				"nobles"
 			],
 			"equipment_traits": {
-				"required": {
-					"Cursed": 1
-				},
+				"required": {},
 				"forbidden": {
 					"Holy": 1,
 					"Blessed": 1
@@ -434,12 +453,11 @@
 			],
 			"equipment_traits": {
 				"required": {
-					"Metal": 1,
-					"Military": 1
+					"Metal": 1
 				},
 				"forbidden": {
 					"Crude": 1,
-					"Natural": 1
+					"Organic": 1
 				}
 			},
 			"race_weights": {
@@ -469,7 +487,7 @@
 			],
 			"equipment_traits": {
 				"required": {
-					"Natural": 1
+					"Organic": 1
 				},
 				"forbidden": {
 					"Metal": 2,
@@ -502,12 +520,10 @@
 				"dragatini"
 			],
 			"equipment_traits": {
-				"required": {
-					"Firearm": 1
-				},
+				"required": {},
 				"forbidden": {
 					"Holy": 1,
-					"Ornate": 2
+					"Noble": 2
 				}
 			},
 			"race_weights": {

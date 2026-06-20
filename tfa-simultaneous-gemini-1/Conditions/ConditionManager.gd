@@ -152,6 +152,8 @@ func _execute_triggered_effect(instance: ConditionInstance, effect: Dictionary) 
 			# Character should listen for triggered_effect_fired and apply damage
 		"heal":
 			result["heal"] = base_value
+		"stress":
+			result["stress"] = base_value
 		"stat_change":
 			result["stat"] = effect.get("stat", "")
 			result["change"] = base_value
@@ -208,7 +210,8 @@ func apply_condition(
 	# Negative delta reduces incoming stacks (and aborts entirely if it reaches 0);
 	# positive delta (crit fail) adds a stack. See ProceduralCharacter.saving_throw.
 	if template.save_stat != "" and character and character.has_method("saving_throw"):
-		var save_delta: int = character.saving_throw(template.save_stat)
+		var fear_bonus: int = int(calculate_effective_stat(0.0, "fear_save")) if int(template.traits.get("fear", 0)) > 0 else 0
+		var save_delta: int = character.saving_throw(template.save_stat, fear_bonus)
 		stacks += save_delta
 		if stacks <= 0:
 			return null

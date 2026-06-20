@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dqbwga4w8ttrv"]
+
+[ext_resource type="Script" uid="uid://bblbxuoum88h6" path="res://vfx/fluid_integration_test.gd" id="1_fit"]
+
+[node name="FluidIntegrationTest" type="Node2D" unique_id=936381915]
+script = ExtResource("1_fit")

@@ -3,6 +3,31 @@
 # Load this as an autoload or initialize it in your game startup
 extends Node
 
+# -----------------------------------------------------------------------
+# Stress-response roll pools. When a character's stress meter breaks (or a
+# near-max Will save fails), the stress system rolls one of these. The
+# negative entries also carry {"affliction", "mental"} so the Carousing
+# downtime activity's remove_mental_affliction effect can clear them.
+# Add new stress responses here to fold them into the roll.
+# -----------------------------------------------------------------------
+const STRESS_AFFLICTION_IDS := [
+	"fearful", "lethargic", "masochistic", "irrational", "paranoid",
+	"selfish", "panic", "hopelessness", "mania", "anxiety",
+	"hypochondria", "narcissistic",
+]
+const STRESS_VIRTUE_IDS := [
+	"powerful", "focused", "stalwart", "acute", "perceptive", "courageous",
+]
+
+
+func get_stress_affliction_ids() -> Array:
+	return STRESS_AFFLICTION_IDS.duplicate()
+
+
+func get_stress_virtue_ids() -> Array:
+	return STRESS_VIRTUE_IDS.duplicate()
+
+
 func _ready() -> void:
 	_register_all_conditions()
 
@@ -374,6 +399,7 @@ func get_all_conditions() -> Array:
 		"id": "frightened",
 		"display_name": "Frightened",
 		"description": "Terrified of a specific creature and compelled to flee from them.",
+			"save_stat": "will",
 		"traits": {"debuff": 1, "fear": 1, "mental": 1},
 		"stackable": false,
 		"duration": 15.0,
@@ -392,6 +418,7 @@ func get_all_conditions() -> Array:
 		"id": "panicked",
 		"display_name": "Panicked",
 		"description": "Overcome with terror, running in random directions.",
+			"save_stat": "will",
 		"traits": {"debuff": 1, "fear": 2, "mental": 1, "cc": 1},
 		"stackable": false,
 		"duration": 10.0,
@@ -1039,7 +1066,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "damage_bonus", "operation": "add", "value": 2}
+			{"stat": "bonus_damage", "operation": "add", "value": 2}
 		],
 		"triggered_effects": [],
 		"conditional_modifiers": [],
@@ -1079,7 +1106,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "damage_resistance", "operation": "add", "value": 1}
+			{"stat": "dr", "operation": "add", "value": 1}
 		],
 		"triggered_effects": [],
 		"conditional_modifiers": [],
@@ -1119,7 +1146,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "line_of_sight", "operation": "add", "value": 2}
+			{"stat": "sight", "operation": "add", "value": 2}
 		],
 		"triggered_effects": [],
 		"conditional_modifiers": [],

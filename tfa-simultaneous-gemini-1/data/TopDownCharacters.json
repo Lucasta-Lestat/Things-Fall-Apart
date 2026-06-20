@@ -1417,7 +1417,7 @@
 		"intelligence": 65,
 		"charisma": 60
 	  },
-	  "equipment": ["sickle","purple_hood"],
+	  "equipment": ["sickle","purple_hood","venonan_vestments"],
 	  "extra_items": {"alcohol": 1},
 	  "icon": "res://Icons/jacana_icon.png",
 	  "dialogue": null,
@@ -2454,7 +2454,7 @@
 	{
 	  "id": "test_male_elf",
 	  "name": "Test Male Elf",
-	  "race": "elf",
+	  "race": "high_elf",
 	  "background": "",
 	  "faction": "neutral",
 	  "body_sprites": {

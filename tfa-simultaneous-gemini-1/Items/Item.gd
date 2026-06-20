@@ -70,6 +70,9 @@ var _cursor_active: bool = false
 const PICKUP_CURSOR_TEXTURE := preload("res://UI/pickup-cursor.png")
 # First-interact options that should swap the cursor to the pickup cursor while hovered.
 const _PICKUP_CURSOR_OPTIONS := ["Open", "Pickup"]
+# Readables (notes/books) swap to a book cursor instead. Loaded at hover time
+# (not preloaded) so the project still parses before the art is generated.
+const READABLE_CURSOR_PATH := "res://UI/readable-cursor.png"
 
 func _ready():
 	# Items are walkable and don't block vision, but should be detectable by
@@ -95,7 +98,18 @@ func _ready():
 	mouse_exited.connect(_on_mouse_exited)
 
 func _on_mouse_entered() -> void:
-	if options.size() > 0 and options[0] in _PICKUP_CURSOR_OPTIONS:
+	if options.is_empty():
+		return
+	if item_type == "readable" or str(options[0]) == "Read":
+		# Readables show a book cursor. Single cursor (no read/unread variant):
+		# reading or taking removes the world object, so a hovered readable is
+		# always one the player hasn't acquired yet.
+		if ResourceLoader.exists(READABLE_CURSOR_PATH):
+			Input.set_custom_mouse_cursor(load(READABLE_CURSOR_PATH))
+		else:
+			Input.set_custom_mouse_cursor(PICKUP_CURSOR_TEXTURE)
+		_cursor_active = true
+	elif options[0] in _PICKUP_CURSOR_OPTIONS:
 		Input.set_custom_mouse_cursor(PICKUP_CURSOR_TEXTURE)
 		_cursor_active = true
 
@@ -111,7 +125,25 @@ func _exit_tree() -> void:
 		Input.set_custom_mouse_cursor(null)
 		_cursor_active = false
 
+# Texture for the hover cursor while the player's mouse is over this item.
+# Driven per-frame by ProceduralCharacter._update_hover_cursor (the mouse_entered
+# signal is unreliable here — the GUI layer suppresses physics mouse picking).
+# Readables show the book cursor; every other world item shows the pickup cursor
+# (all world items can be picked up).
+func get_hover_cursor_texture() -> Texture2D:
+	if item_type == "readable" or (options.size() > 0 and str(options[0]) == "Read"):
+		if ResourceLoader.exists(READABLE_CURSOR_PATH):
+			return load(READABLE_CURSOR_PATH) as Texture2D
+		return PICKUP_CURSOR_TEXTURE
+	return PICKUP_CURSOR_TEXTURE
+
 func _apply_item_data():
+	# Readables resolve their title/text from ReadableDatabase, not the item
+	# database. Branch first so the item-DB miss printerr below never fires for
+	# them and they never need a stub entry in Items.json.
+	if ReadableDatabase != null and ReadableDatabase.has_readable(str(id)):
+		_apply_readable_data(ReadableDatabase.get_readable(str(id)))
+		return
 	var data = _lookup_item_data()
 	if not data:
 		printerr("Failed to get data for item_id: ", id)
@@ -199,6 +231,77 @@ func _apply_item_data():
 		var has_explicit_contents := contents is Array and not (contents as Array).is_empty()
 		if not has_explicit_contents:
 			contents = _generate_chest_contents(controlling_faction, loot_value)
+
+func _apply_readable_data(data: Dictionary) -> void:
+	# Minimal world setup for a readable. Title/body live in ReadableDatabase;
+	# here we only configure the world object so it renders, is hoverable, and
+	# offers the "Read"/"Take" context options. Readables never enter inventory.
+	item_type = "readable"
+	display_name = str(data.get("title", str(id)))
+	description = ""
+	var raw_options = data.get("interact_options", ["Read", "Take"])
+	options = raw_options if raw_options is Array else ["Read", "Take"]
+
+	# World sprite (with the shared Item.png fallback).
+	sprite_path = str(data.get("world_sprite_path", "res://Structures/Item.png"))
+	if not FileAccess.file_exists(sprite_path):
+		sprite_path = "res://Structures/Item.png"
+
+	var w: float = float(data.get("world_width", 18.0))
+	var h: float = float(data.get("world_height", 18.0))
+	size = Vector2(w, h)
+	sprite.texture = load(sprite_path)
+	if sprite.texture:
+		scale_sprite(size)
+
+	# Weightless, free, never stacks, not a container.
+	weight = 0.0
+	cost = 0.0
+	is_stackable = false
+	max_stack_size = 1
+	stack_count = 1
+	num_slots = 0
+	contents = null
+	walkability = 1.1
+	noise_per_step = 0.0
+
+# Called by the context menu (UI/context_menu.gd default branch) and by the
+# left-click fast-path in ProceduralCharacter. Reading or taking a readable
+# files it into the journal and removes the world object.
+func interact(option: String) -> void:
+	match option:
+		"Read":
+			_read_from_world()
+		"Take":
+			_take_from_world()
+		"Pick Up":
+			var g = get_node_or_null("/root/Game")
+			if g != null and g.has_method("pick_up_item"):
+				g.pick_up_item(self)
+		_:
+			pass
+
+func _read_from_world() -> void:
+	var g = get_node_or_null("/root/Game")
+	if g != null and g.has_method("show_readable"):
+		g.show_readable(str(id))
+	_destroy_item()
+
+func _take_from_world() -> void:
+	if ReadableManager != null:
+		ReadableManager.collect(str(id))
+	_destroy_item()
+
+# Build an inventory item dict for this world item (used by Pick Up). Pulls the
+# canonical data from the item database and carries the current stack count.
+func to_inventory_data() -> Dictionary:
+	var data = _lookup_item_data()
+	if data.is_empty():
+		return {}
+	var dict: Dictionary = data.duplicate(true)
+	if is_stackable:
+		dict["num_stacks"] = stack_count
+	return dict
 
 func _default_noise_per_step() -> float:
 	# Inferred from item_type + equip_slot when Items.json doesn't specify

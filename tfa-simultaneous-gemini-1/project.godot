@@ -57,6 +57,8 @@ HexIconDatabase="*res://Global/HexIconDatabase.gd"
 QuestDatabase="*res://Global/QuestDatabase.gd"
 QuestManager="*res://Global/QuestManager.gd"
 HearingManager="*res://Global/HearingManager.gd"
+ReadableDatabase="*res://Global/ReadableDatabase.gd"
+ReadableManager="*res://Global/ReadableManager.gd"
 
 [display]
 

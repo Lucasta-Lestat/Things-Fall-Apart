@@ -17,6 +17,7 @@ var panel_visible: bool = false
 var _shown_x: float = 0.0
 var _hidden_x: float = 0.0
 var _tween: Tween = null
+var _active_tab: String = "quests"
 
 var _margin: MarginContainer
 var _scroll: ScrollContainer
@@ -56,12 +57,21 @@ func _ready() -> void:
 	_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(_margin)
 
+	# Outer column: a fixed tab row above a scrolling content area.
+	var outer := VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_theme_constant_override("separation", 8)
+	_margin.add_child(outer)
+
+	outer.add_child(_build_tabs_row())
+
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	_margin.add_child(_scroll)
+	outer.add_child(_scroll)
 
 	_content_vbox = VBoxContainer.new()
 	_content_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -73,6 +83,8 @@ func _ready() -> void:
 	call_deferred("_refresh")
 
 func _connect_quest_manager() -> void:
+	if ReadableManager != null and not ReadableManager.journal_updated.is_connected(_on_readable_event):
+		ReadableManager.journal_updated.connect(_on_readable_event)
 	if QuestManager == null:
 		return
 	if not QuestManager.quest_updated.is_connected(_on_quest_event):
@@ -91,6 +103,9 @@ func _on_quest_event(_quest_id: String) -> void:
 	call_deferred("_refresh")
 
 func _on_quest_stage_changed(_quest_id: String, _old: String, _new: String) -> void:
+	call_deferred("_refresh")
+
+func _on_readable_event(_readable_id: String) -> void:
 	call_deferred("_refresh")
 
 # ---------------------------------------------------------------------------
@@ -127,7 +142,12 @@ func _refresh() -> void:
 		return
 	for child in _content_vbox.get_children():
 		child.queue_free()
+	if _active_tab == "notes":
+		_refresh_library()
+	else:
+		_refresh_quests()
 
+func _refresh_quests() -> void:
 	if QuestManager == null or QuestDatabase == null:
 		return
 
@@ -154,13 +174,11 @@ func _refresh() -> void:
 		return
 
 	for qid in active_ids:
-		print("[QuestLogPanel] _refresh build active=", qid)
 		_content_vbox.add_child(_build_quest_block(qid, "active"))
 	for qid in completed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "completed"))
 	for qid in failed_ids:
 		_content_vbox.add_child(_build_quest_block(qid, "failed"))
-	print("[QuestLogPanel] _refresh END (built ", active_ids.size(), " active)")
 
 func _build_quest_block(quest_id: String, group: String) -> Control:
 	var q: Dictionary = QuestDatabase.get_quest(quest_id)
@@ -260,3 +278,98 @@ func _build_checklist_row(entry: Dictionary) -> Control:
 		row.add_child(desc)
 
 	return row
+
+# ---------------------------------------------------------------------------
+# Tabs + Library (readables)
+# ---------------------------------------------------------------------------
+
+func _build_tabs_row() -> Control:
+	var tabs := HBoxContainer.new()
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.add_theme_constant_override("separation", 8)
+	var quests_btn := Button.new()
+	quests_btn.text = "Quests"
+	quests_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	quests_btn.pressed.connect(_on_tab_selected.bind("quests"))
+	tabs.add_child(quests_btn)
+	var library_btn := Button.new()
+	library_btn.text = "Notes"
+	library_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	library_btn.pressed.connect(_on_tab_selected.bind("notes"))
+	tabs.add_child(library_btn)
+	return tabs
+
+func _on_tab_selected(tab: String) -> void:
+	_active_tab = tab
+	_refresh()
+
+func _refresh_library() -> void:
+	var title := RichTextLabel.new()
+	title.bbcode_enabled = true
+	title.fit_content = true
+	title.scroll_active = false
+	title.text = "[b][color=#3b2a14]Notes[/color][/b]"
+	title.add_theme_font_size_override("normal_font_size", 22)
+	_content_vbox.add_child(title)
+
+	if ReadableManager == null:
+		return
+	var ids: Array = ReadableManager.get_collected()
+	if ids.is_empty():
+		var empty := RichTextLabel.new()
+		empty.bbcode_enabled = true
+		empty.fit_content = true
+		empty.scroll_active = false
+		empty.text = "[i][color=#5a4225]Nothing collected yet.[/color][/i]"
+		_content_vbox.add_child(empty)
+		return
+
+	for rid in ids:
+		_content_vbox.add_child(_build_library_row(str(rid)))
+
+func _build_library_row(readable_id: String) -> Control:
+	var title_text: String = readable_id
+	var kind_text: String = ""
+	if ReadableDatabase != null:
+		title_text = ReadableDatabase.get_title(readable_id)
+		kind_text = ReadableDatabase.get_kind(readable_id)
+	var entry_is_read: bool = false
+	if ReadableManager != null:
+		entry_is_read = ReadableManager.is_read(readable_id)
+
+	# Plain-text Button (no TextureRect sibling) — avoids the Godot 4.6 layout
+	# crash documented in _build_quest_block. Button text isn't BBCode, so the
+	# read/unread state is shown with a glyph + a theme color override.
+	var btn := Button.new()
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var glyph: String = "☑" if entry_is_read else "☐"
+	var suffix: String = ""
+	if kind_text != "":
+		if entry_is_read:
+			suffix = "  (%s)" % kind_text
+		else:
+			suffix = "  (%s · unread)" % kind_text
+	btn.text = "%s %s%s" % [glyph, title_text, suffix]
+	var font_col: Color = Color(0.235, 0.122, 0.078)
+	if entry_is_read:
+		font_col = Color(0.353, 0.259, 0.145)
+	btn.add_theme_color_override("font_color", font_col)
+	btn.pressed.connect(_on_library_entry_pressed.bind(readable_id))
+
+	# Flat so it sits on the parchment like the quest rows.
+	var normal_box := StyleBoxFlat.new()
+	normal_box.bg_color = Color(0, 0, 0, 0)
+	btn.add_theme_stylebox_override("normal", normal_box)
+	var hover_box := StyleBoxFlat.new()
+	hover_box.bg_color = Color(0.6, 0.45, 0.2, 0.18)
+	hover_box.set_corner_radius_all(4)
+	btn.add_theme_stylebox_override("hover", hover_box)
+	btn.add_theme_stylebox_override("pressed", hover_box)
+	return btn
+
+func _on_library_entry_pressed(readable_id: String) -> void:
+	var game = get_node_or_null("/root/Game")
+	if game != null and game.has_method("show_readable"):
+		game.show_readable(readable_id)

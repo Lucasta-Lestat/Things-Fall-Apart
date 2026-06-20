@@ -822,17 +822,62 @@ func show_context_menu(target, position: Vector2) -> void:
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
 	elif target is Item:
-		# World item context menu — use the options array loaded from the item's JSON data.
-		var raw_options: Array = target.options if target.options else []
-		options = raw_options.duplicate()
-		if options.is_empty():
-			options.append("Inspect")
+		options = _world_item_options(target)
 	elif target is Dictionary:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
 	context_menu.setup(target, options)
 	$GameUI.add_child(context_menu)
+
+## World-item context menu options. Readables keep Read/Take; containers keep
+## their own options (Open/Inspect); every other world item is pick-up-able.
+func _world_item_options(item: Item) -> Array:
+	if item.item_type == "readable":
+		return item.options.duplicate() if item.options else ["Read"]
+	var is_container: bool = item.num_slots > 0 or (item.options.size() > 0 and str(item.options[0]) == "Open")
+	if is_container:
+		return item.options.duplicate() if item.options else ["Open"]
+	# A loose world item: the world action is to pick it up. Intrinsic actions
+	# (Consume/Throw/Equip) and "Drop" belong to the inventory context menu.
+	return ["Pick Up"]
+
+## Pick up a world item into a party member's inventory, then remove it from the
+## world. Returns true on success. Readables are excluded (they use Read/Take).
+func pick_up_item(item: Item) -> bool:
+	if not is_instance_valid(item):
+		return false
+	var character = _resolve_pickup_character()
+	if character == null:
+		GameLog.add_entry("No one is free to pick that up.")
+		return false
+	var data: Dictionary = item.to_inventory_data()
+	if data.is_empty():
+		return false
+	var equip_slot: String = str(data.get("equip_slot", ""))
+	var ok: bool = false
+	if (equip_slot == "Main Hand" or equip_slot == "Off Hand") and character.inventory.has_method("stow_weapon_from_data"):
+		character.inventory.stow_weapon_from_data(data)
+		ok = true
+	else:
+		ok = character.inventory.add_stack(data)
+	if ok:
+		if SfxManager and SfxManager.has_method("play"):
+			SfxManager.play("pickup", item.global_position)
+		item._destroy_item()
+	else:
+		GameLog.add_entry("%s's inventory is full." % character.Name)
+	return ok
+
+# Pick the party member who should receive a picked-up item: the primary-selected
+# character, else the first party member with an inventory.
+func _resolve_pickup_character():
+	if primary_selected != null and is_instance_valid(primary_selected) and primary_selected.inventory != null:
+		return primary_selected
+	for c in party_chars:
+		if is_instance_valid(c) and ("inventory" in c) and c.inventory != null:
+			return c
+	return null
 
 # ---------------------------------------------------------------------------
 # Chest inventory + Trade windows
@@ -845,6 +890,21 @@ func show_chest_inventory(item: Item) -> void:
 	var w = ChestWindow.instantiate()
 	w.chest_item = item
 	$GameUI.add_child(w)
+
+func show_readable(readable_id: String) -> void:
+	# Readables open in a parchment/book-themed reading window and are filed into
+	# the journal (ReadableManager), never the inventory. Pure-GDScript window —
+	# instantiate the script directly, not a PackedScene.
+	if ReadableDatabase == null or not ReadableDatabase.has_readable(readable_id):
+		return
+	# Don't stack duplicate windows for the same readable.
+	for c in $GameUI.get_children():
+		if c is ReadableWindow and c.readable_id == readable_id:
+			return
+	var ReadableWin = load("res://UI/ReadableWindow.gd")
+	var w_read = ReadableWin.new()
+	w_read.readable_id = readable_id
+	$GameUI.add_child(w_read)
 
 func show_trade_window(npc) -> void:
 	if not is_instance_valid(npc):
@@ -2084,9 +2144,15 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	return proj
 
 
+func _splash_if_fluid(world_pos: Vector2, strength: float = 1.1) -> void:
+	"""Spawn a splash ripple if a fluid tile exists at this world position."""
+	if fluid_manager and fluid_manager.get_fluid_type_at(GridManager.world_to_map(world_pos)) != "":
+		fluid_manager.add_ripple(world_pos, strength)
+
 func _on_weapon_projectile_hit(collision: KinematicCollision2D, shooter: ProceduralCharacter, weapon: WeaponShape) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
+	_splash_if_fluid(hit_pos, 1.1)
 	if collider is ProceduralCharacter:
 		# body_collision_shape is disabled on death, so live collisions imply a
 		# living target — but guard anyway in case of mid-frame state changes.
@@ -2186,6 +2252,7 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary, shooter) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
+	_splash_if_fluid(hit_pos, 1.1)
 	if collider is ProceduralCharacter:
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
@@ -2203,6 +2270,7 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 
 
 func _on_thrown_projectile_expired(final_position: Vector2, item_id: String) -> void:
+	_splash_if_fluid(final_position, 1.0)
 	if not item_id.is_empty():
 		create_item(item_id, final_position)
 	SfxManager.play("sword-fall", final_position)

@@ -51,6 +51,20 @@ var _sim_timer: float = 0.0
 const SIM_INTERVAL: float = 0.25  # Simulate flow 4x/sec. Lerp rates in fluid.gd
                                   # are tuned to settle within one tick at this rate.
 
+# --- Reactive ripples (characters wading, projectile/ability splashes) ---
+# Stored in GRID space (world_pos / TILE_SIZE) so a ring crosses tile boundaries
+# seamlessly — the shader reads world-continuous (tile_position + UV) coords.
+# Each entry: {pos: Vector2, age: float, strength: float}. Aged & broadcast to
+# every active fluid material each frame while any ripple is alive.
+const RIPPLE_LIFE: float = 1.4
+const MAX_RIPPLES: int = 6
+var _ripples: Array = []
+var _ripples_need_clear: bool = false  # one final count=0 broadcast after the last dies
+
+# Global water-effects quality (caustics / sun-glitter / refraction). Lower on
+# weak hardware; 1.0 = full, 0.0 = off. Applied to each fluid material on spawn.
+@export var water_quality: float = 1.0
+
 func _ready() -> void:
 	_load_fluid_database()
 
@@ -68,10 +82,50 @@ func _load_fluid_database() -> void:
 
 func update_fluid_tick(delta: float) -> void:
 	"""Called from Game._process to drive fluid simulation in real time."""
+	_update_ripples(delta)
 	_sim_timer += delta
 	if _sim_timer >= SIM_INTERVAL:
 		_sim_timer = 0.0
 		update_fluid_simulation()
+
+# --- Reactive ripples ---
+
+func add_ripple(world_pos: Vector2, strength: float = 0.8) -> void:
+	"""Spawn an expanding ripple at a world position (e.g. a footstep or splash).
+	Safe to call even if there's no fluid there — it just won't be visible."""
+	var gp := world_pos / float(GridManager.TILE_SIZE)
+	_ripples.append({"pos": gp, "age": 0.0, "strength": clamp(strength, 0.0, 2.0)})
+	if _ripples.size() > MAX_RIPPLES:
+		_ripples.pop_front()  # keep the newest MAX_RIPPLES
+
+func _update_ripples(delta: float) -> void:
+	if _ripples.is_empty():
+		if _ripples_need_clear:
+			_broadcast_ripples()  # final broadcast with count 0
+			_ripples_need_clear = false
+		return
+	var alive: Array = []
+	for r in _ripples:
+		r.age += delta
+		if r.age <= RIPPLE_LIFE:
+			alive.append(r)
+	_ripples = alive
+	_broadcast_ripples()
+	_ripples_need_clear = true
+
+func _broadcast_ripples() -> void:
+	var packed: Array = []
+	for r in _ripples:
+		packed.append(Vector4(r.pos.x, r.pos.y, r.age, r.strength))
+		if packed.size() >= MAX_RIPPLES:
+			break
+	var n := packed.size()
+	while packed.size() < MAX_RIPPLES:
+		packed.append(Vector4.ZERO)  # pad to the declared uniform array size
+	for tile_pos in active_fluid_tiles:
+		var node = active_fluid_tiles[tile_pos]
+		if node and not (node is bool) and is_instance_valid(node) and node.has_method("set_ripples"):
+			node.set_ripples(packed, n)
 
 # --- Condition Application (modeled after FogOverlay) ---
 
@@ -377,6 +431,13 @@ func _create_fluid_visual(grid_pos: Vector2i, fluid_type: String, amount: float)
 			var water_color = Color(color_arr[0], color_arr[1], color_arr[2], color_arr[3])
 			var wave_color = Color(wave_arr[0], wave_arr[1], wave_arr[2], wave_arr[3])
 			fluid_node.set_fluid_colors(water_color, wave_color)
+
+		# Data-driven visual style (caustics, sparkle, foam, emissive, viscosity,
+		# refraction) from fluids.json — falls back to the shader defaults.
+		if fluid_node.has_method("apply_fluid_style"):
+			fluid_node.apply_fluid_style(fluid_def)
+		if fluid_node.has_method("set_effects_quality"):
+			fluid_node.set_effects_quality(water_quality)
 
 	# Snap initial fill state so a freshly-spawned partial tile doesn't render
 	# at full opacity for a frame and then lerp down. inflow_directions has
