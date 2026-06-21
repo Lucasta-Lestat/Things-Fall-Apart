@@ -2632,7 +2632,7 @@
 	"description": "A leather skin full of fresh water. Drink to quench thirst, or pour out as a fire-quenching splash.",
 	"base_width": 20.0,
 	"base_height": 36.0,
-	"sprite_path": "res://Items/acid_flask.png",
+	"sprite_path": "res://Items/waterskin.png",
 	"weight": 1.0,
 	"cost": 1.0,
 	"satiety": 5.0,
