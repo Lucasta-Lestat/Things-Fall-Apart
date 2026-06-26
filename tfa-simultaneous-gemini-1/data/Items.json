@@ -4040,5 +4040,1088 @@
 	"resources": {
 	  "cloth": 8
 	}
+  },
+  {
+	"id": "cabbage",
+	"display_name": "Cabbage",
+	"type": "item",
+	"description": "A humble round head of cabbage. Hearty peasant fare.",
+	"base_width": 30.0,
+	"base_height": 28.0,
+	"sprite_path": "res://Items/cabbage.png",
+	"weight": 1.0,
+	"cost": 2.0,
+	"satiety": 8.0,
+	"calories": 50.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
+	"id": "cheese_wheel",
+	"display_name": "Cheese Wheel",
+	"type": "item",
+	"description": "A waxy wheel of farmhouse cheese, sharp and filling.",
+	"base_width": 32.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/cheese_wheel.png",
+	"weight": 2.0,
+	"cost": 8.0,
+	"satiety": 14.0,
+	"calories": 350.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 5
+  },
+  {
+	"id": "bread_loaf",
+	"display_name": "Bread Loaf",
+	"type": "item",
+	"description": "A round cottage loaf, its crust scored with a baker's cross.",
+	"base_width": 30.0,
+	"base_height": 28.0,
+	"sprite_path": "res://Items/bread_loaf.png",
+	"weight": 1.0,
+	"cost": 3.0,
+	"satiety": 16.0,
+	"calories": 250.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
+	"id": "roast_fowl",
+	"display_name": "Roast Fowl",
+	"type": "item",
+	"description": "A whole roasted fowl, dripping and golden. A feast for one.",
+	"base_width": 36.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/roast_fowl.png",
+	"weight": 2.0,
+	"cost": 12.0,
+	"satiety": 25.0,
+	"calories": 450.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 2
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 5
+  },
+  {
+	"id": "apple",
+	"display_name": "Apple",
+	"type": "item",
+	"description": "A crisp red apple.",
+	"base_width": 22.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/apple.png",
+	"weight": 0.3,
+	"cost": 1.0,
+	"satiety": 6.0,
+	"calories": 80.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 20
+  },
+  {
+	"id": "turnip",
+	"display_name": "Turnip",
+	"type": "item",
+	"description": "A humble turnip. Better than an empty belly.",
+	"base_width": 24.0,
+	"base_height": 26.0,
+	"sprite_path": "res://Items/turnip.png",
+	"weight": 0.5,
+	"cost": 1.0,
+	"satiety": 7.0,
+	"calories": 60.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 15
+  },
+  {
+	"id": "fish",
+	"display_name": "Fish",
+	"type": "item",
+	"description": "A fresh river trout, its scales still bright.",
+	"base_width": 40.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/fish.png",
+	"weight": 1.0,
+	"cost": 4.0,
+	"satiety": 12.0,
+	"calories": 200.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
+	"id": "pottage",
+	"display_name": "Pottage",
+	"type": "item",
+	"description": "A wooden bowl of thick pottage, the everyday stew of the poor.",
+	"base_width": 30.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/pottage.png",
+	"weight": 1.5,
+	"cost": 3.0,
+	"satiety": 18.0,
+	"calories": 220.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 5
+  },
+  {
+	"id": "meat_pie",
+	"display_name": "Meat Pie",
+	"type": "item",
+	"description": "A golden-crusted meat pie. Best not ask what's inside.",
+	"base_width": 30.0,
+	"base_height": 28.0,
+	"sprite_path": "res://Items/meat_pie.png",
+	"weight": 1.0,
+	"cost": 6.0,
+	"satiety": 20.0,
+	"calories": 400.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 5
+  },
+  {
+	"id": "onion",
+	"display_name": "Onion",
+	"type": "item",
+	"description": "A papery brown onion, sharp enough to bring a tear.",
+	"base_width": 24.0,
+	"base_height": 26.0,
+	"sprite_path": "res://Items/onion.png",
+	"weight": 0.4,
+	"cost": 1.0,
+	"satiety": 6.0,
+	"calories": 50.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 15
+  },
+  {
+	"id": "barrel",
+	"display_name": "Barrel",
+	"type": "item",
+	"description": "A sturdy hooped wooden barrel.",
+	"base_width": 40.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/barrel.png",
+	"weight": 20.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "crate",
+	"display_name": "Crate",
+	"type": "item",
+	"description": "A wooden crate for storing goods.",
+	"base_width": 38.0,
+	"base_height": 38.0,
+	"sprite_path": "res://Items/crate.png",
+	"weight": 12.0,
+	"cost": 4.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 25.0,
+	"hp": 25.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "basket",
+	"display_name": "Basket",
+	"type": "item",
+	"description": "A woven wicker basket.",
+	"base_width": 30.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/basket.png",
+	"weight": 2.0,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "grain_sack",
+	"display_name": "Grain Sack",
+	"type": "item",
+	"description": "A burlap sack heavy with grain.",
+	"base_width": 30.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/grain_sack.png",
+	"weight": 15.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 12.0,
+	"hp": 12.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "amphora",
+	"display_name": "Amphora",
+	"type": "item",
+	"description": "A clay amphora for oil or wine.",
+	"base_width": 28.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/amphora.png",
+	"weight": 8.0,
+	"cost": 6.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 8.0,
+	"hp": 8.0,
+	"traits": {
+	  "Earth": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bucket",
+	"display_name": "Bucket",
+	"type": "item",
+	"description": "A wooden bucket.",
+	"base_width": 24.0,
+	"base_height": 24.0,
+	"sprite_path": "res://Items/bucket.png",
+	"weight": 3.0,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "round_table",
+	"display_name": "Round Table",
+	"type": "item",
+	"description": "A round wooden table.",
+	"base_width": 48.0,
+	"base_height": 48.0,
+	"sprite_path": "res://Items/round_table.png",
+	"weight": 25.0,
+	"cost": 8.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 35.0,
+	"hp": 35.0,
+	"traits": {
+	  "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bench",
+	"display_name": "Bench",
+	"type": "item",
+	"description": "A long wooden bench.",
+	"base_width": 48.0,
+	"base_height": 16.0,
+	"sprite_path": "res://Items/bench.png",
+	"weight": 18.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "stool",
+	"display_name": "Stool",
+	"type": "item",
+	"description": "A simple wooden stool.",
+	"base_width": 22.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/stool.png",
+	"weight": 6.0,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 15.0,
+	"hp": 15.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "straw_bed",
+	"display_name": "Straw Bed",
+	"type": "item",
+	"description": "A straw-stuffed bed.",
+	"base_width": 44.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/straw_bed.png",
+	"weight": 20.0,
+	"cost": 6.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 25.0,
+	"hp": 25.0,
+	"traits": {
+	  "Wood": 1,
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bedroll",
+	"display_name": "Bedroll",
+	"type": "item",
+	"description": "A traveller's rolled bedroll.",
+	"base_width": 40.0,
+	"base_height": 24.0,
+	"sprite_path": "res://Items/bedroll.png",
+	"weight": 3.0,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 8.0,
+	"hp": 8.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "campfire",
+	"display_name": "Campfire",
+	"type": "item",
+	"description": "A crackling campfire ringed with stones.",
+	"base_width": 40.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/campfire.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "brazier",
+	"display_name": "Brazier",
+	"type": "item",
+	"description": "An iron brazier of glowing coals.",
+	"base_width": 32.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/brazier.png",
+	"weight": 15.0,
+	"cost": 10.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Metal": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "cauldron",
+	"display_name": "Cauldron",
+	"type": "item",
+	"description": "A heavy iron cauldron.",
+	"base_width": 32.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/cauldron.png",
+	"weight": 18.0,
+	"cost": 12.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	  "Metal": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "torch",
+	"display_name": "Torch",
+	"type": "item",
+	"description": "A burning torch.",
+	"base_width": 30.0,
+	"base_height": 14.0,
+	"sprite_path": "res://Items/torch.png",
+	"weight": 1.0,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "rug",
+	"display_name": "Rug",
+	"type": "item",
+	"description": "An ornate woven rug.",
+	"base_width": 48.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/rug.png",
+	"weight": 5.0,
+	"cost": 15.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "fur_rug",
+	"display_name": "Fur Rug",
+	"type": "item",
+	"description": "A bearskin rug.",
+	"base_width": 44.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/fur_rug.png",
+	"weight": 6.0,
+	"cost": 20.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "hay_pile",
+	"display_name": "Hay Pile",
+	"type": "item",
+	"description": "A loose pile of hay.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/hay_pile.png",
+	"weight": 4.0,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 8.0,
+	"hp": 8.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bones",
+	"display_name": "Bones",
+	"type": "item",
+	"description": "A scatter of old bones and a skull.",
+	"base_width": 30.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/bones.png",
+	"weight": 2.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bloodstain",
+	"display_name": "Bloodstain",
+	"type": "item",
+	"description": "A dark stain of dried blood.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/bloodstain.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 1.0,
+	"hp": 1.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "grave_mound",
+	"display_name": "Grave Mound",
+	"type": "item",
+	"description": "A fresh mound of turned earth.",
+	"base_width": 44.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/grave_mound.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	  "Earth": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "trapdoor",
+	"display_name": "Trapdoor",
+	"type": "item",
+	"description": "A wooden trapdoor with an iron ring.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/trapdoor.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "sewer_grate",
+	"display_name": "Sewer Grate",
+	"type": "item",
+	"description": "An iron grate over a drain.",
+	"base_width": 34.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/sewer_grate.png",
+	"weight": 10.0,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 35.0,
+	"hp": 35.0,
+	"traits": {
+	  "Metal": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "millstone",
+	"display_name": "Millstone",
+	"type": "item",
+	"description": "A heavy round grinding stone.",
+	"base_width": 40.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/millstone.png",
+	"weight": 40.0,
+	"cost": 15.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 80.0,
+	"hp": 80.0,
+	"traits": {
+	  "Earth": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "rope_coil",
+	"display_name": "Coil of Rope",
+	"type": "item",
+	"description": "A coil of stout rope.",
+	"base_width": 28.0,
+	"base_height": 28.0,
+	"sprite_path": "res://Items/rope_coil.png",
+	"weight": 4.0,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "cart",
+	"display_name": "Hand Cart",
+	"type": "item",
+	"description": "A wooden hand cart.",
+	"base_width": 48.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/cart.png",
+	"weight": 30.0,
+	"cost": 15.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	  "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "cartwheel",
+	"display_name": "Cartwheel",
+	"type": "item",
+	"description": "A spoked wooden cartwheel.",
+	"base_width": 34.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/cartwheel.png",
+	"weight": 8.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "firewood",
+	"display_name": "Firewood",
+	"type": "item",
+	"description": "A bundle of chopped firewood.",
+	"base_width": 34.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Items/firewood.png",
+	"weight": 10.0,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 15.0,
+	"hp": 15.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "well",
+	"display_name": "Well",
+	"type": "item",
+	"description": "A stone well of dark water.",
+	"base_width": 48.0,
+	"base_height": 48.0,
+	"sprite_path": "res://Items/well.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 80.0,
+	"hp": 80.0,
+	"traits": {
+	  "Earth": 3,
+	  "Liquid": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "trough",
+	"display_name": "Trough",
+	"type": "item",
+	"description": "A wooden water trough.",
+	"base_width": 48.0,
+	"base_height": 24.0,
+	"sprite_path": "res://Items/trough.png",
+	"weight": 20.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2,
+	  "Liquid": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "altar",
+	"display_name": "Altar",
+	"type": "item",
+	"description": "A carved stone altar, stained dark.",
+	"base_width": 48.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/altar.png",
+	"weight": 0.0,
+	"cost": 20.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 80.0,
+	"hp": 80.0,
+	"traits": {
+	  "Earth": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "coffin",
+	"display_name": "Coffin",
+	"type": "item",
+	"description": "A nailed wooden coffin.",
+	"base_width": 44.0,
+	"base_height": 28.0,
+	"sprite_path": "res://Items/coffin.png",
+	"weight": 25.0,
+	"cost": 10.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "cage",
+	"display_name": "Iron Cage",
+	"type": "item",
+	"description": "A barred iron cage.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/cage.png",
+	"weight": 30.0,
+	"cost": 15.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 50.0,
+	"hp": 50.0,
+	"traits": {
+	  "Metal": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "skull_pile",
+	"display_name": "Pile of Skulls",
+	"type": "item",
+	"description": "A grim heap of skulls.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/skull_pile.png",
+	"weight": 8.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "tent",
+	"display_name": "Tent",
+	"type": "item",
+	"description": "A peaked canvas tent.",
+	"base_width": 48.0,
+	"base_height": 44.0,
+	"sprite_path": "res://Items/tent.png",
+	"weight": 12.0,
+	"cost": 15.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "tree_stump",
+	"display_name": "Tree Stump",
+	"type": "item",
+	"description": "A cut tree stump.",
+	"base_width": 34.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/tree_stump.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "fallen_log",
+	"display_name": "Fallen Log",
+	"type": "item",
+	"description": "A mossy fallen log.",
+	"base_width": 48.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/fallen_log.png",
+	"weight": 25.0,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 35.0,
+	"hp": 35.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "shrub",
+	"display_name": "Shrub",
+	"type": "item",
+	"description": "A round leafy shrub.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/shrub.png",
+	"weight": 0.0,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 15.0,
+	"hp": 15.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "boulder",
+	"display_name": "Boulder",
+	"type": "item",
+	"description": "A large mossy boulder.",
+	"base_width": 40.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/boulder.png",
+	"weight": 0.0,
+	"cost": 0.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 100.0,
+	"hp": 100.0,
+	"traits": {
+	  "Earth": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "market_stall",
+	"display_name": "Market Stall",
+	"type": "item",
+	"description": "A canvas-awninged market stall.",
+	"base_width": 48.0,
+	"base_height": 44.0,
+	"sprite_path": "res://Items/market_stall.png",
+	"weight": 25.0,
+	"cost": 20.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	  "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]
