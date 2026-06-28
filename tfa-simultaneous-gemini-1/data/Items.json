@@ -5146,7 +5146,7 @@
 	  "Organic": 1
 	},
 	"is_stackable": 1.0,
-	"max_stack_size": 20
+	"max_stack_size": 100
   },
   {
 	"id": "pipe",
