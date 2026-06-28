@@ -5123,5 +5123,200 @@
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null
+  },
+  {
+	"id": "cigar",
+	"display_name": "Cigar",
+	"type": "item",
+	"description": "A fat hand-rolled cigar with a gilt paper band. A gentleman's smoke.",
+	"base_width": 22.0,
+	"base_height": 10.0,
+	"sprite_path": "res://Items/cigar.png",
+	"weight": 0.2,
+	"cost": 5.0,
+	"satiety": 0.0,
+	"calories": 0.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 2.0,
+	"hp": 2.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
+	"id": "cigarettes",
+	"display_name": "Cigarettes",
+	"type": "item",
+	"description": "A bundle of hand-rolled cigarettes tied with twine.",
+	"base_width": 26.0,
+	"base_height": 18.0,
+	"sprite_path": "res://Items/cigarettes.png",
+	"weight": 0.2,
+	"cost": 3.0,
+	"satiety": 0.0,
+	"calories": 0.0,
+	"interact_options": [
+	  "Consume",
+	  "Drop"
+	],
+	"max_hp": 2.0,
+	"hp": 2.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 1.0,
+	"max_stack_size": 10
+  },
+  {
+	"id": "clay_pipe",
+	"display_name": "Clay Pipe",
+	"type": "item",
+	"description": "A long-stemmed white clay churchwarden pipe.",
+	"base_width": 9.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/clay_pipe.png",
+	"weight": 0.3,
+	"cost": 4.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 2.0,
+	"hp": 2.0,
+	"traits": {
+	  "Earth": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "briar_pipe",
+	"display_name": "Briar Pipe",
+	"type": "item",
+	"description": "A bent briar-wood pipe with a polished amber stem.",
+	"base_width": 26.0,
+	"base_height": 18.0,
+	"sprite_path": "res://Items/briar_pipe.png",
+	"weight": 0.3,
+	"cost": 6.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 4.0,
+	"hp": 4.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "tobacco_pouch",
+	"display_name": "Tobacco Pouch",
+	"type": "item",
+	"description": "A worn leather drawstring pouch of pipe tobacco.",
+	"base_width": 18.0,
+	"base_height": 22.0,
+	"sprite_path": "res://Items/tobacco_pouch.png",
+	"weight": 0.4,
+	"cost": 4.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "snuff_box",
+	"display_name": "Snuff Box",
+	"type": "item",
+	"description": "An ornate engraved silver snuff box.",
+	"base_width": 20.0,
+	"base_height": 16.0,
+	"sprite_path": "res://Items/snuff_box.png",
+	"weight": 0.5,
+	"cost": 12.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Metal": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "pipe_tobacco_tin",
+	"display_name": "Tobacco Tin",
+	"type": "item",
+	"description": "A round tin of pipe-weed with a faded label.",
+	"base_width": 20.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/pipe_tobacco_tin.png",
+	"weight": 0.4,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 4.0,
+	"hp": 4.0,
+	"traits": {
+	  "Metal": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "matchbox",
+	"display_name": "Matchbox",
+	"type": "item",
+	"description": "A wooden box of red-tipped matches.",
+	"base_width": 18.0,
+	"base_height": 16.0,
+	"sprite_path": "res://Items/matchbox.png",
+	"weight": 0.2,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 2.0,
+	"hp": 2.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "ashtray",
+	"display_name": "Ashtray",
+	"type": "item",
+	"description": "A shallow earthenware ashtray with a few spent stubs.",
+	"base_width": 22.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/ashtray.png",
+	"weight": 0.6,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 3.0,
+	"hp": 3.0,
+	"traits": {
+	  "Earth": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]
