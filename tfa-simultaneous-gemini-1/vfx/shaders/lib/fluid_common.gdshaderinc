@@ -15,7 +15,22 @@ uniform vec2 tile_position = vec2(0.0);
 // 1.0 = exposed boundary edge, 0.0 = neighbor present.
 uniform vec4 edge_mask = vec4(0.0);
 uniform float edge_fade_width = 0.4;
-uniform float edge_noise_scale = 6.0;
+uniform float edge_noise_scale : hint_range(1.0, 10.0) = 3.0; // shoreline noise frequency
+
+// Neighbour occupancy for the continuous shoreline. Presence of the 8 neighbours
+// of this tile (1 = same fluid present, 0 = absent):
+//   cov_sides = (right, left, bottom, top)
+//   cov_diag  = (top-right, top-left, bottom-left, bottom-right)
+// Default = isolated, so an un-refreshed / still-spreading tile appears as a
+// round droplet (not a solid square) until its real coverage is set.
+uniform vec4 cov_sides = vec4(0.0);
+uniform vec4 cov_diag = vec4(0.0);
+uniform float edge_irregularity : hint_range(0.0, 0.4) = 0.10; // shoreline waviness (bounded noise on the waterline)
+uniform float edge_softness : hint_range(0.02, 0.3) = 0.07;    // waterline blur
+// Higher = water recedes further inward from the tile edge (wider erosion band);
+// lower = a thinner band hugging the boundary. Kept modest so the edge softening
+// stays at the very edge and doesn't bleed toward the next tile layer.
+uniform float edge_threshold : hint_range(0.4, 0.95) = 0.56;
 
 // Inside-corner fade — vec4(top-right, top-left, bottom-left, bottom-right).
 // 1.0 = both adjacent edges have neighbors but the diagonal tile is missing.
@@ -52,76 +67,47 @@ float fbm(vec2 p) {
     return v / 0.875;
 }
 
-// --- Organic tile edges -----------------------------------------------------
-float compute_edge_alpha(vec2 uv, vec2 world_uv) {
-    float alpha = 1.0;
-    vec2 noise_pos = world_uv * edge_noise_scale;
+// --- Organic shoreline (continuous across tiles) ----------------------------
+// Coverage reconstructed from the 8-neighbour occupancy. Each tile corner = the
+// average of the 4 cells meeting there (self always present); shared corner
+// values match across tile seams, so the field is C0-continuous and ONE
+// threshold yields a single waterline around the WHOLE body — no per-tile square
+// cores. A connectivity-gated ROUND blob keeps lone / thin / still-spreading
+// tiles visible WITHOUT a square per-tile footprint (the old chebyshev centre
+// cap is what made the shore look sawtoothed, worst while the body spread).
+float tile_coverage(vec2 uv) {
+    float R = cov_sides.x, L = cov_sides.y, B = cov_sides.z, T = cov_sides.w;
+    float TR = cov_diag.x, TL = cov_diag.y, BL = cov_diag.z, BR = cov_diag.w;
+    float c_tl = (1.0 + L + T + TL) * 0.25;
+    float c_tr = (1.0 + R + T + TR) * 0.25;
+    float c_bl = (1.0 + L + B + BL) * 0.25;
+    float c_br = (1.0 + R + B + BR) * 0.25;
+    float cov = mix(mix(c_tl, c_tr, uv.x), mix(c_bl, c_br, uv.x), uv.y);
 
-    // Per-edge fade: distance from each exposed edge, noise-thresholded for an
-    // irregular shoreline.
-    float right_a = 1.0, left_a = 1.0, bottom_a = 1.0, top_a = 1.0;
-
-    if (edge_mask.x > 0.5) { // right
-        float dist = 1.0 - uv.x;
-        float n = fbm(noise_pos + vec2(37.0, 0.0));
-        right_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
-    }
-    if (edge_mask.y > 0.5) { // left
-        float dist = uv.x;
-        float n = fbm(noise_pos + vec2(0.0, 71.0));
-        left_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
-    }
-    if (edge_mask.z > 0.5) { // bottom
-        float dist = 1.0 - uv.y;
-        float n = fbm(noise_pos + vec2(113.0, 0.0));
-        bottom_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
-    }
-    if (edge_mask.w > 0.5) { // top
-        float dist = uv.y;
-        float n = fbm(noise_pos + vec2(0.0, 157.0));
-        top_a = smoothstep(0.0, edge_fade_width * n * 0.6 + 0.02, dist);
-    }
-
-    // Multiply edges together — corners (2 edges meeting) get stronger erosion.
-    alpha = right_a * left_a * bottom_a * top_a;
-
-    // Inside-corner fade: round off any corner whose two adjacent edges are
-    // closed but whose diagonal tile is missing.
-    if (corner_mask.x > 0.5) { // top-right (UV (1,0))
-        float dx = 1.0 - uv.x;
-        float dy = uv.y;
-        float n = fbm(noise_pos + vec2(43.0, 197.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
-    }
-    if (corner_mask.y > 0.5) { // top-left (UV (0,0))
-        float n = fbm(noise_pos + vec2(53.0, 91.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, length(uv));
-    }
-    if (corner_mask.z > 0.5) { // bottom-left (UV (0,1))
-        float dx = uv.x;
-        float dy = 1.0 - uv.y;
-        float n = fbm(noise_pos + vec2(107.0, 211.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
-    }
-    if (corner_mask.w > 0.5) { // bottom-right (UV (1,1))
-        float dx = 1.0 - uv.x;
-        float dy = 1.0 - uv.y;
-        float n = fbm(noise_pos + vec2(67.0, 179.0));
-        alpha *= smoothstep(0.0, edge_fade_width * n * 0.75 + 0.035, sqrt(dx*dx + dy*dy));
-    }
-    return alpha;
+    // corner_max ~ how strongly this tile belongs to a body: 1.0 = interior/edge
+    // of a body, 0.25 = fully isolated. Only weakly-connected tiles get the blob,
+    // so a real shoreline stays purely coverage-driven (smooth, no bumps).
+    float corner_max = max(max(c_tl, c_tr), max(c_bl, c_br));
+    float lone = 1.0 - smoothstep(0.55, 0.85, corner_max);
+    float r = length(uv - vec2(0.5)) * 2.0;                // 0 centre .. ~1.41 corners
+    float blob = (1.0 - smoothstep(0.15, 1.0, r)) * 0.85;  // round centre fill
+    return max(cov, blob * lone);
 }
 
-// Distance (in UV units, 0..1) to the nearest EXPOSED tile edge. Returns 1.0
-// for a fully-surrounded interior tile (no foam there). Used to band foam along
-// the organic shoreline.
+// Alpha from the coverage field with a world-space noisy waterline. The noise is
+// bounded (edge_irregularity) so the contour stays connected — it can wobble the
+// shoreline but can't carve detached islands.
+float compute_edge_alpha(vec2 uv, vec2 world_uv) {
+    float cov = tile_coverage(uv);
+    float n = fbm(world_uv * edge_noise_scale) - 0.5;
+    float threshold = edge_threshold + n * edge_irregularity;
+    return smoothstep(threshold - edge_softness, threshold + edge_softness, cov);
+}
+
+// Interior "depth from shore" proxy (0 at the waterline, growing inward), from
+// the same coverage field so foam/depth banding hugs the organic shoreline.
 float nearest_edge_distance(vec2 uv) {
-    float d = 1.0;
-    if (edge_mask.x > 0.5) d = min(d, 1.0 - uv.x); // right
-    if (edge_mask.y > 0.5) d = min(d, uv.x);       // left
-    if (edge_mask.z > 0.5) d = min(d, 1.0 - uv.y); // bottom
-    if (edge_mask.w > 0.5) d = min(d, uv.y);       // top
-    return d;
+    return clamp(tile_coverage(uv) - edge_threshold, 0.0, 0.5);
 }
 
 // --- Animated caustics (ridged noise web) -----------------------------------

@@ -33,7 +33,7 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = "cemetery"
+var current_map_id: String = "tg_export"  # TEMP: checking the level-editor export (was "cemetery")
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
@@ -417,7 +417,7 @@ func _wire_ally_witness(new_char) -> void:
 
 
 	
-func load_map(map_id: String, from_map: String = "") -> void:
+func load_map(map_id: String, from_map: String = "", spawn_override: String = "") -> void:
 	# Validate target before tearing down the current map so a missing asset
 	# (e.g. world-map PNG not yet pushed) leaves us on the current map
 	# instead of in a broken empty state.
@@ -454,21 +454,33 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	# World maps have no structures layer — fall back to the main map image.
 	GridManager.TILE_SIZE = current_map_data.get("tile_size", 64)
 	var images: Dictionary = current_map_data.get("images", {})
-	var dim_src_path: String = images.get("structures", "")
-	if dim_src_path.is_empty() or not ResourceLoader.exists(dim_src_path):
-		dim_src_path = images.get("map", "")
-	var dim_img: Image = load(dim_src_path).get_image()
-	GridManager.initialize(dim_img.get_width(), dim_img.get_height())
+	var structured: bool = String(current_map_data.get("format", "")) == "structured"
+	if structured:
+		# structured maps declare their pixel size (no mask image to measure)
+		var ws: Array = current_map_data.get("world_size", [2048, 2048])
+		GridManager.initialize(int(ws[0]), int(ws[1]))
+	else:
+		var dim_src_path: String = images.get("structures", "")
+		if dim_src_path.is_empty() or not ResourceLoader.exists(dim_src_path):
+			dim_src_path = images.get("map", "")
+		var dim_img: Image = load(dim_src_path).get_image()
+		GridManager.initialize(dim_img.get_width(), dim_img.get_height())
 
 	# 2. Tell the MapLoader to build the visual map (floors, structures).
+	#    Structured maps (procedural level-editor exports) carry instance
+	#    geometry + a finished ground render instead of the 4-PNG mask set.
 	#    World maps skip the structures pass and use the world-terrain palette.
-	var is_world_map: bool = current_map_data.get("is_world_map", false)
-	map_loader.world_map_mode = is_world_map
-	map_loader.map_image_path = images.get("map", "")
-	map_loader.mask_image_path = images.get("mask", "")
-	map_loader.structure_map_image_path = images.get("structures", "")
-	map_loader.structure_mask_path = images.get("structures_mask", "")
-	map_loader.generate_map()
+	var is_world_map: bool = current_map_data.get("is_world_map", false) and not structured
+	if structured:
+		map_loader.world_map_mode = false
+		map_loader.generate_structured_map(current_map_data)
+	else:
+		map_loader.world_map_mode = is_world_map
+		map_loader.map_image_path = images.get("map", "")
+		map_loader.mask_image_path = images.get("mask", "")
+		map_loader.structure_map_image_path = images.get("structures", "")
+		map_loader.structure_mask_path = images.get("structures_mask", "")
+		map_loader.generate_map()
 
 	# Apply time-scale multiplier. World maps run game time much faster so
 	# hunger, hours-of-day, and weather advance on the strategic scale; local
@@ -480,9 +492,14 @@ func load_map(map_id: String, from_map: String = "") -> void:
 	setup_map_music(current_map_data)
 	setup_map_weather(current_map_data)
 
-	# 4. Determine which spawn key to use based on where we came from
+	# 4. Determine which spawn key to use: an explicit override (a warp's
+	# target_spawn -- same-map stairs land at their linked arrival marker)
+	# wins over the from_<map> arrival convention.
 	var spawn_key: String = "default"
-	if not from_map.is_empty():
+	if not spawn_override.is_empty() \
+			and current_map_data.get("player_spawns", {}).has(spawn_override):
+		spawn_key = spawn_override
+	elif not from_map.is_empty():
 		var from_key = "from_" + from_map
 		if current_map_data.get("player_spawns", {}).has(from_key):
 			spawn_key = from_key

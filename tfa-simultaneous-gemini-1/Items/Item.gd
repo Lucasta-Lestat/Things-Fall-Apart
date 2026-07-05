@@ -364,13 +364,15 @@ func _generate_chest_contents(faction_id: String, target_value: float) -> Array:
 			generated.pop_back()
 			total -= pick_cost
 			break
-	var gold_needed := target_value - total
-	if gold_needed > 0.0:
-		var gold_data := _lookup_item_data_by_id("gold")
-		if not gold_data.is_empty():
-			var gold_entry := gold_data.duplicate(true)
-			gold_entry["num_stacks"] = int(round(gold_needed))
-			generated.append(gold_entry)
+	var change_needed := target_value - total
+	if change_needed > 0.0:
+		# Fill the remaining value with a random Currency-trait item (gold,
+		# cigarette, ...) so chests pay "change" in any tagged currency.
+		var cur_data := ItemDatabase.random_currency_data("gold")
+		if not cur_data.is_empty():
+			var cur_entry := cur_data.duplicate(true)
+			cur_entry["num_stacks"] = int(round(change_needed))
+			generated.append(cur_entry)
 	return generated
 
 func _gather_faction_filtered_items(faction_id: String) -> Array:
@@ -384,8 +386,8 @@ func _gather_faction_filtered_items(faction_id: String) -> Array:
 			var slots: int = int(slots_val) if slots_val != null else 0
 			if slots > 0:
 				continue  # don't nest chests inside chests
-			if str(data.get("id", "")) == "gold":
-				continue  # gold is the remainder filler, never drawn as loot
+			if ItemDatabase.is_currency(data):
+				continue  # currency items are the change filler, never drawn as loot
 			if FactionDatabase.item_passes_faction_filter(data, faction_id):
 				pool.append(data)
 	return pool

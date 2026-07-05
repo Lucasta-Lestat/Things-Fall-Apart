@@ -7,6 +7,10 @@ var grid_costs: Dictionary = {}
 var walls: Dictionary = {}
 var floors: Dictionary = {}
 var fluids: Dictionary = {}
+# Obstacle REFERENCE COUNTS: structured maps register abutting wall segments /
+# trees whose occupied tiles overlap at junctions -- destroying one structure
+# must not unblock a tile a standing neighbour still covers.
+var _obstacle_refs: Dictionary = {}
 
 func initialize(map_width_px: int, map_height_px: int) -> void:
 	var cols = int(ceil(float(map_width_px) / TILE_SIZE))
@@ -16,6 +20,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	walls.clear()
 	floors.clear()
 	fluids.clear()
+	_obstacle_refs.clear()
 	for y in range(rows):
 		for x in range(cols):
 			var pos = Vector2i(x, y)
@@ -36,6 +41,7 @@ func would_walk(grid_pos) -> bool:
 	return grid_costs.get(grid_pos, INF) <= 10
 
 func register_obstacle(grid_pos: Vector2i) -> void:
+	_obstacle_refs[grid_pos] = int(_obstacle_refs.get(grid_pos, 0)) + 1
 	grid_costs[grid_pos] = INF
 	walls[grid_pos] = true
 
@@ -52,6 +58,11 @@ func unregister_object(grid_pos: Vector2i, item) -> void:
 		grid_costs[grid_pos] *= item.walkability
 
 func unregister_obstacle(grid_pos: Vector2i) -> void:
+	# refcounted: the tile stays blocked while any registered structure covers it
+	var refs = int(_obstacle_refs.get(grid_pos, 0)) - 1
+	_obstacle_refs[grid_pos] = max(0, refs)
+	if refs > 0:
+		return
 	# Restore to floor cost if a floor is registered, otherwise default
 	if floors.has(grid_pos) and floors[grid_pos] != "":
 		var floor_data = FloorDatabase.floor_definitions.get(floors[grid_pos])

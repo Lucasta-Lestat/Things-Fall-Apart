@@ -107,8 +107,9 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 				game.surface_manager.try_ignite(tile_pos)
 
 	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color.RED, 0.1)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.1)
+	var vis: CanvasItem = _visual()
+	tween.tween_property(vis, "modulate", Color.RED, 0.1)
+	tween.tween_property(vis, "modulate", Color.WHITE, 0.1)
 
 	emit_signal("health_changed", current_health, max_health, self)
 
@@ -134,9 +135,16 @@ func _destroy_structure():
 	for tile_pos in occupied_tiles:
 		GridManager.unregister_obstacle(tile_pos)
 	emit_signal("destroyed", self, global_position)
-	sprite.visible = false
+	_visual().visible = false
 	collision_shape.disabled = true
 	queue_free()
+
+# The node damage flashes / death hides: structured-format maps replace the
+# Sprite with an "Art" Polygon2D (an exact geometry slice of the structures
+# overlay); legacy maps keep using the Sprite.
+func _visual() -> CanvasItem:
+	var art := get_node_or_null("Art")
+	return art if art != null else sprite
 
 func change_texture(texture_path):
 	#print("attempting to update structure texture with: ", texture_path)

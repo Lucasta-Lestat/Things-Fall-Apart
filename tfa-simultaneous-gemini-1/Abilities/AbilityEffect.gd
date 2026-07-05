@@ -131,13 +131,18 @@ static func _resolve_summon(
 		match summon_type:
 			"character":
 				if game.has_method("_spawn_character"):
-					var overrides = effect.get("overrides", {})
+					var overrides: Dictionary = (effect.get("overrides", {}) as Dictionary).duplicate(true)
+					# Ally the summon to its caster. build_character reads "faction"
+					# from overrides; the live character property is faction_id.
+					if not overrides.has("faction") and "faction_id" in caster:
+						overrides["faction"] = caster.faction_id
 					spawned = game._spawn_character(summon_id, pos, overrides)
 					if spawned:
 						spawned.AI_enabled = true
-						# If caster has a faction/team, ally the summon to them
-						if "faction" in caster and "faction" in spawned:
-							spawned.faction = caster.faction
+						if "faction_id" in caster and "faction_id" in spawned:
+							spawned.faction_id = caster.faction_id
+						# Render this combatant as a boid swarm if its template opts in.
+						_attach_swarm_visual(spawned)
 			"item":
 				if game.has_method("create_item"):
 					spawned = game.create_item(summon_id, pos, stack_count)
@@ -156,6 +161,25 @@ static func _resolve_summon(
 		result["error"] = "Failed to spawn any objects"
 
 	return result
+
+
+## Render a summoned combatant as a boid swarm if its template opts in via
+## "swarm_visual": "<preset>" (e.g. rat_swarm). The BoidField lives under the
+## scene root because it simulates in world space; a SwarmVisualController makes
+## it follow the actor, hides the normal body, and despawns it on death.
+static func _attach_swarm_visual(actor: Node) -> void:
+	if not is_instance_valid(actor):
+		return
+	var template: Dictionary = TopDownCharacterDatabase.get_template(actor.template_id)
+	var preset: String = String(template.get("swarm_visual", ""))
+	if preset.is_empty():
+		return
+	var scene_root := actor.get_tree().current_scene
+	if scene_root == null:
+		return
+	var controller := SwarmVisualController.new()
+	scene_root.add_child(controller)
+	controller.setup(actor, preset)
 
 
 ## Walk up the scene tree from a node to find the main game scene

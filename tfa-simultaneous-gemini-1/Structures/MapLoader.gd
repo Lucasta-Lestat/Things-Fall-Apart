@@ -1,6 +1,8 @@
 # res://MapLoader.gd
 extends Node2D
 
+signal map_loaded
+
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
 @export var structure_map_image_path: String = "res://maps/cemetery_structures.png"
@@ -56,6 +58,232 @@ var floor_scene: PackedScene = preload("res://Structures/floors/floor.tscn")
 func _ready():
 	# Don't auto-generate; Game.load_map() calls generate_map() after GridManager is initialized
 	pass
+
+
+# ---------------------------------------------------------------------------
+# STRUCTURED FORMAT (procedural level-editor exports; "format": "structured"
+# in Maps.json). The 4-PNG mask pipeline above exists for hand/LLM-made map
+# images; procedural maps ship real data instead:
+#   images.map          ONE finished ground PNG -- becomes a single full-map
+#                       sprite (no per-tile floor sprites, no blended
+#                       underlay: destroying a structure reveals this image)
+#   images.structures   alpha overlay holding ONLY the structure art; each
+#                       instance displays its own geometry-exact slice of it
+#   floors              per-tile type codes (rows of chars, see FLOOR_CODES)
+#                       -> logical GridManager floors (fire/pathing/audio)
+#   structures          INSTANCE GEOMETRY: wall segments, tree circles, door
+#                       leaves -- each becomes a Structure.tscn instance with
+#                       an EXACT (rotated) collision shape and per-instance
+#                       health, so the gap between two buildings is exactly
+#                       as walkable as it looks. Pathing obstacles register
+#                       only for tiles whose centre the geometry truly covers
+#                       (the flood-fill loader's bounding boxes sealed gaps).
+# ---------------------------------------------------------------------------
+
+const FLOOR_CODES := {"g": "grass", "d": "floor_dirt", "s": "floor_stone", "w": "shallow_water"}
+
+# GridManager.register_floor only reads .floor_id/.walkability; floors on
+# structured maps are logical-only (their art is baked into the ground PNG).
+class FloorStub:
+	extends RefCounted
+	var floor_id: String = ""
+	var walkability: float = 1.0
+
+
+func generate_structured_map(map_data: Dictionary) -> void:
+	# MapLoader is Game's direct child (same resolution the legacy path uses);
+	# the "game" group has no members, so a group lookup would silently return
+	# null and kill fire/targeting/loot for every structure on the map
+	var game = get_parent()
+	if game == null or not ("structures_in_scene" in game):
+		game = get_tree().current_scene
+	var images: Dictionary = map_data.get("images", {})
+	var tile_size: int = GridManager.TILE_SIZE
+
+	# 1. ground: the finished editor render as one sprite
+	var ground_path := String(images.get("map", ""))
+	if ground_path != "" and ResourceLoader.exists(ground_path):
+		var ground := Sprite2D.new()
+		ground.texture = load(ground_path)
+		ground.centered = false
+		ground.z_index = -6
+		add_child(ground)
+	else:
+		push_error("structured map: missing ground image " + ground_path)
+
+	# 2. floors: logical registration from per-tile codes
+	var rows: Array = map_data.get("floors", [])
+	for ty in rows.size():
+		var row := String(rows[ty])
+		for tx in row.length():
+			var fid := String(FLOOR_CODES.get(row[tx], ""))
+			if fid == "":
+				continue
+			var stub := FloorStub.new()
+			stub.floor_id = fid
+			var fdata = FloorDatabase.floor_definitions.get(fid)
+			if fdata != null and "walkability" in fdata:
+				stub.walkability = maxf(0.05, float(fdata.walkability))
+			GridManager.register_floor(Vector2i(tx, ty), stub)
+
+	# 3. structures: geometry instances with exact collision
+	var overlay_tex: Texture2D = null
+	var op := String(images.get("structures", ""))
+	if op != "" and ResourceLoader.exists(op):
+		overlay_tex = load(op)
+	if game != null and "structures_in_scene" in game:
+		game.structures_in_scene.clear()
+	for s in map_data.get("structures", []):
+		if typeof(s) != TYPE_DICTIONARY:
+			continue
+		var inst := _spawn_geo_structure(s, overlay_tex, tile_size)
+		if inst != null and game != null and "structures_in_scene" in game:
+			game.structures_in_scene.append(inst)
+			if inst.has_signal("destroyed") and game.has_method("_on_structure_destroyed"):
+				inst.destroyed.connect(game._on_structure_destroyed)
+
+	emit_signal("map_loaded")
+
+
+func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int) -> Structure:
+	var kind := String(s.get("kind", ""))
+	var center: Vector2
+	var shape: Shape2D
+	var shape_rot := 0.0
+	var poly_local := PackedVector2Array()
+	var occupied: Array[Vector2i] = []
+	# pathing margin: a tile registers as an obstacle only if its CENTRE is
+	# within this reach of the actual geometry (about a body-width)
+	var path_margin := float(tile_size) * 0.35
+
+	if kind == "wall":
+		var a := _arr_v2(s.get("a", [0, 0]))
+		var b := _arr_v2(s.get("b", [0, 0]))
+		var half := float(s.get("half", 5.0))
+		var seg := b - a
+		if seg.length() < 2.0:
+			return null
+		center = (a + b) * 0.5
+		var rect := RectangleShape2D.new()
+		rect.size = Vector2(seg.length(), half * 2.0)
+		shape = rect
+		shape_rot = seg.angle()
+		var dirn := seg.normalized()
+		var perp := dirn.orthogonal()
+		# generous art overgrow: wall ART extends past the collision geometry
+		# (bevelled caps, castle BATTLEMENT merlons on tower rims) -- clipping
+		# the slice at the quad leaves see-through notches where the ground
+		# shows. Overlapping neighbour slices draw identical overlay pixels, so
+		# the overlap is invisible.
+		var g := half + 12.0
+		poly_local = PackedVector2Array([
+			-seg * 0.5 - dirn * g - perp * (half + g), seg * 0.5 + dirn * g - perp * (half + g),
+			seg * 0.5 + dirn * g + perp * (half + g), -seg * 0.5 - dirn * g + perp * (half + g)])
+		occupied = _tiles_near_segment(a, b, half + path_margin, tile_size)
+	elif kind == "tree":
+		center = _arr_v2(s.get("pos", [0, 0]))
+		var r := float(s.get("r", 30.0))
+		var circ := CircleShape2D.new()
+		circ.radius = maxf(6.0, r * 0.45)   # trunk-scale: canopy overhang stays walkable
+		shape = circ
+		var rr := r + 4.0
+		poly_local = PackedVector2Array([
+			Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
+		occupied = _tiles_near_segment(center, center, circ.radius + path_margin, tile_size)
+	elif kind == "door":
+		var hinge := _arr_v2(s.get("hinge", [0, 0]))
+		var deg := float(s.get("deg", 0.0))
+		var width := float(s.get("width", 30.0))
+		var dhalf := float(s.get("half", 5.0))
+		var leaf := Vector2.RIGHT.rotated(deg_to_rad(deg)) * width
+		center = hinge + leaf * 0.5
+		var drect := RectangleShape2D.new()
+		drect.size = Vector2(width, dhalf * 2.0)
+		shape = drect
+		shape_rot = leaf.angle()
+		var ddir := leaf.normalized()
+		var dperp := ddir.orthogonal()
+		poly_local = PackedVector2Array([
+			-leaf * 0.5 - dperp * (dhalf + 2.0), leaf * 0.5 - dperp * (dhalf + 2.0),
+			leaf * 0.5 + dperp * (dhalf + 2.0), -leaf * 0.5 + dperp * (dhalf + 2.0)])
+		occupied = _tiles_near_segment(hinge, hinge + leaf, dhalf + path_margin, tile_size)
+	else:
+		return null
+
+	var inst: Structure = structure_scene.instantiate()
+	inst.structure_id = StringName(String(s.get("id", "stone_wall")))
+	inst.skip_grid_snap = true
+	inst.use_custom_texture = true
+	inst.custom_texture = _blank_tex()   # the Sprite stays hidden; Art draws instead
+	inst.custom_size = Vector2(8, 8)
+	inst.position = center
+	inst.z_index = -3
+	inst.occupied_tiles = occupied
+	add_child(inst)
+	# EXACT collision: rotated to the real geometry (the legacy loader's
+	# axis-aligned region bounding boxes are what sealed walkable gaps)
+	var cs: CollisionShape2D = inst.get_node("CollisionShape2D")
+	cs.shape = shape
+	cs.rotation = shape_rot
+	inst.get_node("Sprite").visible = false
+	if overlay_tex != null:
+		var art := Polygon2D.new()
+		art.name = "Art"
+		art.texture = overlay_tex
+		art.polygon = poly_local
+		var uvs := PackedVector2Array()
+		for p in poly_local:
+			uvs.append(p + center)   # overlay covers the whole map 1:1 in pixels
+		art.uv = uvs
+		# the overlay was rendered onto a transparent viewport, so its edge
+		# pixels carry PREMULTIPLIED alpha -- straight-alpha blending would draw
+		# dark fringes around every wall/crown edge
+		var pm := CanvasItemMaterial.new()
+		pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+		art.material = pm
+		inst.add_child(art)
+	# per-instance health: the editor scales wall hp by run length
+	if s.has("hp"):
+		inst.max_health = int(s["hp"])
+		inst.current_health = inst.max_health
+	for t in occupied:
+		GridManager.register_obstacle(t)
+	return inst
+
+
+# Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).
+func _tiles_near_segment(a: Vector2, b: Vector2, reach: float, tile_size: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var lo := Vector2(minf(a.x, b.x) - reach, minf(a.y, b.y) - reach)
+	var hi := Vector2(maxf(a.x, b.x) + reach, maxf(a.y, b.y) + reach)
+	var t0 := Vector2i(int(floor(lo.x / tile_size)), int(floor(lo.y / tile_size)))
+	var t1 := Vector2i(int(floor(hi.x / tile_size)), int(floor(hi.y / tile_size)))
+	var ab := b - a
+	var l2 := ab.length_squared()
+	for ty in range(t0.y, t1.y + 1):
+		for tx in range(t0.x, t1.x + 1):
+			var c := Vector2((tx + 0.5) * tile_size, (ty + 0.5) * tile_size)
+			var q := a
+			if l2 > 0.0001:
+				q = a + ab * clampf((c - a).dot(ab) / l2, 0.0, 1.0)
+			if c.distance_to(q) <= reach and GridManager.map_rect.has_point(Vector2i(tx, ty)):
+				out.append(Vector2i(tx, ty))
+	return out
+
+
+func _arr_v2(v) -> Vector2:
+	if typeof(v) == TYPE_ARRAY and v.size() >= 2:
+		return Vector2(float(v[0]), float(v[1]))
+	return Vector2.ZERO
+
+
+var _blank: ImageTexture
+
+func _blank_tex() -> ImageTexture:
+	if _blank == null:
+		var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+		_blank = ImageTexture.create_from_image(img)
+	return _blank
 
 func generate_map():
 	if world_map_mode:

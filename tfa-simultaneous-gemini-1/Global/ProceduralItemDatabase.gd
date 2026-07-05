@@ -90,6 +90,46 @@ func _parse_flat_item_list(item_list: Array) -> void:
 			equipment[item_key] = item_data
 		else:
 			items[item_key] = item_data
+
+# ===== CURRENCY =====
+
+func is_currency(data: Dictionary) -> bool:
+	"""True if an item-data dict is flagged with the Currency trait (gold,
+	cigarette, or anything else tagged {"Currency": >=1})."""
+	var item_traits = data.get("traits", {})
+	if not (item_traits is Dictionary):
+		return false
+	var cv = item_traits.get("Currency", 0)
+	return cv != null and int(cv) >= 1
+
+func currency_item_datas() -> Array:
+	"""All item-data dicts with the Currency trait. Payout systems (chest change,
+	downtime pay) draw money from this pool, so any Currency-tagged item can
+	circulate as currency without hardcoding an id."""
+	var result: Array = []
+	for key in items:
+		var data = items[key]
+		if data is Dictionary and is_currency(data):
+			result.append(data)
+	return result
+
+func currency_item_ids() -> Array:
+	"""Ids of all Currency-trait items."""
+	var ids: Array = []
+	for data in currency_item_datas():
+		ids.append(str(data.get("id", "")))
+	return ids
+
+func random_currency_data(fallback_id: String = "gold") -> Dictionary:
+	"""A random Currency-trait item's data, for minting a payout. Falls back to
+	the fallback id's data (then {}) if nothing is tagged."""
+	var pool := currency_item_datas()
+	if pool.is_empty():
+		var fb: Dictionary = items.get(fallback_id, {})
+		return fb
+	var chosen: Dictionary = pool[randi() % pool.size()]
+	return chosen
+
 # ===== WEAPON LOOKUPS =====
 
 func get_weapon_data(weapon_name: String) -> Dictionary:

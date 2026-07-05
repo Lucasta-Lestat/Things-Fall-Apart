@@ -113,7 +113,8 @@ func apply_fluid_style(def: Dictionary) -> void:
 			"normal_strength", "shading_contrast", "shininess",
 			"specular_intensity", "sparkle_intensity",
 			"caustic_intensity", "caustic_scale",
-			"foam_amount", "foam_width", "depth_width",
+			"foam_amount", "foam_width", "depth_full",
+			"edge_irregularity", "edge_softness", "edge_noise_scale", "edge_threshold",
 			"distortion_strength", "distortion_speed",
 			"emissive", "viscosity", "refraction_strength"]:
 		if def.has(key):
@@ -134,6 +135,12 @@ func set_corner_mask(mask: Vector4) -> void:
 	"""Set which inside corners need rounding. vec4(top-right, top-left, bottom-left, bottom-right)."""
 	if water_sprite and water_sprite.material is ShaderMaterial:
 		water_sprite.material.set_shader_parameter("corner_mask", mask)
+
+func set_coverage(sides: Vector4, diag: Vector4) -> void:
+	"""8-neighbour presence for the continuous shoreline. sides=(R,L,B,T), diag=(TR,TL,BL,BR), 1=fluid present."""
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("cov_sides", sides)
+		water_sprite.material.set_shader_parameter("cov_diag", diag)
 
 func set_custom_shader(shader_path: String) -> void:
 	"""Replace the shader with a custom one (e.g. oil sheen)."""
@@ -216,8 +223,12 @@ func snap_fill_state(ratio: float, inflow: Vector2) -> void:
 		water_sprite.material.set_shader_parameter("inflow_direction", inflow)
 
 func set_water_depth(new_depth: float):
-	"""Update water depth and visuals"""
+	"""Update water depth and visuals. The shader uses the actual amount (NOT a
+	distance-to-shore proxy) to grade opacity/colour, so a level pond is uniform
+	and fades out uniformly as it evaporates."""
 	water_depth = new_depth
+	if water_sprite and water_sprite.material is ShaderMaterial:
+		water_sprite.material.set_shader_parameter("water_depth", new_depth)
 	update_visuals()
 
 func get_flow_info() -> Dictionary:

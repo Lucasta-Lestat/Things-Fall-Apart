@@ -16,10 +16,20 @@ const EVAPORATION_RATE_PER_SEC: float = 0.002  # was effectively 0.005/sec; slow
 # Minimum flow_amount per tick to apply. Lower than PUDDLE_HEIGHT so small puddles
 # can still flow at higher tick rates (where per-tick amounts are small).
 const MIN_FLOW_AMOUNT: float = 0.001
+# Below this height difference, two tiles are treated as level and don't exchange.
+# Kills the perpetual micro-churn that made settled water show random flow.
+const FLOW_EPSILON: float = 0.006
+# Visual: don't show a current (directional waves) below this flow speed, and ease
+# the displayed direction over time so neighbours can't disagree frame-to-frame.
+const VISUAL_FLOW_MIN: float = 0.03
+const DISPLAY_DIR_EMA: float = 0.3
 
 # Flow tracking for visualization
 var flow_directions: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 var flow_speeds: Dictionary = {}  # Dictionary[Vector2i, float]
+# Temporally-smoothed display flow (direction * speed) per tile, for jitter-free
+# visuals — settled water eases to still instead of flickering each sim tick.
+var _display_flow: Dictionary = {}  # Dictionary[Vector2i, Vector2]
 
 # Average direction fluid moves AS IT ENTERS each tile (per most-recent sim tick).
 # Used by the shader to draw a directional fill front. Cleared each sim tick.
@@ -301,9 +311,15 @@ func update_fluid_simulation() -> void:
 				var neighbor_pressure = calculate_pressure(neighbor_pos, fluid_type)
 				var pressure_diff = pressure - neighbor_pressure
 
-				if pressure_diff > 0:
+				# Deadband: ignore negligible gradients so near-level tiles stop
+				# exchanging (no perpetual churn, no noisy directions).
+				if pressure_diff > FLOW_EPSILON:
+					# Cap the transfer at HALF the height difference so two tiles
+					# settle to level instead of overshooting and sloshing back and
+					# forth every tick (the classic two-cell oscillation).
 					var flow_amount = min(
-						amount * flow_rate_tick * (pressure_diff / (pressure + 0.1)),
+						min(amount * flow_rate_tick * (pressure_diff / (pressure + 0.1)),
+							pressure_diff * 0.5),
 						amount - PUDDLE_HEIGHT
 					)
 					if flow_amount > MIN_FLOW_AMOUNT:
@@ -506,6 +522,23 @@ func update_edge_masks() -> void:
 		if fluid_node.has_method("set_corner_mask"):
 			fluid_node.set_corner_mask(corner_mask)
 
+		# Continuous-shoreline coverage: pass the 8-neighbour presence so the shader
+		# reconstructs one smooth waterline across the whole body (no square cores).
+		if fluid_node.has_method("set_coverage"):
+			var cov_sides = Vector4(
+				0.0 if right_open else 1.0,
+				0.0 if left_open else 1.0,
+				0.0 if bottom_open else 1.0,
+				0.0 if top_open else 1.0
+			)
+			var cov_diag = Vector4(
+				1.0 if _has_compatible_fluid_at(tr_diag, my_type) else 0.0,
+				1.0 if _has_compatible_fluid_at(tl_diag, my_type) else 0.0,
+				1.0 if _has_compatible_fluid_at(bl_diag, my_type) else 0.0,
+				1.0 if _has_compatible_fluid_at(br_diag, my_type) else 0.0
+			)
+			fluid_node.set_coverage(cov_sides, cov_diag)
+
 func _has_compatible_fluid_at(tile_pos: Vector2i, fluid_type: String) -> bool:
 	"""True only if neighbor has the same fluid type with > PUDDLE_HEIGHT amount."""
 	if not fluid_grid.has(tile_pos):
@@ -531,6 +564,7 @@ func remove_fluid_tile(grid_pos: Vector2i) -> void:
 		fluid_grid.erase(grid_pos)
 	flow_directions.erase(grid_pos)
 	flow_speeds.erase(grid_pos)
+	_display_flow.erase(grid_pos)
 	_condition_timers.erase(grid_pos)
 	_request_edge_mask_update()
 
@@ -608,9 +642,20 @@ func update_water_tile_flows() -> void:
 	for grid_pos in active_fluid_tiles.keys():
 		var water_tile = active_fluid_tiles[grid_pos]
 		if water_tile and is_instance_valid(water_tile):
-			var flow_dir = flow_directions.get(grid_pos, Vector2.ZERO)
-			var flow_speed = flow_speeds.get(grid_pos, 0.0)
-			water_tile.set_flow_direction(flow_dir, flow_speed)
+			# Smooth + gate the displayed current: hide tiny residual flows and ease
+			# the direction over time so a settled pond looks still and adjacent
+			# tiles don't disagree from one tick to the next.
+			var raw_dir: Vector2 = flow_directions.get(grid_pos, Vector2.ZERO)
+			var raw_speed: float = flow_speeds.get(grid_pos, 0.0)
+			if raw_speed < VISUAL_FLOW_MIN:
+				raw_dir = Vector2.ZERO
+				raw_speed = 0.0
+			var prev_vec: Vector2 = _display_flow.get(grid_pos, Vector2.ZERO)
+			var smooth_vec: Vector2 = prev_vec.lerp(raw_dir * raw_speed, DISPLAY_DIR_EMA)
+			_display_flow[grid_pos] = smooth_vec
+			var disp_speed: float = smooth_vec.length()
+			var disp_dir: Vector2 = smooth_vec / disp_speed if disp_speed > 0.0001 else Vector2.ZERO
+			water_tile.set_flow_direction(disp_dir, disp_speed)
 			var fluid_type = get_fluid_type_at(grid_pos)
 			if not fluid_type.is_empty():
 				var amount = get_fluid_amount(grid_pos, fluid_type)

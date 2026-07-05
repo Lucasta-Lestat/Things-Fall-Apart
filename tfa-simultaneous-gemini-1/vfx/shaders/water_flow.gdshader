@@ -51,8 +51,12 @@ uniform float caustic_scale : hint_range(1.0, 12.0) = 5.0;
 uniform float foam_amount : hint_range(0.0, 1.0) = 0.9;
 uniform float foam_width : hint_range(0.0, 0.5) = 0.1;
 
-// Depth grading: edge distance over which shallow->deep; emissive self-glow.
-uniform float depth_width : hint_range(0.05, 1.0) = 0.5;
+// Depth grading from the ACTUAL fluid amount (set per tile by the sim) — NOT a
+// distance-to-shore proxy. A level pond shades uniformly; deeper water is more
+// opaque/saturated, a thin or evaporating puddle is lighter, clearer, and fades
+// out uniformly as it dries. depth_full = amount at which water reads fully deep.
+uniform float water_depth = 0.5;                         // fluid amount at this tile (sim)
+uniform float depth_full : hint_range(0.05, 1.5) = 0.3;  // amount -> fully deep/opaque
 uniform float emissive : hint_range(0.0, 1.0) = 0.0;
 
 // Global quality lever (set per tile by FluidManager). Scales the expensive
@@ -118,9 +122,12 @@ void fragment() {
     vec2 lit = water_lighting(N, L, shininess); // (diffuse, specular)
     float h_center = total_height(wp, t);
 
-    // --- Depth grading (shore = lighter & clearer, interior = deeper) ---
+    // --- Depth grading from the ACTUAL amount (uniform across a level pond) ---
+    // edge_d is the sub-tile distance to the waterline (drives foam). depth_t is
+    // the real fluid depth, so the interior is uniform (no rectangle) and the body
+    // fades out uniformly as it evaporates rather than dissolving edge-first.
     float edge_d = nearest_edge_distance(uv);
-    float depth_t = smoothstep(0.0, depth_width, edge_d);
+    float depth_t = clamp(water_depth / max(depth_full, 0.01), 0.0, 1.0);
     vec3 shallow_col = mix(water_color.rgb, wave_color.rgb, 0.6) * 1.18;
     vec3 deep_col = water_color.rgb * 0.78;
     vec3 base = mix(shallow_col, deep_col, depth_t);

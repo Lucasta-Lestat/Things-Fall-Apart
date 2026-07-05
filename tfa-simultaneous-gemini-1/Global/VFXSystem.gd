@@ -90,6 +90,28 @@ func create_effect(position: Vector2, size: Vector2, shape: String, effect_type:
 	
 	return effect_node
 
+# Spawn a GPU-flocked swarm (spell motes or creatures) at a world position and
+# return the BoidField so the caller can steer it.
+#   preset  - a BoidPresets name: "arcane_motes", "fire_swarm", "spirit_wisps",
+#             "insect_swarm", "rat_swarm", ...
+#   params  - optional. Recognised keys: "duration" (auto-despawn seconds),
+#             "target" (Vector2 to seek). Any other key is a BoidPresets
+#             override (e.g. "count", "color", "max_speed", "bounds_half").
+func create_boids(position: Vector2, preset: String, params: Dictionary = {}) -> BoidField:
+	var overrides := params.duplicate()
+	overrides.erase("duration")
+	overrides.erase("target")
+	var field := BoidField.spawn(get_tree().current_scene, preset, position, overrides)
+	if params.has("target"):
+		field.set_target(params["target"])
+	var duration: float = params.get("duration", 0.0)
+	if duration > 0.0:
+		var timer := get_tree().create_timer(duration)
+		timer.timeout.connect(func() -> void:
+			if is_instance_valid(field):
+				field.despawn())
+	return field
+
 func _create_effect_node() -> Node2D:
 	var node = Node2D.new()
 	node.set_script(load("res://VFXEffectNode.gd"))  # Use load instead of preload

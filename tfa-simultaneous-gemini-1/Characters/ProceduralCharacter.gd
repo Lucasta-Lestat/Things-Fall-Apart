@@ -3058,7 +3058,10 @@ func _handle_input() -> void:
 		if warp != null and game:
 			var target_map: String = warp.get_meta("target_map", "")
 			if not target_map.is_empty():
-				game.load_map(target_map, game.current_map_id)
+				# target_spawn (when the destination defines that key) beats the
+				# from_<map> convention -- same-map stairs land at their marker
+				game.load_map(target_map, game.current_map_id,
+					warp.get_meta("target_spawn", ""))
 				return
 
 	# --- Left mouse button - probe readable (note/book) ---

@@ -43,7 +43,10 @@ func _on_option_selected(option: String):
 	if target_character is Area2D and target_character.has_meta("target_map"):
 		var target_map: String = target_character.get_meta("target_map", "")
 		if not target_map.is_empty():
-			game.load_map(target_map, game.current_map_id)
+			# target_spawn (when set) beats the from_<map> convention -- same-map
+			# stairs land at their linked arrival marker
+			game.load_map(target_map, game.current_map_id,
+				target_character.get_meta("target_spawn", ""))
 		queue_free()
 		game.call_deferred("set", "context_menu_open", false)
 		return

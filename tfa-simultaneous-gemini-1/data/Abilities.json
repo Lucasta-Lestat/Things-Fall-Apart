@@ -1,6 +1,22 @@
 {
 	"abilities": [
 		{
+			"id": "rat_pack",
+			"display_name": "Rat Pack",
+			"description": "Conjure a writhing swarm of rats that fights at your side until slain.",
+			"icon": "res://UI/UI Icons/ability_cloud_kill.png",
+			"visual_duration": 1.0,
+			"costs": {},
+			"cast_time": 0.0,
+			"interruptible": true,
+			"traits": { "spell": 1, "summon": 1, "magical": 1, "Occult": 2 },
+			"targeting": { "type": "point", "range": 220.0, "shape": "none", "radius": 0.0 },
+			"effects": [
+				{ "type": "summon", "summon_type": "character", "summon_id": "rat_swarm", "count": 1, "spread_radius": 0.0 }
+			],
+			"visuals": { "cast_effect": "", "sound_cast": "" }
+		},
+		{
 			"id": "fireball",
 			"display_name": "Fireball",
 			"description": "Hurl a ball of fire that explodes on impact, dealing fire damage to all enemies in the area.",

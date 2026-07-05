@@ -1,3088 +1,8791 @@
 {
 	"maps": [
 		{
-			"id": "cemetery",
-			"name": "Old Cemetery",
 			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
-			"region": "perrow",
+			"dialogue_time_triggers": [
+				{
+					"dialogue": "demo_scheduled_dialogue",
+					"id": "demo_midnight_bell",
+					"recurrence": "daily",
+					"scope": {
+						"map": "cemetery"
+					},
+					"when": {
+						"hour": 0.0,
+						"minute": 0.0
+					}
+				}
+			],
+			"dialogue_triggers_on_load": [
+				{
+					"dialogue": "demo_cemetery_on_load",
+					"id": "demo_cemetery_arrival",
+					"one_shot": true
+				}
+			],
+			"dialogue_zones": [
+				{
+					"dialogue": "demo_cemetery_zone",
+					"id": "demo_altar_zone",
+					"one_shot": true,
+					"position": [
+						600.0,
+						300.0
+					],
+					"radius": 80.0,
+					"trigger_on": "protagonist"
+				}
+			],
+			"fluid_spawns": [
+				{
+					"amount": 0.5,
+					"position": [
+						5.0,
+						3.0
+					],
+					"radius": 2.0,
+					"type": "oil"
+				},
+				{
+					"amount": 0.3,
+					"position": [
+						3.0,
+						6.0
+					],
+					"radius": 1.0,
+					"type": "oil"
+				}
+			],
+			"fog_ids": [
+				"fog"
+			],
+			"id": "cemetery",
 			"images": {
 				"map": "res://Maps/cemetery.png",
 				"mask": "res://Maps/cemetery_mask.png",
 				"structures": "res://Maps/cemetery_structures.png",
 				"structures_mask": "res://Maps/cemetery_structures_mask.png"
 			},
-			"tile_size": 64,
-			"music_track": "cemetery_ambient",
-			"weather_group": "Scarlatti",
-			"fog_ids": [
-				"fog"
+			"item_spawns": [
+				{
+					"count": 1.0,
+					"id": "potion_of_healing",
+					"position": [
+						150.0,
+						200.0
+					]
+				},
+				{
+					"container": "chest",
+					"count": 3.0,
+					"id": "gold",
+					"position": [
+						320.0,
+						280.0
+					]
+				},
+				{
+					"controlling_faction": "cultists",
+					"count": 1.0,
+					"id": "treasure_chest",
+					"position": [
+						2400.0,
+						1100.0
+					],
+					"value": 80.0
+				},
+				{
+					"condition": {
+						"readable_collected::torn_journal_page": false
+					},
+					"count": 1.0,
+					"id": "torn_journal_page",
+					"position": [
+						260.0,
+						200.0
+					]
+				},
+				{
+					"condition": {
+						"readable_collected::chronicle_of_perrow": false
+					},
+					"count": 1.0,
+					"id": "chronicle_of_perrow",
+					"position": [
+						320.0,
+						200.0
+					]
+				}
 			],
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				},
-				"from_town_square": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				},
-				"from_catacombs": {
-					"position": [
-						480,
-						350
-					],
-					"facing": 270
-				},
-				"from_venonan_chapel": {
-					"position": [
-						2700,
-						700
-					],
-					"facing": 180
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 40
-				},
-				"from_town_square": {
-					"formation": "column",
-					"offset_radius": 30,
-					"facing": 90
-				}
-			},
+			"music_track": "cemetery_ambient",
+			"name": "Old Cemetery",
 			"npc_spawns": [
 				{
-					"template_id": "cultist",
-					"position": [
-						400,
-						300
-					],
-					"count": 2,
-					"spread_radius": 30,
 					"condition": {
 						"quest": "dark_ritual",
 						"state": "active"
-					}
+					},
+					"count": 2.0,
+					"position": [
+						400.0,
+						300.0
+					],
+					"spread_radius": 30.0,
+					"template_id": "cultist"
 				},
 				{
-					"template_id": "surgeon_captain_federica",
-					"position": [
-						250,
-						200
-					],
-					"count": 1,
 					"condition": {
-						"time_hour_min": 20
-					}
+						"time_hour_min": 20.0
+					},
+					"count": 1.0,
+					"position": [
+						250.0,
+						200.0
+					],
+					"template_id": "surgeon_captain_federica"
 				},
 				{
-					"template_id": "test_male_elf",
+					"count": 1.0,
 					"position": [
-						150,
-						100
+						150.0,
+						100.0
 					],
-					"count": 1
+					"template_id": "test_male_elf"
 				}
 			],
-			"fluid_spawns": [
-				{
-					"type": "oil",
-					"position": [
-						5,
-						3
-					],
-					"amount": 0.5,
-					"radius": 2
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40.0
 				},
-				{
-					"type": "oil",
-					"position": [
-						3,
-						6
-					],
-					"amount": 0.3,
-					"radius": 1
+				"from_town_square": {
+					"facing": 90.0,
+					"formation": "column",
+					"offset_radius": 30.0
 				}
-			],
-			"item_spawns": [
-				{
-					"id": "potion_of_healing",
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
 					"position": [
-						150,
-						200
-					],
-					"count": 1
+						40.0,
+						40.0
+					]
 				},
-				{
-					"id": "gold",
+				"from_catacombs": {
+					"facing": 270.0,
 					"position": [
-						320,
-						280
-					],
-					"count": 3,
-					"container": "chest"
+						480.0,
+						350.0
+					]
 				},
-				{
-					"id": "treasure_chest",
+				"from_town_square": {
+					"facing": 90.0,
 					"position": [
-						2400,
-						1100
-					],
-					"count": 1,
-					"controlling_faction": "cultists",
-					"value": 80
+						40.0,
+						40.0
+					]
 				},
-				{
-					"id": "torn_journal_page",
+				"from_venonan_chapel": {
+					"facing": 180.0,
 					"position": [
-						260,
-						200
-					],
-					"count": 1,
-					"condition": {
-						"readable_collected::torn_journal_page": false
-					}
-				},
-				{
-					"id": "chronicle_of_perrow",
-					"position": [
-						320,
-						200
-					],
-					"count": 1,
-					"condition": {
-						"readable_collected::chronicle_of_perrow": false
-					}
+						2700.0,
+						700.0
+					]
 				}
-			],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_town_square",
+					"label": "To Town Square",
 					"position": [
-						20,
-						300
+						20.0,
+						300.0
 					],
 					"size": [
-						20,
-						60
+						20.0,
+						60.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_cemetery",
-					"label": "To Town Square"
+					"target_spawn": "from_cemetery"
 				},
 				{
-					"id": "to_catacombs",
-					"position": [
-						490,
-						350
-					],
-					"size": [
-						30,
-						30
-					],
-					"target_map": "catacombs",
-					"target_spawn": "from_cemetery",
-					"label": "Enter Catacombs",
 					"condition": {
 						"item": "catacombs_key"
-					}
+					},
+					"id": "to_catacombs",
+					"label": "Enter Catacombs",
+					"position": [
+						490.0,
+						350.0
+					],
+					"size": [
+						30.0,
+						30.0
+					],
+					"target_map": "catacombs",
+					"target_spawn": "from_cemetery"
 				},
 				{
 					"id": "to_venonan_chapel",
+					"label": "To Venonan Chapel",
 					"position": [
-						2700,
-						700
+						2700.0,
+						700.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "venonan_chapel",
-					"target_spawn": "from_cemetery",
-					"label": "To Venonan Chapel"
+					"target_spawn": "from_cemetery"
 				}
 			],
-			"dialogue_triggers_on_load": [
-				{
-					"id": "demo_cemetery_arrival",
-					"dialogue": "demo_cemetery_on_load",
-					"one_shot": true
-				}
-			],
-			"dialogue_zones": [
-				{
-					"id": "demo_altar_zone",
-					"dialogue": "demo_cemetery_zone",
-					"position": [
-						600,
-						300
-					],
-					"radius": 80,
-					"trigger_on": "protagonist",
-					"one_shot": true
-				}
-			],
-			"dialogue_time_triggers": [
-				{
-					"id": "demo_midnight_bell",
-					"dialogue": "demo_scheduled_dialogue",
-					"when": {
-						"hour": 0,
-						"minute": 0
-					},
-					"recurrence": "daily",
-					"scope": {
-						"map": "cemetery"
-					}
-				}
-			]
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "town_square",
-			"name": "Town Square",
 			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "town_square",
 			"images": {
 				"map": "res://Maps/town_square_clean.png",
 				"mask": "res://Maps/town_square_mask.png",
 				"structures": "res://Maps/town_square.jpg",
 				"structures_mask": "res://Maps/town_square_structures_mask.png"
 			},
-			"tile_size": 64,
-			"music_track": "town_theme",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"item_spawns": [
+				{
+					"controlling_faction": "liziti",
+					"count": 1.0,
+					"id": "treasure_chest",
 					"position": [
-						1024,
-						1024
+						1700.0,
+						1700.0
 					],
-					"facing": 0
-				},
-				"from_cemetery": {
-					"position": [
-						2000,
-						1024
-					],
-					"facing": 180
-				},
-				"from_venonan_chapel": {
-					"position": [
-						60,
-						1024
-					],
-					"facing": 0
-				},
-				"from_perrow_tavern": {
-					"position": [
-						1024,
-						60
-					],
-					"facing": 90
-				},
-				"from_dock_tavern": {
-					"position": [
-						1024,
-						2000
-					],
-					"facing": 270
-				},
-				"from_minschaleft_university": {
-					"position": [
-						2000,
-						200
-					],
-					"facing": 180
-				},
-				"from_perrow_heart_village": {
-					"position": [
-						1024,
-						190
-					],
-					"facing": 90
+					"value": 100.0
 				}
-			},
+			],
+			"music_track": "town_theme",
+			"name": "Town Square",
+			"npc_spawns": [
+				{
+					"count": 2.0,
+					"position": [
+						100.0,
+						100.0
+					],
+					"spread_radius": 40.0,
+					"template_id": "town_guard"
+				},
+				{
+					"count": 3.0,
+					"dialogue": "merchant_generic",
+					"position": [
+						256.0,
+						200.0
+					],
+					"spread_radius": 60.0,
+					"template_id": "merchant"
+				},
+				{
+					"count": 1.0,
+					"dialogue": "castellan_intro",
+					"position": [
+						400.0,
+						300.0
+					],
+					"template_id": "noble_lord",
+					"unique_name": "Lord Castellan"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						800.0,
+						800.0
+					],
+					"template_id": "smith_darcy"
+				}
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 35
+					"offset_radius": 35.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "town_guard",
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
 					"position": [
-						100,
-						100
-					],
-					"count": 2,
-					"spread_radius": 40
+						1024.0,
+						1024.0
+					]
 				},
-				{
-					"template_id": "merchant",
+				"from_cemetery": {
+					"facing": 180.0,
 					"position": [
-						256,
-						200
-					],
-					"count": 3,
-					"spread_radius": 60,
-					"dialogue": "merchant_generic"
+						2000.0,
+						1024.0
+					]
 				},
-				{
-					"template_id": "noble_lord",
+				"from_dock_tavern": {
+					"facing": 270.0,
 					"position": [
-						400,
-						300
-					],
-					"count": 1,
-					"unique_name": "Lord Castellan",
-					"dialogue": "castellan_intro"
+						1024.0,
+						2000.0
+					]
 				},
-				{
-					"template_id": "smith_darcy",
+				"from_minschaleft_university": {
+					"facing": 180.0,
 					"position": [
-						800,
-						800
-					],
-					"count": 1
+						2000.0,
+						200.0
+					]
+				},
+				"from_perrow_heart_village": {
+					"facing": 90.0,
+					"position": [
+						1024.0,
+						190.0
+					]
+				},
+				"from_perrow_tavern": {
+					"facing": 90.0,
+					"position": [
+						1024.0,
+						60.0
+					]
+				},
+				"from_venonan_chapel": {
+					"facing": 0.0,
+					"position": [
+						60.0,
+						1024.0
+					]
 				}
-			],
-			"item_spawns": [
-				{
-					"id": "treasure_chest",
-					"position": [
-						1700,
-						1700
-					],
-					"count": 1,
-					"controlling_faction": "liziti",
-					"value": 100
-				}
-			],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_cemetery",
+					"label": "To Cemetery",
 					"position": [
-						2010,
-						1024
+						2010.0,
+						1024.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "cemetery",
-					"target_spawn": "from_town_square",
-					"label": "To Cemetery"
+					"target_spawn": "from_town_square"
 				},
 				{
 					"id": "to_venonan_chapel",
+					"label": "To Venonan Chapel",
 					"position": [
-						40,
-						1024
+						40.0,
+						1024.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "venonan_chapel",
-					"target_spawn": "from_town_square",
-					"label": "To Venonan Chapel"
+					"target_spawn": "from_town_square"
 				},
 				{
 					"id": "to_perrow_tavern",
+					"label": "Enter Perrow Tavern",
 					"position": [
-						1024,
-						40
+						1024.0,
+						40.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_tavern",
-					"target_spawn": "from_town_square",
-					"label": "Enter Perrow Tavern"
+					"target_spawn": "from_town_square"
 				},
 				{
 					"id": "to_dock_tavern",
+					"label": "Enter Dock Tavern",
 					"position": [
-						1024,
-						2010
+						1024.0,
+						2010.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "dock_tavern",
-					"target_spawn": "from_town_square",
-					"label": "Enter Dock Tavern"
+					"target_spawn": "from_town_square"
 				},
 				{
 					"id": "to_minschaleft_university",
+					"label": "To Minschaleft University",
 					"position": [
-						2010,
-						200
+						2010.0,
+						200.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "minschaleft_university",
-					"target_spawn": "from_town_square",
-					"label": "To Minschaleft University"
+					"target_spawn": "from_town_square"
 				},
 				{
 					"id": "to_perrow_heart_village",
+					"label": "To Heart of the Village",
 					"position": [
-						1024,
-						100
+						1024.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_heart_village",
-					"target_spawn": "from_town_square",
-					"label": "To Heart of the Village"
+					"target_spawn": "from_town_square"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "colosseum",
-			"name": "The Colosseum",
 			"description": "A grand arena ringed with tiered stone seating, where crowds once roared for blood and glory.",
+			"fog_ids": [],
+			"id": "colosseum",
 			"images": {
 				"map": "res://Maps/Colosseum Clean.png",
 				"mask": "res://Maps/Colosseum_mask.png",
 				"structures": "res://Maps/Colosseum.png",
 				"structures_mask": "res://Maps/Colosseum_structures_mask.png"
 			},
-			"tile_size": 64,
-			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"item_spawns": [
+				{
+					"controlling_faction": "dragatini",
+					"count": 1.0,
+					"id": "treasure_chest",
 					"position": [
-						768,
-						768
+						1300.0,
+						200.0
 					],
-					"facing": 0
+					"value": 120.0
 				}
-			},
+			],
+			"music_track": "",
+			"name": "The Colosseum",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40
+					"offset_radius": 40.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [
-				{
-					"id": "treasure_chest",
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
 					"position": [
-						1300,
-						200
-					],
-					"count": 1,
-					"controlling_faction": "dragatini",
-					"value": 120
+						768.0,
+						768.0
+					]
 				}
-			],
-			"warp_points": []
+			},
+			"tile_size": 64.0,
+			"warp_points": [],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "venonan_chapel",
-			"name": "Venonan Chapel",
 			"description": "A weathered chapel of grey stone outside Venonan, its bells long silenced by neglect.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "venonan_chapel",
 			"images": {
 				"map": "res://Maps/venonan_chapel_clean.png",
 				"mask": "res://Maps/venonan_chapel_mask.png",
 				"structures": "res://Maps/Venonan_chapel.png",
 				"structures_mask": "res://Maps/venonan_chapel_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						436,
-						578
-					],
-					"facing": 0
-				},
-				"from_cemetery": {
-					"position": [
-						40,
-						578
-					],
-					"facing": 0
-				},
-				"from_town_square": {
-					"position": [
-						820,
-						578
-					],
-					"facing": 180
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30
-				}
-			},
+			"name": "Venonan Chapel",
 			"npc_spawns": [
 				{
-					"template_id": "reverend_mother_liana",
+					"count": 1.0,
 					"position": [
-						400,
-						400
+						400.0,
+						400.0
 					],
-					"count": 1
+					"template_id": "reverend_mother_liana"
 				},
 				{
-					"template_id": "mother_inferior_macaria",
+					"count": 1.0,
 					"position": [
-						500,
-						400
+						500.0,
+						400.0
 					],
-					"count": 1
+					"template_id": "mother_inferior_macaria"
 				},
 				{
-					"template_id": "pit_monitor",
+					"count": 1.0,
 					"position": [
-						600,
-						600
+						600.0,
+						600.0
 					],
-					"count": 1
+					"template_id": "pit_monitor"
 				},
 				{
+					"count": 1.0,
+					"position": [
+						620.0,
+						620.0
+					],
 					"template_id": "pit_hound",
-					"position": [
-						620,
-						620
-					],
-					"count": 1,
 					"unique_name": "Julius"
 				},
 				{
-					"template_id": "pit_hound",
+					"count": 1.0,
 					"position": [
-						640,
-						620
+						640.0,
+						620.0
 					],
-					"count": 1,
+					"template_id": "pit_hound",
 					"unique_name": "Augustus"
 				},
 				{
-					"template_id": "pit_hound",
+					"count": 1.0,
 					"position": [
-						660,
-						620
+						660.0,
+						620.0
 					],
-					"count": 1,
+					"template_id": "pit_hound",
 					"unique_name": "Octavius"
 				},
 				{
-					"template_id": "pit_hound",
+					"count": 1.0,
 					"position": [
-						680,
-						620
+						680.0,
+						620.0
 					],
-					"count": 1,
+					"template_id": "pit_hound",
 					"unique_name": "Cleopatra"
 				},
 				{
-					"template_id": "pit_hound",
+					"count": 1.0,
 					"position": [
-						700,
-						620
+						700.0,
+						620.0
 					],
-					"count": 1,
+					"template_id": "pit_hound",
 					"unique_name": "Philbert"
 				}
 			],
-			"item_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						436.0,
+						578.0
+					]
+				},
+				"from_cemetery": {
+					"facing": 0.0,
+					"position": [
+						40.0,
+						578.0
+					]
+				},
+				"from_town_square": {
+					"facing": 180.0,
+					"position": [
+						820.0,
+						578.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_cemetery",
+					"label": "To Cemetery",
 					"position": [
-						20,
-						578
+						20.0,
+						578.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "cemetery",
-					"target_spawn": "from_venonan_chapel",
-					"label": "To Cemetery"
+					"target_spawn": "from_venonan_chapel"
 				},
 				{
 					"id": "to_town_square",
+					"label": "To Town Square",
 					"position": [
-						840,
-						578
+						840.0,
+						578.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_venonan_chapel",
-					"label": "To Town Square"
+					"target_spawn": "from_venonan_chapel"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_tavern",
-			"name": "Perrow Tavern",
 			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_tavern",
 			"images": {
 				"map": "res://Maps/perrow_tavern_clean.png",
 				"mask": "res://Maps/perrow_tavern_mask.png",
 				"structures": "res://Maps/perrow_tavern.png",
 				"structures_mask": "res://Maps/perrow_tavern_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "tavern_theme",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"name": "Perrow Tavern",
+			"npc_spawns": [
+				{
+					"count": 1.0,
 					"position": [
-						1024,
-						1900
+						800.0,
+						1000.0
 					],
-					"facing": 270
+					"template_id": "austache_jongle"
 				},
-				"from_town_square": {
+				{
+					"count": 1.0,
 					"position": [
-						1024,
-						1900
+						1200.0,
+						1000.0
 					],
-					"facing": 270
+					"template_id": "mostlemyre_drouge"
 				}
-			},
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "austache_jongle",
+			"player_spawns": {
+				"default": {
+					"facing": 270.0,
 					"position": [
-						800,
-						1000
-					],
-					"count": 1
+						1024.0,
+						1900.0
+					]
 				},
-				{
-					"template_id": "mostlemyre_drouge",
+				"from_town_square": {
+					"facing": 270.0,
 					"position": [
-						1200,
-						1000
-					],
-					"count": 1
+						1024.0,
+						1900.0
+					]
 				}
-			],
-			"item_spawns": [],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_town_square",
+					"label": "Out to Town Square",
 					"position": [
-						1024,
-						2000
+						1024.0,
+						2000.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_perrow_tavern",
-					"label": "Out to Town Square"
+					"target_spawn": "from_perrow_tavern"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "dock_tavern",
-			"name": "Dock Tavern",
 			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "dock_tavern",
 			"images": {
 				"map": "res://Maps/dock_tavern_clean.png",
 				"mask": "res://Maps/dock_tavern_mask.png",
 				"structures": "res://Maps/dock-tavern.png",
 				"structures_mask": "res://Maps/dock_tavern_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "tavern_theme",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"name": "Dock Tavern",
+			"npc_spawns": [
+				{
+					"count": 1.0,
 					"position": [
-						421,
-						578
+						421.0,
+						700.0
 					],
-					"facing": 90
+					"template_id": "alewife_juturna"
 				},
-				"from_town_square": {
+				{
+					"count": 1.0,
 					"position": [
-						421,
-						1100
+						500.0,
+						750.0
 					],
-					"facing": 270
+					"template_id": "mary_guana"
 				},
-				"from_don_manor": {
+				{
+					"count": 1.0,
 					"position": [
-						800,
-						578
+						350.0,
+						800.0
 					],
-					"facing": 180
+					"template_id": "hunter_john"
 				},
-				"from_lighthouse": {
+				{
+					"count": 1.0,
 					"position": [
-						421,
-						190
+						600.0,
+						700.0
 					],
-					"facing": 90
+					"template_id": "centurion_marcus"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						650.0,
+						700.0
+					],
+					"template_id": "deputy_gleg"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						300.0,
+						900.0
+					],
+					"template_id": "hedge_witch_magda"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						421.0,
+						950.0
+					],
+					"template_id": "lot_lizard_zillah"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						500.0,
+						950.0
+					],
+					"template_id": "andrew_tuatara"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						700.0,
+						800.0
+					],
+					"template_id": "alligator_capone"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						350.0,
+						950.0
+					],
+					"template_id": "cletus_samson"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						200.0,
+						900.0
+					],
+					"template_id": "obediah"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						220.0,
+						900.0
+					],
+					"template_id": "jezebel"
 				}
-			},
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "alewife_juturna",
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
 					"position": [
-						421,
-						700
-					],
-					"count": 1
+						421.0,
+						578.0
+					]
 				},
-				{
-					"template_id": "mary_guana",
+				"from_don_manor": {
+					"facing": 180.0,
 					"position": [
-						500,
-						750
-					],
-					"count": 1
+						800.0,
+						578.0
+					]
 				},
-				{
-					"template_id": "hunter_john",
+				"from_lighthouse": {
+					"facing": 90.0,
 					"position": [
-						350,
-						800
-					],
-					"count": 1
+						421.0,
+						190.0
+					]
 				},
-				{
-					"template_id": "centurion_marcus",
+				"from_town_square": {
+					"facing": 270.0,
 					"position": [
-						600,
-						700
-					],
-					"count": 1
-				},
-				{
-					"template_id": "deputy_gleg",
-					"position": [
-						650,
-						700
-					],
-					"count": 1
-				},
-				{
-					"template_id": "hedge_witch_magda",
-					"position": [
-						300,
-						900
-					],
-					"count": 1
-				},
-				{
-					"template_id": "lot_lizard_zillah",
-					"position": [
-						421,
-						950
-					],
-					"count": 1
-				},
-				{
-					"template_id": "andrew_tuatara",
-					"position": [
-						500,
-						950
-					],
-					"count": 1
-				},
-				{
-					"template_id": "alligator_capone",
-					"position": [
-						700,
-						800
-					],
-					"count": 1
-				},
-				{
-					"template_id": "cletus_samson",
-					"position": [
-						350,
-						950
-					],
-					"count": 1
-				},
-				{
-					"template_id": "obediah",
-					"position": [
-						200,
-						900
-					],
-					"count": 1
-				},
-				{
-					"template_id": "jezebel",
-					"position": [
-						220,
-						900
-					],
-					"count": 1
+						421.0,
+						1100.0
+					]
 				}
-			],
-			"item_spawns": [],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_town_square",
+					"label": "Out to Town Square",
 					"position": [
-						421,
-						1130
+						421.0,
+						1130.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_dock_tavern",
-					"label": "Out to Town Square"
+					"target_spawn": "from_dock_tavern"
 				},
 				{
 					"id": "to_don_manor",
+					"label": "To Don Manor",
 					"position": [
-						820,
-						578
+						820.0,
+						578.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "don_manor",
-					"target_spawn": "from_dock_tavern",
-					"label": "To Don Manor"
+					"target_spawn": "from_dock_tavern"
 				},
 				{
 					"id": "to_lighthouse",
+					"label": "To Lighthouse",
 					"position": [
-						421,
-						100
+						421.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "lighthouse",
-					"target_spawn": "from_dock_tavern",
-					"label": "To Lighthouse"
+					"target_spawn": "from_dock_tavern"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "don_manor",
-			"name": "Don Manor",
 			"description": "An imposing manor house that serves as the seat of the local Don, ringed by guards and rumor.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "don_manor",
 			"images": {
 				"map": "res://Maps/don_manor_clean.jpg",
 				"mask": "res://Maps/don_manor_mask.png",
 				"structures": "res://Maps/don_manor.jpg",
 				"structures_mask": "res://Maps/don_manor_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"name": "Don Manor",
+			"npc_spawns": [
+				{
+					"count": 1.0,
 					"position": [
-						465,
-						578
+						465.0,
+						400.0
 					],
-					"facing": 270
+					"template_id": "liziti_don",
+					"titles": [
+						"Don"
+					],
+					"unique_name": "Iguana Don"
 				},
-				"from_dock_tavern": {
+				{
+					"count": 1.0,
 					"position": [
-						40,
-						578
+						600.0,
+						600.0
 					],
-					"facing": 0
+					"template_id": "saul_laelia"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						700.0,
+						700.0
+					],
+					"template_id": "big_al_samson"
 				}
-			},
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "liziti_don",
+			"player_spawns": {
+				"default": {
+					"facing": 270.0,
 					"position": [
-						465,
-						400
-					],
-					"count": 1,
-					"unique_name": "Iguana Don",
-					"titles": [
-						"Don"
+						465.0,
+						578.0
 					]
 				},
-				{
-					"template_id": "saul_laelia",
+				"from_dock_tavern": {
+					"facing": 0.0,
 					"position": [
-						600,
-						600
-					],
-					"count": 1
-				},
-				{
-					"template_id": "big_al_samson",
-					"position": [
-						700,
-						700
-					],
-					"count": 1
+						40.0,
+						578.0
+					]
 				}
-			],
-			"item_spawns": [],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_dock_tavern",
+					"label": "To Dock Tavern",
 					"position": [
-						20,
-						578
+						20.0,
+						578.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "dock_tavern",
-					"target_spawn": "from_don_manor",
-					"label": "To Dock Tavern"
+					"target_spawn": "from_don_manor"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "minschaleft_university",
-			"name": "Minschaleft University",
 			"description": "A sprawling university whose halls have lately grown unsettlingly quiet.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "minschaleft_university",
 			"images": {
 				"map": "res://Maps/minschaleft_university_clean.png",
 				"mask": "res://Maps/minschaleft_university_mask.png",
 				"structures": "res://Maps/minschaleft_university.png",
 				"structures_mask": "res://Maps/minschaleft_university_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"name": "Minschaleft University",
+			"npc_spawns": [
+				{
+					"count": 1.0,
 					"position": [
-						418,
-						668
+						400.0,
+						600.0
 					],
-					"facing": 0
+					"template_id": "professor_circino"
 				},
-				"from_town_square": {
+				{
+					"count": 1.0,
 					"position": [
-						60,
-						668
+						500.0,
+						600.0
 					],
-					"facing": 0
+					"template_id": "professor_easton"
+				},
+				{
+					"count": 1.0,
+					"position": [
+						450.0,
+						700.0
+					],
+					"template_id": "zakariah"
 				}
-			},
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "professor_circino",
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
 					"position": [
-						400,
-						600
-					],
-					"count": 1
+						418.0,
+						668.0
+					]
 				},
-				{
-					"template_id": "professor_easton",
+				"from_town_square": {
+					"facing": 0.0,
 					"position": [
-						500,
-						600
-					],
-					"count": 1
-				},
-				{
-					"template_id": "zakariah",
-					"position": [
-						450,
-						700
-					],
-					"count": 1
+						60.0,
+						668.0
+					]
 				}
-			],
-			"item_spawns": [],
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_town_square",
+					"label": "Out to Town Square",
 					"position": [
-						40,
-						668
+						40.0,
+						668.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_minschaleft_university",
-					"label": "Out to Town Square"
+					"target_spawn": "from_minschaleft_university"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "eeler_floor_two",
-			"name": "Eeler Floor Two",
 			"description": "The second floor of the Eeler, dim and close, with low ceilings that swallow sound.",
+			"fog_ids": [],
+			"id": "eeler_floor_two",
 			"images": {
 				"map": "res://Maps/eeler floor two.png",
 				"mask": "res://Maps/eeler_floor_two_mask.png",
 				"structures": "res://Maps/eeler floor two.png",
 				"structures_mask": "res://Maps/eeler_floor_two_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						421,
-						578
-					],
-					"facing": 0
-				}
-			},
+			"name": "Eeler Floor Two",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
-			"warp_points": []
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						421.0,
+						578.0
+					]
+				}
+			},
+			"tile_size": 64.0,
+			"warp_points": [],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "skarsgaard_throne",
-			"name": "Skarsgaard Throne Hall",
 			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
+			"id": "skarsgaard_throne",
+			"images": {
+
+			},
+			"item_spawns": [],
+			"name": "Skarsgaard Throne Hall",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
 			"region": "skarsgaard",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30
-				}
-			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "southrons_mill",
-			"name": "Southron's Mill",
 			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
-			"region": "perrow",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
+			"id": "southrons_mill",
+			"images": {
+
 			},
+			"item_spawns": [],
+			"name": "Southron's Mill",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "vermincelli_hideout",
-			"name": "Vermincelli Hideout",
 			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
-			"region": "perrow",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
+			"id": "vermincelli_hideout",
+			"images": {
+
 			},
+			"item_spawns": [],
+			"name": "Vermincelli Hideout",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "sacred_grove",
-			"name": "The Sacred Grove",
 			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
-			"region": "wilderness",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
+			"id": "sacred_grove",
+			"images": {
+
 			},
+			"item_spawns": [],
+			"name": "The Sacred Grove",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
+			"region": "wilderness",
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
+			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
 			"id": "bortelinian_catacombs",
+			"images": {
+
+			},
+			"item_spawns": [],
 			"name": "Bortelinian Catacombs",
-			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
 			"region": "perrow",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30
-				}
-			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "alamonean_tower",
-			"name": "Alamonean Magician's Tower",
 			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"id": "alamonean_tower",
+			"images": {
+
+			},
+			"item_spawns": [],
+			"name": "Alamonean Magician's Tower",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
 			"region": "alamone",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30
-				}
-			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "river_elf_village",
-			"name": "River-Elf Village",
 			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
+			"id": "river_elf_village",
+			"images": {
+
+			},
+			"item_spawns": [],
+			"name": "River-Elf Village",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
 			"region": "wilderness",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
-			},
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30
-				}
-			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "curia",
-			"name": "The Scarlattin Curia",
 			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
-			"region": "scarlatti",
-			"images": {},
-			"tile_size": 64,
-			"player_spawns": {
-				"default": {
-					"position": [
-						40,
-						40
-					],
-					"facing": 90
-				}
+			"id": "curia",
+			"images": {
+
 			},
+			"item_spawns": [],
+			"name": "The Scarlattin Curia",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						40.0,
+						40.0
+					]
+				}
+			},
+			"region": "scarlatti",
+			"tile_size": 64.0,
 			"warp_points": []
 		},
 		{
-			"id": "scarlatti_world",
-			"name": "Scarlatti",
 			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
-			"region": "scarlatti",
-			"is_world_map": true,
-			"time_scale_multiplier": 60.0,
+			"fluid_spawns": [],
+			"fog_ids": [],
+			"id": "scarlatti_world",
 			"images": {
 				"map": "res://Maps/Scarlatti World Map (3).png",
 				"mask": "res://Maps/scarlatti_world_mask.png"
 			},
-			"tile_size": 64,
+			"is_world_map": true,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
+			"name": "Scarlatti",
+			"npc_spawns": [
+				{
+					"count": 1.0,
+					"faction": "cultists",
 					"position": [
-						1500,
-						220
+						1200.0,
+						1100.0
 					],
-					"facing": 180
+					"template_id": "cultist"
+				},
+				{
+					"count": 1.0,
+					"faction": "cultists",
+					"position": [
+						1500.0,
+						700.0
+					],
+					"template_id": "cultist"
 				}
-			},
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "single",
-					"offset_radius": 0
+					"offset_radius": 0.0
 				}
 			},
-			"npc_spawns": [
-				{
-					"template_id": "cultist",
+			"player_spawns": {
+				"default": {
+					"facing": 180.0,
 					"position": [
-						1200,
-						1100
-					],
-					"count": 1,
-					"faction": "cultists"
-				},
-				{
-					"template_id": "cultist",
-					"position": [
-						1500,
-						700
-					],
-					"count": 1,
-					"faction": "cultists"
+						1500.0,
+						220.0
+					]
 				}
-			],
-			"item_spawns": [],
-			"fluid_spawns": [],
-			"world_labels": [
-				{
-					"id": "perrow",
-					"name": "Perrow",
-					"position": [
-						1500,
-						180
-					],
-					"controller": "liziti",
-					"territory_radius_px": 320
-				},
-				{
-					"id": "alamone",
-					"name": "Alamone",
-					"position": [
-						614,
-						444
-					],
-					"controller": "tortellini",
-					"territory_radius_px": 280
-				},
-				{
-					"id": "agentiara",
-					"name": "Agentiara",
-					"position": [
-						1024,
-						1092
-					],
-					"controller": "neutral",
-					"territory_radius_px": 240
-				},
-				{
-					"id": "bortellini",
-					"name": "Bortellini",
-					"position": [
-						511,
-						1638
-					],
-					"controller": "dragatini",
-					"territory_radius_px": 360
-				}
-			],
+			},
+			"region": "scarlatti",
+			"tile_size": 64.0,
+			"time_scale_multiplier": 60.0,
 			"warp_points": [
 				{
 					"id": "to_perrow",
+					"label": "Perrow",
 					"position": [
-						1500,
-						180
+						1500.0,
+						180.0
 					],
+					"reveal_radius_px": 220.0,
 					"size": [
-						64,
-						64
+						64.0,
+						64.0
 					],
 					"target_map": "cemetery",
 					"target_spawn": "default",
-					"label": "Perrow",
-					"world_warp": true,
-					"reveal_radius_px": 220
+					"world_warp": true
 				},
 				{
 					"id": "to_bortellini",
+					"label": "Bortellini",
 					"position": [
-						1500,
-						1300
+						1500.0,
+						1300.0
 					],
+					"reveal_radius_px": 220.0,
 					"size": [
-						64,
-						64
+						64.0,
+						64.0
 					],
 					"target_map": "bortellini_city_market",
 					"target_spawn": "default",
-					"label": "Bortellini",
-					"world_warp": true,
-					"reveal_radius_px": 220
+					"world_warp": true
 				},
 				{
 					"id": "to_alamone",
+					"label": "Alamone",
 					"position": [
-						900,
-						1300
+						900.0,
+						1300.0
 					],
+					"reveal_radius_px": 220.0,
 					"size": [
-						64,
-						64
+						64.0,
+						64.0
 					],
 					"target_map": "alamone_floating_market",
 					"target_spawn": "default",
-					"label": "Alamone",
-					"world_warp": true,
-					"reveal_radius_px": 220
+					"world_warp": true
 				},
 				{
 					"id": "to_argentiara",
+					"label": "Argentiara",
 					"position": [
-						1500,
-						500
+						1500.0,
+						500.0
 					],
+					"reveal_radius_px": 220.0,
 					"size": [
-						64,
-						64
+						64.0,
+						64.0
 					],
 					"target_map": "argentiara_square",
 					"target_spawn": "default",
-					"label": "Argentiara",
-					"world_warp": true,
-					"reveal_radius_px": 220
+					"world_warp": true
+				}
+			],
+			"weather_group": "Scarlatti",
+			"world_labels": [
+				{
+					"controller": "liziti",
+					"id": "perrow",
+					"name": "Perrow",
+					"position": [
+						1500.0,
+						180.0
+					],
+					"territory_radius_px": 320.0
+				},
+				{
+					"controller": "tortellini",
+					"id": "alamone",
+					"name": "Alamone",
+					"position": [
+						614.0,
+						444.0
+					],
+					"territory_radius_px": 280.0
+				},
+				{
+					"controller": "neutral",
+					"id": "agentiara",
+					"name": "Agentiara",
+					"position": [
+						1024.0,
+						1092.0
+					],
+					"territory_radius_px": 240.0
+				},
+				{
+					"controller": "dragatini",
+					"id": "bortellini",
+					"name": "Bortellini",
+					"position": [
+						511.0,
+						1638.0
+					],
+					"territory_radius_px": 360.0
 				}
 			]
 		},
 		{
-			"id": "argentiara_square",
-			"name": "Argentiara Square",
 			"description": "The dusty heart of the mining town, where ore-carts rattle past the assayer's office and miners trade silver for bread and drink.",
-			"region": "argentiara",
+			"fog_ids": [],
+			"id": "argentiara_square",
 			"images": {
 				"map": "res://Maps/argentiara_square_clean.png",
 				"mask": "res://Maps/argentiara_square_mask.png",
 				"structures": "res://Maps/argentiara_square.png",
 				"structures_mask": "res://Maps/argentiara_square_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						512,
-						512
-					],
-					"facing": 0
-				},
-				"from_argentiara_mine": {
-					"position": [
-						900,
-						512
-					],
-					"facing": 180
-				},
-				"from_argentiara_mine_town": {
-					"position": [
-						190,
-						512
-					],
-					"facing": 0
-				}
-			},
+			"name": "Argentiara Square",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						512.0,
+						512.0
+					]
+				},
+				"from_argentiara_mine": {
+					"facing": 180.0,
+					"position": [
+						900.0,
+						512.0
+					]
+				},
+				"from_argentiara_mine_town": {
+					"facing": 0.0,
+					"position": [
+						190.0,
+						512.0
+					]
+				}
+			},
+			"region": "argentiara",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_argentiara_mine",
+					"label": "To the Mine",
 					"position": [
-						960,
-						512
+						960.0,
+						512.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "argentiara_mine",
-					"target_spawn": "from_argentiara_square",
-					"label": "To the Mine"
+					"target_spawn": "from_argentiara_square"
 				},
 				{
 					"id": "to_argentiara_mine_town",
+					"label": "To Royal Mine Town",
 					"position": [
-						100,
-						512
+						100.0,
+						512.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "argentiara_mine_town",
-					"target_spawn": "from_argentiara_square",
-					"label": "To Royal Mine Town"
+					"target_spawn": "from_argentiara_square"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "argentiara_mine",
-			"name": "Argentiara Mine",
 			"description": "The mouth of the great silver mine. Timbered galleries swallow the lantern light, and the rock face waits for any back strong enough to work it.",
-			"region": "argentiara",
+			"fog_ids": [],
+			"id": "argentiara_mine",
 			"images": {
 				"map": "res://Maps/argentiara_mine_clean.png",
 				"mask": "res://Maps/argentiara_mine_mask.png",
 				"structures": "res://Maps/argentiara_mine.png",
 				"structures_mask": "res://Maps/argentiara_mine_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						512,
-						512
-					],
-					"facing": 0
-				},
-				"from_argentiara_square": {
-					"position": [
-						80,
-						512
-					],
-					"facing": 0
-				},
-				"from_argentiara_deep_shaft": {
-					"position": [
-						900,
-						512
-					],
-					"facing": 180
-				}
-			},
+			"name": "Argentiara Mine",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						512.0,
+						512.0
+					]
+				},
+				"from_argentiara_deep_shaft": {
+					"facing": 180.0,
+					"position": [
+						900.0,
+						512.0
+					]
+				},
+				"from_argentiara_square": {
+					"facing": 0.0,
+					"position": [
+						80.0,
+						512.0
+					]
+				}
+			},
+			"region": "argentiara",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_argentiara_square",
+					"label": "To the Square",
 					"position": [
-						60,
-						512
+						60.0,
+						512.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "argentiara_square",
-					"target_spawn": "from_argentiara_mine",
-					"label": "To the Square"
+					"target_spawn": "from_argentiara_mine"
 				},
 				{
 					"id": "to_argentiara_deep_shaft",
+					"label": "Descend the Deep Shaft",
 					"position": [
-						960,
-						512
+						960.0,
+						512.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "argentiara_deep_shaft",
-					"target_spawn": "from_argentiara_mine",
-					"label": "Descend the Deep Shaft"
+					"target_spawn": "from_argentiara_mine"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "argentiara_deep_shaft",
-			"name": "Argentiara Deep Shaft",
 			"description": "The lowest worked level of the mine, hot and close, where the richest seams run — and where the rock is most apt to come down on the unwary.",
-			"region": "argentiara",
+			"fog_ids": [],
+			"id": "argentiara_deep_shaft",
 			"images": {
 				"map": "res://Maps/argentiara_deep_shaft_clean.png",
 				"mask": "res://Maps/argentiara_deep_shaft_mask.png",
 				"structures": "res://Maps/argentiara_deep_shaft.png",
 				"structures_mask": "res://Maps/argentiara_deep_shaft_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						512,
-						512
-					],
-					"facing": 0
-				},
-				"from_argentiara_mine": {
-					"position": [
-						80,
-						512
-					],
-					"facing": 0
-				}
-			},
+			"name": "Argentiara Deep Shaft",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						512.0,
+						512.0
+					]
+				},
+				"from_argentiara_mine": {
+					"facing": 0.0,
+					"position": [
+						80.0,
+						512.0
+					]
+				}
+			},
+			"region": "argentiara",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_argentiara_mine",
+					"label": "Ascend to the Mine",
 					"position": [
-						60,
-						512
+						60.0,
+						512.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "argentiara_mine",
-					"target_spawn": "from_argentiara_deep_shaft",
-					"label": "Ascend to the Mine"
+					"target_spawn": "from_argentiara_deep_shaft"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_river_stronghold",
-			"name": "River Stronghold",
 			"description": "A riverside stone stronghold half-claimed by the bullywug swamp, its walls rising from reed-choked black water.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_river_stronghold",
 			"images": {
 				"map": "res://Maps/perrow_river_stronghold_clean.jpg",
 				"mask": "res://Maps/perrow_river_stronghold_mask.png",
 				"structures": "res://Maps/perrow_river_stronghold.jpg",
 				"structures_mask": "res://Maps/perrow_river_stronghold_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1696,
-						2528
-					],
-					"facing": 0
-				},
-				"from_perrow_eeler_tavern": {
-					"position": [
-						1696,
-						4866
-					],
-					"facing": 270
-				}
-			},
+			"name": "River Stronghold",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1696.0,
+						2528.0
+					]
+				},
+				"from_perrow_eeler_tavern": {
+					"facing": 270.0,
+					"position": [
+						1696.0,
+						4866.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_eeler_tavern",
+					"label": "To The Eeler's Tavern",
 					"position": [
-						1696,
-						4956
+						1696.0,
+						4956.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_eeler_tavern",
-					"target_spawn": "from_perrow_river_stronghold",
-					"label": "To The Eeler's Tavern"
+					"target_spawn": "from_perrow_river_stronghold"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_heart_village",
-			"name": "Heart of the Village",
 			"description": "The old heart of the village, its square and cottages slowly sinking into a misty swamp graveyard.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_heart_village",
 			"images": {
 				"map": "res://Maps/perrow_heart_village_clean.jpg",
 				"mask": "res://Maps/perrow_heart_village_mask.png",
 				"structures": "res://Maps/perrow_heart_village.jpg",
 				"structures_mask": "res://Maps/perrow_heart_village_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_town_square": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				},
-				"from_perrow_village_market": {
-					"position": [
-						1792,
-						190
-					],
-					"facing": 90
-				},
-				"from_perrow_vale_tavern": {
-					"position": [
-						190,
-						2400
-					],
-					"facing": 0
-				},
-				"from_perrow_forest_pass": {
-					"position": [
-						3394,
-						2400
-					],
-					"facing": 180
-				}
-			},
+			"name": "Heart of the Village",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_perrow_forest_pass": {
+					"facing": 180.0,
+					"position": [
+						3394.0,
+						2400.0
+					]
+				},
+				"from_perrow_vale_tavern": {
+					"facing": 0.0,
+					"position": [
+						190.0,
+						2400.0
+					]
+				},
+				"from_perrow_village_market": {
+					"facing": 90.0,
+					"position": [
+						1792.0,
+						190.0
+					]
+				},
+				"from_town_square": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_town_square",
+					"label": "To Town Square",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_perrow_heart_village",
-					"label": "To Town Square"
+					"target_spawn": "from_perrow_heart_village"
 				},
 				{
 					"id": "to_perrow_village_market",
+					"label": "To Village Market",
 					"position": [
-						1792,
-						100
+						1792.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_village_market",
-					"target_spawn": "from_perrow_heart_village",
-					"label": "To Village Market"
+					"target_spawn": "from_perrow_heart_village"
 				},
 				{
 					"id": "to_perrow_vale_tavern",
+					"label": "To Ages of the Vale Tavern",
 					"position": [
-						100,
-						2400
+						100.0,
+						2400.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "perrow_vale_tavern",
-					"target_spawn": "from_perrow_heart_village",
-					"label": "To Ages of the Vale Tavern"
+					"target_spawn": "from_perrow_heart_village"
 				},
 				{
 					"id": "to_perrow_forest_pass",
+					"label": "To Mangrove Forest Pass",
 					"position": [
-						3484,
-						2400
+						3484.0,
+						2400.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "perrow_forest_pass",
-					"target_spawn": "from_perrow_heart_village",
-					"label": "To Mangrove Forest Pass"
+					"target_spawn": "from_perrow_heart_village"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_vale_tavern",
-			"name": "Ages of the Vale Tavern",
 			"description": "A timber tavern raised on stilts over the swampy shallows, linked by creaking boardwalks across dark water.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_vale_tavern",
 			"images": {
 				"map": "res://Maps/perrow_vale_tavern_clean.jpg",
 				"mask": "res://Maps/perrow_vale_tavern_mask.png",
 				"structures": "res://Maps/perrow_vale_tavern.jpg",
 				"structures_mask": "res://Maps/perrow_vale_tavern_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1696,
-						2528
-					],
-					"facing": 0
-				},
-				"from_perrow_heart_village": {
-					"position": [
-						1696,
-						4866
-					],
-					"facing": 270
-				},
-				"from_perrow_eeler_tavern": {
-					"position": [
-						1696,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Ages of the Vale Tavern",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1696.0,
+						2528.0
+					]
+				},
+				"from_perrow_eeler_tavern": {
+					"facing": 90.0,
+					"position": [
+						1696.0,
+						190.0
+					]
+				},
+				"from_perrow_heart_village": {
+					"facing": 270.0,
+					"position": [
+						1696.0,
+						4866.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_heart_village",
+					"label": "To Heart of the Village",
 					"position": [
-						1696,
-						4956
+						1696.0,
+						4956.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_vale_tavern",
-					"label": "To Heart of the Village"
+					"target_spawn": "from_perrow_vale_tavern"
 				},
 				{
 					"id": "to_perrow_eeler_tavern",
+					"label": "To The Eeler's Tavern",
 					"position": [
-						1696,
-						100
+						1696.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_eeler_tavern",
-					"target_spawn": "from_perrow_vale_tavern",
-					"label": "To The Eeler's Tavern"
+					"target_spawn": "from_perrow_vale_tavern"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_village_market",
-			"name": "Village Market",
 			"description": "A walled village market edged by encroaching bog, its stalls set on raised planking above muddy channels.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_village_market",
 			"images": {
 				"map": "res://Maps/perrow_village_market_clean.jpg",
 				"mask": "res://Maps/perrow_village_market_mask.png",
 				"structures": "res://Maps/perrow_village_market.jpg",
 				"structures_mask": "res://Maps/perrow_village_market_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1536,
-						2752
-					],
-					"facing": 0
-				},
-				"from_perrow_heart_village": {
-					"position": [
-						1536,
-						5314
-					],
-					"facing": 270
-				},
-				"from_perrow_adventurers_guild": {
-					"position": [
-						1536,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Village Market",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1536.0,
+						2752.0
+					]
+				},
+				"from_perrow_adventurers_guild": {
+					"facing": 90.0,
+					"position": [
+						1536.0,
+						190.0
+					]
+				},
+				"from_perrow_heart_village": {
+					"facing": 270.0,
+					"position": [
+						1536.0,
+						5314.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_heart_village",
+					"label": "To Heart of the Village",
 					"position": [
-						1536,
-						5404
+						1536.0,
+						5404.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_village_market",
-					"label": "To Heart of the Village"
+					"target_spawn": "from_perrow_village_market"
 				},
 				{
 					"id": "to_perrow_adventurers_guild",
+					"label": "To Adventurers' Guild",
 					"position": [
-						1536,
-						100
+						1536.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_adventurers_guild",
-					"target_spawn": "from_perrow_village_market",
-					"label": "To Adventurers' Guild"
+					"target_spawn": "from_perrow_village_market"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_adventurers_guild",
-			"name": "Adventurers' Guild",
 			"description": "A guildhall on the rim of a fog-laden swamp graveyard, where the courtyard gives way to mossy tombs and still water.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_adventurers_guild",
 			"images": {
 				"map": "res://Maps/perrow_adventurers_guild_clean.jpg",
 				"mask": "res://Maps/perrow_adventurers_guild_mask.png",
 				"structures": "res://Maps/perrow_adventurers_guild.jpg",
 				"structures_mask": "res://Maps/perrow_adventurers_guild_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2400,
-						1792
-					],
-					"facing": 0
-				},
-				"from_perrow_village_market": {
-					"position": [
-						2400,
-						3394
-					],
-					"facing": 270
-				}
-			},
+			"name": "Adventurers' Guild",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2400.0,
+						1792.0
+					]
+				},
+				"from_perrow_village_market": {
+					"facing": 270.0,
+					"position": [
+						2400.0,
+						3394.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_village_market",
+					"label": "To Village Market",
 					"position": [
-						2400,
-						3484
+						2400.0,
+						3484.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_village_market",
-					"target_spawn": "from_perrow_adventurers_guild",
-					"label": "To Village Market"
+					"target_spawn": "from_perrow_adventurers_guild"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_eeler_tavern",
-			"name": "The Eeler's Tavern",
 			"description": "A dockside eel-fishers' tavern over brackish swamp water, hung with traps and nets along weathered jetties.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_eeler_tavern",
 			"images": {
 				"map": "res://Maps/perrow_eeler_tavern_clean.jpg",
 				"mask": "res://Maps/perrow_eeler_tavern_mask.png",
 				"structures": "res://Maps/perrow_eeler_tavern.jpg",
 				"structures_mask": "res://Maps/perrow_eeler_tavern_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2400,
-						1792
-					],
-					"facing": 0
-				},
-				"from_perrow_vale_tavern": {
-					"position": [
-						2400,
-						3394
-					],
-					"facing": 270
-				},
-				"from_perrow_river_stronghold": {
-					"position": [
-						2400,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "The Eeler's Tavern",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2400.0,
+						1792.0
+					]
+				},
+				"from_perrow_river_stronghold": {
+					"facing": 90.0,
+					"position": [
+						2400.0,
+						190.0
+					]
+				},
+				"from_perrow_vale_tavern": {
+					"facing": 270.0,
+					"position": [
+						2400.0,
+						3394.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_vale_tavern",
+					"label": "To Ages of the Vale Tavern",
 					"position": [
-						2400,
-						3484
+						2400.0,
+						3484.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_vale_tavern",
-					"target_spawn": "from_perrow_eeler_tavern",
-					"label": "To Ages of the Vale Tavern"
+					"target_spawn": "from_perrow_eeler_tavern"
 				},
 				{
 					"id": "to_perrow_river_stronghold",
+					"label": "To River Stronghold",
 					"position": [
-						2400,
-						100
+						2400.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_river_stronghold",
-					"target_spawn": "from_perrow_eeler_tavern",
-					"label": "To River Stronghold"
+					"target_spawn": "from_perrow_eeler_tavern"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_goblin_fortress",
-			"name": "Goblin Forest Fortress",
 			"description": "A ramshackle goblin fortress lashed together among the tangled roots and channels of a flooded mangrove forest.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_goblin_fortress",
 			"images": {
 				"map": "res://Maps/perrow_goblin_fortress_clean.jpg",
 				"mask": "res://Maps/perrow_goblin_fortress_mask.png",
 				"structures": "res://Maps/perrow_goblin_fortress.jpg",
 				"structures_mask": "res://Maps/perrow_goblin_fortress_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_perrow_forest_pass": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				}
-			},
+			"name": "Goblin Forest Fortress",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_perrow_forest_pass": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_forest_pass",
+					"label": "To Mangrove Forest Pass",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_forest_pass",
-					"target_spawn": "from_perrow_goblin_fortress",
-					"label": "To Mangrove Forest Pass"
+					"target_spawn": "from_perrow_goblin_fortress"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "perrow_forest_pass",
-			"name": "Mangrove Forest Pass",
 			"description": "A winding trail of raised paths and footbridges threading through dense, tidal mangrove woodland.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "perrow_forest_pass",
 			"images": {
 				"map": "res://Maps/perrow_forest_pass_clean.jpg",
 				"mask": "res://Maps/perrow_forest_pass_mask.png",
 				"structures": "res://Maps/perrow_forest_pass.jpg",
 				"structures_mask": "res://Maps/perrow_forest_pass_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1856,
-						2304
-					],
-					"facing": 0
-				},
-				"from_perrow_heart_village": {
-					"position": [
-						1856,
-						4418
-					],
-					"facing": 270
-				},
-				"from_perrow_goblin_fortress": {
-					"position": [
-						1856,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Mangrove Forest Pass",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1856.0,
+						2304.0
+					]
+				},
+				"from_perrow_goblin_fortress": {
+					"facing": 90.0,
+					"position": [
+						1856.0,
+						190.0
+					]
+				},
+				"from_perrow_heart_village": {
+					"facing": 270.0,
+					"position": [
+						1856.0,
+						4418.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_perrow_heart_village",
+					"label": "To Heart of the Village",
 					"position": [
-						1856,
-						4508
+						1856.0,
+						4508.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_forest_pass",
-					"label": "To Heart of the Village"
+					"target_spawn": "from_perrow_forest_pass"
 				},
 				{
 					"id": "to_perrow_goblin_fortress",
+					"label": "To Goblin Forest Fortress",
 					"position": [
-						1856,
-						100
+						1856.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "perrow_goblin_fortress",
-					"target_spawn": "from_perrow_forest_pass",
-					"label": "To Goblin Forest Fortress"
+					"target_spawn": "from_perrow_forest_pass"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_amphitheatre",
-			"name": "Bortellini Amphitheatre",
 			"description": "A grand stone amphitheatre on the banks of the tidal river, its tiered seating descending toward the water.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_amphitheatre",
 			"images": {
 				"map": "res://Maps/bortellini_amphitheatre_clean.jpg",
 				"mask": "res://Maps/bortellini_amphitheatre_mask.png",
 				"structures": "res://Maps/bortellini_amphitheatre.jpg",
 				"structures_mask": "res://Maps/bortellini_amphitheatre_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_bortellini_city_market": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				},
-				"from_bortellini_training_camp": {
-					"position": [
-						1792,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Bortellini Amphitheatre",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_bortellini_city_market": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				},
+				"from_bortellini_training_camp": {
+					"facing": 90.0,
+					"position": [
+						1792.0,
+						190.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_city_market",
+					"label": "To Bortellini City Market",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_amphitheatre",
-					"label": "To Bortellini City Market"
+					"target_spawn": "from_bortellini_amphitheatre"
 				},
 				{
 					"id": "to_bortellini_training_camp",
+					"label": "To Training Camp",
 					"position": [
-						1792,
-						100
+						1792.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_training_camp",
-					"target_spawn": "from_bortellini_amphitheatre",
-					"label": "To Training Camp"
+					"target_spawn": "from_bortellini_amphitheatre"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_royal_stables",
-			"name": "Royal Stables",
 			"description": "Royal riverside stables, their paddocks and yards opening onto the broad tidal riverbank.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_royal_stables",
 			"images": {
 				"map": "res://Maps/bortellini_royal_stables_clean.jpg",
 				"mask": "res://Maps/bortellini_royal_stables_mask.png",
 				"structures": "res://Maps/bortellini_royal_stables.jpg",
 				"structures_mask": "res://Maps/bortellini_royal_stables_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2400,
-						1792
-					],
-					"facing": 0
-				},
-				"from_bortellini_city_market": {
-					"position": [
-						2400,
-						3394
-					],
-					"facing": 270
-				}
-			},
+			"name": "Royal Stables",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2400.0,
+						1792.0
+					]
+				},
+				"from_bortellini_city_market": {
+					"facing": 270.0,
+					"position": [
+						2400.0,
+						3394.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_city_market",
+					"label": "To Bortellini City Market",
 					"position": [
-						2400,
-						3484
+						2400.0,
+						3484.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_royal_stables",
-					"label": "To Bortellini City Market"
+					"target_spawn": "from_bortellini_royal_stables"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_adventurers_guild",
-			"name": "Adventurers' Guild",
 			"description": "A guildhall on the tidal riverfront, its courtyard meeting stone quays along the flowing water.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_adventurers_guild",
 			"images": {
 				"map": "res://Maps/bortellini_adventurers_guild_clean.jpg",
 				"mask": "res://Maps/bortellini_adventurers_guild_mask.png",
 				"structures": "res://Maps/bortellini_adventurers_guild.jpg",
 				"structures_mask": "res://Maps/bortellini_adventurers_guild_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2400,
-						1792
-					],
-					"facing": 0
-				},
-				"from_bortellini_city_market": {
-					"position": [
-						2400,
-						3394
-					],
-					"facing": 270
-				}
-			},
+			"name": "Adventurers' Guild",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2400.0,
+						1792.0
+					]
+				},
+				"from_bortellini_city_market": {
+					"facing": 270.0,
+					"position": [
+						2400.0,
+						3394.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_city_market",
+					"label": "To Bortellini City Market",
 					"position": [
-						2400,
-						3484
+						2400.0,
+						3484.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_adventurers_guild",
-					"label": "To Bortellini City Market"
+					"target_spawn": "from_bortellini_adventurers_guild"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_hippodrome",
-			"name": "Bortellini Hippodrome",
 			"description": "A great chariot hippodrome running alongside the tidal river, its long oval track parallel to the bank.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_hippodrome",
 			"images": {
 				"map": "res://Maps/bortellini_hippodrome_clean.jpg",
 				"mask": "res://Maps/bortellini_hippodrome_mask.png",
 				"structures": "res://Maps/bortellini_hippodrome.jpg",
 				"structures_mask": "res://Maps/bortellini_hippodrome_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1536,
-						2752
-					],
-					"facing": 0
-				},
-				"from_bortellini_city_market": {
-					"position": [
-						1536,
-						5314
-					],
-					"facing": 270
-				}
-			},
+			"name": "Bortellini Hippodrome",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1536.0,
+						2752.0
+					]
+				},
+				"from_bortellini_city_market": {
+					"facing": 270.0,
+					"position": [
+						1536.0,
+						5314.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_city_market",
+					"label": "To Bortellini City Market",
 					"position": [
-						1536,
-						5404
+						1536.0,
+						5404.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_hippodrome",
-					"label": "To Bortellini City Market"
+					"target_spawn": "from_bortellini_hippodrome"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_training_camp",
-			"name": "Training Camp",
 			"description": "A military training camp on the tidal riverbank, its sparring yards and drill grounds beside the water.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_training_camp",
 			"images": {
 				"map": "res://Maps/bortellini_training_camp_clean.jpg",
 				"mask": "res://Maps/bortellini_training_camp_mask.png",
 				"structures": "res://Maps/bortellini_training_camp.jpg",
 				"structures_mask": "res://Maps/bortellini_training_camp_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_bortellini_amphitheatre": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				}
-			},
+			"name": "Training Camp",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_bortellini_amphitheatre": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_amphitheatre",
+					"label": "To Bortellini Amphitheatre",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_amphitheatre",
-					"target_spawn": "from_bortellini_training_camp",
-					"label": "To Bortellini Amphitheatre"
+					"target_spawn": "from_bortellini_training_camp"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "bortellini_city_market",
-			"name": "Bortellini City Market",
 			"description": "A bustling walled market beside the tidal river, its quays and stalls lining the busy waterfront.",
-			"region": "bortellini",
+			"fog_ids": [],
+			"id": "bortellini_city_market",
 			"images": {
 				"map": "res://Maps/bortellini_city_market_clean.jpg",
 				"mask": "res://Maps/bortellini_city_market_mask.png",
 				"structures": "res://Maps/bortellini_city_market.jpg",
 				"structures_mask": "res://Maps/bortellini_city_market_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1536,
-						2752
-					],
-					"facing": 0
-				},
-				"from_bortellini_amphitheatre": {
-					"position": [
-						1536,
-						5314
-					],
-					"facing": 270
-				},
-				"from_bortellini_hippodrome": {
-					"position": [
-						1536,
-						190
-					],
-					"facing": 90
-				},
-				"from_bortellini_royal_stables": {
-					"position": [
-						190,
-						2752
-					],
-					"facing": 0
-				},
-				"from_bortellini_adventurers_guild": {
-					"position": [
-						2882,
-						2752
-					],
-					"facing": 180
-				}
-			},
+			"name": "Bortellini City Market",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1536.0,
+						2752.0
+					]
+				},
+				"from_bortellini_adventurers_guild": {
+					"facing": 180.0,
+					"position": [
+						2882.0,
+						2752.0
+					]
+				},
+				"from_bortellini_amphitheatre": {
+					"facing": 270.0,
+					"position": [
+						1536.0,
+						5314.0
+					]
+				},
+				"from_bortellini_hippodrome": {
+					"facing": 90.0,
+					"position": [
+						1536.0,
+						190.0
+					]
+				},
+				"from_bortellini_royal_stables": {
+					"facing": 0.0,
+					"position": [
+						190.0,
+						2752.0
+					]
+				}
+			},
+			"region": "bortellini",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_bortellini_amphitheatre",
+					"label": "To Bortellini Amphitheatre",
 					"position": [
-						1536,
-						5404
+						1536.0,
+						5404.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_amphitheatre",
-					"target_spawn": "from_bortellini_city_market",
-					"label": "To Bortellini Amphitheatre"
+					"target_spawn": "from_bortellini_city_market"
 				},
 				{
 					"id": "to_bortellini_hippodrome",
+					"label": "To Bortellini Hippodrome",
 					"position": [
-						1536,
-						100
+						1536.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "bortellini_hippodrome",
-					"target_spawn": "from_bortellini_city_market",
-					"label": "To Bortellini Hippodrome"
+					"target_spawn": "from_bortellini_city_market"
 				},
 				{
 					"id": "to_bortellini_royal_stables",
+					"label": "To Royal Stables",
 					"position": [
-						100,
-						2752
+						100.0,
+						2752.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "bortellini_royal_stables",
-					"target_spawn": "from_bortellini_city_market",
-					"label": "To Royal Stables"
+					"target_spawn": "from_bortellini_city_market"
 				},
 				{
 					"id": "to_bortellini_adventurers_guild",
+					"label": "To Adventurers' Guild",
 					"position": [
-						2972,
-						2752
+						2972.0,
+						2752.0
 					],
 					"size": [
-						40,
-						80
+						40.0,
+						80.0
 					],
 					"target_map": "bortellini_adventurers_guild",
-					"target_spawn": "from_bortellini_city_market",
-					"label": "To Adventurers' Guild"
+					"target_spawn": "from_bortellini_city_market"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "alamone_floating_market",
-			"name": "Floating Market",
 			"description": "A floating market of boats and pontoons drifting among lush druidic islands, walkways linking the verdant islets.",
-			"region": "alamone",
+			"fog_ids": [],
+			"id": "alamone_floating_market",
 			"images": {
 				"map": "res://Maps/alamone_floating_market_clean.jpg",
 				"mask": "res://Maps/alamone_floating_market_mask.png",
 				"structures": "res://Maps/alamone_floating_market.jpg",
 				"structures_mask": "res://Maps/alamone_floating_market_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_alamone_black_market": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				},
-				"from_alamone_adventurers_guild": {
-					"position": [
-						1792,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Floating Market",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_alamone_adventurers_guild": {
+					"facing": 90.0,
+					"position": [
+						1792.0,
+						190.0
+					]
+				},
+				"from_alamone_black_market": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				}
+			},
+			"region": "alamone",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_alamone_black_market",
+					"label": "To Black Market Streets",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "alamone_black_market",
-					"target_spawn": "from_alamone_floating_market",
-					"label": "To Black Market Streets"
+					"target_spawn": "from_alamone_floating_market"
 				},
 				{
 					"id": "to_alamone_adventurers_guild",
+					"label": "To Adventurers' Guild",
 					"position": [
-						1792,
-						100
+						1792.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "alamone_adventurers_guild",
-					"target_spawn": "from_alamone_floating_market",
-					"label": "To Adventurers' Guild"
+					"target_spawn": "from_alamone_floating_market"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "alamone_black_market",
-			"name": "Black Market Streets",
 			"description": "A shadowy black-market quarter strung across small druid islands, its alleys and bridges spanning overgrown channels.",
-			"region": "alamone",
+			"fog_ids": [],
+			"id": "alamone_black_market",
 			"images": {
 				"map": "res://Maps/alamone_black_market_clean.jpg",
 				"mask": "res://Maps/alamone_black_market_mask.png",
 				"structures": "res://Maps/alamone_black_market.jpg",
 				"structures_mask": "res://Maps/alamone_black_market_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2528,
-						1696
-					],
-					"facing": 0
-				},
-				"from_alamone_floating_market": {
-					"position": [
-						2528,
-						3202
-					],
-					"facing": 270
-				}
-			},
+			"name": "Black Market Streets",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2528.0,
+						1696.0
+					]
+				},
+				"from_alamone_floating_market": {
+					"facing": 270.0,
+					"position": [
+						2528.0,
+						3202.0
+					]
+				}
+			},
+			"region": "alamone",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_alamone_floating_market",
+					"label": "To Floating Market",
 					"position": [
-						2528,
-						3292
+						2528.0,
+						3292.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "alamone_floating_market",
-					"target_spawn": "from_alamone_black_market",
-					"label": "To Floating Market"
+					"target_spawn": "from_alamone_black_market"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "alamone_adventurers_guild",
-			"name": "Adventurers' Guild",
 			"description": "A guildhall on a lush druid island, ringed by water, standing stones, and ancient trees.",
-			"region": "alamone",
+			"fog_ids": [],
+			"id": "alamone_adventurers_guild",
 			"images": {
 				"map": "res://Maps/alamone_adventurers_guild_clean.jpg",
 				"mask": "res://Maps/alamone_adventurers_guild_mask.png",
 				"structures": "res://Maps/alamone_adventurers_guild.jpg",
 				"structures_mask": "res://Maps/alamone_adventurers_guild_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2400,
-						1792
-					],
-					"facing": 0
-				},
-				"from_alamone_floating_market": {
-					"position": [
-						2400,
-						3394
-					],
-					"facing": 270
-				}
-			},
+			"name": "Adventurers' Guild",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2400.0,
+						1792.0
+					]
+				},
+				"from_alamone_floating_market": {
+					"facing": 270.0,
+					"position": [
+						2400.0,
+						3394.0
+					]
+				}
+			},
+			"region": "alamone",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_alamone_floating_market",
+					"label": "To Floating Market",
 					"position": [
-						2400,
-						3484
+						2400.0,
+						3484.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "alamone_floating_market",
-					"target_spawn": "from_alamone_adventurers_guild",
-					"label": "To Floating Market"
+					"target_spawn": "from_alamone_adventurers_guild"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "argentiara_mine_town",
-			"name": "Royal Mine Town",
 			"description": "A royal silver-mining town carved into rocky dragon-memorial highlands, its ore-works clustered among weathered monuments.",
-			"region": "argentiara",
+			"fog_ids": [],
+			"id": "argentiara_mine_town",
 			"images": {
 				"map": "res://Maps/argentiara_mine_town_clean.jpg",
 				"mask": "res://Maps/argentiara_mine_town_mask.png",
 				"structures": "res://Maps/argentiara_mine_town.jpg",
 				"structures_mask": "res://Maps/argentiara_mine_town_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1696,
-						2528
-					],
-					"facing": 0
-				},
-				"from_argentiara_square": {
-					"position": [
-						1696,
-						4866
-					],
-					"facing": 270
-				},
-				"from_argentiara_wild_west_town": {
-					"position": [
-						1696,
-						190
-					],
-					"facing": 90
-				}
-			},
+			"name": "Royal Mine Town",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1696.0,
+						2528.0
+					]
+				},
+				"from_argentiara_square": {
+					"facing": 270.0,
+					"position": [
+						1696.0,
+						4866.0
+					]
+				},
+				"from_argentiara_wild_west_town": {
+					"facing": 90.0,
+					"position": [
+						1696.0,
+						190.0
+					]
+				}
+			},
+			"region": "argentiara",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_argentiara_square",
+					"label": "To Argentiara Square",
 					"position": [
-						1696,
-						4956
+						1696.0,
+						4956.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "argentiara_square",
-					"target_spawn": "from_argentiara_mine_town",
-					"label": "To Argentiara Square"
+					"target_spawn": "from_argentiara_mine_town"
 				},
 				{
 					"id": "to_argentiara_wild_west_town",
+					"label": "To Frontier Town",
 					"position": [
-						1696,
-						100
+						1696.0,
+						100.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "argentiara_wild_west_town",
-					"target_spawn": "from_argentiara_mine_town",
-					"label": "To Frontier Town"
+					"target_spawn": "from_argentiara_mine_town"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "argentiara_wild_west_town",
-			"name": "Frontier Town",
 			"description": "A dusty frontier mining town in rocky badlands, a wide main street flanked by timber buildings beneath stone outcrops.",
-			"region": "argentiara",
+			"fog_ids": [],
+			"id": "argentiara_wild_west_town",
 			"images": {
 				"map": "res://Maps/argentiara_wild_west_town_clean.jpg",
 				"mask": "res://Maps/argentiara_wild_west_town_mask.png",
 				"structures": "res://Maps/argentiara_wild_west_town.jpg",
 				"structures_mask": "res://Maps/argentiara_wild_west_town_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						1792,
-						2400
-					],
-					"facing": 0
-				},
-				"from_argentiara_mine_town": {
-					"position": [
-						1792,
-						4610
-					],
-					"facing": 270
-				}
-			},
+			"name": "Frontier Town",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						1792.0,
+						2400.0
+					]
+				},
+				"from_argentiara_mine_town": {
+					"facing": 270.0,
+					"position": [
+						1792.0,
+						4610.0
+					]
+				}
+			},
+			"region": "argentiara",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_argentiara_mine_town",
+					"label": "To Royal Mine Town",
 					"position": [
-						1792,
-						4700
+						1792.0,
+						4700.0
 					],
 					"size": [
-						80,
-						40
+						80.0,
+						40.0
 					],
 					"target_map": "argentiara_mine_town",
-					"target_spawn": "from_argentiara_wild_west_town",
-					"label": "To Royal Mine Town"
+					"target_spawn": "from_argentiara_wild_west_town"
 				}
-			]
+			],
+			"weather_group": "Scarlatti"
 		},
 		{
-			"id": "lighthouse",
-			"name": "Lighthouse",
 			"description": "A rugged coastal lighthouse on a rocky isle within a sheltered harpy cove, its tower rising over tide-washed rocks.",
-			"region": "perrow",
+			"fog_ids": [],
+			"id": "lighthouse",
 			"images": {
 				"map": "res://Maps/lighthouse_clean.jpg",
 				"mask": "res://Maps/lighthouse_mask.png",
 				"structures": "res://Maps/lighthouse.jpg",
 				"structures_mask": "res://Maps/lighthouse_structures_mask.png"
 			},
-			"tile_size": 64,
+			"item_spawns": [],
 			"music_track": "",
-			"weather_group": "Scarlatti",
-			"fog_ids": [],
-			"player_spawns": {
-				"default": {
-					"position": [
-						2304,
-						1856
-					],
-					"facing": 0
-				},
-				"from_dock_tavern": {
-					"position": [
-						2304,
-						3522
-					],
-					"facing": 270
-				}
-			},
+			"name": "Lighthouse",
+			"npc_spawns": [],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30
+					"offset_radius": 30.0
 				}
 			},
-			"npc_spawns": [],
-			"item_spawns": [],
+			"player_spawns": {
+				"default": {
+					"facing": 0.0,
+					"position": [
+						2304.0,
+						1856.0
+					]
+				},
+				"from_dock_tavern": {
+					"facing": 270.0,
+					"position": [
+						2304.0,
+						3522.0
+					]
+				}
+			},
+			"region": "perrow",
+			"tile_size": 64.0,
 			"warp_points": [
 				{
 					"id": "to_dock_tavern",
+					"label": "To Dock Tavern",
 					"position": [
-						2304,
-						3612
+						2304.0,
+						3612.0
+					],
+					"size": [
+						80.0,
+						40.0
+					],
+					"target_map": "dock_tavern",
+					"target_spawn": "from_lighthouse"
+				}
+			],
+			"weather_group": "Scarlatti"
+		},
+		{
+			"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
+			"fluid_spawns": [],
+			"id": "tg_test",
+			"images": {
+				"map": "res://Maps/tg_test.png",
+				"mask": "res://Maps/tg_test_mask.png",
+				"structures": "res://Maps/tg_test_structures.png",
+				"structures_mask": "res://Maps/tg_test_structures_mask.png"
+			},
+			"item_spawns": [
+				{
+					"id": "altar",
+					"position": [
+						566.0,
+						1130.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						607.0,
+						1154.0
+					],
+					"rotation": 2.031,
+					"scale": 1.03
+				},
+				{
+					"id": "brazier",
+					"position": [
+						542.0,
+						1107.0
+					],
+					"rotation": 1.424,
+					"scale": 0.938
+				},
+				{
+					"id": "crate",
+					"position": [
+						564.0,
+						970.0
+					],
+					"rotation": 4.584,
+					"scale": 1.091
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						113.0,
+						729.0
+					],
+					"rotation": -1.469,
+					"scale": 0.906
+				},
+				{
+					"id": "amphora",
+					"position": [
+						119.0,
+						688.0
+					],
+					"rotation": -1.051,
+					"scale": 0.947
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						143.0,
+						827.0
+					],
+					"rotation": -1.067,
+					"scale": 0.986
+				},
+				{
+					"id": "stool",
+					"position": [
+						107.0,
+						658.0
+					],
+					"rotation": -1.114,
+					"scale": 1.048
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						786.0,
+						609.0
+					],
+					"rotation": 3.691,
+					"scale": 1.013
+				},
+				{
+					"id": "barrel",
+					"position": [
+						959.0,
+						566.0
+					],
+					"rotation": 3.044,
+					"scale": 1.034
+				},
+				{
+					"id": "crate",
+					"position": [
+						914.0,
+						481.0
+					],
+					"rotation": 2.876,
+					"scale": 1.035
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						868.0,
+						578.0
+					],
+					"rotation": 3.664,
+					"scale": 1.038
+				},
+				{
+					"id": "barrel",
+					"position": [
+						844.0,
+						444.0
+					],
+					"rotation": 3.528,
+					"scale": 0.963
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						888.0,
+						472.0
+					],
+					"rotation": 3.046,
+					"scale": 1.053
+				},
+				{
+					"id": "cage",
+					"position": [
+						913.0,
+						565.0
+					],
+					"rotation": 3.567,
+					"scale": 0.999
+				},
+				{
+					"id": "round_table",
+					"position": [
+						976.0,
+						964.0
+					],
+					"rotation": -2.44,
+					"scale": 0.97
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						975.0,
+						932.0
+					],
+					"rotation": -2.788,
+					"scale": 0.945
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1088.0,
+						965.0
+					],
+					"rotation": -2.233,
+					"scale": 1.036
+				},
+				{
+					"id": "fur_rug",
+					"position": [
+						1006.0,
+						894.0
+					],
+					"rotation": -2.588,
+					"scale": 0.994
+				},
+				{
+					"id": "basket",
+					"position": [
+						881.0,
+						891.0
+					],
+					"rotation": 5.093,
+					"scale": 0.998
+				},
+				{
+					"id": "hammer",
+					"position": [
+						472.0,
+						395.0
+					],
+					"rotation": 1.353,
+					"scale": 0.902
+				},
+				{
+					"id": "barrel",
+					"position": [
+						503.0,
+						354.0
+					],
+					"rotation": 0.74,
+					"scale": 0.974
+				},
+				{
+					"id": "cartwheel",
+					"position": [
+						843.0,
+						1066.0
+					],
+					"rotation": -1.624,
+					"scale": 0.908
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						899.0,
+						1190.0
+					],
+					"rotation": -1.806,
+					"scale": 1.087
+				},
+				{
+					"id": "basket",
+					"position": [
+						221.0,
+						1132.0
+					],
+					"rotation": 1.508,
+					"scale": 1.069
+				},
+				{
+					"id": "amphora",
+					"position": [
+						342.0,
+						1031.0
+					],
+					"rotation": 2.01,
+					"scale": 0.988
+				},
+				{
+					"id": "basket",
+					"position": [
+						383.0,
+						1083.0
+					],
+					"rotation": 3.092,
+					"scale": 1.038
+				},
+				{
+					"id": "bucket",
+					"position": [
+						489.0,
+						547.0
+					],
+					"rotation": 2.548,
+					"scale": 0.945
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						504.0,
+						524.0
+					],
+					"rotation": 1.681,
+					"scale": 0.936
+				},
+				{
+					"id": "bucket",
+					"position": [
+						272.0,
+						472.0
+					],
+					"rotation": 1.954,
+					"scale": 1.041
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						273.0,
+						513.0
+					],
+					"rotation": 2.203,
+					"scale": 0.902
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						551.0,
+						850.0
+					],
+					"rotation": -0.024,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						539.0,
+						824.0
+					],
+					"rotation": 3.569,
+					"scale": 1.0
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						683.0,
+						850.0
+					],
+					"rotation": -0.032,
+					"scale": 1.0
+				},
+				{
+					"id": "basket",
+					"position": [
+						689.0,
+						824.0
+					],
+					"rotation": 5.248,
+					"scale": 1.0
+				},
+				{
+					"id": "well",
+					"position": [
+						498.0,
+						655.0
+					],
+					"rotation": 0.085,
+					"scale": 1.0
+				},
+				{
+					"id": "cart",
+					"position": [
+						619.0,
+						1458.0
+					],
+					"rotation": 3.138,
+					"scale": 1.0
+				}
+			],
+			"name": "Tg Test",
+			"npc_spawns": [
+				{
+					"count": 2.0,
+					"position": [
+						691.0,
+						710.0
+					],
+					"spread_radius": 30.0,
+					"template_id": "town_guard"
+				},
+				{
+					"condition": {
+						"time_hour_min": 8.0
+					},
+					"count": 1.0,
+					"position": [
+						741.0,
+						810.0
+					],
+					"spread_radius": 30.0,
+					"template_id": "merchant"
+				}
+			],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						531.0,
+						730.0
+					]
+				},
+				"from_cemetery": {
+					"facing": 90.0,
+					"position": [
+						591.0,
+						830.0
+					]
+				},
+				"warp_1_arrival": {
+					"facing": 90.0,
+					"position": [
+						811.0,
+						960.0
+					]
+				}
+			},
+			"tile_size": 64.0,
+			"warp_points": [
+				{
+					"id": "to_town_square_1",
+					"label": "To Town Square",
+					"position": [
+						451.0,
+						870.0
+					],
+					"size": [
+						40.0,
+						40.0
+					],
+					"target_map": "town_square",
+					"target_spawn": "default"
+				},
+				{
+					"condition": {
+						"item": "cellar_key"
+					},
+					"id": "warp_1",
+					"label": "Stairs",
+					"position": [
+						641.0,
+						890.0
+					],
+					"size": [
+						40.0,
+						40.0
+					],
+					"target_map": "tg_test",
+					"target_spawn": "warp_1_arrival"
+				}
+			]
+		},
+		{
+			"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
+			"editor_export": true,
+			"floors": [
+				"ggggggggggggssssssssssssssdddddggggggggggggggggggggg",
+				"ggggggggggdggssssssssggssdgggggggggggggdgggggggggggg",
+				"gggggggggggggssssssssggsssgggggggggggggdgggggggggggg",
+				"gggggsgggggggssssssssggsssgggggggggggggggggggggggggg",
+				"ggggsssggggggssssssssggssssggggggggggggggggggggggggg",
+				"ggggssssgggggsssssssssgsssggsssggggggggggggggggggggg",
+				"gggggssssggggggggdssssgsssggssssgggggggggggggggggggg",
+				"ggggggssggggggggggssssgssssssssgggggggggggggddgggggg",
+				"ggggggdgggggggggggsssddssssgsssgggggggggggggddgggggg",
+				"gggggdddggggggggggsssdsssssgsssgggggggggggggdddggggg",
+				"gggggggggggggggggsssggssssgsgggggggggggggggggdddgggg",
+				"gggggggggggggggggsssgggsssgssgggggggggggggggggdggggg",
+				"gsssggggggssssssssssgggsssgssddddddddggggggggggggggg",
+				"gssssssgggssssssssssgggsssgssddgggdgdggggggggggggggg",
+				"gssssssgggssssssssssgggsssgssggggggggggggggggggggggg",
+				"gssssssgggssssssssssgggsssgssggggggggggggggggggggggg",
+				"gssgggggggssssssssssgggsssgggggggggggggggggggggggggg",
+				"ggggggggggssssssssssgggsssgggggggggggggggggggggggggg",
+				"ggggggggggsssssssssssggsssgggggggggggggggggggggggggg",
+				"ggsssgggggsssssssssssdgdsssggggggggggggggggggggggggg",
+				"ggsssgggggggggggggdssssgsssggggggggggggggggggggggggg",
+				"ggsssgggggggggggdddsssssssssssgggggggggggggggggggggg",
+				"gggggggggggggggggdggsssssssssssggggggggggggggggggggg",
+				"ggggggggsssggggggggggssssssssssssggggggggggggggggggg",
+				"gggddggsssssgggggggsgggsssssssssssgggggggggggggggggg",
+				"ggggdgssssssggssssssgggsssssssssssgggggggggggggggggg",
+				"gggggsssssssggssssssggggssssssssssgggggggggggggggggg",
+				"ggggggssssssggsssgggggggsssssssssggggggggggggggggggg",
+				"gggggssssssgggssssgggggsssssssssgggggggggggggggggggg",
+				"gdggggssssggggssssgggggsssssssssgggggggggggggggggggg",
+				"gdgggggssgdgggggggggggssssggssssgggggggggggggggggggg",
+				"ggggggggggdgsssgggggggsssggggssssggggggggddggggggggg",
+				"ggggggggggggsssgggggggssgggdggsssgggggggdddggggggggg",
+				"ggggggggggggsssgggggssssggggggssssggggggdddggggggggg",
+				"ggggggggggggsssgggggsssgggggggsssdggggggddgggggggggg",
+				"gggggggggggggggggggssssggggggggsssgggggggggggggggggg",
+				"gggggggggggdgggggggssssggggggggsssgggggggggggggggggg",
+				"gggggggggggggggggggssssggggggggsssgggggggggggggggggg",
+				"gggggggdggggggggggggsssgggggggggsssggggggggggggggggg",
+				"ggggggdgggggggggggggsssgggggggggsssggggggggggggggggg",
+				"gggggddgggddggggggggsssgggggggggsssggggggggggggggggg",
+				"ggggggggggddggggggggsssgggggggggsssggggggggggggggggg",
+				"ggggggggggggggggggggsssgggggggggssssgggggggggggggggg",
+				"ggggggggggggggggggggssssggggggggssssgggggggggggggggg",
+				"gggggggggggggggggggggsssggggggggsssggggggggggggggggg",
+				"gggggggggggggggggggggsssggggggggssgggggggggggggggggg",
+				"gggggggggggggggggggggsssggggggdsssgggggggggggggggggg",
+				"gggggggggggggggggggggssssddggddsssgggggggggggggggggg",
+				"ggggggggggggggggggggggsssddgggdsssgggggdgggggggggggg",
+				"ggggggggggggggggggggggsssdgggggsssgggggggggggggggggg",
+				"gggggggggggggggggggggggsssggggdsssgggggggggggggggdgg",
+				"gggggggggggggggdddgggggssssgggssssggggggggggggggddgg",
+				"ggggggggggddggddddgggggdssssggsssgggggggggggggggdgdg",
+				"ggggggggggddddddddggggggsssssgsssggggggggggggggggggg",
+				"ggggggggggggggdgggggggggggsssggssggggggggggggggggggg",
+				"gggggggggggggggggggggggggggsssdssggggggggggggggggggg",
+				"gggggggggggggggggggggggggggssssssggggggggggggggggggg",
+				"gggggggggggggggggggggggggggssssssggggggggggggggggggg",
+				"gggggggggggggggggggggggggggsssssdggggggdgggggggggggg",
+				"ggggggggggggggggggggggggggdsssssgggggggddggggggggggg",
+				"ggggggggggggggggggggggggggdddsssgggggggggggggggggggg",
+				"ggggggggggggdggggggggggggggdgsssgggggggggggggggggggg",
+				"gggggggggggggggggggggggggggsssssssggdggggggggggggggg",
+				"gggggggggggggggggggggggggggggggggggggggggggggggggggg"
+			],
+			"fluid_spawns": [],
+			"format": "structured",
+			"id": "tg_export",
+			"images": {
+				"map": "res://Maps/tg_export.png",
+				"structures": "res://Maps/tg_export_structures.png"
+			},
+			"item_spawns": [
+				{
+					"id": "altar",
+					"position": [
+						152,
+						921
+					],
+					"rotation": 3.142,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						106,
+						1001
+					],
+					"rotation": 3.602,
+					"scale": 1.03
+				},
+				{
+					"id": "brazier",
+					"position": [
+						198,
+						871
+					],
+					"rotation": 2.995,
+					"scale": 0.938
+				},
+				{
+					"id": "crate",
+					"position": [
+						473,
+						915
+					],
+					"rotation": 4.584,
+					"scale": 1.091
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1122,
+						70
+					],
+					"rotation": 0.101,
+					"scale": 0.906
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1205,
+						84
+					],
+					"rotation": 0.52,
+					"scale": 0.947
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						925,
+						131
+					],
+					"rotation": 0.504,
+					"scale": 0.986
+				},
+				{
+					"id": "stool",
+					"position": [
+						1265,
+						59
+					],
+					"rotation": 0.457,
+					"scale": 1.048
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1965,
+						1892
+					],
+					"rotation": 2.607,
+					"scale": 1.013
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2050,
+						1546
+					],
+					"rotation": 1.96,
+					"scale": 1.034
+				},
+				{
+					"id": "crate",
+					"position": [
+						1859,
+						1544
+					],
+					"rotation": 1.792,
+					"scale": 1.035
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1987,
+						1717
+					],
+					"rotation": 2.58,
+					"scale": 1.038
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1728,
+						1634
+					],
+					"rotation": 2.444,
+					"scale": 0.963
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1818,
+						1582
+					],
+					"rotation": 1.962,
+					"scale": 1.053
+				},
+				{
+					"id": "cage",
+					"position": [
+						2006,
+						1625
+					],
+					"rotation": 2.484,
+					"scale": 0.999
+				},
+				{
+					"id": "round_table",
+					"position": [
+						509,
+						1636
+					],
+					"rotation": -0.884,
+					"scale": 0.97
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						573,
+						1634
+					],
+					"rotation": -1.233,
+					"scale": 0.945
+				},
+				{
+					"id": "amphora",
+					"position": [
+						509,
+						1860
+					],
+					"rotation": -0.677,
+					"scale": 1.036
+				},
+				{
+					"id": "fur_rug",
+					"position": [
+						648,
+						1694
+					],
+					"rotation": -1.033,
+					"scale": 0.994
+				},
+				{
+					"id": "basket",
+					"position": [
+						651,
+						1445
+					],
+					"rotation": 5.093,
+					"scale": 0.998
+				},
+				{
+					"id": "hammer",
+					"position": [
+						375,
+						422
+					],
+					"rotation": 1.11,
+					"scale": 0.902
+				},
+				{
+					"id": "barrel",
+					"position": [
+						415,
+						329
+					],
+					"rotation": 0.497,
+					"scale": 0.974
+				},
+				{
+					"id": "cartwheel",
+					"position": [
+						1814,
+						992
+					],
+					"rotation": 1.844,
+					"scale": 0.908
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1787,
+						720
+					],
+					"rotation": 1.662,
+					"scale": 1.087
+				},
+				{
+					"id": "basket",
+					"position": [
+						1175,
+						1665
+					],
+					"rotation": -1.717,
+					"scale": 1.069
+				},
+				{
+					"id": "amphora",
+					"position": [
+						950,
+						1887
+					],
+					"rotation": -1.215,
+					"scale": 0.988
+				},
+				{
+					"id": "basket",
+					"position": [
+						1061,
+						1542
+					],
+					"rotation": 3.092,
+					"scale": 1.038
+				},
+				{
+					"id": "straw_bed",
+					"position": [
+						1868,
+						570
+					],
+					"rotation": 2.306,
+					"scale": 0.945
+				},
+				{
+					"id": "straw_bed",
+					"position": [
+						1905,
+						414
+					],
+					"rotation": 2.316,
+					"scale": 0.984
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1628,
+						446
+					],
+					"rotation": 3.877,
+					"scale": 0.931
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						783,
+						2218
+					],
+					"rotation": -1.526,
+					"scale": 1.061
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						900,
+						2147
+					],
+					"rotation": -1.552,
+					"scale": 1.063
+				},
+				{
+					"id": "firewood",
+					"position": [
+						256,
+						1300
+					],
+					"rotation": -0.282,
+					"scale": 0.96
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						223,
+						1338
+					],
+					"rotation": -0.123,
+					"scale": 0.966
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						792,
+						1214
+					],
+					"rotation": -0.068,
+					"scale": 1.0
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						834,
+						1162
+					],
+					"rotation": 5.365,
+					"scale": 1.0
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						968,
+						1214
+					],
+					"rotation": 0.061,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						915,
+						1162
+					],
+					"rotation": 4.642,
+					"scale": 1.0
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						1144,
+						1214
+					],
+					"rotation": 0.074,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						1103,
+						1162
+					],
+					"rotation": 2.575,
+					"scale": 1.0
+				},
+				{
+					"id": "well",
+					"position": [
+						731,
+						825
+					],
+					"rotation": 0.026,
+					"scale": 1.0
+				},
+				{
+					"id": "cart",
+					"position": [
+						1929,
+						3814
+					],
+					"rotation": 0.902,
+					"scale": 1.0
+				}
+			],
+			"name": "Tg Export",
+			"npc_spawns": [
+				{
+					"count": 2,
+					"position": [
+						1789,
+						1919
+					],
+					"spread_radius": 60,
+					"template_id": "town_guard"
+				},
+				{
+					"condition": {
+						"time_hour_min": 8.0
+					},
+					"count": 1,
+					"position": [
+						1889,
+						2119
+					],
+					"spread_radius": 60,
+					"template_id": "merchant"
+				}
+			],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90,
+					"position": [
+						1469,
+						1959
+					]
+				},
+				"from_cemetery": {
+					"facing": 90,
+					"position": [
+						1589,
+						2159
+					]
+				},
+				"warp_1_arrival": {
+					"facing": 90,
+					"position": [
+						2029,
+						2419
+					]
+				}
+			},
+			"structures": [
+				{
+					"a": [
+						236,
+						1097
+					],
+					"b": [
+						68,
+						1097
+					],
+					"half": 10.0,
+					"hp": 105,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						1097
+					],
+					"b": [
+						68,
+						1013
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						1013
+					],
+					"b": [
+						-132,
+						1013
+					],
+					"half": 10.0,
+					"hp": 125,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-132,
+						1013
+					],
+					"b": [
+						-132,
+						829
+					],
+					"half": 10.0,
+					"hp": 115,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-132,
+						829
+					],
+					"b": [
+						68,
+						829
+					],
+					"half": 10.0,
+					"hp": 125,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						829
+					],
+					"b": [
+						68,
+						745
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						745
+					],
+					"b": [
+						236,
+						745
+					],
+					"half": 10.0,
+					"hp": 105,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						236,
+						745
+					],
+					"b": [
+						236,
+						829
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						236,
+						829
+					],
+					"b": [
+						436,
+						829
+					],
+					"half": 10.0,
+					"hp": 125,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						436,
+						829
+					],
+					"b": [
+						436,
+						891
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						436,
+						951
+					],
+					"b": [
+						436,
+						1013
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						436,
+						1013
+					],
+					"b": [
+						236,
+						1013
+					],
+					"half": 10.0,
+					"hp": 125,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						236,
+						1013
+					],
+					"b": [
+						236,
+						1097
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						1013
+					],
+					"b": [
+						68,
+						951
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						68,
+						891
+					],
+					"b": [
+						68,
+						829
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-102,
+						947
+					],
+					"b": [
+						-102,
+						895
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-124,
+						989
+					],
+					"b": [
+						-228,
+						989
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-228,
+						989
+					],
+					"b": [
+						-228,
+						853
+					],
+					"half": 10.0,
+					"hp": 85,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-228,
+						853
+					],
+					"b": [
+						-124,
+						853
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						-124,
+						853
+					],
+					"b": [
+						-124,
+						989
+					],
+					"half": 10.0,
+					"hp": 85,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						476,
+						973
+					],
+					"b": [
+						372,
+						973
+					],
+					"half": 11.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						372,
+						973
+					],
+					"b": [
+						372,
+						869
+					],
+					"half": 11.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						372,
+						869
+					],
+					"b": [
+						476,
+						869
+					],
+					"half": 11.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						476,
+						869
+					],
+					"b": [
+						476,
+						973
+					],
+					"half": 11.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						832,
+						8
+					],
+					"b": [
+						1352,
+						8
+					],
+					"half": 10.0,
+					"hp": 325,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1352,
+						8
+					],
+					"b": [
+						1352,
+						656
+					],
+					"half": 10.0,
+					"hp": 405,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1352,
+						656
+					],
+					"b": [
+						1285,
+						656
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1195,
+						656
+					],
+					"b": [
+						1128,
+						656
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1128,
+						656
+					],
+					"b": [
+						1128,
+						376
+					],
+					"half": 10.0,
+					"hp": 175,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1128,
+						376
+					],
+					"b": [
+						832,
+						376
+					],
+					"half": 10.0,
+					"hp": 185,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						832,
+						376
+					],
+					"b": [
+						832,
+						8
+					],
+					"half": 10.0,
+					"hp": 230,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1128,
+						376
+					],
+					"b": [
+						1210,
+						376
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1270,
+						376
+					],
+					"b": [
+						1352,
+						376
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2156,
+						1723
+					],
+					"b": [
+						2108,
+						1792
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2088,
+						1822
+					],
+					"b": [
+						2038,
+						1895
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2017,
+						1924
+					],
+					"b": [
+						2015,
+						1927
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1815,
+						1964
+					],
+					"b": [
+						1757,
+						1924
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1669,
+						1863
+					],
+					"b": [
+						1611,
+						1823
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1799,
+						1953
+					],
+					"b": [
+						1762,
+						1928
+					],
+					"half": 46.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1664,
+						1860
+					],
+					"b": [
+						1627,
+						1835
+					],
+					"half": 46.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1837,
+						1872
+					],
+					"b": [
+						1822,
+						1862
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1704,
+						1780
+					],
+					"b": [
+						1689,
+						1770
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1574,
+						1623
+					],
+					"b": [
+						1627,
+						1546
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1647,
+						1517
+					],
+					"b": [
+						1688,
+						1457
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1709,
+						1428
+					],
+					"b": [
+						1715,
+						1419
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1915,
+						1382
+					],
+					"b": [
+						1974,
+						1423
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2004,
+						1443
+					],
+					"b": [
+						2075,
+						1492
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2104,
+						1512
+					],
+					"b": [
+						2119,
+						1523
+					],
+					"half": 40.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2362,
+						1581
+					],
+					"b": [
+						2363,
+						1614
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2363,
+						1614
+					],
+					"b": [
+						2356,
+						1646
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2356,
+						1646
+					],
+					"b": [
+						2341,
+						1676
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2341,
+						1676
+					],
+					"b": [
+						2319,
+						1700
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2319,
+						1700
+					],
+					"b": [
+						2292,
+						1718
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2292,
+						1718
+					],
+					"b": [
+						2261,
+						1728
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2261,
+						1728
+					],
+					"b": [
+						2228,
+						1730
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2228,
+						1730
+					],
+					"b": [
+						2196,
+						1723
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2196,
+						1723
+					],
+					"b": [
+						2166,
+						1708
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2166,
+						1708
+					],
+					"b": [
+						2142,
+						1686
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2142,
+						1686
+					],
+					"b": [
+						2124,
+						1658
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2124,
+						1658
+					],
+					"b": [
+						2114,
+						1627
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2114,
+						1627
+					],
+					"b": [
+						2112,
+						1594
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2112,
+						1594
+					],
+					"b": [
+						2119,
+						1562
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2119,
+						1562
+					],
+					"b": [
+						2134,
+						1533
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2134,
+						1533
+					],
+					"b": [
+						2156,
+						1508
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2156,
+						1508
+					],
+					"b": [
+						2184,
+						1490
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2184,
+						1490
+					],
+					"b": [
+						2215,
+						1480
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2215,
+						1480
+					],
+					"b": [
+						2248,
+						1479
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2248,
+						1479
+					],
+					"b": [
+						2280,
+						1485
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2280,
+						1485
+					],
+					"b": [
+						2309,
+						1500
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2309,
+						1500
+					],
+					"b": [
+						2334,
+						1522
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2334,
+						1522
+					],
+					"b": [
+						2351,
+						1550
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2351,
+						1550
+					],
+					"b": [
+						2362,
+						1581
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1957,
+						2170
+					],
+					"b": [
+						1924,
+						2171
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1924,
+						2171
+					],
+					"b": [
+						1892,
+						2164
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1892,
+						2164
+					],
+					"b": [
+						1862,
+						2149
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1862,
+						2149
+					],
+					"b": [
+						1838,
+						2127
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1838,
+						2127
+					],
+					"b": [
+						1820,
+						2100
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1820,
+						2100
+					],
+					"b": [
+						1810,
+						2069
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1810,
+						2069
+					],
+					"b": [
+						1808,
+						2036
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1808,
+						2036
+					],
+					"b": [
+						1815,
+						2004
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1815,
+						2004
+					],
+					"b": [
+						1830,
+						1974
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1830,
+						1974
+					],
+					"b": [
+						1852,
+						1950
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1852,
+						1950
+					],
+					"b": [
+						1880,
+						1932
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1880,
+						1932
+					],
+					"b": [
+						1911,
+						1922
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1911,
+						1922
+					],
+					"b": [
+						1944,
+						1920
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1944,
+						1920
+					],
+					"b": [
+						1976,
+						1927
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1976,
+						1927
+					],
+					"b": [
+						2005,
+						1942
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2005,
+						1942
+					],
+					"b": [
+						2030,
+						1964
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2030,
+						1964
+					],
+					"b": [
+						2048,
+						1992
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2048,
+						1992
+					],
+					"b": [
+						2058,
+						2023
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2058,
+						2023
+					],
+					"b": [
+						2059,
+						2056
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2059,
+						2056
+					],
+					"b": [
+						2053,
+						2088
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2053,
+						2088
+					],
+					"b": [
+						2038,
+						2117
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2038,
+						2117
+					],
+					"b": [
+						2016,
+						2142
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2016,
+						2142
+					],
+					"b": [
+						1988,
+						2159
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1988,
+						2159
+					],
+					"b": [
+						1957,
+						2170
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1368,
+						1765
+					],
+					"b": [
+						1367,
+						1732
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1367,
+						1732
+					],
+					"b": [
+						1374,
+						1700
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1374,
+						1700
+					],
+					"b": [
+						1388,
+						1670
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1388,
+						1670
+					],
+					"b": [
+						1410,
+						1646
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1410,
+						1646
+					],
+					"b": [
+						1438,
+						1628
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1438,
+						1628
+					],
+					"b": [
+						1469,
+						1618
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1469,
+						1618
+					],
+					"b": [
+						1502,
+						1616
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1502,
+						1616
+					],
+					"b": [
+						1534,
+						1623
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1534,
+						1623
+					],
+					"b": [
+						1564,
+						1638
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1564,
+						1638
+					],
+					"b": [
+						1588,
+						1660
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1588,
+						1660
+					],
+					"b": [
+						1606,
+						1688
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1606,
+						1688
+					],
+					"b": [
+						1616,
+						1719
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1616,
+						1719
+					],
+					"b": [
+						1618,
+						1752
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1618,
+						1752
+					],
+					"b": [
+						1611,
+						1784
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1611,
+						1784
+					],
+					"b": [
+						1596,
+						1813
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1596,
+						1813
+					],
+					"b": [
+						1574,
+						1838
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1574,
+						1838
+					],
+					"b": [
+						1546,
+						1856
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1546,
+						1856
+					],
+					"b": [
+						1515,
+						1866
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1515,
+						1866
+					],
+					"b": [
+						1482,
+						1867
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1482,
+						1867
+					],
+					"b": [
+						1450,
+						1861
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1450,
+						1861
+					],
+					"b": [
+						1421,
+						1846
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1421,
+						1846
+					],
+					"b": [
+						1396,
+						1824
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1396,
+						1824
+					],
+					"b": [
+						1378,
+						1796
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1378,
+						1796
+					],
+					"b": [
+						1368,
+						1765
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1773,
+						1176
+					],
+					"b": [
+						1806,
+						1175
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1806,
+						1175
+					],
+					"b": [
+						1838,
+						1182
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1838,
+						1182
+					],
+					"b": [
+						1868,
+						1196
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1868,
+						1196
+					],
+					"b": [
+						1892,
+						1219
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1892,
+						1219
+					],
+					"b": [
+						1910,
+						1246
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1910,
+						1246
+					],
+					"b": [
+						1920,
+						1277
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1920,
+						1277
+					],
+					"b": [
+						1922,
+						1310
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1922,
+						1310
+					],
+					"b": [
+						1915,
+						1342
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1915,
+						1342
+					],
+					"b": [
+						1900,
+						1372
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1900,
+						1372
+					],
+					"b": [
+						1878,
+						1396
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1878,
+						1396
+					],
+					"b": [
+						1850,
+						1414
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1850,
+						1414
+					],
+					"b": [
+						1819,
+						1424
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1819,
+						1424
+					],
+					"b": [
+						1786,
+						1426
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1786,
+						1426
+					],
+					"b": [
+						1754,
+						1419
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1754,
+						1419
+					],
+					"b": [
+						1725,
+						1404
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1725,
+						1404
+					],
+					"b": [
+						1700,
+						1382
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1700,
+						1382
+					],
+					"b": [
+						1682,
+						1354
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1682,
+						1354
+					],
+					"b": [
+						1672,
+						1323
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1672,
+						1323
+					],
+					"b": [
+						1671,
+						1290
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1671,
+						1290
+					],
+					"b": [
+						1677,
+						1258
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1677,
+						1258
+					],
+					"b": [
+						1692,
+						1229
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1692,
+						1229
+					],
+					"b": [
+						1714,
+						1204
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1714,
+						1204
+					],
+					"b": [
+						1742,
+						1187
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1742,
+						1187
+					],
+					"b": [
+						1773,
+						1176
+					],
+					"half": 34.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2022,
+						1776
+					],
+					"b": [
+						1892,
+						1687
+					],
+					"half": 14.0,
+					"hp": 99,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1843,
+						1653
+					],
+					"b": [
+						1713,
+						1563
+					],
+					"half": 14.0,
+					"hp": 99,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2171,
+						1559
+					],
+					"b": [
+						2022,
+						1776
+					],
+					"half": 14.0,
+					"hp": 166,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1713,
+						1563
+					],
+					"b": [
+						1862,
+						1346
+					],
+					"half": 14.0,
+					"hp": 166,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1801,
+						1791
+					],
+					"b": [
+						1777,
+						1775
+					],
+					"half": 8.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						331,
+						1707
+					],
+					"b": [
+						461,
+						1505
+					],
+					"half": 10.0,
+					"hp": 150,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						461,
+						1505
+					],
+					"b": [
+						508,
+						1535
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						508,
+						1535
+					],
+					"b": [
+						575,
+						1431
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						575,
+						1431
+					],
+					"b": [
+						662,
+						1487
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						723,
+						1526
+					],
+					"b": [
+						810,
+						1582
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						810,
+						1582
+					],
+					"b": [
+						743,
+						1687
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						743,
+						1687
+					],
+					"b": [
+						790,
+						1717
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						790,
+						1717
+					],
+					"b": [
+						661,
+						1919
+					],
+					"half": 10.0,
+					"hp": 150,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						661,
+						1919
+					],
+					"b": [
+						614,
+						1889
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						614,
+						1889
+					],
+					"b": [
+						547,
+						1993
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						547,
+						1993
+					],
+					"b": [
+						311,
+						1842
+					],
+					"half": 10.0,
+					"hp": 176,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						311,
+						1842
+					],
+					"b": [
+						378,
+						1737
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						378,
+						1737
+					],
+					"b": [
+						331,
+						1707
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						443,
+						1636
+					],
+					"b": [
+						535,
+						1696
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						586,
+						1728
+					],
+					"b": [
+						678,
+						1788
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						496,
+						1813
+					],
+					"b": [
+						544,
+						1737
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						577,
+						1687
+					],
+					"b": [
+						626,
+						1611
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						651,
+						1516
+					],
+					"b": [
+						702,
+						1548
+					],
+					"half": 14.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						344,
+						192
+					],
+					"b": [
+						511,
+						354
+					],
+					"half": 10.0,
+					"hp": 91,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						377,
+						491
+					],
+					"b": [
+						210,
+						329
+					],
+					"half": 10.0,
+					"hp": 91,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						210,
+						329
+					],
+					"b": [
+						344,
+						192
+					],
+					"half": 10.0,
+					"hp": 76,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						492,
+						439
+					],
+					"b": [
+						461,
+						470
+					],
+					"half": 16.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						247,
+						322
+					],
+					"b": [
+						228,
+						342
+					],
+					"half": 17.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1831,
+						654
+					],
+					"b": [
+						1883,
+						1034
+					],
+					"half": 10.0,
+					"hp": 151,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1883,
+						1034
+					],
+					"b": [
+						1748,
+						1053
+					],
+					"half": 10.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1748,
+						1053
+					],
+					"b": [
+						1744,
+						1025
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1738,
+						982
+					],
+					"b": [
+						1735,
+						956
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1729,
+						913
+					],
+					"b": [
+						1725,
+						885
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1719,
+						842
+					],
+					"b": [
+						1715,
+						812
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1709,
+						768
+					],
+					"b": [
+						1704,
+						732
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1699,
+						688
+					],
+					"b": [
+						1696,
+						672
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1696,
+						672
+					],
+					"b": [
+						1831,
+						654
+					],
+					"half": 10.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1844,
+						749
+					],
+					"b": [
+						1709,
+						767
+					],
+					"half": 6.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1857,
+						844
+					],
+					"b": [
+						1722,
+						862
+					],
+					"half": 6.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1870,
+						939
+					],
+					"b": [
+						1735,
+						958
+					],
+					"half": 6.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						921,
+						1948
+					],
+					"b": [
+						873,
+						1607
+					],
+					"half": 10.0,
+					"hp": 135,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						873,
+						1607
+					],
+					"b": [
+						1045,
+						1583
+					],
+					"half": 10.0,
+					"hp": 68,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1105,
+						1574
+					],
+					"b": [
+						1277,
+						1550
+					],
+					"half": 10.0,
+					"hp": 68,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1277,
+						1550
+					],
+					"b": [
+						1304,
+						1740
+					],
+					"half": 10.0,
+					"hp": 76,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1304,
+						1740
+					],
+					"b": [
+						1130,
+						1765
+					],
+					"half": 10.0,
+					"hp": 69,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1130,
+						1765
+					],
+					"b": [
+						1151,
+						1915
+					],
+					"half": 10.0,
+					"hp": 60,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1151,
+						1915
+					],
+					"b": [
+						921,
+						1948
+					],
+					"half": 10.0,
+					"hp": 91,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						901,
+						1808
+					],
+					"b": [
+						993,
+						1795
+					],
+					"half": 7.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1040,
+						1788
+					],
+					"b": [
+						1131,
+						1776
+					],
+					"half": 7.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1008,
+						1905
+					],
+					"b": [
+						1056,
+						1898
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2045,
+						362
+					],
+					"b": [
+						1968,
+						698
+					],
+					"half": 10.0,
+					"hp": 135,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1968,
+						698
+					],
+					"b": [
+						1571,
+						606
+					],
+					"half": 10.0,
+					"hp": 160,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1571,
+						606
+					],
+					"b": [
+						1614,
+						419
+					],
+					"half": 10.0,
+					"hp": 76,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1614,
+						419
+					],
+					"b": [
+						1670,
+						432
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1729,
+						445
+					],
+					"b": [
+						1785,
+						458
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1785,
+						458
+					],
+					"b": [
+						1819,
+						310
+					],
+					"half": 10.0,
+					"hp": 60,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1819,
+						310
+					],
+					"b": [
+						2045,
+						362
+					],
+					"half": 10.0,
+					"hp": 91,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2014,
+						500
+					],
+					"b": [
+						1924,
+						479
+					],
+					"half": 7.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1877,
+						468
+					],
+					"b": [
+						1788,
+						448
+					],
+					"half": 7.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1949,
+						371
+					],
+					"b": [
+						1902,
+						360
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						737,
+						2274
+					],
+					"b": [
+						740,
+						1980
+					],
+					"half": 10.0,
+					"hp": 115,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						740,
+						1980
+					],
+					"b": [
+						818,
+						1981
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						878,
+						1982
+					],
+					"b": [
+						956,
+						1983
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						956,
+						1983
+					],
+					"b": [
+						953,
+						2276
+					],
+					"half": 10.0,
+					"hp": 115,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						953,
+						2276
+					],
+					"b": [
+						737,
+						2274
+					],
+					"half": 10.0,
+					"hp": 85,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						867,
+						2247
+					],
+					"b": [
+						823,
+						2246
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						94,
+						1250
+					],
+					"b": [
+						312,
+						1169
+					],
+					"half": 10.0,
+					"hp": 92,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						312,
+						1169
+					],
+					"b": [
+						340,
+						1244
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						361,
+						1300
+					],
+					"b": [
+						389,
+						1375
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						389,
+						1375
+					],
+					"b": [
+						171,
+						1456
+					],
+					"half": 10.0,
+					"hp": 92,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						171,
+						1456
+					],
+					"b": [
+						94,
+						1250
+					],
+					"half": 10.0,
+					"hp": 87,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						167,
+						1364
+					],
+					"b": [
+						151,
+						1322
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						306,
+						3558
+					],
+					"r": 62.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1227,
+						3314
+					],
+					"r": 60.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3236,
+						2158
+					],
+					"r": 50.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2615,
+						2704
+					],
+					"r": 46.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						189,
+						2085
+					],
+					"r": 50.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2557,
+						898
+					],
+					"r": 50.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						846,
+						2560
+					],
+					"r": 59.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2797,
+						2556
+					],
+					"r": 74.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3041,
+						450
+					],
+					"r": 57.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3049,
+						3331
+					],
+					"r": 65.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						621,
+						214
+					],
+					"r": 55.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1712,
+						2668
+					],
+					"r": 42.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						648,
+						3108
+					],
+					"r": 81.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						134,
+						1848
+					],
+					"r": 69.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1443,
+						1099
+					],
+					"r": 58.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3130,
+						2824
+					],
+					"r": 50.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1728,
+						3735
+					],
+					"r": 53.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3108,
+						3112
+					],
+					"r": 58.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1065,
+						2754
+					],
+					"r": 60.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2274,
+						3038
+					],
+					"r": 62.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2280,
+						3471
+					],
+					"r": 75.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3114,
+						1653
+					],
+					"r": 69.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1719,
+						66
+					],
+					"r": 49.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						910,
+						3259
+					],
+					"r": 75.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						99,
+						2358
+					],
+					"r": 125.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						253,
+						4018
+					],
+					"r": 61.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3006,
+						1375
+					],
+					"r": 51.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2727,
+						3754
+					],
+					"r": 52.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2885,
+						3539
+					],
+					"r": 59.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2324,
+						1255
+					],
+					"r": 118.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2244,
+						2282
+					],
+					"r": 74.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2762,
+						876
+					],
+					"r": 56.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						774,
+						3702
+					],
+					"r": 42.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1730,
+						3089
+					],
+					"r": 45.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						427,
+						2806
+					],
+					"r": 49.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						421,
+						3749
+					],
+					"r": 53.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2825,
+						2225
+					],
+					"r": 63.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2793,
+						479
+					],
+					"r": 50.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2895,
+						1237
+					],
+					"r": 54.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2940,
+						3840
+					],
+					"r": 64.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						608,
+						995
+					],
+					"r": 46.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3156,
+						2559
+					],
+					"r": 65.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						85,
+						3485
+					],
+					"r": 63.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1023,
+						3504
+					],
+					"r": 51.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						448,
+						3062
+					],
+					"r": 39.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3257,
+						3520
+					],
+					"r": 56.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3171,
+						1037
+					],
+					"r": 52.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1628,
+						2248
+					],
+					"r": 69.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2458,
+						2553
+					],
+					"r": 70.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2660,
+						52
+					],
+					"r": 70.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						569,
+						548
+					],
+					"r": 46.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						816,
+						2379
+					],
+					"r": 60.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						337,
+						3170
+					],
+					"r": 59.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						338,
+						3323
+					],
+					"r": 43.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						875,
+						3826
+					],
+					"r": 44.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1245,
+						3802
+					],
+					"r": 65.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1762,
+						2472
+					],
+					"r": 61.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						667,
+						720
+					],
+					"r": 66.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2317,
+						647
+					],
+					"r": 71.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						511,
+						3319
+					],
+					"r": 49.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2714,
+						1077
+					],
+					"r": 83.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3034,
+						2670
+					],
+					"r": 48.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3252,
+						527
+					],
+					"r": 75.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2072,
+						3829
+					],
+					"r": 65.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2650,
+						2264
+					],
+					"r": 41.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2231,
+						370
+					],
+					"r": 56.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2155,
+						52
+					],
+					"r": 44.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						609,
+						2330
+					],
+					"r": 52.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						720,
+						83
+					],
+					"r": 55.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1220,
+						2004
+					],
+					"r": 51.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2528,
+						3276
+					],
+					"r": 63.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1219,
+						3091
+					],
+					"r": 59.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						409,
+						2048
+					],
+					"r": 61.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1043,
+						1434
+					],
+					"r": 69.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2177,
+						978
+					],
+					"r": 43.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2797,
+						4049
+					],
+					"r": 52.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3111,
+						3803
+					],
+					"r": 52.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2253,
+						2465
+					],
+					"r": 53.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2722,
+						1503
+					],
+					"r": 60.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2573,
+						3595
+					],
+					"r": 58.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1020,
+						3836
+					],
+					"r": 52.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2497,
+						3898
+					],
+					"r": 53.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1956,
+						3148
+					],
+					"r": 65.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						598,
+						3726
+					],
+					"r": 48.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3197,
+						1451
+					],
+					"r": 46.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3090,
+						857
+					],
+					"r": 50.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						272,
+						2573
+					],
+					"r": 51.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						520,
+						1217
+					],
+					"r": 47.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1230,
+						1458
+					],
+					"r": 44.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2469,
+						2948
+					],
+					"r": 59.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2602,
+						2554
+					],
+					"r": 32.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1254,
+						2720
+					],
+					"r": 72.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3152,
+						703
+					],
+					"r": 55.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1428,
+						3788
+					],
+					"r": 52.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1248,
+						2436
+					],
+					"r": 45.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						581,
+						854
+					],
+					"r": 47.5
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3249,
+						3670
+					],
+					"r": 50.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2882,
+						1807
+					],
+					"r": 49.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1399,
+						746
+					],
+					"r": 52.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2705,
+						1770
+					],
+					"r": 47.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3228,
+						2966
+					],
+					"r": 65.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						970,
+						2935
+					],
+					"r": 43.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2902,
+						2005
+					],
+					"r": 57.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						767,
+						2698
+					],
+					"r": 52.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1415,
+						3988
+					],
+					"r": 49.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						971,
+						2352
+					],
+					"r": 47.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2643,
+						1289
+					],
+					"r": 63.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2635,
+						3133
+					],
+					"r": 49.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2453,
+						101
+					],
+					"r": 52.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1221,
+						2194
+					],
+					"r": 45.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3242,
+						3268
+					],
+					"r": 50.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1578,
+						3716
+					],
+					"r": 52.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2665,
+						709
+					],
+					"r": 56.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						119,
+						3654
+					],
+					"r": 59.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2819,
+						291
+					],
+					"r": 76.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						285,
+						1920
+					],
+					"r": 44.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						435,
+						3994
+					],
+					"r": 48.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1428,
+						951
+					],
+					"r": 43.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2556,
+						1808
+					],
+					"r": 57.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1081,
+						2195
+					],
+					"r": 38.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						591,
+						2806
+					],
+					"r": 64.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						146,
+						517
+					],
+					"r": 51.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2297,
+						3986
+					],
+					"r": 53.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						664,
+						1369
+					],
+					"r": 66.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1722,
+						3539
+					],
+					"r": 41.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2333,
+						894
+					],
+					"r": 50.2
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2255,
+						3653
+					],
+					"r": 44.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2231,
+						2082
+					],
+					"r": 60.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						802,
+						2876
+					],
+					"r": 52.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2505,
+						1043
+					],
+					"r": 50.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2981,
+						2258
+					],
+					"r": 38.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2714,
+						2926
+					],
+					"r": 65.9
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						162,
+						124
+					],
+					"r": 64.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						188,
+						2720
+					],
+					"r": 52.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2795,
+						2369
+					],
+					"r": 37.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2160,
+						521
+					],
+					"r": 57.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3142,
+						1275
+					],
+					"r": 46.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						65,
+						3858
+					],
+					"r": 63.4
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						723,
+						399
+					],
+					"r": 62.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2145,
+						1109
+					],
+					"r": 49.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1100,
+						2389
+					],
+					"r": 41.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3090,
+						4016
+					],
+					"r": 57.6
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1685,
+						3240
+					],
+					"r": 61.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						496,
+						3592
+					],
+					"r": 56.3
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2856,
+						2729
+					],
+					"r": 49.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1576,
+						3943
+					],
+					"r": 57.1
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1444,
+						3236
+					],
+					"r": 67.8
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1629,
+						2944
+					],
+					"r": 39.0
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1753,
+						182
+					],
+					"r": 32.7
+				},
+				{
+					"hp": 80,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2300,
+						1028
+					],
+					"r": 43.6
+				},
+				{
+					"deg": 90.0,
+					"half": 10.0,
+					"hinge": [
+						436,
+						891
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -90.0,
+					"half": 7.0,
+					"hinge": [
+						68,
+						951
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 180.0,
+					"half": 10.0,
+					"hinge": [
+						1285,
+						656
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 90.0
+				},
+				{
+					"deg": 0.0,
+					"half": 7.0,
+					"hinge": [
+						1210,
+						376
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -145.5,
+					"half": 40.0,
+					"hinge": [
+						1757,
+						1924
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 108.0
+				},
+				{
+					"deg": -145.5,
+					"half": 14.0,
+					"hinge": [
+						1892,
+						1687
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 32.7,
+					"half": 10.0,
+					"hinge": [
+						662,
+						1487
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 72.0
+				},
+				{
+					"deg": 32.7,
+					"half": 7.0,
+					"hinge": [
+						535,
+						1696
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -57.3,
+					"half": 7.0,
+					"hinge": [
+						544,
+						1737
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -8.1,
+					"half": 10.0,
+					"hinge": [
+						1045,
+						1583
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -8.1,
+					"half": 7.0,
+					"hinge": [
+						993,
+						1795
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 48.0
+				},
+				{
+					"deg": 13.0,
+					"half": 10.0,
+					"hinge": [
+						1670,
+						432
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": -167.0,
+					"half": 7.0,
+					"hinge": [
+						1924,
+						479
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 48.0
+				},
+				{
+					"deg": 0.6,
+					"half": 10.0,
+					"hinge": [
+						818,
+						1981
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 69.6,
+					"half": 10.0,
+					"hinge": [
+						340,
+						1244
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				}
+			],
+			"tile_size": 64,
+			"warp_points": [
+				{
+					"id": "to_town_square_1",
+					"label": "To Town Square",
+					"position": [
+						1349,
+						2279
 					],
 					"size": [
 						80,
-						40
+						80
 					],
-					"target_map": "dock_tavern",
-					"target_spawn": "from_lighthouse",
-					"label": "To Dock Tavern"
+					"target_map": "town_square",
+					"target_spawn": "default"
+				},
+				{
+					"condition": {
+						"item": "cellar_key"
+					},
+					"id": "warp_1",
+					"label": "Stairs",
+					"position": [
+						1729,
+						2319
+					],
+					"size": [
+						80,
+						80
+					],
+					"target_map": "tg_export",
+					"target_spawn": "warp_1_arrival"
 				}
+			],
+			"world_size": [
+				3328,
+				4096
 			]
 		}
 	]

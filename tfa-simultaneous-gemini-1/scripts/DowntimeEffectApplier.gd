@@ -111,24 +111,49 @@ static func _apply_money(character, value, success_tier: int) -> void:
 	var inv: Inventory = character.get_node_or_null("Inventory")
 	if inv == null:
 		return
-	# "all" means lost everything.
+	# "all" means lost everything — zero out every currency the character holds.
 	if typeof(value) == TYPE_STRING and String(value).to_lower() == "all":
-		var idx_all: int = inv.find_item_by_id(GOLD_ID)
-		if idx_all >= 0:
-			inv.items[idx_all]["num_stacks"] = 0
+		for cid in _ordered_currency_ids():
+			var idx_all: int = inv.find_item_by_id(cid)
+			if idx_all >= 0:
+				inv.items[idx_all]["num_stacks"] = 0
 		return
 	var amount: int = int(value)
 	if amount == 0:
 		return
 	if amount > 0:
 		var scaled: int = amount * max(success_tier, 1)
-		inv.add_stack({"id": GOLD_ID, "is_stackable": true, "num_stacks": scaled, "name": "Gold", "max_stack_size": 9999})
-	else:
-		var idx: int = inv.find_item_by_id(GOLD_ID)
-		if idx < 0:
+		# Pay out in a random Currency-trait item (gold, cigarette, ...).
+		var cur_data: Dictionary = ItemDatabase.random_currency_data(GOLD_ID)
+		if cur_data.is_empty():
 			return
-		var current: int = int(inv.items[idx].get("num_stacks", 0))
-		inv.items[idx]["num_stacks"] = max(0, current - abs(amount))
+		var entry: Dictionary = cur_data.duplicate(true)
+		entry["num_stacks"] = scaled
+		entry["is_stackable"] = true
+		inv.add_stack(entry)
+	else:
+		# Deduct across the character's currency holdings (gold first).
+		var remaining: int = abs(amount)
+		for cid in _ordered_currency_ids():
+			if remaining <= 0:
+				break
+			var idx: int = inv.find_item_by_id(cid)
+			if idx < 0:
+				continue
+			var current: int = int(inv.items[idx].get("num_stacks", 0))
+			var take: int = min(current, remaining)
+			inv.items[idx]["num_stacks"] = current - take
+			remaining -= take
+
+static func _ordered_currency_ids() -> Array:
+	# Currency ids with GOLD_ID first (so removal/"all" prefers gold), then the
+	# rest in a stable order.
+	var ids: Array = ItemDatabase.currency_item_ids()
+	ids.sort()
+	if GOLD_ID in ids:
+		ids.erase(GOLD_ID)
+		ids.push_front(GOLD_ID)
+	return ids
 
 static func _remove_with_trait(character, trait_tag: String) -> int:
 	var cm = character.get_node_or_null("ConditionManager")

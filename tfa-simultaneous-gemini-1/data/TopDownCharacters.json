@@ -26,7 +26,7 @@
 	  "icon": "res://icons/characters/default_human.png",
 	  "dialogue": null,
 	  "interact_options": ["Inspect"],
-	  "extra_abilities": ["fireball", "cloud_kill", "ice_storm", "lightning_bolt", "creepy_beam", "acid_splash", "thunderwave", "beguile", "confess", "hitch", "fatal_attraction", "test_confused", "test_frightened", "test_panicked", "test_sickened", "test_nauseated", "test_animal_magnetism", "bide", "rain", "acid_rain", "freezing_rain", "wave_of_dysthymia", "deny_ending", "psych_up", "fire_spin", "bumper_crop", "alms_of_the_vein", "bind_soul", "force_march"],
+	  "extra_abilities": ["fireball", "cloud_kill", "ice_storm", "lightning_bolt", "creepy_beam", "acid_splash", "thunderwave", "beguile", "confess", "hitch", "fatal_attraction", "test_confused", "test_frightened", "test_panicked", "test_sickened", "test_nauseated", "test_animal_magnetism", "bide", "rain", "acid_rain", "freezing_rain", "wave_of_dysthymia", "deny_ending", "psych_up", "fire_spin", "bumper_crop", "alms_of_the_vein", "bind_soul", "force_march", "rat_pack"],
 	  "extra_conditions": [],
 	  "extra_traits": {"Martial": 2, "Arcane": 3, "Occult": 2, "Holy": 2, "Primal": 2},
 	  "use_school_resources": true,
@@ -455,6 +455,45 @@
 		"sight": 150,
 		"hearing": 200,
 		"fov_angle_degrees": 270
+	  },
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "rat_swarm",
+	  "name": "Rat Swarm",
+	  "race": "rat",
+	  "is_creature": true,
+	  "faction": "wildlife",
+	  "swarm_visual": "rat_swarm",
+	  "stats": {
+		"strength": 35,
+		"constitution": 55,
+		"dexterity": 65,
+		"will": 20,
+		"intelligence": 8,
+		"charisma": 5
+	  },
+	  "appearance_override": {
+		"body_width": 16.0,
+		"body_height": 12.0
+	  },
+	  "equipment": [],
+	  "icon": "res://Icons/wild_wolf_icon.png",
+	  "dialogue": null,
+	  "interact_options": [
+        "Inspect"
+	  ],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {
+		"unarmed_strike_damage_type": "piercing",
+		"unarmed_strike_damage": 8
+	  },
+	  "sensory": {
+		"sight": 120,
+		"hearing": 180,
+		"fov_angle_degrees": 300
 	  },
 	  "spawn_conditions": {}
 	},
@@ -1683,10 +1722,11 @@
         "Inspect"
 	  ],
 	  "extra_abilities": [
-        "pied_piper"
+		"pied_piper", "rat_pack"
 	  ],
 	  "extra_conditions": [],
-	  "extra_traits": {},
+	  "extra_traits": {"Occult": 2},
+	  "use_school_resources": true,
 	  "combat": {},
 	  "sensory": {},
 	  "spawn_conditions": {}
