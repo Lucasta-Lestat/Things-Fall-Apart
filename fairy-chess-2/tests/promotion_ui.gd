@@ -14,6 +14,12 @@ func fail(msg: String) -> void:
 	print("PROMO FAIL: " + msg)
 
 
+# Autoload singletons are NOT compile-time identifiers in a fresh `--script`
+# compile, so fetch PlayerDatabase from the tree at runtime instead.
+func _pdb():
+	return root.get_node("/root/PlayerDatabase")
+
+
 func _initialize():
 	var scene = load("res://fairy_chess.tscn").instantiate()
 	root.add_child(scene)
@@ -31,6 +37,8 @@ func _initialize():
 		_done()
 		return
 
+	# Dismiss the pre-game champion picker; this test builds its own position.
+	ui.profile_picker.cancel()
 	gb.set_ai_enabled(false) # hotseat so we control both sides deterministically
 
 	# Build a minimal legal position directly in the rules state, bypassing the
@@ -113,7 +121,7 @@ func _initialize():
 
 
 func _spawn(gb, display, type, color, pos):
-	var def = PlayerDatabase.PIECE_DEFINITIONS[type]
+	var def = _pdb().PIECE_DEFINITIONS[type]
 	var node = load(def.scene).instantiate()
 	display.add_child(node)
 	node.setup_piece(type, color, def.category == "royal", 100)

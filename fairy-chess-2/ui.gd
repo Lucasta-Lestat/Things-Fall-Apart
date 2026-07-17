@@ -18,6 +18,7 @@ extends CanvasLayer
 @onready var game_over_panel = $GameOverlayUI/GameOverPanel
 @onready var game_over_label = $GameOverlayUI/GameOverPanel/VBoxContainer/OutcomeLabel
 @onready var promotion_picker = $GameOverlayUI/PromotionPicker
+@onready var profile_picker = $GameOverlayUI/ProfilePicker
 
 var piece_icon_scene = preload("res://ui/piece_icon.tscn")
 
@@ -30,15 +31,18 @@ func _ready():
 	game_board.turn_info_changed.connect(_on_turn_info_changed)
 	game_board.spawn_credits_changed.connect(_on_spawn_credits_changed)
 	game_board.game_ended.connect(_on_game_ended)
+	profile_picker.confirmed.connect(_on_profiles_confirmed)
 
 	game_over_panel.visible = false
 	ai_toggle.visible = true
 	ai_toggle.button_pressed = game_board.ai_enabled
 
-	_on_game_state_changed("setup")
-	_on_setup_state_changed()
-	populate_piece_panels(white_piece_panel, "white", game_board.white_profile)
-	populate_piece_panels(black_piece_panel, "black", game_board.black_profile)
+	_on_game_state_changed(game_board.game_phase)
+
+
+func _on_profiles_confirmed(white_id, black_id, ai_on):
+	ai_toggle.button_pressed = ai_on
+	game_board.begin_setup(white_id, black_id, ai_on)
 
 
 # --- UI Update Functions ---
@@ -65,6 +69,17 @@ func _any_positive(credits: Dictionary) -> bool:
 func _on_game_state_changed(new_state):
 	game_state_label.text = "Game Phase: " + new_state.capitalize()
 	match new_state:
+		"pregame":
+			# Champion selection happens over an otherwise-inert board.
+			start_button.disabled = true
+			ai_toggle.disabled = true
+			white_piece_panel.visible = false
+			black_piece_panel.visible = false
+			setup_turn_label.visible = false
+			player_turn_label.visible = true
+			profile_picker.open(PlayerDatabase.get_roster(),
+				game_board.DEFAULT_WHITE_ID, game_board.DEFAULT_BLACK_ID,
+				game_board.ai_enabled)
 		"setup":
 			start_button.disabled = true
 			ai_toggle.disabled = false
@@ -75,6 +90,8 @@ func _on_game_state_changed(new_state):
 			update_profile_displays()
 			white_profile_display.visible = true
 			black_profile_display.visible = true
+			populate_piece_panels(white_piece_panel, "white", game_board.white_profile)
+			populate_piece_panels(black_piece_panel, "black", game_board.black_profile)
 		"playing":
 			start_button.disabled = true
 			ai_toggle.disabled = true

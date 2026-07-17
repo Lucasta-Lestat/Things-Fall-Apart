@@ -10,9 +10,11 @@
 extends Node
 
 var _templates: Dictionary = {}
+var _chess_sets: Dictionary = {} # character id -> {peasants, nobles, royals}
 
 func _ready() -> void:
 	_load_database()
+	_load_chess_sets()
 
 func _load_database() -> void:
 	var file_path = "res://data/TopDownCharacters.json"
@@ -46,6 +48,34 @@ func get_template(template_id: String) -> Dictionary:
 
 func get_all_template_ids() -> Array:
 	return _templates.keys()
+
+# ---------------------------------------------------------------------------
+# Fairy chess sets (the character's army in the chess minigame)
+# ---------------------------------------------------------------------------
+# Sets are generated offline by tools/generate_fairy_chess.py from each
+# character's faction / traits / stats and stored in data/fairy_chess_sets.json,
+# keyed by character id. Each set is {peasants, nobles, royals} where each is a
+# {piece_type: count} dict.
+
+func _load_chess_sets() -> void:
+	var file_path = "res://data/fairy_chess_sets.json"
+	if not FileAccess.file_exists(file_path):
+		push_warning("Fairy chess sets not found at: " + file_path)
+		return
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	var json = JSON.new()
+	if json.parse(file.get_as_text()) == OK:
+		_chess_sets = json.get_data()
+		print("Loaded %d fairy chess sets" % _chess_sets.size())
+	else:
+		push_error("Failed to parse fairy chess sets: " + json.get_error_message())
+
+# Returns the character's chess army, or an empty dict if none is defined.
+func get_chess_set(template_id: String) -> Dictionary:
+	return _chess_sets.get(template_id, {})
+
+func has_chess_set(template_id: String) -> bool:
+	return _chess_sets.has(template_id)
 
 # ---------------------------------------------------------------------------
 # Spawn a fully resolved character from a template
@@ -505,7 +535,7 @@ func _grant_equipment(character, equipment: Array) -> void:
 					inventory.equip_weapon_from_data(item_data, hand)
 				elif inventory.has_method("equip_ability_from_id"):
 					inventory.equip_ability_from_id(item_name, hand)
-			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
+			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:
 				if character.has_method("equip_equipment"):
 					character.equip_equipment(item_data)
 					# Mark the inventory copy as equipped so the UI shows "Unequip"

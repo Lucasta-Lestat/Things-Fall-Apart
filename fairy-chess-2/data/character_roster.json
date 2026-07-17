@@ -1,0 +1,2213 @@
+{
+	"roster": [
+		{
+			"id": "alamonean_magician",
+			"name": "Alamonean Magician",
+			"title": "",
+			"faction": "alamoneans",
+			"portrait": "res://assets/portraits/alamonean_magician.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Pawn": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Minister": 1,
+					"Queen": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "alligator_capone",
+			"name": "Alligator Capone",
+			"title": "Skipper",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/alligator_capone.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Cannonier": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "andrew_tuatara",
+			"name": "Andrew Tuatara",
+			"title": "Whoremonger",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/andrew_tuatara.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Anarch": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "austache_jongle",
+			"name": "Austache Jongle",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/austache_jongle.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "bandit",
+			"name": "Bandit",
+			"title": "",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/bandit.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "bandit_chief",
+			"name": "Bandit Chief",
+			"title": "",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/bandit_chief.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 3,
+					"Kulak": 2
+				},
+				"nobles": {
+					"Rifleman": 1,
+					"Cannonier": 1,
+					"Grasshopper": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "barthes",
+			"name": "Barthes",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/barthes.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Knight": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "big_al_samson",
+			"name": "Big Al Samson",
+			"title": "Whoremonger",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/big_al_samson.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "boa",
+			"name": "Boa",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/boa.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Basic Automata": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Bishop": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "brutus_half_off",
+			"name": "Brutus Half-Off",
+			"title": "",
+			"faction": "spider_party",
+			"portrait": "res://assets/portraits/brutus_half_off.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "captain_jameson",
+			"name": "Captain Jameson",
+			"title": "",
+			"faction": "pirates",
+			"portrait": "res://assets/portraits/captain_jameson.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "captain_morgan",
+			"name": "Captain Morgan",
+			"title": "",
+			"faction": "pirates",
+			"portrait": "res://assets/portraits/captain_morgan.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "carapacian_hermit",
+			"name": "Carapacian Hermit",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/carapacian_hermit.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "centaur_druid",
+			"name": "Centaur Druid",
+			"title": "",
+			"faction": "druids",
+			"portrait": "res://assets/portraits/centaur_druid.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Werewolf (human form)": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Grasshopper": 2,
+					"Centaur": 1,
+					"Elephant Rider": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "centurion_marcus",
+			"name": "Centurion Marcus",
+			"title": "",
+			"faction": "golden_guard",
+			"portrait": "res://assets/portraits/centurion_marcus.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Valkyrie": 2,
+					"Knight": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "chameleon_paglia",
+			"name": "Chameleon Paglia",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/chameleon_paglia.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "cheese_monger",
+			"name": "Cheesemonger Slave",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/cheese_monger.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "chef_master",
+			"name": "Chef-Master",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/chef_master.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "cletus_samson",
+			"name": "Cletus Samson",
+			"title": "Slavecatcher",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/cletus_samson.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "cultist",
+			"name": "Cultist",
+			"title": "",
+			"faction": "cultists",
+			"portrait": "res://assets/portraits/cultist.png",
+			"chess_set": {
+				"peasants": {
+					"Cultist": 2,
+					"Zombie": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Anarch": 2,
+					"Devil Toad": 1,
+					"Gorgon": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "smith_darcy",
+			"name": "Darcy",
+			"title": "Smith",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/smith_darcy.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "default_human",
+			"name": "Default Human",
+			"title": "",
+			"faction": "player",
+			"portrait": "res://assets/portraits/default_human.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "demon_imp",
+			"name": "Demon Imp",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/demon_imp.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "deputy_gleg",
+			"name": "Deputy Gleg",
+			"title": "",
+			"faction": "golden_guard",
+			"portrait": "res://assets/portraits/deputy_gleg.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Valkyrie": 2,
+					"Knight": 1,
+					"Rook": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "djargo",
+			"name": "Djargo",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/djargo.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "draga_centurion",
+			"name": "Draga Centurion",
+			"title": "",
+			"faction": "dragatini",
+			"portrait": "res://assets/portraits/draga_centurion.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 3,
+					"Pawn": 2
+				},
+				"nobles": {
+					"Knight": 1,
+					"Rook": 1,
+					"Cannonier": 1,
+					"Elephant Rider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "draga_legionnaire",
+			"name": "Draga Legionnaire",
+			"title": "",
+			"faction": "dragatini",
+			"portrait": "res://assets/portraits/draga_legionnaire.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "dryad",
+			"name": "Dryad",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/dryad.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "dusk",
+			"name": "Dusk",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/dusk.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "earl_grey",
+			"name": "Earl Grey",
+			"title": "",
+			"faction": "druids",
+			"portrait": "res://assets/portraits/earl_grey.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Grasshopper": 2,
+					"Devil Toad": 1,
+					"Gorgon": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "professor_easton",
+			"name": "Easton",
+			"title": "Professor",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/professor_easton.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 3,
+					"Pawn": 2
+				},
+				"nobles": {
+					"Dragonrider": 1,
+					"Nightrider": 1,
+					"Anarch": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "forest_elf",
+			"name": "Forest Elf",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/forest_elf.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "gnaeus",
+			"name": "Gnaeus",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/gnaeus.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "goatman_druid",
+			"name": "Goatman Druid",
+			"title": "",
+			"faction": "druids",
+			"portrait": "res://assets/portraits/goatman_druid.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Werewolf (human form)": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Grasshopper": 2,
+					"Centaur": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "gordon_gecko",
+			"name": "Gordon Gecko",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/gordon_gecko.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "wild_bear",
+			"name": "Graveyard Bear",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/wild_bear.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "guild_hunter",
+			"name": "Guild Hunter",
+			"title": "",
+			"faction": "adventurers_guild",
+			"portrait": "res://assets/portraits/guild_hunter.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Bishop": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "hadrian_rosemerrow",
+			"name": "Hadrian Rosemerrow",
+			"title": "",
+			"faction": "spider_party",
+			"portrait": "res://assets/portraits/hadrian_rosemerrow.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Grasshopper": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "half_elf_wanderer",
+			"name": "Half-Elf Wanderer",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/half_elf_wanderer.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "hunter_john",
+			"name": "Hunter John",
+			"title": "Peddler",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/hunter_john.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "iguana_don",
+			"name": "Iguana Don",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/iguana_don.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "jacana",
+			"name": "Jacana",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/jacana.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Minister": 1,
+					"Valkyrie": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "jezebel",
+			"name": "Jezebel",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/jezebel.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "joey_feritas",
+			"name": "Joey Feritas",
+			"title": "",
+			"faction": "none",
+			"portrait": "res://assets/portraits/joey_feritas.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Cultist": 2,
+					"Zombie": 1
+				},
+				"nobles": {
+					"Anarch": 2,
+					"Devil Toad": 1,
+					"Gorgon": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "alewife_juturna",
+			"name": "Juturna",
+			"title": "Alewife",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/alewife_juturna.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "king_skarsgaard",
+			"name": "King of Skarsgaard",
+			"title": "",
+			"faction": "skarsgaard",
+			"portrait": "res://assets/portraits/king_skarsgaard.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "reverend_mother_liana",
+			"name": "Liana",
+			"title": "Reverend Mother",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/reverend_mother_liana.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 4,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Monk": 2,
+					"Bishop": 1,
+					"Valkyrie": 1
+				},
+				"royals": {
+					"Pontifex": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "lighthouse_keeper_brother",
+			"name": "Lighthouse Keeper Brother",
+			"title": "",
+			"faction": "none",
+			"portrait": "res://assets/portraits/lighthouse_keeper_brother.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "liziti_don",
+			"name": "Liziti Don",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/liziti_don.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "liziti_thug",
+			"name": "Liziti Thug",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/liziti_thug.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "vermincelli_hostage",
+			"name": "Made Man Hostage",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/vermincelli_hostage.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "hedge_witch_magda",
+			"name": "Magda",
+			"title": "Hedge-Witch",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/hedge_witch_magda.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Knight": 1,
+					"Queen": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "mary_guana",
+			"name": "Mary Guana",
+			"title": "Venefica",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/mary_guana.png",
+			"chess_set": {
+				"peasants": {
+					"Cultist": 2,
+					"Zombie": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Gorgon": 1,
+					"Devil Toad": 1,
+					"Anarch": 1,
+					"Nightrider": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "merchant",
+			"name": "Merchant",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/merchant.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "mostlemyre_drouge",
+			"name": "Mostlemyre Drouge",
+			"title": "Hierophant",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/mostlemyre_drouge.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Pawn": 2,
+					"Kulak": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Minister": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "mother_inferior_macaria",
+			"name": "Mother Inferior Macaria",
+			"title": "Hierophant",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/mother_inferior_macaria.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 3,
+					"Cultist": 2
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Monk": 1,
+					"Princess": 1
+				},
+				"royals": {
+					"Pontifex": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "noble_lord",
+			"name": "Noble Lord",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/noble_lord.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Basic Automata": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Bishop": 1,
+					"Valkyrie": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "nude_elf",
+			"name": "Nude Elf",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/nude_elf.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "obediah",
+			"name": "Obediah",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/obediah.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "orc_warrior",
+			"name": "Orc Warrior",
+			"title": "",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/orc_warrior.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "patrician_knight",
+			"name": "Patrician Knight",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/patrician_knight.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Basic Automata": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Bishop": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "pesto",
+			"name": "Pesto",
+			"title": "",
+			"faction": "tortellini",
+			"portrait": "res://assets/portraits/pesto.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Knight": 1,
+					"Rook": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "pirate_buccaneer",
+			"name": "Pirate Buccaneer",
+			"title": "",
+			"faction": "pirates",
+			"portrait": "res://assets/portraits/pirate_buccaneer.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "pirate_captain",
+			"name": "Pirate Captain",
+			"title": "",
+			"faction": "pirates",
+			"portrait": "res://assets/portraits/pirate_captain.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "pit_hound",
+			"name": "Pit Hound",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/pit_hound.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "pit_monitor",
+			"name": "Pit Monitor",
+			"title": "Houndmaster",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/pit_monitor.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "professor_circino",
+			"name": "Professor Circino",
+			"title": "Librarian",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/professor_circino.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Pawn": 2,
+					"Kulak": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Minister": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "prosecco",
+			"name": "Prosecco",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/prosecco.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "protagonist",
+			"name": "Protagonist",
+			"title": "",
+			"faction": "player",
+			"portrait": "res://assets/portraits/protagonist.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 1,
+					"Cultist": 1,
+					"Basic Automata": 1
+				},
+				"nobles": {
+					"Knight": 1,
+					"Dragonrider": 1,
+					"Rifleman": 1,
+					"Valkyrie": 1
+				},
+				"royals": {
+					"King": 1,
+					"Pontifex": 1
+				}
+			}
+		},
+		{
+			"id": "queen_madeline_du_belmonte",
+			"name": "Queen Madeline du Belmonte",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/queen_madeline_du_belmonte.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "quillath",
+			"name": "Quillath",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/quillath.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "rapture_beast",
+			"name": "Rapture Beast",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/rapture_beast.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "rat_swarm",
+			"name": "Rat Swarm",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/rat_swarm.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "rebel_fighter",
+			"name": "Rebel Fighter",
+			"title": "",
+			"faction": "rebels",
+			"portrait": "res://assets/portraits/rebel_fighter.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "rodney_the_rat",
+			"name": "Rodney the Rat",
+			"title": "",
+			"faction": "vermincelli",
+			"portrait": "res://assets/portraits/rodney_the_rat.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "roy_demonitor",
+			"name": "Roy DeMonitor",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/roy_demonitor.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "saul_laelia",
+			"name": "Saul Laelia",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/saul_laelia.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "senator_clodia",
+			"name": "Senator Clodia",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/senator_clodia.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "senator_marius",
+			"name": "Senator Marius",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/senator_marius.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "senator_titus",
+			"name": "Senator Titus",
+			"title": "",
+			"faction": "patriciate",
+			"portrait": "res://assets/portraits/senator_titus.png",
+			"chess_set": {
+				"peasants": {
+					"Basic Automata": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Bishop": 2,
+					"Dragonrider": 1,
+					"Minister": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "shambling_zombie",
+			"name": "Shambling Zombie",
+			"title": "",
+			"faction": "undead",
+			"portrait": "res://assets/portraits/shambling_zombie.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Werewolf (human form)": 2,
+					"Cultist": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Knight": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "siren",
+			"name": "Siren",
+			"title": "",
+			"faction": "tortellini",
+			"portrait": "res://assets/portraits/siren.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Werewolf (human form)": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Anarch": 2,
+					"Devil Toad": 1,
+					"Gorgon": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "skeleton_warrior",
+			"name": "Skeleton Warrior",
+			"title": "",
+			"faction": "undead",
+			"portrait": "res://assets/portraits/skeleton_warrior.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Cultist": 2,
+					"Zombie": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Anarch": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "stokes_carfire",
+			"name": "Stokes Carfire",
+			"title": "",
+			"faction": "dragatini",
+			"portrait": "res://assets/portraits/stokes_carfire.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Dragonrider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "stray_horse",
+			"name": "Stray Horse",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/stray_horse.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "sunder_havelton",
+			"name": "Sunder Havelton",
+			"title": "",
+			"faction": "spider_party",
+			"portrait": "res://assets/portraits/sunder_havelton.png",
+			"chess_set": {
+				"peasants": {
+					"Werewolf (human form)": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Lady of the Lake": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "surgeon_captain_federica",
+			"name": "Surgeon Captain Federica",
+			"title": "Surgeon Captain",
+			"faction": "waldau",
+			"portrait": "res://assets/portraits/surgeon_captain_federica.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Centaur": 1,
+					"Elephant Rider": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "test_male_elf",
+			"name": "Test Male Elf",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/test_male_elf.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "the_southron",
+			"name": "The Southron",
+			"title": "",
+			"faction": "bandits",
+			"portrait": "res://assets/portraits/the_southron.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "tommy",
+			"name": "Tommy",
+			"title": "",
+			"faction": "tortellini",
+			"portrait": "res://assets/portraits/tommy.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Knight": 1,
+					"Rook": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "tort_enforcer",
+			"name": "Tortellini Enforcer",
+			"title": "",
+			"faction": "tortellini",
+			"portrait": "res://assets/portraits/tort_enforcer.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Dragonrider": 2,
+					"Knight": 1,
+					"Rook": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "town_guard",
+			"name": "Town Guard",
+			"title": "",
+			"faction": "golden_guard",
+			"portrait": "res://assets/portraits/town_guard.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Raider": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Valkyrie": 2,
+					"Knight": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"Chancellor": 1,
+					"King": 1
+				}
+			}
+		},
+		{
+			"id": "vermincelli_capo",
+			"name": "Vermincelli Capo",
+			"title": "",
+			"faction": "vermincelli",
+			"portrait": "res://assets/portraits/vermincelli_capo.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Werewolf (human form)": 2,
+					"Raider": 1
+				},
+				"nobles": {
+					"Devil Toad": 2,
+					"Gorgon": 1,
+					"Centaur": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "wild_wolf",
+			"name": "Wild Wolf",
+			"title": "",
+			"faction": "wildlife",
+			"portrait": "res://assets/portraits/wild_wolf.png",
+			"chess_set": {
+				"peasants": {
+					"Kulak": 2,
+					"Pawn": 2,
+					"Werewolf (human form)": 1
+				},
+				"nobles": {
+					"Centaur": 2,
+					"Elephant Rider": 1,
+					"Devil Toad": 1
+				},
+				"royals": {
+					"King": 1,
+					"Lady of the Lake": 1
+				}
+			}
+		},
+		{
+			"id": "zakariah",
+			"name": "Zakariah",
+			"title": "",
+			"faction": "neutral",
+			"portrait": "res://assets/portraits/zakariah.png",
+			"chess_set": {
+				"peasants": {
+					"Pawn": 2,
+					"Kulak": 2,
+					"Basic Automata": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Bishop": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		},
+		{
+			"id": "lot_lizard_zillah",
+			"name": "Zillah",
+			"title": "",
+			"faction": "liziti",
+			"portrait": "res://assets/portraits/lot_lizard_zillah.png",
+			"chess_set": {
+				"peasants": {
+					"Raider": 2,
+					"Kulak": 2,
+					"Pawn": 1
+				},
+				"nobles": {
+					"Knight": 2,
+					"Rook": 1,
+					"Rifleman": 1
+				},
+				"royals": {
+					"King": 1,
+					"Chancellor": 1
+				}
+			}
+		}
+	]
+}

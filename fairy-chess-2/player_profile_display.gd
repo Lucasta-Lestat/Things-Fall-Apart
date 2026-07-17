@@ -13,7 +13,9 @@ func set_profile(profile_data):
 		return
 
 	self.visible = true
-	name_label.text = profile_data.get("name", "Player")
+	var display_name = profile_data.get("name", "Player")
+	var title = profile_data.get("title", "")
+	name_label.text = display_name + " — " + title if title != "" else display_name
 
 	var portrait_path = profile_data.get("portrait", "")
 	# ResourceLoader.exists (not FileAccess) so imported textures are found
