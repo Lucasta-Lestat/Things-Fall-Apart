@@ -27,7 +27,7 @@ var state = Rules.new_state() # authoritative rules state
 var board = [] # 2D array of piece NODES, kept in sync for the display layer
 var piece_nodes = {} # state id -> node
 var phased_nodes = {} # state id -> node (Valkyries waiting to return)
-var game_phase = "setup" # "setup", "playing", "game_over"
+var game_phase = "pregame" # "pregame", "setup", "playing", "game_over"
 var white_pending = null # {"id": int, "action": Dictionary}
 var black_pending = null
 var ai_enabled = true
@@ -37,9 +37,20 @@ var setup_placer = "white"
 var white_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
 var black_placed_pieces = {"peasant": 0, "non_peasant": 0, "royal": 0}
 var placement_stack = [] # for right-click undo during setup
-# Profiles are deep-copied so a rematch (scene reload) starts fresh.
-var white_profile = PlayerDatabase.get_profile("god").duplicate(true)
-var black_profile = PlayerDatabase.get_profile("Saratov").duplicate(true)
+# Default match-up (the profile picker overrides these before setup). Deep-
+# copied so a rematch or right-click undo mutates a private copy, not the
+# shared roster entry.
+const DEFAULT_WHITE_ID = "protagonist"
+const DEFAULT_BLACK_ID = "bandit_chief"
+var white_profile = _default_profile(DEFAULT_WHITE_ID)
+var black_profile = _default_profile(DEFAULT_BLACK_ID)
+
+
+static func _default_profile(id: String) -> Dictionary:
+	var p = PlayerDatabase.get_profile(id)
+	if p == null:
+		p = PlayerDatabase.get_profile("god")
+	return p.duplicate(true)
 
 
 func _ready():
@@ -50,11 +61,25 @@ func _ready():
 		for y in range(BOARD_SIZE):
 			board[x][y] = null
 	emit_signal("game_state_changed", game_phase)
-	emit_signal("turn_info_changed", "Place your pieces.")
+	emit_signal("turn_info_changed", "Choose your champions.")
 
 
 func is_valid_square(pos) -> bool:
 	return Rules.is_valid_square(pos)
+
+
+# Called by the profile picker once both champions are chosen. Locks in the
+# armies and opens the piece-placement (setup) phase.
+func begin_setup(white_id: String, black_id: String, ai_on: bool) -> void:
+	if game_phase != "pregame":
+		return
+	white_profile = _default_profile(white_id)
+	black_profile = _default_profile(black_id)
+	ai_enabled = ai_on
+	game_phase = "setup"
+	emit_signal("game_state_changed", "setup")
+	emit_signal("turn_info_changed", "Place your pieces.")
+	emit_signal("setup_state_changed")
 
 
 # =========================================================================
@@ -150,6 +175,15 @@ func set_ai_enabled(enabled: bool):
 	if game_phase == "setup":
 		# Wake the AI placer / refresh the UI for the new mode.
 		emit_signal("setup_state_changed")
+
+
+# Called by the profile picker before setup begins. Ids index PlayerDatabase.
+func set_profiles(white_id: String, black_id: String) -> void:
+	if game_phase != "setup":
+		return
+	white_profile = _default_profile(white_id)
+	black_profile = _default_profile(black_id)
+	emit_signal("setup_state_changed")
 
 
 # =========================================================================

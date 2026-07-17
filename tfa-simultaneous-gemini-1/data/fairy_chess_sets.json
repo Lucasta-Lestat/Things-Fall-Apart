@@ -1,0 +1,1539 @@
+{
+	"protagonist": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 1,
+			"Cultist": 1,
+			"Basic Automata": 1
+		},
+		"nobles": {
+			"Knight": 1,
+			"Dragonrider": 1,
+			"Rifleman": 1,
+			"Valkyrie": 1
+		},
+		"royals": {
+			"King": 1,
+			"Pontifex": 1
+		}
+	},
+	"default_human": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"town_guard": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Valkyrie": 2,
+			"Knight": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"merchant": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"bandit": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"bandit_chief": {
+		"peasants": {
+			"Raider": 3,
+			"Kulak": 2
+		},
+		"nobles": {
+			"Rifleman": 1,
+			"Cannonier": 1,
+			"Grasshopper": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"rebel_fighter": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"forest_elf": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"cultist": {
+		"peasants": {
+			"Cultist": 2,
+			"Zombie": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Anarch": 2,
+			"Devil Toad": 1,
+			"Gorgon": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"skeleton_warrior": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Cultist": 2,
+			"Zombie": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Anarch": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"demon_imp": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"noble_lord": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Basic Automata": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Bishop": 1,
+			"Valkyrie": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"wild_wolf": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"rat_swarm": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"liziti_thug": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"liziti_don": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"draga_legionnaire": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"draga_centurion": {
+		"peasants": {
+			"Kulak": 3,
+			"Pawn": 2
+		},
+		"nobles": {
+			"Knight": 1,
+			"Rook": 1,
+			"Cannonier": 1,
+			"Elephant Rider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"tort_enforcer": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Knight": 1,
+			"Rook": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"pirate_buccaneer": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"pirate_captain": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"guild_hunter": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Bishop": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"patrician_knight": {
+		"peasants": {
+			"Kulak": 2,
+			"Basic Automata": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Bishop": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"djargo": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"hadrian_rosemerrow": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Grasshopper": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"sunder_havelton": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"brutus_half_off": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"quillath": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"stokes_carfire": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"captain_morgan": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"captain_jameson": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"earl_grey": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Grasshopper": 2,
+			"Devil Toad": 1,
+			"Gorgon": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"dryad": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"nude_elf": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"lighthouse_keeper_brother": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"iguana_don": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"roy_demonitor": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"gordon_gecko": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"dusk": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"chameleon_paglia": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"jacana": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Minister": 1,
+			"Valkyrie": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"siren": {
+		"peasants": {
+			"Kulak": 2,
+			"Werewolf (human form)": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Anarch": 2,
+			"Devil Toad": 1,
+			"Gorgon": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"pesto": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Knight": 1,
+			"Rook": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"tommy": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Knight": 1,
+			"Rook": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"prosecco": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"boa": {
+		"peasants": {
+			"Kulak": 2,
+			"Basic Automata": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Bishop": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"rodney_the_rat": {
+		"peasants": {
+			"Werewolf (human form)": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"joey_feritas": {
+		"peasants": {
+			"Raider": 2,
+			"Cultist": 2,
+			"Zombie": 1
+		},
+		"nobles": {
+			"Anarch": 2,
+			"Devil Toad": 1,
+			"Gorgon": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"orc_warrior": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"centaur_druid": {
+		"peasants": {
+			"Kulak": 2,
+			"Werewolf (human form)": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Grasshopper": 2,
+			"Centaur": 1,
+			"Elephant Rider": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"goatman_druid": {
+		"peasants": {
+			"Kulak": 2,
+			"Werewolf (human form)": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Grasshopper": 2,
+			"Centaur": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"half_elf_wanderer": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"carapacian_hermit": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"shambling_zombie": {
+		"peasants": {
+			"Pawn": 2,
+			"Werewolf (human form)": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"wild_bear": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"stray_horse": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"reverend_mother_liana": {
+		"peasants": {
+			"Pawn": 4,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Monk": 2,
+			"Bishop": 1,
+			"Valkyrie": 1
+		},
+		"royals": {
+			"Pontifex": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"mother_inferior_macaria": {
+		"peasants": {
+			"Pawn": 3,
+			"Cultist": 2
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Monk": 1,
+			"Princess": 1
+		},
+		"royals": {
+			"Pontifex": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"pit_monitor": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"pit_hound": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Devil Toad": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"alewife_juturna": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"mary_guana": {
+		"peasants": {
+			"Cultist": 2,
+			"Zombie": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Gorgon": 1,
+			"Devil Toad": 1,
+			"Anarch": 1,
+			"Nightrider": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"hunter_john": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"centurion_marcus": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Valkyrie": 2,
+			"Knight": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"deputy_gleg": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Valkyrie": 2,
+			"Knight": 1,
+			"Rook": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"hedge_witch_magda": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Knight": 1,
+			"Queen": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"lot_lizard_zillah": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"andrew_tuatara": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Anarch": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"alligator_capone": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Cannonier": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"cletus_samson": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"obediah": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"jezebel": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"austache_jongle": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"mostlemyre_drouge": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Pawn": 2,
+			"Kulak": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Minister": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"smith_darcy": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"professor_circino": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Pawn": 2,
+			"Kulak": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Minister": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"professor_easton": {
+		"peasants": {
+			"Basic Automata": 3,
+			"Pawn": 2
+		},
+		"nobles": {
+			"Dragonrider": 1,
+			"Nightrider": 1,
+			"Anarch": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"zakariah": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Basic Automata": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Bishop": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"saul_laelia": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"big_al_samson": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"surgeon_captain_federica": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Dragonrider": 2,
+			"Centaur": 1,
+			"Elephant Rider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"test_male_elf": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"queen_madeline_du_belmonte": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"king_skarsgaard": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"rapture_beast": {
+		"peasants": {
+			"Kulak": 2,
+			"Pawn": 2,
+			"Werewolf (human form)": 1
+		},
+		"nobles": {
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1
+		},
+		"royals": {
+			"King": 1,
+			"Lady of the Lake": 1
+		}
+	},
+	"the_southron": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"vermincelli_capo": {
+		"peasants": {
+			"Kulak": 2,
+			"Werewolf (human form)": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Centaur": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"vermincelli_hostage": {
+		"peasants": {
+			"Raider": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"cheese_monger": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"chef_master": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Knight": 2,
+			"Rook": 1,
+			"Rifleman": 1
+		},
+		"royals": {
+			"King": 1,
+			"Chancellor": 1
+		}
+	},
+	"alamonean_magician": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Pawn": 2,
+			"Cultist": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Minister": 1,
+			"Queen": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"senator_marius": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"senator_titus": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"senator_clodia": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"barthes": {
+		"peasants": {
+			"Pawn": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Knight": 1,
+			"Dragonrider": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	},
+	"gnaeus": {
+		"peasants": {
+			"Basic Automata": 2,
+			"Kulak": 2,
+			"Raider": 1
+		},
+		"nobles": {
+			"Bishop": 2,
+			"Dragonrider": 1,
+			"Minister": 1
+		},
+		"royals": {
+			"Chancellor": 1,
+			"King": 1
+		}
+	}
+}

@@ -11,9 +11,9 @@ config_version=5
 [application]
 
 config/name="Fairy Chess 2"
-run/main_scene="uid://bsuoy0ishctwb"
+run/main_scene="res://fairy_chess.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
-config/icon="uid://dp0l84g02y328"
+config/icon="res://icon.svg"
 
 [autoload]
 

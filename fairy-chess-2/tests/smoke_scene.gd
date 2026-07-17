@@ -14,6 +14,12 @@ func fail(msg: String) -> void:
 	print("SMOKE FAIL: " + msg)
 
 
+# Autoload singletons are NOT compile-time identifiers in a fresh `--script`
+# compile, so fetch PlayerDatabase from the tree at runtime instead.
+func _pdb():
+	return root.get_node("/root/PlayerDatabase")
+
+
 func _initialize():
 	var scene = load("res://fairy_chess.tscn").instantiate()
 	root.add_child(scene)
@@ -22,10 +28,42 @@ func _initialize():
 	await process_frame
 
 	var gb = root.get_node("FairyChess/GameBoard")
+	var ui = root.get_node("FairyChess/UI")
 	var display = root.get_node("FairyChess/UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay")
 
+	# --- Roster / profile validation (autoloads are live in the scene tree) --
+	_validate_roster()
+
+	# The scene opens in "pregame" with the champion picker up. Verify it, then
+	# skip it: lock in the sandbox army for white (so the fixed placement plan
+	# below has every piece) via the same path the picker uses.
+	if gb.game_phase != "pregame":
+		fail("scene did not open in pregame phase (was %s)" % gb.game_phase)
+	if not ui.profile_picker.visible:
+		fail("profile picker was not shown at pregame")
+
+	# --- Profile picker mechanics ---
+	var pp = ui.profile_picker
+	var r = _pdb().get_roster()
+	if pp._grid.get_child_count() != r.size():
+		fail("picker grid has %d buttons, expected %d" % [pp._grid.get_child_count(), r.size()])
+	pp._on_portrait_pressed(r[0].id) # fills White, active -> Black
+	pp._on_portrait_pressed(r[1].id) # fills Black
+	if pp._white_id != r[0].id or pp._black_id != r[1].id:
+		fail("picker portrait clicks did not fill both slots (%s / %s)" % [pp._white_id, pp._black_id])
+	if not pp.confirmed.is_connected(ui._on_profiles_confirmed):
+		fail("picker 'confirmed' signal is not wired to the UI")
+
+	# Skip the picker for the placement test: lock in the sandbox army for white
+	# (so the fixed placement plan below has every piece) via the same
+	# begin_setup path the picker's Start button drives.
+	ui.profile_picker.cancel()
+	gb.begin_setup("god", gb.DEFAULT_BLACK_ID, true)
+	if gb.game_phase != "setup":
+		fail("begin_setup did not enter setup phase")
+
 	# --- Setup undo: place one piece, let the AI answer, then undo ----------
-	var pawn_def = PlayerDatabase.PIECE_DEFINITIONS["Pawn"]
+	var pawn_def = _pdb().PIECE_DEFINITIONS["Pawn"]
 	display.place_piece_on_board({
 		"piece_type": "Pawn", "color": "white", "is_peasant": true,
 		"is_royal": false, "category": "peasant", "scene_path": pawn_def.scene,
@@ -60,7 +98,7 @@ func _initialize():
 			break
 		var piece_type = entry[0]
 		var is_peasant = entry[1]
-		var def = PlayerDatabase.PIECE_DEFINITIONS[piece_type]
+		var def = _pdb().PIECE_DEFINITIONS[piece_type]
 		var pos = Vector2(peasant_col, 4) if is_peasant else Vector2(noble_col, 5)
 		if is_peasant:
 			peasant_col += 1
@@ -146,8 +184,8 @@ func _initialize():
 			fail("scene did not reload after restart")
 		elif new_gb.get_instance_id() == old_gb_id:
 			fail("restart did not create a fresh scene")
-		elif new_gb.game_phase != "setup":
-			fail("restarted game not in setup phase")
+		elif new_gb.game_phase != "pregame":
+			fail("restarted game not in pregame phase")
 		elif not Rules.all_pieces(new_gb.state).is_empty():
 			fail("restarted game has leftover pieces")
 		elif int(new_gb.white_profile.peasants.Pawn) != 2:
@@ -156,3 +194,48 @@ func _initialize():
 	print("")
 	print("=== SMOKE: %d turns played, phase=%s, %d failures ===" % [turns_played, final_phase, failures])
 	quit(1 if failures > 0 else 0)
+
+
+func _validate_roster():
+	var roster = _pdb().get_roster()
+	if roster.size() < 90:
+		fail("roster loaded only %d characters" % roster.size())
+	if _pdb().get_profile("god") == null:
+		fail("god sandbox profile missing")
+	var protag = _pdb().get_profile("protagonist")
+	if protag == null or protag.name != "Protagonist":
+		fail("protagonist profile did not resolve by id")
+
+	var valid_types = {}
+	for t in _pdb().PIECE_DEFINITIONS.keys():
+		valid_types[t] = true
+	var illegal = []
+	var bad_type = []
+	var missing_portrait = []
+	for entry in roster:
+		var profile = _pdb().get_profile(entry.id)
+		var peasants = _sum(profile.peasants)
+		var non_peasants = _sum(profile.nobles) + _sum(profile.royals)
+		var royals = _sum(profile.royals)
+		if peasants < 4 or non_peasants < 4 or royals < 1:
+			illegal.append(entry.id)
+		for bucket in [profile.peasants, profile.nobles, profile.royals]:
+			for t in bucket:
+				if not valid_types.has(t):
+					bad_type.append("%s:%s" % [entry.id, t])
+		if entry.portrait != "" and not ResourceLoader.exists(entry.portrait):
+			missing_portrait.append(entry.id)
+	if not illegal.is_empty():
+		fail("placement-illegal rosters: %s" % str(illegal.slice(0, 5)))
+	if not bad_type.is_empty():
+		fail("unknown piece types: %s" % str(bad_type.slice(0, 5)))
+	if not missing_portrait.is_empty():
+		fail("unimportable portraits: %s" % str(missing_portrait.slice(0, 8)))
+	print("ROSTER OK: %d characters, all armies legal, portraits importable" % roster.size())
+
+
+func _sum(d: Dictionary) -> int:
+	var total = 0
+	for k in d:
+		total += int(d[k])
+	return total

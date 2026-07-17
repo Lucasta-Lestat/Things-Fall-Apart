@@ -1,7 +1,8 @@
-[gd_scene load_steps=19 format=3 uid="uid://bsuoy0ishctwb"]
+[gd_scene load_steps=20 format=3 uid="uid://bsuoy0ishctwb"]
 
 [ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
 [ext_resource type="Script" path="res://promotion_picker.gd" id="19_prom"]
+[ext_resource type="Script" path="res://profile_picker.gd" id="20_prof"]
 [ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
 [ext_resource type="Texture2D" uid="uid://h0h5a5o0buhk" path="res://assets/Table Background.png" id="3_au1l4"]
 [ext_resource type="Script" uid="uid://divc3al5238ms" path="res://ui.gd" id="3_ik8s4"]
@@ -204,6 +205,9 @@ script = ExtResource("14_kvhh4")
 
 [node name="PromotionPicker" type="Control" parent="UI/GameOverlayUI"]
 script = ExtResource("19_prom")
+
+[node name="ProfilePicker" type="Control" parent="UI/GameOverlayUI"]
+script = ExtResource("20_prof")
 
 [node name="AudioManager" type="Node" parent="."]
 script = ExtResource("13_6kral")
