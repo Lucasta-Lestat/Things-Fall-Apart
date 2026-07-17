@@ -1,66 +1,48 @@
 # piece.gd
-# Base class for all chess pieces in the game.
-# It defines common properties and methods that specific pieces will override.
+# Base class for all chess piece display nodes. Pieces are thin views: all
+# movement and rules queries are delegated to the rules engine through the
+# GameBoard, keyed by state_id.
 
 extends Node2D
 
 class_name ChessPiece
-@onready var game_board = get_node("root/FairyChess/Gameboard")
+
 # --- Properties ---
 var piece_type: String = "Generic"
 var color: String = "white" # "white" or "black"
 var is_royal: bool = false
 var is_petrified: bool = false
 var grid_position: Vector2 = Vector2.ZERO
-var last_known_pos: Vector2 = Vector2.ZERO # For Valkyrie
-var traits = [] #Male or Female, Virgin, Barbarian, Elf, Draconic, etc.
+var state_id: int = -1 # id of this piece in the GameBoard's Rules state
 
-# --- Methods to be Overridden ---
-# Returns a list of valid moves/actions for the piece.
-# An action is a dictionary, e.g., {"action": "move", "target": Vector2(x,y)}
-func get_valid_actions(board_state):
-	# This should be implemented by each specific piece's script.
-	return []
 
-# Called when this piece is captured.
-func on_capture(game_board):
-	# Implement death rattle effects here.
-	# Pass the game_board to allow interaction with the game state.
-	pass
+func _ready():
+	add_child(Sprite2D.new())
 
-# Called when this piece's move is being resolved.
-func on_move(game_board):
-	# Implement effects that trigger on move (e.g., Gorgon's freeze).
-	# This is now handled centrally in game_board.gd for simplicity.
-	pass
-	
-func is_valid_square(pos):
-	return pos.x >= 0 and pos.x < 6 and pos.y >= 0 and pos.y < 6
+
+# Actions this piece may declare, straight from the rules engine.
+# (board_state parameter kept for call-site compatibility; it is unused.)
+func get_valid_actions(_board_state = null) -> Array:
+	var game_board = get_node_or_null("/root/FairyChess/GameBoard")
+	if game_board == null:
+		return []
+	return game_board.get_actions_for_node(self)
+
+
 # --- Setup ---
-# Initializes the piece with its type, color, and royal status.
-func setup_piece(p_type, p_color, p_is_royal,tile_size):
+func setup_piece(p_type, p_color, p_is_royal, tile_size):
 	piece_type = p_type
 	color = p_color
 	is_royal = p_is_royal
-	
-	# Load the appropriate texture based on the piece type and color.
-	# Assumes textures are named like "Valkyrie_white.png" and are in "res://assets/pieces/".
+	if Rules.PIECE_INFO.has(p_type):
+		is_royal = Rules.PIECE_INFO[p_type].category == "royal"
+
 	var texture_path = "res://assets/icons/" + piece_type + "_" + color + ".png"
 	var texture = load(texture_path)
+	if texture == null:
+		push_warning("Missing piece texture: " + texture_path)
+		return
 	$Sprite2D.texture = texture
-	# --- Automatic Resizing Logic ---
-	# Get the original size of the texture.
-	var texture_size = texture.get_size()
-	
-	# Set a desired padding, so the piece doesn't fill the entire tile (e.g., 90% of the tile size).
 	var desired_width = tile_size * 0.55
-	
-	# Calculate the scale factor needed to match the desired width.
-	var scale = desired_width / texture_size.x
-	
-	# Apply the scale uniformly to the Sprite2D node.
-	$Sprite2D.scale = Vector2(scale, scale)
-
-func _ready():
-	# Add a sprite to visually represent the piece.
-	add_child(Sprite2D.new())
+	var texture_scale = desired_width / texture.get_size().x
+	$Sprite2D.scale = Vector2(texture_scale, texture_scale)

@@ -1,20 +1,14 @@
-[gd_scene load_steps=25 format=3 uid="uid://bsuoy0ishctwb"]
+[gd_scene load_steps=19 format=3 uid="uid://bsuoy0ishctwb"]
 
 [ext_resource type="Script" uid="uid://d31ja5esmwwjr" path="res://game_board.gd" id="1_jhicg"]
+[ext_resource type="Script" path="res://promotion_picker.gd" id="19_prom"]
 [ext_resource type="Script" uid="uid://c3gy8xvnqtf15" path="res://chessboard_display.gd" id="2_nbw42"]
 [ext_resource type="Texture2D" uid="uid://h0h5a5o0buhk" path="res://assets/Table Background.png" id="3_au1l4"]
 [ext_resource type="Script" uid="uid://divc3al5238ms" path="res://ui.gd" id="3_ik8s4"]
-[ext_resource type="PackedScene" uid="uid://bj1330b3wrqda" path="res://scenes/pieces/pawn.tscn" id="3_nbw42"]
 [ext_resource type="PackedScene" uid="uid://bvv50c65j2xhe" path="res://scenes/player_profile_display.tscn" id="4_guhtp"]
-[ext_resource type="PackedScene" uid="uid://36475ufqra0w" path="res://scenes/pieces/Chancellor.tscn" id="4_ljmel"]
-[ext_resource type="PackedScene" uid="uid://knl5btkaj2qq" path="res://scenes/pieces/Bishop.tscn" id="5_mqiwu"]
-[ext_resource type="PackedScene" uid="uid://bbbmvtx26jq7y" path="res://scenes/pieces/King.tscn" id="6_myjci"]
-[ext_resource type="PackedScene" uid="uid://kuilwacq0k3w" path="res://scenes/pieces/Kulak.tscn" id="8_g7uw4"]
-[ext_resource type="PackedScene" uid="uid://bhbebsq87y5ep" path="res://scenes/pieces/Knight.tscn" id="9_g7uw4"]
-[ext_resource type="PackedScene" uid="uid://drmvqv3x5jfwu" path="res://scenes/pieces/Rook.tscn" id="10_ou3o4"]
-[ext_resource type="PackedScene" uid="uid://ca4o1x42i0q61" path="res://scenes/pieces/Queen.tscn" id="11_h5vv0"]
 [ext_resource type="Script" uid="uid://n87q08mkh6mb" path="res://highlight_layer.gd" id="12_g1r23"]
 [ext_resource type="Script" uid="uid://cbfh1b6s1g2l6" path="res://audio_manager.gd" id="13_6kral"]
+[ext_resource type="Script" path="res://ai_controller.gd" id="13_aictl"]
 [ext_resource type="AudioStream" uid="uid://rojuy7jf2tck" path="res://Sounds/capture.mp3" id="14_jwrwn"]
 [ext_resource type="Script" uid="uid://bly1jvexu2h33" path="res://debug_label.gd" id="14_kvhh4"]
 [ext_resource type="AudioStream" uid="uid://c2t50oo75x05j" path="res://Sounds/rifle.mp3" id="14_vl6e3"]
@@ -86,23 +80,6 @@ layout_mode = 2
 size_flags_horizontal = 0
 mouse_default_cursor_shape = 3
 script = ExtResource("2_nbw42")
-
-[node name="Chancellor" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("4_ljmel")]
-
-[node name="Pawn" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("3_nbw42")]
-visible = false
-
-[node name="Bishop" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("5_mqiwu")]
-
-[node name="King" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("6_myjci")]
-
-[node name="Kulak" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("8_g7uw4")]
-
-[node name="Knight" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("9_g7uw4")]
-
-[node name="Rook" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("10_ou3o4")]
-
-[node name="Queen" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay" instance=ExtResource("11_h5vv0")]
 
 [node name="HighlightLayer" type="Control" parent="UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay"]
 anchors_preset = 0
@@ -181,18 +158,52 @@ mouse_filter = 2
 alignment = 1
 
 [node name="PlayerModeButton" type="CheckBox" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels"]
-visible = false
 layout_mode = 2
+button_pressed = true
+text = "Play vs AI"
 
 [node name="StartButton" type="Button" parent="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels"]
 layout_mode = 2
 text = "Start"
 
+[node name="GameOverPanel" type="PanelContainer" parent="UI/GameOverlayUI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -80.0
+offset_right = 180.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/GameOverlayUI/GameOverPanel"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="OutcomeLabel" type="Label" parent="UI/GameOverlayUI/GameOverPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Game Over"
+horizontal_alignment = 1
+
+[node name="PlayAgainButton" type="Button" parent="UI/GameOverlayUI/GameOverPanel/VBoxContainer"]
+layout_mode = 2
+text = "Play Again"
+
 [node name="DebugLabel" type="Label" parent="UI/GameOverlayUI"]
+visible = false
 offset_right = 40.0
 offset_bottom = 23.0
 text = "Debug Label"
 script = ExtResource("14_kvhh4")
+
+[node name="PromotionPicker" type="Control" parent="UI/GameOverlayUI"]
+script = ExtResource("19_prom")
 
 [node name="AudioManager" type="Node" parent="."]
 script = ExtResource("13_6kral")
@@ -219,7 +230,7 @@ volume_db = 24.0
 
 [node name="MusicPlayer" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("16_au1l4")
-parameters/looping = false
+parameters/looping = true
 
 [node name="WinSound" type="AudioStreamPlayer2D" parent="AudioManager"]
 stream = ExtResource("22_guhtp")
@@ -228,5 +239,9 @@ stream = ExtResource("22_guhtp")
 stream = ExtResource("18_jwrwn")
 volume_db = 24.0
 
-[connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="GameBoard" method="_on_start_button_pressed"]
+[node name="AIController" type="Node" parent="."]
+script = ExtResource("13_aictl")
+
 [connection signal="pressed" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/StartButton" to="UI" method="_on_start_button_pressed"]
+[connection signal="toggled" from="UI/GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/PlayerModeButton" to="UI" method="_on_player_mode_button_toggled"]
+[connection signal="pressed" from="UI/GameOverlayUI/GameOverPanel/VBoxContainer/PlayAgainButton" to="UI" method="_on_play_again_pressed"]

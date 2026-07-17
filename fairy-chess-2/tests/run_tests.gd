@@ -1,0 +1,687 @@
+# tests/run_tests.gd
+# Headless test suite for the fairy chess rules engine.
+# Run with:
+#   Godot_v4.6-stable_win64_console.exe --headless --path fairy-chess-2 --script res://tests/run_tests.gd
+extends SceneTree
+
+var checks = 0
+var failures = 0
+
+
+func _initialize():
+	test_pawn_movegen()
+	test_kulak_movegen()
+	test_automata_movegen()
+	test_monk_movegen()
+	test_sliders_and_leapers()
+	test_nightrider()
+	test_grasshopper()
+	test_rifleman()
+	test_cannonier()
+	test_dragonrider()
+	test_elephant_rider()
+	test_gorgon_movegen()
+	test_anarch()
+	test_devil_toad()
+	test_werewolf_wolf_movegen()
+	test_cultist()
+	test_adjacent_promoters()
+	test_basic_move_and_capture()
+	test_swap_mutual_capture()
+	test_multi_arrival()
+	test_block_bounces_not_kills()
+	test_friendly_bounce_cascade()
+	test_shot_always_lands()
+	test_cannon_friendly_fire()
+	test_dragon_breath()
+	test_en_passant()
+	test_promotion_royal_status()
+	test_conversion()
+	test_werewolf_toggle()
+	test_valkyrie_phase_out_and_return()
+	test_zombie_automatic()
+	test_necromancer_credit()
+	test_valhalla_credit()
+	test_petrify()
+	test_win_conditions()
+	test_no_progress_adjudication()
+	test_spawn()
+	test_legal_actions()
+	test_leaper_paths_unblockable()
+	test_kulak_ep_not_shadowed()
+	test_rifleman_shot_first()
+	test_gorgon_standoff()
+	test_petrified_valkyrie_shatters()
+	test_ep_not_registered_for_the_dead()
+	test_promotion_picker_choices()
+
+	print("")
+	print("=== %d checks, %d failures ===" % [checks, failures])
+	quit(1 if failures > 0 else 0)
+
+
+func check(cond: bool, name: String) -> void:
+	checks += 1
+	if not cond:
+		failures += 1
+		print("FAIL: " + name)
+
+
+func targets(actions: Array, kind: String = "move") -> Array:
+	var out = []
+	for a in actions:
+		if a.action == kind and a.has("target"):
+			out.append(a.target)
+	return out
+
+
+func has_action(actions: Array, kind: String) -> bool:
+	for a in actions:
+		if a.action == kind:
+			return true
+	return false
+
+
+func alive_types(state: Dictionary, color: String) -> Array:
+	var out = []
+	for p in Rules.all_pieces(state, color):
+		out.append(p.type)
+	out.sort()
+	return out
+
+
+# ==========================================================================
+# Movegen
+# ==========================================================================
+
+func test_pawn_movegen():
+	var st = Rules.new_state()
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(2, 4))
+	var acts = Rules.get_actions(st, pawn)
+	var t = targets(acts)
+	check(Vector2(2, 3) in t, "pawn single step")
+	check(Vector2(2, 2) in t, "pawn double step from start row")
+	check(t.size() == 2, "pawn has exactly 2 moves on empty board")
+	# Captures
+	Rules.add_piece(st, "Rook", "black", Vector2(1, 3))
+	Rules.add_piece(st, "Rook", "white", Vector2(3, 3))
+	acts = Rules.get_actions(st, pawn)
+	t = targets(acts)
+	check(Vector2(1, 3) in t, "pawn captures diagonally")
+	check(not Vector2(3, 3) in t, "pawn cannot capture friendly")
+	# Promotion action offered on the last row
+	var st2 = Rules.new_state()
+	var promo_pawn = Rules.add_piece(st2, "Pawn", "white", Vector2(0, 0))
+	check(has_action(Rules.get_actions(st2, promo_pawn), "promote"), "pawn offers promotion on last row")
+
+
+func test_kulak_movegen():
+	var st = Rules.new_state()
+	var kulak = Rules.add_piece(st, "Kulak", "white", Vector2(2, 4))
+	Rules.add_piece(st, "Pawn", "black", Vector2(2, 3))
+	var acts = Rules.get_actions(st, kulak)
+	var t = targets(acts)
+	check(Vector2(1, 3) in t and Vector2(3, 3) in t, "kulak diagonal moves")
+	check(Vector2(0, 2) in t and Vector2(4, 2) in t, "kulak diagonal double from start row")
+	check(Vector2(2, 3) in t, "kulak captures straight ahead")
+
+
+func test_automata_movegen():
+	var st = Rules.new_state()
+	var bot = Rules.add_piece(st, "Basic Automata", "white", Vector2(2, 4))
+	var t = targets(Rules.get_actions(st, bot))
+	check(Vector2(2, 3) in t and Vector2(2, 2) in t and Vector2(2, 1) in t, "automata 1/2/3 forward from start")
+	Rules.add_piece(st, "Pawn", "black", Vector2(0, 2))
+	Rules.add_piece(st, "Pawn", "black", Vector2(4, 2))
+	Rules.add_piece(st, "Pawn", "white", Vector2(3, 3))
+	t = targets(Rules.get_actions(st, bot))
+	check(Vector2(0, 2) in t, "automata range-2 diagonal capture")
+	check(not Vector2(4, 2) in t, "automata capture blocked by friendly on the way")
+
+
+func test_monk_movegen():
+	var st = Rules.new_state()
+	var monk = Rules.add_piece(st, "Monk", "white", Vector2(2, 5))
+	var t = targets(Rules.get_actions(st, monk))
+	check(Vector2(2, 4) in t and Vector2(2, 3) in t, "monk forward + double from back row")
+	check(Vector2(0, 3) in t and Vector2(5, 2) in t, "monk bishop slides")
+
+
+func test_sliders_and_leapers():
+	var st = Rules.new_state()
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(2, 2))
+	check(targets(Rules.get_actions(st, rook)).size() == 10, "rook has 10 moves from (2,2)")
+	var st2 = Rules.new_state()
+	var knight = Rules.add_piece(st2, "Knight", "white", Vector2(2, 2))
+	check(targets(Rules.get_actions(st2, knight)).size() == 8, "knight has 8 moves from (2,2)")
+	var st3 = Rules.new_state()
+	var queen = Rules.add_piece(st3, "Queen", "white", Vector2(0, 0))
+	check(targets(Rules.get_actions(st3, queen)).size() == 15, "queen has 15 moves from corner")
+	var st4 = Rules.new_state()
+	var valk = Rules.add_piece(st4, "Valkyrie", "white", Vector2(2, 2))
+	check(targets(Rules.get_actions(st4, valk)).size() == 27, "valkyrie = queen + knight moves")
+
+
+func test_nightrider():
+	var st = Rules.new_state()
+	var nr = Rules.add_piece(st, "Nightrider", "white", Vector2(0, 0))
+	var t = targets(Rules.get_actions(st, nr))
+	check(Vector2(2, 4) in t, "nightrider extends knight line")
+	Rules.add_piece(st, "Pawn", "white", Vector2(1, 2))
+	t = targets(Rules.get_actions(st, nr))
+	check(not Vector2(2, 4) in t and not Vector2(1, 2) in t, "nightrider blocked by friendly on line")
+	var path = Rules.move_path("Nightrider", Vector2(0, 0), Vector2(2, 4))
+	check(path == [Vector2(1, 2)], "nightrider path = intermediate landings")
+
+
+func test_grasshopper():
+	var st = Rules.new_state()
+	var gh = Rules.add_piece(st, "Grasshopper", "white", Vector2(2, 2))
+	check(targets(Rules.get_actions(st, gh)).is_empty(), "grasshopper needs a hurdle")
+	Rules.add_piece(st, "Pawn", "black", Vector2(2, 4))
+	var t = targets(Rules.get_actions(st, gh))
+	check(t == [Vector2(2, 5)], "grasshopper lands just past the hurdle")
+
+
+func test_rifleman():
+	var st = Rules.new_state()
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 2))
+	Rules.add_piece(st, "Pawn", "black", Vector2(2, 5))
+	Rules.add_piece(st, "Pawn", "white", Vector2(2, 0))
+	Rules.add_piece(st, "Pawn", "black", Vector2(5, 2))
+	var acts = Rules.get_actions(st, rifle)
+	var shots = targets(acts, "shoot")
+	check(Vector2(2, 5) in shots, "rifleman shoots down the file")
+	check(Vector2(5, 2) in shots, "rifleman shoots across the rank")
+	check(not Vector2(2, 0) in shots, "rifleman does not shoot friendlies")
+
+
+func test_cannonier():
+	var st = Rules.new_state()
+	var can = Rules.add_piece(st, "Cannonier", "white", Vector2(3, 4))
+	var acts = Rules.get_actions(st, can)
+	check(has_action(acts, "fire_cannon"), "cannonier can always fire")
+	check(Vector2(3, 3) in targets(acts), "cannonier walks forward")
+
+
+func test_dragonrider():
+	var st = Rules.new_state()
+	var dr = Rules.add_piece(st, "Dragonrider", "white", Vector2(0, 5))
+	var acts = Rules.get_actions(st, dr)
+	check(Vector2(4, 4) in targets(acts) and Vector2(1, 1) in targets(acts), "dragonrider (4,1) leaps")
+	var breaths = 0
+	for a in acts:
+		if a.action == "dragon_breath":
+			breaths += 1
+	check(breaths == 4, "dragonrider has 4 breath directions")
+
+
+func test_elephant_rider():
+	var st = Rules.new_state()
+	var el = Rules.add_piece(st, "Elephant Rider", "white", Vector2(2, 4))
+	var charge_found = false
+	for a in Rules.get_actions(st, el):
+		if a.action == "move" and a.get("is_charge", false):
+			charge_found = a.target == Vector2(2, 2)
+	check(charge_found, "elephant rider charges 2 forward")
+
+
+func test_gorgon_movegen():
+	var st = Rules.new_state()
+	var gorgon = Rules.add_piece(st, "Gorgon", "white", Vector2(2, 2))
+	Rules.add_piece(st, "Pawn", "white", Vector2(2, 3))
+	Rules.add_piece(st, "Pawn", "black", Vector2(3, 3))
+	var t = targets(Rules.get_actions(st, gorgon))
+	check(not Vector2(2, 3) in t, "gorgon cannot move onto friendly")
+	check(Vector2(3, 3) in t, "gorgon can move onto enemy")
+
+
+func test_anarch():
+	var st = Rules.new_state()
+	var anarch = Rules.add_piece(st, "Anarch", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "black", Vector2(4, 1))
+	var t = targets(Rules.get_actions(st, anarch))
+	check(Vector2(4, 2) in t and Vector2(3, 0) in t, "anarch teleports next to enemy royal")
+
+
+func test_devil_toad():
+	var st = Rules.new_state()
+	var toad = Rules.add_piece(st, "Devil Toad", "white", Vector2(0, 0))
+	var t = targets(Rules.get_actions(st, toad))
+	check(Vector2(5, 5) in t, "devil toad slides the long diagonal")
+	check(t.size() > 5, "devil toad bounces off edges")
+
+
+func test_werewolf_wolf_movegen():
+	var st = Rules.new_state()
+	var wolf = Rules.add_piece(st, "Werewolf (wolf form)", "white", Vector2(2, 2))
+	var t = targets(Rules.get_actions(st, wolf))
+	check(Vector2(4, 4) in t and Vector2(2, 4) in t and Vector2(3, 4) in t, "wolf reaches 2-step ring")
+	check(not Vector2(2, 2) in t, "wolf cannot stand still")
+	for i in range(t.size()):
+		for j in range(i + 1, t.size()):
+			if t[i] == t[j]:
+				check(false, "wolf has duplicate targets")
+				return
+
+
+func test_cultist():
+	var st = Rules.new_state()
+	var cultist = Rules.add_piece(st, "Cultist", "white", Vector2(2, 2))
+	Rules.add_piece(st, "Pawn", "black", Vector2(3, 2))
+	Rules.add_piece(st, "Rook", "black", Vector2(1, 2))
+	var acts = Rules.get_actions(st, cultist)
+	var converts = targets(acts, "convert")
+	check(Vector2(3, 2) in converts, "cultist converts adjacent enemy peasant")
+	check(not Vector2(1, 2) in converts, "cultist cannot convert non-peasants")
+
+
+func test_adjacent_promoters():
+	var st = Rules.new_state()
+	var lady = Rules.add_piece(st, "Lady of the Lake", "white", Vector2(2, 5))
+	Rules.add_piece(st, "Pawn", "white", Vector2(2, 4))
+	var acts = Rules.get_actions(st, lady)
+	var found = false
+	for a in acts:
+		if a.action == "promote" and a.target == Vector2(2, 4) and a.promote_to == "King":
+			found = true
+	check(found, "lady of the lake promotes adjacent pawn to King")
+	var st2 = Rules.new_state()
+	var pont = Rules.add_piece(st2, "Pontifex", "white", Vector2(2, 5))
+	Rules.add_piece(st2, "Cultist", "white", Vector2(3, 5))
+	var found2 = false
+	for a in Rules.get_actions(st2, pont):
+		if a.action == "promote" and a.target == Vector2(3, 5) and a.promote_to == "Bishop":
+			found2 = true
+	check(found2, "pontifex promotes any adjacent peasant to Bishop")
+
+
+# ==========================================================================
+# Resolution
+# ==========================================================================
+
+func test_basic_move_and_capture():
+	var st = Rules.new_state()
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(0, 0))
+	var victim = Rules.add_piece(st, "Pawn", "black", Vector2(0, 4))
+	var res = Rules.resolve(st, {rook.id: {"action": "move", "target": Vector2(0, 4)}})
+	var new_rook = Rules.find_piece(res.state, rook.id)
+	check(new_rook != null and new_rook.pos == Vector2(0, 4), "rook moved")
+	check(Rules.find_piece(res.state, victim.id) == null, "stationary victim captured")
+
+
+func test_swap_mutual_capture():
+	var st = Rules.new_state()
+	var a = Rules.add_piece(st, "Rook", "white", Vector2(0, 0))
+	var b = Rules.add_piece(st, "Rook", "black", Vector2(0, 5))
+	var res = Rules.resolve(st, {
+		a.id: {"action": "move", "target": Vector2(0, 5)},
+		b.id: {"action": "move", "target": Vector2(0, 0)},
+	})
+	check(Rules.find_piece(res.state, a.id) == null and Rules.find_piece(res.state, b.id) == null,
+		"head-on swap kills both")
+
+
+func test_multi_arrival():
+	var st = Rules.new_state()
+	var a = Rules.add_piece(st, "Knight", "white", Vector2(0, 0))
+	var b = Rules.add_piece(st, "Knight", "black", Vector2(4, 0))
+	var res = Rules.resolve(st, {
+		a.id: {"action": "move", "target": Vector2(2, 1)},
+		b.id: {"action": "move", "target": Vector2(2, 1)},
+	})
+	check(Rules.find_piece(res.state, a.id) == null and Rules.find_piece(res.state, b.id) == null,
+		"same-square arrival kills both")
+
+
+func test_block_bounces_not_kills():
+	var st = Rules.new_state()
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(0, 2))
+	var knight = Rules.add_piece(st, "Knight", "black", Vector2(4, 0))
+	var res = Rules.resolve(st, {
+		rook.id: {"action": "move", "target": Vector2(5, 2)},
+		knight.id: {"action": "move", "target": Vector2(3, 2)},
+	})
+	var moved_rook = Rules.find_piece(res.state, rook.id)
+	check(moved_rook != null, "blocked rook survives (old code killed it)")
+	check(moved_rook.pos == Vector2(0, 2), "blocked rook bounced back to origin")
+	var moved_knight = Rules.find_piece(res.state, knight.id)
+	check(moved_knight.pos == Vector2(3, 2), "blocking knight landed")
+
+
+func test_friendly_bounce_cascade():
+	var st = Rules.new_state()
+	var c = Rules.add_piece(st, "Rook", "white", Vector2(2, 2)) # will be blocked
+	var a = Rules.add_piece(st, "Queen", "white", Vector2(2, 0)) # heads for c's square
+	var k = Rules.add_piece(st, "Knight", "black", Vector2(5, 0)) # blocks c
+	var res = Rules.resolve(st, {
+		c.id: {"action": "move", "target": Vector2(5, 2)},
+		a.id: {"action": "move", "target": Vector2(2, 2)},
+		k.id: {"action": "move", "target": Vector2(4, 2)},
+	})
+	check(Rules.find_piece(res.state, c.id).pos == Vector2(2, 2), "rook blocked in place")
+	check(Rules.find_piece(res.state, a.id).pos == Vector2(2, 0), "queen bounced off friendly rook")
+	check(Rules.find_piece(res.state, k.id).pos == Vector2(4, 2), "knight landed")
+
+
+func test_shot_always_lands():
+	var st = Rules.new_state()
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 2))
+	var runner = Rules.add_piece(st, "Knight", "black", Vector2(2, 5))
+	var res = Rules.resolve(st, {
+		rifle.id: {"action": "shoot", "target": Vector2(2, 5)},
+		runner.id: {"action": "move", "target": Vector2(0, 4)},
+	})
+	check(Rules.find_piece(res.state, runner.id) == null, "shot victim dies even while fleeing")
+
+
+func test_cannon_friendly_fire():
+	var st = Rules.new_state()
+	var can = Rules.add_piece(st, "Cannonier", "white", Vector2(3, 5))
+	var friend = Rules.add_piece(st, "Pawn", "white", Vector2(3, 3))
+	var foe = Rules.add_piece(st, "Pawn", "black", Vector2(3, 1))
+	var res = Rules.resolve(st, {can.id: {"action": "fire_cannon"}})
+	check(Rules.find_piece(res.state, friend.id) == null, "cannon hits friendlies")
+	check(Rules.find_piece(res.state, foe.id) == null, "cannon hits enemies")
+	check(Rules.find_piece(res.state, can.id) != null, "cannonier survives firing")
+
+
+func test_dragon_breath():
+	var st = Rules.new_state()
+	var dr = Rules.add_piece(st, "Dragonrider", "white", Vector2(2, 3))
+	var v1 = Rules.add_piece(st, "Pawn", "black", Vector2(2, 2))
+	var v2 = Rules.add_piece(st, "Pawn", "black", Vector2(1, 1))
+	var safe = Rules.add_piece(st, "Pawn", "black", Vector2(4, 3))
+	var res = Rules.resolve(st, {dr.id: {"action": "dragon_breath", "direction": Vector2.UP}})
+	check(Rules.find_piece(res.state, v1.id) == null, "breath hits square ahead")
+	check(Rules.find_piece(res.state, v2.id) == null, "breath hits cone corner")
+	check(Rules.find_piece(res.state, safe.id) != null, "breath misses outside cone")
+
+
+func test_en_passant():
+	var st = Rules.new_state()
+	var black_pawn = Rules.add_piece(st, "Pawn", "black", Vector2(3, 1))
+	var white_pawn = Rules.add_piece(st, "Pawn", "white", Vector2(2, 3))
+	var res = Rules.resolve(st, {black_pawn.id: {"action": "move", "target": Vector2(3, 3), "is_double_move": true}})
+	check(res.state.ep_targets.has(Vector2(3, 2)), "double move registers en passant square")
+	var st2 = res.state
+	var wp = Rules.find_piece(st2, white_pawn.id)
+	var acts = Rules.get_actions(st2, wp)
+	var ep_action = null
+	for a in acts:
+		if a.get("is_en_passant", false):
+			ep_action = a
+	check(ep_action != null and ep_action.target == Vector2(3, 2), "pawn sees en passant capture")
+	var res2 = Rules.resolve(st2, {white_pawn.id: ep_action})
+	check(Rules.find_piece(res2.state, black_pawn.id) == null, "en passant kills the double mover")
+	check(Rules.find_piece(res2.state, white_pawn.id).pos == Vector2(3, 2), "capturer lands on the passed square")
+
+
+func test_promotion_royal_status():
+	var st = Rules.new_state()
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(0, 0))
+	Rules.add_piece(st, "King", "white", Vector2(5, 5)) # keep a royal alive
+	var res = Rules.resolve(st, {pawn.id: {"action": "promote", "target": Vector2(0, 0), "promote_to": "Valkyrie"}})
+	var promoted = Rules.find_piece(res.state, pawn.id)
+	check(promoted.type == "Valkyrie" and not promoted.royal, "pawn promoted to Valkyrie")
+	# Lady of the Lake makes new royals.
+	var st2 = Rules.new_state()
+	var lady = Rules.add_piece(st2, "Lady of the Lake", "white", Vector2(2, 5))
+	var pawn2 = Rules.add_piece(st2, "Pawn", "white", Vector2(2, 4))
+	var res2 = Rules.resolve(st2, {lady.id: {"action": "promote", "target": Vector2(2, 4), "promote_to": "King"}})
+	var new_king = Rules.find_piece(res2.state, pawn2.id)
+	check(new_king.type == "King" and new_king.royal, "lady-made King counts as royal")
+	check(Rules.royal_count(res2.state, "white") == 2, "royal count includes promoted King")
+
+
+func test_conversion():
+	var st = Rules.new_state()
+	var cultist = Rules.add_piece(st, "Cultist", "white", Vector2(2, 2))
+	var victim = Rules.add_piece(st, "Pawn", "black", Vector2(3, 2))
+	var res = Rules.resolve(st, {cultist.id: {"action": "convert", "target": Vector2(3, 2)}})
+	var converted = Rules.find_piece(res.state, victim.id)
+	check(converted.type == "Cultist" and converted.color == "white", "victim converted to white cultist")
+
+
+func test_werewolf_toggle():
+	var st = Rules.new_state()
+	var wolf = Rules.add_piece(st, "Werewolf (wolf form)", "white", Vector2(2, 2))
+	var res = Rules.resolve(st, {})
+	check(Rules.find_piece(res.state, wolf.id).type == "Werewolf (human form)", "wolf becomes human at turn end")
+	var res2 = Rules.resolve(res.state, {})
+	check(Rules.find_piece(res2.state, wolf.id).type == "Werewolf (wolf form)", "human becomes wolf again")
+
+
+func test_valkyrie_phase_out_and_return():
+	var st = Rules.new_state()
+	var valk = Rules.add_piece(st, "Valkyrie", "white", Vector2(3, 3))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(3, 0))
+	var res = Rules.resolve(st, {rook.id: {"action": "move", "target": Vector2(3, 3)}})
+	check(Rules.find_piece(res.state, valk.id) == null, "captured valkyrie leaves the board")
+	check(res.state.phased_out.size() == 1, "valkyrie is phased out, not dead")
+	var res2 = Rules.resolve(res.state, {})
+	var returned = Rules.find_piece(res2.state, valk.id)
+	check(returned != null, "valkyrie returns next turn")
+	check(returned.pos != Vector2(3, 3), "return square dodges the occupier")
+	check(res2.state.phased_out.is_empty(), "phase-out list cleared")
+
+
+func test_zombie_automatic():
+	var st = Rules.new_state()
+	var zombie = Rules.add_piece(st, "Zombie", "white", Vector2(2, 3))
+	var res = Rules.resolve(st, {})
+	check(Rules.find_piece(res.state, zombie.id).pos == Vector2(2, 2), "zombie shambles forward on its own")
+	# Prefers to eat.
+	var st2 = Rules.new_state()
+	var zombie2 = Rules.add_piece(st2, "Zombie", "white", Vector2(2, 3))
+	var meal = Rules.add_piece(st2, "Pawn", "black", Vector2(1, 2))
+	var res2 = Rules.resolve(st2, {})
+	check(Rules.find_piece(res2.state, zombie2.id).pos == Vector2(1, 2), "zombie prefers to capture")
+	check(Rules.find_piece(res2.state, meal.id) == null, "zombie ate the pawn")
+	check(Rules.get_actions(st2, zombie2).is_empty(), "players cannot order zombies around")
+
+
+func test_necromancer_credit():
+	var st = Rules.new_state()
+	var raider = Rules.add_piece(st, "Raider", "white", Vector2(2, 3))
+	Rules.add_piece(st, "Pawn", "black", Vector2(1, 2))
+	var res = Rules.resolve(st, {raider.id: {"action": "move", "target": Vector2(1, 2)}})
+	check(res.state.credits.white.get("Zombie", 0) == 1, "raider capture raises a zombie credit")
+
+
+func test_valhalla_credit():
+	var st = Rules.new_state()
+	var raider = Rules.add_piece(st, "Raider", "white", Vector2(2, 3))
+	Rules.add_piece(st, "Pawn", "black", Vector2(1, 2))
+	var rifle = Rules.add_piece(st, "Rifleman", "black", Vector2(1, 0))
+	var res = Rules.resolve(st, {
+		raider.id: {"action": "move", "target": Vector2(1, 2)},
+		rifle.id: {"action": "shoot", "target": Vector2(2, 3)},
+	})
+	check(Rules.find_piece(res.state, raider.id) == null, "raider died mid-raid")
+	check(res.state.credits.white.get("Raider", 0) == 1, "barbarian who died capturing goes to valhalla")
+
+
+func test_petrify():
+	var st = Rules.new_state()
+	var gorgon = Rules.add_piece(st, "Gorgon", "white", Vector2(2, 2))
+	var foe = Rules.add_piece(st, "Rook", "black", Vector2(2, 4))
+	var friend = Rules.add_piece(st, "Rook", "white", Vector2(2, 3)) # adjacent after move? no - keep away
+	friend.pos = Vector2(0, 0)
+	st.board[2][3] = null
+	st.board[0][0] = friend
+	var res = Rules.resolve(st, {gorgon.id: {"action": "move", "target": Vector2(2, 3)}})
+	var stoned = Rules.find_piece(res.state, foe.id)
+	check(stoned.petrified, "enemy adjacent to gorgon is petrified")
+	check(not Rules.find_piece(res.state, friend.id).petrified, "friends are safe from the gorgon")
+	check(Rules.get_actions(res.state, stoned).is_empty(), "petrified pieces cannot act")
+
+
+func test_win_conditions():
+	var st = Rules.new_state()
+	var wk = Rules.add_piece(st, "King", "white", Vector2(0, 5))
+	var bk = Rules.add_piece(st, "King", "black", Vector2(0, 0))
+	Rules.add_piece(st, "Rook", "white", Vector2(5, 0))
+	var rook = st.board[5][0]
+	var res = Rules.resolve(st, {rook.id: {"action": "move", "target": Vector2(0, 0)}})
+	check(res.outcome == "white", "capturing the last royal wins")
+	# Mutual destruction = draw.
+	var st2 = Rules.new_state()
+	var wk2 = Rules.add_piece(st2, "King", "white", Vector2(2, 2))
+	var bk2 = Rules.add_piece(st2, "King", "black", Vector2(2, 4))
+	var res2 = Rules.resolve(st2, {
+		wk2.id: {"action": "move", "target": Vector2(2, 3)},
+		bk2.id: {"action": "move", "target": Vector2(2, 3)},
+	})
+	check(res2.outcome == "draw", "mutual royal annihilation is a draw")
+	# Petrified royal counts as lost.
+	var st3 = Rules.new_state()
+	var gorgon = Rules.add_piece(st3, "Gorgon", "white", Vector2(2, 2))
+	Rules.add_piece(st3, "King", "white", Vector2(5, 5))
+	var bk3 = Rules.add_piece(st3, "King", "black", Vector2(2, 4))
+	var res3 = Rules.resolve(st3, {gorgon.id: {"action": "move", "target": Vector2(2, 3)}})
+	check(Rules.find_piece(res3.state, bk3.id).petrified, "royal petrified")
+	check(res3.outcome == "white", "petrifying the last royal wins")
+
+
+func test_no_progress_adjudication():
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "black", Vector2(0, 0))
+	Rules.add_piece(st, "Queen", "white", Vector2(5, 5))
+	st.no_progress = Rules.NO_PROGRESS_LIMIT - 1
+	var res = Rules.resolve(st, {})
+	check(res.outcome == "white", "stalled game adjudicated on material")
+
+
+func test_spawn():
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "black", Vector2(0, 0))
+	st.credits.white["Zombie"] = 1
+	var res = Rules.resolve(st, {-1: {"action": "spawn", "piece_type": "Zombie", "target": Vector2(3, 4), "color": "white"}})
+	check("Zombie" in alive_types(res.state, "white"), "spawned zombie on board")
+	check(res.state.credits.white["Zombie"] == 0, "spawn consumed the credit")
+	# Spawning onto an occupied square fails and keeps the credit.
+	var st2 = Rules.new_state()
+	Rules.add_piece(st2, "King", "white", Vector2(0, 5))
+	Rules.add_piece(st2, "Pawn", "black", Vector2(3, 4))
+	st2.credits.white["Zombie"] = 1
+	var res2 = Rules.resolve(st2, {-1: {"action": "spawn", "piece_type": "Zombie", "target": Vector2(3, 4), "color": "white"}})
+	check(not "Zombie" in alive_types(res2.state, "white"), "blocked spawn fails")
+	check(res2.state.credits.white["Zombie"] == 1, "failed spawn keeps the credit")
+
+
+func test_leaper_paths_unblockable():
+	check(Rules.move_path("Grasshopper", Vector2(2, 2), Vector2(2, 5)).is_empty(), "grasshopper hop has no blockable path")
+	check(Rules.move_path("Elephant Rider", Vector2(2, 4), Vector2(2, 2)).is_empty(), "charge has no blockable path")
+	check(Rules.move_path("Werewolf (wolf form)", Vector2(2, 2), Vector2(2, 4)).is_empty(), "wolf double-step has no blockable path")
+	check(Rules.move_path("Devil Toad", Vector2(0, 0), Vector2(3, 3)).is_empty(), "toad run has no blockable path")
+	check(Rules.move_path("Anarch", Vector2(0, 0), Vector2(0, 4)).is_empty(), "anarch teleport has no blockable path")
+	check(Rules.move_path("Rook", Vector2(0, 0), Vector2(0, 3)).size() == 2, "rook path still blockable")
+
+
+func test_kulak_ep_not_shadowed():
+	var st = Rules.new_state()
+	var black_pawn = Rules.add_piece(st, "Pawn", "black", Vector2(3, 1))
+	var kulak = Rules.add_piece(st, "Kulak", "white", Vector2(2, 3))
+	var res = Rules.resolve(st, {black_pawn.id: {"action": "move", "target": Vector2(3, 3), "is_double_move": true}})
+	var kk = Rules.find_piece(res.state, kulak.id)
+	var to_ep_square = []
+	for a in Rules.get_actions(res.state, kk):
+		if a.action == "move" and a.target == Vector2(3, 2):
+			to_ep_square.append(a)
+	check(to_ep_square.size() == 1, "kulak has exactly one action on the ep square")
+	check(to_ep_square.size() > 0 and to_ep_square[0].get("is_en_passant", false), "and it is the ep capture (not a plain step)")
+
+
+func test_rifleman_shot_first():
+	var st = Rules.new_state()
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 2))
+	Rules.add_piece(st, "Pawn", "black", Vector2(2, 1))
+	var first_on_target = null
+	for a in Rules.get_actions(st, rifle):
+		if a.has("target") and a.target == Vector2(2, 1):
+			first_on_target = a
+			break
+	check(first_on_target != null and first_on_target.action == "shoot", "adjacent enemy: shoot comes before the move")
+
+
+func test_gorgon_standoff():
+	var st = Rules.new_state()
+	var g1 = Rules.add_piece(st, "Gorgon", "white", Vector2(2, 2))
+	var g2 = Rules.add_piece(st, "Gorgon", "black", Vector2(2, 3))
+	var res = Rules.resolve(st, {})
+	check(Rules.find_piece(res.state, g1.id).petrified, "white gorgon petrified in standoff")
+	check(Rules.find_piece(res.state, g2.id).petrified, "black gorgon petrified in standoff")
+
+
+func test_petrified_valkyrie_shatters():
+	var st = Rules.new_state()
+	var valk = Rules.add_piece(st, "Valkyrie", "white", Vector2(3, 3))
+	valk.petrified = true
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(3, 0))
+	var res = Rules.resolve(st, {rook.id: {"action": "move", "target": Vector2(3, 3)}})
+	check(Rules.find_piece(res.state, valk.id) == null, "petrified valkyrie is captured")
+	check(res.state.phased_out.is_empty(), "petrified valkyrie does not phase out")
+
+
+func test_ep_not_registered_for_the_dead():
+	var st = Rules.new_state()
+	var black_pawn = Rules.add_piece(st, "Pawn", "black", Vector2(3, 1))
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(3, 4))
+	var res = Rules.resolve(st, {
+		black_pawn.id: {"action": "move", "target": Vector2(3, 3), "is_double_move": true},
+		rifle.id: {"action": "shoot", "target": Vector2(3, 1)},
+	})
+	check(Rules.find_piece(res.state, black_pawn.id) == null, "double-mover shot dead")
+	check(res.state.ep_targets.is_empty(), "no ep square registered for a dead double-mover")
+
+
+func test_promotion_picker_choices():
+	var st = Rules.new_state()
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(0, 0))
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	# get_actions (human display) offers a single promote action.
+	var promo_count = 0
+	for a in Rules.get_actions(st, pawn):
+		if a.action == "promote":
+			promo_count += 1
+	check(promo_count == 1, "display sees one promote action (picker supplies the rest)")
+	# legal_actions (AI) expands into one per choice.
+	var offered = {}
+	for e in Rules.legal_actions(st, "white"):
+		if e.piece_id == pawn.id and e.action.action == "promote":
+			offered[e.action.promote_to] = true
+	check(offered.size() == Rules.promotion_choices().size(), "legal_actions expands every promotion choice")
+	check(offered.has("Queen") and offered.has("Valkyrie") and offered.has("Knight"), "choices include Queen/Valkyrie/Knight")
+	check(not offered.has("King"), "cannot promote to a royal")
+	# Resolving a chosen promotion yields that piece.
+	var res = Rules.resolve(st, {pawn.id: {"action": "promote", "target": Vector2(0, 0), "promote_to": "Queen"}})
+	var promoted = Rules.find_piece(res.state, pawn.id)
+	check(promoted != null and promoted.type == "Queen", "pawn promotes to the chosen Queen")
+	check(not promoted.royal, "promoted Queen is not royal")
+
+
+func test_legal_actions():
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(2, 5))
+	var zombie = Rules.add_piece(st, "Zombie", "white", Vector2(2, 4))
+	var stone = Rules.add_piece(st, "Rook", "white", Vector2(0, 0))
+	stone.petrified = true
+	st.credits.white["Raider"] = 1
+	var acts = Rules.legal_actions(st, "white")
+	var has_spawn = false
+	var zombie_orders = 0
+	var stone_orders = 0
+	for entry in acts:
+		if entry.action.action == "spawn":
+			has_spawn = true
+		if entry.piece_id == zombie.id:
+			zombie_orders += 1
+		if entry.piece_id == stone.id:
+			stone_orders += 1
+	check(has_spawn, "legal actions include credit spawns")
+	check(zombie_orders == 0, "no orders for automatic pieces")
+	check(stone_orders == 0, "no orders for petrified pieces")
+	check(acts.size() > 0, "king has legal actions")
