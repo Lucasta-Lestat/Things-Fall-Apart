@@ -189,7 +189,7 @@ static func action_priority(action: Dictionary) -> int:
 
 
 # Key identifying the board square/marker an action occupies in the UI.
-static func _action_slot(action: Dictionary) -> String:
+static func action_slot(action: Dictionary) -> String:
 	if action.get("action", "") == "dragon_breath":
 		return "dir:" + str(action.get("direction", Vector2.ZERO))
 	if action.has("target"):
@@ -197,15 +197,21 @@ static func _action_slot(action: Dictionary) -> String:
 	return "self"
 
 
-# Sorts by precedence and keeps only the winning action per square, so what the
-# board draws is exactly what a click will declare.
-static func prioritize_actions(actions: Array) -> Array:
+# Every action, best-first. The board keeps this full list so a square holding
+# several options (e.g. promote vs. conditional backfill) can offer a choice.
+static func sort_actions(actions: Array) -> Array:
 	var ranked = actions.duplicate()
 	ranked.sort_custom(func(a, b): return action_priority(a) < action_priority(b))
+	return ranked
+
+
+# Sorts by precedence and keeps only the winning action per square -- the
+# marker the board draws for each square.
+static func prioritize_actions(actions: Array) -> Array:
 	var seen = {}
 	var out = []
-	for a in ranked:
-		var slot = _action_slot(a)
+	for a in sort_actions(actions):
+		var slot = action_slot(a)
 		if seen.has(slot):
 			continue
 		seen[slot] = true

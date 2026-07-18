@@ -17,7 +17,7 @@ extends CanvasLayer
 @onready var ai_toggle = $GameOverlayUI/MarginContainer/VBoxContainer/BottomRowLabels/PlayerModeButton
 @onready var game_over_panel = $GameOverlayUI/GameOverPanel
 @onready var game_over_label = $GameOverlayUI/GameOverPanel/VBoxContainer/OutcomeLabel
-@onready var promotion_picker = $GameOverlayUI/PromotionPicker
+@onready var choice_picker = $GameOverlayUI/ChoicePicker
 @onready var profile_picker = $GameOverlayUI/ProfilePicker
 
 var piece_icon_scene = preload("res://ui/piece_icon.tscn")

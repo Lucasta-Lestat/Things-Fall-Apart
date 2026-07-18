@@ -38,6 +38,7 @@ func _initialize():
 	test_conditional_moves_are_offered()
 	test_chancellor_promotes_peasants()
 	test_promotion_beats_conditional_move()
+	test_alternatives_are_kept_for_the_chooser()
 	test_shot_still_catches_a_fleeing_victim()
 	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
@@ -506,6 +507,37 @@ func test_promotion_beats_conditional_move():
 			if a.has("target") and a.target == Vector2(1, 4):
 				count += 1
 		check(count == 1, "%s: only one action is offered per square" % promoter)
+
+
+func test_alternatives_are_kept_for_the_chooser():
+	# The board draws one marker per square, but BOTH options must survive so
+	# clicking that square can offer a choice.
+	var st = Rules.new_state()
+	var chancellor = Rules.add_piece(st, "Chancellor", "white", Vector2(1, 5))
+	Rules.add_piece(st, "Pawn", "white", Vector2(1, 4))
+	var raw = Rules.get_actions(st, chancellor)
+	var all_sorted = Rules.sort_actions(raw)
+	var drawn = Rules.prioritize_actions(raw)
+
+	var on_square_all = []
+	for a in all_sorted:
+		if a.has("target") and a.target == Vector2(1, 4):
+			on_square_all.append(a)
+	var on_square_drawn = []
+	for a in drawn:
+		if a.has("target") and a.target == Vector2(1, 4):
+			on_square_drawn.append(a)
+
+	check(on_square_all.size() == 2, "both promote and conditional move are kept (got %d)" % on_square_all.size())
+	check(on_square_drawn.size() == 1, "only one marker is drawn for that square")
+	check(on_square_all[0].action == "promote", "the chooser lists promotion first")
+	var has_conditional = false
+	for a in on_square_all:
+		if a.action == "move" and a.get("is_conditional", false):
+			has_conditional = true
+	check(has_conditional, "the conditional backfill is still selectable via the chooser")
+	# sort_actions must not drop anything.
+	check(all_sorted.size() == raw.size(), "sort_actions preserves every action")
 
 
 func test_shot_still_catches_a_fleeing_victim():

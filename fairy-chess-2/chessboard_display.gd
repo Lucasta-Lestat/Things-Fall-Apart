@@ -15,6 +15,8 @@ const BOARD_SIZE = 6
 var selected_piece = null
 var valid_actions_to_show = []
 var previewing = false # selection is a read-only look at a piece we can't order
+var _all_actions = [] # every action for the selection, best-first (may share squares)
+var _picker_mode = "" # "action" | "promotion": which question the picker is asking
 var _pending_promotion_piece = null # awaiting a choice from the promotion picker
 var _shudder = {} # royal state id -> looping tween (in-check tremble)
 
@@ -58,42 +60,23 @@ func _gui_input(event):
 		accept_event()
 		return
 
-	# 1. Did the player click one of the highlighted actions? (Only a piece we
-	#    actually control can declare; a previewed enemy is read-only.)
-	if not previewing:
-		for action in valid_actions_to_show:
-			if action.action == "dragon_breath":
-				var target_square = selected_piece.grid_position + action.direction
-				if target_square == grid_pos:
-					game_board.declare_action(selected_piece, action)
-					clear_selection()
-					accept_event()
-					return
-			elif action.action == "promote" and action.target == selected_piece.grid_position:
-				# Self-promotion: open the picker instead of declaring immediately.
-				if grid_pos == selected_piece.grid_position:
-					_open_promotion_picker(selected_piece)
-					accept_event()
-					return
-			elif action.has("target") and action.target == grid_pos:
-				game_board.declare_action(selected_piece, action)
-				clear_selection()
-				accept_event()
-				return
+	# 1. Did the player click a square this piece can act on? One option
+	#    declares straight away; several open the chooser. (A previewed enemy
+	#    is read-only, so it never declares.)
+	if not previewing and selected_piece != null:
+		var here = _actions_for_square(grid_pos)
+		if here.size() == 1:
+			_take_action(here[0])
+			accept_event()
+			return
+		elif here.size() > 1:
+			_open_action_picker(here)
+			accept_event()
+			return
 
 	var clicked_piece = game_board.board[grid_pos.x][grid_pos.y]
 
-	# 2. Clicking the selected piece itself triggers its targetless action
-	#    (e.g. fire_cannon).
-	if not previewing and clicked_piece != null and clicked_piece == selected_piece:
-		for action in valid_actions_to_show:
-			if not action.has("target") and not action.has("direction"):
-				game_board.declare_action(selected_piece, action)
-				clear_selection()
-				accept_event()
-				return
-
-	# 3. Otherwise (re)select. A piece we control is selected to ORDER; any
+	# 2. Otherwise (re)select. A piece we control is selected to ORDER; any
 	#    other piece (enemy, petrified, or ours while a move is pending) is
 	#    selected to PREVIEW its moves read-only.
 	if clicked_piece == null:
@@ -135,17 +118,28 @@ func _controllable(piece) -> bool:
 func select_piece(piece, preview := false):
 	selected_piece = piece
 	previewing = preview
-	# One action per square, specials first -- otherwise a conditional backfill
-	# would shadow the promotion offered on the same neighbouring square.
-	valid_actions_to_show = Rules.prioritize_actions(piece.get_valid_actions())
+	# Keep every action (best-first) so a square offering several options can
+	# ask; draw only the winning marker per square so the board stays readable.
+	_all_actions = Rules.sort_actions(piece.get_valid_actions())
+	valid_actions_to_show = Rules.prioritize_actions(_all_actions)
 	# Annotate capture moves so the highlight layer can colour them red.
 	for action in valid_actions_to_show:
 		if action.action == "move" and action.has("target"):
 			var occ = game_board.board[action.target.x][action.target.y]
 			if occ != null and occ.color != piece.color:
 				action["is_capture_hint"] = true
+	# Mark squares offering more than one option so the board can flag them.
+	var counts = {}
+	for action in _all_actions:
+		var sq = _square_for_action(action)
+		counts[sq] = int(counts.get(sq, 0)) + 1
+	var multi = {}
+	for sq in counts:
+		if counts[sq] > 1:
+			multi[sq] = true
 	highlight_layer.selected_piece = selected_piece
 	highlight_layer.valid_actions_to_show = valid_actions_to_show
+	highlight_layer.multi_option_squares = multi
 	highlight_layer.preview = preview
 	highlight_layer.queue_redraw()
 
@@ -153,11 +147,98 @@ func select_piece(piece, preview := false):
 func clear_selection():
 	selected_piece = null
 	valid_actions_to_show = []
+	_all_actions = []
 	previewing = false
 	highlight_layer.selected_piece = null
 	highlight_layer.valid_actions_to_show = []
+	highlight_layer.multi_option_squares = {}
 	highlight_layer.preview = false
 	highlight_layer.queue_redraw()
+
+
+# --- Action resolution on a clicked square ---
+# The board square an action's marker occupies (breath is drawn on the square
+# it faces; targetless actions like fire_cannon sit on the piece itself).
+func _square_for_action(action) -> Vector2:
+	if action.action == "dragon_breath":
+		return selected_piece.grid_position + action.direction
+	if action.has("target"):
+		return action.target
+	return selected_piece.grid_position
+
+
+func _actions_for_square(grid_pos: Vector2) -> Array:
+	var out = []
+	for action in _all_actions:
+		if _square_for_action(action) == grid_pos:
+			out.append(action)
+	return out
+
+
+# Declares an action, or asks the follow-up question it needs first.
+func _take_action(action) -> void:
+	if action.action == "promote" and action.target == selected_piece.grid_position:
+		_open_promotion_picker(selected_piece) # which piece to become?
+		return
+	game_board.declare_action(selected_piece, action)
+	clear_selection()
+
+
+func _action_label(action) -> String:
+	match action.action:
+		"move":
+			if action.get("is_conditional", false):
+				return "Move here if vacated"
+			var occ = game_board.board[action.target.x][action.target.y]
+			if occ != null and occ.color != selected_piece.color:
+				return "Capture " + occ.piece_type
+			if action.get("is_charge", false):
+				return "Charge"
+			return "Move here"
+		"promote":
+			if action.target == selected_piece.grid_position:
+				return "Promote"
+			return "Promote to " + str(action.get("promote_to", ""))
+		"convert":
+			return "Convert"
+		"shoot":
+			return "Shoot"
+		"fire_cannon":
+			return "Fire cannon"
+		"dragon_breath":
+			return "Dragon breath"
+	return str(action.action)
+
+
+func _action_icon(action):
+	if action.action == "promote":
+		var become = str(action.get("promote_to", ""))
+		if become != "":
+			var path = "res://assets/icons/%s_%s.png" % [become, selected_piece.color]
+			if ResourceLoader.exists(path):
+				return load(path)
+	if action.action in ["shoot", "fire_cannon", "dragon_breath"]:
+		return highlight_layer.attack_icon
+	return null
+
+
+func _open_action_picker(actions) -> void:
+	_picker_mode = "action"
+	var entries = []
+	for action in actions:
+		entries.append({
+			"label": _action_label(action),
+			"icon": _action_icon(action),
+			"payload": action,
+			"tooltip": _action_tooltip(action),
+		})
+	_picker().open("Choose an action", entries)
+
+
+func _action_tooltip(action) -> String:
+	if action.get("is_conditional", false):
+		return "Resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
+	return ""
 
 
 # --- Check indicator: threatened royals shudder ---
@@ -190,13 +271,33 @@ func _on_check_status_changed(threatened_ids):
 		_shudder[id] = tw
 
 
-# --- Promotion picker ---
+# --- Choice picker (shared by the action and promotion questions) ---
+func _picker():
+	var picker = ui.choice_picker
+	if not picker.chosen.is_connected(_on_picker_chosen):
+		picker.chosen.connect(_on_picker_chosen)
+	return picker
+
+
+func _on_picker_chosen(payload):
+	if _picker_mode == "promotion":
+		_on_promotion_picked(payload)
+	else:
+		_take_action(payload)
+
+
 func _open_promotion_picker(piece):
+	_picker_mode = "promotion"
 	_pending_promotion_piece = piece
-	var picker = ui.promotion_picker
-	if not picker.picked.is_connected(_on_promotion_picked):
-		picker.picked.connect(_on_promotion_picked)
-	picker.open(piece.color)
+	var entries = []
+	for piece_type in Rules.promotion_choices():
+		var path = "res://assets/icons/%s_%s.png" % [piece_type, piece.color]
+		entries.append({
+			"label": piece_type,
+			"icon": load(path) if ResourceLoader.exists(path) else null,
+			"payload": piece_type,
+		})
+	_picker().open("Promote to", entries)
 
 
 func _on_promotion_picked(promote_to):
