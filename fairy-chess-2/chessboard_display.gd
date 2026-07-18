@@ -135,7 +135,9 @@ func _controllable(piece) -> bool:
 func select_piece(piece, preview := false):
 	selected_piece = piece
 	previewing = preview
-	valid_actions_to_show = piece.get_valid_actions()
+	# One action per square, specials first -- otherwise a conditional backfill
+	# would shadow the promotion offered on the same neighbouring square.
+	valid_actions_to_show = Rules.prioritize_actions(piece.get_valid_actions())
 	# Annotate capture moves so the highlight layer can colour them red.
 	for action in valid_actions_to_show:
 		if action.action == "move" and action.has("target"):

@@ -167,6 +167,52 @@ static func promotion_choices() -> Array:
 	return PROMOTION_CHOICES
 
 
+# --- Action precedence -----------------------------------------------------
+# Several actions can land on the SAME square: a Pontifex both promotes the
+# peasant beside it and could conditionally backfill that square. The UI shows
+# and declares one action per square, so rank them -- a deliberate special
+# beats a plain step, and a conditional backfill ranks last because it is the
+# situational option. Lower number wins.
+static func action_priority(action: Dictionary) -> int:
+	match action.get("action", ""):
+		"promote":
+			return 0
+		"convert":
+			return 1
+		"shoot":
+			return 2
+		"fire_cannon", "dragon_breath":
+			return 3
+		"move":
+			return 5 if action.get("is_conditional", false) else 4
+	return 6
+
+
+# Key identifying the board square/marker an action occupies in the UI.
+static func _action_slot(action: Dictionary) -> String:
+	if action.get("action", "") == "dragon_breath":
+		return "dir:" + str(action.get("direction", Vector2.ZERO))
+	if action.has("target"):
+		return "sq:" + str(action.target)
+	return "self"
+
+
+# Sorts by precedence and keeps only the winning action per square, so what the
+# board draws is exactly what a click will declare.
+static func prioritize_actions(actions: Array) -> Array:
+	var ranked = actions.duplicate()
+	ranked.sort_custom(func(a, b): return action_priority(a) < action_priority(b))
+	var seen = {}
+	var out = []
+	for a in ranked:
+		var slot = _action_slot(a)
+		if seen.has(slot):
+			continue
+		seen[slot] = true
+		out.append(a)
+	return out
+
+
 static func breath_cone(direction: Vector2) -> Array:
 	if direction == Vector2.UP:
 		return [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(0, -1)]
@@ -362,8 +408,11 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 			_anarch_hunts(state, piece, actions)
 		"Devil Toad":
 			_devil_toad_actions(state, piece, actions)
-		"King", "Chancellor":
+		"King":
 			_leaps(state, piece, KING_DIRS, actions)
+		"Chancellor":
+			_leaps(state, piece, KING_DIRS, actions)
+			_adjacent_promotions(state, piece, actions, "Minister", [], ["Peasant"])
 		"Lady of the Lake":
 			_leaps(state, piece, KING_DIRS, actions)
 			_adjacent_promotions(state, piece, actions, "King", ["Pawn", "Kulak"], [])
