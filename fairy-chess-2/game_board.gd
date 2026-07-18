@@ -14,6 +14,7 @@ signal turn_info_changed(message)
 signal piece_spawned(piece_node, grid_pos)
 signal spawn_credits_changed(white_credits, black_credits)
 signal game_ended(outcome_text)
+signal check_status_changed(threatened_ids) # royal state ids currently "in check"
 
 @onready var audio_manager = get_node("../AudioManager")
 
@@ -167,7 +168,13 @@ func start_game():
 	audio_manager.play_music()
 	game_phase = "playing"
 	emit_signal("game_state_changed", game_phase)
+	_emit_check_status()
 	_prompt_next()
+
+
+# Broadcasts which royals are currently in check (for the shudder indicator).
+func _emit_check_status():
+	emit_signal("check_status_changed", Rules.threatened_royals(state).keys())
 
 
 func set_ai_enabled(enabled: bool):
@@ -278,6 +285,7 @@ func resolve_turn():
 	_sync_board_nodes()
 
 	emit_signal("spawn_credits_changed", state.credits.white, state.credits.black)
+	_emit_check_status()
 
 	if result.outcome != "":
 		match result.outcome:

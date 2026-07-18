@@ -167,6 +167,65 @@ static func promotion_choices() -> Array:
 	return PROMOTION_CHOICES
 
 
+static func breath_cone(direction: Vector2) -> Array:
+	if direction == Vector2.UP:
+		return [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(0, -1)]
+	elif direction == Vector2.DOWN:
+		return [Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2), Vector2(0, 1)]
+	elif direction == Vector2.LEFT:
+		return [Vector2(-2, -1), Vector2(-2, 0), Vector2(-2, 1), Vector2(-1, 0)]
+	elif direction == Vector2.RIGHT:
+		return [Vector2(2, -1), Vector2(2, 0), Vector2(2, 1), Vector2(1, 0)]
+	return []
+
+
+# Ids of every royal an enemy could capture or petrify NEXT turn -- i.e. "in
+# check". Used by the display to make threatened royals shudder. Best-effort
+# (covers moves, shots, cannon files, dragon breath, gorgon petrification); a
+# threat indicator, not a legality guarantee.
+static func threatened_royals(state: Dictionary) -> Dictionary:
+	var threatened = {}
+	for royal in all_pieces(state):
+		if not royal.royal or royal.petrified:
+			continue
+		if _royal_is_threatened(state, royal):
+			threatened[royal.id] = true
+	return threatened
+
+
+static func _royal_is_threatened(state: Dictionary, royal: Dictionary) -> bool:
+	var enemy_color = "black" if royal.color == "white" else "white"
+	for p in all_pieces(state, enemy_color):
+		if p.petrified:
+			continue
+		# Gorgon turns adjacent enemies to stone (a royal lost). She threatens
+		# any square she occupies or can step to that neighbours the royal.
+		if p.type == "Gorgon":
+			if _chebyshev(p.pos, royal.pos) <= 1:
+				return true
+			for a in get_actions_raw(state, p):
+				if a.action == "move" and _chebyshev(a.target, royal.pos) <= 1:
+					return true
+			continue
+		for a in get_actions_raw(state, p):
+			match a.action:
+				"move", "shoot":
+					if a.get("target", Vector2(-99, -99)) == royal.pos:
+						return true
+				"fire_cannon":
+					if royal.pos.x == p.pos.x and signf(royal.pos.y - p.pos.y) == forward_dir(p.color):
+						return true
+				"dragon_breath":
+					for offset in breath_cone(a.direction):
+						if p.pos + offset == royal.pos:
+							return true
+	return false
+
+
+static func _chebyshev(a: Vector2, b: Vector2) -> float:
+	return max(abs(a.x - b.x), abs(a.y - b.y))
+
+
 static func piece_at(state: Dictionary, pos: Vector2):
 	if not is_valid_square(pos):
 		return null
@@ -358,6 +417,11 @@ static func _slides(state, piece, dirs, actions) -> void:
 			else:
 				if occ.color != piece.color:
 					actions.append({"action": "move", "target": pos})
+				else:
+					# Conditional "backfill": step into your own piece's square.
+					# Resolves only if that piece leaves or dies this turn, and
+					# then cuts down whatever enemy claimed the square.
+					actions.append({"action": "move", "target": pos, "is_conditional": true})
 				break
 			pos += dir
 
@@ -370,6 +434,8 @@ static func _leaps(state, piece, dirs, actions) -> void:
 		var occ = piece_at(state, pos)
 		if occ == null or occ.color != piece.color:
 			actions.append({"action": "move", "target": pos})
+		else:
+			actions.append({"action": "move", "target": pos, "is_conditional": true})
 
 
 # Shared pawn-style movement: forward step, double step from the peasant row,
@@ -522,16 +588,31 @@ static func _grasshopper_actions(state, piece, actions) -> void:
 			pos += dir
 
 
+# The rifleman fires a PROJECTILE down a rank or file. The shot is aimed in a
+# direction, not at a piece: it travels until it meets the first piece standing
+# there when it resolves -- so an enemy can step in to intercept it, and your
+# own pieces are not safe in the line of fire.
 static func _rifleman_shots(state, piece, actions) -> void:
 	for dir in ROOK_DIRS:
-		var pos = piece.pos + dir
-		while is_valid_square(pos):
-			var occ = piece_at(state, pos)
+		if not is_valid_square(piece.pos + dir):
+			continue
+		# Marker square for the UI: the first piece currently in the line, or
+		# the far edge if the line is empty.
+		var marker = piece.pos + dir
+		var friendly_fire = false
+		var scan = piece.pos + dir
+		while is_valid_square(scan):
+			var occ = piece_at(state, scan)
 			if occ != null:
-				if occ.color != piece.color:
-					actions.append({"action": "shoot", "target": pos})
+				marker = scan
+				friendly_fire = occ.color == piece.color
 				break
-			pos += dir
+			marker = scan
+			scan += dir
+		actions.append({
+			"action": "shoot", "direction": dir, "target": marker,
+			"friendly_fire": friendly_fire,
+		})
 
 
 static func _cannonier_actions(state, piece, actions) -> void:
@@ -724,27 +805,39 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 				converts.append([id, action])
 
 	# --- Movement conflict resolution --------------------------------------
-	var captured = {}  # id -> true
-	var cancelled = {} # id -> true
+	var captured = {}  # id -> true (removed from the board)
+	var cancelled = {} # id -> true (move did not happen; the piece stays put)
+	var en_route = {}  # id -> true (destroyed in transit, before reaching target)
 	var origin_of = {} # id -> pre-turn position
 	var mover_ids = movers.keys()
 	for id in mover_ids:
 		origin_of[id] = by_id[id].pos
 
+	# Split conditional "backfill" moves (ordered onto a square held by one of
+	# your own pieces) from normal moves. Backfills resolve in a later wave and
+	# only if that square is vacated this turn.
+	var backfill_ids = []
+	var normal_ids = []
+	for id in mover_ids:
+		var occ = piece_at(state, movers[id].target)
+		if occ != null and occ.id != id and occ.color == by_id[id].color \
+				and not movers[id].get("is_charge", false):
+			backfill_ids.append(id)
+		else:
+			normal_ids.append(id)
+
 	# 1. Head-on swaps: both die in the collision.
-	for i in range(mover_ids.size()):
-		for j in range(i + 1, mover_ids.size()):
-			var a = mover_ids[i]
-			var b = mover_ids[j]
+	for i in range(normal_ids.size()):
+		for j in range(i + 1, normal_ids.size()):
+			var a = normal_ids[i]
+			var b = normal_ids[j]
 			if movers[a].target == origin_of[b] and movers[b].target == origin_of[a]:
 				captured[a] = true
 				captured[b] = true
 
-	# 2. Path blocking: a declared destination on someone else's path bounces
-	#    that mover back to its origin.
-	for a in mover_ids:
-		if captured.has(a):
-			continue
+	# 2. Path collisions: a mover whose declared destination lands on another
+	#    mover's path is struck in transit -- both are destroyed on that square.
+	for a in normal_ids:
 		var path = move_path(by_id[a].type, origin_of[a], movers[a].target)
 		if path.is_empty():
 			continue
@@ -752,54 +845,69 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			if a == b or movers[b].target == movers[a].target:
 				continue
 			if movers[b].target in path:
-				cancelled[a] = true
-				events.append({"type": "blocked", "id": a})
+				captured[a] = true
+				captured[b] = true
+				en_route[a] = true # died before reaching its target
+				events.append({"type": "collision", "id": a, "other": b, "pos": movers[b].target})
 				break
 
-	# 3. Arrivals (iterate: bounced movers become stationary occupants).
-	var arrival_done = false
-	var guard = 0
-	while not arrival_done and guard < 10:
-		guard += 1
-		arrival_done = true
-		var by_dest = {}
-		for a in mover_ids:
-			if captured.has(a) or cancelled.has(a):
+	# 3. Committed captures: a mover strikes whatever ENEMY held its target
+	#    square when orders were given. Fleeing does NOT save the victim -- the
+	#    only defences are to block the attacker or kill it first.
+	for a in normal_ids:
+		if en_route.has(a):
+			continue # cut down before it could land the blow
+		var victim = piece_at(state, movers[a].target)
+		if victim == null or victim.id == a or not by_id.has(victim.id):
+			continue
+		if victim.color != by_id[a].color or movers[a].get("is_charge", false):
+			captured[victim.id] = true
+
+	# 4. Converging movers annihilate each other on the contested square.
+	var by_dest = {}
+	for a in normal_ids:
+		if captured.has(a):
+			continue
+		var dest = movers[a].target
+		if not by_dest.has(dest):
+			by_dest[dest] = []
+		by_dest[dest].append(a)
+	for dest in by_dest.keys():
+		var arrivers = by_dest[dest]
+		if arrivers.size() > 1:
+			for a in arrivers:
+				captured[a] = true
+
+	# 5. Backfill wave: a conditional move resolves only if the friendly piece
+	#    holding its target square is gone (dead or moved). The backfiller then
+	#    takes the square, cutting down whatever enemy claimed it, and survives
+	#    -- this is the "avenge the queen" counter-attack.
+	var backfill_by_dest = {}
+	for a in backfill_ids:
+		var d = movers[a].target
+		if not backfill_by_dest.has(d):
+			backfill_by_dest[d] = []
+		backfill_by_dest[d].append(a)
+	for a in backfill_ids:
+		var dest = movers[a].target
+		if backfill_by_dest[dest].size() > 1:
+			cancelled[a] = true # two of your own pieces cannot both backfill
+			events.append({"type": "blocked", "id": a})
+			continue
+		var blocker = piece_at(state, dest)
+		var blocker_gone = blocker == null or not by_id.has(blocker.id) \
+			or captured.has(blocker.id) \
+			or (movers.has(blocker.id) and not cancelled.has(blocker.id))
+		if not blocker_gone:
+			cancelled[a] = true # the way is still barred: the move does not happen
+			events.append({"type": "blocked", "id": a})
+			continue
+		for b in normal_ids:
+			if b == a or captured.has(b):
 				continue
-			var dest = movers[a].target
-			if not by_dest.has(dest):
-				by_dest[dest] = []
-			by_dest[dest].append(a)
-		for dest in by_dest.keys():
-			var arrivers = by_dest[dest]
-			var occ = piece_at(st, dest)
-			var occ_id = -1
-			if occ != null:
-				occ_id = occ.id
-			if arrivers.size() > 1:
-				# Mutual annihilation on the contested square.
-				for a in arrivers:
-					captured[a] = true
-				if occ_id != -1 and not arrivers.has(occ_id):
-					var occ_stays = (not movers.has(occ_id)) or cancelled.has(occ_id)
-					if occ_stays and not captured.has(occ_id):
-						captured[occ_id] = true
-				continue
-			var a = arrivers[0]
-			if occ_id == -1 or occ_id == a:
-				continue
-			var occ_stays = (not movers.has(occ_id)) or cancelled.has(occ_id) or captured.has(occ_id)
-			if not occ_stays:
-				continue # occupant is moving away; square will be free
-			if captured.has(occ_id):
-				continue # already dead; square will be free
-			if occ.color == by_id[a].color and not movers[a].get("is_charge", false):
-				# Friendly piece unexpectedly still there: bounce back.
-				cancelled[a] = true
-				events.append({"type": "blocked", "id": a})
-				arrival_done = false
-			else:
-				captured[occ_id] = true
+			if movers[b].target == dest and by_id[b].color != by_id[a].color:
+				captured[b] = true # the backfiller cuts down the claimant
+		events.append({"type": "backfill", "id": a, "pos": dest})
 
 	# 4. En passant victims die even if they ran -- and even if the ep-mover
 	#    itself dies this turn (dying strikes apply to en passant too).
@@ -811,12 +919,42 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			if victim_id != -1 and by_id.has(victim_id):
 				captured[victim_id] = true
 
-	# --- Ranged attacks: they always land ----------------------------------
+	# --- Ranged attacks ------------------------------------------------------
+	# Fire resolves against a square's occupant taken as the UNION of where
+	# pieces started and where they moved: a piece standing in the line when
+	# you fired cannot dodge out of it, and a piece that steps INTO the line
+	# intercepts the shot. Friendly fire is real for all of these.
+	var attack_occupant = {} # Vector2 -> piece id
+	for p in all_pieces(state):
+		if by_id.has(p.id):
+			attack_occupant[p.pos] = p.id
+	for a in mover_ids:
+		if captured.has(a) or cancelled.has(a):
+			continue
+		var dest = movers[a].target
+		if not attack_occupant.has(dest):
+			attack_occupant[dest] = a
+
 	for entry in shooters:
-		var target = piece_at(st, entry[1].target)
-		if target != null and target.color != by_id[entry[0]].color:
-			captured[target.id] = true
-			events.append({"type": "shot", "shooter": entry[0], "victim": target.id})
+		var shooter = by_id[entry[0]]
+		var action = entry[1]
+		var victim_id = -1
+		if action.has("direction"):
+			# Projectile: travels until it meets the first piece, friend or foe.
+			var pos = shooter.pos + action.direction
+			while is_valid_square(pos):
+				if attack_occupant.has(pos):
+					victim_id = attack_occupant[pos]
+					break
+				pos += action.direction
+		else:
+			# Legacy targeted shot (still used by tests / saved actions).
+			var target = piece_at(st, action.target)
+			if target != null and target.color != shooter.color:
+				victim_id = target.id
+		if victim_id != -1 and victim_id != entry[0]:
+			captured[victim_id] = true
+			events.append({"type": "shot", "shooter": entry[0], "victim": victim_id})
 
 	for entry in aoes:
 		var attacker = by_id[entry[0]]
@@ -824,44 +962,26 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		if action.action == "fire_cannon":
 			var fwd = forward_dir(attacker.color)
 			for i in range(1, BOARD_SIZE):
-				var occ = piece_at(st, attacker.pos + Vector2(0, i * fwd))
-				if occ != null:
-					captured[occ.id] = true # friendly fire included
+				var q = attacker.pos + Vector2(0, i * fwd)
+				if attack_occupant.has(q):
+					captured[attack_occupant[q]] = true # friendly fire included
 			events.append({"type": "cannon", "id": attacker.id})
 		elif action.action == "dragon_breath":
-			var dir = action.direction
-			var cone = []
-			if dir == Vector2.UP:
-				cone = [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(0, -1)]
-			elif dir == Vector2.DOWN:
-				cone = [Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2), Vector2(0, 1)]
-			elif dir == Vector2.LEFT:
-				cone = [Vector2(-2, -1), Vector2(-2, 0), Vector2(-2, 1), Vector2(-1, 0)]
-			elif dir == Vector2.RIGHT:
-				cone = [Vector2(2, -1), Vector2(2, 0), Vector2(2, 1), Vector2(1, 0)]
-			for offset in cone:
-				var occ = piece_at(st, attacker.pos + offset)
-				if occ != null:
-					captured[occ.id] = true # friendly fire included
-			events.append({"type": "breath", "id": attacker.id, "direction": dir})
+			for offset in breath_cone(action.direction):
+				var q = attacker.pos + offset
+				if attack_occupant.has(q):
+					captured[attack_occupant[q]] = true # friendly fire included
+			events.append({"type": "breath", "id": attacker.id, "direction": action.direction})
 
-	# --- Dying strikes -------------------------------------------------------
-	# A mover that dies mid-turn still lands its declared capture on a
-	# stationary enemy occupant (everything happens at once).
-	for a in mover_ids:
-		if cancelled.has(a) or not captured.has(a):
-			continue
-		var occ = piece_at(st, movers[a].target)
-		if occ != null and occ.id != a and occ.color != by_id[a].color:
-			var occ_stays = (not movers.has(occ.id)) or cancelled.has(occ.id) or captured.has(occ.id)
-			if occ_stays:
-				captured[occ.id] = true
+	# Dying strikes need no separate pass: step 3 lands a mover's committed
+	# capture whether or not the mover itself survives the turn. Only a piece
+	# cut down in transit (en_route) never gets its blow in.
 
 	# --- Necromancy / Valhalla bookkeeping ----------------------------------
 	# A capture-by-movement is a mover landing on a square whose occupant dies.
 	var move_capturers = []
 	for a in mover_ids:
-		if cancelled.has(a):
+		if cancelled.has(a) or en_route.has(a):
 			continue
 		var occ = piece_at(st, movers[a].target)
 		if occ != null and occ.id != a and captured.has(occ.id) and occ.color != by_id[a].color:

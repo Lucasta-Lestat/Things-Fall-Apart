@@ -14,18 +14,26 @@ const BOARD_SIZE = 6
 # --- Gameplay State ---
 var selected_piece = null
 var valid_actions_to_show = []
+var previewing = false # selection is a read-only look at a piece we can't order
 var _pending_promotion_piece = null # awaiting a choice from the promotion picker
+var _shudder = {} # royal state id -> looping tween (in-check tremble)
 
 
 func _ready():
 	game_board.turn_resolved.connect(_on_turn_resolved)
 	game_board.piece_spawned.connect(_on_piece_spawned)
+	game_board.check_status_changed.connect(_on_check_status_changed)
 	highlight_layer.size = self.size
 	highlight_layer.mouse_filter = Control.MOUSE_FILTER_PASS
 
 
 # --- Input Handling for Gameplay ---
 func _gui_input(event):
+	# Explain conditional (backfill) moves and friendly-fire shots on hover.
+	if event is InputEventMouseMotion:
+		_update_hover_tooltip((event.position / TILE_SIZE).floor())
+		return
+
 	if not event is InputEventMouseButton or not event.is_pressed():
 		return
 
@@ -50,32 +58,34 @@ func _gui_input(event):
 		accept_event()
 		return
 
-	# 1. Did the player click one of the highlighted actions?
-	for action in valid_actions_to_show:
-		if action.action == "dragon_breath":
-			var target_square = selected_piece.grid_position + action.direction
-			if target_square == grid_pos:
+	# 1. Did the player click one of the highlighted actions? (Only a piece we
+	#    actually control can declare; a previewed enemy is read-only.)
+	if not previewing:
+		for action in valid_actions_to_show:
+			if action.action == "dragon_breath":
+				var target_square = selected_piece.grid_position + action.direction
+				if target_square == grid_pos:
+					game_board.declare_action(selected_piece, action)
+					clear_selection()
+					accept_event()
+					return
+			elif action.action == "promote" and action.target == selected_piece.grid_position:
+				# Self-promotion: open the picker instead of declaring immediately.
+				if grid_pos == selected_piece.grid_position:
+					_open_promotion_picker(selected_piece)
+					accept_event()
+					return
+			elif action.has("target") and action.target == grid_pos:
 				game_board.declare_action(selected_piece, action)
 				clear_selection()
 				accept_event()
 				return
-		elif action.action == "promote" and action.target == selected_piece.grid_position:
-			# Self-promotion: open the picker instead of declaring immediately.
-			if grid_pos == selected_piece.grid_position:
-				_open_promotion_picker(selected_piece)
-				accept_event()
-				return
-		elif action.has("target") and action.target == grid_pos:
-			game_board.declare_action(selected_piece, action)
-			clear_selection()
-			accept_event()
-			return
 
 	var clicked_piece = game_board.board[grid_pos.x][grid_pos.y]
 
 	# 2. Clicking the selected piece itself triggers its targetless action
 	#    (e.g. fire_cannon).
-	if clicked_piece != null and clicked_piece == selected_piece:
+	if not previewing and clicked_piece != null and clicked_piece == selected_piece:
 		for action in valid_actions_to_show:
 			if not action.has("target") and not action.has("direction"):
 				game_board.declare_action(selected_piece, action)
@@ -83,23 +93,48 @@ func _gui_input(event):
 				accept_event()
 				return
 
-	# 3. Otherwise (re)select.
-	var can_select = false
-	if clicked_piece != null and not clicked_piece.is_petrified:
-		if clicked_piece.color == "white" and game_board.white_pending == null:
-			can_select = true
-		elif clicked_piece.color == "black" and game_board.black_pending == null and not game_board.ai_enabled:
-			can_select = true
-	if can_select:
-		select_piece(clicked_piece)
-	else:
+	# 3. Otherwise (re)select. A piece we control is selected to ORDER; any
+	#    other piece (enemy, petrified, or ours while a move is pending) is
+	#    selected to PREVIEW its moves read-only.
+	if clicked_piece == null:
 		clear_selection()
+	elif _controllable(clicked_piece):
+		select_piece(clicked_piece, false)
+	else:
+		select_piece(clicked_piece, true)
 	accept_event()
 
 
+func _update_hover_tooltip(grid_pos):
+	var text = ""
+	if selected_piece != null and is_instance_valid(selected_piece) and not previewing:
+		for action in valid_actions_to_show:
+			if not action.has("target") or action.target != grid_pos:
+				continue
+			if action.action == "move" and action.get("is_conditional", false):
+				text = "Conditional move — resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
+				break
+			if action.action == "shoot" and action.get("friendly_fire", false):
+				text = "Friendly fire — this shot hits the first piece in the line, and right now that is your own piece. An enemy stepping into the line would intercept it instead."
+				break
+	if tooltip_text != text:
+		tooltip_text = text
+
+
+func _controllable(piece) -> bool:
+	if piece.is_petrified:
+		return false
+	if piece.color == "white":
+		return game_board.white_pending == null
+	return game_board.black_pending == null and not game_board.ai_enabled
+
+
 # --- Selection & Highlighting ---
-func select_piece(piece):
+# preview = true shows a piece's moves read-only (e.g. clicking an enemy to
+# scout its threats); the highlights render muted and no action can be declared.
+func select_piece(piece, preview := false):
 	selected_piece = piece
+	previewing = preview
 	valid_actions_to_show = piece.get_valid_actions()
 	# Annotate capture moves so the highlight layer can colour them red.
 	for action in valid_actions_to_show:
@@ -109,15 +144,48 @@ func select_piece(piece):
 				action["is_capture_hint"] = true
 	highlight_layer.selected_piece = selected_piece
 	highlight_layer.valid_actions_to_show = valid_actions_to_show
+	highlight_layer.preview = preview
 	highlight_layer.queue_redraw()
 
 
 func clear_selection():
 	selected_piece = null
 	valid_actions_to_show = []
+	previewing = false
 	highlight_layer.selected_piece = null
 	highlight_layer.valid_actions_to_show = []
+	highlight_layer.preview = false
 	highlight_layer.queue_redraw()
+
+
+# --- Check indicator: threatened royals shudder ---
+func _on_check_status_changed(threatened_ids):
+	var want = {}
+	for id in threatened_ids:
+		want[id] = true
+	# Stop trembling on royals no longer in check.
+	for id in _shudder.keys():
+		if not want.has(id):
+			var tw = _shudder[id]
+			if tw != null and tw.is_valid():
+				tw.kill()
+			var node = game_board.piece_nodes.get(id)
+			if node != null and is_instance_valid(node):
+				node.rotation = 0.0
+			_shudder.erase(id)
+	# Start trembling on newly-threatened royals.
+	for id in threatened_ids:
+		if _shudder.has(id):
+			continue
+		var node = game_board.piece_nodes.get(id)
+		if node == null or not is_instance_valid(node):
+			continue
+		var tw = create_tween().set_loops()
+		tw.tween_property(node, "rotation", 0.05, 0.07)
+		tw.tween_property(node, "rotation", -0.05, 0.14)
+		tw.tween_property(node, "rotation", 0.0, 0.07)
+		tw.tween_interval(0.5)
+		_shudder[id] = tw
 
 
 # --- Promotion picker ---

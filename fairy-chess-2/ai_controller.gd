@@ -200,6 +200,11 @@ func _static_score(state, entry, color) -> float:
 					score += 50.0
 			if action.get("is_en_passant", false):
 				score += 1.0
+			# A backfill only pays off if the blocker actually dies, so keep
+			# these from crowding out real moves during pruning; the payoff
+			# simulation still surfaces one when it genuinely wins a trade.
+			if action.get("is_conditional", false):
+				score -= 0.6
 			# Nudge toward the enemy royal.
 			var piece = Rules.find_piece(state, entry.piece_id)
 			if piece != null:
@@ -211,9 +216,13 @@ func _static_score(state, entry, color) -> float:
 		"shoot":
 			var occ = Rules.piece_at(state, action.target)
 			if occ != null:
-				score += Rules.PIECE_INFO.get(occ.type, {"value": 2.0}).value + 0.5
-				if occ.royal:
-					score += 50.0
+				var v = Rules.PIECE_INFO.get(occ.type, {"value": 2.0}).value
+				if occ.color == color:
+					score -= v + 1.0 # do not casually shoot our own line
+				else:
+					score += v + 0.5
+					if occ.royal:
+						score += 50.0
 		"promote":
 			score += 3.0 + Rules.PIECE_INFO.get(action.get("promote_to", "Valkyrie"), {"value": 2.0}).value
 		"convert":

@@ -7,6 +7,17 @@ extends Node2D
 
 class_name ChessPiece
 
+# --- Art sizing ---
+# Pieces are scaled by their VISIBLE content height (transparent padding
+# ignored) to a consistent on-screen height, so wildly different source
+# aspect ratios all read as the same-sized figurine on the board. 1.1 matches
+# the look of the classic pieces (Pawn/Knight/King) at the old width-based
+# scale. Per-piece multipliers fine-tune outliers.
+const ART_HEIGHT_FACTOR := 1.10
+const ART_SCALE_OVERRIDE := {
+	# "Cultist": 0.95,
+}
+
 # --- Properties ---
 var piece_type: String = "Generic"
 var color: String = "white" # "white" or "black"
@@ -43,6 +54,22 @@ func setup_piece(p_type, p_color, p_is_royal, tile_size):
 		push_warning("Missing piece texture: " + texture_path)
 		return
 	$Sprite2D.texture = texture
-	var desired_width = tile_size * 0.55
-	var texture_scale = desired_width / texture.get_size().x
+
+	# Measure the visible content (non-transparent pixels) so padding in the
+	# source art doesn't shrink the figure or throw off vertical placement.
+	var tex_size = texture.get_size()
+	var content_h = tex_size.y
+	var content_center_y = tex_size.y / 2.0
+	var image = texture.get_image()
+	if image != null:
+		var used = image.get_used_rect()
+		if used.size.y > 0:
+			content_h = used.size.y
+			content_center_y = used.position.y + used.size.y / 2.0
+
+	var factor = ART_HEIGHT_FACTOR * float(ART_SCALE_OVERRIDE.get(piece_type, 1.0))
+	var texture_scale = (tile_size * factor) / content_h
 	$Sprite2D.scale = Vector2(texture_scale, texture_scale)
+	# Shift the sprite so the CONTENT (not the padded texture) is centered on
+	# the tile. Sprite2D.offset is in texture pixels, applied before scale.
+	$Sprite2D.offset = Vector2(0, (tex_size.y / 2.0) - content_center_y)
