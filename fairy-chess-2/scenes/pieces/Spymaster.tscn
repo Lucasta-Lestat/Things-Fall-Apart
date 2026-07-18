@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://81arz6l804kk"]
+
+[ext_resource type="Script" uid="uid://1223wh3tra38" path="res://scenes/pieces/spymaster.gd" id="1_4j2aa"]
+
+[node name="Spymaster" type="Node2D"]
+script = ExtResource("1_4j2aa")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

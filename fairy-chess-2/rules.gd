@@ -55,7 +55,7 @@ const PIECE_INFO = {
 	"Kulak":                   {"category": "peasant", "value": 1.1, "traits": ["Peasant"]},
 	"Basic Automata":          {"category": "peasant", "value": 1.2, "traits": ["Peasant"]},
 	"Zombie":                  {"category": "peasant", "value": 0.9, "traits": ["Peasant", "Automatic"]},
-	"Raider":                  {"category": "peasant", "value": 1.3, "traits": ["Peasant", "Barbarian", "Necromancer"]},
+	"Raider":                  {"category": "peasant", "value": 1.3, "traits": ["Peasant", "Viking"]},
 	"Cultist":                 {"category": "peasant", "value": 1.4, "traits": ["Peasant"]},
 	"Werewolf (human form)":   {"category": "peasant", "value": 2.0, "traits": ["Peasant", "Shapeshifter"]},
 	# Nobles (back row)
@@ -78,11 +78,17 @@ const PIECE_INFO = {
 	"Rook":                    {"category": "noble", "value": 4.0, "traits": []},
 	"Valkyrie":                {"category": "noble", "value": 6.5, "traits": []},
 	"Werewolf (wolf form)":    {"category": "noble", "value": 3.5, "traits": ["Shapeshifter"]},
+	"Factory":                 {"category": "noble", "value": 3.5, "traits": ["Immobile", "Technological"]},
+	"Doppelganger":            {"category": "noble", "value": 3.0, "traits": ["Mimic"]},
+	"Berserker":               {"category": "noble", "value": 3.5, "traits": ["Viking"]},
+	"Spymaster":               {"category": "noble", "value": 4.0, "traits": []},
 	# Royals (back row; lose them all and you lose)
 	"Chancellor":              {"category": "royal", "value": 4.0, "traits": []},
 	"King":                    {"category": "royal", "value": 3.0, "traits": []},
 	"Lady of the Lake":        {"category": "royal", "value": 4.5, "traits": []},
 	"Pontifex":                {"category": "royal", "value": 4.0, "traits": []},
+	"Praetor":                 {"category": "royal", "value": 4.0, "traits": ["Technological"]},
+	"Chieftain":               {"category": "royal", "value": 3.5, "traits": ["Viking"]},
 }
 
 # Pieces a pawn-family unit may promote INTO when it reaches the last rank.
@@ -131,6 +137,9 @@ static func new_state() -> Dictionary:
 		"no_progress": 0,
 		"turn": 0,
 		"next_id": 1,
+		# Type of the last piece each side deliberately moved -- what a
+		# Doppelganger copies at the end of the round.
+		"last_moved_type": {"white": "", "black": ""},
 	}
 
 
@@ -145,6 +154,9 @@ static func make_piece(state: Dictionary, type: String, color: String, pos: Vect
 		"pos": pos,
 		"traits": info.traits.duplicate(),
 	}
+	if type == "Doppelganger":
+		# Persists through every transformation, unlike traits.
+		piece["mimic"] = true
 	state.next_id += 1
 	return piece
 
@@ -416,9 +428,26 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 			_devil_toad_actions(state, piece, actions)
 		"King":
 			_leaps(state, piece, KING_DIRS, actions)
+		"Chieftain":
+			_leaps(state, piece, KING_DIRS, actions)
 		"Chancellor":
 			_leaps(state, piece, KING_DIRS, actions)
 			_adjacent_promotions(state, piece, actions, "Minister", [], ["Peasant"])
+		"Praetor":
+			_leaps(state, piece, KING_DIRS, actions)
+			_adjacent_promotions(state, piece, actions, "Factory", [], ["Peasant"])
+		"Factory":
+			pass # bolted to the ground; it builds instead of moving
+		"Doppelganger":
+			# Until it has copied something it shuffles like a king; once it
+			# mimics, its current form supplies the moves.
+			_leaps(state, piece, KING_DIRS, actions)
+		"Berserker":
+			# Rook lines, but never retreats.
+			var fwd = forward_dir(piece.color)
+			_slides(state, piece, [Vector2(0, fwd), Vector2(1, 0), Vector2(-1, 0)], actions)
+		"Spymaster":
+			_spymaster_actions(state, piece, actions)
 		"Lady of the Lake":
 			_leaps(state, piece, KING_DIRS, actions)
 			_adjacent_promotions(state, piece, actions, "King", ["Pawn", "Kulak"], [])
@@ -601,7 +630,37 @@ static func _convert_actions(state, piece, actions) -> void:
 		var pos = piece.pos + dir
 		var occ = piece_at(state, pos)
 		if occ != null and occ.color != piece.color and "Peasant" in occ.traits:
-			actions.append({"action": "convert", "target": pos})
+			actions.append({"action": "convert", "target": pos, "convert_to": "Cultist"})
+
+
+# The Spymaster creeps sideways and backwards along open lines, edges forward
+# only one diagonal step at a time, and turns the enemy court against itself.
+static func _spymaster_actions(state, piece, actions) -> void:
+	var fwd = forward_dir(piece.color)
+	# Rook lines to the rear and flanks (never straight ahead).
+	_slides(state, piece, [Vector2(0, -fwd), Vector2(1, 0), Vector2(-1, 0)], actions)
+	# A single diagonal step forward.
+	_leaps(state, piece, [Vector2(1, fwd), Vector2(-1, fwd)], actions)
+	_spymaster_conversions(state, piece, actions)
+
+
+# Suborns any enemy piece standing next to an enemy royal -- the bodyguards,
+# never the royal itself -- flipping it into one of our Pawns. Range is
+# irrelevant: this is blackmail, not a knife.
+static func _spymaster_conversions(state, piece, actions) -> void:
+	var seen = {}
+	for royal in all_pieces(state):
+		if royal.color == piece.color or not royal.royal:
+			continue
+		for dir in KING_DIRS:
+			var pos = royal.pos + dir
+			var occ = piece_at(state, pos)
+			if occ == null or occ.color == piece.color or occ.royal:
+				continue
+			if seen.has(occ.id):
+				continue
+			seen[occ.id] = true
+			actions.append({"action": "convert", "target": pos, "convert_to": "Pawn"})
 
 
 static func _werewolf_wolf_actions(state, piece, actions) -> void:
@@ -1070,22 +1129,15 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		else:
 			events.append({"type": "capture", "id": id, "pos": piece.pos})
 
-	# Valhalla: a Barbarian that captured this turn and also died comes back
-	# as a spawn credit for its owner.
+	# Valhalla: a Viking who dies on the same turn he takes a life is carried
+	# home and returns as a spawn credit for his owner. Dying while killing is
+	# the whole point -- surviving the kill earns nothing.
 	for a in move_capturers:
 		var piece = by_id[a]
-		if captured.has(a) and "Barbarian" in piece.traits:
+		if captured.has(a) and "Viking" in piece.traits:
 			var credits = st.credits[piece.color]
 			credits[piece.type] = credits.get(piece.type, 0) + 1
 			events.append({"type": "credit", "color": piece.color, "piece_type": piece.type})
-	# Necromancy: a Necromancer that captures by movement raises the victim
-	# as a Zombie credit.
-	for a in move_capturers:
-		var piece = by_id[a]
-		if not captured.has(a) and "Necromancer" in piece.traits:
-			var credits = st.credits[piece.color]
-			credits["Zombie"] = credits.get("Zombie", 0) + 1
-			events.append({"type": "credit", "color": piece.color, "piece_type": "Zombie"})
 
 	# --- Apply movement ------------------------------------------------------
 	for a in mover_ids:
@@ -1098,6 +1150,10 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		piece.pos = dest
 		st.board[int(dest.x)][int(dest.y)] = piece
 		events.append({"type": "move", "id": a, "to": dest})
+		# Only a deliberately ordered move is something a Doppelganger can
+		# study -- zombies shambling on their own don't count.
+		if declared.has(a):
+			st.last_moved_type[piece.color] = piece.type
 
 	# --- Promotions / conversions / transformations -------------------------
 	# Blessings land on whoever stood on the target square when orders were
@@ -1127,13 +1183,25 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		var victim = by_id[pre_victim.id]
 		if victim.color == cultist.color:
 			continue
-		_replace_piece(st, victim, "Cultist", cultist.color, events, "convert")
+		_replace_piece(st, victim, str(action.get("convert_to", "Cultist")), cultist.color, events, "convert")
 		progress = true
 
 	# Werewolves toggle form at the end of every turn they survive.
 	for piece in all_pieces(st):
 		if WEREWOLF_TOGGLE.has(piece.type) and not piece.petrified:
 			_replace_piece(st, piece, WEREWOLF_TOGGLE[piece.type], piece.color, events, "transform")
+
+	# Doppelgangers take the shape of whatever the enemy last moved. The mimic
+	# flag rides along through every change of form, so it keeps copying.
+	for piece in all_pieces(st):
+		if not piece.get("mimic", false) or piece.petrified:
+			continue
+		var enemy = "black" if piece.color == "white" else "white"
+		var copy_type = str(st.last_moved_type.get(enemy, ""))
+		if copy_type == "" or copy_type == piece.type or not PIECE_INFO.has(copy_type):
+			continue
+		_replace_piece(st, piece, copy_type, piece.color, events, "transform")
+		piece.mimic = true # survive the change of form
 
 	# --- Gorgon petrification (enemy pieces adjacent to her final square) ----
 	# Two-phase so the outcome is symmetric: all gorgons un-petrified at the
@@ -1169,6 +1237,23 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		var piece = add_piece(st, action.piece_type, color, action.target)
 		progress = true
 		events.append({"type": "spawn", "id": piece.id, "piece_type": piece.type, "color": color, "pos": action.target})
+
+	# --- Factories work a shift ----------------------------------------------
+	# Every surviving factory stamps out an automaton onto an adjacent empty
+	# square. Resolved after movement so this turn's traffic has cleared, and
+	# in a fixed direction order so the output is deterministic.
+	for piece in all_pieces(st):
+		if piece.type != "Factory" or piece.petrified:
+			continue
+		for dir in KING_DIRS:
+			var pos = piece.pos + dir
+			if not is_valid_square(pos) or piece_at(st, pos) != null:
+				continue
+			var built = add_piece(st, "Basic Automata", piece.color, pos)
+			progress = true
+			events.append({"type": "spawn", "id": built.id, "piece_type": built.type,
+				"color": built.color, "pos": pos})
+			break
 
 	# --- Valkyries return from the mists -------------------------------------
 	var still_phased = []

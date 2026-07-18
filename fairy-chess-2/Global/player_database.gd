@@ -46,11 +46,17 @@ const PIECE_DEFINITIONS = {
 	"Rook": {"scene": "res://scenes/pieces/Rook.tscn", "category": "noble"},
 	"Valkyrie": {"scene": "res://scenes/pieces/Valkyrie.tscn", "category": "noble"},
 	"Werewolf (wolf form)": {"scene": "res://scenes/pieces/Werewolf (wolf form).tscn", "category": "noble"},
+	"Factory": {"scene": "res://scenes/pieces/Factory.tscn", "category": "noble"},
+	"Doppelganger": {"scene": "res://scenes/pieces/Doppelganger.tscn", "category": "noble"},
+	"Berserker": {"scene": "res://scenes/pieces/Berserker.tscn", "category": "noble"},
+	"Spymaster": {"scene": "res://scenes/pieces/Spymaster.tscn", "category": "noble"},
 	# Royals:
 	"Chancellor": {"scene": "res://scenes/pieces/Chancellor.tscn", "category": "royal"},
 	"King": {"scene": "res://scenes/pieces/King.tscn", "category": "royal"},
 	"Lady of the Lake": {"scene": "res://scenes/pieces/LadyOfTheLake.tscn", "category": "royal"},
 	"Pontifex": {"scene": "res://scenes/pieces/Pontifex.tscn", "category": "royal"},
+	"Praetor": {"scene": "res://scenes/pieces/Praetor.tscn", "category": "royal"},
+	"Chieftain": {"scene": "res://scenes/pieces/Chieftain.tscn", "category": "royal"},
 }
 
 # profile id -> {name, title, portrait, faction, peasants, nobles, royals}

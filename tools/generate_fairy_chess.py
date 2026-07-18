@@ -16,12 +16,15 @@ Pipeline
    portrait):  fairy-chess-2/data/character_roster.json  plus portrait PNGs in
    fairy-chess-2/assets/portraits/.
 
-Deterministic: no RNG. Re-running with the same inputs yields identical output.
+Deterministic: the only randomness is seeded per character id, so re-running
+with the same inputs yields identical output while armies still vary between
+characters.
 Run from the repo root:  python tools/generate_fairy_chess.py
 """
 
 import json
 import os
+import random
 import shutil
 import sys
 
@@ -67,12 +70,52 @@ NOBLES = {
     "Bishop":         (["Holy", "Arcane"], 1.5),
     "Valkyrie":       (["Holy", "Martial"], 0.6),
     "Princess":       (["Holy"], 0.5),
+    "Factory":        (["Arcane"], 0.2),
+    "Doppelganger":   (["Occult", "Arcane"], 0.6),
+    "Berserker":      (["Martial"], 0.4),
+    "Spymaster":      (["Occult", "Arcane"], 0.7),
 }
 ROYALS = {
     "King":              ([], 3.0),
     "Chancellor":        (["Martial", "Arcane"], 1.0),
     "Pontifex":          (["Holy"], 0.5),
     "Lady of the Lake":  (["Holy", "Primal"], 0.5),
+    "Praetor":           (["Arcane"], 0.45),
+    "Chieftain":         (["Martial"], 0.15),
+}
+
+# --- Thematic steering -----------------------------------------------------
+# Machines and gunpowder. Drawn to tinkers, kobolds and malcontents; shunned by
+# the devout.
+TECH_PIECES = {"Basic Automata", "Factory", "Cannonier", "Rifleman", "Praetor"}
+TECH_RACES = {"kobold"}
+TECH_FACTIONS = {"rebels", "vermincelli"}  # revolutionaries and malcontents
+
+# Secular/parliamentary pieces the pious would rather not field.
+DEMOCRATIC_PIECES = {"Chancellor", "Anarch"}
+
+# The wilder, older pieces elves gravitate toward.
+PRIMAL_FAVOURITES = {"Centaur", "Elephant Rider", "Grasshopper", "Lady of the Lake", "Devil Toad"}
+ELF_RACES = {"elf", "high_elf", "half_elf", "quadrelf", "fey"}
+
+# Norse-flavoured warriors, for the die-fighting-go-home crowd.
+VIKING_PIECES = {"Berserker", "Chieftain", "Raider"}
+VIKING_FACTIONS = {"skarsgaard", "pirates", "waldau"}
+
+# --- Race -> school affinity (Martial, Arcane, Occult, Holy, Primal) ---
+RACE_WEIGHTS = {
+    "elf": (0, 1, 0, 0, 3), "high_elf": (0, 2, 0, 0, 3), "half_elf": (0, 1, 0, 0, 2),
+    "quadrelf": (0, 1, 0, 0, 3), "fey": (0, 1, 0, 0, 3),
+    "kobold": (0, 2, 0, 0, 0),
+    "wolf": (0, 0, 0, 0, 3), "bear": (0, 0, 0, 0, 3), "horse": (0, 0, 0, 0, 3),
+    "centaur": (1, 0, 0, 0, 3), "goatmen": (0, 0, 1, 0, 2),
+    "rat": (0, 0, 1, 0, 2), "rodentkin": (0, 0, 1, 0, 2),
+    "saurian": (1, 0, 0, 0, 2), "draconian": (1, 1, 0, 0, 2),
+    "carapacian": (1, 0, 0, 0, 2), "carapacians": (1, 0, 0, 0, 2),
+    "grimalkin": (0, 0, 1, 0, 2), "siren": (0, 1, 1, 0, 2),
+    "human_undead": (0, 0, 3, 0, 0), "mephistkin": (0, 0, 3, 0, 0),
+    "dwarf": (2, 1, 0, 0, 0), "orc": (2, 0, 0, 0, 1), "half_orc": (2, 0, 0, 0, 1),
+    "halfling": (0, 0, 0, 0, 1),
 }
 
 # --- Faction -> school affinity (Martial, Arcane, Occult, Holy, Primal) ---
@@ -176,6 +219,10 @@ def affinity(char):
     fac = FACTION_WEIGHTS.get(char.get("faction", "neutral"), (1, 0, 0, 0, 0))
     for i, s in enumerate(SCHOOLS):
         score[s] += fac[i]
+    race = RACE_WEIGHTS.get(char.get("race", ""), None)
+    if race:
+        for i, s in enumerate(SCHOOLS):
+            score[s] += race[i]
     for trait, val in (char.get("extra_traits") or {}).items():
         if trait in SCHOOLS:  # a magic-school tier: strong, scaled by tier
             score[trait] += float(val) * 2.0
@@ -192,11 +239,47 @@ def affinity(char):
     return score
 
 
-def _rank(pieces, score):
-    # Deterministic: sort by (affinity desc, name asc).
+def tech_affinity(char):
+    """How drawn this character is to machines and gunpowder."""
+    tech = 0.0
+    if char.get("race", "") in TECH_RACES:
+        tech += 3.0
+    if "Technological" in (char.get("extra_traits") or {}):
+        tech += 3.0
+    if char.get("faction", "") in TECH_FACTIONS:
+        tech += 2.0
+    # Clever characters tinker.
+    tech += (float((char.get("stats") or {}).get("intelligence", 50)) - 50.0) * 0.06
+    return tech
+
+
+def piece_bias(name, char, score, tech):
+    """Per-piece nudges that sit on top of the five-school affinity."""
+    bias = 0.0
+    devout = score["Holy"] >= max(score[s] for s in SCHOOLS) and score["Holy"] > 1.0
+    if name in TECH_PIECES:
+        bias += tech
+        if devout:
+            bias -= 4.0  # the pious keep their distance from machines
+    if name in DEMOCRATIC_PIECES and devout:
+        bias -= 3.0      # ...and from parliaments
+    if name in PRIMAL_FAVOURITES and char.get("race", "") in ELF_RACES:
+        bias += 2.5      # elves keep the old wild company
+    if name in VIKING_PIECES and char.get("faction", "") in VIKING_FACTIONS:
+        bias += 2.0
+    return bias
+
+
+def _rank(pieces, score, char=None, tech=0.0, rng=None):
+    # Sort by (affinity desc, name asc). A small seeded jitter keeps armies
+    # from looking identical across characters with similar profiles.
     scored = []
     for name, (tags, base) in pieces.items():
         s = base + sum(score[t] for t in tags)
+        if char is not None:
+            s += piece_bias(name, char, score, tech)
+        if rng is not None:
+            s += rng.uniform(0.0, 1.4)
         scored.append((-s, name))
     scored.sort()
     return [name for _, name in scored]
@@ -211,9 +294,13 @@ def _distribute(types, counts):
 
 def build_set(char):
     score = affinity(char)
-    peasant_rank = _rank(PEASANTS, score)
-    noble_rank = _rank(NOBLES, score)
-    royal_rank = _rank(ROYALS, score)
+    tech = tech_affinity(char)
+    # Seeded per character: stable across runs, different between characters.
+    rng = random.Random("fairy-chess:" + str(char.get("id", "")))
+
+    peasant_rank = _rank(PEASANTS, score, char, tech, rng)
+    noble_rank = _rank(NOBLES, score, char, tech, rng)
+    royal_rank = _rank(ROYALS, score, char, tech, rng)
 
     # 5 peasants: top type doubled, plus the next two (2+2+1).
     peasants = _distribute(peasant_rank[:3], [2, 2, 1])
@@ -224,6 +311,17 @@ def build_set(char):
     if "King" not in royal_types:
         royal_types = [royal_rank[0], "King"]
     royals = {t: 1 for t in royal_types[:2]}
+
+    # A couple of wildcards for variety, drawn from further down each character's
+    # own ranking so they stay in flavour without being the obvious pick.
+    for _ in range(rng.randint(1, 2)):
+        pick = rng.choice(noble_rank[3:9]) if len(noble_rank) > 3 else None
+        if pick:
+            nobles[pick] = nobles.get(pick, 0) + 1
+    if rng.random() < 0.6 and len(peasant_rank) > 3:
+        pick = rng.choice(peasant_rank[3:6])
+        peasants[pick] = peasants.get(pick, 0) + 1
+
     return {"peasants": peasants, "nobles": nobles, "royals": royals}
 
 
