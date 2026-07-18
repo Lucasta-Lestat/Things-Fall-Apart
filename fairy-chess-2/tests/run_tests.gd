@@ -36,6 +36,8 @@ func _initialize():
 	test_backfill_avenges_the_queen()
 	test_backfill_does_not_resolve_while_blocked()
 	test_conditional_moves_are_offered()
+	test_chancellor_promotes_peasants()
+	test_promotion_beats_conditional_move()
 	test_shot_still_catches_a_fleeing_victim()
 	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
@@ -458,6 +460,52 @@ func test_conditional_moves_are_offered():
 			found = a
 	check(found != null, "a move onto your own piece's square is offered")
 	check(found != null and found.get("is_conditional", false), "and it is flagged conditional")
+
+
+func test_chancellor_promotes_peasants():
+	var st = Rules.new_state()
+	var chancellor = Rules.add_piece(st, "Chancellor", "white", Vector2(1, 5))
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(1, 4))
+	var promo = null
+	for a in Rules.get_actions(st, chancellor):
+		if a.action == "promote" and a.target == Vector2(1, 4):
+			promo = a
+	check(promo != null, "chancellor offers to promote the peasant beside it")
+	check(promo != null and promo.promote_to == "Minister", "and the promotion is to Minister")
+	var res = Rules.resolve(st, {chancellor.id: {"action": "promote", "target": Vector2(1, 4), "promote_to": "Minister"}})
+	var promoted = Rules.find_piece(res.state, pawn.id)
+	check(promoted != null and promoted.type == "Minister", "the pawn becomes a Minister")
+	# Only peasants: a noble beside the chancellor is not promotable.
+	var st2 = Rules.new_state()
+	var chan2 = Rules.add_piece(st2, "Chancellor", "white", Vector2(1, 5))
+	Rules.add_piece(st2, "Rook", "white", Vector2(1, 4))
+	var found_noble = false
+	for a in Rules.get_actions(st2, chan2):
+		if a.action == "promote":
+			found_noble = true
+	check(not found_noble, "chancellor cannot promote a non-peasant")
+
+
+func test_promotion_beats_conditional_move():
+	# Regression guard: a conditional backfill onto the same square must not
+	# shadow the promotion (the UI declares one action per square).
+	for promoter in ["Chancellor", "Pontifex", "Lady of the Lake"]:
+		var st = Rules.new_state()
+		var royal = Rules.add_piece(st, promoter, "white", Vector2(1, 5))
+		Rules.add_piece(st, "Pawn", "white", Vector2(1, 4))
+		var ranked = Rules.prioritize_actions(Rules.get_actions(st, royal))
+		var on_square = null
+		for a in ranked:
+			if a.has("target") and a.target == Vector2(1, 4):
+				on_square = a
+		check(on_square != null and on_square.action == "promote",
+			"%s: promotion wins the peasant's square over a backfill" % promoter)
+		# And exactly one action occupies that square after prioritisation.
+		var count = 0
+		for a in ranked:
+			if a.has("target") and a.target == Vector2(1, 4):
+				count += 1
+		check(count == 1, "%s: only one action is offered per square" % promoter)
 
 
 func test_shot_still_catches_a_fleeing_victim():
