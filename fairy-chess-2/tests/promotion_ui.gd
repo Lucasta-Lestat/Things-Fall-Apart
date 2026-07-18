@@ -32,8 +32,8 @@ func _initialize():
 	var display = root.get_node("FairyChess/UI/CenterContainer/VBoxContainer/HBoxContainer/ChessboardDisplay")
 
 	# Verify the picker node resolved through the UI's @onready reference.
-	if ui.promotion_picker == null:
-		fail("ui.promotion_picker did not resolve")
+	if ui.choice_picker == null:
+		fail("ui.choice_picker did not resolve")
 		_done()
 		return
 
@@ -76,10 +76,10 @@ func _initialize():
 	# Simulate clicking the pawn's own square: opens the picker.
 	display._open_promotion_picker(pawn)
 	await process_frame
-	if not ui.promotion_picker.visible:
+	if not ui.choice_picker.visible:
 		fail("promotion picker did not become visible")
 	var buttons = 0
-	for child in ui.promotion_picker._row.get_children():
+	for child in ui.choice_picker._grid.get_children():
 		buttons += 1
 	if buttons != Rules.promotion_choices().size():
 		fail("picker shows %d buttons, expected %d" % [buttons, Rules.promotion_choices().size()])
@@ -87,8 +87,8 @@ func _initialize():
 	# Choose "Queen" by pressing its button, exactly as a real click would
 	# (the button handler hides the picker and emits `picked`).
 	var queen_button = null
-	for child in ui.promotion_picker._row.get_children():
-		if child.tooltip_text == "Queen":
+	for child in ui.choice_picker._grid.get_children():
+		if child.text == "Queen":
 			queen_button = child
 	if queen_button == null:
 		fail("no Queen button in the picker")
@@ -96,7 +96,7 @@ func _initialize():
 		return
 	queen_button.pressed.emit()
 	await process_frame
-	if ui.promotion_picker.visible:
+	if ui.choice_picker.visible:
 		fail("picker stayed visible after a choice")
 
 	# White has now declared its promotion; give black a move so the turn resolves.

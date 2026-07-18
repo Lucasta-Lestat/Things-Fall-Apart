@@ -13,6 +13,7 @@ const BOARD_SIZE = 6
 var selected_piece = null
 var valid_actions_to_show = []
 var preview = false # read-only look at an enemy's moves: render muted
+var multi_option_squares = {} # squares offering more than one action -> true
 
 
 func _draw():
@@ -77,3 +78,7 @@ func _draw():
 			draw_circle(center, radius, highlight_color)
 		if icon_to_draw != null and not preview:
 			draw_texture(icon_to_draw, center - icon_to_draw.get_size() / 2.0)
+		# A thin outer ring flags a square that offers more than one action;
+		# clicking it opens the chooser instead of declaring immediately.
+		if not preview and multi_option_squares.has(target_pos):
+			draw_arc(center, radius + 7.0, 0.0, TAU, 28, Color(1, 1, 1, 0.75), 2.0)
