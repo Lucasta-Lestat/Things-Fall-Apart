@@ -95,7 +95,7 @@ func _update_hover_tooltip(grid_pos):
 			if not action.has("target") or action.target != grid_pos:
 				continue
 			if action.action == "move" and action.get("is_conditional", false):
-				text = "Conditional move — resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
+				text = "Conditional move: resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
 				break
 			if action.action == "shoot" and action.get("friendly_fire", false):
 				text = "Friendly fire — this shot hits the first piece in the line, and right now that is your own piece. An enemy stepping into the line would intercept it instead."

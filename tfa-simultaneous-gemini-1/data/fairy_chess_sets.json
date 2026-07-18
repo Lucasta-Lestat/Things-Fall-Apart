@@ -20,16 +20,17 @@
 	"default_human": {
 		"peasants": {
 			"Kulak": 2,
-			"Raider": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Raider": 1
 		},
 		"nobles": {
-			"Bishop": 2,
-			"Dragonrider": 1,
-			"Centaur": 1
+			"Grasshopper": 2,
+			"Bishop": 1,
+			"Centaur": 1,
+			"Spymaster": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Lady of the Lake": 1,
 			"King": 1
 		}
 	},
@@ -42,7 +43,9 @@
 		"nobles": {
 			"Valkyrie": 2,
 			"Knight": 1,
-			"Bishop": 1
+			"Rook": 1,
+			"Rifleman": 1,
+			"Minister": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -53,12 +56,14 @@
 		"peasants": {
 			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Bishop": 1
+			"Bishop": 1,
+			"Centaur": 1
 		},
 		"royals": {
 			"King": 1,
@@ -67,17 +72,18 @@
 	},
 	"bandit": {
 		"peasants": {
-			"Kulak": 2,
 			"Raider": 2,
+			"Kulak": 2,
 			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
+			"Centaur": 2,
 			"Rook": 1,
-			"Centaur": 1
+			"Knight": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -99,14 +105,17 @@
 	},
 	"rebel_fighter": {
 		"peasants": {
-			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Kulak": 2,
+			"Basic Automata": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
+			"Rifleman": 1,
 			"Rook": 1,
-			"Dragonrider": 1
+			"Valkyrie": 1,
+			"Berserker": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -115,30 +124,34 @@
 	},
 	"forest_elf": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Werewolf (human form)": 2,
+			"Basic Automata": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Bishop": 1
+			"Grasshopper": 2,
+			"Centaur": 1,
+			"Elephant Rider": 1,
+			"Bishop": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"cultist": {
 		"peasants": {
-			"Cultist": 2,
 			"Zombie": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Anarch": 2,
 			"Devil Toad": 1,
-			"Gorgon": 1
+			"Gorgon": 1,
+			"Valkyrie": 1,
+			"Bishop": 1
 		},
 		"royals": {
 			"King": 1,
@@ -148,13 +161,15 @@
 	"skeleton_warrior": {
 		"peasants": {
 			"Werewolf (human form)": 2,
-			"Cultist": 2,
-			"Zombie": 1
+			"Zombie": 2,
+			"Raider": 1
 		},
 		"nobles": {
-			"Devil Toad": 2,
-			"Gorgon": 1,
-			"Anarch": 1
+			"Gorgon": 2,
+			"Devil Toad": 1,
+			"Doppelganger": 1,
+			"Spymaster": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"King": 1,
@@ -163,14 +178,16 @@
 	},
 	"demon_imp": {
 		"peasants": {
-			"Pawn": 2,
-			"Kulak": 2,
+			"Cultist": 2,
+			"Zombie": 2,
+			"Werewolf (human form)": 1,
 			"Raider": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Spymaster": 2,
+			"Doppelganger": 1,
+			"Devil Toad": 1,
+			"Gorgon": 1
 		},
 		"royals": {
 			"King": 1,
@@ -180,13 +197,14 @@
 	"noble_lord": {
 		"peasants": {
 			"Kulak": 2,
-			"Raider": 2,
-			"Basic Automata": 1
+			"Basic Automata": 2,
+			"Raider": 1
 		},
 		"nobles": {
 			"Dragonrider": 2,
 			"Bishop": 1,
-			"Valkyrie": 1
+			"Valkyrie": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -196,45 +214,51 @@
 	"wild_wolf": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
-			"Devil Toad": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Devil Toad": 1,
+			"Rook": 1,
+			"Knight": 1
 		},
 		"royals": {
-			"King": 1,
-			"Lady of the Lake": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"rat_swarm": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Centaur": 2,
+			"Gorgon": 2,
 			"Elephant Rider": 1,
-			"Devil Toad": 1
+			"Devil Toad": 1,
+			"Knight": 1
 		},
 		"royals": {
-			"King": 1,
-			"Lady of the Lake": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"liziti_thug": {
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Berserker": 1,
+			"Centaur": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -245,15 +269,17 @@
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Cultist": 1
+			"Werewolf (human form)": 1,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Rifleman": 2
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -261,12 +287,14 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Dragonrider": 1
+			"Dragonrider": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -291,14 +319,16 @@
 	},
 	"tort_enforcer": {
 		"peasants": {
+			"Pawn": 2,
 			"Raider": 2,
-			"Kulak": 2,
-			"Pawn": 1
+			"Kulak": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Dragonrider": 2,
-			"Knight": 1,
-			"Rook": 1
+			"Knight": 2,
+			"Spymaster": 1,
+			"Bishop": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -307,33 +337,37 @@
 	},
 	"pirate_buccaneer": {
 		"peasants": {
-			"Kulak": 2,
 			"Raider": 2,
+			"Kulak": 2,
 			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
-			"Knight": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Rifleman": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Chieftain": 1,
+			"King": 1
 		}
 	},
 	"pirate_captain": {
 		"peasants": {
-			"Kulak": 2,
 			"Raider": 2,
-			"Werewolf (human form)": 1
+			"Kulak": 2,
+			"Werewolf (human form)": 1,
+			"Pawn": 1
 		},
 		"nobles": {
 			"Centaur": 2,
 			"Elephant Rider": 1,
+			"Rook": 1,
+			"Devil Toad": 1,
 			"Knight": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -341,12 +375,14 @@
 		"peasants": {
 			"Kulak": 2,
 			"Pawn": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Dragonrider": 2,
+			"Knight": 1,
 			"Bishop": 1,
-			"Knight": 1
+			"Grasshopper": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -356,13 +392,16 @@
 	"patrician_knight": {
 		"peasants": {
 			"Kulak": 2,
-			"Basic Automata": 2,
-			"Pawn": 1
+			"Raider": 2,
+			"Pawn": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Dragonrider": 2,
+			"Knight": 1,
 			"Bishop": 1,
-			"Knight": 1
+			"Doppelganger": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -371,14 +410,16 @@
 	},
 	"djargo": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1,
+			"Basic Automata": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Bishop": 1
+			"Centaur": 2,
+			"Devil Toad": 1,
+			"Knight": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"King": 1,
@@ -388,13 +429,14 @@
 	"hadrian_rosemerrow": {
 		"peasants": {
 			"Werewolf (human form)": 2,
-			"Kulak": 2,
-			"Pawn": 1
+			"Pawn": 2,
+			"Kulak": 1
 		},
 		"nobles": {
 			"Devil Toad": 2,
 			"Gorgon": 1,
-			"Grasshopper": 1
+			"Grasshopper": 1,
+			"Bishop": 1
 		},
 		"royals": {
 			"Lady of the Lake": 1,
@@ -403,13 +445,16 @@
 	},
 	"sunder_havelton": {
 		"peasants": {
-			"Werewolf (human form)": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Werewolf (human form)": 2,
+			"Raider": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Devil Toad": 2,
 			"Gorgon": 1,
+			"Elephant Rider": 1,
+			"Knight": 1,
 			"Centaur": 1
 		},
 		"royals": {
@@ -419,17 +464,18 @@
 	},
 	"brutus_half_off": {
 		"peasants": {
-			"Werewolf (human form)": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Werewolf (human form)": 2,
+			"Raider": 1
 		},
 		"nobles": {
-			"Devil Toad": 2,
-			"Gorgon": 1,
-			"Centaur": 1
+			"Gorgon": 2,
+			"Devil Toad": 1,
+			"Centaur": 1,
+			"Rook": 1
 		},
 		"royals": {
-			"Lady of the Lake": 1,
+			"Chancellor": 1,
 			"King": 1
 		}
 	},
@@ -437,28 +483,33 @@
 		"peasants": {
 			"Kulak": 2,
 			"Pawn": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Centaur": 1
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Knight": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1
 		}
 	},
 	"stokes_carfire": {
 		"peasants": {
+			"Basic Automata": 2,
 			"Kulak": 2,
-			"Pawn": 2,
-			"Raider": 1
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Dragonrider": 1
+			"Rifleman": 2,
+			"Dragonrider": 1,
+			"Cannonier": 1,
+			"Queen": 1,
+			"Bishop": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -467,17 +518,19 @@
 	},
 	"captain_morgan": {
 		"peasants": {
-			"Kulak": 2,
 			"Raider": 2,
-			"Werewolf (human form)": 1
+			"Kulak": 2,
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
-			"Knight": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Devil Toad": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -485,15 +538,18 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Centaur": 2,
 			"Elephant Rider": 1,
+			"Berserker": 1,
+			"Gorgon": 1,
 			"Knight": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -501,11 +557,14 @@
 		"peasants": {
 			"Werewolf (human form)": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Grasshopper": 2,
 			"Devil Toad": 1,
+			"Elephant Rider": 1,
+			"Minister": 1,
 			"Gorgon": 1
 		},
 		"royals": {
@@ -515,46 +574,52 @@
 	},
 	"dryad": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Bishop": 1
+			"Elephant Rider": 2,
+			"Devil Toad": 1,
+			"Centaur": 1,
+			"Rook": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"nude_elf": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Pawn": 2,
+			"Werewolf (human form)": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Grasshopper": 1,
+			"Gorgon": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"lighthouse_keeper_brother": {
 		"peasants": {
 			"Pawn": 2,
-			"Kulak": 2,
-			"Raider": 1
+			"Raider": 2,
+			"Kulak": 1,
+			"Basic Automata": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Bishop": 1
+			"Rook": 2,
+			"Knight": 1,
+			"Rifleman": 1,
+			"Centaur": 1,
+			"Princess": 1
 		},
 		"royals": {
 			"King": 1,
@@ -563,13 +628,15 @@
 	},
 	"iguana_don": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
-			"Cultist": 1
+			"Raider": 2,
+			"Werewolf (human form)": 1,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
+			"Elephant Rider": 2,
+			"Knight": 1,
+			"Centaur": 1,
 			"Rifleman": 1
 		},
 		"royals": {
@@ -579,14 +646,15 @@
 	},
 	"roy_demonitor": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Raider": 2,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Knight": 2,
+			"Elephant Rider": 2,
+			"Knight": 1,
 			"Rook": 1,
-			"Rifleman": 1
+			"Centaur": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -595,14 +663,17 @@
 	},
 	"gordon_gecko": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1,
 			"Cultist": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Dragonrider": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Rifleman": 1,
+			"Dragonrider": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -613,12 +684,14 @@
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Werewolf (human form)": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Berserker": 2
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -627,14 +700,16 @@
 	},
 	"chameleon_paglia": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
+			"Raider": 2,
+			"Werewolf (human form)": 1,
 			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Dragonrider": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Berserker": 2
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -643,14 +718,17 @@
 	},
 	"jacana": {
 		"peasants": {
-			"Basic Automata": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 2,
+			"Basic Automata": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Minister": 1,
-			"Valkyrie": 1
+			"Valkyrie": 1,
+			"Centaur": 1,
+			"Monk": 1
 		},
 		"royals": {
 			"Lady of the Lake": 1,
@@ -664,9 +742,10 @@
 			"Raider": 1
 		},
 		"nobles": {
-			"Anarch": 2,
-			"Devil Toad": 1,
-			"Gorgon": 1
+			"Devil Toad": 2,
+			"Grasshopper": 1,
+			"Gorgon": 1,
+			"Doppelganger": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -677,12 +756,14 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Dragonrider": 2,
+			"Centaur": 2,
+			"Elephant Rider": 1,
 			"Knight": 1,
-			"Rook": 1
+			"Dragonrider": 1,
+			"Grasshopper": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -693,12 +774,15 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Dragonrider": 2,
-			"Knight": 1,
-			"Rook": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Dragonrider": 1,
+			"Rook": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -709,12 +793,14 @@
 		"peasants": {
 			"Basic Automata": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Pawn": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Dragonrider": 1,
-			"Minister": 1
+			"Minister": 1,
+			"Spymaster": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -724,12 +810,14 @@
 	"boa": {
 		"peasants": {
 			"Kulak": 2,
-			"Basic Automata": 2,
-			"Raider": 1
+			"Raider": 2,
+			"Basic Automata": 1
 		},
 		"nobles": {
 			"Dragonrider": 2,
 			"Bishop": 1,
+			"Centaur": 1,
+			"Grasshopper": 1,
 			"Minister": 1
 		},
 		"royals": {
@@ -744,9 +832,10 @@
 			"Raider": 1
 		},
 		"nobles": {
-			"Devil Toad": 2,
-			"Gorgon": 1,
-			"Centaur": 1
+			"Gorgon": 2,
+			"Devil Toad": 1,
+			"Elephant Rider": 1,
+			"Centaur": 2
 		},
 		"royals": {
 			"Lady of the Lake": 1,
@@ -756,13 +845,16 @@
 	"joey_feritas": {
 		"peasants": {
 			"Raider": 2,
-			"Cultist": 2,
-			"Zombie": 1
+			"Zombie": 2,
+			"Werewolf (human form)": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Anarch": 2,
-			"Devil Toad": 1,
-			"Gorgon": 1
+			"Gorgon": 2,
+			"Spymaster": 1,
+			"Doppelganger": 1,
+			"Knight": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"King": 1,
@@ -776,12 +868,14 @@
 			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Centaur": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Valkyrie": 1,
+			"Rifleman": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -789,12 +883,15 @@
 		"peasants": {
 			"Kulak": 2,
 			"Werewolf (human form)": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Grasshopper": 2,
+			"Elephant Rider": 2,
+			"Gorgon": 1,
 			"Centaur": 1,
-			"Elephant Rider": 1
+			"Devil Toad": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
 			"Lady of the Lake": 1,
@@ -803,14 +900,16 @@
 	},
 	"goatman_druid": {
 		"peasants": {
-			"Kulak": 2,
 			"Werewolf (human form)": 2,
-			"Pawn": 1
+			"Kulak": 2,
+			"Pawn": 1,
+			"Basic Automata": 1
 		},
 		"nobles": {
-			"Grasshopper": 2,
-			"Centaur": 1,
-			"Devil Toad": 1
+			"Devil Toad": 2,
+			"Gorgon": 1,
+			"Grasshopper": 1,
+			"Anarch": 1
 		},
 		"royals": {
 			"Lady of the Lake": 1,
@@ -819,46 +918,53 @@
 	},
 	"half_elf_wanderer": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
+			"Werewolf (human form)": 2,
+			"Pawn": 1,
 			"Raider": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Grasshopper": 1,
+			"Knight": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"carapacian_hermit": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Pawn": 2,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Bishop": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Knight": 1,
+			"Rifleman": 1,
+			"Devil Toad": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1
 		}
 	},
 	"shambling_zombie": {
 		"peasants": {
-			"Pawn": 2,
 			"Werewolf (human form)": 2,
-			"Cultist": 1
+			"Cultist": 2,
+			"Zombie": 1,
+			"Kulak": 1
 		},
 		"nobles": {
 			"Devil Toad": 2,
 			"Gorgon": 1,
-			"Knight": 1
+			"Doppelganger": 1,
+			"Elephant Rider": 1,
+			"Centaur": 1
 		},
 		"royals": {
 			"King": 1,
@@ -868,33 +974,36 @@
 	"wild_bear": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Gorgon": 1,
 			"Devil Toad": 1
 		},
 		"royals": {
-			"King": 1,
-			"Lady of the Lake": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"stray_horse": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1,
+			"Raider": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
-			"Devil Toad": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Gorgon": 1,
+			"Valkyrie": 2
 		},
 		"royals": {
-			"King": 1,
-			"Lady of the Lake": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"reverend_mother_liana": {
@@ -931,12 +1040,14 @@
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Cultist": 1
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Valkyrie": 1,
+			"Elephant Rider": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -946,32 +1057,36 @@
 	"pit_hound": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
+			"Werewolf (human form)": 2,
+			"Pawn": 1
+		},
+		"nobles": {
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Devil Toad": 1,
+			"Berserker": 1,
+			"Valkyrie": 1
+		},
+		"royals": {
+			"Lady of the Lake": 1,
+			"King": 1
+		}
+	},
+	"alewife_juturna": {
+		"peasants": {
+			"Kulak": 2,
+			"Raider": 2,
 			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Centaur": 2,
 			"Elephant Rider": 1,
-			"Devil Toad": 1
-		},
-		"royals": {
-			"King": 1,
-			"Lady of the Lake": 1
-		}
-	},
-	"alewife_juturna": {
-		"peasants": {
-			"Raider": 2,
-			"Kulak": 2,
-			"Pawn": 1
-		},
-		"nobles": {
-			"Knight": 2,
+			"Devil Toad": 1,
 			"Rook": 1,
-			"Rifleman": 1
+			"Dragonrider": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Lady of the Lake": 1,
 			"King": 1
 		}
 	},
@@ -994,14 +1109,17 @@
 	},
 	"hunter_john": {
 		"peasants": {
-			"Kulak": 2,
 			"Pawn": 2,
-			"Raider": 1
+			"Kulak": 2,
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Rook": 2,
+			"Knight": 1,
+			"Centaur": 1,
+			"Berserker": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"King": 1,
@@ -1012,12 +1130,15 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Basic Automata": 1
 		},
 		"nobles": {
 			"Valkyrie": 2,
 			"Knight": 1,
-			"Bishop": 1
+			"Dragonrider": 1,
+			"Rifleman": 1,
+			"Minister": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1028,12 +1149,14 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Valkyrie": 2,
 			"Knight": 1,
-			"Rook": 1
+			"Rook": 1,
+			"Elephant Rider": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1043,13 +1166,14 @@
 	"hedge_witch_magda": {
 		"peasants": {
 			"Pawn": 2,
-			"Kulak": 2,
+			"Basic Automata": 2,
 			"Raider": 1
 		},
 		"nobles": {
-			"Bishop": 2,
-			"Knight": 1,
-			"Queen": 1
+			"Knight": 2,
+			"Rifleman": 1,
+			"Dragonrider": 1,
+			"Cannonier": 1
 		},
 		"royals": {
 			"King": 1,
@@ -1058,30 +1182,35 @@
 	},
 	"lot_lizard_zillah": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Raider": 2,
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Centaur": 2,
+			"Knight": 1,
+			"Elephant Rider": 1,
+			"Gorgon": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Chancellor": 1,
+			"King": 1
 		}
 	},
 	"andrew_tuatara": {
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Cultist": 1
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Anarch": 1
+			"Centaur": 2,
+			"Devil Toad": 1,
+			"Knight": 1,
+			"Dragonrider": 1,
+			"Gorgon": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1106,17 +1235,18 @@
 	},
 	"cletus_samson": {
 		"peasants": {
-			"Raider": 2,
 			"Kulak": 2,
-			"Werewolf (human form)": 1
+			"Raider": 2,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Centaur": 1
+			"Rook": 2,
+			"Knight": 1,
+			"Elephant Rider": 1,
+			"Valkyrie": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -1127,9 +1257,10 @@
 			"Raider": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Rook": 2,
+			"Knight": 1,
+			"Centaur": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"King": 1,
@@ -1140,16 +1271,18 @@
 		"peasants": {
 			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Elephant Rider": 1,
+			"Bishop": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Chieftain": 1
 		}
 	},
 	"austache_jongle": {
@@ -1161,26 +1294,29 @@
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Centaur": 1,
+			"Cannonier": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Chieftain": 1
 		}
 	},
 	"mostlemyre_drouge": {
 		"peasants": {
 			"Basic Automata": 2,
-			"Pawn": 2,
+			"Raider": 2,
 			"Kulak": 1
 		},
 		"nobles": {
 			"Bishop": 2,
+			"Factory": 1,
 			"Minister": 1,
 			"Dragonrider": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Praetor": 1,
 			"King": 1
 		}
 	},
@@ -1188,28 +1324,32 @@
 		"peasants": {
 			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Valkyrie": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Chieftain": 1
 		}
 	},
 	"professor_circino": {
 		"peasants": {
 			"Basic Automata": 2,
 			"Pawn": 2,
-			"Kulak": 1
+			"Kulak": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Bishop": 2,
-			"Minister": 1,
-			"Dragonrider": 1
+			"Dragonrider": 1,
+			"Factory": 1,
+			"Queen": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1235,13 +1375,15 @@
 	"zakariah": {
 		"peasants": {
 			"Pawn": 2,
-			"Kulak": 2,
-			"Basic Automata": 1
+			"Basic Automata": 2,
+			"Kulak": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
+			"Rifleman": 1,
 			"Rook": 1,
-			"Bishop": 1
+			"Berserker": 2
 		},
 		"royals": {
 			"King": 1,
@@ -1252,12 +1394,15 @@
 		"peasants": {
 			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Berserker": 1,
+			"Rifleman": 1,
+			"Centaur": 1
 		},
 		"royals": {
 			"King": 1,
@@ -1268,15 +1413,17 @@
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 1,
+			"Pawn": 1
 		},
 		"nobles": {
 			"Knight": 2,
+			"Elephant Rider": 1,
 			"Rook": 1,
 			"Centaur": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
@@ -1284,12 +1431,14 @@
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Dragonrider": 2,
-			"Centaur": 1,
-			"Elephant Rider": 1
+			"Rifleman": 2,
+			"Cannonier": 1,
+			"Elephant Rider": 1,
+			"Centaur": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1298,30 +1447,33 @@
 	},
 	"test_male_elf": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Rifleman": 1
+			"Grasshopper": 2,
+			"Elephant Rider": 1,
+			"Centaur": 1,
+			"Queen": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Lady of the Lake": 1,
+			"King": 1
 		}
 	},
 	"queen_madeline_du_belmonte": {
 		"peasants": {
 			"Basic Automata": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Werewolf (human form)": 1,
+			"Cultist": 1
 		},
 		"nobles": {
-			"Bishop": 2,
-			"Dragonrider": 1,
-			"Minister": 1
+			"Grasshopper": 2,
+			"Centaur": 1,
+			"Elephant Rider": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1332,28 +1484,32 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
+			"Werewolf (human form)": 1,
 			"Pawn": 1
 		},
 		"nobles": {
-			"Centaur": 2,
-			"Elephant Rider": 1,
-			"Knight": 1
+			"Elephant Rider": 2,
+			"Centaur": 1,
+			"Berserker": 1,
+			"Rook": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Chieftain": 1,
 			"King": 1
 		}
 	},
 	"rapture_beast": {
 		"peasants": {
 			"Kulak": 2,
-			"Pawn": 2,
-			"Werewolf (human form)": 1
+			"Werewolf (human form)": 2,
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Centaur": 2,
 			"Elephant Rider": 1,
-			"Knight": 1
+			"Knight": 1,
+			"Rook": 1
 		},
 		"royals": {
 			"King": 1,
@@ -1364,12 +1520,15 @@
 		"peasants": {
 			"Kulak": 2,
 			"Raider": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Basic Automata": 1
 		},
 		"nobles": {
-			"Knight": 2,
-			"Rook": 1,
-			"Centaur": 1
+			"Centaur": 2,
+			"Elephant Rider": 1,
+			"Rifleman": 1,
+			"Berserker": 1,
+			"Dragonrider": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1378,30 +1537,36 @@
 	},
 	"vermincelli_capo": {
 		"peasants": {
-			"Kulak": 2,
+			"Raider": 2,
 			"Werewolf (human form)": 2,
-			"Raider": 1
+			"Kulak": 1,
+			"Pawn": 1
 		},
 		"nobles": {
-			"Devil Toad": 2,
+			"Rifleman": 2,
 			"Gorgon": 1,
-			"Centaur": 1
+			"Centaur": 1,
+			"Spymaster": 1,
+			"Cannonier": 1
 		},
 		"royals": {
-			"King": 1,
-			"Chancellor": 1
+			"Chancellor": 1,
+			"King": 1
 		}
 	},
 	"vermincelli_hostage": {
 		"peasants": {
 			"Raider": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Pawn": 1,
+			"Zombie": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Rifleman": 1,
+			"Centaur": 1,
+			"Berserker": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1412,28 +1577,33 @@
 		"peasants": {
 			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Raider": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
+			"Rifleman": 1,
 			"Rook": 1,
-			"Rifleman": 1
+			"Queen": 1,
+			"Elephant Rider": 1
 		},
 		"royals": {
 			"King": 1,
-			"Chancellor": 1
+			"Chieftain": 1
 		}
 	},
 	"chef_master": {
 		"peasants": {
 			"Pawn": 2,
-			"Kulak": 2,
-			"Raider": 1
+			"Raider": 2,
+			"Kulak": 1,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
 			"Knight": 2,
 			"Rook": 1,
-			"Rifleman": 1
+			"Rifleman": 1,
+			"Queen": 2
 		},
 		"royals": {
 			"King": 1,
@@ -1444,15 +1614,18 @@
 		"peasants": {
 			"Basic Automata": 2,
 			"Pawn": 2,
-			"Cultist": 1
+			"Cultist": 1,
+			"Raider": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Minister": 1,
-			"Queen": 1
+			"Factory": 1,
+			"Dragonrider": 1,
+			"Anarch": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Praetor": 1,
 			"King": 1
 		}
 	},
@@ -1460,12 +1633,14 @@
 		"peasants": {
 			"Basic Automata": 2,
 			"Kulak": 2,
-			"Pawn": 1
+			"Raider": 1,
+			"Zombie": 1
 		},
 		"nobles": {
-			"Bishop": 2,
-			"Dragonrider": 1,
-			"Minister": 1
+			"Dragonrider": 2,
+			"Bishop": 1,
+			"Minister": 1,
+			"Queen": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1475,13 +1650,14 @@
 	"senator_titus": {
 		"peasants": {
 			"Basic Automata": 2,
-			"Kulak": 2,
-			"Pawn": 1
+			"Raider": 2,
+			"Kulak": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Dragonrider": 1,
-			"Minister": 1
+			"Minister": 1,
+			"Grasshopper": 1
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1491,13 +1667,15 @@
 	"senator_clodia": {
 		"peasants": {
 			"Basic Automata": 2,
-			"Kulak": 2,
-			"Pawn": 1
+			"Pawn": 2,
+			"Raider": 1,
+			"Kulak": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Dragonrider": 1,
-			"Minister": 1
+			"Minister": 1,
+			"Queen": 2
 		},
 		"royals": {
 			"Chancellor": 1,
@@ -1506,30 +1684,33 @@
 	},
 	"barthes": {
 		"peasants": {
-			"Pawn": 2,
 			"Kulak": 2,
-			"Raider": 1
+			"Basic Automata": 2,
+			"Werewolf (human form)": 1
 		},
 		"nobles": {
-			"Bishop": 2,
-			"Knight": 1,
+			"Grasshopper": 2,
+			"Centaur": 1,
+			"Elephant Rider": 1,
 			"Dragonrider": 1
 		},
 		"royals": {
-			"Chancellor": 1,
+			"Lady of the Lake": 1,
 			"King": 1
 		}
 	},
 	"gnaeus": {
 		"peasants": {
 			"Basic Automata": 2,
-			"Kulak": 2,
-			"Raider": 1
+			"Pawn": 2,
+			"Kulak": 1,
+			"Cultist": 1
 		},
 		"nobles": {
 			"Bishop": 2,
 			"Dragonrider": 1,
-			"Minister": 1
+			"Minister": 1,
+			"Spymaster": 1
 		},
 		"royals": {
 			"Chancellor": 1,

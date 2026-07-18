@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://c2hzh3y2poki"]
+
+[ext_resource type="Script" uid="uid://udyqxewdk3i7" path="res://scenes/pieces/factory.gd" id="1_co85n"]
+
+[node name="Factory" type="Node2D"]
+script = ExtResource("1_co85n")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

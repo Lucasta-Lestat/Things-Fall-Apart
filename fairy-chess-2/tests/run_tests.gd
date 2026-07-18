@@ -39,6 +39,13 @@ func _initialize():
 	test_chancellor_promotes_peasants()
 	test_promotion_beats_conditional_move()
 	test_alternatives_are_kept_for_the_chooser()
+	test_viking_valhalla()
+	test_factory()
+	test_praetor()
+	test_doppelganger()
+	test_berserker()
+	test_chieftain()
+	test_spymaster()
 	test_shot_still_catches_a_fleeing_victim()
 	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
@@ -49,7 +56,6 @@ func _initialize():
 	test_werewolf_toggle()
 	test_valkyrie_phase_out_and_return()
 	test_zombie_automatic()
-	test_necromancer_credit()
 	test_valhalla_credit()
 	test_petrify()
 	test_win_conditions()
@@ -540,6 +546,128 @@ func test_alternatives_are_kept_for_the_chooser():
 	check(all_sorted.size() == raw.size(), "sort_actions preserves every action")
 
 
+func test_viking_valhalla():
+	# Dying on the same turn you take a life sends you home to be re-fielded.
+	var st = Rules.new_state()
+	var raider = Rules.add_piece(st, "Raider", "white", Vector2(2, 3))
+	Rules.add_piece(st, "Pawn", "black", Vector2(1, 2))
+	var rifle = Rules.add_piece(st, "Rifleman", "black", Vector2(2, 0))
+	var res = Rules.resolve(st, {
+		raider.id: {"action": "move", "target": Vector2(1, 2)},
+		rifle.id: {"action": "shoot", "target": Vector2(2, 3)},
+	})
+	check(Rules.find_piece(res.state, raider.id) == null, "raider died taking the pawn")
+	check(res.state.credits.white.get("Raider", 0) == 1, "raider who died killing returns as a credit")
+	check(res.state.credits.white.get("Zombie", 0) == 0, "raider no longer raises zombies")
+
+	# Surviving the kill earns nothing -- you have to die for it.
+	var st2 = Rules.new_state()
+	var raider2 = Rules.add_piece(st2, "Raider", "white", Vector2(2, 3))
+	Rules.add_piece(st2, "Pawn", "black", Vector2(1, 2))
+	var res2 = Rules.resolve(st2, {raider2.id: {"action": "move", "target": Vector2(1, 2)}})
+	check(Rules.find_piece(res2.state, raider2.id) != null, "raider survived")
+	check(res2.state.credits.white.get("Raider", 0) == 0, "a surviving viking earns no credit")
+	check(res2.state.credits.white.get("Zombie", 0) == 0, "and still raises no zombies")
+
+
+func test_factory():
+	var st = Rules.new_state()
+	var factory = Rules.add_piece(st, "Factory", "white", Vector2(2, 2))
+	check(Rules.get_actions(st, factory).is_empty(), "a factory cannot be ordered to move")
+	var res = Rules.resolve(st, {})
+	var built = 0
+	for p in Rules.all_pieces(res.state, "white"):
+		if p.type == "Basic Automata":
+			built += 1
+	check(built == 1, "factory stamps out one automaton per turn (got %d)" % built)
+	check(Rules.find_piece(res.state, factory.id) != null, "factory stays put")
+
+	# Boxed in on every side, it produces nothing.
+	var st2 = Rules.new_state()
+	var boxed = Rules.add_piece(st2, "Factory", "white", Vector2(0, 0))
+	for pos in [Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
+		Rules.add_piece(st2, "Pawn", "white", pos)
+	var before = Rules.all_pieces(st2).size()
+	var res2 = Rules.resolve(st2, {})
+	check(Rules.all_pieces(res2.state).size() == before, "a walled-in factory builds nothing")
+
+
+func test_praetor():
+	var st = Rules.new_state()
+	var praetor = Rules.add_piece(st, "Praetor", "white", Vector2(1, 5))
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(1, 4))
+	check(praetor.royal, "praetor is royal")
+	var promo = null
+	for a in Rules.get_actions(st, praetor):
+		if a.action == "promote" and a.target == Vector2(1, 4):
+			promo = a
+	check(promo != null and promo.promote_to == "Factory", "praetor turns a peasant into a factory")
+	var res = Rules.resolve(st, {praetor.id: {"action": "promote", "target": Vector2(1, 4), "promote_to": "Factory"}})
+	check(Rules.find_piece(res.state, pawn.id).type == "Factory", "the peasant became a factory")
+
+
+func test_doppelganger():
+	var st = Rules.new_state()
+	var doppel = Rules.add_piece(st, "Doppelganger", "white", Vector2(0, 5))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(5, 0))
+	var res = Rules.resolve(st, {rook.id: {"action": "move", "target": Vector2(5, 1)}})
+	var copy = Rules.find_piece(res.state, doppel.id)
+	check(copy.type == "Rook", "doppelganger copies the enemy's last moved piece (got %s)" % copy.type)
+	check(copy.color == "white", "the copy stays on our side")
+	check(copy.get("mimic", false), "it remains a mimic after transforming")
+	# It keeps copying on later rounds.
+	var knight = Rules.add_piece(res.state, "Knight", "black", Vector2(0, 0))
+	var res2 = Rules.resolve(res.state, {knight.id: {"action": "move", "target": Vector2(2, 1)}})
+	check(Rules.find_piece(res2.state, doppel.id).type == "Knight", "and copies again next round")
+
+
+func test_berserker():
+	var st = Rules.new_state()
+	var zerk = Rules.add_piece(st, "Berserker", "white", Vector2(2, 3))
+	var t = targets(Rules.get_actions(st, zerk))
+	check(Vector2(2, 0) in t and Vector2(2, 2) in t, "berserker charges forward like a rook")
+	check(Vector2(0, 3) in t and Vector2(5, 3) in t, "and sweeps sideways")
+	check(not Vector2(2, 4) in t and not Vector2(2, 5) in t, "but never retreats")
+	check("Viking" in zerk.traits, "berserker is a viking")
+
+
+func test_chieftain():
+	var st = Rules.new_state()
+	var chief = Rules.add_piece(st, "Chieftain", "white", Vector2(2, 2))
+	check(chief.royal, "chieftain is royal")
+	check("Viking" in chief.traits, "chieftain is a viking")
+	check(targets(Rules.get_actions(st, chief)).size() == 8, "chieftain moves as a king")
+	var has_promote = false
+	for a in Rules.get_actions(st, chief):
+		if a.action == "promote":
+			has_promote = true
+	check(not has_promote, "chieftain promotes nobody")
+
+
+func test_spymaster():
+	var st = Rules.new_state()
+	var spy = Rules.add_piece(st, "Spymaster", "white", Vector2(2, 3))
+	var t = targets(Rules.get_actions(st, spy))
+	check(Vector2(2, 4) in t and Vector2(2, 5) in t, "spymaster slips backwards along the file")
+	check(Vector2(0, 3) in t and Vector2(5, 3) in t, "and sideways along the rank")
+	check(Vector2(1, 2) in t and Vector2(3, 2) in t, "and one diagonal step forward")
+	check(not Vector2(2, 2) in t, "but never straight ahead")
+
+	# Suborns the guards around an enemy royal, wherever it stands.
+	var st2 = Rules.new_state()
+	var spy2 = Rules.add_piece(st2, "Spymaster", "white", Vector2(0, 5))
+	Rules.add_piece(st2, "King", "black", Vector2(4, 1))
+	var guard = Rules.add_piece(st2, "Knight", "black", Vector2(4, 2))
+	var far = Rules.add_piece(st2, "Rook", "black", Vector2(0, 0))
+	var converts = targets(Rules.get_actions(st2, spy2), "convert")
+	check(Vector2(4, 2) in converts, "spymaster turns a royal's bodyguard at range")
+	check(not Vector2(0, 0) in converts, "but not pieces away from the royal")
+	check(not Vector2(4, 1) in converts, "and never the royal itself")
+	var res = Rules.resolve(st2, {spy2.id: {"action": "convert", "target": Vector2(4, 2), "convert_to": "Pawn"}})
+	var turned = Rules.find_piece(res.state, guard.id)
+	check(turned.type == "Pawn" and turned.color == "white", "the guard becomes our pawn")
+
+
 func test_shot_still_catches_a_fleeing_victim():
 	var st = Rules.new_state()
 	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 2))
@@ -673,14 +801,6 @@ func test_zombie_automatic():
 	check(Rules.find_piece(res2.state, zombie2.id).pos == Vector2(1, 2), "zombie prefers to capture")
 	check(Rules.find_piece(res2.state, meal.id) == null, "zombie ate the pawn")
 	check(Rules.get_actions(st2, zombie2).is_empty(), "players cannot order zombies around")
-
-
-func test_necromancer_credit():
-	var st = Rules.new_state()
-	var raider = Rules.add_piece(st, "Raider", "white", Vector2(2, 3))
-	Rules.add_piece(st, "Pawn", "black", Vector2(1, 2))
-	var res = Rules.resolve(st, {raider.id: {"action": "move", "target": Vector2(1, 2)}})
-	check(res.state.credits.white.get("Zombie", 0) == 1, "raider capture raises a zombie credit")
 
 
 func test_valhalla_credit():

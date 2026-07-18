@@ -232,6 +232,33 @@ func _validate_roster():
 	if not missing_portrait.is_empty():
 		fail("unimportable portraits: %s" % str(missing_portrait.slice(0, 8)))
 	print("ROSTER OK: %d characters, all armies legal, portraits importable" % roster.size())
+	_validate_piece_assets()
+
+
+# Every registered piece must have a loadable scene and art for both sides,
+# otherwise it explodes the first time someone actually fields it.
+func _validate_piece_assets():
+	var missing_scene = []
+	var missing_art = []
+	var missing_rules = []
+	for piece_type in _pdb().PIECE_DEFINITIONS:
+		var def = _pdb().PIECE_DEFINITIONS[piece_type]
+		if not ResourceLoader.exists(def.scene):
+			missing_scene.append(piece_type)
+		for color in ["white", "black"]:
+			if not ResourceLoader.exists("res://assets/icons/%s_%s.png" % [piece_type, color]):
+				missing_art.append("%s_%s" % [piece_type, color])
+		if not Rules.PIECE_INFO.has(piece_type):
+			missing_rules.append(piece_type)
+		elif Rules.PIECE_INFO[piece_type].category != def.category:
+			missing_rules.append("%s (category mismatch)" % piece_type)
+	if not missing_scene.is_empty():
+		fail("pieces with no scene: %s" % str(missing_scene))
+	if not missing_art.is_empty():
+		fail("pieces with no art: %s" % str(missing_art))
+	if not missing_rules.is_empty():
+		fail("pieces missing/mismatched in Rules.PIECE_INFO: %s" % str(missing_rules))
+	print("ASSETS OK: %d piece types have scene + art + rules" % _pdb().PIECE_DEFINITIONS.size())
 
 
 func _sum(d: Dictionary) -> int:
