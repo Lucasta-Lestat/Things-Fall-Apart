@@ -29,9 +29,15 @@ func _initialize():
 	test_basic_move_and_capture()
 	test_swap_mutual_capture()
 	test_multi_arrival()
-	test_block_bounces_not_kills()
-	test_friendly_bounce_cascade()
-	test_shot_always_lands()
+	test_path_collision_kills_both()
+	test_collision_denies_the_blow()
+	test_committed_capture_catches_fleeing_piece()
+	test_committed_capture_catches_automatic_zombie()
+	test_backfill_avenges_the_queen()
+	test_backfill_does_not_resolve_while_blocked()
+	test_conditional_moves_are_offered()
+	test_shot_still_catches_a_fleeing_victim()
+	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
 	test_dragon_breath()
 	test_en_passant()
@@ -54,6 +60,7 @@ func _initialize():
 	test_petrified_valkyrie_shatters()
 	test_ep_not_registered_for_the_dead()
 	test_promotion_picker_choices()
+	test_threatened_royals()
 
 	print("")
 	print("=== %d checks, %d failures ===" % [checks, failures])
@@ -168,8 +175,15 @@ func test_nightrider():
 	var t = targets(Rules.get_actions(st, nr))
 	check(Vector2(2, 4) in t, "nightrider extends knight line")
 	Rules.add_piece(st, "Pawn", "white", Vector2(1, 2))
-	t = targets(Rules.get_actions(st, nr))
-	check(not Vector2(2, 4) in t and not Vector2(1, 2) in t, "nightrider blocked by friendly on line")
+	var acts = Rules.get_actions(st, nr)
+	t = targets(acts)
+	check(not Vector2(2, 4) in t, "nightrider cannot leap past a friendly on its line")
+	var onto_friendly = null
+	for a in acts:
+		if a.action == "move" and a.target == Vector2(1, 2):
+			onto_friendly = a
+	check(onto_friendly != null and onto_friendly.get("is_conditional", false),
+		"the friendly's own square is offered only as a conditional backfill")
 	var path = Rules.move_path("Nightrider", Vector2(0, 0), Vector2(2, 4))
 	check(path == [Vector2(1, 2)], "nightrider path = intermediate landings")
 
@@ -191,9 +205,21 @@ func test_rifleman():
 	Rules.add_piece(st, "Pawn", "black", Vector2(5, 2))
 	var acts = Rules.get_actions(st, rifle)
 	var shots = targets(acts, "shoot")
-	check(Vector2(2, 5) in shots, "rifleman shoots down the file")
-	check(Vector2(5, 2) in shots, "rifleman shoots across the rank")
-	check(not Vector2(2, 0) in shots, "rifleman does not shoot friendlies")
+	# A rifleman aims a DIRECTION, so it can fire down any of the four lines --
+	# including one occupied by a friendly (flagged as friendly fire).
+	check(Vector2(2, 5) in shots, "rifleman fires down the file")
+	check(Vector2(5, 2) in shots, "rifleman fires across the rank")
+	check(Vector2(2, 0) in shots, "rifleman may fire into its own piece")
+	var ff = null
+	for a in acts:
+		if a.action == "shoot" and a.target == Vector2(2, 0):
+			ff = a
+	check(ff != null and ff.get("friendly_fire", false), "line onto a friendly is flagged as friendly fire")
+	var free_line = null
+	for a in acts:
+		if a.action == "shoot" and a.direction == Vector2(-1, 0):
+			free_line = a
+	check(free_line != null and not free_line.get("friendly_fire", false), "empty line is not friendly fire")
 
 
 func test_cannonier():
@@ -231,8 +257,14 @@ func test_gorgon_movegen():
 	var gorgon = Rules.add_piece(st, "Gorgon", "white", Vector2(2, 2))
 	Rules.add_piece(st, "Pawn", "white", Vector2(2, 3))
 	Rules.add_piece(st, "Pawn", "black", Vector2(3, 3))
-	var t = targets(Rules.get_actions(st, gorgon))
-	check(not Vector2(2, 3) in t, "gorgon cannot move onto friendly")
+	var gorgon_acts = Rules.get_actions(st, gorgon)
+	var t = targets(gorgon_acts)
+	var onto_friend = null
+	for a in gorgon_acts:
+		if a.action == "move" and a.target == Vector2(2, 3):
+			onto_friend = a
+	check(onto_friend != null and onto_friend.get("is_conditional", false),
+		"gorgon's friendly square is only a conditional backfill")
 	check(Vector2(3, 3) in t, "gorgon can move onto enemy")
 
 
@@ -334,7 +366,8 @@ func test_multi_arrival():
 		"same-square arrival kills both")
 
 
-func test_block_bounces_not_kills():
+func test_path_collision_kills_both():
+	# A piece stepping into a slider's path is struck in transit: both die.
 	var st = Rules.new_state()
 	var rook = Rules.add_piece(st, "Rook", "white", Vector2(0, 2))
 	var knight = Rules.add_piece(st, "Knight", "black", Vector2(4, 0))
@@ -342,37 +375,118 @@ func test_block_bounces_not_kills():
 		rook.id: {"action": "move", "target": Vector2(5, 2)},
 		knight.id: {"action": "move", "target": Vector2(3, 2)},
 	})
-	var moved_rook = Rules.find_piece(res.state, rook.id)
-	check(moved_rook != null, "blocked rook survives (old code killed it)")
-	check(moved_rook.pos == Vector2(0, 2), "blocked rook bounced back to origin")
-	var moved_knight = Rules.find_piece(res.state, knight.id)
-	check(moved_knight.pos == Vector2(3, 2), "blocking knight landed")
+	check(Rules.find_piece(res.state, rook.id) == null, "slider dies on the piece that cut its path")
+	check(Rules.find_piece(res.state, knight.id) == null, "the intruder dies in the collision too")
 
 
-func test_friendly_bounce_cascade():
+func test_collision_denies_the_blow():
+	# A slider cut down in transit never lands its committed capture.
 	var st = Rules.new_state()
-	var c = Rules.add_piece(st, "Rook", "white", Vector2(2, 2)) # will be blocked
-	var a = Rules.add_piece(st, "Queen", "white", Vector2(2, 0)) # heads for c's square
-	var k = Rules.add_piece(st, "Knight", "black", Vector2(5, 0)) # blocks c
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(0, 2))
+	var victim = Rules.add_piece(st, "Pawn", "black", Vector2(5, 2))
+	var blocker = Rules.add_piece(st, "Knight", "black", Vector2(4, 0))
 	var res = Rules.resolve(st, {
-		c.id: {"action": "move", "target": Vector2(5, 2)},
-		a.id: {"action": "move", "target": Vector2(2, 2)},
-		k.id: {"action": "move", "target": Vector2(4, 2)},
+		rook.id: {"action": "move", "target": Vector2(5, 2)},
+		blocker.id: {"action": "move", "target": Vector2(3, 2)},
 	})
-	check(Rules.find_piece(res.state, c.id).pos == Vector2(2, 2), "rook blocked in place")
-	check(Rules.find_piece(res.state, a.id).pos == Vector2(2, 0), "queen bounced off friendly rook")
-	check(Rules.find_piece(res.state, k.id).pos == Vector2(4, 2), "knight landed")
+	check(Rules.find_piece(res.state, rook.id) == null, "rook died in transit")
+	check(Rules.find_piece(res.state, victim.id) != null, "its intended victim survives (blow never landed)")
 
 
-func test_shot_always_lands():
+func test_committed_capture_catches_fleeing_piece():
+	# The reported case: a target cannot escape a declared capture by moving.
+	var st = Rules.new_state()
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(0, 0))
+	var king = Rules.add_piece(st, "King", "black", Vector2(0, 4))
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	var res = Rules.resolve(st, {
+		rook.id: {"action": "move", "target": Vector2(0, 4)},
+		king.id: {"action": "move", "target": Vector2(1, 5)}, # tries to slip away
+	})
+	check(Rules.find_piece(res.state, king.id) == null, "fleeing king is still cut down")
+	check(Rules.find_piece(res.state, rook.id).pos == Vector2(0, 4), "attacker takes the square")
+
+
+func test_committed_capture_catches_automatic_zombie():
+	# The automaton/zombie case: the zombie advances on its own, but the
+	# declared capture still lands.
+	# Attack from (3,4) so the zombie has no counter-capture and simply
+	# advances -- otherwise the two would trade in a mutual strike.
+	var st = Rules.new_state()
+	var bot = Rules.add_piece(st, "Basic Automata", "white", Vector2(3, 4))
+	var zombie = Rules.add_piece(st, "Zombie", "black", Vector2(1, 2))
+	var res = Rules.resolve(st, {bot.id: {"action": "move", "target": Vector2(1, 2)}})
+	check(Rules.find_piece(res.state, zombie.id) == null, "advancing zombie is caught by the capture")
+	check(Rules.find_piece(res.state, bot.id).pos == Vector2(1, 2), "automaton takes the zombie's square")
+
+
+func test_backfill_avenges_the_queen():
+	# Order the rook into your own queen's square. It waits; when the knight
+	# takes her, the rook moves in, kills the knight, and survives.
+	var st = Rules.new_state()
+	var queen = Rules.add_piece(st, "Queen", "white", Vector2(3, 3))
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(3, 0))
+	var knight = Rules.add_piece(st, "Knight", "black", Vector2(4, 5))
+	var res = Rules.resolve(st, {
+		knight.id: {"action": "move", "target": Vector2(3, 3)},
+		rook.id: {"action": "move", "target": Vector2(3, 3), "is_conditional": true},
+	})
+	check(Rules.find_piece(res.state, queen.id) == null, "the queen falls to the knight")
+	check(Rules.find_piece(res.state, knight.id) == null, "the backfilling rook cuts down the knight")
+	var avenger = Rules.find_piece(res.state, rook.id)
+	check(avenger != null and avenger.pos == Vector2(3, 3), "the rook survives and holds the square")
+
+
+func test_backfill_does_not_resolve_while_blocked():
+	var st = Rules.new_state()
+	var queen = Rules.add_piece(st, "Queen", "white", Vector2(3, 3))
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(3, 0))
+	var res = Rules.resolve(st, {
+		rook.id: {"action": "move", "target": Vector2(3, 3), "is_conditional": true},
+	})
+	check(Rules.find_piece(res.state, queen.id) != null, "the queen is unharmed by her ally")
+	check(Rules.find_piece(res.state, rook.id).pos == Vector2(3, 0), "blocked backfill does not happen")
+
+
+func test_conditional_moves_are_offered():
+	var st = Rules.new_state()
+	var rook = Rules.add_piece(st, "Rook", "white", Vector2(3, 0))
+	Rules.add_piece(st, "Queen", "white", Vector2(3, 3))
+	var found = null
+	for a in Rules.get_actions(st, rook):
+		if a.action == "move" and a.target == Vector2(3, 3):
+			found = a
+	check(found != null, "a move onto your own piece's square is offered")
+	check(found != null and found.get("is_conditional", false), "and it is flagged conditional")
+
+
+func test_shot_still_catches_a_fleeing_victim():
 	var st = Rules.new_state()
 	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 2))
 	var runner = Rules.add_piece(st, "Knight", "black", Vector2(2, 5))
 	var res = Rules.resolve(st, {
-		rifle.id: {"action": "shoot", "target": Vector2(2, 5)},
+		rifle.id: {"action": "shoot", "direction": Vector2(0, 1), "target": Vector2(2, 5)},
 		runner.id: {"action": "move", "target": Vector2(0, 4)},
 	})
-	check(Rules.find_piece(res.state, runner.id) == null, "shot victim dies even while fleeing")
+	check(Rules.find_piece(res.state, runner.id) == null, "a piece in the line cannot dodge out of it")
+
+
+func test_shot_is_intercepted_and_friendly_fire():
+	# Your rifleman fires toward your own king; an anarch steps into the line.
+	var st = Rules.new_state()
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(2, 5))
+	var king = Rules.add_piece(st, "King", "white", Vector2(2, 1))
+	var anarch = Rules.add_piece(st, "Anarch", "black", Vector2(0, 3))
+	Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var shot = {"action": "shoot", "direction": Vector2(0, -1), "target": Vector2(2, 1)}
+	# Anarch steps into the line -> it intercepts, the king lives.
+	var res = Rules.resolve(st, {rifle.id: shot, anarch.id: {"action": "move", "target": Vector2(2, 3)}})
+	check(Rules.find_piece(res.state, anarch.id) == null, "the anarch walks into the shot and dies")
+	check(Rules.find_piece(res.state, king.id) != null, "and the king is spared")
+	# Anarch stays away -> the round carries to your own king.
+	var res2 = Rules.resolve(st, {rifle.id: shot})
+	check(Rules.find_piece(res2.state, king.id) == null, "with the line clear, friendly fire kills the king")
+	check(Rules.find_piece(res2.state, anarch.id) != null, "the distant anarch is untouched")
 
 
 func test_cannon_friendly_fire():
@@ -661,6 +775,36 @@ func test_promotion_picker_choices():
 	var promoted = Rules.find_piece(res.state, pawn.id)
 	check(promoted != null and promoted.type == "Queen", "pawn promotes to the chosen Queen")
 	check(not promoted.royal, "promoted Queen is not royal")
+
+
+func test_threatened_royals():
+	# Rook bearing down an open file threatens the enemy king.
+	var st = Rules.new_state()
+	var wk = Rules.add_piece(st, "King", "white", Vector2(2, 2))
+	Rules.add_piece(st, "Rook", "black", Vector2(2, 5))
+	var t = Rules.threatened_royals(st)
+	check(t.has(wk.id), "king in an enemy rook's open file is in check")
+	# Block the file: no longer threatened.
+	Rules.add_piece(st, "Pawn", "black", Vector2(2, 4))
+	check(not Rules.threatened_royals(st).has(wk.id), "blocked rook does not threaten the king")
+
+	# A safe king is not flagged.
+	var st2 = Rules.new_state()
+	var wk2 = Rules.add_piece(st2, "King", "white", Vector2(0, 5))
+	Rules.add_piece(st2, "King", "black", Vector2(5, 0))
+	check(not Rules.threatened_royals(st2).has(wk2.id), "distant king is not in check")
+
+	# Adjacent enemy Gorgon threatens to petrify a royal.
+	var st3 = Rules.new_state()
+	var wk3 = Rules.add_piece(st3, "King", "white", Vector2(2, 2))
+	Rules.add_piece(st3, "Gorgon", "black", Vector2(2, 3))
+	check(Rules.threatened_royals(st3).has(wk3.id), "royal beside an enemy gorgon is in check")
+
+	# Rifleman with a clear shot threatens a royal.
+	var st4 = Rules.new_state()
+	var wk4 = Rules.add_piece(st4, "King", "white", Vector2(4, 2))
+	Rules.add_piece(st4, "Rifleman", "black", Vector2(0, 2))
+	check(Rules.threatened_royals(st4).has(wk4.id), "royal in a rifleman's line is in check")
 
 
 func test_legal_actions():

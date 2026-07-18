@@ -12,6 +12,7 @@ const BOARD_SIZE = 6
 # Set by the parent ChessboardDisplay script.
 var selected_piece = null
 var valid_actions_to_show = []
+var preview = false # read-only look at an enemy's moves: render muted
 
 
 func _draw():
@@ -24,21 +25,30 @@ func _draw():
 		return
 
 	var selected_pos = selected_piece.grid_position
-	draw_rect(Rect2(selected_pos.x * TILE_SIZE, selected_pos.y * TILE_SIZE, TILE_SIZE, TILE_SIZE), Color(0, 1, 0, 0.3))
+	# Green for a piece you control, amber for a read-only enemy preview.
+	var select_tint = Color(1, 0.7, 0.1, 0.3) if preview else Color(0, 1, 0, 0.3)
+	draw_rect(Rect2(selected_pos.x * TILE_SIZE, selected_pos.y * TILE_SIZE, TILE_SIZE, TILE_SIZE), select_tint)
 
 	for action in valid_actions_to_show:
 		var target_pos = selected_pos
 		var highlight_color = Color(0, 0.5, 1, 0.5) # blue: move
 		var icon_to_draw = null
+		var conditional = false
 
 		match action.action:
 			"move":
 				target_pos = action.target
-				if action.get("is_capture_hint", false):
+				if action.get("is_conditional", false):
+					# Backfill: only resolves if the blocker leaves. Drawn as a
+					# hollow ring so it reads as "not guaranteed".
+					conditional = true
+					highlight_color = Color(0.4, 0.9, 1.0, 0.85)
+				elif action.get("is_capture_hint", false):
 					highlight_color = Color(1, 0.2, 0.1, 0.5)
 			"shoot":
 				target_pos = action.target
-				highlight_color = Color(1, 0, 0, 0.5)
+				# Amber warns that this shot would strike your own piece.
+				highlight_color = Color(1, 0.65, 0, 0.6) if action.get("friendly_fire", false) else Color(1, 0, 0, 0.5)
 				icon_to_draw = attack_icon
 			"promote":
 				target_pos = action.target
@@ -56,7 +66,14 @@ func _draw():
 				highlight_color = Color(1, 0.5, 0, 0.5)
 				icon_to_draw = attack_icon
 
+		# Muted, smaller markers when merely previewing an enemy's reach.
+		if preview:
+			highlight_color = Color(highlight_color.r, highlight_color.g, highlight_color.b, 0.28)
 		var center = target_pos * TILE_SIZE + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
-		draw_circle(center, TILE_SIZE / 4.0, highlight_color)
-		if icon_to_draw != null:
+		var radius = TILE_SIZE / 6.0 if preview else TILE_SIZE / 4.0
+		if conditional:
+			draw_arc(center, radius * 1.15, 0.0, TAU, 28, highlight_color, 3.0)
+		else:
+			draw_circle(center, radius, highlight_color)
+		if icon_to_draw != null and not preview:
 			draw_texture(icon_to_draw, center - icon_to_draw.get_size() / 2.0)
