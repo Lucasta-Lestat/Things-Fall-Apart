@@ -47,6 +47,7 @@ func _initialize():
 	test_berserker()
 	test_chieftain()
 	test_spymaster()
+	test_conversion_reports_failure()
 	test_shot_still_catches_a_fleeing_victim()
 	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
@@ -714,6 +715,43 @@ func test_spymaster():
 	var res = Rules.resolve(st2, {spy2.id: {"action": "convert", "target": Vector2(4, 2), "convert_to": "Pawn"}})
 	var turned = Rules.find_piece(res.state, guard.id)
 	check(turned.type == "Pawn" and turned.color == "white", "the guard becomes our pawn")
+
+
+func test_conversion_reports_failure():
+	# A conversion lands on the marked piece even if it runs -- it just arrives
+	# wherever the victim ended up.
+	var st = Rules.new_state()
+	var spy = Rules.add_piece(st, "Spymaster", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "white", Vector2(1, 5))
+	Rules.add_piece(st, "Chancellor", "black", Vector2(4, 0))
+	var mark = Rules.add_piece(st, "Dragonrider", "black", Vector2(4, 1))
+	var res = Rules.resolve(st, {
+		spy.id: {"action": "convert", "target": Vector2(4, 1), "convert_to": "Pawn"},
+		mark.id: {"action": "move", "target": Vector2(0, 0)},
+	})
+	var turned = Rules.find_piece(res.state, mark.id)
+	check(turned != null and turned.type == "Pawn" and turned.color == "white",
+		"a fleeing mark is still suborned")
+	check(turned != null and turned.pos == Vector2(0, 0), "and is converted where it fled to")
+
+	# But if something kills the mark the same turn, the conversion is lost --
+	# and must say so rather than silently doing nothing.
+	var st2 = Rules.new_state()
+	var spy2 = Rules.add_piece(st2, "Spymaster", "white", Vector2(0, 5))
+	Rules.add_piece(st2, "King", "white", Vector2(1, 5))
+	Rules.add_piece(st2, "Chancellor", "black", Vector2(4, 0))
+	var mark2 = Rules.add_piece(st2, "Dragonrider", "black", Vector2(4, 1))
+	Rules.add_piece(st2, "Zombie", "white", Vector2(0, 1)) # auto-advances into (0,0)
+	var res2 = Rules.resolve(st2, {
+		spy2.id: {"action": "convert", "target": Vector2(4, 1), "convert_to": "Pawn"},
+		mark2.id: {"action": "move", "target": Vector2(0, 0)},
+	})
+	check(Rules.find_piece(res2.state, mark2.id) == null, "the mark died before it could be turned")
+	var reported = false
+	for e in res2.events:
+		if e.type == "convert_failed" and e.get("reason", "") == "target_destroyed":
+			reported = true
+	check(reported, "a lost conversion is reported, not silently dropped")
 
 
 func test_shot_still_catches_a_fleeing_victim():

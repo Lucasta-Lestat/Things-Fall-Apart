@@ -21,6 +21,23 @@ var _pending_promotion_piece = null # awaiting a choice from the promotion picke
 var _shudder = {} # royal state id -> looping tween (in-check tremble)
 
 
+func _unhandled_input(event):
+	# Escape backs out: close an open chooser first, otherwise drop the
+	# selection. Beats having to hunt for a square the piece can't move to.
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	var picker = ui.choice_picker
+	if picker != null and picker.visible:
+		picker.cancel()
+		_pending_promotion_piece = null
+		_picker_mode = ""
+		get_viewport().set_input_as_handled()
+		return
+	if selected_piece != null:
+		clear_selection()
+		get_viewport().set_input_as_handled()
+
+
 func _ready():
 	game_board.turn_resolved.connect(_on_turn_resolved)
 	game_board.piece_spawned.connect(_on_piece_spawned)

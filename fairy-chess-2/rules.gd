@@ -1201,11 +1201,16 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		var action = entry[1]
 		var pre_victim = piece_at(state, action.target)
 		if pre_victim == null:
+			events.append({"type": "convert_failed", "id": entry[0], "reason": "no_target"})
 			continue
 		if not by_id.has(pre_victim.id) or captured.has(pre_victim.id):
+			# The mark was killed before the turn (or by it) -- a conversion
+			# and a killing blow can't both land on the same piece.
+			events.append({"type": "convert_failed", "id": entry[0], "reason": "target_destroyed"})
 			continue
 		var victim = by_id[pre_victim.id]
 		if victim.color == cultist.color:
+			events.append({"type": "convert_failed", "id": entry[0], "reason": "no_target"})
 			continue
 		_replace_piece(st, victim, str(action.get("convert_to", "Cultist")), cultist.color, events, "convert")
 		progress = true
