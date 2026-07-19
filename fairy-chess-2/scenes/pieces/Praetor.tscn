@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://emvpefknd7ih"]
+[gd_scene format=3 uid="uid://emvpefknd7ih"]
 
 [ext_resource type="Script" uid="uid://kys1vhm8xanp" path="res://scenes/pieces/praetor.gd" id="1_p1dfz"]
 

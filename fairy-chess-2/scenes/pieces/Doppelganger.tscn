@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://s8fgn8h0n8m3"]
+[gd_scene format=3 uid="uid://s8fgn8h0n8m3"]
 
 [ext_resource type="Script" uid="uid://yvp9w076ehoj" path="res://scenes/pieces/doppelganger.gd" id="1_lztbs"]
 

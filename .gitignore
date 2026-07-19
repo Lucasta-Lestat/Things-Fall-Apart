@@ -4,3 +4,7 @@
 # Editor & temp backup files
 *.bak
 *~
+
+# Raw two-up diptychs from the fairy-chess art generator (re-splittable source)
+tools/_fairy_chess_raw/
+__pycache__/

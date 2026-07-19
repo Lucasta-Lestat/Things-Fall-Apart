@@ -456,7 +456,31 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 			_adjacent_promotions(state, piece, actions, "Bishop", [], ["Peasant"])
 		_:
 			_leaps(state, piece, KING_DIRS, actions)
-	return actions
+	return dedupe_actions(actions)
+
+
+# Collapses actions that mean exactly the same thing. Pieces whose movement
+# retraces itself -- the Devil Toad's four bounce paths can arrive at one
+# square from several directions -- would otherwise offer the same move twice
+# and pop the "choose an action" dialog with identical entries.
+static func dedupe_actions(actions: Array) -> Array:
+	var seen = {}
+	var out = []
+	for a in actions:
+		var key = "%s|%s|%s|%s|%s|%s|%s" % [
+			a.get("action", ""),
+			str(a.get("target", "")),
+			str(a.get("direction", "")),
+			str(a.get("promote_to", "")),
+			str(a.get("convert_to", "")),
+			str(a.get("is_conditional", false)),
+			str(a.get("is_charge", false)) + str(a.get("is_en_passant", false)) + str(a.get("is_double_move", false)),
+		]
+		if seen.has(key):
+			continue
+		seen[key] = true
+		out.append(a)
+	return out
 
 
 # Every action a player may declare this turn: piece actions plus spawn
