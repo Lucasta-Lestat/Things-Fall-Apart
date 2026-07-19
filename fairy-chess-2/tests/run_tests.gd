@@ -340,6 +340,25 @@ func test_adjacent_promoters():
 		if a.action == "promote" and a.target == Vector2(2, 4) and a.promote_to == "King":
 			found = true
 	check(found, "lady of the lake promotes adjacent pawn to King")
+	# Any peasant, not just Pawn/Kulak -- the roster has plenty of others.
+	for peasant in ["Werewolf (human form)", "Cultist", "Basic Automata", "Zombie", "Raider"]:
+		var st_p = Rules.new_state()
+		var lady_p = Rules.add_piece(st_p, "Lady of the Lake", "white", Vector2(2, 5))
+		Rules.add_piece(st_p, peasant, "white", Vector2(2, 4))
+		var raised = false
+		for a in Rules.get_actions(st_p, lady_p):
+			if a.action == "promote" and a.target == Vector2(2, 4) and a.promote_to == "King":
+				raised = true
+		check(raised, "lady of the lake raises a %s to King" % peasant)
+	# But not a noble.
+	var st_n = Rules.new_state()
+	var lady_n = Rules.add_piece(st_n, "Lady of the Lake", "white", Vector2(2, 5))
+	Rules.add_piece(st_n, "Rook", "white", Vector2(2, 4))
+	var raised_noble = false
+	for a in Rules.get_actions(st_n, lady_n):
+		if a.action == "promote":
+			raised_noble = true
+	check(not raised_noble, "lady of the lake cannot raise a noble")
 	var st2 = Rules.new_state()
 	var pont = Rules.add_piece(st2, "Pontifex", "white", Vector2(2, 5))
 	Rules.add_piece(st2, "Cultist", "white", Vector2(3, 5))
@@ -715,6 +734,30 @@ func test_spymaster():
 	var res = Rules.resolve(st2, {spy2.id: {"action": "convert", "target": Vector2(4, 2), "convert_to": "Pawn"}})
 	var turned = Rules.find_piece(res.state, guard.id)
 	check(turned.type == "Pawn" and turned.color == "white", "the guard becomes our pawn")
+
+	# Diagonal neighbours are off limits: a pawn captures diagonally, so
+	# turning one would take the royal on the spot and end the game.
+	var st3 = Rules.new_state()
+	var spy3 = Rules.add_piece(st3, "Spymaster", "white", Vector2(0, 5))
+	var bk = Rules.add_piece(st3, "King", "black", Vector2(3, 2))
+	Rules.add_piece(st3, "Knight", "black", Vector2(4, 3))  # diagonal
+	Rules.add_piece(st3, "Rook", "black", Vector2(3, 3))    # orthogonal
+	var conv3 = targets(Rules.get_actions(st3, spy3), "convert")
+	check(not Vector2(4, 3) in conv3, "a diagonal bodyguard cannot be suborned")
+	check(Vector2(3, 3) in conv3, "an orthogonal bodyguard still can")
+	# And the pawn we do get has no shot at the royal next turn.
+	var res3 = Rules.resolve(st3, {spy3.id: {"action": "convert", "target": Vector2(3, 3), "convert_to": "Pawn"}})
+	var new_pawn = null
+	for p in Rules.all_pieces(res3.state, "white"):
+		if p.type == "Pawn":
+			new_pawn = p
+	check(new_pawn != null, "the orthogonal guard flipped")
+	var can_take_royal = false
+	if new_pawn != null:
+		for a in Rules.get_actions(res3.state, new_pawn):
+			if a.action == "move" and a.get("target", Vector2(-9, -9)) == bk.pos:
+				can_take_royal = true
+	check(not can_take_royal, "the converted pawn cannot immediately capture the royal")
 
 
 func test_conversion_reports_failure():
