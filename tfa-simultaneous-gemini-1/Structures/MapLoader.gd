@@ -3,6 +3,10 @@ extends Node2D
 
 signal map_loaded
 
+# the structured map's ground Sprite2D (null on legacy maps) -- FluidManager binds
+# the organic water shader to it
+var structured_ground: Sprite2D = null
+
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
 @export var structure_map_image_path: String = "res://maps/cemetery_structures.png"
@@ -15,6 +19,11 @@ signal map_loaded
 @export var world_map_mode: bool = false
 
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
+const DOOR_SCRIPT := preload("res://Structures/Door.gd")
+
+# Map id of the structured map being loaded; keys Door.lock_key so session
+# unlocks survive the full teardown/reload every warp performs.
+var _current_map_id: String = ""
 
 # Map mask colors to structure IDs
 var color_to_structure: Dictionary = {
@@ -97,10 +106,13 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	var game = get_parent()
 	if game == null or not ("structures_in_scene" in game):
 		game = get_tree().current_scene
+	_current_map_id = String(map_data.get("id", ""))
 	var images: Dictionary = map_data.get("images", {})
 	var tile_size: int = GridManager.TILE_SIZE
 
-	# 1. ground: the finished editor render as one sprite
+	# 1. ground: the finished editor render as one sprite (kept as structured_ground
+	# so FluidManager/CellFluidFX can bind the organic water shader to it)
+	structured_ground = null
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -108,6 +120,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		ground.centered = false
 		ground.z_index = -6
 		add_child(ground)
+		structured_ground = ground
 	else:
 		push_error("structured map: missing ground image " + ground_path)
 
@@ -133,14 +146,23 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		overlay_tex = load(op)
 	if game != null and "structures_in_scene" in game:
 		game.structures_in_scene.clear()
-	for s in map_data.get("structures", []):
-		if typeof(s) != TYPE_DICTIONARY:
-			continue
-		var inst := _spawn_geo_structure(s, overlay_tex, tile_size)
-		if inst != null and game != null and "structures_in_scene" in game:
-			game.structures_in_scene.append(inst)
-			if inst.has_signal("destroyed") and game.has_method("_on_structure_destroyed"):
-				inst.destroyed.connect(game._on_structure_destroyed)
+	# TWO passes, decks (walk_elev) first: a solid structure's occlude_top is
+	# terrain + height read at spawn time, so every deck must have registered
+	# its elevation before any parapet standing on it spawns — regardless of
+	# JSON array order.
+	var all_structs: Array = map_data.get("structures", [])
+	for pass_decks in [true, false]:
+		for s in all_structs:
+			if typeof(s) != TYPE_DICTIONARY:
+				continue
+			var deck: bool = s.get("walk_elev") != null and String(s.get("kind", "")) in ["disc", "wall"]
+			if deck != pass_decks:
+				continue
+			var inst := _spawn_geo_structure(s, overlay_tex, tile_size)
+			if inst != null and game != null and "structures_in_scene" in game:
+				game.structures_in_scene.append(inst)
+				if inst.has_signal("destroyed") and game.has_method("_on_structure_destroyed"):
+					inst.destroyed.connect(game._on_structure_destroyed)
 
 	emit_signal("map_loaded")
 
@@ -151,7 +173,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var shape: Shape2D
 	var shape_rot := 0.0
 	var poly_local := PackedVector2Array()
+	var occ_poly := PackedVector2Array()   # exact silhouette for the vision-cone occluder
 	var occupied: Array[Vector2i] = []
+	var tight: Array[Vector2i] = []        # tiles the REAL geometry covers (fire gates)
 	# pathing margin: a tile registers as an obstacle only if its CENTRE is
 	# within this reach of the actual geometry (about a body-width)
 	var path_margin := float(tile_size) * 0.35
@@ -179,7 +203,11 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		poly_local = PackedVector2Array([
 			-seg * 0.5 - dirn * g - perp * (half + g), seg * 0.5 + dirn * g - perp * (half + g),
 			seg * 0.5 + dirn * g + perp * (half + g), -seg * 0.5 - dirn * g + perp * (half + g)])
+		occ_poly = PackedVector2Array([
+			-seg * 0.5 - perp * half, seg * 0.5 - perp * half,
+			seg * 0.5 + perp * half, -seg * 0.5 + perp * half])
 		occupied = _tiles_near_segment(a, b, half + path_margin, tile_size)
+		tight = _tiles_near_segment(a, b, half, tile_size)
 	elif kind == "tree":
 		center = _arr_v2(s.get("pos", [0, 0]))
 		var r := float(s.get("r", 30.0))
@@ -189,7 +217,12 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var rr := r + 4.0
 		poly_local = PackedVector2Array([
 			Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
+		# occluder = the TRUNK silhouette (matches what LOS rays hit), not the crown
+		for i in 10:
+			var ang := TAU * float(i) / 10.0
+			occ_poly.append(Vector2(cos(ang), sin(ang)) * circ.radius)
 		occupied = _tiles_near_segment(center, center, circ.radius + path_margin, tile_size)
+		tight = _tiles_near_segment(center, center, circ.radius, tile_size)
 	elif kind == "door":
 		var hinge := _arr_v2(s.get("hinge", [0, 0]))
 		var deg := float(s.get("deg", 0.0))
@@ -206,11 +239,47 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		poly_local = PackedVector2Array([
 			-leaf * 0.5 - dperp * (dhalf + 2.0), leaf * 0.5 - dperp * (dhalf + 2.0),
 			leaf * 0.5 + dperp * (dhalf + 2.0), -leaf * 0.5 + dperp * (dhalf + 2.0)])
+		occ_poly = PackedVector2Array([
+			-leaf * 0.5 - dperp * dhalf, leaf * 0.5 - dperp * dhalf,
+			leaf * 0.5 + dperp * dhalf, -leaf * 0.5 + dperp * dhalf])
 		occupied = _tiles_near_segment(hinge, hinge + leaf, dhalf + path_margin, tile_size)
+		tight = _tiles_near_segment(hinge, hinge + leaf, dhalf, tile_size)
+	elif kind == "disc":
+		# a solid fort-tower drum (exported wall_platform): full-radius stone, no
+		# walkable interior. Covers the overlay drum art so no ground shows through.
+		center = _arr_v2(s.get("pos", [0, 0]))
+		var dr := float(s.get("r", 30.0))
+		var dcirc := CircleShape2D.new()
+		dcirc.radius = dr
+		shape = dcirc
+		var drr := dr + 6.0
+		poly_local = PackedVector2Array([
+			Vector2(-drr, -drr), Vector2(drr, -drr), Vector2(drr, drr), Vector2(-drr, drr)])
+		for i in 16:
+			var da := TAU * float(i) / 16.0
+			occ_poly.append(Vector2(cos(da), sin(da)) * dr)
+		occupied = _tiles_near_segment(center, center, dr + path_margin, tile_size)
+		tight = _tiles_near_segment(center, center, dr, tile_size)
 	else:
 		return null
 
+	# Walkable elevated deck (battlement walkway / tower top): "walk_elev" in
+	# signed stories. occlude_top (ABSOLUTE stories) feeds elevation-aware LOS:
+	# decks occlude up to their walking surface; solids occlude terrain + height.
+	var walk_elev = s.get("walk_elev")
+	var is_deck := walk_elev != null and (kind == "disc" or kind == "wall")
+	var occlude_top: float
+	if is_deck:
+		occlude_top = float(walk_elev)   # a viewer AT deck height sees past the deck floor itself
+	else:
+		var base_elev := GridManager.effective_elev(GridManager.world_to_map(center))
+		occlude_top = base_elev + (2.0 if (kind == "tree" or kind == "disc") else 1.0)  # wall/door 1 story, tree/solid disc 2
+
 	var inst: Structure = structure_scene.instantiate()
+	if kind == "door":
+		# safe: Structure.tscn root sets no exported values, and no properties
+		# have been assigned yet — the swap loses nothing
+		inst.set_script(DOOR_SCRIPT)
 	inst.structure_id = StringName(String(s.get("id", "stone_wall")))
 	inst.skip_grid_snap = true
 	inst.use_custom_texture = true
@@ -219,6 +288,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	inst.position = center
 	inst.z_index = -3
 	inst.occupied_tiles = occupied
+	inst.fire_blocking_tiles = tight   # fire gates use the REAL footprint, not the halo
 	add_child(inst)
 	# EXACT collision: rotated to the real geometry (the legacy loader's
 	# axis-aligned region bounding boxes are what sealed walkable gaps)
@@ -226,6 +296,24 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	cs.shape = shape
 	cs.rotation = shape_rot
 	inst.get_node("Sprite").visible = false
+	# vision-cone occluder: the sight cones are PointLight2Ds with shadows, and
+	# 2D light shadows come ONLY from LightOccluder2D -- physics bodies don't
+	# cast them, so without this the cones render straight through walls even
+	# though gameplay LOS rays are blocked correctly. Freed with the structure.
+	if not occ_poly.is_empty():
+		var occ := LightOccluder2D.new()
+		occ.name = "Occluder"
+		var opoly := OccluderPolygon2D.new()
+		opoly.polygon = occ_poly
+		opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+		occ.occluder = opoly
+		occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_GROUND
+		if not is_deck and occlude_top >= 2.0:
+			# tall solids + parapets-on-decks occlude elevated sight cones too;
+			# deck occluders stay ground-mask only: they must never shadow the
+			# cone of a light standing on them
+			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
+		inst.add_child(occ)
 	if overlay_tex != null:
 		var art := Polygon2D.new()
 		art.name = "Art"
@@ -246,8 +334,34 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	if s.has("hp"):
 		inst.max_health = int(s["hp"])
 		inst.current_health = inst.max_health
-	for t in occupied:
-		GridManager.register_obstacle(t)
+	if inst is Door:
+		var door := inst as Door
+		door.locked = bool(s.get("locked", false))
+		door.key_id = String(s.get("key_id", ""))
+		door.consume_key = bool(s.get("consume_key", false))
+		var hpx := _arr_v2(s.get("hinge", [0, 0]))
+		door.lock_key = "%s|door|%d,%d" % [_current_map_id, int(hpx.x), int(hpx.y)]
+		# Session-unlock re-application: warps do a FULL load_map teardown; a
+		# consumed key must not re-lock its door (softlock guard).
+		var g: Node = get_parent()
+		if g == null or not ("unlocked_locks" in g):
+			g = get_tree().current_scene
+		if g != null and ("unlocked_locks" in g) and g.unlocked_locks.has(door.lock_key):
+			door.locked = false
+	inst.set_meta("occlude_top", occlude_top)
+	if is_deck:
+		# No hard collision, no pathing obstacle: blocking ground characters is
+		# purely logical via GridManager.can_step. Body stays on VISION_BLOCKERS
+		# so ground LOS rays hit it (occlude_top = deck height hides its top).
+		inst.collision_layer = CollisionLayers.VISION_BLOCKERS   # post-add_child, wins over _ready's STRUCTURE_LAYERS
+		inst.is_deck = true
+		inst.deck_elevation = float(walk_elev)
+		inst.deck_tiles = tight   # TIGHT footprint — the walkable top is the real geometry, not the pathing halo
+		for t in tight:
+			GridManager.register_deck(t, float(walk_elev))
+	else:
+		for t in occupied:
+			GridManager.register_obstacle(t)
 	return inst
 
 

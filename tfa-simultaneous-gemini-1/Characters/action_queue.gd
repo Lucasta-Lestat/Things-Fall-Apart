@@ -216,7 +216,7 @@ func queue_move(target_pos: Vector2) -> bool:
 	"""Queue a move action with pathfinding"""
 	var start_tile = GridManager.world_to_map(character.global_position)
 	var end_tile = GridManager.world_to_map(target_pos)
-	var tile_path = GridManager.find_path(start_tile, end_tile)
+	var tile_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof)
 	var waypoints: Array[Vector2] = []
 	for tile in tile_path:
 		waypoints.append(GridManager.map_to_world(tile))
@@ -353,14 +353,14 @@ func _execute_action(action: Action) -> void:
 			var target_pos = action.data.get("target_position", null)
 			if target_pos:
 				character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
-			character.attack()
+			character.attack("Main", target_pos)
 		
 		ActionType.ATTACK_TARGET:
 			var target = action.data.get("target")
 			if target and is_instance_valid(target):
-				# Face the target then attack
+				# Face the target then attack (live node: rig aim tracks its movement)
 				character.target_rotation = (target.global_position - character.global_position).angle() + PI / 2
-				character.attack()
+				character.attack("Main", null, target)
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)

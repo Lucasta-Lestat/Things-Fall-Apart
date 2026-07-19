@@ -61,6 +61,17 @@ var _sim_timer: float = 0.0
 const SIM_INTERVAL: float = 0.25  # Simulate flow 4x/sec. Lerp rates in fluid.gd
                                   # are tuned to settle within one tick at this rate.
 
+# STRUCTURED maps run the Stalberg-cell fluid sim (downhill flow, pooling) and
+# PROJECT its depths onto the tile renderer + query grid below; legacy/world
+# maps keep the flat tile sim (cell_fluid stays null). Mirrors SurfaceManager's
+# cell_fire. The CellGraph is shared with cell_fire (passed from Game.load_map).
+const CELL_FLUID_SCENE := preload("res://CellFluid.gd")
+const CELL_FLUID_FX_SCENE := preload("res://CellFluidFX.gd")
+var cell_fluid: CellFluid = null
+var cell_fluid_fx: CellFluidFX = null   # organic blob-field water renderer (replaces tile sprites)
+var _cell_type_order: Array = []     # fluid type strings, water first (ftype index+1)
+var _proj_tiles: Dictionary = {}     # tiles the last projection wrote (for dry-out removal)
+
 # --- Reactive ripples (characters wading, projectile/ability splashes) ---
 # Stored in GRID space (world_pos / TILE_SIZE) so a ring crosses tile boundaries
 # seamlessly — the shader reads world-continuous (tile_position + UV) coords.
@@ -90,13 +101,118 @@ func _load_fluid_database() -> void:
 	else:
 		push_error("FluidManager: Failed to parse fluids.json")
 
+# Structured maps: build the cell fluid sim on the SHARED CellGraph (or tear it
+# down for legacy/world maps, where the flat tile sim runs instead).
+func setup_cell_graph(graph: CellGraph) -> void:
+	if cell_fluid != null and is_instance_valid(cell_fluid):
+		cell_fluid.queue_free()
+	if cell_fluid_fx != null and is_instance_valid(cell_fluid_fx):
+		cell_fluid_fx.queue_free()
+	cell_fluid = null
+	cell_fluid_fx = null
+	_proj_tiles.clear()
+	if graph == null or graph.cell_count == 0:
+		return
+	clear_all_water_tiles()   # start the structured map from a clean tile surface
+	# fluid type order, water first so its ftype byte is 1 (matches the sim)
+	_cell_type_order = []
+	if _fluid_db.has(FLUID_TYPE_WATER):
+		_cell_type_order.append(FLUID_TYPE_WATER)
+	for t in _fluid_db.keys():
+		if t != FLUID_TYPE_WATER:
+			_cell_type_order.append(t)
+	cell_fluid = CELL_FLUID_SCENE.new()
+	add_child(cell_fluid)
+	cell_fluid.setup(graph, self, _fluid_db, _cell_type_order)
+	# organic water renderer: bind the editor's blob-field water shader to the
+	# structured map's ground sprite (no per-tile Fluid.tscn sprites then)
+	var game = get_parent()
+	var gs = game.map_loader.structured_ground if (game != null and "map_loader" in game and game.map_loader != null) else null
+	if gs != null:
+		cell_fluid_fx = CELL_FLUID_FX_SCENE.new()
+		add_child(cell_fluid_fx)
+		cell_fluid_fx.setup(cell_fluid, graph, gs, _fluid_db, _cell_type_order)
+
+
 func update_fluid_tick(delta: float) -> void:
 	"""Called from Game._process to drive fluid simulation in real time."""
 	_update_ripples(delta)
+	if cell_fluid != null and cell_fluid.active_sim():
+		cell_fluid.tick(delta)   # self-throttles flow at its own SIM_INTERVAL
+		_sim_timer += delta
+		if _sim_timer >= SIM_INTERVAL:
+			_sim_timer = 0.0
+			_project_cells_to_tiles()
+		return
 	_sim_timer += delta
 	if _sim_timer >= SIM_INTERVAL:
 		_sim_timer = 0.0
 		update_fluid_simulation()
+
+
+# Project the cell sim's depths onto the tile grid: each tile takes its deepest
+# covering cell's type+depth+flow. Feeds the existing tile renderer, fluid_grid,
+# GridManager.fluids (so footsteps/queries answer right), and water->fire douse.
+func _project_cells_to_tiles() -> void:
+	var cur: Dictionary = {}   # tile -> {type, amt, dir, spd}
+	for cid in cell_fluid.active:
+		var amt: float = cell_fluid.amount[cid]
+		if amt < PUDDLE_HEIGHT:
+			continue
+		var tstr: String = cell_fluid.type_at(cid)
+		if tstr == "":
+			continue
+		var t: Vector2i = GridManager.world_to_map(cell_fluid.graph.centroid(cid))
+		var prev = cur.get(t)
+		if prev == null or amt > float(prev["amt"]):
+			cur[t] = {"type": tstr, "amt": amt,
+				"dir": cell_fluid.flow_dir.get(cid, Vector2.ZERO),
+				"spd": cell_fluid.flow_speed.get(cid, 0.0)}
+	for t in cur:
+		var e: Dictionary = cur[t]
+		_set_tile_fluid(t, String(e["type"]), float(e["amt"]))
+		flow_directions[t] = e["dir"]
+		flow_speeds[t] = e["spd"]
+	for t in _proj_tiles:
+		if not cur.has(t):
+			remove_fluid_tile(t)
+			GridManager.fluids.erase(t)
+	_proj_tiles = cur
+	update_water_tile_flows()
+	# fluid moved under the fire (oil flowed in, water arrived): CellFire keys its
+	# per-cell fuel off cell_fluid, so drop that cache while both are live. Water
+	# extinguishes fire per-EXACT-cell in CellFluid._fire_interactions (no tile
+	# round-trip), so no try_extinguish sweep is needed here.
+	var game = get_parent()
+	if game != null and "surface_manager" in game and game.surface_manager:
+		var cf = game.surface_manager.cell_fire
+		if cf != null and is_instance_valid(cf) and not cf.burning.is_empty():
+			cf.invalidate_fuel()
+
+
+# Set a tile's fluid to an ABSOLUTE depth from the projection (register_fluid
+# adds; this overwrites), creating/refreshing the visual + query entries.
+func _set_tile_fluid(tile_pos: Vector2i, fluid_type: String, amt: float) -> void:
+	var existing := get_fluid_type_at(tile_pos)
+	if not existing.is_empty() and existing != fluid_type:
+		var ov = active_fluid_tiles.get(tile_pos)
+		if ov and not (ov is bool) and is_instance_valid(ov):
+			ov.queue_free()
+		active_fluid_tiles.erase(tile_pos)
+		flow_directions.erase(tile_pos)
+		flow_speeds.erase(tile_pos)
+	fluid_grid[tile_pos] = {fluid_type: amt}
+	GridManager.fluids[tile_pos] = fluid_type
+	# the blob-field renderer draws the water; the projection only feeds tile
+	# QUERIES, so keep a sentinel (no Fluid.tscn sprite) when it is active
+	if cell_fluid_fx != null:
+		active_fluid_tiles[tile_pos] = true
+		return
+	var vis = active_fluid_tiles.get(tile_pos)
+	if vis == null or (vis is bool) or not is_instance_valid(vis):
+		_create_fluid_visual(tile_pos, fluid_type, amt)
+	elif vis.has_method("set_water_depth"):
+		vis.set_water_depth(amt)
 
 # --- Reactive ripples ---
 
@@ -173,6 +289,10 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 					continue
 				if not character.has_method("is_alive") or not character.is_alive():
 					continue
+				# A roof-walker passing over a fluid cell is a story up, not
+				# standing in it — don't apply the fluid's condition.
+				if "on_roof" in character and character.on_roof:
+					continue
 				var char_tile = GridManager.world_to_map(character.global_position)
 				if char_tile != tile_pos:
 					continue
@@ -186,6 +306,11 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 
 func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> void:
 	if amount <= 0:
+		return
+	# Structured maps: every deposit (spawns, blood, vomit, rain) goes into the
+	# covering cell; the projection renders + answers tile queries from there.
+	if cell_fluid != null and cell_fluid.active_sim():
+		cell_fluid.deposit(GridManager.map_to_world(tile_pos), fluid_type, amount)
 		return
 
 	# Overwrite: if a different fluid type currently occupies this tile, wipe it.
@@ -247,6 +372,11 @@ func is_fluid_flammable(tile_pos: Vector2i) -> bool:
 
 func remove_fluid(tile_pos: Vector2i, amount: float) -> void:
 	"""Reduces the fluid amount at a tile (e.g. fire consuming oil)."""
+	if cell_fluid != null and cell_fluid.active_sim():
+		var cid := cell_fluid.graph.cell_at(GridManager.map_to_world(tile_pos))
+		if cid >= 0:
+			cell_fluid.burn_off(cid, amount)
+		return
 	if not fluid_grid.has(tile_pos):
 		return
 	for fluid_type in fluid_grid[tile_pos]:
@@ -572,6 +702,11 @@ func clear_all_water_tiles() -> void:
 	for pos in active_fluid_tiles.keys():
 		remove_fluid_tile(pos)
 	_condition_timers.clear()
+	if cell_fluid != null and is_instance_valid(cell_fluid):
+		cell_fluid.clear_all()
+	if cell_fluid_fx != null and is_instance_valid(cell_fluid_fx):
+		cell_fluid_fx.clear_all()
+	_proj_tiles.clear()
 
 # --- Freeze / Thaw ---
 
@@ -606,9 +741,14 @@ func freeze_fluid_at(tile_pos: Vector2i) -> Array[Vector2i]:
 			visited[neighbor] = true
 			queue.append(neighbor)
 
-	# Remove all the fluid from the frozen tiles
+	# Remove all the fluid from the frozen tiles -- AND from the cells under them
+	# on structured maps, else the cell sim re-projects (re-floods) them next tick.
 	for tile in frozen_tiles:
 		remove_fluid_tile(tile)
+		if cell_fluid != null and cell_fluid.active_sim():
+			cell_fluid.drain_tile(tile)
+			_proj_tiles.erase(tile)
+			GridManager.fluids.erase(tile)
 
 	return frozen_tiles
 
@@ -631,6 +771,10 @@ func freeze_all_fluids() -> Dictionary:
 
 	for tile_pos in tiles_to_freeze:
 		remove_fluid_tile(tile_pos)
+	# structured maps: the whole cell sim is frozen -- empty it so nothing re-floods
+	if cell_fluid != null and cell_fluid.active_sim():
+		cell_fluid.clear_all()
+		_proj_tiles.clear()
 
 	return frozen_data
 

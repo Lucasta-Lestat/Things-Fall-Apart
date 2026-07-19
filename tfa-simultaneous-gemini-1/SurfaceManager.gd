@@ -30,6 +30,30 @@ var electrified_grid: Dictionary = {}  # Dictionary[Vector2i, Dictionary]
 # Per-character apply cooldowns for the electrified system (separate from fire's).
 var _electrified_condition_timers: Dictionary = {}  # Dictionary[int, float]
 
+# CELL-GRAPH FIRE: when a map supplies a CellGraph (structured -> Stalberg cells,
+# legacy -> square-tile adapter), fire runs on it instead of the tile surface_grid
+# -- organic spread, fuel scaling, wind bias. The tile-fire code below stays but
+# goes dormant (ignition routes to cell_fire, so surface_grid never gets fire).
+var cell_fire: CellFire = null
+const CELL_FIRE_SCENE := preload("res://CellFire.gd")
+
+
+# Called by Game.load_map once the grid + structures exist. graph may be null
+# (e.g. world maps) -> fire falls back to the legacy tile path.
+func setup_cell_graph(graph: CellGraph) -> void:
+	if cell_fire != null and is_instance_valid(cell_fire):
+		cell_fire.queue_free()
+		cell_fire = null
+	if graph == null or graph.cell_count <= 0:
+		return
+	cell_fire = CELL_FIRE_SCENE.new()
+	add_child(cell_fire)
+	cell_fire.setup(graph, self, _surface_defs.get("fire", {}))
+
+
+func _cell_fire_active() -> bool:
+	return cell_fire != null and is_instance_valid(cell_fire) and cell_fire.active()
+
 func _ready() -> void:
 	_load_surface_database()
 
@@ -53,6 +77,8 @@ func update_surfaces(delta: float, characters: Array, game: Node) -> void:
 		_process_spread(delta, game)
 		_process_damage(delta, game)
 		_process_lifetime(delta, game)
+	if _cell_fire_active():
+		cell_fire.tick(delta, characters, game)
 	if not electrified_grid.is_empty():
 		_apply_electrified_to_characters(delta, characters)
 		_process_electrified_lifetime(delta)
@@ -180,12 +206,13 @@ func _process_damage(delta: float, game: Node) -> void:
 					var sc = Color(scorch_color_arr[0], scorch_color_arr[1], scorch_color_arr[2], scorch_color_arr[3])
 					_scorch_floor(tile_pos, sc, game)
 
-		# Damage structures on this tile
+		# Damage structures on this tile (real footprint, not the pathing halo --
+		# a fire a body-width away from a wall shouldn't chew through it)
 		if game and "structures_in_scene" in game:
 			for structure in game.structures_in_scene:
 				if not is_instance_valid(structure):
 					continue
-				if tile_pos in structure.occupied_tiles:
+				if tile_pos in _fire_tiles_of(structure):
 					structure.take_damage(damage_per_tick.duplicate(), 0)
 
 	for tile_pos in tiles_to_remove:
@@ -219,6 +246,9 @@ func _process_lifetime(delta: float, game: Node) -> void:
 
 func try_ignite_area(center_world: Vector2, radius: float) -> void:
 	"""Attempt to ignite all flammable tiles within a world-space radius."""
+	if _cell_fire_active():
+		cell_fire.ignite_area(center_world, radius)
+		return
 	var center_tile = GridManager.world_to_map(center_world)
 	var tile_radius = int(ceil(radius / GridManager.TILE_SIZE))
 
@@ -260,10 +290,16 @@ func place_surface_in_area(surface_id: String, center_world: Vector2, radius: fl
 
 func try_ignite(tile_pos: Vector2i) -> void:
 	"""Attempt to ignite a single tile. Checks fluids first (flood-fill), then floors."""
+	# ice thaw stays on the tile grid even under cell fire (ice is tile-based)
+	if surface_grid.has(tile_pos) and surface_grid[tile_pos]["surface_id"] == "ice":
+		thaw_ice_at(tile_pos)
+		return
+	if _cell_fire_active():
+		# route ground ignition to the cell fire (the tile's centre cell). Fluid
+		# flood-ignition stays on the tile FluidManager until stage 2.
+		cell_fire.ignite_at(GridManager.map_to_world(tile_pos))
+		return
 	if surface_grid.has(tile_pos):
-		# Fire hitting ice → thaw the ice instead of igniting
-		if surface_grid[tile_pos]["surface_id"] == "ice":
-			thaw_ice_at(tile_pos)
 		return  # Already has a surface
 
 	var game = _get_game()
@@ -281,15 +317,18 @@ func try_ignite(tile_pos: Vector2i) -> void:
 		if not fluid_type.is_empty():
 			return  # Has non-flammable fluid — can't ignite
 
-	# Non-flammable structure blocks fire
+	# Non-flammable structure blocks fire (tight fire footprint, not the pathing
+	# halo -- see _fire_tiles_of; any flammable claimer wins on shared tiles)
 	if game and "structures_in_scene" in game:
+		var claimed := false
 		for structure in game.structures_in_scene:
-			if is_instance_valid(structure) and tile_pos in structure.occupied_tiles:
-				if not structure.flammable:
-					return
-				else:
+			if is_instance_valid(structure) and tile_pos in _fire_tiles_of(structure):
+				if structure.flammable:
 					_ignite_tile(tile_pos, "floor")
 					return
+				claimed = true
+		if claimed:
+			return
 
 	# Check flammable floor
 	if _is_floor_flammable(tile_pos):
@@ -332,6 +371,10 @@ func _ignite_tile(tile_pos: Vector2i, source_type: String) -> void:
 
 func try_extinguish(tile_pos: Vector2i) -> void:
 	"""Extinguish fire at a tile (e.g. water flowing in)."""
+	# fire lives on the cell graph now -- bridge the tile water-douse to it
+	if _cell_fire_active():
+		cell_fire.douse_at(GridManager.map_to_world(tile_pos))
+		return
 	if surface_grid.has(tile_pos) and surface_grid[tile_pos]["surface_id"] == "fire":
 		_remove_surface(tile_pos)
 
@@ -413,6 +456,8 @@ func clear_all_surfaces() -> void:
 		_remove_surface(tile_pos)
 	for tile_pos in electrified_grid.keys():
 		_remove_electrified(tile_pos)
+	if cell_fire != null and is_instance_valid(cell_fire):
+		cell_fire.clear_all()
 	_condition_timers.clear()
 	_electrified_condition_timers.clear()
 	_spread_timer = 0.0
@@ -457,17 +502,33 @@ func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
 			# There's fluid here — only flammable if the fluid itself is flammable
 			return fluid_manager.is_fluid_flammable(tile_pos)
 
-	# Non-flammable structure on tile blocks fire from reaching the floor underneath
+	# Non-flammable structure on tile blocks fire from reaching the floor underneath.
+	# Structured maps inflate occupied_tiles by a PATHING margin -- test the tight
+	# fire footprint instead (falls back to occupied_tiles on legacy maps, where
+	# it is tile-exact), and when several structures claim the tile, ANY flammable
+	# claimer lets fire take hold (iteration order must not decide).
 	if game and "structures_in_scene" in game:
+		var claimed := false
 		for structure in game.structures_in_scene:
 			if not is_instance_valid(structure):
 				continue
-			if tile_pos in structure.occupied_tiles:
-				# Structure is here — fire can only spread if structure is flammable
-				return structure.flammable
+			if tile_pos in _fire_tiles_of(structure):
+				if structure.flammable:
+					return true
+				claimed = true
+		if claimed:
+			return false
 
 	# Check floor flammability
 	return _is_floor_flammable(tile_pos)
+
+
+# The tiles a structure blocks/feeds fire on: its real-geometry footprint when
+# the loader provided one (structured maps), else its occupied tiles (legacy).
+func _fire_tiles_of(structure) -> Array:
+	if "fire_blocking_tiles" in structure and not structure.fire_blocking_tiles.is_empty():
+		return structure.fire_blocking_tiles
+	return structure.occupied_tiles
 
 func _is_floor_flammable(tile_pos: Vector2i) -> bool:
 	if not GridManager.floors.has(tile_pos):

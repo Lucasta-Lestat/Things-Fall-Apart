@@ -85,11 +85,15 @@ func apply_blend_shader():
 	sprite.material = material
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
+	if amount.is_empty():
+		return   # no-damage hits must not flash/emit (see Structure.take_damage)
 	var damage_multiplier = pow(1.5,success_level)
 	var took_fire_damage = false
 
 	for damage_type in amount.keys():
-		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier - self.damage_resistances[damage_type]))
+		# clamped + safe lookup: resistance must never heal, unknown types must not abort
+		var dealt = max(0.0, amount[damage_type]*damage_multiplier - self.damage_resistances.get(damage_type, 0))
+		current_health = max(0, current_health - dealt)
 		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
 		if damage_type == "fire":
 			took_fire_damage = true

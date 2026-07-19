@@ -5190,5 +5190,125 @@
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null
+  },
+  {
+	"id": "iron_key",
+	"display_name": "Iron Key",
+	"type": "key",
+	"description": "A small iron key.",
+	"sprite_path": "res://Items/iron_key.png",
+	"base_width": 12.0,
+	"base_height": 12.0,
+	"weight": 0.1,
+	"cost": 5.0,
+	"interact_options": [
+	 "Inspect",
+	 "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	 "Metal": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"key": null
+  },
+  {
+	"id": "brass_key",
+	"display_name": "Brass Key",
+	"type": "key",
+	"description": "A worn brass key.",
+	"sprite_path": "res://Items/brass_key.png",
+	"base_width": 12.0,
+	"base_height": 12.0,
+	"weight": 0.1,
+	"cost": 10.0,
+	"interact_options": ["Inspect", "Drop"],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {"Metal": 1},
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"key": null
+  },
+  {
+	"id": "silver_key",
+	"display_name": "Silver Key",
+	"type": "key",
+	"description": "A finely made silver key.",
+	"sprite_path": "res://Items/silver_key.png",
+	"base_width": 12.0,
+	"base_height": 12.0,
+	"weight": 0.1,
+	"cost": 25.0,
+	"interact_options": ["Inspect", "Drop"],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {"Metal": 1},
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"key": null
+  },
+  {
+	"id": "gold_key",
+	"display_name": "Gold Key",
+	"type": "key",
+	"description": "An ornate golden key.",
+	"sprite_path": "res://Items/gold_key.png",
+	"base_width": 12.0,
+	"base_height": 12.0,
+	"weight": 0.1,
+	"cost": 60.0,
+	"interact_options": ["Inspect", "Drop"],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {"Metal": 1},
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"key": null
+  },
+  {
+	"id": "bed_wooden",
+	"display_name": "Wooden Bed",
+	"type": "item",
+	"description": "A sturdy oak-frame bed with a wool blanket.",
+	"base_width": 34.0,
+	"base_height": 55.0,
+	"sprite_path": "res://Items/bed_wooden.png",
+	"weight": 45.0,
+	"cost": 14.0,
+	"interact_options": [
+	 "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	 "Wood": 3,
+	 "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "wardrobe",
+	"display_name": "Wardrobe",
+	"type": "item",
+	"description": "A tall oak wardrobe with iron hinges.",
+	"base_width": 24.0,
+	"base_height": 49.0,
+	"sprite_path": "res://Items/wardrobe.png",
+	"weight": 60.0,
+	"cost": 18.0,
+	"interact_options": [
+	 "Drop"
+	],
+	"max_hp": 45.0,
+	"hp": 45.0,
+	"traits": {
+	 "Wood": 4
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]

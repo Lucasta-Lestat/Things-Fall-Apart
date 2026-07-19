@@ -122,6 +122,12 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	# --- Walking noise (how loud footsteps are, 0.0 = silent, 1.0 = normal) ---
 	_set_if_exists(character, "walking_noise", race.get("walking_noise", 1.0))
 
+	# --- Jump / fall (rooftop traversal) --- races without the keys keep the
+	# character defaults (jump_height 0 = non-jumper), bit-identical to today
+	_set_if_exists(character, "jump_height", race.get("jump_height", null))
+	_set_if_exists(character, "jump_range", race.get("jump_range", null))
+	_set_if_exists(character, "fall_damage_mult", race.get("fall_damage_mult", null))
+
 	# --- Body dimensions ---
 	var body: Dictionary = race.get("body", {})
 	_set_if_exists(character, "body_size_mod",    body.get("body_size_mod", 1.0))
@@ -133,6 +139,11 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	# Uniform-scale mode: when set, BodyPartSprites uses this single scale factor
 	# for head/torso/arms so source-art relative proportions are preserved.
 	_set_if_exists(character, "body_scale",        body.get("body_scale"))
+	# Auto-rig (Option C): a packaged CharacterRig mesh scene + its uniform scale.
+	# Both fields accept a plain value (shared by genders) OR a
+	# {"male": ..., "female": ...} dict (gendered rig exports).
+	_set_if_exists(character, "rig_scene_path",    str(_gendered(body.get("rig_scene", ""), gender, "")))
+	_set_if_exists(character, "rig_scale",         float(_gendered(body.get("rig_scale", 0.0), gender, 0.0)))
 	_set_if_exists(character, "leg_length",        body.get("leg_length"))
 	_set_if_exists(character, "leg_width",         body.get("leg_width"))
 	_set_if_exists(character, "leg_spacing",       body.get("leg_spacing"))
@@ -300,6 +311,19 @@ func _apply_asi(character, stat_name: String, modifier: int) -> void:
 func _add_to(character, property: String, amount: float) -> void:
 	if property in character:
 		character.set(property, character.get(property) + amount)
+
+static func _gendered(v, gender: String, fallback):
+	# Resolve a possibly-gendered data field: {"male": x, "female": y} -> the
+	# character's gender entry (falling back to male, then any entry).
+	if v is Dictionary:
+		if v.has(gender):
+			return v[gender]
+		if v.has("male"):
+			return v["male"]
+		for k in v:
+			return v[k]
+		return fallback
+	return v if v != null else fallback
 
 func _set_if_exists(character, property: String, value) -> void:
 	if value == null:

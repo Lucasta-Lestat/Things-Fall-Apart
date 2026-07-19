@@ -446,7 +446,7 @@ func _astar_path_to_waypoints(from_pos: Vector2, to_pos: Vector2) -> PackedVecto
 	"""Use A* pathfinding to get waypoints between two world positions."""
 	var start_tile = GridManager.world_to_map(from_pos)
 	var end_tile = GridManager.world_to_map(to_pos)
-	var tile_path = GridManager.find_path(start_tile, end_tile)
+	var tile_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof)
 	var waypoints = PackedVector2Array()
 	for tile in tile_path:
 		waypoints.append(GridManager.map_to_world(tile))

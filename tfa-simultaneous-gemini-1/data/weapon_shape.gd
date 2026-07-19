@@ -257,7 +257,11 @@ func _setup_hitbox() -> void:
 	hitbox.collision_layer = CollisionLayers.WEAPON_HITBOXES
 	hitbox.collision_mask = CollisionLayers.WEAPON_HITBOX_MASK
 	hitbox.monitoring = false
-	hitbox.monitorable = false
+	# monitorable MUST be true: a non-monitorable Area2D never forms broadphase
+	# pairs with STATIC bodies, so melee swings passed clean through walls/trees
+	# (Structures are StaticBody2D) while still hitting characters. Nothing else
+	# masks against WEAPON_HITBOXES, so this exposes the hitbox to no new code.
+	hitbox.monitorable = true
 	add_child(hitbox)
 
 	hitbox_shape = CollisionShape2D.new()
@@ -507,7 +511,14 @@ func load_from_data(data: Dictionary) -> void:
 	
 	# Combat & Stats
 	if data.has("base_damage"): base_damage = data["base_damage"]
-	if data.has("damage"): damage = data["damage"]
+	if data.has("damage") and data["damage"] is Dictionary: damage = (data["damage"] as Dictionary).duplicate()
+	# a weapon must never swing with an EMPTY damage dict -- structures flash
+	# from the hit but take zero damage and show no numbers ("immortal wall")
+	if damage.is_empty():
+		var fallback_type := str(data.get("primary_damage_type", "bludgeoning"))
+		if fallback_type == "" or fallback_type == "null":
+			fallback_type = "bludgeoning"
+		damage = {fallback_type: maxf(1.0, float(base_damage))}
 	if data.has("primary_damage_type"): primary_damage_type = data["primary_damage_type"]
 	if data.has("damage_resitances"): damage_resitances = data["damage_resitances"]
 	if data.has("range"): weapon_range = data["range"]

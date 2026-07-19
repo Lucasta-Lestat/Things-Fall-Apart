@@ -63,6 +63,7 @@ var last_heard_position: Vector2 = Vector2.ZERO
 var time_since_last_stimulus: float = 999.0
 var ally_share_timer: float = 0.0
 var _search_look_timer: float = 0.0
+var _search_repath_cd: float = 0.0   # throttle repaths to an unreachable noise
 
 signal alertness_changed(old_alertness: Alertness, new_alertness: Alertness)
 
@@ -174,7 +175,7 @@ func _check_stealth_wake() -> void:
 	for pc in party:
 		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
 			continue
-		if is_in_line_of_sight(pc.global_position):
+		if is_in_line_of_sight(pc.global_position, pc.get_elevation()):
 			wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, pc.global_position)
 			return  # is_at_ease is now false; caller's early-out blocks re-entry
 
@@ -300,7 +301,7 @@ func get_sight_range_tiles() -> int:
 func get_facing_vector() -> Vector2:
 	return Vector2.UP.rotated(character.rotation)
 
-func is_in_line_of_sight(target_position: Vector2) -> bool:
+func is_in_line_of_sight(target_position: Vector2, target_elev: float = 0.0) -> bool:
 	var to_target = target_position - character.global_position
 	var distance = to_target.length()
 
@@ -314,17 +315,17 @@ func is_in_line_of_sight(target_position: Vector2) -> bool:
 	if abs(angle_to_target) > half_fov:
 		return false
 
-	return _has_clear_sight_line(target_position)
+	return _has_clear_sight_line(target_position, target_elev)
 
-func _has_clear_sight_line(target_position: Vector2) -> bool:
+func _has_clear_sight_line(target_position: Vector2, target_elev: float = 0.0) -> bool:
 	var world := character.get_world_2d()
 	if not world:
 		return true
-	var space := world.direct_space_state
-	var params := PhysicsRayQueryParameters2D.create(character.global_position, target_position, CollisionLayers.VISION_RAY_MASK)
-	params.collide_with_areas = false
-	params.collide_with_bodies = true
-	return space.intersect_ray(params).is_empty()
+	# Elevation-aware: an elevated sentry sees over 1-story walls; a ground NPC
+	# can't see onto decks (their occlude_top blocks a ground-level viewer).
+	# Passing the target's elevation lets a street guard acquire a character
+	# standing on a roof (otherwise the perimeter wall blocks every ray up).
+	return GridManager.sight_line_clear(world.direct_space_state, character.global_position, target_position, character.get_elevation(), target_elev)
 
 func get_items_in_line_of_sight() -> Array:
 	var visible_items = []
@@ -339,7 +340,7 @@ func get_items_in_line_of_sight() -> Array:
 func get_characters_in_line_of_sight() -> Array:
 	var visible_chars = []
 	for c in game.characters_in_scene:
-		if c != character and is_instance_valid(c) and is_in_line_of_sight(c.global_position):
+		if c != character and is_instance_valid(c) and is_in_line_of_sight(c.global_position, c.get_elevation()):
 			visible_chars.append(c)
 	return visible_chars
 
@@ -376,7 +377,7 @@ func _update_target() -> void:
 			var other = node as ProceduralCharacter
 			if not other or not other.is_alive():
 				continue
-			if not is_in_line_of_sight(other.global_position):
+			if not is_in_line_of_sight(other.global_position, other.get_elevation()):
 				continue
 			var dist = character.global_position.distance_to(other.global_position)
 			if dist < detection_range:
@@ -414,7 +415,7 @@ func _update_target() -> void:
 		if infatuation_source and other == infatuation_source:
 			continue
 
-		if not is_in_line_of_sight(other.global_position):
+		if not is_in_line_of_sight(other.global_position, other.get_elevation()):
 			continue
 
 		var dist = character.global_position.distance_to(other.global_position)
@@ -507,6 +508,12 @@ func _process_approach(delta: float) -> void:
 		return
 
 	if dist <= safe_attack_range and dist >= safe_too_close and attack_cooldown_timer <= 0:
+		# Melee can't reach across stories (Game.can_hit_target vetoes the hit) —
+		# don't enter ATTACK and whiff forever at a deck edge; path toward the
+		# target instead so A*'s per-step elevation routing finds the ramp.
+		if absf(character.get_elevation() - _target_elevation()) > game.MELEE_ELEV_TOLERANCE:
+			_move_toward(current_target.global_position)
+			return
 		_change_state(AIState.ATTACK)
 		return
 
@@ -526,12 +533,24 @@ func _process_approach(delta: float) -> void:
 			var strafe_dir = dir_to_target.rotated(PI / 2 * (1 if randf() > 0.5 else -1))
 			_move_toward(character.global_position + strafe_dir * 30)
 
+func _target_elevation() -> float:
+	if current_target and is_instance_valid(current_target):
+		if current_target.has_method("get_elevation"):
+			return current_target.get_elevation()
+		return GridManager.effective_elev(GridManager.world_to_map(current_target.global_position))
+	return character.get_elevation()
+
 func _process_attack(delta: float) -> void:
 	var combined_collision_dist = character.collision_radius + (current_target.collision_radius if current_target else 0) + character.minimum_separation
 	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
 
+	# Track the target while in ATTACK state: APPROACH stops re-facing once we
+	# get here, so a strafing target used to drift out of the firing line.
+	if current_target and is_instance_valid(current_target):
+		character.target_rotation = (current_target.global_position - character.global_position).angle() + PI / 2
+
 	if not character.attack_animator.is_attacking:
-		character.attack()
+		character.attack("Main", null, current_target)
 		if character.current_main_hand_item:
 			attack_cooldown_timer = attack_cooldown / character.attack_speed_multiplier
 		else:
@@ -651,7 +670,7 @@ func _move_toward(target_pos: Vector2) -> void:
 func navigate_to(world_pos: Vector2) -> void:
 	var start = GridManager.world_to_map(character.global_position)
 	var end_tile = GridManager.world_to_map(world_pos)
-	nav_path = GridManager.find_path(start, end_tile)
+	nav_path = GridManager.find_path(start, end_tile, character.jump_height, character.jump_range, character.on_roof)
 	nav_path_index = 0
 	if not nav_path.is_empty():
 		_advance_path()
@@ -790,7 +809,7 @@ func is_item_owned_by_ally(item: Node) -> bool:
 func can_reach_item(item: Node) -> bool:
 	var start_tile = GridManager.world_to_map(character.global_position)
 	var end_tile = GridManager.world_to_map(item.global_position)
-	var test_path = GridManager.find_path(start_tile, end_tile)
+	var test_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof)
 	return not test_path.is_empty()
 
 func pickup_item(item: Node):
@@ -845,7 +864,7 @@ func find_random_wander_target(from_tile: Vector2i) -> Vector2i:
 				continue
 			var check_tile = from_tile + Vector2i(x, y)
 			if is_tile_walkable(check_tile):
-				var test_path = GridManager.find_path(from_tile, check_tile)
+				var test_path = GridManager.find_path(from_tile, check_tile, character.jump_height, character.jump_range, character.on_roof)
 				if not test_path.is_empty():
 					valid_tiles.append(check_tile)
 
@@ -856,6 +875,14 @@ func find_random_wander_target(from_tile: Vector2i) -> Vector2i:
 
 func is_tile_walkable(tile: Vector2i) -> bool:
 	if not GridManager.would_walk(tile):
+		return false
+	# Elevation gate ONLY for directly adjacent candidates: can_step is defined
+	# for single-tile transitions. Distant flee/wander targets legitimately
+	# differ by more than one step's elevation — A* (elevation-aware per step
+	# via _get_neighbors) decides whether a graded route exists.
+	var cur_t := GridManager.world_to_map(character.global_position)
+	var dt := tile - cur_t
+	if absi(dt.x) + absi(dt.y) == 1 and not GridManager.can_step(cur_t, tile):
 		return false
 	# Check if another character occupies this tile
 	for c in game.characters_in_scene:
@@ -965,7 +992,7 @@ func _share_alertness_with_allies() -> void:
 		if not other_ai:
 			continue
 		# LOS required — eye contact, not telepathy.
-		if not is_in_line_of_sight(other_char.global_position):
+		if not is_in_line_of_sight(other_char.global_position, other_char.get_elevation()):
 			continue
 		if alertness_value > other_ai.alertness_value:
 			# Transfer half the gap; tag last_heard_position so they look the
@@ -995,8 +1022,16 @@ func _process_searching(delta: float) -> void:
 	var dist = character.global_position.distance_to(last_heard_position)
 	if dist > GridManager.TILE_SIZE * 0.75:
 		# Still en route to the noise.
+		_search_repath_cd -= delta
 		if not character.is_moving and nav_path.is_empty():
-			navigate_to(last_heard_position)
+			if _search_repath_cd <= 0.0:
+				navigate_to(last_heard_position)
+				# Unreachable noise (e.g. a roof-walker's footsteps land on a
+				# tile a ground NPC can't path to): find_path returned empty and
+				# we're not moving, so without a cooldown this re-floods a
+				# full-map A* every frame. Back off and let alertness decay.
+				if nav_path.is_empty():
+					_search_repath_cd = 0.6
 		else:
 			_check_path_progress()
 		_search_look_timer = 0.0

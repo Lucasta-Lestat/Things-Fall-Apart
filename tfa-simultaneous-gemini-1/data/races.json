@@ -1,3190 +1,3375 @@
 {
-	"races": [
-		{
-			"id": "human",
-			"name": "Human",
-			"icon": "Assets/Icons/Human.png",
-			"description": "The most numerous race in much of Galba, either by breeding faster or dying less often than other races. One of the shortest lived races, after only orcs and half-orcs, and one of the most ambitious and present oriented.",
-			"cost": 0,
-			"features": [],
-			"ability_score_increases": {},
-			"traits": {
-				"_choice": "Choose 2"
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 20,
-				"middle": 40,
-				"old": 60
-			},
-			"height": {
-				"male": 148,
-				"female": 135
-			},
-			"weight": {
-				"male": 170,
-				"female": 130
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#F5D6B8",
-					"#D4A574",
-					"#8D5524",
-					"#4A2912"
-				],
-				"hair_colors": [
-					"#4A3728",
-					"#1A1A1A",
-					"#C4A35A",
-					"#8B4513",
-					"#D4D4D4"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"HORSESHOE",
-						"COMBOVER",
-						"BUZZCUT",
-						"MOHAWK"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"BRAIDS",
-						"BUN",
-						"PIGTAILS",
-						"POMPADOUR"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": []
-		},
-		{
-			"id": "halfling",
-			"name": "Halfling",
-			"icon": "Assets/Icons/Halfling.png",
-			"description": "A shorter, earthier, and more materialistic relative of humans. Known for their great agility, the monkeys to our gorillas, one might say",
-			"cost": 1,
-			"features": [
-				"lucky"
-			],
-			"ability_score_increases": {
-				"Dex": 10,
-				"Cha": 5,
-				"Str": -10
-			},
-			"traits": {
-				"Mobility": 1,
-				"Stealth": 1,
-				"Fear": 1,
-				"Thrown Weapon": 1,
-				"Unassuming": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 25,
-				"middle": 50,
-				"old": 75
-			},
-			"height": {
-				"male": 75,
-				"female": 69
-			},
-			"weight": {
-				"male": 30,
-				"female": 25
-			},
-			"size": "Small",
-			"body": {
-				"body_size_mod": 0.7,
-				"body_width": 34,
-				"body_height": 21,
-				"head_width": 25,
-				"head_length": 22,
-				"shoulder_y_offset": 8,
-				"leg_length": 6,
-				"leg_width": 2,
-				"leg_spacing": 5
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Halfling/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Halfling/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#F5D6B8",
-					"#E8C49A",
-					"#D4A574"
-				],
-				"hair_colors": [
-					"#8B4513",
-					"#C4A35A",
-					"#4A3728",
-					"#A0522D"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"COMBOVER"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"BRAIDS"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": -5,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"lucky"
-			]
-		},
-		{
-			"id": "gnome",
-			"name": "Gnome",
-			"icon": "Assets/Icons/Gnome.png",
-			"description": "Curious sentient fungal creatures with red mushrooms caps on their heads. Highly intelligent, mercurial, and masochistic.",
-			"cost": 1,
-			"features": [
-				"quixotic"
-			],
-			"ability_score_increases": {
-				"Cha": 5,
-				"Str": -10,
-				"Int": 10
-			},
-			"traits": {
-				"Scientific": 1,
-				"Tinkerer": 1,
-				"Arcana": 1,
-				"Unassuming": 1,
-				"Carousing": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 100,
-				"middle": 200,
-				"old": 300
-			},
-			"height": {
-				"male": 70,
-				"female": 64
-			},
-			"weight": {
-				"male": 25,
-				"female": 20
-			},
-			"size": "Small",
-			"body": {
-				"body_size_mod": 0.7,
-				"body_width": 34,
-				"body_height": 21,
-				"head_width": 31,
-				"head_length": 26,
-				"shoulder_y_offset": 8,
-				"leg_length": 6,
-				"leg_width": 2,
-				"leg_spacing": 5
-			},
-			"appearance": {
-				"skin_colors": [
-					"#E8D5C4",
-					"#F0E0D0",
-					"#C4A882"
-				],
-				"hair_colors": [
-					"#CC0000",
-					"#AA0000",
-					"#880000"
-				],
-				"blood_color": "#556B2F",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 7,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": -5,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"quixotic"
-			]
-		},
-		{
-			"id": "half_elf",
-			"name": "Half-Elf",
-			"icon": "Assets/Icons/Half-Elf.png",
-			"description": "Despite the Elves racially charged arrogance, they frequently intermarry with \"hylics\", as they call the lesser races. Indeed, they must do so in order to maintain a stable population in warlike times, given their slow rate of maturation. Though once looked down upon, those of mixed human and elven descent now make up the outright majority of the population in Belmonte and among noble classes throughout the continent",
-			"cost": 1,
-			"features": [
-				"light_cantrip"
-			],
-			"ability_score_increases": {
-				"Cha": 5,
-				"Dex": 7,
-				"Int": 7,
-				"Str": -2
-			},
-			"traits": {
-				"Persuasive": 1,
-				"Race Relations": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 37.5,
-				"middle": 75,
-				"old": 120
-			},
-			"height": {
-				"male": 158,
-				"female": 145
-			},
-			"weight": {
-				"male": 160,
-				"female": 132
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Half-Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Half-Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#FAEBD7",
-					"#F5D6B8",
-					"#D4A574"
-				],
-				"hair_colors": [
-					"#C4A35A",
-					"#F5E6CC",
-					"#4A3728",
-					"#1A1A1A"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"elf_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"POMPADOUR",
-						"BRAIDS"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"light_cantrip"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "half_orc",
-			"name": "Half-Orc",
-			"icon": "Assets/Icons/Half-Orc.png",
-			"description": "Typically the sad products of systemic rape. Their half that isn't orc may be almost literally anything else, as the orc's flexible genetics find purchase in almost any womb, or any flower even",
-			"cost": 1,
-			"features": [
-				"brutal_critical"
-			],
-			"ability_score_increases": {
-				"Str": 15,
-				"Con": 10,
-				"Int": -7,
-				"Cha": -7
-			},
-			"traits": {
-				"Athletic": 1,
-				"Savage": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 10,
-				"middle": 20,
-				"old": 30
-			},
-			"height": {
-				"male": 158,
-				"female": 145
-			},
-			"weight": {
-				"male": 200,
-				"female": 166
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#6B8E23",
-					"#556B2F",
-					"#8FBC8F",
-					"#808060"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F2F2F",
-					"#4A3728"
-				],
-				"blood_color": "#4A0000",
-				"head_shape": "ORCISH",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"MOHAWK",
-						"BUZZCUT",
-						"NONE"
-					],
-					"female": [
-						"MOHAWK",
-						"BUZZCUT",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 7,
-				"crit_fail_threshold": 94,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"brutal_critical"
-			]
-		},
-		{
-			"id": "dwarf",
-			"name": "Dwarf",
-			"icon": "Assets/Icons/Dwarf.png",
-			"description": "Crass, materialistic and cruel midgets. Excessively ambitious and with a short memory for everything but grudges",
-			"cost": 1,
-			"features": [
-				"immune_to_drunken"
-			],
-			"ability_score_increases": {
-				"Str": 5,
-				"Con": 5,
-				"Wil": 5
-			},
-			"traits": {
-				"Stone": 1,
-				"Vengeful": 1,
-				"Historian": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 100,
-				"middle": 200,
-				"old": 300
-			},
-			"height": {
-				"male": 115,
-				"female": 105
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Small",
-			"body": {
-				"body_size_mod": 0.7,
-				"body_width": 48,
-				"body_height": 26,
-				"head_width": 25,
-				"head_length": 19,
-				"shoulder_y_offset": 8,
-				"leg_length": 6,
-				"leg_width": 2,
-				"leg_spacing": 5
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Dwarf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Dwarf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Dwarf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Dwarf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Dwarf/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Dwarf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Dwarf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Dwarf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Dwarf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Dwarf/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#D4A574",
-					"#C4956A",
-					"#B8860B"
-				],
-				"hair_colors": [
-					"#8B4513",
-					"#A0522D",
-					"#D4A35A",
-					"#C0C0C0",
-					"#1A1A1A"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"HORSESHOE",
-						"BUZZCUT"
-					],
-					"female": [
-						"FULL",
-						"BRAIDS",
-						"BUN"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": -5,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"immune_to_drunken"
-			]
-		},
-		{
-			"id": "sahuagin",
-			"name": "Sahuagin",
-			"icon": "Assets/Icons/Sahuagin.png",
-			"description": "Gar-like humanoids known for their toughness and distrust of all terrestrial life. Often used as shock troops by the Neptunians.",
-			"cost": 1,
-			"features": [
-				"swift_swim",
-				"rough_skin"
-			],
-			"ability_score_increases": {
-				"Dex": 10,
-				"Con": 5
-			},
-			"traits": {
-				"Paranoid": 1,
-				"Aquatic": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 25,
-				"middle": 50,
-				"old": 75
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 29,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#2E8B57",
-					"#20B2AA",
-					"#008080",
-					"#006666"
-				],
-				"hair_colors": [],
-				"blood_color": "#00CED1",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"swift_swim",
-				"rough_skin"
-			]
-		},
-		{
-			"id": "kobold",
-			"name": "Kobold",
-			"icon": "Assets/Icons/Kobold.png",
-			"description": "Little misshapen lizards created by the First Dragons to terrorize the populations over which they ruled. They were granted by their creators a great practical intelligence but also a vanishingly short memory and an active malice toward all non-reptiles. Kobold's have inherited the great Engineering projects of the old Empire, and turned them to antisocial uses, such as the transformation of the Aqueducts into Inferniducts",
-			"cost": 1,
-			"features": [
-				"jury_rig"
-			],
-			"ability_score_increases": {
-				"Cha": -5,
-				"Wil": -5,
-				"Str": -10,
-				"Dex": 15,
-				"Int": 10
-			},
-			"traits": {
-				"chaotic": 1,
-				"Technical": 1,
-				"Intimidating": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 20,
-				"middle": 40,
-				"old": 60
-			},
-			"height": {
-				"male": 90,
-				"female": 82
-			},
-			"weight": {
-				"male": 40,
-				"female": 33
-			},
-			"size": "Small",
-			"body": {
-				"body_size_mod": 0.7,
-				"body_width": 34,
-				"body_height": 21,
-				"head_width": 26,
-				"head_length": 29,
-				"shoulder_y_offset": 8,
-				"leg_length": 6,
-				"leg_width": 2,
-				"leg_spacing": 5
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Kobold/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Kobold/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Kobold/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Kobold/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Kobold/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Kobold/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Kobold/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Kobold/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Kobold/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Kobold/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#CD853F",
-					"#B8860B",
-					"#8B7355",
-					"#D2691E"
-				],
-				"hair_colors": [],
-				"blood_color": "#8B0000",
-				"head_shape": "DRACONIC",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 93,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": -5,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"jury_rig"
-			]
-		},
-		{
-			"id": "saurian",
-			"name": "Saurian",
-			"icon": "Assets/Icons/Saurian.png",
-			"description": "A semi aquatic draconic race, created by the Dragon Emperor Heliograbalus to serve as his personal Privateer navy. They eventually rebelled against his rule, and now mostly live in quasi independent communities on the east coast of scarlatti",
-			"cost": 1,
-			"features": [
-				"tough_claws",
-				"natural_armor"
-			],
-			"ability_score_increases": {
-				"Str": 5,
-				"Con": 5,
-				"Wil": 5
-			},
-			"traits": {
-				"Cruel": 1,
-				"Aquatic": 1,
-				"Survival": 1,
-				"Drug user": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 20,
-				"middle": 40,
-				"old": 60
-			},
-			"height": {
-				"male": 160,
-				"female": 147
-			},
-			"weight": {
-				"male": 200,
-				"female": 166
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 55,
-				"body_height": 28,
-				"head_width": 35,
-				"head_length": 39,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Saurian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Saurian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#6B8E23",
-					"#228B22",
-					"#2E8B57",
-					"#556B2F"
-				],
-				"hair_colors": [],
-				"blood_color": "#6B8E23",
-				"head_shape": "DRACONIC",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"tough_claws",
-				"natural_armor"
-			]
-		},
-		{
-			"id": "mephistkin",
-			"name": "Mephistkin",
-			"icon": "Assets/Icons/Mephistkin.png",
-			"description": "Pregnant mothers in regions where corruption and bribery have become normalized often bear children with strange deformities such as goat horns or purple skin. In the past, both the mother and such children were often strangled to death on the spot by the midwife herself. In these more enlightened times, the Mephistkin are merely consigned to live in ghettoes. While not necessarily evil, devilspawn are acknowledged to make some of the finest barristers and journalists, having an innate nack for twisting rules or information to their advantage.",
-			"cost": 1,
-			"features": [
-				"devilsight"
-			],
-			"ability_score_increases": {
-				"Cha": 20
-			},
-			"traits": {
-				"Fire resistant": 1,
-				"Stigmatized": 1,
-				"Manipulative": 3
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 100,
-				"middle": 200,
-				"old": 300
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 36,
-				"head_length": 31,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Mephistkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Mephistkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#8B0000",
-					"#B22222",
-					"#A52A2A",
-					"#DC143C"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F0000"
-				],
-				"blood_color": "#4A0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"MOHAWK"
-					],
-					"female": [
-						"FULL",
-						"POMPADOUR",
-						"LONG"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 4,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"devilsight"
-			]
-		},
-		{
-			"id": "goluna",
-			"name": "Goluna",
-			"icon": "Assets/Icons/Goluna.png",
-			"description": "A race of avian humanoids who migrate to Galba every summer from a distant continent.",
-			"cost": 2,
-			"features": [
-				"flight"
-			],
-			"ability_score_increases": {
-				"Dex": 10,
-				"Con": -5
-			},
-			"traits": {
-				"Perceptive": 1,
-				"Nimble": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 25,
-				"middle": 50,
-				"old": 75
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 110,
-				"female": 91
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 41,
-				"body_height": 23,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#E8E8E8",
-					"#D3D3D3",
-					"#C0C0C0",
-					"#F5F5F5"
-				],
-				"hair_colors": [
-					"#F5F5F5",
-					"#E0E0E0",
-					"#C4A35A"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"NONE"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"flight"
-			]
-		},
-		{
-			"id": "orc",
-			"name": "Orc",
-			"icon": "Assets/Icons/Orc.png",
-			"description": "One would think that belated rainfall in the world's harshest desert would be a cause for joy. Sadly, it heralds the bloom of the desert fungus creatures known as orcs, who quickly set about on their unique and terrible reproductive strategy of cross-species rape.",
-			"cost": 2,
-			"features": [
-				"ferocity",
-				"detritivore",
-				"brutal_critical",
-				"get_at_the_flesh"
-			],
-			"ability_score_increases": {
-				"Str": 30,
-				"Con": 20,
-				"Int": -15,
-				"Cha": -15
-			},
-			"traits": {
-				"Intimidating": 1,
-				"Ignorant": 3
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 0.5,
-				"middle": 1,
-				"old": 2
-			},
-			"height": {
-				"male": 168,
-				"female": 154
-			},
-			"weight": {
-				"male": 230,
-				"female": 190
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 62,
-				"body_height": 37,
-				"head_width": 34,
-				"head_length": 25,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 4,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Orc/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Orc/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Orc/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Orc/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Orc/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Orc/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Orc/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Orc/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Orc/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Orc/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#556B2F",
-					"#4A5D23",
-					"#3B4A1A",
-					"#6B8E23"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F2F2F"
-				],
-				"blood_color": "#4A0000",
-				"head_shape": "ORCISH",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"MOHAWK",
-						"BUZZCUT",
-						"NONE"
-					],
-					"female": [
-						"MOHAWK",
-						"BUZZCUT",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 8,
-				"crit_fail_threshold": 92,
-				"mp_regen_amount": 2,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"ferocity",
-				"detritivore",
-				"brutal_critical",
-				"get_at_the_flesh"
-			]
-		},
-		{
-			"id": "draconian",
-			"name": "Draconian",
-			"icon": "Assets/Icons/Dragonsworn.png",
-			"description": "The most loyal servants of the First Dragons, most remain slaves to this day, though they staff most of the important positions in Scarlatti's government. They were created more in the dragon's own image than the other draconic races, with the gift of their parents' deadly breath",
-			"cost": 2,
-			"features": [
-				"breath_weapon"
-			],
-			"ability_score_increases": {
-				"Str": 20,
-				"Con": 20,
-				"Wil": -20
-			},
-			"traits": {
-				"Unassuming": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 90,
-				"middle": 180,
-				"old": 270
-			},
-			"height": {
-				"male": 168,
-				"female": 154
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 55,
-				"body_height": 33,
-				"head_width": 35,
-				"head_length": 42,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Draconian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Draconian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Draconian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Draconian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Draconian/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Draconian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Draconian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Draconian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Draconian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Draconian/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#8B0000",
-					"#B8860B",
-					"#2F4F4F",
-					"#4A0080"
-				],
-				"hair_colors": [],
-				"blood_color": "#8B0000",
-				"head_shape": "DRACONIC",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"breath_weapon"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "goatmen",
-			"name": "Goatmen",
-			"icon": "Assets/Icons/Goatment.png",
-			"description": "These aristocratic humanoid goats are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don't even think humans have souls and are therefore not worthy of any respect.",
-			"cost": 2,
-			"features": [
-				"beguile",
-				"ram"
-			],
-			"ability_score_increases": {
-				"Int": 10,
-				"Cha": 10,
-				"Str": 5
-			},
-			"traits": {
-				"Intimidation": 1,
-				"Persuasion": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 16,
-				"middle": 50,
-				"old": 80
-			},
-			"height": {
-				"male": 185,
-				"female": 175
-			},
-			"weight": {
-				"male": 90,
-				"female": 78
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 36,
-				"head_length": 31,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Goatman/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Goatman/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Goatman/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Goatman/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#8B7355",
-					"#A0522D",
-					"#6B4423"
-				],
-				"hair_colors": [
-					"#2F2F2F",
-					"#4A3728",
-					"#1A1A1A"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"animal_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"NONE"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.5,
-			"active_abilities": [
-				"beguile",
-				"ram"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "carapacians",
-			"name": "Carapacians",
-			"icon": "Assets/Icons/Carapacians.png",
-			"description": "A race of turtle people often accused of being a \"fifth-column\" for invasion of the Land by the Neptunians. Slow, patient, and methodical planners of both revenge and preemptive hostility",
-			"cost": 2,
-			"features": [
-				"withdraw"
-			],
-			"ability_score_increases": {
-				"Con": 20,
-				"Dex": -20,
-				"Wil": 20
-			},
-			"traits": {
-				"Historian": 1,
-				"Cruel": 1,
-				"Aquatic": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 200,
-				"middle": 400,
-				"old": 600
-			},
-			"height": {
-				"male": 158,
-				"female": 145
-			},
-			"weight": {
-				"male": 230,
-				"female": 190
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 62,
-				"body_height": 37,
-				"head_width": 25,
-				"head_length": 22,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#556B2F",
-					"#4A6A3A",
-					"#3B5B2B"
-				],
-				"hair_colors": [],
-				"blood_color": "#6B8E23",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"withdraw"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "naga",
-			"name": "Naga",
-			"icon": "Assets/Icons/Naga.png",
-			"description": "A matriarchal race of snake people, known for their iron-clad caste system. All male Naga are either castrated or killed at birth, while the females reproduce parthenogenically, ensuring each generation is genetically identical to the last. Their Eastern Empire is perhaps the oldest and most reactionary civilization on Earth.",
-			"cost": 2,
-			"features": [
-				"poison_bite",
-				"charm_person"
-			],
-			"ability_score_increases": {
-				"Cha": 10,
-				"Int": 10,
-				"Will": 10
-			},
-			"traits": {
-				"Poison": 1,
-				"Calculating": 1,
-				"Manipulative": 1,
-				"Cruel": 2,
-				"Stealthy": 2,
-				"Deceptive": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 100,
-				"middle": 200,
-				"old": 300
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 33,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#9370DB",
-					"#8A2BE2",
-					"#20B2AA",
-					"#2E8B57"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F0050",
-					"#006400"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"NONE"
-					],
-					"female": [
-						"FULL",
-						"POMPADOUR",
-						"LONG",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"poison_bite",
-				"charm_person"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "newt",
-			"name": "Newt",
-			"icon": "Assets/Icons/Newt.png",
-			"description": "Humanoid amphibians from the jungles of Obi. Known for the hallucinogenic poison that coats their skin, and their particularly nightmarish practice of slavery. The slaves they take of other races, constantly having to be in contact with the Newts' psychedelic secretions, all eventually lose their minds in strange and terrible ways.",
-			"cost": 2,
-			"features": [
-				"poisonous_skin"
-			],
-			"ability_score_increases": {
-				"Cha": 15,
-				"Will": 15
-			},
-			"traits": {
-				"Barter": 1,
-				"Poison": 1,
-				"Primitive": 1,
-				"Cruel": 2
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 50,
-				"middle": 100,
-				"old": 150
-			},
-			"height": {
-				"male": 138,
-				"female": 126
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#FF6347",
-					"#FF4500",
-					"#FFA500",
-					"#32CD32"
-				],
-				"hair_colors": [],
-				"blood_color": "#ADFF2F",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"poisonous_skin"
-			]
-		},
-		{
-			"id": "centaur",
-			"name": "Centaur",
-			"icon": "Assets/Icons/Centaur.png",
-			"description": "One of the exalted mutants created by the Grail, Centaurs fill the ranks of the Knightly Orders of Belmonte",
-			"cost": 2,
-			"features": [
-				"chilling_neigh"
-			],
-			"ability_score_increases": {
-				"Str": 10,
-				"Dex": 10,
-				"Wil": 5
-			},
-			"traits": {
-				"Noble": 1,
-				"Primitive": 2
-			},
-			"creature_type": "Fey",
-			"age": {
-				"base": 75,
-				"middle": 150,
-				"old": 225
-			},
-			"height": {
-				"male": 180,
-				"female": 165
-			},
-			"weight": {
-				"male": 400,
-				"female": 332
-			},
-			"size": "Medium",
-			"body": {
-				"body_type": "quadruped",
-				"body_size_mod": 1.0,
-				"body_width": 55,
-				"body_height": 42,
-				"body_length": 70,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": -20,
-				"leg_length": 12,
-				"leg_width": 3,
-				"leg_spacing": 7,
-				"tail_length": 28,
-				"has_tail": true,
-				"has_arms": true
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#D4A574",
-					"#8B7355",
-					"#F5D6B8"
-				],
-				"hair_colors": [
-					"#4A3728",
-					"#1A1A1A",
-					"#C4A35A",
-					"#8B4513"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"MOHAWK"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"BRAIDS",
-						"POMPADOUR"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"chilling_neigh"
-			]
-		},
-		{
-			"id": "cerebrals",
-			"name": "Cerebrals",
-			"icon": "Assets/Icons/Cerebrals.png",
-			"description": "A bizarre research project by the genocidal gnomish leader Fridrik the Terrible to create the ideal being. Through a liberal use of both eugenics and dangerous alchemy, a race with the ambition of humans, the equanimity of elves, and the intelligence of gnomes was supposedly created. Fridrik's successor had no interest in the project and let everyone go home. Much time has passed since, and Cerebrals have formed their own communities and culture, but their minds and bodies show strange quirks of the genetic and magical ringer they were put through. Tend to have an odd fascination with water, especially tranquil pools",
-			"cost": 2,
-			"features": [
-				"came_to_me_in_a_dream"
-			],
-			"ability_score_increases": {
-				"Int": 30,
-				"Str": -5
-			},
-			"traits": {
-				"Aquatic": 1,
-				"Calm": 2,
-				"Scientific": 3,
-				"Historian": 3,
-				"Calculating": 3
-			},
-			"creature_type": "Aberration",
-			"age": {
-				"base": 150,
-				"middle": 300,
-				"old": 450
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 160,
-				"female": 132
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 34,
-				"body_height": 28,
-				"head_width": 41,
-				"head_length": 34,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#DDA0DD",
-					"#DA70D6",
-					"#BA55D3",
-					"#E6E6FA"
-				],
-				"hair_colors": [],
-				"blood_color": "#9370DB",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 10,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"came_to_me_in_a_dream"
-			]
-		},
-		{
-			"id": "pixie",
-			"name": "Pixie",
-			"icon": "Assets/Icons/Pixie.png",
-			"description": "The most whimiscal and malicious of fey, these mercurial and obnoxious bug-men are resented throughout Galba. Even in Belmonte, where due to fae pacts and tradition they effectively run the legal system, the people's patience often wears thin. \"Pixie Pogroms\" or \"Pest control\" are solutions of first resort for angry peasantry",
-			"cost": 2,
-			"features": [
-				"quixotic",
-				"flight"
-			],
-			"ability_score_increases": {
-				"Cha": 15,
-				"Int": 5,
-				"Wil": -10,
-				"Dex": 15
-			},
-			"traits": {
-				"Stigmatized": 2,
-				"Chaotic": 3
-			},
-			"creature_type": "Fey",
-			"age": {
-				"base": 500,
-				"middle": 1000,
-				"old": 1500
-			},
-			"height": {
-				"male": 30,
-				"female": 27
-			},
-			"weight": {
-				"male": 10,
-				"female": 8
-			},
-			"size": "Tiny",
-			"body": {
-				"body_size_mod": 0.35,
-				"body_width": 21,
-				"body_height": 12,
-				"head_width": 13,
-				"head_length": 12,
-				"shoulder_y_offset": 4,
-				"leg_length": 3,
-				"leg_width": 1,
-				"leg_spacing": 3
-			},
-			"appearance": {
-				"skin_colors": [
-					"#FFB6C1",
-					"#98FB98",
-					"#87CEEB",
-					"#DDA0DD"
-				],
-				"hair_colors": [
-					"#FFD700",
-					"#FF69B4",
-					"#00FA9A",
-					"#87CEEB"
-				],
-				"blood_color": "#FFD700",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR"
-					],
-					"female": [
-						"FULL",
-						"POMPADOUR",
-						"PIGTAILS"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 3,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"quixotic",
-				"flight"
-			]
-		},
-		{
-			"id": "sobruaro",
-			"name": "Sobruaro",
-			"icon": "Assets/Icons/Sobruaro.png",
-			"description": "Proud, prickly loners, these humanoid cacti typically make a solitary living herding livestock across the great deserts to the South, protecting their flocks from rape-mad orcs",
-			"cost": 2,
-			"features": [
-				"thorns"
-			],
-			"ability_score_increases": {
-				"Str": 5,
-				"Dex": 15,
-				"Wil": 10,
-				"Cha": -5
-			},
-			"traits": {
-				"Antisocial": 1,
-				"Primitive": 1,
-				"Empathetic": 2
-			},
-			"creature_type": "Plant",
-			"age": {
-				"base": 50,
-				"middle": 100,
-				"old": 150
-			},
-			"height": {
-				"male": 170,
-				"female": 156
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 55,
-				"body_height": 33,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#228B22",
-					"#2E8B57",
-					"#006400",
-					"#6B8E23"
-				],
-				"hair_colors": [],
-				"blood_color": "#228B22",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"thorns"
-			]
-		},
-		{
-			"id": "dhampir",
-			"name": "Dhampir",
-			"icon": "Assets/Icons/Dhampir.png",
-			"description": "The most thinblooded vampires often retain some degree of function in their reproductive organs, allowing them to produce offspring with other races. These are known as \"Dhampir\"",
-			"cost": 2,
-			"features": [
-				"con_drain_bite"
-			],
-			"ability_score_increases": {
-				"Str": 7,
-				"Dex": 7,
-				"Cha": 7,
-				"Int": 7,
-				"Will": -5
-			},
-			"traits": {
-				"Persuasive": 1,
-				"Deceptive": 2
-			},
-			"creature_type": "Humanoid, Undead",
-			"age": {
-				"base": 250,
-				"middle": 500,
-				"old": 750
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Human/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#F5F5DC",
-					"#E8E0D0",
-					"#D3C4B0",
-					"#C0B0A0"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#F5F5F5",
-					"#4A0000"
-				],
-				"blood_color": "#4A0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"COMBOVER"
-					],
-					"female": [
-						"FULL",
-						"POMPADOUR",
-						"LONG"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"con_drain_bite"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "bugaboo",
-			"name": "Bugaboo",
-			"icon": "Assets/Icons/Bugaboo.png",
-			"description": "Long limbed mantis people known for their infinite patience and homicidal mating rituals. Known to lay in wait for days at a time, blending in with foliage on the side of a road, striking out with nutcracker like arms to make a quick meal of any unwary traveller",
-			"cost": 2,
-			"features": [
-				"opportunist",
-				"grappling_strike"
-			],
-			"ability_score_increases": {
-				"Str": 10,
-				"Wil": 10,
-				"Dex": 10
-			},
-			"traits": {
-				"Calm": 1,
-				"Intimidation": 1,
-				"Stealthy": 2
-			},
-			"creature_type": "Monstrosity",
-			"age": {
-				"base": 5,
-				"middle": 10,
-				"old": 15
-			},
-			"height": {
-				"male": 180,
-				"female": 165
-			},
-			"weight": {
-				"male": 180,
-				"female": 149
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 62,
-				"body_height": 37,
-				"head_width": 31,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 10,
-				"leg_width": 4,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#2F4F2F",
-					"#3B5B3B",
-					"#4A6A4A",
-					"#1A3A1A"
-				],
-				"hair_colors": [],
-				"blood_color": "#ADFF2F",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 5,
-			"walking_noise": 0.5,
-			"active_abilities": [],
-			"passive_conditions": [
-				"opportunist",
-				"grappling_strike"
-			]
-		},
-		{
-			"id": "high_elf",
-			"name": "High-Elf",
-			"icon": "Assets/Icons/High-Elf.png",
-			"description": "The reigning nobility of Belmonte, and once all of Galba. Believed to have been put in place by Archfey such as the Lady of the Lake to establish a foothold of the Feyrealm in the realm of mortals, the Elves superficial similarity to men belies their truly alien nature, (alien in biology, morality and much else besides. )",
-			"cost": 3,
-			"features": [
-				"immortal",
-				"light_cantrip",
-				"command",
-				"large_sized"
-			],
-			"ability_score_increases": {
-				"Int": 15,
-				"Dex": 15,
-				"Str": -5,
-				"Cha": 10
-			},
-			"traits": {
-				"Perceptive": 1,
-				"Magical": 1,
-				"Noble": 3
-			},
-			"creature_type": "Humanoid, Fey",
-			"age": {
-				"base": 18,
-				"middle": "immortal",
-				"old": "immortal"
-			},
-			"height": {
-				"male": 168,
-				"female": 154
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 42,
-				"body_height": 28,
-				"head_width": 36,
-				"head_length": 29,
-				"shoulder_y_offset": 10,
-				"leg_length": 12,
-				"leg_width": 3,
-				"leg_spacing": 7,
-				"body_scale": 0.065
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#FAEBD7",
-					"#FFF8DC",
-					"#FFFFF0"
-				],
-				"hair_colors": [
-					"#F5E6CC",
-					"#C4A35A",
-					"#FFD700",
-					"#C0C0C0"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"elf_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"POMPADOUR"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 4,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 8,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 5,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"light_cantrip",
-				"command"
-			],
-			"passive_conditions": [
-				"immortal"
-			]
-		},
-		{
-			"id": "aedelf",
-			"name": "Aedelf",
-			"icon": "Assets/Icons/Aedelf.png",
-			"description": "The knowledge of you stabs them in the\nflesh with every recollection and event.\nThough they know it well, the wound of you\nwill not close. Each memory of you, each\nexperience, all evidence of your continued\nbeing, is like a knife twisting in the skin.\nNo other species could absorb such titanic\ncontempt and remain sane. They would be\nreduced to raving berserkers, living only to\nkill, directly, the loathed enabler of their pain.\nBut the \u00c6delf are old; they know much\nof patience and control. And they know\nthat they are born from the substance of\nyour fear and that if there was nothing left\nto feel afraid, they might well die.\nSo.\nEverything that can be done is being done.\nThe situation is difficult, but there is time.\nThere is always time. They must endure,\nas they have for so long. They wait and\nplan for an inverted world, a world where\nsocieties and civilisations and empires and\nspecies exist purely to instill and sustain\nfear.\nThey will live to see it.",
-			"cost": 3,
-			"features": [
-				"alter_self",
-				"phantasmal_killer",
-				"maddening_darkness",
-				"immortal",
-				"large_sized"
-			],
-			"ability_score_increases": {
-				"Int": 15,
-				"Wil": 20,
-				"Dex": 15,
-				"Cha": -10,
-				"Str": -5
-			},
-			"traits": {
-				"Religious": 1,
-				"Unnerving": 2,
-				"Cruel": 3,
-				"Noble": 3
-			},
-			"creature_type": "Humanoid, Dream Spirit",
-			"age": {
-				"base": 18,
-				"middle": "immortal",
-				"old": "immortal"
-			},
-			"height": {
-				"male": 168,
-				"female": 154
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 42,
-				"body_height": 28,
-				"head_width": 36,
-				"head_length": 29,
-				"shoulder_y_offset": 10,
-				"leg_length": 12,
-				"leg_width": 3,
-				"leg_spacing": 7,
-				"body_scale": 0.065
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#4A0080",
-					"#2F0050",
-					"#6A0DAD",
-					"#1A0030"
-				],
-				"hair_colors": [
-					"#F5F5F5",
-					"#E0E0E0",
-					"#C0C0C0"
-				],
-				"blood_color": "#4A0080",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"elf_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"NONE"
-					],
-					"female": [
-						"FULL",
-						"LONG",
-						"POMPADOUR",
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 3,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 10,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"alter_self",
-				"phantasmal_killer",
-				"maddening_darkness"
-			],
-			"passive_conditions": [
-				"immortal"
-			]
-		},
-		{
-			"id": "vampire",
-			"name": "Vampire",
-			"icon": "Assets/Icons/Vampire.png",
-			"description": "Just a vampire ass vampire",
-			"cost": 3,
-			"features": [
-				"con_drain_bite",
-				"charm_person"
-			],
-			"ability_score_increases": {
-				"Str": 15,
-				"Dex": 15,
-				"Cha": 15,
-				"Int": 15,
-				"Wil": -10
-			},
-			"traits": {
-				"Commanding": 1,
-				"Intimidating": 2,
-				"Persuasive": 3,
-				"Historian": 3
-			},
-			"creature_type": "Undead",
-			"age": {
-				"base": 18,
-				"middle": "immortal",
-				"old": "immortal"
-			},
-			"height": {
-				"male": 148,
-				"female": 136
-			},
-			"weight": {
-				"male": 170,
-				"female": 141
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 48,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"appearance": {
-				"skin_colors": [
-					"#F5F5DC",
-					"#E8E0D0",
-					"#DCDCDC"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F0000",
-					"#F5F5F5"
-				],
-				"blood_color": "#4A0000",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"FULL",
-						"POMPADOUR",
-						"COMBOVER"
-					],
-					"female": [
-						"FULL",
-						"POMPADOUR",
-						"LONG"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 4,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 7,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [
-				"con_drain_bite",
-				"charm_person"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "troll",
-			"name": "Troll",
-			"icon": "Assets/Icons/Troll.png",
-			"description": "Spindly pipecleaner limbs, twisted ice-pick\nfingers and an oversized monstrous head.\nUncomfortably organic fungal spirals throughout its body\nIts infections have infections.",
-			"cost": 3,
-			"features": [
-				"regen"
-			],
-			"ability_score_increases": {
-				"Str": 30,
-				"Con": 30,
-				"Int": -5,
-				"Cha": -5,
-				"Will": -5
-			},
-			"traits": {
-				"Primitive": 3,
-				"Intimidting": 3
-			},
-			"creature_type": "Monstrosity",
-			"age": {
-				"base": 250,
-				"middle": 500,
-				"old": 750
-			},
-			"height": {
-				"male": 270,
-				"female": 248
-			},
-			"weight": {
-				"male": 340,
-				"female": 282
-			},
-			"size": "Large",
-			"body": {
-				"body_size_mod": 1.5,
-				"body_width": 82,
-				"body_height": 51,
-				"head_width": 36,
-				"head_length": 29,
-				"shoulder_y_offset": 16,
-				"leg_length": 14,
-				"leg_width": 5,
-				"leg_spacing": 12
-			},
-			"appearance": {
-				"skin_colors": [
-					"#556B2F",
-					"#6B8E23",
-					"#808060",
-					"#4A5D23"
-				],
-				"hair_colors": [
-					"#2F2F2F",
-					"#1A1A1A"
-				],
-				"blood_color": "#556B2F",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"NONE",
-						"MOHAWK"
-					],
-					"female": [
-						"NONE",
-						"MOHAWK"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 8,
-				"crit_fail_threshold": 90,
-				"mp_regen_amount": 2,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 5,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"regen"
-			]
-		},
-		{
-			"id": "wolf",
-			"name": "Wolf",
-			"icon": "Assets/Icons/Wolf.png",
-			"description": "A common predator of the forests and plains. Wolves hunt in packs and are feared for their intelligence and coordination.",
-			"cost": 0,
-			"features": [],
-			"ability_score_increases": {
-				"Dex": 10,
-				"Str": 5,
-				"Int": -20
-			},
-			"traits": {
-				"Pack Hunter": 2
-			},
-			"creature_type": "Beast",
-			"age": {
-				"base": 2,
-				"middle": 6,
-				"old": 10
-			},
-			"height": {
-				"male": 80,
-				"female": 73
-			},
-			"weight": {
-				"male": 40,
-				"female": 33
-			},
-			"size": "Medium",
-			"body": {
-				"body_type": "quadruped",
-				"body_size_mod": 0.9,
-				"body_width": 41,
-				"body_height": 23,
-				"body_length": 65,
-				"head_width": 23,
-				"head_length": 26,
-				"shoulder_y_offset": -20,
-				"leg_length": 8,
-				"leg_width": 2,
-				"leg_spacing": 5,
-				"tail_length": 36,
-				"has_tail": true,
-				"has_arms": false
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Wolf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Wolf/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
-				}
-			},
-			"appearance": {
-				"head_shape": "CANINE",
-				"head_features": [
-					"animal_ears"
-				],
-				"skin_colors": [
-					"#808080",
-					"#A0A0A0",
-					"#4A4A4A",
-					"#C0C0C0"
-				],
-				"hair_colors": [],
-				"blood_color": "#8B0000",
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 0,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 10,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": []
-		},
-		{
-			"id": "bear",
-			"name": "Bear",
-			"icon": "Assets/Icons/Bear.png",
-			"description": "A massive woodland predator. Bears are solitary creatures of tremendous strength and resilience.",
-			"cost": 0,
-			"features": [],
-			"ability_score_increases": {
-				"Str": 25,
-				"Con": 20,
-				"Int": -25
-			},
-			"traits": {},
-			"creature_type": "Beast",
-			"age": {
-				"base": 3,
-				"middle": 12,
-				"old": 20
-			},
-			"height": {
-				"male": 120,
-				"female": 100
-			},
-			"weight": {
-				"male": 250,
-				"female": 200
-			},
-			"size": "Large",
-			"body": {
-				"body_type": "quadruped",
-				"body_size_mod": 1.4,
-				"body_width": 62,
-				"body_height": 33,
-				"body_length": 79,
-				"head_width": 33,
-				"head_length": 29,
-				"shoulder_y_offset": -24,
-				"leg_length": 8,
-				"leg_width": 4,
-				"leg_spacing": 7,
-				"tail_length": 12,
-				"has_tail": true,
-				"has_arms": false
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Bear/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Bear/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
-				}
-			},
-			"appearance": {
-				"head_shape": "CANINE",
-				"head_features": [
-					"round_ears"
-				],
-				"skin_colors": [
-					"#4A3728",
-					"#2F1F14",
-					"#8B7355",
-					"#1A1A1A"
-				],
-				"hair_colors": [],
-				"blood_color": "#8B0000",
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 0,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 5,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": []
-		},
-		{
-			"id": "horse",
-			"name": "Horse",
-			"icon": "Assets/Icons/Horse.png",
-			"description": "A noble steed. Horses are prized for their speed and endurance, serving as mounts for knights and messengers alike.",
-			"cost": 0,
-			"features": [],
-			"ability_score_increases": {
-				"Str": 15,
-				"Dex": 10,
-				"Int": -25
-			},
-			"traits": {},
-			"creature_type": "Beast",
-			"age": {
-				"base": 3,
-				"middle": 12,
-				"old": 25
-			},
-			"height": {
-				"male": 160,
-				"female": 150
-			},
-			"weight": {
-				"male": 500,
-				"female": 450
-			},
-			"size": "Large",
-			"body": {
-				"body_type": "quadruped",
-				"body_size_mod": 1.2,
-				"body_width": 48,
-				"body_height": 28,
-				"body_length": 75,
-				"head_width": 20,
-				"head_length": 34,
-				"shoulder_y_offset": -24,
-				"leg_length": 12,
-				"leg_width": 2,
-				"leg_spacing": 5,
-				"tail_length": 44,
-				"has_tail": true,
-				"has_arms": false
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Horse/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Horse/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
-					"leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
-				}
-			},
-			"appearance": {
-				"head_shape": "EQUINE",
-				"head_features": [
-					"horse_ears"
-				],
-				"skin_colors": [
-					"#8B7355",
-					"#4A3728",
-					"#1A1A1A",
-					"#F5F5F5"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#4A3728",
-					"#F5F5F5"
-				],
-				"blood_color": "#8B0000",
-				"hair_styles": {
-					"any": [
-						"MANE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 0,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 20,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": []
-		},
-		{
-			"id": "rat",
-			"name": "Rat",
-			"icon": "Assets/Icons/Rat.png",
-			"description": "A common vermin found in every city and sewer. Small but numerous, they carry disease and chew through everything.",
-			"cost": 0,
-			"features": [],
-			"ability_score_increases": {
-				"Dex": 15,
-				"Str": -20,
-				"Int": -20
-			},
-			"traits": {},
-			"creature_type": "Beast",
-			"age": {
-				"base": 1,
-				"middle": 2,
-				"old": 3
-			},
-			"height": {
-				"male": 20,
-				"female": 18
-			},
-			"weight": {
-				"male": 1,
-				"female": 1
-			},
-			"size": "Small",
-			"body": {
-				"body_type": "quadruped",
-				"body_size_mod": 0.5,
-				"body_width": 27,
-				"body_height": 16,
-				"body_length": 42,
-				"head_width": 18,
-				"head_length": 19,
-				"shoulder_y_offset": -12,
-				"leg_length": 5,
-				"leg_width": 1,
-				"leg_spacing": 3,
-				"tail_length": 40,
-				"has_tail": true,
-				"has_arms": false
-			},
-			"appearance": {
-				"head_shape": "CANINE",
-				"head_features": [
-					"round_ears"
-				],
-				"skin_colors": [
-					"#808080",
-					"#696969",
-					"#4A3728",
-					"#F5F5F5"
-				],
-				"hair_colors": [],
-				"blood_color": "#8B0000",
-				"hair_styles": {
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 0,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": []
-		},
-		{
-			"id": "grimalkin",
-			"name": "Grimalkin",
-			"icon": "Assets/Icons/Grimalkin.png",
-			"description": "Feline humanoids with retractable claws and an unnerving talent for moving without sound. Grimalkin are lithe and quick, preferring ambush and sudden violence to prolonged engagement. Their vertical-slit pupils see well in low light, and their padded feet leave almost no trace on any surface.",
-			"cost": 1,
-			"features": [
-				"pounce"
-			],
-			"ability_score_increases": {
-				"Dex": 15,
-				"Str": 5
-			},
-			"traits": {
-				"Stealthy": 2,
-				"Acrobatics": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 14,
-				"middle": 40,
-				"old": 65
-			},
-			"height": {
-				"male": 168,
-				"female": 158
-			},
-			"weight": {
-				"male": 62,
-				"female": 54
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 0.9,
-				"body_width": 48,
-				"body_height": 33,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 8,
-				"leg_length": 10,
-				"leg_width": 3,
-				"leg_spacing": 6,
-				"has_tail": true,
-				"tail_length": 24
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Male Grimalkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Male Grimalkin/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Male Grimalkin/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Female Grimalkin/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Female Grimalkin/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Female Grimalkin/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#C8A882",
-					"#A0785A",
-					"#8B6914",
-					"#6B4423",
-					"#3B3B3B",
-					"#1A1A1A"
-				],
-				"hair_colors": [
-					"#C8A882",
-					"#A0785A",
-					"#3B3B3B",
-					"#1A1A1A",
-					"#F5F5DC"
-				],
-				"blood_color": "#CC0000",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"cat_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"NONE",
-						"SHORT"
-					],
-					"female": [
-						"NONE",
-						"SHORT",
-						"LONG"
-					],
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 5,
-			"arm_length_bonus": 0,
-			"walking_noise": 0.3,
-			"active_abilities": [
-				"pounce"
-			],
-			"passive_conditions": []
-		},
-		{
-			"id": "goblin",
-			"name": "Goblin",
-			"icon": "Assets/Icons/Goblin.png",
-			"description": "Small, green-skinned scavengers with an instinct for trouble and a knack for improvised machinery. Goblins are cunning, cowardly, and endlessly inventive, preferring traps, ambushes, and underhanded tactics to a fair fight. Their societies are chaotic hierarchies where the cleverest rise to the top, usually by sabotaging everyone else.",
-			"cost": 1,
-			"features": [
-				"thrill_of_sin"
-			],
-			"ability_score_increases": {
-				"Dex": 10,
-				"Int": 5,
-				"Str": -10,
-				"Con": -5
-			},
-			"traits": {
-				"goblinoid": 3,
-				"technological": 1,
-				"cowardly": 1
-			},
-			"creature_type": "Humanoid",
-			"age": {
-				"base": 8,
-				"middle": 25,
-				"old": 40
-			},
-			"height": {
-				"male": 95,
-				"female": 88
-			},
-			"weight": {
-				"male": 38,
-				"female": 33
-			},
-			"size": "Small",
-			"body": {
-				"body_size_mod": 0.7,
-				"body_width": 34,
-				"body_height": 21,
-				"head_width": 31,
-				"head_length": 24,
-				"shoulder_y_offset": 8,
-				"leg_length": 5,
-				"leg_width": 2,
-				"leg_spacing": 5
-			},
-			"appearance": {
-				"skin_colors": [
-					"#6B8E23",
-					"#556B2F",
-					"#8B9A46",
-					"#4A6B2A",
-					"#3D5A1E"
-				],
-				"hair_colors": [
-					"#1A1A1A",
-					"#2F2F2F",
-					"#4A3728"
-				],
-				"blood_color": "#8B0000",
-				"head_shape": "HUMANOID",
-				"head_features": [
-					"pointed_ears"
-				],
-				"hair_styles": {
-					"male": [
-						"NONE",
-						"MOHAWK",
-						"SHORT"
-					],
-					"female": [
-						"NONE",
-						"SHORT",
-						"MOHAWK"
-					],
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 5,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": 0,
-			"arm_length_bonus": 0,
-			"walking_noise": 0.8,
-			"active_abilities": [],
-			"passive_conditions": [
-				"thrill_of_sin"
-			]
-		},
-		{
-			"id": "human_undead",
-			"name": "Human Undead",
-			"icon": "Assets/Icons/Human_Undead.png",
-			"description": "A shambling corpse animated by dark magic or sheer spite. Whatever spark of humanity once lived behind these eyes is long gone, replaced by a hollow hunger and the will of whoever raised them. They feel no pain, know no fear, and carry disease in their rotting flesh.",
-			"cost": 0,
-			"features": [
-				"undead_resilience"
-			],
-			"ability_score_increases": {
-				"Str": 10,
-				"Con": 10,
-				"Dex": -15,
-				"Int": -30,
-				"Cha": -30,
-				"Wil": -20
-			},
-			"traits": {
-				"mindless": 4,
-				"undead": 1,
-				"occult": 1
-			},
-			"creature_type": "Undead",
-			"age": {
-				"base": 0,
-				"middle": 0,
-				"old": 0
-			},
-			"height": {
-				"male": 170,
-				"female": 160
-			},
-			"weight": {
-				"male": 75,
-				"female": 63
-			},
-			"size": "Medium",
-			"body": {
-				"body_size_mod": 1.0,
-				"body_width": 42,
-				"body_height": 28,
-				"head_width": 28,
-				"head_length": 24,
-				"shoulder_y_offset": 10,
-				"leg_length": 8,
-				"leg_width": 3,
-				"leg_spacing": 7
-			},
-			"body_sprites": {
-				"male": {
-					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
-				},
-				"female": {
-					"head": "res://Characters/Assets/Body Parts/Zombie/head.png",
-					"torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
-					"upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
-					"forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
-					"leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
-				}
-			},
-			"appearance": {
-				"skin_colors": [
-					"#7A7A6E",
-					"#6B6B5E",
-					"#5C5C50",
-					"#8A8A7A",
-					"#4A4A40"
-				],
-				"hair_colors": [
-					"#3B3B3B",
-					"#2A2A2A",
-					"#4A4A4A"
-				],
-				"blood_color": "#2F2F1F",
-				"head_shape": "HUMANOID",
-				"head_features": [],
-				"hair_styles": {
-					"male": [
-						"NONE",
-						"SHORT"
-					],
-					"female": [
-						"NONE",
-						"SHORT"
-					],
-					"any": [
-						"NONE"
-					]
-				}
-			},
-			"stat_overrides": {
-				"crit_threshold": 5,
-				"crit_fail_threshold": 96,
-				"mp_regen_amount": 0,
-				"mp_regen_interval": 0.5
-			},
-			"speed_modifier": -10,
-			"arm_length_bonus": 0,
-			"walking_noise": 1.0,
-			"active_abilities": [],
-			"passive_conditions": [
-				"undead_resilience"
-			]
-		}
-	]
+ "races": [
+  {
+   "id": "human",
+   "name": "Human",
+   "icon": "Assets/Icons/Human.png",
+   "description": "The most numerous race in much of Galba, either by breeding faster or dying less often than other races. One of the shortest lived races, after only orcs and half-orcs, and one of the most ambitious and present oriented.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {},
+   "traits": {
+    "_choice": "Choose 2"
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 20,
+    "middle": 40,
+    "old": 60
+   },
+   "height": {
+    "male": 148,
+    "female": 135
+   },
+   "weight": {
+    "male": 170,
+    "female": 130
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/human_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/human/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1102,
+     "male": 0.06
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#F5D6B8",
+     "#D4A574",
+     "#8D5524",
+     "#4A2912"
+    ],
+    "hair_colors": [
+     "#4A3728",
+     "#1A1A1A",
+     "#C4A35A",
+     "#8B4513",
+     "#D4D4D4"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "HORSESHOE",
+      "COMBOVER",
+      "BUZZCUT",
+      "MOHAWK"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "BRAIDS",
+      "BUN",
+      "PIGTAILS",
+      "POMPADOUR"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": []
+  },
+  {
+   "id": "halfling",
+   "name": "Halfling",
+   "icon": "Assets/Icons/Halfling.png",
+   "description": "A shorter, earthier, and more materialistic relative of humans. Known for their great agility, the monkeys to our gorillas, one might say",
+   "cost": 1,
+   "features": [
+    "lucky"
+   ],
+   "ability_score_increases": {
+    "Dex": 10,
+    "Cha": 5,
+    "Str": -10
+   },
+   "traits": {
+    "Mobility": 1,
+    "Stealth": 1,
+    "Fear": 1,
+    "Thrown Weapon": 1,
+    "Unassuming": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 25,
+    "middle": 50,
+    "old": 75
+   },
+   "height": {
+    "male": 75,
+    "female": 69
+   },
+   "weight": {
+    "male": 30,
+    "female": 25
+   },
+   "size": "Small",
+   "body": {
+    "body_size_mod": 0.7,
+    "body_width": 34,
+    "body_height": 21,
+    "head_width": 25,
+    "head_length": 22,
+    "shoulder_y_offset": 8,
+    "leg_length": 6,
+    "leg_width": 2,
+    "leg_spacing": 5
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Halfling/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Halfling/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#F5D6B8",
+     "#E8C49A",
+     "#D4A574"
+    ],
+    "hair_colors": [
+     "#8B4513",
+     "#C4A35A",
+     "#4A3728",
+     "#A0522D"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "COMBOVER"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "BRAIDS"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": -5,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "lucky"
+   ]
+  },
+  {
+   "id": "gnome",
+   "name": "Gnome",
+   "icon": "Assets/Icons/Gnome.png",
+   "description": "Curious sentient fungal creatures with red mushrooms caps on their heads. Highly intelligent, mercurial, and masochistic.",
+   "cost": 1,
+   "features": [
+    "quixotic"
+   ],
+   "ability_score_increases": {
+    "Cha": 5,
+    "Str": -10,
+    "Int": 10
+   },
+   "traits": {
+    "Scientific": 1,
+    "Tinkerer": 1,
+    "Arcana": 1,
+    "Unassuming": 1,
+    "Carousing": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 100,
+    "middle": 200,
+    "old": 300
+   },
+   "height": {
+    "male": 70,
+    "female": 64
+   },
+   "weight": {
+    "male": 25,
+    "female": 20
+   },
+   "size": "Small",
+   "body": {
+    "body_size_mod": 0.7,
+    "body_width": 34,
+    "body_height": 21,
+    "head_width": 31,
+    "head_length": 26,
+    "shoulder_y_offset": 8,
+    "leg_length": 6,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "rig_scene": {
+     "female": "res://RigCharacters/gnome_female/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.0857
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#E8D5C4",
+     "#F0E0D0",
+     "#C4A882"
+    ],
+    "hair_colors": [
+     "#CC0000",
+     "#AA0000",
+     "#880000"
+    ],
+    "blood_color": "#556B2F",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 7,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": -5,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "quixotic"
+   ]
+  },
+  {
+   "id": "half_elf",
+   "name": "Half-Elf",
+   "icon": "Assets/Icons/Half-Elf.png",
+   "description": "Despite the Elves racially charged arrogance, they frequently intermarry with \"hylics\", as they call the lesser races. Indeed, they must do so in order to maintain a stable population in warlike times, given their slow rate of maturation. Though once looked down upon, those of mixed human and elven descent now make up the outright majority of the population in Belmonte and among noble classes throughout the continent",
+   "cost": 1,
+   "features": [
+    "light_cantrip"
+   ],
+   "ability_score_increases": {
+    "Cha": 5,
+    "Dex": 7,
+    "Int": 7,
+    "Str": -2
+   },
+   "traits": {
+    "Persuasive": 1,
+    "Race Relations": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 37.5,
+    "middle": 75,
+    "old": 120
+   },
+   "height": {
+    "male": 158,
+    "female": 145
+   },
+   "weight": {
+    "male": 160,
+    "female": 132
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "male": "res://RigCharacters/half_elf_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "male": 0.1396
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Half-Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Half-Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#FAEBD7",
+     "#F5D6B8",
+     "#D4A574"
+    ],
+    "hair_colors": [
+     "#C4A35A",
+     "#F5E6CC",
+     "#4A3728",
+     "#1A1A1A"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "elf_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "POMPADOUR",
+      "BRAIDS"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "light_cantrip"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "half_orc",
+   "name": "Half-Orc",
+   "icon": "Assets/Icons/Half-Orc.png",
+   "description": "Typically the sad products of systemic rape. Their half that isn't orc may be almost literally anything else, as the orc's flexible genetics find purchase in almost any womb, or any flower even",
+   "cost": 1,
+   "features": [
+    "brutal_critical"
+   ],
+   "ability_score_increases": {
+    "Str": 15,
+    "Con": 10,
+    "Int": -7,
+    "Cha": -7
+   },
+   "traits": {
+    "Athletic": 1,
+    "Savage": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 10,
+    "middle": 20,
+    "old": 30
+   },
+   "height": {
+    "male": 158,
+    "female": 145
+   },
+   "weight": {
+    "male": 200,
+    "female": 166
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/half_orc_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/half_orc_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1294,
+     "male": 0.1558
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#6B8E23",
+     "#556B2F",
+     "#8FBC8F",
+     "#808060"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F2F2F",
+     "#4A3728"
+    ],
+    "blood_color": "#4A0000",
+    "head_shape": "ORCISH",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "MOHAWK",
+      "BUZZCUT",
+      "NONE"
+     ],
+     "female": [
+      "MOHAWK",
+      "BUZZCUT",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 7,
+    "crit_fail_threshold": 94,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "brutal_critical"
+   ]
+  },
+  {
+   "id": "dwarf",
+   "name": "Dwarf",
+   "icon": "Assets/Icons/Dwarf.png",
+   "description": "Crass, materialistic and cruel midgets. Excessively ambitious and with a short memory for everything but grudges",
+   "cost": 1,
+   "features": [
+    "immune_to_drunken"
+   ],
+   "ability_score_increases": {
+    "Str": 5,
+    "Con": 5,
+    "Wil": 5
+   },
+   "traits": {
+    "Stone": 1,
+    "Vengeful": 1,
+    "Historian": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 100,
+    "middle": 200,
+    "old": 300
+   },
+   "height": {
+    "male": 115,
+    "female": 105
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Small",
+   "body": {
+    "body_size_mod": 0.7,
+    "body_width": 48,
+    "body_height": 26,
+    "head_width": 25,
+    "head_length": 19,
+    "shoulder_y_offset": 8,
+    "leg_length": 6,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "rig_scene": {
+     "female": "res://RigCharacters/dwarf_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/dwarf_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1185,
+     "male": 0.1231
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Dwarf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Dwarf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Dwarf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Dwarf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Dwarf/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Dwarf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Dwarf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Dwarf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Dwarf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Dwarf/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#D4A574",
+     "#C4956A",
+     "#B8860B"
+    ],
+    "hair_colors": [
+     "#8B4513",
+     "#A0522D",
+     "#D4A35A",
+     "#C0C0C0",
+     "#1A1A1A"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "HORSESHOE",
+      "BUZZCUT"
+     ],
+     "female": [
+      "FULL",
+      "BRAIDS",
+      "BUN"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": -5,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "immune_to_drunken"
+   ]
+  },
+  {
+   "id": "sahuagin",
+   "name": "Sahuagin",
+   "icon": "Assets/Icons/Sahuagin.png",
+   "description": "Gar-like humanoids known for their toughness and distrust of all terrestrial life. Often used as shock troops by the Neptunians.",
+   "cost": 1,
+   "features": [
+    "swift_swim",
+    "rough_skin"
+   ],
+   "ability_score_increases": {
+    "Dex": 10,
+    "Con": 5
+   },
+   "traits": {
+    "Paranoid": 1,
+    "Aquatic": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 25,
+    "middle": 50,
+    "old": 75
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 29,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/sahuagin_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/sahuagin_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1469,
+     "male": 0.1376
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#2E8B57",
+     "#20B2AA",
+     "#008080",
+     "#006666"
+    ],
+    "hair_colors": [],
+    "blood_color": "#00CED1",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "swift_swim",
+    "rough_skin"
+   ]
+  },
+  {
+   "id": "kobold",
+   "name": "Kobold",
+   "icon": "Assets/Icons/Kobold.png",
+   "description": "Little misshapen lizards created by the First Dragons to terrorize the populations over which they ruled. They were granted by their creators a great practical intelligence but also a vanishingly short memory and an active malice toward all non-reptiles. Kobold's have inherited the great Engineering projects of the old Empire, and turned them to antisocial uses, such as the transformation of the Aqueducts into Inferniducts",
+   "cost": 1,
+   "features": [
+    "jury_rig"
+   ],
+   "ability_score_increases": {
+    "Cha": -5,
+    "Wil": -5,
+    "Str": -10,
+    "Dex": 15,
+    "Int": 10
+   },
+   "traits": {
+    "chaotic": 1,
+    "Technical": 1,
+    "Intimidating": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 20,
+    "middle": 40,
+    "old": 60
+   },
+   "height": {
+    "male": 90,
+    "female": 82
+   },
+   "weight": {
+    "male": 40,
+    "female": 33
+   },
+   "size": "Small",
+   "body": {
+    "body_size_mod": 0.7,
+    "body_width": 34,
+    "body_height": 21,
+    "head_width": 26,
+    "head_length": 29,
+    "shoulder_y_offset": 8,
+    "leg_length": 6,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "rig_scene": {
+     "female": "res://RigCharacters/kobold_female/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1141
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Kobold/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Kobold/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Kobold/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Kobold/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Kobold/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Kobold/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Kobold/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Kobold/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Kobold/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Kobold/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#CD853F",
+     "#B8860B",
+     "#8B7355",
+     "#D2691E"
+    ],
+    "hair_colors": [],
+    "blood_color": "#8B0000",
+    "head_shape": "DRACONIC",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 93,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": -5,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "jury_rig"
+   ]
+  },
+  {
+   "id": "saurian",
+   "name": "Saurian",
+   "icon": "Assets/Icons/Saurian.png",
+   "description": "A semi aquatic draconic race, created by the Dragon Emperor Heliograbalus to serve as his personal Privateer navy. They eventually rebelled against his rule, and now mostly live in quasi independent communities on the east coast of scarlatti",
+   "cost": 1,
+   "features": [
+    "tough_claws",
+    "natural_armor"
+   ],
+   "ability_score_increases": {
+    "Str": 5,
+    "Con": 5,
+    "Wil": 5
+   },
+   "traits": {
+    "Cruel": 1,
+    "Aquatic": 1,
+    "Survival": 1,
+    "Drug user": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 20,
+    "middle": 40,
+    "old": 60
+   },
+   "height": {
+    "male": 160,
+    "female": 147
+   },
+   "weight": {
+    "male": 200,
+    "female": 166
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 55,
+    "body_height": 28,
+    "head_width": 35,
+    "head_length": 39,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/saurian_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/saurian_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1411,
+     "male": 0.1649
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Saurian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Saurian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Saurian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Saurian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Saurian/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Saurian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Saurian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Saurian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Saurian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Saurian/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#6B8E23",
+     "#228B22",
+     "#2E8B57",
+     "#556B2F"
+    ],
+    "hair_colors": [],
+    "blood_color": "#6B8E23",
+    "head_shape": "DRACONIC",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "tough_claws",
+    "natural_armor"
+   ]
+  },
+  {
+   "id": "mephistkin",
+   "name": "Mephistkin",
+   "icon": "Assets/Icons/Mephistkin.png",
+   "description": "Pregnant mothers in regions where corruption and bribery have become normalized often bear children with strange deformities such as goat horns or purple skin. In the past, both the mother and such children were often strangled to death on the spot by the midwife herself. In these more enlightened times, the Mephistkin are merely consigned to live in ghettoes. While not necessarily evil, devilspawn are acknowledged to make some of the finest barristers and journalists, having an innate nack for twisting rules or information to their advantage.",
+   "cost": 1,
+   "features": [
+    "devilsight"
+   ],
+   "ability_score_increases": {
+    "Cha": 20
+   },
+   "traits": {
+    "Fire resistant": 1,
+    "Stigmatized": 1,
+    "Manipulative": 3
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 100,
+    "middle": 200,
+    "old": 300
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 36,
+    "head_length": 31,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/mephistkin_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/mephistkin_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1575,
+     "male": 0.1276
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Mephistkin/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Mephistkin/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#8B0000",
+     "#B22222",
+     "#A52A2A",
+     "#DC143C"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F0000"
+    ],
+    "blood_color": "#4A0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "MOHAWK"
+     ],
+     "female": [
+      "FULL",
+      "POMPADOUR",
+      "LONG"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 4,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "devilsight"
+   ]
+  },
+  {
+   "id": "goluna",
+   "name": "Goluna",
+   "icon": "Assets/Icons/Goluna.png",
+   "description": "A race of avian humanoids who migrate to Galba every summer from a distant continent.",
+   "cost": 2,
+   "features": [
+    "flight"
+   ],
+   "ability_score_increases": {
+    "Dex": 10,
+    "Con": -5
+   },
+   "traits": {
+    "Perceptive": 1,
+    "Nimble": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 25,
+    "middle": 50,
+    "old": 75
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 110,
+    "female": 91
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 41,
+    "body_height": 23,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/goluna_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/goluna_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1376,
+     "male": 0.0679
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#E8E8E8",
+     "#D3D3D3",
+     "#C0C0C0",
+     "#F5F5F5"
+    ],
+    "hair_colors": [
+     "#F5F5F5",
+     "#E0E0E0",
+     "#C4A35A"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "NONE"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "flight"
+   ]
+  },
+  {
+   "id": "orc",
+   "name": "Orc",
+   "icon": "Assets/Icons/Orc.png",
+   "description": "One would think that belated rainfall in the world's harshest desert would be a cause for joy. Sadly, it heralds the bloom of the desert fungus creatures known as orcs, who quickly set about on their unique and terrible reproductive strategy of cross-species rape.",
+   "cost": 2,
+   "features": [
+    "ferocity",
+    "detritivore",
+    "brutal_critical",
+    "get_at_the_flesh"
+   ],
+   "ability_score_increases": {
+    "Str": 30,
+    "Con": 20,
+    "Int": -15,
+    "Cha": -15
+   },
+   "traits": {
+    "Intimidating": 1,
+    "Ignorant": 3
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 0.5,
+    "middle": 1,
+    "old": 2
+   },
+   "height": {
+    "male": 168,
+    "female": 154
+   },
+   "weight": {
+    "male": 230,
+    "female": 190
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 62,
+    "body_height": 37,
+    "head_width": 34,
+    "head_length": 25,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 4,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/orc_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/orc/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1584,
+     "male": 0.0794
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Orc/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Orc/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Orc/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Orc/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Orc/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Orc/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Orc/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Orc/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Orc/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Orc/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#556B2F",
+     "#4A5D23",
+     "#3B4A1A",
+     "#6B8E23"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F2F2F"
+    ],
+    "blood_color": "#4A0000",
+    "head_shape": "ORCISH",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "MOHAWK",
+      "BUZZCUT",
+      "NONE"
+     ],
+     "female": [
+      "MOHAWK",
+      "BUZZCUT",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 8,
+    "crit_fail_threshold": 92,
+    "mp_regen_amount": 2,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "ferocity",
+    "detritivore",
+    "brutal_critical",
+    "get_at_the_flesh"
+   ]
+  },
+  {
+   "id": "draconian",
+   "name": "Draconian",
+   "icon": "Assets/Icons/Dragonsworn.png",
+   "description": "The most loyal servants of the First Dragons, most remain slaves to this day, though they staff most of the important positions in Scarlatti's government. They were created more in the dragon's own image than the other draconic races, with the gift of their parents' deadly breath",
+   "cost": 2,
+   "features": [
+    "breath_weapon"
+   ],
+   "ability_score_increases": {
+    "Str": 20,
+    "Con": 20,
+    "Wil": -20
+   },
+   "traits": {
+    "Unassuming": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 90,
+    "middle": 180,
+    "old": 270
+   },
+   "height": {
+    "male": 168,
+    "female": 154
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 55,
+    "body_height": 33,
+    "head_width": 35,
+    "head_length": 42,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "male": "res://RigCharacters/draconian_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "male": 0.1405
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Draconian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Draconian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Draconian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Draconian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Draconian/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Draconian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Draconian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Draconian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Draconian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Draconian/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#8B0000",
+     "#B8860B",
+     "#2F4F4F",
+     "#4A0080"
+    ],
+    "hair_colors": [],
+    "blood_color": "#8B0000",
+    "head_shape": "DRACONIC",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "breath_weapon"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "goatmen",
+   "name": "Goatmen",
+   "icon": "Assets/Icons/Goatment.png",
+   "description": "These aristocratic humanoid goats are intelligent, well-dressed and usually erudite, with skill in both arms and magic. They are also evil, rapacious and casually cruel. They breed human slave-pets that they keep magically charmed and permanently dulled by herbs. They don't even think humans have souls and are therefore not worthy of any respect.",
+   "cost": 2,
+   "features": [
+    "beguile",
+    "ram"
+   ],
+   "ability_score_increases": {
+    "Int": 10,
+    "Cha": 10,
+    "Str": 5
+   },
+   "traits": {
+    "Intimidation": 1,
+    "Persuasion": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 16,
+    "middle": 50,
+    "old": 80
+   },
+   "height": {
+    "male": 185,
+    "female": 175
+   },
+   "weight": {
+    "male": 90,
+    "female": 78
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 36,
+    "head_length": 31,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/goatmen_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/goatmen_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1089,
+     "male": 0.1151
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Goatman/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Goatman/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Goatman/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Goatman/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#8B7355",
+     "#A0522D",
+     "#6B4423"
+    ],
+    "hair_colors": [
+     "#2F2F2F",
+     "#4A3728",
+     "#1A1A1A"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "animal_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "NONE"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.5,
+   "active_abilities": [
+    "beguile",
+    "ram"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "carapacians",
+   "name": "Carapacians",
+   "icon": "Assets/Icons/Carapacians.png",
+   "description": "A race of turtle people often accused of being a \"fifth-column\" for invasion of the Land by the Neptunians. Slow, patient, and methodical planners of both revenge and preemptive hostility",
+   "cost": 2,
+   "features": [
+    "withdraw"
+   ],
+   "ability_score_increases": {
+    "Con": 20,
+    "Dex": -20,
+    "Wil": 20
+   },
+   "traits": {
+    "Historian": 1,
+    "Cruel": 1,
+    "Aquatic": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 200,
+    "middle": 400,
+    "old": 600
+   },
+   "height": {
+    "male": 158,
+    "female": 145
+   },
+   "weight": {
+    "male": 230,
+    "female": 190
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 62,
+    "body_height": 37,
+    "head_width": 25,
+    "head_length": 22,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Carapacian/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Carapacian/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Carapacian/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Carapacian/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Carapacian/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#556B2F",
+     "#4A6A3A",
+     "#3B5B2B"
+    ],
+    "hair_colors": [],
+    "blood_color": "#6B8E23",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "withdraw"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "naga",
+   "name": "Naga",
+   "icon": "Assets/Icons/Naga.png",
+   "description": "A matriarchal race of snake people, known for their iron-clad caste system. All male Naga are either castrated or killed at birth, while the females reproduce parthenogenically, ensuring each generation is genetically identical to the last. Their Eastern Empire is perhaps the oldest and most reactionary civilization on Earth.",
+   "cost": 2,
+   "features": [
+    "poison_bite",
+    "charm_person"
+   ],
+   "ability_score_increases": {
+    "Cha": 10,
+    "Int": 10,
+    "Will": 10
+   },
+   "traits": {
+    "Poison": 1,
+    "Calculating": 1,
+    "Manipulative": 1,
+    "Cruel": 2,
+    "Stealthy": 2,
+    "Deceptive": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 100,
+    "middle": 200,
+    "old": 300
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 33,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/naga_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/naga_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1558,
+     "male": 0.0594
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#9370DB",
+     "#8A2BE2",
+     "#20B2AA",
+     "#2E8B57"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F0050",
+     "#006400"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "NONE"
+     ],
+     "female": [
+      "FULL",
+      "POMPADOUR",
+      "LONG",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "poison_bite",
+    "charm_person"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "newt",
+   "name": "Newt",
+   "icon": "Assets/Icons/Newt.png",
+   "description": "Humanoid amphibians from the jungles of Obi. Known for the hallucinogenic poison that coats their skin, and their particularly nightmarish practice of slavery. The slaves they take of other races, constantly having to be in contact with the Newts' psychedelic secretions, all eventually lose their minds in strange and terrible ways.",
+   "cost": 2,
+   "features": [
+    "poisonous_skin"
+   ],
+   "ability_score_increases": {
+    "Cha": 15,
+    "Will": 15
+   },
+   "traits": {
+    "Barter": 1,
+    "Poison": 1,
+    "Primitive": 1,
+    "Cruel": 2
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 50,
+    "middle": 100,
+    "old": 150
+   },
+   "height": {
+    "male": 138,
+    "female": 126
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/newt_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/newt_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1056,
+     "male": 0.1265
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#FF6347",
+     "#FF4500",
+     "#FFA500",
+     "#32CD32"
+    ],
+    "hair_colors": [],
+    "blood_color": "#ADFF2F",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "poisonous_skin"
+   ]
+  },
+  {
+   "id": "centaur",
+   "name": "Centaur",
+   "icon": "Assets/Icons/Centaur.png",
+   "description": "One of the exalted mutants created by the Grail, Centaurs fill the ranks of the Knightly Orders of Belmonte",
+   "cost": 2,
+   "features": [
+    "chilling_neigh"
+   ],
+   "ability_score_increases": {
+    "Str": 10,
+    "Dex": 10,
+    "Wil": 5
+   },
+   "traits": {
+    "Noble": 1,
+    "Primitive": 2
+   },
+   "creature_type": "Fey",
+   "age": {
+    "base": 75,
+    "middle": 150,
+    "old": 225
+   },
+   "height": {
+    "male": 180,
+    "female": 165
+   },
+   "weight": {
+    "male": 400,
+    "female": 332
+   },
+   "size": "Medium",
+   "body": {
+    "body_type": "quadruped",
+    "body_size_mod": 1.0,
+    "body_width": 55,
+    "body_height": 42,
+    "body_length": 70,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": -20,
+    "leg_length": 12,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "tail_length": 28,
+    "has_tail": true,
+    "has_arms": true
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#D4A574",
+     "#8B7355",
+     "#F5D6B8"
+    ],
+    "hair_colors": [
+     "#4A3728",
+     "#1A1A1A",
+     "#C4A35A",
+     "#8B4513"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "MOHAWK"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "BRAIDS",
+      "POMPADOUR"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "chilling_neigh"
+   ]
+  },
+  {
+   "id": "cerebrals",
+   "name": "Cerebrals",
+   "icon": "Assets/Icons/Cerebrals.png",
+   "description": "A bizarre research project by the genocidal gnomish leader Fridrik the Terrible to create the ideal being. Through a liberal use of both eugenics and dangerous alchemy, a race with the ambition of humans, the equanimity of elves, and the intelligence of gnomes was supposedly created. Fridrik's successor had no interest in the project and let everyone go home. Much time has passed since, and Cerebrals have formed their own communities and culture, but their minds and bodies show strange quirks of the genetic and magical ringer they were put through. Tend to have an odd fascination with water, especially tranquil pools",
+   "cost": 2,
+   "features": [
+    "came_to_me_in_a_dream"
+   ],
+   "ability_score_increases": {
+    "Int": 30,
+    "Str": -5
+   },
+   "traits": {
+    "Aquatic": 1,
+    "Calm": 2,
+    "Scientific": 3,
+    "Historian": 3,
+    "Calculating": 3
+   },
+   "creature_type": "Aberration",
+   "age": {
+    "base": 150,
+    "middle": 300,
+    "old": 450
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 160,
+    "female": 132
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 34,
+    "body_height": 28,
+    "head_width": 41,
+    "head_length": 34,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/cerebrals_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/cerebrals_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.0904,
+     "male": 0.1624
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#DDA0DD",
+     "#DA70D6",
+     "#BA55D3",
+     "#E6E6FA"
+    ],
+    "hair_colors": [],
+    "blood_color": "#9370DB",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 10,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "came_to_me_in_a_dream"
+   ]
+  },
+  {
+   "id": "pixie",
+   "name": "Pixie",
+   "icon": "Assets/Icons/Pixie.png",
+   "description": "The most whimiscal and malicious of fey, these mercurial and obnoxious bug-men are resented throughout Galba. Even in Belmonte, where due to fae pacts and tradition they effectively run the legal system, the people's patience often wears thin. \"Pixie Pogroms\" or \"Pest control\" are solutions of first resort for angry peasantry",
+   "cost": 2,
+   "features": [
+    "quixotic",
+    "flight"
+   ],
+   "ability_score_increases": {
+    "Cha": 15,
+    "Int": 5,
+    "Wil": -10,
+    "Dex": 15
+   },
+   "traits": {
+    "Stigmatized": 2,
+    "Chaotic": 3
+   },
+   "creature_type": "Fey",
+   "age": {
+    "base": 500,
+    "middle": 1000,
+    "old": 1500
+   },
+   "height": {
+    "male": 30,
+    "female": 27
+   },
+   "weight": {
+    "male": 10,
+    "female": 8
+   },
+   "size": "Tiny",
+   "body": {
+    "body_size_mod": 0.35,
+    "body_width": 21,
+    "body_height": 12,
+    "head_width": 13,
+    "head_length": 12,
+    "shoulder_y_offset": 4,
+    "leg_length": 3,
+    "leg_width": 1,
+    "leg_spacing": 3
+   },
+   "appearance": {
+    "skin_colors": [
+     "#FFB6C1",
+     "#98FB98",
+     "#87CEEB",
+     "#DDA0DD"
+    ],
+    "hair_colors": [
+     "#FFD700",
+     "#FF69B4",
+     "#00FA9A",
+     "#87CEEB"
+    ],
+    "blood_color": "#FFD700",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR"
+     ],
+     "female": [
+      "FULL",
+      "POMPADOUR",
+      "PIGTAILS"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 3,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "quixotic",
+    "flight"
+   ]
+  },
+  {
+   "id": "sobruaro",
+   "name": "Sobruaro",
+   "icon": "Assets/Icons/Sobruaro.png",
+   "description": "Proud, prickly loners, these humanoid cacti typically make a solitary living herding livestock across the great deserts to the South, protecting their flocks from rape-mad orcs",
+   "cost": 2,
+   "features": [
+    "thorns"
+   ],
+   "ability_score_increases": {
+    "Str": 5,
+    "Dex": 15,
+    "Wil": 10,
+    "Cha": -5
+   },
+   "traits": {
+    "Antisocial": 1,
+    "Primitive": 1,
+    "Empathetic": 2
+   },
+   "creature_type": "Plant",
+   "age": {
+    "base": 50,
+    "middle": 100,
+    "old": 150
+   },
+   "height": {
+    "male": 170,
+    "female": 156
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 55,
+    "body_height": 33,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/sobruaro_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/sobruaro_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1826,
+     "male": 0.1584
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#228B22",
+     "#2E8B57",
+     "#006400",
+     "#6B8E23"
+    ],
+    "hair_colors": [],
+    "blood_color": "#228B22",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "thorns"
+   ]
+  },
+  {
+   "id": "dhampir",
+   "name": "Dhampir",
+   "icon": "Assets/Icons/Dhampir.png",
+   "description": "The most thinblooded vampires often retain some degree of function in their reproductive organs, allowing them to produce offspring with other races. These are known as \"Dhampir\"",
+   "cost": 2,
+   "features": [
+    "con_drain_bite"
+   ],
+   "ability_score_increases": {
+    "Str": 7,
+    "Dex": 7,
+    "Cha": 7,
+    "Int": 7,
+    "Will": -5
+   },
+   "traits": {
+    "Persuasive": 1,
+    "Deceptive": 2
+   },
+   "creature_type": "Humanoid, Undead",
+   "age": {
+    "base": 250,
+    "middle": 500,
+    "old": 750
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/dhampir_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/dhampir_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.111,
+     "male": 0.1469
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#F5F5DC",
+     "#E8E0D0",
+     "#D3C4B0",
+     "#C0B0A0"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#F5F5F5",
+     "#4A0000"
+    ],
+    "blood_color": "#4A0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "COMBOVER"
+     ],
+     "female": [
+      "FULL",
+      "POMPADOUR",
+      "LONG"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "con_drain_bite"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "bugaboo",
+   "name": "Bugaboo",
+   "icon": "Assets/Icons/Bugaboo.png",
+   "description": "Long limbed mantis people known for their infinite patience and homicidal mating rituals. Known to lay in wait for days at a time, blending in with foliage on the side of a road, striking out with nutcracker like arms to make a quick meal of any unwary traveller",
+   "cost": 2,
+   "features": [
+    "opportunist",
+    "grappling_strike"
+   ],
+   "ability_score_increases": {
+    "Str": 10,
+    "Wil": 10,
+    "Dex": 10
+   },
+   "traits": {
+    "Calm": 1,
+    "Intimidation": 1,
+    "Stealthy": 2
+   },
+   "creature_type": "Monstrosity",
+   "age": {
+    "base": 5,
+    "middle": 10,
+    "old": 15
+   },
+   "height": {
+    "male": 180,
+    "female": 165
+   },
+   "weight": {
+    "male": 180,
+    "female": 149
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 62,
+    "body_height": 37,
+    "head_width": 31,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 10,
+    "leg_width": 4,
+    "leg_spacing": 7
+   },
+   "appearance": {
+    "skin_colors": [
+     "#2F4F2F",
+     "#3B5B3B",
+     "#4A6A4A",
+     "#1A3A1A"
+    ],
+    "hair_colors": [],
+    "blood_color": "#ADFF2F",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 5,
+   "walking_noise": 0.5,
+   "active_abilities": [],
+   "passive_conditions": [
+    "opportunist",
+    "grappling_strike"
+   ]
+  },
+  {
+   "id": "high_elf",
+   "name": "High-Elf",
+   "icon": "Assets/Icons/High-Elf.png",
+   "description": "The reigning nobility of Belmonte, and once all of Galba. Believed to have been put in place by Archfey such as the Lady of the Lake to establish a foothold of the Feyrealm in the realm of mortals, the Elves superficial similarity to men belies their truly alien nature, (alien in biology, morality and much else besides. )",
+   "cost": 3,
+   "features": [
+    "immortal",
+    "light_cantrip",
+    "command",
+    "large_sized"
+   ],
+   "ability_score_increases": {
+    "Int": 15,
+    "Dex": 15,
+    "Str": -5,
+    "Cha": 10
+   },
+   "traits": {
+    "Perceptive": 1,
+    "Magical": 1,
+    "Noble": 3
+   },
+   "creature_type": "Humanoid, Fey",
+   "age": {
+    "base": 18,
+    "middle": "immortal",
+    "old": "immortal"
+   },
+   "height": {
+    "male": 168,
+    "female": 154
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 42,
+    "body_height": 28,
+    "head_width": 36,
+    "head_length": 29,
+    "shoulder_y_offset": 10,
+    "leg_length": 12,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "body_scale": 0.065,
+    "rig_scene": {
+     "female": "res://RigCharacters/high_elf_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/elf/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.0854,
+     "male": 0.0481
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#FAEBD7",
+     "#FFF8DC",
+     "#FFFFF0"
+    ],
+    "hair_colors": [
+     "#F5E6CC",
+     "#C4A35A",
+     "#FFD700",
+     "#C0C0C0"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "elf_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "POMPADOUR"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 4,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 8,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 5,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "light_cantrip",
+    "command"
+   ],
+   "passive_conditions": [
+    "immortal"
+   ]
+  },
+  {
+   "id": "aedelf",
+   "name": "Aedelf",
+   "icon": "Assets/Icons/Aedelf.png",
+   "description": "The knowledge of you stabs them in the\nflesh with every recollection and event.\nThough they know it well, the wound of you\nwill not close. Each memory of you, each\nexperience, all evidence of your continued\nbeing, is like a knife twisting in the skin.\nNo other species could absorb such titanic\ncontempt and remain sane. They would be\nreduced to raving berserkers, living only to\nkill, directly, the loathed enabler of their pain.\nBut the Ædelf are old; they know much\nof patience and control. And they know\nthat they are born from the substance of\nyour fear and that if there was nothing left\nto feel afraid, they might well die.\nSo.\nEverything that can be done is being done.\nThe situation is difficult, but there is time.\nThere is always time. They must endure,\nas they have for so long. They wait and\nplan for an inverted world, a world where\nsocieties and civilisations and empires and\nspecies exist purely to instill and sustain\nfear.\nThey will live to see it.",
+   "cost": 3,
+   "features": [
+    "alter_self",
+    "phantasmal_killer",
+    "maddening_darkness",
+    "immortal",
+    "large_sized"
+   ],
+   "ability_score_increases": {
+    "Int": 15,
+    "Wil": 20,
+    "Dex": 15,
+    "Cha": -10,
+    "Str": -5
+   },
+   "traits": {
+    "Religious": 1,
+    "Unnerving": 2,
+    "Cruel": 3,
+    "Noble": 3
+   },
+   "creature_type": "Humanoid, Dream Spirit",
+   "age": {
+    "base": 18,
+    "middle": "immortal",
+    "old": "immortal"
+   },
+   "height": {
+    "male": 168,
+    "female": 154
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 42,
+    "body_height": 28,
+    "head_width": 36,
+    "head_length": 29,
+    "shoulder_y_offset": 10,
+    "leg_length": 12,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "body_scale": 0.065,
+    "rig_scene": {
+     "female": "res://RigCharacters/aedelf_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/aedelf_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.0851,
+     "male": 0.105
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Elf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Elf/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Elf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Elf/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Elf/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#4A0080",
+     "#2F0050",
+     "#6A0DAD",
+     "#1A0030"
+    ],
+    "hair_colors": [
+     "#F5F5F5",
+     "#E0E0E0",
+     "#C0C0C0"
+    ],
+    "blood_color": "#4A0080",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "elf_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "NONE"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "POMPADOUR",
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 3,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 10,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "alter_self",
+    "phantasmal_killer",
+    "maddening_darkness"
+   ],
+   "passive_conditions": [
+    "immortal"
+   ]
+  },
+  {
+   "id": "vampire",
+   "name": "Vampire",
+   "icon": "Assets/Icons/Vampire.png",
+   "description": "Just a vampire ass vampire",
+   "cost": 3,
+   "features": [
+    "con_drain_bite",
+    "charm_person"
+   ],
+   "ability_score_increases": {
+    "Str": 15,
+    "Dex": 15,
+    "Cha": 15,
+    "Int": 15,
+    "Wil": -10
+   },
+   "traits": {
+    "Commanding": 1,
+    "Intimidating": 2,
+    "Persuasive": 3,
+    "Historian": 3
+   },
+   "creature_type": "Undead",
+   "age": {
+    "base": 18,
+    "middle": "immortal",
+    "old": "immortal"
+   },
+   "height": {
+    "male": 148,
+    "female": 136
+   },
+   "weight": {
+    "male": 170,
+    "female": 141
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/vampire_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/vampire_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1119,
+     "male": 0.1396
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#F5F5DC",
+     "#E8E0D0",
+     "#DCDCDC"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F0000",
+     "#F5F5F5"
+    ],
+    "blood_color": "#4A0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "POMPADOUR",
+      "COMBOVER"
+     ],
+     "female": [
+      "FULL",
+      "POMPADOUR",
+      "LONG"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 4,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 7,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [
+    "con_drain_bite",
+    "charm_person"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "troll",
+   "name": "Troll",
+   "icon": "Assets/Icons/Troll.png",
+   "description": "Spindly pipecleaner limbs, twisted ice-pick\nfingers and an oversized monstrous head.\nUncomfortably organic fungal spirals throughout its body\nIts infections have infections.",
+   "cost": 3,
+   "features": [
+    "regen"
+   ],
+   "ability_score_increases": {
+    "Str": 30,
+    "Con": 30,
+    "Int": -5,
+    "Cha": -5,
+    "Will": -5
+   },
+   "traits": {
+    "Primitive": 3,
+    "Intimidting": 3
+   },
+   "creature_type": "Monstrosity",
+   "age": {
+    "base": 250,
+    "middle": 500,
+    "old": 750
+   },
+   "height": {
+    "male": 270,
+    "female": 248
+   },
+   "weight": {
+    "male": 340,
+    "female": 282
+   },
+   "size": "Large",
+   "body": {
+    "body_size_mod": 1.5,
+    "body_width": 82,
+    "body_height": 51,
+    "head_width": 36,
+    "head_length": 29,
+    "shoulder_y_offset": 16,
+    "leg_length": 14,
+    "leg_width": 5,
+    "leg_spacing": 12
+   },
+   "appearance": {
+    "skin_colors": [
+     "#556B2F",
+     "#6B8E23",
+     "#808060",
+     "#4A5D23"
+    ],
+    "hair_colors": [
+     "#2F2F2F",
+     "#1A1A1A"
+    ],
+    "blood_color": "#556B2F",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "NONE",
+      "MOHAWK"
+     ],
+     "female": [
+      "NONE",
+      "MOHAWK"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 8,
+    "crit_fail_threshold": 90,
+    "mp_regen_amount": 2,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 5,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "regen"
+   ]
+  },
+  {
+   "id": "wolf",
+   "name": "Wolf",
+   "icon": "Assets/Icons/Wolf.png",
+   "description": "A common predator of the forests and plains. Wolves hunt in packs and are feared for their intelligence and coordination.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {
+    "Dex": 10,
+    "Str": 5,
+    "Int": -20
+   },
+   "traits": {
+    "Pack Hunter": 2
+   },
+   "creature_type": "Beast",
+   "age": {
+    "base": 2,
+    "middle": 6,
+    "old": 10
+   },
+   "height": {
+    "male": 80,
+    "female": 73
+   },
+   "weight": {
+    "male": 40,
+    "female": 33
+   },
+   "size": "Medium",
+   "body": {
+    "body_type": "quadruped",
+    "body_size_mod": 0.9,
+    "body_width": 41,
+    "body_height": 23,
+    "body_length": 65,
+    "head_width": 23,
+    "head_length": 26,
+    "shoulder_y_offset": -20,
+    "leg_length": 8,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "tail_length": 36,
+    "has_tail": true,
+    "has_arms": false
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Wolf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Wolf/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Wolf/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Wolf/leg.png"
+    }
+   },
+   "appearance": {
+    "head_shape": "CANINE",
+    "head_features": [
+     "animal_ears"
+    ],
+    "skin_colors": [
+     "#808080",
+     "#A0A0A0",
+     "#4A4A4A",
+     "#C0C0C0"
+    ],
+    "hair_colors": [],
+    "blood_color": "#8B0000",
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 0,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 10,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": []
+  },
+  {
+   "id": "bear",
+   "name": "Bear",
+   "icon": "Assets/Icons/Bear.png",
+   "description": "A massive woodland predator. Bears are solitary creatures of tremendous strength and resilience.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {
+    "Str": 25,
+    "Con": 20,
+    "Int": -25
+   },
+   "traits": {},
+   "creature_type": "Beast",
+   "age": {
+    "base": 3,
+    "middle": 12,
+    "old": 20
+   },
+   "height": {
+    "male": 120,
+    "female": 100
+   },
+   "weight": {
+    "male": 250,
+    "female": 200
+   },
+   "size": "Large",
+   "body": {
+    "body_type": "quadruped",
+    "body_size_mod": 1.4,
+    "body_width": 62,
+    "body_height": 33,
+    "body_length": 79,
+    "head_width": 33,
+    "head_length": 29,
+    "shoulder_y_offset": -24,
+    "leg_length": 8,
+    "leg_width": 4,
+    "leg_spacing": 7,
+    "tail_length": 12,
+    "has_tail": true,
+    "has_arms": false
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Bear/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Bear/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Bear/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Bear/leg.png"
+    }
+   },
+   "appearance": {
+    "head_shape": "CANINE",
+    "head_features": [
+     "round_ears"
+    ],
+    "skin_colors": [
+     "#4A3728",
+     "#2F1F14",
+     "#8B7355",
+     "#1A1A1A"
+    ],
+    "hair_colors": [],
+    "blood_color": "#8B0000",
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 0,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 5,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": []
+  },
+  {
+   "id": "horse",
+   "name": "Horse",
+   "icon": "Assets/Icons/Horse.png",
+   "description": "A noble steed. Horses are prized for their speed and endurance, serving as mounts for knights and messengers alike.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {
+    "Str": 15,
+    "Dex": 10,
+    "Int": -25
+   },
+   "traits": {},
+   "creature_type": "Beast",
+   "age": {
+    "base": 3,
+    "middle": 12,
+    "old": 25
+   },
+   "height": {
+    "male": 160,
+    "female": 150
+   },
+   "weight": {
+    "male": 500,
+    "female": 450
+   },
+   "size": "Large",
+   "body": {
+    "body_type": "quadruped",
+    "body_size_mod": 1.2,
+    "body_width": 48,
+    "body_height": 28,
+    "body_length": 75,
+    "head_width": 20,
+    "head_length": 34,
+    "shoulder_y_offset": -24,
+    "leg_length": 12,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "tail_length": 44,
+    "has_tail": true,
+    "has_arms": false
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Horse/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Horse/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Horse/torso.png",
+     "leg": "res://Characters/Assets/Body Parts/Horse/leg.png"
+    }
+   },
+   "appearance": {
+    "head_shape": "EQUINE",
+    "head_features": [
+     "horse_ears"
+    ],
+    "skin_colors": [
+     "#8B7355",
+     "#4A3728",
+     "#1A1A1A",
+     "#F5F5F5"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#4A3728",
+     "#F5F5F5"
+    ],
+    "blood_color": "#8B0000",
+    "hair_styles": {
+     "any": [
+      "MANE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 0,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 20,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": []
+  },
+  {
+   "id": "rat",
+   "name": "Rat",
+   "icon": "Assets/Icons/Rat.png",
+   "description": "A common vermin found in every city and sewer. Small but numerous, they carry disease and chew through everything.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {
+    "Dex": 15,
+    "Str": -20,
+    "Int": -20
+   },
+   "traits": {},
+   "creature_type": "Beast",
+   "age": {
+    "base": 1,
+    "middle": 2,
+    "old": 3
+   },
+   "height": {
+    "male": 20,
+    "female": 18
+   },
+   "weight": {
+    "male": 1,
+    "female": 1
+   },
+   "size": "Small",
+   "body": {
+    "body_type": "quadruped",
+    "body_size_mod": 0.5,
+    "body_width": 27,
+    "body_height": 16,
+    "body_length": 42,
+    "head_width": 18,
+    "head_length": 19,
+    "shoulder_y_offset": -12,
+    "leg_length": 5,
+    "leg_width": 1,
+    "leg_spacing": 3,
+    "tail_length": 40,
+    "has_tail": true,
+    "has_arms": false
+   },
+   "appearance": {
+    "head_shape": "CANINE",
+    "head_features": [
+     "round_ears"
+    ],
+    "skin_colors": [
+     "#808080",
+     "#696969",
+     "#4A3728",
+     "#F5F5F5"
+    ],
+    "hair_colors": [],
+    "blood_color": "#8B0000",
+    "hair_styles": {
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 0,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": []
+  },
+  {
+   "id": "grimalkin",
+   "name": "Grimalkin",
+   "icon": "Assets/Icons/Grimalkin.png",
+   "description": "Feline humanoids with retractable claws and an unnerving talent for moving without sound. Grimalkin are lithe and quick, preferring ambush and sudden violence to prolonged engagement. Their vertical-slit pupils see well in low light, and their padded feet leave almost no trace on any surface.",
+   "cost": 1,
+   "features": [
+    "pounce"
+   ],
+   "ability_score_increases": {
+    "Dex": 15,
+    "Str": 5
+   },
+   "traits": {
+    "Stealthy": 2,
+    "Acrobatics": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 14,
+    "middle": 40,
+    "old": 65
+   },
+   "height": {
+    "male": 168,
+    "female": 158
+   },
+   "weight": {
+    "male": 62,
+    "female": 54
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 0.9,
+    "body_width": 48,
+    "body_height": 33,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 8,
+    "leg_length": 10,
+    "leg_width": 3,
+    "leg_spacing": 6,
+    "has_tail": true,
+    "tail_length": 24,
+    "rig_scene": {
+     "female": "res://RigCharacters/grimalkin_female/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1237
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Grimalkin/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Grimalkin/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Grimalkin/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Grimalkin/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Elf/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Elf/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Grimalkin/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Grimalkin/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#C8A882",
+     "#A0785A",
+     "#8B6914",
+     "#6B4423",
+     "#3B3B3B",
+     "#1A1A1A"
+    ],
+    "hair_colors": [
+     "#C8A882",
+     "#A0785A",
+     "#3B3B3B",
+     "#1A1A1A",
+     "#F5F5DC"
+    ],
+    "blood_color": "#CC0000",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "cat_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "NONE",
+      "SHORT"
+     ],
+     "female": [
+      "NONE",
+      "SHORT",
+      "LONG"
+     ],
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 5,
+   "jump_height": 2.5,
+   "jump_range": 2,
+   "fall_damage_mult": 0.4,
+   "arm_length_bonus": 0,
+   "walking_noise": 0.3,
+   "active_abilities": [
+    "pounce"
+   ],
+   "passive_conditions": []
+  },
+  {
+   "id": "goblin",
+   "name": "Goblin",
+   "icon": "Assets/Icons/Goblin.png",
+   "description": "Small, green-skinned scavengers with an instinct for trouble and a knack for improvised machinery. Goblins are cunning, cowardly, and endlessly inventive, preferring traps, ambushes, and underhanded tactics to a fair fight. Their societies are chaotic hierarchies where the cleverest rise to the top, usually by sabotaging everyone else.",
+   "cost": 1,
+   "features": [
+    "thrill_of_sin"
+   ],
+   "ability_score_increases": {
+    "Dex": 10,
+    "Int": 5,
+    "Str": -10,
+    "Con": -5
+   },
+   "traits": {
+    "goblinoid": 3,
+    "technological": 1,
+    "cowardly": 1
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 8,
+    "middle": 25,
+    "old": 40
+   },
+   "height": {
+    "male": 95,
+    "female": 88
+   },
+   "weight": {
+    "male": 38,
+    "female": 33
+   },
+   "size": "Small",
+   "body": {
+    "body_size_mod": 0.7,
+    "body_width": 34,
+    "body_height": 21,
+    "head_width": 31,
+    "head_length": 24,
+    "shoulder_y_offset": 8,
+    "leg_length": 5,
+    "leg_width": 2,
+    "leg_spacing": 5,
+    "rig_scene": {
+     "female": "res://RigCharacters/goblin_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/goblin_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1104,
+     "male": 0.0921
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#6B8E23",
+     "#556B2F",
+     "#8B9A46",
+     "#4A6B2A",
+     "#3D5A1E"
+    ],
+    "hair_colors": [
+     "#1A1A1A",
+     "#2F2F2F",
+     "#4A3728"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [
+     "pointed_ears"
+    ],
+    "hair_styles": {
+     "male": [
+      "NONE",
+      "MOHAWK",
+      "SHORT"
+     ],
+     "female": [
+      "NONE",
+      "SHORT",
+      "MOHAWK"
+     ],
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 0.8,
+   "active_abilities": [],
+   "passive_conditions": [
+    "thrill_of_sin"
+   ]
+  },
+  {
+   "id": "human_undead",
+   "name": "Human Undead",
+   "icon": "Assets/Icons/Human_Undead.png",
+   "description": "A shambling corpse animated by dark magic or sheer spite. Whatever spark of humanity once lived behind these eyes is long gone, replaced by a hollow hunger and the will of whoever raised them. They feel no pain, know no fear, and carry disease in their rotting flesh.",
+   "cost": 0,
+   "features": [
+    "undead_resilience"
+   ],
+   "ability_score_increases": {
+    "Str": 10,
+    "Con": 10,
+    "Dex": -15,
+    "Int": -30,
+    "Cha": -30,
+    "Wil": -20
+   },
+   "traits": {
+    "mindless": 4,
+    "undead": 1,
+    "occult": 1
+   },
+   "creature_type": "Undead",
+   "age": {
+    "base": 0,
+    "middle": 0,
+    "old": 0
+   },
+   "height": {
+    "male": 170,
+    "female": 160
+   },
+   "weight": {
+    "male": 75,
+    "female": 63
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 42,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/human_undead_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/human_undead_male/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1386,
+     "male": 0.1265
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Zombie/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Zombie/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Zombie/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Zombie/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Zombie/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Zombie/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#7A7A6E",
+     "#6B6B5E",
+     "#5C5C50",
+     "#8A8A7A",
+     "#4A4A40"
+    ],
+    "hair_colors": [
+     "#3B3B3B",
+     "#2A2A2A",
+     "#4A4A4A"
+    ],
+    "blood_color": "#2F2F1F",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "NONE",
+      "SHORT"
+     ],
+     "female": [
+      "NONE",
+      "SHORT"
+     ],
+     "any": [
+      "NONE"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 0,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": -10,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
+   "passive_conditions": [
+    "undead_resilience"
+   ]
+  }
+ ]
 }

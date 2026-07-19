@@ -33,11 +33,17 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = "tg_export"  # TEMP: checking the level-editor export (was "cemetery")
+var current_map_id: String = "tg_castle_demo"  # TEMP: castle-demo export (set "tg_export" for the fort map, "cemetery" for the built-in)
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
 var stealth_mode: bool = false
+# Session-scoped unlock memory, keyed "<map_id>|door|<hinge_x>,<hinge_y>" (export-px
+# ints from the geometry JSON hinge). Written by Door.interact on successful unlock,
+# re-applied by MapLoader on door spawn. Intentionally NOT cleared in
+# _unload_current_map: every warp (incl. same-map stairs) is a full reload, and a
+# consumed key must never soft-lock the player. Include in the save system when one lands.
+var unlocked_locks: Dictionary = {}
 
 # World-map state. When the player presses M from a local map we remember
 # which map they came from and where their protagonist stood, so M again
@@ -386,6 +392,10 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 	# Track in scene
 	characters_in_scene.append(character)
 
+	# Seed elevation before sight-cone lights are added: a warp arrival onto a
+	# deck must read deck elevation on frame 0 or its cone stays ground-tier.
+	character._refresh_elevation()
+
 	# Visible-ally adrenaline: wire bi-directional witness connections so any
 	# character who shares this character's faction grants them +1 adrenaline
 	# when wounded/severed/killed within vision range. Cheap on spawn; resource
@@ -471,6 +481,22 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	#    geometry + a finished ground render instead of the 4-PNG mask set.
 	#    World maps skip the structures pass and use the world-terrain palette.
 	var is_world_map: bool = current_map_data.get("is_world_map", false) and not structured
+
+	# 2a. Build the CELL GRAPH first: the fire/fluid sims run on it, and the
+	# structured loader reads terrain elevation (GridManager) while spawning
+	# structures, so it must exist BEFORE generate_structured_map. Structured
+	# maps ship the Stalberg graph, other local maps use a square-tile adapter,
+	# world maps get none (fire there is meaningless).
+	var graph: CellGraph = null
+	if not is_world_map:
+		if structured:
+			var cg_path: String = current_map_data.get("cell_graph", "")
+			if cg_path != "":
+				graph = CellGraph.from_structured(cg_path)
+		else:
+			graph = CellGraph.from_square_tiles()
+	GridManager.set_elevation_data(graph if structured else null)
+
 	if structured:
 		map_loader.world_map_mode = false
 		map_loader.generate_structured_map(current_map_data)
@@ -481,6 +507,14 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		map_loader.structure_map_image_path = images.get("structures", "")
 		map_loader.structure_mask_path = images.get("structures_mask", "")
 		map_loader.generate_map()
+
+	# 2b. Hand the shared graph to the sims.
+	if surface_manager:
+		surface_manager.setup_cell_graph(graph)
+		# fluids run on the SHARED graph, but only on structured maps -- legacy/
+		# world maps keep FluidManager's flat tile sim (cell_fluid stays null)
+		if fluid_manager:
+			fluid_manager.setup_cell_graph(graph if structured else null)
 
 	# Apply time-scale multiplier. World maps run game time much faster so
 	# hunger, hours-of-day, and weather advance on the strategic scale; local
@@ -630,6 +664,8 @@ func _unload_current_map() -> void:
 	if weather_vfx_controller:
 		weather_vfx_controller.clear_all()
 
+	GridManager.set_elevation_data(null)
+
 	current_map_id = ""
 	current_map_data = {}
 
@@ -742,6 +778,17 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 	for i in range(spawn_count):
 		var entry = party_state[i]
 		var offset = Vector2(i * 40, 0) if not is_world_map else Vector2.ZERO
+		# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
+		# battlement walkway ~20px wide) the +x row walks later members off the
+		# edge — they'd land at ground level beside the wall, or inside it.
+		# Collapse onto the base position when the offset tile's surface
+		# differs; the separation nudge spreads them out safely after spawn.
+		if offset != Vector2.ZERO:
+			var bt := GridManager.world_to_map(base_pos)
+			var ot := GridManager.world_to_map(base_pos + offset)
+			if ot != bt and (not GridManager.can_step(bt, ot)
+					or GridManager.grid_costs.get(ot, INF) == INF):
+				offset = Vector2.ZERO
 		var character = _spawn_character(entry["template_id"], base_pos + offset, entry.get("overrides", {}))
 		if not character:
 			continue
@@ -838,6 +885,8 @@ func show_context_menu(target, position: Vector2) -> void:
 			options.append("Trade")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
+	elif target is Door:
+		options = target.get_interact_options()
 	elif target is Item:
 		options = _world_item_options(target)
 	elif target is Dictionary:
@@ -949,7 +998,7 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	light.name = "LineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = 1
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if character.current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
 	light.z_index = 102
 	character.add_child(light)
 
@@ -966,7 +1015,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.name = "NPCLineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = 1
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if npc.current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
@@ -1067,6 +1116,16 @@ func create_structure(structure_id: String, world_position: Vector2) -> Structur
 
 func _on_structure_destroyed(structure: Structure, world_pos: Vector2):
 	structures_in_scene.erase(structure)
+
+	# a wall/tree removed by ANY means (melee, ranged, bomb) changes the fuel map:
+	# without this, cell fire keeps the destroyed structure's cells as a phantom
+	# firebreak (the fuel cache only self-invalidates on fire deaths otherwise)
+	if surface_manager and surface_manager.cell_fire and is_instance_valid(surface_manager.cell_fire):
+		surface_manager.cell_fire.invalidate_fuel()
+	# a destroyed wall un-refcounts its obstacle tiles -> fluid can now flow
+	# through the breach, so drop the cell fluid's cached edge blocking
+	if fluid_manager and fluid_manager.cell_fluid and is_instance_valid(fluid_manager.cell_fluid):
+		fluid_manager.cell_fluid.invalidate_edges()
 
 	if structure.resources.is_empty():
 		return
@@ -1218,7 +1277,7 @@ func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2) -> boo
 	var angle: float = facing_dir.angle_to(to_target.normalized())
 	if abs(angle) > deg_to_rad(from_char.fov_angle_degrees * 0.5):
 		return false
-	return _sight_line_clear(from_char.global_position, target_pos)
+	return _sight_line_clear(from_char.global_position, target_pos, from_char.get_elevation())
 
 
 # Non-linear pulse curve. t in [0, 1] where 0 = fresh pulse, 1 = expired.
@@ -1291,7 +1350,7 @@ func _update_npc_los_visibility() -> void:
 			var facing_dir = Vector2.UP.rotated(ally.rotation)
 			var angle_to_npc = facing_dir.angle_to(to_npc.normalized())
 			var half_fov = deg_to_rad(ally.fov_angle_degrees * 0.5)
-			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position):
+			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position, ally.get_elevation(), npc.get_elevation()):
 				seen = true
 				break
 
@@ -1320,15 +1379,11 @@ func _update_npc_los_visibility() -> void:
 			npc.visible = false
 			npc.modulate.a = 0.0
 
-func _sight_line_clear(from_pos: Vector2, to_pos: Vector2) -> bool:
+func _sight_line_clear(from_pos: Vector2, to_pos: Vector2, viewer_elev: float = 0.0, target_elev: float = 0.0) -> bool:
 	var viewport := get_viewport()
 	if not viewport or not viewport.world_2d:
 		return true
-	var space := viewport.world_2d.direct_space_state
-	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
-	params.collide_with_areas = false
-	params.collide_with_bodies = true
-	return space.intersect_ray(params).is_empty()
+	return GridManager.sight_line_clear(viewport.world_2d.direct_space_state, from_pos, to_pos, viewer_elev, target_elev)
 
 
 func _is_position_visible_to_party(target_pos: Vector2) -> bool:
@@ -1349,7 +1404,7 @@ func _is_position_visible_to_party(target_pos: Vector2) -> bool:
 		var angle = facing_dir.angle_to(to_target.normalized())
 		if abs(angle) > deg_to_rad(ally.fov_angle_degrees * 0.5):
 			continue
-		if _sight_line_clear(ally.global_position, target_pos):
+		if _sight_line_clear(ally.global_position, target_pos, ally.get_elevation()):
 			return true
 	return false
 
@@ -2043,8 +2098,21 @@ func register_attack_end(attacker: Node2D) -> void:
 	"""Called when an attack ends - clears hit tracking"""
 	active_hits.erase(attacker.get_instance_id())
 
+const MELEE_ELEV_TOLERANCE := 0.75
+
+func _elev_of(n: Node2D) -> float:
+	if n.has_method("get_elevation"):
+		return n.get_elevation()
+	# Structures: tile under their center — a parapet on deck tiles reads deck
+	# elevation (unhittable from ground); a ground wall reads terrain.
+	return GridManager.effective_elev(GridManager.world_to_map(n.global_position))
+
 func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 	"""Check if this attack can still hit this target (hasn't already)"""
+	# Melee cannot reach across stories (deck walker vs ground character).
+	if absf(_elev_of(attacker) - _elev_of(target)) > MELEE_ELEV_TOLERANCE:
+		return false
+
 	var attacker_id = attacker.get_instance_id()
 	var target_id = target.get_instance_id()
 

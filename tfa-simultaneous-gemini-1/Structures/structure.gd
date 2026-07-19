@@ -19,6 +19,17 @@ var custom_texture: ImageTexture
 var skip_grid_snap: bool = false
 var custom_size: Vector2 = Vector2.ZERO
 var occupied_tiles: Array[Vector2i] = []
+# Tiles the structure's REAL geometry covers (no pathing margin). Structured
+# maps inflate occupied_tiles by a body-width so pathfinding keeps clear --
+# the fire system must not treat that halo as "a structure stands here", or
+# invisible stone-wall margins veto ignition of plain grass around buildings.
+# Empty = legacy map -> consumers fall back to occupied_tiles (tile-exact there).
+var fire_blocking_tiles: Array[Vector2i] = []
+# Walkable elevated deck (structured maps, "walk_elev" instances): the body sits
+# on VISION_BLOCKERS only and registers deck elevations instead of obstacles.
+var is_deck: bool = false
+var deck_elevation: float = 0.0
+var deck_tiles: Array[Vector2i] = []
 
 
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
@@ -73,11 +84,18 @@ func _setup_collision_shape() -> void:
 	collision_shape.disabled = false
 	
 func take_damage(amount: Dictionary, success_level:int = 0):
+	if amount.is_empty():
+		# a no-damage hit must not flash/emit -- it reads as "wall is immortal"
+		push_warning("%s hit with an empty damage dict" % name)
+		return
 	var damage_multiplier = pow(1.5,success_level)
 	var took_fire_damage = false
 
 	for damage_type in amount.keys():
-		current_health = max(0, current_health - (amount[damage_type]*damage_multiplier - self.damage_resistances[damage_type]))
+		# clamp per type: resistance exceeding damage must never HEAL, and an
+		# unknown damage type must not abort the hit
+		var dealt = max(0.0, amount[damage_type]*damage_multiplier - self.damage_resistances.get(damage_type, 0))
+		current_health = max(0, current_health - dealt)
 		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
 		if damage_type == "fire":
 			took_fire_damage = true
@@ -131,9 +149,16 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 	
 func _destroy_structure():
-	# Unregister all occupied tiles from the grid
-	for tile_pos in occupied_tiles:
-		GridManager.unregister_obstacle(tile_pos)
+	# Unregister all occupied tiles from the grid. Decks never registered
+	# obstacles — unregistering them anyway would corrupt refcounts shared
+	# with abutting wall segments. (A character standing on a destroyed deck
+	# auto-grounds next frame; elevation is positional.)
+	if is_deck:
+		for t in deck_tiles:
+			GridManager.unregister_deck(t, deck_elevation)
+	else:
+		for tile_pos in occupied_tiles:
+			GridManager.unregister_obstacle(tile_pos)
 	emit_signal("destroyed", self, global_position)
 	_visual().visible = false
 	collision_shape.disabled = true

@@ -84,12 +84,19 @@ func _parse_flat_item_list(item_list: Array) -> void:
 			continue
 		var item_key = Globals.name_to_id(item_name)
 		var item_type = item_data.get("type", "").to_lower()
+		var target: Dictionary = items
 		if item_type in weapon_types:
-			weapons[item_key] = item_data
+			target = weapons
 		elif item_type in equipment_types:
-			equipment[item_key] = item_data
-		else:
-			items[item_key] = item_data
+			target = equipment
+		target[item_key] = item_data
+		# ALSO register under the JSON "id": structure resource drops and map
+		# item_spawns look items up by id ("wood"), but display-name keying
+		# stores "Wood Log" as "wood_log" -- the id lookup missed, so drops
+		# spawned as invisible textureless ghosts. Alias shares the same dict.
+		var id_key = str(item_data.get("id", ""))
+		if id_key != "" and id_key != item_key and not target.has(id_key):
+			target[id_key] = item_data
 
 # ===== CURRENCY =====
 

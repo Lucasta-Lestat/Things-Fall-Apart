@@ -161,6 +161,46 @@ var body_sprite_data: Dictionary = {}  # Paths to body part sprite textures
 var skeletal_rig: SkeletalBodyRig = null
 var use_skeletal_rig: bool = false
 
+# --- Auto-rig (CharacterRig mesh scene) integration -------------------------
+# Option C: when a race's body block declares body.rig_scene, the visual +
+# animation layer is a packaged CharacterRig (Node2D) child, replacing BOTH the
+# legacy Line2D body and SkeletalBodyRig. The CharacterBody2D host is unchanged;
+# it feeds the rig only high-level state (set_moving / play_action / facing via
+# node rotation) and NEVER pushes per-frame joints (the rig self-animates). See
+# _setup_character_rig().
+var rig_scene_path: String = ""          # res:// path to a CharacterMesh.tscn
+var rig_scale: float = 0.0               # uniform scale; 0 = auto/default
+var character_rig: Node2D = null         # the instantiated CharacterRig scene
+var _rig_grip_r: Node2D = null            # rig weapon anchors (fingertip, +X = blade)
+var _rig_grip_l: Node2D = null
+var _rig_holder_sync_queued := false
+
+func _rig_sync_holders() -> void:
+	# End-of-frame holder sync (see _sync_character_rig). WeaponShape art
+	# points -Y at rot 0 while the grip's +X is the blade direction, hence
+	# the +PI/2. z 20 lifts the weapon above the rig mesh (baked rig weapons
+	# use z 15).
+	_rig_holder_sync_queued = false
+	if _rig_grip_r != null and is_instance_valid(_rig_grip_r) and main_hand_holder != null:
+		main_hand_holder.global_position = _rig_grip_r.global_position
+		main_hand_holder.global_rotation = _rig_grip_r.global_rotation + PI / 2.0
+		main_hand_holder.z_index = 20
+	if _rig_grip_l != null and is_instance_valid(_rig_grip_l) and off_hand_holder != null:
+		off_hand_holder.global_position = _rig_grip_l.global_position
+		off_hand_holder.global_rotation = _rig_grip_l.global_rotation + PI / 2.0
+		off_hand_holder.z_index = 20
+var _rig_last_moving: bool = false       # so set_moving fires only on change
+# The rig art is authored FRONT-FACING (+Y / south); TFA forward is local -Y. A
+# single local rotation on the rig child makes its face LEAD the movement
+# direction (verified in all directions). Applied in ONE place only — never
+# per-part — which structurally avoids the legacy split-orientation bug.
+const RIG_FACING_OFFSET := PI
+# Uniform scale fallback. Matches the legacy SkeletalBodyRig render_scale (~0.065).
+# NOTE: deriving from body_width/bone-root-span overshoots ~2x because the arm
+# bone ROOTS sit inboard of the visual shoulders — a proper auto-derive must
+# measure the VISUAL shoulder width (torso polygon), not the bone spacing.
+const RIG_DEFAULT_SCALE := 0.06
+
 enum HairStyle {
 	NONE,
 	HORSESHOE,      # Original balding/receding hairline
@@ -257,6 +297,27 @@ var _dash_motion_remaining: float = 0.0
 var _dash_motion_max_time: float = 0.0
 var _dash_motion_elapsed: float = 0.0
 var _dash_motion_on_complete: Callable
+
+# Scripted JUMP state (rooftop traversal; jump-capable races only). The arc is
+# a straight lerp that deliberately phases over walls/gaps — collision vs
+# STRUCTURES is suspended for its duration and restored on landing.
+var _jump_active: bool = false
+var _jump_from: Vector2 = Vector2.ZERO
+var _jump_to_world: Vector2 = Vector2.ZERO
+var _jump_target_surface: float = 0.0
+var _jump_target_on_roof: bool = false
+var _jump_elapsed: float = 0.0
+var _jump_duration: float = 0.0
+var _jump_saved_mask: int = 0
+var _jump_takeoff_elev: float = 0.0
+
+# Scripted FALL state (forced off a ledge/roof, deck destroyed, or a jumper's
+# controlled big drop). Short vertical settle; damage applied on landing.
+var _fall_active: bool = false
+var _fall_from_elev: float = 0.0
+var _fall_to_elev: float = 0.0
+var _fall_elapsed: float = 0.0
+var _fall_duration: float = 0.0
 
 # Condition-driven movement timers (for player-controlled override)
 var _panic_timer: float = 0.0
@@ -389,6 +450,17 @@ var speed_modifier: float = 0.0
 # is set.
 var overland_speed_modifier: float = 0.0
 var on_world_map: bool = false
+# Elevation in signed stories, purely POSITIONAL (tile under feet, refreshed
+# each frame + on spawn). Intentionally not persisted in live_state.
+var current_elevation: float = 0.0
+# Roof layer: true while standing ON a roof (a stacked surface over the ground;
+# interiors below keep ground elevation). Only jumpers ever set this.
+var on_roof: bool = false
+# Race-driven jump capability (RaceDatabase): 0.0 = non-jumper (every existing
+# race; all jump/fall branches are dead code for them).
+var jump_height: float = 0.0
+var jump_range: int = 1
+var fall_damage_mult: float = 1.0
 var arm_length: float = 0.0
 var race_id: String = ""
 var creature_type: String = "Humanoid"
@@ -396,6 +468,30 @@ var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
+
+func get_elevation() -> float:
+	return current_elevation
+
+# Re-derive elevation from the tile under our feet and retier the sight-cone
+# lights. Called every unpaused frame + on spawn (Game._spawn_character) so a
+# warp arrival onto a deck reads deck elevation before its light is added.
+# Layer-aware: a character ON a roof reads the roof surface, not the ground
+# (or interior) beneath it.
+func _refresh_elevation() -> void:
+	var t := GridManager.world_to_map(global_position)
+	var e: float
+	if on_roof and GridManager.has_roof(t):
+		e = GridManager.roof_at(t)
+	else:
+		e = GridManager.effective_elev(t)
+	if is_equal_approx(e, current_elevation):
+		return
+	current_elevation = e
+	var mask := CollisionLayers.SIGHT_MASK_HIGH if current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
+	for n in ["LineOfSight", "NPCLineOfSight"]:
+		var l := get_node_or_null(n)
+		if l:
+			l.shadow_item_cull_mask = mask
 
 # Configuration
 @export_group("Wound Lines")
@@ -1516,7 +1612,7 @@ func _process_condition_movement_overrides(delta: float) -> void:
 			target_tile.y = clampi(target_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
 			if not GridManager.walls.get(target_tile, false) and GridManager.grid_costs.get(target_tile, INF) < INF:
 				var start_tile = GridManager.world_to_map(global_position)
-				var tile_path = GridManager.find_path(start_tile, target_tile)
+				var tile_path = GridManager.find_path(start_tile, target_tile, jump_height, jump_range, on_roof)
 				_nav_waypoints.clear()
 				for tile in tile_path:
 					_nav_waypoints.append(GridManager.map_to_world(tile))
@@ -1550,7 +1646,7 @@ func _process_condition_movement_overrides(delta: float) -> void:
 					test_tile.y = clampi(test_tile.y, GridManager.map_rect.position.y, GridManager.map_rect.position.y + GridManager.map_rect.size.y - 1)
 					if not GridManager.walls.get(test_tile, false) and GridManager.grid_costs.get(test_tile, INF) < INF:
 						var start_tile = GridManager.world_to_map(global_position)
-						var tile_path = GridManager.find_path(start_tile, test_tile)
+						var tile_path = GridManager.find_path(start_tile, test_tile, jump_height, jump_range, on_roof)
 						if not tile_path.is_empty():
 							_nav_waypoints.clear()
 							for tile in tile_path:
@@ -1582,6 +1678,9 @@ func get_separation_vector() -> Vector2:
 	var overlapping = get_overlapping_characters()
 	
 	for other in overlapping:
+		# A deck walker directly above a ground character must not repel it.
+		if absf(other.current_elevation - current_elevation) > 0.5:
+			continue
 		var to_self = global_position - other.global_position
 		var distance = to_self.length()
 		var min_dist = collision_radius + other.collision_radius + minimum_separation
@@ -1750,7 +1849,7 @@ func rebuild_visuals() -> void:
 	for node_name in ["LeftLeg", "RightLeg", "FrontLeftLeg", "FrontRightLeg",
 			"RearLeftLeg", "RearRightLeg",
 			"LeftArm", "RightArm", "Body", "Head", "Snout", "TuskL", "TuskR",
-			"Tail", "HeadFeatures", "BodyPartSprites", "SkeletalBodyRig"]:
+			"Tail", "HeadFeatures", "BodyPartSprites", "SkeletalBodyRig", "CharacterRig"]:
 		var node = get_node_or_null(node_name)
 		if node:
 			to_remove.append(node)
@@ -1762,6 +1861,8 @@ func rebuild_visuals() -> void:
 		node.free()
 	body_part_sprites = null
 	skeletal_rig = null
+	character_rig = null
+	_rig_last_moving = false
 	use_sprite_overlays = false
 	use_skeletal_rig = false
 
@@ -1786,9 +1887,16 @@ func rebuild_visuals() -> void:
 	_update_hair_colors()
 	_update_collision_shape()
 
-	# Set up body part sprite overlays if sprite data exists
-	if body_sprite_data and not body_sprite_data.is_empty():
+	# Set up body part sprite overlays if sprite data exists — or when the race
+	# declares a rig_scene: rigged races don't need legacy sprite art at all.
+	if (body_sprite_data and not body_sprite_data.is_empty()) or rig_scene_path != "":
 		_setup_body_part_sprites()
+	if character_rig == null:
+		# Rig -> legacy rebuild: restore the flat armor icons the rig had hidden.
+		_rig_worn.clear()
+		for shape in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
+			if shape and is_instance_valid(shape):
+				shape.visible = true
 
 func _create_body_parts() -> void:
 	if body_type == BodyType.QUADRUPED:
@@ -2557,8 +2665,14 @@ func _update_colors() -> void:
 
 func _setup_body_part_sprites() -> void:
 	"""Create and configure body part sprite overlays from body_sprite_data.
-	Prefers the manifest-driven SkeletalBodyRig when a body_manifest.json sits
-	next to the part sprites; otherwise falls back to legacy BodyPartSprites."""
+	Prefers a packaged CharacterRig (body.rig_scene); then the manifest-driven
+	SkeletalBodyRig when a body_manifest.json sits next to the part sprites;
+	otherwise falls back to legacy BodyPartSprites."""
+	# Option C: packaged auto-rig scene wins over both older paths.
+	if rig_scene_path != "" and _setup_character_rig():
+		return
+	if body_sprite_data == null or body_sprite_data.is_empty():
+		return  # rig-only race whose scene failed to load: keep procedural body
 	var head_path: String = body_sprite_data.get("head", "")
 	if head_path != "" and SkeletalBodyRig.has_manifest(head_path):
 		_setup_skeletal_rig(head_path)
@@ -2652,6 +2766,192 @@ func _setup_skeletal_rig(head_path: String) -> void:
 	use_skeletal_rig = true
 	use_sprite_overlays = true
 
+func _setup_character_rig() -> bool:
+	"""Auto-rig path (Option C): instantiate a packaged CharacterRig mesh scene as
+	the character's visual. The CharacterRig owns an internal AnimationPlayer, so
+	— unlike SkeletalBodyRig — we do NOT push per-frame joints into it; the
+	per-frame legacy posing chain is skipped for rig characters (see _process),
+	and we feed it only set_moving()/play_action(). Returns false to fall back to
+	the legacy paths if the scene can't be loaded."""
+	if not ResourceLoader.exists(rig_scene_path):
+		push_warning("[ProceduralCharacter] rig_scene not found: " + rig_scene_path)
+		return false
+	var scn: PackedScene = load(rig_scene_path)
+	if scn == null:
+		return false
+	# Tear down any prior overlay of any kind.
+	if body_part_sprites:
+		remove_child(body_part_sprites); body_part_sprites.queue_free(); body_part_sprites = null
+	if skeletal_rig:
+		remove_child(skeletal_rig); skeletal_rig.queue_free(); skeletal_rig = null
+	if character_rig:
+		remove_child(character_rig); character_rig.queue_free(); character_rig = null
+	_rig_grip_r = null
+	_rig_grip_l = null
+
+	character_rig = scn.instantiate() as Node2D
+	if character_rig == null:
+		push_warning("[ProceduralCharacter] rig_scene root is not a Node2D: " + rig_scene_path)
+		return false
+	character_rig.name = "CharacterRig"
+	add_child(character_rig)
+
+	# Uniform scale: explicit race body.rig_scale wins; else a measured default
+	# (TODO: publish the rig's shoulder span so this auto-derives from body_width).
+	var s: float = rig_scale if rig_scale > 0.0 else RIG_DEFAULT_SCALE
+	character_rig.scale = Vector2(s, s)
+	# ONE facing offset — parent (CharacterBody2D) rotation carries live facing.
+	character_rig.rotation = RIG_FACING_OFFSET
+	# Center the rig's visual centroid on the host origin.
+	var center: Vector2 = character_rig.get_meta("center") if character_rig.has_meta("center") else Vector2.ZERO
+	character_rig.position = -(center * s).rotated(RIG_FACING_OFFSET)
+
+	# Front-facing art: default to facing SOUTH so it reads upright at rest instead
+	# of inverted at rotation 0 (forward = UP.rotated(rotation) → south at PI).
+	target_rotation = PI
+	rotation = PI
+
+	# Hide the legacy Line2D geometry (the rig self-animates; no push needed).
+	_set_procedural_geometry_visible(false)
+	use_sprite_overlays = true
+	use_skeletal_rig = false
+	_rig_last_moving = false
+	# Weapon anchors: every exported rig ships grip_l/grip_r Node2Ds on the hand
+	# bones (origin = fingertip, +X = blade direction). Generalized equipping
+	# parents nothing — the hand holders just follow these each frame, so ANY
+	# TFA weapon works on ANY rigged race with no baking.
+	_rig_grip_r = character_rig.get_node_or_null("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r/grip_r")
+	_rig_grip_l = character_rig.get_node_or_null("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l/grip_l")
+	# Fitted wearables for armor equipped before this (re)build.
+	_rig_apply_wearables()
+	if character_rig.has_method("set_moving"):
+		character_rig.set_moving(is_moving)
+	return true
+
+func _sync_character_rig() -> void:
+	"""Per-frame bridge for rig characters: push locomotion STATE (not joints).
+	set_moving is called only on change so the base idle/walk clip isn't restarted
+	every frame. Facing is carried by the parent node rotation (single authority)."""
+	if character_rig == null:
+		return
+	if is_moving != _rig_last_moving:
+		_rig_last_moving = is_moving
+		if character_rig.has_method("set_moving"):
+			character_rig.set_moving(is_moving)
+	# Live IK tracking: while an arm is aim-posed (clipless attack / cast),
+	# re-aim it every frame so it follows a moving target.
+	if _rig_ik_hand != "":
+		rig_aim(_rig_ik_hand, _rig_aim_fallback_point())
+	# Generalized equipping: the legacy weapon holders ride the rig's grip
+	# anchors, so the equipped WeaponShape (visuals + melee hitbox, unchanged)
+	# follows the animated/IK-posed hand. Deferred to end-of-frame: the rig
+	# (a CHILD) animates its bones after this parent's _process, so a direct
+	# copy here would trail the hand by one frame — visible as a detached
+	# blade during fast swings.
+	if (_rig_grip_r != null or _rig_grip_l != null) and not _rig_holder_sync_queued:
+		_rig_holder_sync_queued = true
+		call_deferred("_rig_sync_holders")
+
+# --- Attack aim target (world) -----------------------------------------------
+# Set by callers right before attack()/cast — mirrors the target_rotation
+# pattern (AI passes its live target node; player/queue pass a world point).
+# Consumed by the rig IK fallback pose and target-aware ranged fire; cleared
+# when the attack/cast ends. Legacy (non-rig) characters simply ignore it.
+var attack_aim_node: Node2D = null      # live target (tracks movement)
+var attack_aim_point = null             # Vector2 world point, or null
+var _rig_ik_hand := ""                  # "l"/"r" while a rig arm is IK-aiming
+var _rig_ik_owner := ""                 # "attack"/"cast" — who armed the hold
+
+# Damage types with no baked rig clip: aim the attacking arm at the target via
+# IK instead of faking an unrelated pose (pistol used to play bow_draw; thrown
+# flasks a sword swing).
+const RIG_IK_FALLBACK_TYPES := ["ranged_bullet", "acid", "electric", "cold", "radiant", "poison"]
+
+func set_attack_aim(point = null, node: Node2D = null) -> void:
+	attack_aim_point = point
+	attack_aim_node = node
+
+func get_attack_aim_point():
+	# Live node wins (tracks movement); then the stashed point; null if neither.
+	if attack_aim_node != null and is_instance_valid(attack_aim_node):
+		return attack_aim_node.global_position
+	return attack_aim_point
+
+func _rig_aim_fallback_point() -> Vector2:
+	var p = get_attack_aim_point()
+	if p != null:
+		return p
+	# No explicit target: aim along current facing at roughly arm's reach.
+	return global_position + Vector2.UP.rotated(rotation) * 120.0
+
+func _rig_ik_set(side: String, owner: String) -> void:
+	# Arm an IK hold. If the OTHER arm is still held (a cast starting mid
+	# off-hand attack), release it first so no arm is ever left pinned to a
+	# stale world point.
+	if _rig_ik_hand != "" and _rig_ik_hand != side:
+		rig_aim(_rig_ik_hand, null)
+	_rig_ik_hand = side
+	_rig_ik_owner = owner
+	rig_aim(side, _rig_aim_fallback_point())
+
+func _rig_ik_release(owner: String = "") -> void:
+	# Release an IK hold — but only for its owner: cast_failed/cast_completed
+	# fire for casts that never armed IK (instant potions, precondition
+	# failures, projectile impacts seconds later) and must not drop a live
+	# attack's arm or its aim stash. "" forces the release.
+	if owner != "" and _rig_ik_owner != owner:
+		return
+	if _rig_ik_hand != "":
+		rig_aim(_rig_ik_hand, null)
+		_rig_ik_hand = ""
+	_rig_ik_owner = ""
+	attack_aim_point = null
+	attack_aim_node = null
+
+func _rig_play_attack(damage_type: String, hand: String) -> void:
+	"""Cosmetic overlay: map a TFA attack to a CharacterRig one-shot clip. Timing
+	(hit frames, projectile spawn) still belongs to AttackAnimator — the clip only
+	needs to visually overlap the swing window. Damage types with no fitting clip
+	fall back to the 2-bone arm IK: the attacking arm aims at the current attack
+	target (live-tracked in _sync_character_rig) until attack_finished releases it."""
+	if character_rig == null or not character_rig.has_method("play_action"):
+		return
+	var side := "right" if hand == "Main" else "left"
+	var action := "swing_" + side
+	match damage_type:
+		"piercing":
+			action = "thrust"
+		"ranged_arrow":
+			action = "bow_draw"
+	var avail: PackedStringArray = character_rig.actions() if character_rig.has_method("actions") else PackedStringArray()
+	var clipless: bool = damage_type in RIG_IK_FALLBACK_TYPES or action not in avail
+	if clipless and character_rig.has_method("set_arm_ik"):
+		_rig_ik_set("r" if hand == "Main" else "l", "attack")
+		return
+	if action not in avail:
+		action = ("swing_" + side) if ("swing_" + side) in avail \
+			else (avail[0] if avail.size() > 0 else "")
+	if action == "":
+		return  # rig has no action clips at all — never wedge the base loop
+	# Time-scale the clip to the REAL attack window (dex/weight-scaled), so the
+	# swing peaks inside the hitbox-monitoring window for every weapon speed.
+	var dur := 0.0
+	if attack_animator:
+		dur = attack_animator.windup_duration + attack_animator.strike_duration 			+ attack_animator.recovery_duration
+	character_rig.play_action(action, dur)
+
+func rig_aim(side: String, target_global) -> void:
+	# Drive the CharacterRig's 2-bone arm IK toward a WORLD target (Vector2), or
+	# pass null to release that arm back to its animation. No-op for legacy
+	# characters. Use for target-aware reach and as a fallback pose for actions
+	# with no baked clip (firearms, cast). side is "l" or "r".
+	if character_rig and character_rig.has_method("set_arm_ik"):
+		character_rig.set_arm_ik(side, target_global)
+
+func rig_aim_clear() -> void:
+	if character_rig and character_rig.has_method("clear_arm_ik"):
+		character_rig.clear_arm_ik()
+
 func _set_procedural_geometry_visible(is_visible: bool) -> void:
 	"""Show or hide the procedural Line2D geometry.
 	When hidden, animations still run to compute positions for sprite overlays."""
@@ -2713,13 +3013,23 @@ func _process(delta: float) -> void:
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
 	if not PauseManager.is_paused:
+		# Airborne: the tile under the lerped mid-arc position is meaningless
+		# (it may be an INF wall or the unroofed landing before we've landed).
+		# _end_jump/_end_fall refresh explicitly on touchdown.
+		if not _jump_active and not _fall_active:
+			_refresh_elevation()
 		handle_visual_shake(delta)
 		_update_movement(delta)
-		_update_leg_animation(delta)
-		_update_body_rotation()
-		_update_arm_ik()
-		_update_arm_visuals()
-		_update_weapon_position()
+		if character_rig != null:
+			# Rig characters self-animate: skip the ENTIRE legacy per-part posing
+			# chain (the single facing/pose authority) and push only locomotion state.
+			_sync_character_rig()
+		else:
+			_update_leg_animation(delta)
+			_update_body_rotation()
+			_update_arm_ik()
+			_update_arm_visuals()
+			_update_weapon_position()
 		_update_severed_limb_visuals()
 		# MP regeneration (only when not stunned)
 		if true: # make stun alter mp_regen_timer
@@ -2906,7 +3216,7 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 			action_queue.queue_attack(mouse_pos)
 		else:
 			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			attack(hand_str)
+			attack(hand_str, mouse_pos)
 			
 	elif item is AbilityShape:
 		# Ability Logic — always face the target
@@ -3111,7 +3421,7 @@ func _handle_input() -> void:
 			if target_tile != _last_nav_target_tile:
 				_last_nav_target_tile = target_tile
 				var start_tile = GridManager.world_to_map(global_position)
-				var tile_path = GridManager.find_path(start_tile, target_tile)
+				var tile_path = GridManager.find_path(start_tile, target_tile, jump_height, jump_range, on_roof)
 				_nav_waypoints.clear()
 				for tile in tile_path:
 					_nav_waypoints.append(GridManager.map_to_world(tile))
@@ -3168,9 +3478,9 @@ func _handle_input() -> void:
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
 ## Probe the world at mouse_pos for a right-click context-menu target. Returns the
-## first Item or non-hostile ProceduralCharacter under the cursor, or null.
-## Hostile characters and empty space return null so the existing right-click
-## (off-hand attack) flow continues.
+## first Door, Item, or non-hostile ProceduralCharacter under the cursor, or null.
+## Hostile characters, plain structures (walls/trees), and empty space return null
+## so the existing right-click (off-hand attack) flow continues.
 func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 	var space = get_world_2d().direct_space_state
 	if space == null:
@@ -3179,25 +3489,41 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 	query.position = world_pos
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
-	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS
+	# STRUCTURES finds closed doors, INTERACTABLES finds open ones.
+	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS \
+		| CollisionLayers.STRUCTURES | CollisionLayers.INTERACTABLES
 	# exclude expects an Array[RID], not a node — use this character's body RID.
 	query.exclude = [self.get_rid()]
-	var hits = space.intersect_point(query, 8)
+	# 16, not 8: wall bodies can now crowd the hit list.
+	# intersect_point results are UNORDERED — decide by fixed priority across
+	# the whole hit list, or a door body spanning an open doorway hijacks the
+	# menu from the NPC/item/hostile standing in it.
+	var hits = space.intersect_point(query, 16)
+	var first_item: Item = null
+	var first_door: Door = null
+	var saw_hostile := false
 	for hit in hits:
 		var collider = hit.get("collider")
 		if collider == null:
 			continue
-		if collider is Item:
-			return collider
-		if collider is ProceduralCharacter and collider != self:
+		if collider is Door and first_door == null:
+			first_door = collider
+		elif collider is Item and first_item == null:
+			first_item = collider
+		elif collider is ProceduralCharacter and collider != self:
 			# Only non-hostile NPCs get a context menu; hostile characters
-			# fall through to the off-hand attack path. We check vs the player
-			# faction (not the controlling character's own faction) so the
-			# decision matches show_context_menu's Trade injection — the menu
+			# keep the off-hand attack path. We check vs the player faction
+			# (not the controlling character's own faction) so the decision
+			# matches show_context_menu's Trade injection — the menu
 			# represents the party's perspective, not an individual member's.
 			if not FactionDatabase.are_enemies("player", collider.faction_id):
 				return collider
-	return null
+			saw_hostile = true
+	if first_item != null:
+		return first_item
+	if saw_hostile:
+		return null   # right-click on a hostile in a doorway must stay an attack
+	return first_door
 
 ## Probe the world for an "openable" Item (chest-style) at mouse_pos. The
 ## chest's first interact_option is "Open" (see Items.json) — clicking it
@@ -3398,6 +3724,14 @@ func _update_movement(delta: float) -> void:
 	if dash_cooldown_timer > 0.0:
 		dash_cooldown_timer -= delta
 
+	# --- Fall / jump overrides (win over everything: the body is airborne) ---
+	if _fall_active:
+		_update_fall_motion(delta)
+		return
+	if _jump_active:
+		_update_jump_motion(delta)
+		return
+
 	# --- Ice sliding override ---
 	if is_ice_sliding:
 		_update_ice_slide(delta)
@@ -3420,9 +3754,94 @@ func _update_movement(delta: float) -> void:
 
 		if distance > 5.0:
 			var move_dir = to_target.normalized()
+			# Elevation traverse gate: crossing into a tile more than
+			# MAX_STEP_STORIES away is a cliff, not a wall — physics won't stop
+			# it, so veto here. Sub-tile movement is never blocked (no jitter
+			# hugging an edge). Slide along the scarp if one axis is safe.
+			var from_t := GridManager.world_to_map(global_position)
+			# ROOF-MOUNT dispatch (must precede the tile-crossing gate below):
+			# mounting a roof is a jump the layered A* chose, but the ground
+			# under the mount tile is bare (elev 0) so the cliff gate never fires
+			# AND the wall's STRUCTURES collider pins the body a tile short before
+			# `to_t` ever becomes the roof tile. Fire on waypoint intent instead.
+			# Guard against turning ordinary indoor walking into hopping: only
+			# when the waypoint carries a roof we're not already on AND cannot be
+			# reached by a plain ground step (no pathable ground there, or too
+			# tall). can_jump_to vets cardinality/range/rise.
+			if jump_height > 0.0 and not on_roof:
+				var wp_mt := GridManager.world_to_map(target_position)
+				if wp_mt != from_t and GridManager.has_roof(wp_mt) and can_jump_to(from_t, wp_mt):
+					var ground_walkable: bool = GridManager.grid_costs.get(wp_mt, INF) != INF and GridManager.can_step(from_t, wp_mt)
+					if not ground_walkable:
+						_begin_jump(wp_mt)
+						return
+			var step: Vector2 = move_dir * move_speed * delta
+			var to_t := GridManager.world_to_map(global_position + step)
+			if to_t != from_t and not _step_ok(from_t, to_t):
+				# JUMP dispatch: a jumper whose current WAYPOINT is leapable
+				# (roof mount, roof-gap crossing, or a controlled drop) takes
+				# the arc instead of fizzling at the ledge. The layered A* is
+				# what put that waypoint there; walkers never get one.
+				var wp_t := GridManager.world_to_map(target_position)
+				if jump_height > 0.0 and can_jump_to(from_t, wp_t):
+					_begin_jump(wp_t)
+					return
+				# Probe each slide axis with the FULL step magnitude actually
+				# applied after the slide (velocity becomes a unit axis *
+				# move_speed) — probing only the diagonal component would
+				# approve slides that slip into cliff tiles at inside corners.
+				var slid := false
+				var full := step.length()
+				if absf(step.x) > 0.001:
+					var tx := GridManager.world_to_map(global_position + Vector2(signf(step.x) * full, 0.0))
+					if tx == from_t or _step_ok(from_t, tx):
+						move_dir = Vector2(signf(step.x), 0.0)
+						slid = true
+				if not slid and absf(step.y) > 0.001:
+					var ty := GridManager.world_to_map(global_position + Vector2(0.0, signf(step.y) * full))
+					if ty == from_t or _step_ok(from_t, ty):
+						move_dir = Vector2(0.0, signf(step.y))
+						slid = true
+				if not slid:
+					# Manual stuck accumulation: is_on_wall() is false against a
+					# logical cliff, so the detector below never fires. Reuse the
+					# fake-arrival contract so ActionQueue MOVE completion (reads
+					# is_moving) advances cleanly.
+					_movement_stuck_time += delta
+					if _movement_stuck_time > 0.5:
+						_movement_stuck_time = 0.0
+						_nav_waypoints.clear()
+						_nav_index = 0
+						is_moving = false
+						emit_signal("character_reached_target")
+					return
 			velocity = move_dir * move_speed
 			var prev_pos := global_position
 			move_and_slide()
+			# Roof support check: a roof-walker carried off the footprint
+			# (deflection / channel granularity at the true edge) falls.
+			if on_roof:
+				var ut := GridManager.world_to_map(global_position)
+				if not GridManager.has_roof(ut):
+					_begin_fall(GridManager.effective_elev(ut))
+					return
+			# Post-move validation: physics wall deflection (or a long frame)
+			# can land us in a tile the pre-move probe never tested. Revert
+			# rather than climb a cliff; the reverted frame counts as stuck so
+			# the fake-arrival contract still terminates the MOVE. (Skipped on
+			# a roof: the ground field under the footprint is irrelevant there;
+			# the support check above already guards the rim.)
+			if not on_roof and not GridManager.can_traverse(prev_pos, global_position):
+				global_position = prev_pos
+				velocity = Vector2.ZERO
+				_movement_stuck_time += delta
+				if _movement_stuck_time > 0.5:
+					_movement_stuck_time = 0.0
+					_nav_waypoints.clear()
+					_nav_index = 0
+					is_moving = false
+					emit_signal("character_reached_target")
+				return
 			# If we are pressed against a wall and made no real progress for
 			# longer than a short threshold, abandon the move so the action
 			# queue (whose MOVE-complete check reads is_moving) can advance.
@@ -3464,8 +3883,19 @@ func _update_movement(delta: float) -> void:
 	if collision_enabled:
 		var separation = get_separation_vector()
 		if separation.length() > 0.1:
-			# Apply separation force (scaled by delta for smooth movement)
-			global_position += separation * min(1.0, delta * 10.0)
+			# Apply separation force (scaled by delta for smooth movement) —
+			# unless the nudge would push us over a cliff edge.
+			var cur_t := GridManager.world_to_map(global_position)
+			var nudged: Vector2 = global_position + separation * min(1.0, delta * 10.0)
+			var nudged_t := GridManager.world_to_map(nudged)
+			# Layer-aware (_step_ok, not can_step): a roof-walker's nudge is gated
+			# on the roof surface, so it can't be shoved onto the INF ground under
+			# the footprint and embed in a wall. If a nudge does carry a
+			# roof-walker off the footprint, it falls — same as a move would.
+			if nudged_t == cur_t or _step_ok(cur_t, nudged_t):
+				global_position = nudged
+				if on_roof and not GridManager.has_roof(nudged_t):
+					_begin_fall(GridManager.effective_elev(nudged_t))
 
 func _accumulate_step(distance_moved: float) -> void:
 	_distance_since_last_step += distance_moved
@@ -3548,9 +3978,18 @@ func _begin_ice_slide(direction: Vector2) -> void:
 	if action_queue and action_queue.current_action != null:
 		action_queue.clear_queue()
 
-func _update_ice_slide(_delta: float) -> void:
+func _update_ice_slide(delta: float) -> void:
 	"""Move the character in a straight line while on ice. Stops on hitting a
-	wall (via physics) or on reaching a non-ice tile."""
+	wall (via physics) or an UP-cliff; slides OFF a down-ledge into a fall."""
+	var ice_step := _ice_slide_direction * _ice_slide_speed * delta
+	if _forced_drop_check(ice_step):
+		is_ice_sliding = false
+		_ice_slide_direction = Vector2.ZERO
+		_ice_slide_speed = 0.0
+		return
+	if not GridManager.can_traverse(global_position, global_position + ice_step):
+		_end_ice_slide()
+		return
 	velocity = _ice_slide_direction * _ice_slide_speed
 	move_and_slide()
 	if is_on_wall():
@@ -3589,6 +4028,19 @@ func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
 
 func _update_knockback(delta: float) -> void:
 	if knockback_velocity.length() > 0.0:
+		# Knocked OFF a down-ledge/roof rim: momentum carries the body over
+		# into a fall. An UP-cliff still stops knockback dead. can_traverse
+		# samples the whole segment: at 800px/s a frame hitch spans >1 tile
+		# and an endpoint check would tunnel across a ravine.
+		var kb_step := knockback_velocity * delta
+		if _forced_drop_check(kb_step):
+			knockback_active = false
+			knockback_velocity = Vector2.ZERO
+			return
+		if not GridManager.can_traverse(global_position, global_position + kb_step):
+			knockback_active = false
+			knockback_velocity = Vector2.ZERO
+			return
 		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
 		velocity = knockback_velocity
 		move_and_slide()
@@ -3619,6 +4071,17 @@ func dash_to(target_pos: Vector2, speed: float, on_complete: Callable = Callable
 
 func _update_dash_motion(delta: float) -> void:
 	_dash_motion_elapsed += delta
+	# A dash OFF a down-ledge becomes a fall — _end_dash_motion runs FIRST so
+	# the owning ability's on_complete still fires. An UP-cliff ends the dash
+	# as before (segment-sampled: dashes run at 600-700px/s and an endpoint-
+	# only check would tunnel across one-tile gaps on hitches).
+	var dash_step := _dash_motion_dir * _dash_motion_speed * delta
+	if _forced_drop_check(dash_step):
+		_end_dash_motion()   # fires on_complete; doesn't touch the fall state
+		return
+	if not GridManager.can_traverse(global_position, global_position + dash_step):
+		_end_dash_motion()
+		return
 	velocity = _dash_motion_dir * _dash_motion_speed
 	var prev_pos := global_position
 	move_and_slide()
@@ -3641,6 +4104,156 @@ func _end_dash_motion() -> void:
 	_dash_motion_on_complete = Callable()
 	if cb.is_valid():
 		cb.call()
+
+
+# --- jump / fall (rooftop traversal; see GridManager's roof layer) -----------
+
+# Layer-aware step gate: a roof-walker steps on the roof surface, everyone
+# else on the ground/deck surface. Dead code (on_roof false) for non-jumpers.
+func _step_ok(a: Vector2i, b: Vector2i) -> bool:
+	return GridManager.can_step_roof(a, b) if on_roof else GridManager.can_step(a, b)
+
+
+# Mirrors the planner's jump edges: cardinal, within jump_range, target tile
+# pathable, and the TARGET SURFACE (roof if roofed, else ground/deck) rises at
+# most jump_height above us. Falling rises are negative -> always allowed (a
+# jumper may leap DOWN any distance; the landing applies fall damage).
+func can_jump_to(from_t: Vector2i, to_t: Vector2i) -> bool:
+	if jump_height <= 0.001:
+		return false
+	var dt := to_t - from_t
+	if (dt.x != 0 and dt.y != 0) or maxi(absi(dt.x), absi(dt.y)) > jump_range or dt == Vector2i.ZERO:
+		return false
+	# roof landings float above ground obstacles (real roofs sit over INF wall
+	# tiles); only GROUND landings need a pathable tile
+	if not GridManager.has_roof(to_t) and GridManager.grid_costs.get(to_t, INF) == INF:
+		return false
+	var target_surface := GridManager.roof_at(to_t) if GridManager.has_roof(to_t) else GridManager.effective_elev(to_t)
+	return target_surface - current_elevation <= jump_height
+
+
+func _begin_jump(to_t: Vector2i) -> void:
+	var to_world := GridManager.map_to_world(to_t)
+	_jump_from = global_position
+	_jump_to_world = to_world
+	_jump_target_on_roof = GridManager.has_roof(to_t)
+	_jump_target_surface = GridManager.roof_at(to_t) if _jump_target_on_roof else GridManager.effective_elev(to_t)
+	# Snapshot the takeoff surface NOW: the per-frame _refresh_elevation is
+	# suppressed while airborne, but capturing here also guards against any
+	# other mid-arc mutation of current_elevation (else a controlled drop reads
+	# takeoff == landing and deals zero fall damage).
+	_jump_takeoff_elev = current_elevation
+	_jump_duration = maxf(0.12, _jump_from.distance_to(to_world) / maxf(1.0, move_speed * 1.5))
+	_jump_elapsed = 0.0
+	# the arc deliberately clears walls/gaps: suspend hard structure collision
+	# for its duration (restored on landing)
+	_jump_saved_mask = collision_mask
+	collision_mask &= ~CollisionLayers.STRUCTURES
+	_jump_active = true
+
+
+func _update_jump_motion(delta: float) -> void:
+	_jump_elapsed += delta
+	var f := clampf(_jump_elapsed / maxf(0.001, _jump_duration), 0.0, 1.0)
+	global_position = _jump_from.lerp(_jump_to_world, f)
+	if f >= 1.0:
+		_end_jump()
+
+
+func _end_jump() -> void:
+	global_position = _jump_to_world
+	collision_mask = _jump_saved_mask
+	_jump_active = false
+	var takeoff := _jump_takeoff_elev
+	on_roof = _jump_target_on_roof
+	_refresh_elevation()
+	# a controlled big drop still lands hard
+	_apply_fall_damage(takeoff - _jump_target_surface)
+
+
+# Control is lost mid-air: nav cancels; the queue is released on landing.
+func _begin_fall(to_elev: float) -> void:
+	_fall_from_elev = current_elevation
+	_fall_to_elev = to_elev
+	_fall_duration = 0.18
+	_fall_elapsed = 0.0
+	_fall_active = true
+	_nav_waypoints.clear()
+	_nav_index = 0
+	is_moving = false
+	# Control is lost — release the driving queue (same as an ice slide). Else
+	# the MOVE's `not is_moving` completion check advances the waypoint mid-fall
+	# and the now-stale path resumes from the landing surface.
+	if action_queue and action_queue.current_action != null:
+		action_queue.clear_queue()
+
+
+func _update_fall_motion(delta: float) -> void:
+	_fall_elapsed += delta
+	if _fall_elapsed >= _fall_duration:
+		_end_fall()
+
+
+func _end_fall() -> void:
+	_fall_active = false
+	on_roof = false
+	_refresh_elevation()
+	_apply_fall_damage(_fall_from_elev - _fall_to_elev)
+	emit_signal("character_reached_target")   # release any driving queue/nav
+
+
+# Forced movers (ice/knockback/dash) carry a body OFF a down-ledge into a fall
+# instead of dead-stopping at the rim. Returns true when a fall began (the
+# caller must end its frame). UP-cliffs keep the existing can_traverse stop.
+func _forced_drop_check(step_vec: Vector2) -> bool:
+	# Segment-sample like can_traverse: a forced mover can span more than one
+	# tile per frame (knockback ~800px/s, frame hitches), so an endpoint-only
+	# test tunnels through walls and lands the body INSIDE an impassable tile.
+	# Walk the path tile by tile; fall off the FIRST down-ledge; a wall or an
+	# up-cliff before any ledge returns false so can_traverse dead-stops.
+	var start := global_position
+	var dist := step_vec.length()
+	if dist < 0.001:
+		return false
+	var steps := int(ceil(dist / (GridManager.TILE_SIZE * 0.45)))
+	var prev_t := GridManager.world_to_map(start)
+	var prev_elev := current_elevation
+	for i in range(1, steps + 1):
+		var p := start + step_vec * (float(i) / float(steps))
+		var t := GridManager.world_to_map(p)
+		if t == prev_t:
+			continue
+		var t_roof: bool = on_roof and GridManager.has_roof(t)
+		# a wall stops the body before any rim — bail so the caller dead-stops
+		if not t_roof and GridManager.grid_costs.get(t, INF) == INF:
+			return false
+		var t_elev := GridManager.roof_at(t) if t_roof else GridManager.effective_elev(t)
+		if prev_elev - t_elev > GridManager.MAX_STEP_STORIES:
+			# down-ledge: stop at this tile's near edge, then fall
+			global_position = p
+			_begin_fall(t_elev)
+			return true
+		if t_elev - prev_elev > GridManager.MAX_STEP_STORIES:
+			return false   # up-cliff before any drop
+		prev_t = t
+		prev_elev = t_elev
+	return false
+
+
+# Damage only ever comes from an actual jump landing or fall state, so ramps
+# (walked step by step) and warps/spawns are free by construction.
+# fall_damage_for is pure/deterministic (harness-testable); take_damage may
+# layer its own limb/condition effects on top of the base amount.
+func fall_damage_for(drop: float) -> int:
+	if drop <= GridManager.FALL_SAFE_STORIES:
+		return 0
+	return int(round((drop - GridManager.FALL_SAFE_STORIES) * GridManager.FALL_DMG_PER_STORY * fall_damage_mult))
+
+
+func _apply_fall_damage(drop: float) -> void:
+	var dmg := fall_damage_for(drop)
+	if dmg > 0:
+		take_damage({"bludgeoning": dmg}, global_position, null, LimbType.LEFT_LEG)
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds
@@ -3843,6 +4456,10 @@ func _update_weapon_position() -> void:
 			main_hand_attack_rotation = attack_animator.get_weapon_rotation()
 		
 		main_hand_holder.rotation = main_hand_attack_rotation
+	# Rig characters set holder z_index 20 (above the mesh); restore the
+	# legacy default here so a rig->legacy rebuild can't leave it raised.
+	main_hand_holder.z_index = 0
+	off_hand_holder.z_index = 0
 
 func _on_active_weapon_changed(weapon, hand) -> void:
 	# Determine the holder for this hand
@@ -3890,6 +4507,9 @@ func _on_attack_hit(hand) -> void:
 
 func _on_attack_finished() -> void:
 	attack_animator.is_attacking = false
+	# Release the attack's IK aim pose and stash (fires on interrupts too).
+	# Owner-scoped: never drops a cast's hold.
+	_rig_ik_release("attack")
 
 func get_weapon_tip_world_position() -> Vector2:
 	var weapon = current_main_hand_item if current_hand == "Main" else current_off_hand_item
@@ -3903,8 +4523,10 @@ func get_weapon_tip_world_position() -> Vector2:
 
 # ===== PUBLIC ATTACK API =====
 
-func attack(Ability:String= "Main") -> void:
-	"""Perform an attack with current weapon"""
+func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -> void:
+	"""Perform an attack with current weapon. aim_point/aim_node (optional) name
+	the attack's target; committed to the aim stash only once the attack really
+	starts, so a refused attack can't redirect an in-flight one."""
 	# Apathetic / stunned: cannot act except for movement
 	if condition_manager.has_active_condition("apathetic") or condition_manager.has_active_condition("stunned"):
 		return
@@ -3937,7 +4559,9 @@ func attack(Ability:String= "Main") -> void:
 		# start_attack must run before _fire_ranged_async so is_attacking=true
 		# is set before await_hit_frame_or_end polls it; otherwise the helper
 		# bails on its first check and the projectile never spawns.
+		set_attack_aim(aim_point, aim_node)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Main", current_main_hand_item)
+		_rig_play_attack(damage_type, "Main")
 		if damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_main_hand_item)
 	if Ability == "Off":
@@ -3952,7 +4576,9 @@ func attack(Ability:String= "Main") -> void:
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
 		HearingManager.emit(global_position, 0.5, self)
+		set_attack_aim(aim_point, aim_node)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
+		_rig_play_attack(damage_type, "Off")
 		if damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_off_hand_item)
 
@@ -3981,6 +4607,15 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 	var game = get_tree().current_scene
 	if game and game.has_method("spawn_projectile"):
 		var fire_direction = Vector2.UP.rotated(rotation)
+		# Target-aware refinement: if an aim point exists and the shooter is
+		# already facing close to it, fire exactly at it. Facing (dex-gated
+		# turn speed) still gates accuracy — this only removes the residual
+		# few-degree error so aimed shots actually connect.
+		var aim = get_attack_aim_point()
+		if aim != null:
+			var to_aim: Vector2 = aim - get_weapon_tip_world_position()
+			if to_aim.length() > 1.0 and absf(fire_direction.angle_to(to_aim.normalized())) < 0.35:
+				fire_direction = to_aim.normalized()
 		game.spawn_projectile(self, fire_direction, weapon)
 
 func _find_ammo_in_inventory(ammo_id: String) -> int:
@@ -4041,6 +4676,122 @@ func has_weapon_equipped() -> bool:
 
 # ===== PUBLIC EQUIPMENT API =====
 
+
+# --- Rig wearables: fitted armor layers on CharacterRig ----------------------
+# On rig characters, worn armor renders as the FITTED, mesh-deforming layers
+# baked into the rig scene (torso -> additive garments; head/feet/hands ->
+# radio part-equipment), resolved from the item id against the rig's own
+# metadata. The flat inventory-icon EquipmentShape sprite is hidden (it would
+# float over the mesh); items with no fitted art yet stay invisible-but-
+# equipped, stats intact. Legacy characters are untouched.
+const RIG_WEARABLE_ALIASES := {
+	"breastplate_2": "breastplate",
+	"leather_boots": "leather_boot",
+	"steel_greaves": "plate_sabaton",
+	"full_face_helmet": "great_helm",
+	"golden_crown_helm": "golden_helm",
+	"peasant's_stained_shirt": "peasants_stained_shirt",
+	"red_travel_cape": "red_cape",
+	"adventurer's_pack": "adventurer_pack",
+	"venonan_vestments": "venonan_vestament",
+}
+const RIG_SLOT_NAMES := {
+	EquipmentShape.EquipmentSlot.HEAD: "head",
+	EquipmentShape.EquipmentSlot.FEET: "feet",
+	EquipmentShape.EquipmentSlot.BACK: "back",
+	EquipmentShape.EquipmentSlot.LEGS: "legs",
+}
+var _rig_worn := {}  # slot enum -> rig layer name currently shown
+
+func _rig_wearable_candidates(item_data: Dictionary) -> Array:
+	var out := []
+	var id := str(item_data.get("id", "")) if item_data.get("id") != null else ""
+	if id != "":
+		out.append(id)
+	var dn = item_data.get("display_name", item_data.get("name", ""))
+	if dn != null and str(dn) != "":
+		out.append(str(dn).to_lower().replace(" ", "_").replace("'", ""))
+	var aliased := []
+	for cand in out:
+		if RIG_WEARABLE_ALIASES.has(cand):
+			aliased.append(RIG_WEARABLE_ALIASES[cand])
+	return out + aliased
+
+func _rig_show_wearable(slot: int, item_data: Dictionary, shape: EquipmentShape) -> void:
+	if character_rig == null:
+		return
+	if shape:
+		shape.visible = false            # never float the flat icon over the mesh
+	_rig_hide_wearable(slot)
+	var cands := _rig_wearable_candidates(item_data)
+	if slot == EquipmentShape.EquipmentSlot.TORSO and character_rig.has_method("garments"):
+		var have: PackedStringArray = character_rig.garments()
+		for cand in cands:
+			if String(cand) in have:
+				character_rig.set_garment(cand, true)
+				_rig_worn[slot] = cand
+				return
+	elif RIG_SLOT_NAMES.has(slot) and character_rig.has_method("equipment"):
+		var srig: String = RIG_SLOT_NAMES[slot]
+		var have2: PackedStringArray = character_rig.equipment(srig)
+		for cand in cands:
+			if String(cand) in have2:
+				character_rig.set_equipment(srig, cand)
+				_rig_worn[slot] = cand
+				return
+
+func _rig_hide_wearable(slot: int) -> void:
+	if character_rig == null or not _rig_worn.has(slot):
+		_rig_worn.erase(slot)
+		return
+	if slot == EquipmentShape.EquipmentSlot.TORSO:
+		if character_rig.has_method("set_garment"):
+			character_rig.set_garment(_rig_worn[slot], false)
+	elif RIG_SLOT_NAMES.has(slot) and character_rig.has_method("set_equipment"):
+		character_rig.set_equipment(RIG_SLOT_NAMES[slot], "")
+	_rig_worn.erase(slot)
+
+func _rig_apply_wearables() -> void:
+	# After a rig (re)build: re-show fitted layers for armor already equipped.
+	_rig_worn.clear()
+	for pair in [[EquipmentShape.EquipmentSlot.HEAD, head_equipment],
+			[EquipmentShape.EquipmentSlot.TORSO, torso_equipment],
+			[EquipmentShape.EquipmentSlot.BACK, back_equipment],
+			[EquipmentShape.EquipmentSlot.LEGS, legs_equipment],
+			[EquipmentShape.EquipmentSlot.FEET, feet_equipment]]:
+		var shape = pair[1]
+		if shape and is_instance_valid(shape) and shape.has_meta("item_data"):
+			_rig_show_wearable(pair[0], shape.get_meta("item_data"), shape)
+
+func _refresh_limb_armor() -> void:
+	# Armor DR, recomputed from every worn piece: sum per damage type on each
+	# limb the slot covers. Items author "damage_resitances" (sic) in
+	# Items.json; the corrected spelling is accepted too. Previously nothing
+	# ever called set_limb_armor, so armor granted zero protection.
+	var totals := {}
+	for lt in limbs.keys():
+		totals[lt] = {}
+	for pair in [[EquipmentShape.EquipmentSlot.HEAD, head_equipment],
+			[EquipmentShape.EquipmentSlot.TORSO, torso_equipment],
+			[EquipmentShape.EquipmentSlot.BACK, back_equipment],
+			[EquipmentShape.EquipmentSlot.LEGS, legs_equipment],
+			[EquipmentShape.EquipmentSlot.FEET, feet_equipment]]:
+		var shape = pair[1]
+		if shape == null or not is_instance_valid(shape) or not shape.has_meta("item_data"):
+			continue
+		var data: Dictionary = shape.get_meta("item_data")
+		var dr = data.get("damage_resitances", data.get("damage_resistances"))
+		if dr == null or not (dr is Dictionary):
+			continue
+		for lt in get_limb_for_equipment_slot(pair[0]):
+			if not totals.has(lt):
+				continue
+			for k in dr.keys():
+				if dr[k] != null:
+					totals[lt][k] = totals[lt].get(k, 0) + int(dr[k])
+	for lt in totals.keys():
+		set_limb_armor(lt, totals[lt])
+
 func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 	"""Equip armor/equipment from data using new shape-based system"""
 	var equipment = EquipmentShape.new()
@@ -4083,6 +4834,9 @@ func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 	
 	if holder:
 		holder.add_child(equipment)
+		equipment.set_meta("item_data", equipment_data)
+		_rig_show_wearable(slot, equipment_data, equipment)
+	_refresh_limb_armor()
 	
 	return equipment
 
@@ -4114,6 +4868,8 @@ func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 				feet_slot.remove_child(feet_equipment)
 				feet_equipment.queue_free()
 				feet_equipment = null
+	_rig_hide_wearable(slot)
+	_refresh_limb_armor()
 
 func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 	"""Equip equipment by looking up its name in the database"""
@@ -4211,6 +4967,8 @@ func _hide_living_visuals() -> void:
 		body_part_sprites.set_all_visible(false)
 	if skeletal_rig:
 		skeletal_rig.set_all_visible(false)
+	if character_rig:
+		character_rig.visible = false
 	for holder in [main_hand_holder, off_hand_holder, head_slot, torso_slot, back_slot, legs_slot, feet_slot]:
 		if holder:
 			holder.visible = false
@@ -4986,6 +5744,12 @@ func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> voi
 		if override != null:
 			cast_loudness = float(override)
 	HearingManager.emit(global_position, cast_loudness, self)
+	# Rig characters have no baked cast clip: aim the casting arm at the target
+	# via IK for the duration of the cast (live-tracked in _sync_character_rig;
+	# released by cast completed/interrupted/failed and by attack_finished).
+	if character_rig != null and character_rig.has_method("set_arm_ik"):
+		set_attack_aim(target_position)
+		_rig_ik_set("r", "cast")
 	cast_started.emit(ability, target_position)
 
 func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
@@ -4996,18 +5760,21 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 		targeting_system.end_targeting()
 	# Check if any conditions should gain stacks based on this ability's traits
 	ability_manager._check_action_trait_stacking(ability)
+	_rig_ik_release("cast")
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
 		targeting_system.end_targeting()
+	_rig_ik_release("cast")
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
 		targeting_system.clear_all_queued_indicators()
 		targeting_system.end_targeting()
+	_rig_ik_release("cast")
 	cast_failed.emit(ability, reason)
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:
