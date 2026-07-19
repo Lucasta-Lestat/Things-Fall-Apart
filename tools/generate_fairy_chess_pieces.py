@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """Generate fairy-chess piece art with Gemini, keyed off the existing King art.
 
-The King_white / King_black icons define the look: a pewter/silver tabletop
-figurine photographed head-on against transparency, ~512x1024. Every new piece
-is generated from that reference so the set stays visually consistent, then
-matched to the King's canvas size and alpha-trimmed the same way.
+The King_white / King_black icons define the look: a pewter tabletop figurine
+against transparency, ~512x1024. Every new piece is generated from that
+reference so the set stays visually consistent, then matched to the King's
+canvas size and alpha-trimmed the same way.
 
-Front/back symmetry: the pieces are viewed straight on and the prompt asks for
-a symmetrical, forward-facing figure with no distinguishing back detail, so a
-piece reads the same to both players across the board.
+IMPORTANT -- how the two armies are told apart: NOT by colour. Every piece in
+the set is the same pewter. The sides differ by FACING. Looking at the board
+from white's seat you see your own pieces from BEHIND and the enemy's facing
+you, so:
+    <piece>_white  = the figurine viewed from BEHIND (no face)
+    <piece>_black  = the same figurine viewed from the FRONT
+Each generation therefore produces one two-up image -- rear view on the left,
+front view on the right -- which is split into those two files.
 
 Usage (from the repo root):
     python tools/generate_fairy_chess_pieces.py --list
@@ -36,24 +41,35 @@ ICONS_DIR = Path("fairy-chess-2") / "assets" / "icons"
 RAW_DIR = Path("tools") / "_fairy_chess_raw"  # kept diptychs, for re-splitting
 MAX_RETRIES = 4
 
-# Shared style, anchored on the King reference the caller passes in.
+# Shared style, anchored on the two King references passed in.
+#
+# The set does NOT distinguish the two armies by colour -- every piece is the
+# same pewter. The sides are told apart by WHICH WAY THE PIECE FACES: your own
+# army is seen from behind, the enemy army faces you. So each generation is one
+# figurine photographed twice, rear view and front view, and the halves map to
+# <piece>_white (rear) and <piece>_black (front).
 STYLE = (
-    "A single image containing TWO views of the SAME fantasy CHESS PIECE "
-    "figurine, side by side with a clear empty gap between them, both rendered "
-    "exactly like the reference images: small cast-metal tabletop miniatures, "
-    "photographed straight on at eye level, standing on round pedestal bases. "
-    "LEFT copy: bright polished pewter/silver metal (the light army). RIGHT "
-    "copy: dark gunmetal/blackened iron (the dark army). They must be the "
-    "IDENTICAL sculpt in the IDENTICAL pose at the IDENTICAL size -- the same "
-    "piece cast in two different metals, not two different models. Match the "
-    "reference lighting and fine sculpted detail. "
+    "A single image containing TWO photographs of the SAME fantasy CHESS PIECE "
+    "figurine, side by side with a clear empty gap between them, rendered "
+    "exactly like the reference images: a small cast-metal tabletop miniature "
+    "photographed straight on at eye level, standing on a round pedestal base. "
+    "LEFT photograph: the figurine seen from BEHIND -- its back to the camera, "
+    "showing the back of the head/helmet and the back of the cloak or body, "
+    "with NO face visible at all. "
+    "RIGHT photograph: the SAME figurine seen from the FRONT -- facing the "
+    "camera, face and frontal detail visible. "
+    "Both photographs show the IDENTICAL sculpt at the IDENTICAL size in the "
+    "IDENTICAL metal: the SAME aged pewter / antique silver tone as the "
+    "reference, with the same lighting and fine sculpted detail. Do NOT make "
+    "one copy darker or a different colour than the other -- they are one "
+    "miniature shot from two angles, not a light and a dark army. "
     "Both stand on a COMPLETELY FLAT, UNIFORM PURE WHITE (#FFFFFF) background "
     "that touches all four edges -- no gradient, no vignette, no checkerboard, "
-    "no ground shadow, no scenery, no text, no labels, no border. "
-    "Each figure is strictly frontal and bilaterally SYMMETRICAL left-to-right, "
-    "with nothing that reads as a front or a back -- no cape trailing to one "
-    "side, no turned head, no weapon or prop held out to one side only -- so "
-    "the piece looks correct to a player seated on either side of the board. "
+    "no ground shadow, no scenery, no text, no labels, no border. Keep the "
+    "background visible THROUGH any gaps in the figure, such as between the "
+    "legs or under a raised arm. "
+    "Each figure is bilaterally SYMMETRICAL left-to-right -- no turned head, no "
+    "prop held out to one side only -- so it reads cleanly on the board. "
     "Both figures fill the frame vertically with a small even margin above the "
     "head and below the base."
 )
@@ -80,20 +96,20 @@ PIECES: list[Piece] = [
         "robes are layered and fall evenly on both sides. Ornamental cogwheel "
         "and circuitry motifs on the chestplate and hem, a small halo-like "
         "gear ring behind the head. Regal and austere, clearly a royal piece. "
-        "Perfectly symmetrical, facing forward."),
+        "Strictly symmetrical about the vertical axis."),
     Piece("Doppelganger",
         "The figurine is a DOPPELGANGER: a smooth faceless humanoid with a "
         "blank featureless oval head, standing upright with both arms held "
         "symmetrically at its sides. Its surface looks half-formed and "
         "liquid, as though the metal is still deciding on a shape, with soft "
         "rippling seams flowing down the body. Eerie and anonymous. No face, "
-        "no hair, no clothing detail. Perfectly symmetrical, facing forward."),
+        "no hair, no clothing detail. Strictly symmetrical about the vertical axis."),
     Piece("Berserker",
         "The figurine is a BERSERKER: a bare-chested viking warrior in a "
         "snarling wolf-pelt hood, roaring, holding a broad axe raised in BOTH "
         "hands directly above and in front of the head, arms mirrored evenly "
         "on both sides. Braided beard, fur across both shoulders equally, "
-        "heavy boots planted wide on the base. Ferocious forward charge. "
+        "heavy boots planted wide on the base. Ferocious and wild. "
         "Strictly symmetrical about the vertical axis."),
     Piece("Chieftain",
         "The figurine is a viking CHIEFTAIN: a broad commanding warrior-king "
@@ -101,14 +117,14 @@ PIECES: list[Piece] = [
         "draped evenly over both shoulders, both hands resting on the pommel "
         "of a large sword planted point-down and exactly centered in front of "
         "him. Ring-mail and knotwork detailing. Clearly a royal piece, "
-        "weathered and imposing. Perfectly symmetrical, facing forward."),
+        "weathered and imposing. Strictly symmetrical about the vertical axis."),
     Piece("Spymaster",
         "The figurine is a SPYMASTER: a slender hooded figure in a deep cowl "
         "that hides the face entirely in shadow, wrapped in a close cloak that "
         "falls evenly on both sides, both hands drawing the cloak closed at "
         "the center of the chest. A small symmetrical mask motif at the "
-        "throat clasp. Secretive and still. No weapon shown. Perfectly "
-        "symmetrical, facing forward."),
+        "throat clasp. Secretive and still. No weapon shown. Strictly "
+        "symmetrical about the vertical axis."),
 ]
 
 
@@ -170,33 +186,77 @@ def strip_background(img: Image.Image, tolerance: int = 36) -> Image.Image:
     mask = np.all(flat == np.array(sentinel, dtype=flat.dtype), axis=-1)
     out = np.array(img)
     out[mask, 3] = 0
-    return Image.fromarray(out, "RGBA")
+    return _clear_enclosed_background(Image.fromarray(out, "RGBA"))
 
 
-def find_figure_clusters(img: Image.Image, min_gap_frac: float = 0.015) -> list:
-    """Column ranges of the distinct figures in an image.
+def _clear_enclosed_background(img: Image.Image, min_area: int = 120) -> Image.Image:
+    """Punch out background trapped INSIDE the figure.
 
-    Gaps narrower than `min_gap_frac` of the width are treated as part of the
-    same figure (the space between an arm and a torso, say) so a single
-    figurine isn't reported as two.
+    Corner flood-fill can only reach background connected to the frame edge,
+    so enclosed pockets -- the gap between a figure's legs, the hole under a
+    raised arm -- survive as opaque white. Those pockets are flat, neutral and
+    near-pure-white, which sculpted metal highlights are not, so they can be
+    removed by colour without eating the artwork.
+    """
+    arr = np.array(img.convert("RGBA"))
+    height, width = arr.shape[:2]
+    rgb = arr[:, :, :3].astype(np.int16)
+    # Flat, neutral, very bright, and still opaque = leftover backdrop.
+    candidate = (
+        (rgb.min(axis=2) >= 232)
+        & ((rgb.max(axis=2) - rgb.min(axis=2)) <= 12)
+        & (arr[:, :, 3] > 0)
+    )
+    if not candidate.any():
+        return img
+
+    visited = np.zeros((height, width), dtype=bool)
+    ys, xs = np.nonzero(candidate)
+    for sy, sx in zip(ys, xs):
+        if visited[sy, sx]:
+            continue
+        stack = [(sy, sx)]
+        visited[sy, sx] = True
+        pocket = []
+        while stack:
+            y, x = stack.pop()
+            pocket.append((y, x))
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= ny < height and 0 <= nx < width and candidate[ny, nx] and not visited[ny, nx]:
+                    visited[ny, nx] = True
+                    stack.append((ny, nx))
+        if len(pocket) >= min_area:
+            for y, x in pocket:
+                arr[y, x, 3] = 0
+    return Image.fromarray(arr, "RGBA")
+
+
+def find_figure_clusters(img: Image.Image, axis: int = 0, min_gap_frac: float = 0.015) -> list:
+    """Ranges occupied by distinct figures along one axis.
+
+    axis=0 scans columns (figures side by side), axis=1 scans rows (figures
+    stacked). Gaps narrower than `min_gap_frac` are treated as part of the same
+    figure -- the space between an arm and a torso, say -- so one figurine
+    isn't reported as two.
     """
     arr = np.array(img.convert("RGBA"))
     if arr.size == 0:
         return []
-    filled = (arr[:, :, 3] > 16).sum(axis=0) > 0
-    width = len(filled)
-    min_gap = max(4, int(width * min_gap_frac))
+    alpha = arr[:, :, 3] > 16
+    filled = alpha.sum(axis=0) > 0 if axis == 0 else alpha.sum(axis=1) > 0
+    extent = len(filled)
+    min_gap = max(4, int(extent * min_gap_frac))
 
     spans = []
     start = None
-    for x in range(width):
-        if filled[x] and start is None:
-            start = x
-        elif not filled[x] and start is not None:
-            spans.append([start, x])
+    for i in range(extent):
+        if filled[i] and start is None:
+            start = i
+        elif not filled[i] and start is not None:
+            spans.append([start, i])
             start = None
     if start is not None:
-        spans.append([start, width])
+        spans.append([start, extent])
     if not spans:
         return []
 
@@ -211,30 +271,56 @@ def find_figure_clusters(img: Image.Image, min_gap_frac: float = 0.015) -> list:
     return [tuple(s) for s in merged if (s[1] - s[0]) > widest * 0.25]
 
 
-def split_pair(img: Image.Image) -> tuple[Image.Image, Image.Image]:
-    """Extract the (light, dark) figures from a multi-up image.
+PAD = 6
 
-    The model is asked for two figures but sometimes renders the pair twice
-    (four figurines: light, light, dark, dark). Cropping the LEFTMOST cluster
-    as light and the RIGHTMOST as dark is correct for both layouts, and beats
-    halving the canvas -- which would hand back two figures per half.
+
+def _crop_span(img: Image.Image, span: tuple, axis: int) -> Image.Image:
+    lo, hi = span
+    if axis == 0:
+        return img.crop((max(0, lo - PAD), 0, min(img.width, hi + PAD), img.height))
+    return img.crop((0, max(0, lo - PAD), img.width, min(img.height, hi + PAD)))
+
+
+def split_pair(img: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Extract the (rear-view, front-view) figures from a multi-up image.
+
+    The prompt asks for the pair side by side, but the model freely rearranges:
+    sometimes stacked vertically, sometimes the pair rendered twice as a 2x2
+    grid. So detect the layout instead of assuming one -- take the first figure
+    in reading order as the rear view and the last as the front view.
     Expects the background to have been keyed out already.
     """
-    clusters = find_figure_clusters(img)
-    if len(clusters) >= 2:
-        left, right = clusters[0], clusters[-1]
-        pad = 6
-        return (
-            img.crop((max(0, left[0] - pad), 0, min(img.width, left[1] + pad), img.height)),
-            img.crop((max(0, right[0] - pad), 0, min(img.width, right[1] + pad), img.height)),
-        )
-    mid = img.width // 2
-    return img.crop((0, 0, mid, img.height)), img.crop((mid, 0, img.width, img.height))
+    cols = find_figure_clusters(img, axis=0)
+    rows = find_figure_clusters(img, axis=1)
+
+    # Side by side.
+    if len(cols) >= 2 and len(rows) <= 1:
+        return _crop_span(img, cols[0], 0), _crop_span(img, cols[-1], 0)
+    # Stacked.
+    if len(rows) >= 2 and len(cols) <= 1:
+        return _crop_span(img, rows[0], 1), _crop_span(img, rows[-1], 1)
+    # A grid: first cell (top-left) is the rear view, last cell the front.
+    if len(cols) >= 2 and len(rows) >= 2:
+        first = _crop_span(img, cols[0], 0)
+        last = _crop_span(img, cols[-1], 0)
+        first_rows = find_figure_clusters(first, axis=1)
+        last_rows = find_figure_clusters(last, axis=1)
+        if first_rows:
+            first = _crop_span(first, first_rows[0], 1)
+        if last_rows:
+            last = _crop_span(last, last_rows[-1], 1)
+        return first, last
+    # Nothing separable: fall back to halving the longer side.
+    if img.width >= img.height:
+        mid = img.width // 2
+        return img.crop((0, 0, mid, img.height)), img.crop((mid, 0, img.width, img.height))
+    mid = img.height // 2
+    return img.crop((0, 0, img.width, mid)), img.crop((0, mid, img.width, img.height))
 
 
 def looks_like_one_figure(img: Image.Image) -> bool:
-    """True if a cropped half holds exactly one figurine."""
-    return len(find_figure_clusters(img)) == 1
+    """True if a cropped half holds exactly one figurine, on both axes."""
+    return len(find_figure_clusters(img, axis=0)) == 1 and len(find_figure_clusters(img, axis=1)) == 1
 
 
 def fit_to_reference(img: Image.Image, ref_size: tuple[int, int]) -> Image.Image:
@@ -278,8 +364,8 @@ def main() -> int:
             if not raw_path.exists():
                 print(f"  no saved diptych for {piece.name}")
                 continue
-            light, dark = split_pair(Image.open(raw_path))
-            for color, half in (("white", light), ("black", dark)):
+            rear, front = split_pair(Image.open(raw_path))
+            for color, half in (("white", rear), ("black", front)):
                 if not looks_like_one_figure(half):
                     print(f"  WARNING: {piece.name}_{color} still looks like two figures", file=sys.stderr)
                 fit_to_reference(half, refs[0].size).save(ICONS_DIR / f"{piece.name}_{color}.png")
@@ -343,8 +429,8 @@ def main() -> int:
             raw_path = RAW_DIR / f"{piece.name}_pair.png"
             RAW_DIR.mkdir(parents=True, exist_ok=True)
             keyed.save(raw_path)
-            light, dark = split_pair(keyed)
-            halves = {"white": light, "black": dark}
+            rear, front = split_pair(keyed)
+            halves = {"white": rear, "black": front}  # own army seen from behind
             for color, path in outputs.items():
                 if not looks_like_one_figure(halves[color]):
                     print(f"  WARNING: {piece.name}_{color} split looks like it caught "
