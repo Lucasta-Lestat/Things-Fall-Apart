@@ -528,3 +528,11 @@ func load_from_dict(data: Dictionary) -> void:
 	if data.has("equipped_weapons"):
 		for weapon_data in data["equipped_weapons"]:
 			equip_weapon_from_data(weapon_data)
+
+	# Re-equip worn armor: items keep their _equipped flag through save, but
+	# nothing rebuilt the EquipmentShape (no visuals, no DR, no boot-step
+	# noise after a load). Route back through equip_equipment.
+	var _armor_slots := ["Head", "Torso", "Back", "Legs", "Feet"]
+	for item in items:
+		if item is Dictionary and item.get("_equipped", false) 				and str(item.get("equip_slot", "")) in _armor_slots 				and possessor and possessor.has_method("equip_equipment"):
+			possessor.equip_equipment(item)

@@ -759,7 +759,7 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 			if not options.has("Split"):
 				options.append("Split")
 		var equip_slot: String = str(item_data.get("equip_slot", ""))
-		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet"]:
+		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:
 			if item_data.get("_equipped", false):
 				options.insert(0, "Unequip")
 			else:
@@ -1187,6 +1187,7 @@ const _EQUIP_SLOT_MAP: Dictionary = {
 	"Back": 2,   # EquipmentShape.EquipmentSlot.BACK
 	"Legs": 3,   # EquipmentShape.EquipmentSlot.LEGS
 	"Feet": 4,   # EquipmentShape.EquipmentSlot.FEET
+	"Cape": 2,   # capes/cloaks occupy the BACK slot
 }
 
 func _equip_item(character, item_index: int, item_data: Dictionary) -> void:

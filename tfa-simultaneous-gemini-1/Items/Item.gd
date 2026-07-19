@@ -161,20 +161,26 @@ func _apply_item_data():
 	resources = res_data.duplicate() if res_data else {}
 
 	# Sprite
-	sprite_path = data.get("sprite_path", "res://Structures/Item.png")
+	var _spr = data.get("sprite_path", "res://Structures/Item.png")
+	sprite_path = str(_spr) if _spr != null else "res://Structures/Item.png"
 	if not FileAccess.file_exists(sprite_path):
 		sprite_path = "res://Structures/Item.png"
 
-	# Core properties with safe defaults
-	description = data.get("description", "")
-	weight = float(data.get("weight", 0.5))
-	cost = float(data.get("cost", 1.0))
-	equip_slot = data.get("equip_slot", "")
+	# Core properties with safe defaults. NOTE: .get() defaults do NOT protect
+	# against explicit JSON nulls ("equip_slot": null returns null, not "") —
+	# every typed-String field must coerce.
+	var _desc = data.get("description", "")
+	description = str(_desc) if _desc != null else ""
+	weight = float(data.get("weight", 0.5) if data.get("weight") != null else 0.5)
+	cost = float(data.get("cost", 1.0) if data.get("cost") != null else 1.0)
+	var _slot = data.get("equip_slot", "")
+	equip_slot = str(_slot) if _slot != null else ""
 	use_ability = data.get("use_ability", null)
-	healing = float(data.get("healing", 0.0))
-	weapon_range = float(data.get("range", 50.0))
-	walkability = float(data.get("walkability", 1.1))
-	item_type = data.get("type", "item")
+	healing = float(data.get("healing", 0.0) if data.get("healing") != null else 0.0)
+	weapon_range = float(data.get("range", 50.0) if data.get("range") != null else 50.0)
+	walkability = float(data.get("walkability", 1.1) if data.get("walkability") != null else 1.1)
+	var _itype = data.get("type", "item")
+	item_type = str(_itype) if _itype != null else "item"
 	if data.has("noise_per_step"):
 		noise_per_step = float(data["noise_per_step"])
 	else:
