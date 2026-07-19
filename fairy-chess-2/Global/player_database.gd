@@ -150,7 +150,7 @@ func build_profile(name: String, title: String, portrait: String, faction: Strin
 # to the game shows up here automatically instead of being quietly missing.
 func _god_profile() -> Dictionary:
 	var profile = {
-		"name": "God (Sandbox)",
+		"name": "God",
 		"title": "Every Piece",
 		"portrait": "res://Fairy Chess Logo.jpg",
 		"faction": "",

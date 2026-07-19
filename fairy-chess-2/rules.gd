@@ -450,7 +450,9 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 			_spymaster_actions(state, piece, actions)
 		"Lady of the Lake":
 			_leaps(state, piece, KING_DIRS, actions)
-			_adjacent_promotions(state, piece, actions, "King", ["Pawn", "Kulak"], [])
+			# Any peasant may be raised to kingship, not just Pawns and Kulaks --
+			# the peasant roster has grown well past those two.
+			_adjacent_promotions(state, piece, actions, "King", [], ["Peasant"])
 		"Pontifex":
 			_leaps(state, piece, KING_DIRS, actions)
 			_adjacent_promotions(state, piece, actions, "Bishop", [], ["Peasant"])
@@ -668,15 +670,19 @@ static func _spymaster_actions(state, piece, actions) -> void:
 	_spymaster_conversions(state, piece, actions)
 
 
-# Suborns any enemy piece standing next to an enemy royal -- the bodyguards,
+# Suborns an enemy piece standing next to an enemy royal -- the bodyguards,
 # never the royal itself -- flipping it into one of our Pawns. Range is
 # irrelevant: this is blackmail, not a knife.
+#
+# Only ORTHOGONALLY adjacent guards can be turned. A pawn captures diagonally,
+# so suborning a diagonal neighbour would hand it the royal on the spot and
+# win the game outright; from beside, in front or behind it has no such shot.
 static func _spymaster_conversions(state, piece, actions) -> void:
 	var seen = {}
 	for royal in all_pieces(state):
 		if royal.color == piece.color or not royal.royal:
 			continue
-		for dir in KING_DIRS:
+		for dir in ROOK_DIRS:
 			var pos = royal.pos + dir
 			var occ = piece_at(state, pos)
 			if occ == null or occ.color == piece.color or occ.royal:
