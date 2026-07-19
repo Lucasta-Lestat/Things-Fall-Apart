@@ -143,14 +143,21 @@ func build_profile(name: String, title: String, portrait: String, faction: Strin
 	}
 
 
-# A synthetic profile stocking every piece, for headless tests and sandbox play.
+# A synthetic profile stocking EVERY piece, for headless tests and sandbox
+# play. Built from PIECE_DEFINITIONS rather than hand-listed, so a piece added
+# to the game shows up here automatically instead of being quietly missing.
 func _god_profile() -> Dictionary:
-	return {
+	var profile = {
 		"name": "God (Sandbox)",
-		"title": "",
+		"title": "Every Piece",
 		"portrait": "res://icon.svg",
 		"faction": "",
-		"peasants": {"Basic Automata": 1, "Kulak": 2, "Pawn": 2, "Zombie": 2, "Raider": 1, "Cultist": 1, "Werewolf (human form)": 1},
-		"nobles": {"Anarch": 1, "Bishop": 1, "Cannonier": 1, "Centaur": 1, "Devil Toad": 1, "Grasshopper": 1, "Dragonrider": 1, "Elephant Rider": 1, "Gorgon": 1, "Knight": 1, "Monk": 1, "Minister": 1, "Nightrider": 1, "Princess": 1, "Queen": 1, "Rifleman": 1, "Rook": 1, "Valkyrie": 1},
-		"royals": {"Chancellor": 1, "Lady of the Lake": 1, "Pontifex": 1, "King": 1}
+		"peasants": {},
+		"nobles": {},
+		"royals": {},
 	}
+	const BUCKET = {"peasant": "peasants", "noble": "nobles", "royal": "royals"}
+	for piece_type in PIECE_DEFINITIONS:
+		var bucket = BUCKET.get(PIECE_DEFINITIONS[piece_type].category, "nobles")
+		profile[bucket][piece_type] = 1
+	return profile

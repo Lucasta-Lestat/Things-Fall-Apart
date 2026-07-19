@@ -32,6 +32,7 @@ var game_phase = "pregame" # "pregame", "setup", "playing", "game_over"
 var white_pending = null # {"id": int, "action": Dictionary}
 var black_pending = null
 var ai_enabled = true
+var last_turn_summary = "" # plain-language account of the previous resolution
 
 # --- Setup State ---
 var setup_placer = "white"
@@ -246,7 +247,10 @@ func _prompt_next():
 			white_pending = {"id": -1, "action": {"action": "pass"}}
 			emit_signal("turn_info_changed", "White has no moves and passes.")
 		else:
-			emit_signal("turn_info_changed", "White to move.")
+			var prompt = "White to move."
+			if last_turn_summary != "":
+				prompt = last_turn_summary + "   " + prompt
+			emit_signal("turn_info_changed", prompt)
 			return
 	if black_pending == null:
 		if Rules.legal_actions(state, "black").is_empty():
@@ -286,6 +290,7 @@ func resolve_turn():
 
 	emit_signal("spawn_credits_changed", state.credits.white, state.credits.black)
 	_emit_check_status()
+	last_turn_summary = _summarise(result.events)
 
 	if result.outcome != "":
 		match result.outcome:
@@ -297,6 +302,48 @@ func resolve_turn():
 				end_game("Draw")
 		return
 	_prompt_next()
+
+
+# A short plain-language account of what the turn actually did. Simultaneous
+# resolution can quietly swallow an order -- a mark killed before the spy could
+# turn it, a move bounced off a blocker -- and without a word the player just
+# sees a piece vanish.
+func _summarise(events: Array) -> String:
+	var captured = 0
+	var notes = []
+	for event in events:
+		match event.type:
+			"capture":
+				captured += 1
+			"convert_failed":
+				if event.get("reason", "") == "target_destroyed":
+					notes.append("conversion failed: the target was killed this turn")
+				else:
+					notes.append("conversion failed: no valid target")
+			"blocked":
+				notes.append("a move was blocked and bounced back")
+			"spawn_failed":
+				notes.append("a reinforcement had nowhere to land")
+			"petrify":
+				notes.append("a piece was turned to stone")
+			"phase_out":
+				notes.append("a Valkyrie left the field")
+			"return":
+				notes.append("a Valkyrie returned")
+			"convert":
+				notes.append("a piece changed sides")
+			"credit":
+				notes.append("a fallen Viking will return")
+	var parts = []
+	if captured > 0:
+		parts.append("%d piece%s lost" % [captured, "" if captured == 1 else "s"])
+	# De-duplicate so a busy turn doesn't produce a wall of identical clauses.
+	var seen = {}
+	for note in notes:
+		if not seen.has(note):
+			seen[note] = true
+			parts.append(note)
+	return "" if parts.is_empty() else "Last turn: " + ", ".join(parts) + "."
 
 
 func _add_declared(declared: Dictionary, pending, spawn_key: int) -> void:

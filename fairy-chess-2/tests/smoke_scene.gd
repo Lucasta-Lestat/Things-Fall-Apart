@@ -64,6 +64,7 @@ func _initialize():
 
 	# --- Setup undo: place one piece, let the AI answer, then undo ----------
 	var pawn_def = _pdb().PIECE_DEFINITIONS["Pawn"]
+	var pawns_before = int(gb.white_profile.peasants.get("Pawn", 0))
 	display.place_piece_on_board({
 		"piece_type": "Pawn", "color": "white", "is_peasant": true,
 		"is_royal": false, "category": "peasant", "scene_path": pawn_def.scene,
@@ -77,12 +78,13 @@ func _initialize():
 		fail("undo did not return the turn to white")
 	if not Rules.all_pieces(gb.state).is_empty():
 		fail("undo left pieces in the rules state")
-	if int(gb.white_profile.peasants.Pawn) != 2:
-		fail("undo did not refund the pawn (count=%s)" % gb.white_profile.peasants.Pawn)
+	if int(gb.white_profile.peasants.get("Pawn", 0)) != pawns_before:
+		fail("undo did not refund the pawn (%s, expected %d)" % [gb.white_profile.peasants.get("Pawn", 0), pawns_before])
 
 	# --- Setup phase: white places, AI answers ------------------------------
+	# Distinct types: the sandbox profile stocks one of every piece.
 	var white_plan = [
-		["Pawn", true], ["Kulak", true], ["Pawn", true], ["Kulak", true],
+		["Pawn", true], ["Kulak", true], ["Basic Automata", true], ["Cultist", true],
 		["Queen", false], ["Rook", false], ["Rifleman", false], ["King", false],
 	]
 	var peasant_col = 0
@@ -188,7 +190,7 @@ func _initialize():
 			fail("restarted game not in pregame phase")
 		elif not Rules.all_pieces(new_gb.state).is_empty():
 			fail("restarted game has leftover pieces")
-		elif int(new_gb.white_profile.peasants.Pawn) != 2:
+		elif int(new_gb.white_profile.peasants.get("Pawn", 0)) < 1:
 			fail("restarted game has a depleted profile")
 
 	print("")
@@ -259,6 +261,21 @@ func _validate_piece_assets():
 	if not missing_rules.is_empty():
 		fail("pieces missing/mismatched in Rules.PIECE_INFO: %s" % str(missing_rules))
 	print("ASSETS OK: %d piece types have scene + art + rules" % _pdb().PIECE_DEFINITIONS.size())
+
+	# The sandbox profile must stock EVERY piece, including newly added ones.
+	var god = _pdb().get_profile("god")
+	var stocked = {}
+	for bucket in [god.peasants, god.nobles, god.royals]:
+		for t in bucket:
+			stocked[t] = true
+	var absent = []
+	for piece_type in _pdb().PIECE_DEFINITIONS:
+		if not stocked.has(piece_type):
+			absent.append(piece_type)
+	if not absent.is_empty():
+		fail("god profile is missing pieces: %s" % str(absent))
+	else:
+		print("GOD OK: sandbox profile stocks all %d piece types" % stocked.size())
 
 
 func _sum(d: Dictionary) -> int:
