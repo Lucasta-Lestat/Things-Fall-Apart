@@ -33,25 +33,29 @@ from PIL import Image, ImageDraw
 
 MODEL = os.environ.get("FAIRY_CHESS_MODEL", "gemini-3-pro-image-preview")
 ICONS_DIR = Path("fairy-chess-2") / "assets" / "icons"
+RAW_DIR = Path("tools") / "_fairy_chess_raw"  # kept diptychs, for re-splitting
 MAX_RETRIES = 4
 
 # Shared style, anchored on the King reference the caller passes in.
 STYLE = (
-    "A single fantasy CHESS PIECE figurine rendered exactly like the reference "
-    "image: a small cast-metal tabletop miniature, photographed straight on at "
-    "eye level, centered, standing on a round pedestal base. Match the "
-    "reference's material and lighting precisely -- {tone} cast metal with soft "
-    "studio highlights and gentle shading, fine sculpted detail. "
-    "The figurine stands alone on a COMPLETELY FLAT, UNIFORM PURE WHITE "
-    "(#FFFFFF) background that touches all four edges of the frame -- no "
-    "gradient, no vignette, no checkerboard, no ground shadow, no scenery, no "
-    "text, no border, no extra objects. The figure is strictly frontal and "
-    "bilaterally SYMMETRICAL left-to-right, with nothing that reads as a front "
-    "or back -- no cape trailing to one side, no turned head, no props held out "
-    "to one side only -- so it looks correct to a player on either side of the "
-    "board. Same overall height and framing as the reference piece: the "
-    "figurine fills the frame vertically with a small margin above the head and "
-    "below the base."
+    "A single image containing TWO views of the SAME fantasy CHESS PIECE "
+    "figurine, side by side with a clear empty gap between them, both rendered "
+    "exactly like the reference images: small cast-metal tabletop miniatures, "
+    "photographed straight on at eye level, standing on round pedestal bases. "
+    "LEFT copy: bright polished pewter/silver metal (the light army). RIGHT "
+    "copy: dark gunmetal/blackened iron (the dark army). They must be the "
+    "IDENTICAL sculpt in the IDENTICAL pose at the IDENTICAL size -- the same "
+    "piece cast in two different metals, not two different models. Match the "
+    "reference lighting and fine sculpted detail. "
+    "Both stand on a COMPLETELY FLAT, UNIFORM PURE WHITE (#FFFFFF) background "
+    "that touches all four edges -- no gradient, no vignette, no checkerboard, "
+    "no ground shadow, no scenery, no text, no labels, no border. "
+    "Each figure is strictly frontal and bilaterally SYMMETRICAL left-to-right, "
+    "with nothing that reads as a front or a back -- no cape trailing to one "
+    "side, no turned head, no weapon or prop held out to one side only -- so "
+    "the piece looks correct to a player seated on either side of the board. "
+    "Both figures fill the frame vertically with a small even margin above the "
+    "head and below the base."
 )
 
 
@@ -127,14 +131,14 @@ def _extract_image(resp) -> Image.Image:
     raise RuntimeError("no inline image data in any candidate part")
 
 
-def generate(client: genai.Client, piece: Piece, reference: Image.Image, tone: str) -> Image.Image:
-    full_prompt = f"{STYLE.format(tone=tone)}\n\n{piece.prompt}"
+def generate(client: genai.Client, piece: Piece, references: list) -> Image.Image:
+    full_prompt = f"{STYLE}\n\n{piece.prompt}"
     last_err: Exception | None = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             resp = client.models.generate_content(
                 model=MODEL,
-                contents=[reference, full_prompt],
+                contents=references + [full_prompt],
                 config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
             )
             return _extract_image(resp)
@@ -169,6 +173,70 @@ def strip_background(img: Image.Image, tolerance: int = 36) -> Image.Image:
     return Image.fromarray(out, "RGBA")
 
 
+def find_figure_clusters(img: Image.Image, min_gap_frac: float = 0.015) -> list:
+    """Column ranges of the distinct figures in an image.
+
+    Gaps narrower than `min_gap_frac` of the width are treated as part of the
+    same figure (the space between an arm and a torso, say) so a single
+    figurine isn't reported as two.
+    """
+    arr = np.array(img.convert("RGBA"))
+    if arr.size == 0:
+        return []
+    filled = (arr[:, :, 3] > 16).sum(axis=0) > 0
+    width = len(filled)
+    min_gap = max(4, int(width * min_gap_frac))
+
+    spans = []
+    start = None
+    for x in range(width):
+        if filled[x] and start is None:
+            start = x
+        elif not filled[x] and start is not None:
+            spans.append([start, x])
+            start = None
+    if start is not None:
+        spans.append([start, width])
+    if not spans:
+        return []
+
+    merged = [spans[0]]
+    for span in spans[1:]:
+        if span[0] - merged[-1][1] < min_gap:
+            merged[-1][1] = span[1]
+        else:
+            merged.append(span)
+    # Ignore specks (stray artefacts), keep real figures.
+    widest = max(s[1] - s[0] for s in merged)
+    return [tuple(s) for s in merged if (s[1] - s[0]) > widest * 0.25]
+
+
+def split_pair(img: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Extract the (light, dark) figures from a multi-up image.
+
+    The model is asked for two figures but sometimes renders the pair twice
+    (four figurines: light, light, dark, dark). Cropping the LEFTMOST cluster
+    as light and the RIGHTMOST as dark is correct for both layouts, and beats
+    halving the canvas -- which would hand back two figures per half.
+    Expects the background to have been keyed out already.
+    """
+    clusters = find_figure_clusters(img)
+    if len(clusters) >= 2:
+        left, right = clusters[0], clusters[-1]
+        pad = 6
+        return (
+            img.crop((max(0, left[0] - pad), 0, min(img.width, left[1] + pad), img.height)),
+            img.crop((max(0, right[0] - pad), 0, min(img.width, right[1] + pad), img.height)),
+        )
+    mid = img.width // 2
+    return img.crop((0, 0, mid, img.height)), img.crop((mid, 0, img.width, img.height))
+
+
+def looks_like_one_figure(img: Image.Image) -> bool:
+    """True if a cropped half holds exactly one figurine."""
+    return len(find_figure_clusters(img)) == 1
+
+
 def fit_to_reference(img: Image.Image, ref_size: tuple[int, int]) -> Image.Image:
     """Trim transparent padding, then letterbox onto the King's canvas size so
     the new piece scales identically on the board."""
@@ -192,11 +260,32 @@ def main() -> int:
     ap.add_argument("--force", action="store_true", help="regenerate existing art")
     ap.add_argument("--colors", default="white,black", help="which sides to generate")
     ap.add_argument("--isolate", action="store_true", help="re-key existing art, no API calls")
+    ap.add_argument("--resplit", action="store_true", help="re-cut saved diptychs, no API calls")
     args = ap.parse_args()
 
     if args.list:
         for p in PIECES:
             print(f"  {p.name}")
+        return 0
+
+    if args.resplit:
+        refs = [Image.open(ICONS_DIR / f"King_{c}.png").convert("RGBA") for c in ("white", "black")]
+        n = 0
+        for piece in PIECES:
+            if args.only and piece.name.lower() not in {x.strip().lower() for x in args.only.split(",")}:
+                continue
+            raw_path = RAW_DIR / f"{piece.name}_pair.png"
+            if not raw_path.exists():
+                print(f"  no saved diptych for {piece.name}")
+                continue
+            light, dark = split_pair(Image.open(raw_path))
+            for color, half in (("white", light), ("black", dark)):
+                if not looks_like_one_figure(half):
+                    print(f"  WARNING: {piece.name}_{color} still looks like two figures", file=sys.stderr)
+                fit_to_reference(half, refs[0].size).save(ICONS_DIR / f"{piece.name}_{color}.png")
+            n += 1
+            print(f"  re-split {piece.name}")
+        print(f"re-split {n} piece(s)")
         return 0
 
     if args.isolate:
@@ -227,31 +316,45 @@ def main() -> int:
     colors = [c.strip() for c in args.colors.split(",") if c.strip()]
 
     client = genai.Client(api_key=api_key)
-    tones = {"white": "bright polished pewter/silver", "black": "dark gunmetal/blackened iron"}
 
     failures = 0
-    for color in colors:
+    refs = []
+    for color in ("white", "black"):
         ref_path = ICONS_DIR / f"King_{color}.png"
         if not ref_path.exists():
             print(f"ERROR: reference {ref_path} missing", file=sys.stderr)
             return 2
-        reference = Image.open(ref_path).convert("RGBA")
-        for piece in PIECES:
-            if wanted and piece.name.lower() not in wanted:
-                continue
-            out = ICONS_DIR / f"{piece.name}_{color}.png"
-            if out.exists() and not args.force:
-                print(f"  skip {out.name} (exists)")
-                continue
-            print(f"generating {out.name} ...")
-            try:
-                img = generate(client, piece, reference, tones.get(color, "cast metal"))
-                img = fit_to_reference(strip_background(img), reference.size)
-                img.save(out)
-                print(f"  wrote {out} {img.size}")
-            except Exception as e:  # noqa: BLE001
-                failures += 1
-                print(f"  FAILED {piece.name}_{color}: {e!r}", file=sys.stderr)
+        refs.append(Image.open(ref_path).convert("RGBA"))
+    ref_size = refs[0].size
+
+    for piece in PIECES:
+        if wanted and piece.name.lower() not in wanted:
+            continue
+        outputs = {c: ICONS_DIR / f"{piece.name}_{c}.png" for c in colors}
+        if all(p.exists() for p in outputs.values()) and not args.force:
+            print(f"  skip {piece.name} (exists)")
+            continue
+        print(f"generating {piece.name} (light + dark in one pass) ...")
+        try:
+            raw = generate(client, piece, refs)
+            keyed = strip_background(raw)
+            # Keep the diptych so a bad split can be re-cut without paying for
+            # another generation (see --resplit).
+            raw_path = RAW_DIR / f"{piece.name}_pair.png"
+            RAW_DIR.mkdir(parents=True, exist_ok=True)
+            keyed.save(raw_path)
+            light, dark = split_pair(keyed)
+            halves = {"white": light, "black": dark}
+            for color, path in outputs.items():
+                if not looks_like_one_figure(halves[color]):
+                    print(f"  WARNING: {piece.name}_{color} split looks like it caught "
+                          f"two figures; re-cut with --resplit or regenerate", file=sys.stderr)
+                img = fit_to_reference(halves[color], ref_size)
+                img.save(path)
+                print(f"  wrote {path} {img.size}")
+        except Exception as e:  # noqa: BLE001
+            failures += 1
+            print(f"  FAILED {piece.name}: {e!r}", file=sys.stderr)
 
     if failures:
         print(f"\n{failures} generation(s) failed", file=sys.stderr)

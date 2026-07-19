@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://9mf6j244jetf"]
+[gd_scene format=3 uid="uid://bamf6j244jetf"]
 
 [ext_resource type="Script" uid="uid://en7953u11rm0" path="res://scenes/pieces/chieftain.gd" id="1_jutoc"]
 

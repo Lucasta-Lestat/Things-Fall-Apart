@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://81arz6l804kk"]
+[gd_scene format=3 uid="uid://81ar06l804kk"]
 
 [ext_resource type="Script" uid="uid://1223wh3tra38" path="res://scenes/pieces/spymaster.gd" id="1_4j2aa"]
 

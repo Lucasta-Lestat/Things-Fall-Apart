@@ -39,6 +39,7 @@ func _initialize():
 	test_chancellor_promotes_peasants()
 	test_promotion_beats_conditional_move()
 	test_alternatives_are_kept_for_the_chooser()
+	test_no_duplicate_actions()
 	test_viking_valhalla()
 	test_factory()
 	test_praetor()
@@ -290,7 +291,18 @@ func test_devil_toad():
 	var toad = Rules.add_piece(st, "Devil Toad", "white", Vector2(0, 0))
 	var t = targets(Rules.get_actions(st, toad))
 	check(Vector2(5, 5) in t, "devil toad slides the long diagonal")
-	check(t.size() > 5, "devil toad bounces off edges")
+	# From a corner every bounce path folds back onto that one diagonal, so it
+	# reaches exactly those 5 squares -- and offers each of them only once.
+	check(t.size() == 5, "devil toad reaches the corner diagonal without repeats")
+	# Away from the corner the bounce genuinely turns, reaching squares no
+	# straight diagonal from the origin would touch.
+	var st2 = Rules.new_state()
+	var toad2 = Rules.add_piece(st2, "Devil Toad", "white", Vector2(2, 0))
+	var bounced_somewhere = false
+	for sq in targets(Rules.get_actions(st2, toad2)):
+		if abs(sq.x - 2) != abs(sq.y):
+			bounced_somewhere = true
+	check(bounced_somewhere, "devil toad bounces off a wall onto a new diagonal")
 
 
 func test_werewolf_wolf_movegen():
@@ -544,6 +556,42 @@ func test_alternatives_are_kept_for_the_chooser():
 	check(has_conditional, "the conditional backfill is still selectable via the chooser")
 	# sort_actions must not drop anything.
 	check(all_sorted.size() == raw.size(), "sort_actions preserves every action")
+
+
+func test_no_duplicate_actions():
+	# The Devil Toad's four bounce paths can reach one square several ways; the
+	# board must not offer (or ask the player to choose between) the same move
+	# twice. Check every piece type on a busy board.
+	var offenders = []
+	for piece_type in Rules.PIECE_INFO:
+		var st = Rules.new_state()
+		var piece = Rules.add_piece(st, piece_type, "white", Vector2(2, 3))
+		# Neighbours to create captures, blocks and conditional backfills.
+		Rules.add_piece(st, "Pawn", "black", Vector2(3, 2))
+		Rules.add_piece(st, "Pawn", "white", Vector2(2, 2))
+		Rules.add_piece(st, "King", "black", Vector2(5, 0))
+		Rules.add_piece(st, "King", "white", Vector2(0, 5))
+		var seen = {}
+		for a in Rules.get_actions(st, piece):
+			var key = "%s|%s|%s|%s" % [a.get("action", ""), str(a.get("target", "")),
+				str(a.get("direction", "")), str(a.get("is_conditional", false))]
+			if seen.has(key):
+				offenders.append("%s:%s" % [piece_type, key])
+			seen[key] = true
+	check(offenders.is_empty(), "no piece offers a duplicate action (%s)" % str(offenders.slice(0, 4)))
+
+	# Specifically the toad, from a corner where bounce paths overlap most.
+	var st2 = Rules.new_state()
+	var toad = Rules.add_piece(st2, "Devil Toad", "white", Vector2(0, 0))
+	var counts = {}
+	for a in Rules.get_actions(st2, toad):
+		var t = str(a.get("target", ""))
+		counts[t] = int(counts.get(t, 0)) + 1
+	var dupes = []
+	for t in counts:
+		if counts[t] > 1:
+			dupes.append(t)
+	check(dupes.is_empty(), "devil toad reaches each square exactly once (dupes: %s)" % str(dupes))
 
 
 func test_viking_valhalla():

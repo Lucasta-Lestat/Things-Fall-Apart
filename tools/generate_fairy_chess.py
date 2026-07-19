@@ -279,7 +279,7 @@ def _rank(pieces, score, char=None, tech=0.0, rng=None):
         if char is not None:
             s += piece_bias(name, char, score, tech)
         if rng is not None:
-            s += rng.uniform(0.0, 1.4)
+            s += rng.uniform(0.0, 1.9)
         scored.append((-s, name))
     scored.sort()
     return [name for _, name in scored]
@@ -302,25 +302,26 @@ def build_set(char):
     noble_rank = _rank(NOBLES, score, char, tech, rng)
     royal_rank = _rank(ROYALS, score, char, tech, rng)
 
-    # 5 peasants: top type doubled, plus the next two (2+2+1).
-    peasants = _distribute(peasant_rank[:3], [2, 2, 1])
-    # 4 nobles: top type doubled, plus the next two (2+1+1).
-    nobles = _distribute(noble_rank[:3], [2, 1, 1])
+    # 6 peasants and 6 nobles: the top two types doubled, then the next two.
+    peasants = _distribute(peasant_rank[:4], [2, 2, 1, 1])
+    nobles = _distribute(noble_rank[:4], [2, 2, 1, 1])
     # 2 distinct royals: the best themed royal plus a fallback (King if absent).
     royal_types = royal_rank[:2]
     if "King" not in royal_types:
         royal_types = [royal_rank[0], "King"]
     royals = {t: 1 for t in royal_types[:2]}
 
-    # A couple of wildcards for variety, drawn from further down each character's
-    # own ranking so they stay in flavour without being the obvious pick.
-    for _ in range(rng.randint(1, 2)):
-        pick = rng.choice(noble_rank[3:9]) if len(noble_rank) > 3 else None
-        if pick:
+    # Wildcards for variety, drawn from a wide band further down each
+    # character's own ranking so they stay in flavour without being the
+    # obvious pick. Only 8 pieces get fielded, so a deeper bench is choice.
+    for _ in range(rng.randint(2, 3)):
+        if len(noble_rank) > 4:
+            pick = rng.choice(noble_rank[4:12])
             nobles[pick] = nobles.get(pick, 0) + 1
-    if rng.random() < 0.6 and len(peasant_rank) > 3:
-        pick = rng.choice(peasant_rank[3:6])
-        peasants[pick] = peasants.get(pick, 0) + 1
+    for _ in range(rng.randint(1, 2)):
+        if len(peasant_rank) > 4:
+            pick = rng.choice(peasant_rank[4:])
+            peasants[pick] = peasants.get(pick, 0) + 1
 
     return {"peasants": peasants, "nobles": nobles, "royals": royals}
 
