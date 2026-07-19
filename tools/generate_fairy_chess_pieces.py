@@ -39,6 +39,7 @@ from PIL import Image, ImageDraw
 MODEL = os.environ.get("FAIRY_CHESS_MODEL", "gemini-3-pro-image-preview")
 ICONS_DIR = Path("fairy-chess-2") / "assets" / "icons"
 RAW_DIR = Path("tools") / "_fairy_chess_raw"  # kept diptychs, for re-splitting
+VARIANT_DIR = RAW_DIR / "variants"           # candidate art awaiting a human pick
 MAX_RETRIES = 4
 
 # Shared style, anchored on the two King references passed in.
@@ -70,6 +71,13 @@ STYLE = (
     "legs or under a raised arm. "
     "Each figure is bilaterally SYMMETRICAL left-to-right -- no turned head, no "
     "prop held out to one side only -- so it reads cleanly on the board. "
+    "CRITICAL: whatever the figure HOLDS (sword, staff, axe, sceptre) is held "
+    "in FRONT of its body, so it belongs ONLY in the front view. In the REAR "
+    "view the body hides it -- do NOT draw a second copy of the weapon or "
+    "staff strapped to, sheathed on, or floating over the figure's back. The "
+    "rear view shows only the back of the body, cloak and head; at most the "
+    "very tip or pommel may peek past the silhouette if the object is long. "
+    "One weapon exists, not two. "
     "Both figures fill the frame vertically with a small even margin above the "
     "head and below the base."
 )
@@ -347,11 +355,39 @@ def main() -> int:
     ap.add_argument("--colors", default="white,black", help="which sides to generate")
     ap.add_argument("--isolate", action="store_true", help="re-key existing art, no API calls")
     ap.add_argument("--resplit", action="store_true", help="re-cut saved diptychs, no API calls")
+    ap.add_argument("--variants", type=int, default=0,
+                    help="generate N candidates per piece into staging; live art untouched")
+    ap.add_argument("--promote", default=None,
+                    help="adopt staged candidates, e.g. 'Chieftain=2,Praetor=1'")
     args = ap.parse_args()
 
     if args.list:
         for p in PIECES:
             print(f"  {p.name}")
+        return 0
+
+    if args.promote:
+        refs = Image.open(ICONS_DIR / "King_white.png").convert("RGBA")
+        for token in args.promote.split(","):
+            if "=" not in token:
+                print(f"  skipping {token!r}: expected Piece=N", file=sys.stderr)
+                continue
+            name, number = (t.strip() for t in token.split("=", 1))
+            moved = 0
+            for color in ("white", "black"):
+                src = VARIANT_DIR / f"{name}_v{number}_{color}.png"
+                if not src.exists():
+                    print(f"  missing {src}", file=sys.stderr)
+                    continue
+                fit_to_reference(Image.open(src), refs.size).save(ICONS_DIR / f"{name}_{color}.png")
+                moved += 1
+            # Keep the winning diptych as the piece's canonical raw.
+            raw_src = VARIANT_DIR / f"{name}_v{number}_pair.png"
+            if raw_src.exists():
+                Image.open(raw_src).save(RAW_DIR / f"{name}_pair.png")
+            if moved:
+                print(f"  promoted {name} variant {number}")
+        print("Done. Re-open the Godot editor once to import the new textures.")
         return 0
 
     if args.resplit:
@@ -412,6 +448,34 @@ def main() -> int:
             return 2
         refs.append(Image.open(ref_path).convert("RGBA"))
     ref_size = refs[0].size
+
+    if args.variants > 0:
+        VARIANT_DIR.mkdir(parents=True, exist_ok=True)
+        for piece in PIECES:
+            if wanted and piece.name.lower() not in wanted:
+                continue
+            for n in range(1, args.variants + 1):
+                print(f"staging {piece.name} variant {n} ...")
+                try:
+                    raw = generate(client, piece, refs)
+                    keyed = strip_background(raw)
+                    keyed.save(VARIANT_DIR / f"{piece.name}_v{n}_pair.png")
+                    rear, front = split_pair(keyed)
+                    for color, half in (("white", rear), ("black", front)):
+                        if not looks_like_one_figure(half):
+                            print(f"  WARNING: {piece.name} v{n} {color} caught more than one figure",
+                                  file=sys.stderr)
+                        fit_to_reference(half, ref_size).save(
+                            VARIANT_DIR / f"{piece.name}_v{n}_{color}.png")
+                    print(f"  staged {piece.name} v{n}")
+                except Exception as e:  # noqa: BLE001
+                    failures += 1
+                    print(f"  FAILED {piece.name} v{n}: {e!r}", file=sys.stderr)
+        print(f"\nStaged candidates in {VARIANT_DIR}. Adopt one with --promote 'Piece=N'.")
+        if failures:
+            return 1
+        return 0
+
 
     for piece in PIECES:
         if wanted and piece.name.lower() not in wanted:
