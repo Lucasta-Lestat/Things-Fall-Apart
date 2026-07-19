@@ -53,6 +53,13 @@ func _initialize():
 		fail("picker portrait clicks did not fill both slots (%s / %s)" % [pp._white_id, pp._black_id])
 	if not pp.confirmed.is_connected(ui._on_profiles_confirmed):
 		fail("picker 'confirmed' signal is not wired to the UI")
+	# The sandbox army must be selectable, not just addressable in code.
+	var listed_god = false
+	for entry in r:
+		if entry.id == "god":
+			listed_god = true
+	if not listed_god:
+		fail("god sandbox profile is not offered in the character picker")
 
 	# Skip the picker for the placement test: lock in the sandbox army for white
 	# (so the fixed placement plan below has every piece) via the same

@@ -108,7 +108,9 @@ func get_roster() -> Array:
 func load_roster() -> void:
 	_loaded = true
 	player_profiles = {"god": _god_profile()}
-	roster_order = []
+	# The sandbox army leads the picker so it is easy to find, and stays
+	# listed even if the exported roster is missing.
+	roster_order = ["god"]
 	if not FileAccess.file_exists(ROSTER_PATH):
 		push_warning("Character roster not found at %s -- using the 'god' test profile only." % ROSTER_PATH)
 		return
@@ -150,7 +152,7 @@ func _god_profile() -> Dictionary:
 	var profile = {
 		"name": "God (Sandbox)",
 		"title": "Every Piece",
-		"portrait": "res://icon.svg",
+		"portrait": "res://Fairy Chess Logo.jpg",
 		"faction": "",
 		"peasants": {},
 		"nobles": {},
