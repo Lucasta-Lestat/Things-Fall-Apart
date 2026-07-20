@@ -39,8 +39,11 @@ const TAN         := Color(0.741, 0.608, 0.463)  # #BD9B76
 const INK         := Color(0.102, 0.098, 0.098)  # #1A1919
 const INERT       := Color(0.550, 0.550, 0.650)  # #8C8CA6
 const HUD_TEXT    := Color(1.000, 1.000, 1.000)  # #FFFFFF
-const TILE_LIGHT  := Color(0.780, 0.643, 0.525)  # #C7A486
-const TILE_DARK   := Color(0.318, 0.235, 0.169)  # #513C2B
+# The board stays in the warm family, but the light square is a real ivory
+# rather than a tan: with both squares brown the board read as one mass against
+# the wooden table. Square separation 4.47:1 -> 6.83:1.
+const TILE_LIGHT  := Color(0.910, 0.851, 0.745)  # #E8D9BE
+const TILE_DARK   := Color(0.353, 0.251, 0.188)  # #5A4030
 
 
 func _alpha(c: Color, a: float) -> Color:
@@ -103,12 +106,16 @@ func _init() -> void:
 	t.set_font_size("font_size", "PanelHeading", 14)
 	t.set_color("font_color", "PanelHeading", GOLD_HEAD)
 
+	# White rather than cream: this label sits on bare wood, and cream measured
+	# only 3.31:1 over bright grain. White is 11.2:1 typical / 4.46:1 worst, and
+	# the outline covers the rest. The heavier outline is for Cinzel's thin
+	# hairlines, which the 4px version was not quite carrying at this size.
 	t.set_type_variation("ProfileName", "Label")
 	t.set_font("font", "ProfileName", cinzel)
-	t.set_font_size("font_size", "ProfileName", 14)
-	t.set_color("font_color", "ProfileName", CREAM)
+	t.set_font_size("font_size", "ProfileName", 16)
+	t.set_color("font_color", "ProfileName", HUD_TEXT)
 	t.set_color("font_outline_color", "ProfileName", INK)
-	t.set_constant("outline_size", "ProfileName", 4)
+	t.set_constant("outline_size", "ProfileName", 6)
 
 	t.set_type_variation("ModalTitle", "Label")
 	t.set_font("font", "ModalTitle", cinzel)
@@ -232,11 +239,15 @@ func _init() -> void:
 	t.set_color("select_own", "Chessboard", Color(0, 1, 0, 0.30))
 	t.set_color("select_preview", "Chessboard", Color(1, 0.7, 0.1, 0.30))
 	t.set_color("move", "Chessboard", Color(0, 0.5, 1, 0.5))
-	t.set_color("move_conditional", "Chessboard", Color(0.4, 0.9, 1.0, 0.85))
+	# Deeper than the old pale cyan/yellow. Both of these are drawn on a light
+	# ivory square now, where the pale versions measured 1.06:1 and 1.13:1 --
+	# the conditional ring in particular was a thin arc and simply vanished.
+	# These sit mid-luminance so they read on ivory AND walnut (~2.5:1 on each).
+	t.set_color("move_conditional", "Chessboard", Color(0.195, 0.574, 0.650, 0.95))
 	t.set_color("capture_hint", "Chessboard", Color(1, 0.2, 0.1, 0.5))
 	t.set_color("shoot", "Chessboard", Color(1, 0, 0, 0.5))
 	t.set_color("friendly_fire", "Chessboard", Color(1, 0.65, 0, 0.6))
-	t.set_color("promote", "Chessboard", Color(1, 1, 0, 0.5))
+	t.set_color("promote", "Chessboard", Color(0.600, 0.525, 0.150, 0.95))
 	t.set_color("convert", "Chessboard", Color(0.7, 0.2, 0.9, 0.5))
 	t.set_color("cannon", "Chessboard", Color(1, 0.5, 0, 0.5))
 	# Two-pass ring: a dark pass under a light one, so the marker survives on

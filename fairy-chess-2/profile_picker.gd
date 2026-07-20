@@ -165,7 +165,7 @@ func open(roster: Array, white_id: String, black_id: String, ai_enabled: bool):
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var label = entry.name
 		if entry.title != "":
-			label += " — " + entry.title
+			label += ": " + entry.title
 		button.tooltip_text = label
 		button.pressed.connect(_on_portrait_pressed.bind(entry.id))
 		_grid.add_child(button)
