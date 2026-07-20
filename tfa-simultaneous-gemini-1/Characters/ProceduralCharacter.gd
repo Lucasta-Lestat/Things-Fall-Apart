@@ -5847,6 +5847,11 @@ func _get_modified_visual_duration(ability: Ability) -> float:
 ## Find targets in the ability's area of effect
 func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	var targets: Array = []
+	# Self-targeted abilities (e.g. Force March) always resolve their effects
+	# against the caster regardless of shape/radius. Returning [self] here
+	# guarantees apply_condition fires on the caster even when radius is 0.
+	if ability.targeting.get("type", "") == "self":
+		return [self]
 	var shape = ability.targeting.get("shape", "none")
 	var radius = ability.targeting.get("radius", 0.0)
 	var size = ability.targeting.get("size", Vector2.ZERO)

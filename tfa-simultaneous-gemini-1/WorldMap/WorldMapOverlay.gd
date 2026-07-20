@@ -88,18 +88,42 @@ func _clear() -> void:
 
 
 func _draw() -> void:
+	# Territories are rendered tile-by-tile so they stop cleanly at the
+	# coastline instead of bleeding into the ocean. For each city we sweep the
+	# bounding box of its territory disc in tile coordinates, check each tile
+	# against GridManager.floors, and only fill tiles whose floor_id isn't a
+	# water type. Out-of-bounds tiles (off the map) and unrecorded tiles are
+	# also skipped so we never paint over the parchment border.
+	var tile_size: int = GridManager.TILE_SIZE
+	var map_rect: Rect2i = GridManager.map_rect
 	for city in _cities:
 		var color: Color = _faction_color(city["controller"])
-		var center: Vector2 = city["position"]
-		var radius: float = city["territory_radius_px"]
-		# Filled disc with low alpha so the underlying map shows through.
 		var fill := color
 		fill.a = TERRITORY_ALPHA
-		draw_circle(center, radius, fill)
-		# Solid edge ring so border lines stay legible even on busy terrain.
-		var edge := color
-		edge.a = 0.85
-		draw_arc(center, radius, 0.0, TAU, 64, edge, TERRITORY_RING_THICKNESS, true)
+		var center: Vector2 = city["position"]
+		var radius: float = city["territory_radius_px"]
+		var center_tile: Vector2i = GridManager.world_to_map(center)
+		var tile_radius: int = int(ceil(radius / float(tile_size))) + 1
+		for dy in range(-tile_radius, tile_radius + 1):
+			for dx in range(-tile_radius, tile_radius + 1):
+				var tile: Vector2i = center_tile + Vector2i(dx, dy)
+				if not map_rect.has_point(tile):
+					continue
+				if _is_water_tile(tile):
+					continue
+				var tile_center: Vector2 = GridManager.map_to_world(tile)
+				if tile_center.distance_to(center) > radius:
+					continue
+				var top_left := Vector2(
+					tile_center.x - tile_size * 0.5,
+					tile_center.y - tile_size * 0.5
+				)
+				draw_rect(Rect2(top_left, Vector2(tile_size, tile_size)), fill, true)
+
+
+func _is_water_tile(tile: Vector2i) -> bool:
+	var fid: String = GridManager.floors.get(tile, "")
+	return fid == "world_water" or fid == "water" or fid == "shallow_water"
 
 
 func _faction_color(faction_id: String) -> Color:

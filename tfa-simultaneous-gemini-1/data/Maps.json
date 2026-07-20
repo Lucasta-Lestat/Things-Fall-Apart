@@ -1,3536 +1,1578 @@
 {
 	"maps": [
 		{
-			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
-			"dialogue_time_triggers": [
-				{
-					"dialogue": "demo_scheduled_dialogue",
-					"id": "demo_midnight_bell",
-					"recurrence": "daily",
-					"scope": {
-						"map": "cemetery"
-					},
-					"when": {
-						"hour": 0.0,
-						"minute": 0.0
-					}
-				}
-			],
-			"dialogue_triggers_on_load": [
-				{
-					"dialogue": "demo_cemetery_on_load",
-					"id": "demo_cemetery_arrival",
-					"one_shot": true
-				}
-			],
-			"dialogue_zones": [
-				{
-					"dialogue": "demo_cemetery_zone",
-					"id": "demo_altar_zone",
-					"one_shot": true,
-					"position": [
-						600.0,
-						300.0
-					],
-					"radius": 80.0,
-					"trigger_on": "protagonist"
-				}
-			],
-			"fluid_spawns": [
-				{
-					"amount": 0.5,
-					"position": [
-						5.0,
-						3.0
-					],
-					"radius": 2.0,
-					"type": "oil"
-				},
-				{
-					"amount": 0.3,
-					"position": [
-						3.0,
-						6.0
-					],
-					"radius": 1.0,
-					"type": "oil"
-				}
-			],
-			"fog_ids": [
-				"fog"
-			],
 			"id": "cemetery",
+			"name": "Old Cemetery",
+			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/cemetery.png",
 				"mask": "res://Maps/cemetery_mask.png",
 				"structures": "res://Maps/cemetery_structures.png",
 				"structures_mask": "res://Maps/cemetery_structures_mask.png"
 			},
-			"item_spawns": [
-				{
-					"count": 1.0,
-					"id": "potion_of_healing",
-					"position": [
-						150.0,
-						200.0
-					]
-				},
-				{
-					"container": "chest",
-					"count": 3.0,
-					"id": "gold",
-					"position": [
-						320.0,
-						280.0
-					]
-				},
-				{
-					"controlling_faction": "cultists",
-					"count": 1.0,
-					"id": "treasure_chest",
-					"position": [
-						2400.0,
-						1100.0
-					],
-					"value": 80.0
-				},
-				{
-					"condition": {
-						"readable_collected::torn_journal_page": false
-					},
-					"count": 1.0,
-					"id": "torn_journal_page",
-					"position": [
-						260.0,
-						200.0
-					]
-				},
-				{
-					"condition": {
-						"readable_collected::chronicle_of_perrow": false
-					},
-					"count": 1.0,
-					"id": "chronicle_of_perrow",
-					"position": [
-						320.0,
-						200.0
-					]
-				}
-			],
+			"tile_size": 64,
 			"music_track": "cemetery_ambient",
-			"name": "Old Cemetery",
-			"npc_spawns": [
-				{
-					"condition": {
-						"quest": "dark_ritual",
-						"state": "active"
-					},
-					"count": 2.0,
-					"position": [
-						400.0,
-						300.0
-					],
-					"spread_radius": 30.0,
-					"template_id": "cultist"
-				},
-				{
-					"condition": {
-						"time_hour_min": 20.0
-					},
-					"count": 1.0,
-					"position": [
-						250.0,
-						200.0
-					],
-					"template_id": "surgeon_captain_federica"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						150.0,
-						100.0
-					],
-					"template_id": "test_male_elf"
-				}
+			"weather_group": "Scarlatti",
+			"fog_ids": [
+				"fog"
 			],
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				},
+				"from_town_square": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				},
+				"from_catacombs": {
+					"position": [
+						480,
+						350
+					],
+					"facing": 270
+				},
+				"from_venonan_chapel": {
+					"position": [
+						2700,
+						700
+					],
+					"facing": 180
+				}
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40.0
+					"offset_radius": 40
 				},
 				"from_town_square": {
-					"facing": 90.0,
 					"formation": "column",
-					"offset_radius": 30.0
+					"offset_radius": 30,
+					"facing": 90
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
+			"npc_spawns": [
+				{
+					"template_id": "cultist",
 					"position": [
-						40.0,
-						40.0
-					]
+						400,
+						300
+					],
+					"count": 2,
+					"spread_radius": 30,
+					"condition": {
+						"quest": "dark_ritual",
+						"state": "active"
+					}
 				},
-				"from_catacombs": {
-					"facing": 270.0,
+				{
+					"template_id": "surgeon_captain_federica",
 					"position": [
-						480.0,
-						350.0
-					]
+						250,
+						200
+					],
+					"count": 1,
+					"condition": {
+						"time_hour_min": 20
+					}
 				},
-				"from_town_square": {
-					"facing": 90.0,
+				{
+					"template_id": "test_male_elf",
 					"position": [
-						40.0,
-						40.0
-					]
-				},
-				"from_venonan_chapel": {
-					"facing": 180.0,
-					"position": [
-						2700.0,
-						700.0
-					]
+						150,
+						100
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"fluid_spawns": [
+				{
+					"type": "oil",
+					"position": [
+						5,
+						3
+					],
+					"amount": 0.5,
+					"radius": 2
+				},
+				{
+					"type": "oil",
+					"position": [
+						3,
+						6
+					],
+					"amount": 0.3,
+					"radius": 1
+				}
+			],
+			"item_spawns": [
+				{
+					"id": "potion_of_healing",
+					"position": [
+						150,
+						200
+					],
+					"count": 1
+				},
+				{
+					"id": "gold",
+					"position": [
+						320,
+						280
+					],
+					"count": 3,
+					"container": "chest"
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						2400,
+						1100
+					],
+					"count": 1,
+					"controlling_faction": "cultists",
+					"value": 80
+				}
+			],
 			"warp_points": [
 				{
 					"id": "to_town_square",
-					"label": "To Town Square",
 					"position": [
-						20.0,
-						300.0
+						20,
+						300
 					],
 					"size": [
-						20.0,
-						60.0
+						20,
+						60
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_cemetery"
+					"target_spawn": "from_cemetery",
+					"label": "To Town Square"
 				},
 				{
-					"condition": {
-						"item": "catacombs_key"
-					},
 					"id": "to_catacombs",
-					"label": "Enter Catacombs",
 					"position": [
-						490.0,
-						350.0
+						490,
+						350
 					],
 					"size": [
-						30.0,
-						30.0
+						30,
+						30
 					],
 					"target_map": "catacombs",
-					"target_spawn": "from_cemetery"
+					"target_spawn": "from_cemetery",
+					"label": "Enter Catacombs",
+					"condition": {
+						"item": "catacombs_key"
+					}
 				},
 				{
 					"id": "to_venonan_chapel",
-					"label": "To Venonan Chapel",
 					"position": [
-						2700.0,
-						700.0
+						2700,
+						700
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "venonan_chapel",
-					"target_spawn": "from_cemetery"
+					"target_spawn": "from_cemetery",
+					"label": "To Venonan Chapel"
 				}
 			],
-			"weather_group": "Scarlatti"
+			"dialogue_triggers_on_load": [
+				{
+					"id": "demo_cemetery_arrival",
+					"dialogue": "demo_cemetery_on_load",
+					"one_shot": true
+				}
+			],
+			"dialogue_zones": [
+				{
+					"id": "demo_altar_zone",
+					"dialogue": "demo_cemetery_zone",
+					"position": [
+						600,
+						300
+					],
+					"radius": 80,
+					"trigger_on": "protagonist",
+					"one_shot": true
+				}
+			],
+			"dialogue_time_triggers": [
+				{
+					"id": "demo_midnight_bell",
+					"dialogue": "demo_scheduled_dialogue",
+					"when": {
+						"hour": 0,
+						"minute": 0
+					},
+					"recurrence": "daily",
+					"scope": {
+						"map": "cemetery"
+					}
+				}
+			]
 		},
 		{
-			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
-			"fog_ids": [],
 			"id": "town_square",
+			"name": "Town Square",
+			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/town_square_clean.png",
 				"mask": "res://Maps/town_square_mask.png",
 				"structures": "res://Maps/town_square.jpg",
 				"structures_mask": "res://Maps/town_square_structures_mask.png"
 			},
-			"item_spawns": [
-				{
-					"controlling_faction": "liziti",
-					"count": 1.0,
-					"id": "treasure_chest",
-					"position": [
-						1700.0,
-						1700.0
-					],
-					"value": 100.0
-				}
-			],
+			"tile_size": 64,
 			"music_track": "town_theme",
-			"name": "Town Square",
-			"npc_spawns": [
-				{
-					"count": 2.0,
+			"weather_group": "Scarlatti",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						100.0,
-						100.0
+						1024,
+						1024
 					],
-					"spread_radius": 40.0,
-					"template_id": "town_guard"
+					"facing": 0
 				},
-				{
-					"count": 3.0,
-					"dialogue": "merchant_generic",
+				"from_cemetery": {
 					"position": [
-						256.0,
-						200.0
+						2000,
+						1024
 					],
-					"spread_radius": 60.0,
-					"template_id": "merchant"
+					"facing": 180
 				},
-				{
-					"count": 1.0,
-					"dialogue": "castellan_intro",
+				"from_venonan_chapel": {
 					"position": [
-						400.0,
-						300.0
+						60,
+						1024
 					],
-					"template_id": "noble_lord",
-					"unique_name": "Lord Castellan"
+					"facing": 0
 				},
-				{
-					"count": 1.0,
+				"from_perrow_tavern": {
 					"position": [
-						800.0,
-						800.0
+						1024,
+						60
 					],
-					"template_id": "smith_darcy"
+					"facing": 90
+				},
+				"from_dock_tavern": {
+					"position": [
+						1024,
+						2000
+					],
+					"facing": 270
+				},
+				"from_minschaleft_university": {
+					"position": [
+						2000,
+						200
+					],
+					"facing": 180
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 35.0
+					"offset_radius": 35
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
+			"npc_spawns": [
+				{
+					"template_id": "town_guard",
 					"position": [
-						1024.0,
-						1024.0
-					]
+						100,
+						100
+					],
+					"count": 2,
+					"spread_radius": 40
 				},
-				"from_cemetery": {
-					"facing": 180.0,
+				{
+					"template_id": "merchant",
 					"position": [
-						2000.0,
-						1024.0
-					]
+						256,
+						200
+					],
+					"count": 3,
+					"spread_radius": 60,
+					"dialogue": "merchant_generic"
 				},
-				"from_dock_tavern": {
-					"facing": 270.0,
+				{
+					"template_id": "noble_lord",
 					"position": [
-						1024.0,
-						2000.0
-					]
+						400,
+						300
+					],
+					"count": 1,
+					"unique_name": "Lord Castellan",
+					"dialogue": "castellan_intro"
 				},
-				"from_minschaleft_university": {
-					"facing": 180.0,
+				{
+					"template_id": "smith_darcy",
 					"position": [
-						2000.0,
-						200.0
-					]
-				},
-				"from_perrow_heart_village": {
-					"facing": 90.0,
-					"position": [
-						1024.0,
-						190.0
-					]
-				},
-				"from_perrow_tavern": {
-					"facing": 90.0,
-					"position": [
-						1024.0,
-						60.0
-					]
-				},
-				"from_venonan_chapel": {
-					"facing": 0.0,
-					"position": [
-						60.0,
-						1024.0
-					]
+						800,
+						800
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [
+				{
+					"id": "treasure_chest",
+					"position": [
+						1700,
+						1700
+					],
+					"count": 1,
+					"controlling_faction": "liziti",
+					"value": 100
+				}
+			],
 			"warp_points": [
 				{
 					"id": "to_cemetery",
-					"label": "To Cemetery",
 					"position": [
-						2010.0,
-						1024.0
+						2010,
+						1024
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "cemetery",
-					"target_spawn": "from_town_square"
+					"target_spawn": "from_town_square",
+					"label": "To Cemetery"
 				},
 				{
 					"id": "to_venonan_chapel",
-					"label": "To Venonan Chapel",
 					"position": [
-						40.0,
-						1024.0
+						40,
+						1024
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "venonan_chapel",
-					"target_spawn": "from_town_square"
+					"target_spawn": "from_town_square",
+					"label": "To Venonan Chapel"
 				},
 				{
 					"id": "to_perrow_tavern",
-					"label": "Enter Perrow Tavern",
 					"position": [
-						1024.0,
-						40.0
+						1024,
+						40
 					],
 					"size": [
-						80.0,
-						40.0
+						80,
+						40
 					],
 					"target_map": "perrow_tavern",
-					"target_spawn": "from_town_square"
+					"target_spawn": "from_town_square",
+					"label": "Enter Perrow Tavern"
 				},
 				{
 					"id": "to_dock_tavern",
-					"label": "Enter Dock Tavern",
 					"position": [
-						1024.0,
-						2010.0
+						1024,
+						2010
 					],
 					"size": [
-						80.0,
-						40.0
+						80,
+						40
 					],
 					"target_map": "dock_tavern",
-					"target_spawn": "from_town_square"
+					"target_spawn": "from_town_square",
+					"label": "Enter Dock Tavern"
 				},
 				{
 					"id": "to_minschaleft_university",
-					"label": "To Minschaleft University",
 					"position": [
-						2010.0,
-						200.0
+						2010,
+						200
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "minschaleft_university",
-					"target_spawn": "from_town_square"
-				},
-				{
-					"id": "to_perrow_heart_village",
-					"label": "To Heart of the Village",
-					"position": [
-						1024.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_heart_village",
-					"target_spawn": "from_town_square"
+					"target_spawn": "from_town_square",
+					"label": "To Minschaleft University"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "A grand arena ringed with tiered stone seating, where crowds once roared for blood and glory.",
-			"fog_ids": [],
 			"id": "colosseum",
+			"name": "The Colosseum",
+			"description": "A grand arena ringed with tiered stone seating, where crowds once roared for blood and glory.",
 			"images": {
 				"map": "res://Maps/Colosseum Clean.png",
 				"mask": "res://Maps/Colosseum_mask.png",
 				"structures": "res://Maps/Colosseum.png",
 				"structures_mask": "res://Maps/Colosseum_structures_mask.png"
 			},
-			"item_spawns": [
-				{
-					"controlling_faction": "dragatini",
-					"count": 1.0,
-					"id": "treasure_chest",
-					"position": [
-						1300.0,
-						200.0
-					],
-					"value": 120.0
-				}
-			],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "The Colosseum",
-			"npc_spawns": [],
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [
+						768,
+						768
+					],
+					"facing": 0
+				}
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40.0
+					"offset_radius": 40
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
+			"npc_spawns": [],
+			"item_spawns": [
+				{
+					"id": "treasure_chest",
 					"position": [
-						768.0,
-						768.0
-					]
+						1300,
+						200
+					],
+					"count": 1,
+					"controlling_faction": "dragatini",
+					"value": 120
 				}
-			},
-			"tile_size": 64.0,
-			"warp_points": [],
-			"weather_group": "Scarlatti"
+			],
+			"warp_points": []
 		},
 		{
-			"description": "A weathered chapel of grey stone outside Venonan, its bells long silenced by neglect.",
-			"fog_ids": [],
 			"id": "venonan_chapel",
+			"name": "Venonan Chapel",
+			"description": "A weathered chapel of grey stone outside Venonan, its bells long silenced by neglect.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/venonan_chapel_clean.png",
 				"mask": "res://Maps/venonan_chapel_mask.png",
 				"structures": "res://Maps/Venonan_chapel.png",
 				"structures_mask": "res://Maps/venonan_chapel_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Venonan Chapel",
-			"npc_spawns": [
-				{
-					"count": 1.0,
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						400.0,
-						400.0
+						436,
+						578
 					],
-					"template_id": "reverend_mother_liana"
+					"facing": 0
 				},
-				{
-					"count": 1.0,
+				"from_cemetery": {
 					"position": [
-						500.0,
-						400.0
+						40,
+						578
 					],
-					"template_id": "mother_inferior_macaria"
+					"facing": 0
 				},
-				{
-					"count": 1.0,
+				"from_town_square": {
 					"position": [
-						600.0,
-						600.0
+						820,
+						578
 					],
-					"template_id": "pit_monitor"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						620.0,
-						620.0
-					],
-					"template_id": "pit_hound",
-					"unique_name": "Julius"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						640.0,
-						620.0
-					],
-					"template_id": "pit_hound",
-					"unique_name": "Augustus"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						660.0,
-						620.0
-					],
-					"template_id": "pit_hound",
-					"unique_name": "Octavius"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						680.0,
-						620.0
-					],
-					"template_id": "pit_hound",
-					"unique_name": "Cleopatra"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						700.0,
-						620.0
-					],
-					"template_id": "pit_hound",
-					"unique_name": "Philbert"
+					"facing": 180
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
+			"npc_spawns": [
+				{
+					"template_id": "reverend_mother_liana",
 					"position": [
-						436.0,
-						578.0
-					]
+						400,
+						400
+					],
+					"count": 1
 				},
-				"from_cemetery": {
-					"facing": 0.0,
+				{
+					"template_id": "mother_inferior_macaria",
 					"position": [
-						40.0,
-						578.0
-					]
+						500,
+						400
+					],
+					"count": 1
 				},
-				"from_town_square": {
-					"facing": 180.0,
+				{
+					"template_id": "pit_monitor",
 					"position": [
-						820.0,
-						578.0
-					]
+						600,
+						600
+					],
+					"count": 1
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [
+						620,
+						620
+					],
+					"count": 1,
+					"unique_name": "Julius"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [
+						640,
+						620
+					],
+					"count": 1,
+					"unique_name": "Augustus"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [
+						660,
+						620
+					],
+					"count": 1,
+					"unique_name": "Octavius"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [
+						680,
+						620
+					],
+					"count": 1,
+					"unique_name": "Cleopatra"
+				},
+				{
+					"template_id": "pit_hound",
+					"position": [
+						700,
+						620
+					],
+					"count": 1,
+					"unique_name": "Philbert"
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_cemetery",
-					"label": "To Cemetery",
 					"position": [
-						20.0,
-						578.0
+						20,
+						578
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "cemetery",
-					"target_spawn": "from_venonan_chapel"
+					"target_spawn": "from_venonan_chapel",
+					"label": "To Cemetery"
 				},
 				{
 					"id": "to_town_square",
-					"label": "To Town Square",
 					"position": [
-						840.0,
-						578.0
+						840,
+						578
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_venonan_chapel"
+					"target_spawn": "from_venonan_chapel",
+					"label": "To Town Square"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
-			"fog_ids": [],
 			"id": "perrow_tavern",
+			"name": "Perrow Tavern",
+			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/perrow_tavern_clean.png",
 				"mask": "res://Maps/perrow_tavern_mask.png",
 				"structures": "res://Maps/perrow_tavern.png",
 				"structures_mask": "res://Maps/perrow_tavern_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "tavern_theme",
-			"name": "Perrow Tavern",
-			"npc_spawns": [
-				{
-					"count": 1.0,
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						800.0,
-						1000.0
+						1024,
+						1900
 					],
-					"template_id": "austache_jongle"
+					"facing": 270
 				},
-				{
-					"count": 1.0,
+				"from_town_square": {
 					"position": [
-						1200.0,
-						1000.0
+						1024,
+						1900
 					],
-					"template_id": "mostlemyre_drouge"
+					"facing": 270
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 270.0,
+			"npc_spawns": [
+				{
+					"template_id": "austache_jongle",
 					"position": [
-						1024.0,
-						1900.0
-					]
+						800,
+						1000
+					],
+					"count": 1
 				},
-				"from_town_square": {
-					"facing": 270.0,
+				{
+					"template_id": "mostlemyre_drouge",
 					"position": [
-						1024.0,
-						1900.0
-					]
+						1200,
+						1000
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_town_square",
-					"label": "Out to Town Square",
 					"position": [
-						1024.0,
-						2000.0
+						1024,
+						2000
 					],
 					"size": [
-						80.0,
-						40.0
+						80,
+						40
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_perrow_tavern"
+					"target_spawn": "from_perrow_tavern",
+					"label": "Out to Town Square"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
-			"fog_ids": [],
 			"id": "dock_tavern",
+			"name": "Dock Tavern",
+			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/dock_tavern_clean.png",
 				"mask": "res://Maps/dock_tavern_mask.png",
 				"structures": "res://Maps/dock-tavern.png",
 				"structures_mask": "res://Maps/dock_tavern_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "tavern_theme",
-			"name": "Dock Tavern",
-			"npc_spawns": [
-				{
-					"count": 1.0,
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						421.0,
-						700.0
+						421,
+						578
 					],
-					"template_id": "alewife_juturna"
+					"facing": 90
 				},
-				{
-					"count": 1.0,
+				"from_town_square": {
 					"position": [
-						500.0,
-						750.0
+						421,
+						1100
 					],
-					"template_id": "mary_guana"
+					"facing": 270
 				},
-				{
-					"count": 1.0,
+				"from_don_manor": {
 					"position": [
-						350.0,
-						800.0
+						800,
+						578
 					],
-					"template_id": "hunter_john"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						600.0,
-						700.0
-					],
-					"template_id": "centurion_marcus"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						650.0,
-						700.0
-					],
-					"template_id": "deputy_gleg"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						300.0,
-						900.0
-					],
-					"template_id": "hedge_witch_magda"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						421.0,
-						950.0
-					],
-					"template_id": "lot_lizard_zillah"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						500.0,
-						950.0
-					],
-					"template_id": "andrew_tuatara"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						700.0,
-						800.0
-					],
-					"template_id": "alligator_capone"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						350.0,
-						950.0
-					],
-					"template_id": "cletus_samson"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						200.0,
-						900.0
-					],
-					"template_id": "obediah"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						220.0,
-						900.0
-					],
-					"template_id": "jezebel"
+					"facing": 180
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
+			"npc_spawns": [
+				{
+					"template_id": "alewife_juturna",
 					"position": [
-						421.0,
-						578.0
-					]
+						421,
+						700
+					],
+					"count": 1
 				},
-				"from_don_manor": {
-					"facing": 180.0,
+				{
+					"template_id": "mary_guana",
 					"position": [
-						800.0,
-						578.0
-					]
+						500,
+						750
+					],
+					"count": 1
 				},
-				"from_lighthouse": {
-					"facing": 90.0,
+				{
+					"template_id": "hunter_john",
 					"position": [
-						421.0,
-						190.0
-					]
+						350,
+						800
+					],
+					"count": 1
 				},
-				"from_town_square": {
-					"facing": 270.0,
+				{
+					"template_id": "centurion_marcus",
 					"position": [
-						421.0,
-						1100.0
-					]
+						600,
+						700
+					],
+					"count": 1
+				},
+				{
+					"template_id": "deputy_gleg",
+					"position": [
+						650,
+						700
+					],
+					"count": 1
+				},
+				{
+					"template_id": "hedge_witch_magda",
+					"position": [
+						300,
+						900
+					],
+					"count": 1
+				},
+				{
+					"template_id": "lot_lizard_zillah",
+					"position": [
+						421,
+						950
+					],
+					"count": 1
+				},
+				{
+					"template_id": "andrew_tuatara",
+					"position": [
+						500,
+						950
+					],
+					"count": 1
+				},
+				{
+					"template_id": "alligator_capone",
+					"position": [
+						700,
+						800
+					],
+					"count": 1
+				},
+				{
+					"template_id": "cletus_samson",
+					"position": [
+						350,
+						950
+					],
+					"count": 1
+				},
+				{
+					"template_id": "obediah",
+					"position": [
+						200,
+						900
+					],
+					"count": 1
+				},
+				{
+					"template_id": "jezebel",
+					"position": [
+						220,
+						900
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_town_square",
-					"label": "Out to Town Square",
 					"position": [
-						421.0,
-						1130.0
+						421,
+						1130
 					],
 					"size": [
-						80.0,
-						40.0
+						80,
+						40
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_dock_tavern"
+					"target_spawn": "from_dock_tavern",
+					"label": "Out to Town Square"
 				},
 				{
 					"id": "to_don_manor",
-					"label": "To Don Manor",
 					"position": [
-						820.0,
-						578.0
+						820,
+						578
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "don_manor",
-					"target_spawn": "from_dock_tavern"
-				},
-				{
-					"id": "to_lighthouse",
-					"label": "To Lighthouse",
-					"position": [
-						421.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "lighthouse",
-					"target_spawn": "from_dock_tavern"
+					"target_spawn": "from_dock_tavern",
+					"label": "To Don Manor"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "An imposing manor house that serves as the seat of the local Don, ringed by guards and rumor.",
-			"fog_ids": [],
 			"id": "don_manor",
+			"name": "Don Manor",
+			"description": "An imposing manor house that serves as the seat of the local Don, ringed by guards and rumor.",
+			"region": "perrow",
 			"images": {
-				"map": "res://Maps/don_manor_clean.jpg",
+				"map": "res://Maps/don-manor-clean.png",
 				"mask": "res://Maps/don_manor_mask.png",
-				"structures": "res://Maps/don_manor.jpg",
+				"structures": "res://Maps/don-manor.png",
 				"structures_mask": "res://Maps/don_manor_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Don Manor",
-			"npc_spawns": [
-				{
-					"count": 1.0,
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						465.0,
-						400.0
+						465,
+						578
 					],
-					"template_id": "liziti_don",
-					"titles": [
-						"Don"
-					],
-					"unique_name": "Iguana Don"
+					"facing": 270
 				},
-				{
-					"count": 1.0,
+				"from_dock_tavern": {
 					"position": [
-						600.0,
-						600.0
+						40,
+						578
 					],
-					"template_id": "saul_laelia"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						700.0,
-						700.0
-					],
-					"template_id": "big_al_samson"
+					"facing": 0
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 270.0,
+			"npc_spawns": [
+				{
+					"template_id": "liziti_don",
 					"position": [
-						465.0,
-						578.0
+						465,
+						400
+					],
+					"count": 1,
+					"unique_name": "Iguana Don",
+					"titles": [
+						"Don"
 					]
 				},
-				"from_dock_tavern": {
-					"facing": 0.0,
+				{
+					"template_id": "saul_laelia",
 					"position": [
-						40.0,
-						578.0
-					]
+						600,
+						600
+					],
+					"count": 1
+				},
+				{
+					"template_id": "big_al_samson",
+					"position": [
+						700,
+						700
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_dock_tavern",
-					"label": "To Dock Tavern",
 					"position": [
-						20.0,
-						578.0
+						20,
+						578
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "dock_tavern",
-					"target_spawn": "from_don_manor"
+					"target_spawn": "from_don_manor",
+					"label": "To Dock Tavern"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "A sprawling university whose halls have lately grown unsettlingly quiet.",
-			"fog_ids": [],
 			"id": "minschaleft_university",
+			"name": "Minschaleft University",
+			"description": "A sprawling university whose halls have lately grown unsettlingly quiet.",
+			"region": "perrow",
 			"images": {
 				"map": "res://Maps/minschaleft_university_clean.png",
 				"mask": "res://Maps/minschaleft_university_mask.png",
 				"structures": "res://Maps/minschaleft_university.png",
 				"structures_mask": "res://Maps/minschaleft_university_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Minschaleft University",
-			"npc_spawns": [
-				{
-					"count": 1.0,
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						400.0,
-						600.0
+						418,
+						668
 					],
-					"template_id": "professor_circino"
+					"facing": 0
 				},
-				{
-					"count": 1.0,
+				"from_town_square": {
 					"position": [
-						500.0,
-						600.0
+						60,
+						668
 					],
-					"template_id": "professor_easton"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						450.0,
-						700.0
-					],
-					"template_id": "zakariah"
+					"facing": 0
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
+			"npc_spawns": [
+				{
+					"template_id": "professor_circino",
 					"position": [
-						418.0,
-						668.0
-					]
+						400,
+						600
+					],
+					"count": 1
 				},
-				"from_town_square": {
-					"facing": 0.0,
+				{
+					"template_id": "professor_easton",
 					"position": [
-						60.0,
-						668.0
-					]
+						500,
+						600
+					],
+					"count": 1
+				},
+				{
+					"template_id": "zakariah",
+					"position": [
+						450,
+						700
+					],
+					"count": 1
 				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
+			],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_town_square",
-					"label": "Out to Town Square",
 					"position": [
-						40.0,
-						668.0
+						40,
+						668
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "town_square",
-					"target_spawn": "from_minschaleft_university"
+					"target_spawn": "from_minschaleft_university",
+					"label": "Out to Town Square"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "The second floor of the Eeler, dim and close, with low ceilings that swallow sound.",
-			"fog_ids": [],
 			"id": "eeler_floor_two",
+			"name": "Eeler Floor Two",
+			"description": "The second floor of the Eeler, dim and close, with low ceilings that swallow sound.",
 			"images": {
 				"map": "res://Maps/eeler floor two.png",
 				"mask": "res://Maps/eeler_floor_two_mask.png",
 				"structures": "res://Maps/eeler floor two.png",
 				"structures_mask": "res://Maps/eeler_floor_two_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Eeler Floor Two",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						421.0,
-						578.0
-					]
-				}
-			},
-			"tile_size": 64.0,
-			"warp_points": [],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
-			"id": "skarsgaard_throne",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "Skarsgaard Throne Hall",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "skarsgaard",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
-			"id": "southrons_mill",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "Southron's Mill",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
-			"id": "vermincelli_hideout",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "Vermincelli Hideout",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
-			"id": "sacred_grove",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "The Sacred Grove",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "wilderness",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
-			"id": "bortelinian_catacombs",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "Bortelinian Catacombs",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
-			"id": "alamonean_tower",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "Alamonean Magician's Tower",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "alamone",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
-			"id": "river_elf_village",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "River-Elf Village",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "wilderness",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
-			"id": "curia",
-			"images": {
-
-			},
-			"item_spawns": [],
-			"name": "The Scarlattin Curia",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						40.0,
-						40.0
-					]
-				}
-			},
-			"region": "scarlatti",
-			"tile_size": 64.0,
-			"warp_points": []
-		},
-		{
-			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
-			"fluid_spawns": [],
+			"weather_group": "",
 			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [
+						421,
+						578
+					],
+					"facing": 0
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "skarsgaard_throne",
+			"name": "Skarsgaard Throne Hall",
+			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
+			"region": "skarsgaard",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "southrons_mill",
+			"name": "Southron's Mill",
+			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "vermincelli_hideout",
+			"name": "Vermincelli Hideout",
+			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "sacred_grove",
+			"name": "The Sacred Grove",
+			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
+			"region": "wilderness",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "bortelinian_catacombs",
+			"name": "Bortelinian Catacombs",
+			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"region": "perrow",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "alamonean_tower",
+			"name": "Alamonean Magician's Tower",
+			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
+			"region": "alamone",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "river_elf_village",
+			"name": "River-Elf Village",
+			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
+			"region": "wilderness",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
+			"id": "curia",
+			"name": "The Scarlattin Curia",
+			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
+			"region": "scarlatti",
+			"images": {},
+			"tile_size": 64,
+			"player_spawns": {
+				"default": {
+					"position": [
+						40,
+						40
+					],
+					"facing": 90
+				}
+			},
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 30
+				}
+			},
+			"npc_spawns": [],
+			"item_spawns": [],
+			"warp_points": []
+		},
+		{
 			"id": "scarlatti_world",
+			"name": "Scarlatti",
+			"description": "The known world. Move the party banner across plains, forests, mountains, and waters; settlements reveal warp points as you approach.",
+			"region": "scarlatti",
+			"is_world_map": true,
+			"world_render_scale": 1.5,
+			"time_scale_multiplier": 7200.0,
 			"images": {
 				"map": "res://Maps/Scarlatti World Map (3).png",
 				"mask": "res://Maps/scarlatti_world_mask.png"
 			},
-			"is_world_map": true,
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Scarlatti",
-			"npc_spawns": [
-				{
-					"count": 1.0,
-					"faction": "cultists",
+			"weather_group": "Scarlatti",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
 					"position": [
-						1200.0,
-						1100.0
+						2250,
+						330
 					],
-					"template_id": "cultist"
-				},
-				{
-					"count": 1.0,
-					"faction": "cultists",
-					"position": [
-						1500.0,
-						700.0
-					],
-					"template_id": "cultist"
+					"facing": 180
 				}
-			],
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "single",
-					"offset_radius": 0.0
+					"offset_radius": 0
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 180.0,
-					"position": [
-						1500.0,
-						220.0
-					]
-				}
-			},
-			"region": "scarlatti",
-			"tile_size": 64.0,
-			"time_scale_multiplier": 60.0,
-			"warp_points": [
+			"npc_spawns": [
 				{
-					"id": "to_perrow",
-					"label": "Perrow",
+					"template_id": "cultist",
 					"position": [
-						1500.0,
-						180.0
+						1800,
+						1650
 					],
-					"reveal_radius_px": 220.0,
-					"size": [
-						64.0,
-						64.0
-					],
-					"target_map": "cemetery",
-					"target_spawn": "default",
-					"world_warp": true
+					"count": 1,
+					"faction": "cultists"
 				},
 				{
-					"id": "to_bortellini",
-					"label": "Bortellini",
+					"template_id": "cultist",
 					"position": [
-						1500.0,
-						1300.0
+						2250,
+						1050
 					],
-					"reveal_radius_px": 220.0,
-					"size": [
-						64.0,
-						64.0
-					],
-					"target_map": "bortellini_city_market",
-					"target_spawn": "default",
-					"world_warp": true
-				},
-				{
-					"id": "to_alamone",
-					"label": "Alamone",
-					"position": [
-						900.0,
-						1300.0
-					],
-					"reveal_radius_px": 220.0,
-					"size": [
-						64.0,
-						64.0
-					],
-					"target_map": "alamone_floating_market",
-					"target_spawn": "default",
-					"world_warp": true
-				},
-				{
-					"id": "to_argentiara",
-					"label": "Argentiara",
-					"position": [
-						1500.0,
-						500.0
-					],
-					"reveal_radius_px": 220.0,
-					"size": [
-						64.0,
-						64.0
-					],
-					"target_map": "argentiara_square",
-					"target_spawn": "default",
-					"world_warp": true
+					"count": 1,
+					"faction": "cultists"
 				}
 			],
-			"weather_group": "Scarlatti",
+			"item_spawns": [],
+			"fluid_spawns": [],
 			"world_labels": [
 				{
-					"controller": "liziti",
 					"id": "perrow",
 					"name": "Perrow",
 					"position": [
-						1500.0,
-						180.0
+						2250,
+						270
 					],
-					"territory_radius_px": 320.0
+					"controller": "liziti",
+					"territory_radius_px": 480
 				},
 				{
-					"controller": "tortellini",
 					"id": "alamone",
 					"name": "Alamone",
 					"position": [
-						614.0,
-						444.0
+						921,
+						666
 					],
-					"territory_radius_px": 280.0
+					"controller": "tortellini",
+					"territory_radius_px": 420
 				},
 				{
-					"controller": "neutral",
-					"id": "agentiara",
-					"name": "Agentiara",
+					"id": "argentiara",
+					"name": "Argentiara",
 					"position": [
-						1024.0,
-						1092.0
+						1536,
+						1638
 					],
-					"territory_radius_px": 240.0
+					"controller": "dragatini",
+					"territory_radius_px": 360
 				},
 				{
-					"controller": "dragatini",
 					"id": "bortellini",
 					"name": "Bortellini",
 					"position": [
-						511.0,
-						1638.0
+						767,
+						2457
 					],
-					"territory_radius_px": 360.0
+					"controller": "dragatini",
+					"territory_radius_px": 540
+				}
+			],
+			"warp_points": [
+				{
+					"id": "to_perrow",
+					"position": [
+						2250,
+						270
+					],
+					"size": [
+						96,
+						96
+					],
+					"target_map": "cemetery",
+					"target_spawn": "default",
+					"label": "Perrow",
+					"world_warp": true,
+					"reveal_radius_px": 330
+				},
+				{
+					"id": "to_alamone",
+					"position": [
+						921,
+						666
+					],
+					"size": [
+						96,
+						96
+					],
+					"target_map": "town_square",
+					"target_spawn": "default",
+					"label": "Alamone",
+					"world_warp": true,
+					"reveal_radius_px": 330
 				}
 			]
 		},
 		{
-			"description": "The dusty heart of the mining town, where ore-carts rattle past the assayer's office and miners trade silver for bread and drink.",
-			"fog_ids": [],
 			"id": "argentiara_square",
+			"name": "Argentiara Square",
+			"description": "The dusty heart of the mining town, where ore-carts rattle past the assayer's office and miners trade silver for bread and drink.",
+			"region": "argentiara",
 			"images": {
 				"map": "res://Maps/argentiara_square_clean.png",
 				"mask": "res://Maps/argentiara_square_mask.png",
 				"structures": "res://Maps/argentiara_square.png",
 				"structures_mask": "res://Maps/argentiara_square_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Argentiara Square",
-			"npc_spawns": [],
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [
+						512,
+						512
+					],
+					"facing": 0
+				},
+				"from_argentiara_mine": {
+					"position": [
+						900,
+						512
+					],
+					"facing": 180
+				}
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						512.0,
-						512.0
-					]
-				},
-				"from_argentiara_mine": {
-					"facing": 180.0,
-					"position": [
-						900.0,
-						512.0
-					]
-				},
-				"from_argentiara_mine_town": {
-					"facing": 0.0,
-					"position": [
-						190.0,
-						512.0
-					]
-				}
-			},
-			"region": "argentiara",
-			"tile_size": 64.0,
+			"npc_spawns": [],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_argentiara_mine",
-					"label": "To the Mine",
 					"position": [
-						960.0,
-						512.0
+						960,
+						512
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "argentiara_mine",
-					"target_spawn": "from_argentiara_square"
-				},
-				{
-					"id": "to_argentiara_mine_town",
-					"label": "To Royal Mine Town",
-					"position": [
-						100.0,
-						512.0
-					],
-					"size": [
-						40.0,
-						80.0
-					],
-					"target_map": "argentiara_mine_town",
-					"target_spawn": "from_argentiara_square"
+					"target_spawn": "from_argentiara_square",
+					"label": "To the Mine"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "The mouth of the great silver mine. Timbered galleries swallow the lantern light, and the rock face waits for any back strong enough to work it.",
-			"fog_ids": [],
 			"id": "argentiara_mine",
+			"name": "Argentiara Mine",
+			"description": "The mouth of the great silver mine. Timbered galleries swallow the lantern light, and the rock face waits for any back strong enough to work it.",
+			"region": "argentiara",
 			"images": {
 				"map": "res://Maps/argentiara_mine_clean.png",
 				"mask": "res://Maps/argentiara_mine_mask.png",
 				"structures": "res://Maps/argentiara_mine.png",
 				"structures_mask": "res://Maps/argentiara_mine_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Argentiara Mine",
-			"npc_spawns": [],
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [
+						512,
+						512
+					],
+					"facing": 0
+				},
+				"from_argentiara_square": {
+					"position": [
+						80,
+						512
+					],
+					"facing": 0
+				},
+				"from_argentiara_deep_shaft": {
+					"position": [
+						900,
+						512
+					],
+					"facing": 180
+				}
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						512.0,
-						512.0
-					]
-				},
-				"from_argentiara_deep_shaft": {
-					"facing": 180.0,
-					"position": [
-						900.0,
-						512.0
-					]
-				},
-				"from_argentiara_square": {
-					"facing": 0.0,
-					"position": [
-						80.0,
-						512.0
-					]
-				}
-			},
-			"region": "argentiara",
-			"tile_size": 64.0,
+			"npc_spawns": [],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_argentiara_square",
-					"label": "To the Square",
 					"position": [
-						60.0,
-						512.0
+						60,
+						512
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "argentiara_square",
-					"target_spawn": "from_argentiara_mine"
+					"target_spawn": "from_argentiara_mine",
+					"label": "To the Square"
 				},
 				{
 					"id": "to_argentiara_deep_shaft",
-					"label": "Descend the Deep Shaft",
 					"position": [
-						960.0,
-						512.0
+						960,
+						512
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "argentiara_deep_shaft",
-					"target_spawn": "from_argentiara_mine"
+					"target_spawn": "from_argentiara_mine",
+					"label": "Descend the Deep Shaft"
 				}
-			],
-			"weather_group": "Scarlatti"
+			]
 		},
 		{
-			"description": "The lowest worked level of the mine, hot and close, where the richest seams run — and where the rock is most apt to come down on the unwary.",
-			"fog_ids": [],
 			"id": "argentiara_deep_shaft",
+			"name": "Argentiara Deep Shaft",
+			"description": "The lowest worked level of the mine, hot and close, where the richest seams run — and where the rock is most apt to come down on the unwary.",
+			"region": "argentiara",
 			"images": {
 				"map": "res://Maps/argentiara_deep_shaft_clean.png",
 				"mask": "res://Maps/argentiara_deep_shaft_mask.png",
 				"structures": "res://Maps/argentiara_deep_shaft.png",
 				"structures_mask": "res://Maps/argentiara_deep_shaft_structures_mask.png"
 			},
-			"item_spawns": [],
+			"tile_size": 64,
 			"music_track": "",
-			"name": "Argentiara Deep Shaft",
-			"npc_spawns": [],
+			"weather_group": "",
+			"fog_ids": [],
+			"player_spawns": {
+				"default": {
+					"position": [
+						512,
+						512
+					],
+					"facing": 0
+				},
+				"from_argentiara_mine": {
+					"position": [
+						80,
+						512
+					],
+					"facing": 0
+				}
+			},
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 30.0
+					"offset_radius": 30
 				}
 			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						512.0,
-						512.0
-					]
-				},
-				"from_argentiara_mine": {
-					"facing": 0.0,
-					"position": [
-						80.0,
-						512.0
-					]
-				}
-			},
-			"region": "argentiara",
-			"tile_size": 64.0,
+			"npc_spawns": [],
+			"item_spawns": [],
 			"warp_points": [
 				{
 					"id": "to_argentiara_mine",
-					"label": "Ascend to the Mine",
 					"position": [
-						60.0,
-						512.0
+						60,
+						512
 					],
 					"size": [
-						40.0,
-						80.0
+						40,
+						80
 					],
 					"target_map": "argentiara_mine",
-					"target_spawn": "from_argentiara_deep_shaft"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A riverside stone stronghold half-claimed by the bullywug swamp, its walls rising from reed-choked black water.",
-			"fog_ids": [],
-			"id": "perrow_river_stronghold",
-			"images": {
-				"map": "res://Maps/perrow_river_stronghold_clean.jpg",
-				"mask": "res://Maps/perrow_river_stronghold_mask.png",
-				"structures": "res://Maps/perrow_river_stronghold.jpg",
-				"structures_mask": "res://Maps/perrow_river_stronghold_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "River Stronghold",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1696.0,
-						2528.0
-					]
-				},
-				"from_perrow_eeler_tavern": {
-					"facing": 270.0,
-					"position": [
-						1696.0,
-						4866.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_eeler_tavern",
-					"label": "To The Eeler's Tavern",
-					"position": [
-						1696.0,
-						4956.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_eeler_tavern",
-					"target_spawn": "from_perrow_river_stronghold"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "The old heart of the village, its square and cottages slowly sinking into a misty swamp graveyard.",
-			"fog_ids": [],
-			"id": "perrow_heart_village",
-			"images": {
-				"map": "res://Maps/perrow_heart_village_clean.jpg",
-				"mask": "res://Maps/perrow_heart_village_mask.png",
-				"structures": "res://Maps/perrow_heart_village.jpg",
-				"structures_mask": "res://Maps/perrow_heart_village_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Heart of the Village",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_perrow_forest_pass": {
-					"facing": 180.0,
-					"position": [
-						3394.0,
-						2400.0
-					]
-				},
-				"from_perrow_vale_tavern": {
-					"facing": 0.0,
-					"position": [
-						190.0,
-						2400.0
-					]
-				},
-				"from_perrow_village_market": {
-					"facing": 90.0,
-					"position": [
-						1792.0,
-						190.0
-					]
-				},
-				"from_town_square": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_town_square",
-					"label": "To Town Square",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "town_square",
-					"target_spawn": "from_perrow_heart_village"
-				},
-				{
-					"id": "to_perrow_village_market",
-					"label": "To Village Market",
-					"position": [
-						1792.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_village_market",
-					"target_spawn": "from_perrow_heart_village"
-				},
-				{
-					"id": "to_perrow_vale_tavern",
-					"label": "To Ages of the Vale Tavern",
-					"position": [
-						100.0,
-						2400.0
-					],
-					"size": [
-						40.0,
-						80.0
-					],
-					"target_map": "perrow_vale_tavern",
-					"target_spawn": "from_perrow_heart_village"
-				},
-				{
-					"id": "to_perrow_forest_pass",
-					"label": "To Mangrove Forest Pass",
-					"position": [
-						3484.0,
-						2400.0
-					],
-					"size": [
-						40.0,
-						80.0
-					],
-					"target_map": "perrow_forest_pass",
-					"target_spawn": "from_perrow_heart_village"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A timber tavern raised on stilts over the swampy shallows, linked by creaking boardwalks across dark water.",
-			"fog_ids": [],
-			"id": "perrow_vale_tavern",
-			"images": {
-				"map": "res://Maps/perrow_vale_tavern_clean.jpg",
-				"mask": "res://Maps/perrow_vale_tavern_mask.png",
-				"structures": "res://Maps/perrow_vale_tavern.jpg",
-				"structures_mask": "res://Maps/perrow_vale_tavern_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Ages of the Vale Tavern",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1696.0,
-						2528.0
-					]
-				},
-				"from_perrow_eeler_tavern": {
-					"facing": 90.0,
-					"position": [
-						1696.0,
-						190.0
-					]
-				},
-				"from_perrow_heart_village": {
-					"facing": 270.0,
-					"position": [
-						1696.0,
-						4866.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_heart_village",
-					"label": "To Heart of the Village",
-					"position": [
-						1696.0,
-						4956.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_vale_tavern"
-				},
-				{
-					"id": "to_perrow_eeler_tavern",
-					"label": "To The Eeler's Tavern",
-					"position": [
-						1696.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_eeler_tavern",
-					"target_spawn": "from_perrow_vale_tavern"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A walled village market edged by encroaching bog, its stalls set on raised planking above muddy channels.",
-			"fog_ids": [],
-			"id": "perrow_village_market",
-			"images": {
-				"map": "res://Maps/perrow_village_market_clean.jpg",
-				"mask": "res://Maps/perrow_village_market_mask.png",
-				"structures": "res://Maps/perrow_village_market.jpg",
-				"structures_mask": "res://Maps/perrow_village_market_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Village Market",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1536.0,
-						2752.0
-					]
-				},
-				"from_perrow_adventurers_guild": {
-					"facing": 90.0,
-					"position": [
-						1536.0,
-						190.0
-					]
-				},
-				"from_perrow_heart_village": {
-					"facing": 270.0,
-					"position": [
-						1536.0,
-						5314.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_heart_village",
-					"label": "To Heart of the Village",
-					"position": [
-						1536.0,
-						5404.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_village_market"
-				},
-				{
-					"id": "to_perrow_adventurers_guild",
-					"label": "To Adventurers' Guild",
-					"position": [
-						1536.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_adventurers_guild",
-					"target_spawn": "from_perrow_village_market"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A guildhall on the rim of a fog-laden swamp graveyard, where the courtyard gives way to mossy tombs and still water.",
-			"fog_ids": [],
-			"id": "perrow_adventurers_guild",
-			"images": {
-				"map": "res://Maps/perrow_adventurers_guild_clean.jpg",
-				"mask": "res://Maps/perrow_adventurers_guild_mask.png",
-				"structures": "res://Maps/perrow_adventurers_guild.jpg",
-				"structures_mask": "res://Maps/perrow_adventurers_guild_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Adventurers' Guild",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2400.0,
-						1792.0
-					]
-				},
-				"from_perrow_village_market": {
-					"facing": 270.0,
-					"position": [
-						2400.0,
-						3394.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_village_market",
-					"label": "To Village Market",
-					"position": [
-						2400.0,
-						3484.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_village_market",
-					"target_spawn": "from_perrow_adventurers_guild"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A dockside eel-fishers' tavern over brackish swamp water, hung with traps and nets along weathered jetties.",
-			"fog_ids": [],
-			"id": "perrow_eeler_tavern",
-			"images": {
-				"map": "res://Maps/perrow_eeler_tavern_clean.jpg",
-				"mask": "res://Maps/perrow_eeler_tavern_mask.png",
-				"structures": "res://Maps/perrow_eeler_tavern.jpg",
-				"structures_mask": "res://Maps/perrow_eeler_tavern_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "The Eeler's Tavern",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2400.0,
-						1792.0
-					]
-				},
-				"from_perrow_river_stronghold": {
-					"facing": 90.0,
-					"position": [
-						2400.0,
-						190.0
-					]
-				},
-				"from_perrow_vale_tavern": {
-					"facing": 270.0,
-					"position": [
-						2400.0,
-						3394.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_vale_tavern",
-					"label": "To Ages of the Vale Tavern",
-					"position": [
-						2400.0,
-						3484.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_vale_tavern",
-					"target_spawn": "from_perrow_eeler_tavern"
-				},
-				{
-					"id": "to_perrow_river_stronghold",
-					"label": "To River Stronghold",
-					"position": [
-						2400.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_river_stronghold",
-					"target_spawn": "from_perrow_eeler_tavern"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A ramshackle goblin fortress lashed together among the tangled roots and channels of a flooded mangrove forest.",
-			"fog_ids": [],
-			"id": "perrow_goblin_fortress",
-			"images": {
-				"map": "res://Maps/perrow_goblin_fortress_clean.jpg",
-				"mask": "res://Maps/perrow_goblin_fortress_mask.png",
-				"structures": "res://Maps/perrow_goblin_fortress.jpg",
-				"structures_mask": "res://Maps/perrow_goblin_fortress_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Goblin Forest Fortress",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_perrow_forest_pass": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_forest_pass",
-					"label": "To Mangrove Forest Pass",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_forest_pass",
-					"target_spawn": "from_perrow_goblin_fortress"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A winding trail of raised paths and footbridges threading through dense, tidal mangrove woodland.",
-			"fog_ids": [],
-			"id": "perrow_forest_pass",
-			"images": {
-				"map": "res://Maps/perrow_forest_pass_clean.jpg",
-				"mask": "res://Maps/perrow_forest_pass_mask.png",
-				"structures": "res://Maps/perrow_forest_pass.jpg",
-				"structures_mask": "res://Maps/perrow_forest_pass_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Mangrove Forest Pass",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1856.0,
-						2304.0
-					]
-				},
-				"from_perrow_goblin_fortress": {
-					"facing": 90.0,
-					"position": [
-						1856.0,
-						190.0
-					]
-				},
-				"from_perrow_heart_village": {
-					"facing": 270.0,
-					"position": [
-						1856.0,
-						4418.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_perrow_heart_village",
-					"label": "To Heart of the Village",
-					"position": [
-						1856.0,
-						4508.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_heart_village",
-					"target_spawn": "from_perrow_forest_pass"
-				},
-				{
-					"id": "to_perrow_goblin_fortress",
-					"label": "To Goblin Forest Fortress",
-					"position": [
-						1856.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "perrow_goblin_fortress",
-					"target_spawn": "from_perrow_forest_pass"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A grand stone amphitheatre on the banks of the tidal river, its tiered seating descending toward the water.",
-			"fog_ids": [],
-			"id": "bortellini_amphitheatre",
-			"images": {
-				"map": "res://Maps/bortellini_amphitheatre_clean.jpg",
-				"mask": "res://Maps/bortellini_amphitheatre_mask.png",
-				"structures": "res://Maps/bortellini_amphitheatre.jpg",
-				"structures_mask": "res://Maps/bortellini_amphitheatre_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Bortellini Amphitheatre",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_bortellini_city_market": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				},
-				"from_bortellini_training_camp": {
-					"facing": 90.0,
-					"position": [
-						1792.0,
-						190.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_city_market",
-					"label": "To Bortellini City Market",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_amphitheatre"
-				},
-				{
-					"id": "to_bortellini_training_camp",
-					"label": "To Training Camp",
-					"position": [
-						1792.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_training_camp",
-					"target_spawn": "from_bortellini_amphitheatre"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "Royal riverside stables, their paddocks and yards opening onto the broad tidal riverbank.",
-			"fog_ids": [],
-			"id": "bortellini_royal_stables",
-			"images": {
-				"map": "res://Maps/bortellini_royal_stables_clean.jpg",
-				"mask": "res://Maps/bortellini_royal_stables_mask.png",
-				"structures": "res://Maps/bortellini_royal_stables.jpg",
-				"structures_mask": "res://Maps/bortellini_royal_stables_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Royal Stables",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2400.0,
-						1792.0
-					]
-				},
-				"from_bortellini_city_market": {
-					"facing": 270.0,
-					"position": [
-						2400.0,
-						3394.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_city_market",
-					"label": "To Bortellini City Market",
-					"position": [
-						2400.0,
-						3484.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_royal_stables"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A guildhall on the tidal riverfront, its courtyard meeting stone quays along the flowing water.",
-			"fog_ids": [],
-			"id": "bortellini_adventurers_guild",
-			"images": {
-				"map": "res://Maps/bortellini_adventurers_guild_clean.jpg",
-				"mask": "res://Maps/bortellini_adventurers_guild_mask.png",
-				"structures": "res://Maps/bortellini_adventurers_guild.jpg",
-				"structures_mask": "res://Maps/bortellini_adventurers_guild_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Adventurers' Guild",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2400.0,
-						1792.0
-					]
-				},
-				"from_bortellini_city_market": {
-					"facing": 270.0,
-					"position": [
-						2400.0,
-						3394.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_city_market",
-					"label": "To Bortellini City Market",
-					"position": [
-						2400.0,
-						3484.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_adventurers_guild"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A great chariot hippodrome running alongside the tidal river, its long oval track parallel to the bank.",
-			"fog_ids": [],
-			"id": "bortellini_hippodrome",
-			"images": {
-				"map": "res://Maps/bortellini_hippodrome_clean.jpg",
-				"mask": "res://Maps/bortellini_hippodrome_mask.png",
-				"structures": "res://Maps/bortellini_hippodrome.jpg",
-				"structures_mask": "res://Maps/bortellini_hippodrome_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Bortellini Hippodrome",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1536.0,
-						2752.0
-					]
-				},
-				"from_bortellini_city_market": {
-					"facing": 270.0,
-					"position": [
-						1536.0,
-						5314.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_city_market",
-					"label": "To Bortellini City Market",
-					"position": [
-						1536.0,
-						5404.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_city_market",
-					"target_spawn": "from_bortellini_hippodrome"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A military training camp on the tidal riverbank, its sparring yards and drill grounds beside the water.",
-			"fog_ids": [],
-			"id": "bortellini_training_camp",
-			"images": {
-				"map": "res://Maps/bortellini_training_camp_clean.jpg",
-				"mask": "res://Maps/bortellini_training_camp_mask.png",
-				"structures": "res://Maps/bortellini_training_camp.jpg",
-				"structures_mask": "res://Maps/bortellini_training_camp_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Training Camp",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_bortellini_amphitheatre": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_amphitheatre",
-					"label": "To Bortellini Amphitheatre",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_amphitheatre",
-					"target_spawn": "from_bortellini_training_camp"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A bustling walled market beside the tidal river, its quays and stalls lining the busy waterfront.",
-			"fog_ids": [],
-			"id": "bortellini_city_market",
-			"images": {
-				"map": "res://Maps/bortellini_city_market_clean.jpg",
-				"mask": "res://Maps/bortellini_city_market_mask.png",
-				"structures": "res://Maps/bortellini_city_market.jpg",
-				"structures_mask": "res://Maps/bortellini_city_market_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Bortellini City Market",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1536.0,
-						2752.0
-					]
-				},
-				"from_bortellini_adventurers_guild": {
-					"facing": 180.0,
-					"position": [
-						2882.0,
-						2752.0
-					]
-				},
-				"from_bortellini_amphitheatre": {
-					"facing": 270.0,
-					"position": [
-						1536.0,
-						5314.0
-					]
-				},
-				"from_bortellini_hippodrome": {
-					"facing": 90.0,
-					"position": [
-						1536.0,
-						190.0
-					]
-				},
-				"from_bortellini_royal_stables": {
-					"facing": 0.0,
-					"position": [
-						190.0,
-						2752.0
-					]
-				}
-			},
-			"region": "bortellini",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_bortellini_amphitheatre",
-					"label": "To Bortellini Amphitheatre",
-					"position": [
-						1536.0,
-						5404.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_amphitheatre",
-					"target_spawn": "from_bortellini_city_market"
-				},
-				{
-					"id": "to_bortellini_hippodrome",
-					"label": "To Bortellini Hippodrome",
-					"position": [
-						1536.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "bortellini_hippodrome",
-					"target_spawn": "from_bortellini_city_market"
-				},
-				{
-					"id": "to_bortellini_royal_stables",
-					"label": "To Royal Stables",
-					"position": [
-						100.0,
-						2752.0
-					],
-					"size": [
-						40.0,
-						80.0
-					],
-					"target_map": "bortellini_royal_stables",
-					"target_spawn": "from_bortellini_city_market"
-				},
-				{
-					"id": "to_bortellini_adventurers_guild",
-					"label": "To Adventurers' Guild",
-					"position": [
-						2972.0,
-						2752.0
-					],
-					"size": [
-						40.0,
-						80.0
-					],
-					"target_map": "bortellini_adventurers_guild",
-					"target_spawn": "from_bortellini_city_market"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A floating market of boats and pontoons drifting among lush druidic islands, walkways linking the verdant islets.",
-			"fog_ids": [],
-			"id": "alamone_floating_market",
-			"images": {
-				"map": "res://Maps/alamone_floating_market_clean.jpg",
-				"mask": "res://Maps/alamone_floating_market_mask.png",
-				"structures": "res://Maps/alamone_floating_market.jpg",
-				"structures_mask": "res://Maps/alamone_floating_market_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Floating Market",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_alamone_adventurers_guild": {
-					"facing": 90.0,
-					"position": [
-						1792.0,
-						190.0
-					]
-				},
-				"from_alamone_black_market": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				}
-			},
-			"region": "alamone",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_alamone_black_market",
-					"label": "To Black Market Streets",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "alamone_black_market",
-					"target_spawn": "from_alamone_floating_market"
-				},
-				{
-					"id": "to_alamone_adventurers_guild",
-					"label": "To Adventurers' Guild",
-					"position": [
-						1792.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "alamone_adventurers_guild",
-					"target_spawn": "from_alamone_floating_market"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A shadowy black-market quarter strung across small druid islands, its alleys and bridges spanning overgrown channels.",
-			"fog_ids": [],
-			"id": "alamone_black_market",
-			"images": {
-				"map": "res://Maps/alamone_black_market_clean.jpg",
-				"mask": "res://Maps/alamone_black_market_mask.png",
-				"structures": "res://Maps/alamone_black_market.jpg",
-				"structures_mask": "res://Maps/alamone_black_market_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Black Market Streets",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2528.0,
-						1696.0
-					]
-				},
-				"from_alamone_floating_market": {
-					"facing": 270.0,
-					"position": [
-						2528.0,
-						3202.0
-					]
-				}
-			},
-			"region": "alamone",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_alamone_floating_market",
-					"label": "To Floating Market",
-					"position": [
-						2528.0,
-						3292.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "alamone_floating_market",
-					"target_spawn": "from_alamone_black_market"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A guildhall on a lush druid island, ringed by water, standing stones, and ancient trees.",
-			"fog_ids": [],
-			"id": "alamone_adventurers_guild",
-			"images": {
-				"map": "res://Maps/alamone_adventurers_guild_clean.jpg",
-				"mask": "res://Maps/alamone_adventurers_guild_mask.png",
-				"structures": "res://Maps/alamone_adventurers_guild.jpg",
-				"structures_mask": "res://Maps/alamone_adventurers_guild_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Adventurers' Guild",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2400.0,
-						1792.0
-					]
-				},
-				"from_alamone_floating_market": {
-					"facing": 270.0,
-					"position": [
-						2400.0,
-						3394.0
-					]
-				}
-			},
-			"region": "alamone",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_alamone_floating_market",
-					"label": "To Floating Market",
-					"position": [
-						2400.0,
-						3484.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "alamone_floating_market",
-					"target_spawn": "from_alamone_adventurers_guild"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A royal silver-mining town carved into rocky dragon-memorial highlands, its ore-works clustered among weathered monuments.",
-			"fog_ids": [],
-			"id": "argentiara_mine_town",
-			"images": {
-				"map": "res://Maps/argentiara_mine_town_clean.jpg",
-				"mask": "res://Maps/argentiara_mine_town_mask.png",
-				"structures": "res://Maps/argentiara_mine_town.jpg",
-				"structures_mask": "res://Maps/argentiara_mine_town_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Royal Mine Town",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1696.0,
-						2528.0
-					]
-				},
-				"from_argentiara_square": {
-					"facing": 270.0,
-					"position": [
-						1696.0,
-						4866.0
-					]
-				},
-				"from_argentiara_wild_west_town": {
-					"facing": 90.0,
-					"position": [
-						1696.0,
-						190.0
-					]
-				}
-			},
-			"region": "argentiara",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_argentiara_square",
-					"label": "To Argentiara Square",
-					"position": [
-						1696.0,
-						4956.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "argentiara_square",
-					"target_spawn": "from_argentiara_mine_town"
-				},
-				{
-					"id": "to_argentiara_wild_west_town",
-					"label": "To Frontier Town",
-					"position": [
-						1696.0,
-						100.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "argentiara_wild_west_town",
-					"target_spawn": "from_argentiara_mine_town"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A dusty frontier mining town in rocky badlands, a wide main street flanked by timber buildings beneath stone outcrops.",
-			"fog_ids": [],
-			"id": "argentiara_wild_west_town",
-			"images": {
-				"map": "res://Maps/argentiara_wild_west_town_clean.jpg",
-				"mask": "res://Maps/argentiara_wild_west_town_mask.png",
-				"structures": "res://Maps/argentiara_wild_west_town.jpg",
-				"structures_mask": "res://Maps/argentiara_wild_west_town_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Frontier Town",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						1792.0,
-						2400.0
-					]
-				},
-				"from_argentiara_mine_town": {
-					"facing": 270.0,
-					"position": [
-						1792.0,
-						4610.0
-					]
-				}
-			},
-			"region": "argentiara",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_argentiara_mine_town",
-					"label": "To Royal Mine Town",
-					"position": [
-						1792.0,
-						4700.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "argentiara_mine_town",
-					"target_spawn": "from_argentiara_wild_west_town"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "A rugged coastal lighthouse on a rocky isle within a sheltered harpy cove, its tower rising over tide-washed rocks.",
-			"fog_ids": [],
-			"id": "lighthouse",
-			"images": {
-				"map": "res://Maps/lighthouse_clean.jpg",
-				"mask": "res://Maps/lighthouse_mask.png",
-				"structures": "res://Maps/lighthouse.jpg",
-				"structures_mask": "res://Maps/lighthouse_structures_mask.png"
-			},
-			"item_spawns": [],
-			"music_track": "",
-			"name": "Lighthouse",
-			"npc_spawns": [],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 30.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 0.0,
-					"position": [
-						2304.0,
-						1856.0
-					]
-				},
-				"from_dock_tavern": {
-					"facing": 270.0,
-					"position": [
-						2304.0,
-						3522.0
-					]
-				}
-			},
-			"region": "perrow",
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_dock_tavern",
-					"label": "To Dock Tavern",
-					"position": [
-						2304.0,
-						3612.0
-					],
-					"size": [
-						80.0,
-						40.0
-					],
-					"target_map": "dock_tavern",
-					"target_spawn": "from_lighthouse"
-				}
-			],
-			"weather_group": "Scarlatti"
-		},
-		{
-			"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
-			"fluid_spawns": [],
-			"id": "tg_test",
-			"images": {
-				"map": "res://Maps/tg_test.png",
-				"mask": "res://Maps/tg_test_mask.png",
-				"structures": "res://Maps/tg_test_structures.png",
-				"structures_mask": "res://Maps/tg_test_structures_mask.png"
-			},
-			"item_spawns": [
-				{
-					"id": "altar",
-					"position": [
-						566.0,
-						1130.0
-					],
-					"rotation": 1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "amphora",
-					"position": [
-						607.0,
-						1154.0
-					],
-					"rotation": 2.031,
-					"scale": 1.03
-				},
-				{
-					"id": "brazier",
-					"position": [
-						542.0,
-						1107.0
-					],
-					"rotation": 1.424,
-					"scale": 0.938
-				},
-				{
-					"id": "crate",
-					"position": [
-						564.0,
-						970.0
-					],
-					"rotation": 4.584,
-					"scale": 1.091
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						113.0,
-						729.0
-					],
-					"rotation": -1.469,
-					"scale": 0.906
-				},
-				{
-					"id": "amphora",
-					"position": [
-						119.0,
-						688.0
-					],
-					"rotation": -1.051,
-					"scale": 0.947
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						143.0,
-						827.0
-					],
-					"rotation": -1.067,
-					"scale": 0.986
-				},
-				{
-					"id": "stool",
-					"position": [
-						107.0,
-						658.0
-					],
-					"rotation": -1.114,
-					"scale": 1.048
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						786.0,
-						609.0
-					],
-					"rotation": 3.691,
-					"scale": 1.013
-				},
-				{
-					"id": "barrel",
-					"position": [
-						959.0,
-						566.0
-					],
-					"rotation": 3.044,
-					"scale": 1.034
-				},
-				{
-					"id": "crate",
-					"position": [
-						914.0,
-						481.0
-					],
-					"rotation": 2.876,
-					"scale": 1.035
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						868.0,
-						578.0
-					],
-					"rotation": 3.664,
-					"scale": 1.038
-				},
-				{
-					"id": "barrel",
-					"position": [
-						844.0,
-						444.0
-					],
-					"rotation": 3.528,
-					"scale": 0.963
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						888.0,
-						472.0
-					],
-					"rotation": 3.046,
-					"scale": 1.053
-				},
-				{
-					"id": "cage",
-					"position": [
-						913.0,
-						565.0
-					],
-					"rotation": 3.567,
-					"scale": 0.999
-				},
-				{
-					"id": "round_table",
-					"position": [
-						976.0,
-						964.0
-					],
-					"rotation": -2.44,
-					"scale": 0.97
-				},
-				{
-					"id": "treasure_chest",
-					"position": [
-						975.0,
-						932.0
-					],
-					"rotation": -2.788,
-					"scale": 0.945
-				},
-				{
-					"id": "amphora",
-					"position": [
-						1088.0,
-						965.0
-					],
-					"rotation": -2.233,
-					"scale": 1.036
-				},
-				{
-					"id": "fur_rug",
-					"position": [
-						1006.0,
-						894.0
-					],
-					"rotation": -2.588,
-					"scale": 0.994
-				},
-				{
-					"id": "basket",
-					"position": [
-						881.0,
-						891.0
-					],
-					"rotation": 5.093,
-					"scale": 0.998
-				},
-				{
-					"id": "hammer",
-					"position": [
-						472.0,
-						395.0
-					],
-					"rotation": 1.353,
-					"scale": 0.902
-				},
-				{
-					"id": "barrel",
-					"position": [
-						503.0,
-						354.0
-					],
-					"rotation": 0.74,
-					"scale": 0.974
-				},
-				{
-					"id": "cartwheel",
-					"position": [
-						843.0,
-						1066.0
-					],
-					"rotation": -1.624,
-					"scale": 0.908
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						899.0,
-						1190.0
-					],
-					"rotation": -1.806,
-					"scale": 1.087
-				},
-				{
-					"id": "basket",
-					"position": [
-						221.0,
-						1132.0
-					],
-					"rotation": 1.508,
-					"scale": 1.069
-				},
-				{
-					"id": "amphora",
-					"position": [
-						342.0,
-						1031.0
-					],
-					"rotation": 2.01,
-					"scale": 0.988
-				},
-				{
-					"id": "basket",
-					"position": [
-						383.0,
-						1083.0
-					],
-					"rotation": 3.092,
-					"scale": 1.038
-				},
-				{
-					"id": "bucket",
-					"position": [
-						489.0,
-						547.0
-					],
-					"rotation": 2.548,
-					"scale": 0.945
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						504.0,
-						524.0
-					],
-					"rotation": 1.681,
-					"scale": 0.936
-				},
-				{
-					"id": "bucket",
-					"position": [
-						272.0,
-						472.0
-					],
-					"rotation": 1.954,
-					"scale": 1.041
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						273.0,
-						513.0
-					],
-					"rotation": 2.203,
-					"scale": 0.902
-				},
-				{
-					"id": "market_stall",
-					"position": [
-						551.0,
-						850.0
-					],
-					"rotation": -0.024,
-					"scale": 1.0
-				},
-				{
-					"id": "crate",
-					"position": [
-						539.0,
-						824.0
-					],
-					"rotation": 3.569,
-					"scale": 1.0
-				},
-				{
-					"id": "market_stall",
-					"position": [
-						683.0,
-						850.0
-					],
-					"rotation": -0.032,
-					"scale": 1.0
-				},
-				{
-					"id": "basket",
-					"position": [
-						689.0,
-						824.0
-					],
-					"rotation": 5.248,
-					"scale": 1.0
-				},
-				{
-					"id": "well",
-					"position": [
-						498.0,
-						655.0
-					],
-					"rotation": 0.085,
-					"scale": 1.0
-				},
-				{
-					"id": "cart",
-					"position": [
-						619.0,
-						1458.0
-					],
-					"rotation": 3.138,
-					"scale": 1.0
-				}
-			],
-			"name": "Tg Test",
-			"npc_spawns": [
-				{
-					"count": 2.0,
-					"position": [
-						691.0,
-						710.0
-					],
-					"spread_radius": 30.0,
-					"template_id": "town_guard"
-				},
-				{
-					"condition": {
-						"time_hour_min": 8.0
-					},
-					"count": 1.0,
-					"position": [
-						741.0,
-						810.0
-					],
-					"spread_radius": 30.0,
-					"template_id": "merchant"
-				}
-			],
-			"party_spawns": {
-				"default": {
-					"formation": "cluster",
-					"offset_radius": 40.0
-				}
-			},
-			"player_spawns": {
-				"default": {
-					"facing": 90.0,
-					"position": [
-						531.0,
-						730.0
-					]
-				},
-				"from_cemetery": {
-					"facing": 90.0,
-					"position": [
-						591.0,
-						830.0
-					]
-				},
-				"warp_1_arrival": {
-					"facing": 90.0,
-					"position": [
-						811.0,
-						960.0
-					]
-				}
-			},
-			"tile_size": 64.0,
-			"warp_points": [
-				{
-					"id": "to_town_square_1",
-					"label": "To Town Square",
-					"position": [
-						451.0,
-						870.0
-					],
-					"size": [
-						40.0,
-						40.0
-					],
-					"target_map": "town_square",
-					"target_spawn": "default"
-				},
-				{
-					"condition": {
-						"item": "cellar_key"
-					},
-					"id": "warp_1",
-					"label": "Stairs",
-					"position": [
-						641.0,
-						890.0
-					],
-					"size": [
-						40.0,
-						40.0
-					],
-					"target_map": "tg_test",
-					"target_spawn": "warp_1_arrival"
+					"target_spawn": "from_argentiara_deep_shaft",
+					"label": "Ascend to the Mine"
 				}
 			]
 		},
