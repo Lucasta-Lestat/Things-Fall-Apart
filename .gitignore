@@ -8,3 +8,6 @@
 # Raw two-up diptychs from the fairy-chess art generator (re-splittable source)
 tools/_fairy_chess_raw/
 __pycache__/
+
+# commercial map-pack archives (kept locally; 100MB+ files GitHub rejects)
+tfa-simultaneous-gemini-1/Maps/Example Maps/*.zip
