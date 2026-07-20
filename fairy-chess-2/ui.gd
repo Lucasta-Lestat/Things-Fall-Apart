@@ -22,8 +22,9 @@ extends CanvasLayer
 
 var piece_icon_scene = preload("res://ui/piece_icon.tscn")
 
-# Size of the art inside a panel icon; the name label sits below it, so a row
-# ends up a little taller than this.
+# Minimum size of the art inside a panel icon; the name label sits below it, so
+# a row ends up a little taller than this. The column's width is pinned by
+# PieceIcon.custom_minimum_size in piece_icon.tscn, not by this value.
 const ART_SIZE = Vector2(90, 150)
 
 
@@ -150,9 +151,7 @@ func populate_piece_panels(panel, color, profile, is_spawn_credits = false):
 		child.queue_free()
 
 	if is_spawn_credits:
-		var label = Label.new()
-		label.text = "Reserves"
-		panel.add_child(label)
+		panel.add_child(_section_heading("Reserves"))
 		for piece_type in profile.keys():
 			for i in range(int(profile[piece_type])):
 				create_piece_icon(panel, piece_type, color)
@@ -160,21 +159,28 @@ func populate_piece_panels(panel, color, profile, is_spawn_credits = false):
 
 	if not profile:
 		return
-	var label = Label.new()
-	label.text = "Peasants"
-	panel.add_child(label)
+	panel.add_child(_section_heading("Peasants"))
 	for piece_type in profile.peasants:
 		for i in range(int(profile.peasants[piece_type])):
 			create_piece_icon(panel, piece_type, color)
-	label = Label.new()
-	label.text = "Nobles & Royals"
-	panel.add_child(label)
+	panel.add_child(_section_heading("Nobles & Royals"))
 	for piece_type in profile.nobles:
 		for i in range(int(profile.nobles[piece_type])):
 			create_piece_icon(panel, piece_type, color)
 	for piece_type in profile.royals:
 		for i in range(int(profile.royals[piece_type])):
 			create_piece_icon(panel, piece_type, color)
+
+
+# A column heading ("Reserves" / "Peasants" / "Nobles & Royals"). These are the
+# only un-sized controls in the reserve column, so without autowrap their text
+# width is what decides how wide the whole column gets.
+func _section_heading(text: String) -> Label:
+	var label = Label.new()
+	label.text = text
+	label.theme_type_variation = "PanelHeading"
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label
 
 
 func create_piece_icon(panel, piece_type, color):

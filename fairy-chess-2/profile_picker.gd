@@ -24,6 +24,8 @@ var _black_portrait: TextureRect
 var _ai_checkbox: CheckBox
 var _start_button: Button
 var _placeholder: Texture2D
+var _scroll: ScrollContainer
+var _grid: GridContainer
 
 
 func _ready():
@@ -36,7 +38,7 @@ func _ready():
 
 func _build_ui():
 	var dim = ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
+	dim.color = get_theme_color("scrim", "Modal")
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
@@ -47,27 +49,21 @@ func _build_ui():
 	add_child(center)
 
 	var panel = PanelContainer.new()
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.13, 0.11, 0.98)
-	style.border_color = Color(0.85, 0.72, 0.4)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(18)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.theme_type_variation = "ModalPanel"
 	center.add_child(panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
 	panel.add_child(vbox)
 
 	var title = Label.new()
 	title.text = "Choose Characters"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 26)
+	title.theme_type_variation = "ModalTitle"
 	vbox.add_child(title)
 
 	# --- Two slots (White / Black) ---
 	var slots = HBoxContainer.new()
+	# Wider than the theme's rhythm so "vs" reads as a separator, not a list item.
 	slots.add_theme_constant_override("separation", 24)
 	slots.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox.add_child(slots)
@@ -80,13 +76,15 @@ func _build_ui():
 	_white_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	white_col.add_child(_white_portrait)
 	_white_button = Button.new()
+	_white_button.clip_text = true
+	_white_button.custom_minimum_size = Vector2(220, 0)
 	_white_button.pressed.connect(func(): _set_active("white"))
 	white_col.add_child(_white_button)
 	slots.add_child(white_col)
 
 	var vs = Label.new()
 	vs.text = "vs"
-	vs.add_theme_font_size_override("font_size", 20)
+	vs.theme_type_variation = "ModalVs"
 	slots.add_child(vs)
 
 	var black_col = VBoxContainer.new()
@@ -97,6 +95,8 @@ func _build_ui():
 	_black_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	black_col.add_child(_black_portrait)
 	_black_button = Button.new()
+	_black_button.clip_text = true
+	_black_button.custom_minimum_size = Vector2(220, 0)
 	_black_button.pressed.connect(func(): _set_active("black"))
 	black_col.add_child(_black_button)
 	slots.add_child(black_col)
@@ -104,22 +104,23 @@ func _build_ui():
 	var hint = Label.new()
 	hint.text = "Click a portrait to fill the highlighted side."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.theme_type_variation = "ModalHint"
 	vbox.add_child(hint)
 
 	# --- Scrollable roster grid ---
-	var scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(GRID_COLUMNS * (THUMB.x + 8) + 24, 280)
-	vbox.add_child(scroll)
-	var grid = GridContainer.new()
-	grid.name = "Grid"
-	grid.columns = GRID_COLUMNS
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
-	scroll.add_child(grid)
+	_scroll = ScrollContainer.new()
+	vbox.add_child(_scroll)
+	_grid = GridContainer.new()
+	_grid.name = "Grid"
+	_grid.columns = GRID_COLUMNS
+	# Tighter than the theme's rhythm -- the thumbnail grid is a contact sheet,
+	# not a form.
+	_grid.add_theme_constant_override("h_separation", 6)
+	_grid.add_theme_constant_override("v_separation", 6)
+	_scroll.add_child(_grid)
 
 	# --- Bottom row: AI toggle + Start ---
 	var bottom = HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 20)
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox.add_child(bottom)
 	_ai_checkbox = CheckBox.new()
@@ -130,11 +131,17 @@ func _build_ui():
 	_start_button.text = "Start Match"
 	_start_button.pressed.connect(_on_start_pressed)
 	bottom.add_child(_start_button)
+	_fit_roster_scroll()
 
-	_grid = grid
 
-
-var _grid: GridContainer
+# The roster grid's width has to follow the live theme: both the grid's
+# h_separation and the scrollbar's width are theme-owned, so hardcoding a
+# fudge factor here silently goes wrong whenever either changes.
+func _fit_roster_scroll() -> void:
+	var sep: int = _grid.get_theme_constant("h_separation")
+	var bar: float = _scroll.get_v_scroll_bar().get_combined_minimum_size().x
+	var w: float = GRID_COLUMNS * THUMB.x + (GRID_COLUMNS - 1) * sep + bar + 8.0
+	_scroll.custom_minimum_size = Vector2(w, 280.0)
 
 
 func open(roster: Array, white_id: String, black_id: String, ai_enabled: bool):
@@ -158,7 +165,7 @@ func open(roster: Array, white_id: String, black_id: String, ai_enabled: bool):
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var label = entry.name
 		if entry.title != "":
-			label += " — " + entry.title
+			label += ": " + entry.title
 		button.tooltip_text = label
 		button.pressed.connect(_on_portrait_pressed.bind(entry.id))
 		_grid.add_child(button)
@@ -197,11 +204,16 @@ func _refresh_slots():
 	var b = _by_id.get(_black_id, {})
 	_white_button.text = "White (You): " + str(w.get("name", "—"))
 	_black_button.text = "Black: " + str(b.get("name", "—"))
+	# The buttons clip their text, so keep the full name reachable on hover.
+	_white_button.tooltip_text = _white_button.text
+	_black_button.tooltip_text = _black_button.text
 	_white_portrait.texture = _portrait_for(w) if not w.is_empty() else _placeholder
 	_black_portrait.texture = _portrait_for(b) if not b.is_empty() else _placeholder
-	# Highlight the active slot.
-	_white_button.modulate = Color(1, 0.9, 0.4) if _active == "white" else Color(1, 1, 1)
-	_black_button.modulate = Color(1, 0.9, 0.4) if _active == "black" else Color(1, 1, 1)
+	# Highlight the active slot by swapping the styled variation rather than
+	# modulating: modulate multiplies the whole control, so it would dim the
+	# border and text along with the fill.
+	_white_button.theme_type_variation = "SlotButtonActive" if _active == "white" else "SlotButton"
+	_black_button.theme_type_variation = "SlotButtonActive" if _active == "black" else "SlotButton"
 	_start_button.disabled = _white_id == "" or _black_id == ""
 
 

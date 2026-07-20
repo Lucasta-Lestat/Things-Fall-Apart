@@ -70,6 +70,9 @@ func _initialize():
 		fail("begin_setup did not enter setup phase")
 
 	_validate_piece_panel(ui.white_piece_panel, gb.white_profile)
+	_validate_theme(ui)
+	await process_frame # let the reserve column lay out before measuring it
+	_validate_panel_geometry(ui)
 
 	# --- Setup undo: place one piece, let the AI answer, then undo ----------
 	var pawn_def = _pdb().PIECE_DEFINITIONS["Pawn"]
@@ -270,6 +273,76 @@ func _validate_piece_panel(panel, profile):
 		fail("piece panel shows %d icons, profile stocks %d" % [found, expected])
 	else:
 		print("PANEL OK: %d icons, each with art and a name label" % found)
+
+
+# The theme is deliberately two-tier: Cinzel for display text, the engine's
+# built-in face for dense text. A silent font-fallback (bad import, stale uid)
+# leaves the game looking plausible but wrong, so assert the tiers directly.
+func _validate_theme(ui):
+	var theme = ThemeDB.get_project_theme()
+	if theme == null:
+		fail("no project theme is set -- check project.godot [gui] theme/custom")
+		return
+
+	var display_font = theme.get_font("font", "HudLabel")
+	if display_font == null or not ("Cinzel" in display_font.get_font_name()):
+		fail("HudLabel should be Cinzel, got %s" % ("<null>" if display_font == null else display_font.get_font_name()))
+	# PieceName defines no font, so it must inherit the engine default rather
+	# than Cinzel -- that inheritance IS the body tier.
+	if theme.has_font("font", "PieceName"):
+		fail("PieceName must not define a font -- it should fall through to the engine default")
+
+	# Every colour looked up by _draw() must exist: get_theme_color on a missing
+	# key logs an error and silently returns black, i.e. an all-black board.
+	var required = ["tile_light", "tile_dark", "select_own", "select_preview",
+		"move", "move_conditional", "capture_hint", "shoot", "friendly_fire",
+		"promote", "convert", "cannon", "ring", "ring_shadow"]
+	var missing = []
+	for key in required:
+		if not theme.has_color(key, "Chessboard"):
+			missing.append(key)
+	if not missing.is_empty():
+		fail("theme is missing Chessboard colors: %s" % ", ".join(missing))
+	if not theme.has_color("scrim", "Modal"):
+		fail("theme is missing Modal/scrim")
+
+	# The variation must actually resolve on a live node, not just in the .tres.
+	var label = ui.get_node("GameOverlayUI/MarginContainer/VBoxContainer/TopRowLabels/GameStateLabel")
+	if label.get_theme_font("font").get_font_name() != display_font.get_font_name():
+		fail("GameStateLabel did not pick up the HudLabel variation")
+	print("THEME OK: Cinzel on display text, engine default on body text, all draw colors present")
+
+
+# Guards the two ways a font or size change silently wrecks this layout:
+# a reserve column that overflows into a horizontal scrollbar, and piece art
+# squashed because its box stopped matching the source aspect.
+func _validate_panel_geometry(ui):
+	var scroll = ui.white_piece_panel.get_parent()
+	var needed = ui.white_piece_panel.get_combined_minimum_size().x
+	var available = scroll.size.x
+	if available > 0 and needed > available:
+		fail("reserve column needs %.0fpx but its scroll container is %.0fpx -- it will grow a horizontal scrollbar" % [needed, available])
+
+	# The icon box is deliberately a different shape from the art (110x150 vs a
+	# ~1:2 portrait), so the art is only undistorted because the stretch mode
+	# letterboxes it. Assert the mode rather than comparing box to texture.
+	var bad = []
+	for child in ui.white_piece_panel.get_children():
+		if child is Label or child.is_queued_for_deletion():
+			continue
+		var art = child.get_node_or_null("Art")
+		if art == null:
+			continue
+		if art.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+			bad.append("%s: stretch_mode=%d squashes the art" % [child.piece_type, art.stretch_mode])
+		# EXPAND_FIT_WIDTH_PROPORTIONAL segfaults Godot 4.6 (it took out the
+		# main game's quest log); make sure nobody reintroduces it here.
+		if art.expand_mode == TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL:
+			bad.append("%s: EXPAND_FIT_WIDTH_PROPORTIONAL crashes Godot 4.6" % child.piece_type)
+	if not bad.is_empty():
+		fail("piece art render mode: %s" % ", ".join(bad))
+	else:
+		print("GEOMETRY OK: reserve column needs %.0fpx of %.0fpx, art is aspect-preserved" % [needed, available])
 
 
 # Every registered piece must have a loadable scene and art for both sides,

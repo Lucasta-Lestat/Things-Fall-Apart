@@ -3,8 +3,7 @@
 [ext_resource type="Script" uid="uid://1u8dl2oer0bt" path="res://ui/piece_icon.gd" id="1_b56i2"]
 
 [node name="PieceIcon" type="VBoxContainer"]
-offset_right = 90.0
-offset_bottom = 184.0
+custom_minimum_size = Vector2(110, 0)
 theme_override_constants/separation = 0
 script = ExtResource("1_b56i2")
 
@@ -12,10 +11,11 @@ script = ExtResource("1_b56i2")
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 1
+stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="."]
 layout_mode = 2
 mouse_filter = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"PieceName"
 horizontal_alignment = 1
 autowrap_mode = 3

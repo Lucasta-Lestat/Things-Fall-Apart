@@ -18,6 +18,9 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
+theme_type_variation = &"ProfileName"
 text = "Player  Name"
 horizontal_alignment = 1
+autowrap_mode = 3

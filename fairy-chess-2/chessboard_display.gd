@@ -331,10 +331,15 @@ func _on_promotion_picked(promote_to):
 
 
 # --- Drawing ---
+# HighlightLayer is a child of this node and redraws the same tiles on top, so
+# this pass is only visible if that layer is ever hidden. Both read the same
+# theme colours to stay in step.
 func _draw():
+	var light = get_theme_color("tile_light", "Chessboard")
+	var dark = get_theme_color("tile_dark", "Chessboard")
 	for x in range(BOARD_SIZE):
 		for y in range(BOARD_SIZE):
-			var color = Color.WHEAT if (x + y) % 2 == 0 else Color.SADDLE_BROWN
+			var color = light if (x + y) % 2 == 0 else dark
 			draw_rect(Rect2(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), color)
 
 
