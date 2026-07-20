@@ -69,6 +69,15 @@ func _random_setup() -> Dictionary:
 					noble_types.append(type)
 			"royal":
 				royal_types.append(type)
+	# Register a full roster for both sides. Real games always have armies
+	# registered, and promotion expands over them -- a bare state would leave
+	# the AI exercising only the 8-entry fallback list.
+	var whole_roster = []
+	for type in Rules.PIECE_INFO:
+		whole_roster.append(type)
+	Rules.set_army(state, "white", whole_roster)
+	Rules.set_army(state, "black", whole_roster)
+
 	for color in ["white", "black"]:
 		var cols = [0, 1, 2, 3, 4, 5]
 		cols.shuffle()

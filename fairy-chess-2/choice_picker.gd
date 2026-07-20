@@ -14,8 +14,11 @@ signal chosen(payload)
 const MAX_COLUMNS = 3
 # Wide enough for the longest generated label ("Capture Doppelganger").
 const BUTTON_MIN = Vector2(190, 84)
+# Beyond this the grid scrolls instead of growing the modal off-screen.
+const MAX_ROWS_SHOWN = 4
 
 var _grid: GridContainer
+var _scroll: ScrollContainer
 var _title: Label
 var _payloads = []
 
@@ -51,15 +54,25 @@ func _build_ui():
 	_title.theme_type_variation = "ModalTitle"
 	vbox.add_child(_title)
 
+	# Scrolled, because promotion now offers a side's whole non-royal roster --
+	# the sandbox army is 30 entries, which is ten rows at three columns.
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(_scroll)
+
 	_grid = GridContainer.new()
-	vbox.add_child(_grid)
+	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_grid)
 
 
 # entries: [{ "label": String, "icon": Texture2D or null, "payload": Variant,
 #             "tooltip": String (optional) }]
 func open(title: String, entries: Array) -> void:
 	_title.text = title
+	# Detached before freeing: queue_free is deferred, so a re-open in the same
+	# frame would otherwise lay out both sets of buttons.
 	for child in _grid.get_children():
+		_grid.remove_child(child)
 		child.queue_free()
 	_payloads = []
 	_grid.columns = max(1, min(entries.size(), MAX_COLUMNS))
@@ -79,6 +92,12 @@ func open(title: String, entries: Array) -> void:
 		_payloads.append(entry.get("payload"))
 		button.pressed.connect(_on_button_pressed.bind(i))
 		_grid.add_child(button)
+
+	# Grow with the content up to MAX_ROWS_SHOWN, then scroll rather than run
+	# off the screen.
+	var rows = ceili(float(entries.size()) / float(_grid.columns))
+	var row_h = BUTTON_MIN.y + _grid.get_theme_constant("v_separation")
+	_scroll.custom_minimum_size.y = min(rows, MAX_ROWS_SHOWN) * row_h
 
 	visible = true
 

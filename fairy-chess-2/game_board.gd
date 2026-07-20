@@ -77,6 +77,7 @@ func begin_setup(white_id: String, black_id: String, ai_on: bool) -> void:
 		return
 	white_profile = _default_profile(white_id)
 	black_profile = _default_profile(black_id)
+	_register_armies()
 	ai_enabled = ai_on
 	game_phase = "setup"
 	emit_signal("game_state_changed", "setup")
@@ -191,7 +192,23 @@ func set_profiles(white_id: String, black_id: String) -> void:
 		return
 	white_profile = _default_profile(white_id)
 	black_profile = _default_profile(black_id)
+	_register_armies()
 	emit_signal("setup_state_changed")
+
+
+# Tells the rules engine which piece types each side fields, so a promoting
+# peasant is offered its own army's pieces rather than a fixed list.
+func _register_armies() -> void:
+	Rules.set_army(state, "white", _army_types(white_profile))
+	Rules.set_army(state, "black", _army_types(black_profile))
+
+
+func _army_types(profile: Dictionary) -> Array:
+	var types = []
+	for bucket in ["peasants", "nobles", "royals"]:
+		for piece_type in profile.get(bucket, {}):
+			types.append(piece_type)
+	return types
 
 
 # =========================================================================
