@@ -16,10 +16,18 @@ var preview = false # read-only look at an enemy's moves: render muted
 var multi_option_squares = {} # squares offering more than one action -> true
 
 
+# Board and marker colours all live in the theme's "Chessboard" type, so they
+# can be retuned from tools/build_theme.gd without touching draw code.
+func _tint(name: String) -> Color:
+	return get_theme_color(name, "Chessboard")
+
+
 func _draw():
+	var light = _tint("tile_light")
+	var dark = _tint("tile_dark")
 	for x in range(BOARD_SIZE):
 		for y in range(BOARD_SIZE):
-			var color = Color.WHEAT if (x + y) % 2 == 0 else Color.SADDLE_BROWN
+			var color = light if (x + y) % 2 == 0 else dark
 			draw_rect(Rect2(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), color)
 
 	if selected_piece == null:
@@ -27,12 +35,12 @@ func _draw():
 
 	var selected_pos = selected_piece.grid_position
 	# Green for a piece you control, amber for a read-only enemy preview.
-	var select_tint = Color(1, 0.7, 0.1, 0.3) if preview else Color(0, 1, 0, 0.3)
+	var select_tint = _tint("select_preview") if preview else _tint("select_own")
 	draw_rect(Rect2(selected_pos.x * TILE_SIZE, selected_pos.y * TILE_SIZE, TILE_SIZE, TILE_SIZE), select_tint)
 
 	for action in valid_actions_to_show:
 		var target_pos = selected_pos
-		var highlight_color = Color(0, 0.5, 1, 0.5) # blue: move
+		var highlight_color = _tint("move")
 		var icon_to_draw = null
 		var conditional = false
 
@@ -43,28 +51,28 @@ func _draw():
 					# Backfill: only resolves if the blocker leaves. Drawn as a
 					# hollow ring so it reads as "not guaranteed".
 					conditional = true
-					highlight_color = Color(0.4, 0.9, 1.0, 0.85)
+					highlight_color = _tint("move_conditional")
 				elif action.get("is_capture_hint", false):
-					highlight_color = Color(1, 0.2, 0.1, 0.5)
+					highlight_color = _tint("capture_hint")
 			"shoot":
 				target_pos = action.target
 				# Amber warns that this shot would strike your own piece.
-				highlight_color = Color(1, 0.65, 0, 0.6) if action.get("friendly_fire", false) else Color(1, 0, 0, 0.5)
+				highlight_color = _tint("friendly_fire") if action.get("friendly_fire", false) else _tint("shoot")
 				icon_to_draw = attack_icon
 			"promote":
 				target_pos = action.target
-				highlight_color = Color(1, 1, 0, 0.5)
+				highlight_color = _tint("promote")
 				icon_to_draw = promotion_icon
 			"convert":
 				target_pos = action.target
-				highlight_color = Color(0.7, 0.2, 0.9, 0.5)
+				highlight_color = _tint("convert")
 			"dragon_breath":
 				target_pos = selected_pos + action.direction
-				highlight_color = Color(1, 0, 0, 0.5)
+				highlight_color = _tint("shoot")
 				icon_to_draw = attack_icon
 			_:
 				# Targetless actions (fire_cannon): shown on the piece itself.
-				highlight_color = Color(1, 0.5, 0, 0.5)
+				highlight_color = _tint("cannon")
 				icon_to_draw = attack_icon
 
 		# Muted, smaller markers when merely previewing an enemy's reach.
@@ -81,4 +89,7 @@ func _draw():
 		# A thin outer ring flags a square that offers more than one action;
 		# clicking it opens the chooser instead of declaring immediately.
 		if not preview and multi_option_squares.has(target_pos):
-			draw_arc(center, radius + 7.0, 0.0, TAU, 28, Color(1, 1, 1, 0.75), 2.0)
+			# Two passes, dark under light: a single pale ring measured only
+			# ~2.3:1 against a light square and effectively vanished there.
+			draw_arc(center, radius + 7.0, 0.0, TAU, 28, _tint("ring_shadow"), 4.0)
+			draw_arc(center, radius + 7.0, 0.0, TAU, 28, _tint("ring"), 2.0)

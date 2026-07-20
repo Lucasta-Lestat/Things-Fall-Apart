@@ -9,9 +9,11 @@ extends Control
 
 signal chosen(payload)
 
-const MAX_COLUMNS = 4
-const BUTTON_MIN = Vector2(150, 84)
-const ICON_MAX = Vector2(56, 56)
+# Three columns rather than four: Rules.promotion_choices() returns eight
+# entries, so four columns fills routinely and pushes the modal very wide.
+const MAX_COLUMNS = 3
+# Wide enough for the longest generated label ("Capture Doppelganger").
+const BUTTON_MIN = Vector2(190, 84)
 
 var _grid: GridContainer
 var _title: Label
@@ -27,7 +29,7 @@ func _ready():
 
 func _build_ui():
 	var dim = ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
+	dim.color = get_theme_color("scrim", "Modal")
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
@@ -38,27 +40,18 @@ func _build_ui():
 	add_child(center)
 
 	var panel = PanelContainer.new()
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.13, 0.11, 0.98)
-	style.border_color = Color(0.85, 0.72, 0.4)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(18)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.theme_type_variation = "ModalPanel"
 	center.add_child(panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
 	panel.add_child(vbox)
 
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", 22)
+	_title.theme_type_variation = "ModalTitle"
 	vbox.add_child(_title)
 
 	_grid = GridContainer.new()
-	_grid.add_theme_constant_override("h_separation", 10)
-	_grid.add_theme_constant_override("v_separation", 10)
 	vbox.add_child(_grid)
 
 
@@ -74,6 +67,7 @@ func open(title: String, entries: Array) -> void:
 	for i in range(entries.size()):
 		var entry = entries[i]
 		var button = Button.new()
+		button.theme_type_variation = "PickerButton"
 		button.text = str(entry.get("label", ""))
 		button.tooltip_text = str(entry.get("tooltip", ""))
 		button.custom_minimum_size = BUTTON_MIN
@@ -82,7 +76,6 @@ func open(title: String, entries: Array) -> void:
 		if icon != null:
 			button.icon = icon
 			button.expand_icon = true
-			button.add_theme_constant_override("icon_max_width", int(ICON_MAX.x))
 		_payloads.append(entry.get("payload"))
 		button.pressed.connect(_on_button_pressed.bind(i))
 		_grid.add_child(button)
