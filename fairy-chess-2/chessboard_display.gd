@@ -307,7 +307,7 @@ func _open_promotion_picker(piece):
 	_picker_mode = "promotion"
 	_pending_promotion_piece = piece
 	var entries = []
-	for piece_type in Rules.promotion_choices():
+	for piece_type in Rules.promotion_choices(game_board.state, piece.color, piece.piece_type):
 		var path = "res://assets/icons/%s_%s.png" % [piece_type, piece.color]
 		entries.append({
 			"label": piece_type,

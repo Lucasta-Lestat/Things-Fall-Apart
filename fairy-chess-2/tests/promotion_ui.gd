@@ -45,6 +45,9 @@ func _initialize():
 	# drag-drop setup: a white pawn at (2,1) about to promote, both kings.
 	gb.state = Rules.new_state()
 	gb.piece_nodes = {}
+	# Register a distinctive army so this exercises the real path: the picker
+	# must offer THESE pieces, not the curated fallback list.
+	Rules.set_army(gb.state, "white", ["Pawn", "Devil Toad", "Rifleman", "Gorgon", "King"])
 	var wk = _spawn(gb, display, "King", "white", Vector2(0, 5))
 	var bk = _spawn(gb, display, "King", "black", Vector2(5, 0))
 	var pawn = _spawn(gb, display, "Pawn", "white", Vector2(2, 1))
@@ -81,20 +84,33 @@ func _initialize():
 	var buttons = 0
 	for child in ui.choice_picker._grid.get_children():
 		buttons += 1
-	if buttons != Rules.promotion_choices().size():
-		fail("picker shows %d buttons, expected %d" % [buttons, Rules.promotion_choices().size()])
+	# Compare against the same call the picker makes, so this keeps working once
+	# the choices come from a registered army rather than the fixed list.
+	var expected = Rules.promotion_choices(gb.state, "white", "Pawn").size()
+	if buttons != expected:
+		fail("picker shows %d buttons, expected %d" % [buttons, expected])
 
-	# Choose "Queen" by pressing its button, exactly as a real click would
-	# (the button handler hides the picker and emits `picked`).
-	var queen_button = null
+	# The registered army has no Queen, so the picker must not offer one --
+	# this is what proves the choices follow the army and not the fixed list.
+	var labels = []
 	for child in ui.choice_picker._grid.get_children():
-		if child.text == "Queen":
-			queen_button = child
-	if queen_button == null:
-		fail("no Queen button in the picker")
+		labels.append(child.text)
+	if "Queen" in labels:
+		fail("picker offered a Queen, which is not in this side's army: %s" % [labels])
+	if not ("Gorgon" in labels and "Devil Toad" in labels):
+		fail("picker did not offer the army's own pieces: %s" % [labels])
+
+	# Choose "Gorgon" by pressing its button, exactly as a real click would
+	# (the button handler hides the picker and emits `picked`).
+	var gorgon_button = null
+	for child in ui.choice_picker._grid.get_children():
+		if child.text == "Gorgon":
+			gorgon_button = child
+	if gorgon_button == null:
+		fail("no Gorgon button in the picker")
 		_done()
 		return
-	queen_button.pressed.emit()
+	gorgon_button.pressed.emit()
 	await process_frame
 	if ui.choice_picker.visible:
 		fail("picker stayed visible after a choice")
@@ -106,15 +122,15 @@ func _initialize():
 	var promoted = Rules.find_piece(gb.state, pawn_id)
 	if promoted == null:
 		fail("promoted piece vanished")
-	elif promoted.type != "Queen":
-		fail("pawn promoted to %s, expected Queen" % promoted.type)
+	elif promoted.type != "Gorgon":
+		fail("pawn promoted to %s, expected Gorgon" % promoted.type)
 	elif promoted.royal:
-		fail("promoted Queen wrongly royal")
+		fail("promoted Gorgon wrongly royal")
 	# The display node should have been swapped to a Queen too.
 	var node = gb.piece_nodes.get(pawn_id)
 	if node == null:
 		fail("no display node for promoted piece")
-	elif node.piece_type != "Queen":
+	elif node.piece_type != "Gorgon":
 		fail("display node still shows %s" % node.piece_type)
 
 	_done()

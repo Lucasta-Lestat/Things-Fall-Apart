@@ -71,6 +71,8 @@ func _initialize():
 	test_petrified_valkyrie_shatters()
 	test_ep_not_registered_for_the_dead()
 	test_promotion_picker_choices()
+	test_every_promoting_piece_promotes()
+	test_promotion_choices_follow_the_army()
 	test_threatened_royals()
 
 	print("")
@@ -1096,7 +1098,7 @@ func test_promotion_picker_choices():
 	for e in Rules.legal_actions(st, "white"):
 		if e.piece_id == pawn.id and e.action.action == "promote":
 			offered[e.action.promote_to] = true
-	check(offered.size() == Rules.promotion_choices().size(), "legal_actions expands every promotion choice")
+	check(offered.size() == Rules.promotion_choices(st, "white", "Pawn").size(), "legal_actions expands every promotion choice")
 	check(offered.has("Queen") and offered.has("Valkyrie") and offered.has("Knight"), "choices include Queen/Valkyrie/Knight")
 	check(not offered.has("King"), "cannot promote to a royal")
 	# Resolving a chosen promotion yields that piece.
@@ -1104,6 +1106,78 @@ func test_promotion_picker_choices():
 	var promoted = Rules.find_piece(res.state, pawn.id)
 	check(promoted != null and promoted.type == "Queen", "pawn promotes to the chosen Queen")
 	check(not promoted.royal, "promoted Queen is not royal")
+
+
+# Back-rank promotion used to be wired up inside each piece's movegen, so the
+# Cultist and the Werewolf were silently left out. It is trait-driven now;
+# this asserts EVERY peasant offers it.
+func test_every_promoting_piece_promotes():
+	var expected = []
+	for type in Rules.PIECE_INFO:
+		if "Peasant" in Rules.PIECE_INFO[type].traits:
+			expected.append(type)
+	check(expected.size() == 7, "7 piece types carry the Peasant trait, got %d" % expected.size())
+	check("Cultist" in expected and "Werewolf (human form)" in expected, "Cultist and Werewolf are peasants")
+	# The Monk borrowed pawn-style movement, and a stray promotion check came
+	# with it. It is a noble and must not promote.
+	check(not ("Monk" in expected), "the Monk is a noble, not a peasant")
+
+	for type in expected:
+		# White's promotion row is y=0. Checked against get_actions_raw because
+		# an Automatic piece (the Zombie) is filtered out of get_actions --
+		# the player cannot order it, but its automatic mover still sees the
+		# promotion.
+		var st = Rules.new_state()
+		var p = Rules.add_piece(st, type, "white", Vector2(2, 0))
+		Rules.add_piece(st, "King", "white", Vector2(0, 5))
+		Rules.add_piece(st, "King", "black", Vector2(5, 5))
+		var found = false
+		for a in Rules.get_actions_raw(st, p):
+			if a.action == "promote" and a.target == p.pos:
+				found = true
+		check(found, "%s promotes on the back rank" % type)
+		# Everything except the Zombie is also promotable by the player.
+		var orderable = false
+		for a in Rules.get_actions(st, p):
+			if a.action == "promote" and a.target == p.pos:
+				orderable = true
+		if "Automatic" in Rules.PIECE_INFO[type].traits:
+			check(not orderable, "%s is automatic, so the player cannot order its promotion" % type)
+		else:
+			check(orderable, "the player can order %s to promote" % type)
+
+	# ...and nothing else does, the Monk included.
+	for type in ["Monk", "Queen", "Rook", "Knight", "Spymaster", "Factory"]:
+		var st2 = Rules.new_state()
+		var p2 = Rules.add_piece(st2, type, "white", Vector2(2, 0))
+		var self_promo = false
+		for a in Rules.get_actions_raw(st2, p2):
+			if a.action == "promote" and a.target == p2.pos:
+				self_promo = true
+		check(not self_promo, "%s does not self-promote" % type)
+
+
+# Promotion offers a side its own roster rather than a fixed list.
+func test_promotion_choices_follow_the_army():
+	var st = Rules.new_state()
+	Rules.set_army(st, "white", ["Pawn", "Cultist", "Devil Toad", "Rifleman", "King", "Pawn"])
+	var choices = Rules.promotion_choices(st, "white", "Cultist")
+	check(not choices.has("King"), "royals are never a promotion target")
+	check(not choices.has("Pawn"), "peasants are not a promotion target either")
+	check(not choices.has("Cultist"), "a piece is not offered its own type")
+	check(choices.has("Devil Toad") and choices.has("Rifleman"), "the army's nobles are offered")
+	check(choices.size() == 2, "only the nobles, no duplicates, got %s" % [choices])
+	check(not choices.has("Queen"), "a type the side does not field is not offered")
+
+	# A side with no registered army falls back to the curated list, which is
+	# what the headless tests and any hand-built state rely on.
+	var bare = Rules.new_state()
+	check(Rules.promotion_choices(bare, "white", "") == Rules.PROMOTION_CHOICES, "unregistered army falls back")
+	check(Rules.promotion_choices() == Rules.PROMOTION_CHOICES, "argless call still works")
+
+	# Each side gets its own list.
+	Rules.set_army(st, "black", ["Gorgon", "Chieftain"])
+	check(Rules.promotion_choices(st, "black", "") == ["Gorgon"], "black gets black's roster")
 
 
 func test_threatened_royals():

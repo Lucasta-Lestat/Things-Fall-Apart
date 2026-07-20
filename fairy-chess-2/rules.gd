@@ -50,7 +50,8 @@ const HARD_TURN_LIMIT = 300
 # Master table: category drives placement rules + royal status; value drives
 # AI evaluation and attrition adjudication.
 const PIECE_INFO = {
-	# Peasants (placed on the second row)
+	# Peasants (placed on the second row). The Peasant trait is what grants
+	# the classic reach-the-far-row promotion.
 	"Pawn":                    {"category": "peasant", "value": 1.0, "traits": ["Peasant"]},
 	"Kulak":                   {"category": "peasant", "value": 1.1, "traits": ["Peasant"]},
 	"Basic Automata":          {"category": "peasant", "value": 1.2, "traits": ["Peasant"]},
@@ -140,6 +141,11 @@ static func new_state() -> Dictionary:
 		# Type of the last piece each side deliberately moved -- what a
 		# Doppelganger copies at the end of the round.
 		"last_moved_type": {"white": "", "black": ""},
+		# Every piece type in each side's chess set, in roster order. Promotion
+		# offers a side its OWN pieces, so a kobold engineer promotes into their
+		# machines rather than a generic queen. Left empty by tests and by any
+		# state built directly, which falls back to PROMOTION_CHOICES.
+		"armies": {"white": [], "black": []},
 	}
 
 
@@ -175,8 +181,38 @@ static func is_valid_square(pos: Vector2) -> bool:
 	return pos.x >= 0 and pos.x < BOARD_SIZE and pos.y >= 0 and pos.y < BOARD_SIZE
 
 
-static func promotion_choices() -> Array:
-	return PROMOTION_CHOICES
+# What a promoting peasant may become: the NOBLES from its own side's chess
+# set. Peasants are excluded as well as royals -- promoting into another
+# peasant is the equivalent of promoting a pawn into a pawn. If no army has
+# been registered (headless tests, states built by hand) this falls back to
+# the curated list so the engine still works standalone.
+static func promotion_choices(state: Dictionary = {}, color: String = "", exclude_type: String = "") -> Array:
+	var army = []
+	if not state.is_empty() and color != "":
+		army = state.get("armies", {}).get(color, [])
+	if army.is_empty():
+		army = PROMOTION_CHOICES
+	var out = []
+	for type in army:
+		if type == exclude_type:
+			continue
+		if PIECE_INFO.get(type, {"category": "noble"}).category != "noble":
+			continue
+		out.append(type)
+	return out
+
+
+# Registers a side's roster so promotion can offer their own pieces. Types may
+# repeat in a profile (two Pawns); the army list is deduplicated.
+static func set_army(state: Dictionary, color: String, types: Array) -> void:
+	var seen = {}
+	var out = []
+	for type in types:
+		if seen.has(type) or not PIECE_INFO.has(type):
+			continue
+		seen[type] = true
+		out.append(type)
+	state.armies[color] = out
 
 
 # --- Action precedence -----------------------------------------------------
@@ -364,20 +400,20 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 	var actions = []
 	match piece.type:
 		"Pawn":
-			_pawn_family(state, piece, actions, true)
+			_pawn_family(state, piece, actions)
 		"Kulak":
 			_kulak_actions(state, piece, actions)
 		"Basic Automata":
 			_automata_actions(state, piece, actions)
 		"Zombie":
-			_pawn_family(state, piece, actions, true)
+			_pawn_family(state, piece, actions)
 		"Raider":
-			_pawn_family(state, piece, actions, true)
+			_pawn_family(state, piece, actions)
 		"Cultist":
-			_pawn_family(state, piece, actions, false)
+			_pawn_family(state, piece, actions)
 			_convert_actions(state, piece, actions)
 		"Werewolf (human form)":
-			_pawn_family(state, piece, actions, false)
+			_pawn_family(state, piece, actions)
 		"Werewolf (wolf form)":
 			_werewolf_wolf_actions(state, piece, actions)
 		"Monk":
@@ -458,6 +494,14 @@ static func get_actions_raw(state: Dictionary, piece: Dictionary) -> Array:
 			_adjacent_promotions(state, piece, actions, "Bishop", [], ["Peasant"])
 		_:
 			_leaps(state, piece, KING_DIRS, actions)
+	# Reaching the far row promotes any peasant. This lives here rather than
+	# inside each piece's movegen so that adding a peasant can never silently
+	# omit it -- which is exactly how the Cultist and the Werewolf ended up
+	# unable to promote.
+	if "Peasant" in piece.traits and piece.pos.y == _promotion_row(piece.color):
+		var choices = promotion_choices(state, piece.color, piece.type)
+		if not choices.is_empty():
+			actions.append({"action": "promote", "target": piece.pos, "promote_to": choices[0]})
 	return dedupe_actions(actions)
 
 
@@ -495,7 +539,7 @@ static func legal_actions(state: Dictionary, color: String) -> Array:
 			# expand it so the AI can evaluate each option. Directed promotions
 			# (Lady/Pontifex, target != own square) keep their fixed result.
 			if action.action == "promote" and action.target == piece.pos:
-				for choice in PROMOTION_CHOICES:
+				for choice in promotion_choices(state, piece.color, piece.type):
 					var expanded = action.duplicate()
 					expanded.promote_to = choice
 					out.append({"piece_id": piece.id, "action": expanded})
@@ -549,8 +593,9 @@ static func _leaps(state, piece, dirs, actions) -> void:
 
 
 # Shared pawn-style movement: forward step, double step from the peasant row,
-# diagonal captures, en passant, and (optionally) promotion on the last row.
-static func _pawn_family(state, piece, actions, can_promote: bool) -> void:
+# diagonal captures and en passant. Back-rank promotion is NOT here -- it is
+# applied to every Peasant centrally in get_actions_raw.
+static func _pawn_family(state, piece, actions) -> void:
 	var fwd = forward_dir(piece.color)
 	var one_step = piece.pos + Vector2(0, fwd)
 	if is_valid_square(one_step) and piece_at(state, one_step) == null:
@@ -568,8 +613,6 @@ static func _pawn_family(state, piece, actions, can_promote: bool) -> void:
 			actions.append({"action": "move", "target": cap})
 		if occ == null and state.ep_targets.has(cap):
 			actions.append({"action": "move", "target": cap, "is_en_passant": true})
-	if can_promote and piece.pos.y == _promotion_row(piece.color):
-		actions.append({"action": "promote", "target": piece.pos, "promote_to": "Valkyrie"})
 
 
 static func _promotion_row(color: String) -> int:
@@ -598,8 +641,6 @@ static func _kulak_actions(state, piece, actions) -> void:
 		var occ = piece_at(state, cap)
 		if occ != null and occ.color != piece.color:
 			actions.append({"action": "move", "target": cap})
-	if piece.pos.y == _promotion_row(piece.color):
-		actions.append({"action": "promote", "target": piece.pos, "promote_to": "Valkyrie"})
 
 
 static func _automata_actions(state, piece, actions) -> void:
@@ -624,8 +665,6 @@ static func _automata_actions(state, piece, actions) -> void:
 				if occ.color != piece.color:
 					actions.append({"action": "move", "target": cap})
 				break
-	if piece.pos.y == _promotion_row(piece.color):
-		actions.append({"action": "promote", "target": piece.pos, "promote_to": "Valkyrie"})
 
 
 static func _monk_actions(state, piece, actions) -> void:
@@ -647,8 +686,6 @@ static func _monk_actions(state, piece, actions) -> void:
 		if occ == null and state.ep_targets.has(cap):
 			actions.append({"action": "move", "target": cap, "is_en_passant": true})
 	_slides(state, piece, BISHOP_DIRS, actions)
-	if piece.pos.y == _promotion_row(piece.color):
-		actions.append({"action": "promote", "target": piece.pos, "promote_to": "Valkyrie"})
 
 
 static func _convert_actions(state, piece, actions) -> void:
