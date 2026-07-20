@@ -22,7 +22,9 @@ extends CanvasLayer
 
 var piece_icon_scene = preload("res://ui/piece_icon.tscn")
 
-const ICON_SIZE = Vector2(90, 180)
+# Size of the art inside a panel icon; the name label sits below it, so a row
+# ends up a little taller than this.
+const ART_SIZE = Vector2(90, 150)
 
 
 func _ready():
@@ -141,7 +143,10 @@ func _on_setup_state_changed():
 
 # Populates a side panel with draggable piece icons.
 func populate_piece_panels(panel, color, profile, is_spawn_credits = false):
+	# Detach before freeing: queue_free() is deferred, so leaving the old icons
+	# parented would have the container lay out both sets for a frame.
 	for child in panel.get_children():
+		panel.remove_child(child)
 		child.queue_free()
 
 	if is_spawn_credits:
@@ -177,16 +182,8 @@ func create_piece_icon(panel, piece_type, color):
 	if not data:
 		return
 	var icon = piece_icon_scene.instantiate()
-	icon.piece_type = piece_type
-	icon.color = color
-	icon.category = data.category
-	icon.is_peasant = data.category == "peasant"
-	icon.is_royal = data.category == "royal"
-	icon.scene_path = data.scene
-	icon.texture = load("res://assets/icons/" + piece_type + "_" + color + ".png")
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.custom_minimum_size = ICON_SIZE
 	panel.add_child(icon)
+	icon.setup(data, piece_type, color, ART_SIZE)
 
 
 func update_profile_displays():

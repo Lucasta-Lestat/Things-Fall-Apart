@@ -2,5 +2,20 @@
 
 [ext_resource type="Script" uid="uid://1u8dl2oer0bt" path="res://ui/piece_icon.gd" id="1_b56i2"]
 
-[node name="PieceIcon" type="TextureRect"]
+[node name="PieceIcon" type="VBoxContainer"]
+offset_right = 90.0
+offset_bottom = 184.0
+theme_override_constants/separation = 0
 script = ExtResource("1_b56i2")
+
+[node name="Art" type="TextureRect" parent="."]
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+
+[node name="NameLabel" type="Label" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+autowrap_mode = 3
