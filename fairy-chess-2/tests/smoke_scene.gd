@@ -69,6 +69,8 @@ func _initialize():
 	if gb.game_phase != "setup":
 		fail("begin_setup did not enter setup phase")
 
+	_validate_piece_panel(ui.white_piece_panel, gb.white_profile)
+
 	# --- Setup undo: place one piece, let the AI answer, then undo ----------
 	var pawn_def = _pdb().PIECE_DEFINITIONS["Pawn"]
 	var pawns_before = int(gb.white_profile.peasants.get("Pawn", 0))
@@ -242,6 +244,32 @@ func _validate_roster():
 		fail("unimportable portraits: %s" % str(missing_portrait.slice(0, 8)))
 	print("ROSTER OK: %d characters, all armies legal, portraits importable" % roster.size())
 	_validate_piece_assets()
+
+
+# Each selection-panel entry shows a piece's art AND its name; a silent typo in
+# either one is easy to miss because the panel still looks populated.
+func _validate_piece_panel(panel, profile):
+	var expected = 0
+	for bucket in ["peasants", "nobles", "royals"]:
+		expected += _sum(profile[bucket])
+	var found = 0
+	for child in panel.get_children():
+		if child is Label or child.is_queued_for_deletion(): # headings / stale rows
+			continue
+		found += 1
+		var art = child.get_node_or_null("Art")
+		var name_label = child.get_node_or_null("NameLabel")
+		if art == null or name_label == null:
+			fail("panel icon for %s is missing its Art/NameLabel" % child.piece_type)
+			continue
+		if art.texture == null:
+			fail("panel icon for %s has no art" % child.piece_type)
+		if name_label.text != child.piece_type:
+			fail("panel icon labelled '%s', expected '%s'" % [name_label.text, child.piece_type])
+	if found != expected:
+		fail("piece panel shows %d icons, profile stocks %d" % [found, expected])
+	else:
+		print("PANEL OK: %d icons, each with art and a name label" % found)
 
 
 # Every registered piece must have a loadable scene and art for both sides,
