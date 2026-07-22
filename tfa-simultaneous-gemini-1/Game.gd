@@ -50,7 +50,6 @@ const WORLD_MAP_ID: String = "scarlatti_world"
 # set_city_controller() to flip ownership at runtime, civ-style.
 var _world_map_overlay: Node2D = null
 
-var factions: Dictionary
 signal character_selected(character: ProceduralCharacter, index: int)
 signal character_deselected(character: ProceduralCharacter)
 signal selection_changed()
@@ -893,10 +892,9 @@ func show_context_menu(target, position: Vector2) -> void:
 	if target is ProceduralCharacter:
 		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
 		# Inject "Trade" for any non-hostile character. FactionDatabase is the
-		# authoritative relationship source (Game.factions is unused in current
-		# code paths). Treat allies/neutrals as tradeable; only true enemies
-		# are blocked.
-		if not FactionDatabase.are_enemies("player", target.faction_id) and not "Trade" in options:
+		# authoritative relationship source. Treat allies/neutrals as
+		# tradeable; only true hostiles are blocked.
+		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options:
 			options.append("Trade")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
@@ -1452,6 +1450,14 @@ func _process(delta: float) -> void:
 			fluid_manager.update_fluid_tick(delta)
 		if surface_manager:
 			surface_manager.update_surfaces(delta, characters_in_scene, self)
+		# Hearing-pulse decay and the party LOS sweeps only run unpaused —
+		# they are the most raycast-heavy per-frame work we do, and nothing
+		# may change LOS during tactical pause: characters are frozen and
+		# Door.interact refuses while paused. If some future feature moves
+		# things mid-pause, it must trigger these sweeps itself.
+		_tick_hearing_pulses(delta)
+		_update_npc_los_visibility()
+		_update_item_los_visibility()
 	# Update all selection indicators
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
@@ -1460,12 +1466,6 @@ func _process(delta: float) -> void:
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
-	# Tick hearing pulse timers before applying visibility, so freshly-expired
-	# pulses go fully transparent this frame instead of next.
-	_tick_hearing_pulses(delta)
-	# Update NPC and item visibility based on party line-of-sight
-	_update_npc_los_visibility()
-	_update_item_los_visibility()
 	# Camera follows primary selected character (unless user is WASD-panning)
 	if primary_selected and is_instance_valid(primary_selected) and player_camera \
 			and not player_camera.manual_pan_active:

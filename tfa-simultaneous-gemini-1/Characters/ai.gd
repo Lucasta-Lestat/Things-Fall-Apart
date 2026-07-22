@@ -426,16 +426,12 @@ func _update_target() -> void:
 	if best_target:
 		_acquire_target(best_target)
 
+# FactionDatabase.are_hostile is THE hostility oracle — do not add local
+# hostility logic here. (The old fallthrough "two distinct non-neutral
+# factions are hostile on sight" lived here; its survivors are now authored
+# as hostile_by_default in factions.json.)
 func _is_enemy(other: ProceduralCharacter) -> bool:
-	if character.faction_id == other.faction_id:
-		return false
-
-	var factions = game.factions
-	if factions:
-		if other.faction_id in factions[character.faction_id].enemies:
-			return true
-
-	return character.faction_id != "neutral" and other.faction_id != "neutral"
+	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
 func _acquire_target(target: ProceduralCharacter) -> void:
 	current_target = target
@@ -796,15 +792,15 @@ func find_most_valuable_item_in_sight() -> Node:
 	return best_item
 
 func is_item_owned_by_ally(item: Node) -> bool:
+	# NOTE: item.owner here is Godot's built-in Node.owner (scene-tree
+	# ownership), which is null for runtime-spawned items — so this returns
+	# false for every world item today. Phase 4 of the law/crime plan replaces
+	# it with a real owner_faction property on Item.
 	if not "owner" in item or item.owner == null:
 		return false
 	if not "faction_id" in item.owner:
 		return false
-	var factions = game.factions
-	if factions and character.faction_id in factions and item.owner.faction_id in factions:
-		if item.owner.faction_id in factions[character.faction_id].allies:
-			return true
-	return character.faction_id == item.owner.faction_id
+	return FactionDatabase.are_friendly(character.faction_id, item.owner.faction_id)
 
 func can_reach_item(item: Node) -> bool:
 	var start_tile = GridManager.world_to_map(character.global_position)

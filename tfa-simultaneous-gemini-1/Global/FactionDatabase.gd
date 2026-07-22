@@ -39,6 +39,17 @@ func get_faction_data(faction_id: String) -> Dictionary:
 	push_error("Faction ID not found: " + faction_id)
 	return {}
 
+func has_faction(faction_id: String) -> bool:
+	return _factions.has(faction_id)
+
+# Silent variant for relation queries, which run per-frame from AI and get
+# handed undefined ids by authored templates (spider_party, druids, "none").
+# Unknown faction -> empty dict -> no relations -> peaceful. get_faction_data
+# keeps its push_error for genuine lookups.
+func _faction_or_empty(faction_id: String) -> Dictionary:
+	var data: Dictionary = _factions.get(faction_id, {})
+	return data
+
 func get_all_faction_ids() -> Array:
 	return _factions.keys()
 
@@ -70,11 +81,13 @@ func adjust_faction_tier(faction_id: String, delta: int) -> void:
 # ---------------------------------------------------------------------------
 
 func are_allies(faction_a: String, faction_b: String) -> bool:
-	var data_a = get_faction_data(faction_a)
+	var data_a: Dictionary = _faction_or_empty(faction_a)
 	return faction_b in data_a.get("allies", [])
 
+# One-directional by design: reads only faction_a's list. For behaviour
+# (combat, menus, targeting) use are_hostile below, which is symmetric.
 func are_enemies(faction_a: String, faction_b: String) -> bool:
-	var data_a = get_faction_data(faction_a)
+	var data_a: Dictionary = _faction_or_empty(faction_a)
 	return faction_b in data_a.get("enemies", [])
 
 func get_relationship(faction_a: String, faction_b: String) -> String:
@@ -84,6 +97,56 @@ func get_relationship(faction_a: String, faction_b: String) -> String:
 		return "ally"
 	if are_enemies(faction_a, faction_b):
 		return "enemy"
+	return "neutral"
+
+# ---------------------------------------------------------------------------
+# Hostility oracle
+# ---------------------------------------------------------------------------
+# THE hostility predicate. ai._is_enemy, the right-click attack-vs-menu split,
+# Trade injection, and ability target filters all delegate here — keep them in
+# lockstep and do not grow a second predicate elsewhere. The law/crime system
+# (Phase 6 of docs/law_crime_stealth_plan.md) extends player_stance_toward;
+# everything else reads this function.
+
+func are_hostile(faction_a: String, faction_b: String) -> bool:
+	if faction_a == faction_b:
+		return false
+	# Beasts and outlaws attack anyone not explicitly allied — INCLUDING the
+	# player. This must precede the player branch or wildlife stops fighting.
+	# "neutral" (unaffiliated civilians) is exempt, preserving the old
+	# predicate's carve-out: bandits menace factions, not extras. Attacking
+	# civilians becomes a *crime*, not an impossibility, when the law system
+	# lands.
+	if faction_b != "neutral" and _hostile_by_default(faction_a) and not are_friendly(faction_a, faction_b):
+		return true
+	if faction_a != "neutral" and _hostile_by_default(faction_b) and not are_friendly(faction_a, faction_b):
+		return true
+	if faction_a == "player" or faction_b == "player":
+		var other: String = faction_b if faction_a == "player" else faction_a
+		return player_stance_toward(other) == "hostile"
+	# Symmetric on purpose: factions.json is inconsistently mirrored and
+	# are_enemies reads only a's list. Fix the predicate, not 19 hand-mirrored
+	# JSON entries.
+	return are_enemies(faction_a, faction_b) or are_enemies(faction_b, faction_a)
+
+# Same faction, or allied in either direction.
+func are_friendly(faction_a: String, faction_b: String) -> bool:
+	return faction_a == faction_b \
+		or are_allies(faction_a, faction_b) \
+		or are_allies(faction_b, faction_a)
+
+func _hostile_by_default(faction_id: String) -> bool:
+	return bool(_faction_or_empty(faction_id).get("hostile_by_default", false))
+
+# The player's standing with a faction. Phase 6 of the law/crime plan derives
+# this from a runtime standing scalar plus a hostile_override set by witnessed
+# crimes (and cleared by paying fines / serving time). Until then it is the
+# static base relation from factions.json, read in both directions.
+func player_stance_toward(other_faction: String) -> String:
+	if are_enemies("player", other_faction) or are_enemies(other_faction, "player"):
+		return "hostile"
+	if are_allies("player", other_faction) or are_allies(other_faction, "player"):
+		return "ally"
 	return "neutral"
 
 # ---------------------------------------------------------------------------

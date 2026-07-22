@@ -24,6 +24,13 @@ func get_interact_options() -> Array:
 	return ["Close Door"] if is_open else ["Open Door"]
 
 func interact(option: String) -> void:
+	# Tactical pause is for planning — the world is frozen, and that includes
+	# doors. (Also keeps the pause-gated LOS sweeps in Game._process honest:
+	# opening a door changes line of sight, so a mid-pause open would show a
+	# stale room to plan against.)
+	if PauseManager.is_paused:
+		show_floating_text("Not while paused", Color.WHITE_SMOKE)
+		return
 	match option:
 		"Open Door":
 			if locked:

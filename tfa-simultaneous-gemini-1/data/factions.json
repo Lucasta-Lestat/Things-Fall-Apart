@@ -40,7 +40,6 @@
 			"icon": "res://icons/player.png",
 			"flag": "res://icons/player_flag.png",
 			"allies": [
-				"town_guard",
 				"merchants"
 			],
 			"enemies": [
@@ -115,9 +114,7 @@
 			"tier": 3,
 			"icon": "res://icons/golden_guard.png",
 			"flag": "res://icons/golden_guard_flag.png",
-			"allies": [
-				"player"
-			],
+			"allies": [],
 			"enemies": [
 				"bandits"
 			],
@@ -247,6 +244,7 @@
 			"tier": 1,
 			"icon": "res://icons/bandits.png",
 			"flag": "res://icons/bandits_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": [
 				"player",
@@ -287,6 +285,7 @@
 			"tier": 2,
 			"icon": "res://icons/rebels.png",
 			"flag": "res://icons/rebels_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": [
 				"town_guard",
@@ -322,6 +321,7 @@
 			"tier": 2,
 			"icon": "res://icons/undead.png",
 			"flag": "res://icons/undead_flag.png",
+			"hostile_by_default": true,
 			"allies": [
 			],
 			"enemies": [
@@ -352,6 +352,7 @@
 			"tier": 0,
 			"icon": "res://icons/wildlife.png",
 			"flag": "res://icons/wildlife_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": [],
 			"equipment_traits": {
@@ -402,6 +403,7 @@
 			"tier": 2,
 			"icon": "res://icons/cultists.png",
 			"flag": "res://icons/cultists_flag.png",
+			"hostile_by_default": true,
 			"allies": [
 				"demons",
 				"patriciate"
@@ -511,6 +513,7 @@
 			"tier": 2,
 			"icon": "res://icons/pirates.png",
 			"flag": "res://icons/pirates_flag.png",
+			"hostile_by_default": true,
 			"allies": [
 				"bandits"
 			],
@@ -550,6 +553,7 @@
 			"tier": 2,
 			"icon": "res://icons/neutral.png",
 			"flag": "res://icons/neutral_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": [
 				"player"
@@ -609,6 +613,7 @@
 			"tier": 2,
 			"icon": "res://icons/skarsgaard.png",
 			"flag": "res://icons/skarsgaard_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": ["patriciate", "player"],
 			"traits": {},
@@ -632,6 +637,7 @@
 			"tier": 1,
 			"icon": "res://icons/vermincelli.png",
 			"flag": "res://icons/vermincelli_flag.png",
+			"hostile_by_default": true,
 			"allies": [],
 			"enemies": ["liziti", "dragatini", "tortellini"],
 			"traits": {},

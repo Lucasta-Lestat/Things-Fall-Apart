@@ -504,7 +504,7 @@ func _passes_filter(target: Node, caster: Node) -> bool:
 		return true
 	var caster_faction = caster.faction_id
 	var target_faction = target.faction_id
-	var enemies = FactionDatabase.are_enemies(caster_faction, target_faction)
+	var enemies = FactionDatabase.are_hostile(caster_faction, target_faction)
 	if target_filter == "enemies":
 		return enemies
 	if target_filter == "allies":

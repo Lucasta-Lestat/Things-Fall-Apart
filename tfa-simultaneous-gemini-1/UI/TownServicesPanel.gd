@@ -174,7 +174,7 @@ func _repopulate() -> void:
 		return
 
 	var controlling_faction: String = RegionDatabase.get_controlling_faction(region_id)
-	if not controlling_faction.is_empty() and FactionDatabase.are_enemies("player", controlling_faction):
+	if not controlling_faction.is_empty() and FactionDatabase.are_hostile("player", controlling_faction):
 		visible = false
 		return
 

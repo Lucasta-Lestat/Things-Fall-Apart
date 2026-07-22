@@ -3516,7 +3516,7 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 			# (not the controlling character's own faction) so the decision
 			# matches show_context_menu's Trade injection — the menu
 			# represents the party's perspective, not an individual member's.
-			if not FactionDatabase.are_enemies("player", collider.faction_id):
+			if not FactionDatabase.are_hostile("player", collider.faction_id):
 				return collider
 			saw_hostile = true
 	if first_item != null:
@@ -3937,7 +3937,10 @@ func _emit_footstep() -> void:
 			if n > 0.0:
 				item_noise += n
 
-	var loudness: float = base_sound * footwear_mult + item_noise
+	# walking_noise is the racial gait multiplier from races.json (0.3 for the
+	# silent-footed up to 1.5 for the heavy) — set in load_from_data alongside
+	# the other race stats.
+	var loudness: float = (base_sound * footwear_mult + item_noise) * walking_noise
 
 	if sfx_key != "":
 		var full_key := "%s_%s" % [sfx_key, footwear_suffix]
@@ -4890,9 +4893,6 @@ func get_faction() -> String:
 func set_faction(new_faction_id: String) -> void:
 	faction_id = new_faction_id
 
-func get_relationship_with(other_character: ProceduralCharacter) -> Faction.Relationship:
-	return game.factions[faction_id].get_relationship(faction_id, other_character.faction_id)
-	
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
 
