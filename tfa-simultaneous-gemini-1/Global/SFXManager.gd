@@ -33,7 +33,17 @@ func play(sound_key: String, global_pos: Vector2, pitch_range: Vector2 = DEFAULT
 	if not sound_library.has(sound_key):
 		push_warning("SFXManager: Sound '%s' not found." % sound_key)
 		return
-		
+
+	# Sound-suppression zones damp what the player hears, not just what the AI
+	# notices. This system and HearingManager are otherwise unaware of each
+	# other — every call site pokes them independently — so without this a
+	# silenced brawl would still clang, which reads as a bug rather than magic.
+	var zone_gain: float = HearingManager.sound_gain_at(global_pos)
+	if zone_gain <= 0.0:
+		return
+	if zone_gain < 1.0:
+		volume_db += linear_to_db(zone_gain)
+
 	var player = _get_next_player()
 	player.stream = sound_library[sound_key]
 	player.global_position = global_pos

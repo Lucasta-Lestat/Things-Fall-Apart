@@ -4,7 +4,7 @@
 			"id": "rat_pack",
 			"display_name": "Rat Pack",
 			"description": "Conjure a writhing swarm of rats that fights at your side until slain.",
-			"icon": "res://UI/UI Icons/ability_cloud_kill.png",
+			"icon": "res://UI/UI Icons/ability_rat_pack.png",
 			"visual_duration": 1.0,
 			"costs": {},
 			"cast_time": 0.0,
@@ -402,7 +402,7 @@
 			"id": "chasten",
 			"display_name": "Chasten",
 			"description": "End a creature's current infatuation",
-			"icon": "res://UI/UI Icons/chasten.png",
+			"icon": "res://UI/UI Icons/ability_chasten.png",
 			"costs": {},
 			"cast_time": 1.0,
 			"traits": {
@@ -1469,7 +1469,7 @@
 			"id": "natural_bite",
 			"display_name": "Bite",
 			"description": "Sink your fangs into a foe. Mutated maw bearers also apply bleeding scaled by the tier of The Jaws That Bite.",
-			"icon": "res://UI/UI Icons/dummy_icon.png",
+			"icon": "res://UI/UI Icons/ability_natural_bite.png",
 			"costs": {
 				"stamina": 5
 			},
@@ -1511,7 +1511,7 @@
 			"id": "bind_soul",
 			"display_name": "Bind Soul",
 			"description": "Reach into the recently dead within range and tether their souls to you. Souls beyond what you can carry overflow into your inventory as soul-bound items.",
-			"icon": "res://UI/UI Icons/soul icon.png",
+			"icon": "res://UI/UI Icons/ability_bind_soul.png",
 			"visual_duration": 2.0,
 			"costs": {},
 			"cast_time": 2.0,
@@ -1544,7 +1544,7 @@
 			"id": "force_march",
 			"display_name": "Force March",
 			"description": "Push the party on without rest. Doubles overland travel speed for two minutes; gain a tier of Exhausted as the price.",
-			"icon": "res://UI/UI Icons/exhausted.png",
+			"icon": "res://UI/UI Icons/ability_force_march.png",
 			"costs": {},
 			"cast_time": 0.0,
 			"interruptible": false,
@@ -1574,6 +1574,40 @@
 				"impact_effect": "",
 				"sound_cast": "",
 				"sound_impact": ""
+			}
+		},
+		{
+			"id": "silence",
+			"display_name": "Silence",
+			"description": "Smothers a patch of the world in dead air. Nothing sounds within it, nothing is heard within it, and nothing carries across it.",
+			"icon": "res://UI/UI Icons/ability_silence.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"interruptible": true,
+			"traits": {
+				"spell": 1,
+				"sound": 1,
+				"magical": 1,
+				"Occult": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 260.0,
+				"shape": "circle",
+				"radius": 120.0
+			},
+			"effects": [
+				{
+					"type": "sound_zone",
+					"radius": 120.0,
+					"gain": 0.0,
+					"duration": 20.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/sonic_hand.tscn",
+				"cast_effect": "",
+				"sound_cast": ""
 			}
 		}
 	]

@@ -665,6 +665,10 @@ func _unload_current_map() -> void:
 		surface_manager.clear_all_surfaces()
 		surface_manager.invalidate_floor_cache()
 
+	# Clear sound-suppression zones (Silence and friends). These parent to the
+	# scene root rather than map_loader, so they need an explicit sweep.
+	HearingManager.clear_sound_zones()
+
 	# Clear weather VFX
 	if weather_vfx_controller:
 		weather_vfx_controller.clear_all()

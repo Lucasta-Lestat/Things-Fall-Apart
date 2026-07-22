@@ -34,6 +34,7 @@ const EFFECT_TYPES = [
 	"summon",           # Summon an entity
 	"cloud",            # Create a Cloud
 	"spawn_fluid",      # Spawn fluid at target (acid, poison, etc.)
+	"sound_zone",       # Create a region that damps sound (Silence)
 	"custom",           # Custom effect with callback
 ]
 
@@ -85,6 +86,8 @@ static func resolve_effect(
 			result = _resolve_spawn_fluid(effect, caster, target_position, ability)
 		"sever_limb":
 			result = _resolve_sever_limb(effect, caster, targets, ability)
+		"sound_zone":
+			result = _resolve_sound_zone(effect, caster, target_position)
 		_:
 			result["success"] = false
 			result["error"] = "Unknown effect type: %s" % effect_type
@@ -263,6 +266,43 @@ static func _resolve_cloud(
 		result["success"] = false
 		result["error"] = "Failed to create cloud"
 
+	return result
+
+
+## Resolve sound_zone effect — creates a persistent region that damps every
+## sound emitted inside, heard inside, or passing through it. A `gain` of 0.0
+## is total silence; higher values muffle instead of smothering, so the same
+## effect covers quiet zones without new code.
+static func _resolve_sound_zone(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "sound_zone",
+		"created_objects": [],
+	}
+
+	var game = _get_game_scene(caster)
+	if not game:
+		result["success"] = false
+		result["error"] = "Could not find game scene"
+		return result
+
+	var zone := SilenceZone.new()
+	zone.radius = float(effect.get("radius", 120.0))
+	zone.gain = float(effect.get("gain", 0.0))
+	zone.duration = float(effect.get("duration", 20.0))
+
+	# Parent first, then position: setting global_position before the node has
+	# a parent transform silently means something different (see the note on
+	# _resolve_force_field below). HearingManager registration happens in
+	# SilenceZone._ready, i.e. during add_child.
+	game.add_child(zone)
+	zone.global_position = target_position
+
+	result["created_objects"].append(zone)
 	return result
 
 
