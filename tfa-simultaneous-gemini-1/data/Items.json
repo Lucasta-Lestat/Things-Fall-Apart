@@ -5269,6 +5269,24 @@
 	"key": null
   },
   {
+	"id": "cellar_key",
+	"display_name": "Cellar Key",
+	"type": "key",
+	"description": "A stout key to a villa cellar.",
+	"sprite_path": "res://Items/iron_key.png",
+	"base_width": 12.0,
+	"base_height": 12.0,
+	"weight": 0.1,
+	"cost": 8.0,
+	"interact_options": ["Inspect", "Drop"],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {"Metal": 1},
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"key": null
+  },
+  {
 	"id": "bed_wooden",
 	"display_name": "Wooden Bed",
 	"type": "item",

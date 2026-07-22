@@ -872,6 +872,12 @@ func _spawn_fluids(fluid_list: Array) -> void:
 					var tile = center_tile + Vector2i(dx, dy)
 					if not GridManager.walls.get(tile, false):
 						fluid_manager.register_fluid(tile, fluid_type, amount)
+		# "rate" marks a PERSISTENT source (villa impluvium spring): keep the
+		# pool topped up against evaporation. Structured maps only — the cell
+		# sim owns sources there; the one-shot deposit above still primes it.
+		var rate: float = float(fluid_def.get("rate", 0.0))
+		if rate > 0.0 and fluid_manager.cell_fluid != null:
+			fluid_manager.cell_fluid.add_source(GridManager.map_to_world(center_tile), fluid_type, rate)
 
 # ---------------------------------------------------------------------------
 # Context menu
