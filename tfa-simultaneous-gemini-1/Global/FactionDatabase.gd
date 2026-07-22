@@ -8,6 +8,27 @@ var _factions: Dictionary = {}
 
 func _ready() -> void:
 	_load_database()
+	_validate_relations()
+
+# Boot lint, push_warning only. are_hostile is symmetric precisely because
+# this data is inconsistently mirrored — the lint nudges the data clean over
+# time without a behavioural cliff.
+func _validate_relations() -> void:
+	var undefined: Dictionary = {}
+	var unmirrored: Array = []
+	for faction_id in _factions:
+		var data: Dictionary = _factions[faction_id]
+		for list_key in ["allies", "enemies"]:
+			for other in data.get(list_key, []):
+				var other_id := str(other)
+				if not _factions.has(other_id):
+					undefined[other_id] = true
+				elif list_key == "enemies" and not faction_id in _factions[other_id].get("enemies", []):
+					unmirrored.append("%s->%s" % [faction_id, other_id])
+	if not undefined.is_empty():
+		push_warning("FactionDatabase: relation lists name undefined factions: %s" % str(undefined.keys()))
+	if not unmirrored.is_empty():
+		push_warning("FactionDatabase: one-directional enemies (are_hostile treats these as mutual): %s" % str(unmirrored))
 
 func _load_database() -> void:
 	var file_path = "res://data/factions.json"

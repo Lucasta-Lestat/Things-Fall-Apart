@@ -1,0 +1,81 @@
+{
+	"version": 1,
+	"default_code": "common_law",
+	"applies_to": ["player"],
+	"confirm_above_severity": 50,
+
+	"statutes": {
+		"theft":       { "display_name": "Theft",    "verb": "take",   "match": { "owner": "law_faction" }, "severity": 25 },
+		"burglary":    { "display_name": "Burglary", "verb": "loot",   "match": { "owner": "law_faction" }, "severity": 30 },
+		"assault":     { "display_name": "Assault",  "verb": "attack", "match": { "victim_protected": true, "lethal": false }, "severity": 40 },
+		"murder":      { "display_name": "Murder",   "verb": "attack", "match": { "victim_protected": true, "lethal": true  }, "severity": 90 },
+		"necromancy":  { "display_name": "Necromancy",            "verb": "cast", "match": { "traits_any": ["necrotic", "drain"] },   "severity": 90 },
+		"conjuration": { "display_name": "Unlawful Conjuration",  "verb": "cast", "match": { "traits_all": ["summon", "Occult"] },    "severity": 55 },
+		"mind_magic":  { "display_name": "Coercion of the Will",  "verb": "cast", "match": { "traits_any": ["charm", "mental"] },     "severity": 40 },
+		"occultism":   { "display_name": "Occultism",             "verb": "cast", "match": { "traits_any": ["Occult"] },              "severity": 30 }
+	},
+
+	"codes": {
+		"none":       { "display_name": "No Law", "statutes": [] },
+		"common_law": { "display_name": "The Common Law", "statutes": ["theft", "burglary", "assault", "murder"] },
+		"liziti_custom": {
+			"display_name": "Liziti Custom", "extends": "common_law", "repeals": ["assault"],
+			"notes": "Duelling is a private matter. Killing is not."
+		},
+		"waldau_rationalist_code": {
+			"display_name": "The Rationalist Code of Waldau", "extends": "common_law",
+			"statutes": ["necromancy", "conjuration", "mind_magic"], "overrides": { "theft": 40 }
+		},
+		"patrician_code": {
+			"display_name": "Patrician Law", "extends": "common_law",
+			"statutes": ["necromancy", "mind_magic"], "overrides": { "burglary": 55 }
+		},
+		"golden_guard_martial_law": {
+			"display_name": "Martial Law", "extends": "patrician_code",
+			"statutes": ["occultism"], "overrides": { "assault": 55 }
+		}
+	},
+
+	"witness": {
+		"outcry_delay_base": 2.2,
+		"outcry_delay_guard": -1.1,
+		"outcry_delay_victim": -1.3,
+		"outcry_delay_afraid": 0.8,
+		"outcry_delay_far": 0.6,
+		"outcry_far_distance": 512.0,
+		"outcry_delay_min": 0.8,
+		"outcry_delay_max": 4.0,
+		"outcry_jitter": 0.15,
+		"scream_loudness": 1.35,
+		"witness_alert": 70.0,
+		"unidentified_alert": 45.0,
+		"guard_alarm_alert": 74.0,
+		"cancel_on_conditions": ["unconscious", "silenced", "panicked"]
+	},
+
+	"standing": {
+		"hostile_at": -50, "friendly_at": 50, "floor": -250, "cap": 100,
+		"decay_per_day": 1.0,
+		"fine_gold_per_severity": 12.0,
+		"jail_days_per_severity": 0.06
+	},
+
+	"surrender": {
+		"default_profile": "implacable",
+		"profiles": {
+			"lawful":     { "accepts": true,  "options": ["pay_fine", "return_goods", "serve_time"],
+							"line": "On your knees. The magistrate will hear of it." },
+			"predatory":  { "accepts": true,  "options": ["rob"], "rob_fraction": 0.5,
+							"line": "Purse or throat. Choose." },
+			"implacable": { "accepts": false, "line": "It does not understand the word." }
+		},
+		"faction_profiles": {
+			"golden_guard": "lawful", "patriciate": "lawful", "liziti": "lawful", "waldau": "lawful",
+			"alamoneans": "lawful", "adventurers_guild": "lawful", "dragatini": "lawful",
+			"tortellini": "lawful", "skarsgaard": "lawful",
+			"bandits": "predatory", "pirates": "predatory", "rival_party": "predatory",
+			"vermincelli": "predatory", "rebels": "predatory",
+			"undead": "implacable", "wildlife": "implacable", "cultists": "implacable"
+		}
+	}
+}

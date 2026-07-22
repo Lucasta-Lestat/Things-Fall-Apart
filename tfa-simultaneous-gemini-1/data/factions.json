@@ -114,6 +114,8 @@
 			"tier": 3,
 			"icon": "res://icons/golden_guard.png",
 			"flag": "res://icons/golden_guard_flag.png",
+			"law_code": "golden_guard_martial_law",
+			"policed_by": ["golden_guard"],
 			"allies": [],
 			"enemies": [
 				"bandits"
@@ -158,6 +160,8 @@
 			"tier": 1,
 			"icon": "res://icons/liziti.png",
 			"flag": "res://icons/liziti_flag.png",
+			"law_code": "liziti_custom",
+			"policed_by": ["liziti", "golden_guard"],
 			"allies": [
 				"rebels",
 				"patriciate"
@@ -196,6 +200,8 @@
 			"tier": 3,
 			"icon": "res://icons/patriciate.png",
 			"flag": "res://icons/patriciate_flag.png",
+			"law_code": "patrician_code",
+			"policed_by": ["patriciate", "golden_guard", "dragatini"],
 			"allies": [
 				"cultists"
 			],
@@ -245,6 +251,7 @@
 			"icon": "res://icons/bandits.png",
 			"flag": "res://icons/bandits_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": [
 				"player",
@@ -286,6 +293,7 @@
 			"icon": "res://icons/rebels.png",
 			"flag": "res://icons/rebels_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": [
 				"town_guard",
@@ -322,6 +330,7 @@
 			"icon": "res://icons/undead.png",
 			"flag": "res://icons/undead_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [
 			],
 			"enemies": [
@@ -353,6 +362,7 @@
 			"icon": "res://icons/wildlife.png",
 			"flag": "res://icons/wildlife_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": [],
 			"equipment_traits": {
@@ -404,6 +414,7 @@
 			"icon": "res://icons/cultists.png",
 			"flag": "res://icons/cultists_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [
 				"demons",
 				"patriciate"
@@ -514,6 +525,7 @@
 			"icon": "res://icons/pirates.png",
 			"flag": "res://icons/pirates_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [
 				"bandits"
 			],
@@ -554,6 +566,7 @@
 			"icon": "res://icons/neutral.png",
 			"flag": "res://icons/neutral_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": [
 				"player"
@@ -583,6 +596,8 @@
 			"tier": 1,
 			"icon": "res://icons/waldau.png",
 			"flag": "res://icons/waldau_flag.png",
+			"law_code": "waldau_rationalist_code",
+			"policed_by": ["waldau", "golden_guard"],
 			"default_alertness": "at_ease",
 			"allies": [],
 			"enemies": [],
@@ -614,6 +629,7 @@
 			"icon": "res://icons/skarsgaard.png",
 			"flag": "res://icons/skarsgaard_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": ["patriciate", "player"],
 			"traits": {},
@@ -638,6 +654,7 @@
 			"icon": "res://icons/vermincelli.png",
 			"flag": "res://icons/vermincelli_flag.png",
 			"hostile_by_default": true,
+			"law_code": "none",
 			"allies": [],
 			"enemies": ["liziti", "dragatini", "tortellini"],
 			"traits": {},

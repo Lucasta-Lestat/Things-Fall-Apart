@@ -25,11 +25,11 @@ func get_interact_options() -> Array:
 
 func interact(option: String) -> void:
 	# Tactical pause is for planning — the world is frozen, and that includes
-	# doors. (Also keeps the pause-gated LOS sweeps in Game._process honest:
-	# opening a door changes line of sight, so a mid-pause open would show a
-	# stale room to plan against.)
+	# doors. Silent refusal: the context menu happens to run while paused (it
+	# is the planning UI), but acting on the world mid-pause was never meant
+	# to work. (Also keeps the pause-gated LOS sweeps in Game._process honest:
+	# opening a door changes line of sight.)
 	if PauseManager.is_paused:
-		show_floating_text("Not while paused", Color.WHITE_SMOKE)
 		return
 	match option:
 		"Open Door":

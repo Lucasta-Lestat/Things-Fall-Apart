@@ -596,6 +596,36 @@ for the whole design**; `evaluate` is pure (same payload twice, identical verdic
 `enforces("golden_guard", "liziti") == true`; and a regression guard that
 `RegionDatabase.is_service_legal(["hedge witch"], "argentiara")` still returns false.
 
+### As built (2026-07-22)
+
+Implemented as specified — `data/laws.json` verbatim from this doc, `law_code`/`policed_by` on 13
+factions (`skarsgaard` is the ninth `"none"`), `Global/LawDatabase.gd` (autoload after
+`RegionDatabase`), the boot lint in LawDatabase plus `FactionDatabase._validate_relations()`.
+`tests/law_data_test.gd`: 43/43 PASS including the acceptance pair; hostility/time/door harnesses
+re-run green. Three deviations and findings:
+
+1. **Protection is hostility-derived, not `policed_by`-derived.** The match table above worded
+   `owner: "law_faction"` and `victim_protected` in terms of `policed_by`, but `policed_by`
+   answers *who enforces*, and using it for protection leaves neutral civilians unprotected
+   everywhere — the exact case (murdering a shopkeeper) the system exists for. As built:
+   `_protected_by(f, lf) := not FactionDatabase.are_hostile(f, lf)`. Corollaries, both intended
+   and both pinned by tests: killing a *bandit* inside town is legal; and in Perrow,
+   **golden_guard property is not under liziti protection** (they are declared enemies — mob
+   rule cuts both ways).
+2. **The doc's own regression example was wrong**: `hedge_witch` is a `golden_guard` law and
+   argentiara is patriciate-controlled, so hedge witches are *legal* there. The harness pins
+   `slavecatcher` (illegal in argentiara) and documents the erratum.
+3. **The lint fired on real data on its first boot**: 4 undefined relation ids, 24
+   one-directional `enemies` pairs, 20 dangling `member_maps`, and — the C3-class catch —
+   **argentiara is a jurisdiction with no enforcer**: none of its existing member maps spawns a
+   `patriciate`/`golden_guard`/`dragatini` NPC. Content debt, now visible at every boot until
+   fixed.
+
+Note for Phase 4-5 payload builders: the Silence spell ships with `Occult: 1`, so casting it is
+`occultism` under `golden_guard_martial_law` — silencing a witness inside a martial-law
+jurisdiction is itself a reportable crime. Leave it that way; it is thematically correct and a
+lovely trap.
+
 ---
 
 # Phase 4 — Ownership and the four gates
