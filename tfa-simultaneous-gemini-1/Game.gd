@@ -2797,15 +2797,13 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 		state["active_weapon_index"] = inv.active_weapon_index
  
 	# --- Active conditions ---
+	# Full instance snapshot via the ConditionManager serializer: expires_at
+	# is absolute time and restores byte-for-byte, so timed conditions keep
+	# their true remaining duration across a map transition. (The old
+	# hand-rolled {id, stacks, expires_at} snapshot fed the absolute value
+	# into apply_condition's RELATIVE duration slot on restore.)
 	if character.condition_manager:
-		state["active_conditions"] = []
-		for cond_id in character.condition_manager.conditions:
-			var instance = character.condition_manager.conditions[cond_id]
-			state["active_conditions"].append({
-				"id": cond_id,
-				"stacks": instance.stacks,
-				"expires_at": instance.expires_at if instance.get("expires_at") != null else -1.0,
-			})
+		state["condition_state"] = character.condition_manager.to_dict()
  
 	# --- Cooldowns (ability cooldowns with remaining time) ---
 	if character.cooldowns.size() > 0:
@@ -2977,14 +2975,10 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			if idx >= -1 and idx < character.inventory.equipped_weapons.size():
 				character.inventory.set_active_weapon(idx)
  
-	# --- Conditions: reapply saved conditions ---
-	if character.condition_manager and state.has("active_conditions"):
-		for cond_entry in state["active_conditions"]:
-			var cond_id: String = cond_entry.get("id", "")
-			var stacks: int = cond_entry.get("stacks", 1)
-			var expires: float = cond_entry.get("expires_at", -1.0)
-			if cond_id != "":
-				character.condition_manager.apply_condition(cond_id, null, stacks, expires)
+	# --- Conditions: restore saved instances (after inventory, which the
+	# grants_ability re-grant guard relies on) ---
+	if character.condition_manager and state.has("condition_state"):
+		character.condition_manager.from_dict(state["condition_state"])
  
 	# --- Cooldowns ---
 	if state.has("cooldowns"):

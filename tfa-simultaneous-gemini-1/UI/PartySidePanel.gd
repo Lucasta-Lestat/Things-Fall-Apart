@@ -1485,7 +1485,9 @@ func _update_conditions(data: Dictionary, character) -> void:
 
 	# Update tooltips with current stacks/duration
 	var time_manager = get_node_or_null("/root/TimeManager")
-	var game_time: float = time_manager.game_time if time_manager else 0.0
+	# expires_at is on the absolute clock — comparing against the wrapping
+	# intraday game_time would show garbage countdowns after any midnight.
+	var game_time: float = time_manager.absolute_time() if time_manager else 0.0
 	var children = cond_container.get_children()
 	for i in range(children.size()):
 		if i >= cond_ids.size():

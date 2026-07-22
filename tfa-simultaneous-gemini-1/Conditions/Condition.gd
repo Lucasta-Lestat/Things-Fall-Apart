@@ -84,7 +84,7 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.display_name = data.get("display_name", "")
 	condition.description = data.get("description", "")
 	condition.tier = data.get("tier", 1)
-	condition.traits = data.get("traits", [])
+	condition.traits = data.get("traits", {})
 	condition.stackable = data.get("stackable", false)
 	condition.max_tier = data.get("max_tier", 1) ####
 	condition.duration = data.get("duration", -1.0)
@@ -98,7 +98,10 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.stat_modifiers = data.get("stat_modifiers", [])
 	condition.triggered_effects = data.get("triggered_effects", [])
 	condition.conditional_modifiers = data.get("conditional_modifiers", [])
-	condition.immunities = data.get("immunities", [])
+	# Dictionary properties need Dictionary defaults — the old [] defaults
+	# made create_from_data abort with a type error on any input that omitted
+	# the key (masked at boot because ConditionDatabase always authors both).
+	condition.immunities = data.get("immunities", {})
 	condition.save_stat = data.get("save_stat", "")
 	condition.save_interval = data.get("save_interval", 0.0)
 	condition.grants_ability = data.get("grants_ability", "")

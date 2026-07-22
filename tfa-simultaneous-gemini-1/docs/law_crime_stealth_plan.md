@@ -378,6 +378,32 @@ accumulated**.
 `ConditionManager._try_periodic_save` still fires across a day boundary (a bug that has been live
 since the wrap was written); `get_remaining_duration` is sane after a rollover.
 
+### As built (2026-07-22)
+
+Implemented as specified (steps 1-5), plus three discoveries:
+
+1. **`apply_condition` was clobbering every `duration_override` on fresh instances** —
+   `instance.apply(current_time)` re-stamped the template expiry *after* the override branch set
+   it. Reordered (apply first, then override). This unmasks two live callers toward their
+   authored intent: `fog_overlay.gd:62`'s `condition_duration_override` and the condition-copy
+   effect's `duration` (`ProceduralCharacter.gd:1344`, default 12 s) now actually take effect on
+   first application. Callers passing explicit `-1.0` (races, backgrounds, thrill-of-sin) now get
+   genuinely permanent conditions even on timed templates — previously the template duration won.
+2. **`Condition.create_from_data` had type-wrong defaults** — `traits` and `immunities` are
+   `Dictionary` properties but defaulted to `[]`, so any input omitting either key aborted with a
+   runtime type error (masked at boot because `ConditionDatabase` always authors both). Fixed the
+   two defaults; the Dictionary arm of `register_condition` works now.
+3. **The plan's step 5 re-grant needed a dedup guard**: `Inventory.add_ability_by_id` does not
+   dedup, and granted abilities *also* round-trip through the weapon serializer (restore order:
+   inventory first, then conditions). `_regrant_condition_abilities` scans
+   `stowed_items`/`equipped_weapons` for a matching `ability_id` before granting, so a restored
+   character neither loses nor duplicates a condition-bestowed ability.
+
+`tests/time_harness.gd`: 20/20 PASS headless (drives `TimeManager._process` by hand around
+`pause_time()` so day rollovers are deterministic; synthetic conditions registered through the
+now-working `create_from_data`). Hostility harness re-run green; full-game headless boot has zero
+script errors.
+
 ---
 
 # Phase 3 — Statutes, jurisdiction, and the pure resolver

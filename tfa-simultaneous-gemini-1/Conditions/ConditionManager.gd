@@ -55,7 +55,10 @@ func _process(delta: float) -> void:
 	if not time_manager:
 		return
 
-	var current_time = time_manager.game_time
+	# absolute_time, not game_time: game_time wraps to [0, 86400) at midnight,
+	# which made any expiry beyond the current day unreachable and broke the
+	# periodic-save interval across day boundaries.
+	var current_time: float = time_manager.absolute_time()
 	var expired_conditions: Array[String] = []
 	var saved_off_conditions: Array[String] = []
 
@@ -216,7 +219,7 @@ func apply_condition(
 		if stacks <= 0:
 			return null
 
-	var current_time = time_manager.game_time if time_manager else 0.0
+	var current_time: float = time_manager.absolute_time() if time_manager else 0.0
 	var existing = conditions.get(condition_id)
 	
 	# --- Trait-based duration scaling handled internally ---
@@ -246,14 +249,15 @@ func apply_condition(
 	# Create new instance
 	var instance = ConditionInstance.new(template, source, target_limb)
 	instance.stacks = min(stacks, template.max_tier) if template.stackable else 1
-	
-	if final_duration > -2.0:
-		if final_duration > 0:
-			instance.expires_at = current_time + final_duration
-		else:
-			instance.expires_at = -1.0
-			
+
+	# apply() stamps applied_at and the TEMPLATE expiry — it must run BEFORE
+	# the override, which used to sit above it and be silently clobbered
+	# (fog_overlay's condition_duration_override and the condition-copy
+	# effect's duration never took effect on fresh instances).
 	instance.apply(current_time)
+	if final_duration > -2.0:
+		instance.expires_at = current_time + final_duration if final_duration > 0.0 else -1.0
+
 	conditions[condition_id] = instance
 
 	if template.save_stat != "" and template.save_interval > 0.0:
@@ -478,7 +482,9 @@ func to_dict() -> Dictionary:
 	return {"conditions": saved_conditions}
 
 
-## Deserialize for loading
+## Deserialize for loading. ConditionInstance.from_dict restores expires_at
+## byte-for-byte (absolute time) and never calls apply(), so timed conditions
+## keep their true remaining duration across a round-trip.
 func from_dict(data: Dictionary) -> void:
 	clear_all_conditions()
 	var saved_conditions = data.get("conditions", {})
@@ -486,4 +492,37 @@ func from_dict(data: Dictionary) -> void:
 		var instance = ConditionInstance.from_dict(saved_conditions[cond_id], condition_registry)
 		if instance:
 			conditions[cond_id] = instance
+	_regrant_condition_abilities()
 	stats_recalculated.emit()
+
+
+## from_dict rebuilds instances without apply-time side effects, so abilities
+## bestowed by conditions (grants_ability) must be re-granted here — mirroring
+## apply_condition's grant block. Guarded by an inventory scan because
+## add_ability_by_id does not dedup and granted abilities also round-trip
+## through the weapon serializer (restore order: inventory first, then this).
+func _regrant_condition_abilities() -> void:
+	if not character:
+		return
+	var inv = character.get_node_or_null("Inventory")
+	if inv == null or not inv.has_method("add_ability_by_id"):
+		return
+	for cond_id in conditions:
+		var template: Condition = conditions[cond_id].condition
+		if template == null or template.grants_ability == "":
+			continue
+		if _inventory_has_ability(inv, template.grants_ability):
+			continue
+		inv.add_ability_by_id(template.grants_ability)
+
+
+func _inventory_has_ability(inv: Node, ability_id: String) -> bool:
+	var pools: Array = []
+	if "stowed_items" in inv:
+		pools.append_array(inv.stowed_items)
+	if "equipped_weapons" in inv:
+		pools.append_array(inv.equipped_weapons)
+	for it in pools:
+		if it != null and ("ability_id" in it) and it.ability_id == ability_id:
+			return true
+	return false

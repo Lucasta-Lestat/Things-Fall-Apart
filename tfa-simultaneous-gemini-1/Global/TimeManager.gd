@@ -6,6 +6,15 @@ var game_time: float = 0.0  # Time in seconds since game start
 var time_scale: float = 1.0  # How fast time passes (1.0 = real-time, 60.0 = 1 min per second)
 var is_paused: bool = false
 
+# Absolute days since game start; never wraps and never rewinds. Incremented
+# only inside advance_days, which is the single funnel every day change passes
+# through (_process rollover, downtime, jail). Together with the intraday
+# game_time this yields absolute_time(), the monotonic clock that condition
+# durations longer than a day require — game_time alone wraps to [0, 86400)
+# at every midnight (see _process below) and must never be compared against
+# a multi-day deadline.
+var days_elapsed: int = 0
+
 # Date/time components.
 # current_day is the day-of-period: 1-36 in regular months, 1-12 during Yearturn.
 # current_month is 1-10 (Frostiem..Mistumnal); ignored while is_yearturn is true.
@@ -75,8 +84,18 @@ func _process(delta):
 		advance_days(total_days)
 		game_time = game_time - (total_days * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE)
 
+# Seconds since game start on a clock that never wraps. This is the ONLY
+# value safe to store in a condition's expires_at or any other future
+# deadline; game_time is intraday-only.
+func absolute_time() -> float:
+	return float(days_elapsed) * float(HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE) + game_time
+
+func today() -> int:
+	return days_elapsed
+
 func advance_days(days: int) -> void:
 	for i in range(days):
+		days_elapsed += 1
 		current_day += 1
 		if is_yearturn:
 			if current_day > YEARTURN_LENGTH:
