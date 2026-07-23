@@ -817,6 +817,34 @@ one chest inside 2 s produce one crime; depositing into a chest produces none; a
 attributed to the summoner; remote pickup beyond `PICKUP_REACH` is refused; self-defence against an
 already-hostile attacker produces no verdict.
 
+### As built (2026-07-22)
+
+Implemented as specified: ownership fields on `Item`, the four-step spawn resolution chain
+(`settlement: true` authored on `town_square`/`dock_tavern`/`perrow_tavern`), all four leak
+closures, `items_owned_by` (derived scan over world + party inventories + stowed weapons),
+`Global/CrimeManager.gd` (autoload after LawDatabase) with the `preview`/`report` contract, all
+four gates wired, reach gates on `pick_up_item`/`show_chest_inventory`, summon attribution meta in
+`_resolve_summon`, and the AI ally-property refusal. `tests/crime_gate_test.gd`: 21/21 PASS; all
+prior harnesses green. Deviations and notes:
+
+1. **Debounce is keyed `(statute, actor, target)`, not `(actor, victim)`** as the plan worded it —
+   a plain pair key would swallow the murder that lands within 2 s of the assault that preceded
+   it. Escalation must always report; repeated same-statute hits must not. Test-pinned.
+2. **The cast confirmation is cast-again-to-confirm**, not a modal: first severely-illegal cast on
+   a map refuses via the infatuation-veto protocol (GameLog + `cast_failed` + `return false`) with
+   a "cast again if you mean to break the law" line; the second cast proceeds and sets the per-map
+   flag. No new UI, fully headless-testable.
+3. **The harness's first draft tripped over the lore**: it asserted assault charges on
+   `town_square` — where `liziti_custom` has *repealed* assault. The final harness runs the
+   assault ladder under a synthetic common-law map and explicitly pins Perrow's behaviour
+   (punching a shopkeep legal, killing one still murder).
+4. `owner_uid` is carried through spawn extras and serialization but nothing assigns it in
+   shipped data yet — it is the authoring seam it was designed to be.
+5. The remote-pickup and serialize-round-trip cases from the test list are covered structurally
+   (reach gate reads one constant; ownership keys ride dicts the party serializer already
+   duplicates wholesale) rather than by scene-level harness spawns; the in-game map transition
+   is part of the Phase 7 persistence harness where real `Game` serialization runs.
+
 ---
 
 # Phase 5 — The witness pipeline

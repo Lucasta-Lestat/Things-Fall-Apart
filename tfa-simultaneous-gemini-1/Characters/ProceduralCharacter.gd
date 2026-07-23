@@ -5760,6 +5760,9 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 		targeting_system.end_targeting()
 	# Check if any conditions should gain stacks based on this ability's traits
 	ability_manager._check_action_trait_stacking(ability)
+	# Law: the crime report fires on completion, beside the trait-stacking
+	# hook — an interrupted cast is not a crime.
+	CrimeManager.report(self, "cast", CrimeManager.cast_payload(ability))
 	_rig_ik_release("cast")
 	cast_completed.emit(ability, results)
 

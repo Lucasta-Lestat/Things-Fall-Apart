@@ -144,6 +144,10 @@ static func _resolve_summon(
 						spawned.AI_enabled = true
 						if "faction_id" in caster and "faction_id" in spawned:
 							spawned.faction_id = caster.faction_id
+						# Law: crimes a summon commits attribute to its
+						# summoner (CrimeManager.attribute walks this meta)
+						# — otherwise the rats take the blame and despawn.
+						spawned.set_meta("summoned_by", caster)
 						# Render this combatant as a boid swarm if its template opts in.
 						_attach_swarm_visual(spawned)
 			"item":

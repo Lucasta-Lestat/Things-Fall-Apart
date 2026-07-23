@@ -77,6 +77,13 @@ func add_stack(item_data: Dictionary) -> bool:
 				continue
 			var add_now: int = min(stacks, space)
 			items[i]["num_stacks"] = current + add_now
+			# Ownership must survive the merge — without this, stealing into a
+			# pre-seeded matching stack silently launders the goods (the merge
+			# path returns without ever appending item_data).
+			if item_data.has("stolen_from"):
+				items[i]["stolen_from"] = item_data["stolen_from"]
+				if item_data.has("stolen_value"):
+					items[i]["stolen_value"] = item_data["stolen_value"]
 			stacks -= add_now
 		if stacks <= 0:
 			emit_signal("item_added", item_data)

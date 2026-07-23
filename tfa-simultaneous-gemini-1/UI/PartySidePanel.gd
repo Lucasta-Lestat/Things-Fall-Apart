@@ -608,6 +608,8 @@ func _drop_data(at_position: Vector2, data) -> void:
 			transferred = target_char.inventory.add_stack(item_dict)
 		if not transferred:
 			return
+		# Law: the drag-take twin of ChestInventoryWindow's tap-take.
+		CrimeManager.report(target_char, "loot", CrimeManager.loot_payload(chest_item))
 		if chest_item.contents is Array:
 			chest_item.contents.erase(item_dict)
 		SfxManager.play_ui("chest_item_out")
@@ -1007,6 +1009,17 @@ func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 		# Fallback: just drop the item at mouse position
 		game_node.create_item(item.get("id", ""), mouse_pos)
 
+# Ownership keys a dropped item carries back into the world. A stolen item
+# stays the owner's property (owner_faction = stolen_from), so re-taking it
+# is theft again.
+func _drop_extras(item: Dictionary) -> Dictionary:
+	var extras: Dictionary = {}
+	var src: String = str(item.get("stolen_from", ""))
+	if not src.is_empty():
+		extras["owner_faction"] = src
+		extras["stolen_from"] = src
+	return extras
+
 func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
@@ -1019,7 +1032,9 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 	if item.is_empty():
 		return
 
-	game_node.create_item(item.get("id", ""), character.global_position)
+	# Ownership survives the drop: without extras, drop-and-retake launders
+	# a stolen item clean (create_item would rebuild it from canonical data).
+	game_node.create_item(item.get("id", ""), character.global_position, 1, _drop_extras(item))
 
 	if item.has("primary_damage_type"):
 		SfxManager.play("sword-fall", character.global_position)
@@ -1038,7 +1053,7 @@ func _drop_item_amount(character, item_index: int, item_data: Dictionary, amount
 	var item = character.inventory.remove_amount(item_index, amount)
 	if item.is_empty():
 		return
-	var world_item = game_node.create_item(item.get("id", ""), character.global_position)
+	var world_item = game_node.create_item(item.get("id", ""), character.global_position, 1, _drop_extras(item))
 	# create_item's stack_count is overwritten by _apply_item_data, so set the
 	# dropped count after it exists in the world.
 	if world_item != null and amount > 1:

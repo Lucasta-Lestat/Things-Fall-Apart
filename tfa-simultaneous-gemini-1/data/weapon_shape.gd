@@ -74,6 +74,11 @@ signal weapon_unequipped
 
 # Basic Info
 var id: String = ""
+# Law/crime: stamped when the weapon was taken from an owned world item or
+# chest; round-trips through to_data/load_from_data so weapons — the
+# highest-value stealable class — cannot launder themselves via the
+# WeaponShape serialization path.
+var stolen_from: String = ""
 var cost: float = 0.0
 
 # Combat Stats
@@ -490,6 +495,7 @@ static func create_pistol(length: float = 22.0, damage: int = 16, projectile_tex
 # ===== SERIALIZATION =====
 
 func load_from_data(data: Dictionary) -> void:
+	stolen_from = str(data.get("stolen_from", ""))
 	# Type Mapping
 	if data.has("type"):
 		match data["type"].to_lower():
@@ -599,6 +605,7 @@ func load_from_data(data: Dictionary) -> void:
 func to_data() -> Dictionary:
 	return {
 		"id": id,
+		"stolen_from": stolen_from,
 		"name": display_name,
 		"type": WeaponType.keys()[weapon_type].to_lower(),
 		"cost": cost,

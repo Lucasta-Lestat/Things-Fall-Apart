@@ -791,16 +791,12 @@ func find_most_valuable_item_in_sight() -> Node:
 
 	return best_item
 
+# Correct for the first time in Phase 4: reads Item.owner_faction (the old
+# version read Godot's built-in Node.owner — always null for runtime items).
 func is_item_owned_by_ally(item: Node) -> bool:
-	# NOTE: item.owner here is Godot's built-in Node.owner (scene-tree
-	# ownership), which is null for runtime-spawned items — so this returns
-	# false for every world item today. Phase 4 of the law/crime plan replaces
-	# it with a real owner_faction property on Item.
-	if not "owner" in item or item.owner == null:
+	if not ("owner_faction" in item) or item.owner_faction == "":
 		return false
-	if not "faction_id" in item.owner:
-		return false
-	return FactionDatabase.are_friendly(character.faction_id, item.owner.faction_id)
+	return FactionDatabase.are_friendly(character.faction_id, item.owner_faction)
 
 func can_reach_item(item: Node) -> bool:
 	var start_tile = GridManager.world_to_map(character.global_position)
@@ -811,6 +807,15 @@ func can_reach_item(item: Node) -> bool:
 func pickup_item(item: Node):
 	if not is_instance_valid(item):
 		return
+	# Refusal, not report: guards don't loot their own barracks and allies
+	# don't loot each other. (find_most_valuable_item_in_sight also filters,
+	# but seek-goal paths can hand us an item directly.)
+	if is_item_owned_by_ally(item):
+		return
+	# Law: instrumented now so enabling NPC crime later is a JSON edit
+	# (laws.json applies_to). For player-faction summons this already
+	# attributes the theft to the summoner today.
+	CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 
 	GameLog.add_entry(character.Name + " picks up " + item.display_name)
 

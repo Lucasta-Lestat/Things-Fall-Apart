@@ -850,6 +850,21 @@ func _spawn_items(item_list: Array) -> void:
 		if item_def.has("value"):
 			extras["value"] = float(item_def["value"])
 
+		# Ownership resolution chain, first hit wins: per-spawn owner_faction,
+		# map-level default_item_owner, the map's jurisdiction when the map
+		# declares "settlement": true, else unowned. Deliberately NO
+		# "everything on a lawful map is owned" global — that criminalises
+		# picking up a stray apple with no authoring signal.
+		var owner_f: String = str(item_def.get("owner_faction", ""))
+		if owner_f.is_empty():
+			owner_f = str(current_map_data.get("default_item_owner", ""))
+		if owner_f.is_empty() and bool(current_map_data.get("settlement", false)):
+			owner_f = LawDatabase.jurisdiction_for_map(current_map_id)
+		if not owner_f.is_empty():
+			extras["owner_faction"] = owner_f
+		if item_def.has("owner_uid"):
+			extras["owner_uid"] = str(item_def["owner_uid"])
+
 		for j in range(count):
 			create_item(item_id, pos, 1, extras)
 
@@ -930,6 +945,14 @@ func pick_up_item(item: Item) -> bool:
 	if character == null:
 		GameLog.add_entry("No one is free to pick that up.")
 		return false
+	# Reach gate: _resolve_pickup_character returns primary_selected with no
+	# distance check anywhere in the chain — without this the player can
+	# select someone outside the town gate and take an item from inside the
+	# guardhouse, and every witness anchor is wrong. Walk-to-then-take is
+	# already expressible through the action queue.
+	if character.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
+		GameLog.add_entry("%s is too far away to reach that." % character.Name)
+		return false
 	var data: Dictionary = item.to_inventory_data()
 	if data.is_empty():
 		return false
@@ -943,6 +966,9 @@ func pick_up_item(item: Item) -> bool:
 	if ok:
 		if SfxManager and SfxManager.has_method("play"):
 			SfxManager.play("pickup", item.global_position)
+		# Report BEFORE the node dies — the payload reads the item's fields.
+		# A refused pickup (full inventory) is not a theft.
+		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 		item._destroy_item()
 	else:
 		GameLog.add_entry("%s's inventory is full." % character.Name)
@@ -964,6 +990,11 @@ func _resolve_pickup_character():
 
 func show_chest_inventory(item: Item) -> void:
 	if not is_instance_valid(item):
+		return
+	# Same reach gate as pick_up_item — this site previously had zero gates.
+	var opener = _resolve_pickup_character()
+	if opener != null and opener.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
+		GameLog.add_entry("%s is too far away to reach that." % opener.Name)
 		return
 	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
 	var w = ChestWindow.instantiate()
@@ -1061,6 +1092,12 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 		item_instance.controlling_faction = String(extras["controlling_faction"])
 	if extras.has("value"):
 		item_instance.loot_value = float(extras["value"])
+	if extras.has("owner_faction"):
+		item_instance.owner_faction = String(extras["owner_faction"])
+	if extras.has("owner_uid"):
+		item_instance.owner_uid = String(extras["owner_uid"])
+	if extras.has("stolen_from"):
+		item_instance.stolen_from = String(extras["stolen_from"])
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -1069,6 +1106,31 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 	item_instance.destroyed.connect(_on_item_destroyed)
 
 	return item_instance
+
+# D6: everything a faction owns, derived by scan — never indexed. The three
+# sites mutating items_in_scene already disagree (create_item appends,
+# _on_item_destroyed erases via signal, ai.pickup_item erases directly
+# without the signal), so an index would leak stale entries on day one.
+# Cost is irrelevant at shipped item counts. Returns a mixed Array: world
+# Item nodes (owner_faction match) + party inventory entry Dictionaries and
+# stowed WeaponShapes (stolen_from match — still theirs by right).
+func items_owned_by(faction_id: String) -> Array:
+	var out: Array = []
+	if faction_id.is_empty():
+		return out
+	for it in items_in_scene:
+		if is_instance_valid(it) and ("owner_faction" in it) and it.owner_faction == faction_id:
+			out.append(it)
+	for c in party_chars:
+		if not is_instance_valid(c) or not ("inventory" in c) or c.inventory == null:
+			continue
+		for entry in c.inventory.items:
+			if entry is Dictionary and str(entry.get("stolen_from", "")) == faction_id:
+				out.append(entry)
+		for w in c.inventory.stowed_items:
+			if w != null and ("stolen_from" in w) and w.stolen_from == faction_id:
+				out.append(w)
+	return out
 
 func _on_item_destroyed(item: Item):
 	# Remove from tracking
@@ -1249,6 +1311,13 @@ func _spawn_radar_ping(world_pos: Vector2) -> void:
 func _on_character_damaged(attacker, location: Vector2, _total_damage: float, victim: ProceduralCharacter) -> void:
 	if not is_instance_valid(victim):
 		return
+	# Law: assault/murder gate on damage APPLICATION, not the swing — a miss
+	# is not assault. Lethality derives from health here: take_damage clamps
+	# current_health BEFORE emitting damaged_by, so a killing blow already
+	# reads victim.is_alive() == false (murder). Debounce + self-defence live
+	# in CrimeManager/LawDatabase, not here.
+	if attacker != null and is_instance_valid(attacker) and attacker != victim:
+		CrimeManager.report(attacker, "attack", CrimeManager.attack_payload(attacker, victim))
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
 	# this function only handles witnesses.
 	for c in characters_in_scene:

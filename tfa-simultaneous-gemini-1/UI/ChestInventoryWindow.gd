@@ -221,6 +221,10 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 		transferred = selected.inventory.add_stack(item_dict)
 	if not transferred:
 		return
+	# Law: a successful take from an owned container is a burglary. The
+	# deposit side (_drop_data) is deliberately NOT gated — giving items
+	# away is not a crime.
+	CrimeManager.report(selected, "loot", CrimeManager.loot_payload(chest_item))
 	if chest_item.contents is Array:
 		chest_item.contents.erase(item_dict)
 	SfxManager.play_ui("chest_item_out")

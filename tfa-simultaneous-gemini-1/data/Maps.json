@@ -227,6 +227,7 @@
 			"description": "The bustling heart of the town, where merchants hawk their wares and guards keep an uneasy peace.",
 			"fog_ids": [],
 			"id": "town_square",
+			"settlement": true,
 			"images": {
 				"map": "res://Maps/town_square_clean.png",
 				"mask": "res://Maps/town_square_mask.png",
@@ -607,6 +608,7 @@
 			"description": "A boisterous tavern in the center of Perrow, smelling of pipe smoke and spilled ale.",
 			"fog_ids": [],
 			"id": "perrow_tavern",
+			"settlement": true,
 			"images": {
 				"map": "res://Maps/perrow_tavern_clean.png",
 				"mask": "res://Maps/perrow_tavern_mask.png",
@@ -680,6 +682,7 @@
 			"description": "A salt-stained tavern down by the docks, where sailors and smugglers nurse cheap drinks.",
 			"fog_ids": [],
 			"id": "dock_tavern",
+			"settlement": true,
 			"images": {
 				"map": "res://Maps/dock_tavern_clean.png",
 				"mask": "res://Maps/dock_tavern_mask.png",

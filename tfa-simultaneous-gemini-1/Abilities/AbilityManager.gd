@@ -83,6 +83,21 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, "Cannot harm charm source")
 		return false
 
+	# Law: a severely illegal cast asks for one cast-again confirmation per
+	# map — legality is jurisdiction-dependent and invisible, and committing
+	# a capital crime by misclick is worse than a prompt. Same refusal
+	# protocol as the infatuation veto above. The crime report itself fires
+	# on COMPLETION (ProceduralCharacter._on_ability_cast_completed), so an
+	# interrupted cast is never a crime.
+	var law_confirm: Dictionary = CrimeManager.cast_needs_confirmation(character, ability)
+	if not law_confirm.is_empty():
+		var verdict: Dictionary = law_confirm.get("verdict", {})
+		GameLog.add_entry("%s here is %s — a crime under the law of %s (severity %d). Cast again if you mean to break the law." % [
+			ability.display_name, str(verdict.get("display_name", "illegal")),
+			str(verdict.get("law_faction", "?")), int(verdict.get("severity", 0))])
+		cast_failed.emit(ability, "Illegal here: " + str(verdict.get("display_name", "")))
+		return false
+
 	if not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false

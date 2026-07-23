@@ -59,6 +59,13 @@ var options: Array = []
 var controlling_faction: String = ""
 var loot_value: float = -1.0  # sentinel: <0 means "use cost"
 
+# --- Ownership (law/crime system, docs/law_crime_stealth_plan.md Phase 4) ---
+# NOT named `owner` — Node.owner already exists, and ai.gd's
+# is_item_owned_by_ally was a live bug caused by exactly that shadowing.
+var owner_faction: String = ""   # "" == unowned, free to take
+var owner_uid: String = ""       # optional specific NPC; the seam for per-NPC grudges
+var stolen_from: String = ""     # stamped on take; drives confiscation and fencing
+
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -307,6 +314,12 @@ func to_inventory_data() -> Dictionary:
 	var dict: Dictionary = data.duplicate(true)
 	if is_stackable:
 		dict["num_stacks"] = stack_count
+	# Ownership rides into the inventory. Free persistence: the party save
+	# duplicates inventory dicts wholesale, so these keys round-trip with
+	# zero serializer changes.
+	if owner_faction != "":
+		dict["stolen_from"] = owner_faction
+		dict["stolen_value"] = cost
 	return dict
 
 func _default_noise_per_step() -> float:
