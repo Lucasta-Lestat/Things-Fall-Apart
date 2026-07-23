@@ -198,7 +198,27 @@ WEATHER_RECIPES: dict[str, dict] = {
     },
 }
 
-SFX_RECIPES: dict[str, dict] = {**IMPACT_RECIPES, **CAST_RECIPES, **WEATHER_RECIPES}
+# ----------------------------------------------------------------------------
+# Section D: Witness SFX (law/crime Phase 5) — voice clips, so no "no voice"
+# tail. witness_huh plays when an outcry fuse lights; witness_scream at fire.
+# Pitch variance at play time (0.9-1.15) covers take-to-take variety.
+# ----------------------------------------------------------------------------
+WITNESS_RECIPES: dict[str, dict] = {
+    "witness_huh": {
+        "prompt": "short startled questioning grunt, a surprised medieval villager "
+                  "who just noticed something wrong, single male voice saying huh, "
+                  "close mic, dry recording, no music",
+        "duration": 1.0,
+    },
+    "witness_scream": {
+        "prompt": "piercing scream of alarm, a terrified medieval villager crying "
+                  "out to summon the town guard, urgent panicked shout, single "
+                  "voice, close mic, dry recording, no music",
+        "duration": 2.0,
+    },
+}
+
+SFX_RECIPES: dict[str, dict] = {**IMPACT_RECIPES, **CAST_RECIPES, **WEATHER_RECIPES, **WITNESS_RECIPES}
 
 
 def generate(api_key: str, prompt: str, duration: float) -> bytes:

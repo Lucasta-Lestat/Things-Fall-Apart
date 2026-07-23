@@ -42,7 +42,10 @@ class StubAI:
 	extends Node
 	var heard_count: int = 0
 	var last_loudness: float = 0.0
-	func on_sound_heard(_world_pos: Vector2, loudness: float, _source = null) -> void:
+	# Mirrors ai.gd's signature: Phase 5 added channel + payload (the alarm
+	# pipeline); HearingManager passes all five.
+	func on_sound_heard(_world_pos: Vector2, loudness: float, _source = null,
+			_channel: String = "ambient", _payload: Dictionary = {}) -> void:
 		heard_count += 1
 		last_loudness = loudness
 

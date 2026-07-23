@@ -1085,6 +1085,32 @@ alarm fires, `identified == false`; crime on a deck witnessed from ground level 
 guard victim of a pickpocket → consequence applied with no `HearingManager` round trip; assault
 victim with no third party → outcry pending on the victim.
 
+### As built (2026-07-22)
+
+Implemented as specified — fan-out with the four loop corrections, outcry fuse on the witness AI
+node (ticked before the unconscious early-out so a KO'd witness's fuse still cancels rather than
+freezing and screaming on wake), alarm channel + multi-wall occlusion + reworked faction gate in
+HearingManager (with a conservative unattenuated-bound distance early-out replacing the plan's
+plain swap — `max_dist` depends on the raycast's result, so a naive reorder was impossible),
+identification + equipment-block disguise, `witness_huh`/`witness_scream` generated via the
+ElevenLabs sound-generation endpoint (recipes added to `tools/generate_ability_sfx.py`, run with
+`--only`). The canonical LOS wrapper now lives at `CrimeManager.has_visual_los` (elevation-aware
++ blinded-aware); `Game._has_visual_los` delegates and `_on_character_damaged`'s bystander wake
+shares `witnesses_of`. `tests/crime_witness_test.gd`: 33/33 PASS. Notes:
+
+1. **The victim's forced identification wins over disguise** ("contact beats costume") — D7's
+   disguise tier applies to observers, not to someone being touched.
+2. **`ai.on_sound_heard`'s signature grew** (`channel`, `payload`) — any stub AI in a harness must
+   mirror it (the Silence workstream's `silence_zone_test` stub needed the update; 28/28 after).
+3. **The silence integration is proven end-to-end for free**: the alarm emit rides `_loudness_at`,
+   which is exactly the choke point SilenceZone suppresses — `silence_zone_test` passing against
+   the new emit path is the "witness screams into dead air" contract.
+4. `sound_emitted`'s "first subscriber" nicety was skipped — nothing needed it; the channel
+   parameter reaches listeners through `on_sound_heard` directly.
+5. Harness lessons: `AI_enabled` defaults false, so fuses tick only via direct `_tick_outcry`
+   calls — fully deterministic, no wall-clock waits; and an un-awaited async case function
+   interleaves its cleanup with the next case (the cover-case ghost failure).
+
 ---
 
 # Phase 6 — Consequence, hostility, and legibility
@@ -1390,6 +1416,25 @@ surrender to `lawful` clears the override and zeroes hostiles' targets; surrende
 changes nothing.
 
 ---
+
+# Future phase — Sneaking, pickpocketing, and stealth mode (user direction, 2026-07-22; unscheduled)
+
+A dedicated sneaking state, building on the toggle that already ships: `Game.stealth_mode`
+(`Game.gd:40`, toggled at `:1647`) currently does exactly two things — shows every NPC's vision
+cone (`:1234 _toggle_npc_los_cones`) and lets AT_EASE NPCs wake on seeing the party
+(`ai.gd:167 _check_stealth_wake`). So "see non-party vision cones" is live today; what does not
+exist is sneaking as a *detection state*. The future phase:
+
+- **Sneaking as a movement mode**: reduced footstep loudness (multiply into the
+  `ProceduralCharacter.gd` footstep formula beside `walking_noise`), reduced speed, and a
+  detection interaction with NPC sight (harder to spot at range / outside the cone edge).
+- **Pickpocketing becomes the DEFAULT interaction with NPCs while sneaking** — left/right-click
+  on an NPC in stealth mode opens a pickpocket attempt instead of Talk/Trade. Mechanically a
+  `take` crime with the victim as owner (`owner_uid` finally earns its keep), an opposed roll
+  (Stealth-flavoured stat vs the victim's perception), and on failure the victim IS the witness
+  — the existing outcry pipeline handles the rest with zero new consequence code.
+- The `Stealth` item/race traits (authored, currently inert) become the sneak-detection
+  modifiers.
 
 # Future phase — AI fight-picking and morale (user direction, 2026-07-22; unscheduled)
 

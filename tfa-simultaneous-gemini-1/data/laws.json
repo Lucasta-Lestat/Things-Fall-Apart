@@ -47,6 +47,7 @@
 		"outcry_delay_max": 4.0,
 		"outcry_jitter": 0.15,
 		"scream_loudness": 1.35,
+		"alarm_range_mult": 2.5,
 		"witness_alert": 70.0,
 		"unidentified_alert": 45.0,
 		"guard_alarm_alert": 74.0,

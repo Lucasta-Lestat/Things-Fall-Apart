@@ -17,6 +17,9 @@
 extends Node
 
 signal crime_committed(actor: Node, verdict: Dictionary, payload: Dictionary)
+## An enforcer actually HEARD an alarm (or witnessed as the law themselves).
+## Phase 6 hangs standing/hostility/ledger off this; Phase 5 dedups and logs.
+signal crime_reported(enforcer: Node, payload: Dictionary)
 
 ## How close a character must be to take a world item or open a container.
 ## Also enforced by Game.pick_up_item / show_chest_inventory (1.5 tiles).
@@ -32,6 +35,10 @@ var _recent_reports: Dictionary = {}  # "statute|actor_iid|target_iid" -> absolu
 # stops the asking for the rest of the map visit.
 var _pending_cast_confirms: Dictionary = {}  # "map_id|ability_id" -> true
 var _confirmed_cast_maps: Dictionary = {}    # map_id -> true
+
+# Witness pipeline (Phase 5)
+var _crime_counter: int = 0
+var _recorded_crimes: Dictionary = {}  # crime_id -> true (one report per crime)
 
 # ---------------------------------------------------------------------------
 # The two-function contract
@@ -79,6 +86,7 @@ func report(actor, verb: String, payload: Dictionary) -> void:
 		actor_name, str(verdict.get("display_name", "?")), int(verdict.get("severity", 0)),
 		str(verdict.get("law_faction", "?"))])
 	crime_committed.emit(effective, verdict, payload)
+	_fan_out_witnesses(effective, actor, verdict, payload)
 
 # ---------------------------------------------------------------------------
 # Attribution and jurisdiction
@@ -125,6 +133,9 @@ func attack_payload(actor, victim) -> Dictionary:
 	var lethal: bool = true
 	if victim.has_method("is_alive"):
 		lethal = not victim.is_alive()
+	var crime_elev: float = 0.0
+	if victim.has_method("get_elevation"):
+		crime_elev = float(victim.get_elevation())
 	return {
 		"victim_faction": victim_faction,
 		# Self-defence carve-out: no charge for fighting someone already
@@ -132,6 +143,8 @@ func attack_payload(actor, victim) -> Dictionary:
 		"victim_hostile_to_actor": FactionDatabase.are_hostile(victim_faction, actor_faction),
 		"lethal": lethal,
 		"victim": victim,
+		"crime_pos": victim.global_position if victim is Node2D else Vector2.INF,
+		"crime_elev": crime_elev,
 		"debounce_target": victim,
 	}
 
@@ -139,6 +152,7 @@ func take_payload(item) -> Dictionary:
 	return {
 		"owner_faction": str(item.owner_faction) if ("owner_faction" in item) else "",
 		"item_cost": float(item.cost) if ("cost" in item) else 0.0,
+		"crime_pos": item.global_position if item is Node2D else Vector2.INF,
 		"debounce_target": item,
 	}
 
@@ -172,3 +186,202 @@ func cast_needs_confirmation(actor, ability) -> Dictionary:
 		return {}
 	_pending_cast_confirms[key] = true
 	return {"verdict": verdict}
+
+# ---------------------------------------------------------------------------
+# Witness pipeline (Phase 5) — the centerpiece
+# ---------------------------------------------------------------------------
+
+## THE witness-LOS helper — the canonical wrapper the audit found split into
+## two disagreeing copies (Game._has_visual_los had no target_elev; ai.gd had
+## no blinded check). Game delegates here now; both fixes live in one place.
+func has_visual_los(from_char, target_pos: Vector2, target_elev: float = 0.0) -> bool:
+	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
+		return false
+	var cm = from_char.get_node_or_null("ConditionManager")
+	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+		return false
+	var to_target: Vector2 = target_pos - from_char.global_position
+	var dist: float = to_target.length()
+	if dist > 1440.0 * from_char.sight:
+		return false
+	var facing_dir: Vector2 = Vector2.UP.rotated(from_char.rotation)
+	var angle: float = facing_dir.angle_to(to_target.normalized())
+	if absf(angle) > deg_to_rad(from_char.fov_angle_degrees * 0.5):
+		return false
+	var tree := get_tree()
+	if tree == null or tree.root == null or tree.root.world_2d == null:
+		return true
+	var viewer_elev: float = 0.0
+	if from_char.has_method("get_elevation"):
+		viewer_elev = float(from_char.get_elevation())
+	return GridManager.sight_line_clear(tree.root.world_2d.direct_space_state,
+		from_char.global_position, target_pos, viewer_elev, target_elev)
+
+## Everyone who saw the crime POSITION (they saw *something happen*), with a
+## second LOS test against the ACTOR (identification). Two tests, not one —
+## a single witness-to-actor test makes every ranged/AoE crime free: stand
+## behind cover, creepy_beam a merchant, and "no witness exists".
+## Skips: the actor, party members (player-controlled), the dead.
+func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor) -> Array:
+	var out: Array = []
+	var game = get_tree().current_scene
+	if game == null or not ("characters_in_scene" in game):
+		return out
+	var party: Array = game.party_chars if ("party_chars" in game) else []
+	var actor_pos: Vector2 = Vector2.INF
+	var actor_elev: float = 0.0
+	if physical_actor is Node2D and is_instance_valid(physical_actor):
+		actor_pos = physical_actor.global_position
+		if physical_actor.has_method("get_elevation"):
+			actor_elev = float(physical_actor.get_elevation())
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c) or c == physical_actor:
+			continue
+		if c in party:
+			continue
+		if not c.has_method("is_alive") or not c.is_alive():
+			continue
+		if c.get_node_or_null("AI") == null:
+			continue
+		if not has_visual_los(c, crime_pos, crime_elev):
+			continue
+		var sees_actor: bool = false
+		if actor_pos != Vector2.INF:
+			sees_actor = has_visual_los(c, actor_pos, actor_elev)
+		out.append({"witness": c, "sees_actor": sees_actor})
+	return out
+
+func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary) -> void:
+	var crime_pos: Vector2 = payload.get("crime_pos", Vector2.INF)
+	if crime_pos == Vector2.INF:
+		if physical_actor is Node2D and is_instance_valid(physical_actor):
+			crime_pos = physical_actor.global_position
+		else:
+			return
+	var crime_elev: float = float(payload.get("crime_elev", 0.0))
+	_crime_counter += 1
+	var crime_id: int = _crime_counter
+	var disguised: bool = is_disguised(physical_actor)
+	var cfg: Dictionary = LawDatabase.witness_cfg()
+	var victim = payload.get("victim")
+	var victim_covered: bool = false
+	for entry in witnesses_of(crime_pos, crime_elev, physical_actor):
+		var witness = entry["witness"]
+		var is_victim: bool = witness == victim
+		# D7: LOS to the actor means identified UNLESS disguised. The victim
+		# is forced identified — they were touched; contact beats costume.
+		var identified: bool = (bool(entry["sees_actor"]) and not disguised) or is_victim
+		if is_victim:
+			victim_covered = true
+		_start_outcry(witness, crime_id, identified, is_victim, crime_pos, effective, verdict, cfg)
+	# The victim is a witness even with no LOS at fan-out time (face-down,
+	# blinded, hit from behind) — the one person guaranteed to know about an
+	# assault must be able to report it.
+	if not victim_covered and victim is Object and is_instance_valid(victim) \
+			and victim != physical_actor and victim.has_method("is_alive") and victim.is_alive() \
+			and victim.get_node_or_null("AI") != null:
+		_start_outcry(victim, crime_id, true, true, crime_pos, effective, verdict, cfg)
+
+func _start_outcry(witness, crime_id: int, identified: bool, is_victim: bool,
+		crime_pos: Vector2, effective: Node, verdict: Dictionary, cfg: Dictionary) -> void:
+	var law_faction: String = str(verdict.get("law_faction", ""))
+	var payload: Dictionary = {
+		"crime_id": crime_id,
+		"identified": identified,
+		# Anonymity is real: an unidentified outcry carries no perp at all.
+		"perp": effective if identified else null,
+		"crime_pos": crime_pos,
+		"law_faction": law_faction,
+		"statute": str(verdict.get("statute", "")),
+		"display_name": str(verdict.get("display_name", "")),
+		"severity": int(verdict.get("severity", 0)),
+		"delay": _outcry_delay(witness, is_victim, crime_pos, law_faction, cfg),
+		"witness_alert": float(cfg.get("witness_alert", 70.0)) if identified else float(cfg.get("unidentified_alert", 45.0)),
+	}
+	var ai_node = witness.get_node_or_null("AI")
+	if ai_node != null and ai_node.has_method("begin_outcry"):
+		ai_node.begin_outcry(payload)
+
+## Delay modifiers are additive, clamped, jittered — a crowd screams raggedly
+## rather than in chorus. Distance does not grant anonymity (D7); it grants
+## DOUBT, measured in seconds.
+func _outcry_delay(witness, is_victim: bool, crime_pos: Vector2, law_faction: String, cfg: Dictionary) -> float:
+	var delay: float = float(cfg.get("outcry_delay_base", 2.2))
+	var witness_faction: String = str(witness.faction_id) if ("faction_id" in witness) else ""
+	if LawDatabase.enforces(witness_faction, law_faction) or _has_condition(witness, "courageous"):
+		delay += float(cfg.get("outcry_delay_guard", -1.1))
+	if is_victim:
+		delay += float(cfg.get("outcry_delay_victim", -1.3))
+	if _has_condition(witness, "frightened") or _has_condition(witness, "panicked"):
+		delay += float(cfg.get("outcry_delay_afraid", 0.8))
+	if witness is Node2D and witness.global_position.distance_to(crime_pos) > float(cfg.get("outcry_far_distance", 512.0)):
+		delay += float(cfg.get("outcry_delay_far", 0.6))
+	delay = clampf(delay, float(cfg.get("outcry_delay_min", 0.8)), float(cfg.get("outcry_delay_max", 4.0)))
+	var jitter: float = float(cfg.get("outcry_jitter", 0.15))
+	return delay + randf_range(-jitter, jitter)
+
+## The witness's fuse reached zero and they can still cry out: scream. The
+## alarm rides the NORMAL hearing pipeline — walls damp it, SilenceZones
+## smother it — that is the counterplay contract.
+func fire_outcry(witness, payload: Dictionary) -> void:
+	if not (witness is Node2D) or not is_instance_valid(witness):
+		return
+	var pos: Vector2 = witness.global_position
+	SfxManager.play("witness_scream", pos, Vector2(0.9, 1.15))
+	var loudness: float = float(LawDatabase.witness_cfg().get("scream_loudness", 1.35))
+	HearingManager.emit(pos, loudness, witness, "alarm", payload)
+	# The sole witness may BE the law: HearingManager skips the emitter, so a
+	# lone guard's own sighting must be delivered directly — same delay, same
+	# kill-window, no round trip.
+	var law_faction: String = str(payload.get("law_faction", ""))
+	if law_faction != "" and ("faction_id" in witness) \
+			and LawDatabase.enforces(str(witness.faction_id), law_faction):
+		on_alarm_heard(witness, payload)
+
+## An enforcer has the report. One record per crime_id no matter how many
+## enforcers hear the scream. Phase 6 subscribes crime_reported for standing,
+## hostile_override, ledger, and manhunt_target.
+func on_alarm_heard(enforcer, payload: Dictionary) -> void:
+	var crime_id: int = int(payload.get("crime_id", -1))
+	if crime_id >= 0 and bool(_recorded_crimes.get(crime_id, false)):
+		return
+	_recorded_crimes[crime_id] = true
+	var who: String = "person or persons unknown"
+	var perp = payload.get("perp")
+	if bool(payload.get("identified", false)) and perp is Object and is_instance_valid(perp) and ("Name" in perp):
+		who = str(perp.Name)
+	GameLog.add_entry("The alarm is raised: %s — %s stands accused." % [
+		str(payload.get("display_name", "a crime")), who])
+	crime_reported.emit(enforcer, payload)
+
+## Binary, per D7: strength >= 3 summed over equipped disguise blocks, head
+## slot required. Pure read of equipment state via the item_data meta already
+## stamped at equip time — no lifecycle, nothing to desync or serialize.
+const _EQUIP_SLOTS: Array = ["head_equipment", "torso_equipment", "back_equipment", "legs_equipment", "feet_equipment"]
+
+func is_disguised(actor) -> bool:
+	if actor == null or not (actor is Object) or not is_instance_valid(actor):
+		return false
+	var total: int = 0
+	var head_covered: bool = false
+	for slot_name in _EQUIP_SLOTS:
+		if not (slot_name in actor):
+			continue
+		var equip = actor.get(slot_name)
+		if equip == null or not (equip is Object) or not equip.has_meta("item_data"):
+			continue
+		var item_data: Dictionary = equip.get_meta("item_data")
+		var disguise: Dictionary = item_data.get("disguise", {})
+		if disguise.is_empty():
+			continue
+		total += int(disguise.get("strength", 0))
+		if String(slot_name) == "head_equipment":
+			head_covered = true
+	return head_covered and total >= 3
+
+func outcry_cancel_conditions() -> Array:
+	return LawDatabase.witness_cfg().get("cancel_on_conditions", ["unconscious", "silenced", "panicked"])
+
+func _has_condition(who, cond_id: String) -> bool:
+	var cm = who.get_node_or_null("ConditionManager") if who is Node else null
+	return cm != null and cm.has_condition(cond_id)

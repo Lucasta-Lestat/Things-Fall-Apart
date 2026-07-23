@@ -126,6 +126,23 @@ var nav_path_index: int = 0
 signal state_changed(old_state: AIState, new_state: AIState)
 signal target_acquired(target: ProceduralCharacter)
 signal target_lost()
+signal outcry_state_changed(active: bool, frac: float)
+
+# ===== OUTCRY (witness pipeline, docs/law_crime_stealth_plan.md Phase 5) =====
+# The fuse lives ON THE WITNESS, which is the whole design: there is no
+# cancellation code because there is nothing centralised to cancel — kill the
+# witness and the fire-time guard rejects, queue_free them and the timer
+# never ticks, knock them out or silence them and _can_still_cry_out catches
+# it. The tick is frame-driven inside process_ai, so PauseManager freezes the
+# fuse with everything else: unlimited thinking time, ~2.2 s of execution
+# time. Do not "fix" the fuse to keep ticking under pause.
+var pending_outcry: Dictionary = {}   # {crime_id, perp, crime_pos, identified, law_faction, delay, ...}
+var _outcry_timer: float = -1.0
+var _outcry_total: float = 0.0
+# Set by Phase 6 when an identified crime is recorded: the perp this AI
+# remembers past alertness decay. Declared here so Phase 5 payloads have a
+# landing site.
+var manhunt_target: ProceduralCharacter = null
 
 func _ready():
 	character = get_parent()
@@ -203,6 +220,10 @@ func process_ai(delta: float) -> void:
 	state_timer += delta
 	time_since_last_stimulus += delta
 	ally_share_timer -= delta
+	# Outcry fuse ticks BEFORE the unconscious early-out on purpose: a
+	# knocked-out witness's fuse must still reach zero so the fire-time
+	# guard cancels it — a frozen fuse would scream when they wake up.
+	_tick_outcry(delta)
 
 	# Alertness decay + ally sharing
 	_update_alertness(delta)
@@ -302,6 +323,12 @@ func get_facing_vector() -> Vector2:
 	return Vector2.UP.rotated(character.rotation)
 
 func is_in_line_of_sight(target_position: Vector2, target_elev: float = 0.0) -> bool:
+	# Blinded/unconscious characters see nothing — the party-side wrapper
+	# (Game._has_visual_los) always checked this; now both wrappers agree.
+	var cm_sight = character.get_node_or_null("ConditionManager")
+	if cm_sight and (cm_sight.has_condition("blinded") or cm_sight.has_condition("unconscious")):
+		return false
+
 	var to_target = target_position - character.global_position
 	var distance = to_target.length()
 
@@ -952,8 +979,22 @@ func wake_from_at_ease(target_value: float = WAKE_FROM_AT_EASE_VALUE, location: 
 # to. Sound never confirms enemy identity — it caps below HOSTILE. If we are
 # already HOSTILE with a known target, sounds also update where we expect
 # that enemy to be.
-func on_sound_heard(world_pos: Vector2, loudness: float, _source = null) -> void:
+func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
+		channel: String = "ambient", payload: Dictionary = {}) -> void:
 	if current_state == AIState.DEAD:
+		return
+
+	# Alarm channel: a scream for the guard. Handled BEFORE the AT_EASE
+	# filter — a civilian hearing a murder scream is not filing it away as
+	# city ambience. Arousal uses the normal sound math (1.35 scream × 55
+	# gain = 74.25 → SEARCHING clear; ×0.45 per wall → SUSPICIOUS / nothing),
+	# so walls degrade the town's response exactly like any other sound.
+	if channel == "alarm":
+		wake_from_at_ease(minf(loudness * ALERTNESS_SOUND_GAIN, ALERTNESS_SOUND_CAP), world_pos)
+		# Enforcers act on the report; bystanders just startle.
+		var law_faction: String = str(payload.get("law_faction", ""))
+		if law_faction != "" and LawDatabase.enforces(character.faction_id, law_faction):
+			CrimeManager.on_alarm_heard(character, payload)
 		return
 
 	# AT_EASE civilians ignore ambient noise entirely. Only an unusually loud
@@ -980,6 +1021,61 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null) -> void
 	var new_value: float = min(alertness_value + gain, ALERTNESS_SOUND_CAP)
 	_set_alertness_value(max(alertness_value, new_value))
 
+
+# ===== OUTCRY =====
+
+## Called by CrimeManager's witness fan-out. The payload carries everything
+## the eventual alarm needs (crime_id, identified, law_faction, delay, ...);
+## this node only owns the fuse.
+func begin_outcry(payload: Dictionary) -> void:
+	if current_state == AIState.DEAD or not character.is_alive():
+		return
+	if not _can_still_cry_out():
+		return
+	if _outcry_timer > 0.0:
+		# One fuse at a time. An identified sighting upgrades a pending
+		# unidentified one; otherwise the first crime keeps the fuse.
+		if bool(payload.get("identified", false)) and not bool(pending_outcry.get("identified", false)):
+			pending_outcry = payload
+		return
+	pending_outcry = payload
+	_outcry_total = maxf(float(payload.get("delay", 2.2)), 0.05)
+	_outcry_timer = _outcry_total
+	# The audible tell that a fuse just lit (pairs with the alertness bump).
+	SfxManager.play("witness_huh", character.global_position, Vector2(0.9, 1.1))
+	wake_from_at_ease(float(payload.get("witness_alert", 70.0)),
+		payload.get("crime_pos", character.global_position))
+	outcry_state_changed.emit(true, 0.0)
+
+## Guard the FIRE, not the tick site: nothing sets AI_enabled = false on
+## death and the DEAD match arm sits after the timer block, so without this
+## a corpse would scream.
+func _tick_outcry(delta: float) -> void:
+	if _outcry_timer <= 0.0:
+		return
+	_outcry_timer -= delta
+	var frac: float = 1.0 - (_outcry_timer / maxf(_outcry_total, 0.001))
+	outcry_state_changed.emit(true, clampf(frac, 0.0, 1.0))
+	if _outcry_timer > 0.0:
+		return
+	_outcry_timer = -1.0
+	if not _can_still_cry_out():
+		pending_outcry = {}
+		outcry_state_changed.emit(false, 0.0)
+		return
+	CrimeManager.fire_outcry(character, pending_outcry)
+	pending_outcry = {}
+	outcry_state_changed.emit(false, 0.0)
+
+func _can_still_cry_out() -> bool:
+	if current_state == AIState.DEAD or not character.is_alive():
+		return false
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm != null:
+		for cond_id in CrimeManager.outcry_cancel_conditions():
+			if cm.has_condition(str(cond_id)):
+				return false
+	return true
 
 func _share_alertness_with_allies() -> void:
 	for other_char in game.characters_in_scene:

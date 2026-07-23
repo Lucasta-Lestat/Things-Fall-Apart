@@ -1315,26 +1315,23 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 	# is not assault. Lethality derives from health here: take_damage clamps
 	# current_health BEFORE emitting damaged_by, so a killing blow already
 	# reads victim.is_alive() == false (murder). Debounce + self-defence live
-	# in CrimeManager/LawDatabase, not here.
+	# in CrimeManager/LawDatabase, not here. If the attack IS a crime, the
+	# witness fan-out inside report() starts outcry fuses on top of the
+	# generic wake below.
 	if attacker != null and is_instance_valid(attacker) and attacker != victim:
 		CrimeManager.report(attacker, "attack", CrimeManager.attack_payload(attacker, victim))
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
-	# this function only handles witnesses.
-	for c in characters_in_scene:
-		if c == victim or c == attacker:
+	# this loop only wakes bystanders (legal fights startle people too).
+	# Enumeration is shared with the crime pipeline: CrimeManager.witnesses_of
+	# already skips the actor, party members, and the dead, and its LOS is
+	# elevation-aware (a rooftop attack is visible from the street now).
+	var victim_elev: float = victim.get_elevation() if victim.has_method("get_elevation") else 0.0
+	for entry in CrimeManager.witnesses_of(victim.global_position, victim_elev, attacker):
+		var witness = entry["witness"]
+		if witness == victim:
 			continue
-		if not is_instance_valid(c) or not c.has_method("is_alive") or not c.is_alive():
-			continue
-		# Skip party members — they're player-controlled, not AI-driven. Bumping
-		# their alertness puts a "?" over their head every time the player swings
-		# a sword, which is just noise.
-		if c in party_chars:
-			continue
-		var ai_node = c.get_node_or_null("AI")
+		var ai_node = witness.get_node_or_null("AI")
 		if not ai_node or not ai_node.has_method("wake_from_at_ease"):
-			continue
-		# LOS on the victim required — must literally see the attack.
-		if not _has_visual_los(c, victim.global_position):
 			continue
 		# 65 = SEARCHING threshold (60) + a bit; witnesses move out
 		# immediately, but the source identity still has to be confirmed via
@@ -1342,24 +1339,11 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		ai_node.wake_from_at_ease(65.0, location)
 
 
-# Shared LOS check helper: position visible to `from_char` given their FOV,
-# sight range, and any wall occlusion. Mirrors the per-ally checks already
-# inlined in `_update_npc_los_visibility`.
-func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2) -> bool:
-	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
-		return false
-	var cm = from_char.get_node_or_null("ConditionManager")
-	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
-		return false
-	var to_target: Vector2 = target_pos - from_char.global_position
-	var dist: float = to_target.length()
-	if dist > 1440.0 * from_char.sight:
-		return false
-	var facing_dir: Vector2 = Vector2.UP.rotated(from_char.rotation)
-	var angle: float = facing_dir.angle_to(to_target.normalized())
-	if abs(angle) > deg_to_rad(from_char.fov_angle_degrees * 0.5):
-		return false
-	return _sight_line_clear(from_char.global_position, target_pos, from_char.get_elevation())
+# Shared LOS check helper — delegates to the canonical witness-LOS wrapper on
+# CrimeManager (elevation-aware, blinded/unconscious-aware). Kept for the
+# internal call sites that predate it.
+func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2, target_elev: float = 0.0) -> bool:
+	return CrimeManager.has_visual_los(from_char, target_pos, target_elev)
 
 
 # Non-linear pulse curve. t in [0, 1] where 0 = fresh pulse, 1 = expired.

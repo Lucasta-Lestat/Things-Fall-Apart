@@ -87,7 +87,14 @@ func sound_gain_at(world_pos: Vector2) -> float:
 	return sound_gain_between(world_pos, world_pos)
 
 
-func emit(world_pos: Vector2, loudness: float, source = null) -> void:
+## channel: "ambient" (default — footsteps, combat, casts; behaviourally
+## unchanged for all pre-existing call sites) or "alarm" (a witness's scream,
+## carrying a crime payload to enforcers). Alarms route through the exact
+## same wall/zone attenuation — a SilenceZone smothers a scream like any
+## other sound, which is the silence-the-witness counterplay. Do NOT give
+## alarms a bypass around _loudness_at.
+func emit(world_pos: Vector2, loudness: float, source = null,
+		channel: String = "ambient", payload: Dictionary = {}) -> void:
 	if loudness <= 0.0:
 		return
 	sound_emitted.emit(world_pos, loudness, source)
@@ -95,6 +102,15 @@ func emit(world_pos: Vector2, loudness: float, source = null) -> void:
 	var game = _get_game()
 	if not game or not ("characters_in_scene" in game):
 		return
+
+	var is_alarm: bool = channel == "alarm"
+	# Alarms carry farther, not louder: vision outranges hearing ~6:1
+	# (1440×sight vs 240×hearing×loudness), so an unmultiplied scream dies
+	# ~5 tiles out and never reaches a guard across a plaza. Range only —
+	# arousal (loudness) is tuned independently. Value lives in laws.json.
+	var range_mult: float = 1.0
+	if is_alarm:
+		range_mult = float(LawDatabase.witness_cfg().get("alarm_range_mult", 2.5))
 
 	var party: Array = game.party_chars if "party_chars" in game else []
 	var any_party_heard := false
@@ -107,12 +123,21 @@ func emit(world_pos: Vector2, loudness: float, source = null) -> void:
 		if listener == source:
 			continue
 
+		# Cheap conservative early-out BEFORE the occlusion raycast:
+		# attenuation only ever reduces loudness, so the unattenuated reach
+		# is a true upper bound. Saves the per-footstep ray fan for every
+		# listener that could never have heard it.
+		var dist: float = listener.global_position.distance_to(world_pos)
+		var reach_bound: float = BASE_HEARING_RADIUS * listener.effective_hearing() * loudness * range_mult
+		if dist > reach_bound:
+			continue
+
 		var eff_loudness := _loudness_at(world_pos, listener.global_position, loudness)
 		if eff_loudness <= 0.0:
 			continue
 
-		var max_dist: float = BASE_HEARING_RADIUS * listener.effective_hearing() * eff_loudness
-		if listener.global_position.distance_to(world_pos) > max_dist:
+		var max_dist: float = BASE_HEARING_RADIUS * listener.effective_hearing() * eff_loudness * range_mult
+		if dist > max_dist:
 			continue
 
 		# Party listener: only the visibility-pulse path cares. Enemy footsteps
@@ -123,22 +148,31 @@ func emit(world_pos: Vector2, loudness: float, source = null) -> void:
 				any_party_heard = true
 			continue
 
-		# Non-party listener: route to AI alertness. Filter by faction so enemies
-		# don't constantly alert each other from their own footsteps.
+		# Non-party listener: route to AI alertness.
 		var ai_node = listener.get_node_or_null("AI")
 		if ai_node and ai_node.has_method("on_sound_heard"):
 			var src_faction := ""
 			if source is ProceduralCharacter:
 				src_faction = source.faction_id
-			# If no source faction (env sound), treat as foreign. If the source
-			# IS a character of the same/allied faction, skip alertness.
-			if src_faction != "" and not FactionDatabase.are_enemies(listener.faction_id, src_faction):
+			# Ambient gate: NPCs shouldn't constantly alert each other with
+			# their own footsteps — which is all this was ever for. Alarms
+			# are the inverse (meant to be heard) and bypass it. Player-made
+			# sound is always audible, so sneaking is detectable BEFORE the
+			# player is hostile — the only ordering under which pre-crime
+			# stealth exists.
+			if not is_alarm and src_faction != "" and src_faction != "player" \
+					and not FactionDatabase.are_hostile(listener.faction_id, src_faction):
 				continue
-			ai_node.on_sound_heard(world_pos, eff_loudness, source)
+			ai_node.on_sound_heard(world_pos, eff_loudness, source, channel, payload)
 
 	if any_party_heard and game.has_method("trigger_hearing_pulse"):
 		game.trigger_hearing_pulse(source)
 
+
+# Sounds attenuate per wall crossed, capped — two rooms away is genuinely
+# quieter than one (a single binary test made them identical, which erased
+# the "indoor crime is quiet crime" contrast the alarm system depends on).
+const MAX_OCCLUDERS: int = 3
 
 # Compute loudness at the listener, applying sound-zone suppression and wall
 # occlusion damping. Sounds carry through walls but are noticeably quieter.
@@ -163,8 +197,16 @@ func _loudness_at(from_pos: Vector2, to_pos: Vector2, loudness: float) -> float:
 	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
 	params.collide_with_areas = false
 	params.collide_with_bodies = true
-	if not space.intersect_ray(params).is_empty():
-		return loudness * WALL_OCCLUSION_FACTOR
+	# Per-occluder damping, mirroring GridManager.sight_line_clear's
+	# exclude-list walk (GridManager.gd:199-208), capped at MAX_OCCLUDERS.
+	for i in range(MAX_OCCLUDERS):
+		var hit: Dictionary = space.intersect_ray(params)
+		if hit.is_empty():
+			break
+		loudness *= WALL_OCCLUSION_FACTOR
+		var exclude: Array = params.exclude.duplicate()
+		exclude.append(hit["rid"])
+		params.exclude = exclude
 	return loudness
 
 

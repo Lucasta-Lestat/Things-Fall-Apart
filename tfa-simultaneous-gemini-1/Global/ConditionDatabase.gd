@@ -564,6 +564,23 @@ func get_all_conditions() -> Array:
 		"immunities": {}
 	},
 	{
+		"id": "silenced",
+		"display_name": "Silenced",
+		"description": "Cannot cry out. A silenced witness never raises the alarm.",
+		"traits": {"debuff": 1, "social": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 12.0,
+		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
 		"id": "thrill_of_sin",
 		"display_name": "Thrill of Sin",
 		"description": "Luck increases each time a criminal action is taken.",
