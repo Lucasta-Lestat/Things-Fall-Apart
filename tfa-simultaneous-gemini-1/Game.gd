@@ -94,6 +94,11 @@ var party_state: Array = [
 # map transitions and saves. Keyed by region_id -> npc_uid -> live_state dict
 # (same shape as party_state[i].live_state).
 var npc_state_per_region: Dictionary = {}
+# World-item state per map (law/crime Phase 7): captured wholesale on unload,
+# restored in place of the authored spawns on revisit. A taken item is simply
+# absent from the records; an emptied chest stays emptied. Same neighbourhood
+# as npc_state_per_region so a reader who understands one understands both.
+var item_state_per_map: Dictionary = {}   # map_id -> Array[record]
 
 # Set of npc_uids the party has discovered, per region. Drives whether a
 # service that's illegal under the controlling faction's laws shows up in
@@ -154,6 +159,10 @@ func _ready() -> void:
 	# React to weather changes (snow → freeze, rain → puddles)
 	WeatherManager.weather_changed.connect(_on_weather_changed)
 
+	# Law/crime Phase 7: the Surrender button (visible whenever a hostile is
+	# near — a missing button is confusion, a visible one is information).
+	_setup_surrender_button()
+
 	load_map(current_map_id)
  
 func save_party_state() -> void:
@@ -186,43 +195,72 @@ func _build_npc_uid(template_id: String, unique_name: String) -> String:
 func _is_service_npc(character) -> bool:
 	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
 
-func _save_service_npc_states() -> void:
-	## Walk the live scene; for any NPC with titles, snapshot its runtime state
-	## into npc_state_per_region[region][uid].
+## Phase 7: death must persist or the witness pipeline is theatre — a
+## murdered guard used to be queue_free'd with state unrecorded and respawn
+## pristine on revisit. Service NPCs persist as before; anyone DEAD persists
+## too (corpses stay corpses, and their corpse_crime meta stays with them).
+func _should_persist_npc(c) -> bool:
+	if _is_service_npc(c):
+		return true
+	return is_instance_valid(c) and "current_health" in c and c.current_health <= 0
+
+## Region bucket, with a per-map fallback so wilderness maps (no region)
+## persist NPC state too instead of silently dropping it.
+func _npc_bucket_key() -> String:
 	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
 	if region_id.is_empty():
-		return
-	if not npc_state_per_region.has(region_id):
-		npc_state_per_region[region_id] = {}
+		return "map:" + current_map_id
+	return region_id
+
+func _save_service_npc_states() -> void:
+	## Walk the live scene; snapshot every NPC that should persist into
+	## npc_state_per_region[bucket][uid].
+	var bucket_key: String = _npc_bucket_key()
+	if not npc_state_per_region.has(bucket_key):
+		npc_state_per_region[bucket_key] = {}
 	for c in characters_in_scene:
 		if c in party_chars:
 			continue
-		if not _is_service_npc(c):
+		if not _should_persist_npc(c):
 			continue
 		var template_id: String = str(c.get_meta("template_id", ""))
 		if template_id.is_empty():
 			# Fallback: derive from display_name (won't survive renames but is rare)
 			template_id = str(c.display_name).to_lower().replace(" ", "_")
 		var unique_name: String = str(c.get_meta("unique_name", ""))
-		var uid: String = _build_npc_uid(template_id, unique_name)
-		npc_state_per_region[region_id][uid] = _serialize_character(c)
+		var uid: String
+		if _is_service_npc(c):
+			# Service NPCs keep the legacy uid form — known_services_per_region
+			# and RegionDatabase._build_npc_uid must keep matching, or the
+			# town services panel loses every discovered service.
+			uid = _build_npc_uid(template_id, unique_name)
+		else:
+			# Non-service persistence (dead guards, dead bystanders): ordinal
+			# uid so two town_guard spawns don't collide on one key. The
+			# ordinal is per-template spawn order — deterministic unless
+			# same-template conditional spawns flip between visits.
+			uid = "%s#%d" % [template_id, int(c.get_meta("spawn_ordinal", 0))]
+		npc_state_per_region[bucket_key][uid] = _serialize_character(c)
 
 func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
 	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
 	## Also tags the live node with template_id + unique_name for save-on-unload.
+	## (spawn_ordinal meta is stamped by _spawn_npcs BEFORE this runs.)
 	if not is_instance_valid(npc):
 		return
 	npc.set_meta("template_id", template_id)
 	npc.set_meta("unique_name", unique_name)
-	if not _is_service_npc(npc):
+	var bucket: Dictionary = npc_state_per_region.get(_npc_bucket_key(), {})
+	if bucket.is_empty():
 		return
-	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
-	if region_id.is_empty():
+	if _is_service_npc(npc):
+		var uid: String = _build_npc_uid(template_id, unique_name)
+		if bucket.has(uid):
+			_deserialize_character(npc, bucket[uid])
 		return
-	var bucket: Dictionary = npc_state_per_region.get(region_id, {})
-	var uid: String = _build_npc_uid(template_id, unique_name)
-	if bucket.has(uid):
-		_deserialize_character(npc, bucket[uid])
+	var ordinal_uid: String = "%s#%d" % [template_id, int(npc.get_meta("spawn_ordinal", 0))]
+	if bucket.has(ordinal_uid):
+		_deserialize_character(npc, bucket[ordinal_uid])
 
 func mark_service_seen(npc) -> void:
 	## Records discovery so an illegal service shows up in the panel even
@@ -257,7 +295,11 @@ func remove_party_member(index: int) -> void:
 # NPC spawning
 # ---------------------------------------------------------------------------
  
+# Per-template spawn counters for the current map load; reset in load_map.
+var _spawn_ordinals: Dictionary = {}
+
 func _spawn_npcs(npc_list: Array) -> void:
+	_spawn_ordinals.clear()
 	for npc_def in npc_list:
 		# Check spawn conditions
 		if npc_def.has("condition") and not check_spawn_conditions(npc_def["condition"]):
@@ -291,6 +333,12 @@ func _spawn_npcs(npc_list: Array) -> void:
 				# template.dialogue; we wire the spawn-level override here).
 				if spawn_overrides.has("dialogue") and "dialogues" in npc:
 					npc.dialogues = [str(spawn_overrides["dialogue"])]
+				# Per-template spawn ordinal: the uid disambiguator for
+				# non-service persistence (two town_guard spawns must not
+				# collide on one save key). Stamped BEFORE restore.
+				var ordinal: int = int(_spawn_ordinals.get(template_id, 0))
+				_spawn_ordinals[template_id] = ordinal + 1
+				npc.set_meta("spawn_ordinal", ordinal)
 				# Restore persisted live_state for service NPCs whose region we've
 				# visited before (lets trades stick across map transitions).
 				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
@@ -554,6 +602,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 
 	# 7. Spawn items
 	_spawn_items(current_map_data.get("item_spawns", []))
+	# 7a. Revisited map: replace the authored spawns with the visited state
+	# (taken items stay gone, emptied chests stay emptied, drops persist).
+	_restore_item_state()
 
 	# 7b. Spawn fluids (oil, water, etc.)
 	_spawn_fluids(current_map_data.get("fluid_spawns", []))
@@ -630,6 +681,18 @@ func _process_on_load_dialogue_triggers(map_data: Dictionary) -> void:
 func _unload_current_map() -> void:
 	# Snapshot any service-NPC live state so trades stick across map transitions.
 	_save_service_npc_states()
+
+	# Snapshot world-item state, then actually clear the item nodes. Items
+	# were previously LEAKED across transitions — never freed and never
+	# erased from items_in_scene, so each revisit re-spawned duplicates on
+	# top of ghost nodes. queue_free (not _destroy_item: that path spawns
+	# resource drops and fires the destroyed signal).
+	_capture_item_state()
+	for it in items_in_scene:
+		if is_instance_valid(it):
+			GridManager.unregister_object(GridManager.world_to_map(it.global_position), it)
+			it.queue_free()
+	items_in_scene.clear()
 
 	# Drop map-scoped scheduled dialogue triggers so they don't fire on the
 	# next map. Global triggers are unaffected.
@@ -1133,6 +1196,179 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 
 	return item_instance
 
+# --- Surrender (law/crime Phase 7) ---
+
+var _surrender_button: Button = null
+var _surrender_poll_accum: float = 0.0
+const SURRENDER_RADIUS: float = 800.0
+
+func _setup_surrender_button() -> void:
+	_surrender_button = Button.new()
+	_surrender_button.name = "SurrenderButton"
+	_surrender_button.text = "Surrender"
+	_surrender_button.visible = false
+	_surrender_button.anchor_left = 0.5
+	_surrender_button.anchor_right = 0.5
+	_surrender_button.anchor_top = 1.0
+	_surrender_button.anchor_bottom = 1.0
+	_surrender_button.offset_left = -70.0
+	_surrender_button.offset_right = 70.0
+	_surrender_button.offset_top = -110.0
+	_surrender_button.offset_bottom = -70.0
+	_surrender_button.pressed.connect(_on_surrender_pressed)
+	$GameUI.add_child(_surrender_button)
+
+## Every living non-party character currently hostile to the party and
+## within `radius` of any party member.
+func hostile_characters_near_party(radius: float = SURRENDER_RADIUS) -> Array:
+	var out: Array = []
+	for c in characters_in_scene:
+		if not is_instance_valid(c) or c in party_chars:
+			continue
+		if not c.has_method("is_alive") or not c.is_alive():
+			continue
+		var ai_node = c.get_node_or_null("AI")
+		if ai_node == null:
+			continue
+		var near_and_hostile: bool = false
+		for pc in party_chars:
+			if not is_instance_valid(pc):
+				continue
+			if c.global_position.distance_to(pc.global_position) <= radius and ai_node._is_enemy(pc):
+				near_and_hostile = true
+				break
+		if near_and_hostile:
+			out.append(c)
+	return out
+
+func _update_surrender_button() -> void:
+	if _surrender_button == null:
+		return
+	_surrender_button.visible = not hostile_characters_near_party().is_empty()
+
+func _on_surrender_pressed() -> void:
+	var SurrenderPanel = load("res://UI/SurrenderPanel.gd")
+	var panel = SurrenderPanel.new()
+	panel.game = self
+	$GameUI.add_child(panel)
+	if not panel.try_open():
+		panel.queue_free()
+
+# --- The named caller (law/crime Phase 7) ---
+# The three orphaned to_dict/from_dict pairs happened because nobody ever
+# called them. This function's entire job is to be that caller. No disk I/O
+# in v1 — but two callers ship with it (the headless round-trip test and the
+# F11 debug hotkey), so it cannot rot the way the orphans did. Disk save is
+# then FileAccess + JSON.stringify around a tested function.
+# v1->v2 rule: additive only; every read via .get(key, default).
+func build_save_dict() -> Dictionary:
+	save_party_state()
+	_save_service_npc_states()
+	_capture_item_state()
+	return {
+		"version": 1,
+		"party_state": party_state.duplicate(true),
+		"npc_state_per_region": npc_state_per_region.duplicate(true),
+		"item_state_per_map": item_state_per_map.duplicate(true),
+		"factions": FactionDatabase.standing_to_dict(),
+		"conditions_note": "per-character condition state rides inside party/npc snapshots",
+		"quests": QuestManager.get_save_data(),
+		"readables": ReadableManager.get_save_data(),
+		"triggers": MapTriggerState.fired.duplicate(true),
+		"world_state": Globals.world_state.duplicate(true),
+		"unlocked_locks": unlocked_locks.duplicate(true),
+		"known_services": known_services_per_region.duplicate(true),
+		"days_elapsed": TimeManager.days_elapsed,
+		"game_time": TimeManager.game_time,
+		"date": [TimeManager.current_day, TimeManager.current_month, TimeManager.current_year],
+		"current_map_id": current_map_id,
+	}
+
+## Symmetric restore. Does NOT reload the map — a disk-load flow calls
+## load_map(d.current_map_id) after applying.
+func apply_save_dict(d: Dictionary) -> void:
+	party_state = d.get("party_state", party_state).duplicate(true)
+	npc_state_per_region = d.get("npc_state_per_region", {}).duplicate(true)
+	item_state_per_map = d.get("item_state_per_map", {}).duplicate(true)
+	FactionDatabase.standing_from_dict(d.get("factions", {}))
+	QuestManager.load_save_data(d.get("quests", {}))
+	ReadableManager.load_save_data(d.get("readables", {}))
+	MapTriggerState.fired = d.get("triggers", {}).duplicate(true)
+	Globals.world_state = d.get("world_state", {}).duplicate(true)
+	unlocked_locks = d.get("unlocked_locks", {}).duplicate(true)
+	known_services_per_region = d.get("known_services", {}).duplicate(true)
+	TimeManager.days_elapsed = int(d.get("days_elapsed", TimeManager.days_elapsed))
+	TimeManager.game_time = float(d.get("game_time", TimeManager.game_time))
+	var date: Array = d.get("date", [])
+	if date.size() == 3:
+		# Assign quietly — set_date emits date_changed, whose four listeners
+		# perform DAILY bookkeeping (quest day counters, standing decay,
+		# weather rolls). Replaying those on load would double-apply a day.
+		TimeManager.current_day = int(date[0])
+		TimeManager.current_month = int(date[1])
+		TimeManager.current_year = int(date[2])
+		TimeManager.is_yearturn = int(date[1]) == 0
+
+# --- World-item persistence (law/crime Phase 7) ---
+
+func _capture_item_state() -> void:
+	if current_map_id.is_empty():
+		return
+	var records: Array = []
+	for it in items_in_scene:
+		if not is_instance_valid(it):
+			continue
+		var record: Dictionary = {
+			"id": str(it.id),
+			"x": it.global_position.x,
+			"y": it.global_position.y,
+			"stack_count": int(it.stack_count) if ("stack_count" in it) else 1,
+			"owner_faction": str(it.owner_faction),
+			"owner_uid": str(it.owner_uid),
+			"stolen_from": str(it.stolen_from),
+			"controlling_faction": str(it.controlling_faction),
+			"loot_value": float(it.loot_value),
+		}
+		if it.contents is Array:
+			record["contents"] = (it.contents as Array).duplicate(true)
+		records.append(record)
+	item_state_per_map[current_map_id] = records
+
+func _restore_item_state() -> void:
+	if not item_state_per_map.has(current_map_id):
+		return
+	# Wholesale replace: drop the authored spawns, rebuild the visited state.
+	for it in items_in_scene:
+		if is_instance_valid(it):
+			GridManager.unregister_object(GridManager.world_to_map(it.global_position), it)
+			it.queue_free()
+	items_in_scene.clear()
+	for record in item_state_per_map[current_map_id]:
+		var extras: Dictionary = {}
+		for key in ["owner_faction", "owner_uid", "stolen_from", "controlling_faction"]:
+			var value: String = str(record.get(key, ""))
+			if not value.is_empty():
+				extras[key] = value
+		var loot_value: float = float(record.get("loot_value", -1.0))
+		if loot_value >= 0.0:
+			extras["value"] = loot_value
+		var item = create_item(str(record.get("id", "")),
+			Vector2(float(record.get("x", 0.0)), float(record.get("y", 0.0))), 1, extras)
+		if item == null:
+			continue
+		# THE ORDERING TRAP: _apply_item_data (inside create_item's add_child)
+		# auto-fills a faction chest whose contents are empty. Restore must
+		# run AFTER create_item returns and must OVERWRITE contents, never
+		# merge — otherwise every emptied chest silently refills from the
+		# loot table on revisit and theft is pointless.
+		if record.has("contents"):
+			item.contents = (record["contents"] as Array).duplicate(true)
+		var stack_count: int = int(record.get("stack_count", 1))
+		if stack_count > 1 and ("stack_count" in item):
+			item.stack_count = stack_count
+			if item.has_method("_update_stack_label"):
+				item._update_stack_label()
+
 # D6: everything a faction owns, derived by scan — never indexed. The three
 # sites mutating items_in_scene already disagree (create_item appends,
 # _on_item_destroyed erases via signal, ai.pickup_item erases directly
@@ -1537,6 +1773,11 @@ func _process(delta: float) -> void:
 		_tick_hearing_pulses(delta)
 		_update_npc_los_visibility()
 		_update_item_los_visibility()
+		# Surrender button visibility, polled at 2 Hz.
+		_surrender_poll_accum += delta
+		if _surrender_poll_accum >= 0.5:
+			_surrender_poll_accum = 0.0
+			_update_surrender_button()
 	# Update all selection indicators
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
@@ -1646,6 +1887,20 @@ func _input(event: InputEvent) -> void:
 			KEY_F12:
 				if not event.echo:
 					DebugManager.toggle()
+			KEY_F11:
+				# Save round-trip smoke test: build -> apply -> build must be
+				# byte-identical. The debug caller that keeps build_save_dict
+				# from rotting the way the three orphaned serializers did.
+				if not event.echo:
+					var first: Dictionary = build_save_dict()
+					apply_save_dict(first)
+					var second: Dictionary = build_save_dict()
+					if JSON.stringify(first) == JSON.stringify(second):
+						GameLog.add_entry("[save] round-trip OK (%d chars)" % JSON.stringify(first).length())
+					else:
+						GameLog.add_entry("[save] ROUND-TRIP MISMATCH — check the F11 diff in the console")
+						print("[save] first:  ", JSON.stringify(first).length(), " chars")
+						print("[save] second: ", JSON.stringify(second).length(), " chars")
 			KEY_R:
 				# Restart
 				get_tree().reload_current_scene()

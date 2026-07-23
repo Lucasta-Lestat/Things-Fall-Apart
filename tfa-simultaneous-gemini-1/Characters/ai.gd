@@ -143,6 +143,12 @@ var _outcry_total: float = 0.0
 # remembers past alertness decay. Declared here so Phase 5 payloads have a
 # landing site.
 var manhunt_target: ProceduralCharacter = null
+# Post-robbery truce (Phase 7 surrender): while active, this AI ignores
+# player-faction targets — without it, a hostile_by_default bandit
+# re-acquires on the next tick and being robbed is pointless.
+var truce_until: float = -1.0
+# Corpse-discovery sweep throttle (Phase 7).
+var corpse_check_timer: float = 0.0
 
 func _ready():
 	character = get_parent()
@@ -252,6 +258,14 @@ func process_ai(delta: float) -> void:
 	if _cm and _cm.has_active_condition("frightened"):
 		_process_frightened(delta)
 		return
+
+	# Corpse discovery (Phase 7): enforcers who see a crime-stamped body
+	# raise an unidentified alarm. Throttled; skipped while incapacitated
+	# states above have already returned.
+	corpse_check_timer -= delta
+	if corpse_check_timer <= 0.0:
+		corpse_check_timer = 1.0
+		_check_corpse_discovery()
 
 	# Check path progress for wandering/seeking
 	_check_path_progress()
@@ -462,6 +476,10 @@ func _update_target() -> void:
 func _is_enemy(other: ProceduralCharacter) -> bool:
 	if manhunt_target != null and is_instance_valid(manhunt_target) and other == manhunt_target:
 		return true
+	# Post-robbery truce: they took your purse and let you live (Phase 7).
+	if truce_until > 0.0 and other.faction_id == "player" \
+			and TimeManager.absolute_time() < truce_until:
+		return false
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
 func _acquire_target(target: ProceduralCharacter) -> void:
@@ -1081,6 +1099,32 @@ func _tick_outcry(delta: float) -> void:
 	CrimeManager.fire_outcry(character, pending_outcry)
 	pending_outcry = {}
 	outcry_state_changed.emit(false, 0.0)
+
+# Phase 7: an enforcer finding a crime-stamped corpse starts its own outcry,
+# unidentified — killing the witness buys time and anonymity, not absolution.
+# One body alarms once (the discovered flag), and a crime whose alarm already
+# escaped dedups away inside on_alarm_heard via the shared crime_id.
+func _check_corpse_discovery() -> void:
+	if current_state == AIState.DEAD or not character.is_alive():
+		return
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c) or c == character:
+			continue
+		if c.has_method("is_alive") and c.is_alive():
+			continue
+		if not c.has_meta("corpse_crime"):
+			continue
+		var info: Dictionary = c.get_meta("corpse_crime")
+		if bool(info.get("discovered", false)):
+			continue
+		if not LawDatabase.enforces(character.faction_id, str(info.get("law_faction", ""))):
+			continue
+		if not is_in_line_of_sight(c.global_position, c.get_elevation()):
+			continue
+		info["discovered"] = true
+		c.set_meta("corpse_crime", info)
+		begin_outcry(CrimeManager.discovery_payload(c, character, info))
+		return
 
 func _can_still_cry_out() -> bool:
 	if current_state == AIState.DEAD or not character.is_alive():

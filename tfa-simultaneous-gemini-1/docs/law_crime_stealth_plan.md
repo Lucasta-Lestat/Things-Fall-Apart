@@ -1450,6 +1450,39 @@ mutate standing/ledger/overrides/item owners → `apply_save_dict` → deep equa
 surrender to `lawful` clears the override and zeroes hostiles' targets; surrender to `implacable`
 changes nothing.
 
+### As built (2026-07-23)
+
+Implemented as specified — `_should_persist_npc` (service OR dead) with the wilderness `"map:"`
+bucket and per-template spawn-ordinal uids (service NPCs keep the legacy forms so the services
+panel keeps matching); world-item capture/restore with the contents-overwrite ordering fix;
+corpse discovery (stamped in the fan-out *before* the zero-witness early-out — the unwitnessed
+murder is the case it exists for — sharing the crime_id so an already-reported crime dedups);
+`build_save_dict`/`apply_save_dict` with the F11 round-trip hotkey; `UI/SurrenderPanel.gd` with
+the three profiles, driven by `settle_with`. `tests/law_persist_test.gd` drives the REAL
+`game.tscn` through actual map transitions: 30/30 PASS; all nine harnesses green. Deviations and
+findings:
+
+1. **Items were LEAKING across map transitions** — never freed, never cleared from
+   `items_in_scene`; every revisit re-spawned duplicates on top of ghost nodes. The
+   capture/restore work fixed it as a side effect (`_unload_current_map` now snapshots, then
+   frees and clears).
+2. **Item persistence is a wholesale per-map snapshot**, not the plan's per-spawn-key delta —
+   handles drops, moves, and takes uniformly, and retires the "spawn keys encode position"
+   known-limitation for session play.
+3. **`apply_save_dict` assigns the date quietly** instead of calling `set_date`: its
+   `date_changed` listeners perform *daily bookkeeping* (quest counters, standing decay, weather
+   rolls), and replaying them on load double-applies a day — caught by the F11-style round-trip
+   test the plan demanded ship with the interface.
+4. **Predatory surrender needed a truce** (`ai.truce_until`, laws.json `truce_seconds: 90`) —
+   without it a `hostile_by_default` bandit re-acquires on the next tick and being robbed is
+   pointless. One clause in `_is_enemy`, beside the manhunt clause.
+5. **`SurrenderPanel` is script-only** (ReadableWindow pattern), no `.tscn`.
+6. Harness lessons, hard-won: a node added to root *during the initial scene-ready cascade*
+   never receives `NOTIFICATION_READY` (await one frame first); `_spawn_character` does not
+   guarantee facing (set `rotation` explicitly before LOS assertions); off-map space is
+   vision-blocked, so probe `sight_line_clear` for a clear test site instead of assuming;
+   `Items.json` authors `"cost": null` on some entries, so every cost read needs a null guard.
+
 ---
 
 # Future phase — Sneaking, pickpocketing, and stealth mode (user direction, 2026-07-22; unscheduled)

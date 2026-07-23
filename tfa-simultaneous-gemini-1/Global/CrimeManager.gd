@@ -293,6 +293,19 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 	var disguised: bool = is_disguised(physical_actor)
 	var cfg: Dictionary = LawDatabase.witness_cfg()
 	var victim = payload.get("victim")
+	# Corpse discovery (Phase 7): a body dropped by a crime carries the
+	# charge — stamped BEFORE the zero-witness early-out, because the
+	# unwitnessed murder is exactly the case discovery exists for. Shares
+	# the crime_id, so a crime whose alarm already escaped dedups away.
+	if bool(payload.get("lethal", false)) and victim is Object and is_instance_valid(victim):
+		victim.set_meta("corpse_crime", {
+			"crime_id": crime_id,
+			"law_faction": str(verdict.get("law_faction", "")),
+			"statute": str(verdict.get("statute", "")),
+			"display_name": str(verdict.get("display_name", "")),
+			"severity": int(verdict.get("severity", 0)),
+			"discovered": false,
+		})
 	var victim_covered: bool = false
 	var fuses: int = 0
 	for entry in witnesses_of(crime_pos, crime_elev, physical_actor):
@@ -397,6 +410,25 @@ func _start_outcry(witness, crime_id: int, identified: bool, is_victim: bool,
 	var ai_node = witness.get_node_or_null("AI")
 	if ai_node != null and ai_node.has_method("begin_outcry"):
 		ai_node.begin_outcry(payload)
+
+## Outcry payload for an enforcer who just found a crime-stamped corpse:
+## always unidentified (the body does not name its killer), delay computed
+## for the discoverer like any witness.
+func discovery_payload(corpse, discoverer, info: Dictionary) -> Dictionary:
+	var cfg: Dictionary = LawDatabase.witness_cfg()
+	var law_faction: String = str(info.get("law_faction", ""))
+	return {
+		"crime_id": int(info.get("crime_id", -1)),
+		"identified": false,
+		"perp": null,
+		"crime_pos": corpse.global_position if corpse is Node2D else Vector2.ZERO,
+		"law_faction": law_faction,
+		"statute": str(info.get("statute", "")),
+		"display_name": str(info.get("display_name", "")),
+		"severity": int(info.get("severity", 0)),
+		"delay": _outcry_delay(discoverer, false, corpse.global_position if corpse is Node2D else Vector2.ZERO, law_faction, cfg),
+		"witness_alert": float(cfg.get("unidentified_alert", 45.0)),
+	}
 
 ## Delay modifiers are additive, clamped, jittered — a crowd screams raggedly
 ## rather than in chorus. Distance does not grant anonymity (D7); it grants

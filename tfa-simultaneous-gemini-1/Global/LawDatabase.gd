@@ -216,6 +216,9 @@ func witness_cfg() -> Dictionary:
 func standing_cfg() -> Dictionary:
 	return _standing_cfg
 
+func surrender_cfg() -> Dictionary:
+	return _surrender_cfg
+
 func surrender_profile(faction_id: String) -> Dictionary:
 	var profiles: Dictionary = _surrender_cfg.get("profiles", {})
 	var by_faction: Dictionary = _surrender_cfg.get("faction_profiles", {})

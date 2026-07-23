@@ -63,6 +63,7 @@
 
 	"surrender": {
 		"default_profile": "implacable",
+		"truce_seconds": 90.0,
 		"profiles": {
 			"lawful":     { "accepts": true,  "options": ["pay_fine", "return_goods", "serve_time"],
 							"line": "On your knees. The magistrate will hear of it." },
