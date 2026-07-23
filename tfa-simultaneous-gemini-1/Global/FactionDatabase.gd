@@ -3,12 +3,45 @@
 extends Node
 
 signal faction_tier_changed(faction_id: String, old_tier: int, new_tier: int)
+## Fired on any change to the player's legal standing with a faction —
+## adjust_player_standing, mark_outlaw, and settle all emit it. Game derives
+## the `wanted` display condition from it.
+signal player_standing_changed(faction_id: String, old_value: int, new_value: int)
 
 var _factions: Dictionary = {}
+
+# --- Player legal standing (law/crime Phase 6) ---
+# The single scalar per faction (D2). _hostile_override carries D8's binary:
+# an identified crime makes the offended faction hostile FULL STOP; the
+# scalar tunes degree and recovery. _crime_ledger is BEHAVIOURALLY INERT —
+# it answers what a fine costs and what dialogue says, and appears on no AI,
+# targeting, hearing, or hostility path (the D2 mitigation; test-asserted).
+var _player_standing: Dictionary = {}    # faction_id -> int
+var _crime_ledger: Dictionary = {}       # faction_id -> {records: Array, days_served: float}
+var _hostile_override: Dictionary = {}   # faction_id -> true
 
 func _ready() -> void:
 	_load_database()
 	_validate_relations()
+	# TimeManager registers after FactionDatabase; connect once the tree is up.
+	call_deferred("_connect_standing_decay")
+
+func _connect_standing_decay() -> void:
+	var tm = get_node_or_null("/root/TimeManager")
+	if tm != null and tm.has_signal("date_changed"):
+		tm.date_changed.connect(_on_date_changed_decay)
+
+# Negative standing creeps back toward 0 (laws.json standing.decay_per_day).
+# The hostile OVERRIDE never decays — being square with the law requires
+# settling, not waiting.
+func _on_date_changed_decay(_d, _m, _y) -> void:
+	var decay: int = int(LawDatabase.standing_cfg().get("decay_per_day", 1.0))
+	if decay <= 0:
+		return
+	for fid in _player_standing.keys():
+		var v: int = int(_player_standing[fid])
+		if v < 0:
+			adjust_player_standing(str(fid), mini(decay, -v))
 
 # Boot lint, push_warning only. are_hostile is symmetric precisely because
 # this data is inconsistently mirrored — the lint nudges the data clean over
@@ -159,16 +192,127 @@ func are_friendly(faction_a: String, faction_b: String) -> bool:
 func _hostile_by_default(faction_id: String) -> bool:
 	return bool(_faction_or_empty(faction_id).get("hostile_by_default", false))
 
-# The player's standing with a faction. Phase 6 of the law/crime plan derives
-# this from a runtime standing scalar plus a hostile_override set by witnessed
-# crimes (and cleared by paying fines / serving time). Until then it is the
-# static base relation from factions.json, read in both directions.
+# The player's stance with a faction: "hostile" | "neutral" | "friendly".
+# ONE argument on purpose — a two-argument variant invites _is_enemy to pass
+# NPC pairs per-frame and read the player's standing as an answer for
+# bandits-vs-wildlife. Base relation (declared ally +40 / enemy −60, read
+# from the faction's own lists both directions) + the runtime scalar,
+# thresholded; the override carries D8's binary above all of it.
 func player_stance_toward(other_faction: String) -> String:
-	if are_enemies("player", other_faction) or are_enemies(other_faction, "player"):
+	if bool(_hostile_override.get(other_faction, false)):
 		return "hostile"
-	if are_allies("player", other_faction) or are_allies(other_faction, "player"):
-		return "ally"
+	var base: int = 0
+	if are_enemies(other_faction, "player") or are_enemies("player", other_faction):
+		base = -60
+	elif are_allies(other_faction, "player") or are_allies("player", other_faction):
+		base = 40
+	var value: int = base + get_player_standing(other_faction)
+	var cfg: Dictionary = LawDatabase.standing_cfg()
+	if value <= int(cfg.get("hostile_at", -50)):
+		return "hostile"
+	if value >= int(cfg.get("friendly_at", 50)):
+		return "friendly"
 	return "neutral"
+
+# ---------------------------------------------------------------------------
+# Standing / ledger / override API (mirrors the tier API above)
+# ---------------------------------------------------------------------------
+
+func get_player_standing(faction_id: String) -> int:
+	return int(_player_standing.get(faction_id, 0))
+
+func adjust_player_standing(faction_id: String, delta: int) -> void:
+	if faction_id.is_empty():
+		return
+	var cfg: Dictionary = LawDatabase.standing_cfg()
+	var old_value: int = get_player_standing(faction_id)
+	var new_value: int = clampi(old_value + delta, int(cfg.get("floor", -250)), int(cfg.get("cap", 100)))
+	if new_value == old_value:
+		return
+	_player_standing[faction_id] = new_value
+	player_standing_changed.emit(faction_id, old_value, new_value)
+
+## D8's binary: identified crime -> the offended faction is hostile, full
+## stop. Cleared only by settle() or a pardon, never by time or the scalar.
+func mark_outlaw(faction_id: String) -> void:
+	if faction_id.is_empty() or bool(_hostile_override.get(faction_id, false)):
+		return
+	_hostile_override[faction_id] = true
+	var v: int = get_player_standing(faction_id)
+	player_standing_changed.emit(faction_id, v, v)
+
+func is_outlaw_with(faction_id: String) -> bool:
+	return bool(_hostile_override.get(faction_id, false))
+
+func is_outlaw_anywhere() -> bool:
+	return not _hostile_override.is_empty()
+
+## Ledger entry — pricing and dialogue ONLY. Never read on a behaviour path.
+func record_crime(faction_id: String, verdict: Dictionary, ctx: Dictionary = {}) -> void:
+	if faction_id.is_empty():
+		return
+	var bucket: Dictionary = _crime_ledger.get(faction_id, {"records": [], "days_served": 0.0})
+	bucket["records"].append({
+		"statute": str(verdict.get("statute", "")),
+		"display_name": str(verdict.get("display_name", "")),
+		"severity": int(verdict.get("severity", 0)),
+		"at": TimeManager.absolute_time(),
+		"settled": false,
+		"ctx": ctx,
+	})
+	_crime_ledger[faction_id] = bucket
+
+func crime_records(faction_id: String) -> Array:
+	return _crime_ledger.get(faction_id, {}).get("records", [])
+
+func _unsettled_severity(faction_id: String) -> int:
+	var total: int = 0
+	for record in crime_records(faction_id):
+		if not bool(record.get("settled", false)):
+			total += int(record.get("severity", 0))
+	return total
+
+func fine_owed(faction_id: String) -> int:
+	var per: float = float(LawDatabase.standing_cfg().get("fine_gold_per_severity", 12.0))
+	return int(ceilf(float(_unsettled_severity(faction_id)) * per))
+
+func jail_days_owed(faction_id: String) -> int:
+	var per: float = float(LawDatabase.standing_cfg().get("jail_days_per_severity", 0.06))
+	return int(ceilf(float(_unsettled_severity(faction_id)) * per))
+
+## Square with the law: clears the override, FLOORS standing at 0 (square,
+## not beloved), marks records settled WITHOUT deleting them — nobody has
+## forgotten what you did, which is exactly the distinction the single
+## scalar risked losing. Dialogue reads three states: never caught, wanted,
+## did their time.
+func settle(faction_id: String, mode: String = "") -> void:
+	_hostile_override.erase(faction_id)
+	var bucket: Dictionary = _crime_ledger.get(faction_id, {"records": [], "days_served": 0.0})
+	if mode == "serve_time":
+		bucket["days_served"] = float(bucket.get("days_served", 0.0)) + float(jail_days_owed(faction_id))
+	for record in bucket.get("records", []):
+		record["settled"] = true
+	_crime_ledger[faction_id] = bucket
+	var old_value: int = get_player_standing(faction_id)
+	var new_value: int = maxi(old_value, 0)
+	_player_standing[faction_id] = new_value
+	player_standing_changed.emit(faction_id, old_value, new_value)
+
+## Serialization (Phase 7's build_save_dict is the named caller).
+func standing_to_dict() -> Dictionary:
+	return {
+		"player_standing": _player_standing.duplicate(true),
+		"crime_ledger": _crime_ledger.duplicate(true),
+		"hostile_override": _hostile_override.duplicate(true),
+	}
+
+func standing_from_dict(data: Dictionary) -> void:
+	_player_standing = data.get("player_standing", {}).duplicate(true)
+	_crime_ledger = data.get("crime_ledger", {}).duplicate(true)
+	_hostile_override = data.get("hostile_override", {}).duplicate(true)
+	for fid in _player_standing.keys():
+		var v: int = int(_player_standing[fid])
+		player_standing_changed.emit(str(fid), v, v)
 
 # ---------------------------------------------------------------------------
 # Race weight helpers

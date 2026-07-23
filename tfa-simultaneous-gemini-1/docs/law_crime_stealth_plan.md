@@ -1111,6 +1111,14 @@ shares `witnesses_of`. `tests/crime_witness_test.gd`: 33/33 PASS. Notes:
    calls — fully deterministic, no wall-clock waits; and an un-awaited async case function
    interleaves its cleanup with the next case (the cover-case ghost failure).
 
+> **REVISIT (user flag, 2026-07-22): rooftop crimes visible from the street.** The `target_elev`
+> fix means a ground witness can see (and report) a crime committed on a roof whenever the
+> occluder math says the elevated position is visible. Correct per the LOS model — but the user
+> is unsure it is right for *stealth feel* (rooftops read as a hidden layer). If it plays badly,
+> the lever is a single term in `CrimeManager.has_visual_los` (or a `witnessable_elev_delta`
+> config in laws.json capping how far UP a witness can testify). Decide in playtest; nothing
+> else depends on the choice.
+
 ---
 
 # Phase 6 — Consequence, hostility, and legibility
@@ -1282,6 +1290,33 @@ ten ledger records at standing 0 → still `"neutral"` (the inertness invariant)
 survives full alertness decay to 0 and re-LOS fires `_acquire_target`; `settle("pay_fine")` clears
 the override, floors standing at 0, and leaves records present with `settled: true`;
 `thrill_of_sin` does not stack on an unwitnessed crime.
+
+### As built (2026-07-22)
+
+Implemented as specified: standing/ledger/override + full API on `FactionDatabase` (with
+`decay_per_day` wired off `date_changed`, negative standing only, override never decays);
+consequence applied once per `crime_id` inside `on_alarm_heard` (identified only — anonymous
+alarms rouse and record nothing); `manhunt_target` set per-listener from identified alarms plus
+the one `_is_enemy` clause; `settle_with` on CrimeManager (return goods → coin or time →
+`FactionDatabase.settle` → `clear_manhunts`); `wanted` derived; downtime's "caught" outcome now
+calls `mark_outlaw`; `thrill_of_sin` granted by walking conditions for the `criminal` trait rule
+when the last fuse of a crime resolves silently, deduped per `(statute, target)`; all five
+legibility items (accelerating amber `!` sharing the alertness Label, "Unseen." floating text,
+"No one raised the alarm.", "Pick Up (owned)", alertness-tinted sight cones).
+`tests/crime_consequence_test.gd`: 33/33 PASS; all eight harnesses green. Notes:
+
+1. **The `wanted` derivation lives on CrimeManager, not Game** — an autoload sees the same
+   `current_scene` contract under the real Game and under test harnesses; Game-side wiring was
+   invisible to the harness and got moved.
+2. **Stance vocabulary is now hostile/neutral/friendly** — a declared ally's base +40 sits below
+   `friendly_at` (50), so allies read "neutral" until earned; the hostility harness's
+   `guild-stance-ally` check was updated accordingly.
+3. **The example in the test plan aged out**: `golden_guard` no longer lists `player` as ally
+   (Phase 1 user direction), so its base is 0 — the override still delivers the binary, which is
+   the part that mattered.
+4. Harness lesson worth keeping: a "loot stand-in" spawned as a real PC **is a witness** if it
+   can see the crime — its unresolved fuse blocks the thrill grant forever. Face test props away
+   or the scene lies to you.
 
 ---
 

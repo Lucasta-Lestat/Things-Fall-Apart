@@ -160,8 +160,10 @@ func _case_spot_semantics() -> void:
 	_check("spot.guard-not-hostile", not FactionDatabase.are_hostile("player", "golden_guard"))
 	_check("spot.bandit-stance-hostile",
 		FactionDatabase.player_stance_toward("bandits") == "hostile")
-	_check("spot.guild-stance-ally",
-		FactionDatabase.player_stance_toward("adventurers_guild") == "ally")
+	# Phase 6 vocabulary: hostile | neutral | friendly. A declared ally
+	# carries base +40, below friendly_at (50) — earn the rest.
+	_check("spot.guild-stance-not-hostile",
+		FactionDatabase.player_stance_toward("adventurers_guild") != "hostile")
 	# are_friendly: same faction, or allied either direction
 	_check("spot.friendly-same", FactionDatabase.are_friendly("liziti", "liziti"))
 	_check("spot.friendly-oneway", FactionDatabase.are_friendly("patriciate", "cultists"))

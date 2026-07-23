@@ -287,7 +287,7 @@ func interact(option: String) -> void:
 			_read_from_world()
 		"Take":
 			_take_from_world()
-		"Pick Up":
+		"Pick Up", "Pick Up (owned)":
 			var g = get_node_or_null("/root/Game")
 			if g != null and g.has_method("pick_up_item"):
 				g.pick_up_item(self)

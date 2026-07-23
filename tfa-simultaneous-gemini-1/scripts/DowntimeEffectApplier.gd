@@ -177,6 +177,16 @@ static func _apply_add_condition(character, value) -> void:
 	if cid.is_empty():
 		return
 	cm.apply_condition(cid, character, stacks, -1, null)
+	# The shipped "caught stealing" downtime outcome applies `wanted`; make
+	# it mean something — the local law faction turns hostile (law/crime
+	# Phase 6). The wanted condition itself is a display derivative.
+	if cid == "wanted":
+		var tree = character.get_tree() if character is Node else null
+		var game = tree.current_scene if tree != null else null
+		if game != null and ("current_map_id" in game):
+			var law_faction: String = LawDatabase.jurisdiction_for_map(str(game.current_map_id))
+			if not law_faction.is_empty():
+				FactionDatabase.mark_outlaw(law_faction)
 
 static func _apply_remove_condition(character, cid: String) -> void:
 	var cm = character.get_node_or_null("ConditionManager")

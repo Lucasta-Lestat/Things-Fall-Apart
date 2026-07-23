@@ -1171,6 +1171,10 @@ func _setup_alertness_indicator() -> void:
 	_alertness_indicator.visible = false
 	add_child(_alertness_indicator)
 	ai_node.alertness_changed.connect(_on_alertness_changed)
+	# The outcry fuse gets the same Label: an accelerating amber ! that
+	# communicates time-remaining with no new art (law/crime Phase 5-6).
+	if ai_node.has_signal("outcry_state_changed"):
+		ai_node.outcry_state_changed.connect(_on_outcry_state_changed)
 	# Hide the indicator on death so ? / ! don't linger over corpses/graves.
 	character_died.connect(_on_alertness_character_died)
 
@@ -1183,6 +1187,44 @@ func _on_alertness_character_died() -> void:
 		_alertness_indicator.visible = false
 
 
+# Accelerating amber ! while an outcry fuse burns. It reads as a fuse
+# because it IS one: flash period lerps 0.30 s -> 0.08 s across the delay.
+# Takes priority over the alertness glyphs; re-issued at most ~5 Hz.
+var _outcry_flash_period: float = -1.0
+var _outcry_flash_restart_ms: int = 0
+
+func _on_outcry_state_changed(active: bool, frac: float) -> void:
+	if not _alertness_indicator or not AI_enabled:
+		return
+	if not active:
+		_outcry_flash_period = -1.0
+		if _alertness_flash_tween and _alertness_flash_tween.is_valid():
+			_alertness_flash_tween.kill()
+			_alertness_flash_tween = null
+		_alertness_indicator.visible = false
+		_alertness_indicator.modulate.a = 1.0
+		# Restore whatever the alertness glyph should be showing now.
+		var ai_node := get_node_or_null("AI")
+		if ai_node != null:
+			_on_alertness_changed(int(ai_node.current_alertness), int(ai_node.current_alertness))
+		return
+	var period: float = lerpf(0.30, 0.08, clampf(frac, 0.0, 1.0))
+	var now_ms: int = Time.get_ticks_msec()
+	if _outcry_flash_period > 0.0 and absf(period - _outcry_flash_period) < 0.02 \
+			and now_ms - _outcry_flash_restart_ms < 200:
+		return
+	_outcry_flash_period = period
+	_outcry_flash_restart_ms = now_ms
+	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
+		_alertness_flash_tween.kill()
+	_alertness_indicator.text = "!"
+	# Amber: distinct from red-HOSTILE and yellow-SEARCHING.
+	_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.72, 0.2))
+	_alertness_indicator.visible = true
+	_alertness_flash_tween = create_tween().set_loops()
+	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, period)
+	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 1.0, period)
+
 func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
 		return
@@ -1193,6 +1235,9 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	# surface as icons on PCs.
 	if not AI_enabled:
 		_alertness_indicator.visible = false
+		return
+	# An outcry fuse owns the indicator while it burns.
+	if _outcry_flash_period > 0.0:
 		return
 	# Cancel any flash currently running — entering a new state resets it.
 	if _alertness_flash_tween and _alertness_flash_tween.is_valid():

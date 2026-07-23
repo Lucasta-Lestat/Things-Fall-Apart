@@ -934,6 +934,9 @@ func _world_item_options(item: Item) -> Array:
 		return item.options.duplicate() if item.options else ["Open"]
 	# A loose world item: the world action is to pick it up. Intrinsic actions
 	# (Consume/Throw/Equip) and "Drop" belong to the inventory context menu.
+	# Owned items read differently — one string of legibility, no new art.
+	if "owner_faction" in item and item.owner_faction != "":
+		return ["Pick Up (owned)"]
 	return ["Pick Up"]
 
 ## Pick up a world item into a party member's inventory, then remove it from the
@@ -1045,6 +1048,29 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if character.current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
 	light.z_index = 102
 	character.add_child(light)
+	# Legibility: cones show STATE, not just geometry — tinted off the AI's
+	# alertness. (Deliberately no special colour for outcry-phase witnesses:
+	# the amber ! is the channel the player must be able to trust.)
+	var ai_node = character.get_node_or_null("AI")
+	if ai_node != null and ai_node.has_signal("alertness_changed"):
+		ai_node.alertness_changed.connect(func(_old, new_alertness):
+			_tint_sight_cone(light, int(new_alertness)))
+		_tint_sight_cone(light, int(ai_node.current_alertness))
+
+# AI.Alertness enum order: AT_EASE=0, UNAWARE=1, SUSPICIOUS=2, SEARCHING=3, HOSTILE=4.
+func _tint_sight_cone(light: PointLight2D, alertness: int) -> void:
+	if not is_instance_valid(light):
+		return
+	match alertness:
+		2:
+			light.color = Color(1.0, 0.75, 0.25)   # SUSPICIOUS — amber
+			light.energy = 0.12
+		3, 4:
+			light.color = Color(1.0, 0.3, 0.25)    # SEARCHING/HOSTILE — red
+			light.energy = 0.14
+		_:
+			light.color = Color(0.55, 0.62, 0.72)  # AT_EASE/UNAWARE — dim blue-grey
+			light.energy = 0.08
 
 func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	"""Add a LOS cone as a child of the NPC. Hidden unless stealth mode is on.

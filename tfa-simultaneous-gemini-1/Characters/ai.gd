@@ -456,8 +456,12 @@ func _update_target() -> void:
 # FactionDatabase.are_hostile is THE hostility oracle — do not add local
 # hostility logic here. (The old fallthrough "two distinct non-neutral
 # factions are hostile on sight" lived here; its survivors are now authored
-# as hostile_by_default in factions.json.)
+# as hostile_by_default in factions.json.) The single exception: a manhunt
+# target is personal knowledge — this enforcer HEARD the accusation — and
+# survives alertness decay until the account is settled.
 func _is_enemy(other: ProceduralCharacter) -> bool:
+	if manhunt_target != null and is_instance_valid(manhunt_target) and other == manhunt_target:
+		return true
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
 func _acquire_target(target: ProceduralCharacter) -> void:
@@ -995,6 +999,14 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 		var law_faction: String = str(payload.get("law_faction", ""))
 		if law_faction != "" and LawDatabase.enforces(character.faction_id, law_faction):
 			CrimeManager.on_alarm_heard(character, payload)
+			# Knowledge outlives arousal: alertness decays at 4/sec and this
+			# guard stops actively searching in ~11 s, but he does not FORGET.
+			# manhunt_target is per-listener (every enforcer who hears the
+			# alarm remembers), cleared by settle or a pardon, never by time.
+			var perp = payload.get("perp")
+			if bool(payload.get("identified", false)) \
+					and perp is ProceduralCharacter and is_instance_valid(perp):
+				manhunt_target = perp
 		return
 
 	# AT_EASE civilians ignore ambient noise entirely. Only an unusually loud
@@ -1060,6 +1072,9 @@ func _tick_outcry(delta: float) -> void:
 		return
 	_outcry_timer = -1.0
 	if not _can_still_cry_out():
+		# Silenced in the window — the crime tracker hears about it (this is
+		# how "no one raised the alarm" and the thrill grant resolve).
+		CrimeManager.on_outcry_resolved(int(pending_outcry.get("crime_id", -1)), false)
 		pending_outcry = {}
 		outcry_state_changed.emit(false, 0.0)
 		return
