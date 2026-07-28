@@ -143,6 +143,29 @@ func can_step_roof(from_t: Vector2i, to_t: Vector2i) -> bool:
 func can_step(from_t: Vector2i, to_t: Vector2i) -> bool:
 	return absf(effective_elev(to_t) - effective_elev(from_t)) <= MAX_STEP_STORIES
 
+# Tiles under CLOSED-but-UNLOCKED doors (Door._sync_door_pass): the obstacle
+# grid says INF (the leaf physically blocks), but A* may route through at a
+# penalty — the walker pushes the door open on contact. Refcounted: junction
+# tiles could be shared by two doorways.
+var door_pass: Dictionary = {}
+const DOOR_PASS_COST := 6.0
+
+func set_door_pass(t: Vector2i, on: bool) -> void:
+	if on:
+		door_pass[t] = int(door_pass.get(t, 0)) + 1
+	elif door_pass.has(t):
+		var n := int(door_pass[t]) - 1
+		if n <= 0:
+			door_pass.erase(t)
+		else:
+			door_pass[t] = n
+
+func step_cost(t: Vector2i) -> float:
+	var c: float = grid_costs.get(t, INF)
+	if c == INF and door_pass.has(t):
+		return DOOR_PASS_COST
+	return c
+
 func register_deck(t: Vector2i, elev: float) -> void:
 	var hs: Array = _deck_refs.get(t, [])
 	hs.append(elev)
@@ -213,6 +236,50 @@ func sight_line_clear(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_po
 func get_neighboring_coords(grid_pos) -> Array:
 	return [Vector2i(grid_pos.x + 1, grid_pos.y), Vector2i(grid_pos.x - 1, grid_pos.y), Vector2i(grid_pos.x, grid_pos.y + 1), Vector2i(grid_pos.x, grid_pos.y - 1)]
 
+# --- A* open set: binary min-heap over [f, node] pairs ---
+# LAZY DELETION, deliberately not a closed set. The old linear open_set re-added
+# an already-expanded node whenever its g improved, so the search tolerated an
+# inconsistent heuristic — and this one IS inconsistent whenever a floor has
+# walkability > 1 (grid_costs = 1.0/walkability, so a step can cost < 1 while
+# _heuristic charges a flat 1 per tile). A hard closed set would silently start
+# returning worse paths on those tiles. Instead an entry whose f no longer
+# matches f_score is stale and skipped, and an improved node is simply pushed
+# again — same expansions, same paths, cheaper bookkeeping.
+func _heap_push(heap: Array, f: float, node: Variant) -> void:
+	heap.append([f, node])
+	var i := heap.size() - 1
+	while i > 0:
+		var parent := (i - 1) >> 1
+		if float(heap[parent][0]) <= float(heap[i][0]):
+			break
+		var tmp: Array = heap[parent]
+		heap[parent] = heap[i]
+		heap[i] = tmp
+		i = parent
+
+func _heap_pop(heap: Array) -> Array:
+	var top: Array = heap[0]
+	var last: Array = heap.pop_back()
+	if not heap.is_empty():
+		heap[0] = last
+		var i := 0
+		var n := heap.size()
+		while true:
+			var l := i * 2 + 1
+			var r := l + 1
+			var small := i
+			if l < n and float(heap[l][0]) < float(heap[small][0]):
+				small = l
+			if r < n and float(heap[r][0]) < float(heap[small][0]):
+				small = r
+			if small == i:
+				break
+			var tmp: Array = heap[small]
+			heap[small] = heap[i]
+			heap[i] = tmp
+			i = small
+	return top
+
 # --- Pathfinding (A*) ---
 # jump_height/jump_range: a jump-capable character (grimalkin etc.) paths over
 # a LAYERED graph (ground + roofs). Default 0.0 short-circuits to the exact
@@ -223,27 +290,37 @@ func find_path(start_pos: Vector2i, end_pos: Vector2i, jump_height: float = 0.0,
 	return _find_path_jump(start_pos, end_pos, jump_height, jump_range, start_on_roof, goal_on_roof)
 
 func _find_path_walk(start_pos: Vector2i, end_pos: Vector2i) -> Array[Vector2i]:
-	var open_set: Array[Vector2i] = [start_pos]
+	# Unreachable-goal early-out. _get_neighbors never emits a tile the grid calls
+	# INF, so `current == end_pos` can never fire for a goal inside a wall or off
+	# the map — the loop below would drain the entire connected component first
+	# and only then return []. On structured maps that is the single most
+	# expensive thing pathfinding does, and callers ask for it constantly (a goal
+	# under a structure, a cursor dragged across a building, an AI probing a
+	# sealed room). Answer it in O(1) instead.
+	if grid_costs.get(end_pos, INF) == INF and not door_pass.has(end_pos):
+		return []
+	var open_heap: Array = []
 	var came_from: Dictionary = {}
-	var g_score: Dictionary = { start_pos: 0 }
-	var f_score: Dictionary = { start_pos: _heuristic(start_pos, end_pos) }
+	var g_score: Dictionary = { start_pos: 0.0 }
+	var start_f: float = _heuristic(start_pos, end_pos)
+	var f_score: Dictionary = { start_pos: start_f }
+	_heap_push(open_heap, start_f, start_pos)
 
-	while not open_set.is_empty():
-		var current = open_set[0]
-		for pos in open_set:
-			if f_score.get(pos, INF) < f_score.get(current, INF):
-				current = pos
+	while not open_heap.is_empty():
+		var entry: Array = _heap_pop(open_heap)
+		var current: Vector2i = entry[1]
+		if float(entry[0]) > float(f_score.get(current, INF)):
+			continue   # stale entry: this node was re-pushed with a better f
 		if current == end_pos:
 			return _reconstruct_path(came_from, current)
-		open_set.erase(current)
 		for neighbor in _get_neighbors(current):
-			var tentative_g_score = g_score.get(current, INF) + grid_costs.get(neighbor, 1)
-			if tentative_g_score < g_score.get(neighbor, INF):
+			var tentative_g_score: float = float(g_score.get(current, INF)) + step_cost(neighbor)
+			if tentative_g_score < float(g_score.get(neighbor, INF)):
 				came_from[neighbor] = current
 				g_score[neighbor] = tentative_g_score
-				f_score[neighbor] = tentative_g_score + _heuristic(neighbor, end_pos)
-				if not open_set.has(neighbor):
-					open_set.append(neighbor)
+				var nf: float = tentative_g_score + _heuristic(neighbor, end_pos)
+				f_score[neighbor] = nf
+				_heap_push(open_heap, nf, neighbor)
 	return []
 
 # Layered A* for jumpers: nodes are Vector3i(x, y, layer) with layer 0 = the
@@ -262,16 +339,24 @@ func _find_path_jump(start_pos: Vector2i, end_pos: Vector2i, jump_height: float,
 	# on layer 1; reach everything else on layer 0. goal_on_roof forces layer 1
 	# for an explicit roof pursuit over a walkable interior.
 	var goal_ground: bool = grid_costs.get(end_pos, INF) != INF
+	# Same early-out as the walking search, widened by the two ways a jumper can
+	# legitimately finish on a tile the ground grid calls INF: a roof over it, or
+	# a closed-unlocked door it will shove open. Without one of those three the
+	# goal node is unreachable and the search below is a pure component drain.
+	if not goal_ground and not door_pass.has(end_pos) and not has_roof(end_pos):
+		return []
 	var want_layer: int = 1 if (goal_on_roof or not goal_ground) else 0
-	var open_set: Array[Vector3i] = [start]
+	var open_heap: Array = []
 	var came_from: Dictionary = {}
 	var g_score: Dictionary = { start: 0.0 }
-	var f_score: Dictionary = { start: _heuristic(start_pos, end_pos) }
-	while not open_set.is_empty():
-		var current: Vector3i = open_set[0]
-		for pos in open_set:
-			if f_score.get(pos, INF) < f_score.get(current, INF):
-				current = pos
+	var start_f: float = _heuristic(start_pos, end_pos)
+	var f_score: Dictionary = { start: start_f }
+	_heap_push(open_heap, start_f, start)
+	while not open_heap.is_empty():
+		var entry: Array = _heap_pop(open_heap)
+		var current: Vector3i = entry[1]
+		if float(entry[0]) > float(f_score.get(current, INF)):
+			continue   # stale entry: this node was re-pushed with a better f
 		if current.x == end_pos.x and current.y == end_pos.y and current.z == want_layer:
 			# project the layer out
 			var path: Array[Vector2i] = [Vector2i(current.x, current.y)]
@@ -281,16 +366,15 @@ func _find_path_jump(start_pos: Vector2i, end_pos: Vector2i, jump_height: float,
 				path.push_front(Vector2i(cur.x, cur.y))
 			path.pop_front()
 			return path
-		open_set.erase(current)
 		for e in _get_jump_neighbors(current, jump_height, jump_range):
 			var nb: Vector3i = e["n"]
-			var tentative: float = g_score.get(current, INF) + float(e["cost"])
-			if tentative < g_score.get(nb, INF):
+			var tentative: float = float(g_score.get(current, INF)) + float(e["cost"])
+			if tentative < float(g_score.get(nb, INF)):
 				came_from[nb] = current
 				g_score[nb] = tentative
-				f_score[nb] = tentative + _heuristic(Vector2i(nb.x, nb.y), end_pos)
-				if not open_set.has(nb):
-					open_set.append(nb)
+				var nbf: float = tentative + _heuristic(Vector2i(nb.x, nb.y), end_pos)
+				f_score[nb] = nbf
+				_heap_push(open_heap, nbf, nb)
 	return []
 
 func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) -> Array:
@@ -300,10 +384,11 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 	if node.z == 0:
 		var here := effective_elev(t)
 		for dir in dirs:
-			# plain walk
+			# plain walk (door_pass: closed-unlocked doors are walkable at a
+			# penalty — the walker pushes them open on contact)
 			var n1: Vector2i = t + dir
-			if grid_costs.get(n1, INF) != INF and can_step(t, n1):
-				out.append({"n": Vector3i(n1.x, n1.y, 0), "cost": grid_costs.get(n1, 1.0)})
+			if (grid_costs.get(n1, INF) != INF or door_pass.has(n1)) and can_step(t, n1):
+				out.append({"n": Vector3i(n1.x, n1.y, 0), "cost": step_cost(n1)})
 			for d in range(1, jump_range + 1):
 				var n: Vector2i = t + dir * d
 				# jump up onto a roof: the ROOF layer floats above ground
@@ -354,7 +439,7 @@ func _get_neighbors(pos: Vector2i) -> Array[Vector2i]:
 	var dirs = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 	for dir in dirs:
 		var n_pos = pos + dir
-		if grid_costs.get(n_pos, INF) != INF:
+		if grid_costs.get(n_pos, INF) != INF or door_pass.has(n_pos):
 			if not can_step(pos, n_pos):
 				continue
 			neighbors.append(n_pos)
@@ -367,6 +452,65 @@ func _reconstruct_path(came_from: Dictionary, current: Vector2i) -> Array[Vector
 		path.push_front(current)
 	path.pop_front()
 	return path
+
+# Every tile reachable from `from_t` in at most `max_steps` moves, mapped to the
+# number of moves it takes. `from_t` itself is excluded.
+#
+# This is the answer to "where near here can I actually get to", which callers
+# used to compute by running a full find_path() PER CANDIDATE TILE — quadratic
+# work whose worst case (a candidate walled off from the asker) drained the whole
+# component every single time. One flood costs at most one expansion per tile in
+# range and answers for all of them at once.
+#
+# STEPS, not cost: this is a reachability question, so per-tile walkability is
+# irrelevant and a plain BFS is exact. Use find_path when you need the route.
+# The step bound is also a feature for "nearby" queries — a tile two away around
+# forty tiles of wall is not somewhere you wanted to send anyone.
+#
+# jump_height mirrors find_path: <= 0 walks the ground graph (the common case),
+# otherwise the layered ground+roof graph, with roof nodes projected back down to
+# their tile so callers still get plain Vector2i keys.
+func reachable_within(from_t: Vector2i, max_steps: int, jump_height: float = 0.0, jump_range: int = 1, start_on_roof: bool = false) -> Dictionary:
+	var out: Dictionary = {}
+	if max_steps <= 0:
+		return out
+	if jump_height <= 0.001:
+		var frontier: Array[Vector2i] = [from_t]
+		var depth := 0
+		while depth < max_steps and not frontier.is_empty():
+			depth += 1
+			var next: Array[Vector2i] = []
+			for t in frontier:
+				for n in _get_neighbors(t):
+					if n == from_t or out.has(n):
+						continue
+					out[n] = depth
+					next.append(n)
+			frontier = next
+		return out
+	# Layered flood. Nodes are Vector3i(x, y, layer) exactly as in _find_path_jump;
+	# `seen` keys on the node so a tile can be entered once per surface, while
+	# `out` keeps the shallowest depth at which the tile was touched on either.
+	var seen: Dictionary = {}
+	var start := Vector3i(from_t.x, from_t.y, 1 if start_on_roof and has_roof(from_t) else 0)
+	seen[start] = true
+	var lframe: Array[Vector3i] = [start]
+	var ldepth := 0
+	while ldepth < max_steps and not lframe.is_empty():
+		ldepth += 1
+		var lnext: Array[Vector3i] = []
+		for node in lframe:
+			for e in _get_jump_neighbors(node, jump_height, jump_range):
+				var nb: Vector3i = e["n"]
+				if seen.has(nb):
+					continue
+				seen[nb] = true
+				lnext.append(nb)
+				var flat := Vector2i(nb.x, nb.y)
+				if flat != from_t and not out.has(flat):
+					out[flat] = ldepth
+		lframe = lnext
+	return out
 
 func create_example_bolt(pos: Vector2i = Vector2i(1000, 1000)):
 	var lightning = LightningVFX.new()

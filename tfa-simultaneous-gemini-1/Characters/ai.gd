@@ -906,17 +906,27 @@ func execute_wander():
 		wander_cooldown = WANDER_COOLDOWN_TIME * 0.5
 
 func find_random_wander_target(from_tile: Vector2i) -> Vector2i:
+	# ONE bounded flood, not a full A* per candidate. This used to run up to 120
+	# complete find_path() searches per re-roll, every WANDER_COOLDOWN_TIME, for
+	# every idle NPC — and each candidate that walls had sealed off cost a whole
+	# connected-component exhaustion, because A* only learns a goal is
+	# unreachable by failing to find it. On structured maps that measured in the
+	# hundreds of milliseconds in a single frame, which is exactly where the
+	# "movement gets sluggish near buildings" hitch came from: _update_movement
+	# runs off _process, so an AI stall freezes whoever the player is steering.
+	#
+	# The step budget is deliberately 2x the box radius: a target around a corner
+	# still qualifies, but one that needs a long trek around a building no longer
+	# does — which is better wander behaviour anyway, not just cheaper.
+	var reach := GridManager.reachable_within(from_tile, WANDER_RANGE_TILES * 2,
+		character.jump_height, character.jump_range, character.on_roof)
 	var valid_tiles: Array[Vector2i] = []
-
-	for x in range(-WANDER_RANGE_TILES, WANDER_RANGE_TILES + 1):
-		for y in range(-WANDER_RANGE_TILES, WANDER_RANGE_TILES + 1):
-			if x == 0 and y == 0:
-				continue
-			var check_tile = from_tile + Vector2i(x, y)
-			if is_tile_walkable(check_tile):
-				var test_path = GridManager.find_path(from_tile, check_tile, character.jump_height, character.jump_range, character.on_roof)
-				if not test_path.is_empty():
-					valid_tiles.append(check_tile)
+	for tile: Vector2i in reach:
+		var d: Vector2i = tile - from_tile
+		if absi(d.x) > WANDER_RANGE_TILES or absi(d.y) > WANDER_RANGE_TILES:
+			continue
+		if is_tile_walkable(tile):
+			valid_tiles.append(tile)
 
 	if valid_tiles.is_empty():
 		return Vector2i.MIN
