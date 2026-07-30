@@ -150,9 +150,10 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 	return false
 
 func _handle_drawing_path(mouse_pos: Vector2) -> bool:
-	# While left mouse is held, add waypoints
+	# While left mouse is held, add waypoints (see _try_add_drawn_sample for
+	# the walkability rules the pen obeys)
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		tactical_path.add_waypoint(mouse_pos)
+		_try_add_drawn_sample(mouse_pos)
 		# Don't consume other input while drawing - just track the mouse
 		return true
 
@@ -164,6 +165,95 @@ func _handle_drawing_path(mouse_pos: Vector2) -> bool:
 		return true
 
 	return true  # Consume all input while drawing
+
+
+# --- freehand pen walkability (GEOMETRY-based, deliberately not tiles) -------
+# The pen obeys the body's true footprint: a sample is valid where the body
+# circle physically fits, tested against the real STRUCTURES colliders (doors
+# excluded — the walker pushes those open). Tile-based clamping made the
+# buffer up to a whole tile wide on unlucky wall/grid alignments (and uneven
+# per wall), and the wall tiles flanking a doorway blocked drawing through it.
+# Rules: (1) a sample must be standable (nudged to the nearest standable
+# point when the cursor rides a wall, so the line HUGS the wall at the true
+# minimum distance); (2) a drag across a doorway snaps that sample to the
+# door's exact gap centre — the same point A* paths thread; (3) every sample
+# must CONNECT to the previous waypoint without the swept circle crossing
+# masonry — the pen cannot pass through a wall; it stops until routed
+# somewhere legal (through the door).
+var _pen_shape: CircleShape2D = null
+
+
+func _pen_radius() -> float:
+	# slightly under the body circle: the walker can shave the last pixel by
+	# sliding, and the arrival radius absorbs it
+	return character._body_circle_radius() * 0.9
+
+
+func _point_standable(p: Vector2) -> bool:
+	if _pen_shape == null:
+		_pen_shape = CircleShape2D.new()
+	_pen_shape.radius = _pen_radius()
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = _pen_shape
+	params.transform = Transform2D(0.0, p)
+	params.collision_mask = CollisionLayers.STRUCTURES
+	params.collide_with_areas = false
+	for h in character.get_world_2d().direct_space_state.intersect_shape(params, 6):
+		var col = h.get("collider")
+		# a closed UNLOCKED door yields to the walker's push — ignore its leaf;
+		# a locked one is a wall until the key turns
+		if col is Door and not (col as Door).locked:
+			continue
+		return false
+	return true
+
+
+# Swept-circle walkability of the straight segment a->b: overlapping circle
+# tests every 12px (radius ~19, so no tunnelling). Steps on door tiles trust
+# execution — the gap-centre snap + the walker's own door push thread jambs
+# tighter than the pen circle allows.
+func _segment_standable(a: Vector2, b: Vector2) -> bool:
+	var steps := int(a.distance_to(b) / 12.0) + 1
+	for i in range(1, steps + 1):
+		var q: Vector2 = a.lerp(b, float(i) / float(steps))
+		if GridManager.door_pass.has(GridManager.world_to_map(q)):
+			continue
+		if not _point_standable(q):
+			return false
+	return true
+
+
+func _try_add_drawn_sample(mouse_pos: Vector2) -> void:
+	var t: Vector2i = GridManager.world_to_map(mouse_pos)
+	var p := mouse_pos
+	if GridManager.door_pass.has(t):
+		# crossing a doorway: the sample IS the door's exact gap centre
+		p = GridManager.door_gaps.get(t, GridManager.map_to_world(t))
+	elif not _point_standable(p):
+		# cursor is riding a wall: hug it — nudge to the nearest standable
+		# point so the line tracks the wall at the true minimum distance
+		var found := false
+		for step in [8.0, 16.0, 26.0]:
+			var best := Vector2.INF
+			var best_d := INF
+			for k in 8:
+				var cand: Vector2 = p + Vector2.from_angle(TAU * float(k) / 8.0) * step
+				if _point_standable(cand):
+					var d := p.distance_squared_to(cand)
+					if d < best_d:
+						best_d = d
+						best = cand
+			if best_d < INF:
+				p = best
+				found = true
+				break
+		if not found:
+			return
+	var prev: Vector2 = character.global_position if tactical_path.waypoints.is_empty() \
+		else tactical_path.waypoints[tactical_path.waypoints.size() - 1]
+	if not _segment_standable(prev, p):
+		return
+	tactical_path.add_waypoint(p)
 
 func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	if pending_action_node == null:
@@ -311,13 +401,15 @@ func _handle_drawing_rotation(mouse_pos: Vector2) -> bool:
 
 # --- Public API for external action assignment (called by PartySidePanel, ability system, etc.) ---
 
-func assign_ability_to_pending_node(ability_id: String, target_pos: Vector2, icon: Texture2D = null) -> bool:
+func assign_ability_to_pending_node(ability_id: String, target_pos: Vector2, icon: Texture2D = null, targets: Array = [], anchor = null) -> bool:
 	if state != PathInputState.PLACING_ACTION or pending_action_node == null:
 		return false
 	pending_action_node.action_type = ActionQueue.ActionType.USE_ABILITY
 	pending_action_node.action_data = {
 		"ability_id": ability_id,
 		"target_position": target_pos,
+		"targets": targets,
+		"target_anchor": anchor,
 		"needs_targeting": false,
 	}
 	pending_action_node.icon_texture = icon
@@ -364,19 +456,30 @@ func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -
 			}
 			pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
 	elif item is WeaponShape:
-		# Weapon attack at mouse position
-		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
-		pending_action_node.action_data = {"target_position": mouse_pos}
-		pending_action_node.icon_texture = _attack_icon
+		# Weapon attack: on a character if one is under the cursor, else at the point.
+		_assign_attack_to_pending_node(mouse_pos)
 	else:
 		# Nothing equipped — basic unarmed attack
-		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
-		pending_action_node.action_data = {"target_position": mouse_pos}
-		pending_action_node.icon_texture = _attack_icon
+		_assign_attack_to_pending_node(mouse_pos)
 
 	pending_action_node = null
 	state = PathInputState.IDLE
 	path_drawer.queue_redraw()
+
+func _assign_attack_to_pending_node(mouse_pos: Vector2) -> void:
+	"""Plan a weapon/unarmed attack on the pending node. A character under the
+	cursor is designated as the victim (ATTACK_TARGET, which re-reads their live
+	position when the swing actually happens); bare ground plans the old
+	fixed-point ATTACK."""
+	var designated := character._find_character_at(mouse_pos)
+	if designated != null:
+		pending_action_node.action_type = ActionQueue.ActionType.ATTACK_TARGET
+		pending_action_node.action_data = {"target": designated}
+	else:
+		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
+		pending_action_node.action_data = {"target_position": mouse_pos}
+	pending_action_node.icon_texture = _attack_icon
+
 
 func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 	"""Confirm the active targeting and assign the ability to the pending action node."""
@@ -395,6 +498,12 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 	pending_action_node.action_data = {
 		"ability_id": ability_id,
 		"target_position": target_pos,
+		# Character designation survives the plan→unpause→walk→cast round trip.
+		# `targets` binds the effect to exact characters; `target_anchor` re-aims
+		# the position at execution. Both are empty/null when the player
+		# confirmed over bare ground, leaving plain area targeting intact.
+		"targets": result.get("targets", []),
+		"target_anchor": result.get("anchor", null),
 		"needs_targeting": false,
 	}
 	pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
@@ -446,12 +555,22 @@ func _astar_path_to_waypoints(from_pos: Vector2, to_pos: Vector2) -> PackedVecto
 	"""Use A* pathfinding to get waypoints between two world positions."""
 	var start_tile = GridManager.world_to_map(from_pos)
 	var end_tile = GridManager.world_to_map(to_pos)
-	var tile_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof)
-	var waypoints = PackedVector2Array()
-	for tile in tile_path:
-		waypoints.append(GridManager.map_to_world(tile))
+	# JUMP input: Shift+middle-click a roof targets the ROOF for jumpers
+	# (plain clicks under a roof path indoors); unreachable ground under a
+	# roof falls back to the roof for jumpers automatically.
+	var can_roof := character.jump_height > 0.0 and GridManager.has_roof(end_tile)
+	var want_roof := can_roof and Input.is_key_pressed(KEY_SHIFT)
+	var tile_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof, want_roof)
+	if tile_path.is_empty() and can_roof and not want_roof:
+		tile_path = GridManager.find_path(start_tile, end_tile, character.jump_height, character.jump_range, character.on_roof, true)
+	if tile_path.is_empty():
+		# the clicked tile is blocked (wall/off-map): snap to the floor beside
+		# it — never fabricate a straight line through the wall
+		var snapped := GridManager.nearest_walkable(end_tile)
+		if snapped != end_tile:
+			tile_path = GridManager.find_path(start_tile, snapped, character.jump_height, character.jump_range, character.on_roof)
+	var waypoints := GridManager.path_to_waypoints(tile_path)
 	if waypoints.is_empty():
-		# Fallback: direct line
+		# genuinely unreachable — a stand-still path refuses the order safely
 		waypoints.append(from_pos)
-		waypoints.append(to_pos)
 	return waypoints

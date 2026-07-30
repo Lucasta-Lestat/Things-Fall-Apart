@@ -20,6 +20,56 @@ STYLE = (
     "pure-white background, fully isolated as a clean cutout. "
 )
 
+# Held gear (weapons, shields) is drawn in a different register from the armor
+# icons: a bold contour with flat cel shading, matching longsword.png and
+# battleaxe.png.
+#
+# A shield drawn as a full circle reads as a disc lying flat on the ground. Held
+# on a raised forearm and seen from above it foreshortens hard, and the parts
+# that sell it are the ones a squashed face-on drawing loses: the rim's material
+# THICKNESS all the way round, and a boss that domes up out of the face and
+# catches the light. So ask for the perspective directly rather than flattening
+# a front view afterwards.
+#
+# One of the reference images is deliberately a WIDE sprite: the model matches
+# the references' aspect ratio, and tall weapon refs alone produce an upright
+# portrait shield every time.
+def shield_style(silhouette, placement, aspect):
+    """Prompt for a shield seen from above.
+
+    ROUND shields are easy: intrinsically 1:1, they foreshorten to a ~2.4:1
+    ellipse and stay legible. ELONGATED shields (kite, heater) are not, and the
+    reason is arithmetic rather than art: that same camera is a squash of ~0.42,
+    so a 2:1 kite laid out horizontally comes to 2 / 0.42 = 4.8:1. At the ~36px
+    these render at, that is a sliver — every attempt at it got called a canoe.
+
+    Two things fix it, both encoded below: lay the shield DIAGONALLY in the
+    ground plane rather than square-on (which buys back short-axis pixels), and
+    cheat the foreshortening shallower than physically correct, capping the
+    bounding box under 3:1. Generate at the final rotation and light it after —
+    rotating a finished render drags the key light round with it.
+    """
+    return (
+        "A single item sprite for a top-down RPG, drawn with bold dark contour lines and flat cel "
+        "shading in the style of the reference sprites provided. The whole image is a WIDE LANDSCAPE "
+        "picture. "
+        "The camera sits high above the shield and looks down onto it at about sixty degrees, a high "
+        "three-quarter overhead view: clearly looking ONTO the shield rather than at its face, while "
+        f"keeping a generous amount of that face visible. SILHOUETTE: {silhouette} "
+        "DEPTH: a thick slab of rim runs along the lower edge nearest the viewer and wraps around "
+        "the far end, showing its full material thickness there, and thins away to almost nothing "
+        "along the far upper edge. The face is dished, shaded in flat cel bands that step from "
+        "lighter at the near lower edge to darker toward the far upper edge. The whole shield casts "
+        "a soft dark shadow onto the ground beneath its near edge. "
+        "The key light comes from the upper left of the finished picture. "
+        "The shading is built from a few large flat areas so the sprite stays readable when it is "
+        "shrunk to thirty pixels across, and the material is matte, shaded in flat steps. "
+        f"PLACEMENT: {placement} The shield's bounding box is about {aspect} times as wide as it is "
+        "tall. "
+        "The shield sits centered and complete inside the frame, surrounded on all four sides by a "
+        "generous empty margin of plain flat pure-white background, fully isolated as a clean cutout. "
+    )
+
 PROMPTS = {
     "dark_robes": STYLE + (
         "The garment is a cultist's heavy dark ritual robe in charcoal black with deep-purple "
@@ -56,6 +106,68 @@ PROMPTS = {
         "embroidery, a ruffled high collar around the top-center neck opening, and ruffled cuffs at "
         "the ends of the sleeves that spread out to the sides."
     ),
+
+    # ── Shields ──
+    # Held items live in the hand next to swords and axes, so they follow the
+    # WEAPON style (bold black contour, flat cel shading) rather than STYLE's
+    # painterly armor register — hence the REFS_OVERRIDE entries below.
+    #
+    # Perspective: a shield drawn as a full circle reads as a disc lying flat on
+    # the ground — a tray, not something strapped to a raised forearm. Overhead,
+    # an upright shield foreshortens to a wide shallow oval, so that is what these
+    # ask for, with a strip of rim thickness along the bottom to sell the depth.
+    "buckler": shield_style(
+        silhouette=(
+            "the shield is round, so it foreshortens into a smooth even ellipse with no corners "
+            "and no taper."
+        ),
+        placement="The ellipse lies flat across the middle of the frame.",
+        aspect="two and a half",
+    ) + (
+        "The shield is a small round wooden buckler. Pale warm timber planks run across the face in "
+        "parallel bands with visible grain and a few nicks, an iron-banded rim wraps the outer edge, "
+        "and a pale domed steel boss crowns the centre, standing proud of the planks."
+    ),
+    # The asymmetry has to be stated twice over. Described as a teardrop or a
+    # smooth lens, the model produces something pointed at BOTH ends and every
+    # reader calls it a canoe; describing one blunt end and one sharp end, and
+    # then saying outright that the two ends look different, is what fixes it.
+    "iron_shield": shield_style(
+        silhouette=(
+            "the shield is a kite. It has ONE broad rounded shoulder at one end which holds almost "
+            "its full width for the first third of its length, and from there both sides run in a "
+            "long straight taper to ONE single sharp point at the other end. The broad end is wide "
+            "and blunt and the far end is a single point, so the two ends look completely different "
+            "from each other."
+        ),
+        placement=(
+            "The shield lies at a shallow diagonal across the ground, its broad rounded shoulder "
+            "toward the upper right of the frame and its single point aimed down toward the lower "
+            "left corner, the long axis about thirty degrees off horizontal."
+        ),
+        aspect="two and a third",
+    ) + (
+        "The shield is a knight's iron kite shield. The camera looks onto its OUTER face, which is "
+        "dished and crossed by a raised iron band. A domed steel boss stands proud of the face near "
+        "the broad shoulder, catching the light on its upper left and casting a soft shadow down "
+        "onto the face beside it. The boss is the one detail that must survive the sprite being "
+        "shrunk, so it is bold and high in contrast."
+    ),
+}
+
+# Items whose style comes from a different set of reference sprites than REFS.
+# shield_topdown_aspect.png is a WIDE landscape sprite and is what stops the
+# model copying the tall weapon refs' portrait framing; longsword.png supplies
+# the contour-and-cel-shading register. (tools/refs carries a .gdignore so Godot
+# leaves these out of the project's asset import.)
+_REFS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "refs")
+SHIELD_REFS = [
+    os.path.join(_REFS_DIR, "shield_topdown_aspect.png"),
+    os.path.join(ITEMS, "longsword.png"),
+]
+REFS_OVERRIDE = {
+    "buckler": SHIELD_REFS,
+    "iron_shield": SHIELD_REFS,
 }
 
 
@@ -134,9 +246,10 @@ def remove_bg(img, tol=28):
 
 def main():
     targets = sys.argv[1:] or list(PROMPTS.keys())
-    ref_paths = [os.path.join(ITEMS, r) for r in REFS]
     for name in targets:
         prompt = PROMPTS[name]
+        # REFS entries are bare Items/ filenames; REFS_OVERRIDE entries are full paths.
+        ref_paths = REFS_OVERRIDE.get(name) or [os.path.join(ITEMS, r) for r in REFS]
         print(f"[gen] {name} ...", flush=True)
         raw, model = gen(prompt, ref_paths)
         img = Image.open(io.BytesIO(raw))

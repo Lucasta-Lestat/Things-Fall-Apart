@@ -35,7 +35,13 @@ var _electrified_condition_timers: Dictionary = {}  # Dictionary[int, float]
 # -- organic spread, fuel scaling, wind bias. The tile-fire code below stays but
 # goes dormant (ignition routes to cell_fire, so surface_grid never gets fire).
 var cell_fire: CellFire = null
+var cell_fire_fx: CellFireFX = null   # editor-look flame renderer: continuous
+                                      # blob sheet over burning cells + merged
+                                      # cluster lights (no per-cell fire.tscn)
+var cell_scorch: CellScorchFX = null  # persistent ground char under the flames
 const CELL_FIRE_SCENE := preload("res://CellFire.gd")
+const CELL_FIRE_FX_SCENE := preload("res://CellFireFX.gd")
+const CELL_SCORCH_SCENE := preload("res://CellScorchFX.gd")
 
 
 # Called by Game.load_map once the grid + structures exist. graph may be null
@@ -44,11 +50,37 @@ func setup_cell_graph(graph: CellGraph) -> void:
 	if cell_fire != null and is_instance_valid(cell_fire):
 		cell_fire.queue_free()
 		cell_fire = null
+	if cell_fire_fx != null and is_instance_valid(cell_fire_fx):
+		cell_fire_fx.queue_free()
+		cell_fire_fx = null
+	if cell_scorch != null and is_instance_valid(cell_scorch):
+		cell_scorch.queue_free()
+		cell_scorch = null
 	if graph == null or graph.cell_count <= 0:
 		return
 	cell_fire = CELL_FIRE_SCENE.new()
 	add_child(cell_fire)
 	cell_fire.setup(graph, self, _surface_defs.get("fire", {}))
+	cell_fire.native_particles = false
+	cell_fire_fx = CELL_FIRE_FX_SCENE.new()
+	# z 0, same as the fire.tscn vfx it replaces: SurfaceManager's tree position
+	# already draws over map art (the old flames were visible on floors)
+	add_child(cell_fire_fx)
+	cell_fire_fx.setup(cell_fire, graph)
+	# persistent char layer: above the baked ground (-6), below legacy floors
+	# (-4) and structures (-3), so burnt grass blackens but walls draw over it.
+	# Parent under MapLoader to share the map art's coordinate space/z run;
+	# fall back to an absolute z under SurfaceManager if it's missing.
+	cell_scorch = CELL_SCORCH_SCENE.new()
+	cell_scorch.setup(graph)
+	cell_scorch.z_index = -5
+	var game = _get_game()
+	if game != null and "map_loader" in game and game.map_loader != null:
+		game.map_loader.add_child(cell_scorch)
+	else:
+		cell_scorch.z_as_relative = false
+		add_child(cell_scorch)
+	cell_fire.scorch_fx = cell_scorch
 
 
 func _cell_fire_active() -> bool:

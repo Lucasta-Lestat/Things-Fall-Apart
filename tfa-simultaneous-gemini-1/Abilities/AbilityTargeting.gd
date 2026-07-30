@@ -59,6 +59,22 @@ const INDICATOR_BORDER_WIDTH = 2.0
 # Queued ability indicators (persist until executed)
 var queued_indicators: Array[Node2D] = []
 
+# --- Knockback landing preview ----------------------------------------------
+# While targeting an ability that shoves, show every affected body's arrow and
+# the ring it will end up in, so the player can aim the DISPLACEMENT rather than
+# just the blast. Empty dict = this ability doesn't knock back and nothing draws.
+var _knockback_effect: Dictionary = {}
+# current_ability parsed once per targeting session. The hit set comes from the
+# caster's own _find_targets_in_area so the ghosts match what will actually be
+# hit — including the nested-vs-flattened targeting split (the flat dict has no
+# "single" shape), which is why this is an Ability and not the raw dictionary.
+var _preview_ability: Ability = null
+var _knockback_layer: KnockbackPreviewDrawer = null
+# _find_targets_in_area sweeps every character, item and structure in the scene,
+# so recompute on cursor movement rather than unconditionally each frame.
+var _knockback_last_pos: Vector2 = Vector2.INF
+const KNOCKBACK_PREVIEW_RESOLUTION := 3.0
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	z_index = 50  # Above ground, below UI
@@ -83,6 +99,8 @@ func _process(_delta: float) -> void:
 			_update_character_targeting_visuals()
 		else:
 			_update_active_indicator()
+
+		_update_knockback_preview()
 
 func _create_indicators() -> void:
 	"""Create the targeting indicator nodes"""
@@ -119,6 +137,21 @@ func _create_indicators() -> void:
 	cone_indicator.add_child(cone_drawer)
 	cone_indicator.visible = false
 	add_child(cone_indicator)
+
+	# Knockback landing preview — top_level and pinned to the origin, so its
+	# local space IS world space and the arrows don't swing with the caster's
+	# facing. Drawn above the AoE fill so the shove reads over the blast.
+	_knockback_layer = KnockbackPreviewDrawer.new()
+	_knockback_layer.name = "KnockbackPreview"
+	_knockback_layer.top_level = true
+	# Absolute, not inherited: this node is two levels below a character root, and
+	# the whole point is being above every body it draws an arrow over. 60 clears
+	# characters (5) and this node's own AoE fill (~55), and stays under VFX (100).
+	_knockback_layer.z_as_relative = false
+	_knockback_layer.z_index = 60
+	_knockback_layer.visible = false
+	add_child(_knockback_layer)
+	_knockback_layer.global_position = Vector2.ZERO
 
 func _update_active_indicator() -> void:
 	"""Update the position and appearance of the active indicator"""
@@ -191,6 +224,47 @@ func _origin_pos() -> Vector2:
 		return caster_origin_override
 	return get_parent().global_position if get_parent() else caster_position
 
+## The character the player confirmed on top of, or null over bare ground.
+## Delegates to the caster's canonical probe so designation means the same thing
+## here as it does in tactical planning.
+func _designated_character_at(world_pos: Vector2):
+	var caster = get_parent()
+	if caster == null or not caster.has_method("_find_character_at"):
+		return null
+	return caster._find_character_at(world_pos)
+
+## True for abilities that affect exactly one character rather than an area.
+##
+## Reads the NESTED targeting block on purpose. AbilityShape flattens shape names
+## into a top-level `target_shape`, but its enum has no "single" member, so the
+## flattened value collapses to "none" and cannot tell the two apart. The nested
+## block is the authored source of truth.
+func _is_single_target_ability() -> bool:
+	var raw_targeting: Dictionary = current_ability.get("targeting", {})
+	# Self-targeted abilities resolve on the caster no matter where the cursor
+	# was, so they can never be bound to a designation. This guard has to sit
+	# ABOVE the shape checks: five abilities (bide, test_animal_magnetism, rain,
+	# acid_rain, freezing_rain) are authored {"type":"self","shape":"single"},
+	# and binding one of those to a bystander would hand them the buff and leave
+	# the caster with nothing — an explicit `targets` array bypasses
+	# _find_targets_in_area's `type == "self" -> [self]` override.
+	if String(raw_targeting.get("type", "")) == "self":
+		return false
+	var raw_shape := String(raw_targeting.get("shape", "none"))
+	# Unshaped abilities have no area to speak of, so a designation is the only
+	# sensible reading of the click.
+	return raw_shape == "single" or raw_shape == "none"
+
+
+## Whether a designation would actually be honored for this ability. Used to
+## avoid recording an anchor that execution will ignore — a stored-but-unused
+## anchor makes the planning UI draw a tracking leash for an ability that will
+## detonate at a fixed point.
+func _ability_follows_anchor() -> bool:
+	return AbilityManager.targeting_follows_anchor(
+		current_ability.get("targeting", {}),
+		current_ability.get("visuals", {}))
+
 # ===== PUBLIC API =====
 
 func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origin_override: Vector2 = Vector2.INF) -> void:
@@ -247,11 +321,17 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 		_:
 			target_shape = TargetShape.NONE
 
+	# Knockback preview: parse once per session, then refresh as the cursor moves.
+	_knockback_effect = _find_knockback_effect(ability)
+	_preview_ability = Ability.from_dict(ability) if not _knockback_effect.is_empty() else null
+	_knockback_last_pos = Vector2.INF
+
 	# Force an immediate update to ensure visual appears this frame
 	if target_shape == TargetShape.CHARACTERS:
 		_update_character_targeting_visuals()
 	else:
 		_update_active_indicator()
+	_update_knockback_preview()
 
 	emit_signal("targeting_started", hand, ability)
 
@@ -275,6 +355,9 @@ func confirm_targeting() -> Dictionary:
 			"position": centroid,
 			"shape": target_shape,
 			"targets": selected_targets.duplicate(),
+			# A single pick can be tracked to its live position; a centroid of
+			# several cannot follow any one of them, so it stays a fixed point.
+			"anchor": selected_targets[0] if selected_targets.size() == 1 else null,
 			"caster_position": caster_position,
 		}
 		emit_signal("targeting_confirmed", current_hand, current_ability, centroid)
@@ -297,6 +380,25 @@ func confirm_targeting() -> Dictionary:
 		"rotation": rectangle_rotation,
 		"caster_position": caster_position,
 	}
+
+	# Designation: whoever the player confirmed on top of. Null over bare ground,
+	# which is what preserves plain area targeting.
+	var designated = _designated_character_at(final_position)
+
+	# Only record an anchor the executor will actually honor. Ground AoE keeps
+	# the patch of ground the player chose, so storing an anchor for it would be
+	# a lie the planning UI then draws a tracking leash for.
+	var anchor = designated if (designated != null and _ability_follows_anchor()) else null
+	result["anchor"] = anchor
+
+	# Single-target abilities additionally bind their effects to that one
+	# character. Without this they fall into _find_targets_in_area's "none"/
+	# "single" arm, which is a 50px proximity sweep — i.e. "single target"
+	# spells splash whoever else happens to be standing nearby. Clicking bare
+	# ground still falls back to that sweep rather than fizzling.
+	if designated != null and _is_single_target_ability():
+		result["targets"] = [designated]
+
 	print("targeting confirmed with position: ", target_position)
 	emit_signal("targeting_confirmed", current_hand, current_ability, target_position)
 	return result
@@ -316,6 +418,11 @@ func end_targeting() -> void:
 	target_shape = TargetShape.NONE
 	lock_to_caster = false
 	caster_origin_override = Vector2.INF
+	_knockback_effect = {}
+	_preview_ability = null
+	if _knockback_layer:
+		_knockback_layer.shoves = []
+		_knockback_layer.visible = false
 	circle_indicator.visible = false
 	rectangle_indicator.visible = false
 	line_indicator.visible = false
@@ -553,7 +660,140 @@ func _emit_auto_confirm() -> void:
 		caster._confirm_ability_target(PauseManager.is_paused)
 
 
+# ===== KNOCKBACK LANDING PREVIEW =====
+
+## The first knockback effect this ability applies, or {} if it doesn't shove.
+## Checks `steps` too — multi-step abilities (a dash that ends in a shove) carry
+## their effects per step rather than at the top level.
+func _find_knockback_effect(ability: Dictionary) -> Dictionary:
+	var direct := _first_knockback_in(ability.get("effects", []))
+	if not direct.is_empty():
+		return direct
+	for step in ability.get("steps", []):
+		if step is Dictionary:
+			var stepped := _first_knockback_in(step.get("effects", []))
+			if not stepped.is_empty():
+				return stepped
+	return {}
+
+func _first_knockback_in(effects) -> Dictionary:
+	if effects is Dictionary:
+		effects = [effects]
+	if not (effects is Array):
+		return {}
+	for e in effects:
+		if e is Dictionary and str(e.get("type", "")) == "knockback":
+			return e
+	return {}
+
+func _update_knockback_preview() -> void:
+	if _knockback_layer == null:
+		return
+	if _knockback_effect.is_empty() or _preview_ability == null:
+		_knockback_layer.visible = false
+		return
+
+	# Only recompute when the aim actually moved — see KNOCKBACK_PREVIEW_RESOLUTION.
+	if target_position.distance_squared_to(_knockback_last_pos) < KNOCKBACK_PREVIEW_RESOLUTION * KNOCKBACK_PREVIEW_RESOLUTION:
+		return
+	_knockback_last_pos = target_position
+
+	var caster = get_parent()
+	if caster == null or not caster.has_method("_find_targets_in_area"):
+		_knockback_layer.visible = false
+		return
+
+	var origin: Vector2 = AbilityEffect.knockback_origin(
+		_knockback_effect, caster.global_position, target_position)
+
+	var shoves: Array = []
+	for t in caster._find_targets_in_area(_preview_ability, target_position):
+		if not is_instance_valid(t) or not (t is Node2D):
+			continue
+		# Only bodies that integrate an external force can be predicted.
+		# _resolve_knockback gates on apply_external_force the same way, so
+		# anything skipped here genuinely wouldn't move.
+		if not t.has_method("predict_knockback_landing"):
+			continue
+		var force: Vector2 = AbilityEffect.knockback_force(
+			_knockback_effect, origin, t.global_position)
+		if force == Vector2.ZERO:
+			continue
+		var landing: Vector2 = t.predict_knockback_landing(
+			force, AbilityEffect.KNOCKBACK_IMPULSE_DURATION)
+		if landing.distance_squared_to(t.global_position) < 16.0:
+			continue  # blocked immediately or shoved a trivial distance
+		var body_radius: float = 16.0
+		if "collision_radius" in t:
+			body_radius = maxf(float(t.collision_radius), 8.0)
+		shoves.append({"from": t.global_position, "to": landing, "radius": body_radius})
+
+	_knockback_layer.shoves = shoves
+	_knockback_layer.visible = not shoves.is_empty()
+	_knockback_layer.queue_redraw()
+
+
 # ===== DRAWER CLASSES =====
+
+## Arrow + landing ring per shoved body. Positions are already world-space
+## (the node is top_level and pinned to the origin), so nothing is transformed here.
+class KnockbackPreviewDrawer extends Node2D:
+	var shoves: Array = []  # [{from: Vector2, to: Vector2, radius: float}]
+	var _t: float = 0.0
+
+	const SHAFT_COLOR := Color(1.0, 0.62, 0.24, 0.95)
+	const SHAFT_SHADOW := Color(0.08, 0.02, 0.0, 0.55)
+	const RING_COLOR := Color(1.0, 0.72, 0.35, 0.85)
+	const SHAFT_WIDTH := 2.6
+	const HEAD_SIZE := 11.0
+	const DASH_COUNT := 16  # arc segments in the landing ring (half drawn = dashed)
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if not shoves.is_empty():
+			queue_redraw()
+
+	func _draw() -> void:
+		# Breathing alpha keeps the preview reading as a projection rather than
+		# as something already on the battlefield.
+		var pulse := 0.78 + 0.22 * sin(_t * 3.4)
+		for s in shoves:
+			var from: Vector2 = s["from"]
+			var to: Vector2 = s["to"]
+			var body_radius: float = s["radius"]
+			var dir := (to - from).normalized()
+			if dir == Vector2.ZERO:
+				continue
+			# Start at the body's edge so the shaft doesn't skewer the sprite.
+			var start := from + dir * body_radius
+			var tip := to - dir * body_radius * 0.35
+			if start.distance_to(tip) < 6.0:
+				continue
+
+			var shaft := SHAFT_COLOR
+			shaft.a *= pulse
+			draw_line(start, tip, SHAFT_SHADOW, SHAFT_WIDTH + 2.5, true)
+			draw_line(start, tip, shaft, SHAFT_WIDTH, true)
+
+			# Arrowhead as a filled triangle — thin strokes vanish against terrain.
+			var perp := dir.rotated(PI / 2.0)
+			draw_colored_polygon(PackedVector2Array([
+				tip + dir * HEAD_SIZE,
+				tip + perp * HEAD_SIZE * 0.45,
+				tip - perp * HEAD_SIZE * 0.45,
+			]), shaft)
+
+			_draw_dashed_ring(to, body_radius, pulse)
+
+	func _draw_dashed_ring(center: Vector2, radius: float, pulse: float) -> void:
+		var color := RING_COLOR
+		color.a *= pulse
+		var arc := TAU / float(DASH_COUNT)
+		for i in range(DASH_COUNT):
+			if i % 2 == 1:
+				continue
+			var a := float(i) * arc + _t * 0.6
+			draw_arc(center, radius, a, a + arc * 0.7, 6, color, 2.2, true)
 
 class CircleDrawer extends Node2D:
 	var radius: float = 50.0

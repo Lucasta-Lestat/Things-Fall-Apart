@@ -33,7 +33,7 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = "tg_castle_demo"  # TEMP: castle-demo export (set "tg_export" for the fort map, "cemetery" for the built-in)
+var current_map_id: String = "combat_test"  # TEMP: combat test arena ("tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
@@ -88,6 +88,8 @@ const SELECTION_CIRCLE_WIDTH = 1.0
 var party_state: Array = [
 	{"template_id": "protagonist", "overrides": {}, "live_state": null},
 	{"template_id": "jacana", "overrides": {}, "live_state": null},
+	# grimalkin (cat-folk, jump-capable): can pounce onto roofs
+	{"template_id": "djargo", "overrides": {}, "live_state": null},
 ]
 
 # Service-NPC state per region. Lets trades and inventory changes survive
@@ -826,7 +828,8 @@ func _spawn_rain_puddles(precip_type: String) -> void:
 			continue
 		if fluid_manager.get_fluid_type_at(tile) != "":
 			continue
-		fluid_manager.register_fluid(tile, "water", amount)
+		# gentle: weather must never erase an authored slick (oil etc.)
+		fluid_manager.register_fluid(tile, "water", amount, true)
 		placed += 1
 
 # ---------------------------------------------------------------------------
@@ -942,13 +945,21 @@ func _spawn_fluids(fluid_list: Array) -> void:
 		var radius: int = fluid_def.get("radius", 0)
 		var center_tile = Vector2i(pos_arr[0], pos_arr[1])
 
-		# Spawn fluid at center tile and optionally in a radius
-		for dx in range(-radius, radius + 1):
-			for dy in range(-radius, radius + 1):
-				if Vector2(dx, dy).length() <= radius + 0.5:
-					var tile = center_tile + Vector2i(dx, dy)
-					if not GridManager.walls.get(tile, false):
-						fluid_manager.register_fluid(tile, fluid_type, amount)
+		# Structured maps with an area: pour a CONTIGUOUS pool — the per-tile
+		# loop deposited into 13 scattered covering cells, which rendered as
+		# faint smudges players read as terrain shading, not an oil slick.
+		if radius > 0 and fluid_manager.cell_fluid != null and fluid_manager.cell_fluid.active_sim():
+			var wc: Vector2 = GridManager.map_to_world(center_tile)
+			var wr: float = (float(radius) + 0.5) * GridManager.TILE_SIZE
+			fluid_manager.cell_fluid.pour(wc, fluid_type, amount, wr)
+		else:
+			# Spawn fluid at center tile and optionally in a radius
+			for dx in range(-radius, radius + 1):
+				for dy in range(-radius, radius + 1):
+					if Vector2(dx, dy).length() <= radius + 0.5:
+						var tile = center_tile + Vector2i(dx, dy)
+						if not GridManager.walls.get(tile, false):
+							fluid_manager.register_fluid(tile, fluid_type, amount)
 		# "rate" marks a PERSISTENT source (villa impluvium spring): keep the
 		# pool topped up against evaporation. Structured maps only — the cell
 		# sim owns sources there; the one-shot deposit above still primes it.
@@ -960,7 +971,10 @@ func _spawn_fluids(fluid_list: Array) -> void:
 # Context menu
 # ---------------------------------------------------------------------------
 
-func show_context_menu(target, position: Vector2) -> void:
+## `actor` is the character who opened the menu — the one who will carry out a
+## verb like "Attack". Without it the menu had no way to name an attacker and
+## made the *target* swing at nothing.
+func show_context_menu(target, position: Vector2, actor = null) -> void:
 	var context_menu = preload("res://UI/ContextMenu.tscn").instantiate()
 	context_menu.global_position = position + Vector2(16, 16)
 	context_menu.z_index = 100
@@ -974,6 +988,11 @@ func show_context_menu(target, position: Vector2) -> void:
 		# tradeable; only true hostiles are blocked.
 		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options:
 			options.append("Trade")
+		# Party members take a hold-ground order: WAIT stops all AI movement
+		# (they still auto-attack hostiles entering their line of sight);
+		# FOLLOW releases it.
+		if target in party_chars:
+			options.append("Resume" if bool(target.get("hold_position")) else "Wait Here")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
 	elif target is Door:
@@ -984,7 +1003,7 @@ func show_context_menu(target, position: Vector2) -> void:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
-	context_menu.setup(target, options)
+	context_menu.setup(target, options, actor)
 	$GameUI.add_child(context_menu)
 
 ## World-item context menu options. Readables keep Read/Take; containers keep
@@ -1941,7 +1960,12 @@ func _add_selection_circle(character: ProceduralCharacter, color: Color) -> void
 		_update_circle_color(character, color)
 		return
 	var indicator = Node2D.new()
-	indicator.z_index = 100
+	# On the ground, under the character it marks — a ring drawn over the body
+	# reads as a collar rather than as a footprint. Above PathDrawer.Z_GROUND (2)
+	# so the ring stays legible where a path runs through it, below the
+	# character root (5). Absolute, so it can't inherit its way back on top.
+	indicator.z_as_relative = false
+	indicator.z_index = 3
 	var circle_drawer = SelectionCircle.new()
 	circle_drawer.radius = max(character.collision_radius + 8.0, 20.0)
 	circle_drawer.circle_color = color
@@ -2718,12 +2742,16 @@ class SelectionCircle extends Node2D:
 	var num_segments: int = 32
 	
 	func _draw() -> void:
-		# Draw circle outline
 		var points = PackedVector2Array()
 		for i in range(num_segments + 1):
 			var angle = (float(i) / num_segments) * TAU
 			points.append(Vector2(cos(angle), sin(angle)) * radius)
-		
+
+		# Dark under-stroke first: now that the ring sits on the floor instead of
+		# on top of the character, it has to hold contrast against pale stone.
+		var shadow := Color(0.02, 0.03, 0.06, 0.45)
+		for i in range(num_segments):
+			draw_line(points[i], points[i + 1], shadow, line_width + 2.5, true)
 		for i in range(num_segments):
 			draw_line(points[i], points[i + 1], circle_color, line_width, true)
 			

@@ -89,6 +89,7 @@ SPECS = {
     "thunderwave": spec("Arcane", "a wide cone opening upward, filled with three nested arcs that spread from a small solid dot at the bottom point", "bright white"),
     "psych_up": spec("Arcane", "two circular arrows chasing each other in a closed loop around a small solid four-pointed spark at the center", "bright lemon yellow"),
     "fire_spin": spec("Arcane", "a closed ring built from five tongues of flame, all leaning the same way around the circle like a wheel of fire", "warm orange-red"),
+    "explosive_revelation": spec("Arcane", "a small solid circle at the center holding a single open eye, with four bold tapering shards blasting outward from it toward the corners", "deep plum purple"),
 
     # ── Occult ──
     "rat_pack": spec("Occult", "three overlapping rat silhouettes seen from the side, clustered together, their long thin tails curling behind them", "dark charcoal"),

@@ -304,18 +304,23 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 
 # --- Fluid Registration ---
 
-func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float) -> void:
+# gentle=true deposits never displace a DIFFERENT standing fluid (weather:
+# rain landing on an authored oil slick must bounce off, not erase it cell by
+# cell). Default deposits keep the wipe-on-type-change contract.
+func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float, gentle: bool = false) -> void:
 	if amount <= 0:
 		return
 	# Structured maps: every deposit (spawns, blood, vomit, rain) goes into the
 	# covering cell; the projection renders + answers tile queries from there.
 	if cell_fluid != null and cell_fluid.active_sim():
-		cell_fluid.deposit(GridManager.map_to_world(tile_pos), fluid_type, amount)
+		cell_fluid.deposit(GridManager.map_to_world(tile_pos), fluid_type, amount, not gentle)
 		return
 
 	# Overwrite: if a different fluid type currently occupies this tile, wipe it.
 	var existing_type = get_fluid_type_at(tile_pos)
 	var type_changed = not existing_type.is_empty() and existing_type != fluid_type
+	if type_changed and gentle:
+		return
 	if type_changed:
 		fluid_grid[tile_pos] = {}
 		var old_visual = active_fluid_tiles.get(tile_pos)
@@ -489,7 +494,15 @@ func update_fluid_simulation() -> void:
 					flow_deltas[tile_pos] = {}
 				if not flow_deltas[tile_pos].has(fluid_type):
 					flow_deltas[tile_pos][fluid_type] = 0.0
-				flow_deltas[tile_pos][fluid_type] -= evap_rate_tick
+				# per-type evaporation (fluids.json "evaporation", e.g. oil 0.0)
+				# so legacy-map slicks match the cell sim; absent key = old rate.
+				# ("puddle" stays structured-map-only -- the flat tile sim has
+				# no per-type outflow floor.)
+				var ev_tick: float = evap_rate_tick
+				var fdef = _fluid_db.get(fluid_type)
+				if fdef is Dictionary and fdef.has("evaporation"):
+					ev_tick = float(fdef["evaporation"]) * SIM_INTERVAL
+				flow_deltas[tile_pos][fluid_type] -= ev_tick
 
 	# Average and normalize per-tile inflow direction.
 	for pos in inflow_vectors.keys():

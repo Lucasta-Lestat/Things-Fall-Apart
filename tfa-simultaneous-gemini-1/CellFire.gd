@@ -16,8 +16,15 @@ var graph: CellGraph
 var sm: Node                          # SurfaceManager (structure fire-tiles + game)
 var _fire_def: Dictionary = {}
 
-var burning: Dictionary = {}          # cid -> {t, t0, seed, vfx}
+var burning: Dictionary = {}          # cid -> {t, t0, seed, char, vfx}
 var burnt: PackedByteArray = PackedByteArray()
+var native_particles := true          # false when CellFireFX draws the flames
+                                      # AND the merged cluster lights (per-cell
+                                      # fire.tscn is skipped entirely then)
+var burn_rev := 0                     # bumped whenever the burning KEY SET
+                                      # changes (ignite/douse/burnout) so
+                                      # CellFireFX recomputes cluster lights
+var scorch_fx: CellScorchFX = null    # persistent ground char (SurfaceManager wires it)
 
 var _spread_timer := 0.0
 var _damage_timer := 0.0
@@ -82,6 +89,7 @@ func douse(cid: int) -> void:
 		if vfx and is_instance_valid(vfx):
 			vfx.queue_free()
 		burning.erase(cid)
+		burn_rev += 1
 
 
 # --- tick --------------------------------------------------------------------
@@ -107,6 +115,7 @@ func clear_all() -> void:
 		if vfx and is_instance_valid(vfx):
 			vfx.queue_free()
 	burning.clear()
+	burn_rev += 1
 	_fuel_cache.clear()
 	_cond_timers.clear()
 	burnt = PackedByteArray()
@@ -130,10 +139,16 @@ func _try_ignite(cid: int) -> bool:
 func _light(cid: int) -> void:
 	var dur := float(_fire_def.get("base_duration", 10.0)) * _rng.randf_range(0.7, 1.3)
 	var seed := _rng.randf()
-	burning[cid] = {"t": dur, "t0": dur, "seed": seed, "vfx": _spawn_vfx(cid)}
+	burning[cid] = {"t": dur, "t0": dur, "seed": seed, "char": 0.0, "vfx": _spawn_vfx(cid)}
+	burn_rev += 1
 
 
 func _spawn_vfx(cid: int) -> Node:
+	# When CellFireFX draws the flames it also owns a few MERGED cluster lights;
+	# a per-cell fire.tscn instance (one ~34px light per ~31px-spaced cell) read
+	# as a lattice of little yellow circles, so cell maps skip the scene entirely.
+	if not native_particles:
+		return null
 	var path := String(_fire_def.get("vfx_scene", ""))
 	if path == "" or not ResourceLoader.exists(path):
 		return null
@@ -222,6 +237,14 @@ func _damage(game: Node) -> void:
 				consumed = true
 		if consumed:
 			_fuel_cache.clear()
+	# progressive ground char, ported from the editor's FireSim._damage: each
+	# damage tick deepens the cell's char and restamps -- fully black after ~5
+	# ticks, so ground blackens WHILE it burns, not just at burnout
+	if scorch_fx != null and is_instance_valid(scorch_fx):
+		for cid in burning:
+			var bd: Dictionary = burning[cid]
+			bd["char"] = minf(float(bd.get("char", 0.0)) + 0.22, 1.0)
+			scorch_fx.stamp(cid, bd["char"], float(bd["seed"]))
 
 
 func _lifetime(delta: float) -> void:
@@ -233,10 +256,15 @@ func _lifetime(delta: float) -> void:
 			out.append(cid)
 	for cid in out:
 		burnt[cid] = 1
+		# final full-depth char stamp on burnout (editor _lifetime emits k=1.0)
+		if scorch_fx != null and is_instance_valid(scorch_fx):
+			scorch_fx.stamp(cid, 1.0, float(burning[cid]["seed"]))
 		var vfx = burning[cid].get("vfx")
 		if vfx and is_instance_valid(vfx):
 			vfx.queue_free()
 		burning.erase(cid)
+	if not out.is_empty():
+		burn_rev += 1
 
 
 # Apply the "burning" condition to characters whose cell is on fire.

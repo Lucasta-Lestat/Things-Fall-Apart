@@ -31,6 +31,12 @@ const DOOR_SCRIPT := preload("res://Structures/Door.gd")
 # unlocks survive the full teardown/reload every warp performs.
 var _current_map_id: String = ""
 
+# Door gap endpoints (world px), collected before structures spawn: wall art
+# slices normally overgrow +12px past their endpoints (covers bevel caps), but
+# at a DOOR GAP that overgrow displays the overlay's baked closed-leaf pixels —
+# a phantom "second door" that stays shut under the real swinging one.
+var _door_ends: PackedVector2Array = PackedVector2Array()
+
 # Map mask colors to structure IDs
 var color_to_structure: Dictionary = {
 	Color8(0, 128, 0): "tree",      # dark green
@@ -157,6 +163,13 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# its elevation before any parapet standing on it spawns — regardless of
 	# JSON array order.
 	var all_structs: Array = map_data.get("structures", [])
+	_door_ends = PackedVector2Array()
+	for s in all_structs:
+		if typeof(s) == TYPE_DICTIONARY and String(s.get("kind", "")) == "door":
+			var dh := _arr_v2(s.get("hinge", [0, 0]))
+			var dl := Vector2.RIGHT.rotated(deg_to_rad(float(s.get("deg", 0.0)))) * float(s.get("width", 30.0))
+			_door_ends.append(dh)
+			_door_ends.append(dh + dl)
 	for pass_decks in [true, false]:
 		for s in all_structs:
 			if typeof(s) != TYPE_DICTIONARY:
@@ -178,6 +191,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var center: Vector2
 	var shape: Shape2D
 	var shape_rot := 0.0
+	var door_leaf := Vector2.ZERO   # doors only: hinge -> free end (swing pivot)
 	var poly_local := PackedVector2Array()
 	var occ_poly := PackedVector2Array()   # exact silhouette for the vision-cone occluder
 	var occupied: Array[Vector2i] = []
@@ -206,9 +220,19 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		# shows. Overlapping neighbour slices draw identical overlay pixels, so
 		# the overlap is invisible.
 		var g := half + 12.0
+		# per-end overgrow: an end that abuts a DOOR GAP keeps a tight 1px lip —
+		# the full +12 lip reached into the gap and displayed the overlay's
+		# baked closed door leaf (phantom door under the real swung one)
+		var g_a := g
+		var g_b := g
+		for de in _door_ends:
+			if de.distance_to(a) < 6.0:
+				g_a = 1.0
+			if de.distance_to(b) < 6.0:
+				g_b = 1.0
 		poly_local = PackedVector2Array([
-			-seg * 0.5 - dirn * g - perp * (half + g), seg * 0.5 + dirn * g - perp * (half + g),
-			seg * 0.5 + dirn * g + perp * (half + g), -seg * 0.5 - dirn * g + perp * (half + g)])
+			-seg * 0.5 - dirn * g_a - perp * (half + g), seg * 0.5 + dirn * g_b - perp * (half + g),
+			seg * 0.5 + dirn * g_b + perp * (half + g), -seg * 0.5 - dirn * g_a + perp * (half + g)])
 		occ_poly = PackedVector2Array([
 			-seg * 0.5 - perp * half, seg * 0.5 - perp * half,
 			seg * 0.5 + perp * half, -seg * 0.5 + perp * half])
@@ -235,6 +259,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var width := float(s.get("width", 30.0))
 		var dhalf := float(s.get("half", 5.0))
 		var leaf := Vector2.RIGHT.rotated(deg_to_rad(deg)) * width
+		door_leaf = leaf
 		center = hinge + leaf * 0.5
 		var drect := RectangleShape2D.new()
 		drect.size = Vector2(width, dhalf * 2.0)
@@ -286,6 +311,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		# safe: Structure.tscn root sets no exported values, and no properties
 		# have been assigned yet — the swap loses nothing
 		inst.set_script(DOOR_SCRIPT)
+		inst.set("leaf", door_leaf)   # hinge->free-end vector: the visual swing pivot
 	inst.structure_id = StringName(String(s.get("id", "stone_wall")))
 	inst.skip_grid_snap = true
 	inst.use_custom_texture = true
@@ -354,6 +380,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			g = get_tree().current_scene
 		if g != null and ("unlocked_locks" in g) and g.unlocked_locks.has(door.lock_key):
 			door.locked = false
+		# pathability sync AFTER the lock fields land (add_child ran _ready
+		# before `locked` was assigned — a locked door must not read pushable)
+		door._sync_door_pass()
 	inst.set_meta("occlude_top", occlude_top)
 	if is_deck:
 		# No hard collision, no pathing obstacle: blocking ground characters is

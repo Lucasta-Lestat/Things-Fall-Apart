@@ -54,6 +54,46 @@ func _process(delta: float) -> void:
 		_process_stepping(delta)
 
 
+## Whether a designated character should re-aim this ability.
+##
+## Ground AoE deliberately does NOT follow its anchor: placing a circle/cone/line
+## on a chosen patch of ground is the whole point of aiming one, and having it
+## chase a character would take that control away. Everything else follows —
+## single-target and unshaped abilities, plus anything with a projectile to fly,
+## since a projectile aimed at a character should leave the caster pointed at
+## where that character actually is. A projectile still detonates wherever it
+## lands, so an anchored projectile-AoE keeps its splash at the impact point.
+static func ability_follows_anchor(ability: Ability) -> bool:
+	return targeting_follows_anchor(ability.targeting, ability.visuals)
+
+
+## Same rule against a raw/flattened data dict, for callers that hold the JSON
+## rather than a built Ability (the targeting UI decides whether to record an
+## anchor before any Ability resource exists).
+static func targeting_follows_anchor(targeting: Dictionary, visuals: Dictionary) -> bool:
+	if String(visuals.get("projectile", "")) != "":
+		return true
+	var shape := String(targeting.get("shape", "none"))
+	# "characters" abilities bind their effects to picked characters already;
+	# following the pick keeps their visuals on the target rather than on the
+	# spot it stood when the player clicked.
+	return shape == "single" or shape == "none" or shape == "characters"
+
+
+## Live position of a designated character, or `fallback` when there is no
+## anchor, the anchor is eligible but gone, or the ability opts out of anchoring.
+func _anchored_position(ability: Ability, anchor, fallback: Vector2) -> Vector2:
+	if anchor == null or not is_instance_valid(anchor):
+		return fallback
+	if not ability_follows_anchor(ability):
+		return fallback
+	# A corpse stays in the scene, so validity alone does not mean "still a
+	# target". Aiming at a dead body is worse than aiming where the player clicked.
+	if anchor.has_method("is_alive") and not anchor.is_alive():
+		return fallback
+	return anchor.global_position
+
+
 ## Use an ability. Entry point for all ability execution.
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if ability == null:
@@ -66,6 +106,14 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 
 	var target_position = target_data.get("position", character.global_position)
 	var explicit_targets: Array = target_data.get("targets", [])
+	var target_anchor = target_data.get("anchor", null)
+
+	# Designated-character re-aim. Same late-binding rationale as the "self"
+	# override below: the position was captured while planning, but movement runs
+	# in real time after unpause, so by the time this fires the target has walked.
+	# Best-effort — a dead or freed anchor silently falls back to the planned
+	# point, so the shot still goes where the player aimed it.
+	target_position = _anchored_position(ability, target_anchor, target_position)
 
 	# Self-targeted abilities always resolve at the caster's live position. A
 	# queued target_position (captured while planning, where the cursor was)
@@ -103,20 +151,21 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		return false
 
 	if ability.cast_time <= 0:
-		_execute_ability(ability, target_position, explicit_targets)
+		_execute_ability(ability, target_position, explicit_targets, target_anchor)
 		return true
 
-	_start_casting(ability, target_position, explicit_targets)
+	_start_casting(ability, target_position, explicit_targets, target_anchor)
 	return true
 
 
 ## Start the casting process (windup before execution)
-func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
+func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "casting",
 		"target_position": target_position,
 		"explicit_targets": explicit_targets,
+		"anchor": target_anchor,
 		"cast_progress": 0.0,
 		"cast_time": ability.cast_time
 	}
@@ -149,16 +198,20 @@ func _process_casting(delta: float) -> void:
 
 	if current_cast["cast_progress"] >= current_cast["cast_time"]:
 		var ability = current_cast["ability"] as Ability
-		var target_pos = current_cast["target_position"]
 		var carried_targets: Array = current_cast.get("explicit_targets", [])
+		var carried_anchor = current_cast.get("anchor", null)
+		# Re-aim after the windup, not before it: a long cast is exactly the
+		# window in which the designated character walks out from under the point
+		# captured when the cast began.
+		var target_pos: Vector2 = _anchored_position(ability, carried_anchor, current_cast["target_position"])
 		current_cast.clear()
-		_execute_ability(ability, target_pos, carried_targets)
+		_execute_ability(ability, target_pos, carried_targets, carried_anchor)
 
 
 ## Execute the ability after casting completes
-func _execute_ability(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
+func _execute_ability(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null) -> void:
 	if ability.is_multi_step():
-		_start_step_sequence(ability, target_position, explicit_targets)
+		_start_step_sequence(ability, target_position, explicit_targets, target_anchor)
 	else:
 		# When the ability targets specific characters, skip the projectile path
 		# and resolve effects directly against the chosen targets.
@@ -174,12 +227,13 @@ func _execute_ability(ability: Ability, target_position: Vector2, explicit_targe
 
 
 ## Start a multi-step ability sequence
-func _start_step_sequence(ability: Ability, target_position: Vector2, explicit_targets: Array = []) -> void:
+func _start_step_sequence(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "stepping",
 		"target_position": target_position,
 		"explicit_targets": explicit_targets,
+		"anchor": target_anchor,
 		"step_results": [],
 	}
 	_current_step_index = -1
@@ -224,7 +278,10 @@ func _execute_current_step() -> void:
 		return
 
 	var step = ability.steps[_current_step_index]
-	var base_target = current_cast.get("target_position", character.global_position)
+	var planned_target: Vector2 = current_cast.get("target_position", character.global_position)
+	# Steps are separated by delays, so re-aim on every one rather than reusing
+	# the position the sequence started with.
+	var base_target: Vector2 = _anchored_position(ability, current_cast.get("anchor", null), planned_target)
 
 	# Per-step targeting override
 	var step_targeting = step.get("targeting", {})

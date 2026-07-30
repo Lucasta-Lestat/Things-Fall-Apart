@@ -12,8 +12,9 @@
 # Semantics kept from FluidManager/FluidSim: depth per cell; each SIM_INTERVAL a
 # wet cell pushes toward lower PRESSURE (head), transfer capped at HALF the
 # difference so bodies settle level; a deadband stops settled ponds churning;
-# outflow leaves a puddle film; everything evaporates; ONE fluid type per cell
-# (a different type arriving wipes the old); budgeted outflow (never over-drain).
+# outflow leaves a per-type minimum pool (water: thin film, oil: thick slick);
+# per-type evaporation (oil: none); ONE fluid type per cell (a different type
+# arriving wipes the old, unless deposited politely); budgeted outflow.
 # Downhill: head = fluid column + ground_elev*HEAD_PER_STORY (CellGraph.ground_elev).
 # Edge blocking: a wall/structure obstacle tile on the centroid->centroid path
 # stops flow (GridManager.walls; refcounted, so a destroyed wall re-opens once
@@ -77,14 +78,16 @@ func active_sim() -> bool:
 # --- public API (mirrors FluidSim; FluidManager routes deposits/queries here) --
 
 # Deposit `depth` of type `ti_or_str` at the cell under a world point (a
-# different type wipes the old -- register_fluid semantics).
-func deposit(world_pos: Vector2, type_str: String, depth: float) -> void:
+# different type wipes the old -- register_fluid semantics). wipe=false makes
+# the deposit polite: a cell already holding another type is left alone (rain
+# must not erase an authored oil slick drop by drop).
+func deposit(world_pos: Vector2, type_str: String, depth: float, wipe: bool = true) -> void:
 	var ti := _ti_of(type_str)
 	if ti <= 0 or depth <= 0.0:
 		return
 	var cid := graph.cell_at(world_pos)
 	if cid >= 0:
-		_add(cid, ti, depth)
+		_add(cid, ti, depth, wipe)
 
 
 # Pour over a world radius (fluid_spawns with radius): fall-off toward the rim.
@@ -209,18 +212,33 @@ func _cell_fire():
 
 func _flow_tick() -> void:
 	var rate_tick := FLOW_RATE_PER_SEC * SIM_INTERVAL
-	var evap_tick := EVAP_PER_SEC * SIM_INTERVAL
 	var deltas: Dictionary = {}
 	flow_dir.clear(); flow_speed.clear()
 	for cid in active:
 		var amt := amount[cid]
 		var ti := ftype[cid]
-		_delta_add(deltas, cid, ti, -evap_tick)
-		if amt < PUDDLE:
+		# per-type evaporation: water dries at the base rate; an oil slick is
+		# effectively permanent until burned (fluids.json "evaporation"
+		# overrides; the uniform rate made oil pools fade before the fight
+		# reached them)
+		# per-type minimum pool: below it a cell stops pushing outward entirely.
+		# Water keeps the thin PUDDLE film; oil holds a THICK slick (0.25) --
+		# on a flat map the old uniform film let a pour spread into an
+		# invisible-but-still-slowing sheet within a minute.
+		var pud := _puddle_of(ti)
+		var ev := _evap_of(ti)
+		# a no-evap fluid (oil) stranded BELOW its pool floor can neither flow
+		# nor dry -- an invisible immortal film that still slows walkers and
+		# reads as heavy fuel (review find). Sub-floor films dry at the base
+		# rate; the standing slick body above the floor never evaporates.
+		if ev <= 0.0 and amt < pud and amt > 0.0:
+			ev = EVAP_PER_SEC
+		_delta_add(deltas, cid, ti, -ev * SIM_INTERVAL)
+		if amt < pud:
 			continue
 		var visc := _visc(ti)
 		var head := _head(cid)
-		var press := amt - PUDDLE
+		var press := amt - pud
 		var avail := press
 		var vect := Vector2.ZERO
 		var out_total := 0.0
@@ -233,7 +251,18 @@ func _flow_tick() -> void:
 			if j < opens.size() and opens[j] == 0:
 				continue
 			var nb: int = nbs[j]
-			var diff := head - _head(nb)
+			var nti := int(ftype[nb])
+			var diff: float
+			if nti == 0 or nti == int(ti):
+				diff = head - _head(nb)
+			else:
+				# immiscible standing bodies: a DIFFERENT-type column counts
+				# in FULL -- water stacks against an oil slick until its true
+				# surface tips over the slick's, THEN spills and wipes cell by
+				# cell. Comparing pool-floor-discounted heads here let a 0.04
+				# rain trickle read a settled 0.28 slick as near-vacuum and
+				# annihilate it for the credit (review find).
+				diff = (_ground_head(cid) + amount[cid]) - (_ground_head(nb) + amount[nb])
 			if diff <= EPSILON:
 				continue
 			var fa := minf(minf(
@@ -281,10 +310,12 @@ func _flow_tick() -> void:
 
 # --- internals ---------------------------------------------------------------
 
-func _add(cid: int, ti: int, amt: float) -> void:
+func _add(cid: int, ti: int, amt: float, wipe: bool = true) -> void:
 	if amt <= 0.0 or cid < 0 or cid >= amount.size():
 		return
 	if ftype[cid] != 0 and ftype[cid] != ti:
+		if not wipe:
+			return           # polite deposit: never displace a standing fluid
 		amount[cid] = 0.0    # a different type arriving wipes the old (register_fluid)
 	ftype[cid] = ti
 	amount[cid] += amt
@@ -299,7 +330,10 @@ func _delta_add(deltas: Dictionary, cid: int, ti: int, d: float) -> void:
 
 
 func _head(cid: int) -> float:
-	return _ground_head(cid) + maxf(amount[cid] - PUDDLE, 0.0)
+	# the per-type minimum pool carries no head: a settled slick reads level to
+	# its neighbours instead of forever pressing outward (dry cells: ftype 0 ->
+	# _puddle_of falls back to PUDDLE, amount 0 -> maxf clamps to 0 either way)
+	return _ground_head(cid) + maxf(amount[cid] - _puddle_of(ftype[cid]), 0.0)
 
 
 func _ground_head(cid: int) -> float:
@@ -343,6 +377,28 @@ func _blocked_between(a: Vector2, b: Vector2) -> bool:
 func _ti_of(type_str: String) -> int:
 	var i := _order.find(type_str)
 	return i + 1 if i >= 0 else 0
+
+
+func _evap_of(ti: int) -> float:
+	if ti <= 0 or ti - 1 >= _order.size():
+		return EVAP_PER_SEC
+	var t: String = _order[ti - 1]
+	# real oil barely evaporates; default everything else to the water rate
+	var dflt: float = 0.0 if t == "oil" else EVAP_PER_SEC
+	return float((_db.get(t, {}) as Dictionary).get("evaporation", dflt))
+
+
+# Per-type minimum pool depth (fluids.json "puddle" overrides). Oil's 0.25 is
+# render-derived: the water shader's shore cutoff needs roughly >= 0.25 cell
+# depth for a slick to stay FULLY visible (0.12 still reads invisible between
+# blob centres) -- and a thick slick that stops creeping is also the right
+# physics for a viscous fluid.
+func _puddle_of(ti: int) -> float:
+	if ti <= 0 or ti - 1 >= _order.size():
+		return PUDDLE
+	var t: String = _order[ti - 1]
+	var dflt: float = 0.25 if t == "oil" else PUDDLE
+	return float((_db.get(t, {}) as Dictionary).get("puddle", dflt))
 
 
 func _visc(ti: int) -> float:

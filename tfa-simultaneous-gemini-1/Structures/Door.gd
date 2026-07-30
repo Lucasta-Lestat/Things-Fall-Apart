@@ -19,6 +19,21 @@ var locked := false
 var key_id := ""        # Items.json id; "" while locked => sealed, bash-only
 var consume_key := false
 var lock_key := ""      # "<map_id>|door|<hinge_x>,<hinge_y>" — set by MapLoader
+var leaf := Vector2.ZERO   # hinge -> free end, world-oriented (set by MapLoader);
+                           # the visual swing pivots the Art around -leaf/2
+var _swing_sign := 1.0
+var _swing_tween: Tween = null
+
+const SWING_RAD := 1.92    # ~110 degrees
+const SWING_SECS := 0.22
+
+func _ready() -> void:
+	super()
+	_sync_door_pass()
+	# publish the exact gap centre (== this node's position: the leaf midpoint)
+	# so pathing threads the needle instead of aiming at tile centres
+	for t in occupied_tiles:
+		GridManager.door_gaps[t] = global_position
 
 func get_interact_options() -> Array:
 	return ["Close Door"] if is_open else ["Open Door"]
@@ -49,11 +64,23 @@ func interact(option: String) -> void:
 		"Close Door":
 			close_door()
 
-func open_door() -> void:
+func open_door(swing_sign: float = 1.0) -> void:
 	if is_open:
 		return
 	is_open = true
+	_swing_sign = swing_sign
 	_apply_open_state()
+
+# Walked into by a character: an unlocked door simply gives way, swinging AWAY
+# from the pusher. Locked doors stay shut (the collision stops the body as
+# before). Called from ProceduralCharacter's slide-collision scan, so NPCs push
+# through unlocked doors exactly like the party does.
+func push_open(from_world: Vector2) -> void:
+	if is_open or locked or PauseManager.is_paused:
+		return
+	var side := signf(leaf.cross(from_world - global_position))
+	open_door(-side if side != 0.0 else 1.0)   # rotate away from the pusher
+	GameLog.add_entry("The door swings open.")
 
 func close_door() -> void:
 	if not is_open:
@@ -71,13 +98,16 @@ func _apply_open_state() -> void:
 		collision_layer = CollisionLayers.INTERACTABLES
 		for t in occupied_tiles:
 			GridManager.unregister_obstacle(t)   # refcounted; junction tiles shared with walls stay blocked
-		# self_modulate, NOT modulate: take_damage's flash tween owns modulate
-		_visual().self_modulate = Color(1, 1, 1, 0.35)
+		# a swung-open leaf is visually unambiguous; keep it near-opaque
+		# (self_modulate, NOT modulate: take_damage's flash tween owns modulate)
+		_visual().self_modulate = Color(1, 1, 1, 0.85)
 	else:
 		collision_layer = CollisionLayers.STRUCTURE_LAYERS
 		for t in occupied_tiles:
 			GridManager.register_obstacle(t)
 		_visual().self_modulate = Color.WHITE
+	_animate_swing()
+	_sync_door_pass()
 	var occ: Node = get_node_or_null("Occluder")   # named by MapLoader
 	if occ == null:
 		for c in get_children():
@@ -87,6 +117,42 @@ func _apply_open_state() -> void:
 	if occ != null:
 		occ.visible = not is_open   # hidden CanvasItems cast no 2D shadows -> cone pierces the doorway
 	_invalidate_sim_caches()
+
+# Visual swing: rotate the Art around the HINGE (inst-local -leaf/2). The
+# gameplay state (collision/tiles/occluder) flips instantly in
+# _apply_open_state; only the leaf's rendering sweeps. Rotating a node by
+# theta around local pivot P needs position = P - P.rotated(theta).
+func _animate_swing() -> void:
+	var art := get_node_or_null("Art") as Node2D
+	if art == null or leaf == Vector2.ZERO:
+		return
+	var pivot := -leaf * 0.5
+	var target := SWING_RAD * _swing_sign if is_open else 0.0
+	if _swing_tween != null and _swing_tween.is_valid():
+		_swing_tween.kill()
+	_swing_tween = create_tween()
+	_swing_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_swing_tween.tween_method(_set_swing.bind(art, pivot), art.rotation, target, SWING_SECS)
+
+
+func _set_swing(a: float, art: Node2D, pivot: Vector2) -> void:
+	art.rotation = a
+	art.position = pivot - pivot.rotated(a)
+
+
+# Closed UNLOCKED doors are pathable-with-cost (GridManager.door_pass): A*
+# routes THROUGH them and the walker pushes them open on contact. Locked or
+# open doors leave the set (open ones aren't obstacles at all). Idempotent —
+# _ready runs before MapLoader assigns `locked`, and MapLoader re-syncs after.
+var _pass_registered := false
+func _sync_door_pass() -> void:
+	var want := (not is_open) and (not locked)
+	if want == _pass_registered:
+		return
+	_pass_registered = want
+	for t in occupied_tiles:
+		GridManager.set_door_pass(t, want)
+
 
 func _invalidate_sim_caches() -> void:
 	# Mirrors Game._on_structure_destroyed: an opened doorway changes fire fuel
@@ -143,6 +209,13 @@ static func try_party_unlock(party: Array, key_item_id: String, consume: bool) -
 	return {"ok": false, "key_name": "", "holder_name": ""}
 
 func _destroy_structure() -> void:
+	if _pass_registered:
+		_pass_registered = false
+		for t in occupied_tiles:
+			GridManager.set_door_pass(t, false)   # a bashed-down door is just a gap
+	for t in occupied_tiles:
+		if GridManager.door_gaps.get(t, Vector2.INF) == global_position:
+			GridManager.door_gaps.erase(t)
 	if is_open:
 		# Tiles were already unregistered on open; the base class unregisters
 		# occupied_tiles unconditionally and would corrupt refcounts shared

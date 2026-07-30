@@ -984,6 +984,26 @@ static func _create_generic_field(
 	return field
 
 
+# --- Knockback: shared between resolution and the targeting preview ----------
+# The planning UI draws where each target will LAND, so the impulse maths has to
+# have exactly one definition. If the preview re-derived it, the first tune of
+# `strength` semantics would silently make every ghost a lie.
+
+## Impulse window converting a JSON `strength` (px/s² of impulse) into a velocity
+## change: ~0.25 × strength. At strength=800 that's ~200 px/s, decaying to zero
+## under ProceduralCharacter.knockback_friction=150 for ~130 px of displacement.
+const KNOCKBACK_IMPULSE_DURATION := 0.25
+
+## Point a knockback radiates from — the caster for `from_caster`, else the AoE centre.
+static func knockback_origin(effect: Dictionary, caster_position: Vector2, target_position: Vector2) -> Vector2:
+	return caster_position if effect.get("from_caster", true) else target_position
+
+## The impulse one target receives. Returns ZERO for a target standing exactly on
+## the origin — normalized() has no direction to give there, so it doesn't move.
+static func knockback_force(effect: Dictionary, origin: Vector2, target_position: Vector2) -> Vector2:
+	var strength: float = float(effect.get("strength", 500.0))
+	return (target_position - origin).normalized() * strength
+
 ## Resolve knockback effect
 static func _resolve_knockback(
 	effect: Dictionary,
@@ -996,30 +1016,23 @@ static func _resolve_knockback(
 		"effect_type": "knockback",
 		"targets_affected": [],
 	}
-	
-	var strength = effect.get("strength", 500.0)
-	var from_caster = effect.get("from_caster", true)
-	var knockback_origin = caster.global_position if from_caster else target_position
-	
+
+	var origin := knockback_origin(effect, caster.global_position, target_position)
+
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-		
+
 		if not target is Node2D:
 			continue
-		
-		var direction = (target.global_position - knockback_origin).normalized()
-		var force = direction * strength
+
+		var force := knockback_force(effect, origin, target.global_position)
 
 		# CharacterBody2D characters expose apply_external_force (defined on
 		# ProceduralCharacter) which integrates the force into knockback
 		# velocity. RigidBody2D targets receive a direct impulse.
-		# Duration of 0.25s converts a JSON `strength` (in px/s² of impulse)
-		# to ~0.25 × strength of velocity change — at strength=800 that's
-		# ~200 px/s, decaying to zero in ~1.3s under knockback_friction=150
-		# for ~130 px of total displacement. Tunable per-ability via JSON.
 		if target.has_method("apply_external_force"):
-			target.apply_external_force(force, 0.25)
+			target.apply_external_force(force, KNOCKBACK_IMPULSE_DURATION)
 		elif target is RigidBody2D:
 			target.apply_central_impulse(force)
 
@@ -1027,7 +1040,7 @@ static func _resolve_knockback(
 			"target": target,
 			"force": force
 		})
-	
+
 	return result
 
 ## Resolve teleport effect

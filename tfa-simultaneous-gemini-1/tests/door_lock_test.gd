@@ -212,15 +212,33 @@ func _case_pathing() -> void:
 		if x != 4:
 			GridManager.register_obstacle(Vector2i(x, 5))
 	var door := _spawn_door([Vector2i(4, 5)] as Array[Vector2i])
+	# NEW CONTRACT (push-open feature): a closed UNLOCKED door is pathable at a
+	# penalty (the walker shoves it open on contact); a LOCKED one still seals.
 	var closed_path := GridManager.find_path(Vector2i(4, 2), Vector2i(4, 8))
-	_check("pathing.closed-no-route", closed_path.is_empty(), "%d steps" % closed_path.size())
+	_check("pathing.closed-unlocked-routes-through", not closed_path.is_empty(),
+		"%d steps" % closed_path.size())
+	door.locked = true
+	door._sync_door_pass()
+	var locked_path := GridManager.find_path(Vector2i(4, 2), Vector2i(4, 8))
+	_check("pathing.locked-no-route", locked_path.is_empty(), "%d steps" % locked_path.size())
+	door.locked = false
+	door._sync_door_pass()
 	door.open_door()
 	var open_path := GridManager.find_path(Vector2i(4, 2), Vector2i(4, 8))
 	_check("pathing.open-routes-through", not open_path.is_empty())
 	door.close_door()
 	await get_tree().physics_frame
 	var reclosed := GridManager.find_path(Vector2i(4, 2), Vector2i(4, 8))
-	_check("pathing.reclosed-no-route", reclosed.is_empty())
+	_check("pathing.reclosed-unlocked-still-routes", not reclosed.is_empty())
+	# push-open: an unlocked closed door gives way; a locked one refuses
+	door.push_open(GridManager.map_to_world(Vector2i(4, 4)))
+	_check("pathing.push-opens-unlocked", door.is_open)
+	door.close_door()
+	door.locked = true
+	door._sync_door_pass()
+	door.push_open(GridManager.map_to_world(Vector2i(4, 4)))
+	_check("pathing.push-refused-locked", not door.is_open)
+	door.locked = false
 	door.open_door()
 	door.queue_free()
 

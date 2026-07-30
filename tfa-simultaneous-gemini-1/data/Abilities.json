@@ -651,6 +651,49 @@
 			}
 		},
 		{
+			"id": "explosive_revelation",
+			"display_name": "Explosive Revelation",
+			"description": "Force a truth no mind can hold into every head nearby. The realisation detonates outward, searing thought and hurling bodies away from its centre.",
+			"icon": "res://UI/UI Icons/ability_explosive_revelation.png",
+			"costs": {},
+			"cast_time": 0.4,
+			"visual_duration": 1.0,
+			"traits": {
+				"spell": 1,
+				"psychic": 3,
+				"magical": 1,
+				"attack": 2,
+				"aoe": 2,
+				"control": 1,
+				"Arcane": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 320.0,
+				"shape": "circle",
+				"radius": 110.0
+			},
+			"effects": [
+				{
+					"type": "damage",
+					"damage": {
+						"psychic": 22
+					}
+				},
+				{
+					"type": "knockback",
+					"strength": 700.0,
+					"from_caster": false
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/mental_hand.tscn",
+				"impact_effect": "res://vfx/shockwave.tscn",
+				"sound_cast": "res://sfx/arcane_cast.mp3",
+				"sound_impact": "res://sfx/force_blast.mp3"
+			}
+		},
+		{
 			"id": "beguile",
 			"display_name": "Beguile",
 			"description": "Charms a target, making them infatuated with the caster and unable to attack them.",

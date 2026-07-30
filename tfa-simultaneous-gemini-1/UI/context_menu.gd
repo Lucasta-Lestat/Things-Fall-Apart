@@ -1,6 +1,9 @@
 extends PanelContainer
 
 var target_character = null
+# Who invoked the menu. Verbs that act on the target (Attack) are performed BY
+# this character; null falls back to the old no-actor behaviour.
+var actor_character = null
 var vbox: VBoxContainer = VBoxContainer.new()
 @onready var game = get_node("/root/Game")
 
@@ -15,10 +18,11 @@ func _ready():
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
-func setup(character, options: Array):
+func setup(character, options: Array, actor = null):
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	target_character = character
+	actor_character = actor
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	#game.context_menu_open = true
@@ -52,7 +56,11 @@ func _on_option_selected(option: String):
 		return
 	match option:
 		"Attack":
-			target_character.attack()
+			# The actor attacks the target, designating them as the aim node so
+			# the swing tracks them. Previously this called attack() on the
+			# TARGET, i.e. the victim swung at their own facing.
+			if is_instance_valid(actor_character) and actor_character.has_method("attack"):
+				actor_character.attack("Main", target_character.global_position, target_character)
 		"Talk":
 			var dlg_idx: int = target_character.current_dialogue_index
 			if dlg_idx >= 0 and dlg_idx < target_character.dialogues.size():
@@ -60,6 +68,14 @@ func _on_option_selected(option: String):
 		"Trade":
 			if target_character is ProceduralCharacter:
 				game.show_trade_window(target_character)
+		"Wait Here":
+			if "hold_position" in target_character:
+				target_character.hold_position = true
+				GameLog.add_entry(str(target_character.Name) + " holds position.")
+		"Resume":
+			if "hold_position" in target_character:
+				target_character.hold_position = false
+				GameLog.add_entry(str(target_character.Name) + " moves out.")
 		"Open":
 			if target_character is Item:
 				game.show_chest_inventory(target_character)

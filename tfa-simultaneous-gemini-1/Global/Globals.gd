@@ -18,8 +18,12 @@ var default_body_scale = 1.7
 @export var default_head_width: float = 14.0 * default_body_scale   # Head width (left-right)
 @export var default_head_length: float = 14.0 * default_body_scale  # Head length (front-back, oval shape)
 @export var default_shoulder_y_offset: float = 4.0  * default_body_scale  # How far back shoulders are from head center (positive = back)
-const DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
-const dmg_0_dict = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
+# Every resistible type in AbilityEffect.DAMAGE_TYPES. "true" is deliberately
+# absent — it ignores resistance by definition, so a DR entry for it would be a
+# knob that does nothing. Reads go through .get(type, 0), so a missing key was
+# never a crash; it just meant the type couldn't be armoured against at all.
+const DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0, "psychic":0, "electric":0 }
+const dmg_0_dict = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0, "psychic":0, "electric":0 }
 # Arm IK settings (smaller for top-down proportions)
 
 
@@ -44,6 +48,7 @@ func damage_color(damage_type: String) -> Color:
 		"radiant": return Color.LIGHT_GOLDENROD
 		"necrotic": return Color.BLACK
 		"poison": return Color.BLUE_VIOLET
+		"psychic": return Color.MEDIUM_ORCHID
 		_: return Color.WHITE_SMOKE
 
 func clamp_to_screen(pos: Vector2, screen_size: Vector2) -> Vector2:

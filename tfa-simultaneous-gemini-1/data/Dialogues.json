@@ -13,13 +13,10 @@
 		{
 		"Zak_intro": 
 			{
-			"Narrator": "A priestess kneels among a cluster of hollow-eyed and filthy children.  Her purple robes are in tatters, almost to the point of indecency.
-			 She seems to have torn strips from her own vestment to bandage a boy's wounds",
+			"Narrator": "A priestess kneels among a cluster of hollow-eyed and filthy children.  Her purple robes are in tatters, almost to the point of indecency. She seems to have torn strips from her own vestment to bandage a boy's wounds",
 			"Jacana": "May it be the hour you first believed",
 			"ZAKARIAH": "Oh, this is marvelous. This is simply marvelous. I arrive to find a nun administering the opiate.",
-			"ZAKARIAH": "It is a drug, Sister. A soporific. A substance which deadens pain by deadening the mind along with it. Which is precisely what you're doing. 
-			(to the children, not unkindly but relentlessly) Your fathers died because this city's defenses were managed according to principles laid down three hundred years ago by men who had never seen a Skaarsgaardian raiding formation. 
-			It is a logistics problem. It is a solvable logistics problem, and the Senate has the solution sitting in a drawer somewhere because the man who wrote it also wrote an essay arguing that church tithes were a form of taxation without representation",
+			"ZAKARIAH": "It is a drug, Sister. A soporific. A substance which deadens pain by deadening the mind along with it. Which is precisely what you're doing. (to the children, not unkindly but relentlessly) Your fathers died because this city's defenses were managed according to principles laid down three hundred years ago by men who had never seen a Skaarsgaardian raiding formation. It is a logistics problem. It is a solvable logistics problem, and the Senate has the solution sitting in a drawer somewhere because the man who wrote it also wrote an essay arguing that church tithes were a form of taxation without representation",
 			"Jacana": "something to do with taking the orphans to the soup kitchen.  Being fed turtle soup.  Jacana knows"
 			}
 		}
@@ -27,12 +24,9 @@
 "Federica_greet": {
 	"dialogueNodes": {
 		"Federica_intro": {
-			"narrator": "The churchyard reeks of fresh-turned earth. Between the headstones, 
-			two figures work by lantern-light — a broad-shouldered half-orc woman and
-			 a slack-jawed man driving his shovel with mechanical patience. Neither has seen you yet.",
+			"narrator": "The churchyard reeks of fresh-turned earth. Between the headstones, two figures work by lantern-light — a broad-shouldered half-orc woman and a slack-jawed man driving his shovel with mechanical patience. Neither has seen you yet.",
 			"Surgeon-Captain Federica": "Deeper, Verhoeven.  No martyr of the antique world lies in a coffin this shallow.",
-			"Verhoeven": "'Outstanding, Ma'am!'  
-			**He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
+			"Verhoeven": "'Outstanding, Ma'am!' **He rolls the casket they've uneartherd on its side and tirelessly resumes his digging beneath its resting place**",
 			"choices":
 				[
 				{	"text": "What Ho, Graverobbers? Speak quickly the reason I should not cry for the guard.",
@@ -49,8 +43,7 @@
 			},
 			"Federica-intro-talk-down": 
 				{
-				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)
-You would be within your rights. I won't insult you with denials — the evidence is plain.",
+				"Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**) You would be within your rights. I won't insult you with denials — the evidence is plain.",
 				"Surgeon-Captain Federica": "Two foreign strangers desecrating graves — in wartime no less. I'd expect a speedy trial and an expeditious execution.",
 				"Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** 'That is, if there are any witnesses to testify.'",
 				"choices":[
@@ -95,8 +88,7 @@ You would be within your rights. I won't insult you with denials — the evidenc
 		"Federica-intro-agree-to-help":
 			{
 			"narrator": "Your new master imparts a few pointers in the use of a shovel, and you join Verhoeven, who has been digging mechanically this whole time.",
-			"narrator": "The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry.
-			Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.",
+			"narrator": "The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry. Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.",
 			"Surgeon Captain Federica": "Stand back.",
 			"narrator": "The corpse convulses.  A wet shriek whistles through a throat half-collapsed with rot.",
 			"THE KNIGHT": "(thrashing, clawing at his own ruined face) — it BURNS — what have you —",
@@ -126,7 +118,7 @@ You would be within your rights. I won't insult you with denials — the evidenc
 					"preferred_traits": ["Cruel", "Savage"],
 					"disliked_traits": ["Pious", "Compassionate"]
 				}
-			],
+			]
 			},
 			"Federica-intro-interrogation-continued":
 				{
@@ -136,15 +128,13 @@ You would be within your rights. I won't insult you with denials — the evidenc
 					"THE ASTROLOGER": "(shuddering, jaw clicking loose and resetting with each word) I cast his... his true horoscope. Not the man's. The thing beneath the man. The Living Stars do not lie",
 					"Surgeon Captain Federica": "What did you learn?",
 					"THE ASTROLOGER": "Fire. He IS fire. A creature from the First Age.  But even he has a touch of impurity.  A drop of human blood.  He is not timeless, he...",
-					"narrator": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. 
-					She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag. [[Federica.add_item_to_inventory('Skull of a Scholar')]]",
+					"narrator": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag. [[Federica.add_item_to_inventory('Skull of a Scholar')]]",
 					"Surgeon-Captain Federica": "Promising. Verhoeven — keep digging",
 					"narrator": "By now you are over twenty feet deep in the same plot. The third coffin you strike is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.",
 					"Verhoeven": "...Ma'am?",
 					"narrator": "The lid explodes upward. A skeleton sits bolt upright in the ruined casket wearing the rotted vestments of a Scarlattian senator. Its jaw unhinges with a sound like tearing leather.",
 					"THE SENATOR": "Heavy is the heart that releases me again upon the world.",
-					"narrator": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness.
-					Then, torchlight at the cemetery gates, and the clatter of armor from the lane. [[spawn_character_from_name('golden_guard',4)]]",
+					"narrator": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness. Then, torchlight at the cemetery gates, and the clatter of armor from the lane. [[spawn_character_from_name('golden_guard',4)]]",
 					"Centurion": "Halt! Stand where you are — all of you!",
 					"narrator": "Four city guards pour through the churchyard gate, halberds leveled. They surround the open grave in which the three of you stand, caked in dirt.",
 					"Centurion": "Graverobbers and a gods-damned necromancer. On your knees, the lot of you.",
@@ -153,7 +143,7 @@ You would be within your rights. I won't insult you with denials — the evidenc
 			},
 		"Federica-intro-guard-fight":
 			{
-			"narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard',4)]]"	,
+			"narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard',4)]]"	
 			},
 		"Federica-intro-let-go":
 			{
@@ -163,7 +153,8 @@ You would be within your rights. I won't insult you with denials — the evidenc
 			{
 				"narrator": "You draw back silently.[[protagonist.add_trait('subtle')]]"
 			}
-		},	
+		}
+	},
 		
   "guard_greet": {
 	"dialogueNodes": {

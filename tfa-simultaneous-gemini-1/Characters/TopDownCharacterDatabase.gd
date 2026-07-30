@@ -509,9 +509,12 @@ func _grant_equipment(character, equipment: Array) -> void:
 			push_warning("Equipment item '%s' not found in ItemDatabase" % item_id)
 			continue
 
-		# Merge per-character overrides from the entry
+		# Merge per-character overrides from the entry. Templates write
+		# "main_hand"-style slots; the auto-equip below compares Items.json's
+		# "Main Hand" labels — normalize, or the override silently disables
+		# equipping (orc_warrior/bandit_chief/bandit_archer fought bare-handed).
 		if entry.has("slot"):
-			item_data["equip_slot"] = entry["slot"]
+			item_data["equip_slot"] = String(entry["slot"]).capitalize()
 		item_data["source"] = "starting_equipment"
 		var quantity: int = entry.get("quantity", item_data.get("quantity", 1))
 

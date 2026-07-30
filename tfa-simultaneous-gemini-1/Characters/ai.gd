@@ -150,13 +150,123 @@ var truce_until: float = -1.0
 # Corpse-discovery sweep throttle (Phase 7).
 var corpse_check_timer: float = 0.0
 
+# True when the equipped main-hand weapon fires projectiles: engagement ranges
+# stretch to the weapon and APPROACH kites instead of closing to fists.
+var is_ranged_fighter: bool = false
+# Combat A* re-plan throttle (see _combat_move).
+var _combat_repath_timer: float = 0.0
+# Fixed approach bearing around the current target (surround slots).
+var _engage_ang: float = 0.0
+# Ability cast cadence (see _try_cast_ability).
+var _cast_timer: float = 0.0
+
+
+# ===== ABILITY CASTING =====
+# NPCs enumerate their AbilityShapes (granted via extra_abilities / race
+# features) and cast through the same AbilityManager pipeline the player
+# uses. Policy, evaluated in inventory order: heal the most-wounded nearby
+# ally when someone is genuinely hurt; otherwise throw the first offensive
+# ability that reaches the current target with a sight line. Cadence-gated
+# so casters still weapon-attack between spells. Costs/conditions gate inside
+# use_ability (NPC templates without school tiers skip the resource gate via
+# npc_unlimited_resources).
+func _try_cast_ability(delta: float) -> bool:
+	_cast_timer -= delta
+	if _cast_timer > 0.0:
+		return false
+	if character.attack_animator != null and character.attack_animator.is_attacking:
+		return false
+	var inv = character.get_node_or_null("Inventory")
+	if inv == null or not ("stowed_items" in inv):
+		return false
+	for it in inv.stowed_items:
+		if not (it is AbilityShape):
+			continue
+		var data: Dictionary = AbilityDatabase.get_ability_data(String(it.ability_id))
+		if data.is_empty():
+			continue
+		var tr: Dictionary = data.get("traits", {})
+		var rng_px: float = float((data.get("targeting", {}) as Dictionary).get("range", 0.0))
+		if int(tr.get("healing", 0)) > 0 or int(tr.get("support", 0)) > 2:
+			var patient = _most_wounded_ally(maxf(rng_px, 120.0))
+			if patient != null and _cast(data, patient.global_position, patient):
+				return true
+		elif int(tr.get("attack", 0)) > 0 and current_target != null and is_instance_valid(current_target):
+			var dist := character.global_position.distance_to(current_target.global_position)
+			if dist <= maxf(rng_px, 90.0) \
+					and is_in_line_of_sight(current_target.global_position, _target_elevation()):
+				if _cast(data, current_target.global_position, current_target):
+					return true
+	_cast_timer = 1.2   # nothing castable right now — re-check soon
+	return false
+
+
+func _cast(data: Dictionary, pos: Vector2, target_node) -> bool:
+	var ab = Ability.from_dict(data)
+	var ok: bool = character.use_ability(ab, {"position": pos, "targets": [target_node], "anchor": target_node})
+	_cast_timer = randf_range(2.6, 4.2) if ok else 1.2
+	return ok
+
+
+# Most-wounded non-hostile character in range (self included), or null when
+# nobody is below 72% health — shamans shouldn't top up scratches mid-fight.
+func _most_wounded_ally(rng_px: float):
+	var best = null
+	var best_frac := 0.72
+	if game == null or not ("characters_in_scene" in game):
+		return null
+	for ch in game.characters_in_scene:
+		if not is_instance_valid(ch) or not ch.has_method("is_alive") or not ch.is_alive():
+			continue
+		if ch != character and (ch.faction_id != character.faction_id \
+				or FactionDatabase.are_hostile(character.faction_id, ch.faction_id)):
+			continue
+		if character.global_position.distance_to(ch.global_position) > rng_px:
+			continue
+		var frac: float = float(ch.current_health) / maxf(1.0, float(ch.max_health))
+		if frac < best_frac:
+			best_frac = frac
+			best = ch
+	return best
+
+
+# Engagement ranges follow the equipped MAIN-HAND item. Body size stays the
+# floor for melee; a projectile weapon pushes attack_range out to its real
+# reach (weapon_range is in TILES: shortbow 5.0 -> 320px) so archers/casters
+# stop walking into hugging distance before firing.
+func _refresh_engagement_ranges(_w = null) -> void:
+	attack_range = 70.0 * character.body_size_mod
+	preferred_range = 40.0 * character.body_size_mod
+	too_close_range = 20.0 * character.body_size_mod
+	is_ranged_fighter = false
+	var w = character.current_main_hand_item
+	if w == null or not ("primary_damage_type" in w):
+		return
+	if String(w.primary_damage_type) in ["ranged_arrow", "ranged_bullet"]:
+		var wr_tiles: float = float(w.weapon_range) if ("weapon_range" in w) else 4.0
+		var px: float = maxf(wr_tiles * GridManager.TILE_SIZE, 128.0)
+		is_ranged_fighter = true
+		attack_range = px
+		preferred_range = px * 0.8
+		too_close_range = px * 0.35   # target closing inside this -> back off (kite)
+	elif ("weapon_range" in w) and float(w.weapon_range) > 0.0:
+		# melee: stand INSIDE the weapon's designed reach. Body size used to
+		# STRETCH attack_range past the physical sweep — a big orc with a
+		# short mace parked ~15px shy of the target and whiffed forever.
+		var reach: float = float(w.weapon_range) * GridManager.TILE_SIZE
+		attack_range = clampf(reach * 0.85, 40.0, 220.0)
+		preferred_range = attack_range * 0.6
+		too_close_range = minf(20.0 * character.body_size_mod, attack_range * 0.35)
+
 func _ready():
 	character = get_parent()
 	game = get_tree().current_scene
 	detection_range = 1440.0 * character.sight
-	attack_range = 70.0 * character.body_size_mod
-	preferred_range = 40.0 * character.body_size_mod
-	too_close_range = 20.0 * character.body_size_mod
+	_refresh_engagement_ranges(null)
+	# ranges follow the EQUIPPED weapon (a shortbow keeps its wielder ~5 tiles
+	# out); equipment lands after _ready, so refresh on every swap
+	if character.has_signal("weapon_changed"):
+		character.weapon_changed.connect(_refresh_engagement_ranges)
 	# Default to UNAWARE; build_character calls apply_default_alertness after
 	# faction is set, which may flip us to AT_EASE for civilian factions.
 	# (_ready fires before build_character runs, so we can't resolve here.)
@@ -485,6 +595,11 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 func _acquire_target(target: ProceduralCharacter) -> void:
 	current_target = target
 	last_known_target_pos = target.global_position
+	# Surround slot: a fixed per-character approach bearing around the target
+	# (anchored at acquisition — a live-recomputed bearing would orbit). The
+	# second melee used to queue into his comrade's back on the same line.
+	_engage_ang = (character.global_position - target.global_position).angle() \
+		+ float((character.get_instance_id() % 5) - 2) * 0.5
 	emit_signal("target_acquired", target)
 	# Visual identification locks alertness to HOSTILE — sound alone can't do
 	# this, only LOS via _update_target reaches here.
@@ -524,13 +639,21 @@ func _process_chase(delta: float) -> void:
 	var combined_collision_dist = character.collision_radius + current_target.collision_radius + character.minimum_separation
 	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
 
+	# casters open from chase range (fireball reaches 400px)
+	if _try_cast_ability(delta):
+		return
+
 	if dist <= safe_attack_range * 1.2:
 		_change_state(AIState.APPROACH)
 		return
 
-	var dir_to_target = (current_target.global_position - character.global_position).normalized()
-	var target_pos = current_target.global_position - dir_to_target * safe_attack_range * 0.8
-	_move_toward(target_pos)
+	# steer for the surround slot, not the straight line — flankers circle in.
+	# Snapped to walkable ground: a slot INSIDE a wall (target hugging masonry,
+	# bearing pointing wallward) froze the AI forever — find_path O(1)-rejects
+	# an INF goal, so it never moved and never closed to APPROACH range.
+	var target_pos = _reachable_slot(current_target.global_position \
+		+ Vector2.from_angle(_engage_ang) * safe_attack_range * 0.8)
+	_combat_move(target_pos, delta)
 
 func _process_approach(delta: float) -> void:
 	if not current_target:
@@ -548,31 +671,43 @@ func _process_approach(delta: float) -> void:
 	# Face the target
 	character.target_rotation = dir_to_target.angle() + PI / 2
 
+	if _try_cast_ability(delta):
+		return
+
 	if dist > safe_attack_range * 1.5:
 		_change_state(AIState.CHASE)
 		return
 
-	if dist <= safe_attack_range and dist >= safe_too_close and attack_cooldown_timer <= 0:
+	# Melee attacks whenever in range and off cooldown — NO lower bound: the
+	# old `dist >= safe_too_close` gate made a cornered enemy back up instead
+	# of swinging, forever if the retreat was blocked (the "orc stands in your
+	# face doing nothing" freeze). Ranged keeps the lower bound to kite first.
+	if dist <= safe_attack_range and attack_cooldown_timer <= 0 \
+			and (not is_ranged_fighter or dist >= safe_too_close):
 		# Melee can't reach across stories (Game.can_hit_target vetoes the hit) —
 		# don't enter ATTACK and whiff forever at a deck edge; path toward the
 		# target instead so A*'s per-step elevation routing finds the ramp.
 		if absf(character.get_elevation() - _target_elevation()) > game.MELEE_ELEV_TOLERANCE:
-			_move_toward(current_target.global_position)
+			_combat_move(current_target.global_position, delta)
+			return
+		# Ranged needs an actual firing line — a 5-tile shot into a wall face
+		# just decorates the masonry. Close along the path until one opens.
+		if is_ranged_fighter and not is_in_line_of_sight(current_target.global_position, _target_elevation()):
+			_combat_move(current_target.global_position, delta)
 			return
 		_change_state(AIState.ATTACK)
 		return
 
-	# Too close — back up
+	# Too close — back up (ranged kiting; melee only lands here on cooldown)
 	if dist < safe_too_close:
-		var retreat_dir = -dir_to_target
-		var retreat_pos = character.global_position + retreat_dir * (safe_preferred_range - dist + 10)
-		_move_toward(retreat_pos)
+		_kite_away(dir_to_target, safe_preferred_range - dist + 10.0)
 		return
 
-	# Approach to preferred range or strafe
+	# Approach the surround slot at preferred range, or strafe in place
 	if dist > safe_preferred_range:
-		var approach_pos = current_target.global_position - dir_to_target * safe_preferred_range
-		_move_toward(approach_pos)
+		var approach_pos = _reachable_slot(current_target.global_position \
+			+ Vector2.from_angle(_engage_ang) * safe_preferred_range)
+		_combat_move(approach_pos, delta)
 	else:
 		if randf() < 0.3 * delta:
 			var strafe_dir = dir_to_target.rotated(PI / 2 * (1 if randf() > 0.5 else -1))
@@ -594,7 +729,9 @@ func _process_attack(delta: float) -> void:
 	if current_target and is_instance_valid(current_target):
 		character.target_rotation = (current_target.global_position - character.global_position).angle() + PI / 2
 
-	if not character.attack_animator.is_attacking:
+	if _try_cast_ability(delta):
+		return
+	if not character.attack_animator.is_attacking and attack_cooldown_timer <= 0.0:
 		character.attack("Main", null, current_target)
 		if character.current_main_hand_item:
 			attack_cooldown_timer = attack_cooldown / character.attack_speed_multiplier
@@ -703,11 +840,104 @@ func _process_frightened(delta: float) -> void:
 # ===== MOVEMENT =====
 
 func _move_toward(target_pos: Vector2) -> void:
+	# WAIT command: a held ally stands ground — every AI locomotion path
+	# (chase, approach, kite, strafe, wander, nav-following) funnels through
+	# here, so one gate holds them all. They still face, target, and attack.
+	if "hold_position" in character and character.hold_position:
+		character.is_moving = false
+		# drop any active path too: a held ally carrying a non-empty nav_path
+		# made _check_path_progress replan (full A*) EVERY tick forever
+		nav_path.clear()
+		nav_path_index = 0
+		var fdir = (target_pos - character.global_position).normalized()
+		if fdir.length() > 0.1:
+			character.target_rotation = fdir.angle() + PI / 2
+		return
 	character.target_position = target_pos
 	character.is_moving = true
 	var dir = (target_pos - character.global_position).normalized()
 	if dir.length() > 0.1:
 		character.target_rotation = dir.angle() + PI / 2
+
+
+# Combat movement: straight-line steer while the walk line is clear (cheap,
+# smooth), A* the moment a wall blocks it. CHASE/APPROACH used to steer
+# blindly and grind enemies face-first into walls forever.
+func _combat_move(target_pos: Vector2, delta: float) -> void:
+	if _walk_line_clear(target_pos):
+		nav_path.clear()
+		nav_path_index = 0
+		_move_toward(target_pos)
+		return
+	_combat_repath_timer -= delta
+	if _combat_repath_timer <= 0.0:
+		_combat_repath_timer = 0.7
+		navigate_to(target_pos)
+		if nav_path.is_empty():
+			# no route (goal sealed/INF): keep pressure on the straight line
+			# — wall-glide slides us along blockers — instead of re-flooding
+			# A* every frame and standing frozen (the old empty-path retry)
+			_move_toward(target_pos)
+		return
+	if nav_path.is_empty():
+		_move_toward(target_pos)
+		return
+	_check_path_progress()
+
+
+# Retreat without wedging into walls: try straight back, then ±60°, then
+# ±100°; take the first clear lane. Fully cornered -> hold ground (a kiting
+# archer pinned against masonry should stand and fire, not sand the wall).
+func _kite_away(dir_to_target: Vector2, dist_back: float) -> void:
+	for ang in [PI, PI - 1.05, PI + 1.05, PI - 1.75, PI + 1.75]:
+		var p := character.global_position + dir_to_target.rotated(ang) * dist_back
+		if GridManager.grid_costs.get(GridManager.world_to_map(p), INF) != INF \
+				and _walk_line_clear(p):
+			_move_toward(p)
+			return
+
+
+# Surround-slot sanitizer: steer points are target_pos + bearing*range and can
+# land inside a wall / sealed interior. Snap to the nearest walkable tile, or
+# fall back to the target itself (their tile is walkable — they stand on it).
+func _reachable_slot(p: Vector2) -> Vector2:
+	var t: Vector2i = GridManager.world_to_map(p)
+	if GridManager.grid_costs.get(t, INF) != INF or GridManager.door_pass.has(t):
+		return p
+	var nt: Vector2i = GridManager.nearest_walkable(t)
+	if GridManager.grid_costs.get(nt, INF) != INF:
+		return GridManager.map_to_world(nt)
+	if current_target and is_instance_valid(current_target):
+		return current_target.global_position
+	return character.global_position
+
+
+# True if every ~24px sample between us and target sits on a pathable tile
+# (finite cost, or a pushable closed door via door_pass) AND every tile
+# transition along the way is elevation-steppable — a scarp/deck edge between
+# finite-cost tiles used to read as "clear", so combat steer never fell back
+# to A* (whose per-step elevation routing finds the ramp) and ground the body
+# against the cliff lip forever. Samples the centre line PLUS two lines
+# offset by most of the body radius: a clear centre line used to steer the
+# body's shoulder straight into jamb corners the tile test called clear.
+# Doorways fail the offset lines -> A* takes over and threads the exact gap
+# centre, which is the right division of labour.
+func _walk_line_clear(target_pos: Vector2) -> bool:
+	var dv := target_pos - character.global_position
+	if dv.length() < 1.0:
+		return true
+	var side := Vector2(-dv.y, dv.x).normalized() * character._body_circle_radius() * 0.8
+	var steps := int(dv.length() / 24.0) + 1
+	for off in [Vector2.ZERO, side, -side]:
+		var prev_t: Vector2i = GridManager.world_to_map(character.global_position + off)
+		for i in range(1, steps + 1):
+			var t: Vector2i = GridManager.world_to_map(character.global_position + off + dv * (float(i) / float(steps)))
+			if GridManager.grid_costs.get(t, INF) == INF and not GridManager.door_pass.has(t):
+				return false
+			if t != prev_t and not GridManager.can_step(prev_t, t):
+				return false
+			prev_t = t
+	return true
 
 
 # ===== PATH FOLLOWING =====
@@ -726,7 +956,8 @@ func _advance_path() -> void:
 		nav_path_index = 0
 		return
 	var next_tile = nav_path[nav_path_index]
-	var next_world = GridManager.map_to_world(next_tile)
+	# door tiles route through the door's exact gap centre, not the tile centre
+	var next_world: Vector2 = GridManager.door_gaps.get(next_tile, GridManager.map_to_world(next_tile))
 	_move_toward(next_world)
 	nav_path_index += 1
 
@@ -734,6 +965,19 @@ func _check_path_progress() -> void:
 	if nav_path.is_empty():
 		return
 	if not character.is_moving:
+		# is_moving=false means the leg ENDED — but arrived and gave-up look
+		# identical (the mover's wall-stuck escape emits a fake arrival).
+		# Advancing on a give-up used to SKIP a waypoint and aim the next leg
+		# deeper into the wall (the chunk-crawl). Not near the leg's target?
+		# Replan from where we actually stand.
+		var leg_i: int = nav_path_index - 1
+		if leg_i >= 0 and leg_i < nav_path.size():
+			var leg_tile: Vector2i = nav_path[leg_i]
+			var leg_world: Vector2 = GridManager.door_gaps.get(leg_tile, GridManager.map_to_world(leg_tile))
+			if character.global_position.distance_to(leg_world) > 24.0:
+				var dest_tile: Vector2i = nav_path[nav_path.size() - 1]
+				navigate_to(GridManager.map_to_world(dest_tile))
+				return
 		_advance_path()
 
 

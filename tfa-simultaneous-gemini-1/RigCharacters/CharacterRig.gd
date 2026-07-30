@@ -32,7 +32,13 @@ func _ready() -> void:
 	_play_base()
 
 func _process(delta: float) -> void:
-	if _ap.is_playing():
+	# The mixer is driven MANUALLY (see _ready), which also opts it out of the
+	# SceneTree's pause -- and hosts commonly run the character at
+	# PROCESS_MODE_ALWAYS so input/UI keep working, so _process still fires while
+	# the game is paused. Without this gate the walk cycle keeps striding during a
+	# planning pause, and anything pinned to a hand (weapon holders) drifts out of
+	# the grip because the host only re-syncs them on unpaused frames.
+	if _ap.is_playing() and not get_tree().paused:
 		_ap.advance(delta)
 	_fix_bone_rotations()
 	if not _ik_target.is_empty():

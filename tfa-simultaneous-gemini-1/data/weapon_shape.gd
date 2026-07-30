@@ -4,7 +4,9 @@
 extends CharacterBody2D
 class_name WeaponShape
 
-enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW, PISTOL }
+# Appended-only: to_data() serialises this as the lowercased key name, so
+# reordering would rename every weapon's "type" on the next save round-trip.
+enum WeaponType { SWORD, AXE, DAGGER, SPEAR, MACE, BOW, PISTOL, SHIELD }
 enum DamageType { SLASHING, PIERCING, BLUDGEONING }
 enum GripStyle { ONE_HANDED, TWO_HANDED }
 
@@ -506,6 +508,7 @@ func load_from_data(data: Dictionary) -> void:
 			"mace": weapon_type = WeaponType.MACE
 			"bow": weapon_type = WeaponType.BOW
 			"pistol", "gun": weapon_type = WeaponType.PISTOL
+			"shield": weapon_type = WeaponType.SHIELD
 
 	# Basic Properties
 	if data.has("id"): id = data["id"]
@@ -577,7 +580,19 @@ func load_from_data(data: Dictionary) -> void:
 	if data.get("size") == "default":
 		_apply_default_size_for_type()
 	else:
-		if data.has("total_length"): total_length = data["total_length"]
+		if data.has("total_length"):
+			total_length = data["total_length"]
+		elif data.has("base_width") or data.has("base_height"):
+			# Items that aren't blade-shaped — shields above all — are authored
+			# with base_width/base_height and no total_length. _auto_scale_sprite
+			# fits the texture's LONGEST side to total_length, so the longer
+			# authored dimension is the right target. Without this they silently
+			# keep the 85.0 default and render 1.7x the length of a longsword.
+			var authored: float = maxf(
+				float(data.get("base_width", 0.0)), float(data.get("base_height", 0.0))
+			)
+			if authored > 0.0:
+				total_length = authored
 		if data.has("grip_position"): grip_position = data["grip_position"]
 		if data.has("grip_length"): grip_length = data["grip_length"]
 		if data.has("blade_width"): blade_width = data["blade_width"]
@@ -708,3 +723,11 @@ func _apply_default_size_for_type() -> void:
 			grip_length = 8.0 * s
 			blade_width = 4.0 * s
 			balance_point = 0.25
+		WeaponType.SHIELD:
+			# Roughly round and gripped dead centre — "length" is the face
+			# diameter, which is what _auto_scale_sprite fits the art to.
+			total_length = 18.0 * s
+			grip_position = 0.5
+			grip_length = 6.0 * s
+			blade_width = 18.0 * s
+			balance_point = 0.5

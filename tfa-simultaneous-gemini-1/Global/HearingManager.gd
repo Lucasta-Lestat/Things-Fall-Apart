@@ -17,8 +17,9 @@ const BASE_HEARING_RADIUS: float = 240.0
 const WALL_OCCLUSION_FACTOR: float = 0.45
 
 # Loudness threshold above which a sound cuts through the AT_EASE filter
-# (civilians ignore ambient noise but react to gunshots/explosions).
-# Gunshot loudness is 1.5; melee swings and clashes are <= 0.9.
+# (civilians ignore ambient noise but react to gunshots/explosions), and
+# above which the sound carries at extended range (see range_mult in emit).
+# Muzzle blast is 1.9, bullet impact 1.5; melee swings/bows are <= 0.9.
 const LOUD_SOUND_THRESHOLD: float = 1.2
 
 signal sound_emitted(world_pos: Vector2, loudness: float, source)
@@ -111,6 +112,12 @@ func emit(world_pos: Vector2, loudness: float, source = null,
 	var range_mult: float = 1.0
 	if is_alarm:
 		range_mult = float(LawDatabase.witness_cfg().get("alarm_range_mult", 2.5))
+	elif loudness >= LOUD_SOUND_THRESHOLD:
+		# Gunshots/explosions CARRY (range, not arousal): the base radius is
+		# tuned for footstep stealth (~3 tiles), which left whole firefights
+		# inaudible one house over. 1.9-loud muzzle × 2.5 ≈ 18 tiles open air,
+		# ~8 tiles through one wall.
+		range_mult = 2.5
 
 	var party: Array = game.party_chars if "party_chars" in game else []
 	var any_party_heard := false

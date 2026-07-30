@@ -183,7 +183,7 @@
 	  },
 	  "equipment": [
 		{
-		  "id": "war_axe",
+		  "id": "battle_axe",
 		  "slot": "main_hand"
 		},
 		{
@@ -213,6 +213,114 @@
 		"unarmed_strike_damage_type": "bludgeoning",
 		"bonus_damage": 2
 	  },
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "bandit_shaman",
+	  "name": "Bandit Shaman",
+	  "race": "from_faction",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "stats": {
+		"strength": 35, 
+		"constitution": 45, 
+		"dexterity": 40, 
+		"will": 65, 
+		"intelligence": 50, 
+		"charisma": 55
+	  },
+	  "equipment": "from_faction",
+	  "icon": "res://Icons/bandit_icon.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Inspect"
+	  ],
+	  "extra_abilities": ["heal", "chasten"],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "bandit_occultist",
+	  "name": "Bandit Occultist",
+	  "race": "from_faction",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "stats": {
+		"strength": 30, 
+		"constitution": 40, 
+		"dexterity": 45, 
+		"will": 60, 
+		"intelligence": 65, 
+		"charisma": 50
+	  },
+	  "equipment": "from_faction",
+	  "icon": "res://Icons/bandit_icon.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Inspect"
+	  ],
+	  "extra_abilities": ["creepy_beam", "bind_soul"],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "bandit_archer",
+	  "name": "Bandit Archer",
+	  "race": "from_faction",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "stats": {
+		"strength": 40, 
+		"constitution": 45, 
+		"dexterity": 70, 
+		"will": 45, 
+		"intelligence": 40, 
+		"charisma": 35
+	  },
+	  "equipment": [{"id": "shortbow", "slot": "main_hand"}, {"id": "arrow", "quantity": 40}],
+	  "icon": "res://Icons/bandit_icon.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Inspect"
+	  ],
+	  "extra_abilities": [],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
+	  "sensory": {},
+	  "spawn_conditions": {}
+	},
+	{
+	  "id": "bandit_pyromancer",
+	  "name": "Bandit Pyromancer",
+	  "race": "from_faction",
+	  "background": "criminal",
+	  "faction": "bandits",
+	  "stats": {
+		"strength": 30, 
+		"constitution": 40, 
+		"dexterity": 50, 
+		"will": 50, 
+		"intelligence": 70, 
+		"charisma": 45
+	  },
+	  "equipment": "from_faction",
+	  "icon": "res://Icons/bandit_icon.png",
+	  "dialogue": null,
+	  "interact_options": [
+		"Inspect"
+	  ],
+	  "extra_abilities": ["fireball", "fire_spin"],
+	  "extra_conditions": [],
+	  "extra_traits": {},
+	  "combat": {},
 	  "sensory": {},
 	  "spawn_conditions": {}
 	},
@@ -837,7 +945,7 @@
 		"intelligence": 55,
 		"charisma": 60
 	  },
-	  "equipment": [],
+	  "equipment": [{"id": "dagger", "slot": "main_hand"}],
 	  "icon": "res://Icons/djargo_icon.png",
 	  "dialogue": null,
 	  "interact_options": [
@@ -1747,7 +1855,7 @@
 	  },
 	  "equipment": [
 		{
-		  "id": "greataxe",
+		  "id": "great_axe",
 		  "slot": "main_hand"
 		}
 	  ],

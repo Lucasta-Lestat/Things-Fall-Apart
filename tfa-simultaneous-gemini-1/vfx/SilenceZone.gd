@@ -28,29 +28,29 @@ extends Node2D
 ## Seconds spent fading the visual in on spawn and out before expiry.
 @export var fade_time: float = 0.75
 
-# Occult violet, matching the school's other effects (see vfx/creepy_beam.gd).
-@export var void_color: Color = Color(0.10, 0.04, 0.18, 0.50)   # dead air
-@export var ring_color: Color = Color(0.78, 0.45, 1.0, 0.85)    # collapsing waves
-@export var rim_color: Color = Color(0.55, 0.18, 0.70, 0.90)    # boundary
+# Deliberately faint and desaturated. Silence is the absence of sound, so the
+# zone reads as a quiet, still pool of dead air — not an active effect. A large
+# bright wash would be the visual equivalent of a loud noise.
+@export var wash_color: Color = Color(0.16, 0.13, 0.20, 0.14)   # dead air
+@export var rim_color: Color = Color(0.55, 0.46, 0.62, 0.30)    # soft boundary
 
-# Concentric rings shown collapsing inward. Sound is drawn into the zone and
-# swallowed rather than radiating out of it — the inverse of the game's
-# existing sound_waves shader, and the same motif as the ability icon.
-const RING_COUNT: int = 4
-const RING_SPEED: float = 0.28      # collapses per second
-const RIM_WIDTH: float = 3.0
-const RING_MAX_WIDTH: float = 4.0
-# Rings start just inside the rim so the boundary stays a distinct, steady
-# line instead of being doubled by a wave sitting on top of it.
-const RING_START: float = 0.92
+const RIM_WIDTH: float = 2.0
+
+# The centred mark is the ability's own icon, scaled to this fraction of the
+# zone diameter — a small, still glyph in the middle of the quiet, not a
+# pattern that fills it.
+const ICON_SCALE: float = 0.6
+const ICON_PATH: String = "res://UI/UI Icons/ability_silence.png"
 
 var _age: float = 0.0
-var _phase: float = 0.0
+var _icon: Texture2D = null
 
 
 func _ready() -> void:
 	# Drawn under characters but over the floor, like the other ground VFX.
 	z_index = -1
+	if ResourceLoader.exists(ICON_PATH):
+		_icon = load(ICON_PATH)
 	HearingManager.register_sound_zone(self)
 	queue_redraw()
 
@@ -67,13 +67,24 @@ func _process(delta: float) -> void:
 		return
 
 	_age += delta
-	_phase = fposmod(_phase + delta * RING_SPEED, 1.0)
 
 	if duration > 0.0 and _age >= duration:
 		queue_free()
 		return
 
-	queue_redraw()
+	# The zone is otherwise static, so only redraw while the fade is actually
+	# changing the image — no per-frame churn once it has settled.
+	if _is_fading():
+		queue_redraw()
+
+
+# True while the spawn fade-in or the pre-expiry fade-out is in progress.
+func _is_fading() -> bool:
+	if fade_time <= 0.0:
+		return false
+	if _age < fade_time:
+		return true
+	return duration > 0.0 and (duration - _age) < fade_time
 
 
 ## How much of a sound travelling from one point to another survives this
@@ -109,30 +120,17 @@ func _draw() -> void:
 	if alpha <= 0.0:
 		return
 
-	# The dead air itself — a pool of muted violet.
-	draw_circle(Vector2.ZERO, radius, _faded(void_color, alpha))
+	# The dead air itself — a faint, still pool.
+	draw_circle(Vector2.ZERO, radius, _faded(wash_color, alpha))
 
-	# Waves collapsing inward, thinning and dimming as they are swallowed.
-	for i in RING_COUNT:
-		var t: float = fposmod(_phase + float(i) / float(RING_COUNT), 1.0)
-		var ring_radius: float = radius * RING_START * (1.0 - t)
-		if ring_radius <= 1.0:
-			continue
-		# Brightest at the rim, gone by the centre.
-		var strength: float = (1.0 - t) * (1.0 - t)
-		draw_arc(
-			Vector2.ZERO,
-			ring_radius,
-			0.0,
-			TAU,
-			48,
-			_faded(ring_color, alpha * strength),
-			maxf(1.0, RING_MAX_WIDTH * strength),
-			true
-		)
-
-	# A steady boundary so the silenced area reads as a hard edge on the map.
+	# A soft boundary so the silenced area reads as a discrete region.
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, _faded(rim_color, alpha), RIM_WIDTH, true)
+
+	# The silence mark, centred.
+	if _icon != null:
+		var side: float = radius * ICON_SCALE
+		var rect := Rect2(-Vector2(side, side) * 0.5, Vector2(side, side))
+		draw_texture_rect(_icon, rect, false, Color(1.0, 1.0, 1.0, alpha))
 
 
 func _faded(base: Color, alpha: float) -> Color:

@@ -26,6 +26,10 @@ var template_id: String = ""
 var is_protagonist = false
 var AI_enabled = false
 var is_player_controlled: bool = false
+# WAIT order (party context menu): the AI still targets and attacks hostiles
+# in LOS but all AI locomotion is gated off (ai.gd _move_toward). Persists
+# across selection changes until "Resume".
+var hold_position: bool = false
 # Dialogue / interaction
 var dialogues: Array = []
 var current_dialogue_index: int = 0
@@ -175,20 +179,35 @@ var _rig_grip_r: Node2D = null            # rig weapon anchors (fingertip, +X = 
 var _rig_grip_l: Node2D = null
 var _rig_holder_sync_queued := false
 
+# Holder z for rig characters. The weapon inside the holder carries z -3 (set in
+# _on_active_weapon_changed for the legacy arms, which sit at -2), and the character
+# root is z 5, so this lands the blade at an absolute 4 -- one below the rig's Body
+# polygon at 5. The rig's HANDS are baked into that same Body mesh, so "under the
+# hand" and "under the body" are the same layer: anything above 5 draws the grip on
+# top of the fingers that are supposed to be holding it.
+const RIG_HOLDER_Z := 2
+
 func _rig_sync_holders() -> void:
 	# End-of-frame holder sync (see _sync_character_rig). WeaponShape art
 	# points -Y at rot 0 while the grip's +X is the blade direction, hence
-	# the +PI/2. z 20 lifts the weapon above the rig mesh (baked rig weapons
-	# use z 15).
+	# the +PI/2.
 	_rig_holder_sync_queued = false
 	if _rig_grip_r != null and is_instance_valid(_rig_grip_r) and main_hand_holder != null:
 		main_hand_holder.global_position = _rig_grip_r.global_position
 		main_hand_holder.global_rotation = _rig_grip_r.global_rotation + PI / 2.0
-		main_hand_holder.z_index = 20
+		main_hand_holder.z_index = RIG_HOLDER_Z
 	if _rig_grip_l != null and is_instance_valid(_rig_grip_l) and off_hand_holder != null:
 		off_hand_holder.global_position = _rig_grip_l.global_position
 		off_hand_holder.global_rotation = _rig_grip_l.global_rotation + PI / 2.0
-		off_hand_holder.z_index = 20
+		off_hand_holder.z_index = RIG_HOLDER_Z
+
+## Defer a holder sync to end-of-frame. The rig is a CHILD, so it animates its
+## bones after this node's _process; copying the grip transforms inline would
+## trail the hand by a frame -- visible as a detached blade during fast swings.
+func _queue_rig_holder_sync() -> void:
+	if (_rig_grip_r != null or _rig_grip_l != null) and not _rig_holder_sync_queued:
+		_rig_holder_sync_queued = true
+		call_deferred("_rig_sync_holders")
 var _rig_last_moving: bool = false       # so set_moving fires only on change
 # The rig art is authored FRONT-FACING (+Y / south); TFA forward is local -Y. A
 # single local rotation on the rig child makes its face LEAD the movement
@@ -269,12 +288,23 @@ var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
 # Time the character has been blocked against a wall while is_moving; once it
-# exceeds the threshold, _update_movement gives up so the action queue advances.
+# exceeds the threshold, _update_movement repaths (or gives up so the action
+# queue advances).
 var _movement_stuck_time: float = 0.0
+# Consecutive stuck-repaths without reaching a waypoint; bounded so a truly
+# trapped body still falls back to the fake-arrival contract.
+var _stuck_repaths: int = 0
+# Net-progress stuck tracking: best distance-to-target achieved on the current
+# leg, and the leg's target (a change of target resets the window).
+var _stuck_best_dist: float = INF
+var _stuck_target: Vector2 = Vector2(INF, INF)
 # Waypoint-based pathfinding for real-time movement
 var _nav_waypoints: Array[Vector2] = []
 var _nav_index: int = 0
 var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
+# The last held-click goal came back pathless: don't re-drain the whole A*
+# component every frame while the button is held on the same tile.
+var _nav_goal_failed: bool = false
 
 # Ice sliding state
 var is_ice_sliding: bool = false
@@ -1085,18 +1115,24 @@ func _setup_collision() -> void:
 	collision_layer = CollisionLayers.CHARACTERS
 	collision_mask = CollisionLayers.STRUCTURES
 
-	# Shared shape resource: one ConvexPolygonShape2D backs both the body and
-	# the Area2D, so _update_collision_shape() mutating .points keeps them in
-	# sync automatically.
+	# BODY shape: a CIRCLE (bipeds) / CAPSULE (quadrupeds). The old rotating
+	# rectangle collider corner-caught on door jambs and wall-segment
+	# junctions (a 48px-wide human rect had ~0 clearance through 48px doors),
+	# and the per-frame `rotation +=` facing writes are un-swept, so turning
+	# while pressed against a wall embedded a rear corner for physics to pop
+	# out. Round shapes cannot corner-catch. Melee/projectile hits resolve
+	# against this body; get_limb_at_position rescales rim contacts onto the
+	# old rect silhouette so limb thresholds keep their tuned meaning.
+	body_collision_shape = CollisionShape2D.new()
+	body_collision_shape.name = "BodyShape"
+	body_collision_shape.shape = _make_body_shape()
+	add_child(body_collision_shape)
+
+	# Area2D for soft character-on-character separation keeps the full body
+	# RECTANGLE (its own resource now — the body circle must not resize it).
 	var polygon = ConvexPolygonShape2D.new()
 	polygon.points = _get_body_collision_points()
 
-	body_collision_shape = CollisionShape2D.new()
-	body_collision_shape.name = "BodyShape"
-	body_collision_shape.shape = polygon
-	add_child(body_collision_shape)
-
-	# Area2D for soft character-on-character separation (the existing system).
 	collision_area = Area2D.new()
 	collision_area.name = "CollisionArea"
 	collision_area.collision_layer = CollisionLayers.CHARACTERS
@@ -1109,9 +1145,39 @@ func _setup_collision() -> void:
 	collision_area.add_child(collision_shape)
 
 func _update_collision_shape() -> void:
-	# Call this if body dimensions change at runtime
+	# Call this if body dimensions change at runtime (race dims can also flip
+	# body_type, which swaps circle <-> capsule — rebuild, don't mutate)
 	if collision_shape and collision_shape.shape is ConvexPolygonShape2D:
 		collision_shape.shape.points = _get_body_collision_points()
+	if body_collision_shape:
+		body_collision_shape.shape = _make_body_shape()
+
+
+# Bipeds: a CIRCLE — cannot corner-catch, indifferent to facing writes.
+# Quadrupeds: a body-length CAPSULE (round ends, still nothing to catch) so
+# the long body keeps a real hit/click silhouette — a narrow-axis circle left
+# up to ~45% of a horse untargetable.
+func _make_body_shape() -> Shape2D:
+	var r := _body_circle_radius()
+	if body_type == BodyType.QUADRUPED:
+		var cap := CapsuleShape2D.new()
+		cap.radius = r
+		cap.height = maxf(body_length, r * 2.0)
+		return cap
+	var circle := CircleShape2D.new()
+	circle.radius = r
+	return circle
+
+
+# Physical footprint radius. 0.45 * width keeps a human (body_width 48) at
+# r = 21.6 — a 43.2px diameter threads the 48px doors the exporter emits —
+# while the visual shoulders overhang the physics circle slightly, which
+# reads fine top-down. Quadrupeds use their narrow axis (capsule radius).
+func _body_circle_radius() -> float:
+	var w: float = maxf(body_width, 20.0)
+	if body_type == BodyType.QUADRUPED:
+		w = minf(w, maxf(body_length, 20.0))
+	return w * 0.45
 
 func _get_body_collision_points() -> PackedVector2Array:
 	var half_width = body_width / 2
@@ -1721,24 +1787,40 @@ func get_separation_vector() -> Vector2:
 	"""Calculate a vector to push this character away from overlapping characters"""
 	var separation = Vector2.ZERO
 	var overlapping = get_overlapping_characters()
-	
+
 	for other in overlapping:
 		# A deck walker directly above a ground character must not repel it.
 		if absf(other.current_elevation - current_elevation) > 0.5:
 			continue
+		# The dead are ground clutter: step over a corpse, don't orbit it.
+		if other.has_method("is_alive") and not other.is_alive():
+			continue
 		var to_self = global_position - other.global_position
 		var distance = to_self.length()
-		var min_dist = collision_radius + other.collision_radius + minimum_separation
-		
+		# Push starts at true body-circle contact. The old model used the
+		# oversized collision_radius pair, repelling ~14px before bodies
+		# touched — and harder than walk speed, so followers ground in place.
+		var min_dist = _body_circle_radius() + other._body_circle_radius() + minimum_separation
+
 		if distance < min_dist and distance > 0.01:
 			# Calculate push strength (stronger when closer)
 			var overlap = min_dist - distance
 			var push_dir = to_self.normalized()
+			# A mover shoved straight backwards can never pass: rotate the
+			# push mostly onto the tangent so bodies SLIP past each other
+			# (side picked by which flank of the other we're already on).
+			if is_moving and velocity.length() > 1.0:
+				var vn := velocity.normalized()
+				if push_dir.dot(vn) < -0.4:
+					var tang := Vector2(-vn.y, vn.x)
+					if tang.dot(push_dir) < 0.0:
+						tang = -tang
+					push_dir = (tang * 0.85 + push_dir * 0.15).normalized()
 			separation += push_dir * overlap
 		elif distance <= 0.01:
 			# Characters are at same position, push in random direction
 			separation += Vector2(randf() - 0.5, randf() - 0.5).normalized() * min_dist
-	
+
 	return separation
 
 # Updated load_from_data function
@@ -2889,13 +2971,8 @@ func _sync_character_rig() -> void:
 		rig_aim(_rig_ik_hand, _rig_aim_fallback_point())
 	# Generalized equipping: the legacy weapon holders ride the rig's grip
 	# anchors, so the equipped WeaponShape (visuals + melee hitbox, unchanged)
-	# follows the animated/IK-posed hand. Deferred to end-of-frame: the rig
-	# (a CHILD) animates its bones after this parent's _process, so a direct
-	# copy here would trail the hand by one frame — visible as a detached
-	# blade during fast swings.
-	if (_rig_grip_r != null or _rig_grip_l != null) and not _rig_holder_sync_queued:
-		_rig_holder_sync_queued = true
-		call_deferred("_rig_sync_holders")
+	# follows the animated/IK-posed hand.
+	_queue_rig_holder_sync()
 
 # --- Attack aim target (world) -----------------------------------------------
 # Set by callers right before attack()/cast — mirrors the target_rotation
@@ -2918,8 +2995,12 @@ func set_attack_aim(point = null, node: Node2D = null) -> void:
 
 func get_attack_aim_point():
 	# Live node wins (tracks movement); then the stashed point; null if neither.
+	# A dead target falls through to the stashed point rather than steering the
+	# shot onto a corpse — corpses stay in the scene, so is_instance_valid alone
+	# would keep aiming at one. Mirrors AbilityManager._anchored_position.
 	if attack_aim_node != null and is_instance_valid(attack_aim_node):
-		return attack_aim_node.global_position
+		if not (attack_aim_node.has_method("is_alive") and not attack_aim_node.is_alive()):
+			return attack_aim_node.global_position
 	return attack_aim_point
 
 func _rig_aim_fallback_point() -> Vector2:
@@ -3086,6 +3167,13 @@ func _process(delta: float) -> void:
 		# Delegate to AI child node
 		if AI_enabled:
 			$AI.process_ai(delta)
+	elif character_rig != null:
+		# Paused: the rig freezes its own clip (CharacterRig gates advance on
+		# get_tree().paused), but a pose can still be re-posed under us — an IK
+		# re-aim, a rebuild, a swapped weapon. Keep the holders on the grips so a
+		# blade never sits detached from the hand for the whole planning phase.
+		_queue_rig_holder_sync()
+
 func handle_visual_shake(delta) -> void:
 	if current_shake_intensity > 0:
 		current_shake_intensity = move_toward(current_shake_intensity, 0, shake_decay_rate * delta)
@@ -3255,14 +3343,22 @@ func _update_tail_animation(delta: float) -> void:
 # Helper to distinguish Weapon vs Ability logic
 func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, paused: bool) -> void:
 	if item is WeaponShape:
-		# Standard Weapon Logic
+		# Standard Weapon Logic. Clicking a character designates them, so the
+		# swing/shot follows them as they move; clicking bare ground keeps the
+		# old "attack this spot" behaviour.
+		var designated := _find_character_at(mouse_pos)
+		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		if paused:
-			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			action_queue.queue_attack(mouse_pos)
+			if designated != null:
+				action_queue.queue_attack_target(designated)
+			else:
+				action_queue.queue_attack(mouse_pos)
 		else:
-			target_rotation = (mouse_pos - global_position).angle() + PI / 2
-			attack(hand_str, mouse_pos)
-			
+			if designated != null:
+				attack(hand_str, designated.global_position, designated)
+			else:
+				attack(hand_str, mouse_pos)
+
 	elif item is AbilityShape:
 		# Ability Logic — always face the target
 		target_rotation = (mouse_pos - global_position).angle() + PI / 2
@@ -3400,7 +3496,7 @@ func _handle_input() -> void:
 		# space fall through to the existing off-hand attack.
 		var ctx_target = _find_context_menu_target_at(mouse_pos)
 		if ctx_target != null and game:
-			game.show_context_menu(ctx_target, get_viewport().get_mouse_position())
+			game.show_context_menu(ctx_target, get_viewport().get_mouse_position(), self)
 			return
 		current_hand = "Off"
 		_handle_hand_input("Off", current_off_hand_item, mouse_pos, paused)
@@ -3463,21 +3559,49 @@ func _handle_input() -> void:
 				action_queue.cancel_all()
 			_clear_tactical_path_if_executing()
 			var target_tile = GridManager.world_to_map(mouse_pos)
-			if target_tile != _last_nav_target_tile:
+			# also re-path when idle: a fake-arrival (stuck detector) used to
+			# make the SAME destination unretryable. A goal that came back
+			# PATHLESS stays skipped until the cursor moves to another tile —
+			# retrying it every held frame drained the full A* component.
+			if target_tile != _last_nav_target_tile or (not is_moving and not _nav_goal_failed):
 				_last_nav_target_tile = target_tile
+				_nav_goal_failed = false
 				var start_tile = GridManager.world_to_map(global_position)
-				var tile_path = GridManager.find_path(start_tile, target_tile, jump_height, jump_range, on_roof)
-				_nav_waypoints.clear()
-				for tile in tile_path:
-					_nav_waypoints.append(GridManager.map_to_world(tile))
-				_nav_index = 0
-				if _nav_waypoints.is_empty():
-					# No path or same tile — move directly
-					target_position = mouse_pos
+				if target_tile == start_tile:
+					# sub-tile micro-move within the current tile (clamped off
+					# wall edges: a click 3px from the blocked band is a target
+					# the body circle can never reach)
+					_nav_waypoints.clear()
+					_nav_index = 0
+					target_position = GridManager.clamp_off_walls(mouse_pos)
+					target_rotation = (target_position - global_position).angle() + PI / 2
+					is_moving = true
 				else:
-					target_position = _nav_waypoints[0]
-				target_rotation = (target_position - global_position).angle() + PI / 2
-				is_moving = true
+					var goal_tile: Vector2i = target_tile
+					# JUMP input: Shift+middle-click a roof sends a jumper ONTO it
+					# (plain click under a roof still paths indoors through doors);
+					# a roof over unreachable ground falls back to the roof anyway.
+					var can_roof := jump_height > 0.0 and GridManager.has_roof(target_tile)
+					var want_roof := can_roof and Input.is_key_pressed(KEY_SHIFT)
+					var tile_path = GridManager.find_path(start_tile, goal_tile, jump_height, jump_range, on_roof, want_roof)
+					if tile_path.is_empty() and can_roof and not want_roof:
+						tile_path = GridManager.find_path(start_tile, goal_tile, jump_height, jump_range, on_roof, true)
+					if tile_path.is_empty():
+						# clicked a wall/blocked tile: snap to the floor beside it
+						goal_tile = GridManager.nearest_walkable(target_tile)
+						if goal_tile != target_tile:
+							tile_path = GridManager.find_path(start_tile, goal_tile, jump_height, jump_range, on_roof)
+					_nav_waypoints.assign(GridManager.path_to_waypoints(tile_path))
+					_nav_index = 0
+					if _nav_waypoints.is_empty():
+						# genuinely unreachable — refuse the order (the old
+						# straight-line fallback ground into the wall forever)
+						is_moving = false
+						_nav_goal_failed = true
+					else:
+						target_position = _nav_waypoints[0]
+						target_rotation = (target_position - global_position).angle() + PI / 2
+						is_moving = true
 
 	# Per-hand weapon cycling: E/Shift+E for main hand, Q/Shift+Q for off hand
 	if Input.is_action_just_pressed("cycle_main_hand_next"):
@@ -3626,6 +3750,39 @@ func _find_world_item_at(world_pos: Vector2) -> Item:
 				best = collider
 	return best
 
+## Topmost living character under a world point, excluding self. This is the one
+## canonical "who did the player click on" probe — planning, free-cast targeting
+## and the hover highlight all route through it so a designation always means the
+## same thing. Point-query based for the same reason _update_hover_cursor is: the
+## GUI layer eats mouse motion, so mouse_entered on characters never fires.
+##
+## Returns null when the cursor is over bare ground, which is what makes plain
+## area/ground targeting still reachable — no character under the cursor means no
+## designation, and callers fall back to the raw position.
+func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> ProceduralCharacter:
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return null
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = world_pos
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.collision_mask = CollisionLayers.CHARACTERS
+	var hits = space.intersect_point(query, 8)
+	var best: ProceduralCharacter = null
+	for hit in hits:
+		var collider = hit.get("collider")
+		if not (collider is ProceduralCharacter) or collider == self:
+			continue
+		# Corpses deliberately stay in the scene (law/crime system), so an
+		# aliveness test is required — is_instance_valid is not enough.
+		if require_alive and collider.has_method("is_alive") and not collider.is_alive():
+			continue
+		if best == null or collider.z_index >= best.z_index:
+			best = collider
+	return best
+
+
 ## Probe for a loose, pick-up-able world Item (not a readable, not a container).
 ## Used by the left-click "default interaction" fast-path.
 func _find_pickup_item_at(world_pos: Vector2) -> Item:
@@ -3664,16 +3821,41 @@ func _update_hover_cursor() -> void:
 					blocked = true
 					break
 				n = n.get_parent()
+	var hotspot: Vector2 = Vector2.ZERO
 	if not blocked:
 		var item: Item = _find_world_item_at(get_global_mouse_position())
 		if item != null:
 			desired = item.get_hover_cursor_texture()
+		else:
+			# No item under the cursor, but a character means clicking here
+			# designates them as the target rather than aiming at the ground.
+			# Show the reticle so that distinction is visible before committing.
+			var hovered_char := _find_character_at(get_global_mouse_position())
+			if hovered_char != null:
+				desired = _get_targeting_cursor()
+				if desired != null:
+					hotspot = desired.get_size() / 2.0
 	if desired != null:
-		Input.set_custom_mouse_cursor(desired)
+		Input.set_custom_mouse_cursor(desired, Input.CURSOR_ARROW, hotspot)
 		_hover_cursor_active = true
 	elif _hover_cursor_active:
 		Input.set_custom_mouse_cursor(null)
 		_hover_cursor_active = false
+
+
+# Reticle shown when hovering a designatable character. Loaded once on demand;
+# null is cached too so a missing file doesn't retry every frame.
+var _targeting_cursor: Texture2D = null
+var _targeting_cursor_loaded: bool = false
+
+func _get_targeting_cursor() -> Texture2D:
+	if not _targeting_cursor_loaded:
+		_targeting_cursor_loaded = true
+		if ResourceLoader.exists("res://targeting icon.png"):
+			var res = load("res://targeting icon.png")
+			if res is Texture2D:
+				_targeting_cursor = res
+	return _targeting_cursor
 
 ## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
 ## layer (CollisionLayers.WARPS) and carry their destination in the
@@ -3724,6 +3906,7 @@ func _confirm_ability_target(paused: bool) -> void:
 	var target_pos = result.get("position", Vector2.ZERO)
 	var ability_id = ability_data.get("id", "")
 	var explicit_targets: Array = result.get("targets", [])
+	var target_anchor = result.get("anchor", null)
 	var is_character_mode = result.get("shape") == targeting_system.TargetShape.CHARACTERS
 
 	# Face the target when confirming an ability
@@ -3732,7 +3915,7 @@ func _confirm_ability_target(paused: bool) -> void:
 	if paused:
 		# End targeting — queued indicator takes over the visual role
 		targeting_system.end_targeting()
-		action_queue.queue_ability(ability_id, target_pos, explicit_targets)
+		action_queue.queue_ability(ability_id, target_pos, explicit_targets, target_anchor)
 
 		if not is_character_mode:
 			# Create persistent ghost indicator for the queued ability
@@ -3754,7 +3937,11 @@ func _confirm_ability_target(paused: bool) -> void:
 		else:
 			targeting_system.is_targeting = false
 		var ability_obj = Ability.from_dict(ability_data)
-		use_ability(ability_obj, {"position": target_pos, "targets": explicit_targets})
+		use_ability(ability_obj, {
+			"position": target_pos,
+			"targets": explicit_targets,
+			"anchor": target_anchor,
+		})
 
 
 func _update_movement(delta: float) -> void:
@@ -3797,7 +3984,14 @@ func _update_movement(delta: float) -> void:
 		var to_target = target_position - global_position
 		var distance = to_target.length()
 
-		if distance > 5.0:
+		# Intermediate waypoints accept a body-radius arrival — pressing to the
+		# exact tile centre beside a wall is what used to wedge bodies. The
+		# FINAL stop keeps the tight 5px so destinations stay precise.
+		var arrive := 5.0
+		if not _nav_waypoints.is_empty() and _nav_index < _nav_waypoints.size() - 1:
+			arrive = maxf(5.0, _body_circle_radius() * 0.6)
+
+		if distance > arrive:
 			var move_dir = to_target.normalized()
 			# Elevation traverse gate: crossing into a tile more than
 			# MAX_STEP_STORIES away is a cliff, not a wall — physics won't stop
@@ -3860,9 +4054,26 @@ func _update_movement(delta: float) -> void:
 						is_moving = false
 						emit_signal("character_reached_target")
 					return
+			# No manual wall-glide here: with wall_min_slide_angle 0 the FLOATING
+			# move_and_slide is magnitude-preserving — even a steep press slides
+			# along the wall at full commanded speed. (An intent-projection that
+			# redirected move_dir onto the wall tangent was tried and REMOVED:
+			# it only knew about the wall on post-contact frames, so it strobed
+			# press/parallel on alternate frames — near-zero net motion AND the
+			# parallel frames broke contact, resetting the stuck timer below =
+			# jitter in place forever. Only exact head-on and inside-corner
+			# presses stop dead now, and the stuck escape handles those.)
 			velocity = move_dir * move_speed
 			var prev_pos := global_position
 			move_and_slide()
+			# unlocked doors give way when walked into (push_open self-guards
+			# open/locked/paused) — NPCs and party alike; A* routes through
+			# closed-unlocked doors (GridManager.door_pass), this is the shove
+			# that makes the tile actually passable when the body arrives
+			for ci in get_slide_collision_count():
+				var pusher_col := get_slide_collision(ci).get_collider()
+				if pusher_col is Door:
+					(pusher_col as Door).push_open(global_position)
 			# Roof support check: a roof-walker carried off the footprint
 			# (deflection / channel granularity at the true edge) falls.
 			if on_roof:
@@ -3887,27 +4098,47 @@ func _update_movement(delta: float) -> void:
 					is_moving = false
 					emit_signal("character_reached_target")
 				return
-			# If we are pressed against a wall and made no real progress for
-			# longer than a short threshold, abandon the move so the action
-			# queue (whose MOVE-complete check reads is_moving) can advance.
+			# Wall-stuck detection by NET PROGRESS, not per-frame displacement:
+			# with wall_min_slide_angle 0 the slide is magnitude-preserving, so
+			# a body converging on the perpendicular foot of a near-wall target
+			# overshoots at FULL speed and flips slide direction every frame —
+			# vibrating in place while a displacement test reads "moving fine"
+			# (the playtest's eternal jitter). Stuck = wall contact while the
+			# best distance-to-target this leg stops improving for 0.4s; then
+			# REPATH to the final nav destination, and only a failed/exhausted
+			# repath falls back to the fake arrival (the action queue's
+			# MOVE-complete check reads is_moving).
 			var actual_motion := (global_position - prev_pos).length()
-			if is_on_wall() and actual_motion < 0.5:
-				_movement_stuck_time += delta
-				if _movement_stuck_time > 0.5:
-					_movement_stuck_time = 0.0
-					_nav_waypoints.clear()
-					_nav_index = 0
-					is_moving = false
-					emit_signal("character_reached_target")
-					return
-			else:
+			if target_position != _stuck_target:
+				_stuck_target = target_position
+				_stuck_best_dist = INF
 				_movement_stuck_time = 0.0
+			# 0.15s window: no-improvement-while-touching-a-wall is diagnostic
+			# within a few frames (vibration/dead-stop stops improving at all;
+			# a real glide improves every frame) — 0.4s made every escape a
+			# visible stall ("get stuck, slide, get stuck, slide")
+			var new_dist := global_position.distance_to(target_position)
+			if new_dist < _stuck_best_dist - 0.5:
+				_stuck_best_dist = new_dist
+				_movement_stuck_time = 0.0
+			elif is_on_wall():
+				_movement_stuck_time += delta
+				if _movement_stuck_time > 0.15:
+					_movement_stuck_time = 0.0
+					_stuck_repaths += 1
+					if _stuck_repaths > 3 or not _try_stuck_repath():
+						_nav_waypoints.clear()
+						_nav_index = 0
+						is_moving = false
+						emit_signal("character_reached_target")
+					return
 			# Check if we just stepped onto an ice tile
 			_check_ice_entry(move_dir)
 			# Emit footstep sound + hearing event every FOOTSTEP_DISTANCE
 			_accumulate_step(actual_motion)
 		else:
 			_movement_stuck_time = 0.0
+			_stuck_repaths = 0
 			# If the action queue is driving movement, let it handle waypoint
 			# advancement — don't use _nav_waypoints which are for real-time input only
 			if action_queue and action_queue.current_action != null:
@@ -3929,9 +4160,17 @@ func _update_movement(delta: float) -> void:
 		var separation = get_separation_vector()
 		if separation.length() > 0.1:
 			# Apply separation force (scaled by delta for smooth movement) —
-			# unless the nudge would push us over a cliff edge.
+			# capped below walk speed so a mover always keeps net progress
+			# (the uncapped push used to outrun walking and grind marching
+			# columns to a halt), and never over a cliff edge.
+			var nudge: Vector2 = separation * min(1.0, delta * 10.0)
+			# rate-based cap (px/s * delta): a per-frame constant floor would
+			# EXCEED walk speed on high-refresh displays and reinstate the grind
+			var nudge_cap: float = maxf(move_speed * 0.6, 60.0) * delta
+			if nudge.length() > nudge_cap:
+				nudge = nudge.normalized() * nudge_cap
 			var cur_t := GridManager.world_to_map(global_position)
-			var nudged: Vector2 = global_position + separation * min(1.0, delta * 10.0)
+			var nudged: Vector2 = global_position + nudge
 			var nudged_t := GridManager.world_to_map(nudged)
 			# Layer-aware (_step_ok, not can_step): a roof-walker's nudge is gated
 			# on the roof surface, so it can't be shoved onto the INF ground under
@@ -3941,6 +4180,28 @@ func _update_movement(delta: float) -> void:
 				global_position = nudged
 				if on_roof and not GridManager.has_roof(nudged_t):
 					_begin_fall(GridManager.effective_elev(nudged_t))
+
+# Wedged against a wall mid-path: re-plan to the final nav destination and
+# keep walking. Returns false when no replan is possible (no waypoints — e.g.
+# AI-driven single-target moves — or no path); the caller then falls back to
+# the fake-arrival contract, which the AI answers with its own repath.
+func _try_stuck_repath() -> bool:
+	if _nav_waypoints.is_empty():
+		return false
+	var dest: Vector2 = _nav_waypoints[_nav_waypoints.size() - 1]
+	var from_t := GridManager.world_to_map(global_position)
+	var dest_t := GridManager.world_to_map(dest)
+	if from_t == dest_t:
+		return false
+	var tile_path := GridManager.find_path(from_t, dest_t, jump_height, jump_range, on_roof)
+	if tile_path.is_empty():
+		return false
+	_nav_waypoints.assign(GridManager.path_to_waypoints(tile_path))
+	_nav_index = 0
+	target_position = _nav_waypoints[0]
+	target_rotation = (target_position - global_position).angle() + PI / 2
+	return true
+
 
 func _accumulate_step(distance_moved: float) -> void:
 	_distance_since_last_step += distance_moved
@@ -4074,6 +4335,42 @@ func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
 		knockback_velocity = knockback_velocity.normalized() * MAX_KNOCKBACK_SPEED
 	knockback_active = true
 
+## Where this body would come to rest if `force` were applied to it right now.
+## Closed-form mirror of apply_external_force + _update_knockback: the impulse
+## becomes v0 = min(|force| * duration, MAX_KNOCKBACK_SPEED), then move_toward
+## drains it LINEARLY at knockback_friction, so the body travels the area under
+## that ramp — v0^2 / (2 * friction). Then clipped at the first wall, using the
+## same GridManager sweep that stops the real thing.
+##
+## Deliberately approximate in two places the planning UI can live with: a
+## down-ledge converts the momentum into a fall (_forced_drop_check) and
+## move_and_slide lets a body slide along a structure it clips. Both make the
+## real landing differ from the ghost; neither is worth simulating per frame.
+func predict_knockback_landing(force: Vector2, duration: float = 0.25) -> Vector2:
+	if force == Vector2.ZERO or knockback_friction <= 0.0:
+		return global_position
+	var v0: float = minf(force.length() * duration, MAX_KNOCKBACK_SPEED)
+	var distance: float = (v0 * v0) / (2.0 * knockback_friction)
+	return _clip_to_traversable(global_position, global_position + force.normalized() * distance)
+
+## Last point along `from`→`to` still reachable without crossing a wall or cliff.
+func _clip_to_traversable(from: Vector2, to: Vector2) -> Vector2:
+	var total := from.distance_to(to)
+	if total < 1.0:
+		return to
+	var step: float = maxf(float(GridManager.TILE_SIZE) * 0.45, 4.0)
+	var dir := (to - from) / total
+	var travelled := 0.0
+	var last := from
+	while travelled < total:
+		var next_dist: float = minf(travelled + step, total)
+		var next := from + dir * next_dist
+		if not GridManager.can_traverse(last, next):
+			return last
+		last = next
+		travelled = next_dist
+	return to
+
 func _update_knockback(delta: float) -> void:
 	if knockback_velocity.length() > 0.0:
 		# Knocked OFF a down-ledge/roof rim: momentum carries the body over
@@ -4136,7 +4433,12 @@ func _update_dash_motion(delta: float) -> void:
 	var actual_motion := (global_position - prev_pos).length()
 	_dash_motion_remaining -= actual_motion
 	var arrived := _dash_motion_remaining <= 0.0
-	var blocked := is_on_wall() and actual_motion < 0.5
+	# blocked = no progress ALONG the dash axis: with wall_min_slide_angle 0
+	# the body glides on oblique wall hits, so raw displacement no longer
+	# collapses against a wall (the old dead-stop assumption). Delta-scaled
+	# like the walk stuck test. Genuinely glancing deflections keep going.
+	var along := (global_position - prev_pos).dot(_dash_motion_dir)
+	var blocked := is_on_wall() and along < _dash_motion_speed * delta * 0.35
 	var timed_out := _dash_motion_elapsed >= _dash_motion_max_time
 	if arrived or blocked or timed_out:
 		_end_dash_motion()
@@ -4602,8 +4904,16 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 			damage_type = unarmed_strike_damage_type
 		if damage_type == "slashing":
 			SfxManager.play("slash", position)
-		# Swing makes noise even on miss — broadcast for AI hearing.
-		HearingManager.emit(global_position, 0.5, self)
+		# Swing makes noise even on miss — broadcast for AI hearing. Weapon
+		# DISCHARGES carry: a gunshot is a map-wide event, not a knife swish
+		# (1.9 > LOUD_SOUND_THRESHOLD 1.2, so it also wakes AT_EASE listeners;
+		# 0.5 could not, which is why bandits ignored a firefight next door).
+		var swing_loud := 0.5
+		if damage_type == "ranged_bullet":
+			swing_loud = 1.9
+		elif damage_type == "ranged_arrow":
+			swing_loud = 0.7
+		HearingManager.emit(global_position, swing_loud, self)
 		# start_attack must run before _fire_ranged_async so is_attacking=true
 		# is set before await_hit_frame_or_end polls it; otherwise the helper
 		# bails on its first check and the projectile never spawns.
@@ -5090,7 +5400,13 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		emit_signal("took_damage", self, int(total_damage))
 		# Broadcast for the AT_EASE wake / witness systems. attacker may be null
 		# for condition-driven damage; subscribers handle that gracefully.
-		emit_signal("damaged_by", attacker, location, float(total_damage))
+		# Callers pass MIXED spaces (weapon/projectile hits are local, ability/
+		# condition/fall damage are world — see handle_damage_effect_based_on_type);
+		# subscribers (ai.gd wake, Game witness) treat it as WORLD, so a local
+		# hit pos sent a no-LOS victim searching toward map origin. Normalize
+		# with the same magnitude discrimination the damage-number path uses.
+		var world_hit: Vector2 = location if location.length() > 200.0 else to_global(location)
+		emit_signal("damaged_by", attacker, world_hit, float(total_damage))
 		health_changed.emit(current_health, max_health, self)
 	_check_death()
 	return total_damage
@@ -5132,6 +5448,18 @@ static func get_limb_for_equipment_slot(slot: int) -> Array[LimbType]:
 # Determine which limb was hit based on local hit position
 func get_limb_at_position(local_pos: Vector2, body_width: float, body_height: float) -> LimbType:
 	"""Determine which limb is at a local position relative to character center"""
+	# The biped physics body is a CIRCLE (radius _body_circle_radius) — melee
+	# and projectile contacts land on its rim, OUTSIDE the rect silhouette
+	# these thresholds were tuned for (a frontal contact at -r read as HEAD
+	# for every mainline race). Rescale rim-space onto the old rect extents
+	# first. Quadrupeds keep a body-length capsule whose silhouette already
+	# tracks the old rect — no rescale.
+	var r := _body_circle_radius()
+	if r > 0.5 and body_type != BodyType.QUADRUPED:
+		var front := -head_length * 0.35
+		var back := shoulder_y_offset + leg_length
+		local_pos.x = clampf(local_pos.x / r, -1.0, 1.0) * (body_width * 0.5)
+		local_pos.y = front + (clampf(local_pos.y / r, -1.0, 1.0) + 1.0) * 0.5 * (back - front)
 	var x = local_pos.x
 	var y = local_pos.y
 	
@@ -5224,6 +5552,11 @@ func _on_character_died() -> void:
 			SfxManager.play("woman-death-scream", global_position)
 		else:
 			SfxManager.play("man-death-scream", global_position)
+		# The scream is a real in-world sound, not just player-facing audio:
+		# alarm channel (empty payload = wake-and-return in the AI) so it
+		# bypasses the ambient same-faction gate and carries across a plaza —
+		# allies out of sight of a kill now come looking.
+		HearingManager.emit(global_position, 1.5, self, "alarm", {})
 	$AI.die()
 	character_died.emit()
 	_enter_corpse_state()
@@ -5252,8 +5585,9 @@ func _enter_corpse_state() -> void:
 	set_process(false)
 	# Corpses do not block projectiles or move_and_slide queries (matches the
 	# pre-physics behavior where _update_projectiles skipped dead characters).
-	# The Area2D soft-separation shape stays enabled so live characters still
-	# bump off corpses naturally.
+	# The Area2D stays enabled for overlap queries, but it no longer REPELS —
+	# get_separation_vector skips the dead so the living step over corpses
+	# instead of orbiting them.
 	if body_collision_shape:
 		body_collision_shape.disabled = true
 
@@ -5903,7 +6237,8 @@ func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	var shape = ability.targeting.get("shape", "none")
 	var radius = ability.targeting.get("radius", 0.0)
 	var size = ability.targeting.get("size", Vector2.ZERO)
-	print("shape: ", shape, " size: ", size, " and radius: ", radius, "of ability ", ability.display_name)
+	# (No tracing here: the knockback landing preview calls this every time the
+	# cursor moves during targeting, so a print would flood the console.)
 	# Get all potential targets
 	var potential_targets: Array = []
 	if game:

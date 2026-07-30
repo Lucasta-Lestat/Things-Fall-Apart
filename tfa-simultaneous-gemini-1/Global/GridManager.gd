@@ -148,6 +148,23 @@ func can_step(from_t: Vector2i, to_t: Vector2i) -> bool:
 # penalty — the walker pushes the door open on contact. Refcounted: junction
 # tiles could be shared by two doorways.
 var door_pass: Dictionary = {}
+# Tile -> the covering door's exact GAP CENTRE (world px), open or closed.
+# Path waypoints are tile centres, and a 60px door gap rarely centres on a
+# 64px tile — walking tile-centre paths caught the jamb and scraped through
+# every doorway. path_to_waypoints snaps door tiles to these.
+var door_gaps: Dictionary = {}
+
+
+# Path tiles -> world waypoints, snapping door tiles to the door's gap centre.
+# Consecutive tiles of the same door collapse onto one waypoint.
+func path_to_waypoints(tile_path: Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for t in tile_path:
+		var p: Vector2 = door_gaps.get(t, map_to_world(t))
+		if out.size() > 0 and out[out.size() - 1].distance_to(p) < 8.0:
+			continue
+		out.append(p)
+	return out
 const DOOR_PASS_COST := 6.0
 
 func set_door_pass(t: Vector2i, on: bool) -> void:
@@ -462,6 +479,62 @@ func _reconstruct_path(came_from: Dictionary, current: Vector2i) -> Array[Vector
 # component every single time. One flood costs at most one expansion per tile in
 # range and answers for all of them at once.
 #
+# Pull a world point out of wall tiles and off their edges so a body circle
+# can actually STAND on it: an INF tile becomes the nearest walkable tile's
+# centre, and coordinates are inset away from any adjacent INF tile edge.
+# Used to sanitise freehand movement targets (drawn tactical samples, sub-tile
+# micro-moves) — a sample a few px inside the blocked band is an unreachable
+# target the mover can only resolve with a stuck-escape stall.
+# Door tiles are exempt: their gap centres legitimately sit near tile edges.
+func clamp_off_walls(p: Vector2, inset: float = 9.0) -> Vector2:
+	var t := world_to_map(p)
+	if grid_costs.get(t, INF) == INF and not door_pass.has(t):
+		t = nearest_walkable(t)
+		p = map_to_world(t)
+	if door_pass.has(t) or door_gaps.has(t):
+		return p
+	var half := TILE_SIZE * 0.5
+	var c := map_to_world(t)
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var nb: Vector2i = t + d
+		if grid_costs.get(nb, INF) == INF and not door_pass.has(nb):
+			if d.x > 0:
+				p.x = minf(p.x, c.x + half - inset)
+			elif d.x < 0:
+				p.x = maxf(p.x, c.x - half + inset)
+			elif d.y > 0:
+				p.y = minf(p.y, c.y + half - inset)
+			else:
+				p.y = maxf(p.y, c.y - half + inset)
+	return p
+
+
+# Nearest finite-cost tile to `t` within max_r rings (t itself first). Lets a
+# click that lands ON a wall resolve to the floor beside it instead of an
+# empty path (the empty-path fallbacks used to fabricate a straight line
+# through the wall — the "party member grinds into the wall" bug).
+func nearest_walkable(t: Vector2i, max_r: int = 3) -> Vector2i:
+	if grid_costs.get(t, INF) != INF:
+		return t
+	for r in range(1, max_r + 1):
+		var best := t
+		var best_d := INF
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue
+				var n := t + Vector2i(dx, dy)
+				if grid_costs.get(n, INF) == INF:
+					continue
+				var d := Vector2(dx, dy).length_squared()
+				if d < best_d:
+					best_d = d
+					best = n
+		if best_d < INF:
+			return best
+	return t
+
+
 # STEPS, not cost: this is a reachability question, so per-tile walkability is
 # irrelevant and a plain BFS is exact. Use find_path when you need the route.
 # The step bound is also a feature for "nearby" queries — a tile two away around

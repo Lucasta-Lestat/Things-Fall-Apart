@@ -261,12 +261,15 @@ func queue_cycle_weapon(direction: int, hand: String = "Main") -> bool:
 	"""Queue a weapon switch for a specific hand"""
 	return queue_action(ActionType.CYCLE_WEAPON, {"direction": direction, "hand": hand})
 
-func queue_ability(ability_id: String, target_position: Vector2 = Vector2.INF, targets: Array = []) -> bool:
-	"""Queue an ability to be used. `targets` is the explicit character list for character-targeting abilities."""
+func queue_ability(ability_id: String, target_position: Vector2 = Vector2.INF, targets: Array = [], anchor = null) -> bool:
+	"""Queue an ability to be used. `targets` is the explicit character list for
+	character-targeting abilities. `anchor` is the designated character the aim
+	point re-resolves to at execution time (see AbilityManager.ability_follows_anchor)."""
 	return queue_action(ActionType.USE_ABILITY, {
 		"ability_id": ability_id,
 		"target_position": target_position,
 		"targets": targets,
+		"target_anchor": anchor,
 		"needs_targeting": target_position == Vector2.INF
 	})
 
@@ -358,9 +361,12 @@ func _execute_action(action: Action) -> void:
 		ActionType.ATTACK_TARGET:
 			var target = action.data.get("target")
 			if target and is_instance_valid(target):
-				# Face the target then attack (live node: rig aim tracks its movement)
+				# Face the target then attack (live node: rig aim tracks its movement).
+				# The position rides along as a last-known fallback, so a target
+				# that dies or is freed mid-swing leaves the attack pointed where
+				# it was rather than at nothing.
 				character.target_rotation = (target.global_position - character.global_position).angle() + PI / 2
-				character.attack("Main", null, target)
+				character.attack("Main", target.global_position, target)
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)
@@ -402,10 +408,15 @@ func _execute_action(action: Action) -> void:
 			var target_pos = action.data.get("target_position", Vector2.INF)
 			var needs_targeting = action.data.get("needs_targeting", false)
 			var queued_targets: Array = action.data.get("targets", [])
+			var queued_anchor = action.data.get("target_anchor", null)
 			var ability = AbilityDatabase.get_ability_data(ability_id)
 			var ability_obj = Ability.from_dict(ability)
 			if ability:
-				character.use_ability(ability_obj, {"position": target_pos, "targets": queued_targets})
+				character.use_ability(ability_obj, {
+					"position": target_pos,
+					"targets": queued_targets,
+					"anchor": queued_anchor,
+				})
 
 func _execute_action_immediate(type: ActionType, data: Dictionary) -> void:
 	"""Execute an action immediately without queueing"""
@@ -424,7 +435,9 @@ func _is_action_complete(action: Action) -> bool:
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
 				var dist = character.global_position.distance_to(waypoints[wp_index])
-				if dist < 5.0 or not character.is_moving:
+				# 12px arrival: drawn tactical samples beside walls needn't be
+				# pressed to the exact pixel (5px forced bodies into jambs)
+				if dist < 12.0 or not character.is_moving:
 					# Advance to next waypoint
 					wp_index += 1
 					action.data["waypoint_index"] = wp_index
