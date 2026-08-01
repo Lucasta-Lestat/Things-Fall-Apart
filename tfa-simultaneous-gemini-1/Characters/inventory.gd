@@ -107,13 +107,19 @@ func remove_item(index: int) -> Dictionary:
 		return {}
 
 	var item = items[index]
-	# Decrement stack instead of removing if stacked
+	# Decrement stack instead of removing if stacked. Return a one-unit COPY,
+	# never the resident dict: every transfer UI appends the return value to
+	# another container, and handing back the live dict put one Dictionary in
+	# two inventories at once (both showing N-1 = net duplication; gold and
+	# stackables cloned across chest/trade/corpse windows — review find).
 	var stacks_val = item.get("num_stacks", 1)
 	var stacks = int(stacks_val) if stacks_val != null else 1
 	if stacks > 1:
 		items[index]["num_stacks"] = stacks - 1
-		emit_signal("item_removed", item)
-		return item
+		var single: Dictionary = item.duplicate()
+		single["num_stacks"] = 1
+		emit_signal("item_removed", single)
+		return single
 
 	items.remove_at(index)
 	emit_signal("item_removed", item)
@@ -368,6 +374,38 @@ func get_all_equipped() -> Array:
 		result.append(off_hand_item)
 	result.append_array(stowed_items)
 	return result
+
+## Corpse flatten: fold hand/stowed weapon NODES into the `items` dict-array so
+## the loot window (which only reads dicts) can offer them, then free the nodes.
+## Db-spawned characters already carry their starting weapon's dict in `items`
+## (TopDownCharacterDatabase grants the item AND equips from the same data), so
+## dedupe by id: a node only appends its data when no unclaimed matching dict
+## exists — otherwise a looted sword would come out twice. Runtime-acquired
+## weapons (stow_weapon_from_data leaves no dict) always append. Ability shapes
+## are not goods — freed without serializing. Idempotent: a second call finds
+## empty hands and appends nothing.
+func flatten_for_corpse() -> void:
+	var claimed: Dictionary = {}   # id -> matching dicts already claimed by a node
+	for node in get_all_equipped():
+		if is_instance_valid(node) and node is WeaponShape and node.has_method("to_data"):
+			var data: Dictionary = node.to_data()
+			var id := String(data.get("id", ""))
+			var have := 0
+			for d in items:
+				if d is Dictionary and String(d.get("id", "")) == id:
+					have += 1
+			var used := int(claimed.get(id, 0))
+			if id == "" or used >= have:
+				items.append(data)
+			claimed[id] = used + 1
+		if is_instance_valid(node):
+			node.queue_free()
+	main_hand_item = null
+	off_hand_item = null
+	stowed_items.clear()
+	if possessor != null:
+		possessor.current_main_hand_item = null
+		possessor.current_off_hand_item = null
 
 ## Legacy: the old equipped_weapons array — now computed dynamically.
 var equipped_weapons: Array:

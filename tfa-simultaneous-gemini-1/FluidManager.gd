@@ -352,6 +352,19 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float, gentl
 	if type_changed:
 		_request_edge_mask_update()
 
+# Weather puddle. On cell maps a single-cell deposit spreads to the pool floor
+# and renders invisible (the oil-vanish bug all over again) -- pour a small
+# polite blot instead, so the settled body stays above the visible depth and an
+# authored slick underneath is never displaced. Legacy maps keep the per-tile
+# gentle deposit.
+const RAIN_POUR_RADIUS := 42.0
+
+func rain_puddle(tile_pos: Vector2i, fluid_type: String, amount: float) -> void:
+	if cell_fluid != null and cell_fluid.active_sim():
+		cell_fluid.pour(GridManager.map_to_world(tile_pos), fluid_type, amount, RAIN_POUR_RADIUS, false)
+		return
+	register_fluid(tile_pos, fluid_type, amount, true)
+
 func get_fluid_amount(tile_pos: Vector2i, fluid_type: String) -> float:
 	if fluid_grid.has(tile_pos) and fluid_grid[tile_pos].has(fluid_type):
 		return fluid_grid[tile_pos][fluid_type]

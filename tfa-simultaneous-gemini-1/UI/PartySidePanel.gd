@@ -573,14 +573,22 @@ func _can_drop_data(at_position: Vector2, data) -> bool:
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return false
+	# The dead receive nothing: loot flows OUT of a corpse via Search Body,
+	# never in — and a drop onto a dead member's row re-entered its own
+	# inventory through add_stack, destroying the stack (review find).
+	var target_char = target_panel["character"]
+	if is_instance_valid(target_char) and target_char.has_method("is_alive") \
+			and not target_char.is_alive():
+		return false
 	if data.has("source_character"):
 		# Can't drop onto same character
-		return target_panel["character"] != data["source_character"]
+		return target_char != data["source_character"]
 	if data.has("source_chest"):
-		return true
+		# A corpse loot window must not feed the corpse's own party row.
+		return data["source_chest"] != target_char
 	if data.has("source_npc"):
 		# Trade window's NPC side -> party member
-		return target_panel["character"] != data["source_npc"]
+		return target_char != data["source_npc"]
 	return false
 
 func _drop_data(at_position: Vector2, data) -> void:
@@ -1207,6 +1215,11 @@ const _EQUIP_SLOT_MAP: Dictionary = {
 
 func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
 	"""Equip an equipment item from inventory onto the character."""
+	# Corpses don't dress: the death-time _equipped strip exists so looted
+	# armor doesn't auto-equip on the receiver's next load, and re-marking a
+	# corpse's dict here would undo it (review find).
+	if character != null and character.has_method("is_alive") and not character.is_alive():
+		return
 	var equip_slot: String = item_data.get("equip_slot", "")
 	if equip_slot.is_empty() or equip_slot not in _EQUIP_SLOT_MAP:
 		return

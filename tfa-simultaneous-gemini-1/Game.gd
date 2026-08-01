@@ -244,6 +244,20 @@ func _save_service_npc_states() -> void:
 			uid = "%s#%d" % [template_id, int(c.get_meta("spawn_ordinal", 0))]
 		npc_state_per_region[bucket_key][uid] = _serialize_character(c)
 
+func _peek_npc_snapshot(template_id: String, unique_name: String) -> Dictionary:
+	## Pre-spawn lookup of the persisted snapshot the upcoming spawn would be
+	## restored from. Mirrors _maybe_restore_npc_state's two uid forms; the
+	## ordinal probe reads the counter value the spawn is about to be stamped
+	## with (_spawn_ordinals only advances on successful spawns).
+	var bucket: Dictionary = npc_state_per_region.get(_npc_bucket_key(), {})
+	if bucket.is_empty():
+		return {}
+	var service_uid: String = _build_npc_uid(template_id, unique_name)
+	if bucket.has(service_uid):
+		return bucket[service_uid]
+	var ordinal_uid: String = "%s#%d" % [template_id, int(_spawn_ordinals.get(template_id, 0))]
+	return bucket.get(ordinal_uid, {})
+
 func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
 	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
 	## Also tags the live node with template_id + unique_name for save-on-unload.
@@ -328,7 +342,20 @@ func _spawn_npcs(npc_list: Array) -> void:
 			if spread > 0 and i > 0:
 				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
 
-			var npc = _spawn_character(template_id, pos, spawn_overrides)
+			# "from_faction" races re-roll every spawn, but a persisted NPC's
+			# snapshot restore stamps the OLD race's identity/dims/colors over
+			# whatever rig the fresh roll built. Peek the snapshot BEFORE spawn
+			# and force its race/gender so build_character rebuilds the same
+			# body the snapshot was taken from.
+			var per_spawn_overrides: Dictionary = spawn_overrides
+			var snap: Dictionary = _peek_npc_snapshot(template_id, str(spawn_overrides.get("unique_name", "")))
+			if not str(snap.get("race_id", "")).is_empty():
+				per_spawn_overrides = spawn_overrides.duplicate()
+				per_spawn_overrides["race"] = str(snap["race_id"])
+				if not str(snap.get("gender", "")).is_empty():
+					per_spawn_overrides["gender"] = str(snap["gender"])
+
+			var npc = _spawn_character(template_id, pos, per_spawn_overrides)
 			if npc:
 				npc.AI_enabled = true
 				# Per-spawn dialogue override (TopDownCharacterDatabase only reads
@@ -812,8 +839,10 @@ func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 func _spawn_rain_puddles(precip_type: String) -> void:
 	if not fluid_manager:
 		return
+	# What falls is what pools: acid rain leaves acid, everything else water.
+	var fluid_type: String = "acid" if precip_type == "acid_rain" else "water"
 	var puddle_count: int = 5 if precip_type == "rain" else 12
-	var amount: float = 0.3 if precip_type == "rain" else 0.6
+	var amount: float = 0.35 if precip_type == "rain" else 0.6
 	var placed := 0
 	var attempts := 0
 	var max_attempts := puddle_count * 10
@@ -831,7 +860,7 @@ func _spawn_rain_puddles(precip_type: String) -> void:
 		if fluid_manager.get_fluid_type_at(tile) != "":
 			continue
 		# gentle: weather must never erase an authored slick (oil etc.)
-		fluid_manager.register_fluid(tile, "water", amount, true)
+		fluid_manager.rain_puddle(tile, fluid_type, amount)
 		placed += 1
 
 # ---------------------------------------------------------------------------
@@ -865,7 +894,17 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			if ot != bt and (not GridManager.can_step(bt, ot)
 					or GridManager.grid_costs.get(ot, INF) == INF):
 				offset = Vector2.ZERO
-		var character = _spawn_character(entry["template_id"], base_pos + offset, entry.get("overrides", {}))
+		# Same guard as _spawn_npcs: a party member built from a race-rolling
+		# template must rebuild the race their live_state was captured with,
+		# not roll a fresh one for the snapshot to stamp over.
+		var member_overrides: Dictionary = entry.get("overrides", {})
+		var live = entry.get("live_state")
+		if live is Dictionary and not str(live.get("race_id", "")).is_empty():
+			member_overrides = member_overrides.duplicate()
+			member_overrides["race"] = str(live["race_id"])
+			if not str(live.get("gender", "")).is_empty():
+				member_overrides["gender"] = str(live["gender"])
+		var character = _spawn_character(entry["template_id"], base_pos + offset, member_overrides)
 		if not character:
 			continue
 
@@ -983,7 +1022,10 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 	context_menu_open = true
 
 	var options: Array = []
-	if target is ProceduralCharacter:
+	if target is ProceduralCharacter and not target.is_alive():
+		# Corpses: loot only — Trade/Talk/Wait are living verbs.
+		options = ["Search Body"]
+	elif target is ProceduralCharacter:
 		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
 		# Inject "Trade" for any non-hostile character. FactionDatabase is the
 		# authoritative relationship source. Treat allies/neutrals as
@@ -1062,12 +1104,16 @@ func pick_up_item(item: Item) -> bool:
 	return ok
 
 # Pick the party member who should receive a picked-up item: the primary-selected
-# character, else the first party member with an inventory.
+# character, else the first LIVING party member with an inventory. Nothing clears
+# primary_selected on death, so a dead primary could otherwise "receive" loot —
+# including from its own corpse window at distance 0 (review find).
 func _resolve_pickup_character():
-	if primary_selected != null and is_instance_valid(primary_selected) and primary_selected.inventory != null:
+	if primary_selected != null and is_instance_valid(primary_selected) \
+			and primary_selected.inventory != null and primary_selected.is_alive():
 		return primary_selected
 	for c in party_chars:
-		if is_instance_valid(c) and ("inventory" in c) and c.inventory != null:
+		if is_instance_valid(c) and ("inventory" in c) and c.inventory != null \
+				and (not c.has_method("is_alive") or c.is_alive()):
 			return c
 	return null
 
@@ -1086,6 +1132,21 @@ func show_chest_inventory(item: Item) -> void:
 	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
 	var w = ChestWindow.instantiate()
 	w.chest_item = item
+	$GameUI.add_child(w)
+
+## Corpse looting ("Search Body"): the same window as chests — a corpse quacks
+## like a container (`contents` aliases its inventory's dict array on death,
+## `display_name` already exists on characters). Same reach gate as chests.
+func show_loot_window(corpse) -> void:
+	if not is_instance_valid(corpse):
+		return
+	var opener = _resolve_pickup_character()
+	if opener != null and opener.global_position.distance_to(corpse.global_position) > CrimeManager.PICKUP_REACH:
+		GameLog.add_entry("%s is too far away to reach that." % opener.Name)
+		return
+	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
+	var w = ChestWindow.instantiate()
+	w.chest_item = corpse
 	$GameUI.add_child(w)
 
 func show_readable(readable_id: String) -> void:
@@ -2503,6 +2564,13 @@ func _elev_of(n: Node2D) -> float:
 
 func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 	"""Check if this attack can still hit this target (hasn't already)"""
+	# The dead are not targets. Normally corpses leave the CHARACTERS layer
+	# (deferred), but a second attacker's queued body_entered in the SAME
+	# physics flush that killed the target can still reach here — without this
+	# gate that contact resolved as a 0-damage armor BOUNCE: clash SFX plus a
+	# spurious 0.9 hearing pulse for the AI (review find).
+	if target is ProceduralCharacter and not target.is_alive():
+		return false
 	# Melee cannot reach across stories (deck walker vs ground character).
 	if absf(_elev_of(attacker) - _elev_of(target)) > MELEE_ELEV_TOLERANCE:
 		return false
@@ -2633,8 +2701,9 @@ func _on_weapon_projectile_hit(collision: KinematicCollision2D, shooter: Procedu
 	var hit_pos: Vector2 = collision.get_position()
 	_splash_if_fluid(hit_pos, 1.1)
 	if collider is ProceduralCharacter:
-		# body_collision_shape is disabled on death, so live collisions imply a
-		# living target — but guard anyway in case of mid-frame state changes.
+		# Corpses move to the CORPSES layer on death (deferred), so live
+		# collisions imply a living target — this guard covers the one-frame
+		# window before the deferred layer write lands.
 		if not collider.is_alive():
 			return
 		_process_projectile_hit_character(shooter, collider, hit_pos, weapon)
@@ -3068,6 +3137,7 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["faction_id"] = character.faction_id
 	state["template_id"] = character.template_id
 	state["race_id"] = character.race_id
+	state["gender"] = character.gender
 	state["creature_size"] = character.creature_size
 	state["racial_features"] = character.racial_features.duplicate()
 	state["traits"] = character.traits.duplicate()
@@ -3212,6 +3282,8 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.template_id = state["template_id"]
 	if state.has("race_id"):
 		character.race_id = state["race_id"]
+	if state.has("gender"):
+		character.gender = state["gender"]
 	if state.has("creature_size"):
 		character.creature_size = state["creature_size"]
 	if state.has("racial_features"):

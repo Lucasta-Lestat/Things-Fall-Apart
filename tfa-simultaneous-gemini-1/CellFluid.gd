@@ -91,16 +91,23 @@ func deposit(world_pos: Vector2, type_str: String, depth: float, wipe: bool = tr
 
 
 # Pour over a world radius (fluid_spawns with radius): fall-off toward the rim.
-func pour(center: Vector2, type_str: String, depth: float, radius: float) -> int:
+# wipe=false pours politely (weather: rain must not erase an authored slick).
+# Wall-band cells are skipped: a 42px rain blot crosses tile edges, and a
+# deposit under a wall band strands sealed fluid there AND projects a phantom
+# wet/conductive wall tile (review find) -- rain doesn't fall through masonry.
+func pour(center: Vector2, type_str: String, depth: float, radius: float, wipe: bool = true) -> int:
 	var ti := _ti_of(type_str)
 	if ti <= 0 or depth <= 0.0:
 		return 0
 	var n := 0
 	for cid in graph.cell_count:
-		var d := graph.centroid(cid).distance_to(center)
+		var c := graph.centroid(cid)
+		var d := c.distance_to(center)
 		if d > radius:
 			continue
-		_add(cid, ti, depth * (1.0 - 0.6 * d / maxf(radius, 1.0)))
+		if GridManager.walls.get(GridManager.world_to_map(c), false):
+			continue
+		_add(cid, ti, depth * (1.0 - 0.6 * d / maxf(radius, 1.0)), wipe)
 		n += 1
 	return n
 
@@ -256,19 +263,34 @@ func _flow_tick() -> void:
 			if nti == 0 or nti == int(ti):
 				diff = head - _head(nb)
 			else:
-				# immiscible standing bodies: a DIFFERENT-type column counts
-				# in FULL -- water stacks against an oil slick until its true
-				# surface tips over the slick's, THEN spills and wipes cell by
-				# cell. Comparing pool-floor-discounted heads here let a 0.04
-				# rain trickle read a settled 0.28 slick as near-vacuum and
-				# annihilate it for the credit (review find).
+				# immiscible standing bodies: a DIFFERENT-type column counts in
+				# FULL, and the arriving front must be able to BURY the whole
+				# resident before any of it flows -- a cross-type credit wipes
+				# the neighbour's entire column (_add), so anything less than a
+				# dominant front annihilates mass both ways (an acid pour
+				# ringing an oil slick ground 95% of it to nothing in 40 ticks;
+				# pool-floor-discounted heads earlier let a 0.04 trickle read a
+				# settled 0.28 slick as near-vacuum -- both review finds).
+				# Donor-side, like the trickle rule above: never book what
+				# can't dominate. This surface test is the cheap prefilter; the
+				# booked-front test below is the real gate.
 				diff = (_ground_head(cid) + amount[cid]) - (_ground_head(nb) + amount[nb])
+				if diff <= amount[nb] + EPSILON:
+					continue
 			if diff <= EPSILON:
 				continue
 			var fa := minf(minf(
 				amt * rate_tick * (diff / (press + 0.1)) / visc,
 				diff * 0.5), avail)
 			if fa <= MIN_FLOW:
+				continue
+			# cross-type: the BOOKED front itself must bury the resident. The
+			# diff gate above tests the potential, but fa is rate/half-diff
+			# capped -- a 0.10 credit approved against a 0.29 column would
+			# still wipe the whole column at apply time, and the sub-floor
+			# beachhead left behind is counter-wiped next tick (verifier sim:
+			# 28% of system mass annihilated in 60 ticks of adjacency churn).
+			if nti != 0 and nti != int(ti) and fa <= amount[nb]:
 				continue
 			avail -= fa
 			_delta_add(deltas, cid, ti, -fa)
@@ -294,6 +316,13 @@ func _flow_tick() -> void:
 		for ti in per:
 			var d: float = per[ti]
 			if d > 0.0:
+				# a cross-type credit smaller than the CURRENT column must not
+				# wipe it -- same-type credits earlier in this per-cell dict
+				# may have topped the column up since the booking snapshot
+				# (Dictionary-order aggravator, verifier find). Dropping the
+				# credit destroys strictly less than zeroing the resident.
+				if ftype[cid] != 0 and ftype[cid] != int(ti) and d <= amount[cid]:
+					continue
 				_add(cid, int(ti), d)
 	# cull dried cells
 	var drop: Array = []

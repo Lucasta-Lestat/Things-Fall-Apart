@@ -274,8 +274,7 @@
 				"saurian": 5,
 				"kobold": 5,
 				"halfling": 5,
-				"mephistkin": 3,
-				"troll": 2
+				"mephistkin": 3
 			},
 			"default_backgrounds": [
 				"criminal",

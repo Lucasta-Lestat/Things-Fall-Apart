@@ -1,15 +1,19 @@
 # ChestInventoryWindow.gd
-# Floating overlay that displays a chest's contents and supports drag/drop with
-# the PartySidePanel. The chest's contents (an Array on the Item node) are
-# mutated in place; closing the window does not undo any transfer.
+# Floating overlay that displays a container's contents and supports drag/drop
+# with the PartySidePanel. The container's `contents` (an Array of item dicts,
+# on a chest Item or a corpse ProceduralCharacter) is mutated in place; closing
+# the window does not undo any transfer.
 extends PanelContainer
 class_name ChestInventoryWindow
 
 const ITEM_SLOT_SIZE := Vector2(40, 40)
 const GRID_COLUMNS := 5
 
-# Set by Game.show_chest_inventory before add_child.
-var chest_item: Item = null
+# Set by Game.show_chest_inventory / show_loot_window before add_child.
+# Node, not Item: everything used is duck-typed (`contents`, `display_name`,
+# `tree_exiting`; CrimeManager's payload guards with `in` checks), so a corpse
+# works as the container.
+var chest_item: Node = null
 
 @onready var game = get_node_or_null("/root/Game")
 
@@ -204,6 +208,11 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	if selected == null:
 		push_warning("ChestInventoryWindow: no party character available to receive item")
 		return
+	# A container must never receive from itself: with corpse looting the
+	# container CAN be a (dead) party character, and routing its own item back
+	# into `contents` merges gold into itself and then erases it (review find).
+	if selected == chest_item:
+		return
 	var entry: Dictionary = slot.get_meta("entry")
 	var item_dict = entry.get("raw")
 	if not (item_dict is Dictionary) or (item_dict as Dictionary).is_empty():
@@ -232,22 +241,28 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 
 # Pick the party character that should receive a clicked item. Primary-selected
 # wins; falls back to the first valid party member so the click still works
-# when nobody has been actively selected yet.
+# when nobody has been actively selected yet. Receivers must be ALIVE and must
+# not be the container itself — a dead primary_selected (nothing clears
+# selection on death) otherwise loots its own corpse into oblivion.
 func _resolve_target_character() -> Node:
 	if game == null:
 		return null
 	var candidate = game.get("primary_selected")
-	if _has_inventory(candidate):
+	if _can_receive(candidate):
 		return candidate
 	var party = game.get("party_chars")
 	if party is Array:
 		for c in party:
-			if _has_inventory(c):
+			if _can_receive(c):
 				return c
 	return null
 
-func _has_inventory(c) -> bool:
-	return is_instance_valid(c) and ("inventory" in c) and c.inventory != null
+func _can_receive(c) -> bool:
+	if not (is_instance_valid(c) and ("inventory" in c) and c.inventory != null):
+		return false
+	if c == chest_item:
+		return false
+	return not c.has_method("is_alive") or c.is_alive()
 
 # ---------------------------------------------------------------------------
 # Drag and drop
@@ -300,9 +315,11 @@ func _create_drag_preview(entry: Dictionary) -> Control:
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
-	# Drop from a party member's slot in the side panel.
+	# Drop from a party member's slot in the side panel. A corpse's own panel
+	# row must not deposit into its own loot window (same-inventory transfer
+	# destroys the stack — review find).
 	if data.has("source_character"):
-		return true
+		return data["source_character"] != chest_item
 	# Drop from another chest.
 	if data.has("source_chest") and data["source_chest"] != chest_item:
 		return true

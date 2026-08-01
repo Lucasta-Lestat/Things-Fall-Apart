@@ -139,6 +139,11 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	var race_options: Dictionary = overrides.get("options", {})
 	if not overrides.get("gender", "").is_empty():
 		race_options["gender"] = overrides["gender"]
+	elif not str(template.get("gender", "")).is_empty():
+		# Template-authored gender was silently ignored — a character declared
+		# "gender": "female" got the MALE rig/sprites every spawn (review find:
+		# surgeon_captain_federica). Spawn overrides still win.
+		race_options["gender"] = str(template["gender"])
 
 	if not race_id.is_empty():
 		RaceDatabase.apply_race_to_character(character, race_id, race_options)

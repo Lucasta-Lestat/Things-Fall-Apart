@@ -12,6 +12,9 @@ const WEAPON_HITBOXES := 32  # Layer 6 — active melee weapon hitbox during a s
 const WARPS := 1 << 19       # Layer 20 — clickable warp Area2Ds (probed from input handlers)
 const INTERACTABLES := 64    # Layer 7 — open doors: point-query clickable, physically blocks nothing.
                              # No composite mask may ever include this bit.
+const CORPSES := 128         # Layer 8 — dead characters' bodies: point-query clickable
+                             # (Search Body loot), physically blocks nothing. Like
+                             # INTERACTABLES, no composite mask may ever include this bit.
 
 # Composite masks — name describes the intent, not the bits, so callsites read clearly.
 

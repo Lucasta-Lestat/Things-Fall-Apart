@@ -1111,7 +1111,11 @@ static func _resolve_custom(
 
 ## Helper: Get entity traits
 static func _get_entity_traits(entity: Node) -> Dictionary:
-	return entity.traits
+	# AoE sweeps pick up bare wall colliders (StaticBody2D with no script) --
+	# anything without a traits Dictionary reads as traitless, not a crash.
+	if "traits" in entity and entity.traits is Dictionary:
+		return entity.traits
+	return {}
 
 
 ## Helper: Get condition manager

@@ -122,14 +122,14 @@ func _on_mouse_entered() -> void:
 
 func _on_mouse_exited() -> void:
 	if _cursor_active:
-		Input.set_custom_mouse_cursor(null)
+		CursorManager.reset()
 		_cursor_active = false
 
 func _exit_tree() -> void:
 	# Reset the cursor if this item was the active hover target when freed —
 	# otherwise the pickup cursor would persist after the item disappears.
 	if _cursor_active:
-		Input.set_custom_mouse_cursor(null)
+		CursorManager.reset()
 		_cursor_active = false
 
 # Texture for the hover cursor while the player's mouse is over this item.

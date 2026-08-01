@@ -711,6 +711,9 @@ var collision_radius: float:
 var collision_shape: CollisionShape2D
 var collision_area: Area2D
 var body_collision_shape: CollisionShape2D
+# Corpse-loot container view: aliased to inventory.items on death so the corpse
+# quacks like a chest for ChestInventoryWindow (which reads/mutates `contents`).
+var contents: Array = []
 
 const AbilityTargetingScript = preload("res://Abilities/AbilityTargeting.gd")
 var targeting_system: Node2D
@@ -776,6 +779,12 @@ func _ready() -> void:
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 	_on_stats_recalculated() # Initialize the effective stats
 	_setup_alertness_indicator()
+	# Ordering hardening: every current spawner add_childs BEFORE
+	# build_character, so _ready's fresh procedural Line2Ds always precede the
+	# rig build. If a future caller builds first, the Line2Ds created above
+	# would paint OVER the live rig with nothing re-hiding them — re-assert.
+	if character_rig != null and is_instance_valid(character_rig):
+		_set_procedural_geometry_visible(false)
 	# LOS light is added by Game.gd after spawn (not here) to control
 	# per-character settings like cull masks and NPC visibility
 func _setup_action_queue() -> void:
@@ -1529,14 +1538,15 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 	if result.has("stress"):
 		gain_stress(int(result["stress"]))
 
-	if result.has("sever_limb"):
+	if result.has("sever_limb") and is_alive():
 		# Condition asked us to remove a limb. If the condition wasn't pinned
 		# to a specific limb, pick one at random (excluding lethal). HEAD/TORSO
 		# severing kills the character — handled inside _on_limb_severed.
+		# Dead-gated: a corpse's lingering condition must not detach limbs.
 		var sever_limb_type: int = instance.target_limb if instance.target_limb != null else _pick_random_severable_limb()
 		_on_limb_severed(sever_limb_type)
 
-	if result.has("condition_id") and effect.get("type") == "apply_condition":
+	if result.has("condition_id") and effect.get("type") == "apply_condition" and is_alive():
 		if randf() <= result.get("chance", 1.0):
 			# Chain-applied conditions inherit the same limb
 			condition_manager.apply_condition(result["condition_id"], instance.source, 1, -2.0, instance.target_limb)
@@ -2018,6 +2028,13 @@ func rebuild_visuals() -> void:
 	# declares a rig_scene: rigged races don't need legacy sprite art at all.
 	if (body_sprite_data and not body_sprite_data.is_empty()) or rig_scene_path != "":
 		_setup_body_part_sprites()
+	elif race_id != "":
+		# No bespoke art of ANY kind for this race: the player sees the raw
+		# procedural body. Deliberate for placeholder races, but say so loudly —
+		# a 2%-weight artless race in a faction spawn table reads as a random
+		# graphics glitch in playtests (the "old proc-gen orc" was a troll,
+		# 2026-07-31).
+		push_warning("[ProceduralCharacter] race '%s' has no rig_scene or body_sprites — rendering procedural body (%s)" % [race_id, Name])
 	if character_rig == null:
 		# Rig -> legacy rebuild: restore the flat armor icons the rig had hidden.
 		_rig_worn.clear()
@@ -3544,6 +3561,18 @@ func _handle_input() -> void:
 			pickup_target.interact("Pick Up")
 			return
 
+	# --- Left mouse button - talk to a non-hostile NPC ---
+	# Pairs with the talk hover cursor: if the pointer says they would answer,
+	# clicking opens the conversation instead of swinging at them. Probed AFTER
+	# the item paths for the same reason the hover cursor prefers items — an item
+	# lying on someone's tile is the thing under the pointer. _would_talk_to is
+	# the same predicate the cursor uses, so the two cannot drift apart.
+	if Input.is_action_just_pressed("left_click"):
+		var talk_target := _find_character_at(mouse_pos)
+		if talk_target != null and _would_talk_to(talk_target):
+			DialogueManager.start_dialogue(talk_target.active_dialogue_id())
+			return
+
 	# --- Left mouse button - Main hand ---
 	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
 		current_hand = "Main"
@@ -3658,9 +3687,11 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 	query.position = world_pos
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
-	# STRUCTURES finds closed doors, INTERACTABLES finds open ones.
+	# STRUCTURES finds closed doors, INTERACTABLES finds open ones,
+	# CORPSES finds dead characters (Search Body).
 	query.collision_mask = CollisionLayers.ITEMS | CollisionLayers.CHARACTERS \
-		| CollisionLayers.STRUCTURES | CollisionLayers.INTERACTABLES
+		| CollisionLayers.STRUCTURES | CollisionLayers.INTERACTABLES \
+		| CollisionLayers.CORPSES
 	# exclude expects an Array[RID], not a node — use this character's body RID.
 	query.exclude = [self.get_rid()]
 	# 16, not 8: wall bodies can now crowd the hit list.
@@ -3670,6 +3701,7 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 	var hits = space.intersect_point(query, 16)
 	var first_item: Item = null
 	var first_door: Door = null
+	var first_corpse: ProceduralCharacter = null
 	var saw_hostile := false
 	for hit in hits:
 		var collider = hit.get("collider")
@@ -3680,18 +3712,27 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 		elif collider is Item and first_item == null:
 			first_item = collider
 		elif collider is ProceduralCharacter and collider != self:
+			# Corpses are loot targets regardless of former faction — a dead
+			# hostile must not trip the hostile-attack fallthrough below.
+			if not collider.is_alive():
+				if first_corpse == null:
+					first_corpse = collider
 			# Only non-hostile NPCs get a context menu; hostile characters
 			# keep the off-hand attack path. We check vs the player faction
 			# (not the controlling character's own faction) so the decision
 			# matches show_context_menu's Trade injection — the menu
 			# represents the party's perspective, not an individual member's.
-			if not FactionDatabase.are_hostile("player", collider.faction_id):
+			elif not FactionDatabase.are_hostile("player", collider.faction_id):
 				return collider
-			saw_hostile = true
+			else:
+				saw_hostile = true
 	if first_item != null:
 		return first_item
 	if saw_hostile:
 		return null   # right-click on a hostile in a doorway must stay an attack
+	if first_corpse != null:
+		return first_corpse   # after the hostile check: a living enemy standing
+							  # on tombstones still takes the swing, not a menu
 	return first_door
 
 ## Probe the world for an "openable" Item (chest-style) at mouse_pos. The
@@ -3774,8 +3815,11 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 		var collider = hit.get("collider")
 		if not (collider is ProceduralCharacter) or collider == self:
 			continue
-		# Corpses deliberately stay in the scene (law/crime system), so an
-		# aliveness test is required — is_instance_valid is not enough.
+		# Aliveness belt-and-braces. NOTE: corpses now live on the CORPSES
+		# layer, so this CHARACTERS-mask query can no longer surface them —
+		# require_alive=false would need the CORPSES bit added to the mask.
+		# The filter stays for the one-frame window before the corpse's
+		# deferred layer write lands.
 		if require_alive and collider.has_method("is_alive") and not collider.is_alive():
 			continue
 		if best == null or collider.z_index >= best.z_index:
@@ -3829,33 +3873,98 @@ func _update_hover_cursor() -> void:
 		else:
 			# No item under the cursor, but a character means clicking here
 			# designates them as the target rather than aiming at the ground.
-			# Show the reticle so that distinction is visible before committing.
+			# Show a cursor so that distinction is visible before committing:
+			# the dagger on a hostile, the talk cursor on someone who would
+			# actually answer, and the plain reticle on everyone else.
 			var hovered_char := _find_character_at(get_global_mouse_position())
 			if hovered_char != null:
-				desired = _get_targeting_cursor()
-				if desired != null:
+				desired = _hover_cursor_for_character(hovered_char)
+				# Only the reticle is a crosshair. The verb cursors aim with
+				# their top-left pixel, like the default arrow.
+				if desired != null and desired == _get_targeting_cursor():
 					hotspot = desired.get_size() / 2.0
 	if desired != null:
 		Input.set_custom_mouse_cursor(desired, Input.CURSOR_ARROW, hotspot)
 		_hover_cursor_active = true
 	elif _hover_cursor_active:
-		Input.set_custom_mouse_cursor(null)
+		CursorManager.reset()
 		_hover_cursor_active = false
 
 
-# Reticle shown when hovering a designatable character. Loaded once on demand;
-# null is cached too so a missing file doesn't retry every frame.
-var _targeting_cursor: Texture2D = null
-var _targeting_cursor_loaded: bool = false
+const TARGETING_CURSOR_PATH := "res://targeting icon.png"
+const ATTACK_CURSOR_PATH := "res://UI/attack-cursor.png"
+const TALK_CURSOR_PATH := "res://UI/talking-cursor.png"
 
-func _get_targeting_cursor() -> Texture2D:
-	if not _targeting_cursor_loaded:
-		_targeting_cursor_loaded = true
-		if ResourceLoader.exists("res://targeting icon.png"):
-			var res = load("res://targeting icon.png")
+# Hover cursors, loaded once on demand and cached by path. A null result is
+# cached too, so a missing file doesn't retry the load every frame.
+var _hover_cursor_cache: Dictionary = {}
+
+func _get_hover_cursor(path: String) -> Texture2D:
+	if not _hover_cursor_cache.has(path):
+		var tex: Texture2D = null
+		if ResourceLoader.exists(path):
+			var res = load(path)
 			if res is Texture2D:
-				_targeting_cursor = res
-	return _targeting_cursor
+				tex = res
+		_hover_cursor_cache[path] = tex
+	return _hover_cursor_cache[path]
+
+## Reticle shown when hovering a character no verb applies to.
+func _get_targeting_cursor() -> Texture2D:
+	return _get_hover_cursor(TARGETING_CURSOR_PATH)
+
+
+## Which cursor a hovered character should show. Hostility is read from
+## FactionDatabase — the one hostility oracle — and from the PLAYER faction
+## rather than this character's own, matching _find_context_menu_target_at:
+## the cursor speaks for the party, not for whichever member is selected.
+func _hover_cursor_for_character(other: ProceduralCharacter) -> Texture2D:
+	if FactionDatabase.are_hostile("player", other.faction_id):
+		var attack_cursor := _get_hover_cursor(ATTACK_CURSOR_PATH)
+		if attack_cursor != null:
+			return attack_cursor
+	elif _would_talk_to(other):
+		var talk_cursor := _get_hover_cursor(TALK_CURSOR_PATH)
+		if talk_cursor != null:
+			return talk_cursor
+	return _get_targeting_cursor()
+
+
+## True when left-clicking `other` opens a conversation — and therefore when the
+## hover cursor shows the talk cursor. Both the cursor and the click route
+## through here so they can never disagree about who will answer.
+func _would_talk_to(other: ProceduralCharacter) -> bool:
+	if FactionDatabase.are_hostile("player", other.faction_id):
+		return false
+	return _can_be_talked_to(other)
+
+
+## True when right-clicking `other` would offer a "Talk" that actually opens a
+## dialogue. Mirrors the two gates the menu itself applies — Game.show_context_menu
+## only lists verbs from `interact_options`, and context_menu.gd's "Talk" branch
+## no-ops unless `current_dialogue_index` indexes into `dialogues` — so the cursor
+## can't promise a conversation the menu won't deliver.
+##
+## Sneaking suppresses it: while stealth_mode is on the player is avoiding notice,
+## and offering a chat cursor over every passer-by reads as an invitation to blow
+## the approach. Corpses can't surface here at all (they sit on the CORPSES layer,
+## which _find_character_at doesn't mask), so there's no aliveness check.
+func _can_be_talked_to(other: ProceduralCharacter) -> bool:
+	if game != null and "stealth_mode" in game and bool(game.stealth_mode):
+		return false
+	if not ("Talk" in other.interact_options):
+		return false
+	return other.active_dialogue_id() != ""
+
+
+## The dialogue this character would open right now, or "" when they have nothing
+## to say. The right-click "Talk" verb, the left-click fast path, and the hover
+## cursor all read it from here rather than re-deriving the index bounds.
+func active_dialogue_id() -> String:
+	var idx: int = current_dialogue_index
+	if idx < 0 or idx >= dialogues.size():
+		return ""
+	return str(dialogues[idx])
 
 ## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
 ## layer (CollisionLayers.WARPS) and carry their destination in the
@@ -5045,8 +5154,6 @@ func has_weapon_equipped() -> bool:
 const RIG_WEARABLE_ALIASES := {
 	"breastplate_2": "breastplate",
 	"leather_boots": "leather_boot",
-	"steel_greaves": "plate_sabaton",
-	"full_face_helmet": "great_helm",
 	"golden_crown_helm": "golden_helm",
 	"peasant's_stained_shirt": "peasants_stained_shirt",
 	"red_travel_cape": "red_cape",
@@ -5110,8 +5217,18 @@ func _rig_hide_wearable(slot: int) -> void:
 	_rig_worn.erase(slot)
 
 func _rig_apply_wearables() -> void:
-	# After a rig (re)build: re-show fitted layers for armor already equipped.
+	# After a rig (re)build: strip EVERY baked wearable first — garment meshes
+	# ship visible in the exported scene, so an untouched rig would spawn
+	# wearing the whole wardrobe stacked — then re-show only what's equipped.
 	_rig_worn.clear()
+	if character_rig == null:
+		return
+	if character_rig.has_method("garments") and character_rig.has_method("set_garment"):
+		for g in character_rig.garments():
+			character_rig.set_garment(g, false)
+	if character_rig.has_method("set_equipment"):
+		for srig in ["head", "hands", "feet", "back", "legs"]:
+			character_rig.set_equipment(srig, "")
 	for pair in [[EquipmentShape.EquipmentSlot.HEAD, head_equipment],
 			[EquipmentShape.EquipmentSlot.TORSO, torso_equipment],
 			[EquipmentShape.EquipmentSlot.BACK, back_equipment],
@@ -5351,6 +5468,14 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 
 	`attacker` is optional but should be passed for any character-sourced damage
 	so the witness/wake-from-AT_EASE pipeline can attribute the attack."""
+	# The dead take no further damage. Lingering DoTs (bleed from the killing
+	# attack) kept ticking through the child ConditionManager and spawned
+	# floating numbers over tombstones for ~30s after death; stray AoEs and
+	# fall damage numbered corpses too. The killing blow itself still shows —
+	# the character is alive when it lands. Corpses are mechanically inert
+	# until a resurrect path exists.
+	if not is_alive():
+		return 0
 	# 1. Per-limb armor DR (armor still protects specific hit locations)
 	var armor_dr = get_limb_armor(hit_limb)
 	var total_damage: int = 0
@@ -5583,13 +5708,37 @@ func _enter_corpse_state() -> void:
 	_hide_living_visuals()
 	_show_death_marker()
 	set_process(false)
-	# Corpses do not block projectiles or move_and_slide queries (matches the
-	# pre-physics behavior where _update_projectiles skipped dead characters).
-	# The Area2D stays enabled for overlap queries, but it no longer REPELS —
-	# get_separation_vector skips the dead so the living step over corpses
-	# instead of orbiting them.
-	if body_collision_shape:
-		body_collision_shape.disabled = true
+	# Corpse body physics: move the body OFF the CHARACTERS layer instead of
+	# disabling its shape. Melee kills arrive inside the weapon-hitbox
+	# body_entered flush, where the physics server silently REJECTS
+	# body_set_shape_disabled — the node property read true but the shape
+	# stayed live, so every melee-killed corpse kept a clickable CHARACTERS
+	# body: right-clicks near the killer opened context menus on tombstones in
+	# an inescapable menu/dismiss loop, projectiles despawned on corpses, and
+	# doors refused to close over them. Deferred writes always land after the
+	# flush. On CORPSES the body blocks nothing (no composite mask includes
+	# that bit) but stays point-queryable, so the corpse can be clicked and
+	# looted (Search Body). The Area2D stays enabled for overlap queries, but
+	# it no longer REPELS — get_separation_vector skips the dead so the living
+	# step over corpses instead of orbiting them.
+	set_deferred("collision_layer", CollisionLayers.CORPSES)
+	set_deferred("collision_mask", 0)
+	# Loot view: the corpse's inventory dict-array IS its container contents
+	# (same Array reference — ChestInventoryWindow transfers mutate the real
+	# inventory, and save/load persists them for free). Held/stowed weapon
+	# NODES are flattened into dicts first (a dead swordsman's sword must be
+	# lootable, and cleared hands stop capture/restore re-arming the corpse).
+	# Equipped-armor marks are stripped so a looted piece doesn't auto-equip
+	# on the receiver's next save-load. Idempotent: restore_dead_state re-runs
+	# this on map re-entry after Game re-equips saved weapons; the flatten's
+	# id-dedupe converges instead of duplicating.
+	if inventory != null:
+		if inventory.has_method("flatten_for_corpse"):
+			inventory.flatten_for_corpse()
+		contents = inventory.items
+		for d in inventory.items:
+			if d is Dictionary:
+				d.erase("_equipped")
 
 func restore_dead_state() -> void:
 	## Re-enter the corpse state for a character respawned at 0 HP after a map

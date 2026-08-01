@@ -62,9 +62,12 @@ func _on_option_selected(option: String):
 			if is_instance_valid(actor_character) and actor_character.has_method("attack"):
 				actor_character.attack("Main", target_character.global_position, target_character)
 		"Talk":
-			var dlg_idx: int = target_character.current_dialogue_index
-			if dlg_idx >= 0 and dlg_idx < target_character.dialogues.size():
-				DialogueManager.start_dialogue(target_character.dialogues[dlg_idx])
+			# active_dialogue_id() owns the index bounds so this branch and the
+			# left-click talk fast path always open the same conversation.
+			if target_character is ProceduralCharacter:
+				var dlg_id: String = target_character.active_dialogue_id()
+				if not dlg_id.is_empty():
+					DialogueManager.start_dialogue(dlg_id)
 		"Trade":
 			if target_character is ProceduralCharacter:
 				game.show_trade_window(target_character)
@@ -79,6 +82,10 @@ func _on_option_selected(option: String):
 		"Open":
 			if target_character is Item:
 				game.show_chest_inventory(target_character)
+		"Search Body":
+			if is_instance_valid(target_character) and target_character is ProceduralCharacter \
+					and not target_character.is_alive():
+				game.show_loot_window(target_character)
 		_:
 			if target_character.has_method("interact"):
 				target_character.interact(option)

@@ -102,6 +102,35 @@ func _ready() -> void:
 				"OK" if body1 >= body0 * 0.98 else "FAIL: water shredded the slick"])
 		for _i in 45:
 			await RenderingServer.frame_post_draw
+	# TFA_RAINDEMO=<water|acid>: scatter weather blots on walkable tiles around
+	# the camera and settle -- visual proof precipitation lays visible surfaces.
+	var raindemo := OS.get_environment("TFA_RAINDEMO")
+	if raindemo != "":
+		var rfm: FluidManager = get_node_or_null("FluidManager")
+		if rfm == null:
+			rfm = FluidManager.new()
+			rfm.name = "FluidManager"
+			add_child(rfm)
+			rfm.setup_cell_graph(graph)
+		var amt := 0.35 if raindemo == "water" else 0.6
+		var placed := 0
+		for i in 60:
+			if placed >= 8:
+				break
+			var ang := float(i) * 2.399963       # golden-angle scatter, deterministic
+			var rr := 60.0 + float(i) * 34.0
+			var p := Vector2(cx, cy) + Vector2(cos(ang), sin(ang)) * rr
+			var t := GridManager.world_to_map(p)
+			if GridManager.walls.get(t, true):
+				continue
+			rfm.rain_puddle(t, raindemo, amt)
+			placed += 1
+		if rfm.cell_fluid != null:
+			for _i in 40:
+				rfm.cell_fluid._flow_tick()
+		print("rain demo: ", placed, " ", raindemo, " puddles")
+		for _i in 45:
+			await RenderingServer.frame_post_draw
 	# Optional door test: TFA_DOORS_OPEN=1 swings every unlocked door open
 	# (phantom-door check: no baked leaf may remain visible under a swung one)
 	if OS.get_environment("TFA_DOORS_OPEN") != "":
