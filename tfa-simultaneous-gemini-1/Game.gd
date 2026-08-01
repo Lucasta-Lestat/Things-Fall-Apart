@@ -755,10 +755,12 @@ func setup_map_fogs(map_data: Dictionary) -> void:
 
 func setup_map_music(map_data: Dictionary) -> void:
 	var track: String = map_data.get("music_track", "")
-	if not track.is_empty():
-		MusicManager.play(track)
-	else:
-		MusicManager.stop()
+	# The combat layer rides on top of this; MusicManager falls back here when
+	# the fight ends. Crossing a warp mid-fight keeps the combat track playing.
+	# A blank or unresolvable `music_track` resolves to
+	# MusicManager.DEFAULT_AMBIENT_TRACK — a map wanting real silence sets
+	# `music_track` to MusicManager.SILENCE_KEY.
+	MusicManager.set_ambient_track(track)
 
 func setup_map_weather(map_data: Dictionary) -> void:
 	var weather_group: String = map_data.get("weather_group", "")
@@ -1260,10 +1262,26 @@ func hostile_characters_near_party(radius: float = SURRENDER_RADIUS) -> Array:
 			out.append(c)
 	return out
 
-func _update_surrender_button() -> void:
+func _update_surrender_button(hostiles: Array = []) -> void:
 	if _surrender_button == null:
 		return
-	_surrender_button.visible = not hostile_characters_near_party().is_empty()
+	_surrender_button.visible = not hostiles.is_empty()
+
+## Seconds with no hostile in range before combat music releases back to the
+## map's ambient track. Without this, music flickers every time an enemy
+## paces across the radius edge or the last one dies mid-swing.
+const COMBAT_MUSIC_RELEASE: float = 6.0
+
+var _combat_music_calm_for: float = COMBAT_MUSIC_RELEASE
+
+func _update_combat_music(hostiles: Array) -> void:
+	if hostiles.is_empty():
+		_combat_music_calm_for += 0.5
+		if _combat_music_calm_for >= COMBAT_MUSIC_RELEASE:
+			MusicManager.set_combat(false)
+	else:
+		_combat_music_calm_for = 0.0
+		MusicManager.set_combat(true)
 
 func _on_surrender_pressed() -> void:
 	var SurrenderPanel = load("res://UI/SurrenderPanel.gd")
@@ -1792,11 +1810,14 @@ func _process(delta: float) -> void:
 		_tick_hearing_pulses(delta)
 		_update_npc_los_visibility()
 		_update_item_los_visibility()
-		# Surrender button visibility, polled at 2 Hz.
+		# Surrender button visibility and combat music, polled at 2 Hz off the
+		# same hostility sweep.
 		_surrender_poll_accum += delta
 		if _surrender_poll_accum >= 0.5:
 			_surrender_poll_accum = 0.0
-			_update_surrender_button()
+			var hostiles: Array = hostile_characters_near_party()
+			_update_surrender_button(hostiles)
+			_update_combat_music(hostiles)
 	# Update all selection indicators
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
