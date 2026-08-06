@@ -498,6 +498,23 @@ var gender: String = "male"
 var creature_size: String = "Medium"
 var racial_features: Array = []
 var walking_noise: float = 1.0
+var background_id: String = ""
+
+# --- Physical record (RaceDatabase.roll_body_metrics) ---
+# Rolled per character from the race's height/weight/age blocks in races.json.
+# Flavour, not simulation: nothing in combat reads them, but the character
+# sheet — the Scarlatti carta d'identità — prints them, so they have to be
+# stable across map transitions (see options.body_metrics in RaceDatabase).
+var race_height: int = 0    # cm
+var race_weight: int = 0    # kg
+var age: int = 0
+var base_age: int = 20      # the race's adulthood / middle / venerable brackets
+var middle_age: int = 40
+var old_age: int = 60
+
+# Per-character portrait override. Empty means "use the template's icon" —
+# only a character built through creation (or a template-less spawn) sets it.
+var icon_path: String = ""
 
 func get_elevation() -> float:
 	return current_elevation

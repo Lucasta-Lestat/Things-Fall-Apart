@@ -15,15 +15,50 @@
    "age": {
     "base": 20,
     "middle": 40,
-    "old": 60
+    "old": 60,
+    "starting": {
+     "min": 17,
+     "dice": {
+      "count": 2,
+      "sides": 6
+     }
+    }
    },
    "height": {
-    "male": 148,
-    "female": 135
+    "unit": "cm",
+    "male": {
+     "base": 160,
+     "dice": {
+      "count": 2,
+      "sides": 10
+     }
+    },
+    "female": {
+     "base": 148,
+     "dice": {
+      "count": 2,
+      "sides": 10
+     }
+    }
    },
    "weight": {
-    "male": 170,
-    "female": 130
+    "unit": "kg",
+    "male": {
+     "base": 50,
+     "per_height_roll": 1.2,
+     "dice": {
+      "count": 2,
+      "sides": 6
+     }
+    },
+    "female": {
+     "base": 42,
+     "per_height_roll": 1.1,
+     "dice": {
+      "count": 2,
+      "sides": 6
+     }
+    }
    },
    "size": "Medium",
    "body": {

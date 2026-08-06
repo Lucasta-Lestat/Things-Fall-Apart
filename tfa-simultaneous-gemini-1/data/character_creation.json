@@ -1,0 +1,145 @@
+{
+  "_comment": "Character creation + character sheet: the Scarlatti carta d'identita. Consumed by Global/CharacterCreationDatabase.gd and rendered by UI/CartaIdentita.gd. All player-facing strings live here so the document can be retyped without touching code. Stat ROLLING lives in Global/DaroDice.gd; body metrics live in the human entry of data/races.json.",
+
+  "document": {
+    "republic_line": "REPVBBLICA DI SCARLATTI",
+    "title": "CARTA D'IDENTITA'",
+    "number_label": "Nº",
+    "of_label": "DI",
+    "fields": {
+      "name": "NOME",
+      "gender": "SESSO",
+      "age": "ETÀ",
+      "profession": "PROFESSIONE",
+      "height": "STATURA",
+      "weight": "PESO",
+      "marks": "TRATTI DISTINTIVI"
+    },
+    "marks_none": "none",
+    "exam": {
+      "header": "VISITA MEDICA D'IMMIGRAZIONE",
+      "verdict_label": "ESITO",
+      "verdict_pass": {
+        "male": "IDONEO",
+        "female": "IDONEA"
+      }
+    },
+    "buttons": {
+      "roll_name": "SORTEGGIA",
+      "prev": "◀",
+      "next": "▶",
+      "confirm": "CONVALIDA",
+      "close": "CHIUDI"
+    },
+    "name_placeholder": "scrivere in stampatello"
+  },
+
+  "genders": [
+    { "id": "male",   "label": "Maschile", "abbrev": "M" },
+    { "id": "female", "label": "Femminile", "abbrev": "F" }
+  ],
+
+  "stats": [
+    { "key": "strength",     "label": "Forza" },
+    { "key": "constitution", "label": "Costituzione" },
+    { "key": "dexterity",    "label": "Destrezza" },
+    { "key": "will",         "label": "Volontà" },
+    { "key": "intelligence", "label": "Intelligenza" },
+    { "key": "charisma",     "label": "Carisma" }
+  ],
+
+  "names": {
+    "male": [
+      "Aurelio", "Bartolomeo", "Cesare", "Dante", "Ennio", "Fabrizio",
+      "Gennaro", "Ippolito", "Lorenzo", "Marcello", "Nicodemo", "Orazio",
+      "Pasquale", "Quirino", "Raffaele", "Silvio", "Tiberio", "Ubaldo",
+      "Vittorio", "Zeno", "Adriano", "Baldassare", "Corrado", "Domenico",
+      "Emiliano", "Fulvio", "Gaspare", "Leonzio", "Massimo", "Ottavio"
+    ],
+    "female": [
+      "Agnese", "Bianca", "Costanza", "Donatella", "Elvira", "Fiammetta",
+      "Gelsomina", "Ilaria", "Livia", "Marcella", "Nerina", "Ortensia",
+      "Placida", "Quirina", "Rosalba", "Serafina", "Teodora", "Ursula",
+      "Valeria", "Zita", "Annunziata", "Beatrice", "Clelia", "Delfina",
+      "Emilia", "Fulvia", "Giuseppina", "Lucrezia", "Modesta", "Ombretta"
+    ],
+    "surnames": [
+      "Giandini", "Vermincelli", "Liziti", "Feritas", "Circino", "Drouge",
+      "Rosemerrow", "Havelton", "Belmonte", "Caravagio", "Bortellini",
+      "Perrucci", "Malacarne", "Sbarra", "Tortoreto", "Cadenza",
+      "Ferrivecchi", "Sponzano", "Quaglia", "Bisogno", "Pellegrini",
+      "Salvucci", "Amaretti", "Prosecchi", "Bacchini", "Mandragora",
+      "Ruffino", "Zampone", "Coltellini", "Barbagianni", "Fiorillo",
+      "Scannagatti", "Trombetta", "Vaccarezza", "Zoppetti", "Argentiaro"
+    ]
+  },
+
+  "_backgrounds_comment": "Every background in data/backgrounds.json is offered at creation except those listed here. `exclude` is for the ones a human citizen of Scarlatti cannot be; `gender_locked` hides a background unless the chosen gender matches.",
+  "backgrounds": {
+    "exclude": ["foppish_elf"],
+    "gender_locked": {
+      "yeatsian_breeding_slave": "female",
+      "oriental_dancing_girl": "female"
+    }
+  },
+
+  "_portraits_comment": "The pick pool, filtered by gender. Seeded from the existing Icons/ token set (hand-tagged); tools/generate_creation_portraits.py appends bespoke carta-photo entries to this list. An entry may carry 'crop': 'full' to be used as it stands; omitting it means the art is a circular Icons/ token and gets cropped into. `id` must stay unique — it is what a saved character stores.",
+  "portraits": {
+    "male": [
+      { "id": "default_human", "path": "res://Icons/default_human_icon.png" },
+      { "id": "gnaeus", "path": "res://Icons/gnaeus_icon.png" },
+      { "id": "atticus", "path": "res://Icons/atticus_icon.png" },
+      { "id": "hadrian_rosemerrow", "path": "res://Icons/hadrian_rosemerrow_icon.png" },
+      { "id": "zakariah", "path": "res://Icons/zakariah_icon.png" },
+      { "id": "joey_feritas", "path": "res://Icons/joey_feritas_icon.png" },
+      { "id": "vermincelli_hostage", "path": "res://Icons/vermincelli_hostage_icon.png" },
+      { "id": "cheese_monger", "path": "res://Icons/cheese_monger_icon.png" },
+      { "id": "smith_darcy", "path": "res://Icons/smith_darcy_icon.png" },
+      { "id": "rebel_fighter", "path": "res://Icons/rebel_fighter_icon.png" },
+      { "id": "merchant", "path": "res://Icons/merchant_icon.png" },
+      { "id": "chef_master", "path": "res://Icons/chef_master_icon.png" },
+      { "id": "hunter_john", "path": "res://Icons/hunter_john_icon.png" },
+      { "id": "guild_hunter", "path": "res://Icons/guild_hunter_icon.png" },
+      { "id": "bandit", "path": "res://Icons/bandit_icon.png" },
+      { "id": "captain_jameson", "path": "res://Icons/captain_jameson_icon.png" },
+      { "id": "captain_morgan", "path": "res://Icons/captain_morgan_icon.png" },
+      { "id": "pirate_buccaneer", "path": "res://Icons/pirate_buccaneer_icon.png" },
+      { "id": "centurion_marcus", "path": "res://Icons/centurion_marcus_icon.png" },
+      { "id": "town_guard", "path": "res://Icons/town_guard_icon.png" },
+      { "id": "sunder_havelton", "path": "res://Icons/sunder_havelton_icon.png" },
+      { "id": "vermincelli_capo", "path": "res://Icons/vermincelli_capo_icon.png" },
+      { "id": "cletus_samson", "path": "res://Icons/cletus_samson_icon.png" },
+      { "id": "the_southron", "path": "res://Icons/the_southron_icon.png" },
+      { "id": "king_skarsgaard", "path": "res://Icons/king_skarsgaard_icon.png" },
+      { "id": "senator_marius", "path": "res://Icons/senator_marius_icon.png" },
+      { "id": "senator_titus", "path": "res://Icons/senator_titus_icon.png" },
+      { "id": "noble_lord", "path": "res://Icons/noble_lord_icon.png" },
+      { "id": "earl_grey", "path": "res://Icons/earl_grey_icon.png" },
+      { "id": "big_al_samson", "path": "res://Icons/big_al_samson_icon.png" },
+      { "id": "austache_jongle", "path": "res://Icons/austache_jongle_icon.png" },
+      { "id": "professor_circino", "path": "res://Icons/professor_circino_icon.png" },
+      { "id": "professor_easton", "path": "res://Icons/professor_easton_icon.png" },
+      { "id": "alamonean_magician", "path": "res://Icons/alamonean_magician_icon.png" },
+      { "id": "barthes", "path": "res://Icons/barthes_icon.png" },
+      { "id": "elder_roa", "path": "res://Icons/elder_roa_icon.png" },
+      { "id": "roa_jr", "path": "res://Icons/roa_jr_icon.png" },
+      { "id": "lighthouse_keeper_brother", "path": "res://Icons/lighthouse_keeper_brother_icon.png" },
+      { "id": "obediah", "path": "res://Icons/obediah_icon.png" },
+      { "id": "saul_laelia", "path": "res://Icons/saul_laelia_icon.png" }
+    ],
+    "female": [
+      { "id": "saul_wife_mary", "path": "res://Icons/saul_wife_mary_icon.png" },
+      { "id": "saul_wife_irene", "path": "res://Icons/saul_wife_irene_icon.png" },
+      { "id": "saul_wife_delilah", "path": "res://Icons/saul_wife_delilah_icon.png" },
+      { "id": "jezebel", "path": "res://Icons/jezebel_icon.png" },
+      { "id": "sally_samson", "path": "res://Icons/sally_samson_icon.png" },
+      { "id": "peggy_samson", "path": "res://Icons/peggy_samson_icon.png" },
+      { "id": "prosecco", "path": "res://Icons/prosecco_icon.png" },
+      { "id": "senator_clodia", "path": "res://Icons/senator_clodia_icon.png" },
+      { "id": "hedge_witch_magda", "path": "res://Icons/hedge_witch_magda_icon.png" },
+      { "id": "reverend_mother_liana", "path": "res://Icons/reverend_mother_liana_icon.png" },
+      { "id": "mother_inferior_macaria", "path": "res://Icons/mother_inferior_macaria_icon.png" },
+      { "id": "sarah", "path": "res://Icons/sarah_icon.png" }
+    ]
+  }
+}

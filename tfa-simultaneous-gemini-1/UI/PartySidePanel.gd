@@ -291,10 +291,14 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	return data
 
 func _load_character_icon(tex_rect: TextureRect, character) -> void:
-	var template = TopDownCharacterDatabase.get_template(
-		character.get("template_id") if "template_id" in character else character.display_name.to_lower()
-	)
-	var icon_path: String = template.get("icon", "")
+	# A per-character portrait (chosen at character creation) outranks the
+	# template's shared icon.
+	var icon_path: String = String(character.get("icon_path")) if "icon_path" in character else ""
+	if icon_path.is_empty():
+		var template = TopDownCharacterDatabase.get_template(
+			character.get("template_id") if "template_id" in character else character.display_name.to_lower()
+		)
+		icon_path = template.get("icon", "")
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		tex_rect.texture = load(icon_path)
 	elif ResourceLoader.exists(DUMMY_ICON_PATH):

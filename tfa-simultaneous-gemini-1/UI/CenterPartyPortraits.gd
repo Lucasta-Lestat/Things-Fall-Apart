@@ -88,10 +88,13 @@ func _rebuild_portraits() -> void:
 		_portraits.append({"rect": rect, "character": c})
 
 func _load_portrait(rect: TextureRect, character) -> void:
-	var template: Dictionary = TopDownCharacterDatabase.get_template(
-		character.get("template_id") if "template_id" in character else String(character.display_name).to_lower()
-	)
-	var icon_path: String = String(template.get("icon", ""))
+	# Per-character portrait (character creation) first, template icon second.
+	var icon_path: String = String(character.get("icon_path")) if "icon_path" in character else ""
+	if icon_path.is_empty():
+		var template: Dictionary = TopDownCharacterDatabase.get_template(
+			character.get("template_id") if "template_id" in character else String(character.display_name).to_lower()
+		)
+		icon_path = String(template.get("icon", ""))
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		rect.texture = load(icon_path)
 	elif ResourceLoader.exists(DUMMY_ICON_PATH):

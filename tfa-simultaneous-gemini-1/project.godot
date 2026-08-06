@@ -62,6 +62,7 @@ HearingManager="*res://Global/HearingManager.gd"
 ReadableDatabase="*res://Global/ReadableDatabase.gd"
 ReadableManager="*res://Global/ReadableManager.gd"
 CursorManager="*res://Global/CursorManager.gd"
+CharacterCreationDatabase="*res://Global/CharacterCreationDatabase.gd"
 
 [display]
 

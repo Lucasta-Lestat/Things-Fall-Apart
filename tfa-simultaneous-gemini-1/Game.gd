@@ -165,8 +165,100 @@ func _ready() -> void:
 	# near — a missing button is confusion, a visible one is information).
 	_setup_surrender_button()
 
+	# Character creation gates the first map load: Scarlatti issues the carta
+	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
+	# nothing may be added below the load_map call.
+	if _should_run_character_creation():
+		await _run_character_creation()
+
 	load_map(current_map_id)
  
+# ---------------------------------------------------------------------------
+# Character creation — the Scarlatti carta d'identità
+# ---------------------------------------------------------------------------
+
+## Whether the new-game gate should run. Off for headless test scenes, off when
+## a run was launched with --skip-creation, and off once a card has been issued
+## (a scene reload with R must not re-open the office).
+func _should_run_character_creation() -> bool:
+	if Globals.skip_character_creation:
+		return false
+	if DisplayServer.get_name() == "headless":
+		return false
+	if "--skip-creation" in OS.get_cmdline_args() \
+			or "--skip-creation" in OS.get_cmdline_user_args():
+		return false
+	return true
+
+func _run_character_creation() -> void:
+	var screen = load("res://UI/CharacterCreationScreen.gd").new()
+	screen.name = "CharacterCreationScreen"
+	screen.mode = CartaIdentita.Mode.CREATE
+	add_child(screen)
+	var draft: Dictionary = await screen.completed
+	screen.queue_free()
+	apply_character_draft(draft)
+	Globals.skip_character_creation = true
+
+## Fold a convalidated card into the protagonist's party_state entry. Everything
+## the document says is expressed as build_character overrides, so it survives
+## map transitions and rides into the save file for free (build_save_dict
+## snapshots party_state wholesale).
+func apply_character_draft(draft: Dictionary) -> void:
+	if draft.is_empty() or party_state.is_empty():
+		return
+	var overrides: Dictionary = party_state[0].get("overrides", {}).duplicate(true)
+	var gender: String = String(draft.get("gender", "male"))
+
+	overrides["unique_name"] = String(draft.get("name", ""))
+	overrides["gender"] = gender
+	overrides["race"] = CharacterCreationDatabase.PLAYER_RACE
+	overrides["background"] = String(draft.get("background_id", ""))
+	overrides["stats"] = draft.get("stats", {}).duplicate()
+	overrides["icon"] = CharacterCreationDatabase.portrait_path(
+			String(draft.get("portrait_id", "")))
+
+	# body_metrics travels inside "options" because that is the dict
+	# RaceDatabase.apply_race_to_character reads — without it the protagonist
+	# would be re-measured on every map load.
+	var options: Dictionary = overrides.get("options", {}).duplicate()
+	options["gender"] = gender
+	options["body_metrics"] = draft.get("body_metrics", {}).duplicate()
+	overrides["options"] = options
+
+	# The document itself, kept verbatim so the character sheet reprints the
+	# card that was issued rather than reconstructing an approximation.
+	overrides["carta"] = draft.duplicate(true)
+
+	party_state[0]["overrides"] = overrides
+	# A card issued mid-session invalidates any snapshot taken before it.
+	party_state[0]["live_state"] = null
+
+## Open (or close) the carta d'identità as a read-only character sheet. Shows
+## the primary-selected party member, falling back to the protagonist.
+func show_character_sheet(character = null) -> void:
+	var existing = get_node_or_null("CharacterSheetScreen")
+	if existing:
+		existing.queue_free()
+		return
+
+	var subject = character
+	if subject == null:
+		subject = primary_selected
+	if subject == null or not is_instance_valid(subject):
+		subject = player
+	if subject == null or not is_instance_valid(subject):
+		return
+
+	var screen = load("res://UI/CharacterCreationScreen.gd").new()
+	screen.name = "CharacterSheetScreen"
+	screen.mode = CartaIdentita.Mode.VIEW
+	screen.subject = subject
+	screen.dismissed.connect(func() -> void:
+		if is_instance_valid(screen):
+			screen.queue_free())
+	add_child(screen)
+
 func save_party_state() -> void:
 	## Snapshots every living party member's runtime state so it survives
 	## map transitions and can be written to a save file.
@@ -925,6 +1017,12 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 		if i == 0:
 			player = character
 			character.is_protagonist = true
+			# Re-stamp the issued card. It lives on the character as metadata
+			# (not a property) because nothing in the simulation reads it —
+			# only the character sheet does, and only to reprint it verbatim.
+			var carta: Dictionary = entry.get("overrides", {}).get("carta", {})
+			if not carta.is_empty():
+				character.set_meta("carta", carta)
 
 		# All party members share the player faction so AI won't target allies
 		character.faction_id = "player"
@@ -2002,6 +2100,11 @@ func _input(event: InputEvent) -> void:
 						GameLog.add_entry("[save] ROUND-TRIP MISMATCH — check the F11 diff in the console")
 						print("[save] first:  ", JSON.stringify(first).length(), " chars")
 						print("[save] second: ", JSON.stringify(second).length(), " chars")
+			KEY_F8:
+				# The carta d'identita, reopened as a read-only character sheet
+				# for whoever is selected (the protagonist if nobody is).
+				if not event.echo:
+					show_character_sheet()
 			KEY_R:
 				# Restart
 				get_tree().reload_current_scene()

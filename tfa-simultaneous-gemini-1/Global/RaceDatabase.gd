@@ -176,11 +176,16 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 	_set_if_exists(character, "mp_regen_amount",     stats.get("mp_regen_amount", 5))
 	_set_if_exists(character, "mp_regen_interval",   stats.get("mp_regen_interval", 0.5))
 
-	# --- Height / Weight (gendered) ---
-	var height_data: Dictionary = race.get("height", {})
-	var weight_data: Dictionary = race.get("weight", {})
-	_set_if_exists(character, "race_height", height_data.get(gender, height_data.get("male")))
-	_set_if_exists(character, "race_weight", weight_data.get(gender, weight_data.get("male")))
+	# --- Height / Weight / Age ---
+	# Character creation rolls these once and hands them back through
+	# options.body_metrics so the protagonist's carta d'identità keeps saying
+	# the same thing after every map transition. Anyone else rolls fresh.
+	var metrics: Dictionary = options.get("body_metrics", {})
+	if metrics.is_empty():
+		metrics = roll_body_metrics(race_id, gender)
+	_set_if_exists(character, "race_height", metrics.get("height"))
+	_set_if_exists(character, "race_weight", metrics.get("weight"))
+	_set_if_exists(character, "age",         metrics.get("age"))
 
 	# --- Age brackets ---
 	var age_data: Dictionary = race.get("age", {})
@@ -196,6 +201,74 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 
 	# --- Apply passive racial conditions ---
 	_apply_racial_conditions(character, race.get("passive_conditions", []))
+
+# ---------------------------------------------------------------------------
+# Body metrics — height, weight, starting age
+# ---------------------------------------------------------------------------
+# races.json carries these per gender in one of two shapes:
+#
+#   "height": {"male": 148, "female": 135}                  <- flat, fixed
+#   "height": {"unit": "cm",
+#              "male": {"base": 160, "dice": {"count": 2, "sides": 10}}}
+#
+# The rolled shape is what character creation wants (a human is a different
+# height every time); the flat shape is what every other race still uses and
+# resolves to the same number it always did. Weight may additionally scale off
+# the *height roll* via "per_height_roll", so a tall character is a heavy one:
+#
+#   weight = base + height_roll * per_height_roll + <dice>
+#
+# Starting age comes from "age".starting = {"min": n, "dice": {...}}; races
+# without it fall back to the "base" adulthood age.
+
+## Roll one character's physical measurements. Pure — writes nothing.
+## Returns {"height": int, "weight": int, "age": int,
+##          "height_unit": String, "weight_unit": String}.
+func roll_body_metrics(race_id: String, gender: String,
+		rng: RandomNumberGenerator = null) -> Dictionary:
+	var race: Dictionary = get_race_data(race_id)
+	var height_data: Dictionary = race.get("height", {})
+	var weight_data: Dictionary = race.get("weight", {})
+	var age_data: Dictionary = race.get("age", {})
+
+	# Height first: its dice roll is an input to weight.
+	var height_spec = height_data.get(gender, height_data.get("male"))
+	var height_roll: int = 0
+	var height: float = 0.0
+	if height_spec is Dictionary:
+		height_roll = _roll_spec_dice(height_spec, rng)
+		height = float(height_spec.get("base", 0)) + float(height_roll)
+	elif height_spec != null:
+		height = float(height_spec)
+
+	var weight_spec = weight_data.get(gender, weight_data.get("male"))
+	var weight: float = 0.0
+	if weight_spec is Dictionary:
+		weight = float(weight_spec.get("base", 0))
+		weight += float(height_roll) * float(weight_spec.get("per_height_roll", 0.0))
+		weight += float(_roll_spec_dice(weight_spec, rng))
+	elif weight_spec != null:
+		weight = float(weight_spec)
+
+	var age: int = int(age_data.get("base", 20))
+	var starting = age_data.get("starting")
+	if starting is Dictionary:
+		age = int(starting.get("min", age)) + _roll_spec_dice(starting, rng)
+
+	return {
+		"height": int(round(height)),
+		"weight": int(round(weight)),
+		"age": age,
+		"height_unit": String(height_data.get("unit", "cm")),
+		"weight_unit": String(weight_data.get("unit", "kg")),
+	}
+
+## The "dice": {"count": n, "sides": m} sub-block of a metric spec, or 0.
+func _roll_spec_dice(spec: Dictionary, rng: RandomNumberGenerator) -> int:
+	var dice = spec.get("dice")
+	if not (dice is Dictionary):
+		return 0
+	return DaroDice.roll_pool(int(dice.get("count", 0)), int(dice.get("sides", 0)), rng)
 
 # ---------------------------------------------------------------------------
 # Active abilities - equip via EquipmentManager

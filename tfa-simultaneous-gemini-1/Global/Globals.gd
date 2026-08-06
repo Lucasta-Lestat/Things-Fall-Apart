@@ -1,6 +1,12 @@
 extends Node
 const FloatingTextScene = preload("res://UI/FloatingText.tscn")
 var world_state = {"Perrow Destroyed": false, "Justinia Remaining Loops": 7}
+
+## Suppresses the character-creation gate in Game._ready. Set once a card has
+## been issued (so pressing R to reload doesn't reopen the immigration office),
+## and settable up front by a dev harness that wants to boot straight into the
+## world. The --skip-creation command-line flag does the same thing per run.
+var skip_character_creation: bool = false
 var dialogue_interaction_distance = 250.0
 var default_body_proportions = {}
 var default_leg_swing_time: float = 0.0

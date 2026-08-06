@@ -132,8 +132,17 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	var bg_id: String = _resolve_background(template, faction_data, overrides)
 
 	# --- Apply base stats (before race/background modifiers) ---
-	var stats: Dictionary = template.get("stats", {})
+	# A caller-supplied "stats" override wins per key, so character creation can
+	# hand over a rolled block without having to restate the template's others.
+	var stats: Dictionary = template.get("stats", {}).duplicate()
+	for stat_name in overrides.get("stats", {}):
+		stats[String(stat_name)] = overrides["stats"][stat_name]
 	_apply_base_stats(character, stats)
+
+	# --- Portrait override (character creation picks one per character) ---
+	var icon_override: String = String(overrides.get("icon", ""))
+	if not icon_override.is_empty():
+		_set_if_exists(character, "icon_path", icon_override)
 
 	# --- Apply race (if not a pure creature) ---
 	var race_options: Dictionary = overrides.get("options", {})
@@ -264,6 +273,23 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	# --- School resources: initialize current = max so a fresh fighter spawns
 	# with full adrenaline (it would otherwise have to wait to be hit).
 	_init_school_resources(character)
+
+	# --- Vitals: a freshly built character starts at full health ---
+	# ProceduralCharacter._ready already does current_health = max_health, but
+	# that runs at add_child — BEFORE this function applies the template's
+	# stats, the race, the background and the school traits above. max_health is
+	# derived (20 + CON/5 + Martial * 2), so every one of those moves it and
+	# current_health was left behind at whatever the @export defaults implied.
+	# The protagonist spawned at 30/34 on its Martial 2 alone; a rolled
+	# constitution widens the gap, and a low-CON template like djargo spawned
+	# ABOVE its own maximum. Must stay after the traits merge.
+	# A live_state restore still wins: Game applies it after _spawn_character
+	# returns, and _deserialize_character clamps to the final max_health.
+	if "current_health" in character and "max_health" in character:
+		character.current_health = character.max_health
+		if character.has_signal("health_changed"):
+			character.health_changed.emit(
+					character.current_health, character.max_health, character)
 
 	# --- NPC opt-out for the school-resource cost gate ---
 	# Templates that opt in (via "use_school_resources": true) play by the new
