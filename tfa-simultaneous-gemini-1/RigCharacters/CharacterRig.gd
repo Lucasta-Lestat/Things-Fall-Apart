@@ -25,6 +25,10 @@ var _foreshorten_on := true           # per-instance override (set_foreshorten)
 const FS_K_FLOOR := 0.15              # scale floor -- below this the skinned
                                       # triangles degenerate
 const FS_BLEND_TIME := 0.12           # clip-change / IK-engage arm blend (s)
+const FS_IK_REACH_K := 0.82           # an IK reach renders at this UNIFORM
+                                      # scale on the upper arm (children
+                                      # inherit): a full-length reach balloons
+                                      # to ~2.5x the tucked idle arm
 
 var _fix_cache := {}                  # anim -> [[track_idx, node, prop], ...]
 var _blend_from := {}                 # node -> {prop: value} at clip change
@@ -201,12 +205,15 @@ func _apply_ik(delta: float) -> void:
 	# overrides the clip's pose for that arm; the hand keeps the clip's local
 	# rotation relative to the IK-posed forearm.
 	#
-	# Foreshortening: an IK'd arm reaches at a WORLD ground-plane point, i.e.
-	# it is aimed in-plane -- zero out-of-plane elevation, cos 0 = 1 -- so the
-	# arm's baked foreshorten scale/skew are ramped to identity before solving.
-	# That is the model, not a workaround, and it keeps the closed-form solve
-	# exact (a scaled upper arm would turn the elbow locus into an ellipse).
-	# The engage ramp doubles as the reach blend so the hand doesn't snap.
+	# Foreshortening: an IK'd arm reaches at a WORLD ground-plane point, so the
+	# arm's baked per-axis foreshorten scale/skew are ramped OFF before solving
+	# -- that keeps the closed-form solve exact (a per-axis-scaled upper arm
+	# would turn the elbow locus into an ellipse). Instead of full length the
+	# whole chain renders at FS_IK_REACH_K via a UNIFORM scale on the upper
+	# arm (a similarity: children inherit, no shear, global_rotation stays
+	# exact) -- a full-length reach reads grotesquely large next to the tucked
+	# idle. The engage ramp doubles as the reach blend so the hand doesn't
+	# snap.
 	#
 	# Lengths and axis angles are derived LIVE from the bones' local joint
 	# offsets (never animated -- no arm bone has a :position track in any
@@ -220,11 +227,14 @@ func _apply_ik(delta: float) -> void:
 			continue
 		var blend := clampf(float(_ik_blend.get(side, 0.0)) + delta / FS_BLEND_TIME, 0.0, 1.0)
 		_ik_blend[side] = blend
-		for b in [up, fo, ha]:
+		var rk := lerpf(1.0, FS_IK_REACH_K, foreshorten_strength if _foreshorten_on else 0.0)
+		up.scale = up.scale.lerp(Vector2(rk, rk), blend)
+		up.skew = lerpf(up.skew, 0.0, blend)
+		for b in [fo, ha]:
 			var n: Node2D = b
 			n.scale = n.scale.lerp(Vector2.ONE, blend)
 			n.skew = lerpf(n.skew, 0.0, blend)
-		var gs := _px_to_world()
+		var gs := _px_to_world() * rk
 		var l1: float = fo.position.length() * gs
 		var l2: float = ha.position.length() * gs
 		if l1 <= 0.0 or l2 <= 0.0:
