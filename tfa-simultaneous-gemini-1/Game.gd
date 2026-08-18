@@ -1394,6 +1394,12 @@ func _spawn_items(item_list: Array) -> void:
 				var sc := float(item_def.get("scale", 1.0))
 				if sc != 1.0:
 					inst.scale = Vector2(sc, sc)
+				# surface stacking: z lifts the piece above base items (a pot on
+				# a stove) while staying under characters (z=5). Set AFTER
+				# create_item — Item._ready already ran and pinned z_index = 1.
+				var zb := int(item_def.get("z", 0))
+				if zb != 0:
+					inst.z_index = 1 + zb
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:

@@ -181,6 +181,75 @@ PROMPTS = {
     ),
 }
 
+# ── Furniture / map props ──
+# Battlemap set dressing drawn in the flat painterly top-down register of
+# long_table.png and desk.png (rounded dark border, soft flat lighting). These
+# render at map scale (~30-110px wide), so each prompt leans on a few large
+# readable shapes rather than fine detail. Phrasing stays positive throughout —
+# describe what IS there ("lying perfectly flat, all four edges visible"), the
+# image models latch onto any concept a sentence tries to rule out.
+PROP_STYLE = (
+    "A single top-down video-game item sprite for a top-down RPG battlemap, drawn from a directly "
+    "overhead bird's-eye camera looking straight down, exactly matching the overhead perspective, "
+    "soft lighting, muted palette and flat painterly style of the reference furniture sprites "
+    "provided. The object sits centered and complete inside the frame, surrounded on all four "
+    "sides by a generous empty margin of plain flat pure-white background, fully isolated as a "
+    "clean cutout. "
+)
+PROMPTS.update({
+    "stove": PROP_STYLE + (
+        "SUBJECT: a medieval kitchen's masonry cooking stove seen from directly above: a sturdy "
+        "rectangular block of mortared grey fieldstone with a rim of stone visible around the top "
+        "edge, the flat top holding a thick dark cast-iron cooking plate with two round iron "
+        "burner rings, a faint warm ember glow escaping the fire slot along the lower edge, and a "
+        "small stack of split firewood tucked against one end of the stone base. The whole image "
+        "is a WIDE LANDSCAPE picture, the stove's bounding box about one and a half times as wide "
+        "as it is tall."
+    ),
+    "prep_table": PROP_STYLE + (
+        "SUBJECT: a well-used kitchen preparation table seen from directly above: a broad "
+        "rectangular butcher-block worktop of pale scrubbed hardwood with visible plank joints "
+        "and knife scars, a round wooden chopping board resting on one half with a small kitchen "
+        "knife lying across it, a scatter of chopped green herbs beside the board, and a folded "
+        "beige linen cloth draped over one corner of the worktop. The whole image is a WIDE "
+        "LANDSCAPE picture, the bounding box about twice as wide as it is tall."
+    ),
+    "shelf": PROP_STYLE + (
+        "SUBJECT: a long kitchen storage shelf standing against a wall, seen from directly above "
+        "so its flat top plank and the goods standing on it fill the sprite: a long narrow band "
+        "of dark oak boards carrying a neat row of round clay jars with cork lids, two stacked "
+        "wooden bowls, a small tied linen sack, and a squat green glass bottle. The whole image "
+        "is a WIDE LANDSCAPE picture, the bounding box about two and a half times as wide as it "
+        "is tall."
+    ),
+    "round_table": PROP_STYLE + (
+        "SUBJECT: a round wooden tavern table seen from directly above: a perfectly circular "
+        "tabletop built from straight parallel oak planks all running in the same single "
+        "direction across the whole circle, the plank wood warmly varnished with soft grain and "
+        "a few pale ring stains left by mugs, and a thin darker band of table edge running all "
+        "the way around the circle. The picture is exactly SQUARE and the tabletop is a perfect "
+        "centered circle."
+    ),
+    "rug": PROP_STYLE + (
+        "SUBJECT: a single ornate rectangular woven carpet lying perfectly flat on the floor, "
+        "seen from directly above: one complete flat rectangle with all four edges straight and "
+        "fully visible, a deep crimson central field with an intricate golden medallion at the "
+        "center, a broad decorative border of geometric knotwork in navy and gold running around "
+        "all four sides, and short pale fringe along the two short ends. The whole carpet lies "
+        "smooth and flat like a painted pattern. The image is a LANDSCAPE picture, the bounding "
+        "box about one and a third times as wide as it is tall."
+    ),
+    "red_carpet": PROP_STYLE + (
+        "SUBJECT: a very long narrow ceremonial red runner carpet lying perfectly flat on the "
+        "floor, seen from directly above: one complete flat rectangle with all four edges "
+        "straight and fully visible, a rich scarlet central field with a subtle repeating "
+        "diamond damask pattern woven in slightly darker red, a double border line of golden "
+        "thread running along all four long sides, and neat squared ends. The whole runner lies "
+        "smooth and flat like a painted pattern. The image is a TALL PORTRAIT picture, the "
+        "bounding box about four times as tall as it is wide."
+    ),
+})
+
 # Items whose style comes from a different set of reference sprites than REFS.
 # shield_topdown_aspect.png is a WIDE landscape sprite and is what stops the
 # model copying the tall weapon refs' portrait framing; longsword.png supplies
@@ -199,10 +268,20 @@ HEAD_REFS = [
     os.path.join(ITEMS, "skarsgaard_king_head.png"),
     os.path.join(ITEMS, "longsword.png"),
 ]
+# Furniture refs: two shipped flat-painterly top-down pieces carry the
+# register; the FIRST ref anchors the output's aspect, so square targets lead
+# with a square ref and the runner leads with the portrait carpet.
+PROP_REFS = [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")]
 REFS_OVERRIDE = {
     "buckler": SHIELD_REFS,
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,
+    "stove": PROP_REFS,
+    "prep_table": PROP_REFS,
+    "shelf": PROP_REFS,
+    "round_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "rug": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "red_carpet.png")],
+    "red_carpet": [os.path.join(ITEMS, "red_carpet.png"), os.path.join(ITEMS, "bed_wooden.png")],
 }
 
 

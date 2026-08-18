@@ -54,6 +54,10 @@ func _ready() -> void:
 			if isc != 1.0:
 				inst.scale = Vector2(isc, isc)
 			add_child(inst)
+			# z AFTER add_child: Item._ready pins z_index = 1 on enter
+			var zb := int(idf.get("z", 0))
+			if zb != 0:
+				inst.z_index = 1 + zb
 			spawned += 1
 		print("item smoke-test: spawned ", spawned, " items")
 

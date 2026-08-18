@@ -5658,13 +5658,76 @@
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
+ {
+	"id": "stove",
+	"display_name": "Stove",
+	"type": "item",
+	"description": "A masonry cooking stove with an iron top plate.",
+	"base_width": 56.0,
+	"base_height": 38.0,
+	"sprite_path": "res://Items/stove.png",
+	"weight": 220.0,
+	"cost": 45.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 60.0,
+	"hp": 60.0,
+	"traits": {
+	 "Stone": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+ {
+	"id": "prep_table",
+	"display_name": "Preparation Table",
+	"type": "item",
+	"description": "A scarred butcher-block table for preparing food.",
+	"base_width": 72.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/prep_table.png",
+	"weight": 45.0,
+	"cost": 18.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 35.0,
+	"hp": 35.0,
+	"traits": {
+	 "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+ {
+	"id": "shelf",
+	"display_name": "Shelf",
+	"type": "item",
+	"description": "An oak shelf stacked with jars and provisions.",
+	"base_width": 64.0,
+	"base_height": 26.0,
+	"sprite_path": "res://Items/shelf.png",
+	"weight": 30.0,
+	"cost": 12.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	 "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
   {
 	"id": "red_carpet",
 	"display_name": "Red Carpet",
 	"type": "item",
 	"description": "A long red ceremonial runner.",
-	"base_width": 36.0,
-	"base_height": 96.0,
+	"base_width": 110.0,
+	"base_height": 440.0,
 	"sprite_path": "res://Items/red_carpet.png",
 	"weight": 8.0,
 	"cost": 30.0,
