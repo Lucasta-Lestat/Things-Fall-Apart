@@ -333,10 +333,14 @@ func _update_animation(delta: float) -> void:
 			attack_progress = attack_timer / recovery_duration
 			_animate_recovery()
 			if attack_timer >= recovery_duration:
-				current_state = AttackState.IDLE
-				attack_timer = 0.0
+				# _finish_attack, NOT an inline copy of it. The old inline version
+				# skipped _disable_active_hitbox and register_attack_end, so the
+				# melee path left the blade Area2D monitoring FOREVER after the
+				# first swing. Damage dispatch is body_entered — an edge, not a
+				# state — so any pose that leaves the idle blade already inside a
+				# body silently eats the next swing against it.
+				_finish_attack()
 				_reset_offsets()
-				emit_signal("attack_finished")
 		# ===== CASTING STATES =====
 		AttackState.CAST_WINDUP:
 			# Channeling phase: Matches the ability.cast_time

@@ -1681,7 +1681,7 @@ texture = ExtResource("36_eq_fancy_metal_helmet_c")
 visible = false
 [node name="EQ_head_dark_hood_c" type="Sprite2D" parent="Rig"]
 centered = false
-position = Vector2(374.00, 328.00)
+position = Vector2(373.00, 328.00)
 z_index = 23
 texture = ExtResource("37_eq_dark_hood_c")
 visible = false

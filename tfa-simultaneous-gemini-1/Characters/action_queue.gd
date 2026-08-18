@@ -16,6 +16,11 @@ enum ActionType {
 	CUSTOM          # For extensibility
 }
 
+# Action types that AIM the character. When one of these completes, the aimed
+# facing is held for a beat (ProceduralCharacter.begin_facing_hold) so the next
+# MOVE segment's path-aligned facing write doesn't snap the body back instantly.
+const FACING_HOLD_ACTIONS := [ActionType.FACE, ActionType.ATTACK, ActionType.ATTACK_TARGET]
+
 # An action in the queue
 class Action:
 	var type: ActionType
@@ -283,6 +288,10 @@ func clear_queue() -> void:
 
 func cancel_current() -> void:
 	"""Cancel the currently executing action"""
+	# A cancelled queue must never leave a planned-facing hold running: the
+	# player's manual order (middle-click move, new attack) re-aims immediately.
+	if character:
+		character.clear_facing_hold()
 	if current_action != null:
 		_remove_reticle(current_action)
 		emit_signal("action_cancelled", current_action)
@@ -329,6 +338,14 @@ func _start_next_action() -> void:
 
 func _execute_action(action: Action) -> void:
 	"""Begin executing an action"""
+	# An explicit new aim (FACE / ATTACK / ATTACK_TARGET) cancels any running
+	# planned-facing hold AND the path angle parked underneath it. Without this a
+	# hold armed by the PREVIOUS aim can expire mid-turn and overwrite
+	# target_rotation with the stale parked angle - which strands this action
+	# forever, because _is_action_complete() compares rotation against THIS
+	# angle while the integrator clamps onto the parked one instead.
+	if action.type in FACING_HOLD_ACTIONS:
+		character.clear_facing_hold()
 	match action.type:
 		ActionType.MOVE:
 			# Clear any stale real-time nav waypoints so _update_movement
@@ -340,12 +357,14 @@ func _execute_action(action: Action) -> void:
 			if waypoints.size() > 0 and wp_index < waypoints.size():
 				var wp = waypoints[wp_index]
 				character.target_position = wp
-				character.target_rotation = (wp - character.global_position).angle() + PI / 2
+				# Path-aligned facing: deferred while a planned turn/attack is still
+				# being "held" (see ProceduralCharacter.set_path_facing).
+				character.set_path_facing((wp - character.global_position).angle() + PI / 2)
 				character.is_moving = true
 			else:
 				var target_pos = action.data.get("target_position", character.global_position)
 				character.target_position = target_pos
-				character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
+				character.set_path_facing((target_pos - character.global_position).angle() + PI / 2)
 				character.is_moving = true
 		
 		ActionType.FACE:
@@ -434,17 +453,30 @@ func _is_action_complete(action: Action) -> bool:
 			var waypoints = action.data.get("waypoints", [])
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
-				var dist = character.global_position.distance_to(waypoints[wp_index])
 				# 12px arrival: drawn tactical samples beside walls needn't be
-				# pressed to the exact pixel (5px forced bodies into jambs)
-				if dist < 12.0 or not character.is_moving:
-					# Advance to next waypoint
+				# pressed to the exact pixel (5px forced bodies into jambs).
+				# Consume EVERY waypoint already reached, not just one per frame:
+				# a drawn tactical path samples at 8px spacing (TacticalPath.
+				# MIN_WAYPOINT_DISTANCE), so a quick character covers more ground
+				# in a frame than a single advance gives back. The target then
+				# sits BEHIND the body, which turns around to reach it, overshoots
+				# again, and rubber-bands back and forth along its own path.
+				var advanced := false
+				while wp_index < waypoints.size() \
+						and character.global_position.distance_to(waypoints[wp_index]) < 12.0:
 					wp_index += 1
+					advanced = true
+				# Fake-arrival contract: a body that stopped moving (wall stuck,
+				# cliff veto) still advances one waypoint so the MOVE terminates.
+				if not advanced and not character.is_moving:
+					wp_index += 1
+					advanced = true
+				if advanced:
 					action.data["waypoint_index"] = wp_index
 					if wp_index < waypoints.size():
 						var next_wp = waypoints[wp_index]
 						character.target_position = next_wp
-						character.target_rotation = (next_wp - character.global_position).angle() + PI / 2
+						character.set_path_facing((next_wp - character.global_position).angle() + PI / 2)
 						character.is_moving = true
 						return false
 					else:
@@ -489,6 +521,16 @@ func _complete_current_action() -> void:
 			character.is_moving = false
 			character._nav_waypoints.clear()
 			character._nav_index = 0
+			# End of the path: nothing left to align to, so drop any parked path
+			# angle rather than letting it fire a spontaneous turn a beat after
+			# the character has already come to a stop.
+			if queue.size() == 0:
+				character.clear_facing_hold()
+		elif current_action.type in FACING_HOLD_ACTIONS:
+			# A planned turn/attack just AIMED the body. Hold that facing for a
+			# beat, measured from the moment the turn actually landed, so the next
+			# MOVE segment can't snap it back down the path on the following frame.
+			character.begin_facing_hold()
 		# Remove the reticle when action completes
 		_remove_reticle(current_action)
 		emit_signal("action_completed", current_action)

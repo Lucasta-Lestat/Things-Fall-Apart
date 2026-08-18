@@ -356,7 +356,7 @@ func _make_drag_row(icon_path: String, label_text: String, drag_data: Dictionary
 	var icon = TextureRect.new()
 	icon.custom_minimum_size = ICON_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		icon.texture = load(icon_path)
@@ -411,7 +411,7 @@ func _make_fighter_card(party: Array, idx: int, is_player: bool) -> Control:
 	var icon = TextureRect.new()
 	icon.custom_minimum_size = Vector2(32, 32)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		icon.texture = load(icon_path)
 	header.add_child(icon)
@@ -507,8 +507,13 @@ func _make_loadout_slot(party: Array, fighter_idx: int, kind: String, slot_idx: 
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		var tex = TextureRect.new()
 		tex.texture = load(icon_path)
+		# The only one of these slots that had no explicit floor. Harmless under
+		# the old proportional mode (which supplied its own minimum), but with
+		# IGNORE_SIZE the minimum is 0, so give it the same ICON_SIZE its
+		# siblings use rather than depend on the PanelContainer alone.
+		tex.custom_minimum_size = ICON_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(tex)
 	else:
@@ -589,7 +594,7 @@ class _DragRow extends PanelContainer:
 			t.texture = load(preview_icon_path)
 			t.custom_minimum_size = Vector2(28, 28)
 			t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			t.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			hb.add_child(t)
 		var l = Label.new()
 		l.text = preview_text

@@ -25,6 +25,10 @@ signal quest_updated(quest_id: String)
 signal quest_stage_changed(quest_id: String, old_stage: String, new_stage: String)
 signal quest_completed(quest_id: String)
 signal quest_failed(quest_id: String)
+# Emitted by turn_in() after the quest completes and its proof is consumed.
+# `offers` is the quest's rewards.offers array; Game listens and opens the
+# reward screen. Nothing else in this file grants anything.
+signal quest_reward_offered(quest_id: String, offers: Array, character: Node)
 
 const COMPLETE_STAGE := "__complete__"
 const FAIL_STAGE := "__fail__"
@@ -90,6 +94,17 @@ func start_quest(quest_id: String) -> void:
 func get_active_quests() -> Array:
 	return active.keys()
 
+# Predicates for dialogue `branch` conditions, e.g.
+#   "branch": { "QuestManager.is_quest_active('bounty')": "still_working" }
+func is_quest_active(quest_id: String) -> bool:
+	return active.has(quest_id)
+
+func is_quest_completed(quest_id: String) -> bool:
+	return quest_id in completed
+
+func is_quest_failed(quest_id: String) -> bool:
+	return quest_id in failed
+
 func get_completed_quests() -> Array:
 	return completed.duplicate()
 
@@ -146,6 +161,118 @@ func get_quest_checklist(quest_id: String) -> Array:
 				continue  # hide future stages per spec
 		out.append(entry)
 	return out
+
+# ---------------------------------------------------------------------------
+# Proof and turn-in
+#
+# Deliberately NOT built on world_state. `item_picked::<id>` is a latch: it goes
+# true on first pickup and stays true after the item is dropped, sold, or
+# stolen, and `item_count::<id>` only ever increments because only item_added is
+# wired (never item_removed). Proof is therefore validated against the turn-in
+# character's LIVE inventory, which is the only source that can go back down.
+# ---------------------------------------------------------------------------
+
+# Every proof spec, across all active quests, that wants a trophy from this
+# template. Drives corpse trophy injection at the moment of death.
+func proof_specs_for_template(template_id: String) -> Array:
+	var out: Array = []
+	if template_id.is_empty() or QuestDatabase == null:
+		return out
+	for quest_id in active.keys():
+		for spec in QuestDatabase.get_all_proof(quest_id):
+			if str(spec.get("from_template", "")) == template_id:
+				out.append(spec)
+	return out
+
+# Does this inventory dict satisfy `spec`? An item matches on id, and — when the
+# spec names a from_template — on the origin stamped when the trophy was taken.
+func _item_matches_proof(item_data, spec: Dictionary) -> bool:
+	if not (item_data is Dictionary):
+		return false
+	if str(item_data.get("id", "")) != str(spec.get("item", "")):
+		return false
+	var want_template: String = str(spec.get("from_template", ""))
+	if want_template.is_empty():
+		return true
+	var origin = item_data.get("origin", {})
+	if not (origin is Dictionary):
+		return false
+	return str(origin.get("template_id", "")) == want_template
+
+# Indices into inventory.items satisfying every proof entry of the quest's
+# current stage, or [] if any requirement is unmet. Returned rather than a bool
+# so turn_in consumes exactly what it validated.
+func _collect_proof_indices(quest_id: String, character) -> Array:
+	if character == null or not is_instance_valid(character):
+		return []
+	var stage_id: String = str(active.get(quest_id, ""))
+	if stage_id.is_empty():
+		return []
+	var specs: Array = QuestDatabase.get_proof(quest_id, stage_id)
+	if specs.is_empty():
+		return []
+	var inv = character.get_node_or_null("Inventory")
+	if inv == null or not ("items" in inv):
+		return []
+
+	var claimed: Array = []
+	for spec in specs:
+		if not (spec is Dictionary):
+			continue
+		var needed: int = max(1, int(spec.get("count", 1)))
+		var found: int = 0
+		for i in range(inv.items.size()):
+			if i in claimed:
+				continue
+			if _item_matches_proof(inv.items[i], spec):
+				claimed.append(i)
+				found += 1
+				if found >= needed:
+					break
+		if found < needed:
+			return []
+	return claimed
+
+# True when `character` is carrying everything the current stage demands. Safe
+# to call from dialogue as a branch condition:
+#   "branch": { "QuestManager.can_turn_in('bounty', protagonist)": "pay_up" }
+func can_turn_in(quest_id: String, character) -> bool:
+	if not active.has(quest_id):
+		return false
+	var stage_id: String = str(active.get(quest_id, ""))
+	# A stage with no proof requirement is turn-in-able on demand.
+	if QuestDatabase.get_proof(quest_id, stage_id).is_empty():
+		return true
+	return not _collect_proof_indices(quest_id, character).is_empty()
+
+# The missing verb. Consumes the proof, completes the quest, and offers rewards.
+# Returns false and changes nothing when the proof isn't in hand.
+func turn_in(quest_id: String, character) -> bool:
+	if not active.has(quest_id):
+		return false
+	var stage_id: String = str(active.get(quest_id, ""))
+	var specs: Array = QuestDatabase.get_proof(quest_id, stage_id)
+	var indices: Array = []
+	if not specs.is_empty():
+		indices = _collect_proof_indices(quest_id, character)
+		if indices.is_empty():
+			return false
+
+	# Consume high-index-first so earlier indices stay valid as we remove.
+	var inv = character.get_node_or_null("Inventory") if character != null else null
+	if inv != null:
+		indices.sort()
+		indices.reverse()
+		for i in indices:
+			inv.remove_item(i)
+
+	_advance(quest_id, COMPLETE_STAGE, {})
+
+	var rewards: Dictionary = QuestDatabase.get_rewards(quest_id)
+	var offers: Array = rewards.get("offers", [])
+	if offers is Array and not offers.is_empty():
+		emit_signal("quest_reward_offered", quest_id, offers, character)
+	return true
 
 # ---------------------------------------------------------------------------
 # Save/load (in-memory; matches Game.save_party_state pattern)

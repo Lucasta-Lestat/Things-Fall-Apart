@@ -66,6 +66,16 @@ var owner_faction: String = ""   # "" == unowned, free to take
 var owner_uid: String = ""       # optional specific NPC; the seam for per-NPC grudges
 var stolen_from: String = ""     # stamped on take; drives confiscation and fencing
 
+# --- Provenance (quest proof) ---
+# Stamped when a trophy is harvested from a corpse; {template_id, name, race,
+# taken_on_day}. Empty on ordinary items. This is what makes a bounty head
+# *this* victim's head rather than any head, so it has to survive a drop and a
+# map unload the same way stolen_from does. `origin_display_name` carries the
+# per-instance name ("Severed Head of Ser Brannoc") because _apply_item_data
+# otherwise overwrites display_name from the database entry.
+var origin: Dictionary = {}
+var origin_display_name: String = ""
+
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -156,8 +166,13 @@ func _apply_item_data():
 		printerr("Failed to get data for item_id: ", id)
 		return
 
-	# Name — items use display_name, weapons/equipment use name
+	# Name — items use display_name, weapons/equipment use name.
+	# A harvested trophy's per-instance name wins over the database entry, so a
+	# dropped head stays "Severed Head of Ser Brannoc" instead of reverting to
+	# the generic "Severed Head".
 	display_name = data.get("display_name", data.get("name", str(id)))
+	if not origin_display_name.is_empty():
+		display_name = origin_display_name
 
 	# Health — items use max_hp/hp, weapons/equipment use max_health/current_health
 	max_health = int(data.get("max_health", data.get("max_hp", 1)))
@@ -320,6 +335,12 @@ func to_inventory_data() -> Dictionary:
 	if owner_faction != "":
 		dict["stolen_from"] = owner_faction
 		dict["stolen_value"] = cost
+	# Provenance rides back into the inventory the same way, so a head that was
+	# dropped and re-taken still satisfies the bounty it was harvested for.
+	if not origin.is_empty():
+		dict["origin"] = origin.duplicate(true)
+	if not origin_display_name.is_empty():
+		dict["display_name"] = origin_display_name
 	return dict
 
 func _default_noise_per_step() -> float:

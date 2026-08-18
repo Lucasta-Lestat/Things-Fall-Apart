@@ -9,9 +9,12 @@ uniform float cone_half_angle : hint_range(0.0, 3.14159) = 0.524; // radians, de
 
 void fragment() {
     vec2 uv = UV;
-    // Cone originates from center-left (0.0, 0.5), opening to the right (+X)
+    // Cone originates from center-left (0.0, 0.5), opening to the right (+X).
+    // Work in units of the rect's WIDTH so the cone angle is correct in world
+    // space even when the rect is not square (it is sized W x 2*W*tan(half)).
     vec2 origin = vec2(0.0, 0.5);
-    vec2 pos = uv - origin;
+    float aspect = max(resolution.y, 1.0) / max(resolution.x, 1.0);
+    vec2 pos = (uv - origin) * vec2(1.0, aspect);
 
     float dist = length(pos);
     float angle = atan(pos.y, pos.x); // angle from +X axis
@@ -21,13 +24,13 @@ void fragment() {
 
     // Create concentric sound waves from origin
     float wave = sin(dist * wave_frequency * 6.28 - time * 8.0) * wave_amplitude;
-    wave *= exp(-dist * 2.0);
+    wave *= exp(-dist * 1.2);
 
     float wave2 = sin(dist * wave_frequency * 4.0 - time * 6.0) * wave_amplitude * 0.6;
-    wave2 *= exp(-dist * 1.5);
+    wave2 *= exp(-dist * 0.9);
 
     float wave3 = sin(dist * wave_frequency * 8.0 - time * 10.0) * wave_amplitude * 0.4;
-    wave3 *= exp(-dist * 3.0);
+    wave3 *= exp(-dist * 1.8);
 
     float total_wave = wave + wave2 + wave3;
 
@@ -36,8 +39,8 @@ void fragment() {
     float intensity = abs(total_wave);
 
     // Ring highlights
-    float ring = 1.0 - smoothstep(0.02, 0.06, abs(total_wave));
-    ring *= (1.0 - dist);
+    float ring = 1.0 - smoothstep(0.02, 0.07, abs(total_wave));
+    ring *= (1.0 - dist * 0.75);
 
     vec3 final_color = wave_color * intensity + ring * vec3(1.0);
     float alpha = (intensity + ring * 0.8) * cone_mask;

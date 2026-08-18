@@ -31,6 +31,9 @@ var _damage_timer := 0.0
 var _rng := RandomNumberGenerator.new()
 var _fuel_cache: Dictionary = {}
 var _cond_timers: Dictionary = {}     # character instance_id -> accumulated time
+var _smoke_timer := 0.0
+var _smoke_clouds: Array[FogOverlay] = []   # live plumes this fire owns
+var _smoke_fog: FogManager = null           # cached so clear_all can reclaim them
 
 
 func setup(p_graph: CellGraph, p_sm: Node, fire_def: Dictionary) -> void:
@@ -105,8 +108,10 @@ func tick(delta: float, characters: Array, game: Node) -> void:
 	if _damage_timer >= float(_fire_def.get("damage_interval", 1.0)):
 		_damage_timer = 0.0
 		_damage(game)
+		_melt_ice()
 	_lifetime(delta)
 	_apply_burning(delta, characters)
+	_smoke(delta, game)
 
 
 func clear_all() -> void:
@@ -118,6 +123,7 @@ func clear_all() -> void:
 	burn_rev += 1
 	_fuel_cache.clear()
 	_cond_timers.clear()
+	_clear_smoke()
 	burnt = PackedByteArray()
 	if graph != null:
 		burnt.resize(graph.cell_count)
@@ -247,6 +253,32 @@ func _damage(game: Node) -> void:
 			scorch_fx.stamp(cid, bd["char"], float(bd["seed"]))
 
 
+# Fire melts ice. Ice is a TILE surface (SurfaceManager.surface_grid) even on
+# cell-fire maps -- freezing DRAINS the cells under the tile, so no burning cell
+# ever sits "in" ice and neither _compute_fuel nor CellFluid._fire_interactions
+# can see it. Melting is therefore driven by ADJACENCY: every tile the flames
+# reach (a burning cell's tile plus its 4-neighbourhood -- the same footprint
+# _damage uses for structures, since cells are ~half a tile) takes one melt
+# tick, and SurfaceManager thaws the ice back into its frozen fluid once enough
+# heat has accumulated.
+func _melt_ice() -> void:
+	if sm == null or not sm.has_method("apply_heat_to_ice"):
+		return
+	var melt: float = float(_fire_def.get("ice_melt_per_tick", 0.34))
+	if melt <= 0.0:
+		return
+	var touched: Dictionary = {}
+	for cid in burning:
+		var t := _tile_of(cid)
+		touched[t] = true
+		touched[t + Vector2i(1, 0)] = true
+		touched[t + Vector2i(-1, 0)] = true
+		touched[t + Vector2i(0, 1)] = true
+		touched[t + Vector2i(0, -1)] = true
+	for tile in touched:
+		sm.apply_heat_to_ice(tile, melt)
+
+
 func _lifetime(delta: float) -> void:
 	var out: Array = []
 	for cid in burning:
@@ -297,6 +329,136 @@ func _apply_burning(delta: float, characters: Array) -> void:
 			mgr = character.get_condition_manager()
 		if mgr:
 			mgr.apply_condition(cond, null, stacks)
+
+
+# --- smoke ---------------------------------------------------------------------
+
+# REAL smoke: burning cells feed the game's cloud system (FogManager ->
+# FogOverlay, the same persistent volume cloud_kill and the map's ambient fogs
+# use) instead of only the cosmetic puffs CellFireFX._draw_smoke paints. One
+# cloud per burning cell per tick would be hundreds of overlapping full-rect fbm
+# shaders, so emission is throttled four ways: a fixed interval, coarse spatial
+# bucketing (one plume per SMOKE_BUCKET-sized patch of fire), a per-tick plume
+# budget, and a hard cap on how many of this fire's clouds may live at once.
+# Plume SIZE/opacity carry the intensity instead -- a hotter, oilier, denser
+# patch of fire makes ONE bigger, thicker plume, not more of them.
+const SMOKE_BUCKET := 160.0      # world px: one plume per bucket of burning cells
+const SMOKE_MAX_LIVE := 8        # concurrent FogOverlays this fire may own
+const SMOKE_MAX_PER_EMIT := 2    # new plumes per emission tick
+const SMOKE_SIZE_K := 1.2        # rect upsize: the cloud shader no longer fills it
+const SMOKE_RISE := 9.0          # px/s the plume body climbs (screen -Y)
+const SMOKE_WIND := 26.0         # px/s of downwind travel at full wind
+
+
+func _smoke(delta: float, game: Node) -> void:
+	var interval := float(_fire_def.get("smoke_interval", 1.5))
+	if interval <= 0.0:
+		return                      # smoke_interval 0 in surfaces.json disables it
+	_smoke_timer += delta
+	if _smoke_timer < interval:
+		return
+	_smoke_timer = 0.0
+	_emit_smoke(game)
+
+
+func _emit_smoke(game: Node) -> void:
+	if game == null or not ("fog_manager" in game):
+		return
+	var fog: FogManager = game.fog_manager
+	if fog == null or not is_instance_valid(fog):
+		return
+	_smoke_fog = fog
+	# prune: FogManager frees expired overlays (and clear_all_fog frees them all
+	# on map load) behind our back, so validate before counting against the cap
+	var live: Array[FogOverlay] = []
+	for c in _smoke_clouds:
+		if is_instance_valid(c):
+			live.append(c)
+	_smoke_clouds = live
+	var budget: int = mini(SMOKE_MAX_PER_EMIT, SMOKE_MAX_LIVE - _smoke_clouds.size())
+	if budget <= 0:
+		return
+	# bucket the burning cells so one plume stands for a whole patch of fire
+	var buckets: Dictionary = {}
+	for cid in burning:
+		var p: Vector2 = graph.centroid(cid)
+		var key := Vector2i(floori(p.x / SMOKE_BUCKET), floori(p.y / SMOKE_BUCKET))
+		var bk: Dictionary = buckets.get(key, {"n": 0, "sum": Vector2.ZERO, "k": 0.0})
+		var bd: Dictionary = burning[cid]
+		var t0: float = maxf(float(bd["t0"]), 0.01)
+		var frac: float = clampf((t0 - float(bd["t"])) / t0, 0.0, 1.0)
+		var acc: Vector2 = bk["sum"]
+		bk["n"] = int(bk["n"]) + 1
+		bk["sum"] = acc + p
+		# intensity: a cell smokes hardest mid-burn (sin arch: flare-up, sustain,
+		# die down) and heavy fuel -- oil 2.5, timber 1.25 -- smokes more than grass
+		bk["k"] = float(bk["k"]) + minf(_fuel(cid), 2.5) * (0.35 + 0.65 * sin(frac * PI))
+		buckets[key] = bk
+	if buckets.is_empty():
+		return
+	var patches: Array = []
+	for key in buckets:
+		patches.append(buckets[key])
+	# jittered intensity sort: the fiercest patches usually smoke first, but a
+	# small outlying patch still gets its turn instead of being starved forever
+	for i in patches.size():
+		var pw: Dictionary = patches[i]
+		pw["w"] = float(pw["k"]) * _rng.randf_range(0.55, 1.45)
+	patches.sort_custom(func(x, y): return float(x["w"]) > float(y["w"]))
+	var wind := _wind()
+	var drift := Vector2(0.0, -SMOKE_RISE) + wind * SMOKE_WIND
+	var base_dur := float(_fire_def.get("smoke_duration", 9.0))
+	var cond_min := int(_fire_def.get("smoke_condition_min_cells", 4))
+	var emitted := 0
+	for patch in patches:
+		if emitted >= budget:
+			break
+		var pd: Dictionary = patch
+		var n: int = int(pd["n"])
+		var k: float = float(pd["k"])
+		var sum_pos: Vector2 = pd["sum"]
+		var center: Vector2 = sum_pos / float(n)
+		# fog.gdshader fades a cloud out by its rect's INSCRIBED circle and then
+		# noise-erodes that boundary inward (~0.84 of it on average), so the plume
+		# no longer fills its rect corner to corner the way the old hard-clipped
+		# square did. SMOKE_SIZE_K restores the apparent width that cost us.
+		var side: float = clampf(96.0 + 46.0 * sqrt(k), 96.0, 288.0) * SMOKE_SIZE_K
+		var dur: float = base_dur * _rng.randf_range(0.8, 1.25)
+		# only a real body of fire makes air unbreathable; a lone smouldering cell
+		# is scenery, not a hazard
+		var cond := ""
+		if n >= cond_min:
+			cond = String(_fire_def.get("smoke_condition", "suffocating"))
+		# NOTE: the Vector2 below is the shader's UV scroll (internal churn), NOT
+		# travel -- travel is FogOverlay.drift, set just after.
+		var cloud: FogOverlay = _smoke_fog.create_cloud(
+			Color(0.17, 0.16, 0.15, clampf(0.30 + 0.05 * k, 0.30, 0.62)),
+			Vector2(side, side),
+			dur,
+			cond,
+			1,
+			-2.0,
+			2.0,
+			clampf(0.45 + 0.06 * k, 0.45, 0.8),
+			3.0,
+			Vector2(0.05, 0.03),
+			center + Vector2(0.0, -side * 0.15),
+			null)
+		if cloud == null:
+			continue
+		cloud.drift = drift
+		cloud.set_fade_envelope(1.0, minf(3.5, dur * 0.5))
+		_smoke_clouds.append(cloud)
+		emitted += 1
+
+
+func _clear_smoke() -> void:
+	if _smoke_fog != null and is_instance_valid(_smoke_fog):
+		for c in _smoke_clouds:
+			if is_instance_valid(c):
+				_smoke_fog.remove_fog(c)
+	_smoke_clouds.clear()
+	_smoke_timer = 0.0
 
 
 # Cell fuel: non-flammable structure -> firebreak; flammable structure -> heavy

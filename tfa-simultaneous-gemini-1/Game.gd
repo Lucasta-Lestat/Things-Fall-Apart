@@ -119,11 +119,99 @@ signal downtime_mode_changed(active: bool)
 # {"result_id": String, "day_abs": int}. DowntimeDatabase reads/writes this.
 var downtime_recent_events: Dictionary = {}
 
+# Who has already spent today, character_uid -> activity_id. Cleared by
+# advance_downtime_day. Its only job is to tell the day-advance which party
+# members still need an activity picked FOR them; it deliberately does not cap
+# how many activities a character may do, because downtime is hours-based and
+# a four-hour activity leaves room for another. Training is the exception and
+# guards itself (a day of study is a day, not four hours).
+var downtime_day_assignments: Dictionary = {}
+signal downtime_day_advanced(day: int)
+
 func set_downtime_mode(active: bool) -> void:
 	if downtime_mode_active == active:
 		return
 	downtime_mode_active = active
 	downtime_mode_changed.emit(active)
+
+func record_downtime_assignment(character, activity_id: String) -> void:
+	var uid: String = DowntimeDatabase.character_uid(character)
+	if uid.is_empty():
+		return
+	downtime_day_assignments[uid] = activity_id
+
+func has_downtime_assignment(character) -> bool:
+	return downtime_day_assignments.has(DowntimeDatabase.character_uid(character))
+
+func trained_today(character) -> bool:
+	var uid: String = DowntimeDatabase.character_uid(character)
+	return str(downtime_day_assignments.get(uid, "")) == TrainingManager.TRAINING_ACTIVITY_ID
+
+## Roll the day over. Everyone the player left idle picks something for
+## themselves, then the clock moves to the next morning.
+##
+## The auto-pick is what makes a multi-day stay in town bearable: a character
+## booked on four days of sword drill would otherwise leave two companions
+## standing still for four days while the player clicks through their evenings.
+func advance_downtime_day() -> void:
+	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	for c in party_chars:
+		if c == null or not is_instance_valid(c):
+			continue
+		if not c.is_alive():
+			continue
+		if has_downtime_assignment(c):
+			continue
+		_auto_pick_downtime(c, region_id)
+
+	downtime_day_assignments.clear()
+	TimeManager.advance_days(1)
+	# Wake everyone at dawn rather than carrying the previous evening's clock
+	# forward; advance_days moves the date, not the time of day.
+	TimeManager.set_time(6, 0, 0)
+	emit_signal("downtime_day_advanced", TimeManager.today())
+	if GameLog:
+		GameLog.add_entry("A new day: %s" % TimeManager.get_date_string())
+
+## Choose and resolve one activity for an unassigned companion, silently.
+## Weighted by how much they'd actually like it — rate_choice is the same
+## preferred/disliked scoring DowntimeResolver uses to decide whether a
+## companion would refuse a player-assigned activity, so a Reclusive character
+## drifts to meditation and a Sociable one to the tavern.
+func _auto_pick_downtime(character, region_id: String) -> void:
+	var candidates: Array = DowntimeDatabase.get_activities_for_region(region_id)
+	# Never volunteer someone for a crime, a self-harm ritual, or a teacher they
+	# haven't been booked with.
+	var weighted: Array = []
+	var total: float = 0.0
+	for activity_id in candidates:
+		var a: Dictionary = DowntimeDatabase.get_activity(activity_id)
+		if a.is_empty():
+			continue
+		if bool(a.get("requires_training", false)):
+			continue
+		if not String(a.get("legal_title", "")).is_empty():
+			continue
+		var score: int = 0
+		if character.has_method("rate_choice"):
+			score = int(character.rate_choice(a.get("preferred_traits", []), a.get("disliked_traits", [])))
+		# A companion never picks something they'd have refused if ordered to.
+		if score < 0:
+			continue
+		var weight: float = 1.0 + float(score) * 2.0
+		weighted.append({"id": activity_id, "weight": weight})
+		total += weight
+	if weighted.is_empty():
+		return
+
+	var roll: float = randf() * total
+	var picked: String = str(weighted[weighted.size() - 1]["id"])
+	for entry in weighted:
+		roll -= float(entry["weight"])
+		if roll <= 0.0:
+			picked = str(entry["id"])
+			break
+	DowntimeResolver.resolve_silently(character, picked, region_id)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -160,6 +248,16 @@ func _ready() -> void:
 
 	# React to weather changes (snow → freeze, rain → puddles)
 	WeatherManager.weather_changed.connect(_on_weather_changed)
+
+	# Quest turn-in opens the reward screen.
+	if not QuestManager.quest_reward_offered.is_connected(show_quest_rewards):
+		QuestManager.quest_reward_offered.connect(show_quest_rewards)
+
+	# A companion catching up with you arrives on a date, and the player can burn
+	# those days standing still in downtime — so returns can't wait for the next
+	# map load.
+	if not TimeManager.date_changed.is_connected(_on_date_changed_for_returns):
+		TimeManager.date_changed.connect(_on_date_changed_for_returns)
 
 	# Law/crime Phase 7: the Surrender button (visible whenever a hostile is
 	# near — a missing button is confusion, a visible one is information).
@@ -259,21 +357,218 @@ func show_character_sheet(character = null) -> void:
 			screen.queue_free())
 	add_child(screen)
 
+## Quest rewards. QuestManager.turn_in completes the quest and consumes the
+## proof, then emits quest_reward_offered; granting lives here because the
+## autoload has no business owning a screen.
+func show_quest_rewards(quest_id: String, offers: Array, character) -> void:
+	if get_node_or_null("QuestRewardScreen") != null:
+		return
+	if character == null or not is_instance_valid(character):
+		character = player
+	if character == null or not is_instance_valid(character):
+		return
+
+	var screen = load("res://UI/QuestRewardScreen.gd").new()
+	screen.name = "QuestRewardScreen"
+	screen.setup(quest_id, offers, character)
+	if not screen.try_open():
+		screen.queue_free()
+		return
+	screen.chosen.connect(func(offer: Dictionary) -> void:
+		_apply_quest_reward(offer, character)
+		if is_instance_valid(screen):
+			screen.queue_free())
+	screen.dismissed.connect(func() -> void:
+		if is_instance_valid(screen):
+			screen.queue_free())
+	add_child(screen)
+
+## Hand over one chosen reward. Items and coin go through DowntimeEffectApplier,
+## which already knows how to pay out in currency items and how to put a thing in
+## a bag. A training offer grants NOTHING now — it books days with a teacher that
+## the learner has to actually spend.
+func _apply_quest_reward(offer: Dictionary, character) -> void:
+	match str(offer.get("type", "")):
+		"money":
+			DowntimeEffectApplier.apply(character, {"money": int(offer.get("amount", 0))}, 1)
+		"item":
+			var item_id: String = str(offer.get("item_id", ""))
+			var data: Dictionary = ItemDatabase.get_item_data(item_id)
+			if data.is_empty():
+				push_warning("Quest reward: unknown item '%s'" % item_id)
+				return
+			var inv = character.get_node_or_null("Inventory")
+			if inv != null and inv.has_method("add_item"):
+				inv.add_item(data)
+				if GameLog:
+					GameLog.add_entry("Received %s." % str(data.get("display_name", item_id)))
+		"training":
+			TrainingManager.accept_offer(character, offer, current_map_id)
+
 func save_party_state() -> void:
 	## Snapshots every living party member's runtime state so it survives
 	## map transitions and can be written to a save file.
-	for i in range(party_state.size()):
-		if i >= party_chars.size():
-			break
-		var character = party_chars[i]
+	##
+	## Pairs by the party_index stamped at spawn rather than by array position:
+	## an away member has no entry in party_chars, so positional zipping would
+	## shift every later member's snapshot onto the wrong row and, e.g., write
+	## Djargo's inventory over Jacana's. Members without the meta (spawned by
+	## older code paths) fall back to their position.
+	for idx in range(party_chars.size()):
+		var character = party_chars[idx]
 		if not is_instance_valid(character):
 			continue
-		party_state[i]["live_state"] = _serialize_character(character)
+		var row: int = int(character.get_meta("party_index", idx))
+		if row < 0 or row >= party_state.size():
+			continue
+		party_state[row]["live_state"] = _serialize_character(character)
  
  
 func load_party_state_from_save(saved: Array) -> void:
 	## Called when loading a save file. Replaces party_state entirely.
 	party_state = saved
+
+# ---------------------------------------------------------------------------
+# Away party members (training that outlasts your stay)
+#
+# A companion who still owes their teacher days when you leave town has to
+# decide between you and the work. Absence is a data flag on their party_state
+# row, so it saves and loads with everything else and needs no new registry:
+#   entry["away"] = {reason, return_day, return_map, ability_id}
+#
+# reason "training"   — they stayed to finish, then come and find you.
+# reason "other_work" — they took a different job. They are where you left them
+#                       and will not chase you; go back for them.
+# ---------------------------------------------------------------------------
+
+## At or above this favour a companion finishes the course and then follows you.
+## Below it they take other work. Deliberately just above neutral: an ally you
+## have never done anything for is not obliged to cross a country for you.
+const FOLLOW_FAVOR_THRESHOLD: int = 10
+## Days a companion spends on the road catching up after finishing their studies.
+const REJOIN_TRAVEL_DAYS: int = 2
+
+func _on_date_changed_for_returns(_day: int, _month: int, _year: int) -> void:
+	if current_map_id.is_empty():
+		return
+	_resolve_returns(current_map_id)
+
+func is_party_member_away(entry) -> bool:
+	if not (entry is Dictionary):
+		return false
+	var away = entry.get("away", null)
+	return away is Dictionary and not (away as Dictionary).is_empty()
+
+func get_away_members() -> Array:
+	var out: Array = []
+	for entry in party_state:
+		if is_party_member_away(entry):
+			out.append(entry)
+	return out
+
+## Called just before a map change, while the party is still assembled. Any
+## member with an unfinished commitment anchored to the map we are leaving picks
+## one of the two branches above.
+func _resolve_departures(leaving_map: String, target_map: String) -> void:
+	if leaving_map.is_empty() or leaving_map == target_map:
+		return
+	for idx in range(party_chars.size()):
+		var character = party_chars[idx]
+		if not is_instance_valid(character):
+			continue
+		var row: int = int(character.get_meta("party_index", idx))
+		if row <= 0 or row >= party_state.size():
+			continue  # the protagonist never stays behind
+		var commitment: Dictionary = TrainingManager.commitment_for(character)
+		if commitment.is_empty():
+			continue
+		if str(commitment.get("map_id", "")) != leaving_map:
+			continue
+
+		var uid: String = DowntimeDatabase.character_uid(character)
+		var who: String = String(character.display_name)
+		var days_left: int = TrainingManager.days_remaining(character)
+		var loyal: bool = int(character.favorability) >= FOLLOW_FAVOR_THRESHOLD
+
+		if loyal:
+			# Finishes the course on their own time, then travels to you.
+			var ability_id: String = TrainingManager.complete_absent(uid)
+			party_state[row]["away"] = {
+				"reason": "training",
+				"return_day": TimeManager.today() + days_left + REJOIN_TRAVEL_DAYS,
+				"return_map": "",
+				"ability_id": ability_id,
+			}
+			if GameLog:
+				GameLog.add_entry("%s stays to finish their training, and will follow." % who)
+		else:
+			# Not owed enough to be left waiting. The booking stands — come back
+			# and they will still be studying — but they will not chase you.
+			party_state[row]["away"] = {
+				"reason": "other_work",
+				"return_day": -1,
+				"return_map": leaving_map,
+				"ability_id": str(commitment.get("ability_id", "")),
+			}
+			if GameLog:
+				GameLog.add_entry("%s takes other work rather than follow you." % who)
+
+## Called after a map loads. Brings back anyone whose absence has run out.
+## A "training" absence expires on a date; an "other_work" absence expires when
+## you return to the town you abandoned them in.
+func _resolve_returns(arrived_map: String) -> void:
+	var today: int = TimeManager.today()
+	var changed := false
+	for entry in party_state:
+		if not is_party_member_away(entry):
+			continue
+		var away: Dictionary = entry["away"]
+		var due: bool = false
+		match str(away.get("reason", "")):
+			"training":
+				due = int(away.get("return_day", -1)) >= 0 and today >= int(away.get("return_day", 0))
+			"other_work":
+				due = str(away.get("return_map", "")) == arrived_map
+		if not due:
+			continue
+		entry.erase("away")
+		changed = true
+		if GameLog:
+			GameLog.add_entry("%s rejoins the party." % str(entry.get("template_id", "Someone")))
+	if changed:
+		# Respawn so the returned member actually has a body on this map.
+		_spawn_returned_members(arrived_map)
+
+## Spawn party rows that are present but have no body, without disturbing the
+## ones already standing. Reuses the normal spawn path by re-running it for the
+## missing rows only.
+func _spawn_returned_members(_arrived_map: String) -> void:
+	var occupied: Dictionary = {}
+	for idx in range(party_chars.size()):
+		var c = party_chars[idx]
+		if is_instance_valid(c):
+			occupied[int(c.get_meta("party_index", idx))] = true
+	var anchor: Vector2 = player.global_position if is_instance_valid(player) else Vector2.ZERO
+	for row in range(party_state.size()):
+		if occupied.has(row) or is_party_member_away(party_state[row]):
+			continue
+		var entry = party_state[row]
+		var character = _spawn_character(entry["template_id"], anchor + Vector2(40 * (row + 1), 0),
+			entry.get("overrides", {}))
+		if not character:
+			continue
+		party_chars.append(character)
+		character.set_meta("party_index", row)
+		character.npc_unlimited_resources = false
+		character.AI_enabled = true
+		character.is_player_controlled = false
+		if entry.get("live_state"):
+			_deserialize_character(character, entry["live_state"])
+		character.faction_id = "player"
+		_wire_ally_witness(character)
+		_add_line_of_sight_light(character)
+		# Anything they finished studying while away lands now.
+		TrainingManager.flush_pending_grants(character)
 
 
 # ---------------------------------------------------------------------------
@@ -609,6 +904,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
 	if not party_chars.is_empty():
 		save_party_state()
+		# Runs while the party is still assembled and current_map_id still names
+		# the map being left: anyone mid-training here decides whether to follow.
+		_resolve_departures(current_map_id, map_id)
 
 	# Reset the "ever seen" radar memory — fresh map means fresh dread.
 	# Pulse/sighting dicts also get cleared so stale references don't linger.
@@ -762,6 +1060,11 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		_world_map_overlay.configure(current_map_data.get("world_labels", []))
 	else:
 		_world_map_overlay = null
+
+	# Anyone whose absence has run out walks back in. After the spawn pass so
+	# there is a player to stand next to, before map_loaded so listeners see the
+	# final roster.
+	_resolve_returns(map_id)
 
 	emit_signal("map_loaded", map_id)
 	print("[GameScene] Loaded map: %s (spawn: %s)" % [map_id, spawn_key])
@@ -974,6 +1277,10 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 
 	for i in range(spawn_count):
 		var entry = party_state[i]
+		# A member who stayed behind to finish their training, or who walked off
+		# to take other work, has no body in the world until they come back.
+		if is_party_member_away(entry):
+			continue
 		var offset = Vector2(i * 40, 0) if not is_world_map else Vector2.ZERO
 		# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
 		# battlement walkway ~20px wide) the +x row walks later members off the
@@ -1001,6 +1308,11 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 			continue
 
 		party_chars.append(character)
+		# Which party_state row this body belongs to. save_party_state used to
+		# pair the two arrays positionally, which is only correct while every row
+		# spawns; the `away` skip above breaks that, and a desynced pair writes
+		# one member's snapshot onto another's row.
+		character.set_meta("party_index", i)
 		# Party members always play by school-resource rules. TopDownCharacterDatabase
 		# defaults to npc_unlimited_resources = true for any template that hasn't
 		# opted into the new system; party characters override that here so casts
@@ -1071,7 +1383,17 @@ func _spawn_items(item_list: Array) -> void:
 			extras["owner_uid"] = str(item_def["owner_uid"])
 
 		for j in range(count):
-			create_item(item_id, pos, 1, extras)
+			var inst := create_item(item_id, pos, 1, extras)
+			# authored placements (editor exports): rotation is radians (the
+			# editor's draw transform + all 555 shipped spawns stay under 2*PI),
+			# scale a uniform multiplier over the item's base footprint. Both
+			# were being exported and silently dropped — every authored long
+			# table lay sideways and scaled set pieces (carpets) shrank.
+			if inst != null:
+				inst.rotation = float(item_def.get("rotation", 0.0))
+				var sc := float(item_def.get("scale", 1.0))
+				if sc != 1.0:
+					inst.scale = Vector2(sc, sc)
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:
@@ -1367,6 +1689,13 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 		item_instance.owner_uid = String(extras["owner_uid"])
 	if extras.has("stolen_from"):
 		item_instance.stolen_from = String(extras["stolen_from"])
+	# Quest-proof provenance. Set before add_child like the rest so _ready ->
+	# _apply_item_data sees origin_display_name and doesn't clobber the
+	# per-instance name with the generic database one.
+	if extras.has("origin") and extras["origin"] is Dictionary:
+		item_instance.origin = (extras["origin"] as Dictionary).duplicate(true)
+	if extras.has("origin_display_name"):
+		item_instance.origin_display_name = String(extras["origin_display_name"])
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -1469,11 +1798,15 @@ func build_save_dict() -> Dictionary:
 		"factions": FactionDatabase.standing_to_dict(),
 		"conditions_note": "per-character condition state rides inside party/npc snapshots",
 		"quests": QuestManager.get_save_data(),
+		"training": TrainingManager.get_save_data(),
 		"readables": ReadableManager.get_save_data(),
 		"triggers": MapTriggerState.fired.duplicate(true),
 		"world_state": Globals.world_state.duplicate(true),
 		"unlocked_locks": unlocked_locks.duplicate(true),
 		"known_services": known_services_per_region.duplicate(true),
+		# DowntimeDatabase's header claims this "round-trips with the existing
+		# save flow"; it did not, so every 7-day result cooldown reset on load.
+		"downtime_recent_events": downtime_recent_events.duplicate(true),
 		"days_elapsed": TimeManager.days_elapsed,
 		"game_time": TimeManager.game_time,
 		"date": [TimeManager.current_day, TimeManager.current_month, TimeManager.current_year],
@@ -1488,11 +1821,13 @@ func apply_save_dict(d: Dictionary) -> void:
 	item_state_per_map = d.get("item_state_per_map", {}).duplicate(true)
 	FactionDatabase.standing_from_dict(d.get("factions", {}))
 	QuestManager.load_save_data(d.get("quests", {}))
+	TrainingManager.load_save_data(d.get("training", {}))
 	ReadableManager.load_save_data(d.get("readables", {}))
 	MapTriggerState.fired = d.get("triggers", {}).duplicate(true)
 	Globals.world_state = d.get("world_state", {}).duplicate(true)
 	unlocked_locks = d.get("unlocked_locks", {}).duplicate(true)
 	known_services_per_region = d.get("known_services", {}).duplicate(true)
+	downtime_recent_events = d.get("downtime_recent_events", {}).duplicate(true)
 	TimeManager.days_elapsed = int(d.get("days_elapsed", TimeManager.days_elapsed))
 	TimeManager.game_time = float(d.get("game_time", TimeManager.game_time))
 	var date: Array = d.get("date", [])
@@ -1525,6 +1860,12 @@ func _capture_item_state() -> void:
 			"controlling_faction": str(it.controlling_faction),
 			"loot_value": float(it.loot_value),
 		}
+		# Quest-proof provenance survives a map unload, so a bounty head left on
+		# the floor is still that victim's head when you come back for it.
+		if it.origin is Dictionary and not (it.origin as Dictionary).is_empty():
+			record["origin"] = (it.origin as Dictionary).duplicate(true)
+		if str(it.origin_display_name) != "":
+			record["origin_display_name"] = str(it.origin_display_name)
 		if it.contents is Array:
 			record["contents"] = (it.contents as Array).duplicate(true)
 		records.append(record)
@@ -1548,6 +1889,10 @@ func _restore_item_state() -> void:
 		var loot_value: float = float(record.get("loot_value", -1.0))
 		if loot_value >= 0.0:
 			extras["value"] = loot_value
+		if record.has("origin") and record["origin"] is Dictionary:
+			extras["origin"] = (record["origin"] as Dictionary).duplicate(true)
+		if record.has("origin_display_name"):
+			extras["origin_display_name"] = str(record["origin_display_name"])
 		var item = create_item(str(record.get("id", "")),
 			Vector2(float(record.get("x", 0.0)), float(record.get("y", 0.0))), 1, extras)
 		if item == null:
@@ -2022,6 +2367,132 @@ func _update_warp_hover_labels() -> void:
 		var inside: bool = absf(local.x) <= rect_size.x * 0.5 and absf(local.y) <= rect_size.y * 0.5
 		hover_label.visible = inside
 
+
+# Weapon trait keys are authored capitalised in Items.json ("Melee", "Ranged",
+# "Metal", ...) and copied verbatim into WeaponShape.traits, but both STR-bonus
+# call sites used to test for lowercase "melee". The check never matched, so
+# STRENGTH CONTRIBUTED NOTHING to armed melee damage — only to unarmed strikes.
+# Match case-insensitively so the damage table can be authored assuming the
+# +STR/10 term actually lands.
+func _weapon_is_melee(weapon) -> bool:
+	if weapon == null or not weapon.get("traits"):
+		return false
+	for key in weapon.traits.keys():
+		if String(key).to_lower() == "melee":
+			return true
+	return false
+
+
+# Attacker-side damage modifiers. All three of these were recomputed from
+# conditions every tick and round-tripped through save/load, but NOTHING in the
+# character damage path ever read them — every buff granting bonus damage was
+# silently inert. They apply here, once, for every weapon/unarmed/thrown hit:
+#
+#   damage_multiplier          = 0.5 + STR/100      (1.0 at STR 50)
+#   bonus_damage               flat, from conditions ("powerful" grants +2)
+#   bonus_damage_against_trait = flat "bane"-style bonus vs a target trait
+#
+# STRENGTH only scales what you swing or throw, so ranged weapons skip the
+# multiplier but still take the flat bonuses. Weapon damage in Items.json is
+# authored as the FINAL number for an average (STR 50) character, which makes
+# the multiplier exactly 1.0 there — the balance table is the STR-50 row.
+func _apply_attacker_damage_mods(damage: Dictionary, attacker, target, str_scales: bool) -> void:
+	if attacker == null or damage.is_empty():
+		return
+	if str_scales:
+		var mult: float = float(attacker.damage_multiplier)
+		if mult != 1.0:
+			for dtype in damage.keys():
+				damage[dtype] = float(damage[dtype]) * mult
+
+	# Flat bonuses land on the leading damage type after scaling, so a bane
+	# bonus is worth the same whether you swing a longsword or a dagger.
+	# Trait keys are authored lowercase but capitalised on characters/races,
+	# so the bane lookup matches case-insensitively.
+	# Rage is NOT a `bonus_damage` stat_modifier: its size tracks the attacker's
+	# CURRENT missing HP, which a modifier's constant `value` cannot express. It
+	# is read at swing time from the same helper the DR half uses
+	# (ProceduralCharacter.rage_bonus) so the two can never disagree. Weapon
+	# attacks only, matching `bonus_damage` itself -- ability damage resolves in
+	# AbilityEffect._resolve_damage, which never reaches this function.
+	var rage_flat: float = float(attacker.rage_bonus()) if attacker.has_method("rage_bonus") else 0.0
+	var flat: float = float(attacker.bonus_damage) + _bane_bonus_against(attacker, target) + rage_flat
+	if flat != 0.0:
+		var keys = damage.keys()
+		damage[keys[0]] = maxf(0.0, float(damage[keys[0]]) + flat)
+
+
+func _bane_bonus_against(attacker, target) -> float:
+	if target == null or not attacker.get("bonus_damage_against_trait"):
+		return 0.0
+	if not ("traits" in target) or not (target.traits is Dictionary):
+		return 0.0
+	var target_keys := {}
+	for k in target.traits.keys():
+		if float(target.traits[k]) > 0.0:
+			target_keys[String(k).to_lower()] = true
+	var total: float = 0.0
+	for trait_key in attacker.bonus_damage_against_trait.keys():
+		var bonus: float = float(attacker.bonus_damage_against_trait[trait_key])
+		if bonus != 0.0 and target_keys.has(String(trait_key).to_lower()):
+			total += bonus
+	return total
+
+
+# Weapon-level bane MULTIPLIERS (vs the additive attacker-level bonuses above):
+# `damage_vs_trait` {"spectral": 2.0} doubles every damage type against targets
+# carrying that trait. `source` is a WeaponShape or a raw item Dictionary
+# (thrown items reach their hit callback as data, not nodes).
+func _apply_weapon_trait_mult(damage: Dictionary, source, target) -> void:
+	if source == null or target == null or damage.is_empty():
+		return
+	var vs = source.get("damage_vs_trait")
+	if not (vs is Dictionary) or vs.is_empty():
+		return
+	if not ("traits" in target) or not (target.traits is Dictionary):
+		return
+	var target_keys := {}
+	for k in target.traits.keys():
+		if float(target.traits[k]) > 0.0:
+			target_keys[String(k).to_lower()] = true
+	var mult: float = 1.0
+	for trait_key in vs.keys():
+		if target_keys.has(String(trait_key).to_lower()):
+			mult *= float(vs[trait_key])
+	if mult != 1.0:
+		for dtype in damage.keys():
+			damage[dtype] = float(damage[dtype]) * mult
+
+
+# Unique-item on-hit procs: the item names an ability (`on_hit_ability`) whose
+# effects resolve directly at the victim — no cast, no school costs, no
+# targeting UI. `source` is a WeaponShape or a raw item Dictionary. The
+# ability data may carry "min_damage": procs only when the hit dealt at least
+# that much (post-DR).
+func _apply_item_on_hit_effects(attacker, target, source, damage_dealt: int, hit_position: Vector2) -> void:
+	if source == null or attacker == null:
+		return
+	# The dead are not targets: a killing blow must not brand/charm/chrome the
+	# corpse (take_damage runs before this at every call site).
+	if target != null and target.has_method("is_alive") and not target.is_alive():
+		return
+	var raw = source.get("on_hit_ability")
+	var ability_id: String = str(raw) if raw != null else ""
+	if ability_id == "" or ability_id == "null":
+		return
+	var data: Dictionary = AbilityDatabase.get_ability_data(ability_id)
+	if data.is_empty():
+		return
+	if damage_dealt < int(data.get("min_damage", 0)):
+		return
+	var ability = Ability.from_dict(data)
+	for effect in ability.effects:
+		AbilityEffect.resolve_effect(effect, attacker, [target], ability, hit_position)
+	if attacker is CharacterBody2D and target is CharacterBody2D:
+		emit_signal("damage_dealt", attacker, target,
+			{"source": source, "damage": damage_dealt, "position": hit_position})
+
+
 func process_object_hit(
 	attacker: ProceduralCharacter,
 	target: Node2D,
@@ -2033,16 +2504,14 @@ func process_object_hit(
 	var attack_damage: Dictionary
 	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
-		if weapon.get("traits") and "melee" in weapon.traits:
-			var str_bonus = attacker.strength / 10.0
-			for dtype in attack_damage:
-				attack_damage[dtype] += str_bonus
+		_apply_attacker_damage_mods(attack_damage, attacker, target, _weapon_is_melee(weapon))
+		_apply_weapon_trait_mult(attack_damage, weapon, target)
 	else:
 		# Unarmed (or AbilityShape held while combat collision detection runs).
 		attack_damage = {
-			attacker.unarmed_strike_damage_type:
-				attacker.unarmed_strike_damage + attacker.strength / 10.0
+			attacker.unarmed_strike_damage_type: float(attacker.unarmed_strike_damage)
 		}
+		_apply_attacker_damage_mods(attack_damage, attacker, target, true)
 
 	# Objects use take_damage(damage_dict, success_level) and handle DR internally
 	target.take_damage(attack_damage, 0)
@@ -2065,10 +2534,10 @@ func process_object_hit(
 		SfxManager.play("impact", target.global_position)
 		HearingManager.emit(target.global_position, 0.8, attacker)
 
-	# Trigger weapon ability on non-bounced hits
+	# Unique-item on-hit procs on non-bounced hits (condition effects no-op on
+	# structures; positional effects like spawn_fluid/cloud still land)
 	if weapon and penetration_result.state != PenetrationState.BOUNCED:
-		if weapon.get("use_ability") and weapon.get("ability"):
-			attacker._resolve_ability_effects(weapon.ability, hit_position)
+		_apply_item_on_hit_effects(attacker, target, weapon, int(total_damage), hit_position)
 
 	return {
 		"attacker": attacker,
@@ -2081,6 +2550,14 @@ func process_object_hit(
 	}
 	
 func _input(event: InputEvent) -> void:
+	# Typing in a text field must never trigger game hotkeys: Node._input runs
+	# BEFORE Control gui_input, so a focused LineEdit can't consume the key
+	# first — typing "r" in the combat-test filter reloaded the whole scene,
+	# "t" toggled WAIT, digits switched the selection.
+	if event is InputEventKey:
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit:
+			return
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_F12:
@@ -2115,6 +2592,11 @@ func _input(event: InputEvent) -> void:
 				if not event.echo:
 					stealth_mode = not stealth_mode
 					_toggle_npc_los_cones()
+			KEY_T:
+				# WAIT toggle for the selected party members — the hotkey twin
+				# of the context menu's Wait Here / Resume pair.
+				if not event.echo:
+					_toggle_wait_selected()
 
 	# World-map toggle (M) and water gathering (G). Use action lookups so the
 	# bindings stay editable from project.godot.
@@ -2258,6 +2740,19 @@ func _sync_character_flags() -> void:
 			character.is_player_controlled = true
 			character.AI_enabled = false
 		else:
+			# Losing input authority must also end any planning gesture still in
+			# flight. ProceduralCharacter._handle_input is is_player_controlled-
+			# gated, so from the next frame this character can neither confirm NOR
+			# cancel what it started: an un-aimed AoE preview rides the cursor
+			# forever (AbilityTargeting processes ALWAYS and gates only on
+			# is_targeting) and PathInputHandler stays parked in PLACING_ACTION -
+			# which is why the only way to clear it was to re-select and confirm.
+			# Gated on the previous flag so it is a transition hook rather than a
+			# per-call sweep of the whole party, and so re-selecting the character
+			# who is ALREADY targeting leaves their live session alone.
+			# Confirmed plans are never touched.
+			if character.is_player_controlled:
+				character.abort_planning_input()
 			character.is_player_controlled = false
 			character.AI_enabled = true
 
@@ -2283,6 +2778,28 @@ func select_previous() -> void:
 func get_selected() -> ProceduralCharacter:
 	"""Get the primary selected character"""
 	return primary_selected
+
+# T: toggle the WAIT order on every selected party member. Mixed selections
+# unify — if anyone is still free the whole selection holds; only when all of
+# them already hold does T release them. Same flag + log lines as the context
+# menu's Wait Here / Resume, so the two entry points are interchangeable.
+func _toggle_wait_selected() -> void:
+	var targets: Array = []
+	for ch in selected_characters:
+		if is_instance_valid(ch) and ch in party_chars \
+				and ch.has_method("is_alive") and ch.is_alive():
+			targets.append(ch)
+	if targets.is_empty():
+		return
+	var hold := false
+	for ch in targets:
+		if not ch.hold_position:
+			hold = true
+			break
+	for ch in targets:
+		if ch.hold_position != hold:
+			ch.hold_position = hold
+			GameLog.add_entry(str(ch.Name) + (" holds position." if hold else " moves out."))
 
 # ===== COMBAT CALLBACKS =====
 
@@ -2310,9 +2827,46 @@ func _on_character_died(character: ProceduralCharacter) -> void:
 	var ai_node = character.get_node_or_null("AI")
 	if ai_node:
 		ai_node.current_state = ai_node.AIState.DEAD
+	_drop_quest_trophies(character)
 	if character == player:
 		print("\n=== GAME OVER ===")
 		print("Press R to restart")
+
+## Quest-proof harvesting. When a character dies, any active quest that declares
+## proof sourced from that character's template gets its trophy appended to the
+## corpse's own inventory, stamped with the victim's identity. Ordinary
+## "Search Body" looting then picks it up — no new interaction verb, because
+## _enter_corpse_state aliases `contents` to the SAME Array as inventory.items,
+## so an append here is visible in the loot window regardless of which of the two
+## death paths runs first.
+##
+## Hooked to character_died (not _enter_corpse_state) deliberately: that signal
+## fires exactly once per real death, while restore_dead_state re-runs the corpse
+## setup on every map re-entry and would re-mint the trophy each time.
+func _drop_quest_trophies(character) -> void:
+	if character == null or not is_instance_valid(character):
+		return
+	if character.has_meta("quest_trophies_taken"):
+		return
+	var template_id: String = str(character.template_id) if "template_id" in character else ""
+	if template_id.is_empty():
+		return
+	var specs: Array = QuestManager.proof_specs_for_template(template_id)
+	if specs.is_empty():
+		return
+	var inv = character.get_node_or_null("Inventory")
+	if inv == null or not inv.has_method("add_item"):
+		return
+
+	character.set_meta("quest_trophies_taken", true)
+	var minted: Array = []
+	for spec in specs:
+		var item_id: String = str(spec.get("item", ""))
+		# Two quests wanting the same trophy from the same corpse share one head.
+		if item_id.is_empty() or item_id in minted:
+			continue
+		minted.append(item_id)
+		inv.add_item(character.build_trophy_item(item_id))
 
 func _print_status() -> void:
 	print("\n=== STATUS ===")
@@ -2438,19 +2992,13 @@ func process_weapon_hit(
 	var attack_damage: Dictionary
 	if weapon and not (weapon is AbilityShape):
 		attack_damage = weapon.damage.duplicate()
-		if weapon.get("traits") and "melee" in weapon.traits:
-			var str_bonus = attacker.strength / 10.0
-			# Get all damage type keys (e.g., ["physical", "fire"])
-			var damage_types = attack_damage.keys()
-			# Apply to the first one available, provided the dictionary isn't empty
-			if damage_types.size() > 0:
-				var first_type = damage_types[0]
-				attack_damage[first_type] += str_bonus
+		_apply_attacker_damage_mods(attack_damage, attacker, target, _weapon_is_melee(weapon))
+		_apply_weapon_trait_mult(attack_damage, weapon, target)
 	else:
 		attack_damage = {
-			attacker.unarmed_strike_damage_type:
-				attacker.unarmed_strike_damage + attacker.strength / 10.0
+			attacker.unarmed_strike_damage_type: float(attacker.unarmed_strike_damage)
 		}
+		_apply_attacker_damage_mods(attack_damage, attacker, target, true)
 
 	# Bide payoff: add accumulated bonus to the first damage type and consume it
 	if "bide_pending_bonus" in attacker and attacker.bide_pending_bonus > 0.0:
@@ -2483,10 +3031,16 @@ func process_weapon_hit(
 	var actual_weapon = weapon if weapon is WeaponShape else null
 	var penetration_result = _calculate_penetration(final_damage, attack_velocity, actual_weapon)
 
-	# Trigger weapon ability only if we actually penetrated
-	if weapon and penetration_result.state != PenetrationState.BOUNCED:
-		if weapon.get("use_ability") and weapon.get("ability"):
-			attacker._resolve_ability_effects(weapon.ability, hit_position)
+	# Unique-item / natural-weapon on-hit procs fire only if we actually
+	# penetrated. Unarmed strikes proc the attacker's race/template
+	# unarmed_on_hit_ability through the same hook (as a data source, the way
+	# thrown items do).
+	if penetration_result.state != PenetrationState.BOUNCED:
+		var proc_source = weapon
+		if is_unarmed and str(attacker.get("unarmed_on_hit_ability")) != "":
+			proc_source = {"on_hit_ability": attacker.unarmed_on_hit_ability}
+		if proc_source:
+			_apply_item_on_hit_effects(attacker, target, proc_source, final_damage, hit_position)
 
 	var result = {
 		"attacker": attacker,
@@ -2653,8 +3207,27 @@ func register_attack_start(attacker: Node2D) -> void:
 	active_hits[attacker.get_instance_id()] = {}
 
 func register_attack_end(attacker: Node2D) -> void:
-	"""Called when an attack ends - clears hit tracking"""
-	active_hits.erase(attacker.get_instance_id())
+	"""Called when an attack ends - clears hit tracking. Also reports a melee
+	swing that touched nothing: whiffs used to be completely silent (no log, no
+	SFX, no cue), so a character parked outside its own reach looked identical to
+	one trading blows, which is what let the reach/stand-off mismatch hide."""
+	var attacker_id: int = attacker.get_instance_id()
+	if active_hits.has(attacker_id) and active_hits[attacker_id].is_empty():
+		_log_melee_whiff(attacker)
+	active_hits.erase(attacker_id)
+
+# Party-only so a twenty-body brawl doesn't bury the log. Ranged attacks and
+# casts share the attack-tracking plumbing but resolve elsewhere (projectiles,
+# AbilityEffect), so an empty hit set means nothing for them.
+func _log_melee_whiff(attacker: Node2D) -> void:
+	if not (attacker is ProceduralCharacter) or not (attacker in party_chars):
+		return
+	var anim = attacker.attack_animator
+	if anim == null or anim.is_casting:
+		return
+	if String(anim.current_damage_type) in ["ranged_arrow", "ranged_bullet"]:
+		return
+	GameLog.add_entry("%s swings and connects with nothing." % attacker.Name)
 
 const MELEE_ELEV_TOLERANCE := 0.75
 
@@ -2685,6 +3258,59 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 		return true
 
 	return not active_hits[attacker_id].has(target_id)
+
+# ===== CHARACTER MELEE: REACH + ARC =====
+#
+# Called from ProceduralCharacter._on_attack_hit at the animation's hit frame.
+# This — not the weapon's blade Area2D — is what decides whether a melee swing
+# lands on a character. See MeleeReach for the measurements that motivated it.
+# The Area2D survives as the object channel (doors, crates), masked to
+# CollisionLayers.WEAPON_OBJECT_HITBOX_MASK.
+func resolve_melee_swing(attacker: Node2D, hand: String) -> void:
+	if not (attacker is ProceduralCharacter) or not attacker.is_alive():
+		return
+	var anim = attacker.attack_animator
+	# attack_hit_frame also fires for casts and for the ranged release; both
+	# resolve elsewhere (AbilityEffect, _fire_ranged_async -> projectiles).
+	if anim == null or anim.is_casting:
+		return
+	if String(anim.current_damage_type) in ["ranged_arrow", "ranged_bullet"]:
+		return
+
+	var weapon: Node2D = attacker.current_off_hand_item if hand == "Off" else attacker.current_main_hand_item
+	if weapon is AbilityShape:
+		return
+	if weapon is WeaponShape and not weapon.is_melee():
+		return
+
+	var damage_type: String = String(attacker.unarmed_strike_damage_type)
+	if weapon is WeaponShape:
+		damage_type = String(weapon.primary_damage_type)
+
+	# attack_velocity feeds the penetration model. Read off the animator exactly
+	# as the Area2D path did — it was never derived from the collision.
+	var attack_velocity: float = 0.0
+	if weapon is WeaponShape:
+		attack_velocity = absf(anim.get_weapon_rotation()) * float(weapon.total_length)
+
+	# Iterating characters_in_scene rather than a physics query keeps this
+	# independent of collision layers, and corpses are filtered by is_alive()
+	# (they stay in this list on purpose — see CrimeManager).
+	for target in characters_in_scene:
+		if target == attacker or not is_instance_valid(target):
+			continue
+		if not (target is ProceduralCharacter) or not target.is_alive():
+			continue
+		if not MeleeReach.in_swing(attacker, target, weapon, damage_type):
+			continue
+		# Shared with the object channel, so both obey the same rules:
+		# already-hit-this-swing, dead targets, and the cross-storey veto.
+		if not can_hit_target(attacker, target):
+			continue
+		register_hit(attacker, target)
+		process_weapon_hit(attacker, target,
+			MeleeReach.contact_point(attacker, target), weapon, attack_velocity)
+
 
 func register_hit(attacker: Node2D, target: Node2D) -> void:
 	"""Mark that this attack has hit this target"""
@@ -2823,7 +3449,14 @@ func _process_projectile_hit_character(
 	var local_hit = target.to_local(hit_position)
 	var limb_type = target.get_limb_at_position(local_hit, target.body_width, target.body_height)
 	var attack_damage = weapon.damage.duplicate()
-	target.take_damage(attack_damage, local_hit, shooter, limb_type)
+	# Ranged: bonus_damage and bane bonuses apply, STR does not (a pistol does
+	# not care how strong you are).
+	_apply_attacker_damage_mods(attack_damage, shooter, target, false)
+	_apply_weapon_trait_mult(attack_damage, weapon, target)
+	var dealt: int = target.take_damage(attack_damage, local_hit, shooter, limb_type)
+	# dealt > 0 mirrors the melee BOUNCED gate: fully-absorbed hits don't proc
+	if dealt > 0:
+		_apply_item_on_hit_effects(shooter, target, weapon, dealt, hit_position)
 
 	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
@@ -2908,7 +3541,17 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
 			var limb_type: int = collider.get_limb_at_position(local_hit, collider.body_width, collider.body_height)
-			collider.take_damage(thrown_damage.duplicate(), local_hit, shooter, limb_type)
+			var thrown_final: Dictionary = thrown_damage.duplicate()
+			# Thrown weapons scale with STR — you put your arm into it.
+			_apply_attacker_damage_mods(thrown_final, shooter, collider, true)
+			# Thrown items reach this callback as an id, not a node — re-fetch
+			# the canonical item data so unique-item hooks work when thrown too.
+			var thrown_data: Dictionary = ItemDatabase.get_item_data(item_id) if not item_id.is_empty() else {}
+			_apply_weapon_trait_mult(thrown_final, thrown_data if not thrown_data.is_empty() else null, collider)
+			var dealt: int = collider.take_damage(thrown_final, local_hit, shooter, limb_type)
+			# dealt > 0 mirrors the melee BOUNCED gate
+			if dealt > 0 and not thrown_data.is_empty():
+				_apply_item_on_hit_effects(shooter, collider, thrown_data, dealt, hit_pos)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
@@ -3270,9 +3913,32 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["crit_threshold_modifier"] = character.crit_threshold_modifier
 	state["crit_fail_modifier"] = character.crit_fail_modifier
 	state["speed_modifier"] = character.speed_modifier
+	state["base_speed_modifier"] = character.base_speed_modifier
 
 	# --- Vitals ---
 	state["MP"] = character.MP
+
+	# --- Social / psychological state ---
+	# These diverge from the template and are NOT derivable from anything else,
+	# so they must ride the snapshot. They were previously omitted, which meant
+	# load_map's snapshot-and-respawn wiped a companion's accumulated favour and
+	# stress on every single warp. Anything that reads favorability across a map
+	# boundary (downtime refusals, training departures) depends on this block.
+	state["favorability"] = character.favorability
+	state["stress"] = character.stress
+	state["active_vows"] = character.active_vows.duplicate(true)
+	state["captured_souls"] = character.captured_souls.duplicate(true)
+	state["souls"] = character.souls
+	state["patron_id"] = character.patron_id
+	state["vow_holy_bonus"] = character.vow_holy_bonus
+	state["vow_poverty_points"] = character.vow_poverty_points
+	state["holy_tier_next_day_pending"] = character.holy_tier_next_day_pending
+
+	# --- Standing orders ---
+	# WAIT survives map transitions and saves: party members are freed and
+	# respawned on every warp, and a member parked outside a hazard must not
+	# silently resume following (review find: the order evaporated per warp).
+	state["hold_position"] = character.hold_position
  
 	# --- Appearance ---
 	state["skin_color"] = character.skin_color.to_html()
@@ -3290,6 +3956,7 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	# --- Combat stats ---
 	state["unarmed_strike_damage"] = character.unarmed_strike_damage
 	state["unarmed_strike_damage_type"] = character.unarmed_strike_damage_type
+	state["unarmed_on_hit_ability"] = character.unarmed_on_hit_ability
 	state["CRIT_THRESHOLD"] = character.CRIT_THRESHOLD
 	state["CRIT_FAIL_THRESHOLD"] = character.CRIT_FAIL_THRESHOLD
 	state["bonus_damage"] = character.bonus_damage
@@ -3422,9 +4089,28 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("crit_threshold_modifier"): character.crit_threshold_modifier = state["crit_threshold_modifier"]
 	if state.has("crit_fail_modifier"):    character.crit_fail_modifier = state["crit_fail_modifier"]
 	if state.has("speed_modifier"):        character.speed_modifier = state["speed_modifier"]
+	if state.has("base_speed_modifier"):   character.base_speed_modifier = state["base_speed_modifier"]
  
 	# --- Vitals ---
 	if state.has("MP"):           character.MP = state["MP"]
+
+	# --- Social / psychological state ---
+	# Mirror of the serializer block. stress is clamped against max_stress, which
+	# derives from will and is therefore already correct by this point (the
+	# attribute restore runs above).
+	if state.has("favorability"):  character.favorability = int(state["favorability"])
+	if state.has("stress"):        character.stress = clamp(int(state["stress"]), 0, character.max_stress)
+	if state.has("active_vows"):   character.active_vows = (state["active_vows"] as Dictionary).duplicate(true)
+	if state.has("captured_souls"): character.captured_souls = (state["captured_souls"] as Array).duplicate(true)
+	if state.has("souls"):         character.souls = int(state["souls"])
+	if state.has("patron_id"):     character.patron_id = str(state["patron_id"])
+	if state.has("vow_holy_bonus"): character.vow_holy_bonus = int(state["vow_holy_bonus"])
+	if state.has("vow_poverty_points"): character.vow_poverty_points = int(state["vow_poverty_points"])
+	if state.has("holy_tier_next_day_pending"):
+		character.holy_tier_next_day_pending = int(state["holy_tier_next_day_pending"])
+
+	# setter drives the stop-hand indicator, so restore re-shows the badge
+	character.hold_position = bool(state.get("hold_position", false))
  
 	# --- Appearance ---
 	if state.has("skin_color"):
@@ -3449,6 +4135,8 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.unarmed_strike_damage = state["unarmed_strike_damage"]
 	if state.has("unarmed_strike_damage_type"):
 		character.unarmed_strike_damage_type = state["unarmed_strike_damage_type"]
+	if state.has("unarmed_on_hit_ability"):
+		character.unarmed_on_hit_ability = state["unarmed_on_hit_ability"]
 	if state.has("CRIT_THRESHOLD"):
 		character.CRIT_THRESHOLD = state["CRIT_THRESHOLD"]
 	if state.has("CRIT_FAIL_THRESHOLD"):

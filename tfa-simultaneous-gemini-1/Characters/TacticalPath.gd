@@ -28,6 +28,23 @@ class PathActionNode:
 	var icon_texture: Texture2D = null
 	var facing_angle: float = NAN  # For FACE action nodes (rotation arrows)
 
+	# --- Planned AoE, for PathDrawer's leader line ---------------------------
+	# Where the queued AoE ghost this node will spawn actually sits, and how far
+	# it reaches from that point. Recorded by PathInputHandler the moment the
+	# player confirms targeting, and deliberately reduced to two presentation
+	# numbers: the drawer never has to know what an AbilityTargeting.TargetShape
+	# is, and this class keeps no dependency on the ability layer.
+	# Vector2.INF means "this node produces no DETACHED AoE" — no ability, a
+	# character-targeted one, or a line/cone (whose ghost already starts at the
+	# node, so it needs no leader line).
+	var aoe_center: Vector2 = Vector2.INF
+	var aoe_extent: float = 0.0
+	# Ability.Intent for the planned ability — the third presentation number, and
+	# the one PathDrawer uses to tint the leader line to match its own AoE ghost.
+	# Deliberately a bare int (0 == Ability.Intent.NEUTRAL) rather than a typed
+	# reference, so this class still knows nothing about the ability layer.
+	var aoe_intent: int = 0
+
 	func _init(p_index: int = 0, p_t: float = 0.0, p_pos: Vector2 = Vector2.ZERO) -> void:
 		path_index = p_index
 		t = p_t

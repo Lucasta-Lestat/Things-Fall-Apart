@@ -116,6 +116,9 @@ func _fog_data_from_entry(entry: Dictionary) -> FogData:
 	data.scale = entry.get("noise_scale", 5.0)
 	var sp: Array = entry.get("speed", [0.02, 0.01])
 	data.speed = Vector2(sp[0], sp[1])
+	data.falloff_radius = minf(float(entry.get("falloff_radius", 1.0)), 1.0)
+	data.falloff_softness = float(entry.get("falloff_softness", 0.5))
+	data.edge_wobble = float(entry.get("edge_wobble", 0.35))
 	return data
 
 func _make_invisible_data(fog_size: Vector2) -> FogData:

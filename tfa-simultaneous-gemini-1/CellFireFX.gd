@@ -185,9 +185,13 @@ func _draw_smoke() -> void:
 			var drift := p + UP * (cr * 1.6 + cr * 2.8 * u) + wind * cr * 1.6 * u \
 				+ Vector2(sin(_t * 0.9 + sd * 20.0 + fi * 3.0) * cr * 0.3, 0.0)
 			var rad := cr * (0.30 + 0.55 * u) * k
-			_smoke.draw_circle(drift, rad, Color(0.13, 0.12, 0.11, 0.26 * (1.0 - u)))
+			# These puffs are the WISPS right at the flame. The drifting body of
+			# smoke is now a real FogOverlay plume (CellFire._emit_smoke), so they
+			# are held back a little to layer with it instead of doubling up into
+			# a muddy patch. Restore 0.26 / 0.18 for the pre-plume look.
+			_smoke.draw_circle(drift, rad, Color(0.13, 0.12, 0.11, 0.17 * (1.0 - u)))
 			_smoke.draw_circle(drift + Vector2(-rad * 0.3, -rad * 0.25), rad * 0.6,
-				Color(0.22, 0.21, 0.20, 0.18 * (1.0 - u)))
+				Color(0.22, 0.21, 0.20, 0.12 * (1.0 - u)))
 
 
 # --- cluster lights -----------------------------------------------------------

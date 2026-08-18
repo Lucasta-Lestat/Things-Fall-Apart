@@ -234,7 +234,7 @@ func _build_service_card(entry: Dictionary):
 	var icon = TextureRect.new()
 	icon.custom_minimum_size = Vector2(40, 40)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_load_service_icon(icon, entry)
 	header.add_child(icon)
@@ -562,7 +562,7 @@ func _create_slot(slot_entry: Dictionary, card_data: Dictionary) -> PanelContain
 		tex.texture = load(sprite_path)
 		tex.custom_minimum_size = ITEM_SLOT_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(tex)
 	else:
@@ -622,7 +622,7 @@ func _create_drag_preview(slot_entry: Dictionary) -> Control:
 		tex.texture = load(sprite_path)
 		tex.custom_minimum_size = ITEM_SLOT_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		return tex
 	var label = Label.new()
 	label.text = slot_entry.get("display_name", "Item")

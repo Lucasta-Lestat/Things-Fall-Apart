@@ -2,7 +2,7 @@
   {
 	"id": "longsword",
 	"type": "sword",
-	"base_damage": 10,
+	"base_damage": 15.0,
 	"total_length": 50.0,
 	"grip_position": 0.75,
 	"grip_length": 12.0,
@@ -14,7 +14,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": null,
 	"damage": {
-	  "slashing": 10
+		"slashing": 15
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -68,20 +68,21 @@
   {
 	"id": "flaming_sword",
 	"type": "sword",
-	"base_damage": 18,
+	"base_damage": 15.0,
 	"total_length": 52.0,
 	"grip_position": 0.75,
 	"grip_length": 13.0,
 	"blade_width": 6.0,
 	"balance_point": 0.3,
 	"sprite_path": "res://Items/flaming_sword.png",
+	"sprite_rotation_degrees": -45.0,
 	"weight": 3.2,
 	"cost": 500.0,
 	"equip_slot": "Main Hand",
 	"use_ability": "Ignite",
 	"damage": {
-	  "slashing": 12,
-	  "fire": 6
+		"slashing": 15,
+		"fire": 5
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -135,9 +136,267 @@
 	"display_name": "Flaming Sword"
   },
   {
+	"id": "match_striker",
+	"type": "sword",
+	"display_name": "Match Striker",
+	"description": "Any solid hit leaves a mark that glows as brightly as a candle. Nothing so branded can slip into invisibility.",
+	"base_damage": 9.0,
+	"total_length": 48.0,
+	"grip_position": 0.75,
+	"grip_length": 12.0,
+	"blade_width": 5.0,
+	"balance_point": 0.35,
+	"sprite_path": "res://Items/match_striker.png",
+	"sprite_rotation_degrees": -45.0,
+	"weight": 2.6,
+	"cost": 320.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"on_hit_ability": "match_strike",
+	"damage": {
+	  "slashing": 9,
+	  "fire": 1
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.5,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "slashing",
+	"max_health": 90.0,
+	"current_health": 90.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 2, "Arcane": 1, "Fire": 1, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.4,
+	"is_stackable": 0.0,
+	"resources": {"metal": 6, "essence": 3}
+  },
+  {
+	"id": "pensword",
+	"type": "sword",
+	"display_name": "The Pensword",
+	"description": "Black ink drips endlessly from the tip while drawn. Can be used as a pen; a lucky stroke blots the target's eyes.",
+	"base_damage": 8.0,
+	"total_length": 46.0,
+	"grip_position": 0.78,
+	"grip_length": 11.0,
+	"blade_width": 4.0,
+	"balance_point": 0.3,
+	"sprite_path": "res://Items/pensword.png",
+	"sprite_rotation_degrees": -45.0,
+	"weight": 1.8,
+	"cost": 280.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"on_hit_ability": "pensword_blot",
+	"adds_condition_on_equip": "inking",
+	"damage": {
+	  "piercing": 8
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.5,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "piercing",
+	"max_health": 80.0,
+	"current_health": 80.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 1, "Arcane": 1, "Scholarly": 1, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.0,
+	"is_stackable": 0.0,
+	"resources": {"metal": 4, "essence": 3}
+  },
+  {
+	"id": "heartbreaker",
+	"type": "hammer",
+	"display_name": "Heartbreaker",
+	"description": "A hammer that wounds bodies and wins hearts: the struck regard the wielder as a dear friend, ignoring the fact that they were just clobbered.",
+	"base_damage": 10.0,
+	"total_length": 40.0,
+	"grip_position": 0.85,
+	"grip_length": 12.0,
+	"blade_width": 8.0,
+	"balance_point": 0.2,
+	"sprite_path": "res://Items/heartbreaker.png",
+	"sprite_rotation_degrees": 135.0,
+	"weight": 3.6,
+	"cost": 420.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"on_hit_ability": "heartbreak",
+	"damage": {
+	  "bludgeoning": 10
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.4,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 110.0,
+	"current_health": 110.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 2, "Occult": 1, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.0,
+	"is_stackable": 0.0,
+	"resources": {"metal": 8, "essence": 4}
+  },
+  {
+	"id": "ghost_buster_sword",
+	"type": "sword",
+	"display_name": "Ghost Buster Sword",
+	"description": "The ghost of a sword that behaves like a real one. Spectral things take double damage from its edge.",
+	"base_damage": 11.0,
+	"total_length": 50.0,
+	"grip_position": 0.75,
+	"grip_length": 12.0,
+	"blade_width": 6.0,
+	"balance_point": 0.3,
+	"sprite_path": "res://Items/ghost_buster_sword.png",
+	"sprite_rotation_degrees": -45.0,
+	"weight": 1.2,
+	"cost": 520.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"damage_vs_trait": {"spectral": 2.0, "ghost": 2.0, "incorporeal": 2.0},
+	"damage": {
+	  "slashing": 11
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.5,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "slashing",
+	"max_health": 90.0,
+	"current_health": 90.0,
+	"walkability": 1.0,
+	"traits": {"Arcane": 2, "Occult": 1, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.3,
+	"is_stackable": 0.0,
+	"resources": {"essence": 8}
+  },
+  {
+	"id": "winters_grip",
+	"type": "sword",
+	"display_name": "Winter's Grip",
+	"description": "Incredibly cold when drawn — fog pours off the blade. Hold it too long and your own fingers begin to freeze to the hilt.",
+	"base_damage": 8.0,
+	"total_length": 50.0,
+	"grip_position": 0.75,
+	"grip_length": 12.0,
+	"blade_width": 6.0,
+	"balance_point": 0.3,
+	"sprite_path": "res://Items/winters_grip.png",
+	"sprite_rotation_degrees": -45.0,
+	"weight": 3.0,
+	"cost": 480.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"adds_condition_on_equip": "winters_grip",
+	"damage": {
+	  "slashing": 8,
+	  "cold": 3
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.5,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "slashing",
+	"max_health": 100.0,
+	"current_health": 100.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 2, "Arcane": 1, "Cold": 3, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.1,
+	"is_stackable": 0.0,
+	"resources": {"metal": 8, "essence": 5}
+  },
+  {
+	"id": "chrome_smoker",
+	"type": "gun",
+	"display_name": "Chrome Smoker",
+	"description": "Each shot plates its mark in a thin layer of shiny chrome. Layers stack; movement and action slow beneath the shell.",
+	"base_damage": 16.0,
+	"total_length": 22.0,
+	"grip_position": 0.85,
+	"grip_length": 8.0,
+	"blade_width": 3.0,
+	"balance_point": 0.4,
+	"sprite_path": "res://Items/chrome_smoker.png",
+	"sprite_rotation_degrees": -52.0,
+	"projectile_texture_path": "res://Items/bullet.png",
+	"ammo_type": "bullet",
+	"weight": 2.4,
+	"cost": 600.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"on_hit_ability": "chrome_smoke",
+	"damage": {
+	  "piercing": 16
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 4.0,
+	"satiety": 0.0,
+	"interact_options": ["Drop", "Sheathe"],
+	"primary_damage_type": "ranged_bullet",
+	"max_health": 40.0,
+	"current_health": 40.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 2, "Ranged": 1, "Firearm": 1, "Technological": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.0,
+	"is_stackable": 0.0,
+	"resources": {"metal": 8}
+  },
+  {
+	"id": "prod_of_justice",
+	"type": "club",
+	"display_name": "The Prod of Justice",
+	"description": "Delivers a solid electrical jolt: targets may seize up or drop their weapons yelling.",
+	"base_damage": 6.0,
+	"total_length": 44.0,
+	"grip_position": 0.85,
+	"grip_length": 12.0,
+	"blade_width": 4.0,
+	"balance_point": 0.35,
+	"sprite_path": "res://Items/prod_of_justice.png",
+	"sprite_rotation_degrees": -45.0,
+	"weight": 2.2,
+	"cost": 380.0,
+	"equip_slot": "Main Hand",
+	"use_ability": null,
+	"on_hit_ability": "prod_jolt",
+	"damage": {
+	  "bludgeoning": 6,
+	  "electric": 2
+	},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 1.5,
+	"satiety": 0.0,
+	"interact_options": ["Throw", "Drop", "Sheathe"],
+	"primary_damage_type": "bludgeoning",
+	"max_health": 100.0,
+	"current_health": 100.0,
+	"walkability": 1.0,
+	"traits": {"Metal": 1, "Technological": 1, "Lawful": 1, "Melee": 1},
+	"is_cursed": 0.0,
+	"emits_light": 0.0,
+	"is_stackable": 0.0,
+	"resources": {"metal": 6}
+  },
+  {
 	"id": "handaxe",
 	"type": "axe",
-	"base_damage": 12,
+	"base_damage": 14.0,
 	"total_length": 40.0,
 	"grip_position": 0.85,
 	"grip_length": 24.0,
@@ -149,7 +408,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Chop",
 	"damage": {
-	  "slashing": 12
+		"slashing": 14
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -204,7 +463,7 @@
   {
 	"id": "battle_axe",
 	"type": "axe",
-	"base_damage": 16,
+	"base_damage": 19.0,
 	"total_length": 50.0,
 	"grip_position": 0.82,
 	"grip_length": 28.0,
@@ -216,7 +475,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Cleave",
 	"damage": {
-	  "slashing": 16
+		"slashing": 19
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -270,20 +529,21 @@
   {
 	"id": "frost_axe",
 	"type": "axe",
-	"base_damage": 15,
+	"base_damage": 13.0,
 	"total_length": 48.0,
 	"grip_position": 0.83,
 	"grip_length": 26.0,
 	"blade_width": 15.0,
 	"balance_point": 0.2,
 	"sprite_path": "res://Items/frost_axe.png",
+	"sprite_rotation_degrees": 45.0,
 	"weight": 5.8,
 	"cost": 450.0,
 	"equip_slot": "Main Hand",
 	"use_ability": "Freeze",
 	"damage": {
-	  "slashing": 10,
-	  "cold": 5
+		"slashing": 13,
+		"cold": 4
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -340,7 +600,7 @@
 	"id": "rapier",
 	"display_name": "Rapier",
 	"type": "sword",
-	"base_damage": 9,
+	"base_damage": 15.0,
 	"total_length": 45.0,
 	"grip_position": 0.85,
 	"grip_length": 8.0,
@@ -352,7 +612,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Riposte",
 	"damage": {
-	  "piercing": 9
+		"piercing": 15
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -398,9 +658,9 @@
 	"id": "pike",
 	"display_name": "Pike",
 	"type": "spear",
-	"base_damage": 14,
+	"base_damage": 18.0,
 	"total_length": 120.0,
-	"grip_position": 0.4,
+	"grip_position": 0.85,
 	"grip_length": 50.0,
 	"blade_width": 4.0,
 	"balance_point": 0.5,
@@ -410,7 +670,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Brace",
 	"damage": {
-	  "piercing": 14
+		"piercing": 18
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -456,7 +716,7 @@
 	"id": "sickle",
 	"display_name": "Sickle",
 	"type": "weapon",
-	"base_damage": 7,
+	"base_damage": 10.0,
 	"total_length": 25.0,
 	"grip_position": 0.8,
 	"grip_length": 10.0,
@@ -468,7 +728,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Harvest",
 	"damage": {
-	  "slashing": 7
+		"slashing": 10
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -496,6 +756,7 @@
 	"walkability": 1.0,
 	"damage_modifiers": null,
 	"traits": {
+		"Melee": 1,
 	  "Metal": 1,
 	  "Organic": 1,
 	  "Light": 1,
@@ -515,7 +776,7 @@
 	"id": "staff",
 	"display_name": "Staff",
 	"type": "staff",
-	"base_damage": 8,
+	"base_damage": 13.0,
 	"total_length": 65.0,
 	"grip_position": 0.5,
 	"grip_length": 40.0,
@@ -527,7 +788,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Sweep",
 	"damage": {
-	  "bludgeoning": 8
+		"bludgeoning": 13
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -572,7 +833,7 @@
 	"id": "maul",
 	"display_name": "Maul",
 	"type": "mace",
-	"base_damage": 22,
+	"base_damage": 31.0,
 	"total_length": 60.0,
 	"grip_position": 0.8,
 	"grip_length": 35.0,
@@ -585,7 +846,7 @@
 	"grip_style": "two_handed",
 	"use_ability": "Crushing Blow",
 	"damage": {
-	  "bludgeoning": 22
+		"bludgeoning": 31
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -631,7 +892,7 @@
 	"id": "great_axe",
 	"display_name": "Great Axe",
 	"type": "axe",
-	"base_damage": 20,
+	"base_damage": 29.0,
 	"total_length": 65.0,
 	"grip_position": 0.8,
 	"grip_length": 38.0,
@@ -644,7 +905,7 @@
 	"grip_style": "two_handed",
 	"use_ability": "Execution",
 	"damage": {
-	  "slashing": 20
+		"slashing": 29
 	},
 	"damage_resitances": {
 	  "slashing": 2,
@@ -688,7 +949,7 @@
 	"id": "great_club",
 	"display_name": "Great Club",
 	"type": "mace",
-	"base_damage": 18,
+	"base_damage": 23.0,
 	"total_length": 70.0,
 	"grip_position": 0.85,
 	"grip_length": 40.0,
@@ -701,7 +962,7 @@
 	"grip_style": "two_handed",
 	"use_ability": "Battering Ram",
 	"damage": {
-	  "bludgeoning": 18
+		"bludgeoning": 23
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -745,7 +1006,7 @@
 	"id": "hammer",
 	"display_name": "Hammer",
 	"type": "mace",
-	"base_damage": 11,
+	"base_damage": 15.0,
 	"total_length": 35.0,
 	"grip_position": 0.85,
 	"grip_length": 15.0,
@@ -757,7 +1018,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Repair",
 	"damage": {
-	  "bludgeoning": 11
+		"bludgeoning": 15
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -803,9 +1064,9 @@
 	"id": "glaive",
 	"display_name": "Glaive",
 	"type": "spear",
-	"base_damage": 16,
+	"base_damage": 18.0,
 	"total_length": 90.0,
-	"grip_position": 0.5,
+	"grip_position": 0.78,
 	"grip_length": 45.0,
 	"blade_width": 10.0,
 	"balance_point": 0.3,
@@ -816,7 +1077,7 @@
 	"grip_style": "two_handed",
 	"use_ability": "Cleave",
 	"damage": {
-	  "slashing": 16
+		"slashing": 18
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -872,17 +1133,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 2,
-	  "bludgeoning": 2,
-	  "piercing": 3,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 2,
+		"piercing": 2,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -913,7 +1174,7 @@
   {
 	"id": "dagger",
 	"type": "dagger",
-	"base_damage": 6,
+	"base_damage": 10.0,
 	"total_length": 25.0,
 	"grip_position": 0.65,
 	"grip_length": 8.0,
@@ -925,7 +1186,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Quick Stab",
 	"damage": {
-	  "piercing": 6
+		"piercing": 10
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -980,7 +1241,7 @@
   {
 	"id": "stilleto",
 	"type": "dagger",
-	"base_damage": 10,
+	"base_damage": 12.0,
 	"total_length": 28.0,
 	"grip_position": 0.6,
 	"grip_length": 9.0,
@@ -992,8 +1253,8 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Assassinate",
 	"damage": {
-	  "piercing": 10,
-	  "poison": 2
+		"piercing": 12,
+		"poison": 2
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -1049,9 +1310,9 @@
   {
 	"id": "spear",
 	"type": "spear",
-	"base_damage": 11,
+	"base_damage": 15.0,
 	"total_length": 70.0,
-	"grip_position": 0.6,
+	"grip_position": 0.75,
 	"grip_length": 30.0,
 	"blade_width": 4.0,
 	"balance_point": 0.45,
@@ -1061,7 +1322,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Thrust",
 	"damage": {
-	  "piercing": 11
+		"piercing": 15
 	},
 	"damage_resitances": {
 	  "slashing": 0,
@@ -1117,7 +1378,7 @@
   {
 	"id": "mace",
 	"type": "mace",
-	"base_damage": 13,
+	"base_damage": 16.0,
 	"total_length": 38.0,
 	"grip_position": 0.8,
 	"grip_length": 18.0,
@@ -1129,7 +1390,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": "Crush",
 	"damage": {
-	  "bludgeoning": 13
+		"bludgeoning": 16
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -1183,20 +1444,21 @@
   {
 	"id": "holy_mace",
 	"type": "mace",
-	"base_damage": 16,
+	"base_damage": 15.0,
 	"total_length": 42.0,
 	"grip_position": 0.78,
 	"grip_length": 20.0,
 	"blade_width": 12.0,
 	"balance_point": 0.12,
 	"sprite_path": "res://Items/holy_mace.png",
+	"sprite_rotation_degrees": -45.0,
 	"weight": 5.2,
 	"cost": 300.0,
 	"equip_slot": "Main Hand",
 	"use_ability": "Smite",
 	"damage": {
-	  "bludgeoning": 12,
-	  "radiant": 6
+		"bludgeoning": 15,
+		"radiant": 5
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -1252,19 +1514,20 @@
   {
 	"id": "warhammer",
 	"type": "mace",
-	"base_damage": 20,
+	"base_damage": 28.0,
 	"total_length": 55.0,
 	"grip_position": 0.75,
 	"grip_length": 30.0,
 	"blade_width": 14.0,
 	"balance_point": 0.1,
 	"sprite_path": "res://Items/warhammer.png",
+	"sprite_rotation_degrees": 45.0,
 	"weight": 12.0,
 	"cost": 60.0,
 	"equip_slot": "Main Hand",
 	"use_ability": "Ground Slam",
 	"damage": {
-	  "bludgeoning": 20
+		"bludgeoning": 28
 	},
 	"damage_resitances": {
 	  "slashing": 2,
@@ -1330,17 +1593,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 3,
-	  "bludgeoning": 2,
-	  "piercing": 2,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 2,
+		"piercing": 2,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -1392,17 +1655,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 3,
-	  "bludgeoning": 2,
-	  "piercing": 2,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 2,
+		"piercing": 2,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -1454,17 +1717,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 2,
-	  "bludgeoning": 1,
-	  "piercing": 1,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 5,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 1,
+		"piercing": 1,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 2,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -1518,17 +1781,17 @@
 	  "bludgeoning": 0
 	},
 	"damage_resitances": {
-	  "slashing": 0,
-	  "bludgeoning": 0,
-	  "piercing": 0,
-	  "fire": 0,
-	  "cold": 1,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": -2,
-	  "necrotic": 3
+		"slashing": 0,
+		"bludgeoning": 0,
+		"piercing": 0,
+		"fire": 0,
+		"cold": 1,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": -2,
+		"necrotic": 2
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -1957,17 +2220,17 @@
 	  "bludgeoning": 0
 	},
 	"damage_resitances": {
-	  "slashing": 0,
-	  "bludgeoning": 0,
-	  "piercing": 0,
-	  "fire": 0,
-	  "cold": 1,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": -5,
-	  "necrotic": 5
+		"slashing": 0,
+		"bludgeoning": 0,
+		"piercing": 0,
+		"fire": 0,
+		"cold": 1,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": -5,
+		"necrotic": 2
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -2021,17 +2284,17 @@
 	  "bludgeoning": 2
 	},
 	"damage_resitances": {
-	  "slashing": 4,
-	  "bludgeoning": 2,
-	  "piercing": 3,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 2,
+		"piercing": 2,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -2144,17 +2407,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 4,
-	  "bludgeoning": 3,
-	  "piercing": 3,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": -1,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 2,
+		"bludgeoning": 2,
+		"piercing": 2,
+		"fire": 0,
+		"cold": 0,
+		"electric": -1,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -2206,17 +2469,17 @@
 	  "bludgeoning": 1
 	},
 	"damage_resitances": {
-	  "slashing": 0,
-	  "bludgeoning": 1,
-	  "piercing": 0,
-	  "fire": 0,
-	  "cold": 1,
-	  "electric": 0,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 0,
+		"bludgeoning": 0,
+		"piercing": 0,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -2268,17 +2531,17 @@
 	  "bludgeoning": 2
 	},
 	"damage_resitances": {
-	  "slashing": 3,
-	  "bludgeoning": 2,
-	  "piercing": 2,
-	  "fire": 0,
-	  "cold": 0,
-	  "electric": -1,
-	  "sonic": 0,
-	  "poison": 0,
-	  "acid": 0,
-	  "radiant": 0,
-	  "necrotic": 0
+		"slashing": 0,
+		"bludgeoning": 0,
+		"piercing": 0,
+		"fire": 0,
+		"cold": 0,
+		"electric": 0,
+		"sonic": 0,
+		"poison": 0,
+		"acid": 0,
+		"radiant": 0,
+		"necrotic": 0
 	},
 	"healing": 0.0,
 	"range": 0.0,
@@ -2661,7 +2924,7 @@
 	"cost": 25.0,
 	"use_ability": "acid_puddle",
 	"damage": {
-	  "acid": 10
+	  "acid": 18
 	},
 	"interact_options": [
 	  "Consume",
@@ -2717,8 +2980,8 @@
 	"cost": 150.0,
 	"use_ability": "create_storm",
 	"damage": {
-	  "electric": 15,
-	  "sonic": 5
+	  "electric": 22,
+	  "sonic": 6
 	},
 	"interact_options": [
 	  "Consume",
@@ -2774,7 +3037,7 @@
 	"cost": 20.0,
 	"use_ability": "sand_blast",
 	"damage": {
-	  "bludgeoning": 5
+	  "bludgeoning": 9
 	},
 	"interact_options": [
 	  "Consume",
@@ -2802,7 +3065,7 @@
 	"cost": 35.0,
 	"use_ability": "freeze",
 	"damage": {
-	  "cold": 8
+	  "cold": 15
 	},
 	"interact_options": [
 	  "Consume",
@@ -2886,7 +3149,7 @@
 	"cost": 40.0,
 	"use_ability": "poison",
 	"damage": {
-	  "poison": 10
+	  "poison": 18
 	},
 	"interact_options": [
 	  "Consume",
@@ -3024,7 +3287,7 @@
 	"id": "shortbow",
 	"type": "bow",
 	"display_name": "Shortbow",
-	"base_damage": 6,
+	"base_damage": 12.0,
 	"total_length": 30.0,
 	"grip_position": 0.5,
 	"grip_length": 6.0,
@@ -3039,7 +3302,7 @@
 	"grip_style": "two_handed",
 	"use_ability": null,
 	"damage": {
-	  "piercing": 6
+	  "piercing": 12
 	},
 	"damage_resitances": {},
 	"healing": 0.0,
@@ -3080,7 +3343,7 @@
 	"id": "longbow",
 	"type": "bow",
 	"display_name": "Longbow",
-	"base_damage": 10,
+	"base_damage": 18.0,
 	"total_length": 70.0,
 	"grip_position": 0.5,
 	"grip_length": 12.0,
@@ -3095,7 +3358,7 @@
 	"grip_style": "two_handed",
 	"use_ability": null,
 	"damage": {
-	  "piercing": 10
+	  "piercing": 18
 	},
 	"damage_resitances": {},
 	"healing": 0.0,
@@ -3136,13 +3399,14 @@
 	"id": "pistol",
 	"type": "gun",
 	"display_name": "Pistol",
-	"base_damage": 12,
+	"base_damage": 22.0,
 	"total_length": 20.0,
 	"grip_position": 0.85,
 	"grip_length": 8.0,
 	"blade_width": 3.0,
 	"balance_point": 0.4,
 	"sprite_path": "res://Items/pistol.png",
+	"sprite_rotation_degrees": 33.0,
 	"projectile_texture_path": "res://Items/bullet.png",
 	"ammo_type": "bullet",
 	"weight": 2.0,
@@ -3150,7 +3414,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": null,
 	"damage": {
-	  "piercing": 12
+	  "piercing": 22
 	},
 	"damage_resitances": {},
 	"healing": 0.0,
@@ -3233,7 +3497,7 @@
 	"id": "shortsword",
 	"type": "sword",
 	"display_name": "Shortsword",
-	"base_damage": 7,
+	"base_damage": 12.0,
 	"total_length": 28.0,
 	"grip_position": 0.85,
 	"grip_length": 8.0,
@@ -3245,7 +3509,7 @@
 	"equip_slot": "Main Hand",
 	"use_ability": null,
 	"damage": {
-	  "slashing": 7
+		"slashing": 12
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -3299,7 +3563,7 @@
 	"id": "greatsword",
 	"type": "sword",
 	"display_name": "Greatsword",
-	"base_damage": 16,
+	"base_damage": 30.0,
 	"total_length": 75.0,
 	"grip_position": 0.78,
 	"grip_length": 22.0,
@@ -3312,7 +3576,7 @@
 	"grip_style": "two_handed",
 	"use_ability": "Cleave",
 	"damage": {
-	  "slashing": 16
+		"slashing": 30
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -3368,9 +3632,9 @@
 	"id": "halberd",
 	"type": "spear",
 	"display_name": "Halberd",
-	"base_damage": 18,
+	"base_damage": 16.0,
 	"total_length": 95.0,
-	"grip_position": 0.5,
+	"grip_position": 0.78,
 	"grip_length": 50.0,
 	"blade_width": 12.0,
 	"balance_point": 0.28,
@@ -3381,8 +3645,8 @@
 	"grip_style": "two_handed",
 	"use_ability": "Cleave",
 	"damage": {
-	  "slashing": 12,
-	  "piercing": 6
+		"slashing": 16,
+		"piercing": 5
 	},
 	"damage_resitances": {
 	  "slashing": 1,
@@ -3428,7 +3692,7 @@
 	"id": "light_crossbow",
 	"type": "bow",
 	"display_name": "Light Crossbow",
-	"base_damage": 9,
+	"base_damage": 15.0,
 	"total_length": 35.0,
 	"grip_position": 0.5,
 	"grip_length": 10.0,
@@ -3443,7 +3707,7 @@
 	"grip_style": "two_handed",
 	"use_ability": null,
 	"damage": {
-	  "piercing": 9
+	  "piercing": 15
 	},
 	"damage_resitances": {},
 	"healing": 0.0,
@@ -3494,7 +3758,7 @@
 	"equip_slot": "Off Hand",
 	"use_ability": null,
 	"damage": {
-	  "bludgeoning": 1
+		"bludgeoning": 6
 	},
 	"damage_resitances": {
 	  "slashing": 2,
@@ -3523,6 +3787,7 @@
 	"walkability": 1.0,
 	"damage_modifiers": null,
 	"traits": {
+		"Melee": 1,
 	  "Metal": 1,
 	  "Wood": 1,
 	  "Defensive": 1
@@ -3549,7 +3814,7 @@
 	"equip_slot": "Off Hand",
 	"use_ability": null,
 	"damage": {
-	  "bludgeoning": 2
+		"bludgeoning": 9
 	},
 	"damage_resitances": {
 	  "slashing": 4,
@@ -3578,6 +3843,7 @@
 	"walkability": 1.0,
 	"damage_modifiers": null,
 	"traits": {
+		"Melee": 1,
 	  "Metal": 2,
 	  "Heavy": 1,
 	  "Defensive": 2
@@ -3753,6 +4019,46 @@
 	"restricted_item_type": null,
 	"resources": {},
 	"display_name": "Head of the King of Skarsgaard"
+  },
+  {
+	"id": "severed_head",
+	"type": "trophy",
+	"sprite_path": "res://Items/severed_head.png",
+	"base_width": 16.0,
+	"base_height": 22.0,
+	"weight": 8.0,
+	"cost": 0.0,
+	"equip_slot": "",
+	"use_ability": null,
+	"damage": {},
+	"damage_resitances": {},
+	"healing": 0.0,
+	"range": 0.0,
+	"satiety": 0.0,
+	"interact_options": ["Inspect", "Drop"],
+	"primary_damage_type": null,
+	"max_health": 10.0,
+	"current_health": 10.0,
+	"walkability": 1.0,
+	"damage_modifiers": null,
+	"traits": {},
+	"is_cursed": 0.0,
+	"damage_modifier_changes": null,
+	"emits_light": 0.0,
+	"adds_condition_on_equip": null,
+	"triggers_ability_on_equip": null,
+	"adds_condition_in_inventory": null,
+	"is_stackable": 0.0,
+	"max_stack_size": null,
+	"num_stacks": null,
+	"adds_item_to_inventory": null,
+	"num_slots": null,
+	"key": null,
+	"contents": null,
+	"restricted_item_type": null,
+	"resources": {},
+	"description": "A head, taken as proof. Someone will want to see this.",
+	"display_name": "Severed Head"
   },
   {
 	"id": "ancient_relic_bortelin",
@@ -5327,6 +5633,200 @@
 	"hp": 45.0,
 	"traits": {
 	 "Wood": 4
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "long_table",
+	"display_name": "Long Table",
+	"type": "item",
+	"description": "A long wooden feast table.",
+	"base_width": 88.0,
+	"base_height": 40.0,
+	"sprite_path": "res://Items/long_table.png",
+	"weight": 60.0,
+	"cost": 25.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	 "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "red_carpet",
+	"display_name": "Red Carpet",
+	"type": "item",
+	"description": "A long red ceremonial runner.",
+	"base_width": 36.0,
+	"base_height": 96.0,
+	"sprite_path": "res://Items/red_carpet.png",
+	"weight": 8.0,
+	"cost": 30.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 10.0,
+	"hp": 10.0,
+	"traits": {
+	 "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "archery_target",
+	"display_name": "Archery Target",
+	"type": "item",
+	"description": "A straw archery butt with painted rings.",
+	"base_width": 34.0,
+	"base_height": 34.0,
+	"sprite_path": "res://Items/archery_target.png",
+	"weight": 25.0,
+	"cost": 10.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 25.0,
+	"hp": 25.0,
+	"traits": {
+	 "Wood": 1,
+	 "Organic": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "training_dummy",
+	"display_name": "Training Dummy",
+	"type": "item",
+	"description": "A straw-stuffed sparring dummy on a post.",
+	"base_width": 36.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/training_dummy.png",
+	"weight": 30.0,
+	"cost": 10.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	 "Wood": 1,
+	 "Organic": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "weapon_rack",
+	"display_name": "Weapon Rack",
+	"type": "item",
+	"description": "A rack of practice weapons.",
+	"base_width": 56.0,
+	"base_height": 27.0,
+	"sprite_path": "res://Items/weapon_rack.png",
+	"weight": 35.0,
+	"cost": 40.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 25.0,
+	"hp": 25.0,
+	"traits": {
+	 "Wood": 2,
+	 "Metal": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "bathtub",
+	"display_name": "Bathtub",
+	"type": "item",
+	"description": "A wooden soaking tub full of water.",
+	"base_width": 52.0,
+	"base_height": 38.0,
+	"sprite_path": "res://Items/bathtub.png",
+	"weight": 45.0,
+	"cost": 35.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	 "Wood": 2,
+	 "Liquid": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "desk",
+	"display_name": "Desk",
+	"type": "item",
+	"description": "A writing desk strewn with papers.",
+	"base_width": 48.0,
+	"base_height": 32.0,
+	"sprite_path": "res://Items/desk.png",
+	"weight": 30.0,
+	"cost": 25.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 25.0,
+	"hp": 25.0,
+	"traits": {
+	 "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "plank_bridge",
+	"display_name": "Plank Bridge",
+	"type": "item",
+	"description": "A simple wooden footbridge.",
+	"base_width": 56.0,
+	"base_height": 210.0,
+	"sprite_path": "res://Items/plank_bridge.png",
+	"weight": 80.0,
+	"cost": 20.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"walkability": 1.0,
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	 "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "anvil",
+	"display_name": "Anvil",
+	"type": "item",
+	"description": "A blacksmith's anvil.",
+	"base_width": 30.0,
+	"base_height": 30.0,
+	"sprite_path": "res://Structures/Anvil.png",
+	"weight": 120.0,
+	"cost": 60.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 60.0,
+	"hp": 60.0,
+	"traits": {
+	 "Metal": 3
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null

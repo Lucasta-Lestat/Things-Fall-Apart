@@ -12,6 +12,9 @@ signal targeting_cancelled(hand: String)
 var is_targeting: bool = false
 var current_hand: String = "Main"
 var current_ability: Dictionary = {}
+# Ability.Intent for the session in progress. Colours the LIVE preview; the queued
+# ghosts carry their own copy because they outlive the session that made them.
+var current_intent: int = Ability.Intent.NEUTRAL
 var target_position: Vector2 = Vector2.ZERO
 
 # Visual indicators
@@ -101,20 +104,51 @@ func _process(_delta: float) -> void:
 			_update_active_indicator()
 
 		_update_knockback_preview()
+	elif lock_to_caster and circle_indicator != null and circle_indicator.visible:
+		# Self-targeted previews used to ride the caster for free by being parented
+		# to it. Now that the indicators are top_level (world space) that no longer
+		# happens automatically, and a self AoE resolves at the caster's EXECUTION
+		# position — so keep re-pinning it to the body for the short window between
+		# an immediate confirm (which drops is_targeting but leaves the preview up)
+		# and the ability actually landing.
+		circle_indicator.global_position = _origin_pos()
 
 func _create_indicators() -> void:
 	"""Create the targeting indicator nodes"""
-	# Circle indicator
+	# Circle indicator — top_level, like line/cone and the queued ghosts, so the
+	# preview lives in WORLD space. This node hangs off the caster, and the caster
+	# walks AND rotates: a parented indicator is only re-pinned inside _process
+	# while is_targeting, and the immediate/unplanned cast clears is_targeting while
+	# KEEPING the preview visible until the ability lands
+	# (ProceduralCharacter._confirm_ability_target). From that moment the AoE was
+	# dragged along and swung through an arc by the moving body — the "jerk". The
+	# planned path never showed it because it swaps in a top_level queued ghost.
+	# z is absolute so the old effective order survives (character z 5 + this node's
+	# relative 50 = 55): under the knockback arrows (60) and VFX (100), over the
+	# queued ghosts (49). A top_level CanvasItem is reparented to the canvas root in
+	# the RenderingServer, so it would otherwise fall to z 0 and draw under bodies.
 	circle_indicator = Node2D.new()
 	circle_indicator.name = "CircleIndicator"
+	circle_indicator.top_level = true
+	circle_indicator.z_as_relative = false
+	circle_indicator.z_index = 55
 	var circle_drawer = CircleDrawer.new()
 	circle_indicator.add_child(circle_drawer)
 	circle_indicator.visible = false
 	add_child(circle_indicator)
-	
-	# Rectangle indicator
+
+	# Rectangle indicator — top_level for the same reason, and it additionally makes
+	# the preview agree with the AREA THAT ACTUALLY GETS HIT: the resolver
+	# (ProceduralCharacter._find_targets_in_area, shape "rectangle") is world-axis
+	# aligned — `abs(diff.x) <= half_size.x and abs(diff.y) <= half_size.y` — while a
+	# caster-parented indicator drew the box rotated by the caster's facing.
+	# (`rectangle_rotation` is declared but never assigned anywhere, so line 171 was
+	# only ever writing 0.0 into a LOCAL rotation.)
 	rectangle_indicator = Node2D.new()
 	rectangle_indicator.name = "RectangleIndicator"
+	rectangle_indicator.top_level = true
+	rectangle_indicator.z_as_relative = false
+	rectangle_indicator.z_index = 55
 	var rect_drawer = RectangleDrawer.new()
 	rectangle_indicator.add_child(rect_drawer)
 	rectangle_indicator.visible = false
@@ -161,6 +195,8 @@ func _update_active_indicator() -> void:
 			circle_indicator.global_position = target_position
 			circle_indicator.visible = true
 			rectangle_indicator.visible = false
+			line_indicator.visible = false
+			cone_indicator.visible = false
 			var drawer = circle_indicator.get_child(0) as CircleDrawer
 			if drawer:
 				drawer.radius = circle_radius
@@ -171,6 +207,8 @@ func _update_active_indicator() -> void:
 			rectangle_indicator.rotation = rectangle_rotation
 			rectangle_indicator.visible = true
 			circle_indicator.visible = false
+			line_indicator.visible = false
+			cone_indicator.visible = false
 			var drawer = rectangle_indicator.get_child(0) as RectangleDrawer
 			if drawer:
 				drawer.rect_size = rectangle_size
@@ -192,6 +230,7 @@ func _update_active_indicator() -> void:
 			line_indicator.visible = true
 			circle_indicator.visible = false
 			rectangle_indicator.visible = false
+			cone_indicator.visible = false
 
 		TargetShape.CONE:
 			# Cone from caster toward mouse
@@ -275,6 +314,21 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 	current_hand = hand
 	current_ability = ability
 	caster_origin_override = origin_override
+
+	# Intent drives the preview's colour for this whole session. It is a pure
+	# function of the ability dictionary, which cannot change while targeting is
+	# live, so it is resolved once here instead of on every _draw. The four
+	# drawers are built once in _create_indicators and reused for every ability,
+	# so the colour has to be re-stamped per session rather than set at build time
+	# — otherwise the second ability you aim inherits the first one's colour.
+	current_intent = Ability.classify_intent(ability)
+	for indicator in [circle_indicator, rectangle_indicator, line_indicator, cone_indicator]:
+		if indicator == null or indicator.get_child_count() == 0:
+			continue
+		var drawer = indicator.get_child(0)
+		if "intent" in drawer:
+			drawer.intent = current_intent
+			drawer.queue_redraw()
 
 	# Self-targeted abilities anchor the AoE preview to the caster instead of the cursor
 	var target_type_str = ability.get("target_type", "point")
@@ -411,8 +465,6 @@ func cancel_targeting() -> void:
 
 func end_targeting() -> void:
 	"""Clean up targeting state"""
-	#end targeting not getting called
-	print("is end targeting being called? Yes")
 	is_targeting = false
 	current_ability = {}
 	target_shape = TargetShape.NONE
@@ -432,8 +484,11 @@ func end_targeting() -> void:
 	if count_label:
 		count_label.visible = false
 
-func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0, caster_pos: Vector2 = Vector2.ZERO) -> Node2D:
+func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: float = 50.0, size: Vector2 = Vector2(100, 50), rot: float = 0.0, caster_pos: Vector2 = Vector2.ZERO, intent: int = Ability.Intent.NEUTRAL) -> Node2D:
 	"""Create a persistent indicator for a queued ability"""
+	# `intent` is trailing and defaulted so every existing six-argument call keeps
+	# working: a caller that forgets to classify gets the uninformative sepia
+	# ghost, never a wrong red or green one.
 	var indicator: Node2D
 
 	match shape:
@@ -442,6 +497,7 @@ func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: fl
 			var drawer = CircleDrawer.new()
 			drawer.radius = radius
 			drawer.is_queued = true
+			drawer.intent = intent
 			indicator.add_child(drawer)
 
 		TargetShape.RECTANGLE:
@@ -449,6 +505,7 @@ func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: fl
 			var drawer = RectangleDrawer.new()
 			drawer.rect_size = size
 			drawer.is_queued = true
+			drawer.intent = intent
 			indicator.add_child(drawer)
 
 		TargetShape.LINE:
@@ -457,6 +514,7 @@ func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: fl
 			drawer.line_end = target_pos - caster_pos
 			drawer.line_width = size.y if size != Vector2.ZERO else 30.0
 			drawer.is_queued = true
+			drawer.intent = intent
 			indicator.add_child(drawer)
 			indicator.top_level = true
 			indicator.global_position = caster_pos
@@ -471,6 +529,7 @@ func create_queued_indicator(target_pos: Vector2, shape: TargetShape, radius: fl
 			drawer.cone_radius = radius
 			drawer.cone_angle_deg = size.x if size.x > 0 else 45.0
 			drawer.is_queued = true
+			drawer.intent = intent
 			indicator.add_child(drawer)
 			indicator.top_level = true
 			indicator.global_position = caster_pos
@@ -706,9 +765,16 @@ func _update_knockback_preview() -> void:
 	var origin: Vector2 = AbilityEffect.knockback_origin(
 		_knockback_effect, caster.global_position, target_position)
 
+	# A self-centred blast spares its caster at resolution time, so the preview
+	# must not promise to shove them either (AbilityManager._resolve_effects).
+	var spares_caster: bool = AbilityManager._is_self_centered(_preview_ability.targeting) \
+		and AbilityManager._harms_targets(_preview_ability.effects)
+
 	var shoves: Array = []
 	for t in caster._find_targets_in_area(_preview_ability, target_position):
 		if not is_instance_valid(t) or not (t is Node2D):
+			continue
+		if spares_caster and t == caster:
 			continue
 		# Only bodies that integrate an external force can be predicted.
 		# _resolve_knockback gates on apply_external_force the same way, so
@@ -798,11 +864,16 @@ class KnockbackPreviewDrawer extends Node2D:
 class CircleDrawer extends Node2D:
 	var radius: float = 50.0
 	var is_queued: bool = false
+	# Ability.Intent. Stamped by start_targeting (live) or create_queued_indicator
+	# (ghost); NEUTRAL is the honest default for a drawer nobody has classified.
+	var intent: int = Ability.Intent.NEUTRAL
 	var num_segments: int = 32
 	
 	func _draw() -> void:
-		var color = Color(0.5, 0.8, 1.0, 0.4) if is_queued else Color(1, 1, 1, 0.4)
-		var border_color = Color(0.5, 0.8, 1.0, 0.8) if is_queued else Color(1, 1, 1, 0.8)
+		var color: Color = Ability.intent_fill_color(intent, is_queued)
+		var border_color: Color = Ability.intent_border_color(intent, is_queued)
+		var border_width: float = Ability.intent_border_width(intent, is_queued)
+		var dashed: bool = Ability.intent_border_dashed(intent, is_queued)
 		
 		# Fill
 		draw_circle(Vector2.ZERO, radius, color)
@@ -813,17 +884,25 @@ class CircleDrawer extends Node2D:
 			var angle = (float(i) / num_segments) * TAU
 			points.append(Vector2(cos(angle), sin(angle)) * radius)
 		
+		# 32 segments, so dropping every other one gives 16 even dashes at any
+		# radius. The dash pattern is the colour-blind-safe half of the
+		# hostile/beneficial split — see the INTENT PALETTE note on Ability.
 		for i in range(num_segments):
-			draw_line(points[i], points[i + 1], border_color, 2.0, true)
+			if dashed and i % 2 == 1:
+				continue
+			draw_line(points[i], points[i + 1], border_color, border_width, true)
 
 
 class RectangleDrawer extends Node2D:
 	var rect_size: Vector2 = Vector2(100, 50)
 	var is_queued: bool = false
+	var intent: int = Ability.Intent.NEUTRAL
 
 	func _draw() -> void:
-		var color = Color(0.5, 0.8, 1.0, 0.4) if is_queued else Color(1, 1, 1, 0.4)
-		var border_color = Color(0.5, 0.8, 1.0, 0.8) if is_queued else Color(1, 1, 1, 0.8)
+		var color: Color = Ability.intent_fill_color(intent, is_queued)
+		var border_color: Color = Ability.intent_border_color(intent, is_queued)
+		var border_width: float = Ability.intent_border_width(intent, is_queued)
+		var dashed: bool = Ability.intent_border_dashed(intent, is_queued)
 
 		var rect = Rect2(-rect_size / 2, rect_size)
 
@@ -831,17 +910,42 @@ class RectangleDrawer extends Node2D:
 		draw_rect(rect, color, true)
 
 		# Border
-		draw_rect(rect, border_color, false, 2.0)
+		if not dashed:
+			draw_rect(rect, border_color, false, border_width)
+			return
+		# draw_rect cannot gap a stroke, and there are only four sides here — so
+		# alternating whole SIDES the way the circle alternates segments would
+		# delete half the outline. Each side is broken once, at its own midpoint.
+		var corners = PackedVector2Array([
+			rect.position,
+			rect.position + Vector2(rect.size.x, 0.0),
+			rect.position + rect.size,
+			rect.position + Vector2(0.0, rect.size.y),
+		])
+		for i in range(corners.size()):
+			var a: Vector2 = corners[i]
+			var b: Vector2 = corners[(i + 1) % corners.size()]
+			draw_line(a, a.lerp(b, 0.42), border_color, border_width, true)
+			draw_line(a.lerp(b, 0.58), b, border_color, border_width, true)
 
 
 class LineDrawer extends Node2D:
 	var line_end: Vector2 = Vector2(100, 0)
 	var line_width: float = 30.0
 	var is_queued: bool = false
+	var intent: int = Ability.Intent.NEUTRAL
 
 	func _draw() -> void:
-		var color = Color(0.5, 0.8, 1.0, 0.3) if is_queued else Color(1, 1, 1, 0.3)
-		var border_color = Color(0.5, 0.8, 1.0, 0.7) if is_queued else Color(1, 1, 1, 0.7)
+		# A line sweeps a long swath, so its fill is thinned to 0.75 of the
+		# circle/rectangle value and its border to 0.875 — exactly the 0.3-vs-0.4
+		# and 0.7-vs-0.8 relationship the old hardcoded colours carried, preserved
+		# so this change stays purely chromatic.
+		var color: Color = Ability.intent_fill_color(intent, is_queued)
+		color.a *= 0.75
+		var border_color: Color = Ability.intent_border_color(intent, is_queued)
+		border_color.a *= 0.875
+		var border_width: float = Ability.intent_border_width(intent, is_queued)
+		var dashed: bool = Ability.intent_border_dashed(intent, is_queued)
 
 		if line_end.length() < 1.0:
 			return
@@ -860,20 +964,33 @@ class LineDrawer extends Node2D:
 		# Fill
 		draw_colored_polygon(corners, color)
 
-		# Border
+		# Border — four long sides, gapped at their midpoints when dashed (see
+		# RectangleDrawer for why whole sides are never skipped).
 		for i in range(corners.size()):
-			draw_line(corners[i], corners[(i + 1) % corners.size()], border_color, 2.0, true)
+			var a: Vector2 = corners[i]
+			var b: Vector2 = corners[(i + 1) % corners.size()]
+			if dashed:
+				draw_line(a, a.lerp(b, 0.42), border_color, border_width, true)
+				draw_line(a.lerp(b, 0.58), b, border_color, border_width, true)
+			else:
+				draw_line(a, b, border_color, border_width, true)
 
 
 class ConeDrawer extends Node2D:
 	var cone_radius: float = 150.0
 	var cone_angle_deg: float = 45.0
 	var is_queued: bool = false
+	var intent: int = Ability.Intent.NEUTRAL
 	var num_segments: int = 24
 
 	func _draw() -> void:
-		var color = Color(0.5, 0.8, 1.0, 0.3) if is_queued else Color(1, 1, 1, 0.3)
-		var border_color = Color(0.5, 0.8, 1.0, 0.7) if is_queued else Color(1, 1, 1, 0.7)
+		# Same 0.75 / 0.875 swath thinning as LineDrawer.
+		var color: Color = Ability.intent_fill_color(intent, is_queued)
+		color.a *= 0.75
+		var border_color: Color = Ability.intent_border_color(intent, is_queued)
+		border_color.a *= 0.875
+		var border_width: float = Ability.intent_border_width(intent, is_queued)
+		var dashed: bool = Ability.intent_border_dashed(intent, is_queued)
 
 		var half_angle = deg_to_rad(cone_angle_deg) / 2.0
 
@@ -888,14 +1005,20 @@ class ConeDrawer extends Node2D:
 		# Fill
 		draw_colored_polygon(points, color)
 
-		# Border (lines along edges)
+		# Border (lines along edges). Only the ARC dashes: index 0 and the last
+		# index are the two straight flanks, and with 26 points the last index is
+		# ODD — alternating blindly would delete one whole flank of the cone.
+		var last := points.size() - 1
 		for i in range(points.size()):
-			draw_line(points[i], points[(i + 1) % points.size()], border_color, 2.0, true)
+			if dashed and i > 0 and i < last and i % 2 == 1:
+				continue
+			draw_line(points[i], points[(i + 1) % points.size()], border_color, border_width, true)
 
 
 class CharacterHighlightDrawer extends Node2D:
 	var radius: float = 32.0
 	var is_queued: bool = false
+	var intent: int = Ability.Intent.NEUTRAL
 	var _t: float = 0.0
 
 	func _process(delta: float) -> void:
@@ -905,7 +1028,11 @@ class CharacterHighlightDrawer extends Node2D:
 	func _draw() -> void:
 		var pulse = 0.85 + 0.15 * sin(_t * 4.0)
 		var r = radius * pulse
-		var color = Color(0.5, 0.8, 1.0, 0.9) if is_queued else Color(1.0, 0.9, 0.3, 0.9)
+		# The queued branch is currently unreachable (_add_highlight_for never sets
+		# is_queued), but it carried the same blue the AoE ghosts used to, so it is
+		# pointed at the shared palette rather than left as a literal waiting to
+		# reintroduce the one cool colour on the battlefield.
+		var color = Ability.intent_border_color(intent, true) if is_queued else Color(1.0, 0.9, 0.3, 0.9)
 		var num_segments := 32
 		var points = PackedVector2Array()
 		for i in range(num_segments + 1):

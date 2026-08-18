@@ -1333,7 +1333,7 @@ texture = ExtResource("30_eq_golden_helm_c")
 visible = false
 [node name="EQ_head_purple_hood_c" type="Sprite2D" parent="Rig"]
 centered = false
-position = Vector2(384.00, 362.00)
+position = Vector2(385.00, 363.00)
 z_index = 23
 texture = ExtResource("31_eq_purple_hood_c")
 visible = false

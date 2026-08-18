@@ -7,13 +7,13 @@
 shader = ExtResource("2_waves")
 shader_parameter/time = 0.0
 shader_parameter/wave_frequency = 5.0
-shader_parameter/wave_amplitude = 0.4
-shader_parameter/resolution = Vector2(300, 300)
+shader_parameter/wave_amplitude = 0.55
+shader_parameter/resolution = Vector2(300, 346)
 shader_parameter/cone_half_angle = 0.524
 
 [sub_resource type="Gradient" id="Gradient_sonic_ramp"]
 offsets = PackedFloat32Array(0, 0.3, 1)
-colors = PackedColorArray(1, 1, 1, 1, 0.6, 0.85, 1.0, 0.8, 0.3, 0.5, 0.8, 0)
+colors = PackedColorArray(1, 1, 1, 0.5, 0.6, 0.85, 1.0, 0.3, 0.3, 0.5, 0.8, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_sonic"]
 gradient = SubResource("Gradient_sonic_ramp")
@@ -36,12 +36,12 @@ initial_velocity_max = 120.0
 gravity = Vector3(0, 0, 0)
 damping_min = 15.0
 damping_max = 30.0
-scale_min = 0.3
-scale_max = 0.8
+scale_min = 0.15
+scale_max = 0.4
 scale_curve = SubResource("CurveTexture_sonic_scale")
 color_ramp = SubResource("GradientTexture1D_sonic")
 turbulence_enabled = true
-turbulence_noise_strength = 2.0
+turbulence_noise_strength = 1.0
 turbulence_noise_speed_random = 0.2
 
 [sub_resource type="Gradient" id="Gradient_light"]
@@ -53,26 +53,27 @@ width = 16
 height = 16
 fill = 1
 fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
 
 [node name="Sonic" type="Node2D"]
 script = ExtResource("1_script")
 
 [node name="WaveLayer" type="ColorRect" parent="."]
 offset_left = 0.0
-offset_top = -150.0
+offset_top = -173.0
 offset_right = 300.0
-offset_bottom = 150.0
+offset_bottom = 173.0
 material = SubResource("ShaderMaterial_sonic")
 
 [node name="GPUParticles2D" type="GPUParticles2D" parent="."]
-amount = 30
-amount_ratio = 0.8
-lifetime = 0.6
+amount = 18
+amount_ratio = 0.7
+lifetime = 0.5
 process_material = SubResource("ParticleProcessMaterial_sonic")
 
 [node name="PointLight2D" type="PointLight2D" parent="."]
 position = Vector2(75, 0)
 color = Color(0.7, 0.85, 1.0, 1)
-energy = 0.5
+energy = 0.45
 texture = SubResource("GradientTexture2D_light")
-texture_scale = 4.0
+texture_scale = 3.0

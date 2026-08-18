@@ -43,6 +43,29 @@ const CELL_FIRE_SCENE := preload("res://CellFire.gd")
 const CELL_FIRE_FX_SCENE := preload("res://CellFireFX.gd")
 const CELL_SCORCH_SCENE := preload("res://CellScorchFX.gd")
 
+# --- Hazard map (pathfinding danger overlay) ---
+# GridManager.hazard_costs is rebuilt HERE because SurfaceManager can see every
+# damaging ground system at once: cell fire, legacy tile fire surfaces,
+# electrified tiles, and harmful standing fluids. The whole dict is swapped in
+# on a short cadence — plus immediately whenever the burning cell set changes
+# (burn_rev) so a fresh ignition can't hide inside the cadence window. Route
+# planning reads it; the damage loops never do (they keep their exact
+# per-cell / per-tile contact tests as ground truth).
+const HAZARD_REBUILD_INTERVAL := 0.3
+# burn_rev bumps on EVERY ignite/douse/burnout — a big blaze churns the rev
+# quasi-continuously, which would turn the "rebuild immediately on change"
+# trigger into a per-frame rebuild. Floor the spacing instead: a fresh
+# ignition still lands within 0.1s, a 600-cell blaze rebuilds at 10 Hz max.
+const HAZARD_MIN_SPACING := 0.1
+# Harm is defined by the condition the ground applies, not by surface/fluid id:
+# anything that damages a standing character is a core hazard. slowed (oil) and
+# "" (water/blood/ink) are nuisances, not hazards.
+const DAMAGING_CONDITIONS := {"burning": true, "corroding": true, "poisoned": true,
+	"shocked": true, "stuck_in_fire": true, "suffocating": true}
+var _hazard_timer := 0.0
+var _hazard_min_cd := 0.0
+var _hazard_burn_rev := -1
+
 
 # Called by Game.load_map once the grid + structures exist. graph may be null
 # (e.g. world maps) -> fire falls back to the legacy tile path.
@@ -56,6 +79,8 @@ func setup_cell_graph(graph: CellGraph) -> void:
 	if cell_scorch != null and is_instance_valid(cell_scorch):
 		cell_scorch.queue_free()
 		cell_scorch = null
+	GridManager.hazard_costs = {}
+	_hazard_burn_rev = -1
 	if graph == null or graph.cell_count <= 0:
 		return
 	cell_fire = CELL_FIRE_SCENE.new()
@@ -109,11 +134,67 @@ func update_surfaces(delta: float, characters: Array, game: Node) -> void:
 		_process_spread(delta, game)
 		_process_damage(delta, game)
 		_process_lifetime(delta, game)
+		# After every heat source has had its say this tick, bleed heat back out
+		# of any ice that wasn't warmed (see _decay_ice_heat).
+		_decay_ice_heat(delta)
 	if _cell_fire_active():
 		cell_fire.tick(delta, characters, game)
 	if not electrified_grid.is_empty():
 		_apply_electrified_to_characters(delta, characters)
 		_process_electrified_lifetime(delta)
+	_hazard_timer -= delta
+	_hazard_min_cd -= delta
+	var rev: int = cell_fire.burn_rev if _cell_fire_active() else -1
+	if (_hazard_timer <= 0.0 or rev != _hazard_burn_rev) and _hazard_min_cd <= 0.0:
+		_hazard_timer = HAZARD_REBUILD_INTERVAL
+		_hazard_min_cd = HAZARD_MIN_SPACING
+		_hazard_burn_rev = rev
+		_rebuild_hazard_map(game)
+
+
+func _rebuild_hazard_map(game: Node) -> void:
+	var hz: Dictionary = {}
+	# Cell fire: burning cell -> its centroid tile (core) + 4-neighbourhood
+	# (halo). Cells are ~half a tile, so the halo also biases routes off the
+	# tiles a burning cell straddles without its centroid landing there.
+	if _cell_fire_active():
+		var graph: CellGraph = cell_fire.graph
+		for cid in cell_fire.burning:
+			hz[GridManager.world_to_map(graph.centroid(cid))] = GridManager.HAZARD_CORE_COST
+		for t in hz.keys():
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = t + d
+				if not hz.has(n):
+					hz[n] = GridManager.HAZARD_HALO_COST
+	# Legacy tile surfaces (fire/fire_spin on graph-less maps); electricity is
+	# tile-grid on ALL maps.
+	for tile_pos in surface_grid:
+		var sdef: Dictionary = _surface_defs.get(surface_grid[tile_pos]["surface_id"], {})
+		if DAMAGING_CONDITIONS.has(String(sdef.get("condition_id", ""))):
+			hz[tile_pos] = GridManager.HAZARD_CORE_COST
+	for tile_pos in electrified_grid:
+		hz[tile_pos] = GridManager.HAZARD_CORE_COST
+	# Harmful standing fluids (acid/poison). The tile projection is
+	# authoritative on both map kinds (cell sims project every 0.25s).
+	var fm := _get_fluid_manager(game)
+	if fm != null:
+		for tile_pos in fm.harmful_fluid_tiles(DAMAGING_CONDITIONS):
+			hz[tile_pos] = GridManager.HAZARD_CORE_COST
+	# Damaging clouds (cloud_kill): the fifth damaging ground system. FogOverlay
+	# applies its condition to every character inside Rect2(global_position,
+	# size) — mark the tiles that rect covers so NPCs walk OUT of a poison
+	# cloud instead of standing in it re-stacking poisoned for 15s.
+	if game != null and ("fog_manager" in game) and game.fog_manager != null:
+		for fog in game.fog_manager._active_fogs:
+			if not is_instance_valid(fog) \
+					or not DAMAGING_CONDITIONS.has(String(fog.condition_id)):
+				continue
+			var t0: Vector2i = GridManager.world_to_map(fog.global_position)
+			var t1: Vector2i = GridManager.world_to_map(fog.global_position + fog.size)
+			for y in range(t0.y, t1.y + 1):
+				for x in range(t0.x, t1.x + 1):
+					hz[Vector2i(x, y)] = GridManager.HAZARD_CORE_COST
+	GridManager.hazard_costs = hz
 
 # --- Condition Application ---
 
@@ -250,6 +331,22 @@ func _process_damage(delta: float, game: Node) -> void:
 	for tile_pos in tiles_to_remove:
 		_remove_surface(tile_pos)
 
+	# Sustained tile fire melts the ice it is standing next to (graph-less maps;
+	# the cell-fire equivalent is CellFire._melt_ice). Collected into a set first
+	# because a thaw ERASES from surface_grid, which must not happen mid-iteration.
+	var ice_melt: float = float(fire_def.get("ice_melt_per_tick", 0.34))
+	if ice_melt > 0.0:
+		var touched: Dictionary = {}
+		for tile_pos in surface_grid:
+			if surface_grid[tile_pos]["surface_id"] != "fire":
+				continue
+			touched[tile_pos + Vector2i(1, 0)] = true
+			touched[tile_pos + Vector2i(-1, 0)] = true
+			touched[tile_pos + Vector2i(0, 1)] = true
+			touched[tile_pos + Vector2i(0, -1)] = true
+		for tile: Vector2i in touched:
+			apply_heat_to_ice(tile, ice_melt)
+
 # --- Lifetime / Burnout ---
 
 func _process_lifetime(delta: float, game: Node) -> void:
@@ -278,6 +375,11 @@ func _process_lifetime(delta: float, game: Node) -> void:
 
 func try_ignite_area(center_world: Vector2, radius: float) -> void:
 	"""Attempt to ignite all flammable tiles within a world-space radius."""
+	# A burst of fire landing on ice melts it on BOTH map kinds. This must run
+	# BEFORE the cell-fire route below: that early return never touches the tile
+	# surface grid ice lives on, which is why AoE fire (fireball) stopped melting
+	# ice while single-target fire (try_ignite) still did.
+	_melt_ice_in_area(center_world, radius, ICE_MELT_THRESHOLD)
 	if _cell_fire_active():
 		cell_fire.ignite_area(center_world, radius)
 		return
@@ -468,6 +570,74 @@ func _place_ice(tile_pos: Vector2i, frozen_fluid_type: String, frozen_fluid_amou
 		"frozen_fluid_amount": frozen_fluid_amount
 	}
 
+# --- Ice melting (heat accumulation) ---
+# Ice is a TILE surface even on cell-fire maps: freezing DRAINS the cells under
+# the tile (FluidManager.freeze_*), so no burning cell ever sits "in" ice and
+# nothing inside the fire/fluid cell sims can see it. Fire therefore melts ice
+# by feeding heat in from the outside, through this one entry point.
+# Total heat an ice tile must absorb before it thaws back into the fluid it
+# froze from. CellFire feeds `ice_melt_per_tick` (surfaces.json fire def,
+# default 0.34) once per damage tick, so ice next to flames melts in ~3s; a
+# direct fire AoE dumps the whole threshold at once and melts on contact
+# (matching what try_ignite already did for a single tile).
+const ICE_MELT_THRESHOLD := 1.0
+# Heat bleeds back out of ice that is no longer being warmed, so a fire that
+# burns out doesn't leave the tile permanently primed for an unrelated fire
+# minutes later. Tuned slower than the melt rate: sustained heat still wins.
+const ICE_MELT_DECAY_PER_SEC := 0.15
+
+func apply_heat_to_ice(tile_pos: Vector2i, amount: float) -> bool:
+	"""Feed heat into an ice tile; thaws it once the accumulated heat crosses
+	ICE_MELT_THRESHOLD. Returns true if this call thawed the tile."""
+	if amount <= 0.0 or get_surface_id_at(tile_pos) != "ice":
+		return false
+	var ice_def: Dictionary = _surface_defs.get("ice", {})
+	if not bool(ice_def.get("thaw_on_fire", true)):
+		return false
+	var data: Dictionary = surface_grid[tile_pos]
+	var heat: float = float(data.get("melt_heat", 0.0)) + amount
+	data["melt_heat"] = heat
+	# Mark as warmed this frame so the decay pass below skips it.
+	data["melt_warmed"] = true
+	if heat < ICE_MELT_THRESHOLD:
+		return false
+	thaw_ice_at(tile_pos)
+	return true
+
+
+func _decay_ice_heat(delta: float) -> void:
+	"""Bleed accumulated melt heat out of ice tiles that weren't warmed this
+	tick, and clear the per-tick warmed flag."""
+	var drop: float = ICE_MELT_DECAY_PER_SEC * delta
+	for tile_pos in surface_grid:
+		var data: Dictionary = surface_grid[tile_pos]
+		if data.get("surface_id", "") != "ice":
+			continue
+		if bool(data.get("melt_warmed", false)):
+			data["melt_warmed"] = false
+			continue
+		var heat: float = float(data.get("melt_heat", 0.0))
+		if heat > 0.0:
+			data["melt_heat"] = maxf(0.0, heat - drop)
+
+
+func _melt_ice_in_area(center_world: Vector2, radius: float, heat: float) -> int:
+	"""Dump heat into every ice tile whose centre is inside a world radius.
+	Iterates a KEY COPY: a thaw erases from surface_grid. Returns tiles thawed."""
+	if surface_grid.is_empty():
+		return 0
+	var melted: int = 0
+	for key in surface_grid.keys():
+		var tile_pos: Vector2i = key
+		if get_surface_id_at(tile_pos) != "ice":
+			continue
+		if GridManager.map_to_world(tile_pos).distance_to(center_world) > radius:
+			continue
+		if apply_heat_to_ice(tile_pos, heat):
+			melted += 1
+	return melted
+
+
 func thaw_ice_at(tile_pos: Vector2i) -> void:
 	"""Thaw an ice tile, restoring its original fluid."""
 	if not surface_grid.has(tile_pos):
@@ -523,7 +693,38 @@ func _spawn_surface_vfx(tile_pos: Vector2i, surface_def: Dictionary) -> Node:
 	add_child(vfx)
 	if vfx.has_method("play"):
 		vfx.play(1.0)
+	# Surface VFX are spawned one Sprite2D PER TILE, so any shader sampling bare
+	# UV repeats identically in every tile (this is what made frozen ponds look
+	# like a grid of identical cloudy blobs). Hand the instance its grid
+	# coordinate so those shaders can build a world-continuous sample position,
+	# the same `tile_position + uv` convention the fluid shaders use (fluid.gd).
+	# Set AFTER play() because play() duplicates the material.
+	_set_tile_position_param(vfx, tile_pos)
 	return vfx
+
+func _set_tile_position_param(vfx: Node, tile_pos: Vector2i) -> void:
+	"""Push the tile's grid coordinate into any ShaderMaterial on the VFX that
+	declares a `tile_position` uniform. Silently ignores VFX that don't."""
+	if vfx == null:
+		return
+	var tp := Vector2(tile_pos.x, tile_pos.y)
+	for node in _canvas_items_of(vfx):
+		var mat := node.material as ShaderMaterial
+		if mat == null or mat.shader == null:
+			continue
+		for prop in mat.shader.get_shader_uniform_list():
+			if prop.get("name", "") == "tile_position":
+				mat.set_shader_parameter("tile_position", tp)
+				break
+
+func _canvas_items_of(root: Node) -> Array[CanvasItem]:
+	var out: Array[CanvasItem] = []
+	var ci := root as CanvasItem
+	if ci != null:
+		out.append(ci)
+	for child in root.get_children():
+		out.append_array(_canvas_items_of(child))
+	return out
 
 func _is_tile_flammable(tile_pos: Vector2i, game: Node) -> bool:
 	# Non-flammable fluid on tile blocks fire (e.g. water)

@@ -35,6 +35,15 @@ func _ready() -> void:
 	victim.inventory.stow_weapon_from_data(sword.duplicate())
 	await get_tree().physics_frame
 
+	# Arm a targeting preview + a queued ghost indicator on the victim: death
+	# must scrub both (a dead caster's preview used to follow the mouse
+	# forever and overlap every later cast's preview).
+	victim.targeting_system.is_targeting = true
+	victim.targeting_system.rectangle_indicator.visible = true
+	var ghost := Node2D.new()
+	add_child(ghost)
+	victim.targeting_system.queued_indicators.append(ghost)
+
 	# --- 1. kill from inside a physics flush (the melee-hitbox path) ---
 	var trigger := Area2D.new()
 	trigger.collision_layer = 0
@@ -65,6 +74,17 @@ func _ready() -> void:
 		"CHARACTERS query hits corpse: %s" % str(chars_hits.has(victim)))
 	_report("corpse.on-corpses-layer", corpse_hits.has(victim),
 		"CORPSES query finds corpse: %s" % str(corpse_hits.has(victim)))
+
+	_report("corpse.targeting-scrubbed",
+		not victim.targeting_system.is_targeting
+		and not victim.targeting_system.rectangle_indicator.visible,
+		"is_targeting=%s rect_visible=%s" % [victim.targeting_system.is_targeting,
+			victim.targeting_system.rectangle_indicator.visible])
+	_report("corpse.queued-indicators-cleared",
+		victim.targeting_system.queued_indicators.is_empty()
+		and not is_instance_valid(ghost),
+		"queued=%d ghost_valid=%s" % [victim.targeting_system.queued_indicators.size(),
+			is_instance_valid(ghost)])
 
 	# --- 2. the dead take no damage (stale-number leak) ---
 	var dealt := victim.take_damage({"true": 5}, victim.global_position)

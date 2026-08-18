@@ -106,7 +106,7 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 		if on_character:
 			# Start drawing a new path from character position — clear stale movement state
 			_clear_stale_movement()
-			tactical_path.clear()
+			_clear_path_synced()
 			tactical_path.add_waypoint(character.global_position)
 			state = PathInputState.DRAWING_PATH
 			path_drawer.is_drawing_path = true
@@ -142,7 +142,7 @@ func _handle_idle(mouse_pos: Vector2) -> bool:
 			# Middle-click on open ground: A* pathfind from character to destination
 			_clear_stale_movement()
 			var astar_waypoints = _astar_path_to_waypoints(character.global_position, mouse_pos)
-			tactical_path.clear()
+			_clear_path_synced()
 			tactical_path.set_waypoints(astar_waypoints)
 			path_drawer.queue_redraw()
 			return true
@@ -299,7 +299,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	# threshold, discard the path after the node and resume free drawing from it.
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not fresh_left_press and (_awaiting_node_press_release or _use_press_armed):
 		if mouse_pos.distance_to(_action_drag_start) > DRAG_THRESHOLD:
-			tactical_path.truncate_after(_action_drag_snap)
+			_truncate_after_synced(_action_drag_snap)
 			tactical_path.remove_action_node(pending_action_node)
 			pending_action_node = null
 			_awaiting_node_press_release = false
@@ -339,7 +339,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	if Input.is_action_just_pressed("middle_mouse"):
 		var node_pos = pending_action_node.world_position
 		var astar_waypoints = _astar_path_to_waypoints(node_pos, mouse_pos)
-		tactical_path.truncate_after(_action_drag_snap)
+		_truncate_after_synced(_action_drag_snap)
 		tactical_path.remove_action_node(pending_action_node)
 		tactical_path.append_waypoints(astar_waypoints)
 		pending_action_node = null
@@ -516,10 +516,12 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 		result.get("radius", 0),
 		result.get("size", Vector2.ZERO),
 		result.get("rotation", 0.0),
-		result.get("caster_position", character.global_position)
+		result.get("caster_position", character.global_position),
+		Ability.classify_intent(ability_data)
 	)
 	if indicator:
 		pending_action_node.action_data["queued_indicator"] = indicator
+		_bind_aoe_to_node(pending_action_node, result)
 
 	_targeting_for_node = false
 	pending_action_node = null
@@ -528,6 +530,39 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 
 func is_placing_action() -> bool:
 	return state == PathInputState.PLACING_ACTION
+
+## Drop the gesture currently IN FLIGHT and leave the committed plan untouched.
+## cancel_path() is the heavier sibling - it also wipes every waypoint and action
+## node - which is exactly what must not happen when the player merely switches to
+## another party member and expects to come back to this one's route.
+## Idempotent: an IDLE handler with nothing pending does nothing at all.
+func abort_pending_input() -> void:
+	if _targeting_for_node:
+		if character != null and character.targeting_system != null:
+			character.targeting_system.cancel_targeting()
+		_targeting_for_node = false
+	if pending_action_node != null:
+		# The node was created by the click that opened this gesture and never got
+		# an action assigned (action_type stays -1). Left behind it draws an empty
+		# ring on the route and splits the MOVE in two for no reason, so it goes -
+		# the same call the ESC branch of _handle_placing_action makes. Free any
+		# ghost first: a node dropped without _release_node_ghosts strands an
+		# ownerless blue circle. Belt-and-braces, since a node only acquires a
+		# ghost in _confirm_targeting_for_node, which clears pending_action_node.
+		_release_node_ghosts([pending_action_node])
+		if tactical_path != null:
+			tactical_path.remove_action_node(pending_action_node)
+		pending_action_node = null
+	_awaiting_node_press_release = false
+	_use_press_armed = false
+	state = PathInputState.IDLE
+	if path_drawer != null:
+		# A mid-drag DRAWING_PATH / DRAWING_ROTATION never sees its own mouse
+		# release either, so drop those flags too. The waypoints drawn so far stay:
+		# they are already part of the plan.
+		path_drawer.is_drawing_path = false
+		path_drawer.is_drawing_rotation = false
+		path_drawer.queue_redraw()
 
 func cancel_path() -> void:
 	if _targeting_for_node:
@@ -540,8 +575,75 @@ func cancel_path() -> void:
 	path_drawer.is_drawing_rotation = false
 	pending_action_node = null
 	if tactical_path:
-		tactical_path.clear()
+		_clear_path_synced()
 	path_drawer.queue_redraw()
+
+## Record WHERE the AoE ghost this node just created actually landed, on the node
+## itself, so PathDrawer can tether the icon to its blast without ever touching
+## AbilityTargeting (and so TacticalPath stays free of TargetShape). Only two
+## presentation numbers cross the boundary: an anchor point and a reach.
+##
+## LINE and CONE are deliberately left unbound. _initiate_action_for_node hands
+## start_targeting() the node position as origin_override, so those ghosts are
+## already drawn FROM the node outward and are visibly attached; a leader line
+## down their own spine would be pure clutter.
+func _bind_aoe_to_node(node: TacticalPath.PathActionNode, result: Dictionary) -> void:
+	node.aoe_center = Vector2.INF
+	node.aoe_extent = 0.0
+	# Set unconditionally, ABOVE the shape test: LINE and CONE bind no centre but
+	# their ghost is still intent-coloured, and a node re-used for a second ability
+	# must never inherit the first one's colour.
+	var ability_dict: Dictionary = result.get("ability", {})
+	node.aoe_intent = Ability.classify_intent(ability_dict)
+	if character == null or character.targeting_system == null:
+		return
+	var shapes = character.targeting_system.TargetShape
+	var shape = result.get("shape", null)
+	var center: Vector2 = result.get("position", node.world_position)
+	if shape == shapes.CIRCLE:
+		node.aoe_center = center
+		node.aoe_extent = float(result.get("radius", 0.0))
+	elif shape == shapes.RECTANGLE:
+		var rect_size: Vector2 = result.get("size", Vector2.ZERO)
+		node.aoe_center = center
+		# Half the SHORT side: the badge has to end up inside the box whichever
+		# way the leader comes in.
+		node.aoe_extent = minf(rect_size.x, rect_size.y) * 0.5
+
+## Free the AoE ghosts owned by nodes that are being dropped from the path. The
+## ghost is a top_level node parented to the targeting system, not to the node,
+## so nothing frees it when the node goes — which is how a redraw used to leave a
+## blue circle floating with no icon and no owner. Only this character's own node
+## ghosts are touched: a blanket clear_all_queued_indicators() would also erase
+## ghosts belonging to unplanned casts already sitting in the action queue.
+func _release_node_ghosts(nodes: Array) -> void:
+	var ts = character.targeting_system if character != null else null
+	for n in nodes:
+		var ghost = n.action_data.get("queued_indicator", null)
+		if ghost != null and is_instance_valid(ghost) and ts != null:
+			ts.remove_queued_indicator(ghost)
+		# Reset the node's own state regardless of whether a targeting system was
+		# available to free the ghost — these are not dependent on it.
+		n.action_data.erase("queued_indicator")
+		n.aoe_center = Vector2.INF
+		n.aoe_extent = 0.0
+
+## tactical_path.clear() with the AoE ghosts torn down alongside the nodes.
+func _clear_path_synced() -> void:
+	_release_node_ghosts(tactical_path.action_nodes.duplicate())
+	tactical_path.clear()
+
+## tactical_path.truncate_after() with the ghosts of the dropped nodes freed.
+## Diffed rather than predicted, so it stays correct if truncate_after's own
+## filter rule ever changes.
+func _truncate_after_synced(snap: Dictionary) -> void:
+	var before: Array = tactical_path.action_nodes.duplicate()
+	tactical_path.truncate_after(snap)
+	var dropped: Array = []
+	for n in before:
+		if not (n in tactical_path.action_nodes):
+			dropped.append(n)
+	_release_node_ghosts(dropped)
 
 func _clear_stale_movement() -> void:
 	"""Clear any stale ActionQueue actions and nav waypoints when creating a new path."""

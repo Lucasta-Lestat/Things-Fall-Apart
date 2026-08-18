@@ -80,7 +80,7 @@ func _rebuild_portraits() -> void:
 		var rect := TextureRect.new()
 		rect.custom_minimum_size = PORTRAIT_SIZE
 		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_load_portrait(rect, c)
 		rect.tooltip_text = String(c.display_name) if "display_name" in c else String(c.name)
@@ -121,7 +121,7 @@ func _get_drag_data(at_position: Vector2):
 	preview.texture = rect.texture
 	preview.custom_minimum_size = PORTRAIT_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	set_drag_preview(preview)
 	return {
 		"kind": "portrait",

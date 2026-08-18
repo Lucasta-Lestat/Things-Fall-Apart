@@ -27,14 +27,12 @@ func _ready() -> void:
 	cam.zoom = Vector2(2.2, 2.2)
 	add_child(cam)
 	cam.make_current()
-	# the user's repro: breastplate_2 + full_face_helmet on a human
-	_spawn("human", "male", Vector2(250, 250),
-		["full_face_helmet", "steel_greaves", "breastplate_2"])
-	# naked control: must wear NOTHING
-	_spawn("human", "male", Vector2(400, 250), [])
-	# race spread: same pieces on an orc
-	_spawn("orc", "male", Vector2(550, 250),
-		["full_face_helmet", "steel_greaves", "breastplate_2"])
+	# grimalkin rebuild + slender quadrelf female QA round
+	_spawn("grimalkin", "male", Vector2(220, 250), [])
+	_spawn("grimalkin", "female", Vector2(370, 250), ["dark_hood"])
+	_spawn("quadrelf", "female", Vector2(520, 250), [])
+	_spawn("quadrelf", "female", Vector2(650, 250),
+		["purple_hood", "peasant's_stained_shirt", "leather_boots"])
 	for i in 12:
 		await get_tree().process_frame
 	get_viewport().get_texture().get_image().save_png(OUT)

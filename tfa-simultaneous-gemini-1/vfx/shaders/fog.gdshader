@@ -4,8 +4,17 @@ uniform vec4 fog_color : source_color = vec4(0.8, 0.8, 0.8, 0.5);
 uniform float density : hint_range(0.0, 1.0) = 0.5;
 uniform vec2 speed = vec2(0.02, 0.01);
 uniform float scale = 4.0;
-uniform float falloff_radius : hint_range(0.0, 1.0) = 0.8;
-uniform float falloff_softness : hint_range(0.01, 1.0) = 0.3;
+// Silhouette. `falloff_radius` is measured against the rect's INSCRIBED circle:
+// 1.0 is the middle of an edge, so any radius <= 1.0 is guaranteed to have faded
+// out before the rect can clip it. (The old default of 0.8 was measured against
+// length(UV - 0.5), where an edge midpoint is only 0.5 -- the fade never even
+// started there, so every fog rendered as a hard rectangle.)
+uniform float falloff_radius : hint_range(0.0, 1.0) = 1.0;
+uniform float falloff_softness : hint_range(0.01, 1.0) = 0.5;
+// How much low-frequency noise chews into the boundary. 0 = clean oval.
+uniform float edge_wobble : hint_range(0.0, 1.0) = 0.35;
+// Per-cloud offset so two puffs spawned side by side aren't the same shape.
+uniform vec2 noise_seed = vec2(0.0);
 uniform float color_shift : hint_range(0.0, 0.3) = 0.08;
 uniform float warp_strength : hint_range(0.0, 2.0) = 0.8;
 
@@ -36,7 +45,7 @@ float fbm(vec2 p) {
 }
 
 void fragment() {
-	vec2 uv = UV * scale;
+	vec2 uv = UV * scale + noise_seed;
 	vec2 movement = TIME * speed;
 
 	// Domain warping: layer 1 (q) distorts the base, layer 2 (r) distorts further
@@ -50,16 +59,31 @@ void fragment() {
 		fbm(uv + warp_strength * q + vec2(8.3, 2.8) + movement * 0.3)
 	);
 
-	float fog = fbm(uv + warp_strength * r);
+	float n = fbm(uv + warp_strength * r);
 
-	// Density threshold
-	fog = smoothstep(1.0 - density, 1.0, fog);
+	// --- Silhouette ---------------------------------------------------------
+	// dist == 1.0 on the rect's inscribed circle, 1.41 in the corners.
+	vec2 d = (UV - vec2(0.5)) * 2.0;
+	float dist = length(d);
 
-	// Soft circular falloff from center of UV space
-	vec2 center_offset = UV - vec2(0.5);
-	float dist = length(center_offset);
-	float vignette = 1.0 - smoothstep(falloff_radius - falloff_softness, falloff_radius, dist);
-	fog *= vignette;
+	// Low-frequency noise bites into the boundary, turning the oval into lobes
+	// and bays. It only ever carves INWARD, so the fade is always finished by
+	// `falloff_radius` and the rect edge stays invisible no matter the seed.
+	float bite = clamp(fbm(d * 1.7 + noise_seed + vec2(11.3, 4.1) + movement * 0.25), 0.0, 1.0);
+	float radius = falloff_radius * (1.0 - edge_wobble * bite);
+	float body = 1.0 - smoothstep(max(radius - falloff_softness, 0.0), radius, dist);
+
+	// --- Density ------------------------------------------------------------
+	// The rim raises the noise THRESHOLD rather than dimming the result, so the
+	// cloud erodes into wisps and holes on the way out -- the same trick that
+	// gives the fluid surface its ragged coastline. A flat alpha ramp instead
+	// reads as a translucent shape with a visible geometric outline.
+	// At body == 1 this is exactly the old smoothstep(1.0 - density, 1.0, n);
+	// at body == 0 the threshold is above anything fbm can produce, so alpha is
+	// a true zero well before the rect border.
+	float low = mix(1.25, 1.0 - density, body);
+	float fog = smoothstep(low, low + max(density, 0.05), n);
+	fog *= 0.4 + 0.6 * body;
 
 	// Color variation: derive two tints from fog_color
 	// Slightly warmer (brighter) and cooler (darker) versions

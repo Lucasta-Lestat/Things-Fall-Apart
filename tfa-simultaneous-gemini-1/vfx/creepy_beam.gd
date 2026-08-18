@@ -12,9 +12,11 @@ class_name CreepyBeamVFX
 
 # Beam shape
 @export var thickness: float = 4.0
-@export var beam_width: float = 32.0
+# Matches the ability's 24px-wide line hit band so the visual reads as the
+# thing that actually damages.
+@export var beam_width: float = 24.0
 @export var segments: int = 24
-@export var wave_amplitude: float = 12.0
+@export var wave_amplitude: float = 6.0
 @export var wave_frequency: float = 1.4
 @export var wave_speed: float = 1.6
 

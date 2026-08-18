@@ -16,6 +16,8 @@ var party_panel: Node = null
 var _scroll: ScrollContainer
 var _vbox: VBoxContainer
 var _header_label: Label
+var _next_day_button: Button = null
+var _day_label: Label = null
 var _tween: Tween = null
 var _cards: Array = []  # Array of {activity_id: String, container: Control}
 
@@ -67,8 +69,29 @@ func _ready() -> void:
 	_vbox.add_theme_constant_override("separation", 6)
 	_scroll.add_child(_vbox)
 
+	# Sleep on it. Multi-day commitments (training) need a way to actually burn
+	# days, and companions the player left idle pick their own activity when the
+	# day turns over. Lives at the foot of the camp panel because that panel is
+	# present in downtime mode on every map, unlike the town board.
+	_next_day_button = Button.new()
+	_next_day_button.text = "Next Day"
+	_next_day_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_next_day_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_next_day_button.add_theme_font_size_override("font_size", 12)
+	_next_day_button.pressed.connect(_on_next_day_pressed)
+	outer.add_child(_next_day_button)
+
+	_day_label = Label.new()
+	_day_label.add_theme_font_size_override("font_size", 10)
+	_day_label.add_theme_color_override("font_color", Color(0.75, 0.68, 0.45))
+	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	outer.add_child(_day_label)
+
 	if game_node and game_node.has_signal("downtime_mode_changed"):
 		game_node.connect("downtime_mode_changed", _on_downtime_mode_changed)
+	if game_node and game_node.has_signal("downtime_day_advanced"):
+		game_node.connect("downtime_day_advanced", _on_day_advanced)
 
 	call_deferred("_repopulate")
 
@@ -76,6 +99,30 @@ func _on_downtime_mode_changed(active: bool) -> void:
 	visible = active
 	if active:
 		_repopulate()
+
+func _on_day_advanced(_day: int) -> void:
+	_repopulate()
+
+func _on_next_day_pressed() -> void:
+	if game_node and game_node.has_method("advance_downtime_day"):
+		game_node.advance_downtime_day()
+
+## Footer line: the date, plus anyone mid-training and how much they owe. This
+## is the only place the player can see that a companion is three days from
+## finishing, which is exactly what they need to decide whether to leave town.
+func _refresh_day_label() -> void:
+	if _day_label == null:
+		return
+	var lines: PackedStringArray = [TimeManager.get_date_string()]
+	if game_node and "party_chars" in game_node:
+		for c in game_node.party_chars:
+			if c == null or not is_instance_valid(c):
+				continue
+			var left: int = TrainingManager.days_remaining(c)
+			if left > 0:
+				var who: String = String(c.display_name) if "display_name" in c else "Someone"
+				lines.append("%s: %d day%s of study left" % [who, left, "" if left == 1 else "s"])
+	_day_label.text = "\n".join(lines)
 
 func _repopulate() -> void:
 	for child in _vbox.get_children():
@@ -92,6 +139,7 @@ func _repopulate() -> void:
 		var card := _build_activity_card(String(aid), activity)
 		if card:
 			_vbox.add_child(card)
+	_refresh_day_label()
 
 func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 	var card_panel := PanelContainer.new()

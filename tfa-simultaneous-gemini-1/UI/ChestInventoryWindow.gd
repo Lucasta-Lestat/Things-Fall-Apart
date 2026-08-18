@@ -134,7 +134,7 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 		tex.texture = load(sprite_path)
 		tex.custom_minimum_size = ITEM_SLOT_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(tex)
 	else:
@@ -305,7 +305,7 @@ func _create_drag_preview(entry: Dictionary) -> Control:
 		tex.texture = load(sprite_path)
 		tex.custom_minimum_size = ITEM_SLOT_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		return tex
 	var label = Label.new()
 	label.text = entry.get("display_name", "Item")

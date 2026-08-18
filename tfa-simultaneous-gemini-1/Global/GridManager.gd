@@ -22,10 +22,25 @@ var _deck_refs: Dictionary = {}        # Vector2i -> Array of float (one entry p
 # folded into effective_elev (a house interior stays at ground height under its
 # own roof). Only jump-capable characters (jump_height > 0) ever enter it.
 var roof_elevations: Dictionary = {}   # Vector2i -> float (stories)
+# Dangerous-ground overlay (Vector2i -> penalty), SEPARATE from grid_costs on
+# purpose: would_walk's <=10 threshold and the A* INF-goal reject must never
+# see hazard weights (a burning tile is a terrible route, not a wall).
+# SurfaceManager rebuilds it on a short cadence from the live fire/fluid sims
+# and swaps the whole dict in. step_cost adds it, so every A* consumer — AI
+# and player click-paths alike — detours around fire/acid when a detour
+# exists, yet can still cross when it is the only way through.
+# CORE = tiles that damage a character standing on them; HALO = tiles
+# adjacent to fire (cells straddle tile borders and fire spreads) — a bias,
+# never treated as dangerous by is_hazard_tile.
+var hazard_costs: Dictionary = {}      # Vector2i -> HAZARD_CORE_COST or HAZARD_HALO_COST
+const HAZARD_CORE_COST := 50.0
+const HAZARD_HALO_COST := 4.0
 const MAX_STEP_STORIES := 0.55
 const EYE_HEIGHT_STORIES := 0.5
 const FALL_SAFE_STORIES := 1.0         # drops <= this are graceful (no damage)
-const FALL_DMG_PER_STORY := 3.0        # bludgeoning per story past FALL_SAFE
+const FALL_DMG_PER_STORY := 8.0        # bludgeoning per story past FALL_SAFE
+                                       # (scaled with the 30 HP baseline: a
+                                       # 3-story drop wounds, 5 stories kills)
 
 func initialize(map_width_px: int, map_height_px: int) -> void:
 	var cols = int(ceil(float(map_width_px) / TILE_SIZE))
@@ -40,6 +55,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	deck_elevations.clear()
 	_deck_refs.clear()
 	roof_elevations.clear()
+	hazard_costs.clear()
 	for y in range(rows):
 		for x in range(cols):
 			var pos = Vector2i(x, y)
@@ -180,8 +196,38 @@ func set_door_pass(t: Vector2i, on: bool) -> void:
 func step_cost(t: Vector2i) -> float:
 	var c: float = grid_costs.get(t, INF)
 	if c == INF and door_pass.has(t):
-		return DOOR_PASS_COST
+		c = DOOR_PASS_COST
+	if c != INF and not hazard_costs.is_empty():
+		# added AFTER the door substitution so a burning doorway is penalized too
+		c += float(hazard_costs.get(t, 0.0))
 	return c
+
+# True only for tiles that actively damage a standing character (fire core,
+# acid/poison pools, electrified ground) — the halo bias never trips this.
+func is_hazard_tile(t: Vector2i) -> bool:
+	return float(hazard_costs.get(t, 0.0)) >= HAZARD_CORE_COST
+
+# Nearest walkable, non-hazardous tile in growing rings around t (t itself
+# qualifies). Vector2i.MAX when every candidate within max_r is unsafe —
+# callers keep their original goal in that case.
+func nearest_safe_tile(t: Vector2i, max_r: int = 4) -> Vector2i:
+	for r in range(0, max_r + 1):
+		var best := Vector2i.MAX
+		var best_d2 := 2147483647
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue   # ring shell only
+				var c := t + Vector2i(dx, dy)
+				if not would_walk(c) or is_hazard_tile(c):
+					continue
+				var d2 := dx * dx + dy * dy
+				if d2 < best_d2:
+					best_d2 = d2
+					best = c
+		if best != Vector2i.MAX:
+			return best
+	return Vector2i.MAX
 
 func register_deck(t: Vector2i, elev: float) -> void:
 	var hs: Array = _deck_refs.get(t, [])
@@ -423,13 +469,15 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 				if grid_costs.get(n, INF) != INF and not has_roof(n):
 					var rise := effective_elev(n) - here
 					if rise > MAX_STEP_STORIES and rise <= jump_height:
-						# jump UP a step too tall to walk
-						out.append({"n": Vector3i(n.x, n.y, 0), "cost": grid_costs.get(n, 1.0) + JUMP_COST * d})
+						# jump UP a step too tall to walk. step_cost, not raw
+						# grid_costs: a landing pays hazard weights like any
+						# walk edge, or the planner leaps INTO fire for ~9.
+						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + JUMP_COST * d})
 					elif rise < -MAX_STEP_STORIES:
 						# jump DOWN a ledge — the mirror of the roof drop-down.
 						# Without it, a deck/scarp a jumper hopped UP onto is a
 						# one-way trap (AI strands up top).
-						out.append({"n": Vector3i(n.x, n.y, 0), "cost": grid_costs.get(n, 1.0) + DROP_COST * (-rise)})
+						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + DROP_COST * (-rise)})
 	else:
 		var rhere := roof_at(t)
 		for dir in dirs:
@@ -443,9 +491,10 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 				if d > 1 and has_roof(n) and roof_at(n) - rhere <= jump_height:
 					out.append({"n": Vector3i(n.x, n.y, 1), "cost": 1.0 + JUMP_COST * d})
 				# drop down to the ground/deck surface: needs a pathable tile
+				# step_cost so a burning street below costs its hazard weight
 				if grid_costs.get(n, INF) != INF and effective_elev(n) < rhere and not has_roof(n):
 					out.append({"n": Vector3i(n.x, n.y, 0),
-						"cost": grid_costs.get(n, 1.0) + DROP_COST * (rhere - effective_elev(n))})
+						"cost": step_cost(n) + DROP_COST * (rhere - effective_elev(n))})
 	return out
 
 func _heuristic(a: Vector2i, b: Vector2i) -> float:

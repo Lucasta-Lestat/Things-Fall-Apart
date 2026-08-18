@@ -11,8 +11,13 @@
 			"damage_per_tick": {"fire": 10},
 			"damage_interval": 1.0,
 			"fluid_consume_rate": 0.05,
+			"ice_melt_per_tick": 0.34,
 			"vfx_scene": "res://vfx/fire.tscn",
-			"scorch_color": [0.15, 0.12, 0.1, 1.0]
+			"scorch_color": [0.15, 0.12, 0.1, 1.0],
+			"smoke_interval": 1.5,
+			"smoke_duration": 9.0,
+			"smoke_condition": "suffocating",
+			"smoke_condition_min_cells": 4
 		},
 		"ice": {
 			"display_name": "Ice",

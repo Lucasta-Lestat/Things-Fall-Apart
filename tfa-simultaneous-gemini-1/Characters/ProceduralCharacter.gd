@@ -26,10 +26,14 @@ var template_id: String = ""
 var is_protagonist = false
 var AI_enabled = false
 var is_player_controlled: bool = false
-# WAIT order (party context menu): the AI still targets and attacks hostiles
-# in LOS but all AI locomotion is gated off (ai.gd _move_toward). Persists
-# across selection changes until "Resume".
-var hold_position: bool = false
+# WAIT order (party context menu or T): the AI still targets and attacks
+# hostiles in LOS but all AI locomotion is gated off (ai.gd _move_toward).
+# Persists across selection changes until "Resume"/T. The setter drives the
+# stop-hand indicator so every writer (menu, hotkey, tests) stays in sync.
+var hold_position: bool = false:
+	set(v):
+		hold_position = v
+		_sync_wait_indicator()
 # Dialogue / interaction
 var dialogues: Array = []
 var current_dialogue_index: int = 0
@@ -175,7 +179,7 @@ var use_skeletal_rig: bool = false
 var rig_scene_path: String = ""          # res:// path to a CharacterMesh.tscn
 var rig_scale: float = 0.0               # uniform scale; 0 = auto/default
 var character_rig: Node2D = null         # the instantiated CharacterRig scene
-var _rig_grip_r: Node2D = null            # rig weapon anchors (fingertip, +X = blade)
+var _rig_grip_r: Node2D = null            # rig weapon anchors (WRIST->HAND joint, +X = blade)
 var _rig_grip_l: Node2D = null
 var _rig_holder_sync_queued := false
 
@@ -187,17 +191,77 @@ var _rig_holder_sync_queued := false
 # top of the fingers that are supposed to be holding it.
 const RIG_HOLDER_Z := 2
 
+# --- Held-item hand clearance ------------------------------------------------
+# grip_l/grip_r sit on the WRIST->HAND joint, NOT on the fingertips: rig.json
+# also carries a fingertip_* joint that export_mesh_godot.py never emits. Across
+# all 43 exported rig.json files |hand->fingertip| / |wrist->hand| measures
+# 0.97-1.26 (mean 1.11, median 1.11), so the drawn fist covers roughly one
+# hand-length of whatever is pinned AT the anchor -- ~10 world units on a
+# dhampir male, ~7 on a human female. A dagger only reaches
+# total_length * grip_position * body_size_mod = 25 * 0.65 * 1.1 = 17.9 units
+# forward of the anchor, so barely 7 units of blade clear the fingers; a
+# greatsword reaches 64 and never had the problem. So the push MUST scale
+# (inversely) with weapon size, and with the race's hand size.
+#
+# NOTE: the holder also carries the weapon's melee Area2D (WeaponShape._setup_hitbox
+# add_childs it onto the weapon) and Game.gd's blade-clash sampling, so this nudge
+# moves the hitbox forward by the same few pixels. Keep the cap small for that reason.
+#
+# Tuning: raise HAND_CLEARANCE_TARGET to show more blade; raise
+# HAND_CLEARANCE_MAX only if the grip should ride further toward the fingertips.
+# HAND_FINGER_REACH is measured geometry, not taste -- leave it alone.
+const HAND_FINGER_REACH := 1.10        # |hand->fingertip| as a multiple of |wrist->hand|
+const HAND_CLEARANCE_TARGET := 2.4     # aim the tip this many finger-reaches past the anchor
+const HAND_CLEARANCE_MAX := 0.65       # cap the push at this fraction of the finger reach,
+# so the grip itself never travels out from under the fingers
+const HAND_CLEARANCE_MIN_GRIP := 0.55  # centre-gripped gear (bows, staves) is exempt
+
+# World-space distance from the rig's grip anchor to the fingertips, cached in
+# _setup_character_rig. 0 = no rig / unknown, which disables the push.
+var _rig_finger_reach: float = 0.0
+
+## Outward push (world units, along the grip's +X == the forearm/hand axis) for
+## an item held at a rig grip anchor. The fist covers _rig_finger_reach units of
+## anything pinned at the anchor, so short weapons are pushed out until their tip
+## stands HAND_CLEARANCE_TARGET finger-reaches clear of it; anything already
+## longer than that (longswords, axes, greatswords, polearms) gets exactly 0 and
+## keeps its current, correct grip. Capped at HAND_CLEARANCE_MAX of the reach so
+## the grip stays under the fingers -- the weapon reads as HELD, just further out.
+func _held_item_clearance(item: Node2D, holder: Node2D) -> float:
+	# is_instance_valid, not '== null': a freed Object does NOT compare equal to
+	# null in Godot 4, and this runs deferred, a frame after a disarm/queue_free.
+	if _rig_finger_reach <= 0.0 or holder == null or not is_instance_valid(item):
+		return 0.0
+	var w: WeaponShape = item as WeaponShape
+	if w == null:
+		return 0.0
+	# Centre-gripped gear has no outward end to reveal; pushing a bow or a staff
+	# along the hand axis just balances it on the fingertips.
+	if w.grip_position <= HAND_CLEARANCE_MIN_GRIP:
+		return 0.0
+	# holder.scale is body_size_mod (see _update_holder_scale), and the host
+	# CharacterBody2D itself is never scaled, so this is already world units.
+	var forward: float = w.total_length * w.grip_position * holder.scale.x
+	var want: float = _rig_finger_reach * HAND_CLEARANCE_TARGET
+	return clampf(want - forward, 0.0, _rig_finger_reach * HAND_CLEARANCE_MAX)
+
 func _rig_sync_holders() -> void:
 	# End-of-frame holder sync (see _sync_character_rig). WeaponShape art
 	# points -Y at rot 0 while the grip's +X is the blade direction, hence
-	# the +PI/2.
+	# the +PI/2. The holder is then nudged along that same +X by
+	# _held_item_clearance so a short blade emerges from under the fingers
+	# instead of being swallowed by the fist.
 	_rig_holder_sync_queued = false
 	if _rig_grip_r != null and is_instance_valid(_rig_grip_r) and main_hand_holder != null:
-		main_hand_holder.global_position = _rig_grip_r.global_position
+		var push_r: float = _held_item_clearance(current_main_hand_item, main_hand_holder)
+		var out_r: Vector2 = Vector2.RIGHT.rotated(_rig_grip_r.global_rotation)
+		main_hand_holder.global_position = _rig_grip_r.global_position + out_r * push_r
 		main_hand_holder.global_rotation = _rig_grip_r.global_rotation + PI / 2.0
 		main_hand_holder.z_index = RIG_HOLDER_Z
 	if _rig_grip_l != null and is_instance_valid(_rig_grip_l) and off_hand_holder != null:
-		off_hand_holder.global_position = _rig_grip_l.global_position
+		var push_l: float = _held_item_clearance(current_off_hand_item, off_hand_holder)
+		var out_l: Vector2 = Vector2.RIGHT.rotated(_rig_grip_l.global_rotation)
+		off_hand_holder.global_position = _rig_grip_l.global_position + out_l * push_l
 		off_hand_holder.global_rotation = _rig_grip_l.global_rotation + PI / 2.0
 		off_hand_holder.z_index = RIG_HOLDER_Z
 
@@ -275,7 +339,11 @@ var current_off_hand_item: Node2D = null
 var main_hand_holder: Node2D
 var off_hand_holder: Node2D
 var unarmed_strike_damage_type = "bludgeoning"
-var unarmed_strike_damage = 1
+var unarmed_strike_damage = 5  # final damage at STR 50; scaled by damage_multiplier
+# Optional natural-weapon proc: an ability id whose effects fire when an
+# unarmed strike lands (same vocabulary as WeaponShape.on_hit_ability).
+# Set per-race via races.json "unarmed_strike", overridable per-template.
+var unarmed_on_hit_ability = ""
 
 func _main_hand_is_two_handed() -> bool:
 	return current_main_hand_item is WeaponShape and current_main_hand_item.is_two_handed()
@@ -287,6 +355,22 @@ func _main_hand_is_two_handed() -> bool:
 var target_position: Vector2
 var target_rotation: float = 0.0
 var is_moving: bool = false
+
+# --- Planned-facing hold -----------------------------------------------------
+# After a planned action node resolves (a drawn FACE arrow, a queued attack) the
+# character KEEPS that facing for a beat before path-aligned facing takes over
+# again. Without this the very next MOVE waypoint write clobbers target_rotation
+# on the same frame the turn lands, so a drawn "check the left alley" arrow is
+# invisible and a body can never look sideways while walking forward.
+# Path-aligned facing writes go through set_path_facing(), which PARKS the angle
+# in _pending_path_facing while the hold runs and applies it when the hold
+# expires (the existing rotation_speed lerp in _update_movement eases it in).
+# Direct target_rotation writes (real-time input, AI, an explicit new aim) are
+# deliberately NOT gated - an explicit re-aim always wins immediately.
+# Set to 0.0 to restore the old snap-back behaviour exactly.
+@export var planned_facing_hold_time: float = 0.8
+var _facing_hold_remaining: float = 0.0
+var _pending_path_facing: float = NAN
 # Time the character has been blocked against a wall while is_moving; once it
 # exceeds the threshold, _update_movement repaths (or gives up so the action
 # queue advances).
@@ -473,6 +557,12 @@ func effective_crit_fail_threshold() -> float:
 	
 	
 var speed_modifier: float = 0.0
+# Innate (racial) speed offset, as the same FRACTION of base walking speed that
+# conditions use. Kept separate from `speed_modifier` because that field is
+# recomputed from scratch on every stat recalculation — writing the racial bonus
+# straight into it meant the first condition a character picked up silently
+# deleted their race's legs. This is the base the recalculation starts from.
+var base_speed_modifier: float = 0.0
 # Additional speed bonus that applies *only* on the world map. Conditions like
 # "force_marching" stack onto this and never affect tactical-map movement.
 # Game.gd sets `on_world_map = true` for every character it spawns into a map
@@ -563,8 +653,16 @@ var conditions = {}
 
 # --- Update your existing getters to use effective values ---
 
+# HP scale (balance pass): an average character (CON 50, no Martial tier) has
+# 30 HP. That's the yardstick the whole damage table is authored against —
+# average one-hander ~15 net damage = 2 hits, dagger ~10 = 3 hits, a heavy
+# two-hander ~30 = 1 hit on an unarmoured target. Martial tiers add +2 each,
+# so the toughest plausible body (CON 100, Martial 5) sits at 50 HP = 5 dagger
+# hits, the design ceiling for "nobody is a raw-HP sponge".
+# Note the /5.0 is float division on purpose: the old `int(con) / 10` was
+# integer division and made HP a coarse step function.
 var max_hp: int:
-	get: return 6 + int(effective_constitution()) / 10
+	get: return 20 + int(effective_constitution() / 5.0) + int(traits.get("Martial", 0)) * 2
 
 # --- Single-bar character HP (replaces the old per-limb HP system) ---
 # `max_health` is an alias of `max_hp` so the conventional name lives alongside
@@ -581,8 +679,14 @@ var max_MP: int:
 var rotation_speed: float:
 	get: return 8.0 * (effective_dexterity() / 50.0)
 
+# Pure STRENGTH scaling: 1.0 at the average STR of 50, 0.7 at STR 20, 1.5 at
+# STR 100. Weapon damage in Items.json is authored as the STR-50 final number.
+# `bonus_damage` used to be summed in here, which made a condition granting
+# "+2 bonus damage" into a ×3.0 multiplier — three times the intended effect
+# and scaling with the weapon. It is now applied as the flat bonus it was
+# authored as, in Game._apply_attacker_damage_mods.
 var damage_multiplier: float:
-	get: return 0.5 + (effective_strength() / 100.0) + bonus_damage
+	get: return 0.5 + (effective_strength() / 100.0)
 
 var move_speed: float:
 	get:
@@ -796,6 +900,7 @@ func _ready() -> void:
 	targeting_system.connect("targeting_confirmed", _on_targeting_confirmed)
 	_on_stats_recalculated() # Initialize the effective stats
 	_setup_alertness_indicator()
+	_setup_wait_indicator()
 	# Ordering hardening: every current spawner add_childs BEFORE
 	# build_character, so _ready's fresh procedural Line2Ds always precede the
 	# rig build. If a future caller builds first, the Line2Ds created above
@@ -849,8 +954,14 @@ func _setup_tactical_path() -> void:
 func _on_game_unpaused_convert_path() -> void:
 	if tactical_path == null or tactical_path.is_empty():
 		return
-	if not is_player_controlled:
-		return
+	# NO is_player_controlled gate here. Selection flips that flag on every click
+	# (Game._sync_character_flags), so planning for A and then for B left A's drawn
+	# path unconverted while A's re-enabled AI drove the body instead - the
+	# "only the selected character follows its path" bug. A non-empty tactical_path
+	# IS the authorization: only a player-driven character can ever acquire one
+	# (PathInputHandler runs inside _handle_input, which IS is_player_controlled-
+	# gated), and every NPC's path stays permanently empty so the is_empty()
+	# early-out above still costs them nothing.
 
 	# If the path was being executed (paused mid-execution), trim the consumed portion
 	# so the character continues from their current position instead of restarting.
@@ -906,6 +1017,60 @@ func _clear_tactical_path_if_executing() -> void:
 			targeting_system.clear_all_queued_indicators()
 		tactical_path.clear()
 		path_drawer.queue_redraw()
+
+## Tear down every LIVE, un-confirmed planning gesture on this body. Called from
+## Game._sync_character_flags the instant selection moves elsewhere, because
+## _handle_input is is_player_controlled-gated: a deselected character never runs
+## another frame of input and so can never finish or abandon the gesture itself.
+##
+## CONFIRMED orders are deliberately left alone - the drawn waypoints, the action
+## nodes and their blue queued ghosts ARE the plan, and the whole point of
+## switching characters is to keep planning for the rest of the party. Only the
+## half-made gesture dies, which is why this goes through
+## cancel_targeting()/end_targeting() and never clear_all_queued_indicators().
+##
+## Idempotent and safe on a character that was never planning anything.
+func abort_planning_input() -> void:
+	if path_input_handler != null:
+		path_input_handler.abort_pending_input()
+	# A cast armed straight from the hand (not bound to a path node) leaves no
+	# path-handler state to unwind, so catch it here as well. Guarded on
+	# is_targeting: a confirmed real-time cast parks is_targeting = false while
+	# deliberately holding its preview up until the ability lands (see
+	# _confirm_ability_target), and end_targeting() would blank that early.
+	if targeting_system != null and targeting_system.is_targeting:
+		targeting_system.cancel_targeting()
+	# The reticle modes freeze the same way - their aim line is only redrawn from
+	# _handle_input, so it would hang on screen with no way to dismiss it.
+	if not pending_throw.is_empty():
+		_cancel_pending_throw()
+	if pending_dash:
+		_cancel_pending_dash()
+	if pending_bite:
+		_cancel_pending_bite()
+
+
+## True while player-drawn orders are still outstanding. This is the ONE
+## predicate that revokes the AI's movement authority (see ai.gd
+## _movement_locked) - and ONLY its movement authority: targeting, attacking,
+## casting, alertness and every reaction keep running while it is true.
+##
+## Deliberately reads the ACTION QUEUE rather than tactical_path.is_executing:
+## the queue is what actually drives the body, and ai.gd never touches it, so a
+## non-empty queue can only ever mean "the player said so". is_executing is
+## cleared a deferred frame later and from more places.
+##
+## Cleared by natural completion (_complete_current_action), ESC and unpaused
+## middle-click (action_queue.cancel_all), and re-conversion at unpause.
+## NOT cleared by _begin_ice_slide / _begin_fall: those call clear_queue(),
+## which empties the pending queue but leaves current_action set. That is
+## harmless - control is lost during a slide/fall anyway, and the running MOVE
+## self-completes through _is_action_complete's `not character.is_moving`
+## branch once the body stops - but do not read those two as "queue emptied".
+func has_player_orders() -> bool:
+	if action_queue == null:
+		return false
+	return action_queue.current_action != null or action_queue.get_queue_size() > 0
 
 # --- Throw targeting helpers ---
 
@@ -1248,6 +1413,38 @@ func _setup_condition_display() -> void:
 var _alertness_indicator: Label = null
 var _alertness_flash_tween: Tween = null
 
+# Stop-hand over the head while hold_position is set (WAIT order). Same badge
+# as the party panel's — one glance says "this one was told to stand here".
+const WAIT_HAND_TEXTURE := preload("res://UI/wait_hand.png")
+var _wait_indicator: Sprite2D = null
+
+func _setup_wait_indicator() -> void:
+	_wait_indicator = Sprite2D.new()
+	_wait_indicator.name = "WaitIndicator"
+	_wait_indicator.texture = WAIT_HAND_TEXTURE
+	_wait_indicator.scale = Vector2(0.34, 0.34)   # 64px art -> ~22px badge
+	# The character ROOT rotates to face (see _update_movement), so a plain
+	# child would orbit the body and flip at the south-facing rest pose.
+	# top_level opts out of the parent transform; _sync_wait_indicator pins
+	# the badge above the head in world space instead.
+	_wait_indicator.top_level = true
+	_wait_indicator.z_index = 110
+	add_child(_wait_indicator)
+	character_died.connect(_sync_wait_indicator)
+	_sync_wait_indicator()                        # flag may pre-date _ready
+
+
+# Visibility + placement in one spot: called from the hold_position setter
+# (instant feedback, even while paused), on death, and after each movement
+# tick so the badge follows a player-steered held character.
+func _sync_wait_indicator() -> void:
+	if _wait_indicator == null or not is_instance_valid(_wait_indicator):
+		return
+	_wait_indicator.visible = hold_position and is_alive()
+	if _wait_indicator.visible:
+		_wait_indicator.global_rotation = 0.0
+		_wait_indicator.global_position = global_position + Vector2(0, COND_DISPLAY_OFFSET_Y - 14)
+
 func _setup_alertness_indicator() -> void:
 	var ai_node := get_node_or_null("AI")
 	if not ai_node or not ai_node.has_signal("alertness_changed"):
@@ -1377,7 +1574,7 @@ func _refresh_condition_display() -> void:
 		var tex_rect = TextureRect.new()
 		tex_rect.custom_minimum_size = COND_DISPLAY_ICON_SIZE
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
@@ -1391,16 +1588,24 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 	_spawn_condition_vfx(instance)
 	_start_condition_sfx(instance)
 	_refresh_condition_display()
+	if instance and instance.condition and instance.condition.id == "invisible":
+		# Ghostly translucency: the player can still find their own invisible
+		# characters; AI target selection is what actually ignores them.
+		modulate.a = 0.35
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
 	_refresh_condition_display()
+	if instance and instance.condition and instance.condition.id == "invisible":
+		modulate.a = 1.0
 
 func _on_condition_expired(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
 	_stop_condition_sfx(instance)
 	_refresh_condition_display()
+	if instance and instance.condition and instance.condition.id == "invisible":
+		modulate.a = 1.0
 
 	if instance and instance.condition and instance.condition.id == "bide":
 		var absorbed = float(instance.custom_data.get("absorbed", 0.0))
@@ -1495,7 +1700,10 @@ func _on_stats_recalculated() -> void:
 	# that the getters can use. So we use modifier floats.
 	
 	# --- Simple modifier stats (base is 0.0, conditions add/multiply onto them) ---
-	speed_modifier = condition_manager.calculate_effective_stat(0.0, "speed_modifier")
+	# Racial speed is the BASE here, not 0.0 — conditions modify a grimalkin's
+	# native quickness rather than replacing it. A "set" operation (paralysis,
+	# rooted) still overrides it outright, which is the intent.
+	speed_modifier = condition_manager.calculate_effective_stat(base_speed_modifier, "speed_modifier")
 	overland_speed_modifier = condition_manager.calculate_effective_stat(0.0, "overland_speed_modifier")
 	bonus_damage = condition_manager.calculate_effective_stat(0.0, "bonus_damage")
 	
@@ -1582,6 +1790,10 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 				_handle_spawn_animal(instance, result.get("custom_data", {}))
 			"bleed_puddle":
 				_handle_bleed_puddle(instance, result.get("custom_data", {}))
+			"ink_puddle":
+				_handle_ink_puddle(instance, result.get("custom_data", {}))
+			"frost_fog":
+				_handle_frost_fog(instance, result.get("custom_data", {}))
 
 
 func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> void:
@@ -1616,6 +1828,38 @@ func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void
 	var game = get_tree().current_scene
 	if game and "fluid_manager" in game and game.fluid_manager:
 		game.fluid_manager.register_fluid(my_tile, "blood", amount)
+
+
+func _handle_ink_puddle(_instance: ConditionInstance, data: Dictionary) -> void:
+	# The Pensword drips: each tick deposits a little ink fluid on the
+	# wielder's current tile (same shape as _handle_bleed_puddle).
+	# Dead-gated: corpse flattening strips while-drawn conditions, but a
+	# leaked instance must not turn a tombstone into an ink fountain.
+	if not is_alive():
+		return
+	var amount: float = data.get("amount", 0.06)
+	var my_tile = GridManager.world_to_map(global_position)
+	var game = get_tree().current_scene
+	if game and "fluid_manager" in game and game.fluid_manager:
+		game.fluid_manager.register_fluid(my_tile, "ink", amount)
+
+
+func _handle_frost_fog(_instance: ConditionInstance, data: Dictionary) -> void:
+	# Winter's Grip: cold fog pours off the drawn blade — a small short-lived
+	# cloud puff at the wielder each tick, drifting slightly. Dead-gated like
+	# _handle_ink_puddle.
+	if not is_alive():
+		return
+	var game = get_tree().current_scene
+	if game == null or not ("fog_manager" in game) or game.fog_manager == null:
+		return
+	var size: float = float(data.get("size", 70.0))
+	var duration: float = float(data.get("duration", 3.0))
+	game.fog_manager.create_cloud(
+		Color(0.75, 0.85, 0.95, 0.5), Vector2(size, size), duration,
+		"", 1, -2.0, 1.0, 0.45, 3.0,
+		Vector2(randf_range(-0.02, 0.02), randf_range(-0.03, -0.01)),
+		global_position, self)
 
 
 func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
@@ -1913,6 +2157,8 @@ func load_from_data(data: Dictionary) -> void:
 		unarmed_strike_damage_type = data["unarmed_strike_damage_type"]
 	if data.has("unarmed_strike_damage"):
 		unarmed_strike_damage = data["unarmed_strike_damage"]
+	if data.has("unarmed_on_hit_ability"):
+		unarmed_on_hit_ability = str(data["unarmed_on_hit_ability"]) if data["unarmed_on_hit_ability"] != null else ""
 	if data.has("crit_threshold"): CRIT_THRESHOLD = data["crit_threshold"]
 	if data.has("crit_fail_threshold"): CRIT_FAIL_THRESHOLD = data["crit_fail_threshold"]
 	
@@ -2949,6 +3195,7 @@ func _setup_character_rig() -> bool:
 		remove_child(character_rig); character_rig.queue_free(); character_rig = null
 	_rig_grip_r = null
 	_rig_grip_l = null
+	_rig_finger_reach = 0.0
 
 	character_rig = scn.instantiate() as Node2D
 	if character_rig == null:
@@ -2978,11 +3225,21 @@ func _setup_character_rig() -> bool:
 	use_skeletal_rig = false
 	_rig_last_moving = false
 	# Weapon anchors: every exported rig ships grip_l/grip_r Node2Ds on the hand
-	# bones (origin = fingertip, +X = blade direction). Generalized equipping
+	# bones (origin = the WRIST->HAND joint, +X = blade direction). Generalized equipping
 	# parents nothing — the hand holders just follow these each frame, so ANY
 	# TFA weapon works on ANY rigged race with no baking.
 	_rig_grip_r = character_rig.get_node_or_null("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r/grip_r")
 	_rig_grip_l = character_rig.get_node_or_null("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l/grip_l")
+	# How much drawn hand overlaps anything held at that anchor. grip_*.position is
+	# the wrist->hand vector in rig-local px (its parent bone sits on the wrist, and
+	# no bone in that chain carries a scale, so `* s` is exact), and the fingers run
+	# on ~HAND_FINGER_REACH x further -- this is the world-space length of fist that
+	# hides a held weapon. Fed to _held_item_clearance.
+	_rig_finger_reach = 0.0
+	if _rig_grip_r != null:
+		_rig_finger_reach = _rig_grip_r.position.length() * s * HAND_FINGER_REACH
+	elif _rig_grip_l != null:
+		_rig_finger_reach = _rig_grip_l.position.length() * s * HAND_FINGER_REACH
 	# Fitted wearables for armor equipped before this (re)build.
 	_rig_apply_wearables()
 	if character_rig.has_method("set_moving"):
@@ -3198,8 +3455,18 @@ func _process(delta: float) -> void:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
 		_tick_school_resources(delta)
-		# Delegate to AI child node
-		if AI_enabled:
+		# Delegate to AI child node. A party member EXECUTING a drawn tactical
+		# path keeps its brain even while selected: the path takes MOVEMENT
+		# authority (ai.gd _movement_locked), not the right to fight. Without this
+		# the one character the player happens to have highlighted is the only one
+		# that walks its path without shooting at what it walks into.
+		# BOTH clauses are required. has_player_orders() alone also fires for a
+		# bare queued attack / ability / weapon-cycle / dash with no path drawn
+		# (see _process_hand_action, _confirm_ability_target), which would wake the
+		# AI during ordinary manual play; is_executing alone can linger when a path
+		# is cancelled without an action_completed signal. Reverts to plain manual
+		# control the frame the queue empties.
+		if AI_enabled or (has_player_orders() and tactical_path != null and tactical_path.is_executing):
 			$AI.process_ai(delta)
 	elif character_rig != null:
 		# Paused: the rig freezes its own clip (CharacterRig gates advance on
@@ -4051,7 +4318,8 @@ func _confirm_ability_target(paused: bool) -> void:
 				result.get("radius", 0),
 				result.get("size", Vector2.ZERO),
 				result.get("rotation", 0.0),
-				result.get("caster_position", global_position)
+				result.get("caster_position", global_position),
+				Ability.classify_intent(ability_data)
 			)
 	else:
 		# Keep the targeting indicator visible until the ability actually lands.
@@ -4070,10 +4338,93 @@ func _confirm_ability_target(paused: bool) -> void:
 		})
 
 
+# --- Planned-facing hold API -------------------------------------------------
+func begin_facing_hold(duration: float = -1.0) -> void:
+	"""Freeze path-aligned facing writes for `duration` seconds (default:
+	planned_facing_hold_time). Called when a queued FACE / attack finishes so the
+	aimed direction survives into the next MOVE segment instead of being snapped
+	back down the path on the following frame. A fresh aim also invalidates any
+	angle parked under the PREVIOUS hold."""
+	_pending_path_facing = NAN
+	var hold: float = duration if duration >= 0.0 else planned_facing_hold_time
+	if hold <= 0.0:
+		return
+	_facing_hold_remaining = hold
+
+func clear_facing_hold() -> void:
+	"""Drop the hold AND the parked path angle (manual order / cancelled queue /
+	an explicit new aim starting)."""
+	_facing_hold_remaining = 0.0
+	_pending_path_facing = NAN
+
+func set_path_facing(angle: float) -> void:
+	"""Path-aligned facing write (movement code only). Parked - not applied -
+	while a planned-facing hold is running; the most recently parked angle is
+	applied when the hold expires. Explicit aims must keep writing
+	target_rotation directly so they win immediately."""
+	if _facing_hold_remaining > 0.0:
+		_pending_path_facing = angle
+		return
+	target_rotation = angle
+
+func _tick_facing_hold(delta: float) -> void:
+	if _facing_hold_remaining <= 0.0:
+		return
+	_facing_hold_remaining -= delta
+	if _facing_hold_remaining > 0.0:
+		return
+	_facing_hold_remaining = 0.0
+	if not is_nan(_pending_path_facing):
+		target_rotation = _pending_path_facing
+		_pending_path_facing = NAN
+
 func _update_movement(delta: float) -> void:
+	# Planned-facing hold expires HERE, ahead of the rotate integration below and
+	# ahead of the fall/jump/ice/knockback/dash early-returns, so the parked path
+	# angle starts easing in on the frame it is released and the timer always
+	# drains even while airborne. Only ever ticks unpaused (see _process).
+	_tick_facing_hold(delta)
+	# Facing authority while a CAST has an arm IK-pinned to a world aim point
+	# (_on_ability_cast_started -> set_attack_aim + _rig_ik_set(cast_arm, "cast")).
+	# The rig re-solves that arm at the WORLD aim point every frame in
+	# _sync_character_rig, but body facing belongs to whoever last wrote
+	# target_rotation — and a tactical path that is STILL executing re-steers it to
+	# the next waypoint on every waypoint advance (action_queue._is_action_complete)
+	# and on every new MOVE segment (action_queue._execute_action). An ability fired
+	# MID-PATH therefore had the facing set by _confirm_ability_target stomped back
+	# along the path while the casting arm stayed nailed to the target: arm and body
+	# visibly pointing different ways. Planned casts avoid the fight by construction
+	# (TacticalPath splits the path at the node, so the MOVE is finished first).
+	# Runs AFTER _tick_facing_hold so an expiring planned-facing hold can't reclaim
+	# the body mid-cast: while an arm is pinned, the cast aim is the authority.
+	# Deliberately scoped:
+	#  - owner "cast" only. A clipless ATTACK arms the same hold (_rig_play_attack,
+	#    for ranged_bullet/acid/electric/cold/radiant/poison) and that path already
+	#    ships with facing-follows-movement; do not change combat visuals here.
+	#  - never during a FACE action. _is_action_complete(FACE) waits for `rotation`
+	#    to reach its OWN angle, so overriding target_rotation would stall the whole
+	#    action queue for the duration of the hold (which, for a projectile ability,
+	#    lasts until impact).
+	# No-op for legacy / SkeletalBodyRig bodies: they pose arms in character-local
+	# space and _rig_ik_hand is always "" for them.
+	if _rig_ik_hand != "" and _rig_ik_owner == "cast":
+		var facing_free: bool = true
+		if action_queue != null and action_queue.current_action != null:
+			facing_free = action_queue.current_action.type != ActionQueue.ActionType.FACE
+		if facing_free:
+			var aim_pt = get_attack_aim_point()
+			if aim_pt is Vector2:
+				var aim_v: Vector2 = aim_pt
+				var to_aim: Vector2 = aim_v - global_position
+				if to_aim.length_squared() > 1.0:
+					target_rotation = to_aim.angle() + PI / 2
 	# Smoothly rotate toward target
 	var angle_diff = wrapf(target_rotation - rotation, -PI, PI)
 	rotation += sign(angle_diff) * min(abs(angle_diff), rotation_speed * delta)
+	# keep the WAIT badge pinned above the head (it's top_level: the rotating
+	# root doesn't carry it, so a steered held character must drag it along)
+	if hold_position:
+		_sync_wait_indicator()
 	# Update dash timers
 	if is_dashing:
 		dash_timer -= delta
@@ -4941,6 +5292,9 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 	# Determine the holder for this hand
 	var holder = main_hand_holder if hand == "Main" else off_hand_holder
 
+	# While-drawn conditions: whatever the OLD weapon granted goes away first.
+	_remove_drawn_weapon_conditions(hand)
+
 	# Remove ALL children from the holder (the old item). Don't free — still in inventory.
 	for child in holder.get_children():
 		# If the previous child was a WeaponShape, deactivate its hitbox and
@@ -4962,13 +5316,77 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 		holder.add_child(weapon)
 		if weapon is WeaponShape:
 			weapon.holder = self
+			_apply_drawn_weapon_conditions(weapon, hand)
 		var grip_offset = weapon.get_grip_offset_for_hand()
 		weapon.position = grip_offset
 		# Render below the forearm/hand sprites (z = -2) so the hand visually grips the weapon
 		weapon.z_index = -3
 	emit_signal("weapon_changed", weapon)
 
+
+# ---- while-drawn item conditions (Winter's Grip, Pensword ink, torches...) ----
+# adds_condition_on_equip on a WEAPON means "while this is in your hand":
+# applied permanent on draw, stripped on stow/swap/disarm. Armor pieces get the
+# same treatment per-slot in equip_equipment/unequip_slot.
+var _drawn_weapon_conditions := {}  # hand -> Array[String] of condition ids we applied
+
+func _resolve_equip_condition_ids(raw) -> Array:
+	var ids: Array = []
+	if raw is String and raw != "" and raw != "null":
+		ids = [raw]
+	elif raw is Dictionary and raw.has("condition_id"):
+		ids = [raw["condition_id"]]
+	elif raw is Array:
+		ids = raw
+	var out: Array = []
+	for cid in ids:
+		# Items author display-style names ("Inspired"); condition ids are
+		# lowercase_snake. Normalize, and skip unregistered ids with a warning
+		# instead of letting apply_condition push per-frame errors.
+		var key := String(cid).to_lower().replace(" ", "_")
+		if ConditionManager.condition_registry.has(key):
+			out.append(key)
+		else:
+			push_warning("equip condition '%s' is not a registered condition" % cid)
+	return out
+
+func _apply_drawn_weapon_conditions(weapon: WeaponShape, hand: String) -> void:
+	if condition_manager == null:
+		return
+	var applied: Array = []
+	for key in _resolve_equip_condition_ids(weapon.adds_condition_on_equip):
+		if condition_manager.apply_condition(key, self, 1, -1.0):
+			applied.append(key)
+	if not applied.is_empty():
+		_drawn_weapon_conditions[hand] = applied
+
+func _remove_drawn_weapon_conditions(hand: String) -> void:
+	if condition_manager == null or not _drawn_weapon_conditions.has(hand):
+		_drawn_weapon_conditions.erase(hand)
+		return
+	for cid in _drawn_weapon_conditions[hand]:
+		condition_manager.remove_condition(cid)
+		# Also strip anything the drawn condition chained into (a triggered
+		# apply_condition like Winter's Grip's bite, or a transforms_into) —
+		# the wielder shouldn't keep freezing after sheathing the sword.
+		var tmpl = ConditionManager.condition_registry.get(cid)
+		if tmpl:
+			for te in tmpl.triggered_effects:
+				if te is Dictionary and str(te.get("type", "")) == "apply_condition" and te.has("condition_id"):
+					condition_manager.remove_condition(str(te["condition_id"]))
+			if tmpl.transforms_into is Dictionary and tmpl.transforms_into.has("id"):
+				condition_manager.remove_condition(str(tmpl.transforms_into["id"]))
+	_drawn_weapon_conditions.erase(hand)
+
 func _on_attack_hit(hand) -> void:
+	# Character melee damage resolves HERE, at the animation's hit frame, via an
+	# explicit reach + arc test — not via the weapon's Area2D, which is parented
+	# to the rig hand and swept an arc offset off this character's facing.
+	# Duck-typed on the scene root the same way WeaponShape's hitbox is, so the
+	# headless combat harnesses can stub it.
+	var combat_manager: Node = get_tree().current_scene
+	if combat_manager != null and combat_manager.has_method("resolve_melee_swing"):
+		combat_manager.resolve_melee_swing(self, String(hand))
 	if hand== "Main":
 	# Called when attack hits (at the impact frame)
 		if current_main_hand_item:
@@ -5328,9 +5746,33 @@ func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 		holder.add_child(equipment)
 		equipment.set_meta("item_data", equipment_data)
 		_rig_show_wearable(slot, equipment_data, equipment)
+		_apply_worn_conditions(slot, equipment_data)
 	_refresh_limb_armor()
-	
+
 	return equipment
+
+
+# ---- while-worn armor conditions (crown's Inspired, cloak's Invisible...) ----
+var _worn_slot_conditions := {}  # slot enum -> Array[String] of condition ids we applied
+
+func _apply_worn_conditions(slot: int, equipment_data: Dictionary) -> void:
+	_remove_worn_conditions(slot)
+	if condition_manager == null:
+		return
+	var applied: Array = []
+	for key in _resolve_equip_condition_ids(equipment_data.get("adds_condition_on_equip")):
+		if condition_manager.apply_condition(key, self, 1, -1.0):
+			applied.append(key)
+	if not applied.is_empty():
+		_worn_slot_conditions[slot] = applied
+
+func _remove_worn_conditions(slot: int) -> void:
+	if condition_manager == null or not _worn_slot_conditions.has(slot):
+		_worn_slot_conditions.erase(slot)
+		return
+	for cid in _worn_slot_conditions[slot]:
+		condition_manager.remove_condition(cid)
+	_worn_slot_conditions.erase(slot)
 
 func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 	"""Remove equipment from a slot"""
@@ -5361,6 +5803,7 @@ func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 				feet_equipment.queue_free()
 				feet_equipment = null
 	_rig_hide_wearable(slot)
+	_remove_worn_conditions(slot)
 	_refresh_limb_armor()
 
 func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
@@ -5475,6 +5918,38 @@ func _show_death_marker() -> void:
 	_death_marker.z_index = 5
 	add_child(_death_marker)
 
+
+## Rage's payoff, sized from how badly hurt this character is RIGHT NOW:
+## round(missing_hp / 15). Returns 0 unless the `rage` condition is active.
+##
+## This is deliberately NOT a stat_modifier. Those carry a constant `value`
+## from the condition template, scaled only by stack count, and nothing
+## recomputes them when HP changes -- they can only express a cast-time
+## snapshot. Rage has to grow as the bearer is wounded and shrink when they
+## are healed, so it is read live instead.
+##
+## SINGLE SOURCE OF TRUTH for both halves of the effect. Callers:
+##   * take_damage (below)                -- physical damage reduction
+##   * Game._apply_attacker_damage_mods   -- flat bonus damage on weapon hits
+## Keep it that way; if the two sites ever compute this separately they will
+## drift.
+func rage_bonus() -> int:
+	if condition_manager == null or not condition_manager.has_active_condition("rage"):
+		return 0
+	if max_health <= 0:
+		return 0
+	# +1 per FULL 20% of max HP missing. Proportional rather than a flat
+	# missing-HP divisor: max_hp spans roughly 25 (frail) to 50 (CON 100,
+	# Martial 5), so any absolute divisor would mean something very different
+	# to a barbarian tank than to a scholar. As a fraction it reads the same
+	# for everyone and re-tunes in one place.
+	# floor(), so the step lands exactly AT each fifth rather than a hair
+	# early. Practical ceiling is +4: +5 needs 100% of HP missing, and a
+	# character at 0 HP is not swinging.
+	var missing: int = maxi(0, max_health - current_health)
+	return clampi(floori(float(missing) / float(max_health) * 5.0), 0, 5)
+
+
 func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_limb: int = LimbType.TORSO) -> int:
 	"""Apply damage to the character's single HP pool.
 
@@ -5505,12 +5980,25 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	var character_dr_remaining: float = 0.0
 	if condition_manager:
 		character_dr_remaining = max(0.0, condition_manager.calculate_effective_stat(0.0, "dr"))
+	# Rage joins the same pool, but is read LIVE on every hit because its size
+	# tracks current missing HP (see rage_bonus). Pooling it here rather than
+	# subtracting it separately gets three things for free: it lands AFTER the
+	# per-limb armour DR and its chip floor, it is spent only on the physical
+	# types in the branch below, and it is consumed across a multi-type hit
+	# exactly like physically_resistant / shielded.
+	character_dr_remaining += float(rage_bonus())
 
 	# 2. Calculate damage for each type after resistances
 	for damage_type in damage:
 		raw_val = damage[damage_type]
 		dr_val = armor_dr.get(damage_type, 0)  # Default to 0 if type not in DR
 		var after_armor = max(0, raw_val - dr_val)
+		# Chip floor: DR is flat subtraction, so a heavily armoured target could
+		# reduce a light weapon to exactly 0 and become literally unkillable by
+		# it. Any hit that carried real damage always gets through for at least
+		# 1 — slowly, but it gets through.
+		if raw_val > 0 and after_armor <= 0:
+			after_armor = 1
 		var char_dr_used: float = 0.0
 		if character_dr_remaining > 0 and damage_type in ["slashing", "bludgeoning", "piercing"]:
 			char_dr_used = min(character_dr_remaining, after_armor)
@@ -5568,9 +6056,39 @@ func set_limb_armor(limb_type: LimbType, dr: Dictionary) -> void:
 		limb.set_armor(dr)
 
 func get_limb_armor(limb_type: LimbType) -> Dictionary:
-	"""Get current armor DR for a limb"""
+	"""Get current armor DR for a limb, worn armor plus any off-hand shield."""
 	var limb = limbs.get(limb_type)
-	return limb.armor_dr if limb else Globals.DR_0 #DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
+	var worn: Dictionary = limb.armor_dr if limb else Globals.DR_0 #DR_0 = {"slashing":0, "bludgeoning": 0, "piercing": 0, "sonic": 0, "radiant":0, "necrotic": 0, "fire":0, "cold":0, "acid":0, "poison":0, "force":0 }
+	var shield: Dictionary = _off_hand_shield_dr(limb_type)
+	if shield.is_empty():
+		return worn
+	# Additive: a shield stacks on top of worn armour. Plate + iron_shield can
+	# reach 8 physical DR and reduce a dagger to a scratch — that's the point,
+	# and the chip floor in take_damage guarantees it can never reach zero.
+	var total: Dictionary = worn.duplicate()
+	for k in shield.keys():
+		total[k] = int(total.get(k, 0)) + int(shield[k])
+	return total
+
+
+# Shields live in the off hand as WeaponShapes, not EquipmentShapes, so
+# _refresh_limb_armor (which only walks the five armour slots) never saw them
+# and their authored damage_resitances did nothing. Resolve them here instead
+# of hooking every off-hand mutation site in inventory.gd. A raised shield
+# covers the torso and arms — not the head or legs.
+const _SHIELD_COVERED_LIMBS := [LimbType.TORSO, LimbType.LEFT_ARM, LimbType.RIGHT_ARM]
+
+func _off_hand_shield_dr(limb_type: LimbType) -> Dictionary:
+	if not limb_type in _SHIELD_COVERED_LIMBS:
+		return {}
+	if inventory == null or not is_instance_valid(inventory):
+		return {}
+	var off = inventory.off_hand_item
+	if off == null or not is_instance_valid(off):
+		return {}
+	if not (off is WeaponShape) or off.weapon_type != WeaponShape.WeaponType.SHIELD:
+		return {}
+	return off.damage_resitances
 
 
 # Map equipment slots to limb types for armor
@@ -5581,6 +6099,9 @@ static func get_limb_for_equipment_slot(slot: int) -> Array[LimbType]:
 			return [LimbType.HEAD]
 		1:  # TORSO
 			return [LimbType.TORSO, LimbType.LEFT_ARM, LimbType.RIGHT_ARM]
+		2:  # BACK (capes, backpacks) — had no case at all, so every cape and
+			# pack contributed exactly zero DR no matter what Items.json said.
+			return [LimbType.TORSO]
 		3:  # LEGS
 			return [LimbType.LEFT_LEG, LimbType.RIGHT_LEG]
 		4:  # FEET
@@ -5725,6 +6246,25 @@ func _enter_corpse_state() -> void:
 	_hide_living_visuals()
 	_show_death_marker()
 	set_process(false)
+	# set_process(false) is PER-NODE: child systems keep processing on the
+	# corpse. An armed targeting preview kept following the mouse forever over
+	# the battlefield and overlapped every later cast's preview (playtest
+	# find); queued ghost indicators outlived their caster; an in-flight cast
+	# would complete from a corpse. Scrub all three. (interrupt_cast respects
+	# non-interruptible abilities — a dying breath may still finish those.)
+	if targeting_system != null:
+		targeting_system.cancel_targeting()
+		targeting_system.clear_all_queued_indicators()
+	# ...and the plan those ghosts belonged to. PathDrawer is a CHILD with
+	# process_mode = ALWAYS, so set_process(false) above does not stop it: without
+	# this the corpse kept painting its route ribbon, node discs and order badges
+	# over the battlefield, tethered to blasts that were just deleted.
+	if tactical_path != null:
+		tactical_path.clear()
+		if path_drawer != null:
+			path_drawer.queue_redraw()
+	if ability_manager != null:
+		ability_manager.interrupt_cast("caster died")
 	# Corpse body physics: move the body OFF the CHARACTERS layer instead of
 	# disabling its shape. Melee kills arrive inside the weapon-hitbox
 	# body_entered flush, where the physics server silently REJECTS
@@ -5750,6 +6290,16 @@ func _enter_corpse_state() -> void:
 	# this on map re-entry after Game re-equips saved weapons; the flatten's
 	# id-dedupe converges instead of duplicating.
 	if inventory != null:
+		# Strip while-drawn/worn conditions BEFORE flattening: flatten nulls
+		# the hands with NO active_weapon_changed signal, which would leak
+		# permanent conditions (inking, winters_grip) ticking on the corpse.
+		_remove_drawn_weapon_conditions("Main")
+		_remove_drawn_weapon_conditions("Off")
+		for slot in _worn_slot_conditions.keys():
+			if condition_manager:
+				for cid in _worn_slot_conditions[slot]:
+					condition_manager.remove_condition(cid)
+		_worn_slot_conditions.clear()
 		if inventory.has_method("flatten_for_corpse"):
 			inventory.flatten_for_corpse()
 		contents = inventory.items
@@ -6088,12 +6638,43 @@ func apply_stagger(intensity: float) -> void:
 		
 func disarm_character() -> void:
 	"""Force character to drop their weapon"""
+	if not drop_held_weapon("Main"):
+		# Nothing droppable in hand (unarmed / AbilityShape): just interrupt.
+		if self.attack_animator:
+			self.attack_animator.interrupt_attack()
+
+
+func drop_held_weapon(hand: String = "Main") -> bool:
+	# A REAL disarm: the held weapon leaves the character entirely and lands
+	# at their feet as a world item (not stowed — that was the old TODO).
+	var weapon = current_main_hand_item if hand == "Main" else current_off_hand_item
+	if weapon == null or not (weapon is WeaponShape):
+		return false
+	var wid: String = str(weapon.id)
+	if wid == "":
+		return false
 	if self.attack_animator:
 		self.attack_animator.interrupt_attack()
-	
-	# TODO: Create dropped weapon entity at character position
-	# For now, just holster
-	self.holster_weapon()
+	# Clear the hand WITHOUT stowing; the active_weapon_changed handler
+	# detaches the node and strips while-drawn conditions.
+	if inventory:
+		if hand == "Main":
+			inventory.main_hand_item = null
+		else:
+			inventory.off_hand_item = null
+		inventory.emit_signal("active_weapon_changed", null, hand)
+	weapon.queue_free()
+	var game = get_tree().current_scene
+	if game and game.has_method("create_item"):
+		var drop_pos: Vector2 = global_position + Vector2(randf_range(-18, 18), randf_range(12, 26))
+		# Carry the theft mark — a fresh canonical copy would launder a stolen
+		# weapon clean (confiscation/return-goods sweeps read stolen_from).
+		var extras := {}
+		if weapon.stolen_from != "":
+			extras["stolen_from"] = weapon.stolen_from
+		game.create_item(wid, drop_pos, 1, extras)
+	GameLog.add_entry("%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name])
+	return true
 # INTERUPTION AND KNOCKBACK
 func apply_knockback(duration: float) -> void:
 	"""Apply a knockback recovery period (can't attack)"""
@@ -6160,6 +6741,9 @@ func get_stat_by_name(stat_name) -> int:
 		&"con", &"constitution": return constitution
 		&"int", &"intelligence": return intelligence
 		&"cha", &"charisma": return charisma
+		# Missing arm meant every will-save (frightened, panicked, charms)
+		# silently rolled against the flat-50 fallback below.
+		&"will", &"wis", &"wisdom": return will
 	return 50
 
 ## Roll a saving throw against `stat_name` and return the tier delta to apply to
@@ -6289,18 +6873,71 @@ func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> voi
 		if override != null:
 			cast_loudness = float(override)
 	HearingManager.emit(global_position, cast_loudness, self)
-	# Rig characters have no baked cast clip: aim the casting arm at the target
-	# via IK for the duration of the cast (live-tracked in _sync_character_rig;
-	# released by cast completed/interrupted/failed and by attack_finished).
+	# Aim the CASTING arm, not a hardcoded one. The arm is whichever hand holds
+	# this ability's shape — the rig path was hardcoded "r", so an off-hand
+	# cast swung the main-hand arm while the off hand spawned the storm
+	# (playtest find; the attack path already picks its arm from the hand).
+	var cast_arm := _casting_arm(ability)
+	# The legacy animator mirrors per-frame off current_hand, and a QUEUED cast
+	# executes long after the initiating click — pin the active hand to the
+	# casting hand for the cast's duration so both body types swing correctly.
+	current_hand = "Off" if cast_arm == "l" else "Main"
+	# Rig characters have no baked cast clip: IK-aim for the cast's duration
+	# (live-tracked in _sync_character_rig; released by cast
+	# completed/interrupted/failed and by attack_finished).
 	if character_rig != null and character_rig.has_method("set_arm_ik"):
 		set_attack_aim(target_position)
-		_rig_ik_set("r", "cast")
+		_rig_ik_set(cast_arm, "cast")
 	cast_started.emit(ability, target_position)
 
+## Which physical arm performs a cast: the hand slot holding this ability's
+## shape wins ("Off" hand = left arm, mirroring _get_hand_mirror); falls back
+## to the initiating click's hand, then the right arm (AI casts have no click).
+func _casting_arm(ability: Ability) -> String:
+	var aid: String = ability.id if ability != null else ""
+	if aid != "":
+		if current_off_hand_item is AbilityShape and current_off_hand_item.ability_id == aid:
+			return "l"
+		if current_main_hand_item is AbilityShape and current_main_hand_item.ability_id == aid:
+			return "r"
+	return "l" if current_hand == "Off" else "r"
+
+## Drop every queued AoE ghost EXCEPT the ones a still-pending path node owns.
+## A cast finishing means "my own preview is spent", not "forget the rest of the
+## plan" — the old blanket clear_all_queued_indicators() erased the second and
+## third planned blasts the instant the first one landed, which also silently
+## killed their PathDrawer tethers and order badges (those gate on the ghost
+## still being alive). Ghosts from unplanned queued casts belong to no node and
+## are still swept, exactly as before.
+func _clear_orphan_queued_indicators() -> void:
+	if targeting_system == null:
+		return
+	var owned: Array = []
+	if tactical_path != null:
+		for n in tactical_path.action_nodes:
+			var ind = n.action_data.get("queued_indicator", null)
+			if ind != null and is_instance_valid(ind):
+				owned.append(ind)
+	# Rebuild the array rather than calling remove_queued_indicator per ghost:
+	# that helper erases from queued_indicators, so driving it from a loop over
+	# the same array would mutate during iteration. Rebuilding also compacts out
+	# entries freed elsewhere, which would otherwise linger forever now that the
+	# blanket clear this replaces no longer purges the array wholesale.
+	var keep: Array[Node2D] = []
+	for ghost in targeting_system.queued_indicators:
+		if not is_instance_valid(ghost):
+			continue
+		if ghost in owned:
+			keep.append(ghost)
+		else:
+			ghost.queue_free()
+	targeting_system.queued_indicators = keep
+
 func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
-	# Clear any queued targeting indicators left over from paused planning
+	# Clear the queued targeting indicators this cast is done with, KEEPING the
+	# ones later path nodes still need to show.
 	if targeting_system:
-		targeting_system.clear_all_queued_indicators()
+		_clear_orphan_queued_indicators()
 		# Also clean up any live indicator that was left visible until the ability landed
 		targeting_system.end_targeting()
 	# Check if any conditions should gain stacks based on this ability's traits
@@ -6313,14 +6950,14 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	if targeting_system:
-		targeting_system.clear_all_queued_indicators()
+		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
-		targeting_system.clear_all_queued_indicators()
+		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
 	cast_failed.emit(ability, reason)
@@ -6392,17 +7029,39 @@ func _get_modified_visual_duration(ability: Ability) -> float:
 			final_multiplier *= MODIFY_DURATION_BY_TRAIT[TRAIT]
 	
 	return base_duration * final_multiplier
+## Whether a targeting block describes a region with actual extent, as opposed to
+## a bare point. Shapes carry their extent in different fields, and an authored
+## radius/size of 0 is the data's way of saying "no ring at all" (Force March).
+static func _targeting_has_area(shape: String, radius: float, size: Vector2) -> bool:
+	match shape:
+		"circle", "cone":
+			return radius > 0.0
+		"rectangle", "line":
+			return size.x > 0.0 or size.y > 0.0
+	return false
+
+
 ## Find targets in the ability's area of effect
 func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	var targets: Array = []
-	# Self-targeted abilities (e.g. Force March) always resolve their effects
-	# against the caster regardless of shape/radius. Returning [self] here
-	# guarantees apply_condition fires on the caster even when radius is 0.
-	if ability.targeting.get("type", "") == "self":
-		return [self]
 	var shape = ability.targeting.get("shape", "none")
 	var radius = ability.targeting.get("radius", 0.0)
 	var size = ability.targeting.get("size", Vector2.ZERO)
+	# "self" carries TWO meanings across Abilities.json, told apart by whether the
+	# targeting describes an actual area:
+	#   no area (Rage, Bide, Force March — shape none/single, or radius 0)
+	#       = "this lands on me". Return [self] so apply_condition still fires
+	#       when there is no ring to sweep at all.
+	#   real area (Repulsion Wave — a 100px circle)
+	#       = "this bursts OUT of me". Fall through to the ordinary sweep, which
+	#       is already centred on the caster because use_ability rewrites a self
+	#       ability's target_position to the live body position. Returning [self]
+	#       for these made the wave shove and damage nobody but its own caster.
+	# Whether the caster themself belongs in that burst is an EFFECT question,
+	# not a geometric one, so it is settled by AbilityManager (a self-centred
+	# aura buff includes them; a self-centred blast does not).
+	if ability.targeting.get("type", "") == "self" and not _targeting_has_area(shape, radius, size):
+		return [self]
 	# (No tracing here: the knockback landing preview calls this every time the
 	# cursor moves during targeting, so a print would flood the console.)
 	# Get all potential targets
@@ -6432,11 +7091,16 @@ func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 				var diff = target.global_position - center
 				in_area = abs(diff.x) <= half_size.x and abs(diff.y) <= half_size.y
 			"cone":
-				# Cone check (direction from caster to target_position)
+				# Cone check (direction from caster to target_position).
+				# The caster is the cone's apex, so they are never a target —
+				# without this, to_target is zero-length, angle_to() returns 0,
+				# and the caster always counts as inside their own cone.
+				if target == self:
+					continue
 				var cone_direction = (center - global_position).normalized()
 				var to_target = (target.global_position - global_position)
 				var distance = to_target.length()
-				if distance <= radius:
+				if distance > 0.01 and distance <= radius:
 					var angle_to_target = cone_direction.angle_to(to_target.normalized())
 					var half_angle = deg_to_rad(ability.targeting.get("angle", 45.0)) / 2
 					in_area = abs(angle_to_target) <= half_angle
@@ -6482,22 +7146,25 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 		if radius > 0:
 			size_scale = radius / 25.0
 		var duration = _get_modified_visual_duration(ability)
-		var instance = _spawn_effect(impact_path, global_position, size_scale, duration)
+		var instance = _spawn_effect(impact_path, global_position, size_scale, duration, radius)
 		if instance:
 			var dir = (target_position - global_position).angle()
 			instance.rotation = dir
-			# Pass cone angle to shader if present
-			var cone_angle_deg = ability.targeting.get("angle", 60.0)
-			var wave_layer = instance.get_node_or_null("WaveLayer")
-			if wave_layer and wave_layer.material is ShaderMaterial:
-				wave_layer.material.set_shader_parameter("cone_half_angle", deg_to_rad(cone_angle_deg) / 2.0)
+			# Pass cone angle to the effect so its geometry matches the preview cone
+			var cone_half_angle = deg_to_rad(ability.targeting.get("angle", 60.0)) / 2.0
+			if instance.has_method("set_cone_angle"):
+				instance.set_cone_angle(cone_half_angle)
+			else:
+				var wave_layer = instance.get_node_or_null("WaveLayer")
+				if wave_layer and wave_layer.material is ShaderMaterial:
+					wave_layer.material.set_shader_parameter("cone_half_angle", cone_half_angle)
 	else:
 		var size_scale = 1.0
 		var radius = ability.get_aoe_radius()
 		if radius > 0:
 			size_scale = radius / 25.0
 		var duration = _get_modified_visual_duration(ability)
-		_spawn_effect(impact_path, target_position, size_scale, duration)
+		_spawn_effect(impact_path, target_position, size_scale, duration, radius)
 
 	# Play ability SFX
 	var sfx_path = ability.visuals.get("sound_impact", "")
@@ -6778,7 +7445,7 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
 ## Spawn a visual effect
-func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0) -> Node:
+func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0, aoe_radius: float = 0.0) -> Node:
 	var scene = _load_effect_scene(scene_path)
 	if not scene:
 		print("did not find ability vfx scene at scene path: ", scene_path)
@@ -6786,6 +7453,15 @@ func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.
 	print("DID FIND ABILITY VFX SCENE at scene path: ", scene_path)
 
 	var instance = scene.instantiate()
+
+	# A VFX scene may declare the world-space radius (or, for cones/beams, the
+	# range) its artwork is authored at. When it does, derive the scale from the
+	# ability's actual AoE so the effect matches the targeting preview instead of
+	# the legacy radius/25 guess.
+	if aoe_radius > 0.0 and "vfx_base_radius" in instance:
+		var base_radius: float = instance.vfx_base_radius
+		if base_radius > 0.0:
+			size_scale = aoe_radius / base_radius
 	# Only positionable nodes get global_position/z_index — CanvasLayer-rooted
 	# scenes (e.g. full-screen weather shaders) live in screen space and don't
 	# expose those properties; setting them would crash.
@@ -7169,6 +7845,39 @@ func _build_soul_record(victim) -> Dictionary:
 		"captured_at": Time.get_ticks_msec(),
 	}
 	return soul
+
+
+# Build a quest-proof trophy taken FROM this character (self is the victim, so
+# this is called on the corpse, not the killer). Mirrors _grant_soul's shape: a
+# plain inventory Dictionary using a REAL ItemDatabase id, plus per-instance
+# overrides. Inventory items are unvalidated dicts that ride through
+# Game._serialize_character verbatim, and PartySidePanel reads display_name /
+# sprite_path off the instance, so the victim's name renders with no UI work.
+#
+# The id must exist in Items.json: Item._apply_item_data looks it up and errors
+# on a miss, so a synthetic id would break the moment the trophy hits the world.
+# Identity therefore lives in `origin`, not in the id.
+func build_trophy_item(item_id: String) -> Dictionary:
+	var base: Dictionary = {}
+	if ItemDatabase and ItemDatabase.has_method("get_item_data"):
+		var looked_up = ItemDatabase.get_item_data(item_id)
+		if looked_up is Dictionary and not looked_up.is_empty():
+			base = looked_up.duplicate(true)
+	var kind: String = String(base.get("display_name", "Trophy"))
+	base["id"] = item_id
+	var victim_name: String = String(Name)
+	if victim_name.is_empty():
+		victim_name = String(display_name)
+	if victim_name.is_empty():
+		victim_name = "an unknown body"
+	base["display_name"] = "%s of %s" % [kind, victim_name]
+	base["origin"] = {
+		"template_id": String(template_id),
+		"name": victim_name,
+		"race": String(race_id),
+		"taken_on_day": int(TimeManager.today()) if TimeManager else 0,
+	}
+	return base
 
 
 # Grant a captured soul. Souls beyond `max_souls` overflow into the inventory.

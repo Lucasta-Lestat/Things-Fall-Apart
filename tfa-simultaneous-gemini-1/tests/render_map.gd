@@ -38,6 +38,25 @@ func _ready() -> void:
 	cam.zoom = Vector2(zm, zm)
 	add_child(cam)
 	cam.make_current()
+	# Optional prop smoke-test: TFA_ITEMS=1 spawns the map's item_spawns as real
+	# Item nodes (same scene Game.create_item uses) — proves exported furniture
+	# ids resolve in Items.json and their art loads at the right footprint
+	if OS.get_environment("TFA_ITEMS") != "":
+		var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
+		var spawned := 0
+		for idf in m.get("item_spawns", []):
+			var inst: Item = item_scene.instantiate() as Item
+			inst.id = String(idf.get("id", ""))
+			var ip: Array = idf.get("position", [0, 0])
+			inst.global_position = Vector2(float(ip[0]), float(ip[1]))
+			inst.rotation = float(idf.get("rotation", 0.0))
+			var isc := float(idf.get("scale", 1.0))
+			if isc != 1.0:
+				inst.scale = Vector2(isc, isc)
+			add_child(inst)
+			spawned += 1
+		print("item smoke-test: spawned ", spawned, " items")
+
 	# Optional fluid smoke-test: TFA_FLUIDS=1 replays the map's fluid_spawns
 	# through a real FluidManager (cell sim + FX) and lets them settle
 	if OS.get_environment("TFA_FLUIDS") != "":

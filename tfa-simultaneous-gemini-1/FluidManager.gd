@@ -302,6 +302,21 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 				if cm:
 					cm.apply_condition(condition_id, null, stacks)
 
+# Tiles whose standing fluid applies a condition in `damaging` (SurfaceManager's
+# hazard-map rebuild passes its DAMAGING_CONDITIONS set). Depth gate matches the
+# condition loop above: any visible pool (>= PUDDLE_HEIGHT) already hurts.
+func harmful_fluid_tiles(damaging: Dictionary) -> Array:
+	var out: Array = []
+	for tile_pos in fluid_grid:
+		for fluid_type in fluid_grid[tile_pos]:
+			if fluid_grid[tile_pos][fluid_type] < PUDDLE_HEIGHT:
+				continue
+			var def: Dictionary = _fluid_db.get(fluid_type, {})
+			if damaging.has(String(def.get("condition_id", ""))):
+				out.append(tile_pos)
+				break
+	return out
+
 # --- Fluid Registration ---
 
 # gentle=true deposits never displace a DIFFERENT standing fluid (weather:

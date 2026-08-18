@@ -82,7 +82,10 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "fatigue": 1, "overworld": 1},
 		"stackable": false,
 		"duration": 120.0,
-		"icon": "res://UI/UI Icons/exhausted.png",
+		# The boot, not the exhausted icon: `force_march` applies BOTH this buff
+		# and `exhausted`, so sharing art made the two pips indistinguishable in
+		# the HUD — you could not tell the speed bonus from the fatigue it costs.
+		"icon": "res://UI/UI Icons/ability_force_march.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"stat_modifiers": [
@@ -130,9 +133,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 8,
+				"value": 6,
 				"damage_type": "fire",
-				"interval": 1.0
+				"interval": 1.5
 			}
 		],
 		"immunities": {}
@@ -145,7 +148,7 @@ func get_all_conditions() -> Array:
 		"stackable": true,
 		"max_tier": 3,
 		"duration": 1.5,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/shocked.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "res://vfx/lightning.tscn",
@@ -153,9 +156,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 5,
+				"value": 3,
 				"damage_type": "electric",
-				"interval": 0.3
+				"interval": 1.0
 			}
 		],
 		"immunities": {}
@@ -329,7 +332,7 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 8,
+				"value": 6,
 				"damage_type": "acid",
 				"interval": 2.0
 			}
@@ -368,12 +371,128 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "charm": 1, "mental": 1},
 		"stackable": false,
 		"duration": 20.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/infatuated.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "res://vfx/infatuated_hearts.tscn",
 		"custom_sfx": "",
 		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "invisible",
+		"display_name": "Invisible",
+		"description": "Unseen: enemies cannot pick this character as a target.",
+		"traits": {"buff": 1, "concealment": 1, "magical": 1},
+		"stackable": false,
+		"duration": 30.0,
+		"icon": "res://UI/UI Icons/invisible.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["revealing"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {}
+	},
+	{
+		"id": "illuminated",
+		"display_name": "Illuminated",
+		"description": "Marked by a glowing brand. The light makes invisibility impossible.",
+		"traits": {"debuff": 1, "light": 1},
+		"stackable": false,
+		"duration": 3600.0,
+		"icon": "res://UI/UI Icons/illuminated.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["darkness"],
+		"custom_vfx": "res://vfx/glow_mark.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"immunities": {"invisible": 1}
+	},
+	{
+		"id": "inking",
+		"display_name": "Dripping Ink",
+		"description": "Black ink runs from the drawn blade, pooling underfoot.",
+		"traits": {"item": 1},
+		"stackable": false,
+		"duration": -1,
+		"icon": "res://UI/UI Icons/inking.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{"type": "custom", "custom_type": "ink_puddle", "interval": 1.5,
+				"custom_data": {"amount": 0.05}}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "winters_grip",
+		"display_name": "Winter's Grip",
+		"description": "Deathly cold seeps from the drawn blade into its wielder's hands.",
+		"traits": {"item": 1, "cold": 1},
+		"stackable": false,
+		"duration": -1,
+		"icon": "res://UI/UI Icons/chilled.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["fire", "heat"],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			# fog pours off the blade the whole time it is drawn...
+			{"type": "custom", "custom_type": "frost_fog", "interval": 2.0,
+				"custom_data": {"size": 70.0, "duration": 3.0}},
+			# ...and after 18 seconds the frostbite phase sets in. delay_first
+			# makes the trigger wait a full interval before its first firing —
+			# without it, triggered effects fire on the first frame.
+			{"type": "apply_condition", "condition_id": "winters_grip_bite",
+				"interval": 18.0, "delay_first": true}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "winters_grip_bite",
+		"display_name": "Freezing Fingers",
+		"description": "Fingers freezing to the hilt: cold damage until the blade is sheathed.",
+		"traits": {"debuff": 1, "item": 1, "cold": 1, "dot": 1},
+		"stackable": false,
+		"duration": -1,
+		"icon": "res://UI/UI Icons/chilled.png",
+		"transforms_into": {},
+		"canceled_by_trait": ["fire", "heat"],
+		"custom_vfx": "res://vfx/frost_mist.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{"type": "damage", "value": 1, "damage_type": "cold", "interval": 6.0}
+		],
+		"immunities": {}
+	},
+	{
+		"id": "metallacized",
+		"display_name": "Metallacized",
+		"description": "Coated in a thin chrome shell. Each layer slows movement and action.",
+		"traits": {"debuff": 1, "metallic": 1},
+		"stackable": true,
+		"max_tier": 5,
+		"duration": 25.0,
+		"save_stat": "str",
+		"save_interval": 6.0,
+		"icon": "res://UI/UI Icons/metallacized.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "res://vfx/metallacized_sheen.tscn",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "speed_modifier", "operation": "add", "value": -0.08},
+			{"stat": "dexterity", "operation": "add", "value": -4}
+		],
 		"triggered_effects": [],
 		"immunities": {}
 	},
@@ -384,7 +503,7 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "cc": 1, "mental": 1},
 		"stackable": false,
 		"duration": 15.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/ability_test_confused.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "",
@@ -403,7 +522,7 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "fear": 1, "mental": 1},
 		"stackable": false,
 		"duration": 15.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/ability_test_frightened.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["courage", "purify"],
 		"custom_vfx": "",
@@ -441,7 +560,7 @@ func get_all_conditions() -> Array:
 		"stackable": true,
 		"max_tier": 3,
 		"duration": 30.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/ability_test_sickened.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "antidote"],
 		"custom_vfx": "",
@@ -467,7 +586,7 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "disease": 1, "physical": 1},
 		"stackable": false,
 		"duration": 20.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/ability_test_nauseated.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "antidote"],
 		"custom_vfx": "",
@@ -492,7 +611,7 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "nature": 1, "magical": 1},
 		"stackable": false,
 		"duration": 30.0,
-		"icon": "res://UI/UI Icons/mighty.png",
+		"icon": "res://UI/UI Icons/ability_test_animal_magnetism.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
@@ -515,7 +634,7 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "charm": 1, "mental": 1, "curse": 1},
 		"stackable": false,
 		"duration": 30.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/ability_fatal_attraction.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "res://vfx/infatuated_hearts.tscn",
@@ -571,7 +690,7 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": 12.0,
-		"icon": "res://UI/UI Icons/dummy_icon.png",
+		"icon": "res://UI/UI Icons/ability_silence.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
@@ -611,7 +730,7 @@ func get_all_conditions() -> Array:
 		"duration": 30.0,
 		"save_stat": "con",
 		"save_interval": 6.0,
-		"icon": "res://UI/UI Icons/weakened.png",
+		"icon": "res://UI/UI Icons/bleeding.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["bandage", "healing"],
 		"custom_vfx": "res://vfx/bleeding.tscn",
@@ -620,9 +739,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 1,
+				"value": 2,
 				"damage_type": "true",
-				"interval": 6.0
+				"interval": 4.0
 			},
 			{
 				"type": "custom",
@@ -689,6 +808,32 @@ func get_all_conditions() -> Array:
 		"conditional_modifiers": [],
 		"immunities": {}
 	},
+	# `stat_modifiers` is deliberately EMPTY. Rage's DR and bonus damage both
+	# scale with the bearer's CURRENT missing HP, and a stat_modifier is a
+	# template constant scaled only by stack count (ConditionInstance.
+	# get_scaled_stat_modifiers) that is never recomputed on HP change -- it
+	# could only ever be a cast-time snapshot. The live value comes from
+	# ProceduralCharacter.rage_bonus(), read at the two consumption sites:
+	# take_damage (DR) and Game._apply_attacker_damage_mods (bonus damage).
+	# Same pattern as `bide` and `deny_ending` elsewhere in this file.
+	{
+		"id": "rage",
+		"display_name": "Rage",
+		"description": "Fury feeds on injury. Damage reduction against physical damage and bonus weapon damage, each equal to missing HP divided by 15, rounded. Both rise as wounds mount and fall again if the wounds are healed.",
+		"traits": {"buff": 1, "physical": 1, "self": 1, "rage": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": 15.0,
+		"icon": "res://UI/UI Icons/ability_rage.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
 	{
 		"id": "apathetic",
 		"display_name": "Apathetic",
@@ -697,7 +842,7 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": 8.0,
-		"icon": "res://UI/UI Icons/stunned.png",
+		"icon": "res://UI/UI Icons/apathetic.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "",
@@ -742,7 +887,7 @@ func get_all_conditions() -> Array:
 			{"stat": "speed_modifier", "operation": "set", "value": -1.0}
 		],
 		"triggered_effects": [
-			{"type": "damage", "value": 5, "damage_type": "fire", "interval": 1.0}
+			{"type": "damage", "value": 5, "damage_type": "fire", "interval": 1.5}
 		],
 		"conditional_modifiers": [],
 		"immunities": {}

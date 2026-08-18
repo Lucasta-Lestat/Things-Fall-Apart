@@ -126,5 +126,28 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check("battery.after-rebuild", _visual_mode(orc) == "rig", _visual_mode(orc))
 
+	# --- 3. casting arm follows the hand holding the ability's shape (an
+	# off-hand ice storm used to IK-swing the main-hand arm: hardcoded "r").
+	# Bare-handed caster: the orc's two-handed great axe occupies BOTH hands,
+	# so ability equips silently stow instead (add_ability_by_id hand gate). ---
+	var caster: ProceduralCharacter = CHAR_SCENE.instantiate()
+	caster.position = Vector2(1200, 1200)
+	add_child(caster)
+	caster.inventory.equip_ability_from_id("ice_storm", "Off")
+	caster.inventory.equip_ability_from_id("fireball", "Main")
+	var ice := Ability.new()
+	ice.id = "ice_storm"
+	var fire := Ability.new()
+	fire.id = "fireball"
+	_check("cast.off-hand-arm-is-left", caster._casting_arm(ice) == "l",
+		caster._casting_arm(ice))
+	_check("cast.main-hand-arm-is-right", caster._casting_arm(fire) == "r",
+		caster._casting_arm(fire))
+	var unknown := Ability.new()
+	unknown.id = "not_in_either_hand"
+	caster.current_hand = "Off"
+	_check("cast.fallback-click-hand", caster._casting_arm(unknown) == "l",
+		caster._casting_arm(unknown))
+
 	print("orc_rig_check: %d checks, %d FAIL" % [checks, fails])
 	get_tree().quit(1 if fails > 0 else 0)

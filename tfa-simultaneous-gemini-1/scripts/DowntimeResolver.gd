@@ -33,6 +33,24 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 		return
 	print("[Downtime] begin_drop: activity loaded, showing confirm dialog")
 
+	# Training is booked, not chosen: only the character who owes a teacher days
+	# in this region can be dropped on it. The card is on the board because
+	# SOMEONE in the party can train here, which isn't necessarily this one.
+	if bool(activity.get("requires_training", false)):
+		var who: String = String(character.display_name) if "display_name" in character else "They"
+		if not TrainingManager.can_train_here(character, region_id):
+			if GameLog:
+				GameLog.add_entry("%s has no teacher waiting here." % who)
+			return
+		# A day of study is a day. Unlike the four-hour activities you can stack
+		# two of in an evening, training is credited per day, so a second session
+		# before the day rolls over would buy a day of progress for free.
+		var game_node := get_node_or_null("/root/Game")
+		if game_node != null and game_node.has_method("trained_today") and game_node.trained_today(character):
+			if GameLog:
+				GameLog.add_entry("%s has already done today's work." % who)
+			return
+
 	var preferred: Array = activity.get("preferred_traits", [])
 	var disliked: Array = activity.get("disliked_traits", [])
 	var score: int = 0
@@ -70,6 +88,58 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 	_attach_dialog_autofree(dlg)
 	get_tree().root.add_child(dlg)
 	dlg.popup_centered()
+
+## Resolve an activity with no confirm dialog and no result popup, logging the
+## outcome instead. Used when a companion picks their own activity as the day
+## rolls over — three modal dialogs per night would make a four-day training
+## stay unplayable.
+##
+## Deliberately does NOT reuse _pending: the day-advance loop runs this for
+## several characters back to back, and _pending is single-slot state owned by
+## the interactive drop flow. Sharing it would let one companion's effects land
+## on the next.
+func resolve_silently(character, activity_id: String, region_id: String) -> void:
+	if character == null or not is_instance_valid(character) or activity_id.is_empty():
+		return
+	var activity: Dictionary = DowntimeDatabase.get_activity(activity_id)
+	if activity.is_empty():
+		return
+
+	var success_tier := 1
+	var ability_check_stat: String = String(activity.get("ability_check", ""))
+	if not ability_check_stat.is_empty() and character.has_method("ability_check"):
+		success_tier = int(character.ability_check(ability_check_stat, {
+			"advantages": activity.get("preferred_traits", []),
+			"disadvantages": activity.get("disliked_traits", []),
+		}))
+
+	var picked: Dictionary = DowntimeDatabase.pick_result(activity, region_id, character, success_tier)
+	var effects: Dictionary = {}
+	var event_text := ""
+	var result_id := ""
+	if not picked.is_empty():
+		result_id = String(picked.get("id", ""))
+		var data: Dictionary = picked.get("data", {})
+		effects = data.get("effects", {}).duplicate(true)
+		event_text = String(data.get("event_description", ""))
+	for k in activity.get("default_effects", {}).keys():
+		if not effects.has(k):
+			effects[k] = activity["default_effects"][k]
+
+	if not result_id.is_empty():
+		DowntimeDatabase.mark_used(DowntimeDatabase.character_uid(character), result_id)
+	DowntimeEffectApplier.apply(character, effects, success_tier)
+
+	var who: String = String(character.display_name) if "display_name" in character else "Someone"
+	if GameLog:
+		if event_text.strip_edges().is_empty():
+			GameLog.add_entry("%s spent the day at %s." % [who, String(activity.get("name", activity_id))])
+		else:
+			GameLog.add_entry(who + event_text)
+
+	var game := get_node_or_null("/root/Game")
+	if game != null and game.has_method("record_downtime_assignment"):
+		game.record_downtime_assignment(character, activity_id)
 
 # ---------------------------------------------------------------------------
 # Internal: confirm / cancel
@@ -189,6 +259,19 @@ func _finish_resolution() -> void:
 	var activity: Dictionary = _pending["activity"]
 
 	DowntimeEffectApplier.apply(character, effects, success_tier)
+
+	# A day of study counts against the commitment. Credited here rather than in
+	# the day-advance so the progress lands with the event text that describes it,
+	# and so a learner who studies twice in one day still only gets one day's
+	# credit (record_assignment below is what enforces that).
+	if bool(activity.get("requires_training", false)):
+		TrainingManager.credit_day(character)
+
+	# Book the day. Anyone the player did NOT assign gets an activity chosen for
+	# them when the day rolls over (Game.advance_downtime_day).
+	var game := get_node_or_null("/root/Game")
+	if game != null and game.has_method("record_downtime_assignment"):
+		game.record_downtime_assignment(character, String(_pending["activity_id"]))
 
 	# Advance in-game time by the activity's duration. TimeManager advances
 	# date/clock automatically as game_time crosses thresholds in _process.

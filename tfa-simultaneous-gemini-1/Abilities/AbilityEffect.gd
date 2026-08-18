@@ -88,6 +88,8 @@ static func resolve_effect(
 			result = _resolve_sever_limb(effect, caster, targets, ability)
 		"sound_zone":
 			result = _resolve_sound_zone(effect, caster, target_position)
+		"disarm":
+			result = _resolve_disarm(effect, caster, targets)
 		_:
 			result["success"] = false
 			result["error"] = "Unknown effect type: %s" % effect_type
@@ -409,7 +411,7 @@ static func _resolve_damage(
 		)
 		
 		# DR is skipped here. target.take_damage handles armor + character DR natively.
-		var damage_dealt = _deal_damage_to_target(target, final_damage)
+		var damage_dealt = _deal_damage_to_target(target, final_damage, caster)
 		
 		result["targets_affected"].append({
 			"target": target,
@@ -419,6 +421,37 @@ static func _resolve_damage(
 		result["total_damage"] += damage_dealt
 		
 	return result
+
+## Force each target to drop their held main-hand weapon at their feet.
+## Effect schema: {type: "disarm", chance: 0-1 (default 1), save_stat: "str"}.
+## A successful save (negative saving_throw delta) resists.
+static func _resolve_disarm(effect: Dictionary, _caster: Node, targets: Array) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "disarm",
+		"targets_affected": [],
+	}
+	var chance: float = float(effect.get("chance", 1.0))
+	var save_stat: String = str(effect.get("save_stat", ""))
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
+		if chance < 1.0 and randf() >= chance:
+			continue
+		if save_stat != "" and target.has_method("saving_throw"):
+			if target.saving_throw(save_stat) < 0:
+				continue
+		if target.has_method("drop_held_weapon"):
+			var held = target.get("current_main_hand_item")
+			if held != null and held is WeaponShape:
+				# DEFERRED: melee disarm procs fire inside the weapon-hitbox
+				# body_entered flush, where detaching the victim's WeaponShape
+				# (a physics body) is rejected by the physics server — same
+				# reason corpse layer changes use set_deferred.
+				target.call_deferred("drop_held_weapon", "Main")
+				result["targets_affected"].append(target)
+	return result
+
 
 static func _resolve_apply_condition(
 	effect: Dictionary,
@@ -438,6 +471,10 @@ static func _resolve_apply_condition(
 	var duration_override = effect.get("duration", -2.0)
 	var target_limb = effect.get("target_limb", null)
 	var chance: float = float(effect.get("chance", 1.0))
+	# Effect-level save: rolls the same stack-delta as condition-level
+	# save_stat, but scoped to THIS application only — the condition template
+	# (and every other way it gets applied) is untouched.
+	var effect_save: String = str(effect.get("save_stat", ""))
 	# When set, the stacks applied equal the caster's current stack count of the
 	# named condition (used for mutation-tier-scales-effect, e.g. The Jaws That Bite).
 	var scale_by: String = str(effect.get("scale_stacks_by_caster_condition", ""))
@@ -457,11 +494,17 @@ static func _resolve_apply_condition(
 		if not target_cond_manager:
 			continue
 
+		var apply_stacks = stacks
+		if effect_save != "" and target.has_method("saving_throw"):
+			apply_stacks += target.saving_throw(effect_save)
+			if apply_stacks <= 0:
+				continue
+
 		# The ConditionManager scales durations internally based on target traits
 		var instance = target_cond_manager.apply_condition(
 			condition_id,
 			caster,
-			stacks,
+			apply_stacks,
 			duration_override,
 			target_limb
 		)
@@ -588,7 +631,7 @@ static func _calculate_modified_damage(
 
 
 ## Deal damage to any target type (character, item, or structure)
-static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> float:
+static func _deal_damage_to_target(target: Node, damage_dict: Dictionary, attacker: Node = null) -> float:
 	var total = 0.0
 	for damage_type in damage_dict:
 		total += damage_dict[damage_type]
@@ -603,7 +646,11 @@ static func _deal_damage_to_target(target: Node, damage_dict: Dictionary) -> flo
 	# disambiguate from Item.take_damage (which takes a different signature).
 	if target.has_method("take_damage") and "limbs" in target:
 		var hit_limb = _pick_random_limb(target)
-		target.take_damage(damage_dict, target.global_position, null, hit_limb)
+		# `attacker` used to be hardcoded null here, so a spell kill was never
+		# attributed: the victim's AT_EASE wake never fired toward the caster
+		# and the witness/crime pipeline recorded a death with no perpetrator.
+		# Murder by fireball was, quite literally, the perfect crime.
+		target.take_damage(damage_dict, target.global_position, attacker, hit_limb)
 	# Items / Structures use take_damage(damage_dict, success_level)
 	elif target.has_method("take_damage"):
 		if target is Item or target is Structure:

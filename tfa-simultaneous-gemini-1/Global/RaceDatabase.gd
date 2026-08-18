@@ -4,6 +4,11 @@ extends Node
 
 var _races: Dictionary = {}
 
+## Baseline walking speed the races.json `speed_modifier` column is an offset
+## from, in feet. Used to convert that column into the fractional units the
+## engine's speed_modifier actually carries.
+const BASE_WALK_SPEED_FEET := 30.0
+
 func _ready() -> void:
 	_load_database()
 
@@ -109,8 +114,16 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 
 	# --- Speed modifier (additive offset from base 30) ---
 	# Halflings: -5, Centaur 60 base would be +30, etc.
-	var speed_mod: float = race.get("speed_modifier", 0)
+	# races.json states this in FEET off a 30ft base, but every consumer
+	# (ProceduralCharacter.move_speed, every condition in ConditionDatabase)
+	# treats speed_modifier as a FRACTION of base speed — so a raw +5 was a 6x
+	# sprint and a raw -5 was NEGATIVE speed. Convert to the fraction here so the
+	# data can stay in the units it documents.
+	var speed_mod: float = float(race.get("speed_modifier", 0)) / BASE_WALK_SPEED_FEET
 	if speed_mod != 0:
+		# Lands on base_speed_modifier, not speed_modifier: the latter is rebuilt
+		# from scratch by _on_stats_recalculated the moment any condition changes.
+		_add_to(character, "base_speed_modifier", speed_mod)
 		_add_to(character, "speed_modifier", speed_mod)
 
 	# --- Arm length bonus (from range_increase column) ---
@@ -121,6 +134,19 @@ func apply_race_to_character(character, race_id: String, options: Dictionary = {
 
 	# --- Walking noise (how loud footsteps are, 0.0 = silent, 1.0 = normal) ---
 	_set_if_exists(character, "walking_noise", race.get("walking_noise", 1.0))
+
+	# --- Unarmed strike (natural weapons) ---
+	# races.json "unarmed_strike": {"damage_type": ..., "damage": ...,
+	# "on_hit_ability": ...} — claws/bites instead of the default punch.
+	# Only keys present are applied; character templates loaded after the race
+	# can still override the individual fields.
+	var unarmed: Dictionary = race.get("unarmed_strike", {})
+	if unarmed.has("damage_type"):
+		_set_if_exists(character, "unarmed_strike_damage_type", str(unarmed["damage_type"]))
+	if unarmed.has("damage"):
+		_set_if_exists(character, "unarmed_strike_damage", int(unarmed["damage"]))
+	if unarmed.has("on_hit_ability"):
+		_set_if_exists(character, "unarmed_on_hit_ability", str(unarmed["on_hit_ability"]))
 
 	# --- Jump / fall (rooftop traversal) --- races without the keys keep the
 	# character defaults (jump_height 0 = non-jumper), bit-identical to today

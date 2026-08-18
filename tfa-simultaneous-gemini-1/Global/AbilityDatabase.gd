@@ -36,3 +36,15 @@ func get_ability_data(ability_id: String) -> Dictionary:
 
 func get_all_ability_ids() -> Array:
 	return _abilities.keys()
+
+# Full ability dicts. DowntimeEffectApplier._pick_random_unknown_spell has called
+# this behind a has_method guard since it was written; the method never existed,
+# so the guard always failed and the Research activity's "new_spell" outcome
+# (learn_spell: "random_spell") silently did nothing. Returns copies so a caller
+# filtering or sorting the pool can't mutate the database — get_ability_data
+# hands out the live dict and that is already a sharp edge.
+func get_all_abilities() -> Array:
+	var out: Array = []
+	for id in _abilities:
+		out.append((_abilities[id] as Dictionary).duplicate(true))
+	return out

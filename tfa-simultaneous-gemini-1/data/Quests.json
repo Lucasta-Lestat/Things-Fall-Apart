@@ -1,6 +1,42 @@
 {
   "quests": [
     {
+      "id": "guild_bounty_bandit_chief",
+      "icon": "res://Icons/quests/king_in_the_north.png",
+      "display_name": "A Guild Bounty: The Bandit Chief",
+      "start_stage": "hunt_chief",
+      "rewards": {
+        "pick": 1,
+        "offers": [
+          { "type": "money", "amount": 180 },
+          { "type": "item", "item_id": "winters_grip" },
+          { "type": "training", "ability_id": "shield_bash", "base_days": 4,
+            "teacher_title": "the Guild's master-at-arms" }
+        ]
+      },
+      "stages": [
+        {
+          "id": "hunt_chief",
+          "name": "Kill the bandit chief",
+          "description": "The Guild has posted a bounty. They will want to see the head, so take it with you.",
+          "transitions": [
+            { "conditions": { "char_dead::bandit_chief": true }, "next_stage": "claim_bounty" }
+          ]
+        },
+        {
+          "id": "claim_bounty",
+          "name": "Claim the bounty at the Guild",
+          "description": "Bring the head back to the Adventurer's Guild and collect.",
+          "turn_in": { "npc_template": "guild_hunter", "faction": "adventurers_guild" },
+          "proof": [
+            { "item": "severed_head", "from_template": "bandit_chief", "count": 1 }
+          ],
+          "transitions": []
+        }
+      ]
+    },
+
+    {
       "id": "tutorial_quest",
       "icon": "res://Icons/Guard.png",
       "display_name": "The Town Guard's Plea",
@@ -62,6 +98,9 @@
           "id": "take_head",
           "name": "Take the King's Head",
           "description": "Claim the grisly trophy.",
+          "proof": [
+            { "item": "skarsgaard_king_head", "from_template": "king_skarsgaard", "count": 1 }
+          ],
           "transitions": [
             { "conditions": { "item_picked::skarsgaard_king_head": true }, "next_stage": "return_to_queen" }
           ]

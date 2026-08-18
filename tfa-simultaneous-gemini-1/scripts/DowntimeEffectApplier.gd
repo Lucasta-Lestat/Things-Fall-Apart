@@ -210,8 +210,12 @@ static func _apply_learn_spell(character, spell_id: String) -> void:
 	_apply_grant_ability(character, spell_id)
 
 static func _pick_random_unknown_spell(character) -> String:
-	# AbilityDatabase exposes get_all_abilities() (see AbilityUpgradeScreen.gd).
 	# A "spell" is an ability whose traits include {"spell": >=1}.
+	# NOTE: AbilityDatabase.get_all_abilities() did not exist until the quest
+	# reward work added it, so the has_method guard below always failed and this
+	# whole function silently returned "" — the Research activity's "new_spell"
+	# outcome had never once granted a spell. The guard is kept as cheap
+	# insurance, but it now passes.
 	if not Engine.has_singleton("AbilityDatabase") and not (typeof(AbilityDatabase) == TYPE_OBJECT):
 		return ""
 	if not AbilityDatabase.has_method("get_all_abilities"):

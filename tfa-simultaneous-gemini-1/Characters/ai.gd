@@ -48,6 +48,9 @@ const ALLY_SHARE_FACTOR: float = 0.5
 # When SEARCHING and arrived at last_heard_position, rotate-scan for this many
 # seconds before giving up.
 const SEARCH_LOOK_AROUND_DURATION: float = 2.5
+# Hard ceiling on one SEARCHING episode, regardless of alertness. The
+# alertness-driven exits can be starved indefinitely (see _process_searching).
+const SEARCH_GIVE_UP_SECONDS: float = 20.0
 # Alertness value an AT_EASE NPC is bumped to when woken — just into UNAWARE
 # (paying attention but not alarmed). Far below SUSPICIOUS to avoid
 # immediately panicking.
@@ -189,11 +192,12 @@ func _try_cast_ability(delta: float) -> bool:
 		var rng_px: float = float((data.get("targeting", {}) as Dictionary).get("range", 0.0))
 		if int(tr.get("healing", 0)) > 0 or int(tr.get("support", 0)) > 2:
 			var patient = _most_wounded_ally(maxf(rng_px, 120.0))
-			if patient != null and _cast(data, patient.global_position, patient):
+			if patient != null and _cast(data, patient.global_position, patient, true):
 				return true
 		elif int(tr.get("attack", 0)) > 0 and current_target != null and is_instance_valid(current_target):
 			var dist := character.global_position.distance_to(current_target.global_position)
 			if dist <= maxf(rng_px, 90.0) \
+					and not _would_self_blast(data, current_target.global_position, current_target) \
 					and is_in_line_of_sight(current_target.global_position, _target_elevation()):
 				if _cast(data, current_target.global_position, current_target):
 					return true
@@ -201,11 +205,59 @@ func _try_cast_ability(delta: float) -> bool:
 	return false
 
 
-func _cast(data: Dictionary, pos: Vector2, target_node) -> bool:
+func _cast(data: Dictionary, pos: Vector2, target_node, explicit := false) -> bool:
 	var ab = Ability.from_dict(data)
-	var ok: bool = character.use_ability(ab, {"position": pos, "targets": [target_node], "anchor": target_node})
+	var params: Dictionary = {"position": pos, "anchor": target_node}
+	# Area attacks pass NO explicit target list: a non-empty list routes into
+	# the pick-your-targets branch, which skips the projectile AND the area
+	# sweep — every AI "AoE" resolved as a single-target nuke with zero splash.
+	# Position-only casts run the exact player pipeline (fireball flies its
+	# projectile, the detonation sweeps everyone in radius — including the
+	# caster, hence _would_self_blast). Heals and non-area shapes keep their
+	# explicit target: a shape-"none" attack passed position-only would sweep
+	# nobody, and an area heal would splash-heal enemies.
+	var shape := String((data.get("targeting", {}) as Dictionary).get("shape", "none"))
+	if explicit or not shape in ["circle", "cone", "line", "rectangle"]:
+		params["targets"] = [target_node]
+	var ok: bool = character.use_ability(ab, params)
 	_cast_timer = randf_range(2.6, 4.2) if ok else 1.2
 	return ok
+
+
+# An AoE dropped on a hugging-range target lands on its caster too: the area
+# sweep has no self-exclusion for circles, and a fire AoE ignites the ground
+# across the FULL targeting radius no matter who the damage hit — the melee
+# fireball suicide from playtest. Skip any circle attack whose blast at `pos`
+# reaches us; evaluation falls through to the next stowed ability, and the
+# weapon swing is still there when nothing safe is castable. Cones and lines
+# originate at the caster and already exclude them in _find_targets_in_area.
+# Only TRUE areas (traits.aoe) are gated: melee attacks are also authored as
+# small circles at the target (natural_bite r30, shield_bash r40, pounce,
+# ram — none carry the aoe trait) and the caster deliberately stands a body
+# width outside them; gating those would leave animals unable to bite.
+func _would_self_blast(data: Dictionary, pos: Vector2, target_node = null) -> bool:
+	var tgt: Dictionary = data.get("targeting", {})
+	if int((data.get("traits", {}) as Dictionary).get("aoe", 0)) <= 0:
+		return false
+	if String(tgt.get("shape", "none")) != "circle":
+		return false
+	var r: float = float(tgt.get("radius", 0.0))
+	if r <= 0.0:
+		return false
+	# margin: our body, plus slop for the step we may take before the cast lands
+	var margin: float = maxf(32.0, character._body_circle_radius() + 16.0)
+	# Anchored casts (projectiles) re-aim at the target's LIVE position after
+	# the windup — a melee attacker charging us drags the detonation onto our
+	# feet even when the snapshot distance looked safe (we plant our own feet
+	# during casts, see _combat_move, so only THEIR closing speed matters).
+	# Ground-placed AoEs (ice storm) stay where they were aimed: no widening.
+	var cast_time: float = float(data.get("cast_time", 0.0))
+	if cast_time > 0.0 and target_node is Node2D and "velocity" in target_node \
+			and AbilityManager.targeting_follows_anchor(tgt, data.get("visuals", {})):
+		var to_me: Vector2 = character.global_position - pos
+		if to_me.length() > 0.001:
+			margin += maxf(0.0, target_node.velocity.dot(to_me.normalized())) * cast_time
+	return character.global_position.distance_to(pos) <= r + margin
 
 
 # Most-wounded non-hostile character in range (self included), or null when
@@ -235,8 +287,11 @@ func _most_wounded_ally(rng_px: float):
 # reach (weapon_range is in TILES: shortbow 5.0 -> 320px) so archers/casters
 # stop walking into hugging distance before firing.
 func _refresh_engagement_ranges(_w = null) -> void:
-	attack_range = 70.0 * character.body_size_mod
-	preferred_range = 40.0 * character.body_size_mod
+	# Unarmed baseline comes from the same helper the hit test uses, so a
+	# bare-handed AI stops parking at the old hardcoded 70px — well outside the
+	# ~56px at which a punch can actually connect.
+	attack_range = MeleeReach.reach_px(character, null)
+	preferred_range = attack_range * 0.6
 	too_close_range = 20.0 * character.body_size_mod
 	is_ranged_fighter = false
 	var w = character.current_main_hand_item
@@ -250,13 +305,50 @@ func _refresh_engagement_ranges(_w = null) -> void:
 		preferred_range = px * 0.8
 		too_close_range = px * 0.35   # target closing inside this -> back off (kite)
 	elif ("weapon_range" in w) and float(w.weapon_range) > 0.0:
-		# melee: stand INSIDE the weapon's designed reach. Body size used to
-		# STRETCH attack_range past the physical sweep — a big orc with a
-		# short mace parked ~15px shy of the target and whiffed forever.
-		var reach: float = float(w.weapon_range) * GridManager.TILE_SIZE
-		attack_range = clampf(reach * 0.85, 40.0, 220.0)
+		# melee: the SAME reach the hit test uses (MeleeReach.reach_px), not a
+		# parallel guess. The old `* 0.85` fudge was compensating for a physical
+		# blade sweep that had no relationship to this number at all; now that
+		# the authored range IS the reach, shrinking it just makes the AI stand
+		# somewhere it cannot swing from.
+		attack_range = MeleeReach.reach_px(character, w)
 		preferred_range = attack_range * 0.6
 		too_close_range = minf(20.0 * character.body_size_mod, attack_range * 0.35)
+
+# Centre-to-centre distance at which two bodies actually touch. Mirrors
+# ProceduralCharacter.get_separation_vector (:2074), which moved the physical
+# model off the oversized `collision_radius` pair (max(body_width, head_width)/2
+# + 2 = 26 for a 48-wide race) onto `_body_circle_radius()` (0.45 * body_width =
+# 21.6) with the note that the old pair "repell[ed] ~14px before bodies touched".
+# ai.gd never followed, so every stand-off carried ~9px of phantom gap per pair —
+# which is exactly what pushed short weapons under the floor below.
+func _body_gap_to(target: Node2D) -> float:
+	var mine: float = character._body_circle_radius()
+	var theirs: float = 0.0
+	if target != null and is_instance_valid(target) and target.has_method("_body_circle_radius"):
+		theirs = target._body_circle_radius()
+	var sep: float = character.minimum_separation
+	return mine + theirs + sep
+
+# The distance the AI is willing to swing from, and the distance it walks to.
+# These MUST NOT invert: `stand` used to be `combined + 10` while `swing` was
+# `combined + 5`, so any weapon whose reach fell under the floor (authored range
+# below ~1.23 tiles — sickle 0.9, dagger 0.8, shortsword 1.0, but not longsword
+# or axe) parked 5px BEYOND the distance it would swing from and then only
+# strafed. That is the "stands in the enemy's face doing nothing" report.
+# `stand` is now clamped inside `swing` so arriving always means in range.
+func _engagement_bands(target: Node2D) -> Dictionary:
+	var gap: float = _body_gap_to(target)
+	var swing: float
+	if is_ranged_fighter:
+		# A projectile's range is not a reach; keep it clear of body contact.
+		swing = maxf(attack_range, gap + 5.0)
+	else:
+		# EXACTLY the distance Game.resolve_melee_swing will accept — same
+		# helper, same numbers. No collision floor is needed here any more:
+		# MeleeReach.MIN_CLEARANCE_PX guarantees this always exceeds `gap`.
+		swing = MeleeReach.max_center_dist(character, target, character.current_main_hand_item)
+	var stand: float = clampf(preferred_range, gap, maxf(gap, swing - 8.0))
+	return {"gap": gap, "swing": swing, "stand": stand}
 
 func _ready():
 	character = get_parent()
@@ -314,12 +406,34 @@ func _check_stealth_wake() -> void:
 
 
 func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void:
-	# Strong wake — SEARCHING threshold + a bit. last_heard_position points to
-	# the attack location so SEARCHING behavior will path there if the
-	# attacker isn't in LOS yet.
+	# Being struck IS positive identification — you do not have to SEE someone
+	# to know they just hit you. The old comment here promised "normal
+	# _update_target will pick them up as a target next tick"; that is only
+	# true inside the ±75° cone, so anyone stabbing this character from behind
+	# was invisible to it forever. Worse, `location` is the impact point on our
+	# OWN body (ProceduralCharacter.gd:6038 re-globalizes the local hit pos), so
+	# the fallback below sends SEARCHING to the ground under our feet: arrive
+	# instantly, spin for 2.5s, stand down, get killed.
+	var foe := attacker as ProceduralCharacter
+	if foe != null and is_instance_valid(foe) and foe.is_alive() and _is_enemy(foe):
+		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
+		last_known_target_pos = foe.global_position
+		if current_target != null:
+			return
+		# A backstab must not auto-reveal an invisible assassin — mirror the
+		# invisibility rule _update_target applies (:731-734).
+		if character.traits.get("true_sight", 0) == 0:
+			var foe_cm = foe.get_node_or_null("ConditionManager")
+			if foe_cm and foe_cm.has_active_condition("invisible"):
+				return
+		# No _change_state here: _acquire_target re-arms reaction_timer (the
+		# flinch delay) and IDLE/SEARCHING both promote to CHASE on their own.
+		_acquire_target(foe)
+		return
+
+	# Not an enemy (friendly fire, a condition tick, falling damage): wake, but
+	# nothing to fight.
 	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
-	# If the attacker is in LOS right now, normal _update_target will pick
-	# them up as a target next tick — no special handling needed.
 	if attacker:
 		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
 
@@ -359,13 +473,25 @@ func process_ai(delta: float) -> void:
 			_change_state(AIState.IDLE)
 		return
 
-	# Handle panicked — random movement, overrides everything
+	# Standing on damaging ground (burning cell, acid pool, electrified tile)
+	# overrides everything a conscious body can override: burning stacks 1/s
+	# toward 24 dmg per 1.5s, and no goal — investigation, attack, even panic —
+	# is worth finishing from inside a fire (a scout burned to death mid-scan
+	# in playtest because nothing ever told him to step out). Escape funnels
+	# through _move_toward, so a player-held ally still stands ground.
+	if _process_hazard_escape(delta):
+		return
+
+	# Handle panicked — random movement, overrides everything (including a
+	# player-drawn path: see _break_player_orders)
 	if _cm and _cm.has_active_condition("panicked"):
+		_break_player_orders()
 		_process_panicked(delta)
 		return
 
-	# Handle frightened — flee from fear source, overrides combat
+	# Handle frightened — flee from fear source, overrides combat and orders
 	if _cm and _cm.has_active_condition("frightened"):
+		_break_player_orders()
 		_process_frightened(delta)
 		return
 
@@ -498,6 +624,32 @@ func get_characters_in_line_of_sight() -> Array:
 
 # ===== TARGET DETECTION =====
 
+# Radius inside which _update_target stops caring which way this character is
+# facing. Two tiles plus our own body: wide enough to cover every melee
+# engagement band (MeleeReach tops out well inside it) and the "he was RIGHT
+# THERE" complaint, narrow enough that it is peripheral awareness rather than
+# omniscience. Deliberately NOT derived from attack_range — a bowman's 5-tile
+# attack_range would turn this into a 7-tile all-round sensor.
+const CLOSE_QUARTERS_TILES: float = 2.0
+
+func _close_quarters_radius() -> float:
+	return GridManager.TILE_SIZE * CLOSE_QUARTERS_TILES + character._body_circle_radius()
+
+
+# The one carve-out from close-quarters awareness: a party member who is
+# deliberately sneaking. The FOV cone IS the stealth mechanic in this game —
+# slipping around behind a guard is the whole move — so peripheral awareness
+# must not quietly delete it. Sneaking buys you the approach, not immunity:
+# the moment you strike, _on_self_damaged acquires you by name regardless of
+# angle, and stepping into the cone still gets you seen.
+func _is_sneaking(other: ProceduralCharacter) -> bool:
+	if game == null or not ("stealth_mode" in game) or not game.stealth_mode:
+		return false
+	if not ("party_chars" in game):
+		return false
+	return other in game.party_chars
+
+
 func _update_target() -> void:
 	# Validate existing target
 	if current_target:
@@ -548,6 +700,13 @@ func _update_target() -> void:
 	var best_target: ProceduralCharacter = null
 	var best_distance: float = detection_range
 
+	# Blinded/unconscious see nothing. is_in_line_of_sight enforces that itself
+	# (:578-580), but the close-quarters branch below skips that helper, so the
+	# check has to be hoisted here or a blinded NPC would sense through walls of
+	# its own eyelids.
+	if _cm2 and (_cm2.has_condition("blinded") or _cm2.has_condition("unconscious")):
+		return
+
 	for node in game.characters_in_scene:
 		if node == character:
 			continue
@@ -566,10 +725,32 @@ func _update_target() -> void:
 		if infatuation_source and other == infatuation_source:
 			continue
 
-		if not is_in_line_of_sight(other.global_position, other.get_elevation()):
+		# Invisible targets can't be acquired — unless this viewer has the
+		# true_sight trait (or the target is glowing, since the "illuminated"
+		# condition blocks invisibility from applying at all).
+		if character.traits.get("true_sight", 0) == 0:
+			var other_cm = other.get_node_or_null("ConditionManager")
+			if other_cm and other_cm.has_active_condition("invisible"):
+				continue
+
+		var dist: float = character.global_position.distance_to(other.global_position)
+		# CLOSE QUARTERS — the cone does not apply. is_in_line_of_sight gates on
+		# a ±75° forward arc (150° is the fov_angle_degrees default and NOTHING
+		# moves it: no condition declares that stat key, so fov_modifier is
+		# always 0), and the only thing in this file that ever turns the head is
+		# the direction of travel — _move_toward writes target_rotation to the
+		# movement bearing, and _aim_at needs a target we do not have yet. A
+		# searcher jogging toward a noise is therefore PERMANENTLY blind to
+		# anything at its flank or back, which is the "walks straight past
+		# enemies" report: an enemy at your elbow is not a vision problem.
+		# The wall ray still runs, so cover, doors and elevation are untouched;
+		# only the arc is skipped.
+		if dist <= _close_quarters_radius() and not _is_sneaking(other):
+			if not _has_clear_sight_line(other.global_position, other.get_elevation()):
+				continue
+		elif not is_in_line_of_sight(other.global_position, other.get_elevation()):
 			continue
 
-		var dist = character.global_position.distance_to(other.global_position)
 		if dist < best_distance:
 			best_distance = dist
 			best_target = other
@@ -595,6 +776,12 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 func _acquire_target(target: ProceduralCharacter) -> void:
 	current_target = target
 	last_known_target_pos = target.global_position
+	# A sighting outranks a sound. SEARCHING walks to last_heard_position, and
+	# until now NOTHING in combat ever wrote that field — only sounds, the
+	# AT_EASE wake and ally sharing did — so a guard who acquired purely by
+	# sight and never heard anything carried the Vector2.ZERO it was born with
+	# (:65) and, the moment it lost the target, marched at the map corner.
+	last_heard_position = target.global_position
 	# Surround slot: a fixed per-character approach bearing around the target
 	# (anchored at acquisition — a live-recomputed bearing would orbit). The
 	# second melee used to queue into his comrade's back on the same line.
@@ -611,6 +798,14 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	reaction_timer = reaction_time
 
 func _lose_target() -> void:
+	# Investigate where they WERE, not the last unrelated bang. _acquire_target
+	# pins alertness to MAX and nothing here lowers it, so the :523 gate
+	# re-promotes to SEARCHING on the very next tick — which meant every kill
+	# sent the AI marching off toward whatever made the last noise. This is the
+	# first and only READ of last_known_target_pos, which _update_target has
+	# been refreshing every frame (:670) for nobody.
+	if last_known_target_pos != Vector2.ZERO:
+		last_heard_position = last_known_target_pos
 	current_target = null
 	emit_signal("target_lost")
 	_change_state(AIState.IDLE)
@@ -636,8 +831,8 @@ func _process_chase(delta: float) -> void:
 		return
 
 	var dist = character.global_position.distance_to(current_target.global_position)
-	var combined_collision_dist = character.collision_radius + current_target.collision_radius + character.minimum_separation
-	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
+	var bands: Dictionary = _engagement_bands(current_target)
+	var safe_attack_range: float = bands["swing"]
 
 	# casters open from chase range (fireball reaches 400px)
 	if _try_cast_ability(delta):
@@ -663,13 +858,14 @@ func _process_approach(delta: float) -> void:
 	var dist = character.global_position.distance_to(current_target.global_position)
 	var dir_to_target = (current_target.global_position - character.global_position).normalized()
 
-	var combined_collision_dist = character.collision_radius + current_target.collision_radius + character.minimum_separation
-	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
-	var safe_preferred_range = max(preferred_range, combined_collision_dist + 10.0)
-	var safe_too_close = max(too_close_range, combined_collision_dist)
+	var bands: Dictionary = _engagement_bands(current_target)
+	var safe_attack_range: float = bands["swing"]
+	var safe_preferred_range: float = bands["stand"]
+	var safe_too_close: float = maxf(too_close_range, float(bands["gap"]))
 
-	# Face the target
-	character.target_rotation = dir_to_target.angle() + PI / 2
+	# Face the target - through _aim_at so the aim survives the path's
+	# set_path_facing writes instead of being stomped on the next waypoint.
+	_aim_at(dir_to_target.angle() + PI / 2)
 
 	if _try_cast_ability(delta):
 		return
@@ -682,8 +878,13 @@ func _process_approach(delta: float) -> void:
 	# old `dist >= safe_too_close` gate made a cornered enemy back up instead
 	# of swinging, forever if the retreat was blocked (the "orc stands in your
 	# face doing nothing" freeze). Ranged keeps the lower bound to kite first.
+	# `_movement_locked()` relaxes the ranged lower bound for exactly the reason
+	# the melee bound was removed: a shooter walking a player-drawn path CANNOT
+	# kite (the legs belong to the ActionQueue), so keeping the bound left it
+	# standing next to an enemy doing nothing until the path carried it clear.
+	# It cannot retreat, so it shoots.
 	if dist <= safe_attack_range and attack_cooldown_timer <= 0 \
-			and (not is_ranged_fighter or dist >= safe_too_close):
+			and (not is_ranged_fighter or dist >= safe_too_close or _movement_locked()):
 		# Melee can't reach across stories (Game.can_hit_target vetoes the hit) —
 		# don't enter ATTACK and whiff forever at a deck edge; path toward the
 		# target instead so A*'s per-step elevation routing finds the ramp.
@@ -698,8 +899,15 @@ func _process_approach(delta: float) -> void:
 		_change_state(AIState.ATTACK)
 		return
 
-	# Too close — back up (ranged kiting; melee only lands here on cooldown)
-	if dist < safe_too_close:
+	# Too close — back up. RANGED ONLY. A melee fighter only ever reached this
+	# branch during its own attack cooldown, and backing off then re-opens the
+	# gap it just closed, so it spends the cooldown walking out and the next
+	# tick walking back in — never settling inside its swing band. Melee holds
+	# its ground and swings again; the soft separation push already handles
+	# actual body overlap.
+	# Skipped under player orders: _kite_away is a no-op then, so taking this
+	# branch would `return` out of the tick having done nothing at all.
+	if is_ranged_fighter and dist < safe_too_close and not _movement_locked():
 		_kite_away(dir_to_target, safe_preferred_range - dist + 10.0)
 		return
 
@@ -721,13 +929,12 @@ func _target_elevation() -> float:
 	return character.get_elevation()
 
 func _process_attack(delta: float) -> void:
-	var combined_collision_dist = character.collision_radius + (current_target.collision_radius if current_target else 0) + character.minimum_separation
-	var safe_attack_range = max(attack_range, combined_collision_dist + 5.0)
+	var safe_attack_range: float = float(_engagement_bands(current_target)["swing"])
 
 	# Track the target while in ATTACK state: APPROACH stops re-facing once we
 	# get here, so a strafing target used to drift out of the firing line.
 	if current_target and is_instance_valid(current_target):
-		character.target_rotation = (current_target.global_position - character.global_position).angle() + PI / 2
+		_aim_at((current_target.global_position - character.global_position).angle() + PI / 2)
 
 	if _try_cast_ability(delta):
 		return
@@ -839,7 +1046,62 @@ func _process_frightened(delta: float) -> void:
 
 # ===== MOVEMENT =====
 
+# ===== PLAYER MOVEMENT ORDERS =====
+# True while player-drawn orders are still outstanding. It revokes exactly ONE
+# faculty: the right to decide where the body walks. Targeting, attacking,
+# ability casting, alertness, outcry and every reaction keep running - the path
+# takes the legs, not the brain. Same shape as the WAIT gate (hold_position)
+# below, so the three locomotion primitives - _move_toward, navigate_to,
+# _check_path_progress - stay the only doors a future AI state can walk through.
+func _movement_locked() -> bool:
+	return character != null and character.has_player_orders()
+
+
+# Fear outranks orders. Panic/frightened are the two states whose WHOLE POINT is
+# taking control away from the player, and they reach the body only through the
+# gated locomotion primitives — so without this an unselected ally who broke
+# would keep calmly walking its drawn path, which is worse than the bug this
+# gate was added to fix. Tearing the orders down (rather than letting the AI
+# fight the ActionQueue for the legs) also clears has_player_orders(), which
+# releases the gate so the flee actually moves. Reuses the character's own
+# teardown so the queued AoE ghosts go with it.
+func _break_player_orders() -> void:
+	if not _movement_locked():
+		return
+	if character.action_queue != null:
+		character.action_queue.cancel_all()
+	character._clear_tactical_path_if_executing()
+
+
+# Explicit combat aim. Writes target_rotation directly (so it beats the path's
+# set_path_facing, which PARKS instead of applying while a facing hold runs) and
+# re-arms that hold every AI tick a target is held, so the next waypoint advance
+# cannot snap the body back down the path. Never armed while a queued FACE is
+# the running action: _is_action_complete(FACE) waits for `rotation` to reach
+# ITS angle, so overriding it would stall the whole action queue.
+const AI_AIM_FACING_HOLD: float = 0.35
+
+func _aim_at(angle: float) -> void:
+	if not _movement_locked():
+		character.target_rotation = angle
+		return
+	var aq: ActionQueue = character.action_queue
+	if aq != null and aq.current_action != null:
+		if aq.current_action.type == ActionQueue.ActionType.FACE:
+			return
+	character.target_rotation = angle
+	character.begin_facing_hold(AI_AIM_FACING_HOLD)
+
+
 func _move_toward(target_pos: Vector2) -> void:
+	# PLAYER ORDERS own the legs. Return WITHOUT touching is_moving /
+	# target_position / target_rotation: the ActionQueue MOVE steers all three,
+	# and a stray is_moving = false here reads as an arrival to
+	# _is_action_complete(MOVE) and silently skips a waypoint.
+	if _movement_locked():
+		nav_path.clear()
+		nav_path_index = 0
+		return
 	# WAIT command: a held ally stands ground — every AI locomotion path
 	# (chase, approach, kite, strafe, wander, nav-following) funnels through
 	# here, so one gate holds them all. They still face, target, and attack.
@@ -864,7 +1126,19 @@ func _move_toward(target_pos: Vector2) -> void:
 # smooth), A* the moment a wall blocks it. CHASE/APPROACH used to steer
 # blindly and grind enemies face-first into walls forever.
 func _combat_move(target_pos: Vector2, delta: float) -> void:
-	if _walk_line_clear(target_pos):
+	# Player orders own locomotion: skip the whole steer/repath layer, including
+	# the cast-plant is_moving = false below (which would false-complete the
+	# running MOVE). Callers already ran _try_cast_ability, so casting is
+	# untouched - only the walking is.
+	if _movement_locked():
+		return
+	# Plant feet while casting: chase used to keep converging on the target
+	# through the whole windup (surround slots sit at 0.8×attack_range), which
+	# walked casters into their own fireball's detonation. Standing still
+	# during a windup also reads better than a walking cast.
+	if character.ability_manager != null and character.ability_manager.is_casting():
+		character.is_moving = false
+		return
 		nav_path.clear()
 		nav_path_index = 0
 		_move_toward(target_pos)
@@ -891,7 +1165,9 @@ func _combat_move(target_pos: Vector2, delta: float) -> void:
 func _kite_away(dir_to_target: Vector2, dist_back: float) -> void:
 	for ang in [PI, PI - 1.05, PI + 1.05, PI - 1.75, PI + 1.75]:
 		var p := character.global_position + dir_to_target.rotated(ang) * dist_back
-		if GridManager.grid_costs.get(GridManager.world_to_map(p), INF) != INF \
+		var pt := GridManager.world_to_map(p)
+		if GridManager.grid_costs.get(pt, INF) != INF \
+				and not GridManager.is_hazard_tile(pt) \
 				and _walk_line_clear(p):
 			_move_toward(p)
 			return
@@ -902,10 +1178,15 @@ func _kite_away(dir_to_target: Vector2, dist_back: float) -> void:
 # fall back to the target itself (their tile is walkable — they stand on it).
 func _reachable_slot(p: Vector2) -> Vector2:
 	var t: Vector2i = GridManager.world_to_map(p)
-	if GridManager.grid_costs.get(t, INF) != INF or GridManager.door_pass.has(t):
+	if (GridManager.grid_costs.get(t, INF) != INF or GridManager.door_pass.has(t)) \
+			and not GridManager.is_hazard_tile(t):
 		return p
-	var nt: Vector2i = GridManager.nearest_walkable(t)
-	if GridManager.grid_costs.get(nt, INF) != INF:
+	# nearest_walkable only reads grid_costs, and a burning tile keeps its
+	# finite cost — it would hand a hazardous slot straight back. The
+	# hazard-aware ring search resolves a slot beside a fire to safe ground
+	# instead of collapsing every flanker onto the straight line to the target.
+	var nt: Vector2i = GridManager.nearest_safe_tile(t, 3)
+	if nt != Vector2i.MAX:
 		return GridManager.map_to_world(nt)
 	if current_target and is_instance_valid(current_target):
 		return current_target.global_position
@@ -934,15 +1215,137 @@ func _walk_line_clear(target_pos: Vector2) -> bool:
 			var t: Vector2i = GridManager.world_to_map(character.global_position + off + dv * (float(i) / float(steps)))
 			if GridManager.grid_costs.get(t, INF) == INF and not GridManager.door_pass.has(t):
 				return false
+			# damaging ground reads as blocked: straight-line combat steer used
+			# to walk through fire whenever the line was geometrically clear —
+			# failing here hands the leg to A*, whose hazard weights detour
+			if GridManager.is_hazard_tile(t):
+				return false
 			if t != prev_t and not GridManager.can_step(prev_t, t):
 				return false
 			prev_t = t
 	return true
 
 
+# ===== HAZARD AVOIDANCE =====
+# Route planning reads the tile map GridManager.hazard_costs (A* detour weights
+# + is_hazard_tile gates in the steering helpers). The STANDING check below is
+# stricter: it re-asks the fire sim for the exact cell under our feet, because
+# a burning cell can straddle a tile border and damage us from a tile whose
+# centroid never registered as hazardous.
+
+var _hazard_escape_tile := Vector2i.MAX   # committed exit; MAX = not escaping
+var _hazard_repath_cd: float = 0.0
+var _hazard_search_cd: float = 0.0        # backoff after a failed exit search
+
+
+# The fire sim under this character's map, or null (legacy tile maps, menus).
+func _cell_fire():
+	if game != null and ("surface_manager" in game) and game.surface_manager != null:
+		var cf = game.surface_manager.cell_fire
+		if cf != null and is_instance_valid(cf) and cf.active():
+			return cf
+	return null
+
+
+func _standing_in_hazard() -> bool:
+	if "on_roof" in character and character.on_roof:
+		return false   # ground fire/fluids never reach roof-walkers
+	if GridManager.is_hazard_tile(GridManager.world_to_map(character.global_position)):
+		return true
+	var cf = _cell_fire()
+	# burning.is_empty() guard: cell_at is a ~9-bucket centroid scan, far too
+	# dear to pay per NPC per frame on a map with no fire anywhere
+	if cf != null and not cf.burning.is_empty():
+		return cf.burning.has(cf.graph.cell_at(character.global_position))
+	return false
+
+
+# The standing test is CELL-exact, so exit validation must be too: a burning
+# cell whose centroid maps into the neighbouring tile can own THIS tile's
+# centre (nearest-centroid cells straddle tile borders). A tile-only test
+# committed escapees to exits the standing check still flagged — locking them
+# in the flames with the whole state machine suppressed.
+func _tile_safe(tile: Vector2i) -> bool:
+	if GridManager.is_hazard_tile(tile):
+		return false
+	var cf = _cell_fire()
+	if cf != null and not cf.burning.is_empty():
+		return not cf.burning.has(cf.graph.cell_at(GridManager.map_to_world(tile)))
+	return true
+
+
+# Nearest REACHABLE safe tile (bounded flood, same primitive wander uses — a
+# safe tile across a wall is no exit). Vector2i.MAX when the whole 5-step
+# neighbourhood burns.
+func _find_escape_tile(from_tile: Vector2i) -> Vector2i:
+	var reach: Dictionary = GridManager.reachable_within(from_tile, 5,
+		character.jump_height, character.jump_range, character.on_roof)
+	var best := Vector2i.MAX
+	var best_steps := 999
+	for tile in reach:
+		if not GridManager.would_walk(tile) or not _tile_safe(tile):
+			continue
+		if int(reach[tile]) < best_steps:
+			best_steps = int(reach[tile])
+			best = tile
+	return best
+
+
+func _process_hazard_escape(delta: float) -> bool:
+	if current_state == AIState.DEAD or not character.is_alive():
+		return false
+	# A held ally stands where the player put them — even in fire. The WAIT
+	# contract is "still face, target, and attack"; returning true here would
+	# turn a tank holding a burning choke into a passive statue (and re-flood
+	# A* every 0.4s for a move the hold gate discards anyway).
+	if "hold_position" in character and character.hold_position:
+		return false
+	# Same contract for player-drawn orders: the path is the order, including
+	# where it crosses fire. Returning true here would swallow the ENTIRE AI tick
+	# (targeting, attacking, casting) for a move the gate discards anyway.
+	if _movement_locked():
+		return false
+	_hazard_repath_cd -= delta
+	_hazard_search_cd -= delta
+	if not _standing_in_hazard():
+		_hazard_escape_tile = Vector2i.MAX
+		return false
+	# Commit to one exit until we're out — re-rolling every tick dithers on
+	# tile borders while the fire keeps stacking. Re-roll if the committed
+	# exit stops being safe (fire spread onto it, or its covering cell burns).
+	if _hazard_escape_tile == Vector2i.MAX or not _tile_safe(_hazard_escape_tile):
+		if _hazard_search_cd > 0.0:
+			return false   # recent search found nothing; don't re-flood per frame
+		_hazard_escape_tile = _find_escape_tile(
+			GridManager.world_to_map(character.global_position))
+		if _hazard_escape_tile == Vector2i.MAX:
+			_hazard_search_cd = 0.5
+			return false   # sea of flame — let the state machine act instead
+		# drop whatever route we were on — including the in-flight leg, which
+		# may point deeper into the fire — the exit is the only destination now
+		nav_path.clear()
+		nav_path_index = 0
+		character.is_moving = false
+	if not character.is_moving and nav_path.is_empty():
+		if _hazard_repath_cd <= 0.0:
+			_hazard_repath_cd = 0.4
+			navigate_to(GridManager.map_to_world(_hazard_escape_tile))
+			if nav_path.is_empty():
+				# A* refused (exit raced shut) — straight line; it's ≤5 tiles out
+				_move_toward(GridManager.map_to_world(_hazard_escape_tile))
+	else:
+		_check_path_progress()
+	return true
+
+
 # ===== PATH FOLLOWING =====
 
 func navigate_to(world_pos: Vector2) -> void:
+	# Don't pay a full A* for a route the movement gate would discard.
+	if _movement_locked():
+		nav_path.clear()
+		nav_path_index = 0
+		return
 	var start = GridManager.world_to_map(character.global_position)
 	var end_tile = GridManager.world_to_map(world_pos)
 	nav_path = GridManager.find_path(start, end_tile, character.jump_height, character.jump_range, character.on_roof)
@@ -956,12 +1359,30 @@ func _advance_path() -> void:
 		nav_path_index = 0
 		return
 	var next_tile = nav_path[nav_path_index]
+	# Never FOLLOW a leg onto damaging ground unless we're already standing on
+	# some (escape routes legitimately cross fire on the way out). A* only
+	# routes through cores when the goal is in or behind the fire — chasing a
+	# target who stands in flames used to dip in, get yanked out by the escape
+	# override, and dip again, stacking a burn tick on every dip until death.
+	# Waiting at the edge is the behaviour a player expects to see.
+	if GridManager.is_hazard_tile(next_tile) and not _standing_in_hazard():
+		nav_path.clear()
+		nav_path_index = 0
+		character.is_moving = false
+		return
 	# door tiles route through the door's exact gap centre, not the tile centre
 	var next_world: Vector2 = GridManager.door_gaps.get(next_tile, GridManager.map_to_world(next_tile))
 	_move_toward(next_world)
 	nav_path_index += 1
 
 func _check_path_progress() -> void:
+	# A nav_path left over from before the plan phase must not advance a leg
+	# while the player's queue is driving (_advance_path can also write
+	# is_moving = false on a hazard tile). Drop it; the AI re-plans on release.
+	if _movement_locked():
+		nav_path.clear()
+		nav_path_index = 0
+		return
 	if nav_path.is_empty():
 		return
 	if not character.is_moving:
@@ -1179,6 +1600,9 @@ func find_random_wander_target(from_tile: Vector2i) -> Vector2i:
 
 func is_tile_walkable(tile: Vector2i) -> bool:
 	if not GridManager.would_walk(tile):
+		return false
+	# wander/panic/flee destinations never land on damaging ground
+	if GridManager.is_hazard_tile(tile):
 		return false
 	# Elevation gate ONLY for directly adjacent candidates: can_step is defined
 	# for single-tile transitions. Distant flee/wander targets legitimately
@@ -1411,12 +1835,49 @@ func _share_alertness_with_allies() -> void:
 			var transfer: float = (alertness_value - float(other_ai.alertness_value)) * ALLY_SHARE_FACTOR
 			var cap: float = ALERTNESS_SOUND_CAP if other_ai.current_alertness != Alertness.HOSTILE else ALERTNESS_MAX
 			var new_val: float = min(float(other_ai.alertness_value) + transfer, cap)
-			other_ai.last_heard_position = last_heard_position
-			other_ai.time_since_last_stimulus = 0.0
+			# Never redirect an ally who is already fighting someone: their own
+			# target is better information than our second-hand rumour, and
+			# _lose_target now reads this field to decide where to search.
+			if other_ai.current_target == null:
+				other_ai.last_heard_position = last_heard_position
+			# `other_ai.time_since_last_stimulus = 0.0` used to sit here, and it
+			# was a permanent decay holiday: this runs every ALLY_SHARE_INTERVAL
+			# (0.75s) against ALERTNESS_DECAY_GRACE (1.5s), so the receiver's
+			# decay branch (:1627) was unreachable and one alert fighter pinned
+			# every ally in eyeshot at the sound cap (85) — above the SEARCHING
+			# promotion threshold (60) and above the give-up floor (36) — for as
+			# long as the fight lasted. That is a whole faction locked into
+			# investigation. Sharing raises their meter; only their OWN stimuli
+			# postpone their decay.
 			other_ai._set_alertness_value(new_val)
 
 
 # ===== SEARCHING STATE =====
+
+var _search_goal_cache := Vector2.INF
+var _search_goal_for := Vector2.INF   # the last_heard_position the cache serves
+var _search_goal_cd: float = 0.0
+
+
+# Where SEARCHING actually walks: the noise itself, or the nearest safe
+# standoff when the noise sits on damaging ground; Vector2.INF when the whole
+# 6-tile neighbourhood burns. The ring search only changes when the hazard
+# map does, so it is cached on a 0.5s cadence instead of paid per frame.
+func _search_goal(delta: float) -> Vector2:
+	_search_goal_cd -= delta
+	if _search_goal_cd > 0.0 and _search_goal_for == last_heard_position:
+		return _search_goal_cache
+	_search_goal_cd = 0.5
+	_search_goal_for = last_heard_position
+	var heard_tile := GridManager.world_to_map(last_heard_position)
+	if not GridManager.is_hazard_tile(heard_tile):
+		_search_goal_cache = last_heard_position
+	else:
+		var safe := GridManager.nearest_safe_tile(heard_tile, 6)
+		_search_goal_cache = GridManager.map_to_world(safe) if safe != Vector2i.MAX \
+			else Vector2.INF
+	return _search_goal_cache
+
 
 func _process_searching(delta: float) -> void:
 	# Acquired a real target while heading over there — switch to combat.
@@ -1429,13 +1890,35 @@ func _process_searching(delta: float) -> void:
 		_change_state(AIState.IDLE)
 		return
 
-	var dist = character.global_position.distance_to(last_heard_position)
+	# Wall-clock backstop. Every alertness-derived exit above can be starved: an
+	# unreachable goal keeps us in the en-route branch, which resets
+	# _search_look_timer every tick and never reaches the arrived-scan bleed,
+	# while any ongoing fight nearby keeps re-zeroing time_since_last_stimulus
+	# so the meter never decays either. Without this, SEARCHING is terminal.
+	if state_timer > SEARCH_GIVE_UP_SECONDS:
+		_set_alertness_value(ALERTNESS_SEARCHING_THRESHOLD - 1.0)
+		_change_state(AIState.IDLE)
+		return
+
+	# Never investigate INTO damaging ground: the noise position can sit inside
+	# a fire (burning structures crackle, victims scream from the flames) and a
+	# scout who walked all the way to it burned to death mid-scan in playtest.
+	# Scan from the nearest safe tile instead — LOS from one tile out is just
+	# as good, and alertness decay handles the rest.
+	var goal := _search_goal(delta)
+	# Vector2.INF: the noise is deep inside a blaze with no safe standoff
+	# within 6 tiles. Fall through to the arrived-scan branch (slow turn,
+	# alertness decay, stand down) instead of pathing in — A* would still
+	# reach the tile (hazard is a weight, not a wall) and the escape override
+	# would just eject us for another burn-collecting lap at the fire's edge.
+	var dist: float = 0.0 if goal == Vector2.INF \
+		else character.global_position.distance_to(goal)
 	if dist > GridManager.TILE_SIZE * 0.75:
 		# Still en route to the noise.
 		_search_repath_cd -= delta
 		if not character.is_moving and nav_path.is_empty():
 			if _search_repath_cd <= 0.0:
-				navigate_to(last_heard_position)
+				navigate_to(goal)
 				# Unreachable noise (e.g. a roof-walker's footsteps land on a
 				# tile a ground NPC can't path to): find_path returned empty and
 				# we're not moving, so without a cooldown this re-floods a
@@ -1448,9 +1931,13 @@ func _process_searching(delta: float) -> void:
 		return
 
 	# Arrived — rotate slowly to scan, give LOS a chance to find the enemy.
-	character.is_moving = false
+	# Under player orders the body is walking and facing down the path: neither
+	# the stop nor the scan-turn is ours to write. The alertness bleed below
+	# still runs, so a searcher on a path stands down on the same schedule.
+	if not _movement_locked():
+		character.is_moving = false
+		character.target_rotation += delta * 1.8  # slow continuous turn
 	_search_look_timer += delta
-	character.target_rotation += delta * 1.8  # slow continuous turn
 
 	if _search_look_timer >= SEARCH_LOOK_AROUND_DURATION:
 		# Found nothing — decay alertness faster and stand down.

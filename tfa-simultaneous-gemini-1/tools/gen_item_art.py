@@ -71,6 +71,32 @@ def shield_style(silhouette, placement, aspect):
     )
 
 PROMPTS = {
+    # The generic quest-proof trophy: whatever the bounty was, this is what you
+    # carry back. Deliberately anonymous where the king's head is characterful —
+    # it gets renamed per victim at runtime ("Severed Head of Ser Brannoc"), so
+    # the art has to read as "somebody's head" rather than as one person's.
+    # Kept stylised and cel-shaded to match its shelf-mate rather than pushed
+    # toward realism, and it has to survive being shrunk to about twenty pixels.
+    "severed_head": (
+        "A single item sprite for a top-down RPG inventory, drawn with bold dark contour lines and "
+        "flat cel shading, exactly matching the framing, proportions, line weight, muted palette and "
+        "painted cel-shaded style of the reference severed-head sprite provided. "
+        "SUBJECT: the severed head of an ordinary grown man, a slain roadside brigand, carried as "
+        "proof of a bounty. He faces the viewer straight on and fills the frame the same way the "
+        "reference head does. "
+        "FACE: gaunt and slack, the eyes closed and sunken into shadowed sockets, the mouth hanging "
+        "slightly open, the skin drained to a pallid grey with faint cold blue-green tones in the "
+        "hollows of the cheeks and under the jaw. A short unkempt stubbled beard and a crooked nose "
+        "that has been broken before. "
+        "HAIR: dark brown, matted, hanging in lank clumps, bare-headed and plainly kept. "
+        "NECK: the head ends at a ragged cut across the neck near the bottom of the frame, the "
+        "cut edge dark and clotted in deep desaturated maroon. "
+        "The key light comes from the upper left. The shading is built from a few large flat areas "
+        "so the sprite stays readable when it is shrunk to twenty pixels across. "
+        "The head's bounding box is very slightly taller than it is wide. "
+        "The head sits centered and complete inside the frame, surrounded on all four sides by a "
+        "generous empty margin of plain flat pure-white background, fully isolated as a clean cutout. "
+    ),
     "dark_robes": STYLE + (
         "The garment is a cultist's heavy dark ritual robe in charcoal black with deep-purple "
         "undertones, thick draping cloth folds radiating outward from the shoulders, a thin twisted "
@@ -165,9 +191,18 @@ SHIELD_REFS = [
     os.path.join(_REFS_DIR, "shield_topdown_aspect.png"),
     os.path.join(ITEMS, "longsword.png"),
 ]
+# The generic bounty trophy has to sit beside skarsgaard_king_head.png in the
+# same bag, so that sprite IS the reference: same face-on framing, same bold
+# contour and flat cel shading, same roughly-square aspect. Adding longsword.png
+# reinforces the contour register without dragging the aspect portrait-tall.
+HEAD_REFS = [
+    os.path.join(ITEMS, "skarsgaard_king_head.png"),
+    os.path.join(ITEMS, "longsword.png"),
+]
 REFS_OVERRIDE = {
     "buckler": SHIELD_REFS,
     "iron_shield": SHIELD_REFS,
+    "severed_head": HEAD_REFS,
 }
 
 
@@ -244,6 +279,35 @@ def remove_bg(img, tol=28):
     return img
 
 
+def trim(img, margin=6, max_side=640):
+    """Crop to the artwork and drop it to a sane resolution.
+
+    The prompts all ask for a generous empty margin, so a raw render is a 1024
+    square that is mostly nothing. Every sprite already in Items/ is cropped
+    close to its alpha bounding box (buckler 512x215, skarsgaard_king_head
+    266x320), and the in-world footprint comes from base_width in Items.json
+    rather than from the pixel dimensions — so the untrimmed square is pure
+    waste, and it also throws off any code that reasons about the art's aspect.
+
+    Cropping to the bounding box preserves the content's aspect ratio, which is
+    what the shield work cared about; it is the empty margin that gets removed,
+    not any of the shape.
+    """
+    bbox = img.convert("RGBA").getchannel("A").getbbox()
+    if bbox is None:
+        return img
+    w, h = img.size
+    box = (max(0, bbox[0] - margin), max(0, bbox[1] - margin),
+           min(w, bbox[2] + margin), min(h, bbox[3] + margin))
+    img = img.crop(box)
+    longest = max(img.size)
+    if longest > max_side:
+        scale = max_side / float(longest)
+        img = img.resize((max(1, round(img.size[0] * scale)),
+                          max(1, round(img.size[1] * scale))), Image.LANCZOS)
+    return img
+
+
 def main():
     targets = sys.argv[1:] or list(PROMPTS.keys())
     for name in targets:
@@ -254,6 +318,7 @@ def main():
         raw, model = gen(prompt, ref_paths)
         img = Image.open(io.BytesIO(raw))
         img = remove_bg(img)
+        img = trim(img)
         out_path = os.path.join(ITEMS, name + ".png")
         img.save(out_path)
         print(f"[ok ] {name}.png  {img.size}  via {model}", flush=True)

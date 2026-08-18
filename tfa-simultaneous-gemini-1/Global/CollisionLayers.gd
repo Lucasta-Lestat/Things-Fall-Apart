@@ -30,8 +30,13 @@ const PROJECTILE_HIT_MASK := STRUCTURES | CHARACTERS
 # and can actually move under forces).
 const ITEM_PHYSICS_MASK := STRUCTURES | ITEMS | CHARACTERS
 
-# What an active melee weapon hitbox should detect during a swing.
-const WEAPON_HITBOX_MASK := CHARACTERS | ITEMS | STRUCTURES
+# What an active melee weapon hitbox should detect during a swing. CHARACTERS is
+# deliberately absent: character melee resolves through MeleeReach's reach + arc
+# test at the animation's hit frame (Game.resolve_melee_swing), because the blade
+# Area2D is parented to the rig's hand and so swept an arc offset ~50deg off the
+# wielder's facing. Objects keep the physical channel — "did the blade enter this
+# door" IS an overlap question, and a door cannot strafe out of the arc.
+const WEAPON_OBJECT_HITBOX_MASK := ITEMS | STRUCTURES
 
 # Mask passed to PhysicsRayQueryParameters2D for line-of-sight checks.
 const VISION_RAY_MASK := VISION_BLOCKERS

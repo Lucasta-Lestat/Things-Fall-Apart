@@ -11,7 +11,28 @@ const SLIDE_DURATION := 0.3
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
 const CONTEXT_MENU_SCENE := preload("res://UI/ContextMenu.tscn")
 const ITEM_SLOT_SIZE := Vector2(40, 40)
-const COND_ICON_SIZE := Vector2(16, 16)
+# 26, not 16. Under the old EXPAND_FIT_WIDTH_PROPORTIONAL these rects inherited
+# the header's full 40px portrait height and KEEP_ASPECT_CENTERED drew the square
+# icons at ~40px, so 16 was never the size anyone actually saw. Pinning them to
+# EXPAND_IGNORE_SIZE (needed to stop tall item art stretching slot rows) made the
+# declared size real for the first time and the pips shrank to genuinely 16px.
+# 26 restores a legible pip while still clearing the 40px row with margin —
+# turn it up if the row can afford it, down if a heavily-conditioned character
+# overflows the header.
+const COND_ICON_SIZE := Vector2(26, 26)
+# Header budget. The header is the one row here whose width is driven by DATA
+# (name length, condition count), so it is the one that can overflow the panel.
+# Rather than reserve a fixed name column — which wasted the pips' share of the
+# row on every character who had no conditions, truncating names for no reason —
+# the name is measured and given whatever the pips actually leave:
+#   name = clamp(text width, NAME_MIN, PANEL_WIDTH - portrait - live pip width)
+# See _fit_name_column. Worst case (4 pips) still fits: 40 + 44 + 112 = 196.
+const HEADER_PORTRAIT_W := 40.0
+const HEADER_WAIT_W := 18.0
+const HEADER_PAD := 10.0
+const NAME_MIN_WIDTH := 44.0
+const MAX_COND_PIPS := 4
+const COND_OVERFLOW_TAG_W := 22.0
 const RESOURCE_ICON_SIZE := Vector2(32, 32)
 
 # School trait → (resource_field, icon_path, fill_color). Icons live in
@@ -65,6 +86,16 @@ func _ready() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	# This panel is a FIXED PANEL_WIDTH strip pinned to the screen edge, so there
+	# is no such thing as a legitimate horizontal scroll here — the content is
+	# supposed to fit. Left enabled, any child whose minimum width crept past
+	# PANEL_WIDTH (a long character name, one pip too many in the header) silently
+	# turned the whole panel into a horizontally scrollable surface and let it
+	# slide off screen. Disabling it also makes ScrollContainer CLAMP the child to
+	# the viewport width instead of letting it grow to its own minimum, which is
+	# what actually keeps the layout honest. The header is separately bounded
+	# below (fixed name width + a capped pip row) so nothing has to be clipped.
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 
 	vbox = VBoxContainer.new()
@@ -126,6 +157,67 @@ func _on_map_loaded(_map_id: String) -> void:
 	# are settled before we read game_node.party_chars.
 	call_deferred("_populate_party")
 
+## Give the name label exactly the width the header can spare: its own measured
+## text width, capped by whatever the condition pips are actually using right
+## now. A character with no conditions therefore shows their full name, and only
+## a genuinely crowded header truncates — the earlier fixed column reserved the
+## pips' share from everyone and cut names that had room to spare.
+## Called from _update_conditions, which is the only place the pip count is known.
+func _fit_name_column(data: Dictionary, pip_count: int, has_overflow: bool) -> void:
+	var name_label: Label = data.get("name_label")
+	if name_label == null or not is_instance_valid(name_label):
+		return
+	var pips_w: float = float(pip_count) * (COND_ICON_SIZE.x + 2.0)
+	if has_overflow:
+		pips_w += COND_OVERFLOW_TAG_W
+	var wait_icon = data.get("wait_icon")
+	var wait_w: float = HEADER_WAIT_W if (wait_icon != null and is_instance_valid(wait_icon) and wait_icon.visible) else 0.0
+	var avail: float = PANEL_WIDTH - HEADER_PORTRAIT_W - wait_w - pips_w - HEADER_PAD
+
+	# Measure the actual glyphs rather than guessing from character count: the
+	# project theme is Cinzel, whose caps are far wider than a default sans, so a
+	# character-count estimate would truncate early on exactly the names this is
+	# meant to stop truncating.
+	var font: Font = name_label.get_theme_font("font")
+	var fsize: int = name_label.get_theme_font_size("font_size")
+	var natural: float = avail
+	if font != null:
+		natural = font.get_string_size(
+			name_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize
+		).x + 2.0  # a hair of slack so the last glyph never clips on rounding
+	var target: float = clampf(natural, NAME_MIN_WIDTH, maxf(NAME_MIN_WIDTH, avail))
+	if not is_equal_approx(name_label.custom_minimum_size.x, target):
+		name_label.custom_minimum_size = Vector2(target, 0)
+
+
+## Report any row whose minimum width would widen the panel past PANEL_WIDTH.
+## Purely diagnostic — it changes no layout, it just names the culprit so the
+## next data-driven row that outgrows the strip shows up in the console instead
+## of only on screen. Deferred one frame so minimum sizes have settled.
+func _warn_if_too_wide() -> void:
+	if vbox == null or not is_instance_valid(vbox):
+		return
+	var worst: Control = null
+	var worst_w: float = PANEL_WIDTH
+	for panel in vbox.get_children():
+		if not (panel is Control):
+			continue
+		for row in (panel as Control).get_children():
+			if not (row is Control):
+				continue
+			var w: float = (row as Control).get_combined_minimum_size().x
+			if w > worst_w:
+				worst_w = w
+				worst = row as Control
+	if worst != null:
+		push_warning(
+			"PartySidePanel: '%s' has a minimum width of %.0fpx, wider than PANEL_WIDTH (%.0f). "
+			% [worst.name if worst.name != "" else worst.get_class(), worst_w, PANEL_WIDTH]
+			+ "A PanelContainer sizes to max(anchor, minimum), so this widens the whole panel. "
+			+ "Make the row wrap (HFlowContainer) or bound its contents."
+		)
+
+
 func _populate_party() -> void:
 	if not game_node:
 		return
@@ -138,6 +230,12 @@ func _populate_party() -> void:
 	for child in vbox.get_children():
 		child.queue_free()
 	_character_panels.clear()
+	# This panel is a PanelContainer, so its width is max(anchor width, minimum
+	# width) — a single over-wide row silently drags the whole panel out past its
+	# 250px anchor instead of being clipped. That has now happened twice (a
+	# one-line resource pip row at 11 * 32px, and an unbounded header), and it is
+	# invisible until someone looks at the screen. Check it instead.
+	call_deferred("_warn_if_too_wide")
 
 	for i in range(game_node.party_chars.size()):
 		var character = game_node.party_chars[i]
@@ -159,14 +257,32 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	var icon = TextureRect.new()
 	icon.custom_minimum_size = Vector2(40, 40)
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_load_character_icon(icon, character)
 	header.add_child(icon)
 
+	# WAIT badge: same stop hand as the in-world indicator (T / context menu).
+	# Sits between portrait and name; hidden unless the character is holding.
+	var wait_icon = TextureRect.new()
+	wait_icon.texture = preload("res://UI/wait_hand.png")
+	wait_icon.custom_minimum_size = Vector2(18, 18)
+	wait_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	wait_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wait_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wait_icon.visible = false
+	header.add_child(wait_icon)
+
 	var name_label = Label.new()
 	name_label.text = character.display_name
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Width is assigned by _fit_name_column once the condition pips are known, so
+	# a character with no conditions gets the whole row for their name and only a
+	# genuinely cramped header truncates. SHRINK_BEGIN (not EXPAND_FILL) keeps
+	# the pips immediately beside the name instead of splitting the leftover
+	# space evenly with it; clip_text stops a long name growing the header, which
+	# is what widened the whole panel.
+	name_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	name_label.clip_text = true
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(name_label)
 
@@ -228,9 +344,18 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	# One TextureProgressBar per school in which the character has tier > 0.
 	# The icon fills left-to-right as the resource recovers; missing resources
 	# are hidden entirely (a pure Martial fighter sees only the Adrenaline icon).
-	var resource_row = HBoxContainer.new()
+	# HFlowContainer, not HBoxContainer. A single row of pips is what forced the
+	# whole panel wide: this is a PanelContainer, and a Container's width is
+	# max(anchor width, minimum width), so an 11-pip row (11 * 32 = ~380px)
+	# dragged the panel out past its 250px anchor rather than being clipped.
+	# Flowing wraps to a second line instead of growing sideways, and because
+	# each SCHOOL is its own inner HBox child (see _build_resource_bars), a
+	# school's pips always stay together on one line — the group is what wraps,
+	# never the pips inside it.
+	var resource_row = HFlowContainer.new()
 	resource_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	resource_row.add_theme_constant_override("separation", 4)
+	resource_row.add_theme_constant_override("h_separation", 4)
+	resource_row.add_theme_constant_override("v_separation", 2)
 	resource_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(resource_row)
 	var resource_bars := _build_resource_bars(character, resource_row)
@@ -260,6 +385,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"index": index,
 		"container": container,
 		"icon": icon,
+		"wait_icon": wait_icon,
 		"name_label": name_label,
 		"health_bar": health_bar,
 		"health_fill": health_fill,
@@ -288,6 +414,11 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		character.inventory.active_weapon_changed.connect(on_active)
 
 	_refresh_inventory(data)
+	# Seed the name width for the no-conditions case. _update_conditions re-fits
+	# it as pips come and go, but it early-returns for a character with no
+	# ConditionManager at all — without this seed such a name would be left at a
+	# zero minimum and collapse to nothing.
+	_fit_name_column(data, 0, false)
 	return data
 
 func _load_character_icon(tex_rect: TextureRect, character) -> void:
@@ -472,7 +603,16 @@ func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContai
 		tex_rect.texture = load(sprite_path)
 		tex_rect.custom_minimum_size = ITEM_SLOT_SIZE
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		# IGNORE_SIZE, never FIT_WIDTH_PROPORTIONAL. That mode derives the rect's
+		# MINIMUM HEIGHT from the texture's aspect ratio, so custom_minimum_size
+		# becomes a floor it sails straight past: item art is authored at wildly
+		# different aspects (arrow.png is 21x128, so in a 40px-wide slot it
+		# demanded 244px of height and stretched the whole inventory column;
+		# greatsword 197px, longsword 178px). With IGNORE_SIZE the rect is
+		# exactly ITEM_SLOT_SIZE and KEEP_ASPECT_CENTERED fits the art inside it,
+		# which is what every call site here already intended. It also avoids the
+		# 4.6 layout crash documented in QuestLogPanel._build_quest_block.
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(tex_rect)
 	else:
@@ -500,12 +640,15 @@ func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContai
 		stack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(stack_label)
 
-	# L/R hand markers — overlay labels pinned to the slot's left/right edges.
-	# "Main" is the character's right hand (right_arm_joints); "Off" is the left.
+	# L/R activation markers — the MOUSE BUTTON that fires the slot, NOT the
+	# anatomical hand: left-click drives the Main hand (character's right arm),
+	# right-click drives the Off hand (left arm). The old anatomical letters
+	# read as click bindings and pointed at the wrong button (playtest find:
+	# "the inventory has an L, which would seem to indicate left clicking").
 	var hand: String = entry.get("hand", "")
-	if hand == "Off" or hand == "Both":
-		slot.add_child(_make_hand_label("L", HORIZONTAL_ALIGNMENT_LEFT))
 	if hand == "Main" or hand == "Both":
+		slot.add_child(_make_hand_label("L", HORIZONTAL_ALIGNMENT_LEFT))
+	if hand == "Off" or hand == "Both":
 		slot.add_child(_make_hand_label("R", HORIZONTAL_ALIGNMENT_RIGHT))
 
 	slot.set_meta("entry", entry)
@@ -564,7 +707,7 @@ func _create_drag_preview_from_entry(entry: Dictionary) -> Control:
 		tex.texture = load(sprite_path)
 		tex.custom_minimum_size = ITEM_SLOT_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		return tex
 	var label = Label.new()
 	label.text = entry.get("display_name", "Item")
@@ -1024,12 +1167,20 @@ func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 # Ownership keys a dropped item carries back into the world. A stolen item
 # stays the owner's property (owner_faction = stolen_from), so re-taking it
 # is theft again.
+#
+# Quest-proof provenance rides along for the same reason: create_item rebuilds
+# the item from canonical database data, so without these keys dropping a bounty
+# head and picking it back up would launder away whose head it was.
 func _drop_extras(item: Dictionary) -> Dictionary:
 	var extras: Dictionary = {}
 	var src: String = str(item.get("stolen_from", ""))
 	if not src.is_empty():
 		extras["owner_faction"] = src
 		extras["stolen_from"] = src
+	var origin = item.get("origin", null)
+	if origin is Dictionary and not (origin as Dictionary).is_empty():
+		extras["origin"] = (origin as Dictionary).duplicate(true)
+		extras["origin_display_name"] = str(item.get("display_name", ""))
 	return extras
 
 func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
@@ -1338,6 +1489,12 @@ func _process(_delta: float) -> void:
 		if icon:
 			icon.modulate = Color(1.0, 0.3, 0.3, 1.0) if not character.is_alive() else Color.WHITE
 
+		# WAIT badge tracks the hold flag (set via T or the context menu)
+		var wicon: TextureRect = data.get("wait_icon")
+		if wicon:
+			wicon.visible = ("hold_position" in character) and character.hold_position \
+				and character.is_alive()
+
 		# Update the single character HP bar
 		_update_health_bar(data, character)
 		_update_stress_bar(data, character)
@@ -1374,7 +1531,10 @@ func _update_stress_bar(data: Dictionary, character) -> void:
 
 # Build one TextureProgressBar per school resource for which the character has
 # tier > 0. Returns a list of dicts the per-frame updater consumes.
-func _build_resource_bars(character, row: HBoxContainer) -> Array:
+## `row` is an HFlowContainer (it wraps school groups to a second line rather
+## than widening the panel); typed as the shared Container base so the pip
+## grouping below doesn't care which of the two it is handed.
+func _build_resource_bars(character, row: Container) -> Array:
 	# One pip (TextureRect) per point of the resource's current maximum.
 	# Pips are coloured by the school's tint when "filled" and grey when empty,
 	# so a Holy:2 character with devotion=1 sees [filled][grey] devotion icons.
@@ -1489,9 +1649,23 @@ func _update_conditions(data: Dictionary, character) -> void:
 	var conditions: Dictionary = cm.conditions
 	var existing_children = cond_container.get_children()
 
+	# The header is a fixed-width row, so the pip count has to be bounded or a
+	# heavily-conditioned character pushes it past PANEL_WIDTH. Show the first
+	# MAX_COND_PIPS and fold the rest into a "+N" tag, which is strictly better
+	# than letting them silently clip off the edge: the player can still see that
+	# more are active, and the tooltip on each pip carries the detail.
+	var all_ids: Array = conditions.keys()
+	var overflow: int = maxi(0, all_ids.size() - MAX_COND_PIPS)
+	var cond_ids: Array = all_ids.slice(0, mini(all_ids.size(), MAX_COND_PIPS))
+
+	# The name label shares the header row with these pips, so re-fit it whenever
+	# the pip count changes (a condition landing or expiring mid-fight resizes
+	# the space the name is allowed to occupy).
+	_fit_name_column(data, cond_ids.size(), overflow > 0)
+
 	# Quick check: if count matches and IDs match, just update tooltips
-	var cond_ids: Array = conditions.keys()
-	var needs_rebuild := existing_children.size() != cond_ids.size()
+	var expected_children: int = cond_ids.size() + (1 if overflow > 0 else 0)
+	var needs_rebuild := existing_children.size() != expected_children
 	if not needs_rebuild:
 		for i in range(cond_ids.size()):
 			if i >= existing_children.size() or existing_children[i].get_meta("cond_id", "") != cond_ids[i]:
@@ -1508,12 +1682,22 @@ func _update_conditions(data: Dictionary, character) -> void:
 			var tex_rect = TextureRect.new()
 			tex_rect.custom_minimum_size = COND_ICON_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 			if icon_tex and icon_tex is Texture2D:
 				tex_rect.texture = icon_tex
 			tex_rect.set_meta("cond_id", cond_id)
 			cond_container.add_child(tex_rect)
+		if overflow > 0:
+			var more := Label.new()
+			more.text = "+%d" % overflow
+			more.add_theme_font_size_override("font_size", 10)
+			more.tooltip_text = "%d more condition(s)" % overflow
+			more.mouse_filter = Control.MOUSE_FILTER_STOP
+			# Tagged so the ID-match check above treats it as a stable child
+			# rather than seeing a mismatch and rebuilding the row every frame.
+			more.set_meta("cond_id", "__overflow__")
+			cond_container.add_child(more)
 
 	# Update tooltips with current stacks/duration
 	var time_manager = get_node_or_null("/root/TimeManager")

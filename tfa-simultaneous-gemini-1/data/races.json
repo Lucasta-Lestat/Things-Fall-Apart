@@ -355,9 +355,9 @@
    },
    "creature_type": "Humanoid",
    "age": {
-    "base": 37.5,
-    "middle": 75,
-    "old": 120
+    "base": 75,
+    "middle": 150,
+    "old": 240
    },
    "height": {
     "male": 158,
@@ -443,6 +443,117 @@
    "active_abilities": [
     "light_cantrip"
    ],
+   "passive_conditions": []
+  },
+  {
+   "id": "quadrelf",
+   "name": "Quadrelf",
+   "icon": "Assets/Icons/Half-Elf.png",
+   "description": "The children of half-elves and humans, quarter-elven blood now runs through much of Belmonte's common stock. A quadrelf is hard to pick out of a human crowd — a subtle point to the ear, a touch of elven grace and a few extra decades of life — but they lack the half-elf's striking features and inherit none of the elven gift for light.",
+   "cost": 0,
+   "features": [],
+   "ability_score_increases": {
+    "Cha": 3,
+    "Dex": 4,
+    "Int": 4,
+    "Str": -1
+   },
+   "traits": {
+    "Race Relations": 1,
+    "_choice": "Choose 1"
+   },
+   "creature_type": "Humanoid",
+   "age": {
+    "base": 37.5,
+    "middle": 75,
+    "old": 120
+   },
+   "height": {
+    "male": 153,
+    "female": 140
+   },
+   "weight": {
+    "male": 165,
+    "female": 131
+   },
+   "size": "Medium",
+   "body": {
+    "body_size_mod": 1.0,
+    "body_width": 48,
+    "body_height": 28,
+    "head_width": 28,
+    "head_length": 24,
+    "shoulder_y_offset": 10,
+    "leg_length": 8,
+    "leg_width": 3,
+    "leg_spacing": 7,
+    "rig_scene": {
+     "female": "res://RigCharacters/quadrelf_female/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.1362
+    }
+   },
+   "body_sprites": {
+    "male": {
+     "head": "res://Characters/Assets/Body Parts/Male Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Male Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Male Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Male Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Male Human/leg.png"
+    },
+    "female": {
+     "head": "res://Characters/Assets/Body Parts/Female Human/head.png",
+     "torso": "res://Characters/Assets/Body Parts/Female Human/torso.png",
+     "upper_arm": "res://Characters/Assets/Body Parts/Female Human/upper_arm.png",
+     "forearm": "res://Characters/Assets/Body Parts/Female Human/forearm.png",
+     "leg": "res://Characters/Assets/Body Parts/Female Human/leg.png"
+    }
+   },
+   "appearance": {
+    "skin_colors": [
+     "#FAEBD7",
+     "#F5D6B8",
+     "#D4A574",
+     "#8D5524"
+    ],
+    "hair_colors": [
+     "#4A3728",
+     "#1A1A1A",
+     "#C4A35A",
+     "#8B4513",
+     "#F5E6CC"
+    ],
+    "blood_color": "#8B0000",
+    "head_shape": "HUMANOID",
+    "head_features": [],
+    "hair_styles": {
+     "male": [
+      "FULL",
+      "HORSESHOE",
+      "COMBOVER",
+      "BUZZCUT",
+      "POMPADOUR"
+     ],
+     "female": [
+      "FULL",
+      "LONG",
+      "BRAIDS",
+      "BUN",
+      "POMPADOUR"
+     ]
+    }
+   },
+   "stat_overrides": {
+    "crit_threshold": 5,
+    "crit_fail_threshold": 96,
+    "mp_regen_amount": 5,
+    "mp_regen_interval": 0.5
+   },
+   "speed_modifier": 0,
+   "arm_length_bonus": 0,
+   "walking_noise": 1.0,
+   "active_abilities": [],
    "passive_conditions": []
   },
   {
@@ -841,6 +952,9 @@
    "name": "Saurian",
    "icon": "Assets/Icons/Saurian.png",
    "description": "A semi aquatic draconic race, created by the Dragon Emperor Heliograbalus to serve as his personal Privateer navy. They eventually rebelled against his rule, and now mostly live in quasi independent communities on the east coast of scarlatti",
+   "unarmed_strike": {
+    "damage_type": "slashing"
+   },
    "cost": 1,
    "features": [
     "tough_claws",
@@ -3073,6 +3187,9 @@
    "name": "Grimalkin",
    "icon": "Assets/Icons/Grimalkin.png",
    "description": "Feline humanoids with retractable claws and an unnerving talent for moving without sound. Grimalkin are lithe and quick, preferring ambush and sudden violence to prolonged engagement. Their vertical-slit pupils see well in low light, and their padded feet leave almost no trace on any surface.",
+   "unarmed_strike": {
+    "damage_type": "slashing"
+   },
    "cost": 1,
    "features": [
     "pounce"
@@ -3113,10 +3230,12 @@
     "has_tail": true,
     "tail_length": 24,
     "rig_scene": {
-     "female": "res://RigCharacters/grimalkin_female/CharacterMesh.tscn"
+     "female": "res://RigCharacters/grimalkin_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/grimalkin_male/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "female": 0.1237
+     "female": 0.1237,
+     "male": 0.1265
     }
    },
    "body_sprites": {

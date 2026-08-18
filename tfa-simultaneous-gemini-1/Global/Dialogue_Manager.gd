@@ -21,7 +21,7 @@ var _pending_dialogues: Array = []
 
 
 # Reserved keywords that aren't character names
-const RESERVED_KEYS = ["choices", "next", "branch", "prerequisites"]
+const RESERVED_KEYS = ["choices", "next", "branch", "prerequisites", "actions"]
 
 # Signals for UI to connect to
 signal dialogue_updated(speaker_name: String, portrait: Texture, text: String, has_next: bool)
@@ -161,8 +161,35 @@ func advance_line():
 	
 	show_current_line(node)
 
+# Run a node's or a choice's side-effecting `actions` list. Each entry is the
+# same call-string syntax `branch` already accepts, e.g.
+#   "actions": ["QuestManager.start_quest('bandit_bounty')"]
+# resolved against /root/ autoloads by evaluate_function_call. Return values are
+# discarded — these are executed for effect, unlike branch calls which are
+# executed for their result.
+#
+# This is the hook the inline [[...]] markup scattered through Dialogues.json
+# always looked like it was using; that markup goes through substitute_variables
+# and is inert, so authors should use `actions` instead.
+func run_actions(actions) -> void:
+	if actions == null:
+		return
+	if actions is String:
+		actions = [actions]
+	if not (actions is Array):
+		return
+	for entry in actions:
+		var call_string := str(entry).strip_edges()
+		if call_string.is_empty():
+			continue
+		evaluate_function_call(call_string)
+
 # Handle node navigation (choices, branch, or next)
 func handle_node_navigation(node: Dictionary):
+	# Side effects fire before navigation so a branch in this same node can test
+	# the state the actions just wrote (e.g. accept a quest, then branch on it).
+	run_actions(node.get("actions", null))
+
 	# Check for branch (conditional navigation)
 	if node.has("branch"):
 		var next_node = evaluate_branch(node["branch"])
@@ -186,6 +213,8 @@ func handle_node_navigation(node: Dictionary):
 				"disliked_traits": disliked,
 				"favorability_weight": float(choice.get("favorability_weight", 1.0)),
 				"ally_reactions": _compute_ally_reactions(preferred, disliked),
+				# Carried through so select_choice can fire it; the UI ignores it.
+				"actions": choice.get("actions", null),
 			}
 			processed_choices.append(choice_data)
 
@@ -248,12 +277,14 @@ func evaluate_function_call(call_string: String):
 	var method_name = parts[-1]
 	var object_path = ".".join(parts.slice(0, -1))
 	
-	# Get the object
+	# Get the object. get_variable_value returns the literal "[path]" String on a
+	# miss rather than null, so a bare null check lets a String through and the
+	# has_method call below then fails on a non-Object. Check the type instead.
 	var obj = get_variable_value(object_path)
-	if obj == null:
+	if obj == null or not (obj is Object):
 		push_error("Object not found: " + object_path)
 		return null
-	
+
 	# Parse arguments
 	var args = parse_function_args(args_string)
 	
@@ -335,6 +366,10 @@ func select_choice(choice_index: int):
 	# Consume the list so a late double-click can't re-apply the same delta.
 	current_choices = []
 
+	# Side effects fire after favorability and before navigation, so a choice's
+	# own branch can test what its actions just wrote.
+	run_actions(choice.get("actions", null))
+
 	# Check if choice has a branch
 	if choice["branch"] != null:
 		var next_node = evaluate_branch(choice["branch"])
@@ -408,13 +443,30 @@ func substitute_variables(text: String) -> String:
 	
 	return result
 
+# Resolve the first segment of a variable path to an object.
+#
+# Autoloads live at /root/<Name> and resolve directly. Two names that authored
+# dialogue already uses do NOT: `game` is /root/Game, and `protagonist` is one of
+# Game's children, not a root node at all. Without these aliases every shipped
+# "protagonist.ability_check(...)" branch resolved to null and silently took the
+# default path, so those skill checks have never actually been rolled.
+func _resolve_root_object(root_name: String):
+	var g = game if (game != null and is_instance_valid(game)) else get_node_or_null("/root/Game")
+	match root_name:
+		"game", "Game":
+			return g
+		"protagonist", "player", "Protagonist":
+			if g != null and "player" in g:
+				return g.player
+			return null
+	return get_node_or_null("/root/" + root_name)
+
 # Get variable value from path (e.g., "protagonist.name")
 func get_variable_value(path: String):
 	var parts = path.split(".")
-	
-	# Try to get from root first
-	var current = get_node_or_null("/root/" + parts[0])
-	
+
+	var current = _resolve_root_object(parts[0])
+
 	if current == null:
 		push_warning("Variable not found: " + path)
 		return "[" + path + "]"

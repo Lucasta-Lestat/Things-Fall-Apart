@@ -220,7 +220,11 @@ func _execute_ability(ability: Ability, target_position: Vector2, explicit_targe
 		if not has_explicit and projectile_path != "" and character.has_method("_spawn_projectile"):
 			character._spawn_projectile(ability, target_position)
 		else:
-			var results = _resolve_effects(ability, ability.effects, target_position, explicit_targets)
+			# Same rule the multi-step path applies per step: a blast centred on
+			# the caster (Repulsion Wave) spares the caster, a buff centred on
+			# them does not. See _resolve_step_and_advance.
+			var results = _resolve_effects(ability, ability.effects, target_position, explicit_targets,
+				_is_self_centered(ability.targeting) and _harms_targets(ability.effects))
 			if character.has_method("_spawn_ability_visuals"):
 				character._spawn_ability_visuals(ability, target_position)
 			cast_completed.emit(ability, results)
@@ -311,9 +315,15 @@ func _resolve_step_and_advance(ability: Ability, step: Dictionary, target_pos: V
 	if step_anim != "" and character.has_method("play_animation"):
 		character.play_animation(step_anim)
 
-	# Resolve effects (carry explicit targets through multi-step sequences)
+	# Resolve effects (carry explicit targets through multi-step sequences).
+	# A step that recentres on the caster ("targeting": {"type": "self"}) and
+	# hurts what it touches is a burst radiating FROM the body — pounce's claw
+	# sweep, ram's impact. The area sweep is run against the ABILITY's targeting
+	# (an ordinary circle), so without this the caster, standing exactly at the
+	# centre, is the first thing their own claws land on.
 	var step_explicit_targets: Array = current_cast.get("explicit_targets", [])
-	var results = _resolve_effects(ability, step_effects, target_pos, step_explicit_targets)
+	var results = _resolve_effects(ability, step_effects, target_pos, step_explicit_targets,
+		_is_self_centered(step.get("targeting", {})) and _harms_targets(step_effects))
 
 	# Per-step visuals
 	var step_visuals = step.get("visuals", {})
@@ -354,8 +364,29 @@ func _dash_to_position(target_pos: Vector2, speed: float, on_complete: Callable)
 	character.dash_to(target_pos, speed, on_complete)
 
 
+## Whether a targeting block recentres on the caster — either a whole ability
+## (Repulsion Wave) or a single step of one (pounce's claw sweep after the dash).
+static func _is_self_centered(targeting: Dictionary) -> bool:
+	return String(targeting.get("type", "")) == "self"
+
+
+## Whether every effect in `effects` is one that damages or displaces whoever it
+## lands on. Used to decide if a self-centred burst should spare its own caster —
+## a self-centred HEAL obviously should not.
+static func _harms_targets(effects: Array) -> bool:
+	const HARMFUL := ["damage", "knockback", "sever_limb", "disarm"]
+	var found_any := false
+	for effect in effects:
+		if not effect is Dictionary:
+			continue
+		if not (String(effect.get("type", "")) in HARMFUL):
+			return false
+		found_any = true
+	return found_any
+
+
 ## Resolve an array of effects against targets
-func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2, explicit_targets: Array = []) -> Array:
+func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2, explicit_targets: Array = [], exclude_caster: bool = false) -> Array:
 	var targets = []
 	if not explicit_targets.is_empty():
 		# Player explicitly picked these targets — skip area sweep
@@ -364,6 +395,9 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 				targets.append(t)
 	elif character.has_method("_find_targets_in_area"):
 		targets = character._find_targets_in_area(ability, target_position)
+
+	if exclude_caster:
+		targets.erase(character)
 
 	var results: Array = []
 	var dealt_fire_damage = false
@@ -417,6 +451,23 @@ static func school_costs_for(ability: Ability) -> Dictionary:
 	return costs
 
 
+## Whether this ability is one the caster's RACE grants (pounce, ram, beguile,
+## breath_weapon...). Innate abilities skip the school-resource gate: they carry
+## a school trait for classification, but no playable race grants the matching
+## school TIER, so max_harmony/max_souls is 0 and the gate rejects every cast
+## silently — a racial ability that can never fire. Read from race data rather
+## than a flag on the character so it survives save/load for free.
+func _is_innate_ability(ability: Ability) -> bool:
+	if ability == null or ability.id == "":
+		return false
+	if not "race_id" in character:
+		return false
+	var rid := String(character.race_id)
+	if rid == "":
+		return false
+	return ability.id in RaceDatabase.get_race_data(rid).get("active_abilities", [])
+
+
 ## Check if ability can be used
 func _check_ability_usable(ability: Ability) -> Dictionary:
 	var cm = _get_condition_manager()
@@ -424,8 +475,10 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 		return {"success": false, "reason": "Cannot act"}
 
 	# NPCs without school tiers opt out of the cost gate so legacy enemies
-	# don't lose their kit until their data is hand-tagged.
-	var skip_resource_gate: bool = "npc_unlimited_resources" in character and character.npc_unlimited_resources
+	# don't lose their kit until their data is hand-tagged. Racial actives opt
+	# out for the same reason — see _is_innate_ability.
+	var skip_resource_gate: bool = ("npc_unlimited_resources" in character and character.npc_unlimited_resources) \
+		or _is_innate_ability(ability)
 
 	if not skip_resource_gate:
 		var costs := school_costs_for(ability)
@@ -504,6 +557,10 @@ func _would_hit_infatuation_source(ability: Ability, target_position: Vector2) -
 ## with `npc_unlimited_resources` pay nothing.
 func _pay_ability_costs(ability: Ability) -> bool:
 	if "npc_unlimited_resources" in character and character.npc_unlimited_resources:
+		return true
+	# Innate racial abilities are free — the gate above already let them through,
+	# so charging here would fail the cast at the till instead.
+	if _is_innate_ability(ability):
 		return true
 	var costs := school_costs_for(ability)
 	# Concentration spells lock the focus they pay until the spell ends.

@@ -85,8 +85,31 @@ func get_activities_for_region(region_id: String) -> Array:
 			var saint_cal = get_node_or_null("/root/SaintCalendar")
 			if saint_cal == null or not saint_cal.is_saint_day():
 				continue
+		# Training gate. Unlike every other filter here this one is party-relative
+		# rather than world-relative: the card only makes sense when somebody in
+		# the party actually owes a teacher days IN THIS REGION. It has to appear
+		# on the board for any of them (the card is a drop target), so we test the
+		# whole party here and DowntimeResolver refuses the drop for a specific
+		# character who has no commitment.
+		if bool(a.get("requires_training", false)):
+			if not any_party_member_can_train(region_id):
+				continue
 		out.append(activity_id)
 	return out
+
+## True when at least one live party member has an open training commitment
+## whose teacher is in `region_id`.
+func any_party_member_can_train(region_id: String) -> bool:
+	var training = get_node_or_null("/root/TrainingManager")
+	if training == null:
+		return false
+	var game = get_node_or_null("/root/Game")
+	if game == null or not ("party_chars" in game):
+		return false
+	for c in game.party_chars:
+		if c != null and is_instance_valid(c) and training.can_train_here(c, region_id):
+			return true
+	return false
 
 func get_camp_activities() -> Array:
 	return camp_activity_ids.duplicate()

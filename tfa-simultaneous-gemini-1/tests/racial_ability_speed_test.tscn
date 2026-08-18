@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/racial_ability_speed_test.gd" id="1"]
+
+; Root is named "Game" on purpose: ProceduralCharacter resolves its owning scene
+; with `get_node_or_null("/root/Game")`, and _find_targets_in_area reads
+; characters_in_scene off it. A differently-named root leaves `game` null and
+; every area sweep silently returns nothing.
+[node name="Game" type="Node2D"]
+script = ExtResource("1")

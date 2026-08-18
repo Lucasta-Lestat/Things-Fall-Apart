@@ -240,6 +240,12 @@ func apply_condition(
 				stats_recalculated.emit()
 			return existing
 		else:
+			# Never shorten a PERMANENT instance (equip-granted, expires_at < 0)
+			# from a default-duration re-apply — a cloak's while-worn
+			# invisibility must not become 30s because something re-applied the
+			# condition. Only an EXPLICIT duration_override may change it.
+			if existing.expires_at < 0 and duration_override <= -2.0:
+				return existing
 			if final_duration > -2.0:
 				existing.expires_at = current_time + final_duration if final_duration > 0 else -1.0
 			elif template.duration > 0:
@@ -258,7 +264,23 @@ func apply_condition(
 	if final_duration > -2.0:
 		instance.expires_at = current_time + final_duration if final_duration > 0.0 else -1.0
 
+	# Triggered effects marked "delay_first" wait one full interval before
+	# their first firing. The -INF seed (fire on the first frame) is right for
+	# DoT ticks, but wrong for delayed-onset triggers like Winter's Grip's
+	# 18-second frostbite.
+	for i in range(template.triggered_effects.size()):
+		if template.triggered_effects[i] is Dictionary and template.triggered_effects[i].get("delay_first", false):
+			instance.last_trigger_times[i] = current_time
+
 	conditions[condition_id] = instance
+
+	# A condition with immunities EVICTS matching active conditions on arrival
+	# (exact id match): illuminated landing strips an EXISTING 'invisible',
+	# not just future applications. Trait-style immunity keys ("cold") match
+	# no condition id and are unaffected.
+	for immune_id in template.immunities:
+		if immune_id != condition_id and conditions.has(immune_id):
+			remove_condition(immune_id)
 
 	if template.save_stat != "" and template.save_interval > 0.0:
 		last_save_times[condition_id] = current_time

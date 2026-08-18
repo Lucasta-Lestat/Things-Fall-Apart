@@ -21,6 +21,11 @@ enum GripStyle { ONE_HANDED, TWO_HANDED }
 @export var grip_style: GripStyle = GripStyle.ONE_HANDED
 @export var traits = {}
 @export var use_ability:String =""
+# Unique-item hooks: an ability whose effects fire when a hit lands (resolved
+# by Game._apply_item_on_hit_effects), and per-target-trait damage multipliers
+# (e.g. {"spectral": 2.0} — a bane weapon; matched case-insensitively).
+@export var on_hit_ability: String = ""
+@export var damage_vs_trait: Dictionary = {}
 
 # Shape definition (all in local coordinates, weapon points "up" at -Y)
 # These represent the final canonical dimensions — already scaled at assignment time.
@@ -54,6 +59,10 @@ var sprite: Sprite2D = null
 
 # Calculated sprite scale (from auto-scaling to match weapon dimensions)
 var _calculated_sprite_scale: Vector2 = Vector2.ONE
+# Calculated sprite offset (slides the centred art so the GRIP lands on this
+# node's origin). The exported sprite_offset stays a pure author tweak and is
+# added on top of this instead of being clobbered by _auto_scale_sprite.
+var _calculated_sprite_offset: Vector2 = Vector2.ZERO
 
 # Debug visualization — gated by DebugManager (F12). Default off; the
 # manager flips this on for every weapon when debug mode is active.
@@ -88,6 +97,10 @@ var damage_resitances: Dictionary = {}
 var damage_modifiers: Dictionary = {}
 var damage_modifier_changes: Dictionary = {}
 var weapon_range: float = 1.5 # Named weapon_range to avoid keyword conflict
+# Optional per-weapon override for the melee swing arc, in DEGREES either side
+# of the wielder's facing (Items.json key "swing_arc"). 0 = use the damage-type
+# default in MeleeReach.ARC_DEG_BY_DAMAGE.
+var swing_arc_deg: float = 0.0
 
 # Item Properties
 var equip_slot: String = ""
@@ -149,7 +162,7 @@ func _update_sprite_transform() -> void:
 	if sprite:
 		# Apply calculated scale * user scale multiplier
 		sprite.scale = _calculated_sprite_scale * sprite_scale
-		sprite.position = sprite_offset
+		sprite.position = _calculated_sprite_offset + sprite_offset
 		sprite.rotation = sprite_rotation
 
 func set_sprite_texture(texture: Texture2D) -> void:
@@ -177,20 +190,33 @@ func _auto_scale_sprite() -> void:
 	(wider than tall) by scaling to the longest dimension and auto-rotating
 	horizontal sprites so they point up (-Y)."""
 	if sprite and sprite.texture:
-		var tex_size = sprite.texture.get_size()
-		var target_height = total_length
-		# Use the longest dimension of the texture for scaling
-		# This handles both vertical and horizontal sprites correctly
-		var max_dim = max(tex_size.x, tex_size.y)
-		var scale_factor = target_height / max_dim
+		var tex_size: Vector2 = sprite.texture.get_size()
+		var target_height: float = total_length
+		# Span of the texture measured along the WEAPON's axis (this node's local
+		# -Y, i.e. after sprite_rotation). The is_zero_approx guard below keeps the
+		# unrotated case on the old max() behaviour. Art drawn on the diagonal of a
+		# square canvas (every recent unique weapon) is ~1.41x longer along its own
+		# axis than either texture side, and max() rendered it that much too short
+		# relative to its true extent.
+		var span: float = maxf(tex_size.x, tex_size.y)
+		if not is_zero_approx(sprite_rotation):
+			span = absf(tex_size.x * sin(sprite_rotation)) + absf(tex_size.y * cos(sprite_rotation))
+		if span <= 0.0:
+			return
+		var scale_factor: float = target_height / span
 
 		# Store calculated scale separately from user sprite_scale
 		_calculated_sprite_scale = Vector2(scale_factor, scale_factor)
 
-		# Calculate offset so grip position aligns with origin
-		var GRIP_OFFSET_TWEAK = 5
-		var grip_offset_y = 0
-		sprite_offset = Vector2(0, grip_offset_y)
+		# Slide the (centred) art so the GRIP -- grip_position along that same
+		# span, 0 = tip, 1 = pommel -- sits on this node's origin. The origin is
+		# what every shape query (tip, blade rect, hitbox) measures from, so art
+		# and collision now agree and the holder needs no compensating shift.
+		# NOTE: this is derived from total_length while the art is scaled by
+		# _calculated_sprite_scale * sprite_scale, so a sprite_scale other than 1
+		# would misalign the grip by that factor. Nothing authors sprite_scale
+		# today; if that changes, fold it in here.
+		_calculated_sprite_offset = Vector2(0.0, (0.5 - grip_position) * total_length)
 
 # ===== SHAPE QUERIES =====
 
@@ -200,10 +226,15 @@ func get_grip_local_position() -> Vector2:
 	return Vector2.ZERO
 
 func get_grip_offset_for_hand() -> Vector2:
-	"""Get the offset needed to position the weapon so the grip is at the hand position.
-	This accounts for grip_position (0=tip, 1=pommel) to offset the sprite correctly."""
-	var offset_y = (0.5 - grip_position) * total_length
-	return Vector2(0, offset_y)
+	"""Offset the holder must apply so the grip ends up in the hand.
+	Zero by design: _auto_scale_sprite now places the ART so grip_position lands
+	on this node's origin, so the origin IS the grip for the sprite, the tip/blade
+	queries and the hitbox alike. Previously the sprite was centred on the origin
+	and this offset moved the whole node to compensate, which left the hitbox and
+	get_tip_local_position (grip_position - 0.5) * total_length out from the drawn
+	blade. Kept because the holder calls it duck-typed -- AbilityShape returns a
+	real offset here (Abilities/ability_shape.gd:151)."""
+	return Vector2.ZERO
 
 func get_tip_local_position() -> Vector2:
 	"""Get the weapon tip in local coordinates"""
@@ -262,7 +293,9 @@ func _setup_hitbox() -> void:
 	hitbox = Area2D.new()
 	hitbox.name = "Hitbox"
 	hitbox.collision_layer = CollisionLayers.WEAPON_HITBOXES
-	hitbox.collision_mask = CollisionLayers.WEAPON_HITBOX_MASK
+	# Objects only. Characters are resolved by Game.resolve_melee_swing at the
+	# animation's hit frame — see MeleeReach for why the physical sweep was wrong.
+	hitbox.collision_mask = CollisionLayers.WEAPON_OBJECT_HITBOX_MASK
 	hitbox.monitoring = false
 	# monitorable MUST be true: a non-monitorable Area2D never forms broadphase
 	# pairs with STATIC bodies, so melee swings passed clean through walls/trees
@@ -292,6 +325,12 @@ func _on_hitbox_body_entered(body: Node2D) -> void:
 	if holder == null or body == null:
 		return
 	if body == holder:
+		return
+	# Characters never resolve here — the mask excludes them (see _setup_hitbox),
+	# and Game.resolve_melee_swing owns them. Belt-and-braces so a future mask
+	# edit cannot silently reinstate double-dipping: a character reaching this
+	# point would take damage from BOTH paths in the same swing.
+	if body is ProceduralCharacter:
 		return
 	var combat_manager: Node = get_tree().current_scene
 	if combat_manager == null or not combat_manager.has_method("can_hit_target"):
@@ -517,6 +556,8 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("weight"): weight = data["weight"]
 	if data.has("equip_slot"): equip_slot = data["equip_slot"]
 	if data.has("use_ability"): use_ability = str(data["use_ability"]) if data["use_ability"] != null else ""
+	if data.has("on_hit_ability"): on_hit_ability = str(data["on_hit_ability"]) if data["on_hit_ability"] != null else ""
+	if data.has("damage_vs_trait"): damage_vs_trait = data["damage_vs_trait"] if data["damage_vs_trait"] is Dictionary else {}
 	
 	# Combat & Stats
 	if data.has("base_damage"): base_damage = data["base_damage"]
@@ -531,6 +572,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("primary_damage_type"): primary_damage_type = data["primary_damage_type"]
 	if data.has("damage_resitances"): damage_resitances = data["damage_resitances"]
 	if data.has("range"): weapon_range = data["range"]
+	if data.has("swing_arc"): swing_arc_deg = float(data["swing_arc"])
 	if data.has("damage_modifiers"): damage_modifiers = data["damage_modifiers"] if data["damage_modifiers"] != null else {}
 	if data.has("damage_modifier_changes"): damage_modifier_changes = data["damage_modifier_changes"] if data["damage_modifier_changes"] != null else {}
 	
@@ -552,7 +594,16 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("resources"): resources = data["resources"]
 	
 	# Requirements/Conditions
-	if data.has("adds_condition_on_equip"): adds_condition_on_equip = data["adds_condition_on_equip"] if data["adds_condition_on_equip"] != null else {}
+	if data.has("adds_condition_on_equip"):
+		# Items.json authors either a bare condition-id String ("inking") or a
+		# {condition_id, ...} dict; the property is typed Dictionary, so wrap.
+		var _ace = data["adds_condition_on_equip"]
+		if _ace is Dictionary:
+			adds_condition_on_equip = _ace
+		elif _ace != null and str(_ace) != "" and str(_ace) != "null":
+			adds_condition_on_equip = {"condition_id": str(_ace)}
+		else:
+			adds_condition_on_equip = {}
 	if data.has("triggers_ability_on_equip"): triggers_ability_on_equip = data["triggers_ability_on_equip"] if data["triggers_ability_on_equip"] != null else {}
 	if data.has("adds_condition_in_inventory"): adds_condition_in_inventory = data["adds_condition_in_inventory"] if data["adds_condition_in_inventory"] != null else {}
 	
@@ -598,6 +649,21 @@ func load_from_data(data: Dictionary) -> void:
 		if data.has("blade_width"): blade_width = data["blade_width"]
 		if data.has("balance_point"): balance_point = data["balance_point"]
 		
+	# Sprite orientation MUST be resolved before the texture is loaded:
+	# _auto_scale_sprite measures the texture along the ROTATED weapon axis, so
+	# the rotation has to be in place first. Art that is drawn on the diagonal
+	# (the unique weapons) is uprighted here rather than by re-exporting the PNG.
+	# "sprite_rotation" is radians (what to_data round-trips);
+	# "sprite_rotation_degrees" is the authoring-friendly alias used in Items.json.
+	if data.has("sprite_rotation") and data["sprite_rotation"] != null:
+		sprite_rotation = float(data["sprite_rotation"])
+	elif data.has("sprite_rotation_degrees") and data["sprite_rotation_degrees"] != null:
+		sprite_rotation = deg_to_rad(float(data["sprite_rotation_degrees"]))
+	if data.has("sprite_offset") and data["sprite_offset"] != null:
+		if data["sprite_offset"] is Vector2:
+			sprite_offset = data["sprite_offset"]
+		elif data["sprite_offset"] is Array and (data["sprite_offset"] as Array).size() >= 2:
+			sprite_offset = Vector2(float(data["sprite_offset"][0]), float(data["sprite_offset"][1]))
 	if data.has("sprite_path") and data["sprite_path"] != null:
 		sprite_path = data["sprite_path"]
 		set_sprite_from_path(sprite_path)
@@ -612,6 +678,11 @@ func load_from_data(data: Dictionary) -> void:
 		elif data["sprite_scale"] is float:
 			sprite_scale = Vector2(data["sprite_scale"], data["sprite_scale"])
 
+	# Geometry may have been re-assigned after the texture was already set (the
+	# size:"default" branch, or a reload on an equipped weapon), so refit the art
+	# before pushing the transform -- _calculated_sprite_offset depends on
+	# grip_position and total_length.
+	_auto_scale_sprite()
 	_update_sprite_transform()
 	_refresh_hitbox_shape()
 	if debug_draw:
@@ -627,6 +698,8 @@ func to_data() -> Dictionary:
 		"weight": weight,
 		"equip_slot": equip_slot,
 		"use_ability": use_ability,
+		"on_hit_ability": on_hit_ability,
+		"damage_vs_trait": damage_vs_trait,
 		"base_damage": base_damage,
 		"damage": damage,
 		"primary_damage_type": primary_damage_type,
@@ -661,6 +734,10 @@ func to_data() -> Dictionary:
 		"blade_width": blade_width,
 		"balance_point": balance_point,
 		"sprite_path": sprite_path,
+		# Round-tripped so a weapon keeps its uprighting across the map-transition
+		# save state (Game.gd writes to_data() into it). Radians, matching the
+		# @export; Items.json authors the degrees alias instead.
+		"sprite_rotation": sprite_rotation,
 		"projectile_texture_path": projectile_texture_path,
 		"ammo_type": ammo_type,
 		"grip_style": "two_handed" if grip_style == GripStyle.TWO_HANDED else "one_handed"

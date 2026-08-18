@@ -45,7 +45,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"fire": 35
+						"fire": 24
 					}
 				},
 				{
@@ -132,8 +132,8 @@
 				{
 					"type": "damage",
 					"damage": {
-						"cold": 25,
-						"bludgeoning": 10
+						"cold": 15,
+						"bludgeoning": 6
 					}
 				},
 				{
@@ -144,8 +144,8 @@
 				}
 			],
 			"visuals": {
-				"in_hand_effect": "res://vfx/ice_storm.tscn",
-				"in_hand_scale": 0.15,
+				"in_hand_effect": "res://vfx/ice_hand.tscn",
+				"in_hand_scale": 0.6,
 				"impact_effect": "res://vfx/ice_storm.tscn",
 				"sound_cast": "res://sfx/arcane_cast.mp3",
 				"sound_impact": "res://sfx/ice_storm_impact.mp3"
@@ -179,7 +179,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"lightning": 40
+						"electric": 30
 					},
 					"target_traits": [],
 					"immune_traits": [
@@ -189,7 +189,7 @@
 			],
 			"visuals": {
 				"in_hand_effect": "res://vfx/lightning_hand.tscn",
-				"in_hand_scale": 0.4,
+				"in_hand_scale": 0.6,
 				"impact_effect": "res://vfx/lightning.tscn",
 				"sound_cast": "res://sfx/arcane_cast.mp3",
 				"sound_impact": "res://sfx/lightning_strike.mp3"
@@ -265,7 +265,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"force": 15
+						"force": 10
 					}
 				}
 			],
@@ -351,7 +351,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"bludgeoning": 5
+						"bludgeoning": 4
 					}
 				}
 			],
@@ -384,7 +384,7 @@
 			"effects": [
 				{
 					"type": "heal",
-					"amount": 40
+					"amount": 15
 				},
 				{
 					"type": "remove_condition",
@@ -459,7 +459,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"bludgeoning": 25
+						"bludgeoning": 14
 					}
 				},
 				{
@@ -479,7 +479,7 @@
 		{
 			"id": "rage",
 			"display_name": "Rage",
-			"description": "Enter a berserker rage, greatly increasing damage but reducing defense.",
+			"description": "Enter a rage. Gain both damage reduction against physical damage and bonus weapon damage, each equal to +1 for every 20% of your maximum HP that is missing. The more wounded you are, the harder you hit and the less you feel.",
 			"icon": "res://UI/UI Icons/ability_rage.png",
 			"costs": {
 				"HP": 10
@@ -499,7 +499,7 @@
 			"effects": [
 				{
 					"type": "apply_condition",
-					"condition_id": "berserker_rage",
+					"condition_id": "rage",
 					"duration": 15.0
 				}
 			],
@@ -539,7 +539,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"necrotic": 30
+						"necrotic": 28
 					}
 				},
 				{
@@ -551,7 +551,7 @@
 			],
 			"visuals": {
 				"in_hand_effect": "res://vfx/necrotic_hand.tscn",
-				"impact_effect": "res://vfx/necrotic.tscn",
+				"impact_effect": "res://vfx/creepy_beam.tscn",
 				"sound_cast": "res://sfx/necrotic_cast.mp3",
 				"sound_impact": "res://sfx/necrotic_drain.mp3"
 			}
@@ -583,7 +583,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"acid": 20
+						"acid": 16
 					}
 				},
 				{
@@ -625,16 +625,16 @@
 			},
 			"targeting": {
 				"type": "direction",
-				"range": 150.0,
+				"range": 200.0,
 				"shape": "cone",
-				"radius": 150.0,
-				"angle": 60.0
+				"radius": 200.0,
+				"angle": 75.0
 			},
 			"effects": [
 				{
 					"type": "damage",
 					"damage": {
-						"sonic": 25
+						"sonic": 18
 					}
 				},
 				{
@@ -677,7 +677,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"psychic": 22
+						"psychic": 18
 					}
 				},
 				{
@@ -724,6 +724,109 @@
 				"impact_effect": "res://vfx/infatuated_hearts.tscn",
 				"sound_impact": "res://sfx/charm_chime.mp3"
 			}
+		},
+		{
+			"id": "match_strike",
+			"display_name": "Match Strike",
+			"description": "On-hit proc of the Match Striker: solid hits brand the target with a glowing mark that makes invisibility impossible.",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"min_damage": 3,
+			"traits": {"item_proc": 1, "light": 1},
+			"targeting": {"type": "target", "range": 0.0, "shape": "single"},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "illuminated",
+					"stacks": 1
+				}
+			],
+			"visuals": {}
+		},
+		{
+			"id": "pensword_blot",
+			"display_name": "Ink Blot",
+			"description": "On-hit proc of the Pensword: a chance to splash ink across the target's eyes, blinding them.",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {"item_proc": 1},
+			"targeting": {"type": "target", "range": 0.0, "shape": "single"},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "blinded",
+					"stacks": 1,
+					"chance": 0.35
+				}
+			],
+			"visuals": {}
+		},
+		{
+			"id": "heartbreak",
+			"display_name": "Heartbreak",
+			"description": "On-hit proc of the Heartbreaker: the struck target is charmed by the wielder (will save resists), ignoring the fact that they were just hit.",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {"item_proc": 1, "charm": 1},
+			"targeting": {"type": "target", "range": 0.0, "shape": "single"},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "infatuated",
+					"stacks": 1,
+					"save_stat": "will"
+				}
+			],
+			"visuals": {
+				"impact_effect": "res://vfx/infatuated_hearts.tscn",
+				"sound_impact": "res://sfx/charm_chime.mp3"
+			}
+		},
+		{
+			"id": "chrome_smoke",
+			"display_name": "Chrome Smoke",
+			"description": "On-hit proc of the Chrome Smoker: plates the target in a thin chrome layer. Layers stack, each slowing movement and action.",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {"item_proc": 1, "metallic": 1},
+			"targeting": {"type": "target", "range": 0.0, "shape": "single"},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "metallacized",
+					"stacks": 1
+				}
+			],
+			"visuals": {}
+		},
+		{
+			"id": "prod_jolt",
+			"display_name": "Jolt of Justice",
+			"description": "On-hit proc of the Prod of Justice: a chance to stun (con save resists) and a chance to jolt the weapon out of the target's grip (str save resists).",
+			"icon": "res://UI/UI Icons/ability_beguile.png",
+			"costs": {},
+			"cast_time": 0.0,
+			"traits": {"item_proc": 1, "electric": 1},
+			"targeting": {"type": "target", "range": 0.0, "shape": "single"},
+			"effects": [
+				{
+					"type": "apply_condition",
+					"condition_id": "stunned",
+					"stacks": 1,
+					"chance": 0.5,
+					"save_stat": "con"
+				},
+				{
+					"type": "disarm",
+					"chance": 0.35,
+					"save_stat": "str"
+				}
+			],
+			"visuals": {}
 		},
 		{
 			"id": "confess",
@@ -1535,7 +1638,7 @@
 				{
 					"type": "damage",
 					"damage": {
-						"piercing": 6
+						"piercing": 10
 					}
 				},
 				{
