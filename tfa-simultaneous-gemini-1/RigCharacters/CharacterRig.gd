@@ -66,6 +66,12 @@ func _process(delta: float) -> void:
 		_apply_ik(delta)
 
 func _fix_bone_tracks(delta: float) -> void:
+	# An explicitly DEACTIVATED mixer (capture/pose-probe harnesses set
+	# _ap.active = false to pose bones by hand) stands the re-apply down too --
+	# assigned_animation survives stop(), so without this gate the last clip's
+	# t=0 pose would stomp every manual bone write.
+	if not _ap.active:
+		return
 	var nm := _ap.assigned_animation
 	if nm == &"":
 		return

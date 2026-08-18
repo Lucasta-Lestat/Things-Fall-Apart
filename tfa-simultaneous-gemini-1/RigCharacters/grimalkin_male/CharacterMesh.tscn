@@ -63,81 +63,263 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.04363, 0.00000]
+"values": [-0.75311, -0.67063, -0.75311]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.04363, 0.00000]
+"values": [Vector2(0.4168, 0.9832), Vector2(0.3889, 0.9827), Vector2(0.4168, 0.9832)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.05236, 0.00000]
+"values": [-0.41728, -0.46264, -0.41728]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.05236, 0.00000]
+"values": [-0.43009, -0.38596, -0.43009]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig:position")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.700, 1.400, 2.100, 2.800),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(5.00, -3.00), Vector2(0.00, -7.00), Vector2(-5.00, -3.00), Vector2(0.00, 0.00)]
+"values": [Vector2(1.4938, 1.7226), Vector2(1.6046, 1.7526), Vector2(1.4938, 1.7226)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.900), Color(1, 1, 1, 1.000)]
+"values": [-0.84086, -0.87619, -0.84086]
 }
 
 tracks/6/type = "value"
 tracks/6/imported = false
 tracks/6/enabled = true
-tracks/6/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
 tracks/6/interp = 1
 tracks/6/loop_wrap = true
 tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.12851, -0.12499, -0.12851]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(1.5481, 1.0118), Vector2(1.6158, 1.0136), Vector2(1.5481, 1.0118)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.11648, -0.12856, -0.11648]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.77468, 0.69425, 0.77468]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0.4098, 0.9861), Vector2(0.3813, 0.9857), Vector2(0.4098, 0.9861)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.38462, 0.42733, 0.38462]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.41856, 0.37332, 0.41856]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(1.4846, 1.7574), Vector2(1.5962, 1.7934), Vector2(1.4846, 1.7574)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.85306, 0.89075, 0.85306]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.13167, 0.12840, 0.13167]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(1.5491, 1.0102), Vector2(1.6170, 1.0118), Vector2(1.5491, 1.0102)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.10861, 0.11989, 0.10861]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig:position")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.700, 1.400, 2.100, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(5.00, -3.00), Vector2(0.00, -7.00), Vector2(-5.00, -3.00), Vector2(0.00, 0.00)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 1.400, 2.800),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.900), Color(1, 1, 1, 1.000)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 1.400, 2.800),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
@@ -152,75 +334,270 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.73304, 1.57080, 1.04720, 0.00000]
+"values": [-0.75311, -0.75311]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.69813, 0.17453, 0.20944, 0.00000]
+"values": [Vector2(0.4168, 0.9832), Vector2(0.4168, 0.9832)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.20944, 0.13963, 0.08727, 0.00000]
+"values": [-0.41728, -0.41728]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig:position")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, -7.00), Vector2(0.00, 20.00), Vector2(0.00, 8.00), Vector2(0.00, 0.00)]
+"values": [-0.43009, -0.43009]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
 "times": PackedFloat32Array(0.000, 0.650),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+"values": [Vector2(1.4938, 1.7226), Vector2(1.4938, 1.7226)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.84086, -0.84086]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.12851, -0.12851]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.5481, 1.0118), Vector2(1.5481, 1.0118)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.11648, -0.11648]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.73304, 1.57080, 1.04720, 0.00000]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.69813, 0.17453, 0.20944, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.20944, 0.13963, 0.08727, 0.00000]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig:position")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, -7.00), Vector2(0.00, 20.00), Vector2(0.00, 8.00), Vector2(0.00, 0.00)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
@@ -248,62 +625,257 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.69813, -0.17453, -0.20944, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.20944, -0.13963, -0.08727, 0.00000]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig:position")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
 "times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, -7.00), Vector2(0.00, 20.00), Vector2(0.00, 8.00), Vector2(0.00, 0.00)]
+"values": [0.00000, 0.69813, -0.17453, -0.20944, 0.00000]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, 0.20944, -0.13963, -0.08727, 0.00000]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.77468, 0.77468]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.4098, 0.9861), Vector2(0.4098, 0.9861)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.38462, 0.38462]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.41856, 0.41856]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.4846, 1.7574), Vector2(1.4846, 1.7574)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.85306, 0.85306]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.13167, 0.13167]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.5491, 1.0102), Vector2(1.5491, 1.0102)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 0.650),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.10861, 0.10861]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig:position")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, -7.00), Vector2(0.00, 20.00), Vector2(0.00, 8.00), Vector2(0.00, 0.00)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
 "times": PackedFloat32Array(0.000, 0.150, 0.320, 0.480, 0.650),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
 "values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 1.000)]
 }
 
-tracks/5/type = "value"
-tracks/5/imported = false
-tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/5/interp = 1
-tracks/5/loop_wrap = true
-tracks/5/keys = {
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.650),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
@@ -318,75 +890,270 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.38397, 1.43117, 1.43117, 0.00000]
+"values": [-0.75311, -0.75311]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.24435, -0.10472, -0.10472, 0.00000]
+"values": [Vector2(0.4168, 0.9832), Vector2(0.4168, 0.9832)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.00000, 0.00000]
+"values": [-0.41728, -0.41728]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig:position")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, -8.00), Vector2(0.00, 22.00), Vector2(0.00, 14.00), Vector2(0.00, 0.00)]
+"values": [-0.43009, -0.43009]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
 "times": PackedFloat32Array(0.000, 0.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+"values": [Vector2(1.4938, 1.7226), Vector2(1.4938, 1.7226)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.84086, -0.84086]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.12851, -0.12851]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.5481, 1.0118), Vector2(1.5481, 1.0118)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.11648, -0.11648]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.38397, 1.43117, 1.43117, 0.00000]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, 0.24435, -0.10472, -0.10472, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig:position")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, -8.00), Vector2(0.00, 22.00), Vector2(0.00, 14.00), Vector2(0.00, 0.00)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.160, 0.300, 0.440, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
@@ -401,105 +1168,261 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [-0.31643, -0.31643]
-}
-
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [0.75520, 1.21021]
-}
-
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [0.20612, 0.20612]
-}
-
-tracks/3/type = "value"
-tracks/3/imported = false
-tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [0.50702, 0.50702]
-}
-
-tracks/4/type = "value"
-tracks/4/imported = false
-tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
-tracks/4/interp = 1
-tracks/4/loop_wrap = true
-tracks/4/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
+"times": PackedFloat32Array(0.000, 1.000),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
 "values": [-1.25873, -1.25873]
 }
 
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.31643, -0.31643]
+}
+
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.20612, 0.20612]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
 "times": PackedFloat32Array(0.500, 0.750),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
 "values": [1.34670, 1.27845]
 }
 
-tracks/6/type = "value"
-tracks/6/imported = false
-tracks/6/enabled = true
-tracks/6/path = NodePath("Rig/HeadPivot/StrandL:modulate")
-tracks/6/interp = 1
-tracks/6/loop_wrap = true
-tracks/6/keys = {
-"times": PackedFloat32Array(0.500, 0.750),
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000)]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
-tracks/7/type = "value"
-tracks/7/imported = false
-tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/7/interp = 1
-tracks/7/loop_wrap = true
-tracks/7/keys = {
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
 "times": PackedFloat32Array(0.500, 0.750),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000)]
+"values": [0.75520, 1.21021]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.50702, 0.50702]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.500, 0.750),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.500, 0.750),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.844)]
 }
 
 [sub_resource type="Animation" id="Anim_shield_guard"]
@@ -523,49 +1446,244 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.250, 1.000),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.97738, -0.97738]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.250, 1.000),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.00000, 0.00000]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
 "times": PackedFloat32Array(0.000, 0.250, 1.000),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000)]
+"values": [0.00000, -0.97738, -0.97738]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.77468, 0.77468]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.4098, 0.9861), Vector2(0.4098, 0.9861)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.38462, 0.38462]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.41856, 0.41856]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.4846, 1.7574), Vector2(1.4846, 1.7574)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.85306, 0.85306]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.13167, 0.13167]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.5491, 1.0102), Vector2(1.5491, 1.0102)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.000),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.10861, 0.10861]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.250, 1.000),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
 "times": PackedFloat32Array(0.000, 1.000),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
@@ -580,66 +1698,300 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/Skeleton2D/root/leg_l:position")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [Vector2(-69.70, 2.00), Vector2(-72.53, 12.61), Vector2(-73.70, 17.00), Vector2(-72.53, 12.61), Vector2(-69.70, 2.00), Vector2(-69.70, -8.61), Vector2(-69.70, -13.00), Vector2(-69.70, -8.61), Vector2(-69.70, 2.00)]
+"values": [-0.75311, -0.62229, -0.56417, -0.62229, -0.75311, -0.87317, -0.92038, -0.87317, -0.75311]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/leg_r:position")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [Vector2(73.30, 0.00), Vector2(73.30, -10.61), Vector2(73.30, -15.00), Vector2(73.30, -10.61), Vector2(73.30, -0.00), Vector2(76.13, 10.61), Vector2(77.30, 15.00), Vector2(76.13, 10.61), Vector2(73.30, 0.00)]
+"values": [Vector2(0.4168, 0.9832), Vector2(0.3775, 0.9825), Vector2(0.3614, 0.9823), Vector2(0.3775, 0.9825), Vector2(0.4168, 0.9832), Vector2(0.4564, 0.9839), Vector2(0.4728, 0.9842), Vector2(0.4564, 0.9839), Vector2(0.4168, 0.9832)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig:position")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, -2.12), Vector2(0.00, -3.00), Vector2(0.00, -2.12), Vector2(0.00, -0.00), Vector2(0.00, -2.12), Vector2(0.00, -3.00), Vector2(0.00, -2.12), Vector2(0.00, -0.00)]
+"values": [-0.41728, -0.48329, -0.51462, -0.48329, -0.41728, -0.36222, -0.34200, -0.36222, -0.41728]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 0.800),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+"values": [-0.43009, -0.38397, -0.36613, -0.38397, -0.43009, -0.48027, -0.50216, -0.48027, -0.43009]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.800),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 1.000)]
+"values": [Vector2(1.4938, 1.7226), Vector2(1.6014, 1.8416), Vector2(1.6542, 1.9014), Vector2(1.6014, 1.8416), Vector2(1.4938, 1.7226), Vector2(1.4074, 1.6293), Vector2(1.3764, 1.5961), Vector2(1.4074, 1.6293), Vector2(1.4938, 1.7226)]
+}
+
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [-0.84086, -0.91011, -0.93959, -0.91011, -0.84086, -0.77361, -0.74620, -0.77361, -0.84086]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [-0.12851, -0.12223, -0.11954, -0.12223, -0.12851, -0.13446, -0.13683, -0.13446, -0.12851]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(1.5481, 1.0118), Vector2(1.6735, 1.0152), Vector2(1.7336, 1.0169), Vector2(1.6735, 1.0152), Vector2(1.5481, 1.0118), Vector2(1.4454, 1.0092), Vector2(1.4083, 1.0083), Vector2(1.4454, 1.0092), Vector2(1.5481, 1.0118)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [-0.11648, -0.13859, -0.14884, -0.13859, -0.11648, -0.09748, -0.09038, -0.09748, -0.11648]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.77468, 0.89203, 0.93819, 0.89203, 0.77468, 0.64678, 0.58989, 0.64678, 0.77468]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.4098, 0.9861), Vector2(0.4503, 0.9867), Vector2(0.4671, 0.9869), Vector2(0.4503, 0.9867), Vector2(0.4098, 0.9861), Vector2(0.3695, 0.9856), Vector2(0.3529, 0.9854), Vector2(0.3695, 0.9856), Vector2(0.4098, 0.9861)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.38462, 0.33310, 0.31427, 0.33310, 0.38462, 0.44686, 0.47659, 0.44686, 0.38462]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.41856, 0.47028, 0.49282, 0.47028, 0.41856, 0.37098, 0.35256, 0.37098, 0.41856]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(1.4846, 1.7574), Vector2(1.3976, 1.6574), Vector2(1.3665, 1.6219), Vector2(1.3976, 1.6574), Vector2(1.4846, 1.7574), Vector2(1.5932, 1.8851), Vector2(1.6465, 1.9495), Vector2(1.5932, 1.8851), Vector2(1.4846, 1.7574)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.85306, 0.78391, 0.75569, 0.78391, 0.85306, 0.92406, 0.95419, 0.92406, 0.85306]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.13167, 0.13721, 0.13941, 0.13721, 0.13167, 0.12583, 0.12333, 0.12583, 0.13167]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(1.5491, 1.0102), Vector2(1.4463, 1.0080), Vector2(1.4091, 1.0072), Vector2(1.4463, 1.0080), Vector2(1.5491, 1.0102), Vector2(1.6747, 1.0132), Vector2(1.7350, 1.0147), Vector2(1.6747, 1.0132), Vector2(1.5491, 1.0102)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.10861, 0.09088, 0.08426, 0.09088, 0.10861, 0.12926, 0.13883, 0.12926, 0.10861]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/Skeleton2D/root/leg_l:position")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(-69.70, 2.00), Vector2(-72.53, 12.61), Vector2(-73.70, 17.00), Vector2(-72.53, 12.61), Vector2(-69.70, 2.00), Vector2(-69.70, -8.61), Vector2(-69.70, -13.00), Vector2(-69.70, -8.61), Vector2(-69.70, 2.00)]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/Skeleton2D/root/leg_r:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(73.30, 0.00), Vector2(73.30, -10.61), Vector2(73.30, -15.00), Vector2(73.30, -10.61), Vector2(73.30, -0.00), Vector2(76.13, 10.61), Vector2(77.30, 15.00), Vector2(76.13, 10.61), Vector2(73.30, 0.00)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, -2.12), Vector2(0.00, -3.00), Vector2(0.00, -2.12), Vector2(0.00, -0.00), Vector2(0.00, -2.12), Vector2(0.00, -3.00), Vector2(0.00, -2.12), Vector2(0.00, -0.00)]
+}
+
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.830), Color(1, 1, 1, 0.760), Color(1, 1, 1, 0.830), Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.830), Color(1, 1, 1, 0.760), Color(1, 1, 1, 0.830), Color(1, 1, 1, 1.000)]
+}
+
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.830), Color(1, 1, 1, 0.760), Color(1, 1, 1, 0.830), Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.830), Color(1, 1, 1, 0.760), Color(1, 1, 1, 0.830), Color(1, 1, 1, 1.000)]
 }
 
 [sub_resource type="Animation" id="Anim_laugh"]
@@ -650,40 +2002,40 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/HeadPivot:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0.000, 0.250, 0.550, 0.850, 1.150, 1.400),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
-"update": 0,
-"values": [0.00000, -0.12217, 0.08727, -0.10472, 0.05236, 0.00000]
-}
-
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
 "values": [0.00000, 0.13963, 0.05236, 0.15708, 0.06981, 0.00000]
 }
 
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.13963, -0.05236, -0.15708, -0.06981, 0.00000]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
@@ -693,71 +2045,253 @@ tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.900, 1.400),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.10472, 0.12217, 0.00000]
+"values": [0.00000, 0.10472, 0.11345, 0.12217, 0.04887, 0.00000]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.900, 1.400),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.10472, -0.12217, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot:position")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.17453, -0.17453]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.13963, -0.05236, -0.15708, -0.06981, 0.00000]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.10472, -0.11345, -0.12217, -0.04887, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.17453, 0.17453]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.400),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot:rotation")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.250, 0.550, 0.850, 1.150, 1.400),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.12217, 0.08727, -0.10472, 0.05236, 0.00000]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
 "times": PackedFloat32Array(0.000, 0.250, 0.550, 0.850, 1.150, 1.400),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(511.50, 471.00), Vector2(511.50, 465.00), Vector2(511.50, 472.00), Vector2(511.50, 465.00), Vector2(511.50, 472.00), Vector2(511.50, 471.00)]
 }
 
-tracks/6/type = "value"
-tracks/6/imported = false
-tracks/6/enabled = true
-tracks/6/path = NodePath("Rig:position")
-tracks/6/interp = 1
-tracks/6/loop_wrap = true
-tracks/6/keys = {
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(0.00, 0.00), Vector2(0.00, 4.00), Vector2(0.00, -2.00), Vector2(0.00, 4.00), Vector2(0.00, -1.00), Vector2(0.00, 0.00)]
 }
 
-tracks/7/type = "value"
-tracks/7/imported = false
-tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot/StrandL:modulate")
-tracks/7/interp = 1
-tracks/7/loop_wrap = true
-tracks/7/keys = {
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
 "values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.680), Color(1, 1, 1, 0.880), Color(1, 1, 1, 0.640), Color(1, 1, 1, 0.840), Color(1, 1, 1, 1.000)]
 }
 
-tracks/8/type = "value"
-tracks/8/imported = false
-tracks/8/enabled = true
-tracks/8/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/8/interp = 1
-tracks/8/loop_wrap = true
-tracks/8/keys = {
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.600, 0.900, 1.200, 1.400),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
 "update": 0,
@@ -785,20 +2319,20 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.450, 1.150, 1.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -2.09440, -2.09440, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -811,46 +2345,46 @@ tracks/2/keys = {
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 1.600),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0.000, 0.450, 1.150, 1.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.00000]
+"values": [0.00000, -2.09440, -2.09440, 0.00000]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
 "times": PackedFloat32Array(0.000, 1.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
 "times": PackedFloat32Array(0.000, 1.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.00000]
+"values": [-0.00000, -0.00000]
 }
 
 tracks/6/type = "value"
 tracks/6/imported = false
 tracks/6/enabled = true
-tracks/6/path = NodePath("Rig/HeadPivot:rotation")
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
 tracks/6/interp = 1
 tracks/6/loop_wrap = true
 tracks/6/keys = {
@@ -863,49 +2397,205 @@ tracks/6/keys = {
 tracks/7/type = "value"
 tracks/7/imported = false
 tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot:position")
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
 tracks/7/interp = 1
 tracks/7/loop_wrap = true
 tracks/7/keys = {
 "times": PackedFloat32Array(0.000, 1.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(511.50, 471.00), Vector2(511.50, 471.00)]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/8/type = "value"
 tracks/8/imported = false
 tracks/8/enabled = true
-tracks/8/path = NodePath("Rig:position")
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
 tracks/8/interp = 1
 tracks/8/loop_wrap = true
 tracks/8/keys = {
 "times": PackedFloat32Array(0.000, 1.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, 0.00)]
+"values": [-0.00000, -0.00000]
 }
 
 tracks/9/type = "value"
 tracks/9/imported = false
 tracks/9/enabled = true
-tracks/9/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
 tracks/9/interp = 1
 tracks/9/loop_wrap = true
 tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot:rotation")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(511.50, 471.00), Vector2(511.50, 471.00)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
+"times": PackedFloat32Array(0.000, 1.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, 0.00)]
+}
+
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
 "times": PackedFloat32Array(0.000, 0.450, 1.150, 1.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 1.000)]
 }
 
-tracks/10/type = "value"
-tracks/10/imported = false
-tracks/10/enabled = true
-tracks/10/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/10/interp = 1
-tracks/10/loop_wrap = true
-tracks/10/keys = {
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
 "times": PackedFloat32Array(0.000, 1.600),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
@@ -920,114 +2610,296 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/HeadPivot:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.17453, -0.06981, 0.00000]
+"values": [0.00000, -0.59341, -0.27925, 0.00000]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.59341, -0.27925, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.52360, -0.20944, 0.00000]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.24435, 0.10472, 0.00000]
+"values": [0.00000, -0.52360, -0.20944, 0.00000]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.100, 0.600),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.17453, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/HeadPivot:position")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.17453, -0.17453]
+}
+
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, 0.24435, 0.10472, 0.00000]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, 0.17453, 0.10472, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.17453, 0.17453]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 0.600),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.00000, 0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot:rotation")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.17453, -0.06981, 0.00000]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(511.50, 471.00), Vector2(511.50, 464.00), Vector2(511.50, 469.00), Vector2(511.50, 471.00)]
 }
 
-tracks/6/type = "value"
-tracks/6/imported = false
-tracks/6/enabled = true
-tracks/6/path = NodePath("Rig:position")
-tracks/6/interp = 1
-tracks/6/loop_wrap = true
-tracks/6/keys = {
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(0.00, 0.00), Vector2(0.00, -14.00), Vector2(0.00, -5.00), Vector2(0.00, 0.00)]
 }
 
-tracks/7/type = "value"
-tracks/7/imported = false
-tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot/StrandL:modulate")
-tracks/7/interp = 1
-tracks/7/loop_wrap = true
-tracks/7/keys = {
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.360), Color(1, 1, 1, 1.000)]
 }
 
-tracks/8/type = "value"
-tracks/8/imported = false
-tracks/8/enabled = true
-tracks/8/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/8/interp = 1
-tracks/8/loop_wrap = true
-tracks/8/keys = {
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
 "times": PackedFloat32Array(0.000, 0.100, 0.300, 0.600),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
@@ -1042,40 +2914,40 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/HeadPivot:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0.000, 0.400, 0.900, 1.800),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.08727, 0.15708, 0.20944]
+"values": [0.00000, 0.31416, 0.34408, 0.52360, 0.59341]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.500, 1.200, 1.800),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.31416, 0.52360, 0.59341]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.500, 1.200, 1.800),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.31416, -0.52360, -0.59341]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
@@ -1085,97 +2957,253 @@ tracks/3/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:rotation")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
-"times": PackedFloat32Array(0.000, 0.600, 1.800),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, 0.27925, 0.41888]
+"values": [0.00000, 0.23271, 0.27925, 0.34907, 0.41888]
 }
 
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.600, 1.800),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.27925, -0.41888]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
 "times": PackedFloat32Array(0.000, 1.800),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.17453]
+"values": [-0.00000, -0.00000]
 }
 
 tracks/6/type = "value"
 tracks/6/imported = false
 tracks/6/enabled = true
-tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
 tracks/6/interp = 1
 tracks/6/loop_wrap = true
 tracks/6/keys = {
-"times": PackedFloat32Array(0.000, 1.800),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.17453]
+"values": [0.00000, 0.04848, 0.05818, 0.11636, 0.17453]
 }
 
 tracks/7/type = "value"
 tracks/7/imported = false
 tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot:position")
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
 tracks/7/interp = 1
 tracks/7/loop_wrap = true
 tracks/7/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.31416, -0.34408, -0.52360, -0.59341]
+}
+
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.23271, -0.27925, -0.34907, -0.41888]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.500, 0.600, 1.200, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.04848, -0.05818, -0.11636, -0.17453]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.800),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot:rotation")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.400, 0.900, 1.800),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.08727, 0.15708, 0.20944]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
 "times": PackedFloat32Array(0.000, 0.400, 0.900, 1.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(511.50, 471.00), Vector2(511.50, 475.00), Vector2(511.50, 483.00), Vector2(511.50, 489.00)]
 }
 
-tracks/8/type = "value"
-tracks/8/imported = false
-tracks/8/enabled = true
-tracks/8/path = NodePath("Rig:position")
-tracks/8/interp = 1
-tracks/8/loop_wrap = true
-tracks/8/keys = {
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
 "times": PackedFloat32Array(0.000, 0.500, 1.100, 1.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(0.00, 0.00), Vector2(0.00, 10.00), Vector2(0.00, 20.00), Vector2(0.00, 26.00)]
 }
 
-tracks/9/type = "value"
-tracks/9/imported = false
-tracks/9/enabled = true
-tracks/9/path = NodePath("Rig/HeadPivot/StrandL:modulate")
-tracks/9/interp = 1
-tracks/9/loop_wrap = true
-tracks/9/keys = {
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
 "times": PackedFloat32Array(0.000, 0.500, 1.200, 1.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.280), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000)]
 }
 
-tracks/10/type = "value"
-tracks/10/imported = false
-tracks/10/enabled = true
-tracks/10/path = NodePath("Rig/HeadPivot/StrandR:modulate")
-tracks/10/interp = 1
-tracks/10/loop_wrap = true
-tracks/10/keys = {
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
 "times": PackedFloat32Array(0.000, 0.500, 1.200, 1.800),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
@@ -1190,40 +3218,40 @@ step = 0.05
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Rig/HeadPivot:rotation")
+tracks/0/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.10472, -0.10472, -0.05236, 0.00000]
+"values": [0.00000, 1.67552, 1.67552, 0.52360, 0.00000]
 }
 
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:rotation")
+tracks/1/path = NodePath("Rig/Skeleton2D/root/upperarm_l:scale")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 1.67552, 1.67552, 0.52360, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
+tracks/2/path = NodePath("Rig/Skeleton2D/root/upperarm_l:skew")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -1.67552, -1.67552, -0.52360, 0.00000]
+"values": [0.00000, 0.00000]
 }
 
 tracks/3/type = "value"
@@ -1242,88 +3270,244 @@ tracks/3/keys = {
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/4/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:scale")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, -0.69813, -0.69813, -0.20944, 0.00000]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/5/type = "value"
 tracks/5/imported = false
 tracks/5/enabled = true
-tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
+tracks/5/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l:skew")
 tracks/5/interp = 1
 tracks/5/loop_wrap = true
 tracks/5/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [0.00000, 0.17453, 0.00000]
+"values": [-0.00000, -0.00000]
 }
 
 tracks/6/type = "value"
 tracks/6/imported = false
 tracks/6/enabled = true
-tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/6/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:rotation")
 tracks/6/interp = 1
 tracks/6/loop_wrap = true
 tracks/6/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1),
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [0.00000, -0.17453, 0.00000]
+"values": [0.00000, 0.17453, 0.10181, 0.04363, 0.00000]
 }
 
 tracks/7/type = "value"
 tracks/7/imported = false
 tracks/7/enabled = true
-tracks/7/path = NodePath("Rig/HeadPivot:position")
+tracks/7/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:scale")
 tracks/7/interp = 1
 tracks/7/loop_wrap = true
 tracks/7/keys = {
-"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(511.50, 471.00), Vector2(511.50, 466.00), Vector2(511.50, 466.00), Vector2(511.50, 469.00), Vector2(511.50, 471.00)]
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
 }
 
 tracks/8/type = "value"
 tracks/8/imported = false
 tracks/8/enabled = true
-tracks/8/path = NodePath("Rig:position")
+tracks/8/path = NodePath("Rig/Skeleton2D/root/upperarm_l/forearm_l/hand_l:skew")
 tracks/8/interp = 1
 tracks/8/loop_wrap = true
 tracks/8/keys = {
-"times": PackedFloat32Array(0.000, 0.250, 0.500, 0.800, 1.200, 1.500),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector2(0.00, 0.00), Vector2(0.00, -10.00), Vector2(0.00, -2.00), Vector2(0.00, -8.00), Vector2(0.00, -2.00), Vector2(0.00, 0.00)]
+"values": [-0.00000, -0.00000]
 }
 
 tracks/9/type = "value"
 tracks/9/imported = false
 tracks/9/enabled = true
-tracks/9/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/9/path = NodePath("Rig/Skeleton2D/root/upperarm_r:rotation")
 tracks/9/interp = 1
 tracks/9/loop_wrap = true
 tracks/9/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,
-"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 1.000)]
+"values": [0.00000, -1.67552, -1.67552, -0.52360, 0.00000]
 }
 
 tracks/10/type = "value"
 tracks/10/imported = false
 tracks/10/enabled = true
-tracks/10/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/10/path = NodePath("Rig/Skeleton2D/root/upperarm_r:scale")
 tracks/10/interp = 1
 tracks/10/loop_wrap = true
 tracks/10/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Rig/Skeleton2D/root/upperarm_r:skew")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:rotation")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.69813, -0.69813, -0.20944, 0.00000]
+}
+
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r:skew")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:rotation")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.17453, -0.10181, -0.04363, 0.00000]
+}
+
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(1.0000, 1.0000), Vector2(1.0000, 1.0000)]
+}
+
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Rig/Skeleton2D/root/upperarm_r/forearm_r/hand_r:skew")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {
+"times": PackedFloat32Array(0.000, 1.500),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.00000, -0.00000]
+}
+
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Rig/HeadPivot:rotation")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.00000, -0.10472, -0.10472, -0.05236, 0.00000]
+}
+
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Rig/HeadPivot:position")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(511.50, 471.00), Vector2(511.50, 466.00), Vector2(511.50, 466.00), Vector2(511.50, 469.00), Vector2(511.50, 471.00)]
+}
+
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Rig:position")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {
+"times": PackedFloat32Array(0.000, 0.250, 0.500, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.00, 0.00), Vector2(0.00, -10.00), Vector2(0.00, -2.00), Vector2(0.00, -8.00), Vector2(0.00, -2.00), Vector2(0.00, 0.00)]
+}
+
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Rig/HeadPivot/StrandL:modulate")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
+"times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 0.000), Color(1, 1, 1, 1.000)]
+}
+
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Rig/HeadPivot/StrandR:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {
 "times": PackedFloat32Array(0.000, 0.300, 0.800, 1.200, 1.500),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1),
 "update": 0,

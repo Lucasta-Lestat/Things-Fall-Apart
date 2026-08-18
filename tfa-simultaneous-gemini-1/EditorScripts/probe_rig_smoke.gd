@@ -19,8 +19,11 @@ func _ready() -> void:
 	var ua := rig.get_node("Rig/Skeleton2D/root/upperarm_l") as Node2D
 	print("SMOKE: idle upperarm_l rot=%.4f scale=(%.3f,%.3f) skew=%.4f" % [
 		ua.rotation, ua.scale.x, ua.scale.y, ua.skew])
-	var idle_ok: bool = ua.scale.is_equal_approx(Vector2.ONE) and absf(ua.skew) < 1e-6
-	print("SMOKE: idle pose %s" % ("OK" if idle_ok else "BAD (unexpected scale/skew)"))
+	# With foreshortened clips installed the idle upper arm carries a baked
+	# scale (k ~0.39) and skew; pre-foreshorten rigs sit at identity. Either
+	# is fine -- RigProbe holds the real invariants. Just bound sanity here.
+	var idle_ok: bool = ua.scale.x > 0.14 and ua.scale.x <= 1.01
+	print("SMOKE: idle pose %s" % ("OK" if idle_ok else "BAD (scale out of bounds)"))
 
 	# Clip-change blend: play an action, confirm no error and action finishes.
 	if rig.has_method("play_action"):

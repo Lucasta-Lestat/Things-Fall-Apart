@@ -488,10 +488,12 @@
     "leg_width": 3,
     "leg_spacing": 7,
     "rig_scene": {
-     "female": "res://RigCharacters/quadrelf_female/CharacterMesh.tscn"
+     "female": "res://RigCharacters/quadrelf_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/quadrelf_male/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "female": 0.1362
+     "female": 0.1362,
+     "male": 0.1376
     }
    },
    "body_sprites": {
