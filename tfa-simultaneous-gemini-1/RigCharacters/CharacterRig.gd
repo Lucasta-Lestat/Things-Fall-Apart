@@ -12,6 +12,25 @@ var _action: StringName = &""
 # one-shots that FREEZE on their last frame instead of auto-reverting to idle/walk
 const HOLD_ACTIONS := ["death"]
 
+# --- Foreshortening ----------------------------------------------------------
+# Clips may carry baked Bone2D :scale/:skew tracks that shorten a limb along its
+# own axis (top-down foreshortening: k = cos of the authored elevation, baked by
+# tools/foreshorten.py). foreshorten_strength lerps those tracks back toward
+# identity at apply time: 0.0 = every limb renders at full authored length (the
+# kill switch -- note it keeps the NEW pose at full length, it does not restore
+# the old T-pose), 1.0 = full effect. Static, so one assignment covers every
+# character alive while the .tscn tracks stay inert data -- no re-export.
+static var foreshorten_strength: float = 1.0
+var _foreshorten_on := true           # per-instance override (set_foreshorten)
+const FS_K_FLOOR := 0.15              # scale floor -- below this the skinned
+                                      # triangles degenerate
+const FS_BLEND_TIME := 0.12           # clip-change / IK-engage arm blend (s)
+
+var _fix_cache := {}                  # anim -> [[track_idx, node, prop], ...]
+var _blend_from := {}                 # node -> {prop: value} at clip change
+var _blend_t: float = 1e9             # since clip change; >= FS_BLEND_TIME = done
+var _last_anim: StringName = &""
+
 # --- Runtime 2-bone IK ------------------------------------------------------
 # Aim/reach an arm's hand at a WORLD target, overriding the animation for that
 # arm only. Solved in global space, so it is invariant to the rig's facing
@@ -19,14 +38,16 @@ const HOLD_ACTIONS := ["death"]
 # with no baked clip (firearms, cast). Empty = arms follow the animation.
 var _ik_target := {}                       # side ("l"/"r") -> Vector2 (global)
 var _ik_bend := {"l": 1.0, "r": -1.0}      # elbow bend sign per side (tunable)
-var _ik_cal := {}                          # side -> {l1,l2,a_up,a_fo} (lazy)
+var _ik_blend := {}                        # side -> engage ramp 0..1
 
 func _ready() -> void:
-	# Godot's AnimationMixer mis-resolves NESTED Bone2D rotation tracks on a
-	# Skeleton2D (forearm_l/r and hand_l/r collide onto one bone, summed; the upper
-	# arms + all position tracks are fine). So we drive the mixer MANUALLY and then
-	# re-apply each bone's rotation directly from the clip's own (correct) track
-	# values -- which matches the authoring tool exactly.
+	# Godot's AnimationMixer mis-resolves NESTED Bone2D value tracks on a
+	# Skeleton2D: the forearm_l/r tracks collide onto one bone and SUM -- for
+	# :rotation, :scale and :skew alike (verified by the game repo's
+	# EditorScripts/MixerProbe.tscn; upper arms and all position tracks are
+	# fine). So we drive the mixer MANUALLY and then re-apply each bone's
+	# tracked properties directly from the clip's own (correct) track values --
+	# which matches the authoring tool exactly.
 	_ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	_ap.animation_finished.connect(_on_anim_finished)
 	_play_base()
@@ -40,38 +61,126 @@ func _process(delta: float) -> void:
 	# the grip because the host only re-syncs them on unpaused frames.
 	if _ap.is_playing() and not get_tree().paused:
 		_ap.advance(delta)
-	_fix_bone_rotations()
+	_fix_bone_tracks(delta)
 	if not _ik_target.is_empty():
-		_apply_ik()
+		_apply_ik(delta)
 
-func _fix_bone_rotations() -> void:
+func _fix_bone_tracks(delta: float) -> void:
 	var nm := _ap.assigned_animation
 	if nm == &"":
 		return
 	var anim := _ap.get_animation(nm)
 	if anim == null:
 		return
+	if nm != _last_anim:
+		_begin_clip_blend(nm, anim)
+		_last_anim = nm
+	_blend_t += delta
+	var w := clampf(_blend_t / FS_BLEND_TIME, 0.0, 1.0)
+	var strength: float = foreshorten_strength if _foreshorten_on else 0.0
 	var pos := _ap.current_animation_position
+	for entry in _cache_for(nm, anim):
+		var node: Node2D = entry[1]
+		var v = anim.value_track_interpolate(entry[0], pos)
+		var prop: String = entry[2]
+		if prop == "rotation":
+			var r: float = v
+			if w < 1.0:
+				var fr: float = _blend_from[node]["rotation"]
+				r = lerp_angle(fr, r, w)
+			node.rotation = r
+		elif prop == "scale":
+			var sv: Vector2 = v
+			sv = Vector2(lerpf(1.0, sv.x, strength), lerpf(1.0, sv.y, strength))
+			if w < 1.0:
+				var fs: Vector2 = _blend_from[node]["scale"]
+				sv = fs.lerp(sv, w)
+			node.scale = Vector2(maxf(sv.x, FS_K_FLOOR), maxf(sv.y, FS_K_FLOOR))
+		else:
+			var sk := lerpf(0.0, float(v), strength)
+			if w < 1.0:
+				var fk: float = _blend_from[node]["skew"]
+				sk = lerpf(fk, sk, w)
+			node.skew = sk
+
+func _cache_for(nm: StringName, anim: Animation) -> Array:
+	# Track -> node resolution is constant per clip, but doing it inline cost a
+	# String alloc + get_node per track per character per frame (and the scale/
+	# skew tracks tripled the track count). Resolved once per clip, then the
+	# per-frame loop is an int-indexed array walk.
+	var cached = _fix_cache.get(nm)
+	if cached != null:
+		return cached
+	var out := []
 	for ti in anim.get_track_count():
 		if anim.track_get_type(ti) != Animation.TYPE_VALUE:
 			continue
 		var ps := String(anim.track_get_path(ti))
-		if not ps.ends_with(":rotation") or not ps.contains("Skeleton2D"):
+		if not ps.contains("Skeleton2D"):
 			continue
-		var node := get_node_or_null(NodePath(ps.substr(0, ps.length() - 9))) as Node2D
+		var ci := ps.rfind(":")
+		if ci < 0:
+			continue
+		var prop := ps.substr(ci + 1)
+		if prop != "rotation" and prop != "scale" and prop != "skew":
+			continue
+		var node := get_node_or_null(NodePath(ps.substr(0, ci))) as Node2D
 		if node:
-			node.rotation = anim.value_track_interpolate(ti, pos)
+			out.append([ti, node, prop])
+	_fix_cache[nm] = out
+	return out
+
+func _begin_clip_blend(nm: StringName, anim: Animation) -> void:
+	# Action clips are authored as deltas from the bind pose while the base
+	# idle/walk holds the arms far from it; a hard clip switch would pop the
+	# arms for a frame (the manual re-apply above bypasses the mixer's own
+	# blending entirely). So blend every tracked bone property from its CURRENT
+	# value into the new clip over FS_BLEND_TIME.
+	_blend_from.clear()
+	for entry in _cache_for(nm, anim):
+		var node: Node2D = entry[1]
+		if not _blend_from.has(node):
+			_blend_from[node] = {}
+		var prop: String = entry[2]
+		if prop == "rotation":
+			_blend_from[node]["rotation"] = node.rotation
+		elif prop == "scale":
+			_blend_from[node]["scale"] = node.scale
+		else:
+			_blend_from[node]["skew"] = node.skew
+	_blend_t = 0.0
 
 func set_arm_ik(side: String, target_global) -> void:
 	# target_global: a Vector2 (global) to aim that arm's hand at, or null to
 	# release the arm back to the animation. side is "l" or "r".
 	if target_global == null:
 		_ik_target.erase(side)
+		_ik_blend.erase(side)
 	else:
 		_ik_target[side] = target_global
 
 func clear_arm_ik() -> void:
 	_ik_target.clear()
+	_ik_blend.clear()
+
+func set_foreshorten(on: bool) -> void:
+	# Per-instance override (portraits, cutscenes, editor previews); the static
+	# foreshorten_strength dial gates every instance at once.
+	_foreshorten_on = on
+
+func chain_reach(side: String) -> float:
+	# LIVE world distance shoulder -> grip, foreshorten included. The host's
+	# cached _rig_finger_reach deliberately keeps the unforeshortened figure
+	# (stable, errs toward showing the blade); this is the honest number for
+	# anything that needs the real reach.
+	var up := _ik_bone("upperarm", side)
+	var ha := _ik_bone("hand", side)
+	if up == null or ha == null:
+		return 0.0
+	var grip := ha.get_node_or_null("grip_" + side) as Node2D
+	if grip == null:
+		return 0.0
+	return up.global_position.distance_to(grip.global_position)
 
 func _ik_bone(part: String, side: String) -> Node2D:
 	var base := "Rig/Skeleton2D/root/upperarm_" + side
@@ -81,40 +190,41 @@ func _ik_bone(part: String, side: String) -> Node2D:
 		return get_node_or_null(base + "/forearm_" + side) as Node2D
 	return get_node_or_null(base + "/forearm_" + side + "/hand_" + side) as Node2D
 
-func _ik_calibrate(side: String):
-	# Bone lengths (world, constant) and each bone's local axis angle (the child's
-	# direction in the bone's own frame). Measured once; invariant to pose.
-	var up := _ik_bone("upperarm", side)
-	var fo := _ik_bone("forearm", side)
-	var ha := _ik_bone("hand", side)
-	if up == null or fo == null or ha == null:
-		return null
-	return {
-		"l1": up.global_position.distance_to(fo.global_position),
-		"l2": fo.global_position.distance_to(ha.global_position),
-		"a_up": fo.position.angle(),
-		"a_fo": ha.position.angle(),
-	}
-
-func _apply_ik() -> void:
-	# Analytic two-bone IK per active arm. Runs AFTER _fix_bone_rotations so it
-	# overrides the clip's upper/forearm rotations; the hand keeps the clip's
-	# local rotation relative to the IK-posed forearm.
+func _apply_ik(delta: float) -> void:
+	# Analytic two-bone IK per active arm. Runs AFTER _fix_bone_tracks so it
+	# overrides the clip's pose for that arm; the hand keeps the clip's local
+	# rotation relative to the IK-posed forearm.
+	#
+	# Foreshortening: an IK'd arm reaches at a WORLD ground-plane point, i.e.
+	# it is aimed in-plane -- zero out-of-plane elevation, cos 0 = 1 -- so the
+	# arm's baked foreshorten scale/skew are ramped to identity before solving.
+	# That is the model, not a workaround, and it keeps the closed-form solve
+	# exact (a scaled upper arm would turn the elbow locus into an ellipse).
+	# The engage ramp doubles as the reach blend so the hand doesn't snap.
+	#
+	# Lengths and axis angles are derived LIVE from the bones' local joint
+	# offsets (never animated -- no arm bone has a :position track in any
+	# race), replacing the old one-shot calibration whose cache went stale on
+	# any rig rebuild or scale change.
 	for side in _ik_target:
-		if not _ik_cal.has(side):
-			var c = _ik_calibrate(side)
-			if c == null:
-				continue
-			_ik_cal[side] = c
-		var cal: Dictionary = _ik_cal[side]
 		var up := _ik_bone("upperarm", side)
 		var fo := _ik_bone("forearm", side)
-		if up == null or fo == null:
+		var ha := _ik_bone("hand", side)
+		if up == null or fo == null or ha == null:
 			continue
-		var l1: float = cal["l1"]
-		var l2: float = cal["l2"]
+		var blend := clampf(float(_ik_blend.get(side, 0.0)) + delta / FS_BLEND_TIME, 0.0, 1.0)
+		_ik_blend[side] = blend
+		for b in [up, fo, ha]:
+			var n: Node2D = b
+			n.scale = n.scale.lerp(Vector2.ONE, blend)
+			n.skew = lerpf(n.skew, 0.0, blend)
+		var gs := _px_to_world()
+		var l1: float = fo.position.length() * gs
+		var l2: float = ha.position.length() * gs
 		if l1 <= 0.0 or l2 <= 0.0:
 			continue
+		var a_up: float = fo.position.angle()
+		var a_fo: float = ha.position.angle()
 		var target: Vector2 = _ik_target[side]
 		var origin := up.global_position
 		var to_t := target - origin
@@ -124,10 +234,21 @@ func _apply_ik() -> void:
 		var sh := acos(cos_sh)
 		var bend := float(_ik_bend.get(side, 1.0))
 		var up_axis := base_ang - bend * sh
-		up.global_rotation = up_axis - float(cal["a_up"])
+		if blend < 1.0:
+			up_axis = lerp_angle(up.global_rotation + a_up, up_axis, blend)
+		up.global_rotation = up_axis - a_up
 		var elbow := origin + Vector2.RIGHT.rotated(up_axis) * l1
 		var fo_axis := (target - elbow).angle()
-		fo.global_rotation = fo_axis - float(cal["a_fo"])
+		if blend < 1.0:
+			fo_axis = lerp_angle(fo.global_rotation + a_fo, fo_axis, blend)
+		fo.global_rotation = fo_axis - a_fo
+
+func _px_to_world() -> float:
+	# Source-art px -> world units. Everything above the arm bones is uniformly
+	# scaled by contract (the host sets a single Vector2(s, s) on the rig), so
+	# one basis-column length of the skeleton's global transform is the factor.
+	var sk := get_node_or_null("Rig/Skeleton2D") as Node2D
+	return sk.global_transform.get_scale().x if sk else 1.0
 
 func play_action(action: StringName, duration: float = 0.0) -> void:
 	# one-shot: "swing_right", "swing_left", "bow_draw", ...

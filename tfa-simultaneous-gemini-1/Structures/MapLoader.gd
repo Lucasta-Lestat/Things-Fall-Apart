@@ -101,7 +101,7 @@ func _ready():
 #                       (the flood-fill loader's bounding boxes sealed gaps).
 # ---------------------------------------------------------------------------
 
-const FLOOR_CODES := {"g": "grass", "d": "floor_dirt", "s": "floor_stone", "w": "shallow_water"}
+const FLOOR_CODES := {"g": "grass", "d": "floor_dirt", "s": "floor_stone", "p": "floor_wood", "w": "shallow_water"}
 
 # GridManager.register_floor only reads .floor_id/.walkability; floors on
 # structured maps are logical-only (their art is baked into the ground PNG).

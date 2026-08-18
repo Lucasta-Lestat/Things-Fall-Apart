@@ -35770,52 +35770,50 @@
 			"description": "Exported from the Terrain Generation editor (seed 5, Grass)",
 			"editor_export": true,
 			"floors": [
-				"gggggggggggggggggggggggggggggggggggggggggggggggwggggggggggggg",
-				"gggggggggggggggggggggggggggggggggggsssgggggggggwwgggggggggggg",
-				"ggssgggggggggggggggggggggggggggggggggggggggggggwwggggggggssgg",
-				"ggssgggggggggggggggggggggggggggggggggggggggggggwwggggggggssgg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgggggdgggggg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggssssssggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggssssssggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggssssssggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggssssssgsssssggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggssssssgsssssggggggggggggggggggggwwgdddddddddgg",
-				"gggggggggggggggssssssgsssssggggggggggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgsssssggggggggggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssgggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssgggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssgggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssgggggggggggggwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssgsssggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssssssggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssssssggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssgssssssssssssggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssgsssssgggggggggggggggggggwwggdddddddddgg",
-				"gggggggggggggggssssssggssggsssgsssggggggggggggwwggdsssssdddgg",
-				"gggggddddddddddssssssggssggsssgsssggggggggggggwgggdsssssdddgg",
-				"gggggddddddddddssssssggggggsssgsssggggggggggggwgggdsssssdddgg",
-				"gggggddddddddddssssssggggggsssgsssggggggggggggwgggdddddddddgg",
-				"gggggddddddddddssssssggggggsssgsssggggggggggggwgggdddddddddgg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggdddddddddgg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggdddddddddgg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggggggggggggg",
-				"ggggdddddddddddddgggggggggggggggggggggggggggggwwggggggggggggg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggggggggggggg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggggggggggggg",
-				"gggggddddddddddddgggggggggggggggggggggggggggggwwggggggggggggg",
-				"ggggggggggggggggggggggggggggggggggggggggggggggwwggggggggggggg",
-				"ggggggggggggggggggggggggggggggggggsssssgggggggwwggggggggggggg",
-				"ggggggggggggggggggggggggggggggggggsssssggggggggwggggggggggggg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwggggggggggggg",
-				"ggssgggggggggggggggggggggggggggggggggggggggggggwgggggggggssgg",
-				"ggssgggggggggggggggggggggggggggggggggggggggggggwgggggggggssgg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwggggggggggggg",
-				"gggggggggggggggggggggggggggggggggggggggggggggggwwgggggggggggg"
+				"gggggggggggggggggggggggggggggggggwwggggggggg",
+				"gsssggggggggggggggggggggssssggggggwgggggsssg",
+				"gsssggggggggggggggggggggggggggggggwgggggsssg",
+				"gsssggggggggggggggggggggggggggggggwwggggsssg",
+				"ggggggggggggggggggggggggggggggggggwwgdddddgg",
+				"ggggggggggggggggggggggggggggggggggwwgdddddgg",
+				"ggggggggggggggggggggggggggggggggggwwddddddgg",
+				"ggggssssssggggggggggggggggggggggggwwddddddgg",
+				"ggggssssssggggggggggggggggggggggggwwgdddddgg",
+				"ggggssssssggggggggggggggggggggggggwwddddddgg",
+				"ggggggggggggggggggggggggggggggggggwwddddddgg",
+				"gggggggggggssssssssssssgggggggggggwggdddddgg",
+				"gggggggggggssssssssssssgggggggggggwggdddddgg",
+				"gggggggggggssssssssssssgggggggggggwgddddddgg",
+				"gggggggggggssssssssssssgggggggggggwggdddddgg",
+				"gggggggggggsssssssssssssssssssggggwggdddddgg",
+				"gggggggggggsssssssssssssssssssggggwggdddddgg",
+				"gggggggggggsssssssssssssssssssggggwggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwwggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwwggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwwggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwwgddddddgg",
+				"gggggggggggsssssssssssssssssssgggwwggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwgggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwgggdddddgg",
+				"gggggggggggsssssssssssssssssssgggwggsssssdgg",
+				"gggdddddddgsssssssssssssssssssgggwggsssssdgg",
+				"gggdddddddgsssssssssssssssssssgggwggsssssdgg",
+				"gggdddddddgsssssssssssssssssssgggwgggdddddgg",
+				"gggddddddddsssssssssssssssssssgggwgggdddddgg",
+				"gggdddddddgggggggggggggggggggggggwgggdddddgg",
+				"gggdddddddgggggggggggggggggggggggwgggdddddgg",
+				"gggdddddddgggggggggggggggggggggggwgggggggggg",
+				"gggdddddddgggggggggggggggggggggggwgggggggggg",
+				"gggdddddddgggggggggggggggggggggggwgggggggggg",
+				"gggdddddddgggggggggggggggggggggggwwggggggggg",
+				"ggggggdggdgggggggggggggggggggggggwwggggggggg",
+				"gggggggggggggggggggggggssssssggggwwggggggggg",
+				"gggggggggggggggggggggggssssssggggwwggggggggg",
+				"gggggggggggggggggggggggssssssggggwwggggggggg",
+				"gsssggggggggggggggggggggggggggggggwgggggsssg",
+				"gsssggggggggggggggggggggggggggggggwgggggsssg",
+				"gsssggggggggggggggggggggggggggggggwgggggsssg",
+				"gggggggggggggggggggggggggggggggggggggggggggg"
 			],
 			"fluid_spawns": [],
 			"format": "structured",
@@ -35826,64 +35824,10 @@
 			},
 			"item_spawns": [
 				{
-					"id": "cabbage",
-					"position": [
-						1846,
-						856
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						1846,
-						948
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						1950,
-						856
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						1950,
-						948
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						2054,
-						856
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						2054,
-						948
-					],
-					"rotation": 0.0,
-					"scale": 1.2
-				},
-				{
 					"id": "red_carpet",
 					"position": [
-						1562,
-						908
+						1295,
+						848
 					],
 					"rotation": 0.0,
 					"scale": 2.1
@@ -35891,8 +35835,8 @@
 				{
 					"id": "red_carpet",
 					"position": [
-						1562,
-						1108
+						1295,
+						1048
 					],
 					"rotation": 0.0,
 					"scale": 2.1
@@ -35900,8 +35844,8 @@
 				{
 					"id": "red_carpet",
 					"position": [
-						1562,
-						1308
+						1295,
+						1248
 					],
 					"rotation": 0.0,
 					"scale": 2.1
@@ -35909,8 +35853,8 @@
 				{
 					"id": "long_table",
 					"position": [
-						1562,
-						934
+						1295,
+						874
 					],
 					"rotation": 1.571,
 					"scale": 1.2
@@ -35918,8 +35862,8 @@
 				{
 					"id": "long_table",
 					"position": [
-						1562,
-						1050
+						1295,
+						990
 					],
 					"rotation": 1.571,
 					"scale": 1.2
@@ -35927,8 +35871,8 @@
 				{
 					"id": "long_table",
 					"position": [
-						1562,
-						1166
+						1295,
+						1106
 					],
 					"rotation": 1.571,
 					"scale": 1.2
@@ -35936,8 +35880,8 @@
 				{
 					"id": "long_table",
 					"position": [
-						1562,
-						1282
+						1295,
+						1222
 					],
 					"rotation": 1.571,
 					"scale": 1.2
@@ -35945,8 +35889,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1490,
-						880
+						1223,
+						820
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35954,8 +35898,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1634,
-						880
+						1223,
+						936
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35963,8 +35907,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1490,
-						996
+						1223,
+						1052
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35972,8 +35916,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1634,
-						996
+						1223,
+						1168
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35981,8 +35925,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1490,
-						1112
+						1223,
+						1284
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35990,8 +35934,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1634,
-						1112
+						1367,
+						820
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -35999,8 +35943,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1490,
-						1228
+						1367,
+						936
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36008,8 +35952,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1634,
-						1228
+						1367,
+						1052
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36017,8 +35961,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1490,
-						1344
+						1367,
+						1168
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36026,8 +35970,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1634,
-						1344
+						1367,
+						1284
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36035,8 +35979,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1438,
-						824
+						1171,
+						764
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36044,8 +35988,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1438,
-						1604
+						1419,
+						764
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36053,8 +35997,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1686,
-						824
+						1171,
+						1544
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36062,8 +36006,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1686,
-						1604
+						1419,
+						1544
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36071,8 +36015,8 @@
 				{
 					"id": "bed_wooden",
 					"position": [
-						1030,
-						1496
+						763,
+						1436
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -36080,80 +36024,71 @@
 				{
 					"id": "straw_bed",
 					"position": [
-						1314,
+						763,
 						1548
 					],
-					"rotation": -1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "straw_bed",
-					"position": [
-						1030,
-						1608
-					],
 					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
-						1314,
+						763,
 						1660
 					],
-					"rotation": -1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "bed_wooden",
-					"position": [
-						1030,
-						1720
-					],
 					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "straw_bed",
 					"position": [
-						1314,
+						763,
 						1772
 					],
-					"rotation": -1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "straw_bed",
-					"position": [
-						1030,
-						1832
-					],
 					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
-						1314,
+						763,
 						1884
 					],
-					"rotation": -1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "bed_wooden",
-					"position": [
-						1030,
-						1944
-					],
 					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "straw_bed",
 					"position": [
-						1314,
-						1996
+						1047,
+						1488
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "bed_wooden",
+					"position": [
+						1047,
+						1600
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "straw_bed",
+					"position": [
+						1047,
+						1712
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "bed_wooden",
+					"position": [
+						1047,
+						1824
 					],
 					"rotation": -1.571,
 					"scale": 1.0
@@ -36161,8 +36096,8 @@
 				{
 					"id": "cauldron",
 					"position": [
-						1066,
-						1104
+						799,
+						1044
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36170,8 +36105,8 @@
 				{
 					"id": "bathtub",
 					"position": [
-						2057,
-						1324
+						1790,
+						1264
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36179,8 +36114,8 @@
 				{
 					"id": "desk",
 					"position": [
-						1847,
-						1308
+						1580,
+						1248
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36188,8 +36123,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1847,
-						1376
+						1580,
+						1316
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36197,8 +36132,8 @@
 				{
 					"id": "red_carpet",
 					"position": [
-						1952,
-						1534
+						1685,
+						1474
 					],
 					"rotation": 1.571,
 					"scale": 1.1
@@ -36206,8 +36141,8 @@
 				{
 					"id": "round_table",
 					"position": [
-						1952,
-						1534
+						1685,
+						1474
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36215,8 +36150,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1490,
-						1708
+						1223,
+						1648
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36224,44 +36159,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1634,
-						1708
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "altar",
-					"position": [
-						766,
-						574
-					],
-					"rotation": 1.571,
-					"scale": 1.0
-				},
-				{
-					"id": "red_carpet",
-					"position": [
-						628,
-						574
-					],
-					"rotation": 1.571,
-					"scale": 1.1
-				},
-				{
-					"id": "brazier",
-					"position": [
-						766,
-						510
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "brazier",
-					"position": [
-						766,
-						638
+						1367,
+						1648
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -36269,8 +36168,62 @@
 				{
 					"id": "cabbage",
 					"position": [
-						349,
-						928
+						1579,
+						796
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1683,
+						796
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1787,
+						796
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1579,
+						888
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1683,
+						888
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1787,
+						888
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						267,
+						891
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36278,8 +36231,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						349,
-						1016
+						355,
+						891
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36287,8 +36240,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						349,
-						1104
+						443,
+						891
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36296,8 +36249,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						349,
-						1192
+						531,
+						891
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36305,8 +36258,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						437,
-						928
+						267,
+						979
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36314,8 +36267,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						437,
-						1016
+						355,
+						979
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36323,8 +36276,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						437,
-						1104
+						443,
+						979
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36332,8 +36285,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						437,
-						1192
+						531,
+						979
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36341,8 +36294,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						525,
-						928
+						267,
+						1067
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36350,8 +36303,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						525,
-						1016
+						355,
+						1067
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36359,8 +36312,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						525,
-						1104
+						443,
+						1067
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36368,8 +36321,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						525,
-						1192
+						531,
+						1067
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36377,8 +36330,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						613,
-						928
+						267,
+						1155
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36386,8 +36339,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						613,
-						1016
+						355,
+						1155
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36395,8 +36348,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						613,
-						1104
+						443,
+						1155
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36404,8 +36357,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						613,
-						1192
+						531,
+						1155
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36413,8 +36366,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						701,
-						928
+						352,
+						1285
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36422,8 +36375,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						701,
-						1016
+						440,
+						1285
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36431,8 +36384,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						701,
-						1104
+						528,
+						1285
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36440,8 +36393,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						701,
-						1192
+						352,
+						1373
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36449,8 +36402,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						466,
-						1341
+						440,
+						1373
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36458,125 +36411,8 @@
 				{
 					"id": "cabbage",
 					"position": [
-						466,
-						1429
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						466,
-						1517
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						554,
-						1341
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						554,
-						1429
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						554,
-						1517
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						642,
-						1341
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						642,
-						1429
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						642,
-						1517
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						730,
-						1341
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						730,
-						1429
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						730,
-						1517
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						818,
-						1341
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						818,
-						1429
-					],
-					"rotation": 0.0,
-					"scale": 1.15
-				},
-				{
-					"id": "cabbage",
-					"position": [
-						818,
-						1517
+						528,
+						1373
 					],
 					"rotation": 0.0,
 					"scale": 1.15
@@ -36584,8 +36420,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						1045,
-						1778
+						614,
+						1703
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36593,8 +36429,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						977,
-						1778
+						546,
+						1703
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36602,53 +36438,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						909,
-						1778
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						841,
-						1778
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						773,
-						1778
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						705,
-						1778
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						637,
-						1778
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						569,
-						1778
+						478,
+						1703
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36656,8 +36447,8 @@
 				{
 					"id": "onion",
 					"position": [
-						1045,
-						1870
+						614,
+						1795
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36665,8 +36456,8 @@
 				{
 					"id": "onion",
 					"position": [
-						977,
-						1870
+						546,
+						1795
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36674,8 +36465,35 @@
 				{
 					"id": "onion",
 					"position": [
-						909,
-						1870
+						478,
+						1795
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						614,
+						1887
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						546,
+						1887
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						478,
+						1887
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36683,8 +36501,8 @@
 				{
 					"id": "onion",
 					"position": [
-						841,
-						1870
+						614,
+						1979
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36692,8 +36510,8 @@
 				{
 					"id": "onion",
 					"position": [
-						773,
-						1870
+						546,
+						1979
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36701,8 +36519,35 @@
 				{
 					"id": "onion",
 					"position": [
-						705,
-						1870
+						478,
+						1979
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						614,
+						2071
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						546,
+						2071
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						478,
+						2071
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36710,8 +36555,8 @@
 				{
 					"id": "onion",
 					"position": [
-						637,
-						1870
+						614,
+						2163
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36719,80 +36564,8 @@
 				{
 					"id": "onion",
 					"position": [
-						569,
-						1870
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						1045,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						977,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						909,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						841,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						773,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						705,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						637,
-						1962
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						569,
-						1962
+						546,
+						2163
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36800,71 +36573,8 @@
 				{
 					"id": "onion",
 					"position": [
-						1045,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						977,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						909,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						841,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						773,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						705,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						637,
-						2054
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						569,
-						2054
+						478,
+						2163
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36872,8 +36582,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						1045,
-						2146
+						614,
+						2255
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36881,8 +36591,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						977,
-						2146
+						546,
+						2255
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -36890,197 +36600,8 @@
 				{
 					"id": "turnip",
 					"position": [
-						909,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						841,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						773,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						705,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						637,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						569,
-						2146
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						1045,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						977,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						909,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						841,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						773,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						705,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						637,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "onion",
-					"position": [
-						569,
-						2238
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						1045,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						977,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						909,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						841,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						773,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						705,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						637,
-						2330
-					],
-					"rotation": 0.0,
-					"scale": 1.1
-				},
-				{
-					"id": "turnip",
-					"position": [
-						569,
-						2330
+						478,
+						2255
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37088,8 +36609,8 @@
 				{
 					"id": "tent",
 					"position": [
-						449,
-						2083
+						367,
+						1992
 					],
 					"rotation": 0.0,
 					"scale": 1.8
@@ -37097,8 +36618,8 @@
 				{
 					"id": "cart",
 					"position": [
-						949,
-						1720
+						581,
+						1643
 					],
 					"rotation": 0.3,
 					"scale": 1.0
@@ -37106,8 +36627,8 @@
 				{
 					"id": "archery_target",
 					"position": [
-						3744,
-						534
+						2663,
+						522
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37115,8 +36636,8 @@
 				{
 					"id": "archery_target",
 					"position": [
-						3744,
-						724
+						2663,
+						712
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37124,8 +36645,8 @@
 				{
 					"id": "archery_target",
 					"position": [
-						3744,
-						914
+						2663,
+						902
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37133,8 +36654,8 @@
 				{
 					"id": "training_dummy",
 					"position": [
-						3415,
-						1447
+						2460,
+						1395
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37142,8 +36663,8 @@
 				{
 					"id": "training_dummy",
 					"position": [
-						3555,
-						1567
+						2600,
+						1515
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -37151,8 +36672,8 @@
 				{
 					"id": "weapon_rack",
 					"position": [
-						3234,
-						674
+						2389,
+						662
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -37160,35 +36681,17 @@
 				{
 					"id": "weapon_rack",
 					"position": [
-						3234,
-						934
+						2389,
+						922
 					],
 					"rotation": 1.571,
 					"scale": 1.0
-				},
-				{
-					"id": "plank_bridge",
-					"position": [
-						3064,
-						883
-					],
-					"rotation": 1.571,
-					"scale": 1.15
-				},
-				{
-					"id": "plank_bridge",
-					"position": [
-						2991,
-						2002
-					],
-					"rotation": 1.571,
-					"scale": 1.15
 				},
 				{
 					"id": "anvil",
 					"position": [
-						3339,
-						1794
+						2376,
+						1718
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37196,8 +36699,8 @@
 				{
 					"id": "barrel",
 					"position": [
-						3287,
-						1738
+						2324,
+						1662
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37205,8 +36708,8 @@
 				{
 					"id": "bucket",
 					"position": [
-						3335,
-						1698
+						2372,
+						1622
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37214,8 +36717,8 @@
 				{
 					"id": "trough",
 					"position": [
-						2282,
-						2472
+						1630,
+						2360
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37223,8 +36726,8 @@
 				{
 					"id": "hay_pile",
 					"position": [
-						2422,
-						2468
+						1770,
+						2356
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37232,7 +36735,7 @@
 				{
 					"id": "crate",
 					"position": [
-						937,
+						676,
 						160
 					],
 					"rotation": 0.0,
@@ -37241,25 +36744,25 @@
 				{
 					"id": "barrel",
 					"position": [
-						1005,
+						744,
 						160
 					],
-					"rotation": 0.1,
+					"rotation": 0.099,
 					"scale": 1.0
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1073,
+						812,
 						160
 					],
-					"rotation": 0.2,
+					"rotation": 0.201,
 					"scale": 1.0
 				},
 				{
 					"id": "crate",
 					"position": [
-						1141,
+						880,
 						160
 					],
 					"rotation": 0.0,
@@ -37268,26 +36771,71 @@
 				{
 					"id": "barrel",
 					"position": [
-						1209,
+						948,
 						160
 					],
-					"rotation": 0.1,
+					"rotation": 0.099,
 					"scale": 1.0
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1277,
+						1016,
 						160
 					],
-					"rotation": 0.2,
+					"rotation": 0.201,
 					"scale": 1.0
 				},
 				{
-					"id": "bed_wooden",
+					"id": "plank_bridge",
 					"position": [
-						1250,
-						1814
+						2220,
+						845
+					],
+					"rotation": 1.571,
+					"scale": 1.55
+				},
+				{
+					"id": "plank_bridge",
+					"position": [
+						2148,
+						1915
+					],
+					"rotation": 1.571,
+					"scale": 1.55
+				},
+				{
+					"id": "altar",
+					"position": [
+						558,
+						535
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "red_carpet",
+					"position": [
+						420,
+						535
+					],
+					"rotation": 1.571,
+					"scale": 1.1
+				},
+				{
+					"id": "brazier",
+					"position": [
+						558,
+						471
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						558,
+						599
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37295,8 +36843,8 @@
 				{
 					"id": "bed_wooden",
 					"position": [
-						1878,
-						1147
+						991,
+						1760
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37304,8 +36852,8 @@
 				{
 					"id": "bed_wooden",
 					"position": [
-						2088,
-						1147
+						1618,
+						1094
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37313,8 +36861,8 @@
 				{
 					"id": "bed_wooden",
 					"position": [
-						1878,
-						1353
+						1828,
+						1094
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37322,8 +36870,8 @@
 				{
 					"id": "bedroll",
 					"position": [
-						2030,
-						1567
+						1771,
+						1514
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37331,8 +36879,8 @@
 				{
 					"id": "treasure_chest",
 					"position": [
-						2025,
-						1753
+						1752,
+						1686
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -37340,281 +36888,272 @@
 				{
 					"id": "bedroll",
 					"position": [
-						1117,
-						1748
+						846,
+						1691
 					],
-					"rotation": 0.342,
-					"scale": 1.092
+					"rotation": 0.0,
+					"scale": 1.062
 				},
 				{
-					"id": "fur_rug",
+					"id": "rope_coil",
 					"position": [
-						1823,
-						1301
-					],
-					"rotation": -0.071,
-					"scale": 1.051
-				},
-				{
-					"id": "bedroll",
-					"position": [
-						1198,
-						1479
-					],
-					"rotation": -0.532,
-					"scale": 0.996
-				},
-				{
-					"id": "wardrobe",
-					"position": [
-						2106,
-						1527
-					],
-					"rotation": 0.379,
-					"scale": 0.926
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						1562,
-						1073
-					],
-					"rotation": 0.39,
-					"scale": 0.909
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						1886,
-						1747
-					],
-					"rotation": 0.195,
-					"scale": 1.059
-				},
-				{
-					"id": "amphora",
-					"position": [
-						359,
-						1173
-					],
-					"rotation": -0.214,
-					"scale": 1.008
-				},
-				{
-					"id": "stool",
-					"position": [
-						1047,
-						1523
-					],
-					"rotation": 0.104,
-					"scale": 0.907
-				},
-				{
-					"id": "amphora",
-					"position": [
-						2094,
+						1024,
 						1317
 					],
-					"rotation": 0.276,
-					"scale": 0.921
+					"rotation": 0.435,
+					"scale": 1.072
 				},
 				{
-					"id": "pottage",
+					"id": "brazier",
 					"position": [
-						1168,
-						1128
+						149,
+						2688
 					],
-					"rotation": -0.255,
-					"scale": 1.04
-				},
-				{
-					"id": "shrub",
-					"position": [
-						681,
-						1346
-					],
-					"rotation": -0.459,
-					"scale": 0.906
-				},
-				{
-					"id": "pottage",
-					"position": [
-						1322,
-						1069
-					],
-					"rotation": 0.102,
-					"scale": 1.079
-				},
-				{
-					"id": "stool",
-					"position": [
-						1816,
-						1387
-					],
-					"rotation": -0.07,
-					"scale": 0.985
-				},
-				{
-					"id": "crate",
-					"position": [
-						2044,
-						1839
-					],
-					"rotation": -0.43,
-					"scale": 1.048
-				},
-				{
-					"id": "bench",
-					"position": [
-						592,
-						1355
-					],
-					"rotation": -0.23,
-					"scale": 1.044
-				},
-				{
-					"id": "altar",
-					"position": [
-						686,
-						553
-					],
-					"rotation": 0.457,
-					"scale": 0.96
-				},
-				{
-					"id": "bench",
-					"position": [
-						1972,
-						936
-					],
-					"rotation": -0.003,
-					"scale": 0.943
-				},
-				{
-					"id": "stool",
-					"position": [
-						2028,
-						1185
-					],
-					"rotation": 0.096,
-					"scale": 0.929
-				},
-				{
-					"id": "spear",
-					"position": [
-						3707,
-						134
-					],
-					"rotation": 0.231,
-					"scale": 0.912
-				},
-				{
-					"id": "bucket",
-					"position": [
-						2115,
-						1363
-					],
-					"rotation": -0.265,
-					"scale": 0.958
-				},
-				{
-					"id": "amphora",
-					"position": [
-						729,
-						1446
-					],
-					"rotation": -0.431,
-					"scale": 0.98
-				},
-				{
-					"id": "crate",
-					"position": [
-						2062,
-						1703
-					],
-					"rotation": 0.351,
-					"scale": 1.079
-				},
-				{
-					"id": "bench",
-					"position": [
-						1239,
-						909
-					],
-					"rotation": 0.136,
-					"scale": 1.043
-				},
-				{
-					"id": "bench",
-					"position": [
-						638,
-						1006
-					],
-					"rotation": -0.526,
-					"scale": 1.008
+					"rotation": -0.202,
+					"scale": 1.0
 				},
 				{
 					"id": "rug",
 					"position": [
-						1268,
-						980
+						1753,
+						1004
 					],
-					"rotation": 0.092,
-					"scale": 1.074
+					"rotation": 1.571,
+					"scale": 1.057
 				},
 				{
-					"id": "stool",
+					"id": "brazier",
 					"position": [
-						1805,
-						1517
+						1352,
+						1413
 					],
-					"rotation": -0.222,
-					"scale": 1.0
+					"rotation": -0.517,
+					"scale": 0.904
 				},
 				{
-					"id": "barrel",
+					"id": "brazier",
 					"position": [
-						1535,
-						1702
+						2698,
+						2664
 					],
-					"rotation": 5.034,
-					"scale": 0.983
+					"rotation": -0.019,
+					"scale": 0.926
 				},
 				{
-					"id": "hay_pile",
+					"id": "rug",
 					"position": [
-						2412,
-						2591
+						1326,
+						1554
 					],
-					"rotation": 3.125,
-					"scale": 0.974
+					"rotation": 3.142,
+					"scale": 0.998
 				},
 				{
-					"id": "bucket",
+					"id": "shrub",
 					"position": [
-						2271,
-						2579
+						394,
+						1393
 					],
-					"rotation": 2.981,
-					"scale": 1.097
+					"rotation": 0.247,
+					"scale": 1.081
 				},
 				{
 					"id": "cauldron",
 					"position": [
-						3513,
-						1707
+						747,
+						990
 					],
-					"rotation": 2.704,
+					"rotation": -0.216,
+					"scale": 1.016
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1806,
+						1872
+					],
+					"rotation": 0.467,
+					"scale": 0.919
+				},
+				{
+					"id": "fur_rug",
+					"position": [
+						1570,
+						1040
+					],
+					"rotation": 3.142,
+					"scale": 1.063
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1728,
+						916
+					],
+					"rotation": -0.154,
+					"scale": 1.096
+				},
+				{
+					"id": "rug",
+					"position": [
+						1042,
+						758
+					],
+					"rotation": 3.142,
 					"scale": 1.024
 				},
 				{
-					"id": "metal",
+					"id": "grain_sack",
 					"position": [
-						3491,
-						1778
+						1656,
+						1801
 					],
-					"rotation": 3.28,
-					"scale": 0.955
+					"rotation": -0.223,
+					"scale": 1.014
+				},
+				{
+					"id": "rug",
+					"position": [
+						750,
+						796
+					],
+					"rotation": 0.0,
+					"scale": 0.912
+				},
+				{
+					"id": "amphora",
+					"position": [
+						970,
+						843
+					],
+					"rotation": 0.332,
+					"scale": 1.084
+				},
+				{
+					"id": "basket",
+					"position": [
+						750,
+						1836
+					],
+					"rotation": -0.204,
+					"scale": 1.079
+				},
+				{
+					"id": "stool",
+					"position": [
+						910,
+						874
+					],
+					"rotation": -0.455,
+					"scale": 0.966
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1009,
+						1173
+					],
+					"rotation": 0.41,
+					"scale": 1.017
+				},
+				{
+					"id": "basket",
+					"position": [
+						839,
+						1849
+					],
+					"rotation": -0.096,
+					"scale": 1.06
+				},
+				{
+					"id": "barrel",
+					"position": [
+						123,
+						187
+					],
+					"rotation": 0.488,
+					"scale": 0.919
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						953,
+						799
+					],
+					"rotation": -0.115,
+					"scale": 0.989
+				},
+				{
+					"id": "stool",
+					"position": [
+						898,
+						1557
+					],
+					"rotation": -0.263,
+					"scale": 1.031
+				},
+				{
+					"id": "round_table",
+					"position": [
+						1198,
+						1391
+					],
+					"rotation": 4.712,
+					"scale": 0.983
+				},
+				{
+					"id": "basket",
+					"position": [
+						1832,
+						881
+					],
+					"rotation": 0.517,
+					"scale": 1.061
+				},
+				{
+					"id": "crate",
+					"position": [
+						1823,
+						1630
+					],
+					"rotation": -0.526,
+					"scale": 0.914
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1550,
+						2506
+					],
+					"rotation": 3.05,
+					"scale": 1.016
+				},
+				{
+					"id": "trough",
+					"position": [
+						1625,
+						2426
+					],
+					"rotation": 3.142,
+					"scale": 0.97
+				},
+				{
+					"id": "hammer",
+					"position": [
+						2459,
+						1712
+					],
+					"rotation": 3.314,
+					"scale": 1.061
+				},
+				{
+					"id": "firewood",
+					"position": [
+						2423,
+						1679
+					],
+					"rotation": 2.901,
+					"scale": 0.928
 				}
 			],
 			"name": "Tg Guild Hall",
@@ -37629,132 +37168,34 @@
 				"default": {
 					"facing": 90,
 					"position": [
-						2030,
-						2120
+						1464,
+						2028
 					]
 				}
 			},
 			"structures": [
 				{
 					"a": [
-						962,
-						784
+						1115,
+						724
 					],
 					"b": [
-						2162,
-						784
+						1115,
+						814
 					],
-					"half": 10.0,
-					"hp": 750,
+					"half": 7.0,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						962,
-						784
-					],
-					"b": [
-						962,
-						1984
-					],
-					"half": 10.0,
-					"hp": 750,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2162,
-						784
-					],
-					"b": [
-						2162,
-						1984
-					],
-					"half": 10.0,
-					"hp": 750,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						962,
-						1984
-					],
-					"b": [
-						1382,
-						1984
-					],
-					"half": 10.0,
-					"hp": 263,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1984
-					],
-					"b": [
-						2162,
-						1984
-					],
-					"half": 10.0,
-					"hp": 263,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						1664
-					],
-					"b": [
-						1514,
-						1664
-					],
-					"half": 10.0,
-					"hp": 83,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1610,
-						1664
-					],
-					"b": [
-						1742,
-						1664
-					],
-					"half": 10.0,
-					"hp": 83,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						784
-					],
-					"b": [
-						1382,
+						1115,
 						874
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						934
-					],
 					"b": [
-						1382,
-						1024
+						1115,
+						964
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37763,40 +37204,26 @@
 				},
 				{
 					"a": [
-						962,
-						1024
+						1115,
+						964
 					],
 					"b": [
-						1382,
-						1024
+						1115,
+						1054
 					],
 					"half": 7.0,
-					"hp": 263,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1382,
-						1024
-					],
-					"b": [
-						1382,
+						1115,
 						1114
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						1174
-					],
 					"b": [
-						1382,
-						1264
+						1115,
+						1204
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37805,40 +37232,26 @@
 				},
 				{
 					"a": [
-						962,
-						1264
+						1115,
+						1204
 					],
 					"b": [
-						1382,
-						1264
+						1115,
+						1254
 					],
 					"half": 7.0,
-					"hp": 263,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1382,
-						1264
-					],
-					"b": [
-						1382,
+						1115,
 						1314
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						1374
-					],
 					"b": [
-						1382,
-						1424
+						1115,
+						1364
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37847,40 +37260,26 @@
 				},
 				{
 					"a": [
-						962,
-						1424
+						1115,
+						1364
 					],
 					"b": [
-						1382,
-						1424
+						1115,
+						1454
 					],
 					"half": 7.0,
-					"hp": 263,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1382,
-						1424
-					],
-					"b": [
-						1382,
+						1115,
 						1514
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1382,
-						1574
-					],
 					"b": [
-						1382,
-						1664
+						1115,
+						1604
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37889,54 +37288,26 @@
 				},
 				{
 					"a": [
-						1382,
-						1664
+						1475,
+						724
 					],
 					"b": [
-						1382,
-						1984
-					],
-					"half": 10.0,
-					"hp": 200,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1004
-					],
-					"b": [
-						2162,
-						1004
+						1475,
+						804
 					],
 					"half": 7.0,
-					"hp": 263,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1742,
-						784
-					],
-					"b": [
-						1742,
+						1475,
 						864
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						924
-					],
 					"b": [
-						1742,
-						1004
+						1475,
+						944
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37945,26 +37316,26 @@
 				},
 				{
 					"a": [
-						1742,
-						1004
+						1475,
+						944
 					],
 					"b": [
-						1742,
+						1475,
+						1024
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
 						1084
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1144
-					],
 					"b": [
-						1742,
-						1224
+						1475,
+						1164
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37973,12 +37344,12 @@
 				},
 				{
 					"a": [
-						1952,
-						1004
+						1475,
+						1164
 					],
 					"b": [
-						1952,
-						1084
+						1475,
+						1234
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -37987,40 +37358,12 @@
 				},
 				{
 					"a": [
-						1952,
-						1144
-					],
-					"b": [
-						1952,
-						1224
-					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1224
-					],
-					"b": [
-						1742,
+						1475,
 						1294
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1354
-					],
 					"b": [
-						1742,
-						1424
+						1475,
+						1364
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -38029,12 +37372,12 @@
 				},
 				{
 					"a": [
-						1952,
-						1224
+						1475,
+						1364
 					],
 					"b": [
-						1952,
-						1294
+						1475,
+						1444
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -38043,40 +37386,12 @@
 				},
 				{
 					"a": [
-						1952,
-						1354
-					],
-					"b": [
-						1952,
-						1424
-					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1424
-					],
-					"b": [
-						1742,
+						1475,
 						1504
 					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1564
-					],
 					"b": [
-						1742,
-						1644
+						1475,
+						1584
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -38085,12 +37400,12 @@
 				},
 				{
 					"a": [
-						1742,
-						1644
+						1475,
+						1584
 					],
 					"b": [
-						1817,
-						1644
+						1475,
+						1604
 					],
 					"half": 7.0,
 					"hp": 80,
@@ -38099,54 +37414,12 @@
 				},
 				{
 					"a": [
-						1877,
-						1644
+						695,
+						964
 					],
 					"b": [
-						1952,
-						1644
-					],
-					"half": 7.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1952,
-						1644
-					],
-					"b": [
-						1952,
-						1784
-					],
-					"half": 7.0,
-					"hp": 88,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1952,
-						1844
-					],
-					"b": [
-						1952,
-						1984
-					],
-					"half": 7.0,
-					"hp": 88,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1742,
-						1224
-					],
-					"b": [
-						2162,
-						1224
+						1115,
+						964
 					],
 					"half": 7.0,
 					"hp": 263,
@@ -38155,12 +37428,12 @@
 				},
 				{
 					"a": [
-						1742,
-						1424
+						695,
+						1204
 					],
 					"b": [
-						2162,
-						1424
+						1115,
+						1204
 					],
 					"half": 7.0,
 					"hp": 263,
@@ -38169,12 +37442,26 @@
 				},
 				{
 					"a": [
-						1952,
-						1644
+						695,
+						1364
 					],
 					"b": [
-						2162,
-						1644
+						1115,
+						1364
+					],
+					"half": 7.0,
+					"hp": 263,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						944
+					],
+					"b": [
+						1685,
+						944
 					],
 					"half": 7.0,
 					"hp": 132,
@@ -38183,12 +37470,446 @@
 				},
 				{
 					"a": [
-						1742,
-						1644
+						1685,
+						944
 					],
 					"b": [
-						1742,
-						1984
+						1895,
+						944
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						944
+					],
+					"b": [
+						1685,
+						1024
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1084
+					],
+					"b": [
+						1685,
+						1164
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						1164
+					],
+					"b": [
+						1685,
+						1164
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1164
+					],
+					"b": [
+						1895,
+						1164
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1164
+					],
+					"b": [
+						1685,
+						1234
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1294
+					],
+					"b": [
+						1685,
+						1364
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						1364
+					],
+					"b": [
+						1685,
+						1364
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1364
+					],
+					"b": [
+						1895,
+						1364
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						1584
+					],
+					"b": [
+						1550,
+						1584
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1610,
+						1584
+					],
+					"b": [
+						1685,
+						1584
+					],
+					"half": 7.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1584
+					],
+					"b": [
+						1895,
+						1584
+					],
+					"half": 7.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1584
+					],
+					"b": [
+						1685,
+						1724
+					],
+					"half": 7.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1685,
+						1784
+					],
+					"b": [
+						1685,
+						1924
+					],
+					"half": 7.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1115,
+						724
+					],
+					"b": [
+						1475,
+						724
+					],
+					"half": 10.0,
+					"hp": 225,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1115,
+						1604
+					],
+					"b": [
+						1247,
+						1604
+					],
+					"half": 10.0,
+					"hp": 83,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1343,
+						1604
+					],
+					"b": [
+						1475,
+						1604
+					],
+					"half": 10.0,
+					"hp": 83,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						724
+					],
+					"b": [
+						695,
+						964
+					],
+					"half": 10.0,
+					"hp": 150,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						724
+					],
+					"b": [
+						1115,
+						724
+					],
+					"half": 10.0,
+					"hp": 263,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						964
+					],
+					"b": [
+						695,
+						1204
+					],
+					"half": 10.0,
+					"hp": 150,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						1204
+					],
+					"b": [
+						695,
+						1364
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						1364
+					],
+					"b": [
+						695,
+						1924
+					],
+					"half": 10.0,
+					"hp": 350,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1115,
+						1604
+					],
+					"b": [
+						1115,
+						1924
+					],
+					"half": 10.0,
+					"hp": 200,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						695,
+						1924
+					],
+					"b": [
+						1115,
+						1924
+					],
+					"half": 10.0,
+					"hp": 263,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1895,
+						724
+					],
+					"b": [
+						1895,
+						944
+					],
+					"half": 10.0,
+					"hp": 138,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						724
+					],
+					"b": [
+						1895,
+						724
+					],
+					"half": 10.0,
+					"hp": 263,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1895,
+						944
+					],
+					"b": [
+						1895,
+						1164
+					],
+					"half": 10.0,
+					"hp": 138,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1895,
+						1164
+					],
+					"b": [
+						1895,
+						1364
+					],
+					"half": 10.0,
+					"hp": 125,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1895,
+						1364
+					],
+					"b": [
+						1895,
+						1584
+					],
+					"half": 10.0,
+					"hp": 138,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						1604
+					],
+					"b": [
+						1475,
+						1924
+					],
+					"half": 10.0,
+					"hp": 200,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1475,
+						1924
+					],
+					"b": [
+						1685,
+						1924
+					],
+					"half": 10.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1895,
+						1584
+					],
+					"b": [
+						1895,
+						1924
 					],
 					"half": 10.0,
 					"hp": 213,
@@ -38197,12 +37918,26 @@
 				},
 				{
 					"a": [
-						992,
-						1118
+						1685,
+						1924
 					],
 					"b": [
-						992,
-						1170
+						1895,
+						1924
+					],
+					"half": 10.0,
+					"hp": 132,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						725,
+						1058
+					],
+					"b": [
+						725,
+						1110
 					],
 					"half": 14.0,
 					"hp": 80,
@@ -38211,12 +37946,12 @@
 				},
 				{
 					"a": [
-						1532,
-						814
+						1265,
+						754
 					],
 					"b": [
-						1592,
-						814
+						1325,
+						754
 					],
 					"half": 14.0,
 					"hp": 80,
@@ -38225,12 +37960,726 @@
 				},
 				{
 					"a": [
-						454,
+						252,
+						92
+					],
+					"b": [
+						1562,
+						92
+					],
+					"half": 16.0,
+					"hp": 819,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1818,
+						92
+					],
+					"b": [
+						2096,
+						92
+					],
+					"half": 16.0,
+					"hp": 174,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2352,
+						92
+					],
+					"b": [
+						2564,
+						92
+					],
+					"half": 16.0,
+					"hp": 133,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						252,
+						2724
+					],
+					"b": [
+						2080,
+						2724
+					],
+					"half": 16.0,
+					"hp": 1143,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2336,
+						2724
+					],
+					"b": [
+						2564,
+						2724
+					],
+					"half": 16.0,
+					"hp": 143,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						252
+					],
+					"b": [
+						92,
+						2564
+					],
+					"half": 16.0,
+					"hp": 1445,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2724,
+						252
+					],
+					"b": [
+						2724,
+						2564
+					],
+					"half": 16.0,
+					"hp": 1445,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						92
+					],
+					"b": [
+						252,
+						92
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						92
+					],
+					"b": [
+						92,
+						252
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						252
+					],
+					"b": [
+						142,
+						252
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						202,
+						252
+					],
+					"b": [
+						252,
+						252
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						252,
+						92
+					],
+					"b": [
+						252,
+						252
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						92
+					],
+					"b": [
+						2724,
+						92
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2724,
+						92
+					],
+					"b": [
+						2724,
+						252
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						252
+					],
+					"b": [
+						2614,
+						252
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2674,
+						252
+					],
+					"b": [
+						2724,
+						252
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						92
+					],
+					"b": [
+						2564,
+						252
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						2724
+					],
+					"b": [
+						252,
+						2724
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						2564
+					],
+					"b": [
+						92,
+						2724
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						92,
+						2564
+					],
+					"b": [
+						142,
+						2564
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						202,
+						2564
+					],
+					"b": [
+						252,
+						2564
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						252,
+						2564
+					],
+					"b": [
+						252,
+						2724
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						2724
+					],
+					"b": [
+						2724,
+						2724
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2724,
+						2564
+					],
+					"b": [
+						2724,
+						2724
+					],
+					"half": 16.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						2564
+					],
+					"b": [
+						2614,
+						2564
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2674,
+						2564
+					],
+					"b": [
+						2724,
+						2564
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2564,
+						2564
+					],
+					"b": [
+						2564,
+						2724
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1562,
+						40
+					],
+					"b": [
+						1562,
+						144
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1818,
+						40
+					],
+					"b": [
+						1818,
+						144
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1562,
+						40
+					],
+					"b": [
+						1636,
+						40
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1744,
+						40
+					],
+					"b": [
+						1818,
+						40
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1562,
+						144
+					],
+					"b": [
+						1636,
+						144
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1744,
+						144
+					],
+					"b": [
+						1818,
+						144
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1609,
+						172
+					],
+					"b": [
+						1627,
+						172
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1753,
+						172
+					],
+					"b": [
+						1771,
+						172
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1535,
+						2098
+					],
+					"b": [
+						1535,
+						2126
+					],
+					"half": 8.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						662,
+						1169
+					],
+					"b": [
+						662,
+						1197
+					],
+					"half": 8.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2610,
 						464
 					],
 					"b": [
-						834,
-						464
+						2589,
+						495
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2589,
+						495
+					],
+					"b": [
+						2557,
+						513
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2557,
+						513
+					],
+					"b": [
+						2520,
+						515
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2520,
+						515
+					],
+					"b": [
+						2487,
+						501
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2487,
+						501
+					],
+					"b": [
+						2463,
+						472
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2463,
+						472
+					],
+					"b": [
+						2454,
+						436
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2454,
+						436
+					],
+					"b": [
+						2463,
+						401
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2463,
+						401
+					],
+					"b": [
+						2487,
+						372
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2487,
+						372
+					],
+					"b": [
+						2520,
+						358
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2520,
+						358
+					],
+					"b": [
+						2557,
+						360
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2557,
+						360
+					],
+					"b": [
+						2589,
+						378
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2589,
+						378
+					],
+					"b": [
+						2610,
+						409
+					],
+					"half": 9.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						246,
+						425
+					],
+					"b": [
+						246,
+						645
+					],
+					"half": 10.0,
+					"hp": 138,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						626,
+						425
+					],
+					"b": [
+						626,
+						645
+					],
+					"half": 10.0,
+					"hp": 138,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						246,
+						425
+					],
+					"b": [
+						626,
+						425
 					],
 					"half": 10.0,
 					"hp": 238,
@@ -38239,40 +38688,12 @@
 				},
 				{
 					"a": [
-						454,
-						464
+						246,
+						645
 					],
 					"b": [
-						454,
-						684
-					],
-					"half": 10.0,
-					"hp": 138,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						834,
-						464
-					],
-					"b": [
-						834,
-						684
-					],
-					"half": 10.0,
-					"hp": 138,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						454,
-						684
-					],
-					"b": [
-						614,
-						684
+						406,
+						645
 					],
 					"half": 10.0,
 					"hp": 100,
@@ -38281,12 +38702,12 @@
 				},
 				{
 					"a": [
-						674,
-						684
+						466,
+						645
 					],
 					"b": [
-						834,
-						684
+						626,
+						645
 					],
 					"half": 10.0,
 					"hp": 100,
@@ -38295,12 +38716,12 @@
 				},
 				{
 					"a": [
-						804,
-						552
+						596,
+						513
 					],
 					"b": [
-						804,
-						596
+						596,
+						557
 					],
 					"half": 12.0,
 					"hp": 80,
@@ -38309,698 +38730,12 @@
 				},
 				{
 					"a": [
-						252,
-						92
+						1882,
+						2532
 					],
 					"b": [
-						2214,
-						92
-					],
-					"half": 16.0,
-					"hp": 1227,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2470,
-						92
-					],
-					"b": [
-						2939,
-						92
-					],
-					"half": 16.0,
-					"hp": 293,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3195,
-						92
-					],
-					"b": [
-						3652,
-						92
-					],
-					"half": 16.0,
-					"hp": 286,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						252,
-						2852
-					],
-					"b": [
-						2924,
-						2852
-					],
-					"half": 16.0,
-					"hp": 1670,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3180,
-						2852
-					],
-					"b": [
-						3652,
-						2852
-					],
-					"half": 16.0,
-					"hp": 296,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						252
-					],
-					"b": [
-						92,
-						2692
-					],
-					"half": 16.0,
-					"hp": 1525,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3812,
-						252
-					],
-					"b": [
-						3812,
-						2692
-					],
-					"half": 16.0,
-					"hp": 1525,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						92
-					],
-					"b": [
-						252,
-						92
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						92
-					],
-					"b": [
-						92,
-						252
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						252
-					],
-					"b": [
-						142,
-						252
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						202,
-						252
-					],
-					"b": [
-						252,
-						252
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						252,
-						92
-					],
-					"b": [
-						252,
-						252
-					],
-					"half": 10.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						92
-					],
-					"b": [
-						3812,
-						92
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3812,
-						92
-					],
-					"b": [
-						3812,
-						252
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						252
-					],
-					"b": [
-						3702,
-						252
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3762,
-						252
-					],
-					"b": [
-						3812,
-						252
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						92
-					],
-					"b": [
-						3652,
-						252
-					],
-					"half": 10.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						2852
-					],
-					"b": [
-						252,
-						2852
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						2692
-					],
-					"b": [
-						92,
-						2852
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						92,
-						2692
-					],
-					"b": [
-						142,
-						2692
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						202,
-						2692
-					],
-					"b": [
-						252,
-						2692
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						252,
-						2692
-					],
-					"b": [
-						252,
-						2852
-					],
-					"half": 10.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						2852
-					],
-					"b": [
-						3812,
-						2852
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3812,
-						2692
-					],
-					"b": [
-						3812,
-						2852
-					],
-					"half": 16.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						2692
-					],
-					"b": [
-						3702,
-						2692
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3762,
-						2692
-					],
-					"b": [
-						3812,
-						2692
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3652,
-						2692
-					],
-					"b": [
-						3652,
-						2852
-					],
-					"half": 10.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2214,
-						40
-					],
-					"b": [
-						2214,
-						144
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2470,
-						40
-					],
-					"b": [
-						2470,
-						144
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2214,
-						40
-					],
-					"b": [
-						2288,
-						40
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2396,
-						40
-					],
-					"b": [
-						2470,
-						40
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2214,
-						144
-					],
-					"b": [
-						2288,
-						144
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2396,
-						144
-					],
-					"b": [
-						2470,
-						144
-					],
-					"half": 10.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2261,
-						172
-					],
-					"b": [
-						2279,
-						172
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2405,
-						172
-					],
-					"b": [
-						2423,
-						172
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2206,
-						1944
-					],
-					"b": [
-						2206,
-						1972
-					],
-					"half": 8.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						937,
-						1605
-					],
-					"b": [
-						937,
-						1633
-					],
-					"half": 8.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3589,
-						484
-					],
-					"b": [
-						3568,
-						515
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3568,
-						515
-					],
-					"b": [
-						3536,
-						533
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3536,
-						533
-					],
-					"b": [
-						3500,
-						535
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3500,
-						535
-					],
-					"b": [
-						3466,
-						520
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3466,
-						520
-					],
-					"b": [
-						3442,
-						492
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3442,
-						492
-					],
-					"b": [
-						3434,
-						456
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3434,
-						456
-					],
-					"b": [
-						3442,
-						420
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3442,
-						420
-					],
-					"b": [
-						3466,
-						392
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3466,
-						392
-					],
-					"b": [
-						3500,
-						378
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3500,
-						378
-					],
-					"b": [
-						3536,
-						380
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3536,
-						380
-					],
-					"b": [
-						3568,
-						398
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						3568,
-						398
-					],
-					"b": [
-						3589,
-						429
-					],
-					"half": 9.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						2534,
-						2644
-					],
-					"b": [
-						2150,
-						2644
+						1498,
+						2532
 					],
 					"half": 10.0,
 					"hp": 150,
@@ -39009,12 +38744,26 @@
 				},
 				{
 					"a": [
-						2150,
-						2644
+						1498,
+						2532
 					],
 					"b": [
-						2150,
-						2613
+						1498,
+						2396
+					],
+					"half": 10.0,
+					"hp": 54,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1498,
+						2396
+					],
+					"b": [
+						1525,
+						2396
 					],
 					"half": 10.0,
 					"hp": 50,
@@ -39023,12 +38772,12 @@
 				},
 				{
 					"a": [
-						2150,
-						2569
+						1569,
+						2396
 					],
 					"b": [
-						2150,
-						2538
+						1606,
+						2396
 					],
 					"half": 10.0,
 					"hp": 50,
@@ -39037,26 +38786,68 @@
 				},
 				{
 					"a": [
-						2150,
-						2508
+						1650,
+						2396
 					],
 					"b": [
-						2534,
-						2508
+						1681,
+						2396
 					],
 					"half": 10.0,
-					"hp": 150,
+					"hp": 50,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2534,
-						2508
+						1725,
+						2396
 					],
 					"b": [
-						2534,
-						2644
+						1752,
+						2396
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1796,
+						2396
+					],
+					"b": [
+						1832,
+						2396
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1876,
+						2396
+					],
+					"b": [
+						1882,
+						2396
+					],
+					"half": 10.0,
+					"hp": 50,
+					"id": "wood_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1882,
+						2396
+					],
+					"b": [
+						1882,
+						2532
 					],
 					"half": 10.0,
 					"hp": 54,
@@ -39065,12 +38856,12 @@
 				},
 				{
 					"a": [
-						2438,
-						2644
+						1786,
+						2532
 					],
 					"b": [
-						2438,
-						2508
+						1786,
+						2396
 					],
 					"half": 6.0,
 					"hp": 54,
@@ -39079,12 +38870,12 @@
 				},
 				{
 					"a": [
-						2342,
-						2644
+						1690,
+						2532
 					],
 					"b": [
-						2342,
-						2508
+						1690,
+						2396
 					],
 					"half": 6.0,
 					"hp": 54,
@@ -39093,12 +38884,12 @@
 				},
 				{
 					"a": [
-						2246,
-						2644
+						1594,
+						2532
 					],
 					"b": [
-						2246,
-						2508
+						1594,
+						2396
 					],
 					"half": 6.0,
 					"hp": 54,
@@ -39107,12 +38898,12 @@
 				},
 				{
 					"a": [
-						3571,
-						1862
+						2608,
+						1786
 					],
 					"b": [
-						3339,
-						1862
+						2376,
+						1786
 					],
 					"half": 10.0,
 					"hp": 91,
@@ -39121,12 +38912,12 @@
 				},
 				{
 					"a": [
-						3339,
-						1670
+						2376,
+						1594
 					],
 					"b": [
-						3571,
-						1670
+						2608,
+						1594
 					],
 					"half": 10.0,
 					"hp": 91,
@@ -39135,12 +38926,12 @@
 				},
 				{
 					"a": [
-						3571,
-						1670
+						2608,
+						1594
 					],
 					"b": [
-						3571,
-						1862
+						2608,
+						1786
 					],
 					"half": 10.0,
 					"hp": 75,
@@ -39149,12 +38940,12 @@
 				},
 				{
 					"a": [
-						3293,
-						1788
+						2330,
+						1712
 					],
 					"b": [
-						3293,
-						1744
+						2330,
+						1668
 					],
 					"half": 16.0,
 					"hp": 80,
@@ -39163,12 +38954,12 @@
 				},
 				{
 					"a": [
-						3550,
-						1702
+						2587,
+						1625
 					],
 					"b": [
-						3550,
-						1674
+						2587,
+						1597
 					],
 					"half": 17.0,
 					"hp": 80,
@@ -39176,11 +38967,155 @@
 					"kind": "wall"
 				},
 				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1115,
+						814
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1115,
+						1054
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1115,
+						1254
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1115,
+						1454
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1475,
+						804
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1475,
+						1024
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1475,
+						1234
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1475,
+						1444
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1685,
+						1024
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1685,
+						1234
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 7.0,
+					"hinge": [
+						1550,
+						1584
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 7.0,
+					"hinge": [
+						1685,
+						1724
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						1514,
-						1664
+						1247,
+						1604
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -39188,162 +39123,6 @@
 					"width": 96.0
 				},
 				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1382,
-						874
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1382,
-						1114
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1382,
-						1314
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1382,
-						1514
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1742,
-						864
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1742,
-						1084
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1952,
-						1084
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1742,
-						1294
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1952,
-						1294
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1742,
-						1504
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 0.0,
-					"half": 7.0,
-					"hinge": [
-						1817,
-						1644
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 90.0,
-					"half": 7.0,
-					"hinge": [
-						1952,
-						1784
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
-					"deg": 0.0,
-					"half": 10.0,
-					"hinge": [
-						614,
-						684
-					],
-					"hp": 50,
-					"id": "door_wood",
-					"kind": "door",
-					"width": 60.0
-				},
-				{
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
@@ -39359,7 +39138,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						3702,
+						2614,
 						252
 					],
 					"hp": 50,
@@ -39372,7 +39151,7 @@
 					"half": 10.0,
 					"hinge": [
 						142,
-						2692
+						2564
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -39383,8 +39162,8 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						3702,
-						2692
+						2614,
+						2564
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -39395,7 +39174,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						2288,
+						1636,
 						40
 					],
 					"hp": 50,
@@ -39407,21 +39186,33 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						2288,
+						1636,
 						144
 					],
 					"hp": 50,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 108.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						406,
+						645
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
 				}
 			],
 			"tile_size": 64,
 			"warp_points": [],
 			"weather_group": "Scarlatti",
 			"world_size": [
-				3904,
-				2944
+				2816,
+				2816
 			]
 		}
 	]
