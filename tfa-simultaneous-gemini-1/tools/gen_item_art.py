@@ -239,6 +239,22 @@ PROMPTS.update({
         "smooth and flat like a painted pattern. The image is a LANDSCAPE picture, the bounding "
         "box about one and a third times as wide as it is tall."
     ),
+    "grain_sack": PROP_STYLE + (
+        "SUBJECT: a plump burlap grain sack lying slumped on the ground, seen from directly "
+        "above: the rounded body of the sack bulging with grain fills most of the frame, coarse "
+        "woven burlap texture with soft creases radiating across the top of the bulge, and the "
+        "gathered neck tied off with a short cord pointing out to one side, lying flat against "
+        "the ground. The image is a LANDSCAPE picture, the bounding box slightly wider than it "
+        "is tall."
+    ),
+    "firewood": PROP_STYLE + (
+        "SUBJECT: a small pile of split firewood lying on the ground, seen from directly above: "
+        "several split logs lying side by side in one direction, their rounded bark backs and "
+        "pale split faces alternating along the pile, with the sawn end grain of the logs "
+        "visible as small pale ovals at the two ends of the pile, and one shorter log resting "
+        "diagonally across the top of the others. The image is a LANDSCAPE picture, the bounding "
+        "box about one and a half times as wide as it is tall."
+    ),
     "red_carpet": PROP_STYLE + (
         "SUBJECT: a very long narrow ceremonial red runner carpet lying perfectly flat on the "
         "floor, seen from directly above: one complete flat rectangle with all four edges "
@@ -280,6 +296,8 @@ REFS_OVERRIDE = {
     "prep_table": PROP_REFS,
     "shelf": PROP_REFS,
     "round_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "grain_sack": PROP_REFS,
+    "firewood": PROP_REFS,
     "rug": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "red_carpet.png")],
     "red_carpet": [os.path.join(ITEMS, "red_carpet.png"), os.path.join(ITEMS, "bed_wooden.png")],
 }

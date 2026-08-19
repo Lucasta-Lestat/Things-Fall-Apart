@@ -106,8 +106,12 @@ func _ready():
 	floating_text_label.z_index = 200
 	floating_text_label.z_as_relative = false
 	_update_stack_label()
+	# Register on the grid WITHOUT snapping the visual to the tile centre:
+	# authored furniture (map item_spawns) is composed sub-tile, and the old
+	# 32px quantization shoved ring stools onto tables, butted adjacent
+	# banquet tables into each other, and pushed wall pieces into the
+	# masonry. The registry only needs the tile key, not a centred sprite.
 	_grid_pos = GridManager.world_to_map(global_position)
-	global_position = GridManager.map_to_world(_grid_pos)
 	GridManager.register_object(_grid_pos, self)
 	# Enable mouse hover signals so we can swap the cursor for pickup-style items.
 	input_pickable = true
