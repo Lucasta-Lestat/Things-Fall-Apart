@@ -185,11 +185,16 @@ var _rig_holder_sync_queued := false
 
 # Holder z for rig characters. The weapon inside the holder carries z -3 (set in
 # _on_active_weapon_changed for the legacy arms, which sit at -2), and the character
-# root is z 5, so this lands the blade at an absolute 4 -- one below the rig's Body
-# polygon at 5. The rig's HANDS are baked into that same Body mesh, so "under the
-# hand" and "under the body" are the same layer: anything above 5 draws the grip on
-# top of the fingers that are supposed to be holding it.
-const RIG_HOLDER_Z := 2
+# Facing-aware: the foreshortened rest pose tucks the hands (and anything they
+# hold) in FRONT of the body, where the EQ boots (rig z19) live on short races.
+# Front-facing, the held item must draw ABOVE those layers or a knife visibly
+# vanishes under the boots -- the cost is the grip handle drawing over the
+# fingers, a sub-pixel sliver at game scale (the old z2 "blade under the Body
+# polygon so the fist covers the grip" trade went the other way and lost).
+# Back-facing, the hands are on the FAR side of the body: the item hides
+# behind everything, including z-4 back equipment.
+const RIG_HOLDER_Z_FRONT := 21
+const RIG_HOLDER_Z_BACK := -7
 
 # --- Held-item hand clearance ------------------------------------------------
 # grip_l/grip_r sit on the WRIST->HAND joint, NOT on the fingertips: rig.json
@@ -252,18 +257,22 @@ func _rig_sync_holders() -> void:
 	# _held_item_clearance so a short blade emerges from under the fingers
 	# instead of being swallowed by the fist.
 	_rig_holder_sync_queued = false
+	# Facing 0 == the art's authored south (toward the viewer); the far half
+	# flips the held items behind the body (see RIG_HOLDER_Z_FRONT/BACK).
+	var hz: int = RIG_HOLDER_Z_FRONT if absf(wrapf(rotation, -PI, PI)) < PI * 0.5 \
+		else RIG_HOLDER_Z_BACK
 	if _rig_grip_r != null and is_instance_valid(_rig_grip_r) and main_hand_holder != null:
 		var push_r: float = _held_item_clearance(current_main_hand_item, main_hand_holder)
 		var out_r: Vector2 = Vector2.RIGHT.rotated(_rig_grip_r.global_rotation)
 		main_hand_holder.global_position = _rig_grip_r.global_position + out_r * push_r
 		main_hand_holder.global_rotation = _rig_grip_r.global_rotation + PI / 2.0
-		main_hand_holder.z_index = RIG_HOLDER_Z
+		main_hand_holder.z_index = hz
 	if _rig_grip_l != null and is_instance_valid(_rig_grip_l) and off_hand_holder != null:
 		var push_l: float = _held_item_clearance(current_off_hand_item, off_hand_holder)
 		var out_l: Vector2 = Vector2.RIGHT.rotated(_rig_grip_l.global_rotation)
 		off_hand_holder.global_position = _rig_grip_l.global_position + out_l * push_l
 		off_hand_holder.global_rotation = _rig_grip_l.global_rotation + PI / 2.0
-		off_hand_holder.z_index = RIG_HOLDER_Z
+		off_hand_holder.z_index = hz
 
 ## Defer a holder sync to end-of-frame. The rig is a CHILD, so it animates its
 ## bones after this node's _process; copying the grip transforms inline would

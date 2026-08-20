@@ -34,6 +34,13 @@ var _fix_cache := {}                  # anim -> [[track_idx, node, prop], ...]
 var _blend_from := {}                 # node -> {prop: value} at clip change
 var _blend_t: float = 1e9             # since clip change; >= FS_BLEND_TIME = done
 var _last_anim: StringName = &""
+var _applied := {}                    # node -> {prop: value} we LAST wrote --
+                                      # the clip-change blend must start from
+                                      # these, never from live bone state: on
+                                      # the change frame advance() has already
+                                      # applied the new clip RAW, and the mixer
+                                      # collision SUMS the forearm tracks
+                                      # (scale ~2.8x) before the repair runs
 
 # --- Runtime 2-bone IK ------------------------------------------------------
 # Aim/reach an arm's hand at a WORLD target, overriding the animation for that
@@ -93,25 +100,31 @@ func _fix_bone_tracks(delta: float) -> void:
 		var node: Node2D = entry[1]
 		var v = anim.value_track_interpolate(entry[0], pos)
 		var prop: String = entry[2]
+		if not _applied.has(node):
+			_applied[node] = {}
 		if prop == "rotation":
 			var r: float = v
 			if w < 1.0:
 				var fr: float = _blend_from[node]["rotation"]
 				r = lerp_angle(fr, r, w)
 			node.rotation = r
+			_applied[node]["rotation"] = r
 		elif prop == "scale":
 			var sv: Vector2 = v
 			sv = Vector2(lerpf(1.0, sv.x, strength), lerpf(1.0, sv.y, strength))
 			if w < 1.0:
 				var fs: Vector2 = _blend_from[node]["scale"]
 				sv = fs.lerp(sv, w)
-			node.scale = Vector2(maxf(sv.x, FS_K_FLOOR), maxf(sv.y, FS_K_FLOOR))
+			sv = Vector2(maxf(sv.x, FS_K_FLOOR), maxf(sv.y, FS_K_FLOOR))
+			node.scale = sv
+			_applied[node]["scale"] = sv
 		else:
 			var sk := lerpf(0.0, float(v), strength)
 			if w < 1.0:
 				var fk: float = _blend_from[node]["skew"]
 				sk = lerpf(fk, sk, w)
 			node.skew = sk
+			_applied[node]["skew"] = sk
 
 func _cache_for(nm: StringName, anim: Animation) -> Array:
 	# Track -> node resolution is constant per clip, but doing it inline cost a
@@ -141,23 +154,27 @@ func _cache_for(nm: StringName, anim: Animation) -> Array:
 	return out
 
 func _begin_clip_blend(nm: StringName, anim: Animation) -> void:
-	# Action clips are authored as deltas from the bind pose while the base
-	# idle/walk holds the arms far from it; a hard clip switch would pop the
-	# arms for a frame (the manual re-apply above bypasses the mixer's own
-	# blending entirely). So blend every tracked bone property from its CURRENT
-	# value into the new clip over FS_BLEND_TIME.
+	# A hard clip switch would pop the arms for a frame (the manual re-apply
+	# bypasses the mixer's own blending entirely), so blend every tracked bone
+	# property into the new clip over FS_BLEND_TIME -- starting from the value
+	# WE last wrote (_applied), NOT from the live bone: by the time the change
+	# is detected, advance() has already run the new clip through the mixer's
+	# raw (collision-summed) path, and snapshotting the bones would blend down
+	# from a ~2.8x ballooned arm on every idle/walk toggle. Falls back to the
+	# live value only for a bone never posed before (spawn = bind pose).
 	_blend_from.clear()
 	for entry in _cache_for(nm, anim):
 		var node: Node2D = entry[1]
 		if not _blend_from.has(node):
 			_blend_from[node] = {}
 		var prop: String = entry[2]
+		var have: Dictionary = _applied.get(node, {})
 		if prop == "rotation":
-			_blend_from[node]["rotation"] = node.rotation
+			_blend_from[node]["rotation"] = have.get("rotation", node.rotation)
 		elif prop == "scale":
-			_blend_from[node]["scale"] = node.scale
+			_blend_from[node]["scale"] = have.get("scale", node.scale)
 		else:
-			_blend_from[node]["skew"] = node.skew
+			_blend_from[node]["skew"] = have.get("skew", node.skew)
 	_blend_t = 0.0
 
 func set_arm_ik(side: String, target_global) -> void:
