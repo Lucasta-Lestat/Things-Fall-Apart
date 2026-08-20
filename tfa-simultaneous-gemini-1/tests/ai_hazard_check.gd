@@ -272,6 +272,27 @@ func _ready() -> void:
 	_report("escape.survives", escapee.is_alive(),
 		"hp=%d" % escapee.current_health)
 
+	# --- 6b. trapped DEEPER than the cheap escape radius: the two-tier search
+	# still finds the exit. A 5-step-only scan read this as "sea of flame" and
+	# stood down — the burning-building death sentence for any room where safe
+	# ground sits 6+ steps out (door tiles can't be destinations, so fire
+	# spilling past a doorway pushes the nearest exit beyond 5 fast) ----------
+	var deep_c := Vector2i(4, 8)
+	for dx in range(-6, 7):
+		for dy in range(-6, 7):
+			if absi(dx) + absi(dy) <= 6:
+				var bt := deep_c + Vector2i(dx, dy)
+				if GridManager.map_rect.has_point(bt):
+					_burn(bt)
+	_sync_hazards()
+	var deep_exit: Vector2i = escapee.get_node("AI")._find_escape_tile(deep_c)
+	var deep_d: int = absi(deep_exit.x - deep_c.x) + absi(deep_exit.y - deep_c.y) \
+		if deep_exit != Vector2i.MAX else -1
+	_report("escape.widens-past-5-steps",
+		deep_exit != Vector2i.MAX and deep_d >= 7,
+		"exit=%s manhattan=%d" % [str(deep_exit), deep_d])
+	_clear_fire()
+
 	# --- 7. WAIT indicator: stop hand tracks hold_position ------------------
 	caster.hold_position = true
 	_report("wait.icon-shows", caster._wait_indicator != null
@@ -279,6 +300,37 @@ func _ready() -> void:
 	caster.hold_position = false
 	_report("wait.icon-hides", caster._wait_indicator == null
 		or not caster._wait_indicator.visible, "")
+
+	# --- 8. combat steer waits at the fire's edge (the burning-building grind) --
+	# A chaser whose only route to the enemy crosses a fire core must WAIT at
+	# the edge, not lean on the straight line: _advance_path's hazard refusal
+	# empties nav_path exactly like a sealed goal, and _combat_move used to read
+	# both as "no route" and steer straight — re-arming is_moving every tick, so
+	# the mover's stuck escape never stuck and the body marched into the flames
+	# (or ground into the wall facing the target) until the fire burned out.
+	for x in range(0, 32):
+		_burn(Vector2i(x, 10))
+	_sync_hazards()
+	scout.hold_position = true   # park the earlier actors clear of the corridor
+	scout.global_position = GridManager.map_to_world(Vector2i(28, 8))
+	escapee.hold_position = true
+	escapee.global_position = GridManager.map_to_world(Vector2i(28, 12))
+	var prey := _spawn(GridManager.map_to_world(Vector2i(10, 5)), false)
+	var chaser := _spawn(GridManager.map_to_world(Vector2i(10, 13)), true)
+	await get_tree().physics_frame
+	var chai = chaser.get_node("AI")
+	chai.current_target = prey
+	chai._change_state(chai.AIState.CHASE)
+	var chaser_entered_fire := false
+	for _i in 300:
+		await get_tree().physics_frame
+		if GridManager.is_hazard_tile(GridManager.world_to_map(chaser.global_position)):
+			chaser_entered_fire = true
+	var chaser_tile := GridManager.world_to_map(chaser.global_position)
+	_report("combat.waits-at-fire-edge",
+		not chaser_entered_fire and chaser_tile.y >= 11 and not chaser.is_moving,
+		"tile=%s entered_fire=%s is_moving=%s" % [str(chaser_tile),
+			str(chaser_entered_fire), str(chaser.is_moving)])
 
 	print("ai_hazard_check: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)

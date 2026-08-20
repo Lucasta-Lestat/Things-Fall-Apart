@@ -124,6 +124,12 @@ var frightened_repath_timer: float = 0.0
 # Path following
 var nav_path: Array[Vector2i] = []
 var nav_path_index: int = 0
+# True when the last plan DID find a route but _advance_path refused its next
+# leg for crossing fire we're not standing in. Distinguishes "wait at the
+# fire's edge" from "goal sealed" — both leave nav_path empty, and _combat_move
+# used to read either as sealed and lean on the straight line, grinding the
+# body into whatever wall faced the target until the fire burned out.
+var _path_refused_on_hazard: bool = false
 
 # Signals
 signal state_changed(old_state: AIState, new_state: AIState)
@@ -1139,6 +1145,7 @@ func _combat_move(target_pos: Vector2, delta: float) -> void:
 	if character.ability_manager != null and character.ability_manager.is_casting():
 		character.is_moving = false
 		return
+	if _walk_line_clear(target_pos):
 		nav_path.clear()
 		nav_path_index = 0
 		_move_toward(target_pos)
@@ -1148,15 +1155,29 @@ func _combat_move(target_pos: Vector2, delta: float) -> void:
 		_combat_repath_timer = 0.7
 		navigate_to(target_pos)
 		if nav_path.is_empty():
-			# no route (goal sealed/INF): keep pressure on the straight line
-			# — wall-glide slides us along blockers — instead of re-flooding
-			# A* every frame and standing frozen (the old empty-path retry)
-			_move_toward(target_pos)
+			_steer_or_wait(target_pos)
 		return
 	if nav_path.is_empty():
-		_move_toward(target_pos)
+		_steer_or_wait(target_pos)
 		return
 	_check_path_progress()
+
+
+# Empty-nav_path arbitration for combat steering. Two very different reasons
+# leave the path empty and they need opposite responses:
+# - goal sealed/INF (A* returned nothing): keep pressure on the straight line
+#   — wall-glide slides us along blockers — instead of re-flooding A* every
+#   frame and standing frozen (the old empty-path retry).
+# - a route EXISTS but its next leg crosses fire we're not standing in
+#   (_advance_path's refusal): wait at the fire's edge. Straight-lining here
+#   aimed the body at the target through whatever wall faced it and re-armed
+#   is_moving every tick, so the mover's stuck escape could never stick —
+#   the "chaser grinds into the burning building's wall forever" bug.
+func _steer_or_wait(target_pos: Vector2) -> void:
+	if _path_refused_on_hazard:
+		character.is_moving = false
+		return
+	_move_toward(target_pos)
 
 
 # Retreat without wedging into walls: try straight back, then ±60°, then
@@ -1275,10 +1296,22 @@ func _tile_safe(tile: Vector2i) -> bool:
 
 
 # Nearest REACHABLE safe tile (bounded flood, same primitive wander uses — a
-# safe tile across a wall is no exit). Vector2i.MAX when the whole 5-step
-# neighbourhood burns.
+# safe tile across a wall is no exit). Two-tier: the cheap 5-step scan covers
+# the common ember-underfoot case, and only when EVERYTHING in it burns do we
+# pay a 10-step sweep — a room deeper than 5 steps, or fire spilling past the
+# doorway, used to read as "sea of flame" while safe ground sat 6-8 steps out
+# (door tiles can't be destinations, so a door k steps away needs k+1 reach).
+# Vector2i.MAX when even the wide sweep finds nothing; both tiers sit behind
+# _hazard_search_cd, so the worst case stays bounded.
 func _find_escape_tile(from_tile: Vector2i) -> Vector2i:
-	var reach: Dictionary = GridManager.reachable_within(from_tile, 5,
+	var best := _escape_scan(from_tile, 5)
+	if best == Vector2i.MAX:
+		best = _escape_scan(from_tile, 10)
+	return best
+
+
+func _escape_scan(from_tile: Vector2i, max_steps: int) -> Vector2i:
+	var reach: Dictionary = GridManager.reachable_within(from_tile, max_steps,
 		character.jump_height, character.jump_range, character.on_roof)
 	var best := Vector2i.MAX
 	var best_steps := 999
@@ -1348,6 +1381,7 @@ func navigate_to(world_pos: Vector2) -> void:
 		return
 	var start = GridManager.world_to_map(character.global_position)
 	var end_tile = GridManager.world_to_map(world_pos)
+	_path_refused_on_hazard = false
 	nav_path = GridManager.find_path(start, end_tile, character.jump_height, character.jump_range, character.on_roof)
 	nav_path_index = 0
 	if not nav_path.is_empty():
@@ -1369,6 +1403,9 @@ func _advance_path() -> void:
 		nav_path.clear()
 		nav_path_index = 0
 		character.is_moving = false
+		# tell _combat_move this was an edge-wait, not a sealed goal — its
+		# empty-path fallback must NOT lean on the straight line here
+		_path_refused_on_hazard = true
 		return
 	# door tiles route through the door's exact gap centre, not the tile centre
 	var next_world: Vector2 = GridManager.door_gaps.get(next_tile, GridManager.map_to_world(next_tile))
