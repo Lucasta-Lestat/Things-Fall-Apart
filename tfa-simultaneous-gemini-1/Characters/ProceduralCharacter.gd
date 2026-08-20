@@ -4496,8 +4496,23 @@ func _update_movement(delta: float) -> void:
 			if jump_height > 0.0 and not on_roof:
 				var wp_mt := GridManager.world_to_map(target_position)
 				if wp_mt != from_t and GridManager.has_roof(wp_mt) and can_jump_to(from_t, wp_mt):
-					var ground_walkable: bool = GridManager.grid_costs.get(wp_mt, INF) != INF and GridManager.can_step(from_t, wp_mt)
-					if not ground_walkable:
+					# door_pass counts as ground: a closed-unlocked door leg is
+					# WALKED (the body shoves the leaf open on contact). Reading
+					# only grid_costs (INF under the closed leaf) turned every
+					# closed-door leg of a roofed building into a mount onto the
+					# roof above the doorway — on_roof=true indoors, which makes
+					# the body fireproof, kills the hazard-escape override, and
+					# re-plans every route on the roof layer (the DJARGO
+					# burning-building wall-grind's entry vector).
+					var ground_walkable: bool = (GridManager.grid_costs.get(wp_mt, INF) != INF \
+						or GridManager.door_pass.has(wp_mt)) and GridManager.can_step(from_t, wp_mt)
+					# mirror the planner's mount cap (GridManager jump edges): a
+					# body under a roof can't leap up through its own ceiling onto
+					# a roof at or below it. can_jump_to must NOT carry this guard
+					# itself — same-height roof-gap jumps from layer 1 are legal.
+					var mountable: bool = not GridManager.has_roof(from_t) \
+						or GridManager.roof_at(from_t) > GridManager.roof_at(wp_mt) + 0.01
+					if not ground_walkable and mountable:
 						_begin_jump(wp_mt)
 						return
 			var step: Vector2 = move_dir * move_speed * delta

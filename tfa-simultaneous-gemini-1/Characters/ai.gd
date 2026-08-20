@@ -130,6 +130,14 @@ var nav_path_index: int = 0
 # used to read either as sealed and lean on the straight line, grinding the
 # body into whatever wall faced the target until the fire burned out.
 var _path_refused_on_hazard: bool = false
+# Sealed-goal press progress gate: position anchored at each empty-path repath
+# cycle. A full 0.7s of straight-line pressure that moved us less than a few
+# px is a head-on press, not a glide — stand down instead of sanding the wall.
+# (A LOCKED door seals a room to A* and the escape flood alike — no door_pass
+# — and the press otherwise re-arms is_moving every tick, so the mover's
+# stuck escape can never stick: the other route into the eternal wall-grind.)
+var _press_anchor := Vector2.INF
+var _press_stalled := false
 
 # Signals
 signal state_changed(old_state: AIState, new_state: AIState)
@@ -1153,9 +1161,17 @@ func _combat_move(target_pos: Vector2, delta: float) -> void:
 	_combat_repath_timer -= delta
 	if _combat_repath_timer <= 0.0:
 		_combat_repath_timer = 0.7
+		var prev_anchor := _press_anchor
+		_press_anchor = character.global_position
 		navigate_to(target_pos)
 		if nav_path.is_empty():
+			# < 4px across the whole previous cycle = head-on, not a glide
+			_press_stalled = prev_anchor != Vector2.INF \
+				and prev_anchor.distance_to(character.global_position) < 4.0
 			_steer_or_wait(target_pos)
+		else:
+			_press_anchor = Vector2.INF
+			_press_stalled = false
 		return
 	if nav_path.is_empty():
 		_steer_or_wait(target_pos)
@@ -1173,8 +1189,11 @@ func _combat_move(target_pos: Vector2, delta: float) -> void:
 #   aimed the body at the target through whatever wall faced it and re-armed
 #   is_moving every tick, so the mover's stuck escape could never stick —
 #   the "chaser grinds into the burning building's wall forever" bug.
+# The sealed-goal press itself is progress-gated (_press_stalled): once a full
+# repath cycle moves us nowhere, the press is head-on and stands down until a
+# repath finds a route again.
 func _steer_or_wait(target_pos: Vector2) -> void:
-	if _path_refused_on_hazard:
+	if _path_refused_on_hazard or _press_stalled:
 		character.is_moving = false
 		return
 	_move_toward(target_pos)

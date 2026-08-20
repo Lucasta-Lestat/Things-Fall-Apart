@@ -332,5 +332,29 @@ func _ready() -> void:
 		"tile=%s entered_fire=%s is_moving=%s" % [str(chaser_tile),
 			str(chaser_entered_fire), str(chaser.is_moving)])
 
+	# --- 8b. sealed goal: the straight-line press stands down once it stalls --
+	# A walled-off target (locked door: no door_pass, A* honestly returns []
+	# forever) keeps the deliberate straight-line pressure — wall-glide slides
+	# along oblique blockers — but a head-on press that makes no ground for a
+	# whole repath cycle must stand down, not sand the wall forever. Pin the
+	# chaser with an unsteppable scarp ring (elevation gates block the mover
+	# and A* alike; the harness has no physics colliders).
+	var cell := Vector2i(2, 26)
+	for ring_d in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(-1, 0),
+			Vector2i(1, 0), Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1)]:
+		GridManager.elevations[cell + ring_d] = 5.0
+	var sealed_prey := _spawn(GridManager.map_to_world(Vector2i(2, 20)), false)
+	var sealed_chaser := _spawn(GridManager.map_to_world(cell), true)
+	await get_tree().physics_frame
+	var scai = sealed_chaser.get_node("AI")
+	scai.current_target = sealed_prey
+	scai._change_state(scai.AIState.CHASE)
+	for _i in 240:
+		await get_tree().physics_frame
+	var sealed_tile := GridManager.world_to_map(sealed_chaser.global_position)
+	_report("combat.sealed-press-stands-down",
+		sealed_tile == cell and not sealed_chaser.is_moving,
+		"tile=%s is_moving=%s" % [str(sealed_tile), str(sealed_chaser.is_moving)])
+
 	print("ai_hazard_check: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
