@@ -39921,6 +39921,96 @@
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
+				},
+				{
+					"a": [
+						1123,
+						240
+					],
+					"b": [
+						1187,
+						240
+					],
+					"half": 80.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 1.0
+				},
+				{
+					"a": [
+						1123,
+						495
+					],
+					"b": [
+						1187,
+						495
+					],
+					"half": 20.8,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 0.2
+				},
+				{
+					"a": [
+						1123,
+						454
+					],
+					"b": [
+						1187,
+						454
+					],
+					"half": 20.8,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 0.4
+				},
+				{
+					"a": [
+						1123,
+						412
+					],
+					"b": [
+						1187,
+						412
+					],
+					"half": 20.8,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 0.6
+				},
+				{
+					"a": [
+						1123,
+						370
+					],
+					"b": [
+						1187,
+						370
+					],
+					"half": 20.8,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 0.8
+				},
+				{
+					"a": [
+						1123,
+						329
+					],
+					"b": [
+						1187,
+						329
+					],
+					"half": 20.8,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall",
+					"walk_elev": 1.0
 				}
 			],
 			"tile_size": 64,
