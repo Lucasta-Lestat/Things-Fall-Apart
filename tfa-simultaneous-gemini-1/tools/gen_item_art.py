@@ -255,6 +255,14 @@ PROMPTS.update({
         "diagonally across the top of the others. The image is a LANDSCAPE picture, the bounding "
         "box about one and a half times as wide as it is tall."
     ),
+    "rope_coil": PROP_STYLE + (
+        "SUBJECT: a length of thick hemp rope coiled up lying flat on the ground, seen from "
+        "directly above: the rope is wound into a tight flat spiral that starts at a small "
+        "curled center and winds outward to the rim, every winding lying snug against its "
+        "neighbour so the whole round shape is solid rope from center to edge, with the twisted "
+        "strand texture following the spiral and the loose tail end of the rope trailing out "
+        "from under the outer edge. The picture is exactly SQUARE and the coil is centered."
+    ),
     "red_carpet": PROP_STYLE + (
         "SUBJECT: a very long narrow ceremonial red runner carpet lying perfectly flat on the "
         "floor, seen from directly above: one complete flat rectangle with all four edges "
@@ -298,6 +306,9 @@ REFS_OVERRIDE = {
     "round_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
     "grain_sack": PROP_REFS,
     "firewood": PROP_REFS,
+    # square first ref anchors the square aspect; basket carries the round
+    # woven top-down register without the old ring's hollow centre
+    "rope_coil": [os.path.join(ITEMS, "basket.png"), os.path.join(ITEMS, "desk.png")],
     "rug": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "red_carpet.png")],
     "red_carpet": [os.path.join(ITEMS, "red_carpet.png"), os.path.join(ITEMS, "bed_wooden.png")],
 }
