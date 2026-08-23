@@ -197,6 +197,23 @@ PROP_STYLE = (
     "clean cutout. "
 )
 PROMPTS.update({
+    "headstone": PROP_STYLE + (
+        "SUBJECT: a weathered granite headstone seen from directly above on a grave plot: "
+        "a rounded-top upright grave marker slab tipped back so its full face shows from "
+        "the bird's-eye view, pale grey stone with darker mottling, a few rows of shallow "
+        "weathered chisel grooves worn smooth across the upper face, moss creeping along "
+        "one edge, a narrow bed of dark packed grave soil framing the stone, and a thin "
+        "cast shadow along its base. The whole image is a small compact picture, the "
+        "marker's bounding box slightly taller than it is wide."
+    ),
+    "sarcophagus": PROP_STYLE + (
+        "SUBJECT: an ancient stone sarcophagus seen from directly above: a heavy rectangular "
+        "coffin-chest of pale weathered limestone with a thick carved lid, a raised border "
+        "rim running around the lid's edge, a worn effigy relief of a recumbent knight down "
+        "the lid's centre, hairline cracks across one corner, and moss gathering in the "
+        "carved recesses. The whole image is a WIDE LANDSCAPE picture, the chest about two "
+        "and a half times as wide as it is tall."
+    ),
     "stone_stairs": PROP_STYLE + (
         "SUBJECT: a straight outdoor staircase of pale cream limestone seen from directly "
         "above: eleven wide rectangular stone treads stacked in a single column, each tread "
@@ -311,6 +328,9 @@ REFS_OVERRIDE = {
     # plank_bridge FIRST: the shipped portrait walkway anchors the tall aspect;
     # desk carries the flat-painterly furniture register
     "stone_stairs": [os.path.join(ITEMS, "plank_bridge.png"), os.path.join(ITEMS, "desk.png")],
+    "headstone": [os.path.join(ITEMS, "tombstone.png"), os.path.join(ITEMS, "desk.png")]
+        if os.path.exists(os.path.join(ITEMS, "tombstone.png")) else PROP_REFS,
+    "sarcophagus": PROP_REFS,
     "buckler": SHIELD_REFS,
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,

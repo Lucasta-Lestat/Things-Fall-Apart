@@ -5896,6 +5896,48 @@
 	"max_stack_size": null
   },
   {
+	"id": "headstone",
+	"display_name": "Headstone",
+	"type": "item",
+	"description": "A weathered grave marker, its epitaph worn beyond reading.",
+	"base_width": 28.0,
+	"base_height": 42.0,
+	"sprite_path": "res://Items/headstone.png",
+	"weight": 120.0,
+	"cost": 5.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 40.0,
+	"hp": 40.0,
+	"traits": {
+	 "Stone": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "sarcophagus",
+	"display_name": "Sarcophagus",
+	"type": "item",
+	"description": "A limestone tomb-chest, its lid carved with a sleeping knight.",
+	"base_width": 64.0,
+	"base_height": 36.0,
+	"sprite_path": "res://Items/sarcophagus.png",
+	"weight": 1500.0,
+	"cost": 80.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 150.0,
+	"hp": 150.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
 	"id": "anvil",
 	"display_name": "Anvil",
 	"type": "item",
