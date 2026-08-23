@@ -36854,15 +36854,6 @@
 					"scale": 1.55
 				},
 				{
-					"id": "stone_stairs",
-					"position": [
-						1155,
-						404
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
 					"id": "altar",
 					"position": [
 						558,
@@ -39930,96 +39921,6 @@
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
-				},
-				{
-					"a": [
-						1123,
-						240
-					],
-					"b": [
-						1187,
-						240
-					],
-					"half": 80.0,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 1.0
-				},
-				{
-					"a": [
-						1107,
-						481
-					],
-					"b": [
-						1203,
-						481
-					],
-					"half": 19.2,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 0.2
-				},
-				{
-					"a": [
-						1107,
-						442
-					],
-					"b": [
-						1203,
-						442
-					],
-					"half": 19.2,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 0.4
-				},
-				{
-					"a": [
-						1107,
-						404
-					],
-					"b": [
-						1203,
-						404
-					],
-					"half": 19.2,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 0.6
-				},
-				{
-					"a": [
-						1107,
-						366
-					],
-					"b": [
-						1203,
-						366
-					],
-					"half": 19.2,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 0.8
-				},
-				{
-					"a": [
-						1107,
-						327
-					],
-					"b": [
-						1203,
-						327
-					],
-					"half": 19.2,
-					"hp": 80,
-					"id": "stone_wall",
-					"kind": "wall",
-					"walk_elev": 1.0
 				}
 			],
 			"tile_size": 64,

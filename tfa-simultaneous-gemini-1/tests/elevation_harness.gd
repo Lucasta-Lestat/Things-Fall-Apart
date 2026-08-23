@@ -31,8 +31,7 @@ func _ready() -> void:
 	await _scenario_elevation_los()
 	_scenario_melee_predicate()
 	_scenario_jump_fall()
-	_scenario_battlements()   # loads the full real map into GridManager
-	_scenario_guild_stairs()  # LAST: loads tg_guild_hall (walkable graded stairs)
+	_scenario_battlements()   # LAST: loads the full real map into GridManager
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -276,62 +275,6 @@ func _scenario_battlements() -> void:
 	_check("battlements.jumper-mounts-real-roof", mounted,
 		"no street-adjacent roof mount found in %d tries" % tried)
 	ml.queue_free()
-
-# 8. GUILD STAIRS: tg_guild_hall's watch platform is reached by WALKING a graded
-# stair flight (stepped walk_elev strips from the editor's stair primitive) --
-# no ladder warps, no jump. The deck rim away from the stair stays a cliff.
-func _scenario_guild_stairs() -> void:
-	var f := FileAccess.open("res://data/Maps.json", FileAccess.READ)
-	if f == null:
-		_check("stairs.maps-json", false, "cannot open Maps.json")
-		return
-	var raw: Dictionary = JSON.parse_string(f.get_as_text())
-	f.close()
-	var m: Dictionary = {}
-	for e in raw.get("maps", []):
-		if String(e.get("id", "")) == "tg_guild_hall":
-			m = e
-			break
-	if m.is_empty():
-		_check("stairs.entry", false, "no tg_guild_hall entry in Maps.json")
-		return
-	add_to_group("game")
-	GridManager.TILE_SIZE = int(m.get("tile_size", 64))
-	var ws: Array = m.get("world_size", [2816, 2816])
-	GridManager.initialize(int(ws[0]), int(ws[1]))
-	var graph: CellGraph = CellGraph.from_structured(String(m.get("cell_graph", "")))
-	GridManager.set_elevation_data(graph)
-	var ml: Node2D = MAP_LOADER.new()
-	add_child(ml)
-	ml.generate_structured_map(m)
-	# the watch platform (authored at map_rel 0.41 x, 120wu y, exported 2px/wu)
-	var deck_t := GridManager.world_to_map(Vector2(1155, 240))
-	var lawn_t := GridManager.world_to_map(Vector2(1184, 608))
-	_check("stairs.deck-height", is_equal_approx(GridManager.effective_elev(deck_t), 1.0),
-		"elev=%.2f at %s" % [GridManager.effective_elev(deck_t), str(deck_t)])
-	_check("stairs.lawn-flat", absf(GridManager.effective_elev(lawn_t)) < 0.001
-		and GridManager.would_walk(lawn_t))
-	# the whole point: a default race WALKS up (no jump parameters)
-	var path := GridManager.find_path(lawn_t, deck_t)
-	_check("stairs.walk-up", not path.is_empty(), "no walk path lawn->deck")
-	# and back down
-	_check("stairs.walk-down", not GridManager.find_path(deck_t, lawn_t).is_empty())
-	# every transition along the flight respects the step gate with margin
-	var worst := 0.0
-	for i in range(1, path.size()):
-		worst = maxf(worst, absf(GridManager.effective_elev(path[i])
-			- GridManager.effective_elev(path[i - 1])))
-	_check("stairs.gradient-margin", worst > 0.0 and worst <= 0.5,
-		"worst step delta %.2f" % worst)
-	# rim stays a cliff: ground due west of the platform cannot step straight up
-	var rim_ground := GridManager.world_to_map(Vector2(992, 224))
-	if GridManager.deck_elevations.has(rim_ground):
-		_check("stairs.rim-probe-is-ground", false, "probe tile unexpectedly a deck")
-	else:
-		_check("stairs.rim-is-cliff",
-			not GridManager.can_step(rim_ground, rim_ground + Vector2i(1, 0)))
-	ml.queue_free()
-
 
 # 1. PROJECTION: real cells.json -> sparse per-tile elevations
 func _scenario_projection() -> void:
