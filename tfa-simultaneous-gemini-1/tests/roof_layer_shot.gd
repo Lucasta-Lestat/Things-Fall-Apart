@@ -16,8 +16,20 @@ func _ready() -> void:
 	GridManager.initialize(int(ground.texture.get_width()), int(ground.texture.get_height()))
 	var graph: CellGraph = CellGraph.from_structured("res://Maps/tg_guild_hall_cells.json")
 	GridManager.set_elevation_data(graph)
-	var roofs := RoofLayer.new()
-	add_child(roofs)
+	# painted export when present (mirrors MapLoader), else the quad fallback
+	var roofs: Node2D
+	if ResourceLoader.exists("res://Maps/tg_guild_hall_roofs.png"):
+		var spr := Sprite2D.new()
+		spr.texture = load("res://Maps/tg_guild_hall_roofs.png")
+		spr.centered = false
+		var pm := CanvasItemMaterial.new()
+		pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+		spr.material = pm
+		roofs = spr
+		add_child(spr)
+	else:
+		roofs = RoofLayer.new()
+		add_child(roofs)
 
 	# frame the camera on the roofed footprint
 	var lo := Vector2i(1 << 30, 1 << 30)

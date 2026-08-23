@@ -23,6 +23,16 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
+		# Ctrl+scroll browses the VIEW LAYER (DF-style ground/roof slice) —
+		# plain scroll stays zoom. Routed to Game (the "game" group root) so
+		# this camera keeps working under harnesses that stand in for it.
+		if event.ctrl_pressed and event.is_pressed() \
+				and (event.button_index == MOUSE_BUTTON_WHEEL_UP
+					or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+			var g := get_tree().get_first_node_in_group("game")
+			if g != null and g.has_method("step_view_layer"):
+				g.step_view_layer(event.button_index == MOUSE_BUTTON_WHEEL_UP)
+			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.is_pressed():
 			target_zoom -= Vector2(zoom_speed, zoom_speed)
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.is_pressed():

@@ -136,6 +136,27 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	else:
 		push_error("structured map: missing ground image " + ground_path)
 
+	# 1b. roofs: the painted DF-style view-slice cover (exporter pass 3),
+	# premult alpha exactly like the structures slice art. Spawned HIDDEN —
+	# Game owns visibility through the view layer (roof_view), and a map load
+	# must never flash roofs over the default ground view. Sits above
+	# characters (z 5) and their overhead widgets (~115); light_mask 0 keeps
+	# the additive sight-cone lights from painting the cover.
+	var roofs_path := String(images.get("roofs", ""))
+	if roofs_path != "" and ResourceLoader.exists(roofs_path):
+		var roofs := Sprite2D.new()
+		roofs.name = "RoofLayer"
+		roofs.texture = load(roofs_path)
+		roofs.centered = false
+		roofs.z_as_relative = false
+		roofs.z_index = 120
+		roofs.light_mask = 0
+		roofs.visible = false
+		var rmat := CanvasItemMaterial.new()
+		rmat.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+		roofs.material = rmat
+		add_child(roofs)
+
 	# 2. floors: logical registration from per-tile codes
 	var rows: Array = map_data.get("floors", [])
 	for ty in rows.size():

@@ -78,6 +78,12 @@ var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
 # every frame (_process); structured maps only (legacy maps have no roof data).
 var roof_view: bool = false
 var roof_layer: Node2D = null   # RoofLayer under map_loader; freed on unload
+# Manual layer browse (Ctrl+scroll, DF-style): -1 = follow the selection
+# (auto), 0 = pin ground, 1 = pin roof. Cleared whenever the auto answer
+# CHANGES (the selected character climbs/drops — their layer wins again) and
+# on a fresh selection (mirrors the camera's manual-pan re-engage).
+var roof_view_override: int = -1
+var _roof_view_auto: bool = false
 const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White (primary)
 const SELECTION_CIRCLE_COLOR_MULTI = Color(0.5, 0.7, 1.0, 0.5)  # Blue (multi-select)
 const SELECTION_CIRCLE_WIDTH = 1.0
@@ -985,13 +991,17 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	if structured:
 		map_loader.world_map_mode = false
 		map_loader.generate_structured_map(current_map_data)
-		# DF-style roof cover: parented under map_loader so the unload sweep
-		# frees it with the rest of the map. Only structured maps carry roof
-		# data; legacy battlemaps correctly get nothing.
-		if not GridManager.roof_elevations.is_empty():
+		# DF-style roof cover: the PAINTED export when the map ships one
+		# (MapLoader spawned it from images.roofs), else procedural palette
+		# quads from the roof grid. Parented under map_loader either way, so
+		# the unload sweep frees it with the rest of the map. Only structured
+		# maps carry roof data; legacy battlemaps correctly get nothing.
+		roof_layer = map_loader.get_node_or_null("RoofLayer")
+		if roof_layer == null and not GridManager.roof_elevations.is_empty():
 			roof_layer = RoofLayer.new()
 			roof_layer.name = "RoofLayer"
 			map_loader.add_child(roof_layer)
+		if roof_layer != null:
 			roof_layer.visible = roof_view
 	else:
 		map_loader.world_map_mode = is_world_map
@@ -2214,6 +2224,16 @@ func _set_roof_view(on: bool) -> void:
 	# _apply_party_layer_visibility below.
 
 
+# Ctrl+scroll layer browse (PlayerCamera routes the wheel here when Ctrl is
+# held; plain scroll stays zoom). up=true browses toward the roof slice.
+# No-op on maps without roof data — a pinned override there would only make
+# hidden-state confusion with nothing visible to explain it.
+func step_view_layer(up: bool) -> void:
+	if GridManager.roof_elevations.is_empty():
+		return
+	roof_view_override = 1 if up else 0
+
+
 # Party members bypass the NPC LOS sweep (always shown), so the ground-view
 # rule "roof-walkers are seen only on the higher layer" needs its own pass.
 # Meta-guarded so we only flip visibility WE changed — anything else that
@@ -2445,9 +2465,15 @@ func _process(delta: float) -> void:
 			and not player_camera.manual_pan_active:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
-	# View layer auto-follows the primary selection: climb a roof and the view
-	# jumps to the roof slice, drop down and interiors come back.
-	_set_roof_view(_char_on_high_layer(primary_selected))
+	# View layer follows the primary selection unless the player is browsing
+	# with Ctrl+scroll: climb a roof and the view jumps to the roof slice,
+	# drop down and interiors come back. A CHANGE in the auto answer reclaims
+	# the view from any manual override.
+	var auto_roof := _char_on_high_layer(primary_selected)
+	if auto_roof != _roof_view_auto:
+		_roof_view_auto = auto_roof
+		roof_view_override = -1
+	_set_roof_view(auto_roof if roof_view_override < 0 else roof_view_override == 1)
 	_apply_party_layer_visibility()
 	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
 	# unreliable when overlapping pickable areas exist (characters, items).
@@ -2804,6 +2830,7 @@ func select_character(character: ProceduralCharacter, index: int = -1) -> void:
 	primary_selected = character
 	if player_camera:
 		player_camera.manual_pan_active = false  # re-engage follow
+	roof_view_override = -1   # fresh selection: their layer drives the view again
 	primary_index = index if index >= 0 else get_party().find(character)
 	selected_characters.append(character)
 	_sync_character_flags()
@@ -2823,6 +2850,7 @@ func toggle_character_selection(character: ProceduralCharacter) -> void:
 			primary_selected = selected_characters[0]
 			if player_camera:
 				player_camera.manual_pan_active = false  # re-engage follow on promoted primary
+			roof_view_override = -1
 			primary_index = get_party().find(primary_selected)
 			emit_signal("character_selected", primary_selected, primary_index)
 		else:
