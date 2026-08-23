@@ -69,7 +69,10 @@
 	"force_march",
 	"rat_pack",
 	"silence",
-	"oil_well"
+	"oil_well",
+	"bloodmusk",
+	"persistent_distraction",
+	"erisian_apple"
    ],
    "extra_conditions": [],
    "extra_traits": {
