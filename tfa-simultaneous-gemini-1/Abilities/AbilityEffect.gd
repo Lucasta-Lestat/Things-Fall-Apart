@@ -35,6 +35,7 @@ const EFFECT_TYPES = [
 	"cloud",            # Create a Cloud
 	"spawn_fluid",      # Spawn fluid at target (acid, poison, etc.)
 	"fluid_well",       # Gush fluid over a region for a duration (oil well)
+	"compulsion_field", # Persistent point of compulsion (musk cloud, idol)
 	"sound_zone",       # Create a region that damps sound (Silence)
 	"custom",           # Custom effect with callback
 ]
@@ -87,6 +88,8 @@ static func resolve_effect(
 			result = _resolve_spawn_fluid(effect, caster, target_position, ability)
 		"fluid_well":
 			result = _resolve_fluid_well(effect, caster, target_position)
+		"compulsion_field":
+			result = _resolve_compulsion_field(effect, caster, target_position)
 		"sever_limb":
 			result = _resolve_sever_limb(effect, caster, targets, ability)
 		"sound_zone":
@@ -390,6 +393,55 @@ static func _resolve_fluid_well(
 	well.global_position = target_position
 
 	result["created_objects"].append(well)
+	return result
+
+
+## Resolve compulsion_field -- a conjured point that periodically tries to seize
+## what everyone who can perceive it does.
+##
+## The saving throw is NOT here: the field re-applies its condition on a timer
+## and ConditionManager.apply_condition rolls save_stat at apply time, so
+## "periodically save or suffer" falls out of the existing machinery.
+static func _resolve_compulsion_field(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "compulsion_field",
+		"created_objects": [],
+	}
+
+	var game = _get_game_scene(caster)
+	if not game:
+		result["success"] = false
+		result["error"] = "Could not find game scene"
+		return result
+
+	var field := CompulsionField.new()
+	field.radius = float(effect.get("radius", 256.0))
+	field.duration = float(effect.get("duration", 12.0))
+	field.reach = String(effect.get("reach", "radius"))
+	field.reach_limit = float(effect.get("reach_limit", 640.0))
+	field.affects = String(effect.get("affects", "all"))
+	field.affects_humanoid_only = bool(effect.get("affects_humanoid_only", true))
+	field.pulse_interval = float(effect.get("pulse_interval", 3.0))
+	field.condition_id = String(effect.get("condition_id", "incited"))
+	field.condition_duration = float(effect.get("condition_duration", -2.0))
+	field.victim_rule = String(effect.get("victim_rule", "same_gender"))
+	field.victim_search_radius = float(effect.get("victim_search_radius", 512.0))
+	field.visual_scene_path = String(effect.get("vfx_scene", ""))
+	field.sprite_path = String(effect.get("sprite_path", ""))
+	field.sprite_width = float(effect.get("sprite_width", 0.0))
+
+	# Parent first, then position -- the same rule as _resolve_sound_zone and
+	# _resolve_fluid_well. CompulsionField defers its first pulse to the first
+	# unpaused tick for exactly that reason.
+	game.add_child(field)
+	field.global_position = target_position
+
+	result["created_objects"].append(field)
 	return result
 
 

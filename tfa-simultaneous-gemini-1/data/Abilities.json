@@ -1792,6 +1792,145 @@
 				"in_hand_effect": "res://vfx/oil_hand.tscn",
 				"sound_cast": "res://sfx/nature_cast.mp3"
 			}
+		},
+		{
+			"id": "bloodmusk",
+			"display_name": "Bloodmusk",
+			"description": "Loose a rutting stink across a wide patch of ground. Anything that breathes it turns on the nearest creature of its own sex.",
+			"icon": "res://UI/UI Icons/ability_bloodmusk.png",
+			"costs": {},
+			"cast_time": 0.8,
+			"interruptible": true,
+			"traits": {
+				"Occult": 1,
+				"Somatic": 1,
+				"Olfactory": 1,
+				"spell": 1,
+				"mental": 2,
+				"charm": 1,
+				"control": 2,
+				"aoe": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 320.0,
+				"shape": "circle",
+				"radius": 256.0
+			},
+			"effects": [
+				{
+					"type": "compulsion_field",
+					"radius": 256.0,
+					"duration": 12.0,
+					"reach": "radius",
+					"affects": "all",
+					"affects_humanoid_only": true,
+					"pulse_interval": 3.0,
+					"condition_id": "incited",
+					"condition_duration": 12.0,
+					"victim_rule": "same_gender",
+					"victim_search_radius": 512.0,
+					"vfx_scene": "res://vfx/bloodmusk_cloud.tscn"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/musk_hand.tscn",
+				"sound_cast": "res://sfx/necrotic_cast.mp3"
+			}
+		},
+		{
+			"id": "persistent_distraction",
+			"display_name": "Persistent Distraction",
+			"description": "Set a small gilded idol on the ground. It burns with a soft golden light, and everything that catches sight of it forgets what it was doing.",
+			"icon": "res://UI/UI Icons/ability_persistent_distraction.png",
+			"costs": {},
+			"cast_time": 1.0,
+			"interruptible": true,
+			"traits": {
+				"Occult": 1,
+				"Holy": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"summon": 1,
+				"mental": 2,
+				"control": 2,
+				"light": 1
+			},
+			"targeting": {
+				"type": "point",
+				"range": 320.0,
+				"shape": "circle",
+				"radius": 48.0
+			},
+			"effects": [
+				{
+					"type": "compulsion_field",
+					"radius": 48.0,
+					"duration": 30.0,
+					"reach": "sight",
+					"reach_limit": 640.0,
+					"affects": "all",
+					"affects_humanoid_only": true,
+					"pulse_interval": 4.0,
+					"condition_id": "transfixed",
+					"condition_duration": 2.5,
+					"victim_rule": "none",
+					"vfx_scene": "res://vfx/idol_glow.tscn",
+					"sprite_path": "res://Items/golden_idol.png",
+					"sprite_width": 46.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/idol_hand.tscn",
+				"sound_cast": "res://sfx/holy_cast.mp3"
+			}
+		},
+		{
+			"id": "erisian_apple",
+			"display_name": "Erisian Apple",
+			"description": "Conjure a golden apple, and let it be for the fairest. Every woman who sees it decides that it is hers.",
+			"icon": "res://UI/UI Icons/ability_erisian_apple.png",
+			"costs": {},
+			"cast_time": 0.8,
+			"interruptible": true,
+			"traits": {
+				"Occult": 1,
+				"Somatic": 1,
+				"spell": 1,
+				"summon": 1,
+				"mental": 2,
+				"charm": 1,
+				"control": 3
+			},
+			"targeting": {
+				"type": "point",
+				"range": 300.0,
+				"shape": "circle",
+				"radius": 32.0
+			},
+			"effects": [
+				{
+					"type": "compulsion_field",
+					"radius": 32.0,
+					"duration": 20.0,
+					"reach": "sight",
+					"reach_limit": 512.0,
+					"affects": "female",
+					"affects_humanoid_only": true,
+					"pulse_interval": 3.0,
+					"condition_id": "incited",
+					"condition_duration": 15.0,
+					"victim_rule": "cohort_peer",
+					"vfx_scene": "res://vfx/apple_glow.tscn",
+					"sprite_path": "res://Items/golden_apple.png",
+					"sprite_width": 26.0
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/apple_hand.tscn",
+				"sound_cast": "res://sfx/charm_chime.mp3"
+			}
 		}
 	]
 }

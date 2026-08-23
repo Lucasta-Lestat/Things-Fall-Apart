@@ -72,6 +72,8 @@ SPECS = {
 
     # ── Mental afflictions (muted violet) ──
     "irrational": spec("mental", "a side profile of a head with a tangled scribble knot where the brain would be", "bright white"),
+    "incited": spec("mental", "two crossed daggers forming an X, each with a broad straight blade and a short crossguard", "bright white"),
+    "transfixed": spec("mental", "one wide open eye with a tight spiral coiled where its pupil should be", "bright white"),
     "paranoid": spec("mental", "one wide staring eye with its round pupil shoved hard to one side", "bright white"),
     "selfish": spec("mental", "three short stubby arrows all pointing inward toward one small solid dot at the center", "bright white"),
     "hopelessness": spec("mental", "a small rain cloud with a single downturned frown curve beneath it", "bright white"),

@@ -1986,6 +1986,19 @@ func _validate_pair_targets(targets: Array) -> Array:
 	if valid.size() < 2:
 		return []
 	return valid
+# A compelled body runs its AI even while selected. A selected party member has
+# AI_enabled false and never enters process_ai, so without this the compulsions
+# would be inert on exactly the character the player is watching. panicked and
+# frightened solve the same problem by duplicating their movement into
+# _process_condition_movement_overrides below, but a forced ATTACK cannot be
+# duplicated that way -- there is no player-side auto-attack driver -- so the
+# brain comes back on for the duration instead. Reverts the frame it lapses.
+func _compulsion_active() -> bool:
+	if condition_manager == null:
+		return false
+	return condition_manager.has_active_condition("incited") 		or condition_manager.has_active_condition("transfixed")
+
+
 
 
 func _process_condition_movement_overrides(delta: float) -> void:
@@ -3475,7 +3488,7 @@ func _process(delta: float) -> void:
 		# AI during ordinary manual play; is_executing alone can linger when a path
 		# is cancelled without an action_completed signal. Reverts to plain manual
 		# control the frame the queue empties.
-		if AI_enabled or (has_player_orders() and tactical_path != null and tactical_path.is_executing):
+		if AI_enabled or (has_player_orders() and tactical_path != null and tactical_path.is_executing) or _compulsion_active():
 			$AI.process_ai(delta)
 	elif character_rig != null:
 		# Paused: the rig freezes its own clip (CharacterRig gates advance on
@@ -3734,7 +3747,7 @@ func _handle_input() -> void:
 	if condition_manager.has_condition("unconscious"):
 		return
 	# Block player input when panicked or frightened — movement is forced
-	if condition_manager.has_active_condition("panicked") or condition_manager.has_active_condition("frightened"):
+	if condition_manager.has_active_condition("panicked") 			or condition_manager.has_active_condition("frightened") 			or condition_manager.has_active_condition("transfixed") 			or condition_manager.has_active_condition("incited"):
 		return
 	# Block game-world clicks when a popup menu is open (PopupMenu lives in
 	# its own Window, invisible to gui_get_hovered_control).

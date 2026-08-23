@@ -160,6 +160,14 @@ var _outcry_total: float = 0.0
 # remembers past alertness decay. Declared here so Phase 5 payloads have a
 # landing site.
 var manhunt_target: ProceduralCharacter = null
+# Compulsion parameters, in the same shape and for the same reason as
+# manhunt_target: personal, per-AI, unserialised, dies with the map. The
+# CONDITION is only the clock and the saving throw; this is the "about whom".
+# Deliberately not in ConditionInstance.custom_data, which to_dict() writes
+# verbatim into the save -- a Node reference there would be serialised.
+# Written only by CompulsionField, so every default-state test stays green.
+var compel_victim: ProceduralCharacter = null
+var compel_focus: Node2D = null
 # Post-robbery truce (Phase 7 surrender): while active, this AI ignores
 # player-faction targets — without it, a hostile_by_default bandit
 # re-acquires on the next tick and being robbed is pointless.
@@ -512,6 +520,18 @@ func process_ai(delta: float) -> void:
 	# Corpse discovery (Phase 7): enforcers who see a crime-stamped body
 	# raise an unidentified alarm. Throttled; skipped while incapacitated
 	# states above have already returned.
+	# Handle transfixed — the idol has your eyes. Sits here deliberately: BELOW
+	# the incapacitating states and hazard escape above (nothing is worth burning
+	# to death for) and ABOVE the apathetic clear further down, which would wipe
+	# it. It tears down player orders the way fear does, because "instead of
+	# whatever it had planned" is the whole point of the spell.
+	if _cm and _cm.has_active_condition("transfixed"):
+		_break_player_orders()
+		_process_transfixed(delta)
+		return
+	elif compel_focus != null:
+		compel_focus = null
+
 	corpse_check_timer -= delta
 	if corpse_check_timer <= 0.0:
 		corpse_check_timer = 1.0
@@ -668,6 +688,12 @@ func _update_target() -> void:
 	# Validate existing target
 	if current_target:
 		if not is_instance_valid(current_target):
+	# Compulsion outranks the hysteresis below on purpose: a musked guard
+	# mid-chase has to turn on his own kind, not finish the fight he was already
+	# in. Above the apathetic suppression too -- a directed compulsion beats an
+	# undirected mood.
+	if _apply_compulsion():
+		return
 			_lose_target()
 			return
 
@@ -775,15 +801,76 @@ func _update_target() -> void:
 # FactionDatabase.are_hostile is THE hostility oracle — do not add local
 # hostility logic here. (The old fallthrough "two distinct non-neutral
 # factions are hostile on sight" lived here; its survivors are now authored
+# True when a compulsion has seized targeting this tick.
+func _apply_compulsion() -> bool:
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm == null:
+		compel_victim = null
+		return false
+	if not cm.has_active_condition("incited"):
+		# Release explicitly. Do NOT copy what `confused` does: nothing there ever
+		# clears current_target when the condition lapses, so a confused NPC keeps
+		# murdering the ally it picked long after it stopped being confused.
+		if compel_victim != null:
+			compel_victim = null
+			if current_target != null:
+				_lose_target()
+		return false
+	if not is_instance_valid(compel_victim) or not compel_victim.is_alive():
+		# Victim gone: the compulsion has nothing left to mean.
+		compel_victim = null
+		cm.remove_condition("incited")
+		if current_target != null:
+			_lose_target()
+		return false
+	if current_target != compel_victim:
+		# _acquire_target, not character.set_target(): set_target is gated on
+		# $AI._is_enemy and would silently no-op for a same-faction victim on the
+		# first frame, before the _is_enemy short-circuit below has anything to
+		# read. _acquire_target has no such gate.
+		_acquire_target(compel_victim)
+	return true
+
+
+# Stand still and stare. Re-asserted every tick because _move_toward rewrites
+# target_rotation to the travel bearing whenever the body moves.
+func _process_transfixed(_delta: float) -> void:
+	var focus: Node2D = compel_focus
+	if focus == null or not is_instance_valid(focus):
+		var cm = character.get_node_or_null("ConditionManager")
+		if cm != null:
+			cm.remove_condition("transfixed")
+		compel_focus = null
+		return
+	if current_target != null:
+		_lose_target()
+	character.is_moving = false
+	nav_path.clear()
+	nav_path_index = 0
+	# _aim_at rather than a raw target_rotation write: it already refuses to
+	# stomp a running ActionType.FACE, which would otherwise stall that action's
+	# queue forever waiting for a rotation that keeps being overwritten.
+	_aim_at((focus.global_position - character.global_position).angle() + PI / 2)
+
+
 # as hostile_by_default in factions.json.) The single exception: a manhunt
 # target is personal knowledge — this enforcer HEARD the accusation — and
 # survives alertness decay until the account is settled.
 func _is_enemy(other: ProceduralCharacter) -> bool:
 	if manhunt_target != null and is_instance_valid(manhunt_target) and other == manhunt_target:
 		return true
+# A compulsion is the second such exception, and is scoped the same way.
 	# Post-robbery truce: they took your purse and let you live (Phase 7).
 	if truce_until > 0.0 and other.faction_id == "player" \
 			and TimeManager.absolute_time() < truce_until:
+	# An incited creature counts its designated victim as an enemy for every
+	# DOWNSTREAM gate too (AbilityTargeting's "enemies" filter, ally scans), which
+	# is what lets a compulsion cross faction lines without touching
+	# FactionDatabase. A field read, not a get_node, because this runs inside the
+	# O(N) candidate scan. Inert unless CompulsionField wrote the field, so
+	# hostility_harness's 361-pair oracle sweep is unaffected.
+	if compel_victim != null and is_instance_valid(compel_victim) and other == compel_victim:
+		return true
 		return false
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 

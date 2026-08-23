@@ -206,6 +206,23 @@ PROMPTS.update({
         "cast shadow along its base. The whole image is a small compact picture, the "
         "marker's bounding box slightly taller than it is wide."
     ),
+    "golden_idol": PROP_STYLE + (
+        "SUBJECT: a small gilded devotional idol standing on a low round stone plinth, seen "
+        "from directly above: a squat seated figure of polished gold with a smooth featureless "
+        "face and folded arms, a ring of short blunt rays fanning out around its head like a "
+        "halo, warm reflected highlights along the shoulders and knees, the pale grey plinth "
+        "forming a circular base around it, and a soft warm glow pooling on the ground at its "
+        "foot. The whole image is a SQUARE picture, the idol and its round plinth filling a "
+        "bounding box as wide as it is tall."
+    ),
+    "golden_apple": PROP_STYLE + (
+        "SUBJECT: a single golden apple lying on the ground, seen from directly above: a round "
+        "fruit of burnished solid gold with a soft specular highlight curving across its upper "
+        "surface, a short dark stem at its centre, one small pointed gold leaf lying flat "
+        "beside the stem, faint hammered facets catching the light around its shoulder, and a "
+        "soft warm glow on the ground beneath it. The whole image is a SQUARE picture, the "
+        "apple filling a bounding box as wide as it is tall."
+    ),
     "sarcophagus": PROP_STYLE + (
         "SUBJECT: an ancient stone sarcophagus seen from directly above: a heavy rectangular "
         "coffin-chest of pale weathered limestone with a thick carved lid, a raised border "
@@ -360,6 +377,10 @@ REFS_OVERRIDE = {
     "headstone": [os.path.join(ITEMS, "tombstone.png"), os.path.join(ITEMS, "desk.png")]
         if os.path.exists(os.path.join(ITEMS, "tombstone.png")) else PROP_REFS,
     "sarcophagus": PROP_REFS,
+    # round_table FIRST anchors the square aspect (the first ref dictates the
+    # output ratio); desk carries the flat-painterly register
+    "golden_idol": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "golden_apple": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
     "buckler": SHIELD_REFS,
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,

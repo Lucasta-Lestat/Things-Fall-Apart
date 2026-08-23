@@ -2,6 +2,7 @@
 	"factions": [
 		{
 			"id": "neutral",
+			"female_chance": 0.5,
 			"name": "Neutral",
 			"color": "#808080",
 			"tier": 0,
@@ -34,6 +35,7 @@
 		},
 		{
 			"id": "player",
+			"female_chance": 0.5,
 			"name": "Player's Party",
 			"color": "#4CAF50",
 			"tier": 1,
@@ -71,6 +73,7 @@
 		},
 		{
 			"id": "adventurers_guild",
+			"female_chance": 0.35,
 			"name": "Adventurer's Guild",
 			"color": "#2196F3",
 			"tier": 2,
@@ -109,6 +112,7 @@
 		},
 		{
 			"id": "golden_guard",
+			"female_chance": 0.15,
 			"name": "Golden Guard",
 			"color": "#FFD700",
 			"tier": 3,
@@ -154,6 +158,7 @@
 		},
 		{
 			"id": "liziti",
+			"female_chance": 0.3,
 			"name": "Liziti",
 			"color": "#FFD800",
 			"territory_color": "#1B5E20",
@@ -195,6 +200,7 @@
 		},
 		{
 			"id": "patriciate",
+			"female_chance": 0.3,
 			"name": "Patriciate",
 			"color": "#9C27B0",
 			"tier": 3,
@@ -245,6 +251,7 @@
 		},
 		{
 			"id": "bandits",
+			"female_chance": 0.2,
 			"name": "Bandit Clan",
 			"color": "#795548",
 			"tier": 1,
@@ -286,6 +293,7 @@
 		},
 		{
 			"id": "rebels",
+			"female_chance": 0.35,
 			"name": "Rebel Alliance",
 			"color": "#F44336",
 			"tier": 2,
@@ -323,6 +331,7 @@
 		},
 		{
 			"id": "undead",
+			"female_chance": 0.3,
 			"name": "The Undead",
 			"color": "#1B5E20",
 			"tier": 2,
@@ -355,6 +364,7 @@
 		},
 		{
 			"id": "wildlife",
+			"female_chance": 0.5,
 			"name": "Wildlife",
 			"color": "#8BC34A",
 			"tier": 0,
@@ -407,6 +417,7 @@
 		},
 		{
 			"id": "cultists",
+			"female_chance": 0.5,
 			"name": "Dark Cult",
 			"color": "#4A148C",
 			"tier": 2,
@@ -449,6 +460,7 @@
 		},
 		{
 			"id": "dragatini",
+			"female_chance": 0.25,
 			"name": "Dragatini",
 			"color": "#B71C1C",
 			"territory_color": "#6A1B9A",
@@ -483,6 +495,7 @@
 		},
 		{
 			"id": "tortellini",
+			"female_chance": 0.25,
 			"name": "Tortellini",
 			"color": "#33691E",
 			"territory_color": "#A8C040",
@@ -518,6 +531,7 @@
 		},
 		{
 			"id": "pirates",
+			"female_chance": 0.2,
 			"name": "Freebooters",
 			"color": "#37474F",
 			"tier": 2,
@@ -559,6 +573,7 @@
 		},
 		{
 			"id": "rival_party",
+			"female_chance": 0.4,
 			"name": "Rival Party",
 			"color": "#E91E63",
 			"tier": 2,
@@ -590,6 +605,7 @@
 		},
 		{
 			"id": "waldau",
+			"female_chance": 0.45,
 			"name": "Waldau",
 			"color": "#7A6E54",
 			"tier": 1,
@@ -622,6 +638,7 @@
 		},
 		{
 			"id": "skarsgaard",
+			"female_chance": 0.25,
 			"name": "Skarsgaard",
 			"color": "#3E5A78",
 			"tier": 2,
@@ -647,6 +664,7 @@
 		},
 		{
 			"id": "vermincelli",
+			"female_chance": 0.25,
 			"name": "Vermincelli Family",
 			"color": "#5C3317",
 			"tier": 1,
@@ -673,6 +691,7 @@
 		},
 		{
 			"id": "alamoneans",
+			"female_chance": 0.5,
 			"name": "Alamoneans",
 			"color": "#7C3AED",
 			"tier": 1,

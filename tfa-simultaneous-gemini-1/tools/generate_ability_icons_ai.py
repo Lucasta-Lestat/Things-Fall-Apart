@@ -109,6 +109,9 @@ SPECS = {
     "bind_soul": spec("Occult", "a small rounded ghost wisp with a wavy tail, wrapped around its middle by a loop of chain links", "pale ice white"),
     "silence": spec("Occult", "a hand bell with a rounded body and a small handle, crossed corner to corner by one bold diagonal stroke", "bright white"),
     "wave_of_dysthymia": spec("Occult", "a wide cone opening upward filled with three nested arcs, with one downturned crescent frown resting inside the widest arc", "dull slate grey"),
+    "bloodmusk": spec("Occult", "a small round stoppered flask with three thick curling wisps of vapour rising and spreading from its neck", "deep oxblood red"),
+    "persistent_distraction": spec("Occult", "a small squat idol figure standing on a low plinth, with a ring of short straight rays radiating around its head", "warm gold"),
+    "erisian_apple": spec("Occult", "one round apple with a short stem and a single pointed leaf, with three short rays coming off its upper edge", "warm gold"),
 
     # ── Primal ──
     "pounce": spec("Primal", "three parallel curved claw slashes tearing diagonally across, each tapering to a point at both ends", "dark charcoal"),

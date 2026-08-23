@@ -153,6 +153,14 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 		# "gender": "female" got the MALE rig/sprites every spawn (review find:
 		# surgeon_captain_federica). Spawn overrides still win.
 		race_options["gender"] = str(template["gender"])
+	elif not race_options.has("gender"):
+		# Nothing authored a gender, and RaceDatabase defaults every such spawn to
+		# "male" (RaceDatabase.gd:85) -- which is why 98 of 100 templates read male
+		# and any gender-aware mechanic had nothing to bite on. Roll from the
+		# faction's own ratio instead. Fighting orders and criminal outfits carry a
+		# male skew; civilian and mystical groups sit near even.
+		var female_chance: float = float(faction_data.get("female_chance", 0.5))
+		race_options["gender"] = "female" if randf() < female_chance else "male"
 
 	if not race_id.is_empty():
 		RaceDatabase.apply_race_to_character(character, race_id, race_options)

@@ -355,6 +355,11 @@ static func _effect_intent(e: Dictionary) -> int:
 			return int(CUSTOM_INTENT.get(method, Intent.NEUTRAL))
 		"fluid_well":
 			return int(FLUID_INTENT.get(String(e.get("fluid_type", "")), Intent.NEUTRAL))
+		"compulsion_field":
+			# Every compulsion is something done TO the people in the ring, and
+			# these ones all end in violence or a lost turn. No payload lookup:
+			# unlike a fluid, there is no benign variant.
+			return Intent.HOSTILE
 	# summon / force_field / spawn_fluid / sound_zone read either way — a magnetic
 	# pull or a silence zone is a tool, not an attack. They ABSTAIN rather than
 	# force a colour; a sibling effect (vortex's damage, gravity_well's `slowed`)
