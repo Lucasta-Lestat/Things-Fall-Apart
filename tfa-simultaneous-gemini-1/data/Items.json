@@ -5743,6 +5743,44 @@
 	"max_stack_size": null
   },
   {
+	"id": "compass_mosaic",
+	"display_name": "Compass Mosaic",
+	"type": "item",
+	"description": "A grand inlaid marble compass-rose floor mosaic.",
+	"base_width": 340.0,
+	"base_height": 340.0,
+	"sprite_path": "res://Items/compass_mosaic.png",
+	"weight": 500.0,
+	"cost": 400.0,
+	"interact_options": [],
+	"max_hp": 200.0,
+	"hp": 200.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "stone_bath",
+	"display_name": "Stone Bath",
+	"type": "item",
+	"description": "A sunken octagonal limestone bathing pool.",
+	"base_width": 130.0,
+	"base_height": 130.0,
+	"sprite_path": "res://Items/stone_bath.png",
+	"weight": 800.0,
+	"cost": 250.0,
+	"interact_options": [],
+	"max_hp": 120.0,
+	"hp": 120.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
 	"id": "archery_target",
 	"display_name": "Archery Target",
 	"type": "item",

@@ -225,6 +225,25 @@ PROMPTS.update({
         "The whole image is a TALL PORTRAIT picture, the flight's bounding box about two and "
         "a half times as tall as it is wide."
     ),
+    "compass_mosaic": PROP_STYLE + (
+        "SUBJECT: a grand inlaid marble compass-rose floor mosaic seen from directly above, "
+        "lying perfectly flat like a painted pattern: a large square panel of pale cream and "
+        "warm sand marble tiles framed by a slim double border inlay of antique gold and "
+        "charcoal stone, and at its centre a great eight-pointed compass star of polished "
+        "charcoal-black and antique-gold marble, with four slender minor points in dusty rose "
+        "and cream between the cardinal points. Fine pale mortar seams divide the tiles, the "
+        "polish is worn matte by footsteps, and the lighting is soft and even across the whole "
+        "face. The whole image is a SQUARE picture, the panel exactly as wide as it is tall."
+    ),
+    "stone_bath": PROP_STYLE + (
+        "SUBJECT: a sunken octagonal stone bathing pool seen from directly above: a wide "
+        "eight-sided rim of pale weathered limestone blocks framing still, clear pale-turquoise "
+        "water, the water shading gently deeper toward the middle, a submerged sitting ledge of "
+        "paler stone visible just under the surface along two sides, a faint darker waterline "
+        "where water meets the rim's inner edge, and a folded beige linen towel with a small "
+        "brass ewer resting on one rim corner. The whole image is a SQUARE picture, the pool's "
+        "bounding box exactly as wide as it is tall."
+    ),
     "stove": PROP_STYLE + (
         "SUBJECT: a medieval kitchen's masonry cooking stove seen from directly above: a sturdy "
         "rectangular block of mortared grey fieldstone with a rim of stone visible around the top "
@@ -335,6 +354,10 @@ REFS_OVERRIDE = {
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,
     "stove": PROP_REFS,
+    # square first refs anchor the square aspect; rug carries the flat inlaid-
+    # pattern register for the mosaic, round_table the circular-basin forms
+    "compass_mosaic": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "desk.png")],
+    "stone_bath": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
     "prep_table": PROP_REFS,
     "shelf": PROP_REFS,
     "round_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
