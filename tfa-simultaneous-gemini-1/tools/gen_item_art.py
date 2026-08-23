@@ -225,6 +225,16 @@ PROMPTS.update({
         "The whole image is a TALL PORTRAIT picture, the flight's bounding box about two and "
         "a half times as tall as it is wide."
     ),
+    "bench": PROP_STYLE + (
+        "SUBJECT: a plain sturdy wooden sitting bench seen from directly above, lying "
+        "perfectly flat in plan view: one long rectangular seat plank of warm honey-brown "
+        "wood filling the silhouette, its full top surface visible with straight parallel "
+        "long edges, gentle lengthwise grain, a couple of worn knots, and two slightly "
+        "darker cross-batten shadow lines showing through where the legs sit under the "
+        "seat near each end, with a soft thin contact shadow along both long edges "
+        "grounding it. The whole image is a TALL PORTRAIT picture, the seat's bounding "
+        "box about three times as tall as it is wide."
+    ),
     "compass_mosaic": PROP_STYLE + (
         "SUBJECT: a grand inlaid marble compass-rose floor mosaic seen from directly above, "
         "lying perfectly flat like a painted pattern: a large square panel of pale cream and "
@@ -354,6 +364,9 @@ REFS_OVERRIDE = {
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,
     "stove": PROP_REFS,
+    # plank_bridge FIRST anchors the tall wooden-plank aspect; desk carries the
+    # furniture register (the old bench art read as a tipped-over side view)
+    "bench": [os.path.join(ITEMS, "plank_bridge.png"), os.path.join(ITEMS, "desk.png")],
     # square first refs anchor the square aspect; rug carries the flat inlaid-
     # pattern register for the mosaic, round_table the circular-basin forms
     "compass_mosaic": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "desk.png")],
