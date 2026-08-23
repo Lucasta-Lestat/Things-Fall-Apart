@@ -12,7 +12,8 @@
 	"dexterity": 50,
 	"will": 50,
 	"intelligence": 50,
-	"charisma": 50
+	"charisma": 50,
+	"souls": 2
    },
    "equipment": [
 	"breastplate_2",
