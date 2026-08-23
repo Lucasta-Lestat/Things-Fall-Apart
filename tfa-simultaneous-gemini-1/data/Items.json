@@ -5874,6 +5874,28 @@
 	"max_stack_size": null
   },
   {
+	"id": "stone_stairs",
+	"display_name": "Stone Stairs",
+	"type": "item",
+	"description": "A flight of worn limestone steps.",
+	"base_width": 96.0,
+	"base_height": 192.0,
+	"sprite_path": "res://Items/stone_stairs.png",
+	"weight": 900.0,
+	"cost": 40.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"walkability": 1.0,
+	"max_hp": 120.0,
+	"hp": 120.0,
+	"traits": {
+	 "Stone": 4
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
 	"id": "anvil",
 	"display_name": "Anvil",
 	"type": "item",

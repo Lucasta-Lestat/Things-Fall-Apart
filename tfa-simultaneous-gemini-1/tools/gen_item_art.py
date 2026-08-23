@@ -197,6 +197,17 @@ PROP_STYLE = (
     "clean cutout. "
 )
 PROMPTS.update({
+    "stone_stairs": PROP_STYLE + (
+        "SUBJECT: a straight outdoor staircase of pale cream limestone seen from directly "
+        "above: eleven wide rectangular stone treads stacked in a single column, each tread "
+        "one worn slab spanning the full width, a crisp dark shadow line tucked under every "
+        "step edge and a sun-bleached highlight along every tread nose. A low curb of the "
+        "same cream masonry runs down each long side of the flight. The staircase descends "
+        "from a slightly brighter landing slab at the TOP of the image to the darkest, most "
+        "worn bottom step, the whole flight shading gradually darker toward the bottom edge. "
+        "The whole image is a TALL PORTRAIT picture, the flight's bounding box about two and "
+        "a half times as tall as it is wide."
+    ),
     "stove": PROP_STYLE + (
         "SUBJECT: a medieval kitchen's masonry cooking stove seen from directly above: a sturdy "
         "rectangular block of mortared grey fieldstone with a rim of stone visible around the top "
@@ -297,6 +308,9 @@ HEAD_REFS = [
 # with a square ref and the runner leads with the portrait carpet.
 PROP_REFS = [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")]
 REFS_OVERRIDE = {
+    # plank_bridge FIRST: the shipped portrait walkway anchors the tall aspect;
+    # desk carries the flat-painterly furniture register
+    "stone_stairs": [os.path.join(ITEMS, "plank_bridge.png"), os.path.join(ITEMS, "desk.png")],
     "buckler": SHIELD_REFS,
     "iron_shield": SHIELD_REFS,
     "severed_head": HEAD_REFS,
