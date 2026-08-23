@@ -51,6 +51,10 @@ const SEARCH_LOOK_AROUND_DURATION: float = 2.5
 # Hard ceiling on one SEARCHING episode, regardless of alertness. The
 # alertness-driven exits can be starved indefinitely (see _process_searching).
 const SEARCH_GIVE_UP_SECONDS: float = 20.0
+# A held combat target with no wall-clear sight line for this long is demoted
+# to a SEARCHING destination (see _update_target). CHASE has no other
+# wall-clock, so without this an occluded target is chased forever.
+const TARGET_OCCLUSION_GIVE_UP: float = 5.0
 # Alertness value an AT_EASE NPC is bumped to when woken — just into UNAWARE
 # (paying attention but not alarmed). Far below SUSPICIOUS to avoid
 # immediately panicking.
@@ -77,6 +81,9 @@ var state_timer: float = 0.0
 # Target tracking
 var current_target: ProceduralCharacter = null
 var last_known_target_pos: Vector2 = Vector2.ZERO
+# Seconds since we last had a wall-clear sight line to current_target (or had
+# them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
+var _target_occluded_time: float = 0.0
 
 # Goal system
 var current_goal: String = "idle"
@@ -321,17 +328,20 @@ func _refresh_engagement_ranges(_w = null) -> void:
 		return
 	if String(w.primary_damage_type) in ["ranged_arrow", "ranged_bullet"]:
 		var wr_tiles: float = float(w.weapon_range) if ("weapon_range" in w) else 4.0
-		var px: float = maxf(wr_tiles * GridManager.TILE_SIZE, 128.0)
+		# COMBAT_TILE_SIZE, not TILE_SIZE: world maps inflate TILE_SIZE by
+		# world_render_scale while character art stays unscaled, so the scaled
+		# value would push archers 1.5x too far out there.
+		var px: float = maxf(wr_tiles * GridManager.COMBAT_TILE_SIZE, 128.0)
 		is_ranged_fighter = true
 		attack_range = px
 		preferred_range = px * 0.8
 		too_close_range = px * 0.35   # target closing inside this -> back off (kite)
-	elif ("weapon_range" in w) and float(w.weapon_range) > 0.0:
-		# melee: the SAME reach the hit test uses (MeleeReach.reach_px), not a
-		# parallel guess. The old `* 0.85` fudge was compensating for a physical
-		# blade sweep that had no relationship to this number at all; now that
-		# the authored range IS the reach, shrinking it just makes the AI stand
-		# somewhere it cannot swing from.
+	elif w is WeaponShape:
+		# melee (shields included): the SAME reach the hit test uses
+		# (MeleeReach.reach_px, derived from the weapon's drawn geometry), not a
+		# parallel guess. Not gated on weapon_range any more — that stat is
+		# ranged-only now, and a melee weapon authored without it must still
+		# stand at its blade's reach rather than at punching distance.
 		attack_range = MeleeReach.reach_px(character, w)
 		preferred_range = attack_range * 0.6
 		too_close_range = minf(20.0 * character.body_size_mod, attack_range * 0.35)
@@ -441,6 +451,10 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
 		last_known_target_pos = foe.global_position
 		if current_target != null:
+			# Their hit is positive identification — an "occluded" target who is
+			# still striking us (through a window, over a ledge) stays a target.
+			if foe == current_target:
+				_target_occluded_time = 0.0
 			return
 		# A backstab must not auto-reveal an invisible assassin — mirror the
 		# invisibility rule _update_target applies (:731-734).
@@ -517,9 +531,6 @@ func process_ai(delta: float) -> void:
 		_process_frightened(delta)
 		return
 
-	# Corpse discovery (Phase 7): enforcers who see a crime-stamped body
-	# raise an unidentified alarm. Throttled; skipped while incapacitated
-	# states above have already returned.
 	# Handle transfixed — the idol has your eyes. Sits here deliberately: BELOW
 	# the incapacitating states and hazard escape above (nothing is worth burning
 	# to death for) and ABOVE the apathetic clear further down, which would wipe
@@ -532,6 +543,9 @@ func process_ai(delta: float) -> void:
 	elif compel_focus != null:
 		compel_focus = null
 
+	# Corpse discovery (Phase 7): enforcers who see a crime-stamped body
+	# raise an unidentified alarm. Throttled; skipped while incapacitated
+	# states above have already returned.
 	corpse_check_timer -= delta
 	if corpse_check_timer <= 0.0:
 		corpse_check_timer = 1.0
@@ -541,7 +555,7 @@ func process_ai(delta: float) -> void:
 	_check_path_progress()
 
 	# Update combat target
-	_update_target()
+	_update_target(delta)
 
 	# Handle apathetic — movement only, no combat. Suppress targeting and force IDLE
 	# AFTER _update_target so reacquisition can't override it.
@@ -684,16 +698,16 @@ func _is_sneaking(other: ProceduralCharacter) -> bool:
 	return other in game.party_chars
 
 
-func _update_target() -> void:
-	# Validate existing target
-	if current_target:
-		if not is_instance_valid(current_target):
+func _update_target(delta: float = 0.0) -> void:
 	# Compulsion outranks the hysteresis below on purpose: a musked guard
 	# mid-chase has to turn on his own kind, not finish the fight he was already
 	# in. Above the apathetic suppression too -- a directed compulsion beats an
 	# undirected mood.
 	if _apply_compulsion():
 		return
+	# Validate existing target
+	if current_target:
+		if not is_instance_valid(current_target):
 			_lose_target()
 			return
 
@@ -707,7 +721,34 @@ func _update_target() -> void:
 			_lose_target()
 			return
 
-		last_known_target_pos = current_target.global_position
+		# Occlusion staleness: a target we haven't had a wall-clear sight line
+		# to in TARGET_OCCLUSION_GIVE_UP seconds is a rumour, not a target.
+		# Chasing the rumour held CHASE forever against the near side of a wall
+		# (CHASE has no wall-clock, unlike SEARCHING) with no `?` overhead —
+		# the player reads that as a brainless statue. Demote via _lose_target:
+		# it hands last_known_target_pos to SEARCHING, and re-sighting en route
+		# re-acquires. Wall ray only (_has_clear_sight_line), NOT the FOV cone:
+		# a kiting archer faces away from a perfectly visible enemy, and being
+		# struck by the target also re-anchors it (_on_self_damaged).
+		if dist <= _close_quarters_radius() \
+				or _has_clear_sight_line(current_target.global_position, current_target.get_elevation()):
+			_target_occluded_time = 0.0
+			# refresh only while we can actually SEE them: a per-frame refresh
+			# during occlusion wall-hacked the eventual search goal onto their
+			# live position. Blind, the last seen point stands — sounds and
+			# their hits keep it fresh (on_sound_heard / _on_self_damaged).
+			last_known_target_pos = current_target.global_position
+		else:
+			_target_occluded_time += delta
+			if _target_occluded_time > TARGET_OCCLUSION_GIVE_UP:
+				# The `?` glyph keys on the Alertness ENUM, which acquisition
+				# pinned at MAX (= HOSTILE class, whose `!` self-hides after its
+				# flash) — without this drop the demotion would search with NO
+				# overhead tell. SOUND_CAP (85) sits under the HOSTILE band (90)
+				# and far over both the SEARCHING promotion (60) and give-up
+				# floor (36): routing is unchanged, only the glyph flips to `?`.
+				_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
+				_lose_target()
 		return
 
 	# Check for confusion — pick random target from all visible living characters
@@ -798,9 +839,6 @@ func _update_target() -> void:
 	if best_target:
 		_acquire_target(best_target)
 
-# FactionDatabase.are_hostile is THE hostility oracle — do not add local
-# hostility logic here. (The old fallthrough "two distinct non-neutral
-# factions are hostile on sight" lived here; its survivors are now authored
 # True when a compulsion has seized targeting this tick.
 func _apply_compulsion() -> bool:
 	var cm = character.get_node_or_null("ConditionManager")
@@ -853,16 +891,16 @@ func _process_transfixed(_delta: float) -> void:
 	_aim_at((focus.global_position - character.global_position).angle() + PI / 2)
 
 
+# FactionDatabase.are_hostile is THE hostility oracle — do not add local
+# hostility logic here. (The old fallthrough "two distinct non-neutral
+# factions are hostile on sight" lived here; its survivors are now authored
 # as hostile_by_default in factions.json.) The single exception: a manhunt
 # target is personal knowledge — this enforcer HEARD the accusation — and
 # survives alertness decay until the account is settled.
+# A compulsion is the second such exception, and is scoped the same way.
 func _is_enemy(other: ProceduralCharacter) -> bool:
 	if manhunt_target != null and is_instance_valid(manhunt_target) and other == manhunt_target:
 		return true
-# A compulsion is the second such exception, and is scoped the same way.
-	# Post-robbery truce: they took your purse and let you live (Phase 7).
-	if truce_until > 0.0 and other.faction_id == "player" \
-			and TimeManager.absolute_time() < truce_until:
 	# An incited creature counts its designated victim as an enemy for every
 	# DOWNSTREAM gate too (AbilityTargeting's "enemies" filter, ally scans), which
 	# is what lets a compulsion cross faction lines without touching
@@ -871,12 +909,16 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 	# hostility_harness's 361-pair oracle sweep is unaffected.
 	if compel_victim != null and is_instance_valid(compel_victim) and other == compel_victim:
 		return true
+	# Post-robbery truce: they took your purse and let you live (Phase 7).
+	if truce_until > 0.0 and other.faction_id == "player" \
+			and TimeManager.absolute_time() < truce_until:
 		return false
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
 func _acquire_target(target: ProceduralCharacter) -> void:
 	current_target = target
 	last_known_target_pos = target.global_position
+	_target_occluded_time = 0.0
 	# A sighting outranks a sound. SEARCHING walks to last_heard_position, and
 	# until now NOTHING in combat ever wrote that field — only sounds, the
 	# AT_EASE wake and ally sharing did — so a guard who acquired purely by
@@ -897,6 +939,14 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	current_goal = "idle"
 	target_item = null
 	reaction_timer = reaction_time
+	# Party call-out: one member spotting a hostile raises the whole party —
+	# through walls, across the map (a fighting party shouts; the LOS-gated
+	# ally share left an indoor member deaf to the entire fight). One-shot per
+	# acquisition, so it can't recreate the decay-holiday bug; per-member
+	# guards (never redirect someone mid-fight) live in Game.alert_party.
+	if game != null and ("party_chars" in game) and character in game.party_chars \
+			and game.has_method("alert_party"):
+		game.alert_party(target.global_position)
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
@@ -995,6 +1045,14 @@ func _process_approach(delta: float) -> void:
 		# Ranged needs an actual firing line — a 5-tile shot into a wall face
 		# just decorates the masonry. Close along the path until one opens.
 		if is_ranged_fighter and not is_in_line_of_sight(current_target.global_position, _target_elevation()):
+			_combat_move(current_target.global_position, delta)
+			return
+		# Melee likewise: the hit test vetoes blade lines through walls
+		# (Game.resolve_melee_swing -> MeleeReach.blade_line_clear), so entering
+		# ATTACK against a wall-occluded target would whiff forever. Pure
+		# geometry (_has_clear_sight_line), NOT is_in_line_of_sight — blindness
+		# or a narrow FOV must not stop a melee swing at contact range.
+		if not is_ranged_fighter and not _has_clear_sight_line(current_target.global_position, _target_elevation()):
 			_combat_move(current_target.global_position, delta)
 			return
 		_change_state(AIState.ATTACK)
@@ -1968,8 +2026,13 @@ func _share_alertness_with_allies() -> void:
 		var other_ai = other_char.get_node_or_null("AI")
 		if not other_ai:
 			continue
-		# LOS required — eye contact, not telepathy.
-		if not is_in_line_of_sight(other_char.global_position, other_char.get_elevation()):
+		# LOS required — eye contact, not telepathy. EXCEPTION: party members
+		# call out to each other (walls stopped a fight outside the house from
+		# ever reaching the ally standing inside it).
+		var both_party: bool = ("party_chars" in game) \
+			and character in game.party_chars and other_char in game.party_chars
+		if not both_party \
+				and not is_in_line_of_sight(other_char.global_position, other_char.get_elevation()):
 			continue
 		if alertness_value > other_ai.alertness_value:
 			# Transfer half the gap; tag last_heard_position so they look the

@@ -585,6 +585,12 @@ var current_elevation: float = 0.0
 # Roof layer: true while standing ON a roof (a stacked surface over the ground;
 # interiors below keep ground elevation). Only jumpers ever set this.
 var on_roof: bool = false
+# Render-layer boost while on_roof: above the RoofLayer cover quads (z 120) so
+# roof-walkers draw ON the roof instead of vanishing under it in roof view.
+# Managed exclusively by _refresh_elevation.
+const ROOF_WALKER_Z := 135
+var _roof_z_boosted: bool = false
+var _pre_roof_z: int = 5
 # Race-driven jump capability (RaceDatabase): 0.0 = non-jumper (every existing
 # race; all jump/fall branches are dead code for them).
 var jump_height: float = 0.0
@@ -630,6 +636,19 @@ func _refresh_elevation() -> void:
 		e = GridManager.roof_at(t)
 	else:
 		e = GridManager.effective_elev(t)
+	# Roof-walkers render ABOVE the RoofLayer cover (z 120): boost the root z
+	# while on_roof and restore on dismount. This is the single chokepoint
+	# every mover path funnels through (jump land, fall, warp, per-frame), so
+	# no transition can leave the boost stale. Checked before the no-change
+	# early-out: on_roof can flip while the ELEVATION value stays equal (e.g.
+	# roof at 0-ish story deltas), and the boost must track the flag, not e.
+	if on_roof and not _roof_z_boosted:
+		_roof_z_boosted = true
+		_pre_roof_z = z_index
+		z_index = ROOF_WALKER_Z
+	elif not on_roof and _roof_z_boosted:
+		_roof_z_boosted = false
+		z_index = _pre_roof_z
 	if is_equal_approx(e, current_elevation):
 		return
 	current_elevation = e
@@ -779,13 +798,11 @@ var npc_unlimited_resources: bool = false
 
 # Resource tick state
 const RESOURCE_TICK_INTERVAL := 0.5
-const ADRENALINE_DECAY_DELAY := 5.0
 var _resource_tick_timer: float = 0.0
-var _adrenaline_decay_delay_remaining: float = 0.0
 var _focus_regen_accum: float = 0.0
 var _harmony_regen_accum: float = 0.0
 var _devotion_regen_accum: float = 0.0
-var _adrenaline_decay_accum: float = 0.0
+var _adrenaline_regen_accum: float = 0.0
 
 # Visible-ally adrenaline trigger radius (px).
 const ALLY_VISION_RADIUS := 500.0
@@ -1986,6 +2003,8 @@ func _validate_pair_targets(targets: Array) -> Array:
 	if valid.size() < 2:
 		return []
 	return valid
+
+
 # A compelled body runs its AI even while selected. A selected party member has
 # AI_enabled false and never enters process_ai, so without this the compulsions
 # would be inert on exactly the character the player is watching. panicked and
@@ -1997,8 +2016,6 @@ func _compulsion_active() -> bool:
 	if condition_manager == null:
 		return false
 	return condition_manager.has_active_condition("incited") 		or condition_manager.has_active_condition("transfixed")
-
-
 
 
 func _process_condition_movement_overrides(delta: float) -> void:
@@ -4128,6 +4145,18 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 		# deferred layer write lands.
 		if require_alive and collider.has_method("is_alive") and not collider.is_alive():
 			continue
+		# View-layer filter: point queries hit INVISIBLE bodies, so without
+		# this a click lands on a character the render refuses to show — a
+		# designated ghost. Mirror what is actually drawn: ground view hides
+		# roof-walkers entirely; roof view covers INTERIOR characters with the
+		# opaque roof quads (open-ground people stay visible from above).
+		if game != null and ("roof_view" in game) and game.has_method("_char_on_high_layer"):
+			if not game.roof_view:
+				if game._char_on_high_layer(collider):
+					continue
+			elif not game._char_on_high_layer(collider) \
+					and GridManager.has_roof(GridManager.world_to_map(collider.global_position)):
+				continue
 		if best == null or collider.z_index >= best.z_index:
 			best = collider
 	return best
@@ -5431,7 +5460,10 @@ func _on_attack_hit(hand) -> void:
 		else:
 			emit_signal("attack_hit", unarmed_strike_damage, unarmed_strike_damage_type)
 	if hand == "Off":
-		if current_main_hand_item:
+		# Gate on the SAME hand that gets read: this used to check the main hand
+		# and then dereference the off-hand item — a null-deref for an off-hand
+		# punch thrown while a main-hand weapon was held.
+		if current_off_hand_item:
 			emit_signal("attack_hit", current_off_hand_item.base_damage, current_off_hand_item.primary_damage_type)
 		else:
 			emit_signal("attack_hit", unarmed_strike_damage, unarmed_strike_damage_type)
@@ -7630,8 +7662,8 @@ func _get_resource_max(resource_name: String) -> int:
 
 
 # Per-frame tick for the five school resources.
-# Recovery scales with the matching attribute; adrenaline decays (after a delay)
-# instead of recovering, since it is GAINED on combat events, not regenerated.
+# Recovery scales with the matching attribute; combat events (taking damage,
+# witnessing allies suffer) additionally grant adrenaline as burst gains.
 func _tick_school_resources(delta: float) -> void:
 	# Focus regen scales with Intelligence. Cap at spendable max (locked focus
 	# can never be regenerated past, it stays locked).
@@ -7661,18 +7693,14 @@ func _tick_school_resources(delta: float) -> void:
 				devotion += 1
 				emit_signal("resource_changed", "devotion", devotion, max_devotion)
 
-	# Adrenaline decays after a delay since the last gain. Decay rate scales
-	# with Constitution (calmer characters shed adrenaline faster).
-	if adrenaline > 0:
-		if _adrenaline_decay_delay_remaining > 0.0:
-			_adrenaline_decay_delay_remaining -= delta
-		else:
-			_adrenaline_decay_accum += delta * (effective_constitution() / 150.0)
-			while _adrenaline_decay_accum >= 1.0:
-				_adrenaline_decay_accum -= 1.0
-				if adrenaline > 0:
-					adrenaline -= 1
-					emit_signal("resource_changed", "adrenaline", adrenaline, max_adrenaline)
+	# Adrenaline regen scales with Constitution.
+	if max_adrenaline > 0 and adrenaline < max_adrenaline:
+		_adrenaline_regen_accum += delta * (effective_constitution() / 50.0)
+		while _adrenaline_regen_accum >= 1.0:
+			_adrenaline_regen_accum -= 1.0
+			if adrenaline < max_adrenaline:
+				adrenaline += 1
+				emit_signal("resource_changed", "adrenaline", adrenaline, max_adrenaline)
 
 
 # === Stress / affliction system ===
@@ -7738,7 +7766,6 @@ func _on_self_damaged(amount: int) -> void:
 		return
 	gain_stress(1)
 	_grant_character_resource("adrenaline", 1)
-	_adrenaline_decay_delay_remaining = ADRENALINE_DECAY_DELAY
 	# Focus loss never drops the locked portion; instead it breaks concentration.
 	if max_focus > 0:
 		if focus - 1 < concentration_locked_focus:
@@ -7794,7 +7821,6 @@ func _on_visible_ally_event(other) -> void:
 	if global_position.distance_to(other.global_position) > ALLY_VISION_RADIUS:
 		return
 	_grant_character_resource("adrenaline", 1)
-	_adrenaline_decay_delay_remaining = ADRENALINE_DECAY_DELAY
 
 
 # Connect to another character so ally-witness events grant this character

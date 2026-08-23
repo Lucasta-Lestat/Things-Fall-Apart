@@ -68,6 +68,16 @@ var selected_index: int:
 
 # Selection indicators (one per selected character)
 var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
+
+# ===== VIEW LAYER (DF-style ground/roof slice) =====
+# roof_view=false: the ground slice — interiors visible (the ground PNG is
+# exported roofless), roof cover hidden, roof-walkers hidden ("characters on
+# roofs are seen only on the higher layer"). roof_view=true: RoofLayer quads
+# cover interiors (and everyone in them, by z), roof-walkers draw above the
+# cover via their on_roof z boost. Auto-follows the primary selection's layer
+# every frame (_process); structured maps only (legacy maps have no roof data).
+var roof_view: bool = false
+var roof_layer: Node2D = null   # RoofLayer under map_loader; freed on unload
 const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White (primary)
 const SELECTION_CIRCLE_COLOR_MULTI = Color(0.5, 0.7, 1.0, 0.5)  # Blue (multi-select)
 const SELECTION_CIRCLE_WIDTH = 1.0
@@ -929,6 +939,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	var is_world_map: bool = current_map_data.get("is_world_map", false)
 	var world_render_scale: float = float(current_map_data.get("world_render_scale", 1.0)) if is_world_map else 1.0
 	GridManager.TILE_SIZE = int(round(float(raw_tile_size) * world_render_scale))
+	# Combat conversions (tiles -> px against unscaled character art) must not
+	# inherit the world map's render inflation — see GridManager.COMBAT_TILE_SIZE.
+	GridManager.COMBAT_TILE_SIZE = raw_tile_size
 	var images: Dictionary = current_map_data.get("images", {})
 	var structured: bool = String(current_map_data.get("format", "")) == "structured"
 	if structured:
@@ -967,9 +980,19 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 			graph = CellGraph.from_square_tiles()
 	GridManager.set_elevation_data(graph if structured else null)
 
+	# the previous map's RoofLayer died with the map_loader child sweep
+	roof_layer = null
 	if structured:
 		map_loader.world_map_mode = false
 		map_loader.generate_structured_map(current_map_data)
+		# DF-style roof cover: parented under map_loader so the unload sweep
+		# frees it with the rest of the map. Only structured maps carry roof
+		# data; legacy battlemaps correctly get nothing.
+		if not GridManager.roof_elevations.is_empty():
+			roof_layer = RoofLayer.new()
+			roof_layer.name = "RoofLayer"
+			map_loader.add_child(roof_layer)
+			roof_layer.visible = roof_view
 	else:
 		map_loader.world_map_mode = is_world_map
 		map_loader.world_render_scale = world_render_scale
@@ -2146,6 +2169,16 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		# immediately, but the source identity still has to be confirmed via
 		# LOS for HOSTILE (handled by existing target acquisition).
 		ai_node.wake_from_at_ease(65.0, location)
+	# Party under fire (either side of the blow): call it out to the whole
+	# party. This is the ONLY player-side fan-out that fires when the SELECTED
+	# character opens a fight — their AI is dormant (AI_enabled false), so the
+	# ai.gd _acquire_target hook never runs for them. witnesses_of skips party
+	# on purpose (crime pipeline), hence the separate channel here.
+	if attacker != null and is_instance_valid(attacker) \
+			and attacker in party_chars and attacker != victim:
+		alert_party(victim.global_position)
+	elif victim in party_chars and attacker != null and is_instance_valid(attacker):
+		alert_party(attacker.global_position)
 
 
 # Shared LOS check helper — delegates to the canonical witness-LOS wrapper on
@@ -2153,6 +2186,67 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 # internal call sites that predate it.
 func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2, target_elev: float = 0.0) -> bool:
 	return CrimeManager.has_visual_los(from_char, target_pos, target_elev)
+
+
+# ===== VIEW LAYER helpers =====
+
+# The "high layer" is an elevation slice, not just on_roof: battlement decks
+# (walk_elev >= 1 story) live up there too — same tiering the sight-cone light
+# masks already use. Deck art is painted into the ground PNG, so decks need no
+# cover quads; only the LAYER of the viewer matters for what gets hidden.
+func _char_on_high_layer(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	if "on_roof" in c and c.on_roof:
+		return true
+	if c.has_method("get_elevation"):
+		return c.get_elevation() >= 1.0
+	return false
+
+
+func _set_roof_view(on: bool) -> void:
+	if roof_view == on:
+		return
+	roof_view = on
+	if roof_layer != null and is_instance_valid(roof_layer):
+		roof_layer.visible = on
+	# NPC visibility re-resolves in the per-frame LOS sweep; party members in
+	# _apply_party_layer_visibility below.
+
+
+# Party members bypass the NPC LOS sweep (always shown), so the ground-view
+# rule "roof-walkers are seen only on the higher layer" needs its own pass.
+# Meta-guarded so we only flip visibility WE changed — anything else that
+# hides a party member (future invisibility etc.) is left alone.
+func _apply_party_layer_visibility() -> void:
+	for pc in party_chars:
+		if not is_instance_valid(pc):
+			continue
+		var should_hide: bool = (not roof_view) and _char_on_high_layer(pc)
+		if should_hide != bool(pc.get_meta("layer_hidden", false)):
+			pc.set_meta("layer_hidden", should_hide)
+			pc.visible = not should_hide
+
+
+# Party call-out: raise every party member toward a fight, through walls and
+# across the map (they shout — the LOS-gated ally share never reached a member
+# standing inside a building). Raise-to-at-least via wake_from_at_ease, so it
+# never LOWERS anyone; members already fighting their own target are left
+# alone — their firsthand information beats a second-hand call-out. 65 puts
+# targetless members over the SEARCHING promotion gate (60): they physically
+# move toward the call and confirm by their own eyes en route. Callers are
+# one-shot events (target acquisition, damage), never per-tick loops — a
+# per-tick location write is the decay-holiday bug (see ai.gd ally share).
+func alert_party(location: Vector2) -> void:
+	for pc in party_chars:
+		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
+			continue
+		var pai = pc.get_node_or_null("AI")
+		if pai == null or not pai.has_method("wake_from_at_ease"):
+			continue
+		if pai.current_target != null:
+			continue
+		pai.wake_from_at_ease(65.0, location)
 
 
 # Non-linear pulse curve. t in [0, 1] where 0 = fresh pulse, 1 = expired.
@@ -2234,8 +2328,6 @@ func _update_npc_los_visibility() -> void:
 
 		if seen:
 			# Direct line of sight overrides any pulse.
-			npc.visible = true
-			npc.modulate.a = 1.0
 			_npc_pulse_remaining.erase(npc)
 			# Mark as "ever seen" for the radar-vs-sprite-pulse branch in
 			# trigger_hearing_pulse. Persists for the map session.
@@ -2244,6 +2336,18 @@ func _update_npc_los_visibility() -> void:
 			# known so they appear in the TownServicesPanel even after leaving.
 			if not was_truly_seen:
 				mark_service_seen(npc)
+			# View-layer slice: in ground view, roof-walkers exist only on the
+			# higher layer — LOS still CONFIRMS them (alerts, discovery, AI all
+			# key on `seen` above), but the render stays on the current slice.
+			# In roof view nothing extra hides: the opaque roof quads already
+			# cover interior characters by z, and open-ground NPCs remain
+			# legitimately visible from above.
+			if not roof_view and _char_on_high_layer(npc):
+				npc.visible = false
+				npc.modulate.a = 0.0
+			else:
+				npc.visible = true
+				npc.modulate.a = 1.0
 		elif _npc_pulse_remaining.has(npc):
 			var t_remaining: float = _npc_pulse_remaining[npc]
 			var t_norm: float = clamp(1.0 - (t_remaining / PULSE_DURATION), 0.0, 1.0)
@@ -2341,6 +2445,10 @@ func _process(delta: float) -> void:
 			and not player_camera.manual_pan_active:
 		player_camera.global_position = player_camera.global_position.lerp(
 			primary_selected.global_position, 5.0 * delta)
+	# View layer auto-follows the primary selection: climb a roof and the view
+	# jumps to the roof slice, drop down and interiors come back.
+	_set_roof_view(_char_on_high_layer(primary_selected))
+	_apply_party_layer_visibility()
 	# Toggle warp hover labels by polling — Area2D mouse_entered/exited is
 	# unreliable when overlapping pickable areas exist (characters, items).
 	_update_warp_hover_labels()
@@ -3302,12 +3410,21 @@ func resolve_melee_swing(attacker: Node2D, hand: String) -> void:
 	# Iterating characters_in_scene rather than a physics query keeps this
 	# independent of collision layers, and corpses are filtered by is_alive()
 	# (they stay in this list on purpose — see CrimeManager).
+	# Game.gd's root is a plain Node — borrow the attacker's world for the ray.
+	var space: PhysicsDirectSpaceState2D = attacker.get_world_2d().direct_space_state
 	for target in characters_in_scene:
 		if target == attacker or not is_instance_valid(target):
 			continue
 		if not (target is ProceduralCharacter) or not target.is_alive():
 			continue
 		if not MeleeReach.in_swing(attacker, target, weapon, damage_type):
+			continue
+		# Walls veto blades. The cheap distance/arc test runs first so the ray
+		# only fires for actual candidates. Without this, a polearm's reach
+		# crossed thin walls and hit characters in the next room — the object
+		# channel (blade Area2D) hit the wall too, but never vetoed the
+		# character hit.
+		if not MeleeReach.blade_line_clear(space, attacker, target):
 			continue
 		# Shared with the object channel, so both obey the same rules:
 		# already-hit-this-swing, dead targets, and the cross-storey veto.
