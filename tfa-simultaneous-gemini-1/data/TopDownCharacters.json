@@ -68,7 +68,8 @@
 	"bind_soul",
 	"force_march",
 	"rat_pack",
-    "silence"
+	"silence",
+	"oil_well"
    ],
    "extra_conditions": [],
    "extra_traits": {

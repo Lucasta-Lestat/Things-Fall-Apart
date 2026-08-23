@@ -34,6 +34,7 @@ const EFFECT_TYPES = [
 	"summon",           # Summon an entity
 	"cloud",            # Create a Cloud
 	"spawn_fluid",      # Spawn fluid at target (acid, poison, etc.)
+	"fluid_well",       # Gush fluid over a region for a duration (oil well)
 	"sound_zone",       # Create a region that damps sound (Silence)
 	"custom",           # Custom effect with callback
 ]
@@ -84,6 +85,8 @@ static func resolve_effect(
 			result = _resolve_cloud(effect, caster, target_position, ability)
 		"spawn_fluid":
 			result = _resolve_spawn_fluid(effect, caster, target_position, ability)
+		"fluid_well":
+			result = _resolve_fluid_well(effect, caster, target_position)
 		"sever_limb":
 			result = _resolve_sever_limb(effect, caster, targets, ability)
 		"sound_zone":
@@ -346,6 +349,47 @@ static func _resolve_spawn_fluid(
 				fluid_manager.register_fluid(tile, fluid_type, amount)
 				result["created_objects"].append(tile)
 
+	return result
+
+
+## Resolve fluid_well effect -- a point that gushes fluid for a fixed time.
+##
+## `spawn_fluid` paints a one-shot Manhattan diamond; this plants a self-expiring
+## node that keeps topping the region up, so the pool grows outward, holds, and
+## heals where it has drained. The node owns its own visual too, because
+## `visuals.impact_effect` is hard-freed on the (inert) visual_duration timer at
+## ~1.95s and so cannot cover a multi-second effect.
+static func _resolve_fluid_well(
+	effect: Dictionary,
+	caster: Node,
+	target_position: Vector2
+) -> Dictionary:
+	var result = {
+		"success": true,
+		"effect_type": "fluid_well",
+		"created_objects": [],
+	}
+
+	var game = _get_game_scene(caster)
+	if not game:
+		result["success"] = false
+		result["error"] = "Could not find game scene"
+		return result
+
+	var well := FluidWell.new()
+	well.fluid_type = String(effect.get("fluid_type", "water"))
+	well.radius = float(effect.get("radius", 160.0))
+	well.duration = float(effect.get("duration", 6.0))
+	well.visual_scene_path = String(effect.get("vfx_scene", ""))
+
+	# Parent first, then position -- the same rule as _resolve_sound_zone above.
+	# FluidWell deliberately defers its tile/cell precompute to the first tick
+	# rather than doing it in _ready(), because at add_child time global_position
+	# is still (0, 0) and every tile it picked there would be wrong.
+	game.add_child(well)
+	well.global_position = target_position
+
+	result["created_objects"].append(well)
 	return result
 
 

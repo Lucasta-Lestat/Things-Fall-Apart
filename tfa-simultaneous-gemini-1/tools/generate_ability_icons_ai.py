@@ -119,6 +119,7 @@ SPECS = {
     "bumper_crop": spec("Primal", "three tall stalks of wheat with full grain heads, fanning out from a single bound base", "rich golden wheat yellow"),
     "natural_bite": spec("Primal", "a pair of open jaws biting together: an upper arc and a lower arc of thick pointed fangs, with a gap between them", "bright white"),
     "bide": spec("Primal", "a compressed coiled spring with one bold arrow pressing down onto it from above", "deep teal"),
+    "oil_well": spec("Primal", "a round stone well head seen from the front, with one thick column of liquid gushing straight up out of its mouth and breaking into three fat falling droplets", "glossy blue-black"),
 
     # ── Martial ──
     "shield_bash": spec("Martial", "a heater shield seen face-on, with a bold four-pointed impact spark bursting off its upper right edge", "pale steel cream"),

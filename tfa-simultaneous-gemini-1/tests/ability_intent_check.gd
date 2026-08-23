@@ -56,6 +56,7 @@ func _ready() -> void:
 		"heal": Ability.Intent.BENEFICIAL,           # heal
 		"cloud_kill": Ability.Intent.HOSTILE,        # cloud -> poisoned (debuff)
 		"silence": Ability.Intent.NEUTRAL,           # sound zone: a tool, not an attack
+		"oil_well": Ability.Intent.HOSTILE,         # fluid_well -> oil: mires, and burns
 	}
 	for id in expect.keys():
 		if not abilities.has(id):

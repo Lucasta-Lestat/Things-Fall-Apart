@@ -239,6 +239,15 @@ const SURFACE_INTENT := {
 	"grassy": Intent.BENEFICIAL,
 }
 
+## `fluid_well` is the same shape of problem: the intent is in the PAYLOAD, not
+## the type. An oil well mires whatever wades through it and begs for a torch; a
+## water well is scenery. Unlisted fluids abstain rather than being guessed.
+const FLUID_INTENT := {
+	"oil": Intent.HOSTILE,
+	"acid": Intent.HOSTILE,
+	"poison": Intent.HOSTILE,
+}
+
 
 # ===== INTENT PALETTE =====
 #
@@ -344,6 +353,8 @@ static func _effect_intent(e: Dictionary) -> int:
 			if method == "_place_surface":
 				return int(SURFACE_INTENT.get(String(e.get("surface_id", "")), Intent.NEUTRAL))
 			return int(CUSTOM_INTENT.get(method, Intent.NEUTRAL))
+		"fluid_well":
+			return int(FLUID_INTENT.get(String(e.get("fluid_type", "")), Intent.NEUTRAL))
 	# summon / force_field / spawn_fluid / sound_zone read either way — a magnetic
 	# pull or a silence zone is a tool, not an attack. They ABSTAIN rather than
 	# force a colour; a sibling effect (vortex's damage, gravity_well's `slowed`)

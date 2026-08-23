@@ -1755,6 +1755,43 @@
 				"cast_effect": "",
 				"sound_cast": ""
 			}
+		},
+		{
+			"id": "oil_well",
+			"display_name": "Oil Well",
+			"description": "Split the ground and let a black spring well up. For six seconds crude oil floods a wide patch of earth, miring anything that wades through it, and waiting for a spark.",
+			"icon": "res://UI/UI Icons/ability_oil_well.png",
+			"costs": {},
+			"cast_time": 0.8,
+			"interruptible": true,
+			"traits": {
+				"Primal": 1,
+				"Somatic": 1,
+				"Verbal": 1,
+				"spell": 1,
+				"nature": 2,
+				"control": 3,
+				"aoe": 2
+			},
+			"targeting": {
+				"type": "point",
+				"range": 320.0,
+				"shape": "circle",
+				"radius": 192.0
+			},
+			"effects": [
+				{
+					"type": "fluid_well",
+					"fluid_type": "oil",
+					"radius": 192.0,
+					"duration": 6.0,
+					"vfx_scene": "res://vfx/oil_gusher.tscn"
+				}
+			],
+			"visuals": {
+				"in_hand_effect": "res://vfx/oil_hand.tscn",
+				"sound_cast": "res://sfx/nature_cast.mp3"
+			}
 		}
 	]
 }
