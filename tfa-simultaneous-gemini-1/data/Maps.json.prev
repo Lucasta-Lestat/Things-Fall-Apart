@@ -1055,7 +1055,9 @@
 		{
 			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
 			"id": "skarsgaard_throne",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "Skarsgaard Throne Hall",
 			"npc_spawns": [],
@@ -1081,7 +1083,9 @@
 		{
 			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
 			"id": "southrons_mill",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "Southron's Mill",
 			"npc_spawns": [],
@@ -1107,7 +1111,9 @@
 		{
 			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
 			"id": "vermincelli_hideout",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "Vermincelli Hideout",
 			"npc_spawns": [],
@@ -1133,7 +1139,9 @@
 		{
 			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
 			"id": "sacred_grove",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "The Sacred Grove",
 			"npc_spawns": [],
@@ -1159,7 +1167,9 @@
 		{
 			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
 			"id": "bortelinian_catacombs",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "Bortelinian Catacombs",
 			"npc_spawns": [],
@@ -1185,7 +1195,9 @@
 		{
 			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
 			"id": "alamonean_tower",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "Alamonean Magician's Tower",
 			"npc_spawns": [],
@@ -1211,7 +1223,9 @@
 		{
 			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
 			"id": "river_elf_village",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "River-Elf Village",
 			"npc_spawns": [],
@@ -1237,7 +1251,9 @@
 		{
 			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
 			"id": "curia",
-			"images": {},
+			"images": {
+
+			},
 			"item_spawns": [],
 			"name": "The Scarlattin Curia",
 			"npc_spawns": [],
@@ -31289,7 +31305,7 @@
 				"gggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
 				"ggggggggggssssssssssssssppppssssssssgggggggggggggggggggg",
 				"ggggggggggssssssssssssssppppssssssssgggggppppppsssgggggg",
-				"ggggggggggssssssssssssssppppssssssssgggggppppppsssgggggg",
+				"ggggggggggssssssssssssssssssssssssssgggggppppppsssgggggg",
 				"ggggggggggssssssssssssssssssssssssssgggggppppppsssgggggg",
 				"ggggggggggpppppsssssssssdddddddpppppgggggppppppsssgggggg",
 				"ggggggggggpppppsssssssssdddddddpppppgggggppppppsssgggggg",
@@ -31304,7 +31320,7 @@
 				"ggggggggggpppppsssssssssdddddddpppppgggggggggggggggggggg",
 				"ggggggggggpppppsssssssssdddddddpppppgggggggggggggggggggg",
 				"ggggggggggssssssssssssssssssssssssssgggggggggggggggggggg",
-				"ggggggggggssssssssssssssppppssssssssgggggggggggggggggggg",
+				"ggggggggggssssssssssssssssssssssssssgggggggggggggggggggg",
 				"ggggggggggssssssssssssssppppssssssssgggggggggggggggggggg",
 				"ggggggggggssssssssssssssppppssssssssgggggggggggggggggggg",
 				"gggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
@@ -31499,7 +31515,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1080.0,
-						1172.0
+						1192.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31508,7 +31524,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1232.0,
-						1172.0
+						1192.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31517,7 +31533,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1384.0,
-						1172.0
+						1192.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31526,7 +31542,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1080.0,
-						1900.0
+						1880.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31535,7 +31551,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1384.0,
-						1900.0
+						1880.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31543,7 +31559,7 @@
 				{
 					"id": "iron_shield",
 					"position": [
-						976.0,
+						980.0,
 						1376.0
 					],
 					"rotation": 0.0,
@@ -31552,7 +31568,7 @@
 				{
 					"id": "iron_shield",
 					"position": [
-						976.0,
+						980.0,
 						1696.0
 					],
 					"rotation": 0.0,
@@ -31597,7 +31613,7 @@
 				{
 					"id": "archery_target",
 					"position": [
-						1972.0,
+						1964.0,
 						1256.0
 					],
 					"rotation": 0.0,
@@ -31606,7 +31622,7 @@
 				{
 					"id": "archery_target",
 					"position": [
-						1972.0,
+						1964.0,
 						1368.0
 					],
 					"rotation": 0.0,
@@ -31615,7 +31631,7 @@
 				{
 					"id": "archery_target",
 					"position": [
-						1972.0,
+						1964.0,
 						1704.0
 					],
 					"rotation": 0.0,
@@ -31624,7 +31640,7 @@
 				{
 					"id": "archery_target",
 					"position": [
-						1972.0,
+						1964.0,
 						1816.0
 					],
 					"rotation": 0.0,
@@ -31688,7 +31704,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1608.0,
-						1164.0
+						1192.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31697,7 +31713,7 @@
 					"id": "weapon_rack",
 					"position": [
 						1608.0,
-						1908.0
+						1880.0
 					],
 					"rotation": 0.0,
 					"scale": 1.5
@@ -31778,7 +31794,7 @@
 					"id": "torch",
 					"position": [
 						1320.0,
-						1062.0
+						1066.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31787,7 +31803,7 @@
 					"id": "torch",
 					"position": [
 						1720.0,
-						1062.0
+						1066.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31796,7 +31812,7 @@
 					"id": "torch",
 					"position": [
 						1320.0,
-						2010.0
+						2006.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31805,7 +31821,7 @@
 					"id": "torch",
 					"position": [
 						1720.0,
-						2010.0
+						2006.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31868,7 +31884,7 @@
 					"id": "shelf",
 					"position": [
 						868.0,
-						1164.0
+						1176.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31889,13 +31905,13 @@
 						972.0
 					],
 					"rotation": 0.0,
-					"scale": 0.9
+					"scale": 0.85
 				},
 				{
 					"id": "bucket",
 					"position": [
 						1284.0,
-						1020.0
+						1008.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31904,7 +31920,7 @@
 					"id": "amphora",
 					"position": [
 						1468.0,
-						932.0
+						936.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31916,13 +31932,13 @@
 						2100.0
 					],
 					"rotation": 0.0,
-					"scale": 0.9
+					"scale": 0.85
 				},
 				{
 					"id": "bucket",
 					"position": [
 						1284.0,
-						2052.0
+						2064.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31931,7 +31947,7 @@
 					"id": "amphora",
 					"position": [
 						1468.0,
-						2140.0
+						2136.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -31940,16 +31956,16 @@
 					"id": "weapon_rack",
 					"position": [
 						1840.0,
-						968.0
+						972.0
 					],
 					"rotation": 1.571,
-					"scale": 1.4
+					"scale": 1.1
 				},
 				{
 					"id": "iron_shield",
 					"position": [
 						1944.0,
-						1012.0
+						1000.0
 					],
 					"rotation": 0.0,
 					"scale": 0.9
@@ -31958,16 +31974,16 @@
 					"id": "weapon_rack",
 					"position": [
 						1840.0,
-						2104.0
+						2100.0
 					],
 					"rotation": 1.571,
-					"scale": 1.4
+					"scale": 1.1
 				},
 				{
 					"id": "iron_shield",
 					"position": [
 						1944.0,
-						2060.0
+						2072.0
 					],
 					"rotation": 0.0,
 					"scale": 0.9
@@ -32266,18 +32282,9 @@
 					"scale": 1.0
 				},
 				{
-					"id": "rug",
-					"position": [
-						812.0,
-						1732.0
-					],
-					"rotation": 0.0,
-					"scale": 2.499
-				},
-				{
 					"id": "bed_wooden",
 					"position": [
-						717.0,
+						739.0,
 						1675.0
 					],
 					"rotation": -1.571,
@@ -32286,17 +32293,26 @@
 				{
 					"id": "bed_wooden",
 					"position": [
-						717.0,
+						739.0,
 						1789.0
 					],
 					"rotation": -1.571,
 					"scale": 1.2
 				},
 				{
+					"id": "rug",
+					"position": [
+						812.0,
+						1732.0
+					],
+					"rotation": 0.0,
+					"scale": 1.78
+				},
+				{
 					"id": "wardrobe",
 					"position": [
-						719.0,
-						1568.0
+						741.0,
+						1590.0
 					],
 					"rotation": 0.0,
 					"scale": 1.12
@@ -32304,17 +32320,17 @@
 				{
 					"id": "crate",
 					"position": [
-						989.0,
-						920.0
+						1198.0,
+						963.0
 					],
-					"rotation": 0.0,
+					"rotation": 1.571,
 					"scale": 1.021
 				},
 				{
 					"id": "barrel",
 					"position": [
-						1039.0,
-						922.0
+						1013.0,
+						945.0
 					],
 					"rotation": 0.0,
 					"scale": 1.036
@@ -32322,8 +32338,8 @@
 				{
 					"id": "grain_sack",
 					"position": [
-						1085.0,
-						911.0
+						1059.0,
+						933.0
 					],
 					"rotation": 0.0,
 					"scale": 1.016
@@ -32331,8 +32347,8 @@
 				{
 					"id": "crate",
 					"position": [
-						1130.0,
-						920.0
+						1103.0,
+						942.0
 					],
 					"rotation": 0.0,
 					"scale": 1.015
@@ -32340,8 +32356,8 @@
 				{
 					"id": "basket",
 					"position": [
-						1130.0,
-						920.0
+						1103.0,
+						942.0
 					],
 					"rotation": -0.237,
 					"scale": 0.65,
@@ -32350,90 +32366,53 @@
 				{
 					"id": "amphora",
 					"position": [
-						1173.0,
-						912.0
+						1146.0,
+						934.0
 					],
 					"rotation": 0.0,
 					"scale": 0.99
 				},
 				{
-					"id": "crate",
+					"id": "grain_sack",
 					"position": [
-						1220.0,
-						941.0
+						1163.0,
+						988.0
 					],
-					"rotation": 1.571,
-					"scale": 1.013
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						1220.0,
-						941.0
-					],
-					"rotation": 1.712,
-					"scale": 0.7,
-					"z": 1.0
-				},
-				{
-					"id": "crate",
-					"position": [
-						1220.0,
-						990.0
-					],
-					"rotation": 1.571,
-					"scale": 1.032
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						1108.0,
-						967.0
-					],
-					"rotation": 0.063,
-					"scale": 0.999
-				},
-				{
-					"id": "crate",
-					"position": [
-						1161.0,
-						992.0
-					],
-					"rotation": -0.461,
-					"scale": 1.092
+					"rotation": -0.415,
+					"scale": 0.965
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1002.0,
-						964.0
+						1071.0,
+						974.0
 					],
-					"rotation": -0.269,
-					"scale": 0.937
+					"rotation": -0.323,
+					"scale": 0.906
 				},
 				{
-					"id": "basket",
+					"id": "crate",
 					"position": [
-						1113.0,
-						1004.0
+						1119.0,
+						1002.0
 					],
-					"rotation": 0.346,
-					"scale": 0.928
+					"rotation": 0.195,
+					"scale": 0.916
 				},
 				{
-					"id": "rug",
+					"id": "rope_coil",
 					"position": [
-						1650.0,
-						976.0
+						1026.0,
+						989.0
 					],
-					"rotation": 0.0,
-					"scale": 1.699
+					"rotation": 0.206,
+					"scale": 0.903
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
 						1612.0,
-						934.0
+						956.0
 					],
 					"rotation": 0.0,
 					"scale": 1.25
@@ -32442,107 +32421,16 @@
 					"id": "bed_wooden",
 					"position": [
 						1688.0,
-						934.0
+						956.0
 					],
 					"rotation": 0.0,
 					"scale": 1.25
 				},
 				{
-					"id": "wardrobe",
-					"position": [
-						1563.0,
-						1024.0
-					],
-					"rotation": 3.142,
-					"scale": 1.112
-				},
-				{
 					"id": "crate",
 					"position": [
-						1880.0,
-						919.0
-					],
-					"rotation": 0.0,
-					"scale": 0.974
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1929.0,
-						922.0
-					],
-					"rotation": 0.0,
-					"scale": 1.018
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						1975.0,
-						911.0
-					],
-					"rotation": 0.0,
-					"scale": 1.021
-				},
-				{
-					"id": "crate",
-					"position": [
-						1993.0,
-						960.0
-					],
-					"rotation": 1.571,
-					"scale": 0.983
-				},
-				{
-					"id": "basket",
-					"position": [
-						1993.0,
-						960.0
-					],
-					"rotation": 1.393,
-					"scale": 0.65,
-					"z": 1.0
-				},
-				{
-					"id": "amphora",
-					"position": [
-						2001.0,
-						1002.0
-					],
-					"rotation": 1.571,
-					"scale": 0.964
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						1899.0,
-						961.0
-					],
-					"rotation": 0.083,
-					"scale": 1.061
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						1929.0,
-						982.0
-					],
-					"rotation": 0.085,
-					"scale": 0.901
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						1804.0,
-						1023.0
-					],
-					"rotation": 0.313,
-					"scale": 1.003
-				},
-				{
-					"id": "crate",
-					"position": [
-						2256.0,
-						941.0
+						1970.0,
+						963.0
 					],
 					"rotation": 1.571,
 					"scale": 1.017
@@ -32550,334 +32438,252 @@
 				{
 					"id": "barrel",
 					"position": [
-						2255.0,
-						990.0
-					],
-					"rotation": 1.571,
-					"scale": 0.98
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						2057.0,
-						911.0
+						1904.0,
+						943.0
 					],
 					"rotation": 0.0,
-					"scale": 1.008
+					"scale": 0.98
 				},
 				{
 					"id": "crate",
 					"position": [
-						2101.0,
-						920.0
+						2234.0,
+						963.0
+					],
+					"rotation": 1.571,
+					"scale": 0.986
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2085.0,
+						944.0
 					],
 					"rotation": 0.0,
-					"scale": 1.013
+					"scale": 1.03
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						2130.0,
+						933.0
+					],
+					"rotation": 0.0,
+					"scale": 1.01
+				},
+				{
+					"id": "crate",
+					"position": [
+						2175.0,
+						942.0
+					],
+					"rotation": 0.0,
+					"scale": 1.018
 				},
 				{
 					"id": "basket",
 					"position": [
-						2101.0,
-						920.0
+						2175.0,
+						942.0
 					],
-					"rotation": -0.186,
+					"rotation": -0.056,
 					"scale": 0.65,
 					"z": 1.0
 				},
 				{
-					"id": "amphora",
-					"position": [
-						2144.0,
-						912.0
-					],
-					"rotation": 0.0,
-					"scale": 0.999
-				},
-				{
 					"id": "crate",
 					"position": [
-						2187.0,
-						919.0
+						2143.0,
+						979.0
 					],
-					"rotation": 0.0,
-					"scale": 0.962
+					"rotation": 0.079,
+					"scale": 0.966
 				},
 				{
-					"id": "cheese_wheel",
+					"id": "basket",
 					"position": [
-						2187.0,
-						919.0
+						2056.0,
+						996.0
 					],
-					"rotation": 0.151,
-					"scale": 0.7,
-					"z": 1.0
+					"rotation": -0.5,
+					"scale": 1.093
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						2179.0,
-						985.0
+						2189.0,
+						1001.0
 					],
-					"rotation": 0.431,
-					"scale": 0.938
-				},
-				{
-					"id": "basket",
-					"position": [
-						2224.0,
-						1014.0
-					],
-					"rotation": 0.234,
-					"scale": 0.951
-				},
-				{
-					"id": "basket",
-					"position": [
-						2049.0,
-						1022.0
-					],
-					"rotation": 0.345,
-					"scale": 0.902
-				},
-				{
-					"id": "crate",
-					"position": [
-						2213.0,
-						957.0
-					],
-					"rotation": 0.334,
-					"scale": 1.093
+					"rotation": 0.111,
+					"scale": 1.01
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
-						2053.0,
-						1221.0
+						2075.0,
+						1264.0
 					],
 					"rotation": -1.571,
-					"scale": 1.2
-				},
-				{
-					"id": "crate",
-					"position": [
-						2109.0,
-						1221.0
-					],
-					"rotation": -1.571,
-					"scale": 0.8
-				},
-				{
-					"id": "straw_bed",
-					"position": [
-						2063.0,
-						1292.0
-					],
-					"rotation": -1.571,
-					"scale": 1.2
-				},
-				{
-					"id": "crate",
-					"position": [
-						2130.0,
-						1292.0
-					],
-					"rotation": -1.571,
-					"scale": 0.8
-				},
-				{
-					"id": "bed_wooden",
-					"position": [
-						2243.0,
-						1221.0
-					],
-					"rotation": 1.571,
 					"scale": 1.2
 				},
 				{
 					"id": "straw_bed",
 					"position": [
-						2233.0,
-						1292.0
+						2086.0,
+						1336.0
 					],
-					"rotation": 1.571,
+					"rotation": -1.571,
 					"scale": 1.2
-				},
-				{
-					"id": "crate",
-					"position": [
-						2166.0,
-						1292.0
-					],
-					"rotation": 1.571,
-					"scale": 0.8
 				},
 				{
 					"id": "bucket",
 					"position": [
 						2147.0,
-						1262.0
+						1336.0
 					],
-					"rotation": 0.389,
-					"scale": 0.937
+					"rotation": -1.571,
+					"scale": 0.8
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
-						2243.0,
-						1709.0
+						2221.0,
+						1264.0
 					],
 					"rotation": 1.571,
+					"scale": 1.2
+				},
+				{
+					"id": "bucket",
+					"position": [
+						2171.0,
+						1264.0
+					],
+					"rotation": 1.571,
+					"scale": 0.8
+				},
+				{
+					"id": "straw_bed",
+					"position": [
+						2210.0,
+						1336.0
+					],
+					"rotation": 1.571,
+					"scale": 1.2
+				},
+				{
+					"id": "stool",
+					"position": [
+						2217.0,
+						1408.0
+					],
+					"rotation": -0.116,
+					"scale": 0.992
+				},
+				{
+					"id": "bed_wooden",
+					"position": [
+						2112.0,
+						1691.0
+					],
+					"rotation": 0.0,
 					"scale": 1.2
 				},
 				{
 					"id": "straw_bed",
 					"position": [
-						2233.0,
-						1780.0
-					],
-					"rotation": 1.571,
-					"scale": 1.2
-				},
-				{
-					"id": "bucket",
-					"position": [
-						2172.0,
-						1780.0
-					],
-					"rotation": 1.571,
-					"scale": 0.8
-				},
-				{
-					"id": "bed_wooden",
-					"position": [
-						2112.0,
-						1669.0
+						2184.0,
+						1702.0
 					],
 					"rotation": 0.0,
 					"scale": 1.2
 				},
 				{
-					"id": "crate",
+					"id": "straw_bed",
 					"position": [
-						2112.0,
-						1725.0
-					],
-					"rotation": 0.0,
-					"scale": 0.8
-				},
-				{
-					"id": "bucket",
-					"position": [
-						2226.0,
-						1860.0
-					],
-					"rotation": 0.023,
-					"scale": 1.062
-				},
-				{
-					"id": "barrel",
-					"position": [
-						990.0,
-						2150.0
-					],
-					"rotation": 3.142,
-					"scale": 1.005
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1041.0,
-						2151.0
-					],
-					"rotation": 3.142,
-					"scale": 0.979
-				},
-				{
-					"id": "amphora",
-					"position": [
-						1087.0,
-						2160.0
-					],
-					"rotation": 3.142,
-					"scale": 1.002
-				},
-				{
-					"id": "crate",
-					"position": [
-						1132.0,
-						2152.0
-					],
-					"rotation": 3.142,
-					"scale": 1.003
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1184.0,
-						2150.0
-					],
-					"rotation": 3.142,
-					"scale": 1.029
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1218.0,
-						2062.0
+						2210.0,
+						1808.0
 					],
 					"rotation": 1.571,
-					"scale": 1.031
+					"scale": 1.2
+				},
+				{
+					"id": "stool",
+					"position": [
+						2098.0,
+						1765.0
+					],
+					"rotation": 0.207,
+					"scale": 1.038
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1197.0,
+						2099.0
+					],
+					"rotation": 1.571,
+					"scale": 0.966
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1012.0,
+						2129.0
+					],
+					"rotation": 3.142,
+					"scale": 0.984
 				},
 				{
 					"id": "amphora",
 					"position": [
-						1228.0,
-						2109.0
+						1058.0,
+						2137.0
 					],
-					"rotation": 1.571,
-					"scale": 0.992
+					"rotation": 3.142,
+					"scale": 1.038
 				},
 				{
 					"id": "crate",
 					"position": [
-						1134.0,
-						2070.0
+						1104.0,
+						2130.0
 					],
-					"rotation": -0.057,
-					"scale": 1.003
+					"rotation": 3.142,
+					"scale": 1.022
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1156.0,
+						2128.0
+					],
+					"rotation": 3.142,
+					"scale": 1.018
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						988.0,
+						2069.0
+					],
+					"rotation": -0.446,
+					"scale": 1.028
 				},
 				{
 					"id": "amphora",
 					"position": [
-						980.0,
-						2105.0
+						1122.0,
+						2075.0
 					],
-					"rotation": -0.02,
-					"scale": 0.978
-				},
-				{
-					"id": "amphora",
-					"position": [
-						1024.0,
-						2105.0
-					],
-					"rotation": -0.324,
-					"scale": 0.976
-				},
-				{
-					"id": "rug",
-					"position": [
-						1650.0,
-						2096.0
-					],
-					"rotation": 0.0,
-					"scale": 1.699
+					"rotation": 0.408,
+					"scale": 1.067
 				},
 				{
 					"id": "bed_wooden",
 					"position": [
 						1612.0,
-						2138.0
+						2116.0
 					],
 					"rotation": 3.142,
 					"scale": 1.25
@@ -32886,89 +32692,34 @@
 					"id": "bed_wooden",
 					"position": [
 						1688.0,
-						2138.0
+						2116.0
 					],
 					"rotation": 3.142,
 					"scale": 1.25
 				},
 				{
-					"id": "wardrobe",
-					"position": [
-						1563.0,
-						2048.0
-					],
-					"rotation": 0.0,
-					"scale": 1.128
-				},
-				{
 					"id": "crate",
-					"position": [
-						1881.0,
-						2152.0
-					],
-					"rotation": 3.142,
-					"scale": 1.021
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1931.0,
-						2150.0
-					],
-					"rotation": 3.142,
-					"scale": 1.037
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						2002.0,
-						2056.0
-					],
-					"rotation": 1.571,
-					"scale": 0.962
-				},
-				{
-					"id": "crate",
-					"position": [
-						1992.0,
-						2100.0
-					],
-					"rotation": 1.571,
-					"scale": 1.026
-				},
-				{
-					"id": "basket",
-					"position": [
-						1992.0,
-						2100.0
-					],
-					"rotation": 1.639,
-					"scale": 0.65,
-					"z": 1.0
-				},
-				{
-					"id": "basket",
 					"position": [
 						1903.0,
-						2089.0
+						2130.0
 					],
-					"rotation": -0.455,
-					"scale": 0.97
+					"rotation": 3.142,
+					"scale": 1.002
 				},
 				{
-					"id": "rope_coil",
+					"id": "basket",
 					"position": [
-						1803.0,
-						2058.0
+						1960.0,
+						2109.0
 					],
-					"rotation": 0.25,
-					"scale": 0.952
+					"rotation": 0.325,
+					"scale": 0.972
 				},
 				{
 					"id": "crate",
 					"position": [
-						2257.0,
-						2060.0
+						2235.0,
+						2098.0
 					],
 					"rotation": 1.571,
 					"scale": 0.963
@@ -32976,392 +32727,283 @@
 				{
 					"id": "barrel",
 					"position": [
-						2255.0,
-						2108.0
+						2085.0,
+						2127.0
 					],
-					"rotation": 1.571,
-					"scale": 0.985
+					"rotation": 3.142,
+					"scale": 1.034
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						2057.0,
-						2161.0
+						2130.0,
+						2139.0
 					],
 					"rotation": 3.142,
-					"scale": 1.004
+					"scale": 0.998
 				},
 				{
 					"id": "crate",
 					"position": [
-						2100.0,
-						2153.0
+						2175.0,
+						2130.0
 					],
 					"rotation": 3.142,
-					"scale": 0.973
+					"scale": 1.018
 				},
 				{
 					"id": "basket",
 					"position": [
-						2100.0,
-						2153.0
+						2175.0,
+						2130.0
 					],
-					"rotation": 2.969,
+					"rotation": 3.053,
 					"scale": 0.65,
 					"z": 1.0
 				},
 				{
-					"id": "amphora",
-					"position": [
-						2143.0,
-						2160.0
-					],
-					"rotation": 3.142,
-					"scale": 1.035
-				},
-				{
-					"id": "crate",
-					"position": [
-						2186.0,
-						2153.0
-					],
-					"rotation": 3.142,
-					"scale": 0.971
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						2186.0,
-						2153.0
-					],
-					"rotation": 3.153,
-					"scale": 0.7,
-					"z": 1.0
-				},
-				{
-					"id": "crate",
-					"position": [
-						2233.0,
-						2153.0
-					],
-					"rotation": 3.142,
-					"scale": 0.982
-				},
-				{
 					"id": "grain_sack",
 					"position": [
-						2133.0,
-						2112.0
+						2177.0,
+						2066.0
 					],
-					"rotation": 0.209,
-					"scale": 1.078
-				},
-				{
-					"id": "basket",
-					"position": [
-						2163.0,
-						2078.0
-					],
-					"rotation": -0.119,
-					"scale": 1.092
+					"rotation": -0.019,
+					"scale": 0.938
 				},
 				{
 					"id": "rope_coil",
 					"position": [
-						2225.0,
-						2079.0
+						2057.0,
+						2072.0
 					],
-					"rotation": 0.229,
-					"scale": 1.076
-				},
-				{
-					"id": "basket",
-					"position": [
-						2103.0,
-						2083.0
-					],
-					"rotation": -0.258,
-					"scale": 0.955
-				},
-				{
-					"id": "treasure_chest",
-					"position": [
-						1094.0,
-						2096.0
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1454.0,
-						1971.0
-					],
-					"rotation": -0.011,
-					"scale": 0.942
+					"rotation": 0.399,
+					"scale": 1.064
 				},
 				{
 					"id": "stool",
 					"position": [
-						817.0,
-						1317.0
+						2163.0,
+						1376.0
 					],
-					"rotation": -0.035,
-					"scale": 1.0
-				},
-				{
-					"id": "basket",
-					"position": [
-						899.0,
-						1397.0
-					],
-					"rotation": 0.237,
-					"scale": 0.941
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						973.0,
-						2046.0
-					],
-					"rotation": 0.01,
-					"scale": 1.095
-				},
-				{
-					"id": "stool",
-					"position": [
-						855.0,
-						1351.0
-					],
-					"rotation": 0.534,
-					"scale": 1.082
-				},
-				{
-					"id": "basket",
-					"position": [
-						1935.0,
-						1084.0
-					],
-					"rotation": -0.366,
-					"scale": 0.937
-				},
-				{
-					"id": "crate",
-					"position": [
-						1006.0,
-						1021.0
-					],
-					"rotation": -0.375,
-					"scale": 1.009
-				},
-				{
-					"id": "spear",
-					"position": [
-						2116.0,
-						1373.0
-					],
-					"rotation": 0.374,
-					"scale": 1.088
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1261.0,
-						1974.0
-					],
-					"rotation": 0.546,
-					"scale": 0.932
-				},
-				{
-					"id": "stool",
-					"position": [
-						870.0,
-						1831.0
-					],
-					"rotation": -0.537,
-					"scale": 1.015
-				},
-				{
-					"id": "basket",
-					"position": [
-						851.0,
-						1645.0
-					],
-					"rotation": 0.407,
-					"scale": 1.06
-				},
-				{
-					"id": "spear",
-					"position": [
-						2070.0,
-						1775.0
-					],
-					"rotation": 0.273,
-					"scale": 0.985
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						2050.0,
-						957.0
-					],
-					"rotation": 0.51,
-					"scale": 1.016
-				},
-				{
-					"id": "basket",
-					"position": [
-						804.0,
-						1865.0
-					],
-					"rotation": -0.283,
-					"scale": 0.976
-				},
-				{
-					"id": "stool",
-					"position": [
-						768.0,
-						1469.0
-					],
-					"rotation": 0.475,
-					"scale": 1.071
-				},
-				{
-					"id": "stool",
-					"position": [
-						847.0,
-						1804.0
-					],
-					"rotation": -0.115,
-					"scale": 1.094
-				},
-				{
-					"id": "basket",
-					"position": [
-						2240.0,
-						1974.0
-					],
-					"rotation": -0.49,
-					"scale": 0.986
+					"rotation": -0.448,
+					"scale": 0.958
 				},
 				{
 					"id": "amphora",
 					"position": [
-						879.0,
-						1497.0
+						864.0,
+						1292.0
 					],
-					"rotation": 0.415,
-					"scale": 0.915
+					"rotation": 0.15,
+					"scale": 0.944
 				},
 				{
-					"id": "amphora",
+					"id": "basket",
 					"position": [
-						2675.0,
-						1066.0
+						895.0,
+						1231.0
 					],
-					"rotation": 0.206,
+					"rotation": 0.328,
 					"scale": 1.041
+				},
+				{
+					"id": "basket",
+					"position": [
+						849.0,
+						1807.0
+					],
+					"rotation": -0.109,
+					"scale": 1.097
+				},
+				{
+					"id": "stool",
+					"position": [
+						1571.0,
+						1005.0
+					],
+					"rotation": -0.021,
+					"scale": 1.081
+				},
+				{
+					"id": "stool",
+					"position": [
+						738.0,
+						1730.0
+					],
+					"rotation": -0.1,
+					"scale": 0.948
+				},
+				{
+					"id": "bucket",
+					"position": [
+						2159.0,
+						1214.0
+					],
+					"rotation": -0.213,
+					"scale": 1.061
+				},
+				{
+					"id": "basket",
+					"position": [
+						895.0,
+						1626.0
+					],
+					"rotation": 0.1,
+					"scale": 1.069
+				},
+				{
+					"id": "bucket",
+					"position": [
+						2141.0,
+						1852.0
+					],
+					"rotation": 0.136,
+					"scale": 0.998
+				},
+				{
+					"id": "stool",
+					"position": [
+						857.0,
+						1426.0
+					],
+					"rotation": -0.296,
+					"scale": 1.073
+				},
+				{
+					"id": "stool",
+					"position": [
+						901.0,
+						1896.0
+					],
+					"rotation": 0.493,
+					"scale": 0.921
+				},
+				{
+					"id": "stool",
+					"position": [
+						812.0,
+						1255.0
+					],
+					"rotation": -0.445,
+					"scale": 0.924
+				},
+				{
+					"id": "amphora",
+					"position": [
+						905.0,
+						1263.0
+					],
+					"rotation": 0.037,
+					"scale": 0.906
+				},
+				{
+					"id": "firewood",
+					"position": [
+						2888.0,
+						1286.0
+					],
+					"rotation": -0.44,
+					"scale": 0.955
 				},
 				{
 					"id": "stove",
 					"position": [
-						3034.0,
-						1362.0
+						3053.0,
+						1344.0
 					],
 					"rotation": 3.142,
-					"scale": 0.966
+					"scale": 1.021
 				},
 				{
 					"id": "cauldron",
 					"position": [
-						3034.0,
-						1362.0
+						3053.0,
+						1344.0
 					],
-					"rotation": 2.941,
+					"rotation": 3.201,
 					"scale": 0.55,
 					"z": 1.0
 				},
 				{
+					"id": "firewood",
+					"position": [
+						3025.0,
+						993.0
+					],
+					"rotation": -0.165,
+					"scale": 1.041
+				},
+				{
+					"id": "amphora",
+					"position": [
+						2696.0,
+						1210.0
+					],
+					"rotation": 0.1,
+					"scale": 1.017
+				},
+				{
 					"id": "bucket",
 					"position": [
-						3022.0,
-						1254.0
+						3085.0,
+						1066.0
 					],
-					"rotation": -0.086,
-					"scale": 0.927
+					"rotation": -0.105,
+					"scale": 0.939
+				},
+				{
+					"id": "amphora",
+					"position": [
+						2931.0,
+						1178.0
+					],
+					"rotation": 0.314,
+					"scale": 1.039
 				},
 				{
 					"id": "basket",
 					"position": [
-						2946.0,
-						1342.0
+						3072.0,
+						1013.0
 					],
-					"rotation": -0.473,
-					"scale": 0.993
+					"rotation": 0.521,
+					"scale": 1.03
 				},
 				{
-					"id": "bucket",
+					"id": "amphora",
 					"position": [
-						3118.0,
-						1121.0
+						2720.0,
+						974.0
 					],
-					"rotation": 0.491,
-					"scale": 0.932
+					"rotation": 0.444,
+					"scale": 1.014
 				},
 				{
 					"id": "firewood",
 					"position": [
-						3115.0,
-						1088.0
+						2701.0,
+						1321.0
 					],
-					"rotation": -0.155,
-					"scale": 1.009
+					"rotation": -0.492,
+					"scale": 1.051
 				},
 				{
 					"id": "basket",
 					"position": [
-						3082.0,
-						1235.0
+						3102.0,
+						1034.0
 					],
-					"rotation": 0.272,
-					"scale": 1.05
+					"rotation": 0.085,
+					"scale": 0.952
 				},
 				{
 					"id": "basket",
 					"position": [
-						3141.0,
-						975.0
+						2888.0,
+						1188.0
 					],
-					"rotation": 0.448,
-					"scale": 1.043
-				},
-				{
-					"id": "bucket",
-					"position": [
-						3065.0,
-						1288.0
-					],
-					"rotation": 0.461,
-					"scale": 1.002
-				},
-				{
-					"id": "basket",
-					"position": [
-						2951.0,
-						1014.0
-					],
-					"rotation": -0.227,
-					"scale": 0.958
-				},
-				{
-					"id": "firewood",
-					"position": [
-						2868.0,
-						1247.0
-					],
-					"rotation": -0.025,
-					"scale": 1.094
+					"rotation": 0.149,
+					"scale": 0.968
 				}
 			],
 			"name": "Tg Castle Keep",
@@ -33411,8 +33053,8 @@
 				"ladder_3_base": {
 					"facing": 0.0,
 					"position": [
-						2208.0,
-						992.0
+						2144.0,
+						1120.0
 					]
 				},
 				"ladder_3_top": {
@@ -33425,8 +33067,8 @@
 				"ladder_4_base": {
 					"facing": 0.0,
 					"position": [
-						2208.0,
-						2080.0
+						2144.0,
+						1952.0
 					]
 				},
 				"ladder_4_top": {
@@ -35167,21 +34809,21 @@
 					],
 					"b": [
 						944.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						944.0,
-						1073.0
+						1065.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35191,7 +34833,7 @@
 				{
 					"a": [
 						944.0,
-						1127.0
+						1119.0
 					],
 					"b": [
 						944.0,
@@ -35223,24 +34865,38 @@
 					],
 					"b": [
 						944.0,
-						1304.0
+						1160.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1376.0
+						1160.0
+					],
+					"b": [
+						944.0,
+						1312.0
+					],
+					"half": 16.8,
+					"hp": 95.0,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						944.0,
+						1384.0
 					],
 					"b": [
 						944.0,
 						1536.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 95.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -35265,35 +34921,35 @@
 					],
 					"b": [
 						944.0,
-						1696.0
+						1688.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 95.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1768.0
+						1760.0
 					],
 					"b": [
 						944.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 95.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						944.0,
-						1945.0
+						1928.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35303,11 +34959,11 @@
 				{
 					"a": [
 						944.0,
-						1999.0
+						1928.0
 					],
 					"b": [
 						944.0,
-						2016.0
+						1953.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35317,14 +34973,28 @@
 				{
 					"a": [
 						944.0,
-						2016.0
+						2007.0
+					],
+					"b": [
+						944.0,
+						2032.0
+					],
+					"half": 16.8,
+					"hp": 80.0,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						944.0,
+						2032.0
 					],
 					"b": [
 						944.0,
 						2176.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -35335,21 +35005,21 @@
 					],
 					"b": [
 						1244.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1064.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35359,11 +35029,11 @@
 				{
 					"a": [
 						1124.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1244.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35377,21 +35047,21 @@
 					],
 					"b": [
 						1524.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1244.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1354.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35401,11 +35071,11 @@
 				{
 					"a": [
 						1414.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1524.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35419,21 +35089,21 @@
 					],
 					"b": [
 						1776.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1524.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1620.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35443,11 +35113,11 @@
 				{
 					"a": [
 						1680.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1776.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35461,21 +35131,21 @@
 					],
 					"b": [
 						2016.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1776.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						1866.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35485,11 +35155,11 @@
 				{
 					"a": [
 						1926.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						2016.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35499,11 +35169,11 @@
 				{
 					"a": [
 						2016.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						2118.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35513,11 +35183,11 @@
 				{
 					"a": [
 						2178.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						2280.0,
-						1056.0
+						1040.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35527,11 +35197,11 @@
 				{
 					"a": [
 						944.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						1116.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 108.0,
@@ -35541,11 +35211,11 @@
 				{
 					"a": [
 						1176.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						1520.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 216.0,
@@ -35555,11 +35225,11 @@
 				{
 					"a": [
 						1520.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						1788.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 168.0,
@@ -35569,11 +35239,11 @@
 				{
 					"a": [
 						1848.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						2016.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 106.0,
@@ -35583,11 +35253,11 @@
 				{
 					"a": [
 						2016.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						2118.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35597,11 +35267,11 @@
 				{
 					"a": [
 						2178.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						2280.0,
-						1144.0
+						1160.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35611,14 +35281,14 @@
 				{
 					"a": [
 						1520.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						1520.0,
 						1416.0
 					],
 					"half": 16.8,
-					"hp": 170.0,
+					"hp": 160.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -35629,21 +35299,21 @@
 					],
 					"b": [
 						1520.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
-					"hp": 170.0,
+					"hp": 160.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						944.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						1116.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 108.0,
@@ -35653,11 +35323,11 @@
 				{
 					"a": [
 						1176.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						1520.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 216.0,
@@ -35667,14 +35337,14 @@
 				{
 					"a": [
 						2016.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						2016.0,
 						1440.0
 					],
 					"half": 16.8,
-					"hp": 185.0,
+					"hp": 175.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -35713,21 +35383,21 @@
 					],
 					"b": [
 						2016.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
-					"hp": 185.0,
+					"hp": 175.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1520.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						1788.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 168.0,
@@ -35737,11 +35407,11 @@
 				{
 					"a": [
 						1848.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						2016.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 106.0,
@@ -35779,11 +35449,11 @@
 				{
 					"a": [
 						2016.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						2118.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35793,11 +35463,11 @@
 				{
 					"a": [
 						2178.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						2280.0,
-						1928.0
+						1912.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35807,11 +35477,11 @@
 				{
 					"a": [
 						944.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1064.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35821,11 +35491,11 @@
 				{
 					"a": [
 						1124.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1244.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35835,11 +35505,11 @@
 				{
 					"a": [
 						1244.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1354.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35849,11 +35519,11 @@
 				{
 					"a": [
 						1414.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1524.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35863,11 +35533,11 @@
 				{
 					"a": [
 						1524.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1620.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35877,11 +35547,11 @@
 				{
 					"a": [
 						1680.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1776.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35891,11 +35561,11 @@
 				{
 					"a": [
 						1776.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1866.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35905,11 +35575,11 @@
 				{
 					"a": [
 						1926.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						2016.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35919,11 +35589,11 @@
 				{
 					"a": [
 						2016.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						2118.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35933,11 +35603,11 @@
 				{
 					"a": [
 						2178.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						2280.0,
-						2016.0
+						2032.0
 					],
 					"half": 16.8,
 					"hp": 80.0,
@@ -35947,56 +35617,56 @@
 				{
 					"a": [
 						1244.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1244.0,
 						2176.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1524.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1524.0,
 						2176.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1776.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						1776.0,
 						2176.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						2016.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						2016.0,
 						2176.0
 					],
 					"half": 16.8,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -36147,10 +35817,10 @@
 					],
 					"b": [
 						2280.0,
-						1056.0
+						1040.0
 					],
 					"half": 24.0,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -36171,11 +35841,11 @@
 				{
 					"a": [
 						2280.0,
-						1056.0
+						1040.0
 					],
 					"b": [
 						2280.0,
-						1144.0
+						1160.0
 					],
 					"half": 24.0,
 					"hp": 80.0,
@@ -36185,14 +35855,14 @@
 				{
 					"a": [
 						2280.0,
-						1144.0
+						1160.0
 					],
 					"b": [
 						2280.0,
 						1440.0
 					],
 					"half": 24.0,
-					"hp": 185.0,
+					"hp": 175.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -36231,21 +35901,21 @@
 					],
 					"b": [
 						2280.0,
-						1928.0
+						1912.0
 					],
 					"half": 24.0,
-					"hp": 185.0,
+					"hp": 175.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						2280.0,
-						1928.0
+						1912.0
 					],
 					"b": [
 						2280.0,
-						2016.0
+						2032.0
 					],
 					"half": 24.0,
 					"hp": 80.0,
@@ -36311,14 +35981,14 @@
 				{
 					"a": [
 						2280.0,
-						2016.0
+						2032.0
 					],
 					"b": [
 						2280.0,
 						2176.0
 					],
 					"half": 24.0,
-					"hp": 100.0,
+					"hp": 90.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -36511,308 +36181,88 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2981.0,
-						2768.0
+						2994.0,
+						2729.0
 					],
-					"r": 46.8
+					"r": 56.3
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						277.0,
-						2427.0
+						209.0,
+						2441.0
 					],
-					"r": 49.1
+					"r": 68.6
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						446.0,
-						218.0
+						3308.0,
+						1881.0
 					],
-					"r": 38.1
+					"r": 50.1
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3313.0,
-						1897.0
+						1880.0,
+						349.0
 					],
-					"r": 52.4
+					"r": 41.8
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						103.0,
-						1191.0
+						751.0,
+						3045.0
 					],
-					"r": 54.6
+					"r": 52.3
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1888.0,
-						333.0
+						1121.0,
+						3128.0
 					],
-					"r": 68.2
+					"r": 75.2
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						784.0,
-						3078.0
+						3339.0,
+						2035.0
 					],
-					"r": 49.9
+					"r": 52.3
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3357.0,
-						2162.0
+						2422.0,
+						2941.0
 					],
-					"r": 58.5
+					"r": 66.9
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2439.0,
-						2961.0
-					],
-					"r": 121.3
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3453.0,
-						105.0
-					],
-					"r": 63.6
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2728.0,
-						1819.0
-					],
-					"r": 52.6
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2644.0,
-						169.0
-					],
-					"r": 62.5
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2967.0,
-						445.0
-					],
-					"r": 36.6
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						59.0,
-						2792.0
-					],
-					"r": 45.6
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3399.0,
-						2928.0
-					],
-					"r": 58.0
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3191.0,
-						834.0
-					],
-					"r": 54.3
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2763.0,
-						2666.0
-					],
-					"r": 80.0
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						168.0,
-						2328.0
-					],
-					"r": 52.8
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2129.0,
-						3134.0
-					],
-					"r": 49.4
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						1950.0,
-						84.0
-					],
-					"r": 43.0
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2218.0,
-						2788.0
-					],
-					"r": 56.5
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						917.0,
-						2843.0
-					],
-					"r": 46.1
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2812.0,
-						146.0
-					],
-					"r": 47.7
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						632.0,
-						2934.0
-					],
-					"r": 49.3
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3453.0,
-						1988.0
-					],
-					"r": 52.2
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3161.0,
-						3120.0
-					],
-					"r": 62.7
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2922.0,
-						69.0
-					],
-					"r": 47.4
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2952.0,
-						1478.0
-					],
-					"r": 46.4
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						3127.0,
-						179.0
-					],
-					"r": 48.5
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						1367.0,
-						284.0
-					],
-					"r": 78.1
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						36.0,
-						2543.0
+						3466.0,
+						112.0
 					],
 					"r": 65.4
 				},
@@ -36821,108 +36271,88 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2272.0,
-						144.0
+						2647.0,
+						187.0
 					],
-					"r": 50.8
+					"r": 44.7
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						245.0,
-						1254.0
+						2960.0,
+						438.0
 					],
-					"r": 41.0
+					"r": 54.1
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3509.0,
-						2337.0
+						36.0,
+						2855.0
 					],
-					"r": 71.1
+					"r": 42.6
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3217.0,
-						488.0
+						3395.0,
+						2867.0
 					],
-					"r": 57.7
+					"r": 64.0
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						143.0,
-						788.0
+						2141.0,
+						3119.0
 					],
-					"r": 71.7
+					"r": 47.8
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2965.0,
-						811.0
+						2806.0,
+						2699.0
 					],
-					"r": 46.5
+					"r": 59.5
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3496.0,
-						845.0
+						171.0,
+						1286.0
 					],
-					"r": 58.5
+					"r": 41.5
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2988.0,
-						2166.0
+						844.0,
+						282.0
 					],
-					"r": 49.1
+					"r": 53.6
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3056.0,
-						1702.0
-					],
-					"r": 64.5
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2752.0,
-						25.0
-					],
-					"r": 41.4
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						161.0,
-						2697.0
+						1940.0,
+						108.0
 					],
 					"r": 37.0
 				},
@@ -36931,98 +36361,198 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3097.0,
-						2673.0
+						2202.0,
+						2802.0
 					],
-					"r": 42.4
+					"r": 69.2
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						74.0,
-						1875.0
+						3108.0,
+						837.0
 					],
-					"r": 63.1
+					"r": 40.5
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1365.0,
-						50.0
+						2876.0,
+						63.0
 					],
-					"r": 46.5
+					"r": 48.0
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1101.0,
-						52.0
+						3150.0,
+						3116.0
 					],
-					"r": 40.9
+					"r": 72.6
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3227.0,
-						2548.0
+						163.0,
+						801.0
 					],
-					"r": 38.7
+					"r": 75.0
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1099.0,
-						3122.0
+						3140.0,
+						154.0
 					],
-					"r": 55.9
+					"r": 51.4
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						549.0,
-						2811.0
+						3518.0,
+						859.0
 					],
-					"r": 52.6
+					"r": 50.6
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3240.0,
-						43.0
+						1360.0,
+						274.0
 					],
-					"r": 60.5
+					"r": 57.5
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1522.0,
-						115.0
+						3210.0,
+						481.0
 					],
-					"r": 62.2
+					"r": 51.9
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2662.0,
-						400.0
+						2940.0,
+						816.0
+					],
+					"r": 48.7
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3007.0,
+						2173.0
+					],
+					"r": 65.6
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1462.0,
+						94.0
+					],
+					"r": 73.8
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3516.0,
+						2335.0
+					],
+					"r": 49.3
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						144.0,
+						2659.0
+					],
+					"r": 59.6
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						52.0,
+						1877.0
+					],
+					"r": 31.7
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						40.0,
+						1250.0
+					],
+					"r": 50.1
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2718.0,
+						1795.0
+					],
+					"r": 68.4
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						1131.0,
+						47.0
+					],
+					"r": 42.9
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						484.0,
+						253.0
+					],
+					"r": 71.2
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3530.0,
+						1886.0
 					],
 					"r": 34.3
 				},
@@ -37031,8 +36561,58 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						845.0,
-						248.0
+						2656.0,
+						2780.0
+					],
+					"r": 52.9
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2647.0,
+						403.0
+					],
+					"r": 34.3
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						569.0,
+						2933.0
+					],
+					"r": 61.5
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						870.0,
+						2899.0
+					],
+					"r": 67.6
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						2058.0,
+						2577.0
+					],
+					"r": 43.6
+				},
+				{
+					"hp": 80.0,
+					"id": "tree",
+					"kind": "tree",
+					"pos": [
+						3323.0,
+						2217.0
 					],
 					"r": 62.3
 				},
@@ -37041,20 +36621,10 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						44.0,
-						79.0
+						3014.0,
+						1516.0
 					],
-					"r": 49.9
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						83.0,
-						2954.0
-					],
-					"r": 46.9
+					"r": 57.1
 				},
 				{
 					"hp": 80.0,
@@ -37071,20 +36641,20 @@
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						3497.0,
-						2797.0
+						2539.0,
+						505.0
 					],
-					"r": 39.8
+					"r": 43.2
 				},
 				{
 					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2058.0,
-						2574.0
+						442.0,
+						2585.0
 					],
-					"r": 44.1
+					"r": 38.9
 				},
 				{
 					"hp": 40.0,
@@ -37783,7 +37353,7 @@
 					"half": 16.8,
 					"hinge": [
 						944.0,
-						1073.0
+						1065.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37795,7 +37365,7 @@
 					"half": 16.8,
 					"hinge": [
 						944.0,
-						1304.0
+						1312.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37807,7 +37377,7 @@
 					"half": 16.8,
 					"hinge": [
 						944.0,
-						1696.0
+						1688.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37819,7 +37389,7 @@
 					"half": 16.8,
 					"hinge": [
 						944.0,
-						1945.0
+						1953.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37831,7 +37401,7 @@
 					"half": 16.8,
 					"hinge": [
 						1064.0,
-						1056.0
+						1040.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37843,7 +37413,7 @@
 					"half": 16.8,
 					"hinge": [
 						1354.0,
-						1056.0
+						1040.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37855,7 +37425,7 @@
 					"half": 16.8,
 					"hinge": [
 						1620.0,
-						1056.0
+						1040.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37867,7 +37437,7 @@
 					"half": 16.8,
 					"hinge": [
 						1866.0,
-						1056.0
+						1040.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37879,7 +37449,7 @@
 					"half": 16.8,
 					"hinge": [
 						2118.0,
-						1056.0
+						1040.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37891,7 +37461,7 @@
 					"half": 16.8,
 					"hinge": [
 						1116.0,
-						1144.0
+						1160.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37903,7 +37473,7 @@
 					"half": 16.8,
 					"hinge": [
 						1788.0,
-						1144.0
+						1160.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37915,7 +37485,7 @@
 					"half": 16.8,
 					"hinge": [
 						2118.0,
-						1144.0
+						1160.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37927,7 +37497,7 @@
 					"half": 16.8,
 					"hinge": [
 						1116.0,
-						1928.0
+						1912.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37951,7 +37521,7 @@
 					"half": 16.8,
 					"hinge": [
 						1788.0,
-						1928.0
+						1912.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37963,7 +37533,7 @@
 					"half": 16.8,
 					"hinge": [
 						2118.0,
-						1928.0
+						1912.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37975,7 +37545,7 @@
 					"half": 16.8,
 					"hinge": [
 						1064.0,
-						2016.0
+						2032.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37987,7 +37557,7 @@
 					"half": 16.8,
 					"hinge": [
 						1354.0,
-						2016.0
+						2032.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -37999,7 +37569,7 @@
 					"half": 16.8,
 					"hinge": [
 						1620.0,
-						2016.0
+						2032.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -38011,7 +37581,7 @@
 					"half": 16.8,
 					"hinge": [
 						1866.0,
-						2016.0
+						2032.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -38023,7 +37593,7 @@
 					"half": 16.8,
 					"hinge": [
 						2118.0,
-						2016.0
+						2032.0
 					],
 					"hp": 50.0,
 					"id": "door_wood",
@@ -38248,8 +37818,8 @@
 					"id": "ladder_up_3",
 					"label": "Ladder up",
 					"position": [
-						2208.0,
-						992.0
+						2144.0,
+						1120.0
 					],
 					"size": [
 						64.0,
@@ -38276,8 +37846,8 @@
 					"id": "ladder_up_4",
 					"label": "Ladder up",
 					"position": [
-						2208.0,
-						2080.0
+						2144.0,
+						1952.0
 					],
 					"size": [
 						64.0,
@@ -38336,13 +37906,13 @@
 			],
 			"fluid_spawns": [
 				{
-					"type": "oil",
 					"amount": 0.55,
-					"radius": 2,
 					"position": [
-						3,
-						9
-					]
+						3.0,
+						9.0
+					],
+					"radius": 2.0,
+					"type": "oil"
 				}
 			],
 			"format": "structured",
@@ -38510,58 +38080,58 @@
 			"name": "Combat Test",
 			"npc_spawns": [
 				{
-					"template_id": "orc_warrior",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						800,
-						224
+						800.0,
+						224.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "orc_warrior"
 				},
 				{
-					"template_id": "bandit",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						96,
-						96
+						96.0,
+						96.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "bandit"
 				},
 				{
-					"template_id": "bandit_shaman",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						1376,
-						416
+						1376.0,
+						416.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "bandit_shaman"
 				},
 				{
-					"template_id": "bandit_occultist",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						1184,
-						96
+						1184.0,
+						96.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "bandit_occultist"
 				},
 				{
-					"template_id": "bandit_archer",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						416,
-						288
+						416.0,
+						288.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "bandit_archer"
 				},
 				{
-					"template_id": "bandit_pyromancer",
-					"count": 1,
+					"count": 1.0,
 					"position": [
-						1056,
-						416
+						1056.0,
+						416.0
 					],
-					"spread_radius": 0.0
+					"spread_radius": 0.0,
+					"template_id": "bandit_pyromancer"
 				}
 			],
 			"party_spawns": {
@@ -38572,11 +38142,11 @@
 			},
 			"player_spawns": {
 				"default": {
+					"facing": -90.0,
 					"position": [
-						288,
-						992
-					],
-					"facing": -90
+						288.0,
+						992.0
+					]
 				}
 			},
 			"structures": [
@@ -43458,8 +43028,8 @@
 				{
 					"id": "altar",
 					"position": [
-						1181,
-						415
+						1181.0,
+						415.0
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -43467,8 +43037,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1057,
-						415
+						1057.0,
+						415.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -43476,8 +43046,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1305,
-						415
+						1305.0,
+						415.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -43485,8 +43055,8 @@
 				{
 					"id": "red_carpet",
 					"position": [
-						1181,
-						515
+						1181.0,
+						515.0
 					],
 					"rotation": 0.0,
 					"scale": 0.28
@@ -43494,8 +43064,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1089,
-						499
+						1089.0,
+						499.0
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43503,8 +43073,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1089,
-						567
+						1089.0,
+						567.0
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43512,8 +43082,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1273,
-						499
+						1273.0,
+						499.0
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43521,8 +43091,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1273,
-						567
+						1273.0,
+						567.0
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43530,8 +43100,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1037,
-						595
+						1037.0,
+						595.0
 					],
 					"rotation": 1.571,
 					"scale": 0.85
@@ -43539,8 +43109,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						502
+						332.0,
+						502.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43548,8 +43118,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						502
+						448.0,
+						502.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43557,8 +43127,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						502
+						564.0,
+						502.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43566,8 +43136,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						502
+						680.0,
+						502.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43575,8 +43145,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						502
+						796.0,
+						502.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43584,8 +43154,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						502
+						912.0,
+						502.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43593,8 +43163,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						650
+						332.0,
+						650.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43602,8 +43172,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						650
+						448.0,
+						650.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43611,8 +43181,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						650
+						564.0,
+						650.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43620,8 +43190,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						650
+						680.0,
+						650.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43629,8 +43199,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						650
+						796.0,
+						650.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43638,8 +43208,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						650
+						912.0,
+						650.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43647,8 +43217,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						798
+						332.0,
+						798.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43656,8 +43226,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						798
+						448.0,
+						798.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43665,8 +43235,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						798
+						564.0,
+						798.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43674,8 +43244,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						798
+						680.0,
+						798.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43683,8 +43253,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						798
+						796.0,
+						798.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43692,8 +43262,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						798
+						912.0,
+						798.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43701,8 +43271,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						946
+						332.0,
+						946.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43710,8 +43280,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						946
+						448.0,
+						946.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43719,8 +43289,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						946
+						564.0,
+						946.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43728,8 +43298,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						946
+						680.0,
+						946.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43737,8 +43307,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						946
+						796.0,
+						946.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43746,8 +43316,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						946
+						912.0,
+						946.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43755,8 +43325,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						1094
+						332.0,
+						1094.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43764,8 +43334,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						1094
+						448.0,
+						1094.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43773,8 +43343,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						1094
+						564.0,
+						1094.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43782,8 +43352,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						1094
+						680.0,
+						1094.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43791,8 +43361,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						1094
+						796.0,
+						1094.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43800,8 +43370,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						1094
+						912.0,
+						1094.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43809,8 +43379,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332,
-						1242
+						332.0,
+						1242.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43818,8 +43388,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448,
-						1242
+						448.0,
+						1242.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43827,8 +43397,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564,
-						1242
+						564.0,
+						1242.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43836,8 +43406,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680,
-						1242
+						680.0,
+						1242.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43845,8 +43415,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796,
-						1242
+						796.0,
+						1242.0
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43854,8 +43424,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912,
-						1242
+						912.0,
+						1242.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43863,8 +43433,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653,
-						398
+						1653.0,
+						398.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43872,8 +43442,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777,
-						398
+						1777.0,
+						398.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43881,8 +43451,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901,
-						398
+						1901.0,
+						398.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43890,8 +43460,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025,
-						398
+						2025.0,
+						398.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43899,8 +43469,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149,
-						398
+						2149.0,
+						398.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43908,8 +43478,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653,
-						558
+						1653.0,
+						558.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43917,8 +43487,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777,
-						558
+						1777.0,
+						558.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43926,8 +43496,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901,
-						558
+						1901.0,
+						558.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43935,8 +43505,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025,
-						558
+						2025.0,
+						558.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43944,8 +43514,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149,
-						558
+						2149.0,
+						558.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43953,8 +43523,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653,
-						718
+						1653.0,
+						718.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43962,8 +43532,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777,
-						718
+						1777.0,
+						718.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43971,8 +43541,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901,
-						718
+						1901.0,
+						718.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43980,8 +43550,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025,
-						718
+						2025.0,
+						718.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43989,8 +43559,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149,
-						718
+						2149.0,
+						718.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43998,8 +43568,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653,
-						878
+						1653.0,
+						878.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -44007,8 +43577,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777,
-						878
+						1777.0,
+						878.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -44016,8 +43586,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901,
-						878
+						1901.0,
+						878.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -44025,8 +43595,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025,
-						878
+						2025.0,
+						878.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -44034,8 +43604,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149,
-						878
+						2149.0,
+						878.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -44043,8 +43613,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653,
-						1038
+						1653.0,
+						1038.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -44052,8 +43622,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777,
-						1038
+						1777.0,
+						1038.0
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -44061,8 +43631,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901,
-						1038
+						1901.0,
+						1038.0
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -44070,8 +43640,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025,
-						1038
+						2025.0,
+						1038.0
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -44079,8 +43649,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149,
-						1038
+						2149.0,
+						1038.0
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -44088,8 +43658,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1668,
-						1423
+						1668.0,
+						1423.0
 					],
 					"rotation": 0.026,
 					"scale": 1.0
@@ -44097,8 +43667,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1876,
-						1423
+						1876.0,
+						1423.0
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -44106,8 +43676,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						2084,
-						1423
+						2084.0,
+						1423.0
 					],
 					"rotation": 0.014,
 					"scale": 1.0
@@ -44115,8 +43685,8 @@
 				{
 					"id": "skull_pile",
 					"position": [
-						2120,
-						1299
+						2120.0,
+						1299.0
 					],
 					"rotation": 0.0,
 					"scale": 0.85
@@ -44124,8 +43694,8 @@
 				{
 					"id": "bones",
 					"position": [
-						2072,
-						1255
+						2072.0,
+						1255.0
 					],
 					"rotation": 0.0,
 					"scale": 0.9
@@ -44133,8 +43703,8 @@
 				{
 					"id": "fallen_log",
 					"position": [
-						1117,
-						1558
+						1117.0,
+						1558.0
 					],
 					"rotation": 0.419,
 					"scale": 1.0
@@ -44142,8 +43712,8 @@
 				{
 					"id": "cart",
 					"position": [
-						1342,
-						1283
+						1342.0,
+						1283.0
 					],
 					"rotation": -0.14,
 					"scale": 1.0
@@ -44151,8 +43721,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1094,
-						124
+						1094.0,
+						124.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44160,8 +43730,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1326,
-						124
+						1326.0,
+						124.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44169,8 +43739,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						2320,
-						1231
+						2320.0,
+						1231.0
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -44178,8 +43748,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						2228,
-						1171
+						2228.0,
+						1171.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44187,8 +43757,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						2228,
-						1291
+						2228.0,
+						1291.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44199,630 +43769,630 @@
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40
+					"offset_radius": 40.0
 				}
 			},
 			"player_spawns": {
 				"default": {
-					"facing": 90,
+					"facing": 90.0,
 					"position": [
-						1210,
-						1231
+						1210.0,
+						1231.0
 					]
 				}
 			},
 			"structures": [
 				{
 					"a": [
-						981,
-						369
+						981.0,
+						369.0
 					],
 					"b": [
-						981,
-						629
+						981.0,
+						629.0
 					],
 					"half": 10.0,
-					"hp": 163,
+					"hp": 163.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1381,
-						369
+						1381.0,
+						369.0
 					],
 					"b": [
-						1381,
-						629
+						1381.0,
+						629.0
 					],
 					"half": 10.0,
-					"hp": 163,
+					"hp": 163.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						981,
-						369
+						981.0,
+						369.0
 					],
 					"b": [
-						1381,
-						369
+						1381.0,
+						369.0
 					],
 					"half": 10.0,
-					"hp": 250,
+					"hp": 250.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						981,
-						629
+						981.0,
+						629.0
 					],
 					"b": [
-						1139,
-						629
+						1139.0,
+						629.0
 					],
 					"half": 10.0,
-					"hp": 99,
+					"hp": 99.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1223,
-						629
+						1223.0,
+						629.0
 					],
 					"b": [
-						1381,
-						629
+						1381.0,
+						629.0
 					],
 					"half": 10.0,
-					"hp": 99,
+					"hp": 99.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80,
-						80
+						80.0,
+						80.0
 					],
 					"b": [
-						1122,
-						80
+						1122.0,
+						80.0
 					],
 					"half": 11.0,
-					"hp": 651,
+					"hp": 651.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1298,
-						80
+						1298.0,
+						80.0
 					],
 					"b": [
-						2800,
-						80
+						2800.0,
+						80.0
 					],
 					"half": 11.0,
-					"hp": 940,
+					"hp": 940.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80,
-						1584
+						80.0,
+						1584.0
 					],
 					"b": [
-						2800,
-						1584
+						2800.0,
+						1584.0
 					],
 					"half": 11.0,
-					"hp": 1700,
+					"hp": 1700.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80,
-						80
+						80.0,
+						80.0
 					],
 					"b": [
-						80,
-						1584
+						80.0,
+						1584.0
 					],
 					"half": 11.0,
-					"hp": 940,
+					"hp": 940.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2800,
-						80
+						2800.0,
+						80.0
 					],
 					"b": [
-						2800,
-						1584
+						2800.0,
+						1584.0
 					],
 					"half": 11.0,
-					"hp": 940,
+					"hp": 940.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						893,
-						1151
+						893.0,
+						1151.0
 					],
 					"b": [
-						893,
-						1179
+						893.0,
+						1179.0
 					],
 					"half": 8.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192,
-						1143
+						2192.0,
+						1143.0
 					],
 					"b": [
-						2192,
-						1201
+						2192.0,
+						1201.0
 					],
 					"half": 10.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192,
-						1261
+						2192.0,
+						1261.0
 					],
 					"b": [
-						2192,
-						1319
+						2192.0,
+						1319.0
 					],
 					"half": 10.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2416,
-						1143
+						2416.0,
+						1143.0
 					],
 					"b": [
-						2416,
-						1319
+						2416.0,
+						1319.0
 					],
 					"half": 10.0,
-					"hp": 110,
+					"hp": 110.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192,
-						1143
+						2192.0,
+						1143.0
 					],
 					"b": [
-						2416,
-						1143
+						2416.0,
+						1143.0
 					],
 					"half": 10.0,
-					"hp": 140,
+					"hp": 140.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192,
-						1319
+						2192.0,
+						1319.0
 					],
 					"b": [
-						2416,
-						1319
+						2416.0,
+						1319.0
 					],
 					"half": 10.0,
-					"hp": 140,
+					"hp": 140.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						939,
-						147
+						939.0,
+						147.0
 					],
 					"r": 58.9
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1292,
-						1349
+						1292.0,
+						1349.0
 					],
 					"r": 58.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						641,
-						194
+						641.0,
+						194.0
 					],
 					"r": 49.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						772,
-						105
+						772.0,
+						105.0
 					],
 					"r": 59.5
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						256,
-						1112
+						256.0,
+						1112.0
 					],
 					"r": 58.2
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1621,
-						1581
+						1621.0,
+						1581.0
 					],
 					"r": 60.3
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						179,
-						1227
+						179.0,
+						1227.0
 					],
 					"r": 36.2
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1844,
-						1011
+						1844.0,
+						1011.0
 					],
 					"r": 69.4
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2450,
-						531
+						2450.0,
+						531.0
 					],
 					"r": 58.8
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						197,
-						940
+						197.0,
+						940.0
 					],
 					"r": 58.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1807,
-						1627
+						1807.0,
+						1627.0
 					],
 					"r": 53.1
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						383,
-						64
+						383.0,
+						64.0
 					],
 					"r": 46.6
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1227,
-						1124
+						1227.0,
+						1124.0
 					],
 					"r": 58.8
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1936,
-						776
+						1936.0,
+						776.0
 					],
 					"r": 46.9
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1112,
-						94
+						1112.0,
+						94.0
 					],
 					"r": 63.6
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2562,
-						51
+						2562.0,
+						51.0
 					],
 					"r": 43.3
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						90,
-						232
+						90.0,
+						232.0
 					],
 					"r": 61.2
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1528,
-						567
+						1528.0,
+						567.0
 					],
 					"r": 39.8
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						401,
-						1240
+						401.0,
+						1240.0
 					],
 					"r": 77.9
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1008,
-						1126
+						1008.0,
+						1126.0
 					],
 					"r": 62.5
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						731,
-						1162
+						731.0,
+						1162.0
 					],
 					"r": 70.1
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						95,
-						1119
+						95.0,
+						1119.0
 					],
 					"r": 53.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2326,
-						637
+						2326.0,
+						637.0
 					],
 					"r": 51.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2775,
-						58
+						2775.0,
+						58.0
 					],
 					"r": 51.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2345,
-						934
+						2345.0,
+						934.0
 					],
 					"r": 67.5
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2066,
-						290
+						2066.0,
+						290.0
 					],
 					"r": 50.5
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						351,
-						419
+						351.0,
+						419.0
 					],
 					"r": 55.3
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1517,
-						1407
+						1517.0,
+						1407.0
 					],
 					"r": 62.3
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2216,
-						284
+						2216.0,
+						284.0
 					],
 					"r": 36.1
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2000,
-						1091
+						2000.0,
+						1091.0
 					],
 					"r": 47.2
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1428,
-						740
+						1428.0,
+						740.0
 					],
 					"r": 41.6
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						544,
-						805
+						544.0,
+						805.0
 					],
 					"r": 41.0
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2673,
-						746
+						2673.0,
+						746.0
 					],
 					"r": 53.2
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						366,
-						773
+						366.0,
+						773.0
 					],
 					"r": 49.8
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2653,
-						1421
+						2653.0,
+						1421.0
 					],
 					"r": 67.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1855,
-						1187
+						1855.0,
+						1187.0
 					],
 					"r": 33.9
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						513,
-						1581
+						513.0,
+						1581.0
 					],
 					"r": 56.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1441,
-						23
+						1441.0,
+						23.0
 					],
 					"r": 35.7
 				},
 				{
-					"hp": 80,
+					"hp": 80.0,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2816,
-						387
+						2816.0,
+						387.0
 					],
 					"r": 46.8
 				},
@@ -44830,10 +44400,10 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						1139,
-						629
+						1139.0,
+						629.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 84.0
@@ -44842,8 +44412,3250 @@
 					"deg": 90.0,
 					"half": 10.0,
 					"hinge": [
-						2192,
-						1201
+						2192.0,
+						1201.0
+					],
+					"hp": 50.0,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				}
+			],
+			"tile_size": 64.0,
+			"warp_points": [],
+			"weather_group": "Scarlatti",
+			"world_size": [
+				2880.0,
+				1664.0
+			]
+		},
+		{
+			"cell_graph": "res://Maps/tg_town_square_cells.json",
+			"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
+			"editor_export": true,
+			"floors": [
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ppppppppsssssssssssssssspppppssss",
+				"ppppppppsssssssssssssssspppppssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"sssssssssssssssssssssssssssssssss",
+				"sssssssssssssssssssssssssssssssss",
+				"sssssssssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppsssssssssssssssssssssssssss",
+				"ppppppppsssssssssssssssspppppssss",
+				"ppppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"ssppppppsssssssssssssssspppppssss",
+				"sssssssssssssssssssssssssssssssss"
+			],
+			"fluid_spawns": [],
+			"format": "structured",
+			"id": "tg_town_square",
+			"images": {
+				"map": "res://Maps/tg_town_square.png",
+				"roofs": "res://Maps/tg_town_square_roofs.png",
+				"structures": "res://Maps/tg_town_square_structures.png"
+			},
+			"item_spawns": [
+				{
+					"id": "piazza_rosette",
+					"position": [
+						1024,
+						1024
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "piazza_fountain",
+					"position": [
+						1424,
+						1364
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bench",
+					"position": [
+						1276,
+						1364
+					],
+					"rotation": 1.571,
+					"scale": 0.55
+				},
+				{
+					"id": "bench",
+					"position": [
+						1572,
+						1364
+					],
+					"rotation": 1.571,
+					"scale": 0.55
+				},
+				{
+					"id": "stall_canopy",
+					"position": [
+						504,
+						564
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "market_umbrella",
+					"position": [
+						652,
+						460
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "market_stall",
+					"position": [
+						364,
+						672
+					],
+					"rotation": 0.14,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						424,
+						548
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "basket",
+					"position": [
+						576,
+						632
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stall_canopy",
+					"position": [
+						1508,
+						488
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "market_umbrella",
+					"position": [
+						1636,
+						616
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1416,
+						424
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "market_umbrella",
+					"position": [
+						452,
+						1500
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stall_canopy",
+					"position": [
+						580,
+						1600
+					],
+					"rotation": 0.07,
+					"scale": 1.0
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						452,
+						1624
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "cart",
+					"position": [
+						1728,
+						1636
+					],
+					"rotation": -0.244,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1648,
+						1720
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						936,
+						128
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1112,
+						128
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						936,
+						1920
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1112,
+						1920
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "round_table",
+					"position": [
+						300,
+						192
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						283,
+						182
+					],
+					"rotation": 0.254,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						320,
+						205
+					],
+					"rotation": 0.28,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						352,
+						211
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						281,
+						244
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						248,
+						173
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						319,
+						140
+					],
+					"rotation": 6.633,
+					"scale": 1.0
+				},
+				{
+					"id": "firewood",
+					"position": [
+						433,
+						237
+					],
+					"rotation": -0.384,
+					"scale": 1.087
+				},
+				{
+					"id": "crate",
+					"position": [
+						533,
+						52
+					],
+					"rotation": 0.0,
+					"scale": 1.003
+				},
+				{
+					"id": "barrel",
+					"position": [
+						582,
+						54
+					],
+					"rotation": 0.0,
+					"scale": 0.999
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						628,
+						43
+					],
+					"rotation": 0.0,
+					"scale": 1.027
+				},
+				{
+					"id": "crate",
+					"position": [
+						671,
+						51
+					],
+					"rotation": 0.0,
+					"scale": 0.963
+				},
+				{
+					"id": "basket",
+					"position": [
+						671,
+						51
+					],
+					"rotation": 0.104,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						713,
+						44
+					],
+					"rotation": 0.0,
+					"scale": 0.968
+				},
+				{
+					"id": "crate",
+					"position": [
+						756,
+						52
+					],
+					"rotation": 0.0,
+					"scale": 1.018
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						756,
+						52
+					],
+					"rotation": 0.119,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						805,
+						53
+					],
+					"rotation": 0.0,
+					"scale": 1.033
+				},
+				{
+					"id": "barrel",
+					"position": [
+						855,
+						54
+					],
+					"rotation": 0.0,
+					"scale": 1.033
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						897,
+						70
+					],
+					"rotation": 1.571,
+					"scale": 1.036
+				},
+				{
+					"id": "crate",
+					"position": [
+						888,
+						114
+					],
+					"rotation": 1.571,
+					"scale": 1.006
+				},
+				{
+					"id": "basket",
+					"position": [
+						888,
+						114
+					],
+					"rotation": 1.611,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						896,
+						157
+					],
+					"rotation": 1.571,
+					"scale": 0.968
+				},
+				{
+					"id": "crate",
+					"position": [
+						888,
+						200
+					],
+					"rotation": 1.571,
+					"scale": 1.013
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						888,
+						200
+					],
+					"rotation": 1.31,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						888,
+						248
+					],
+					"rotation": 1.571,
+					"scale": 1.014
+				},
+				{
+					"id": "barrel",
+					"position": [
+						887,
+						297
+					],
+					"rotation": 1.571,
+					"scale": 0.961
+				},
+				{
+					"id": "basket",
+					"position": [
+						769,
+						332
+					],
+					"rotation": -0.177,
+					"scale": 1.039
+				},
+				{
+					"id": "basket",
+					"position": [
+						534,
+						293
+					],
+					"rotation": 0.262,
+					"scale": 0.959
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						524,
+						235
+					],
+					"rotation": 0.284,
+					"scale": 1.077
+				},
+				{
+					"id": "crate",
+					"position": [
+						793,
+						272
+					],
+					"rotation": -0.441,
+					"scale": 1.074
+				},
+				{
+					"id": "basket",
+					"position": [
+						296,
+						61
+					],
+					"rotation": -0.274,
+					"scale": 0.93
+				},
+				{
+					"id": "firewood",
+					"position": [
+						214,
+						53
+					],
+					"rotation": 0.026,
+					"scale": 1.038
+				},
+				{
+					"id": "basket",
+					"position": [
+						697,
+						281
+					],
+					"rotation": 0.24,
+					"scale": 1.019
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						533,
+						125
+					],
+					"rotation": 0.175,
+					"scale": 0.931
+				},
+				{
+					"id": "amphora",
+					"position": [
+						376,
+						97
+					],
+					"rotation": 0.205,
+					"scale": 1.065
+				},
+				{
+					"id": "crate",
+					"position": [
+						661,
+						118
+					],
+					"rotation": 0.201,
+					"scale": 0.923
+				},
+				{
+					"id": "basket",
+					"position": [
+						796,
+						210
+					],
+					"rotation": 0.519,
+					"scale": 1.078
+				},
+				{
+					"id": "basket",
+					"position": [
+						516,
+						322
+					],
+					"rotation": 0.484,
+					"scale": 0.955
+				},
+				{
+					"id": "stove",
+					"position": [
+						1261,
+						49
+					],
+					"rotation": 0.0,
+					"scale": 0.962
+				},
+				{
+					"id": "cauldron",
+					"position": [
+						1261,
+						49
+					],
+					"rotation": -0.251,
+					"scale": 0.55,
+					"z": 1
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						1343,
+						56
+					],
+					"rotation": 0.0,
+					"scale": 0.982
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1322,
+						58
+					],
+					"rotation": 0.1,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1363,
+						52
+					],
+					"rotation": -0.222,
+					"scale": 0.75,
+					"z": 1
+				},
+				{
+					"id": "shelf",
+					"position": [
+						1432,
+						40
+					],
+					"rotation": 0.0,
+					"scale": 1.037
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1288,
+						295
+					],
+					"rotation": -0.024,
+					"scale": 0.994
+				},
+				{
+					"id": "round_table",
+					"position": [
+						1710,
+						192
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						1693,
+						182
+					],
+					"rotation": 0.261,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						1730,
+						205
+					],
+					"rotation": 0.177,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						1762,
+						211
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1691,
+						244
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1658,
+						173
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1729,
+						140
+					],
+					"rotation": 6.633,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1651,
+						81
+					],
+					"rotation": -0.394,
+					"scale": 0.908
+				},
+				{
+					"id": "basket",
+					"position": [
+						1427,
+						238
+					],
+					"rotation": -0.506,
+					"scale": 0.957
+				},
+				{
+					"id": "basket",
+					"position": [
+						1613,
+						95
+					],
+					"rotation": 0.41,
+					"scale": 0.942
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1390,
+						213
+					],
+					"rotation": 0.224,
+					"scale": 0.987
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1380,
+						294
+					],
+					"rotation": -0.091,
+					"scale": 0.913
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1403,
+						179
+					],
+					"rotation": -0.222,
+					"scale": 1.014
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1333,
+						187
+					],
+					"rotation": 0.038,
+					"scale": 0.904
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1385,
+						145
+					],
+					"rotation": -0.436,
+					"scale": 1.025
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1656,
+						122
+					],
+					"rotation": -0.415,
+					"scale": 1.033
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1332,
+						407
+					],
+					"rotation": 3.169,
+					"scale": 0.965
+				},
+				{
+					"id": "round_table",
+					"position": [
+						192,
+						600
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						175,
+						590
+					],
+					"rotation": -0.241,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						212,
+						613
+					],
+					"rotation": 0.241,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						244,
+						619
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						173,
+						652
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						140,
+						581
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						211,
+						548
+					],
+					"rotation": 6.633,
+					"scale": 1.0
+				},
+				{
+					"id": "basket",
+					"position": [
+						252,
+						518
+					],
+					"rotation": -0.135,
+					"scale": 0.961
+				},
+				{
+					"id": "firewood",
+					"position": [
+						329,
+						493
+					],
+					"rotation": 0.066,
+					"scale": 0.924
+				},
+				{
+					"id": "amphora",
+					"position": [
+						196,
+						762
+					],
+					"rotation": -0.327,
+					"scale": 0.972
+				},
+				{
+					"id": "amphora",
+					"position": [
+						167,
+						458
+					],
+					"rotation": -0.333,
+					"scale": 1.056
+				},
+				{
+					"id": "firewood",
+					"position": [
+						140,
+						705
+					],
+					"rotation": -0.436,
+					"scale": 0.995
+				},
+				{
+					"id": "amphora",
+					"position": [
+						191,
+						320
+					],
+					"rotation": -0.042,
+					"scale": 1.037
+				},
+				{
+					"id": "basket",
+					"position": [
+						209,
+						485
+					],
+					"rotation": -0.34,
+					"scale": 0.907
+				},
+				{
+					"id": "amphora",
+					"position": [
+						189,
+						688
+					],
+					"rotation": 0.327,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						222,
+						725
+					],
+					"rotation": -0.177,
+					"scale": 0.958
+				},
+				{
+					"id": "round_table",
+					"position": [
+						192,
+						1268
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						175,
+						1258
+					],
+					"rotation": -0.185,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						212,
+						1281
+					],
+					"rotation": -0.275,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						244,
+						1287
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						173,
+						1320
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						140,
+						1249
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						211,
+						1216
+					],
+					"rotation": 6.633,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						99,
+						1308
+					],
+					"rotation": -0.172,
+					"scale": 1.04
+				},
+				{
+					"id": "bed_wooden",
+					"position": [
+						249,
+						1763
+					],
+					"rotation": 3.142,
+					"scale": 1.2
+				},
+				{
+					"id": "rug",
+					"position": [
+						192,
+						1628
+					],
+					"rotation": 0.0,
+					"scale": 3.105
+				},
+				{
+					"id": "wardrobe",
+					"position": [
+						67,
+						1768
+					],
+					"rotation": 3.142,
+					"scale": 1.101
+				},
+				{
+					"id": "stool",
+					"position": [
+						200,
+						1646
+					],
+					"rotation": 0.226,
+					"scale": 1.087
+				},
+				{
+					"id": "basket",
+					"position": [
+						320,
+						1561
+					],
+					"rotation": 0.491,
+					"scale": 0.985
+				},
+				{
+					"id": "basket",
+					"position": [
+						258,
+						1120
+					],
+					"rotation": 0.44,
+					"scale": 1.019
+				},
+				{
+					"id": "basket",
+					"position": [
+						101,
+						1561
+					],
+					"rotation": 0.231,
+					"scale": 1.051
+				},
+				{
+					"id": "basket",
+					"position": [
+						233,
+						1375
+					],
+					"rotation": 0.26,
+					"scale": 0.954
+				},
+				{
+					"id": "stool",
+					"position": [
+						329,
+						1771
+					],
+					"rotation": 0.166,
+					"scale": 1.002
+				},
+				{
+					"id": "stool",
+					"position": [
+						265,
+						1614
+					],
+					"rotation": -0.362,
+					"scale": 1.017
+				},
+				{
+					"id": "stool",
+					"position": [
+						218,
+						1614
+					],
+					"rotation": -0.539,
+					"scale": 0.945
+				},
+				{
+					"id": "stove",
+					"position": [
+						1746,
+						882
+					],
+					"rotation": 3.142,
+					"scale": 0.984
+				},
+				{
+					"id": "cauldron",
+					"position": [
+						1746,
+						882
+					],
+					"rotation": 3.077,
+					"scale": 0.55,
+					"z": 1
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						1828,
+						876
+					],
+					"rotation": 3.142,
+					"scale": 0.981
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1850,
+						874
+					],
+					"rotation": 3.046,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1809,
+						880
+					],
+					"rotation": 3.06,
+					"scale": 0.75,
+					"z": 1
+				},
+				{
+					"id": "shelf",
+					"position": [
+						1915,
+						892
+					],
+					"rotation": 3.142,
+					"scale": 0.967
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1775,
+						496
+					],
+					"rotation": 0.323,
+					"scale": 0.987
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1811,
+						519
+					],
+					"rotation": -0.343,
+					"scale": 0.92
+				},
+				{
+					"id": "basket",
+					"position": [
+						1771,
+						654
+					],
+					"rotation": 0.438,
+					"scale": 0.958
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1881,
+						838
+					],
+					"rotation": 0.378,
+					"scale": 0.926
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1725,
+						468
+					],
+					"rotation": -0.253,
+					"scale": 1.061
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1943,
+						397
+					],
+					"rotation": -0.387,
+					"scale": 0.997
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1916,
+						571
+					],
+					"rotation": 0.421,
+					"scale": 1.078
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1800,
+						616
+					],
+					"rotation": 0.282,
+					"scale": 0.982
+				},
+				{
+					"id": "basket",
+					"position": [
+						1825,
+						681
+					],
+					"rotation": -0.082,
+					"scale": 1.055
+				},
+				{
+					"id": "crate",
+					"position": [
+						1737,
+						1776
+					],
+					"rotation": 3.142,
+					"scale": 1.011
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1787,
+						1774
+					],
+					"rotation": 3.142,
+					"scale": 1.026
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1832,
+						1785
+					],
+					"rotation": 3.142,
+					"scale": 0.986
+				},
+				{
+					"id": "crate",
+					"position": [
+						1917,
+						1775
+					],
+					"rotation": 3.142,
+					"scale": 1.031
+				},
+				{
+					"id": "basket",
+					"position": [
+						1917,
+						1775
+					],
+					"rotation": 2.952,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1961,
+						1783
+					],
+					"rotation": 3.142,
+					"scale": 1.035
+				},
+				{
+					"id": "crate",
+					"position": [
+						1996,
+						1181
+					],
+					"rotation": 1.571,
+					"scale": 1.019
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1996,
+						1181
+					],
+					"rotation": 1.837,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						1995,
+						1230
+					],
+					"rotation": 1.571,
+					"scale": 1.028
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1994,
+						1280
+					],
+					"rotation": 1.571,
+					"scale": 1.028
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						2005,
+						1326
+					],
+					"rotation": 1.571,
+					"scale": 0.986
+				},
+				{
+					"id": "crate",
+					"position": [
+						1997,
+						1369
+					],
+					"rotation": 1.571,
+					"scale": 0.965
+				},
+				{
+					"id": "basket",
+					"position": [
+						1997,
+						1369
+					],
+					"rotation": 1.486,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						2004,
+						1411
+					],
+					"rotation": 1.571,
+					"scale": 0.983
+				},
+				{
+					"id": "crate",
+					"position": [
+						1995,
+						1454
+					],
+					"rotation": 1.571,
+					"scale": 1.036
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1995,
+						1454
+					],
+					"rotation": 1.66,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						1996,
+						1503
+					],
+					"rotation": 1.571,
+					"scale": 1.023
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1993,
+						1554
+					],
+					"rotation": 1.571,
+					"scale": 1.034
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						2005,
+						1600
+					],
+					"rotation": 1.571,
+					"scale": 1.036
+				},
+				{
+					"id": "crate",
+					"position": [
+						1996,
+						1644
+					],
+					"rotation": 1.571,
+					"scale": 0.991
+				},
+				{
+					"id": "basket",
+					"position": [
+						1996,
+						1644
+					],
+					"rotation": 1.282,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						2003,
+						1687
+					],
+					"rotation": 1.571,
+					"scale": 1.034
+				},
+				{
+					"id": "crate",
+					"position": [
+						1996,
+						1731
+					],
+					"rotation": 1.571,
+					"scale": 0.984
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1996,
+						1731
+					],
+					"rotation": 1.575,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1957,
+						1500
+					],
+					"rotation": -0.128,
+					"scale": 1.02
+				},
+				{
+					"id": "basket",
+					"position": [
+						1933,
+						1374
+					],
+					"rotation": -0.071,
+					"scale": 1.078
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1853,
+						1246
+					],
+					"rotation": -0.377,
+					"scale": 1.099
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1721,
+						1176
+					],
+					"rotation": 0.045,
+					"scale": 1.082
+				},
+				{
+					"id": "basket",
+					"position": [
+						1929,
+						1170
+					],
+					"rotation": -0.061,
+					"scale": 1.05
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1914,
+						1595
+					],
+					"rotation": -0.379,
+					"scale": 0.998
+				},
+				{
+					"id": "basket",
+					"position": [
+						1867,
+						1359
+					],
+					"rotation": -0.201,
+					"scale": 0.908
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1868,
+						1316
+					],
+					"rotation": 0.235,
+					"scale": 1.067
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1857,
+						1518
+					],
+					"rotation": -0.225,
+					"scale": 0.951
+				},
+				{
+					"id": "basket",
+					"position": [
+						1910,
+						1295
+					],
+					"rotation": 0.401,
+					"scale": 0.941
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1768,
+						1532
+					],
+					"rotation": 0.012,
+					"scale": 1.091
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1731,
+						1385
+					],
+					"rotation": 0.238,
+					"scale": 0.909
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1645,
+						1449
+					],
+					"rotation": 5.0,
+					"scale": 1.045
+				},
+				{
+					"id": "round_table",
+					"position": [
+						346,
+						1856
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						329,
+						1846
+					],
+					"rotation": -0.065,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						366,
+						1869
+					],
+					"rotation": 0.193,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						398,
+						1875
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						327,
+						1908
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						294,
+						1837
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "firewood",
+					"position": [
+						252,
+						1975
+					],
+					"rotation": 0.024,
+					"scale": 1.083
+				},
+				{
+					"id": "crate",
+					"position": [
+						590,
+						1995
+					],
+					"rotation": 3.142,
+					"scale": 1.03
+				},
+				{
+					"id": "barrel",
+					"position": [
+						639,
+						1994
+					],
+					"rotation": 3.142,
+					"scale": 1.002
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						684,
+						2005
+					],
+					"rotation": 3.142,
+					"scale": 0.969
+				},
+				{
+					"id": "crate",
+					"position": [
+						727,
+						1996
+					],
+					"rotation": 3.142,
+					"scale": 1.007
+				},
+				{
+					"id": "basket",
+					"position": [
+						727,
+						1996
+					],
+					"rotation": 3.381,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						770,
+						2004
+					],
+					"rotation": 3.142,
+					"scale": 0.98
+				},
+				{
+					"id": "crate",
+					"position": [
+						812,
+						1997
+					],
+					"rotation": 3.142,
+					"scale": 0.966
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						812,
+						1997
+					],
+					"rotation": 3.09,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						860,
+						1996
+					],
+					"rotation": 3.142,
+					"scale": 0.997
+				},
+				{
+					"id": "barrel",
+					"position": [
+						882,
+						1738
+					],
+					"rotation": 1.571,
+					"scale": 1.015
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						893,
+						1784
+					],
+					"rotation": 1.571,
+					"scale": 1.034
+				},
+				{
+					"id": "crate",
+					"position": [
+						884,
+						1829
+					],
+					"rotation": 1.571,
+					"scale": 1.023
+				},
+				{
+					"id": "basket",
+					"position": [
+						884,
+						1829
+					],
+					"rotation": 1.619,
+					"scale": 0.65,
+					"z": 1
+				},
+				{
+					"id": "amphora",
+					"position": [
+						892,
+						1872
+					],
+					"rotation": 1.571,
+					"scale": 0.976
+				},
+				{
+					"id": "crate",
+					"position": [
+						884,
+						1915
+					],
+					"rotation": 1.571,
+					"scale": 1.025
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						884,
+						1915
+					],
+					"rotation": 1.429,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "basket",
+					"position": [
+						566,
+						1857
+					],
+					"rotation": -0.411,
+					"scale": 1.075
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						594,
+						1929
+					],
+					"rotation": 0.16,
+					"scale": 1.084
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						809,
+						1779
+					],
+					"rotation": -0.36,
+					"scale": 0.942
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						615,
+						1962
+					],
+					"rotation": -0.379,
+					"scale": 1.058
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						617,
+						1870
+					],
+					"rotation": 0.475,
+					"scale": 1.048
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						824,
+						1854
+					],
+					"rotation": -0.4,
+					"scale": 0.969
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						774,
+						1966
+					],
+					"rotation": -0.004,
+					"scale": 0.933
+				},
+				{
+					"id": "firewood",
+					"position": [
+						428,
+						1841
+					],
+					"rotation": 0.441,
+					"scale": 0.999
+				},
+				{
+					"id": "basket",
+					"position": [
+						424,
+						1943
+					],
+					"rotation": 0.378,
+					"scale": 1.03
+				},
+				{
+					"id": "amphora",
+					"position": [
+						507,
+						1744
+					],
+					"rotation": -0.076,
+					"scale": 0.974
+				},
+				{
+					"id": "basket",
+					"position": [
+						569,
+						1959
+					],
+					"rotation": -0.383,
+					"scale": 1.02
+				},
+				{
+					"id": "basket",
+					"position": [
+						476,
+						1999
+					],
+					"rotation": 0.284,
+					"scale": 1.009
+				},
+				{
+					"id": "stove",
+					"position": [
+						1246,
+						1998
+					],
+					"rotation": 3.142,
+					"scale": 1.013
+				},
+				{
+					"id": "cauldron",
+					"position": [
+						1246,
+						1998
+					],
+					"rotation": 3.132,
+					"scale": 0.55,
+					"z": 1
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						1330,
+						1992
+					],
+					"rotation": 3.142,
+					"scale": 0.981
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1352,
+						1990
+					],
+					"rotation": 3.322,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						1310,
+						1996
+					],
+					"rotation": 3.01,
+					"scale": 0.75,
+					"z": 1
+				},
+				{
+					"id": "shelf",
+					"position": [
+						1417,
+						2008
+					],
+					"rotation": 3.142,
+					"scale": 0.986
+				},
+				{
+					"id": "basket",
+					"position": [
+						1270,
+						1768
+					],
+					"rotation": 0.433,
+					"scale": 0.981
+				},
+				{
+					"id": "round_table",
+					"position": [
+						1700,
+						1856
+					],
+					"rotation": 0.0,
+					"scale": 1.25
+				},
+				{
+					"id": "pottage",
+					"position": [
+						1683,
+						1846
+					],
+					"rotation": 0.016,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						1720,
+						1869
+					],
+					"rotation": 0.063,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "stool",
+					"position": [
+						1752,
+						1875
+					],
+					"rotation": 1.921,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1681,
+						1908
+					],
+					"rotation": 3.492,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1648,
+						1837
+					],
+					"rotation": 5.062,
+					"scale": 1.0
+				},
+				{
+					"id": "basket",
+					"position": [
+						1771,
+						1765
+					],
+					"rotation": -0.076,
+					"scale": 1.023
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1610,
+						1758
+					],
+					"rotation": 0.486,
+					"scale": 0.948
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1564,
+						1749
+					],
+					"rotation": -0.244,
+					"scale": 0.919
+				},
+				{
+					"id": "basket",
+					"position": [
+						1574,
+						1960
+					],
+					"rotation": -0.472,
+					"scale": 0.944
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1418,
+						1716
+					],
+					"rotation": 0.105,
+					"scale": 0.99
+				},
+				{
+					"id": "basket",
+					"position": [
+						1362,
+						1884
+					],
+					"rotation": -0.012,
+					"scale": 0.99
+				},
+				{
+					"id": "basket",
+					"position": [
+						1484,
+						1966
+					],
+					"rotation": 0.485,
+					"scale": 1.096
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1719,
+						1910
+					],
+					"rotation": 0.497,
+					"scale": 1.077
+				},
+				{
+					"id": "amphora",
+					"position": [
+						1605,
+						1879
+					],
+					"rotation": 0.142,
+					"scale": 1.086
+				}
+			],
+			"music_track": "town_theme",
+			"name": "Town Square",
+			"npc_spawns": [
+				{
+					"count": 2,
+					"position": [
+						1024,
+						280
+					],
+					"spread_radius": 80,
+					"template_id": "town_guard"
+				},
+				{
+					"count": 3,
+					"dialogue": "merchant_generic",
+					"position": [
+						600,
+						600
+					],
+					"spread_radius": 120,
+					"template_id": "merchant"
+				},
+				{
+					"count": 1,
+					"dialogue": "castellan_intro",
+					"position": [
+						1200,
+						860
+					],
+					"spread_radius": 60,
+					"template_id": "noble_lord",
+					"unique_name": "Lord Castellan"
+				},
+				{
+					"count": 1,
+					"position": [
+						1640,
+						1700
+					],
+					"spread_radius": 60,
+					"template_id": "smith_darcy"
+				}
+			],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90,
+					"position": [
+						1024,
+						1240
+					]
+				},
+				"from_cemetery": {
+					"facing": 90,
+					"position": [
+						1920,
+						1024
+					]
+				},
+				"from_dock_tavern": {
+					"facing": 90,
+					"position": [
+						1024,
+						1920
+					]
+				},
+				"from_minschaleft_university": {
+					"facing": 90,
+					"position": [
+						1920,
+						200
+					]
+				},
+				"from_perrow_tavern": {
+					"facing": 90,
+					"position": [
+						1024,
+						128
+					]
+				},
+				"from_venonan_chapel": {
+					"facing": 90,
+					"position": [
+						128,
+						1024
+					]
+				}
+			},
+			"region": "perrow",
+			"settlement": true,
+			"structures": [
+				{
+					"a": [
+						480,
+						20
+					],
+					"b": [
+						480,
+						364
+					],
+					"half": 7.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						120,
+						20
+					],
+					"b": [
+						120,
+						364
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						120,
+						20
+					],
+					"b": [
+						480,
+						20
+					],
+					"half": 10.0,
+					"hp": 225,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						120,
+						364
+					],
+					"b": [
+						270,
+						364
+					],
+					"half": 10.0,
+					"hp": 94,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						330,
+						364
+					],
+					"b": [
+						480,
+						364
+					],
+					"half": 10.0,
+					"hp": 94,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						920,
+						20
+					],
+					"b": [
+						920,
+						364
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						480,
+						20
+					],
+					"b": [
+						920,
+						20
+					],
+					"half": 10.0,
+					"hp": 275,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						480,
+						364
+					],
+					"b": [
+						670,
+						364
+					],
+					"half": 10.0,
+					"hp": 119,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						730,
+						364
+					],
+					"b": [
+						920,
+						364
+					],
+					"half": 10.0,
+					"hp": 119,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1540,
+						20
+					],
+					"b": [
+						1540,
+						364
+					],
+					"half": 7.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1200,
+						20
+					],
+					"b": [
+						1200,
+						364
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1200,
+						20
+					],
+					"b": [
+						1540,
+						20
+					],
+					"half": 10.0,
+					"hp": 213,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1200,
+						364
+					],
+					"b": [
+						1340,
+						364
+					],
+					"half": 10.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1400,
+						364
+					],
+					"b": [
+						1540,
+						364
+					],
+					"half": 10.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1880,
+						20
+					],
+					"b": [
+						1880,
+						364
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1540,
+						20
+					],
+					"b": [
+						1880,
+						20
+					],
+					"half": 10.0,
+					"hp": 213,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1540,
+						364
+					],
+					"b": [
+						1680,
+						364
+					],
+					"half": 10.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1740,
+						364
+					],
+					"b": [
+						1880,
+						364
+					],
+					"half": 10.0,
+					"hp": 88,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						280
+					],
+					"b": [
+						20,
+						920
+					],
+					"half": 10.0,
+					"hp": 400,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						364,
+						280
+					],
+					"b": [
+						364,
+						570
+					],
+					"half": 10.0,
+					"hp": 182,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						364,
+						630
+					],
+					"b": [
+						364,
+						920
+					],
+					"half": 10.0,
+					"hp": 182,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						280
+					],
+					"b": [
+						364,
+						280
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						920
+					],
+					"b": [
+						364,
+						920
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						1448
+					],
+					"b": [
+						162,
+						1448
+					],
+					"half": 7.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						222,
+						1448
+					],
+					"b": [
+						364,
+						1448
+					],
+					"half": 7.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						1088
+					],
+					"b": [
+						20,
+						1448
+					],
+					"half": 10.0,
+					"hp": 225,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						364,
+						1088
+					],
+					"b": [
+						364,
+						1238
+					],
+					"half": 10.0,
+					"hp": 94,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						364,
+						1298
+					],
+					"b": [
+						364,
+						1448
+					],
+					"half": 10.0,
+					"hp": 94,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						1088
+					],
+					"b": [
+						364,
+						1088
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						1448
+					],
+					"b": [
+						20,
+						1808
+					],
+					"half": 10.0,
+					"hp": 225,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						364,
+						1448
+					],
+					"b": [
+						364,
+						1808
+					],
+					"half": 10.0,
+					"hp": 225,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						20,
+						1808
+					],
+					"b": [
+						364,
+						1808
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						312
+					],
+					"b": [
+						1684,
+						582
+					],
+					"half": 10.0,
+					"hp": 169,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						642
+					],
+					"b": [
+						1684,
+						912
+					],
+					"half": 10.0,
+					"hp": 169,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2028,
+						312
+					],
+					"b": [
+						2028,
+						912
+					],
+					"half": 10.0,
+					"hp": 375,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						312
+					],
+					"b": [
+						2028,
+						312
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						912
+					],
+					"b": [
+						2028,
+						912
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						1128
+					],
+					"b": [
+						1684,
+						1429
+					],
+					"half": 10.0,
+					"hp": 189,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						1507
+					],
+					"b": [
+						1684,
+						1808
+					],
+					"half": 10.0,
+					"hp": 189,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						2028,
+						1128
+					],
+					"b": [
+						2028,
+						1808
+					],
+					"half": 10.0,
+					"hp": 425,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						1128
+					],
+					"b": [
+						2028,
+						1128
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1684,
+						1808
+					],
+					"b": [
+						2028,
+						1808
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1956,
+						1204
+					],
+					"b": [
+						1956,
+						1252
+					],
+					"half": 13.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						536,
+						1684
+					],
+					"b": [
+						536,
+						2028
+					],
+					"half": 7.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						156,
+						1684
+					],
+					"b": [
+						156,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						156,
+						1684
+					],
+					"b": [
+						316,
+						1684
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						376,
+						1684
+					],
+					"b": [
+						536,
+						1684
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						156,
+						2028
+					],
+					"b": [
+						536,
+						2028
+					],
+					"half": 10.0,
+					"hp": 238,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						916,
+						1684
+					],
+					"b": [
+						916,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						536,
+						1684
+					],
+					"b": [
+						696,
+						1684
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						756,
+						1684
+					],
+					"b": [
+						916,
+						1684
+					],
+					"half": 10.0,
+					"hp": 100,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						536,
+						2028
+					],
+					"b": [
+						916,
+						2028
+					],
+					"half": 10.0,
+					"hp": 238,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1528,
+						1684
+					],
+					"b": [
+						1528,
+						2028
+					],
+					"half": 7.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1184,
+						1684
+					],
+					"b": [
+						1184,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1184,
+						1684
+					],
+					"b": [
+						1326,
+						1684
+					],
+					"half": 10.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1386,
+						1684
+					],
+					"b": [
+						1528,
+						1684
+					],
+					"half": 10.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1184,
+						2028
+					],
+					"b": [
+						1528,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1872,
+						1684
+					],
+					"b": [
+						1872,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1528,
+						1684
+					],
+					"b": [
+						1670,
+						1684
+					],
+					"half": 10.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1730,
+						1684
+					],
+					"b": [
+						1872,
+						1684
+					],
+					"half": 10.0,
+					"hp": 89,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1528,
+						2028
+					],
+					"b": [
+						1872,
+						2028
+					],
+					"half": 10.0,
+					"hp": 215,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						270,
+						364
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						670,
+						364
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						1340,
+						364
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						1680,
+						364
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 10.0,
+					"hinge": [
+						364,
+						570
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 7.0,
+					"hinge": [
+						162,
+						1448
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 10.0,
+					"hinge": [
+						364,
+						1238
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 10.0,
+					"hinge": [
+						1684,
+						582
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 90.0,
+					"half": 10.0,
+					"hinge": [
+						1684,
+						1429
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 78.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						316,
+						1684
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						696,
+						1684
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						1326,
+						1684
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 60.0
+				},
+				{
+					"deg": 0.0,
+					"half": 10.0,
+					"hinge": [
+						1670,
+						1684
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -44852,11 +47664,82 @@
 				}
 			],
 			"tile_size": 64,
-			"warp_points": [],
+			"warp_points": [
+				{
+					"id": "to_perrow_tavern",
+					"label": "To the Tavern",
+					"position": [
+						1024,
+						36
+					],
+					"size": [
+						192,
+						72
+					],
+					"target_map": "perrow_tavern",
+					"target_spawn": "from_town_square"
+				},
+				{
+					"id": "to_dock_tavern",
+					"label": "To the Docks",
+					"position": [
+						1024,
+						2012
+					],
+					"size": [
+						192,
+						72
+					],
+					"target_map": "dock_tavern",
+					"target_spawn": "from_town_square"
+				},
+				{
+					"id": "to_venonan_chapel",
+					"label": "To the Chapel",
+					"position": [
+						36,
+						1024
+					],
+					"size": [
+						72,
+						192
+					],
+					"target_map": "venonan_chapel",
+					"target_spawn": "from_town_square"
+				},
+				{
+					"id": "to_cemetery",
+					"label": "To the Cemetery",
+					"position": [
+						2012,
+						1024
+					],
+					"size": [
+						72,
+						192
+					],
+					"target_map": "cemetery",
+					"target_spawn": "from_town_square"
+				},
+				{
+					"id": "to_minschaleft_university",
+					"label": "To the University",
+					"position": [
+						2012,
+						200
+					],
+					"size": [
+						72,
+						192
+					],
+					"target_map": "minschaleft_university",
+					"target_spawn": "from_town_square"
+				}
+			],
 			"weather_group": "Scarlatti",
 			"world_size": [
-				2880,
-				1664
+				2112,
+				2112
 			]
 		}
 	]

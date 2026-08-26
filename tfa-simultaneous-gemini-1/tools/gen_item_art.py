@@ -346,6 +346,49 @@ PROMPTS.update({
         "smooth and flat like a painted pattern. The image is a TALL PORTRAIT picture, the "
         "bounding box about four times as tall as it is wide."
     ),
+    # ---- Renaissance piazza set (town square rebuild) ----------------------
+    "piazza_rosette": PROP_STYLE + (
+        "SUBJECT: a grand circular paved plaza rosette seen from directly above, lying "
+        "perfectly flat like a painted pattern: one great CIRCLE of pale cream sandstone "
+        "paving filling the frame edge to edge, inlaid tone-on-tone with warm tan and ochre "
+        "stone. At the centre a large eight-pointed compass star of warm tan stone with "
+        "slender darker outlines, around it a ring of eight broad petal-shaped loops of "
+        "tan cobble inlay forming a rosette, and a wide double border ring of warm sand "
+        "stone closing the circle's rim. Fine pale mortar seams divide the big irregular "
+        "paving flags everywhere, the surface is sun-worn and matte with soft ochre "
+        "staining, and the whole pattern reads as flat inlaid pavement. The whole image is "
+        "a SQUARE picture, the circle touching all four edges, the four corners outside "
+        "the circle plain flat pure white."
+    ),
+    "piazza_fountain": PROP_STYLE + (
+        "SUBJECT: a public plaza fountain seen from directly above: a wide octagonal basin "
+        "rim of warm cream travertine blocks framing clear pale-turquoise water, and at the "
+        "centre a smaller raised round upper bowl on a stone pedestal, its own disc of "
+        "brighter rippling water catching the light, thin white rills of falling water "
+        "fanning from the upper bowl's lip onto the lower pool, gentle concentric ripples "
+        "spreading to the basin edge, and a faint darker waterline along the rim's inner "
+        "edge. The whole image is a SQUARE picture, the basin's bounding box exactly as "
+        "wide as it is tall."
+    ),
+    "market_umbrella": PROP_STYLE + (
+        "SUBJECT: a large market parasol umbrella seen from directly above, fully open: a "
+        "round canvas canopy of eight neat wedge panels alternating deep terracotta red and "
+        "warm cream, slim darker seam lines between the panels meeting at a small round "
+        "wooden hub button in the exact centre, a gently scalloped outer edge, soft fabric "
+        "shading along each wedge, and a thin soft contact shadow ringing the canopy's rim. "
+        "The whole image is a SQUARE picture, the canopy filling a bounding box as wide as "
+        "it is tall."
+    ),
+    "stall_canopy": PROP_STYLE + (
+        "SUBJECT: a market stall seen from directly above, its rectangular canvas awning "
+        "covering nearly the whole silhouette: bold stripes of deep red and warm cream "
+        "canvas running across the short axis, the fabric draping in gentle scalloped waves "
+        "along both long edges, a slim timber frame corner peeking at each of the four "
+        "corners, and along one long side a narrow strip of the wooden counter plank "
+        "showing from under the awning with a couple of small round produce baskets on it. "
+        "The whole image is a WIDE LANDSCAPE picture, the stall about one and three "
+        "quarter times as wide as it is tall."
+    ),
 })
 
 # Items whose style comes from a different set of reference sprites than REFS.
@@ -402,6 +445,13 @@ REFS_OVERRIDE = {
     "rope_coil": [os.path.join(ITEMS, "basket.png"), os.path.join(ITEMS, "desk.png")],
     "rug": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "red_carpet.png")],
     "red_carpet": [os.path.join(ITEMS, "red_carpet.png"), os.path.join(ITEMS, "bed_wooden.png")],
+    # piazza set: square-first refs anchor the square aspect; compass_mosaic
+    # carries the flat inlaid-paving register for the rosette, stone_bath the
+    # water-in-stone-basin register for the fountain
+    "piazza_rosette": [os.path.join(ITEMS, "compass_mosaic.png"), os.path.join(ITEMS, "rug.png")],
+    "piazza_fountain": [os.path.join(ITEMS, "stone_bath.png"), os.path.join(ITEMS, "round_table.png")],
+    "market_umbrella": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "stall_canopy": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
 }
 
 

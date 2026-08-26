@@ -5995,5 +5995,87 @@
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null
+  },
+  {
+	"id": "piazza_rosette",
+	"display_name": "Piazza Rosette",
+	"type": "item",
+	"description": "A grand circular paving rosette of cream and tan sandstone inlay.",
+	"base_width": 760.0,
+	"base_height": 760.0,
+	"sprite_path": "res://Items/piazza_rosette.png",
+	"weight": 2000.0,
+	"cost": 800.0,
+	"interact_options": [],
+	"max_hp": 400.0,
+	"hp": 400.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "piazza_fountain",
+	"display_name": "Fountain",
+	"type": "item",
+	"description": "An octagonal travertine fountain with a raised upper bowl.",
+	"base_width": 140.0,
+	"base_height": 140.0,
+	"sprite_path": "res://Items/piazza_fountain.png",
+	"weight": 1500.0,
+	"cost": 500.0,
+	"interact_options": [],
+	"max_hp": 200.0,
+	"hp": 200.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "market_umbrella",
+	"display_name": "Market Umbrella",
+	"type": "item",
+	"description": "A wide canvas market parasol in terracotta and cream.",
+	"base_width": 64.0,
+	"base_height": 64.0,
+	"sprite_path": "res://Items/market_umbrella.png",
+	"weight": 12.0,
+	"cost": 25.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	 "Wood": 1,
+	 "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "stall_canopy",
+	"display_name": "Canopied Stall",
+	"type": "item",
+	"description": "A market stall under a striped red-and-cream canvas awning.",
+	"base_width": 88.0,
+	"base_height": 50.0,
+	"sprite_path": "res://Items/stall_canopy.png",
+	"weight": 30.0,
+	"cost": 30.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	 "Wood": 2,
+	 "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]
