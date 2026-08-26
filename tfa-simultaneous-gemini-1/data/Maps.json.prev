@@ -1055,9 +1055,7 @@
 		{
 			"description": "Dummy placeholder map (King in the North quest target). Real map assets pending.",
 			"id": "skarsgaard_throne",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "Skarsgaard Throne Hall",
 			"npc_spawns": [],
@@ -1083,9 +1081,7 @@
 		{
 			"description": "Dummy placeholder map (Southron's Mill quest target). Real map assets pending.",
 			"id": "southrons_mill",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "Southron's Mill",
 			"npc_spawns": [],
@@ -1111,9 +1107,7 @@
 		{
 			"description": "Dummy placeholder map (Rats Hostage Sausage quest target). Real map assets pending.",
 			"id": "vermincelli_hideout",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "Vermincelli Hideout",
 			"npc_spawns": [],
@@ -1139,9 +1133,7 @@
 		{
 			"description": "Dummy placeholder map (Sacred Grove quest target). Real map assets pending.",
 			"id": "sacred_grove",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "The Sacred Grove",
 			"npc_spawns": [],
@@ -1167,9 +1159,7 @@
 		{
 			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
 			"id": "bortelinian_catacombs",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "Bortelinian Catacombs",
 			"npc_spawns": [],
@@ -1195,9 +1185,7 @@
 		{
 			"description": "Dummy placeholder map (Last Laugh quest target). Real map assets pending.",
 			"id": "alamonean_tower",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "Alamonean Magician's Tower",
 			"npc_spawns": [],
@@ -1223,9 +1211,7 @@
 		{
 			"description": "Dummy placeholder map (From the River to the See quest target). Real map assets pending.",
 			"id": "river_elf_village",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "River-Elf Village",
 			"npc_spawns": [],
@@ -1251,9 +1237,7 @@
 		{
 			"description": "Dummy placeholder map (Quest for Quorum target). Real map assets pending.",
 			"id": "curia",
-			"images": {
-
-			},
+			"images": {},
 			"item_spawns": [],
 			"name": "The Scarlattin Curia",
 			"npc_spawns": [],
@@ -38350,7 +38334,17 @@
 				"ggggdddggdgdddggggggggg",
 				"ggggggdddddddddgggggggg"
 			],
-			"fluid_spawns": [],
+			"fluid_spawns": [
+				{
+					"type": "oil",
+					"amount": 0.55,
+					"radius": 2,
+					"position": [
+						3,
+						9
+					]
+				}
+			],
 			"format": "structured",
 			"id": "combat_test",
 			"images": {
@@ -38362,8 +38356,8 @@
 				{
 					"id": "straw_bed",
 					"position": [
-						369,
-						732
+						369.0,
+						732.0
 					],
 					"rotation": 1.455,
 					"scale": 0.99
@@ -38371,8 +38365,8 @@
 				{
 					"id": "stool",
 					"position": [
-						358,
-						820
+						358.0,
+						820.0
 					],
 					"rotation": -0.151,
 					"scale": 0.968
@@ -38380,8 +38374,8 @@
 				{
 					"id": "basket",
 					"position": [
-						496,
-						1117
+						496.0,
+						1117.0
 					],
 					"rotation": 3.588,
 					"scale": 1.024
@@ -38389,8 +38383,8 @@
 				{
 					"id": "basket",
 					"position": [
-						504,
-						1162
+						504.0,
+						1162.0
 					],
 					"rotation": 3.331,
 					"scale": 1.1
@@ -38398,8 +38392,8 @@
 				{
 					"id": "rug",
 					"position": [
-						373,
-						243
+						373.0,
+						243.0
 					],
 					"rotation": 1.931,
 					"scale": 0.941
@@ -38407,8 +38401,8 @@
 				{
 					"id": "wardrobe",
 					"position": [
-						430,
-						257
+						430.0,
+						257.0
 					],
 					"rotation": 1.931,
 					"scale": 1.065
@@ -38416,8 +38410,8 @@
 				{
 					"id": "firewood",
 					"position": [
-						312,
-						353
+						312.0,
+						353.0
 					],
 					"rotation": 2.104,
 					"scale": 0.955
@@ -38425,8 +38419,8 @@
 				{
 					"id": "crate",
 					"position": [
-						278,
-						431
+						278.0,
+						431.0
 					],
 					"rotation": 1.984,
 					"scale": 0.949
@@ -38434,8 +38428,8 @@
 				{
 					"id": "firewood",
 					"position": [
-						388,
-						407
+						388.0,
+						407.0
 					],
 					"rotation": 2.042,
 					"scale": 1.013
@@ -38443,8 +38437,8 @@
 				{
 					"id": "basket",
 					"position": [
-						296,
-						242
+						296.0,
+						242.0
 					],
 					"rotation": 1.413,
 					"scale": 1.01
@@ -38452,8 +38446,8 @@
 				{
 					"id": "basket",
 					"position": [
-						402,
-						141
+						402.0,
+						141.0
 					],
 					"rotation": 2.331,
 					"scale": 1.025
@@ -38461,8 +38455,8 @@
 				{
 					"id": "amphora",
 					"position": [
-						845,
-						558
+						845.0,
+						558.0
 					],
 					"rotation": 2.117,
 					"scale": 0.959
@@ -38470,8 +38464,8 @@
 				{
 					"id": "rug",
 					"position": [
-						728,
-						554
+						728.0,
+						554.0
 					],
 					"rotation": 2.193,
 					"scale": 0.708
@@ -38479,8 +38473,8 @@
 				{
 					"id": "basket",
 					"position": [
-						692,
-						593
+						692.0,
+						593.0
 					],
 					"rotation": 2.606,
 					"scale": 1.025
@@ -38488,8 +38482,8 @@
 				{
 					"id": "firewood",
 					"position": [
-						885,
-						562
+						885.0,
+						562.0
 					],
 					"rotation": 2.505,
 					"scale": 1.04
@@ -38497,8 +38491,8 @@
 				{
 					"id": "stool",
 					"position": [
-						1228,
-						955
+						1228.0,
+						955.0
 					],
 					"rotation": 1.515,
 					"scale": 0.952
@@ -38506,596 +38500,657 @@
 				{
 					"id": "firewood",
 					"position": [
-						1153,
-						963
+						1153.0,
+						963.0
 					],
 					"rotation": 1.118,
 					"scale": 0.971
 				}
 			],
 			"name": "Combat Test",
-			"npc_spawns": [],
+			"npc_spawns": [
+				{
+					"template_id": "orc_warrior",
+					"count": 1,
+					"position": [
+						800,
+						224
+					],
+					"spread_radius": 0.0
+				},
+				{
+					"template_id": "bandit",
+					"count": 1,
+					"position": [
+						96,
+						96
+					],
+					"spread_radius": 0.0
+				},
+				{
+					"template_id": "bandit_shaman",
+					"count": 1,
+					"position": [
+						1376,
+						416
+					],
+					"spread_radius": 0.0
+				},
+				{
+					"template_id": "bandit_occultist",
+					"count": 1,
+					"position": [
+						1184,
+						96
+					],
+					"spread_radius": 0.0
+				},
+				{
+					"template_id": "bandit_archer",
+					"count": 1,
+					"position": [
+						416,
+						288
+					],
+					"spread_radius": 0.0
+				},
+				{
+					"template_id": "bandit_pyromancer",
+					"count": 1,
+					"position": [
+						1056,
+						416
+					],
+					"spread_radius": 0.0
+				}
+			],
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40
+					"offset_radius": 40.0
 				}
 			},
 			"player_spawns": {
-
+				"default": {
+					"position": [
+						288,
+						992
+					],
+					"facing": -90
+				}
 			},
 			"structures": [
 				{
 					"a": [
-						196,
-						780
+						196.0,
+						780.0
 					],
 					"b": [
-						298,
-						768
+						298.0,
+						768.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						298,
-						768
+						298.0,
+						768.0
 					],
 					"b": [
-						287,
-						679
+						287.0,
+						679.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						287,
-						679
+						287.0,
+						679.0
 					],
 					"b": [
-						495,
-						655
+						495.0,
+						655.0
 					],
 					"half": 10.0,
-					"hp": 82,
+					"hp": 82.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						495,
-						655
+						495.0,
+						655.0
 					],
 					"b": [
-						505,
-						736
+						505.0,
+						736.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						512,
-						795
+						512.0,
+						795.0
 					],
 					"b": [
-						521,
-						876
+						521.0,
+						876.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						521,
-						876
+						521.0,
+						876.0
 					],
 					"b": [
-						212,
-						912
+						212.0,
+						912.0
 					],
 					"half": 10.0,
-					"hp": 122,
+					"hp": 122.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						212,
-						912
+						212.0,
+						912.0
 					],
 					"b": [
-						196,
-						780
+						196.0,
+						780.0
 					],
 					"half": 10.0,
-					"hp": 52,
+					"hp": 52.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						385,
-						863
+						385.0,
+						863.0
 					],
 					"b": [
-						341,
-						868
+						341.0,
+						868.0
 					],
 					"half": 13.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						701,
-						1184
+						701.0,
+						1184.0
 					],
 					"b": [
-						609,
-						1190
+						609.0,
+						1190.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						549,
-						1194
+						549.0,
+						1194.0
 					],
 					"b": [
-						457,
-						1200
+						457.0,
+						1200.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						457,
-						1200
+						457.0,
+						1200.0
 					],
 					"b": [
-						442,
-						972
+						442.0,
+						972.0
 					],
 					"half": 10.0,
-					"hp": 90,
+					"hp": 90.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						442,
-						972
+						442.0,
+						972.0
 					],
 					"b": [
-						686,
-						956
+						686.0,
+						956.0
 					],
 					"half": 10.0,
-					"hp": 96,
+					"hp": 96.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						686,
-						956
+						686.0,
+						956.0
 					],
 					"b": [
-						701,
-						1184
+						701.0,
+						1184.0
 					],
 					"half": 10.0,
-					"hp": 90,
+					"hp": 90.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						544,
-						994
+						544.0,
+						994.0
 					],
 					"b": [
-						588,
-						991
+						588.0,
+						991.0
 					],
 					"half": 13.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						501,
-						219
+						501.0,
+						219.0
 					],
 					"b": [
-						410,
-						460
+						410.0,
+						460.0
 					],
 					"half": 10.0,
-					"hp": 101,
+					"hp": 101.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						410,
-						460
+						410.0,
+						460.0
 					],
 					"b": [
-						322,
-						427
+						322.0,
+						427.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						322,
-						427
+						322.0,
+						427.0
 					],
 					"b": [
-						296,
-						497
+						296.0,
+						497.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						296,
-						497
+						296.0,
+						497.0
 					],
 					"b": [
-						206,
-						464
+						206.0,
+						464.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						206,
-						464
+						206.0,
+						464.0
 					],
 					"b": [
-						232,
-						393
+						232.0,
+						393.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						232,
-						393
+						232.0,
+						393.0
 					],
 					"b": [
-						202,
-						382
+						202.0,
+						382.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						202,
-						382
+						202.0,
+						382.0
 					],
 					"b": [
-						293,
-						140
+						293.0,
+						140.0
 					],
 					"half": 10.0,
-					"hp": 101,
+					"hp": 101.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						293,
-						140
+						293.0,
+						140.0
 					],
 					"b": [
-						369,
-						169
+						369.0,
+						169.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						425,
-						190
+						425.0,
+						190.0
 					],
 					"b": [
-						501,
-						219
+						501.0,
+						219.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						456,
-						339
+						456.0,
+						339.0
 					],
 					"b": [
-						332,
-						293
+						332.0,
+						293.0
 					],
 					"half": 7.0,
-					"hp": 52,
+					"hp": 52.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						287,
-						276
+						287.0,
+						276.0
 					],
 					"b": [
-						247,
-						261
+						247.0,
+						261.0
 					],
 					"half": 7.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						246,
-						335
+						246.0,
+						335.0
 					],
 					"b": [
-						262,
-						294
+						262.0,
+						294.0
 					],
 					"half": 13.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						948,
-						546
+						948.0,
+						546.0
 					],
 					"b": [
-						887,
-						631
+						887.0,
+						631.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						852,
-						680
+						852.0,
+						680.0
 					],
 					"b": [
-						791,
-						764
+						791.0,
+						764.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						791,
-						764
+						791.0,
+						764.0
 					],
 					"b": [
-						604,
-						630
+						604.0,
+						630.0
 					],
 					"half": 10.0,
-					"hp": 91,
+					"hp": 91.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						604,
-						630
+						604.0,
+						630.0
 					],
 					"b": [
-						760,
-						411
+						760.0,
+						411.0
 					],
 					"half": 10.0,
-					"hp": 105,
+					"hp": 105.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						760,
-						411
+						760.0,
+						411.0
 					],
 					"b": [
-						948,
-						546
+						948.0,
+						546.0
 					],
 					"half": 10.0,
-					"hp": 91,
+					"hp": 91.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						848,
-						474
+						848.0,
+						474.0
 					],
 					"b": [
-						752,
-						607
+						752.0,
+						607.0
 					],
 					"half": 7.0,
-					"hp": 65,
+					"hp": 65.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						724,
-						646
+						724.0,
+						646.0
 					],
 					"b": [
-						691,
-						692
+						691.0,
+						692.0
 					],
 					"half": 7.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1263,
-						799
+						1263.0,
+						799.0
 					],
 					"b": [
-						1331,
-						1045
+						1331.0,
+						1045.0
 					],
 					"half": 10.0,
-					"hp": 100,
+					"hp": 100.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1331,
-						1045
+						1331.0,
+						1045.0
 					],
 					"b": [
-						1140,
-						1098
+						1140.0,
+						1098.0
 					],
 					"half": 10.0,
-					"hp": 78,
+					"hp": 78.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1140,
-						1098
+						1140.0,
+						1098.0
 					],
 					"b": [
-						1125,
-						1044
+						1125.0,
+						1044.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1109,
-						987
+						1109.0,
+						987.0
 					],
 					"b": [
-						1094,
-						933
+						1094.0,
+						933.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1094,
-						933
+						1094.0,
+						933.0
 					],
 					"b": [
-						1159,
-						915
+						1159.0,
+						915.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1159,
-						915
+						1159.0,
+						915.0
 					],
 					"b": [
-						1137,
-						834
+						1137.0,
+						834.0
 					],
 					"half": 10.0,
-					"hp": 50,
+					"hp": 50.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1137,
-						834
+						1137.0,
+						834.0
 					],
 					"b": [
-						1263,
-						799
+						1263.0,
+						799.0
 					],
 					"half": 10.0,
-					"hp": 52,
+					"hp": 52.0,
 					"id": "wood_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1264,
-						909
+						1264.0,
+						909.0
 					],
 					"b": [
-						1275,
-						951
+						1275.0,
+						951.0
 					],
 					"half": 13.0,
-					"hp": 80,
+					"hp": 80.0,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -39103,10 +39158,10 @@
 					"deg": 83.4,
 					"half": 10.0,
 					"hinge": [
-						505,
-						736
+						505.0,
+						736.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
@@ -39115,10 +39170,10 @@
 					"deg": 176.2,
 					"half": 10.0,
 					"hinge": [
-						609,
-						1190
+						609.0,
+						1190.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
@@ -39127,10 +39182,10 @@
 					"deg": 20.6,
 					"half": 10.0,
 					"hinge": [
-						369,
-						169
+						369.0,
+						169.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
@@ -39139,10 +39194,10 @@
 					"deg": -159.4,
 					"half": 7.0,
 					"hinge": [
-						332,
-						293
+						332.0,
+						293.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 48.0
@@ -39151,10 +39206,10 @@
 					"deg": 125.7,
 					"half": 10.0,
 					"hinge": [
-						887,
-						631
+						887.0,
+						631.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
@@ -39163,10 +39218,10 @@
 					"deg": 125.7,
 					"half": 7.0,
 					"hinge": [
-						752,
-						607
+						752.0,
+						607.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 48.0
@@ -39175,21 +39230,21 @@
 					"deg": -105.5,
 					"half": 10.0,
 					"hinge": [
-						1125,
-						1044
+						1125.0,
+						1044.0
 					],
-					"hp": 50,
+					"hp": 50.0,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
 				}
 			],
-			"tile_size": 64,
+			"tile_size": 64.0,
 			"warp_points": [],
 			"weather_group": "Scarlatti",
 			"world_size": [
-				1472,
-				1344
+				1472.0,
+				1344.0
 			]
 		},
 		{
@@ -43396,14 +43451,15 @@
 			"id": "tg_cemetery",
 			"images": {
 				"map": "res://Maps/tg_cemetery.png",
+				"roofs": "res://Maps/tg_cemetery_roofs.png",
 				"structures": "res://Maps/tg_cemetery_structures.png"
 			},
 			"item_spawns": [
 				{
 					"id": "altar",
 					"position": [
-						1181.0,
-						415.0
+						1181,
+						415
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -43411,8 +43467,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1057.0,
-						415.0
+						1057,
+						415
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -43420,8 +43476,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						1305.0,
-						415.0
+						1305,
+						415
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -43429,8 +43485,8 @@
 				{
 					"id": "red_carpet",
 					"position": [
-						1181.0,
-						515.0
+						1181,
+						515
 					],
 					"rotation": 0.0,
 					"scale": 0.28
@@ -43438,8 +43494,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1089.0,
-						499.0
+						1089,
+						499
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43447,8 +43503,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1089.0,
-						567.0
+						1089,
+						567
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43456,8 +43512,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1273.0,
-						499.0
+						1273,
+						499
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43465,8 +43521,8 @@
 				{
 					"id": "bench",
 					"position": [
-						1273.0,
-						567.0
+						1273,
+						567
 					],
 					"rotation": 1.571,
 					"scale": 1.0
@@ -43474,8 +43530,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1037.0,
-						595.0
+						1037,
+						595
 					],
 					"rotation": 1.571,
 					"scale": 0.85
@@ -43483,8 +43539,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						502.0
+						332,
+						502
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43492,8 +43548,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						502.0
+						448,
+						502
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43501,8 +43557,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						502.0
+						564,
+						502
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43510,8 +43566,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						502.0
+						680,
+						502
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43519,8 +43575,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						502.0
+						796,
+						502
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43528,8 +43584,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						502.0
+						912,
+						502
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43537,8 +43593,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						650.0
+						332,
+						650
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43546,8 +43602,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						650.0
+						448,
+						650
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43555,8 +43611,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						650.0
+						564,
+						650
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43564,8 +43620,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						650.0
+						680,
+						650
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43573,8 +43629,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						650.0
+						796,
+						650
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43582,8 +43638,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						650.0
+						912,
+						650
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43591,8 +43647,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						798.0
+						332,
+						798
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43600,8 +43656,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						798.0
+						448,
+						798
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43609,8 +43665,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						798.0
+						564,
+						798
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43618,8 +43674,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						798.0
+						680,
+						798
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43627,8 +43683,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						798.0
+						796,
+						798
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43636,8 +43692,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						798.0
+						912,
+						798
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43645,8 +43701,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						946.0
+						332,
+						946
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43654,8 +43710,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						946.0
+						448,
+						946
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43663,8 +43719,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						946.0
+						564,
+						946
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43672,8 +43728,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						946.0
+						680,
+						946
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43681,8 +43737,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						946.0
+						796,
+						946
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43690,8 +43746,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						946.0
+						912,
+						946
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43699,8 +43755,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						1094.0
+						332,
+						1094
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43708,8 +43764,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						1094.0
+						448,
+						1094
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43717,8 +43773,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						1094.0
+						564,
+						1094
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43726,8 +43782,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						1094.0
+						680,
+						1094
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43735,8 +43791,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						1094.0
+						796,
+						1094
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43744,8 +43800,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						1094.0
+						912,
+						1094
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43753,8 +43809,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						332.0,
-						1242.0
+						332,
+						1242
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43762,8 +43818,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						448.0,
-						1242.0
+						448,
+						1242
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43771,8 +43827,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						564.0,
-						1242.0
+						564,
+						1242
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43780,8 +43836,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						680.0,
-						1242.0
+						680,
+						1242
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43789,8 +43845,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						796.0,
-						1242.0
+						796,
+						1242
 					],
 					"rotation": 0.052,
 					"scale": 1.0
@@ -43798,8 +43854,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						912.0,
-						1242.0
+						912,
+						1242
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43807,8 +43863,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653.0,
-						398.0
+						1653,
+						398
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43816,8 +43872,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777.0,
-						398.0
+						1777,
+						398
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43825,8 +43881,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901.0,
-						398.0
+						1901,
+						398
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43834,8 +43890,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025.0,
-						398.0
+						2025,
+						398
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43843,8 +43899,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149.0,
-						398.0
+						2149,
+						398
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43852,8 +43908,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653.0,
-						558.0
+						1653,
+						558
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43861,8 +43917,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777.0,
-						558.0
+						1777,
+						558
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43870,8 +43926,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901.0,
-						558.0
+						1901,
+						558
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43879,8 +43935,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025.0,
-						558.0
+						2025,
+						558
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43888,8 +43944,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149.0,
-						558.0
+						2149,
+						558
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43897,8 +43953,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653.0,
-						718.0
+						1653,
+						718
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43906,8 +43962,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777.0,
-						718.0
+						1777,
+						718
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43915,8 +43971,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901.0,
-						718.0
+						1901,
+						718
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43924,8 +43980,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025.0,
-						718.0
+						2025,
+						718
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43933,8 +43989,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149.0,
-						718.0
+						2149,
+						718
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43942,8 +43998,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653.0,
-						878.0
+						1653,
+						878
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43951,8 +44007,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777.0,
-						878.0
+						1777,
+						878
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -43960,8 +44016,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901.0,
-						878.0
+						1901,
+						878
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -43969,8 +44025,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025.0,
-						878.0
+						2025,
+						878
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -43978,8 +44034,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149.0,
-						878.0
+						2149,
+						878
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -43987,8 +44043,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1653.0,
-						1038.0
+						1653,
+						1038
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -43996,8 +44052,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1777.0,
-						1038.0
+						1777,
+						1038
 					],
 					"rotation": 0.017,
 					"scale": 1.0
@@ -44005,8 +44061,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						1901.0,
-						1038.0
+						1901,
+						1038
 					],
 					"rotation": -0.052,
 					"scale": 1.0
@@ -44014,8 +44070,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2025.0,
-						1038.0
+						2025,
+						1038
 					],
 					"rotation": 0.035,
 					"scale": 1.0
@@ -44023,8 +44079,8 @@
 				{
 					"id": "headstone",
 					"position": [
-						2149.0,
-						1038.0
+						2149,
+						1038
 					],
 					"rotation": -0.017,
 					"scale": 1.0
@@ -44032,8 +44088,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1668.0,
-						1423.0
+						1668,
+						1423
 					],
 					"rotation": 0.026,
 					"scale": 1.0
@@ -44041,8 +44097,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						1876.0,
-						1423.0
+						1876,
+						1423
 					],
 					"rotation": -0.035,
 					"scale": 1.0
@@ -44050,8 +44106,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						2084.0,
-						1423.0
+						2084,
+						1423
 					],
 					"rotation": 0.014,
 					"scale": 1.0
@@ -44059,8 +44115,8 @@
 				{
 					"id": "skull_pile",
 					"position": [
-						2120.0,
-						1299.0
+						2120,
+						1299
 					],
 					"rotation": 0.0,
 					"scale": 0.85
@@ -44068,8 +44124,8 @@
 				{
 					"id": "bones",
 					"position": [
-						2072.0,
-						1255.0
+						2072,
+						1255
 					],
 					"rotation": 0.0,
 					"scale": 0.9
@@ -44077,8 +44133,8 @@
 				{
 					"id": "fallen_log",
 					"position": [
-						1117.0,
-						1558.0
+						1117,
+						1558
 					],
 					"rotation": 0.419,
 					"scale": 1.0
@@ -44086,8 +44142,8 @@
 				{
 					"id": "cart",
 					"position": [
-						1342.0,
-						1283.0
+						1342,
+						1283
 					],
 					"rotation": -0.14,
 					"scale": 1.0
@@ -44095,8 +44151,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1094.0,
-						124.0
+						1094,
+						124
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44104,8 +44160,8 @@
 				{
 					"id": "torch",
 					"position": [
-						1326.0,
-						124.0
+						1326,
+						124
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44113,8 +44169,8 @@
 				{
 					"id": "sarcophagus",
 					"position": [
-						2320.0,
-						1231.0
+						2320,
+						1231
 					],
 					"rotation": 0.0,
 					"scale": 1.1
@@ -44122,8 +44178,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						2228.0,
-						1171.0
+						2228,
+						1171
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44131,8 +44187,8 @@
 				{
 					"id": "brazier",
 					"position": [
-						2228.0,
-						1291.0
+						2228,
+						1291
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44143,630 +44199,630 @@
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40.0
+					"offset_radius": 40
 				}
 			},
 			"player_spawns": {
 				"default": {
-					"facing": 90.0,
+					"facing": 90,
 					"position": [
-						1210.0,
-						1231.0
+						1210,
+						1231
 					]
 				}
 			},
 			"structures": [
 				{
 					"a": [
-						981.0,
-						369.0
+						981,
+						369
 					],
 					"b": [
-						981.0,
-						629.0
+						981,
+						629
 					],
 					"half": 10.0,
-					"hp": 163.0,
+					"hp": 163,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1381.0,
-						369.0
+						1381,
+						369
 					],
 					"b": [
-						1381.0,
-						629.0
+						1381,
+						629
 					],
 					"half": 10.0,
-					"hp": 163.0,
+					"hp": 163,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						981.0,
-						369.0
+						981,
+						369
 					],
 					"b": [
-						1381.0,
-						369.0
+						1381,
+						369
 					],
 					"half": 10.0,
-					"hp": 250.0,
+					"hp": 250,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						981.0,
-						629.0
+						981,
+						629
 					],
 					"b": [
-						1139.0,
-						629.0
+						1139,
+						629
 					],
 					"half": 10.0,
-					"hp": 99.0,
+					"hp": 99,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1223.0,
-						629.0
+						1223,
+						629
 					],
 					"b": [
-						1381.0,
-						629.0
+						1381,
+						629
 					],
 					"half": 10.0,
-					"hp": 99.0,
+					"hp": 99,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80.0,
-						80.0
+						80,
+						80
 					],
 					"b": [
-						1122.0,
-						80.0
+						1122,
+						80
 					],
 					"half": 11.0,
-					"hp": 651.0,
+					"hp": 651,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1298.0,
-						80.0
+						1298,
+						80
 					],
 					"b": [
-						2800.0,
-						80.0
+						2800,
+						80
 					],
 					"half": 11.0,
-					"hp": 940.0,
+					"hp": 940,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80.0,
-						1584.0
+						80,
+						1584
 					],
 					"b": [
-						2800.0,
-						1584.0
+						2800,
+						1584
 					],
 					"half": 11.0,
-					"hp": 1700.0,
+					"hp": 1700,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						80.0,
-						80.0
+						80,
+						80
 					],
 					"b": [
-						80.0,
-						1584.0
+						80,
+						1584
 					],
 					"half": 11.0,
-					"hp": 940.0,
+					"hp": 940,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2800.0,
-						80.0
+						2800,
+						80
 					],
 					"b": [
-						2800.0,
-						1584.0
+						2800,
+						1584
 					],
 					"half": 11.0,
-					"hp": 940.0,
+					"hp": 940,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						893.0,
-						1151.0
+						893,
+						1151
 					],
 					"b": [
-						893.0,
-						1179.0
+						893,
+						1179
 					],
 					"half": 8.0,
-					"hp": 80.0,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192.0,
-						1143.0
+						2192,
+						1143
 					],
 					"b": [
-						2192.0,
-						1201.0
+						2192,
+						1201
 					],
 					"half": 10.0,
-					"hp": 80.0,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192.0,
-						1261.0
+						2192,
+						1261
 					],
 					"b": [
-						2192.0,
-						1319.0
+						2192,
+						1319
 					],
 					"half": 10.0,
-					"hp": 80.0,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2416.0,
-						1143.0
+						2416,
+						1143
 					],
 					"b": [
-						2416.0,
-						1319.0
+						2416,
+						1319
 					],
 					"half": 10.0,
-					"hp": 110.0,
+					"hp": 110,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192.0,
-						1143.0
+						2192,
+						1143
 					],
 					"b": [
-						2416.0,
-						1143.0
+						2416,
+						1143
 					],
 					"half": 10.0,
-					"hp": 140.0,
+					"hp": 140,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						2192.0,
-						1319.0
+						2192,
+						1319
 					],
 					"b": [
-						2416.0,
-						1319.0
+						2416,
+						1319
 					],
 					"half": 10.0,
-					"hp": 140.0,
+					"hp": 140,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						939.0,
-						147.0
+						939,
+						147
 					],
 					"r": 58.9
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1292.0,
-						1349.0
+						1292,
+						1349
 					],
 					"r": 58.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						641.0,
-						194.0
+						641,
+						194
 					],
 					"r": 49.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						772.0,
-						105.0
+						772,
+						105
 					],
 					"r": 59.5
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						256.0,
-						1112.0
+						256,
+						1112
 					],
 					"r": 58.2
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1621.0,
-						1581.0
+						1621,
+						1581
 					],
 					"r": 60.3
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						179.0,
-						1227.0
+						179,
+						1227
 					],
 					"r": 36.2
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1844.0,
-						1011.0
+						1844,
+						1011
 					],
 					"r": 69.4
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2450.0,
-						531.0
+						2450,
+						531
 					],
 					"r": 58.8
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						197.0,
-						940.0
+						197,
+						940
 					],
 					"r": 58.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1807.0,
-						1627.0
+						1807,
+						1627
 					],
 					"r": 53.1
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						383.0,
-						64.0
+						383,
+						64
 					],
 					"r": 46.6
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1227.0,
-						1124.0
+						1227,
+						1124
 					],
 					"r": 58.8
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1936.0,
-						776.0
+						1936,
+						776
 					],
 					"r": 46.9
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1112.0,
-						94.0
+						1112,
+						94
 					],
 					"r": 63.6
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2562.0,
-						51.0
+						2562,
+						51
 					],
 					"r": 43.3
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						90.0,
-						232.0
+						90,
+						232
 					],
 					"r": 61.2
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1528.0,
-						567.0
+						1528,
+						567
 					],
 					"r": 39.8
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						401.0,
-						1240.0
+						401,
+						1240
 					],
 					"r": 77.9
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1008.0,
-						1126.0
+						1008,
+						1126
 					],
 					"r": 62.5
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						731.0,
-						1162.0
+						731,
+						1162
 					],
 					"r": 70.1
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						95.0,
-						1119.0
+						95,
+						1119
 					],
 					"r": 53.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2326.0,
-						637.0
+						2326,
+						637
 					],
 					"r": 51.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2775.0,
-						58.0
+						2775,
+						58
 					],
 					"r": 51.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2345.0,
-						934.0
+						2345,
+						934
 					],
 					"r": 67.5
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2066.0,
-						290.0
+						2066,
+						290
 					],
 					"r": 50.5
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						351.0,
-						419.0
+						351,
+						419
 					],
 					"r": 55.3
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1517.0,
-						1407.0
+						1517,
+						1407
 					],
 					"r": 62.3
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2216.0,
-						284.0
+						2216,
+						284
 					],
 					"r": 36.1
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2000.0,
-						1091.0
+						2000,
+						1091
 					],
 					"r": 47.2
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1428.0,
-						740.0
+						1428,
+						740
 					],
 					"r": 41.6
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						544.0,
-						805.0
+						544,
+						805
 					],
 					"r": 41.0
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2673.0,
-						746.0
+						2673,
+						746
 					],
 					"r": 53.2
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						366.0,
-						773.0
+						366,
+						773
 					],
 					"r": 49.8
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2653.0,
-						1421.0
+						2653,
+						1421
 					],
 					"r": 67.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1855.0,
-						1187.0
+						1855,
+						1187
 					],
 					"r": 33.9
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						513.0,
-						1581.0
+						513,
+						1581
 					],
 					"r": 56.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						1441.0,
-						23.0
+						1441,
+						23
 					],
 					"r": 35.7
 				},
 				{
-					"hp": 80.0,
+					"hp": 80,
 					"id": "tree",
 					"kind": "tree",
 					"pos": [
-						2816.0,
-						387.0
+						2816,
+						387
 					],
 					"r": 46.8
 				},
@@ -44774,10 +44830,10 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						1139.0,
-						629.0
+						1139,
+						629
 					],
-					"hp": 50.0,
+					"hp": 50,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 84.0
@@ -44786,21 +44842,21 @@
 					"deg": 90.0,
 					"half": 10.0,
 					"hinge": [
-						2192.0,
-						1201.0
+						2192,
+						1201
 					],
-					"hp": 50.0,
+					"hp": 50,
 					"id": "door_wood",
 					"kind": "door",
 					"width": 60.0
 				}
 			],
-			"tile_size": 64.0,
+			"tile_size": 64,
 			"warp_points": [],
 			"weather_group": "Scarlatti",
 			"world_size": [
-				2880.0,
-				1664.0
+				2880,
+				1664
 			]
 		}
 	]
