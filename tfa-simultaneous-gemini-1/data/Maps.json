@@ -44434,38 +44434,38 @@
 			"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
 			"editor_export": true,
 			"floors": [
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ppppppppsssssssssssssssspppppssss",
-				"ppppppppsssssssssssssssspppppssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
+				"ssssssppppppppssssspppppsssssssss",
+				"ssssssppppppppssssspppppsssssssss",
+				"ssssssppppppppssssspppppsssssssss",
+				"ssssssppppppppssssspppppsssssssss",
+				"ppppppppppppppssssspppppsssssssss",
+				"ppppppppppppppssssspppppsssssssss",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
 				"sssssssssssssssssssssssssssssssss",
 				"sssssssssssssssssssssssssssssssss",
 				"sssssssssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppsssssssssssssssssssssssssss",
-				"ppppppppsssssssssssssssspppppssss",
-				"ppppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
-				"ssppppppsssssssssssssssspppppssss",
+				"sssssssssssssssssssssssssssssssss",
+				"sssssssssssssssssssssssssspppppps",
+				"sssssssssssssssssssssssssspppppps",
+				"sssssssssssssssssssssssssspppppps",
+				"sssssssssssssssssssssssssspppppps",
+				"sssssssssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppsssssssssssssssssssspppppps",
+				"ppppppppppppppsssspppppppppppppps",
+				"ppppppppppppppsssspppppppppppppps",
+				"ssssssppppppppssssppppppppsssssss",
+				"ssssssppppppppssssppppppppsssssss",
+				"ssssssppppppppssssppppppppsssssss",
+				"ssssssppppppppssssppppppppsssssss",
 				"sssssssssssssssssssssssssssssssss"
 			],
 			"fluid_spawns": [],
@@ -44489,8 +44489,8 @@
 				{
 					"id": "piazza_fountain",
 					"position": [
-						1424,
-						1364
+						1024,
+						1024
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44498,53 +44498,161 @@
 				{
 					"id": "bench",
 					"position": [
-						1276,
-						1364
+						840,
+						1024
 					],
-					"rotation": 1.571,
+					"rotation": 0.0,
 					"scale": 0.55
 				},
 				{
 					"id": "bench",
 					"position": [
-						1572,
-						1364
+						1208,
+						1024
 					],
-					"rotation": 1.571,
+					"rotation": 0.0,
 					"scale": 0.55
 				},
 				{
-					"id": "stall_canopy",
+					"id": "stall_table",
 					"position": [
-						504,
-						564
+						444,
+						496
 					],
 					"rotation": 0.0,
 					"scale": 1.0
+				},
+				{
+					"id": "cabbage",
+					"position": [
+						420,
+						496
+					],
+					"rotation": 0.0,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "onion",
+					"position": [
+						444,
+						506
+					],
+					"rotation": 0.0,
+					"scale": 0.75,
+					"z": 1
+				},
+				{
+					"id": "turnip",
+					"position": [
+						468,
+						492
+					],
+					"rotation": 0.0,
+					"scale": 0.75,
+					"z": 1
+				},
+				{
+					"id": "stall_table",
+					"position": [
+						624,
+						496
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bread_loaf",
+					"position": [
+						604,
+						500
+					],
+					"rotation": 0.262,
+					"scale": 0.85,
+					"z": 1
+				},
+				{
+					"id": "bread_loaf",
+					"position": [
+						640,
+						492
+					],
+					"rotation": -0.349,
+					"scale": 0.85,
+					"z": 1
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						624,
+						508
+					],
+					"rotation": 0.0,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "stall_table",
+					"position": [
+						804,
+						496
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						784,
+						498
+					],
+					"rotation": 0.524,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "alcohol",
+					"position": [
+						820,
+						492
+					],
+					"rotation": -0.262,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						804,
+						508
+					],
+					"rotation": 0.0,
+					"scale": 0.85,
+					"z": 1
 				},
 				{
 					"id": "market_umbrella",
 					"position": [
-						652,
-						460
+						624,
+						432
+					],
+					"rotation": 0.0,
+					"scale": 0.9
+				},
+				{
+					"id": "crate",
+					"position": [
+						384,
+						440
 					],
 					"rotation": 0.0,
 					"scale": 1.0
 				},
 				{
-					"id": "market_stall",
+					"id": "grain_sack",
 					"position": [
-						424,
-						712
-					],
-					"rotation": 0.14,
-					"scale": 1.0
-				},
-				{
-					"id": "crate",
-					"position": [
-						424,
-						548
+						564,
+						440
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44552,8 +44660,82 @@
 				{
 					"id": "basket",
 					"position": [
-						576,
-						632
+						744,
+						440
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stall_canopy",
+					"position": [
+						484,
+						664
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stall_table",
+					"position": [
+						664,
+						664
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "roast_fowl",
+					"position": [
+						646,
+						664
+					],
+					"rotation": 0.0,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						684,
+						660
+					],
+					"rotation": 0.0,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "stall_canopy",
+					"position": [
+						844,
+						664
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "market_umbrella",
+					"position": [
+						940,
+						580
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						384,
+						688
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "amphora",
+					"position": [
+						912,
+						656
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44586,28 +44768,67 @@
 					"scale": 1.0
 				},
 				{
-					"id": "market_umbrella",
+					"id": "stall_table",
 					"position": [
-						452,
-						1500
+						1564,
+						1684
 					],
 					"rotation": 0.0,
 					"scale": 1.0
 				},
 				{
-					"id": "stall_canopy",
+					"id": "hammer",
 					"position": [
-						580,
-						1600
+						1540,
+						1680
 					],
-					"rotation": 0.07,
+					"rotation": 0.436,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "metal",
+					"position": [
+						1588,
+						1688
+					],
+					"rotation": 0.0,
+					"scale": 0.8,
+					"z": 1
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						1564,
+						1696
+					],
+					"rotation": 0.0,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "anvil",
+					"position": [
+						1632,
+						1732
+					],
+					"rotation": 0.0,
 					"scale": 1.0
 				},
 				{
-					"id": "grain_sack",
+					"id": "barrel",
 					"position": [
-						452,
-						1624
+						1504,
+						1712
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						1632,
+						1640
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -44615,19 +44836,10 @@
 				{
 					"id": "cart",
 					"position": [
-						1728,
-						1636
+						1484,
+						1584
 					],
 					"rotation": -0.244,
-					"scale": 1.0
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1648,
-						1720
-					],
-					"rotation": 0.0,
 					"scale": 1.0
 				},
 				{
@@ -44669,7 +44881,7 @@
 				{
 					"id": "round_table",
 					"position": [
-						300,
+						527,
 						192
 					],
 					"rotation": 0.0,
@@ -44678,7 +44890,7 @@
 				{
 					"id": "pottage",
 					"position": [
-						283,
+						510,
 						182
 					],
 					"rotation": 0.254,
@@ -44688,7 +44900,7 @@
 				{
 					"id": "alcohol",
 					"position": [
-						320,
+						547,
 						205
 					],
 					"rotation": 0.28,
@@ -44698,7 +44910,7 @@
 				{
 					"id": "stool",
 					"position": [
-						352,
+						579,
 						211
 					],
 					"rotation": 1.921,
@@ -44707,7 +44919,7 @@
 				{
 					"id": "stool",
 					"position": [
-						281,
+						508,
 						244
 					],
 					"rotation": 3.492,
@@ -44716,7 +44928,7 @@
 				{
 					"id": "stool",
 					"position": [
-						248,
+						475,
 						173
 					],
 					"rotation": 5.062,
@@ -44725,7 +44937,7 @@
 				{
 					"id": "stool",
 					"position": [
-						319,
+						546,
 						140
 					],
 					"rotation": 6.633,
@@ -44734,7 +44946,7 @@
 				{
 					"id": "firewood",
 					"position": [
-						433,
+						619,
 						237
 					],
 					"rotation": -0.384,
@@ -44743,7 +44955,7 @@
 				{
 					"id": "crate",
 					"position": [
-						533,
+						711,
 						52
 					],
 					"rotation": 0.0,
@@ -44752,7 +44964,7 @@
 				{
 					"id": "barrel",
 					"position": [
-						582,
+						760,
 						54
 					],
 					"rotation": 0.0,
@@ -44761,7 +44973,7 @@
 				{
 					"id": "grain_sack",
 					"position": [
-						628,
+						806,
 						43
 					],
 					"rotation": 0.0,
@@ -44770,7 +44982,7 @@
 				{
 					"id": "crate",
 					"position": [
-						671,
+						849,
 						51
 					],
 					"rotation": 0.0,
@@ -44779,7 +44991,7 @@
 				{
 					"id": "basket",
 					"position": [
-						671,
+						849,
 						51
 					],
 					"rotation": 0.104,
@@ -44789,54 +45001,54 @@
 				{
 					"id": "amphora",
 					"position": [
-						713,
-						44
+						896,
+						68
 					],
-					"rotation": 0.0,
-					"scale": 0.968
+					"rotation": 1.571,
+					"scale": 1.018
 				},
 				{
 					"id": "crate",
 					"position": [
-						756,
-						52
+						888,
+						112
 					],
-					"rotation": 0.0,
-					"scale": 1.018
+					"rotation": 1.571,
+					"scale": 1.016
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						756,
-						52
+						888,
+						112
 					],
-					"rotation": 0.119,
+					"rotation": 1.817,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "crate",
 					"position": [
-						805,
-						53
+						887,
+						161
 					],
-					"rotation": 0.0,
+					"rotation": 1.571,
 					"scale": 1.033
 				},
 				{
 					"id": "barrel",
 					"position": [
-						855,
-						54
+						886,
+						211
 					],
-					"rotation": 0.0,
-					"scale": 1.033
+					"rotation": 1.571,
+					"scale": 1.018
 				},
 				{
 					"id": "grain_sack",
 					"position": [
 						897,
-						70
+						257
 					],
 					"rotation": 1.571,
 					"scale": 1.036
@@ -44845,7 +45057,7 @@
 					"id": "crate",
 					"position": [
 						888,
-						114
+						301
 					],
 					"rotation": 1.571,
 					"scale": 1.006
@@ -44854,211 +45066,174 @@
 					"id": "basket",
 					"position": [
 						888,
-						114
+						301
 					],
 					"rotation": 1.611,
 					"scale": 0.65,
 					"z": 1
 				},
 				{
-					"id": "amphora",
+					"id": "rope_coil",
 					"position": [
-						896,
-						157
+						834,
+						333
 					],
-					"rotation": 1.571,
-					"scale": 0.968
-				},
-				{
-					"id": "crate",
-					"position": [
-						888,
-						200
-					],
-					"rotation": 1.571,
-					"scale": 1.013
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						888,
-						200
-					],
-					"rotation": 1.31,
-					"scale": 0.7,
-					"z": 1
-				},
-				{
-					"id": "crate",
-					"position": [
-						888,
-						248
-					],
-					"rotation": 1.571,
-					"scale": 1.014
-				},
-				{
-					"id": "barrel",
-					"position": [
-						887,
-						297
-					],
-					"rotation": 1.571,
-					"scale": 0.961
-				},
-				{
-					"id": "basket",
-					"position": [
-						769,
-						332
-					],
-					"rotation": -0.177,
-					"scale": 1.039
-				},
-				{
-					"id": "basket",
-					"position": [
-						534,
-						293
-					],
-					"rotation": 0.262,
-					"scale": 0.959
+					"rotation": 0.472,
+					"scale": 0.903
 				},
 				{
 					"id": "rope_coil",
 					"position": [
-						524,
-						235
+						863,
+						271
 					],
-					"rotation": 0.284,
-					"scale": 1.077
+					"rotation": 0.414,
+					"scale": 0.917
 				},
 				{
 					"id": "crate",
 					"position": [
-						793,
-						272
+						820,
+						278
 					],
-					"rotation": -0.441,
+					"rotation": 0.142,
+					"scale": 0.912
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						803,
+						317
+					],
+					"rotation": -0.35,
+					"scale": 1.079
+				},
+				{
+					"id": "basket",
+					"position": [
+						511,
+						111
+					],
+					"rotation": 0.209,
 					"scale": 1.074
 				},
 				{
 					"id": "basket",
 					"position": [
-						296,
-						61
+						585,
+						327
 					],
-					"rotation": -0.274,
-					"scale": 0.93
+					"rotation": 0.096,
+					"scale": 0.916
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						720,
+						141
+					],
+					"rotation": -0.464,
+					"scale": 0.927
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						746,
+						264
+					],
+					"rotation": 0.357,
+					"scale": 1.071
 				},
 				{
 					"id": "firewood",
 					"position": [
-						214,
-						53
+						567,
+						77
 					],
-					"rotation": 0.026,
-					"scale": 1.038
+					"rotation": -0.144,
+					"scale": 0.95
 				},
 				{
 					"id": "basket",
 					"position": [
-						697,
-						281
+						457,
+						127
 					],
-					"rotation": 0.24,
-					"scale": 1.019
+					"rotation": 0.211,
+					"scale": 0.998
+				},
+				{
+					"id": "firewood",
+					"position": [
+						456,
+						233
+					],
+					"rotation": 0.033,
+					"scale": 1.075
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						533,
-						125
+						804,
+						104
 					],
-					"rotation": 0.175,
-					"scale": 0.931
+					"rotation": -0.037,
+					"scale": 1.041
 				},
 				{
-					"id": "amphora",
+					"id": "firewood",
 					"position": [
-						376,
-						97
+						494,
+						408
 					],
-					"rotation": 0.205,
-					"scale": 1.065
-				},
-				{
-					"id": "crate",
-					"position": [
-						661,
-						118
-					],
-					"rotation": 0.201,
-					"scale": 0.923
-				},
-				{
-					"id": "basket",
-					"position": [
-						796,
-						210
-					],
-					"rotation": 0.519,
-					"scale": 1.078
-				},
-				{
-					"id": "basket",
-					"position": [
-						516,
-						322
-					],
-					"rotation": 0.484,
-					"scale": 0.955
+					"rotation": 0.42,
+					"scale": 0.984
 				},
 				{
 					"id": "stove",
 					"position": [
-						1261,
-						49
+						1263,
+						50
 					],
 					"rotation": 0.0,
-					"scale": 0.962
+					"scale": 1.029
 				},
 				{
 					"id": "cauldron",
 					"position": [
-						1261,
-						49
+						1263,
+						50
 					],
-					"rotation": -0.251,
+					"rotation": 0.097,
 					"scale": 0.55,
 					"z": 1
 				},
 				{
 					"id": "prep_table",
 					"position": [
-						1343,
+						1346,
 						56
 					],
 					"rotation": 0.0,
-					"scale": 0.982
+					"scale": 0.961
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						1322,
+						1325,
 						58
 					],
-					"rotation": 0.1,
+					"rotation": 0.164,
 					"scale": 0.8,
 					"z": 1
 				},
 				{
 					"id": "cabbage",
 					"position": [
-						1363,
+						1365,
 						52
 					],
-					"rotation": -0.222,
+					"rotation": 0.22,
 					"scale": 0.75,
 					"z": 1
 				},
@@ -45069,16 +45244,16 @@
 						40
 					],
 					"rotation": 0.0,
-					"scale": 1.037
+					"scale": 0.978
 				},
 				{
-					"id": "bucket",
+					"id": "basket",
 					"position": [
-						1288,
-						295
+						1322,
+						227
 					],
-					"rotation": -0.024,
-					"scale": 0.994
+					"rotation": -0.076,
+					"scale": 1.034
 				},
 				{
 					"id": "round_table",
@@ -45095,7 +45270,7 @@
 						1693,
 						182
 					],
-					"rotation": 0.261,
+					"rotation": 0.226,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45105,7 +45280,7 @@
 						1730,
 						205
 					],
-					"rotation": 0.177,
+					"rotation": -0.175,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45146,94 +45321,94 @@
 					"scale": 1.0
 				},
 				{
-					"id": "amphora",
+					"id": "basket",
 					"position": [
-						1651,
-						81
+						1716,
+						101
 					],
-					"rotation": -0.394,
-					"scale": 0.908
+					"rotation": 0.352,
+					"scale": 1.016
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1849,
+						252
+					],
+					"rotation": -0.099,
+					"scale": 0.931
 				},
 				{
 					"id": "basket",
 					"position": [
-						1427,
-						238
+						1288,
+						143
 					],
-					"rotation": -0.506,
-					"scale": 0.957
+					"rotation": -0.386,
+					"scale": 0.901
 				},
 				{
-					"id": "basket",
+					"id": "bucket",
 					"position": [
-						1613,
-						95
+						1390,
+						174
 					],
-					"rotation": 0.41,
-					"scale": 0.942
+					"rotation": 0.229,
+					"scale": 0.931
 				},
 				{
 					"id": "grain_sack",
 					"position": [
 						1390,
-						213
-					],
-					"rotation": 0.224,
-					"scale": 0.987
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1380,
-						294
-					],
-					"rotation": -0.091,
-					"scale": 0.913
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1403,
-						179
-					],
-					"rotation": -0.222,
-					"scale": 1.014
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1333,
-						187
+						234
 					],
 					"rotation": 0.038,
-					"scale": 0.904
+					"scale": 1.034
 				},
 				{
-					"id": "grain_sack",
+					"id": "basket",
 					"position": [
-						1385,
-						145
+						1434,
+						273
 					],
-					"rotation": -0.436,
-					"scale": 1.025
+					"rotation": 0.283,
+					"scale": 0.973
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1359,
+						199
+					],
+					"rotation": -0.119,
+					"scale": 1.043
 				},
 				{
 					"id": "amphora",
 					"position": [
-						1656,
-						122
+						1791,
+						321
 					],
-					"rotation": -0.415,
-					"scale": 1.033
+					"rotation": -0.174,
+					"scale": 0.94
 				},
 				{
 					"id": "firewood",
 					"position": [
+						1662,
+						297
+					],
+					"rotation": -0.09,
+					"scale": 0.953
+				},
+				{
+					"id": "crate",
+					"position": [
 						1332,
 						407
 					],
-					"rotation": 3.169,
-					"scale": 0.965
+					"rotation": 1.238,
+					"scale": 1.014
 				},
 				{
 					"id": "round_table",
@@ -45250,7 +45425,7 @@
 						175,
 						590
 					],
-					"rotation": -0.241,
+					"rotation": -0.269,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45260,7 +45435,7 @@
 						212,
 						613
 					],
-					"rotation": 0.241,
+					"rotation": 0.248,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45301,85 +45476,94 @@
 					"scale": 1.0
 				},
 				{
-					"id": "basket",
+					"id": "bench",
 					"position": [
-						252,
-						518
+						274,
+						483
 					],
-					"rotation": -0.135,
-					"scale": 0.961
-				},
-				{
-					"id": "firewood",
-					"position": [
-						329,
-						493
-					],
-					"rotation": 0.066,
-					"scale": 0.924
+					"rotation": -0.104,
+					"scale": 0.909
 				},
 				{
 					"id": "amphora",
 					"position": [
-						196,
-						762
+						296,
+						812
 					],
-					"rotation": -0.327,
-					"scale": 0.972
+					"rotation": -0.437,
+					"scale": 1.013
 				},
 				{
-					"id": "amphora",
+					"id": "bench",
 					"position": [
-						167,
-						458
+						125,
+						781
 					],
-					"rotation": -0.333,
-					"scale": 1.056
-				},
-				{
-					"id": "firewood",
-					"position": [
-						140,
-						705
-					],
-					"rotation": -0.436,
-					"scale": 0.995
-				},
-				{
-					"id": "amphora",
-					"position": [
-						191,
-						320
-					],
-					"rotation": -0.042,
-					"scale": 1.037
-				},
-				{
-					"id": "basket",
-					"position": [
-						209,
-						485
-					],
-					"rotation": -0.34,
+					"rotation": 1.571,
 					"scale": 0.907
 				},
 				{
-					"id": "firewood",
+					"id": "amphora",
 					"position": [
-						328,
-						654
+						180,
+						311
 					],
-					"rotation": 0.206,
-					"scale": 1.076
+					"rotation": -0.439,
+					"scale": 1.057
+				},
+				{
+					"id": "amphora",
+					"position": [
+						307,
+						712
+					],
+					"rotation": 0.363,
+					"scale": 1.029
 				},
 				{
 					"id": "firewood",
 					"position": [
-						106,
-						858
+						129,
+						503
 					],
-					"rotation": -0.01,
-					"scale": 0.972
+					"rotation": -0.256,
+					"scale": 1.039
+				},
+				{
+					"id": "basket",
+					"position": [
+						328,
+						321
+					],
+					"rotation": 0.516,
+					"scale": 1.084
+				},
+				{
+					"id": "firewood",
+					"position": [
+						49,
+						429
+					],
+					"rotation": 0.537,
+					"scale": 0.908
+				},
+				{
+					"id": "amphora",
+					"position": [
+						137,
+						427
+					],
+					"rotation": 0.433,
+					"scale": 0.951
+				},
+				{
+					"id": "firewood",
+					"position": [
+						402,
+						592
+					],
+					"rotation": 0.433,
+					"scale": 1.085
 				},
 				{
 					"id": "round_table",
@@ -45396,7 +45580,7 @@
 						175,
 						1258
 					],
-					"rotation": 0.177,
+					"rotation": -0.199,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45406,7 +45590,7 @@
 						212,
 						1281
 					],
-					"rotation": 0.153,
+					"rotation": 0.054,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45447,13 +45631,22 @@
 					"scale": 1.0
 				},
 				{
-					"id": "firewood",
+					"id": "amphora",
 					"position": [
-						222,
-						1335
+						299,
+						1161
 					],
-					"rotation": -0.29,
-					"scale": 0.989
+					"rotation": -0.015,
+					"scale": 1.046
+				},
+				{
+					"id": "bed_wooden",
+					"position": [
+						135,
+						1763
+					],
+					"rotation": 3.142,
+					"scale": 1.2
 				},
 				{
 					"id": "bed_wooden",
@@ -45476,293 +45669,293 @@
 				{
 					"id": "wardrobe",
 					"position": [
-						68,
-						1767
+						67,
+						1769
 					],
 					"rotation": 3.142,
-					"scale": 1.131
+					"scale": 1.064
 				},
 				{
 					"id": "stool",
 					"position": [
-						250,
-						1554
+						256,
+						1545
 					],
-					"rotation": -0.341,
-					"scale": 1.045
+					"rotation": -0.132,
+					"scale": 0.936
 				},
 				{
-					"id": "stool",
+					"id": "basket",
 					"position": [
-						320,
-						1778
+						104,
+						1408
 					],
-					"rotation": -0.23,
-					"scale": 1.085
-				},
-				{
-					"id": "stool",
-					"position": [
-						129,
-						1550
-					],
-					"rotation": -0.51,
-					"scale": 1.044
-				},
-				{
-					"id": "amphora",
-					"position": [
-						61,
-						1404
-					],
-					"rotation": -0.463,
+					"rotation": 0.436,
 					"scale": 1.049
 				},
 				{
 					"id": "basket",
 					"position": [
-						299,
-						1521
+						255,
+						1412
 					],
-					"rotation": -0.319,
-					"scale": 0.958
-				},
-				{
-					"id": "firewood",
-					"position": [
-						238,
-						1401
-					],
-					"rotation": 0.482,
-					"scale": 1.067
+					"rotation": 0.009,
+					"scale": 1.025
 				},
 				{
 					"id": "stool",
 					"position": [
-						274,
-						1710
+						327,
+						1705
 					],
-					"rotation": 0.347,
-					"scale": 0.96
+					"rotation": 0.093,
+					"scale": 1.022
+				},
+				{
+					"id": "basket",
+					"position": [
+						159,
+						1192
+					],
+					"rotation": -0.391,
+					"scale": 0.947
 				},
 				{
 					"id": "amphora",
 					"position": [
-						265,
-						1346
+						330,
+						1335
 					],
-					"rotation": 0.531,
-					"scale": 0.961
+					"rotation": -0.295,
+					"scale": 1.015
+				},
+				{
+					"id": "amphora",
+					"position": [
+						254,
+						1331
+					],
+					"rotation": -0.145,
+					"scale": 1.081
+				},
+				{
+					"id": "firewood",
+					"position": [
+						281,
+						1211
+					],
+					"rotation": 0.216,
+					"scale": 1.088
 				},
 				{
 					"id": "stove",
 					"position": [
-						1745,
+						1747,
 						882
 					],
 					"rotation": 3.142,
-					"scale": 0.975
+					"scale": 1.031
 				},
 				{
 					"id": "cauldron",
 					"position": [
-						1745,
+						1747,
 						882
 					],
-					"rotation": 2.849,
+					"rotation": 3.294,
 					"scale": 0.55,
 					"z": 1
 				},
 				{
 					"id": "prep_table",
 					"position": [
-						1828,
+						1831,
 						876
 					],
 					"rotation": 3.142,
-					"scale": 0.978
+					"scale": 0.985
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						1849,
+						1853,
 						874
 					],
-					"rotation": 3.225,
+					"rotation": 3.146,
 					"scale": 0.8,
 					"z": 1
 				},
 				{
 					"id": "cabbage",
 					"position": [
-						1808,
+						1811,
 						880
 					],
-					"rotation": 2.973,
+					"rotation": 3.353,
 					"scale": 0.75,
 					"z": 1
 				},
 				{
 					"id": "shelf",
 					"position": [
-						1915,
+						1919,
 						892
 					],
 					"rotation": 3.142,
-					"scale": 1.009
+					"scale": 1.013
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1825,
+						713
+					],
+					"rotation": 0.357,
+					"scale": 0.988
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1980,
+						762
+					],
+					"rotation": 0.43,
+					"scale": 0.955
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1990,
+						636
+					],
+					"rotation": -0.187,
+					"scale": 1.09
+				},
+				{
+					"id": "basket",
+					"position": [
+						1965,
+						695
+					],
+					"rotation": -0.232,
+					"scale": 0.972
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1901,
+						791
+					],
+					"rotation": 0.482,
+					"scale": 0.971
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1866,
-						566
+						1932,
+						538
 					],
-					"rotation": 0.413,
-					"scale": 0.919
+					"rotation": -0.21,
+					"scale": 1.078
 				},
 				{
-					"id": "basket",
+					"id": "bucket",
 					"position": [
-						1838,
-						680
+						1949,
+						443
 					],
-					"rotation": 0.184,
-					"scale": 0.925
-				},
-				{
-					"id": "basket",
-					"position": [
-						1823,
-						479
-					],
-					"rotation": -0.391,
-					"scale": 0.947
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1994,
-						729
-					],
-					"rotation": -0.295,
-					"scale": 1.015
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1918,
-						722
-					],
-					"rotation": -0.145,
-					"scale": 1.081
+					"rotation": 0.504,
+					"scale": 0.914
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1945,
-						512
+						1770,
+						777
 					],
-					"rotation": 0.216,
-					"scale": 1.088
+					"rotation": 0.164,
+					"scale": 1.082
 				},
 				{
-					"id": "firewood",
+					"id": "bucket",
 					"position": [
-						1858,
-						809
+						1894,
+						449
 					],
-					"rotation": -0.067,
-					"scale": 1.051
-				},
-				{
-					"id": "basket",
-					"position": [
-						1837,
-						448
-					],
-					"rotation": -0.193,
-					"scale": 1.066
-				},
-				{
-					"id": "basket",
-					"position": [
-						1788,
-						830
-					],
-					"rotation": 0.312,
-					"scale": 1.032
+					"rotation": 0.036,
+					"scale": 0.907
 				},
 				{
 					"id": "crate",
 					"position": [
-						1738,
-						1775
+						1737,
+						1776
 					],
 					"rotation": 3.142,
-					"scale": 1.036
+					"scale": 0.978
 				},
 				{
 					"id": "barrel",
 					"position": [
-						1787,
+						1786,
 						1774
 					],
 					"rotation": 3.142,
-					"scale": 0.986
+					"scale": 1.022
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1832,
+						1831,
 						1785
 					],
 					"rotation": 3.142,
-					"scale": 0.99
+					"scale": 0.997
 				},
 				{
 					"id": "crate",
 					"position": [
-						1915,
-						1777
+						1876,
+						1775
 					],
 					"rotation": 3.142,
-					"scale": 0.961
+					"scale": 1.034
 				},
 				{
 					"id": "basket",
 					"position": [
-						1915,
-						1777
+						1876,
+						1775
 					],
-					"rotation": 3.38,
+					"rotation": 3.221,
 					"scale": 0.65,
 					"z": 1
 				},
 				{
 					"id": "amphora",
 					"position": [
-						1957,
+						1919,
 						1784
 					],
 					"rotation": 3.142,
-					"scale": 0.966
+					"scale": 1.012
 				},
 				{
 					"id": "crate",
 					"position": [
-						1996,
-						1181
+						1962,
+						1777
 					],
-					"rotation": 1.571,
-					"scale": 0.976
+					"rotation": 3.142,
+					"scale": 0.964
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						1996,
-						1181
+						1962,
+						1777
 					],
-					"rotation": 1.441,
+					"rotation": 2.848,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -45770,45 +45963,45 @@
 					"id": "crate",
 					"position": [
 						1996,
-						1228
+						1181
 					],
 					"rotation": 1.571,
-					"scale": 0.988
+					"scale": 1.015
 				},
 				{
 					"id": "barrel",
 					"position": [
-						1993,
-						1277
+						1994,
+						1231
 					],
 					"rotation": 1.571,
-					"scale": 1.035
+					"scale": 1.016
 				},
 				{
 					"id": "grain_sack",
 					"position": [
 						2005,
-						1323
+						1277
 					],
 					"rotation": 1.571,
-					"scale": 1.002
+					"scale": 1.039
 				},
 				{
 					"id": "crate",
 					"position": [
-						1997,
-						1366
+						1996,
+						1322
 					],
 					"rotation": 1.571,
-					"scale": 0.968
+					"scale": 1.017
 				},
 				{
 					"id": "basket",
 					"position": [
-						1997,
-						1366
+						1996,
+						1322
 					],
-					"rotation": 1.518,
+					"rotation": 1.326,
 					"scale": 0.65,
 					"z": 1
 				},
@@ -45816,73 +46009,73 @@
 					"id": "amphora",
 					"position": [
 						2004,
-						1408
-					],
-					"rotation": 1.571,
-					"scale": 0.965
-				},
-				{
-					"id": "crate",
-					"position": [
-						1997,
-						1450
-					],
-					"rotation": 1.571,
-					"scale": 0.96
-				},
-				{
-					"id": "cheese_wheel",
-					"position": [
-						1997,
-						1450
-					],
-					"rotation": 1.353,
-					"scale": 0.7,
-					"z": 1
-				},
-				{
-					"id": "crate",
-					"position": [
-						1996,
-						1498
-					],
-					"rotation": 1.571,
-					"scale": 1.023
-				},
-				{
-					"id": "barrel",
-					"position": [
-						1995,
-						1547
-					],
-					"rotation": 1.571,
-					"scale": 0.961
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						2005,
-						1591
-					],
-					"rotation": 1.571,
-					"scale": 1.031
-				},
-				{
-					"id": "crate",
-					"position": [
-						1996,
-						1635
+						1365
 					],
 					"rotation": 1.571,
 					"scale": 0.985
 				},
 				{
-					"id": "basket",
+					"id": "crate",
 					"position": [
 						1996,
-						1635
+						1407
 					],
-					"rotation": 1.614,
+					"rotation": 1.571,
+					"scale": 0.979
+				},
+				{
+					"id": "cheese_wheel",
+					"position": [
+						1996,
+						1407
+					],
+					"rotation": 1.813,
+					"scale": 0.7,
+					"z": 1
+				},
+				{
+					"id": "crate",
+					"position": [
+						1996,
+						1455
+					],
+					"rotation": 1.571,
+					"scale": 1.022
+				},
+				{
+					"id": "barrel",
+					"position": [
+						1994,
+						1505
+					],
+					"rotation": 1.571,
+					"scale": 0.992
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						2005,
+						1549
+					],
+					"rotation": 1.571,
+					"scale": 0.971
+				},
+				{
+					"id": "crate",
+					"position": [
+						1995,
+						1593
+					],
+					"rotation": 1.571,
+					"scale": 1.036
+				},
+				{
+					"id": "basket",
+					"position": [
+						1995,
+						1593
+					],
+					"rotation": 1.538,
 					"scale": 0.65,
 					"z": 1
 				},
@@ -45890,119 +46083,83 @@
 					"id": "amphora",
 					"position": [
 						2004,
-						1678
+						1637
 					],
 					"rotation": 1.571,
-					"scale": 1.024
+					"scale": 1.011
 				},
 				{
 					"id": "crate",
 					"position": [
-						1997,
-						1721
+						1996,
+						1680
 					],
 					"rotation": 1.571,
-					"scale": 0.964
+					"scale": 1.007
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						1997,
-						1721
+						1996,
+						1680
 					],
-					"rotation": 1.609,
+					"rotation": 1.867,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "crate",
 					"position": [
-						1901,
-						1194
+						1996,
+						1728
 					],
-					"rotation": 0.256,
-					"scale": 1.082
+					"rotation": 1.571,
+					"scale": 0.976
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1764,
+						1718
+					],
+					"rotation": -0.479,
+					"scale": 1.011
 				},
 				{
 					"id": "rope_coil",
 					"position": [
-						1874,
-						1260
+						1948,
+						1741
 					],
-					"rotation": 0.124,
-					"scale": 0.956
-				},
-				{
-					"id": "crate",
-					"position": [
-						1715,
-						1489
-					],
-					"rotation": -0.011,
-					"scale": 1.048
+					"rotation": -0.496,
+					"scale": 1.051
 				},
 				{
 					"id": "rope_coil",
-					"position": [
-						1871,
-						1461
-					],
-					"rotation": -0.345,
-					"scale": 0.95
-				},
-				{
-					"id": "crate",
-					"position": [
-						1904,
-						1604
-					],
-					"rotation": -0.116,
-					"scale": 1.056
-				},
-				{
-					"id": "basket",
-					"position": [
-						1804,
-						1490
-					],
-					"rotation": -0.5,
-					"scale": 0.964
-				},
-				{
-					"id": "rope_coil",
-					"position": [
-						1857,
-						1518
-					],
-					"rotation": -0.225,
-					"scale": 0.951
-				},
-				{
-					"id": "basket",
 					"position": [
 						1910,
 						1295
 					],
-					"rotation": 0.401,
-					"scale": 0.941
+					"rotation": -0.141,
+					"scale": 0.95
 				},
 				{
-					"id": "rope_coil",
+					"id": "basket",
 					"position": [
-						1768,
-						1532
+						1825,
+						1581
 					],
-					"rotation": 0.012,
-					"scale": 1.091
+					"rotation": 0.391,
+					"scale": 0.986
 				},
 				{
-					"id": "crate",
+					"id": "grain_sack",
 					"position": [
-						1840,
-						1344
+						1731,
+						1385
 					],
-					"rotation": -0.32,
-					"scale": 1.078
+					"rotation": 0.238,
+					"scale": 0.909
 				},
 				{
 					"id": "grain_sack",
@@ -46023,9 +46180,54 @@
 					"scale": 1.079
 				},
 				{
+					"id": "rope_coil",
+					"position": [
+						1864,
+						1223
+					],
+					"rotation": 0.236,
+					"scale": 1.066
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1919,
+						1655
+					],
+					"rotation": 0.07,
+					"scale": 1.038
+				},
+				{
+					"id": "basket",
+					"position": [
+						1950,
+						1621
+					],
+					"rotation": 0.131,
+					"scale": 0.936
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						1774,
+						1188
+					],
+					"rotation": 0.537,
+					"scale": 0.94
+				},
+				{
+					"id": "basket",
+					"position": [
+						1894,
+						1383
+					],
+					"rotation": 0.196,
+					"scale": 0.987
+				},
+				{
 					"id": "round_table",
 					"position": [
-						346,
+						526,
 						1856
 					],
 					"rotation": 0.0,
@@ -46034,27 +46236,27 @@
 				{
 					"id": "pottage",
 					"position": [
-						329,
+						509,
 						1846
 					],
-					"rotation": 0.015,
+					"rotation": -0.111,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "alcohol",
 					"position": [
-						366,
+						546,
 						1869
 					],
-					"rotation": -0.23,
+					"rotation": -0.235,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "stool",
 					"position": [
-						398,
+						578,
 						1875
 					],
 					"rotation": 1.921,
@@ -46063,7 +46265,7 @@
 				{
 					"id": "stool",
 					"position": [
-						327,
+						507,
 						1908
 					],
 					"rotation": 3.492,
@@ -46072,138 +46274,73 @@
 				{
 					"id": "stool",
 					"position": [
-						294,
+						474,
 						1837
 					],
 					"rotation": 5.062,
 					"scale": 1.0
 				},
 				{
-					"id": "amphora",
+					"id": "stool",
 					"position": [
-						503,
-						1919
+						545,
+						1804
 					],
-					"rotation": -0.227,
-					"scale": 1.055
-				},
-				{
-					"id": "crate",
-					"position": [
-						589,
-						1996
-					],
-					"rotation": 3.142,
-					"scale": 0.999
-				},
-				{
-					"id": "barrel",
-					"position": [
-						638,
-						1994
-					],
-					"rotation": 3.142,
-					"scale": 1.021
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						684,
-						2005
-					],
-					"rotation": 3.142,
-					"scale": 1.003
-				},
-				{
-					"id": "crate",
-					"position": [
-						728,
-						1996
-					],
-					"rotation": 3.142,
-					"scale": 0.983
-				},
-				{
-					"id": "basket",
-					"position": [
-						728,
-						1996
-					],
-					"rotation": 3.368,
-					"scale": 0.65,
-					"z": 1
-				},
-				{
-					"id": "amphora",
-					"position": [
-						770,
-						2004
-					],
-					"rotation": 3.142,
-					"scale": 0.962
-				},
-				{
-					"id": "crate",
-					"position": [
-						812,
-						1996
-					],
-					"rotation": 3.142,
+					"rotation": 6.633,
 					"scale": 1.0
 				},
 				{
-					"id": "cheese_wheel",
+					"id": "amphora",
 					"position": [
-						812,
-						1996
+						446,
+						1915
 					],
-					"rotation": 2.895,
-					"scale": 0.7,
-					"z": 1
+					"rotation": 0.141,
+					"scale": 0.969
 				},
 				{
 					"id": "crate",
 					"position": [
-						860,
-						1996
+						710,
+						1995
 					],
 					"rotation": 3.142,
-					"scale": 0.974
+					"scale": 1.029
 				},
 				{
 					"id": "barrel",
 					"position": [
-						882,
-						1738
+						759,
+						1994
 					],
-					"rotation": 1.571,
-					"scale": 1.025
+					"rotation": 3.142,
+					"scale": 1.019
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						893,
-						1783
+						805,
+						2005
 					],
-					"rotation": 1.571,
-					"scale": 0.96
+					"rotation": 3.142,
+					"scale": 1.034
 				},
 				{
 					"id": "crate",
 					"position": [
-						884,
-						1827
+						850,
+						1996
 					],
-					"rotation": 1.571,
-					"scale": 1.008
+					"rotation": 3.142,
+					"scale": 0.986
 				},
 				{
 					"id": "basket",
 					"position": [
-						884,
-						1827
+						850,
+						1996
 					],
-					"rotation": 1.537,
+					"rotation": 2.849,
 					"scale": 0.65,
 					"z": 1
 				},
@@ -46211,27 +46348,27 @@
 					"id": "amphora",
 					"position": [
 						892,
-						1870
+						1732
 					],
 					"rotation": 1.571,
-					"scale": 0.964
+					"scale": 1.024
 				},
 				{
 					"id": "crate",
 					"position": [
 						884,
-						1912
+						1776
 					],
 					"rotation": 1.571,
-					"scale": 0.996
+					"scale": 1.0
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
 						884,
-						1912
+						1776
 					],
-					"rotation": 1.76,
+					"rotation": 1.812,
 					"scale": 0.7,
 					"z": 1
 				},
@@ -46239,106 +46376,80 @@
 					"id": "crate",
 					"position": [
 						884,
-						1960
-					],
-					"rotation": 1.571,
-					"scale": 1.007
-				},
-				{
-					"id": "basket",
-					"position": [
-						618,
 						1823
 					],
-					"rotation": 0.181,
-					"scale": 1.032
+					"rotation": 1.571,
+					"scale": 0.986
+				},
+				{
+					"id": "barrel",
+					"position": [
+						882,
+						1872
+					],
+					"rotation": 1.571,
+					"scale": 1.014
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						598,
-						1722
+						893,
+						1917
 					],
-					"rotation": 0.172,
-					"scale": 1.07
-				},
-				{
-					"id": "basket",
-					"position": [
-						626,
-						1866
-					],
-					"rotation": -0.321,
-					"scale": 0.909
+					"rotation": 1.571,
+					"scale": 0.974
 				},
 				{
 					"id": "crate",
 					"position": [
-						768,
-						1816
+						884,
+						1961
 					],
-					"rotation": 0.29,
-					"scale": 0.99
-				},
-				{
-					"id": "crate",
-					"position": [
-						618,
-						1952
-					],
-					"rotation": -0.385,
-					"scale": 0.938
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						724,
-						1934
-					],
-					"rotation": 0.216,
-					"scale": 0.927
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						849,
-						1927
-					],
-					"rotation": -0.41,
-					"scale": 0.999
-				},
-				{
-					"id": "grain_sack",
-					"position": [
-						709,
-						1826
-					],
-					"rotation": -0.188,
-					"scale": 1.08
+					"rotation": 1.571,
+					"scale": 1.012
 				},
 				{
 					"id": "basket",
 					"position": [
-						615,
-						1902
+						884,
+						1961
 					],
-					"rotation": 0.433,
-					"scale": 0.961
+					"rotation": 1.553,
+					"scale": 0.65,
+					"z": 1
 				},
 				{
-					"id": "amphora",
+					"id": "crate",
 					"position": [
-						415,
+						830,
 						1751
 					],
-					"rotation": 0.315,
-					"scale": 1.046
+					"rotation": -0.355,
+					"scale": 0.902
 				},
 				{
-					"id": "amphora",
+					"id": "rope_coil",
 					"position": [
-						335,
-						1991
+						788,
+						1932
+					],
+					"rotation": 0.459,
+					"scale": 1.057
+				},
+				{
+					"id": "basket",
+					"position": [
+						705,
+						1846
+					],
+					"rotation": 0.447,
+					"scale": 1.095
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						814,
+						1854
 					],
 					"rotation": 0.143,
 					"scale": 0.939
@@ -46346,82 +46457,136 @@
 				{
 					"id": "firewood",
 					"position": [
-						394,
-						1718
+						431,
+						1742
 					],
-					"rotation": 0.375,
-					"scale": 0.908
+					"rotation": 0.144,
+					"scale": 1.015
+				},
+				{
+					"id": "basket",
+					"position": [
+						840,
+						1824
+					],
+					"rotation": -0.482,
+					"scale": 1.057
+				},
+				{
+					"id": "amphora",
+					"position": [
+						598,
+						1983
+					],
+					"rotation": 0.33,
+					"scale": 0.952
+				},
+				{
+					"id": "firewood",
+					"position": [
+						621,
+						1864
+					],
+					"rotation": -0.216,
+					"scale": 1.077
+				},
+				{
+					"id": "basket",
+					"position": [
+						740,
+						1921
+					],
+					"rotation": -0.057,
+					"scale": 1.064
+				},
+				{
+					"id": "grain_sack",
+					"position": [
+						688,
+						1749
+					],
+					"rotation": -0.244,
+					"scale": 0.919
+				},
+				{
+					"id": "basket",
+					"position": [
+						695,
+						1960
+					],
+					"rotation": -0.472,
+					"scale": 0.944
+				},
+				{
+					"id": "amphora",
+					"position": [
+						571,
+						1716
+					],
+					"rotation": 0.105,
+					"scale": 0.99
 				},
 				{
 					"id": "stove",
 					"position": [
-						1245,
-						1999
+						1246,
+						1998
 					],
 					"rotation": 3.142,
-					"scale": 0.973
+					"scale": 1.005
 				},
 				{
 					"id": "cauldron",
 					"position": [
-						1245,
-						1999
+						1246,
+						1998
 					],
-					"rotation": 3.372,
+					"rotation": 3.103,
 					"scale": 0.55,
 					"z": 1
 				},
 				{
 					"id": "prep_table",
 					"position": [
-						1330,
+						1332,
 						1990
 					],
 					"rotation": 3.142,
-					"scale": 1.038
+					"scale": 1.037
 				},
 				{
 					"id": "cheese_wheel",
 					"position": [
-						1353,
+						1354,
 						1988
 					],
-					"rotation": 3.311,
+					"rotation": 3.102,
 					"scale": 0.8,
 					"z": 1
 				},
 				{
 					"id": "cabbage",
 					"position": [
-						1309,
+						1311,
 						1995
 					],
-					"rotation": 2.879,
+					"rotation": 3.391,
 					"scale": 0.75,
 					"z": 1
 				},
 				{
-					"id": "shelf",
+					"id": "bucket",
 					"position": [
-						1419,
-						2008
+						1264,
+						1862
 					],
-					"rotation": 3.142,
-					"scale": 0.997
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1351,
-						1783
-					],
-					"rotation": 0.3,
-					"scale": 1.033
+					"rotation": 0.092,
+					"scale": 1.026
 				},
 				{
 					"id": "round_table",
 					"position": [
-						1700,
+						1535,
 						1856
 					],
 					"rotation": 0.0,
@@ -46430,27 +46595,27 @@
 				{
 					"id": "pottage",
 					"position": [
-						1683,
+						1518,
 						1846
 					],
-					"rotation": -0.132,
+					"rotation": -0.292,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "alcohol",
 					"position": [
-						1720,
+						1555,
 						1869
 					],
-					"rotation": -0.107,
+					"rotation": 0.247,
 					"scale": 0.7,
 					"z": 1
 				},
 				{
 					"id": "stool",
 					"position": [
-						1752,
+						1587,
 						1875
 					],
 					"rotation": 1.921,
@@ -46459,7 +46624,7 @@
 				{
 					"id": "stool",
 					"position": [
-						1681,
+						1516,
 						1908
 					],
 					"rotation": 3.492,
@@ -46468,92 +46633,110 @@
 				{
 					"id": "stool",
 					"position": [
-						1648,
+						1483,
 						1837
 					],
 					"rotation": 5.062,
 					"scale": 1.0
 				},
 				{
-					"id": "basket",
+					"id": "stool",
 					"position": [
-						1614,
-						1768
+						1554,
+						1804
 					],
-					"rotation": 0.433,
-					"scale": 0.981
+					"rotation": 6.633,
+					"scale": 1.0
 				},
 				{
-					"id": "bucket",
+					"id": "amphora",
 					"position": [
-						1421,
-						1733
+						1469,
+						1989
 					],
-					"rotation": -0.462,
-					"scale": 0.99
-				},
-				{
-					"id": "bucket",
-					"position": [
-						1352,
-						1835
-					],
-					"rotation": -0.07,
-					"scale": 1.068
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1391,
-						1841
-					],
-					"rotation": -0.534,
-					"scale": 1.075
+					"rotation": 0.219,
+					"scale": 0.98
 				},
 				{
 					"id": "grain_sack",
 					"position": [
-						1432,
-						1895
+						1234,
+						1827
 					],
-					"rotation": 0.289,
-					"scale": 1.098
-				},
-				{
-					"id": "bucket",
-					"position": [
-						1268,
-						1752
-					],
-					"rotation": 0.213,
-					"scale": 1.068
-				},
-				{
-					"id": "firewood",
-					"position": [
-						1366,
-						1941
-					],
-					"rotation": 0.549,
-					"scale": 0.907
+					"rotation": 0.115,
+					"scale": 1.017
 				},
 				{
 					"id": "basket",
 					"position": [
-						1447,
-						1837
+						1526,
+						1953
 					],
-					"rotation": -0.399,
-					"scale": 1.083
+					"rotation": -0.331,
+					"scale": 1.077
 				},
 				{
-					"id": "grain_sack",
+					"id": "bucket",
 					"position": [
-						1227,
-						1869
+						1209,
+						1952
 					],
-					"rotation": 0.452,
-					"scale": 0.903
+					"rotation": -0.495,
+					"scale": 1.016
+				},
+				{
+					"id": "basket",
+					"position": [
+						1309,
+						1780
+					],
+					"rotation": -0.176,
+					"scale": 1.088
+				},
+				{
+					"id": "bucket",
+					"position": [
+						1321,
+						1915
+					],
+					"rotation": -0.21,
+					"scale": 1.069
+				},
+				{
+					"id": "firewood",
+					"position": [
+						1338,
+						1722
+					],
+					"rotation": -0.124,
+					"scale": 1.025
+				},
+				{
+					"id": "basket",
+					"position": [
+						1367,
+						1863
+					],
+					"rotation": -0.543,
+					"scale": 1.004
+				},
+				{
+					"id": "basket",
+					"position": [
+						1467,
+						1942
+					],
+					"rotation": 0.298,
+					"scale": 0.972
+				},
+				{
+					"id": "crate",
+					"position": [
+						1270,
+						1640
+					],
+					"rotation": 4.164,
+					"scale": 1.03
 				}
 			],
 			"music_track": "town_theme",
@@ -46572,8 +46755,8 @@
 					"count": 3,
 					"dialogue": "merchant_generic",
 					"position": [
-						600,
-						600
+						624,
+						580
 					],
 					"spread_radius": 120,
 					"template_id": "merchant"
@@ -46654,11 +46837,11 @@
 			"structures": [
 				{
 					"a": [
-						480,
+						658,
 						20
 					],
 					"b": [
-						480,
+						658,
 						364
 					],
 					"half": 7.0,
@@ -46668,11 +46851,11 @@
 				},
 				{
 					"a": [
-						120,
+						396,
 						20
 					],
 					"b": [
-						120,
+						396,
 						364
 					],
 					"half": 10.0,
@@ -46682,43 +46865,43 @@
 				},
 				{
 					"a": [
-						120,
+						396,
 						20
 					],
 					"b": [
-						480,
+						658,
 						20
 					],
 					"half": 10.0,
-					"hp": 225,
+					"hp": 164,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						120,
+						396,
 						364
 					],
 					"b": [
-						270,
+						497,
 						364
 					],
 					"half": 10.0,
-					"hp": 94,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						330,
+						557,
 						364
 					],
 					"b": [
-						480,
+						658,
 						364
 					],
 					"half": 10.0,
-					"hp": 94,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -46738,7 +46921,7 @@
 				},
 				{
 					"a": [
-						480,
+						658,
 						20
 					],
 					"b": [
@@ -46746,27 +46929,27 @@
 						20
 					],
 					"half": 10.0,
-					"hp": 275,
+					"hp": 164,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						480,
+						658,
 						364
 					],
 					"b": [
-						670,
+						759,
 						364
 					],
 					"half": 10.0,
-					"hp": 119,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						730,
+						819,
 						364
 					],
 					"b": [
@@ -46774,7 +46957,7 @@
 						364
 					],
 					"half": 10.0,
-					"hp": 119,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -47103,53 +47286,53 @@
 				{
 					"a": [
 						1684,
-						312
+						396
 					],
 					"b": [
 						1684,
-						582
+						624
 					],
 					"half": 10.0,
-					"hp": 169,
+					"hp": 143,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1684,
-						642
+						684
 					],
 					"b": [
 						1684,
 						912
 					],
 					"half": 10.0,
-					"hp": 169,
+					"hp": 143,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						2028,
-						312
+						396
 					],
 					"b": [
 						2028,
 						912
 					],
 					"half": 10.0,
-					"hp": 375,
+					"hp": 323,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
 						1684,
-						312
+						396
 					],
 					"b": [
 						2028,
-						312
+						396
 					],
 					"half": 10.0,
 					"hp": 215,
@@ -47256,11 +47439,11 @@
 				},
 				{
 					"a": [
-						536,
+						656,
 						1684
 					],
 					"b": [
-						536,
+						656,
 						2028
 					],
 					"half": 7.0,
@@ -47270,11 +47453,11 @@
 				},
 				{
 					"a": [
-						156,
+						396,
 						1684
 					],
 					"b": [
-						156,
+						396,
 						2028
 					],
 					"half": 10.0,
@@ -47284,43 +47467,43 @@
 				},
 				{
 					"a": [
-						156,
+						396,
 						1684
 					],
 					"b": [
-						316,
+						496,
 						1684
 					],
 					"half": 10.0,
-					"hp": 100,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						376,
+						556,
 						1684
 					],
 					"b": [
-						536,
+						656,
 						1684
 					],
 					"half": 10.0,
-					"hp": 100,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						156,
+						396,
 						2028
 					],
 					"b": [
-						536,
+						656,
 						2028
 					],
 					"half": 10.0,
-					"hp": 238,
+					"hp": 163,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -47340,35 +47523,35 @@
 				},
 				{
 					"a": [
-						536,
+						656,
 						1684
 					],
 					"b": [
-						696,
-						1684
-					],
-					"half": 10.0,
-					"hp": 100,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
 						756,
 						1684
 					],
-					"b": [
-						916,
-						1684
-					],
 					"half": 10.0,
-					"hp": 100,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						536,
+						816,
+						1684
+					],
+					"b": [
+						916,
+						1684
+					],
+					"half": 10.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						656,
 						2028
 					],
 					"b": [
@@ -47376,17 +47559,17 @@
 						2028
 					],
 					"half": 10.0,
-					"hp": 238,
+					"hp": 163,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1528,
+						1418,
 						1684
 					],
 					"b": [
-						1528,
+						1418,
 						2028
 					],
 					"half": 7.0,
@@ -47414,25 +47597,25 @@
 						1684
 					],
 					"b": [
-						1326,
+						1271,
 						1684
 					],
 					"half": 10.0,
-					"hp": 89,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1386,
+						1331,
 						1684
 					],
 					"b": [
-						1528,
+						1418,
 						1684
 					],
 					"half": 10.0,
-					"hp": 89,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -47442,7 +47625,21 @@
 						2028
 					],
 					"b": [
-						1528,
+						1418,
+						2028
+					],
+					"half": 10.0,
+					"hp": 147,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						1652,
+						1684
+					],
+					"b": [
+						1652,
 						2028
 					],
 					"half": 10.0,
@@ -47452,57 +47649,43 @@
 				},
 				{
 					"a": [
-						1872,
+						1418,
 						1684
 					],
 					"b": [
-						1872,
-						2028
+						1505,
+						1684
 					],
 					"half": 10.0,
-					"hp": 215,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1528,
+						1565,
 						1684
 					],
 					"b": [
-						1670,
+						1652,
 						1684
 					],
 					"half": 10.0,
-					"hp": 89,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
 				{
 					"a": [
-						1730,
-						1684
-					],
-					"b": [
-						1872,
-						1684
-					],
-					"half": 10.0,
-					"hp": 89,
-					"id": "stone_wall",
-					"kind": "wall"
-				},
-				{
-					"a": [
-						1528,
+						1418,
 						2028
 					],
 					"b": [
-						1872,
+						1652,
 						2028
 					],
 					"half": 10.0,
-					"hp": 215,
+					"hp": 147,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -47510,7 +47693,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						270,
+						497,
 						364
 					],
 					"hp": 50,
@@ -47522,7 +47705,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						670,
+						759,
 						364
 					],
 					"hp": 50,
@@ -47595,7 +47778,7 @@
 					"half": 10.0,
 					"hinge": [
 						1684,
-						582
+						624
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -47618,7 +47801,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						316,
+						496,
 						1684
 					],
 					"hp": 50,
@@ -47630,7 +47813,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						696,
+						756,
 						1684
 					],
 					"hp": 50,
@@ -47642,7 +47825,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						1326,
+						1271,
 						1684
 					],
 					"hp": 50,
@@ -47654,7 +47837,7 @@
 					"deg": 0.0,
 					"half": 10.0,
 					"hinge": [
-						1670,
+						1505,
 						1684
 					],
 					"hp": 50,

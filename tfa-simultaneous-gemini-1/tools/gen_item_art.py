@@ -379,6 +379,16 @@ PROMPTS.update({
         "The whole image is a SQUARE picture, the canopy filling a bounding box as wide as "
         "it is tall."
     ),
+    "stall_table": PROP_STYLE + (
+        "SUBJECT: an open-air market display table seen from directly above, its whole top "
+        "surface visible and uncovered: a sturdy rectangular trestle counter of warm "
+        "honey-brown planks, a plain strip of cream burlap cloth laid flat down the middle "
+        "third of the top as a display runner, the bare wood grain showing along both long "
+        "edges, slightly darker end boards at the two short ends, and a thin soft contact "
+        "shadow grounding all four sides. The table top stays open and empty, ready for "
+        "wares to be laid out on it. The whole image is a WIDE LANDSCAPE picture, the "
+        "counter about twice as wide as it is tall."
+    ),
     "stall_canopy": PROP_STYLE + (
         "SUBJECT: a market stall seen from directly above, its rectangular canvas awning "
         "covering nearly the whole silhouette: bold stripes of deep red and warm cream "
@@ -452,6 +462,7 @@ REFS_OVERRIDE = {
     "piazza_fountain": [os.path.join(ITEMS, "stone_bath.png"), os.path.join(ITEMS, "round_table.png")],
     "market_umbrella": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
     "stall_canopy": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
+    "stall_table": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
 }
 
 

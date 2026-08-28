@@ -6077,5 +6077,26 @@
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null
+  },
+  {
+	"id": "stall_table",
+	"display_name": "Market Table",
+	"type": "item",
+	"description": "An open trestle counter with a burlap display runner.",
+	"base_width": 76.0,
+	"base_height": 35.0,
+	"sprite_path": "res://Items/stall_table.png",
+	"weight": 25.0,
+	"cost": 20.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 30.0,
+	"hp": 30.0,
+	"traits": {
+	 "Wood": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]
