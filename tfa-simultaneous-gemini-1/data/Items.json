@@ -6143,7 +6143,7 @@
 	"type": "item",
 	"description": "A long flat-topped J-curved walnut table strewn with ledgers and briefs.",
 	"base_width": 220.0,
-	"base_height": 427.0,
+	"base_height": 335.0,
 	"sprite_path": "res://Items/horseshoe_table.png",
 	"weight": 900.0,
 	"cost": 400.0,
