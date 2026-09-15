@@ -399,6 +399,41 @@ PROMPTS.update({
         "The whole image is a WIDE LANDSCAPE picture, the stall about one and three "
         "quarter times as wide as it is tall."
     ),
+    # ---- Courthouse set (tribunal / courtroom map) -------------------------
+    "judges_bench": PROP_STYLE + (
+        "SUBJECT: a grand courtroom magistrate's bench seen from directly above: a long "
+        "imposing judicial desk of deep polished walnut, its public-facing front edge along "
+        "the BOTTOM of the picture sweeping in a gentle outward curve and faced with carved "
+        "gilded panelling that catches warm light, the broad desktop showing rich dark wood "
+        "grain with a runner of deep crimson cloth down its middle, a leather-bound ledger, "
+        "a few parchment sheets and a small brass hand-bell resting on the top, and along "
+        "the TOP of the picture, tucked behind the desk, the tall crowned back of the "
+        "judge's throne-like chair seen edge-on from overhead, crimson velvet framed by a "
+        "gilded wooden crest. The whole image is a WIDE LANDSCAPE picture, the bench about "
+        "twice as wide as it is tall."
+    ),
+    "justice_seal": PROP_STYLE + (
+        "SUBJECT: a grand circular courtroom floor medallion seen from directly above, "
+        "lying perfectly flat like inlaid stone: one great CIRCLE of deep green serpentine "
+        "marble filling the frame edge to edge, inlaid at the centre with a large set of "
+        "balance scales rendered in flat polished brass — an upright central column, a "
+        "horizontal beam, and two round hanging pans on fine chains — ringed by a laurel "
+        "wreath of pale golden stone inlay, and closed at the rim by a wide double border "
+        "ring of brass and cream marble. Fine seams divide the stonework, the polished "
+        "surface carries soft marbled veining, and the whole pattern reads as flat inlaid "
+        "flooring. The whole image is a SQUARE picture, the circle touching all four "
+        "edges, the four corners outside the circle plain flat pure white."
+    ),
+    "loose_papers": PROP_STYLE + (
+        "SUBJECT: a small loose pile of parchment documents lying flat on the ground, seen "
+        "from directly above: four or five rectangular sheets of cream and ivory parchment "
+        "fanned out at slightly different angles, each covered in neat lines of dark brown "
+        "ink handwriting suggested with fine script strokes, the topmost sheet carrying a "
+        "small round red wax seal near its lower edge, corners of the lower sheets peeking "
+        "out beneath it, and soft paper-thin shadows where the sheets overlap. The whole "
+        "image is a picture slightly wider than it is tall, the fanned pile centered with "
+        "a clear white margin all around it."
+    ),
 })
 
 # Items whose style comes from a different set of reference sprites than REFS.
@@ -463,6 +498,12 @@ REFS_OVERRIDE = {
     "market_umbrella": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
     "stall_canopy": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
     "stall_table": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
+    # courthouse set: long_table anchors the wide bench aspect, compass_mosaic
+    # the square inlaid-floor register for the seal, rug the near-square flat
+    # footprint for the paper pile
+    "judges_bench": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
+    "justice_seal": [os.path.join(ITEMS, "compass_mosaic.png"), os.path.join(ITEMS, "rug.png")],
+    "loose_papers": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "desk.png")],
 }
 
 

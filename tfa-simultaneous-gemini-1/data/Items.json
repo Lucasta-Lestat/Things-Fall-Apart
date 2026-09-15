@@ -6098,5 +6098,64 @@
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null
+  },
+  {
+	"id": "judges_bench",
+	"display_name": "Magistrate's Bench",
+	"type": "item",
+	"description": "A curved walnut tribunal bench with gilded panelling and a crowned chair.",
+	"base_width": 210.0,
+	"base_height": 178.0,
+	"sprite_path": "res://Items/judges_bench.png",
+	"weight": 400.0,
+	"cost": 300.0,
+	"interact_options": [],
+	"max_hp": 120.0,
+	"hp": 120.0,
+	"traits": {
+	 "Wood": 3
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "justice_seal",
+	"display_name": "Seal of Justice",
+	"type": "item",
+	"description": "A circular floor medallion of green serpentine inlaid with brass scales.",
+	"base_width": 96.0,
+	"base_height": 96.0,
+	"sprite_path": "res://Items/justice_seal.png",
+	"weight": 800.0,
+	"cost": 400.0,
+	"interact_options": [],
+	"max_hp": 300.0,
+	"hp": 300.0,
+	"traits": {
+	 "Stone": 5
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "loose_papers",
+	"display_name": "Loose Papers",
+	"type": "item",
+	"description": "A fanned sheaf of handwritten parchment, one sheet bearing a wax seal.",
+	"base_width": 18.0,
+	"base_height": 15.0,
+	"sprite_path": "res://Items/loose_papers.png",
+	"weight": 0.1,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 4.0,
+	"hp": 4.0,
+	"traits": {
+	 "Organic": 1
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
   }
 ]
