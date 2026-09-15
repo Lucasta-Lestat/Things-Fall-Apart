@@ -48132,6 +48132,15 @@
 					"scale": 1.0
 				},
 				{
+					"id": "treasure_chest",
+					"position": [
+						632,
+						220
+					],
+					"rotation": 0.0,
+					"scale": 0.85
+				},
+				{
 					"id": "amphora",
 					"position": [
 						628,
@@ -48199,46 +48208,46 @@
 				{
 					"id": "wooden_chair",
 					"position": [
-						612,
+						484,
 						820
 					],
-					"rotation": -1.571,
+					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						612,
+						484,
 						910
 					],
-					"rotation": -1.571,
+					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						612,
+						484,
 						1000
 					],
-					"rotation": -1.571,
+					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						612,
+						484,
 						1090
 					],
-					"rotation": -1.571,
+					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						660,
-						790
+						646,
+						640
 					],
-					"rotation": -0.785,
+					"rotation": 3.142,
 					"scale": 1.0
 				},
 				{
@@ -48265,46 +48274,46 @@
 				{
 					"id": "wooden_chair",
 					"position": [
-						1180,
+						1308,
 						820
 					],
-					"rotation": 1.571,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						1180,
+						1308,
 						910
 					],
-					"rotation": 1.571,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						1180,
+						1308,
 						1000
 					],
-					"rotation": 1.571,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						1180,
+						1308,
 						1090
 					],
-					"rotation": 1.571,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
 					"id": "wooden_chair",
 					"position": [
-						1132,
-						790
+						1146,
+						640
 					],
-					"rotation": 0.785,
+					"rotation": 3.142,
 					"scale": 1.0
 				},
 				{
