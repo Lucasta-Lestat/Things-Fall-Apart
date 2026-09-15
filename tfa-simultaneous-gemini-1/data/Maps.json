@@ -48114,12 +48114,12 @@
 					"scale": 1.0
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
 						452,
 						320
 					],
-					"rotation": 0.0,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
@@ -48189,204 +48189,131 @@
 				{
 					"id": "horseshoe_table",
 					"position": [
-						596,
+						616,
 						910
 					],
 					"rotation": 0.0,
-					"scale": 1.0
+					"scale": 1.0,
+					"scale_y": 1.15
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
-						596,
-						710
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						466,
-						750
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						396,
-						910
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						412,
+						612,
 						820
 					],
-					"rotation": 0.0,
+					"rotation": -1.571,
 					"scale": 1.0
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
-						412,
-						1000
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						466,
-						1070
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						596,
-						1110
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "loose_papers",
-					"position": [
-						596,
-						760
-					],
-					"rotation": 0.524,
-					"scale": 0.8,
-					"z": 1
-				},
-				{
-					"id": "loose_papers",
-					"position": [
-						446,
+						612,
 						910
 					],
-					"rotation": -1.047,
-					"scale": 0.8,
-					"z": 1
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						612,
+						1000
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						612,
+						1090
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						660,
+						790
+					],
+					"rotation": -0.785,
+					"scale": 1.0
 				},
 				{
 					"id": "loose_papers",
 					"position": [
-						596,
-						1060
+						546,
+						960
 					],
-					"rotation": 1.745,
+					"rotation": 0.262,
 					"scale": 0.8,
 					"z": 1
 				},
 				{
 					"id": "horseshoe_table",
 					"position": [
-						1196,
-						910
-					],
-					"rotation": 3.142,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						1196,
-						710
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						1326,
-						750
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						1396,
+						1176,
 						910
 					],
 					"rotation": 0.0,
-					"scale": 1.0
+					"scale": 1.0,
+					"scale_x": -1.0,
+					"scale_y": 1.15
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
-						1380,
+						1180,
 						820
 					],
-					"rotation": 0.0,
+					"rotation": 1.571,
 					"scale": 1.0
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
-						1380,
-						1000
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						1326,
-						1070
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "stool",
-					"position": [
-						1196,
-						1110
-					],
-					"rotation": 0.0,
-					"scale": 1.0
-				},
-				{
-					"id": "loose_papers",
-					"position": [
-						1196,
-						760
-					],
-					"rotation": -0.524,
-					"scale": 0.8,
-					"z": 1
-				},
-				{
-					"id": "loose_papers",
-					"position": [
-						1346,
+						1180,
 						910
 					],
-					"rotation": 1.047,
-					"scale": 0.8,
-					"z": 1
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						1180,
+						1000
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						1180,
+						1090
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "wooden_chair",
+					"position": [
+						1132,
+						790
+					],
+					"rotation": 0.785,
+					"scale": 1.0
 				},
 				{
 					"id": "loose_papers",
 					"position": [
-						1196,
-						1060
+						1246,
+						960
 					],
-					"rotation": -1.745,
+					"rotation": -0.262,
 					"scale": 0.8,
 					"z": 1
 				},
@@ -48537,8 +48464,8 @@
 				{
 					"id": "straw_pallet",
 					"position": [
-						432,
-						1456
+						420,
+						1418
 					],
 					"rotation": -1.571,
 					"scale": 1.0
@@ -48547,25 +48474,34 @@
 					"id": "bucket",
 					"position": [
 						556,
-						1536
+						1448
 					],
 					"rotation": 0.0,
 					"scale": 1.0
-				},
-				{
-					"id": "hay_pile",
-					"position": [
-						372,
-						1516
-					],
-					"rotation": 0.0,
-					"scale": 0.45
 				},
 				{
 					"id": "straw_pallet",
 					"position": [
-						432,
-						1704
+						420,
+						1532
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "hay_pile",
+					"position": [
+						546,
+						1556
+					],
+					"rotation": 0.0,
+					"scale": 0.65
+				},
+				{
+					"id": "straw_pallet",
+					"position": [
+						420,
+						1648
 					],
 					"rotation": -1.571,
 					"scale": 1.0
@@ -48574,28 +48510,37 @@
 					"id": "bucket",
 					"position": [
 						556,
-						1776
+						1676
 					],
 					"rotation": 0.0,
 					"scale": 1.0
 				},
 				{
-					"id": "hay_pile",
-					"position": [
-						372,
-						1780
-					],
-					"rotation": 0.0,
-					"scale": 0.45
-				},
-				{
 					"id": "loose_papers",
 					"position": [
-						496,
-						1640
+						506,
+						1620
 					],
 					"rotation": 1.047,
 					"scale": 0.8
+				},
+				{
+					"id": "straw_pallet",
+					"position": [
+						420,
+						1762
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "hay_pile",
+					"position": [
+						546,
+						1790
+					],
+					"rotation": 0.0,
+					"scale": 0.65
 				},
 				{
 					"id": "torch",
@@ -48616,7 +48561,7 @@
 					"scale": 1.0
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
 						1176,
 						1460
@@ -48634,7 +48579,7 @@
 					"scale": 1.0
 				},
 				{
-					"id": "stool",
+					"id": "wooden_chair",
 					"position": [
 						1356,
 						1460
@@ -48960,7 +48905,7 @@
 				{
 					"count": 1,
 					"position": [
-						686,
+						776,
 						910
 					],
 					"spread_radius": 60,
@@ -49160,6 +49105,48 @@
 				{
 					"a": [
 						336,
+						1476
+					],
+					"b": [
+						596,
+						1476
+					],
+					"half": 11.2,
+					"hp": 163,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						596,
+						1360
+					],
+					"b": [
+						596,
+						1394
+					],
+					"half": 11.2,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						596,
+						1442
+					],
+					"b": [
+						596,
+						1476
+					],
+					"half": 11.2,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						336,
 						1590
 					],
 					"b": [
@@ -49174,11 +49161,11 @@
 				{
 					"a": [
 						596,
-						1360
+						1476
 					],
 					"b": [
 						596,
-						1451
+						1509
 					],
 					"half": 11.2,
 					"hp": 80,
@@ -49188,7 +49175,7 @@
 				{
 					"a": [
 						596,
-						1499
+						1557
 					],
 					"b": [
 						596,
@@ -49201,12 +49188,26 @@
 				},
 				{
 					"a": [
+						336,
+						1706
+					],
+					"b": [
+						596,
+						1706
+					],
+					"half": 11.2,
+					"hp": 163,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
 						596,
 						1590
 					],
 					"b": [
 						596,
-						1681
+						1624
 					],
 					"half": 11.2,
 					"hp": 80,
@@ -49216,7 +49217,35 @@
 				{
 					"a": [
 						596,
-						1729
+						1672
+					],
+					"b": [
+						596,
+						1706
+					],
+					"half": 11.2,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						596,
+						1706
+					],
+					"b": [
+						596,
+						1739
+					],
+					"half": 11.2,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						596,
+						1787
 					],
 					"b": [
 						596,
@@ -49388,10 +49417,24 @@
 					],
 					"b": [
 						336,
+						1476
+					],
+					"half": 16.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						336,
+						1476
+					],
+					"b": [
+						336,
 						1590
 					],
 					"half": 16.0,
-					"hp": 144,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -49402,10 +49445,24 @@
 					],
 					"b": [
 						336,
+						1706
+					],
+					"half": 16.0,
+					"hp": 80,
+					"id": "stone_wall",
+					"kind": "wall"
+				},
+				{
+					"a": [
+						336,
+						1706
+					],
+					"b": [
+						336,
 						1820
 					],
 					"half": 16.0,
-					"hp": 144,
+					"hp": 80,
 					"id": "stone_wall",
 					"kind": "wall"
 				},
@@ -49522,7 +49579,7 @@
 					"half": 11.2,
 					"hinge": [
 						596,
-						1451
+						1394
 					],
 					"hp": 50,
 					"id": "door_wood",
@@ -49534,7 +49591,31 @@
 					"half": 11.2,
 					"hinge": [
 						596,
-						1681
+						1509
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 48.0
+				},
+				{
+					"deg": 90.0,
+					"half": 11.2,
+					"hinge": [
+						596,
+						1624
+					],
+					"hp": 50,
+					"id": "door_wood",
+					"kind": "door",
+					"width": 48.0
+				},
+				{
+					"deg": 90.0,
+					"half": 11.2,
+					"hinge": [
+						596,
+						1739
 					],
 					"hp": 50,
 					"id": "door_wood",

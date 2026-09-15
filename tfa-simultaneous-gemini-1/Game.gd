@@ -1425,8 +1425,13 @@ func _spawn_items(item_list: Array) -> void:
 			if inst != null:
 				inst.rotation = float(item_def.get("rotation", 0.0))
 				var sc := float(item_def.get("scale", 1.0))
-				if sc != 1.0:
-					inst.scale = Vector2(sc, sc)
+				# scale_x/scale_y stretch the item along its OWN axes on top of
+				# the uniform scale (node scale is applied before rotation, so
+				# the stretch follows the art); negative values mirror the art.
+				var sx := sc * float(item_def.get("scale_x", 1.0))
+				var sy := sc * float(item_def.get("scale_y", 1.0))
+				if sx != 1.0 or sy != 1.0:
+					inst.scale = Vector2(sx, sy)
 				# surface stacking: z lifts the piece above base items (a pot on
 				# a stove) while staying under characters (z=5). Set AFTER
 				# create_item — Item._ready already ran and pinned z_index = 1.

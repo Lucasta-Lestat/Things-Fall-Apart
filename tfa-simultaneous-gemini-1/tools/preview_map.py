@@ -46,7 +46,15 @@ for e in spawns:
         continue
     img, bw = sp
     sc = float(e.get("scale", 1.0)) * bw / img.width
-    it = img.resize((max(1, round(img.width * sc)), max(1, round(img.height * sc))), Image.LANCZOS)
+    # per-axis stretch over the art's own axes (before rotation, matching the
+    # game's node-local scale); negative values mirror the sprite
+    sx = sc * float(e.get("scale_x", 1.0))
+    sy = sc * float(e.get("scale_y", 1.0))
+    it = img.resize((max(1, round(img.width * abs(sx))), max(1, round(img.height * abs(sy)))), Image.LANCZOS)
+    if sx < 0:
+        it = it.transpose(Image.FLIP_LEFT_RIGHT)
+    if sy < 0:
+        it = it.transpose(Image.FLIP_TOP_BOTTOM)
     rot = float(e.get("rotation", 0.0))
     if abs(rot) > 1e-3:
         it = it.rotate(-math.degrees(rot), expand=True, resample=Image.BICUBIC)

@@ -6141,9 +6141,9 @@
 	"id": "horseshoe_table",
 	"display_name": "Advocates' Bench",
 	"type": "item",
-	"description": "A continuous curved walnut counter, its top strewn with ledgers and briefs.",
-	"base_width": 340.0,
-	"base_height": 340.0,
+	"description": "A long J-curved walnut counter, its top strewn with ledgers and briefs.",
+	"base_width": 220.0,
+	"base_height": 353.0,
 	"sprite_path": "res://Items/horseshoe_table.png",
 	"weight": 900.0,
 	"cost": 400.0,
@@ -6174,6 +6174,27 @@
 	"traits": {
 	 "Wood": 1,
 	 "Organic": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "wooden_chair",
+	"display_name": "Wooden Chair",
+	"type": "item",
+	"description": "A high-backed walnut chair with a crimson cushion and slim armrests.",
+	"base_width": 26.0,
+	"base_height": 25.0,
+	"sprite_path": "res://Items/wooden_chair.png",
+	"weight": 9.0,
+	"cost": 8.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	 "Wood": 2
 	},
 	"is_stackable": 0.0,
 	"max_stack_size": null

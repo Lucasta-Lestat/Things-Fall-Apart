@@ -425,15 +425,29 @@ PROMPTS.update({
         "edges, the four corners outside the circle plain flat pure white."
     ),
     "horseshoe_table": PROP_STYLE + (
-        "SUBJECT: one single continuous curved courtroom counter seen from directly "
-        "above, shaped like a broad letter C: a solid ring-segment of dark polished "
-        "walnut sweeping through half a circle, the OPENING of the C facing the RIGHT "
-        "edge of the picture, the counter run keeping one uniform width from end to end "
-        "with both squared end caps pointing right, carved gilded panelling lining the "
-        "outer rim, and the flat countertop strewn along its whole curved length with "
-        "cream parchment sheets, open leather-bound ledgers and a couple of small brass "
-        "ink pots. The whole image is a SQUARE picture, the C's bounding box touching "
-        "all four edges, the areas inside and outside the curve plain flat pure white."
+        "SUBJECT: one single long courtroom advocates' counter seen from directly "
+        "above, shaped like a letter J: a long straight counter run descending the "
+        "LEFT half of the picture from near the top edge to the bottom edge, and at "
+        "the TOP of the picture the counter curving smoothly through one rounded "
+        "quarter-turn hook that ends pointing at the RIGHT edge with a squared end "
+        "cap; the bottom end of the straight run finished with a matching squared "
+        "cap. The counter keeps one uniform width along its whole run. Carved gilded "
+        "panelling lines the OUTER rim (the left side and the top of the curve), and "
+        "the flat walnut countertop is strewn along its whole length with cream "
+        "parchment sheets and open leather-bound ledgers, each sheet turned so its "
+        "writing reads for clerks seated along the counter's INNER right-hand side, "
+        "plus a couple of small brass ink pots. The whole image is a TALL PORTRAIT "
+        "picture, about one and a half times as tall as it is wide, the area around "
+        "the counter plain flat pure white."
+    ),
+    "wooden_chair": PROP_STYLE + (
+        "SUBJECT: a sturdy wooden courtroom chair seen from directly above: a nearly "
+        "square seat of dark polished walnut holding a plump deep-crimson cushion, "
+        "the gently curved top rail of its high backrest running along the BOTTOM "
+        "edge of the seat so the chair faces the top of the picture, slim wooden "
+        "armrest tips showing along the left and right seat edges, and four dark "
+        "leg caps peeking out at the corners. The whole image is nearly SQUARE, "
+        "very slightly taller than it is wide."
     ),
     "straw_pallet": PROP_STYLE + (
         "SUBJECT: a prisoner's straw sleeping pallet seen from directly above: a low "
@@ -527,7 +541,8 @@ REFS_OVERRIDE = {
     "loose_papers": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "desk.png")],
     # round_table anchors the square aspect + wooden-furniture register for the
     # horseshoe counter; bed_wooden the tall portrait bed register for the pallet
-    "horseshoe_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "horseshoe_table": [os.path.join(ITEMS, "bed_wooden.png"), os.path.join(ITEMS, "desk.png")],
+    "wooden_chair": [os.path.join(ITEMS, "stool.png"), os.path.join(ITEMS, "desk.png")],
     "straw_pallet": [os.path.join(ITEMS, "bed_wooden.png"), os.path.join(ITEMS, "hay_pile.png")],
 }
 

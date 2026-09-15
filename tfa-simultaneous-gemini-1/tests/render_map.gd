@@ -51,8 +51,11 @@ func _ready() -> void:
 			inst.global_position = Vector2(float(ip[0]), float(ip[1]))
 			inst.rotation = float(idf.get("rotation", 0.0))
 			var isc := float(idf.get("scale", 1.0))
-			if isc != 1.0:
-				inst.scale = Vector2(isc, isc)
+			# mirror Game._spawn_items: per-axis stretch/mirror over uniform scale
+			var isx := isc * float(idf.get("scale_x", 1.0))
+			var isy := isc * float(idf.get("scale_y", 1.0))
+			if isx != 1.0 or isy != 1.0:
+				inst.scale = Vector2(isx, isy)
 			add_child(inst)
 			# z AFTER add_child: Item._ready pins z_index = 1 on enter
 			var zb := int(idf.get("z", 0))
