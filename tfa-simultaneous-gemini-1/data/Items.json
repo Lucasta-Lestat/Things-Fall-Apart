@@ -6138,6 +6138,47 @@
 	"max_stack_size": null
   },
   {
+	"id": "horseshoe_table",
+	"display_name": "Advocates' Bench",
+	"type": "item",
+	"description": "A continuous curved walnut counter, its top strewn with ledgers and briefs.",
+	"base_width": 340.0,
+	"base_height": 340.0,
+	"sprite_path": "res://Items/horseshoe_table.png",
+	"weight": 900.0,
+	"cost": 400.0,
+	"interact_options": [],
+	"max_hp": 200.0,
+	"hp": 200.0,
+	"traits": {
+	 "Wood": 4
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "straw_pallet",
+	"display_name": "Straw Pallet",
+	"type": "item",
+	"description": "A rough plank pallet of loose straw under a coarse woollen blanket.",
+	"base_width": 36.0,
+	"base_height": 70.0,
+	"sprite_path": "res://Items/straw_pallet.png",
+	"weight": 15.0,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 20.0,
+	"hp": 20.0,
+	"traits": {
+	 "Wood": 1,
+	 "Organic": 2
+	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
 	"id": "loose_papers",
 	"display_name": "Loose Papers",
 	"type": "item",

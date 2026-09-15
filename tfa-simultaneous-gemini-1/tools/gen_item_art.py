@@ -424,6 +424,27 @@ PROMPTS.update({
         "flooring. The whole image is a SQUARE picture, the circle touching all four "
         "edges, the four corners outside the circle plain flat pure white."
     ),
+    "horseshoe_table": PROP_STYLE + (
+        "SUBJECT: one single continuous curved courtroom counter seen from directly "
+        "above, shaped like a broad letter C: a solid ring-segment of dark polished "
+        "walnut sweeping through half a circle, the OPENING of the C facing the RIGHT "
+        "edge of the picture, the counter run keeping one uniform width from end to end "
+        "with both squared end caps pointing right, carved gilded panelling lining the "
+        "outer rim, and the flat countertop strewn along its whole curved length with "
+        "cream parchment sheets, open leather-bound ledgers and a couple of small brass "
+        "ink pots. The whole image is a SQUARE picture, the C's bounding box touching "
+        "all four edges, the areas inside and outside the curve plain flat pure white."
+    ),
+    "straw_pallet": PROP_STYLE + (
+        "SUBJECT: a prisoner's straw sleeping pallet seen from directly above: a low "
+        "rectangular bed of loose golden straw packed into a rough weathered plank "
+        "frame, the straw heaped into a thicker folded mound across the TOP short end "
+        "of the rectangle like a pillow, individual straw strands poking out over the "
+        "frame edges, and a coarse grey-brown woollen blanket lying flat over the lower "
+        "two thirds of the pallet, slightly rumpled with soft fold shadows. The whole "
+        "image is a TALL PORTRAIT picture, the bounding box about twice as tall as it "
+        "is wide."
+    ),
     "loose_papers": PROP_STYLE + (
         "SUBJECT: a small loose pile of parchment documents lying flat on the ground, seen "
         "from directly above: four or five rectangular sheets of cream and ivory parchment "
@@ -504,6 +525,10 @@ REFS_OVERRIDE = {
     "judges_bench": [os.path.join(ITEMS, "long_table.png"), os.path.join(ITEMS, "desk.png")],
     "justice_seal": [os.path.join(ITEMS, "compass_mosaic.png"), os.path.join(ITEMS, "rug.png")],
     "loose_papers": [os.path.join(ITEMS, "rug.png"), os.path.join(ITEMS, "desk.png")],
+    # round_table anchors the square aspect + wooden-furniture register for the
+    # horseshoe counter; bed_wooden the tall portrait bed register for the pallet
+    "horseshoe_table": [os.path.join(ITEMS, "round_table.png"), os.path.join(ITEMS, "desk.png")],
+    "straw_pallet": [os.path.join(ITEMS, "bed_wooden.png"), os.path.join(ITEMS, "hay_pile.png")],
 }
 
 
