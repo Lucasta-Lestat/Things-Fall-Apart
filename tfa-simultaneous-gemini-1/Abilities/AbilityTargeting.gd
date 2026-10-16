@@ -23,6 +23,15 @@ var rectangle_indicator: Node2D = null
 var line_indicator: Node2D = null
 var cone_indicator: Node2D = null
 
+# Projectile AoEs (Fireball...) burst on the first body or wall in their path.
+# While targeting one, this is where it would burst (Vector2.INF = clear path);
+# the live preview is drawn there, but confirm_targeting keeps the aimed point.
+var _projectile_impact: Vector2 = Vector2.INF
+# Matches Projectile.collision_radius and the default spawn offset in
+# ProceduralCharacter._spawn_projectile (visuals.projectile_spawn_offset).
+const PROJECTILE_PREVIEW_RADIUS := 4.0
+const PROJECTILE_SPAWN_OFFSET := Vector2(0, -20)
+
 # Targeting parameters (set from ability data)
 var target_shape: TargetShape = TargetShape.NONE
 var circle_radius: float = 50.0
@@ -197,7 +206,9 @@ func _update_active_indicator() -> void:
 	#print("target_shape is : ", target_shape)
 	match target_shape:
 		TargetShape.CIRCLE:
-			circle_indicator.global_position = target_position
+			_projectile_impact = _find_projectile_impact()
+			var stopped_short := _projectile_impact != Vector2.INF
+			circle_indicator.global_position = _projectile_impact if stopped_short else target_position
 			circle_indicator.visible = true
 			rectangle_indicator.visible = false
 			line_indicator.visible = false
@@ -205,6 +216,9 @@ func _update_active_indicator() -> void:
 			var drawer = circle_indicator.get_child(0) as CircleDrawer
 			if drawer:
 				drawer.radius = circle_radius
+				# Aiming at a body also stops at its edge; only tint when the
+				# burst no longer covers the point aimed at.
+				drawer.is_blocked = stopped_short and _projectile_impact.distance_to(target_position) > circle_radius
 				drawer.queue_redraw()
 		
 		TargetShape.RECTANGLE:
@@ -267,6 +281,36 @@ func _origin_pos() -> Vector2:
 	if caster_origin_override != Vector2.INF:
 		return caster_origin_override
 	return get_parent().global_position if get_parent() else caster_position
+
+func _find_projectile_impact() -> Vector2:
+	"""Where a projectile AoE aimed at target_position would hit something first
+	(the same sweep Projectile does with move_and_collide), or Vector2.INF if
+	its path is clear or the ability has no projectile."""
+	var visuals = current_ability.get("visuals", {})
+	if lock_to_caster or not (visuals is Dictionary) or String(visuals.get("projectile", "")) == "":
+		return Vector2.INF
+	var space = get_world_2d().direct_space_state
+	if space == null:
+		return Vector2.INF
+	var offset = visuals.get("projectile_spawn_offset", PROJECTILE_SPAWN_OFFSET)
+	var from: Vector2 = _origin_pos() + (offset if offset is Vector2 else PROJECTILE_SPAWN_OFFSET)
+	var motion: Vector2 = target_position - from
+	if motion.length() < 1.0:
+		return Vector2.INF
+	var shape := CircleShape2D.new()
+	shape.radius = PROJECTILE_PREVIEW_RADIUS
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape
+	query.transform = Transform2D(0.0, from)
+	query.motion = motion
+	query.collision_mask = CollisionLayers.PROJECTILE_HIT_MASK
+	var caster = get_parent()
+	if caster is CollisionObject2D:
+		query.exclude = [caster.get_rid()]
+	var fractions: PackedFloat32Array = space.cast_motion(query)
+	if fractions.size() < 2 or fractions[1] >= 1.0:
+		return Vector2.INF
+	return from + motion * fractions[1]
 
 ## The character the player confirmed on top of, or null over bare ground.
 ## Delegates to the caster's canonical probe so designation means the same thing
@@ -385,6 +429,8 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 	_preview_ability = Ability.from_dict(ability) if not _knockback_effect.is_empty() else null
 	_knockback_last_pos = Vector2.INF
 
+	_projectile_impact = Vector2.INF
+
 	# Force an immediate update to ensure visual appears this frame
 	if target_shape == TargetShape.CHARACTERS:
 		_update_character_targeting_visuals()
@@ -475,6 +521,7 @@ func end_targeting() -> void:
 	target_shape = TargetShape.NONE
 	lock_to_caster = false
 	caster_origin_override = Vector2.INF
+	_projectile_impact = Vector2.INF
 	_knockback_effect = {}
 	_preview_ability = null
 	if _knockback_layer:
@@ -873,12 +920,18 @@ class CircleDrawer extends Node2D:
 	# (ghost); NEUTRAL is the honest default for a drawer nobody has classified.
 	var intent: int = Ability.Intent.NEUTRAL
 	var num_segments: int = 32
+	# Red over the intent colours: a projectile AoE will burst too far short
+	# of the cursor to reach it (AbilityTargeting._find_projectile_impact).
+	var is_blocked: bool = false
 	
 	func _draw() -> void:
 		var color: Color = Ability.intent_fill_color(intent, is_queued)
 		var border_color: Color = Ability.intent_border_color(intent, is_queued)
 		var border_width: float = Ability.intent_border_width(intent, is_queued)
 		var dashed: bool = Ability.intent_border_dashed(intent, is_queued)
+		if is_blocked:
+			color = Color(1.0, 0.35, 0.3, 0.4)
+			border_color = Color(1.0, 0.35, 0.3, 0.8)
 		
 		# Fill
 		draw_circle(Vector2.ZERO, radius, color)
