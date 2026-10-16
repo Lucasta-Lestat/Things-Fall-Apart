@@ -223,28 +223,18 @@ func cast_needs_confirmation(actor, ability) -> Dictionary:
 ## THE witness-LOS helper — the canonical wrapper the audit found split into
 ## two disagreeing copies (Game._has_visual_los had no target_elev; ai.gd had
 ## no blinded check). Game delegates here now; both fixes live in one place.
+## The test itself is ProceduralCharacter.can_see_point, the one AI detection
+## and party visibility share: live sight range (senses, Perceptive, weather,
+## fog at either end), effective FOV, elevation-aware sight line.
 func has_visual_los(from_char, target_pos: Vector2, target_elev: float = 0.0) -> bool:
 	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
 		return false
 	var cm = from_char.get_node_or_null("ConditionManager")
 	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
 		return false
-	var to_target: Vector2 = target_pos - from_char.global_position
-	var dist: float = to_target.length()
-	if dist > 1440.0 * from_char.sight:
+	if not from_char.has_method("can_see_point"):
 		return false
-	var facing_dir: Vector2 = Vector2.UP.rotated(from_char.rotation)
-	var angle: float = facing_dir.angle_to(to_target.normalized())
-	if absf(angle) > deg_to_rad(from_char.fov_angle_degrees * 0.5):
-		return false
-	var tree := get_tree()
-	if tree == null or tree.root == null or tree.root.world_2d == null:
-		return true
-	var viewer_elev: float = 0.0
-	if from_char.has_method("get_elevation"):
-		viewer_elev = float(from_char.get_elevation())
-	return GridManager.sight_line_clear(tree.root.world_2d.direct_space_state,
-		from_char.global_position, target_pos, viewer_elev, target_elev)
+	return from_char.can_see_point(target_pos, target_elev)
 
 ## Everyone who saw the crime POSITION (they saw *something happen*), with a
 ## second LOS test against the ACTOR (identification). Two tests, not one —

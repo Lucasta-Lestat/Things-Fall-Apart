@@ -13,6 +13,39 @@ var default_leg_swing_time: float = 0.0
 const SIGHT_TEXTURE = preload("res://sight_cone_smooth.png")
 ## Pixels of sight range per 1.0 of the sight stat (the vision code's 1440 * sight).
 const SIGHT_PX_PER_POINT := 1440.0
+# Generated cone wedges by whole-degree FOV (see get_sight_cone_texture).
+var _sight_cone_cache: Dictionary = {}
+
+## Sight-cone light texture for a field of view in degrees: a white wedge
+## pointing +x whose radius is half the texture width. 150 deg is the authored
+## SIGHT_TEXTURE; other angles (wolves 270, skeletons 360) are generated once
+## at 256 px and cached. Scale a light by range / (tex.get_width() * 0.5).
+func get_sight_cone_texture(fov_deg: float) -> Texture2D:
+	var key: int = clampi(roundi(fov_deg), 1, 360)
+	if key == 150:
+		return SIGHT_TEXTURE
+	if _sight_cone_cache.has(key):
+		return _sight_cone_cache[key]
+	var tex_size: int = 256
+	var radius: float = tex_size * 0.5
+	var half_angle: float = deg_to_rad(key) * 0.5
+	var img := Image.create(tex_size, tex_size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(tex_size):
+		for x in range(tex_size):
+			var v := Vector2(x + 0.5 - radius, y + 0.5 - radius)
+			var dist: float = v.length()
+			if dist > radius:
+				continue
+			# Soft rim and wedge edges (about 1.5 px), like the authored cone.
+			var a: float = clampf((radius - dist) / 1.5, 0.0, 1.0)
+			if key < 360:
+				a *= clampf((half_angle - absf(v.angle())) * maxf(dist, 1.0) / 1.5, 0.0, 1.0)
+			if a > 0.0:
+				img.set_pixel(x, y, Color(1, 1, 1, a))
+	var tex := ImageTexture.create_from_image(img)
+	_sight_cone_cache[key] = tex
+	return tex
 var default_body_scale = 1.7
 @export var default_leg_swing_speed: float = 12.0  # How fast default_legs oscillate
 @export var default_leg_swing_amount: float = 8.0  # How far default_legs swing

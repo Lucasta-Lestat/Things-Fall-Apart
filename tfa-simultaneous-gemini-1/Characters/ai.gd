@@ -103,13 +103,16 @@ const HUNGER_THRESHOLD: float = 50.0
 # Interaction
 var interact_options = ["Attack", "Talk"]
 
-# Detection settings — initialized in _ready() from character stats
-var detection_range: float
+# Detection settings — initialized in _ready() from character stats.
+# detection_range is live: the character's current sight range (senses,
+# Perceptive, Blinded, weather, fog), not a value cached at spawn.
+var detection_range: float:
+	get: return get_sight_range_pixels()
 var attack_range: float
 var preferred_range: float
 var too_close_range: float
 
-# Line of sight — uses character.effective_fov() for FOV
+# Line of sight — character.can_see_point (effective FOV, live sight range)
 
 # Minimum approach distance
 var min_approach_distance: float:
@@ -389,7 +392,6 @@ func _engagement_bands(target: Node2D) -> Dictionary:
 func _ready():
 	character = get_parent()
 	game = get_tree().current_scene
-	detection_range = 1440.0 * character.sight
 	_refresh_engagement_ranges(null)
 	# ranges follow the EQUIPPED weapon (a shortbow keeps its wielder ~5 tiles
 	# out); equipment lands after _ready, so refresh on every swap
@@ -616,7 +618,7 @@ func die() -> void:
 # ===== LINE OF SIGHT =====
 
 func get_sight_range_pixels() -> float:
-	return 1440.0 * character.sight
+	return character.get_sight_range_px()
 
 func get_sight_range_tiles() -> int:
 	return int(ceil(get_sight_range_pixels() / GridManager.TILE_SIZE))
@@ -624,27 +626,13 @@ func get_sight_range_tiles() -> int:
 func get_facing_vector() -> Vector2:
 	return Vector2.UP.rotated(character.rotation)
 
+# The character's canonical visual test (ProceduralCharacter.can_see_point,
+# shared with party visibility and crime witnesses): blinded/unconscious see
+# nothing, live sight range (weather, fog at either end), effective FOV, and
+# an elevation-aware sight line. Passing the target's elevation lets a street
+# guard acquire a character standing on a roof.
 func is_in_line_of_sight(target_position: Vector2, target_elev: float = 0.0) -> bool:
-	# Blinded/unconscious characters see nothing — the party-side wrapper
-	# (Game._has_visual_los) always checked this; now both wrappers agree.
-	var cm_sight = character.get_node_or_null("ConditionManager")
-	if cm_sight and (cm_sight.has_condition("blinded") or cm_sight.has_condition("unconscious")):
-		return false
-
-	var to_target = target_position - character.global_position
-	var distance = to_target.length()
-
-	if distance > get_sight_range_pixels():
-		return false
-
-	var facing = get_facing_vector()
-	var angle_to_target = rad_to_deg(facing.angle_to(to_target.normalized()))
-	var half_fov = character.effective_fov() / 2.0
-
-	if abs(angle_to_target) > half_fov:
-		return false
-
-	return _has_clear_sight_line(target_position, target_elev)
+	return character.can_see_point(target_position, target_elev)
 
 func _has_clear_sight_line(target_position: Vector2, target_elev: float = 0.0) -> bool:
 	var world := character.get_world_2d()

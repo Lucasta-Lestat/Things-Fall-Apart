@@ -1247,20 +1247,6 @@ func _hide_aim_line() -> void:
 	if _aim_line:
 		_aim_line.hide_aim()
 
-func _setup_los_visual() -> void:
-	var light = PointLight2D.new()
-	light.texture = Globals.SIGHT_TEXTURE
-	light.energy = 0.3
-	var master_radius = 512.0
-	var desired_radius = 1440.0 * sight
-	light.texture_scale = desired_radius / master_radius
-	light.name = "LineOfSight"
-	light.rotation_degrees = 90
-	light.shadow_enabled = true
-	light.shadow_item_cull_mask = 1
-	light.z_index = 102
-	add_child(light)
-
 func _setup_inventory() -> void:
 	inventory = Inventory.new()
 	inventory.name = "Inventory"
@@ -5923,21 +5909,83 @@ func is_hostile_to_party() -> bool:
 	return FactionDatabase.are_hostile("player", faction_id)
 
 ## Sight range in world pixels: Globals.SIGHT_PX_PER_POINT times the sight
-## stat, times the environment multiplier at our position when Game provides
-## one (Game.get_sight_multiplier_at; 1.0 without a Game, e.g. headless
-## tests). 0 while blinded or unconscious, the viewers every LOS check skips.
-## The base is the raw `sight` stat, as in every existing sight check (AI
-## detection, party LOS, crime witnesses, cone radii): effective_sight() can't
-## carry it yet, since a "set" modifier (Blinded) reads as +0 there and
-## Perceptive's +2 would triple the range.
+## stat with its condition modifiers (_sight_stat: creature senses are the
+## base, Perceptive x1.2, Blinded 0), times the environment multiplier at our
+## position (weather, fog: Game.get_sight_multiplier_at; 1.0 without a Game,
+## e.g. headless tests). 0 while blinded or unconscious, the viewers every LOS
+## check skips. This is the drawn cone's radius and the AI's detection range.
 func get_sight_range_px() -> float:
-	if condition_manager != null and (condition_manager.has_condition("blinded") \
-			or condition_manager.has_condition("unconscious")):
+	if _sight_disabled():
 		return 0.0
-	var range_px: float = Globals.SIGHT_PX_PER_POINT * maxf(0.0, sight)
+	return Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * _env_sight_mult(global_position)
+
+## Sight range toward a specific point: as get_sight_range_px, but the thicker
+## fog of viewer and target applies, so someone standing in fog or smoke is
+## only seen up close.
+func get_sight_range_px_to(target_pos: Vector2) -> float:
+	if _sight_disabled():
+		return 0.0
+	var env: float = minf(_env_sight_mult(global_position), _env_sight_mult(target_pos))
+	return Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * env
+
+func _env_sight_mult(world_pos: Vector2) -> float:
 	if game != null and is_instance_valid(game) and game.has_method("get_sight_multiplier_at"):
-		range_px *= float(game.get_sight_multiplier_at(global_position))
-	return range_px
+		return float(game.get_sight_multiplier_at(world_pos))
+	return 1.0
+
+func _sight_disabled() -> bool:
+	return condition_manager != null and (condition_manager.has_condition("blinded") \
+		or condition_manager.has_condition("unconscious"))
+
+# The sight stat with condition modifiers applied to it, computed from the
+# base so "multiply" and "set" act on the real stat (Perceptive x1.2, Blinded
+# 0) whatever sight_modifier holds. Cached until the conditions or the base
+# change: can_see_point runs per item and NPC per party member every frame.
+var _sight_stat_cache: float = 0.0
+var _sight_stat_base: float = -1.0
+var _sight_stat_dirty: bool = true
+
+func _sight_stat() -> float:
+	if condition_manager == null:
+		return sight
+	if _sight_stat_dirty or _sight_stat_base != sight:
+		if not condition_manager.stats_recalculated.is_connected(_on_sight_mods_changed):
+			condition_manager.stats_recalculated.connect(_on_sight_mods_changed)
+		_sight_stat_cache = condition_manager.calculate_effective_stat(sight, "sight")
+		_sight_stat_base = sight
+		_sight_stat_dirty = false
+	return _sight_stat_cache
+
+func _on_sight_mods_changed() -> void:
+	_sight_stat_dirty = true
+
+## THE visual test, shared by AI detection, party visibility and crime
+## witnesses: alive and sighted, the point within sight range (fog at either
+## end counts), inside the effective FOV cone, and an elevation-aware sight
+## line clear of walls. range_mult scales the range (a held or hard-to-see
+## target); within fov_free_radius px facing doesn't matter (close contact).
+func can_see_point(target_pos: Vector2, target_elev: float = 0.0, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
+	if not is_alive() or _sight_disabled():
+		return false
+	var to_target: Vector2 = target_pos - global_position
+	var dist: float = to_target.length()
+	# Cheap tests first (this runs per item and NPC per party member each
+	# frame): the environment only ever shortens sight, so the bare stat range
+	# bounds it before any weather or fog lookup.
+	var base_px: float = Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * range_mult
+	if base_px <= 0.0 or dist > base_px:
+		return false
+	var half_fov: float = effective_fov() * 0.5
+	if half_fov < 180.0 and dist > 0.01 and dist > fov_free_radius:
+		var facing: Vector2 = Vector2.UP.rotated(rotation)
+		if absf(rad_to_deg(facing.angle_to(to_target))) > half_fov:
+			return false
+	if dist > get_sight_range_px_to(target_pos) * range_mult:
+		return false
+	var world: World2D = get_world_2d() if is_inside_tree() else null
+	if world == null:
+		return true
+	return GridManager.sight_line_clear(world.direct_space_state, global_position, target_pos, get_elevation(), target_elev)
 
 ## How easy we are to see, as a multiplier on observers' sight (1.0 =
 ## normal). The "invisible" condition is separate and binary: the AI can't

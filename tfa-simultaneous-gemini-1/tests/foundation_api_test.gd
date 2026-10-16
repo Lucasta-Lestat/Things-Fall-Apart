@@ -283,7 +283,9 @@ func _case_game_hosts() -> void:
 	var tl: Control = ui.get_node("TimeLabel")
 	_check("game.hud_status-below-clock", is_equal_approx(game.hud_status.offset_top, tl.position.y + tl.size.y + 4.0),
 		"%s vs clock %s+%s" % [game.hud_status.offset_top, tl.position.y, tl.size.y])
-	_check("game.sight-multiplier-baseline", is_equal_approx(game.get_sight_multiplier_at(Vector2(100, 100)), 1.0))
+	# The vision lane fills it in: weather (visibility_modifier) x fog, never above 1.
+	var sm: float = game.get_sight_multiplier_at(Vector2(100, 100))
+	_check("game.sight-multiplier-weather-x-fog", is_equal_approx(sm, game.get_weather_visibility_mult() * game.get_fog_sight_mult_at(Vector2(100, 100))) and sm > 0.0 and sm <= 1.0, str(sm))
 	_check("game.seen-null-false", not game.is_seen_by_party(null))
 
 func _case_character_queries() -> void:
@@ -345,8 +347,11 @@ func _case_stealth_and_sight() -> void:
 	game.stealth_mode = was
 
 	for p in party:
-		_check("sight.range-1440x-sight " + str(p.Name), is_equal_approx(p.get_sight_range_px(), 1440.0 * maxf(0.0, p.sight)),
-			"%s vs sight %s" % [p.get_sight_range_px(), p.sight])
+		# 1440 x the sight stat with its condition modifiers (Perceptive x1.2)
+		# x the environment at the viewer (weather, fog).
+		var want: float = 1440.0 * maxf(0.0, p.condition_manager.calculate_effective_stat(p.sight, "sight")) 			* game.get_sight_multiplier_at(p.global_position)
+		_check("sight.range-1440x-sight " + str(p.Name), is_equal_approx(p.get_sight_range_px(), want),
+			"%s vs sight %s (want %s)" % [p.get_sight_range_px(), p.sight, want])
 	var cm = p0.condition_manager
 	var inst = cm.apply_condition("blinded", null, 1, 60.0)
 	if inst != null:

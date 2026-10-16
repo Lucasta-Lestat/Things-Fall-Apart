@@ -27,8 +27,8 @@ const REVEAL_FADE_TIME := 0.35      # seconds for a newly seen tile to fade in
 # hiding BEHIND a wall still reads blocked: its pulled-back endpoint lands
 # inside the wall tile, so the ray hits the occluder on the way in.
 const WALL_REVEAL_PULLBACK_TILES := 0.55
-# Party sight range in px per point of `sight` — same constant the LOS lights
-# and _is_position_visible_to_party use.
+# Party sight range in px per point of `sight` (Globals.SIGHT_PX_PER_POINT),
+# for viewers without ProceduralCharacter.get_sight_range_px (test stubs).
 const SIGHT_RANGE_PX := 1440.0
 # Fade bytes are written onto the shader's ACTIVE smoothstep window
 # (edge_lo 0.25 .. edge_hi 0.75 of unexplored_fog.gdshader): a linear 1..254
@@ -232,14 +232,20 @@ func sweep(party_chars: Array, space: PhysicsDirectSpaceState2D) -> void:
 		# a door change, or the periodic epoch bump re-tests naturally.
 		var facing_bucket: int = int(floor(float(ally.rotation) / (TAU / float(FACING_BUCKETS))))
 		var iid: int = ally.get_instance_id()
+		# The party's own sight range and FOV (ProceduralCharacter.can_see_point:
+		# senses, Perceptive, weather and fog at the viewer); a changed range
+		# (the weather clears) re-tests like a move does.
+		var sight_px: float = float(ally.get_sight_range_px()) if ally.has_method("get_sight_range_px") \
+			else SIGHT_RANGE_PX * float(ally.sight)
+		var fov_deg: float = float(ally.effective_fov()) if ally.has_method("effective_fov") \
+			else float(ally.fov_angle_degrees)
 		var memo: Array = _sweep_memo.get(iid, [])
-		if memo.size() == 3 and memo[0] == origin_tile and memo[1] == facing_bucket \
-				and int(memo[2]) == _occlusion_epoch:
+		if memo.size() == 4 and memo[0] == origin_tile and memo[1] == facing_bucket \
+				and int(memo[2]) == _occlusion_epoch and int(memo[3]) == roundi(sight_px):
 			continue
-		var sight_px: float = SIGHT_RANGE_PX * float(ally.sight)
 		var radius_tiles: int = int(ceil(sight_px / ts))
 		var facing: Vector2 = Vector2.UP.rotated(ally.rotation)
-		var half_fov: float = deg_to_rad(float(ally.fov_angle_degrees) * 0.5)
+		var half_fov: float = deg_to_rad(fov_deg * 0.5)
 		var viewer_elev: float = ally.get_elevation()
 		var starved: bool = false
 		for off in _offsets_for_radius(radius_tiles):
@@ -271,7 +277,7 @@ func sweep(party_chars: Array, space: PhysicsDirectSpaceState2D) -> void:
 			else:
 				reveal_tile(tile)
 		if not starved:
-			_sweep_memo[iid] = [origin_tile, facing_bucket, _occlusion_epoch]
+			_sweep_memo[iid] = [origin_tile, facing_bucket, _occlusion_epoch, roundi(sight_px)]
 
 
 func _process(delta: float) -> void:
