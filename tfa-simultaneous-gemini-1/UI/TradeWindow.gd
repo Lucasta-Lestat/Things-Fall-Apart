@@ -295,7 +295,7 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = "%s (%.0f gold)" % [entry.get("display_name", "Unknown"), _entry_cost(entry)]
+	slot.tooltip_text = preload("res://UI/ItemTooltip.gd").detail_text(entry, "trade")
 
 	var bg = StyleBoxFlat.new()
 	bg.bg_color = Color(0.2, 0.2, 0.25, 0.85)
@@ -341,17 +341,6 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 
 	slot.set_meta("entry", entry)
 	return slot
-
-func _entry_cost(entry: Dictionary) -> float:
-	if entry.get("kind", "") == "weapon":
-		var w = entry.get("raw")
-		if w and "cost" in w:
-			return float(w.cost)
-		return 0.0
-	var raw: Dictionary = entry.get("raw", {})
-	var stacks_val = raw.get("num_stacks", 1)
-	var stacks: int = int(stacks_val) if stacks_val != null else 1
-	return float(raw.get("cost", 0.0)) * max(stacks, 1)
 
 # ---------------------------------------------------------------------------
 # Drag and drop

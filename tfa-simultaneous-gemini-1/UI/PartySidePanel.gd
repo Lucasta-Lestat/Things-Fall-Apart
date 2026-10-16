@@ -586,7 +586,7 @@ func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContai
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = entry.get("display_name", "Unknown")
+	slot.tooltip_text = preload("res://UI/ItemTooltip.gd").detail_text(entry)
 
 	var bg = StyleBoxFlat.new()
 	bg.bg_color = Color(0.2, 0.2, 0.25, 0.8)

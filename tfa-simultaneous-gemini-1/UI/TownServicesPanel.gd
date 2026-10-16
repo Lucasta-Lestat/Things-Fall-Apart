@@ -545,7 +545,7 @@ func _create_slot(slot_entry: Dictionary, card_data: Dictionary) -> PanelContain
 	var slot = PanelContainer.new()
 	slot.custom_minimum_size = ITEM_SLOT_SIZE
 	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.tooltip_text = "%s (%.0f gold)" % [slot_entry.get("display_name", "?"), _entry_cost(slot_entry)]
+	slot.tooltip_text = preload("res://UI/ItemTooltip.gd").detail_text(slot_entry, "service")
 
 	# Subtle dark frame on translucent fill so the parchment shows through
 	# but item icons still pop visually.
@@ -740,20 +740,6 @@ func _compute_inventory_value(items: Array) -> float:
 		var stacks: int = int(stacks_val) if stacks_val != null else 1
 		total += float(item.get("cost", 0.0)) * max(stacks, 1)
 	return total
-
-func _entry_cost(slot_entry: Dictionary) -> float:
-	## Slot costs differ between item dicts and WeaponShape Nodes.
-	if slot_entry.get("kind", "") == "weapon":
-		var w = slot_entry.get("raw")
-		if w != null and "cost" in w:
-			return float(w.cost)
-		return 0.0
-	var raw = slot_entry.get("raw", {})
-	if raw is Dictionary:
-		var stacks_val = raw.get("num_stacks", 1)
-		var stacks: int = int(stacks_val) if stacks_val != null else 1
-		return float(raw.get("cost", 0.0)) * max(stacks, 1)
-	return 0.0
 
 # ---------------------------------------------------------------------------
 # Click handling on portrait header
