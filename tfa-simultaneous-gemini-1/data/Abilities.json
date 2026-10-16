@@ -109,7 +109,7 @@
 		{
 			"id": "ice_storm",
 			"display_name": "Ice Storm",
-			"description": "Conjure a storm of ice that damages and slows all enemies in the area.",
+			"description": "Conjure a storm of ice that damages all enemies in the area, with an 80% chance to slow each one.",
 			"icon": "res://UI/UI Icons/ability_ice_storm.png",
 			"costs": {},
 			"cast_time": 1.5,
@@ -278,7 +278,7 @@
 		{
 			"id": "gravity_well",
 			"display_name": "Gravity Well",
-			"description": "Create a point of intense gravity that pulls all enemies toward it.",
+			"description": "Create a point of intense gravity that pulls all enemies toward it, with a 60% chance to slow each one.",
 			"icon": "res://UI/UI Icons/ability_gravity_well.png",
 			"costs": {},
 			"cast_time": 2.0,
@@ -418,7 +418,7 @@
 			"effects": [
 				{
 					"type": "remove_condition",
-					"trait": "infatuated"
+					"condition_id": "infatuated"
 				}
 			],
 			"visuals": {
@@ -431,7 +431,7 @@
 		{
 			"id": "shield_bash",
 			"display_name": "Shield Bash",
-			"description": "Bash an enemy with your shield, dealing damage and stunning them.",
+			"description": "Bash an enemy with your shield, dealing damage with a 70% chance to stun them.",
 			"icon": "res://UI/UI Icons/ability_shield_bash.png",
 			"costs": {
 				"stamina": 20
@@ -514,7 +514,7 @@
 		{
 			"id": "creepy_beam",
 			"display_name": "Creepy Beam",
-			"description": "Project a beam of necrotic energy that drains the life from all creatures in its path.",
+			"description": "Project a beam of necrotic energy that drains the life from all creatures in its path, with a 50% chance to weaken each one.",
 			"icon": "res://UI/UI Icons/ability_creepy_beam.png",
 			"costs": {},
 			"cast_time": 0.6,

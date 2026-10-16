@@ -345,8 +345,9 @@ static func _effect_intent(e: Dictionary) -> int:
 			# buff/debuff lookup answers both.
 			return _condition_intent(String(e.get("condition_id", "")))
 		"remove_condition":
-			# Keyed by TRAIT, not by id (heal strips "poison", chasten strips
-			# "infatuated"). A cleanse is a favour unless what is stripped is a buff.
+			# Keyed by TRAIT (heal strips "poison") or by condition id (chasten
+			# ends "infatuated"). A cleanse is a favour unless what is stripped
+			# is a buff.
 			return Intent.HOSTILE if String(e.get("trait", "")) == "buff" else Intent.BENEFICIAL
 		"custom":
 			var method := String(e.get("method", ""))

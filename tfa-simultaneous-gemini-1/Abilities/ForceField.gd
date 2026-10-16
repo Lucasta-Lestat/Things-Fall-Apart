@@ -64,6 +64,10 @@ var _entities_in_field: Dictionary = {}  # entity -> {last_condition_time: float
 ## Cached center position (updated when needed)
 var _field_center: Vector2
 
+## Draw the faint disc and rim below. Set by ability-created fields; subclasses
+## with their own visuals (FogZone's rectangle shader) leave it off.
+var show_outline: bool = false
+
 signal entity_entered_field(entity: Node)
 signal entity_exited_field(entity: Node)
 signal force_applied(entity: Node, force: Vector2)
@@ -84,6 +88,24 @@ func _ready() -> void:
 		game = get_node_or_null("/root/Game")
 
 	_field_center = global_position
+	queue_redraw()
+
+
+## Faint disc and rim so the player can see the field for its whole duration
+## (ability impact VFX end after a second or two; fields last several).
+## The field never resizes, so the one redraw from _ready is enough.
+func _draw() -> void:
+	if not show_outline:
+		return
+	var r := _get_field_radius()
+	var tint := _field_tint()
+	draw_circle(Vector2.ZERO, r, Color(tint.r, tint.g, tint.b, 0.10))
+	draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(tint.r, tint.g, tint.b, 0.6), 2.0)
+
+
+## Base colour of the field outline (alpha is applied in _draw).
+func _field_tint() -> Color:
+	return Color(0.4, 0.6, 1.0)
 
 
 func _physics_process(delta: float) -> void:
@@ -124,16 +146,20 @@ func _physics_process(delta: float) -> void:
 		_process_condition_application()
 
 
-## Check if an entity should be affected by this field based on traits
+## Check if an entity should be affected by this field based on traits.
+## Trait names compare case-insensitively (items tag "Metal", ability data
+## says "metal").
 func _should_affect_entity(entity: Node) -> bool:
-	var entity_traits = _get_entity_traits(entity)
+	var entity_traits: Array = _get_entity_traits(entity).map(func(t): return str(t).to_lower())
 	
-	if entity_traits.is_empty():
+	# A trait-less entity can't meet a requirement, but an unfiltered field
+	# still moves it.
+	if entity_traits.is_empty() and not required_traits.is_empty():
 		return false
 	
 	# Check immunities first
 	for immune_trait in immune_traits:
-		if immune_trait in entity_traits:
+		if immune_trait.to_lower() in entity_traits:
 			return false
 	
 	# Check required traits
@@ -143,12 +169,12 @@ func _should_affect_entity(entity: Node) -> bool:
 	match trait_match_mode:
 		TraitMatchMode.ANY:
 			for req_trait in required_traits:
-				if req_trait in entity_traits:
+				if req_trait.to_lower() in entity_traits:
 					return true
 			return false
 		TraitMatchMode.ALL:
 			for req_trait in required_traits:
-				if req_trait not in entity_traits:
+				if req_trait.to_lower() not in entity_traits:
 					return false
 			return true
 	

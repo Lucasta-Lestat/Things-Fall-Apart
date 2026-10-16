@@ -583,19 +583,26 @@ static func _resolve_apply_condition(
 		if not is_instance_valid(target):
 			continue
 
-		if chance < 1.0 and randf() >= chance:
-			continue
-
+		# Looked up before the roll, so a target that can't hold conditions
+		# never shows a miss notice.
 		var target_cond_manager = _get_condition_manager(target)
 		if not target_cond_manager:
 			continue
+
+		if chance < 1.0:
+			var roll := randf()
+			if roll >= chance:
+				_announce_chance_miss(target, caster, condition_id, ability, chance, roll)
+				continue
 
 		var apply_stacks = stacks
 		if effect_save != "" and target.has_method("saving_throw"):
 			apply_stacks += target.saving_throw(effect_save)
 			if apply_stacks <= 0:
+				_announce_effect_save(target, caster, condition_id, ability, effect_save)
 				continue
 
+		# Saves and immunities inside apply_condition are reported by ConditionManager.
 		# The ConditionManager scales durations internally based on target traits
 		var instance = target_cond_manager.apply_condition(
 			condition_id,
@@ -614,6 +621,74 @@ static func _resolve_apply_condition(
 			})
 
 	return result
+
+
+## A condition rider that only lands some of the time ("chance": 0.8) missed:
+## float "Resisted" over the target, and log the roll when the party is involved.
+static func _announce_chance_miss(target: Node, caster: Node, condition_id: String, ability: Ability, chance: float, roll: float) -> void:
+	var tmpl = ConditionManager.condition_registry.get(condition_id)
+	var is_debuff: bool = tmpl != null and tmpl.traits.has("debuff")
+	var log_text := ""
+	if _involves_party(caster) or _involves_party(target):
+		# Displayed as a d100: the rider lands on a roll of chance% or lower.
+		log_text = "%s %s %s from %s (%d%% chance: rolled %d)." % [
+			_node_name(target),
+			"avoids" if is_debuff else "doesn't gain",
+			condition_display_name(condition_id),
+			ability.display_name if ability else "the ability",
+			int(round(chance * 100.0)),
+			int(roll * 100.0) + 1,
+		]
+	_notify_rider(target, "Resisted" if is_debuff else "No effect", log_text)
+
+
+## The effect's own "save_stat" (dev's per-application save) threw the rider
+## off entirely: the same notice as a missed chance, with the save named.
+static func _announce_effect_save(target: Node, caster: Node, condition_id: String, ability: Ability, save_stat: String) -> void:
+	var log_text := ""
+	if _involves_party(caster) or _involves_party(target):
+		var detail := " (%s save)" % save_stat.to_upper()
+		var roll = target.get("last_save_roll")
+		var target_val = target.get("last_save_target")
+		if roll is int and target_val is int and roll >= 0:
+			detail = " (%s save: rolled %d vs %d)" % [save_stat.to_upper(), roll, target_val]
+		log_text = "%s resists %s from %s%s." % [
+			_node_name(target),
+			condition_display_name(condition_id),
+			ability.display_name if ability else "the ability",
+			detail,
+		]
+	_notify_rider(target, "Resisted", log_text)
+
+
+## Floats a rider notice over a target the party can see (a hidden NPC stays
+## quiet, as ConditionManager's notices do); the log line goes out regardless,
+## since it is only built when the party is involved.
+static func _notify_rider(target: Node, text: String, log_text: String, color: Color = Color(0.6, 0.85, 1.0)) -> void:
+	var noticeable: bool = _involves_party(target) or (target is CanvasItem and target.visible)
+	if noticeable and target.has_method("notify"):
+		target.notify(text, color, log_text)
+	elif not log_text.is_empty():
+		GameLog.add_entry(log_text)
+
+
+## True when node is one of the player's party members.
+static func _involves_party(node) -> bool:
+	return node != null and is_instance_valid(node) and node.has_method("is_party_member") and node.is_party_member()
+
+
+static func _node_name(node: Node) -> String:
+	var n = node.get("Name")
+	return str(n) if n != null and str(n) != "" else str(node.name)
+
+
+## Player-facing name of a condition id: the template's display_name, else the
+## id with underscores spaced out ("berserker_rage" -> "Berserker Rage").
+static func condition_display_name(condition_id: String) -> String:
+	var tmpl = ConditionManager.condition_registry.get(condition_id)
+	if tmpl and tmpl.display_name != "":
+		return tmpl.display_name
+	return condition_id.capitalize()
 
 
 ## Sever a limb on each target. Effect schema:
@@ -854,19 +929,27 @@ static func _resolve_remove_condition(
 	var condition_id = effect.get("condition_id", "")
 	var remove_trait = effect.get("trait", "")  # Remove all conditions with this trait
 	var stacks_to_remove = effect.get("stacks", -1)  # -1 = all
-	
+	# A pure cleanse (Chasten) says "No effect" when there was nothing to remove;
+	# a cleanse riding on another effect (Heal's poison cure) stays quiet then.
+	var cleanse_only := _is_cleanse_only(ability)
+
 	for target in targets:
 		if not is_instance_valid(target):
 			continue
-		
+
 		var condition_manager = _get_condition_manager(target)
 		if not condition_manager:
 			continue
-		
+
+		var removed_names: Array[String] = []
 		if remove_trait != "":
 			# Remove conditions by trait
+			var before: Array = condition_manager.conditions.keys()
 			var count = condition_manager.remove_conditions_with_trait(remove_trait)
 			if count > 0:
+				for cid in before:
+					if not condition_manager.conditions.has(cid):
+						removed_names.append(condition_display_name(cid))
 				result["targets_affected"].append(target)
 				result["conditions_removed"].append({
 					"target": target,
@@ -878,6 +961,7 @@ static func _resolve_remove_condition(
 			if stacks_to_remove > 0:
 				var removed = condition_manager.remove_stacks(condition_id, stacks_to_remove)
 				if removed > 0:
+					removed_names.append(condition_display_name(condition_id))
 					result["targets_affected"].append(target)
 					result["conditions_removed"].append({
 						"target": target,
@@ -886,13 +970,38 @@ static func _resolve_remove_condition(
 					})
 			else:
 				if condition_manager.remove_condition(condition_id):
+					removed_names.append(condition_display_name(condition_id))
 					result["targets_affected"].append(target)
 					result["conditions_removed"].append({
 						"target": target,
 						"condition": condition_id
 					})
-	
+
+		if not target.has_method("notify"):
+			continue
+		if not removed_names.is_empty():
+			var log_text := ""
+			if _involves_party(caster) or _involves_party(target):
+				log_text = "%s ends %s on %s." % [
+					ability.display_name if ability else "A cleanse",
+					", ".join(removed_names),
+					_node_name(target),
+				]
+			_notify_rider(target, "Cleansed", log_text)
+		elif cleanse_only:
+			_notify_rider(target, "No effect", "", Color(0.75, 0.75, 0.75))
+
 	return result
+
+
+## True when every effect of the ability is a remove_condition (e.g. Chasten).
+static func _is_cleanse_only(ability: Ability) -> bool:
+	if ability == null or ability.effects.is_empty():
+		return false
+	for e in ability.effects:
+		if not (e is Dictionary) or e.get("type", "") != "remove_condition":
+			return false
+	return true
 
 
 ## Resolve force field creation
@@ -920,9 +1029,9 @@ static func _resolve_force_field(
 	
 	match field_type:
 		"magnetic_attract":
-			field = _create_magnetic_field(target_position, radius, strength, MagneticField.Polarity.ATTRACT)
+			field = _create_magnetic_field(target_position, radius, strength, MagneticField.Polarity.ATTRACT, affected_traits)
 		"magnetic_repel":
-			field = _create_magnetic_field(target_position, radius, strength, MagneticField.Polarity.REPEL)
+			field = _create_magnetic_field(target_position, radius, strength, MagneticField.Polarity.REPEL, affected_traits)
 		"gravity":
 			field = _create_gravity_field(target_position, radius, strength, affected_traits)
 		"repulsion":
@@ -941,6 +1050,8 @@ static func _resolve_force_field(
 			field = _create_generic_field(target_position, radius, strength, affected_traits, effect)
 	
 	if field:
+		# Visible for its whole duration, not just while the impact VFX plays
+		field.show_outline = true
 		# Add to scene
 		var scene_root = caster.get_tree().current_scene
 		scene_root.add_child(field)
@@ -967,12 +1078,17 @@ static func _create_magnetic_field(
 	position: Vector2,
 	radius: float,
 	strength: float,
-	polarity: MagneticField.Polarity
+	polarity: MagneticField.Polarity,
+	affected_traits: Array[String] = []
 ) -> MagneticField:
 	var field = MagneticField.new()
 	field.global_position = position
 	field.polarity = polarity
 	field.force_magnitude = strength
+	# MagneticField._ready only falls back to its default ["metal", "magnetized"]
+	# when this is still empty.
+	if not affected_traits.is_empty():
+		field.required_traits = affected_traits
 	
 	var collision = CollisionShape2D.new()
 	var shape = CircleShape2D.new()

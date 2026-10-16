@@ -1,0 +1,441 @@
+# res://tests/condition_feedback_test.gd
+# Headless assertion harness for condition and condition-rider feedback:
+# trait-keyed immunities, apply-time and periodic save notices (and their
+# silence for hidden NPCs and corpses), transforms_into (Chilled 3 -> Frozen,
+# which roots), missed chance riders and effect-level saves, Chasten's
+# cleanse report, and force fields (outline, Magnetic Pull's traits).
+# Drives the real game scene the way feedback_layer_test does.
+# Run:  godot --headless --path . res://tests/condition_feedback_test.tscn
+# Judge by PASS/FAIL lines, not exit code alone (startup noise is normal).
+extends Node2D
+
+const PC_SCENE_PATH := "res://Characters/ProceduralCharacter.tscn"
+
+var failures := 0
+var game = null
+var spawned: Array = []
+
+func _check(check_name: String, cond: bool, detail: String = "") -> void:
+	if cond:
+		print("PASS %s" % check_name)
+	else:
+		failures += 1
+		print("FAIL %s: %s" % [check_name, detail])
+
+func _await_frames(n: int) -> void:
+	for i in range(n):
+		await get_tree().process_frame
+
+func _ready() -> void:
+	TimeManager.pause_time()
+	await get_tree().process_frame
+	var GameScene := load("res://game.tscn")
+	game = GameScene.instantiate()
+	game.current_map_id = ""
+	get_tree().root.add_child(game)
+	get_tree().current_scene = game
+	await _await_frames(2)
+	game.load_map("town_square")
+	await _await_frames(10)
+
+	await _case_immunity()
+	await _case_save_notices()
+	await _case_periodic_and_corpse()
+	await _case_transforms()
+	await _case_riders()
+	await _case_chasten()
+	await _case_force_fields()
+
+	for c in spawned:
+		if is_instance_valid(c):
+			c.queue_free()
+	print("HARNESS DONE failures=%d" % failures)
+	get_tree().quit(1 if failures > 0 else 0)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+## A bare NPC with no AI, placed far from the party.
+func _spawn(char_name: String, pos: Vector2) -> Node:
+	var ch = load(PC_SCENE_PATH).instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	ch.Name = char_name
+	game.add_child(ch)
+	ch.global_position = pos
+	spawned.append(ch)
+	return ch
+
+func _last_log() -> String:
+	var entries: Array = GameLog.get_entries()
+	return str(entries[-1].text) if not entries.is_empty() else ""
+
+func _logged_since(n0: int, fragment: String) -> bool:
+	var entries: Array = GameLog.get_entries()
+	for i in range(n0, entries.size()):
+		if fragment in str(entries[i].text):
+			return true
+	return false
+
+func _reset_notices(ch) -> void:
+	ch._last_notify_text = ""
+	ch.condition_manager._last_notice_ms.clear()
+
+func _party():
+	return game.party_chars[0]
+
+# ---------------------------------------------------------------------------
+# Trait-keyed immunities
+# ---------------------------------------------------------------------------
+
+func _case_immunity() -> void:
+	var n = _spawn("Hasty", Vector2(3000, 3000))
+	await _await_frames(2)
+	var cm = n.condition_manager
+	cm.apply_condition("hasted", null)
+	_check("immunity.hasted-blocks-slowed", cm.apply_condition("slowed", null) == null and not cm.has_condition("slowed"))
+	_check("immunity.hasted-blocks-chilled", cm.apply_condition("chilled", null) == null and not cm.has_condition("chilled"))
+	cm.clear_all_conditions()
+	cm.apply_condition("shielded", null)
+	_check("immunity.shielded-blocks-burning", cm.apply_condition("burning", null) == null)
+	cm.clear_all_conditions()
+	# Frozen carries the cold trait it is immune to: re-applying refreshes it.
+	var f1 = cm.apply_condition("frozen", null)
+	var f2 = cm.apply_condition("frozen", null)
+	_check("immunity.never-blocks-itself", f1 != null and f2 == f1)
+	_check("immunity.frozen-blocks-chilled", cm.apply_condition("chilled", null) == null)
+	cm.clear_all_conditions()
+
+	# The notice: a party member floats "Immune" and the log names the cause.
+	var p = _party()
+	var pcm = p.condition_manager
+	var saved: Dictionary = pcm.to_dict()
+	pcm.clear_all_conditions()
+	pcm.apply_condition("hasted", null)
+	_reset_notices(p)
+	var n0: int = GameLog.get_entries().size()
+	pcm.apply_condition("slowed", n)
+	_check("immunity.notice-floats", p._last_notify_text == "Immune", p._last_notify_text)
+	_check("immunity.notice-logged", _logged_since(n0, "%s is immune to Slowed (Hasted)." % p.Name), _last_log())
+	# No source (surfaces, fire tiles) stays quiet.
+	_reset_notices(p)
+	n0 = GameLog.get_entries().size()
+	pcm.apply_condition("slowed", null)
+	_check("immunity.sourceless-quiet", p._last_notify_text == "" and GameLog.get_entries().size() == n0)
+	pcm.from_dict(saved)
+
+# ---------------------------------------------------------------------------
+# Apply-time saves
+# ---------------------------------------------------------------------------
+
+func _case_save_notices() -> void:
+	var foe = _spawn("Cutter", Vector2(3100, 3000))
+	var p = _party()
+	var pcm = p.condition_manager
+	var saved: Dictionary = pcm.to_dict()
+	var con0: int = p.constitution
+	pcm.clear_all_conditions()
+
+	# A sure pass (margin >= 50) throws the whole application off.
+	p.constitution = 500
+	_reset_notices(p)
+	var n0: int = GameLog.get_entries().size()
+	var inst = pcm.apply_condition("bleeding", foe, 1)
+	_check("save.resisted-null", inst == null)
+	_check("save.resisted-floats", p._last_notify_text == "Resisted", p._last_notify_text)
+	_check("save.resisted-logged-with-roll", _logged_since(n0, "%s resists Bleeding (CON save: rolled " % p.Name) and _logged_since(n0, " vs 500)."), _last_log())
+	# Throttled: an identical notice inside the window is held back.
+	p._last_notify_text = ""
+	n0 = GameLog.get_entries().size()
+	pcm.apply_condition("bleeding", foe, 1)
+	_check("save.throttled", p._last_notify_text == "" and GameLog.get_entries().size() == n0)
+
+	# A sure crit fail (margin <= -50) on a stackable adds a stack.
+	p.constitution = -500
+	_reset_notices(p)
+	n0 = GameLog.get_entries().size()
+	inst = pcm.apply_condition("bleeding", foe, 1)
+	_check("save.crit-fail-extra-stack", inst != null and inst.stacks == 2, str(inst.stacks if inst else -1))
+	_check("save.crit-fail-floats", p._last_notify_text == "Critical fail", p._last_notify_text)
+	_check("save.crit-fail-logged", _logged_since(n0, "%s critically fails against Bleeding" % p.Name), _last_log())
+	pcm.remove_condition("bleeding")
+
+	# A field or cloud (not a character) re-applying on its pulse waits longer.
+	p.constitution = 500
+	var field := Node2D.new()
+	add_child(field)
+	_reset_notices(p)
+	pcm.apply_condition("bleeding", field, 1)
+	_check("save.area-source-floats", p._last_notify_text == "Resisted")
+	var key := "bleeding:Resisted"
+	pcm._last_notice_ms[key] = Time.get_ticks_msec() - (pcm.NOTICE_REPEAT_MS + 500)
+	p._last_notify_text = ""
+	pcm.apply_condition("bleeding", field, 1)
+	_check("save.area-source-longer-window", p._last_notify_text == "", p._last_notify_text)
+	pcm._last_notice_ms[key] = Time.get_ticks_msec() - (pcm.NOTICE_REPEAT_MS + 500)
+	pcm.apply_condition("bleeding", foe, 1)
+	_check("save.character-source-short-window", p._last_notify_text == "Resisted", p._last_notify_text)
+	field.queue_free()
+
+	# Hidden NPCs: no float and no log, and the throttle isn't used up.
+	foe.constitution = 500
+	var hidden = _spawn("Lurker", Vector2(3200, 3000))
+	await _await_frames(2)
+	hidden.constitution = 500
+	hidden.visible = false
+	_reset_notices(hidden)
+	n0 = GameLog.get_entries().size()
+	hidden.condition_manager.apply_condition("bleeding", p, 1)
+	_check("save.hidden-npc-quiet", hidden._last_notify_text == "" and GameLog.get_entries().size() == n0 \
+		and hidden.condition_manager._last_notice_ms.is_empty())
+	hidden.visible = true
+	hidden.condition_manager.apply_condition("bleeding", p, 1)
+	_check("save.seen-npc-floats", hidden._last_notify_text == "Resisted", hidden._last_notify_text)
+	_check("save.party-source-logs", _logged_since(n0, "Lurker resists Bleeding"), _last_log())
+
+	p.constitution = con0
+	pcm.from_dict(saved)
+
+# ---------------------------------------------------------------------------
+# Periodic saves; corpses don't roll
+# ---------------------------------------------------------------------------
+
+func _case_periodic_and_corpse() -> void:
+	var foe = _spawn("Slasher", Vector2(3300, 3000))
+	var p = _party()
+	var pcm = p.condition_manager
+	var saved: Dictionary = pcm.to_dict()
+	var con0: int = p.constitution
+	pcm.clear_all_conditions()
+	p.constitution = 0  # lands at a plain fail (roll 1..100 vs 0, margin > -50 mostly)
+	var inst = null
+	for i in 10:
+		inst = pcm.apply_condition("bleeding", foe, 3)
+		if inst != null:
+			break
+	_check("periodic.fixture", inst != null)
+	if inst != null:
+		p.constitution = 500
+		_reset_notices(p)
+		var n0: int = GameLog.get_entries().size()
+		var now: float = TimeManager.absolute_time()
+		pcm.last_save_times["bleeding"] = now - 100.0
+		# Stacks 3+ drop by 2 per sure pass: first an "eases", then "shakes off".
+		pcm._process(0.016)
+		_check("periodic.eases-logged", _logged_since(n0, "%s's Bleeding eases to tier" % p.Name), _last_log())
+		pcm.last_save_times["bleeding"] = now - 100.0
+		pcm._process(0.016)
+		if pcm.has_condition("bleeding"):
+			pcm.last_save_times["bleeding"] = now - 100.0
+			pcm._process(0.016)
+		_check("periodic.shook-off", not pcm.has_condition("bleeding"))
+		_check("periodic.shook-off-floats", p._last_notify_text == "Shook off Bleeding", p._last_notify_text)
+		_check("periodic.shook-off-logged", _logged_since(n0, "%s shakes off Bleeding (CON save: rolled" % p.Name), _last_log())
+	p.constitution = con0
+	pcm.from_dict(saved)
+
+	# A corpse keeps its conditions but rolls nothing.
+	var dead = _spawn("Corpse", Vector2(3400, 3000))
+	await _await_frames(2)
+	dead.constitution = 0
+	var dcm = dead.condition_manager
+	var dinst = null
+	for i in 10:
+		dinst = dcm.apply_condition("bleeding", foe, 2)
+		if dinst != null:
+			break
+	dead.current_health = 0
+	dead._check_death()
+	await _await_frames(1)
+	if dcm.has_condition("bleeding"):
+		dcm.last_save_times["bleeding"] = -1000.0
+		dcm._process(0.016)
+		_check("corpse.no-periodic-save", float(dcm.last_save_times.get("bleeding", 0.0)) == -1000.0)
+	else:
+		_check("corpse.fixture", false, "no bleeding on the corpse")
+
+# ---------------------------------------------------------------------------
+# transforms_into
+# ---------------------------------------------------------------------------
+
+func _case_transforms() -> void:
+	var n = _spawn("Shiver", Vector2(3500, 3000))
+	await _await_frames(2)
+	var cm = n.condition_manager
+	var speed0: float = n.move_speed
+	cm.apply_condition("chilled", null, 2)
+	_check("transform.below-tier-stays", cm.has_condition("chilled") and not cm.has_condition("frozen"))
+	var out = cm.apply_condition("chilled", null, 1)
+	_check("transform.chilled-to-frozen", cm.has_condition("frozen") and not cm.has_condition("chilled") \
+		and out != null and out.condition.id == "frozen")
+	_check("frozen.roots", speed0 > 0.0 and is_equal_approx(n.move_speed, 0.0), "%s -> %s" % [speed0, n.move_speed])
+	cm.clear_all_conditions()
+	_check("frozen.thaws", n.move_speed > 0.0)
+	var fresh = cm.apply_condition("chilled", null, 3)
+	_check("transform.fresh-instance", fresh != null and fresh.condition.id == "frozen")
+	cm.clear_all_conditions()
+	cm.apply_condition("fatigued", null, 3)
+	_check("transform.fatigued-to-exhausted", cm.has_condition("exhausted") and not cm.has_condition("fatigued"))
+	cm.clear_all_conditions()
+	# Poisoned -> toxic_shock isn't registered: poisoned stays.
+	cm.apply_condition("poisoned", null, 10)
+	_check("transform.unregistered-target-skipped", cm.has_condition("poisoned"))
+	cm.clear_all_conditions()
+
+	# The party is told.
+	var p = _party()
+	var pcm = p.condition_manager
+	var saved: Dictionary = pcm.to_dict()
+	pcm.clear_all_conditions()
+	_reset_notices(p)
+	var n0: int = GameLog.get_entries().size()
+	pcm.apply_condition("chilled", n, 3)
+	_check("transform.party-floats", p._last_notify_text == "Frozen!", p._last_notify_text)
+	_check("transform.party-logged", _logged_since(n0, "%s is now Frozen (Chilled reached tier 3)." % p.Name), _last_log())
+	pcm.from_dict(saved)
+
+# ---------------------------------------------------------------------------
+# Chance riders and effect-level saves
+# ---------------------------------------------------------------------------
+
+func _rider_ability(effect: Dictionary) -> Ability:
+	return Ability.from_dict({
+		"id": "harness_rider", "display_name": "Harness Rider", "traits": {},
+		"targeting": {"type": "point", "shape": "circle", "radius": 10.0},
+		"effects": [effect],
+	})
+
+func _case_riders() -> void:
+	var p = _party()
+	var npc = _spawn("Target", Vector2(3600, 3000))
+	await _await_frames(2)
+	var eff := {"type": "apply_condition", "condition_id": "chilled", "chance": 0.0}
+	var ab := _rider_ability(eff)
+	_reset_notices(npc)
+	var n0: int = GameLog.get_entries().size()
+	var r: Dictionary = AbilityEffect.resolve_effect(eff, p, [npc], ab, npc.global_position)
+	_check("rider.chance-miss-applies-nothing", r.get("conditions_applied", []).is_empty() and not npc.condition_manager.has_condition("chilled"))
+	_check("rider.chance-miss-floats", npc._last_notify_text == "Resisted", npc._last_notify_text)
+	_check("rider.chance-miss-logged", _logged_since(n0, "Target avoids Chilled from Harness Rider (0% chance: rolled "), _last_log())
+
+	# A buff that misses says "No effect".
+	var buff := {"type": "apply_condition", "condition_id": "hasted", "chance": 0.0}
+	npc._last_notify_text = ""
+	AbilityEffect.resolve_effect(buff, p, [npc], _rider_ability(buff), npc.global_position)
+	_check("rider.buff-miss-no-effect", npc._last_notify_text == "No effect", npc._last_notify_text)
+	_check("rider.buff-miss-wording", "doesn't gain Hasted" in _last_log(), _last_log())
+
+	# Hidden targets: logged for the party's own cast, but no float.
+	npc.visible = false
+	npc._last_notify_text = ""
+	AbilityEffect.resolve_effect(eff, p, [npc], ab, npc.global_position)
+	_check("rider.hidden-target-no-float", npc._last_notify_text == "")
+	npc.visible = true
+
+	# NPC on NPC: floats, no log.
+	var other = _spawn("Bystander", Vector2(3650, 3000))
+	await _await_frames(1)
+	npc._last_notify_text = ""
+	n0 = GameLog.get_entries().size()
+	AbilityEffect.resolve_effect(eff, other, [npc], ab, npc.global_position)
+	_check("rider.npc-only-float-no-log", npc._last_notify_text == "Resisted" and GameLog.get_entries().size() == n0)
+
+	# Effect-level save_stat (dev's per-application save).
+	npc.constitution = 500
+	var saved_eff := {"type": "apply_condition", "condition_id": "slowed", "save_stat": "con"}
+	npc._last_notify_text = ""
+	n0 = GameLog.get_entries().size()
+	AbilityEffect.resolve_effect(saved_eff, p, [npc], _rider_ability(saved_eff), npc.global_position)
+	_check("rider.effect-save-floats", npc._last_notify_text == "Resisted" and not npc.condition_manager.has_condition("slowed"), npc._last_notify_text)
+	_check("rider.effect-save-logged", _logged_since(n0, "Target resists Slowed from Harness Rider (CON save: rolled "), _last_log())
+
+	_check("rider.display-name", AbilityEffect.condition_display_name("chilled") == "Chilled" \
+		and AbilityEffect.condition_display_name("no_such_thing") == "No Such Thing")
+
+	# Data: the riders' descriptions state their chance.
+	for pair in [["ice_storm", "80%"], ["gravity_well", "60%"], ["shield_bash", "70%"], ["creepy_beam", "50%"]]:
+		var desc := str(AbilityDatabase.get_ability_data(pair[0]).get("description", ""))
+		_check("data.%s-states-chance" % pair[0], pair[1] in desc, desc)
+
+# ---------------------------------------------------------------------------
+# Chasten
+# ---------------------------------------------------------------------------
+
+func _case_chasten() -> void:
+	var data: Dictionary = AbilityDatabase.get_ability_data("chasten")
+	var eff: Dictionary = data.get("effects", [{}])[0]
+	_check("chasten.by-condition-id", str(eff.get("condition_id", "")) == "infatuated" and not eff.has("trait"), str(eff))
+	var chasten := Ability.from_dict(data)
+	_check("chasten.reads-beneficial", Ability.classify_intent(data) == Ability.Intent.BENEFICIAL)
+	var p = _party()
+	var charmer = _spawn("Charmer", Vector2(3700, 3000))
+	await _await_frames(2)
+	var pcm = p.condition_manager
+	var saved: Dictionary = pcm.to_dict()
+	pcm.clear_all_conditions()
+	pcm.apply_condition("infatuated", charmer, 1, 20.0)
+	var had: bool = pcm.has_condition("infatuated")
+	_reset_notices(p)
+	var n0: int = GameLog.get_entries().size()
+	for e in chasten.effects:
+		AbilityEffect.resolve_effect(e, p, [p], chasten, p.global_position)
+	_check("chasten.ends-infatuation", had and not pcm.has_condition("infatuated"), str(had))
+	_check("chasten.cleansed-floats", p._last_notify_text == "Cleansed", p._last_notify_text)
+	_check("chasten.logged", _logged_since(n0, "Chasten ends Infatuated on %s." % p.Name), _last_log())
+	p._last_notify_text = ""
+	for e in chasten.effects:
+		AbilityEffect.resolve_effect(e, p, [p], chasten, p.global_position)
+	_check("chasten.nothing-to-remove", p._last_notify_text == "No effect", p._last_notify_text)
+
+	# A cleanse riding on another effect (Heal's poison cure) stays quiet.
+	var heal := Ability.from_dict(AbilityDatabase.get_ability_data("heal"))
+	_check("cleanse.heal-not-cleanse-only", not AbilityEffect._is_cleanse_only(heal))
+	pcm.from_dict(saved)
+
+# ---------------------------------------------------------------------------
+# Force fields
+# ---------------------------------------------------------------------------
+
+func _case_force_fields() -> void:
+	var p = _party()
+	var pull: Dictionary = AbilityDatabase.get_ability_data("magnetic_pull")
+	var pull_eff: Dictionary = {}
+	for e in pull.get("effects", []):
+		if e is Dictionary and e.get("type", "") == "force_field":
+			pull_eff = e
+	var r: Dictionary = AbilityEffect.resolve_effect(pull_eff, p, [], Ability.from_dict(pull), p.global_position + Vector2(0, 400))
+	var objs: Array = r.get("created_objects", [])
+	var mag = objs[0] if not objs.is_empty() else null
+	_check("field.magnetic-created", mag != null and mag is MagneticField)
+	if mag != null:
+		_check("field.outline-shown", mag.show_outline)
+		_check("field.magnetic-keeps-data-traits", Array(mag.required_traits) == ["metal", "armored"], str(mag.required_traits))
+		_check("field.magnetic-tint", mag._field_tint() == mag.field_color)
+		var metal := Node2D.new()
+		metal.set_meta("traits", ["Metal"])
+		add_child(metal)
+		_check("field.trait-case-insensitive", mag._should_affect_entity(metal))
+		var plain := Node2D.new()
+		add_child(plain)
+		_check("field.filtered-skips-traitless", not mag._should_affect_entity(plain))
+		metal.queue_free()
+		plain.queue_free()
+		mag.queue_free()
+
+	var well: Dictionary = AbilityDatabase.get_ability_data("gravity_well")
+	var well_eff: Dictionary = {}
+	for e in well.get("effects", []):
+		if e is Dictionary and e.get("type", "") == "force_field":
+			well_eff = e
+	r = AbilityEffect.resolve_effect(well_eff, p, [], Ability.from_dict(well), p.global_position + Vector2(0, 600))
+	objs = r.get("created_objects", [])
+	var grav = objs[0] if not objs.is_empty() else null
+	_check("field.gravity-outline", grav != null and grav.show_outline)
+	if grav != null:
+		var bare := Node2D.new()
+		add_child(bare)
+		_check("field.unfiltered-moves-traitless", grav._should_affect_entity(bare))
+		bare.queue_free()
+		grav.queue_free()
+	await _await_frames(1)
