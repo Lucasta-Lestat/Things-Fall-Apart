@@ -6,8 +6,9 @@
 #
 # A service NPC appears here when:
 #   - the party is in a region whose controlling faction is non-hostile, AND
-#   - either the service is legal under that faction's laws OR the player has
-#     personally seen the NPC at least once.
+#   - the service is legal under that faction's laws, AND
+#   - the player has personally seen the NPC at least once. An NPC first seen
+#     while the panel is up is listed at once (list_newly_seen_service).
 #
 # Inventory source per service:
 #   - Live mode: the NPC is on the current map -> we use its real Inventory.
@@ -104,6 +105,9 @@ func _ready() -> void:
 	if game_node and game_node.has_signal("downtime_mode_changed"):
 		game_node.connect("downtime_mode_changed", _on_downtime_mode_changed)
 
+	# Saint-day activities (Feasting) come and go with the date.
+	TimeManager.date_changed.connect(_on_date_changed)
+
 	# Sync with PartySidePanel's Tab toggle.
 	call_deferred("_hook_party_panel_visibility")
 	call_deferred("_repopulate")
@@ -111,6 +115,10 @@ func _ready() -> void:
 func _on_downtime_mode_changed(active: bool) -> void:
 	mode = "downtime" if active else "services"
 	_repopulate()
+
+func _on_date_changed(_day, _month, _year) -> void:
+	if mode == "downtime":
+		_repopulate()
 
 func _hook_party_panel_visibility() -> void:
 	if game_node:
@@ -149,6 +157,17 @@ func _on_map_loaded(_map_id: String) -> void:
 # ---------------------------------------------------------------------------
 
 func _repopulate() -> void:
+	# Old cards stop listening to their live NPC. Signals match a bound
+	# callable by its method alone, so the new card's connect would otherwise
+	# be refused as a duplicate and the NPC's next trade would refresh the old
+	# card's freed grid. (A card added mid-visit by list_newly_seen_service is
+	# rebuilt by the next downtime toggle on the same map.)
+	for card in _cards:
+		var npc = card.get("live_npc")
+		if is_instance_valid(npc) and npc.inventory:
+			for sig in [npc.inventory.item_added, npc.inventory.item_removed]:
+				if sig.is_connected(_on_live_inventory_changed):
+					sig.disconnect(_on_live_inventory_changed)
 	for child in vbox.get_children():
 		child.queue_free()
 	_cards.clear()
@@ -198,6 +217,30 @@ func _repopulate() -> void:
 		var card = _build_service_card(entry)
 		if card:
 			vbox.add_child(card)
+
+## Game.mark_service_seen calls this (deferred) when the party sees a service
+## NPC for the first time, so a merchant met on this visit is listed without
+## leaving the map. Only that card is added: a full _repopulate would reset
+## every card's trade baseline (the credit for items already handed over).
+func list_newly_seen_service(uid: String) -> void:
+	if game_node == null or mode != "services" or not visible:
+		return
+	for card in _cards:
+		var card_entry = card.get("entry")
+		if card_entry is Dictionary and card_entry.get("npc_uid", "") == uid:
+			return  # a map-load repopulate already listed it
+	var region_id: String = RegionDatabase.get_region_for_map(str(game_node.get("current_map_id")))
+	if region_id.is_empty():
+		return
+	for entry in RegionDatabase.get_service_npcs_in_region(region_id):
+		if entry["npc_uid"] != uid:
+			continue
+		# Same rule as _repopulate: listed only when legal AND seen.
+		if RegionDatabase.is_service_legal(entry["titles"], region_id):
+			var card = _build_service_card(entry)
+			if card:
+				vbox.add_child(card)
+		return
 
 func _build_service_card(entry: Dictionary):
 	var live_npc = _find_live_npc(entry)
@@ -351,8 +394,12 @@ func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(title_label)
 
+	# Long descriptions are cut on the card; the card's tooltip has all of it
+	# (desc_label ignores the mouse, so the tooltip goes on the card).
+	var full_desc := String(activity.get("description", ""))
+	card_panel.tooltip_text = full_desc
 	var desc_label := Label.new()
-	desc_label.text = String(activity.get("description", "")).left(140)
+	desc_label.text = full_desc if full_desc.length() <= 140 else full_desc.left(139) + "…"
 	desc_label.add_theme_font_size_override("font_size", 10)
 	desc_label.add_theme_color_override("font_color", Color(0.30, 0.22, 0.10))
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -527,6 +574,34 @@ func _refresh_inventory(card_data: Dictionary) -> void:
 		for w in inv.stowed_items:
 			if w is WeaponShape:
 				grid.add_child(_create_slot(_make_weapon_slot_entry(w, "", false), card_data))
+	elif live_npc == null and game_node:
+		# Away NPCs: the snapshot still lists the weapons they carry. Show them
+		# greyed out so the card doesn't look empty, but they can't be dragged
+		# (weapons need the live NPC to trade).
+		var region_id: String = RegionDatabase.get_region_for_map(entry["map_id"])
+		var snap: Dictionary = game_node.npc_state_per_region.get(region_id, {}).get(entry["npc_uid"], {})
+		for w in snap.get("equipped_weapons", []):
+			if not (w is Dictionary) or str(w.get("type", "")) != "weapon":
+				continue
+			var data = w.get("data", {})
+			if not (data is Dictionary):
+				continue
+			var sprite_path = data.get("sprite_path", "")
+			var shown_entry := {
+				"kind": "weapon_preview",
+				"display_name": str(data.get("name", data.get("display_name", "Weapon"))),
+				"sprite_path": str(sprite_path) if sprite_path != null else "",
+				"num_stacks": 1,
+				"equipped": false,
+				"hand": "",
+				"source_index": -1,
+				"raw": data,
+			}
+			var slot := _create_slot(shown_entry, card_data)
+			slot.tooltip_text = preload("res://UI/ItemTooltip.gd").detail_text(shown_entry, "service_preview")
+			slot.modulate = Color(1, 1, 1, 0.5)
+			slot.set_meta("display_only", true)
+			grid.add_child(slot)
 
 func _make_weapon_slot_entry(node: WeaponShape, hand: String, equipped: bool) -> Dictionary:
 	var sprite_path = node.sprite_path if "sprite_path" in node else ""
@@ -646,10 +721,16 @@ func _can_drop_data(at_position: Vector2, data) -> bool:
 			String(card_data.get("activity_id", "?")), String(data.get("kind", "")), is_portrait])
 		return is_portrait
 	# Service mode: reject portrait drops (those belong on activity cards in
-	# downtime mode); accept the existing item-drop dicts.
+	# downtime mode) and anything that isn't an item or a weapon. Weapons are
+	# accepted here only so _drop_data can refuse them with an explanation
+	# instead of a bare forbidden cursor; it moves nothing for them.
 	if String(data.get("kind", "")) == "portrait":
 		return false
-	return true
+	var drag_entry = data.get("entry", {})
+	if not (drag_entry is Dictionary):
+		return false
+	var entry_kind := String(drag_entry.get("kind", ""))
+	return entry_kind == "item" or entry_kind == "weapon"
 
 func _drop_data(at_position: Vector2, data) -> void:
 	var card_data = _find_card_at(at_position)
@@ -677,6 +758,25 @@ func _drop_data(at_position: Vector2, data) -> void:
 	# We only support items here (weapons could be added later — they need
 	# WeaponShape -> data conversion in snapshot mode).
 	if slot_entry.get("kind", "") != "item":
+		if slot_entry.get("kind", "") == "weapon":
+			var weapon_msg := "Weapons can't be traded on a service card; trade with %s in person instead." % str(entry.get("display_name", "them"))
+			if source_char.has_method("notify"):
+				source_char.notify("Trade weapons in person", Color(1.0, 0.6, 0.4), weapon_msg)
+			else:
+				GameLog.add_entry(weapon_msg)
+		SfxManager.play_ui("trade_decline")
+		return
+
+	# A live NPC's inventory has a slot cap; check before taking the item from
+	# the party member so a full NPC refuses it instead of swallowing it.
+	var live_npc = card_data["live_npc"]
+	var raw = slot_entry.get("raw", {})
+	if live_npc and live_npc.inventory and raw is Dictionary and not live_npc.inventory.can_accept(raw):
+		if source_char.has_method("notify"):
+			source_char.notify("No room", Color(1.0, 0.6, 0.4),
+				"%s can't give the %s to %s: their inventory is full." % [
+					source_char.Name, slot_entry.get("display_name", "item"), live_npc.Name])
+		SfxManager.play_ui("trade_decline")
 		return
 
 	# Pull the item from the party member.
@@ -687,7 +787,6 @@ func _drop_data(at_position: Vector2, data) -> void:
 	# Push into the service NPC. The baseline stays at its original value so
 	# the player can withdraw up to what they've given (mirrors TradeWindow's
 	# net-non-negative rule, but enforced per-drop instead of at commit time).
-	var live_npc = card_data["live_npc"]
 	if live_npc and live_npc.inventory:
 		live_npc.inventory.add_item(item)
 	else:
@@ -731,6 +830,18 @@ func can_accept_value_loss(uid: String, item_value: float) -> bool:
 			return (current - item_value) >= baseline
 	return false
 
+# Gold value the player has dropped on this card beyond what they have taken
+# back: the most can_accept_value_loss will let them withdraw. PartySidePanel
+# can quote it when it refuses a withdrawal. Same value rule as
+# can_accept_value_loss (the service's item dicts).
+func get_credit(uid: String) -> float:
+	for card in _cards:
+		var entry = card.get("entry")
+		if entry is Dictionary and entry.get("npc_uid", "") == uid:
+			var current: float = _compute_inventory_value(_get_service_inventory(entry, card["live_npc"]))
+			return current - float(_value_baseline.get(uid, current))
+	return 0.0
+
 func _compute_inventory_value(items: Array) -> float:
 	var total: float = 0.0
 	for item in items:
@@ -759,11 +870,19 @@ func _show_warp_menu(card_data: Dictionary) -> void:
 	var entry: Dictionary = card_data["entry"]
 	var menu = PopupMenu.new()
 	var map_label: String = str(MapDatabase.get_map_data(entry["map_id"]).get("name", entry["map_id"]))
-	menu.add_item("Warp to %s" % map_label, 0)
+	# No warp entry for the map the party is already on (_warp_to ignores it).
+	if game_node == null or entry["map_id"] != game_node.current_map_id:
+		menu.add_item("Warp to %s" % map_label, 0)
 	if card_data["live_npc"]:
 		menu.add_item("Trade", 1)
-		if card_data["live_npc"].dialogues.size() > 0:
+		# Same test as the world menu's Talk: a loaded dialogue with nodes.
+		if card_data["live_npc"].active_dialogue_id() != "":
 			menu.add_item("Talk", 2)
+	if menu.item_count == 0:
+		# A local NPC who is gone (dead or despawned) leaves nothing to offer.
+		menu.free()
+		GameLog.add_entry("%s isn't here right now." % str(entry.get("display_name", "They")))
+		return
 	menu.id_pressed.connect(_on_warp_menu_selected.bind(card_data))
 	if game_node:
 		game_node.context_menu_open = true
@@ -781,8 +900,13 @@ func _on_warp_menu_selected(id: int, card_data: Dictionary) -> void:
 			if card_data["live_npc"]:
 				game_node.show_trade_window(card_data["live_npc"])
 		2:
-			if card_data["live_npc"] and card_data["live_npc"].dialogues.size() > 0:
-				DialogueManager.start_dialogue(card_data["live_npc"].dialogues[card_data["live_npc"].current_dialogue_index])
+			var npc = card_data["live_npc"]
+			if is_instance_valid(npc):
+				var dlg_id: String = npc.active_dialogue_id()
+				if dlg_id != "":
+					DialogueManager.start_dialogue(dlg_id)
+				else:
+					GameLog.add_entry("%s has nothing to say." % npc.Name)
 
 func _handle_left_click(card_data: Dictionary) -> void:
 	# Same as right-click "Trade" if NPC is local, else fall back to warp menu.
@@ -810,7 +934,9 @@ func _find_slot_at(local_pos: Vector2) -> PanelContainer:
 	for card in _cards:
 		var grid: GridContainer = card["inv_grid"]
 		for child in grid.get_children():
-			if child is PanelContainer and child.get_global_rect().has_point(global_pos):
+			# Greyed away-NPC weapons are shown, not traded.
+			if child is PanelContainer and not child.has_meta("display_only") \
+					and child.get_global_rect().has_point(global_pos):
 				return child
 	return null
 
