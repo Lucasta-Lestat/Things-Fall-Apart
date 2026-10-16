@@ -722,8 +722,8 @@ func mark_service_seen(npc) -> void:
 		var services_panel = get_node_or_null("GameUI/TownServicesPanel")
 		if services_panel != null and services_panel.has_method("list_newly_seen_service"):
 			services_panel.call_deferred("list_newly_seen_service", uid)
-
-
+ 
+ 
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
 	party_state.append({
 		"template_id": template_id,
