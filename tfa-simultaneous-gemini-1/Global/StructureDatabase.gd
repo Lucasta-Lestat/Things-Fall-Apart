@@ -15,6 +15,9 @@ class StructureData:
 	var damage: Dictionary = {"Bludgeoning": 1}
 	var resources: Dictionary = {} # What resources it drops on destruction
 	var flammable: bool = false
+	# Player-facing name (hover readout). display_name can't serve: it builds
+	# the texture path ("Wall Stone" -> Wall Stone.png).
+	var label: String = ""
 
 	func _init(p_id, p_name, p_health, p_resources, p_size = size, p_flammable: bool = false):
 		var texture_path = "res://Structures/" + p_name + ".png"
@@ -49,6 +52,10 @@ func _setup_structure_data():
 	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10}, Vector2(64,128), true)
 	structure_data[&"door_wood"] = wood_door
 	
+	wood_wall.label = "Wooden wall"
+	stone_wall.label = "Stone wall"
+	tree.label = "Tree"
+	wood_door.label = "Wooden door"
 	
 
 func get_structure_data(structure_id: StringName) -> StructureData:
@@ -57,3 +64,11 @@ func get_structure_data(structure_id: StringName) -> StructureData:
 	else:
 		print("Warning: Structure ID '", structure_id, "' not found in database #structures")
 		return null
+
+## Player-facing structure name. Quiet on a miss (unlike get_structure_data),
+## so the hover readout can ask every frame: unknown ids read from the id.
+func get_structure_label(structure_id: StringName) -> String:
+	var d = structure_data.get(structure_id)
+	if d != null and d.label != "":
+		return d.label
+	return String(structure_id).replace("_", " ").capitalize()

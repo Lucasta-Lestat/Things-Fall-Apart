@@ -99,13 +99,14 @@ func _apply_open_state() -> void:
 		for t in occupied_tiles:
 			GridManager.unregister_obstacle(t)   # refcounted; junction tiles shared with walls stay blocked
 		# a swung-open leaf is visually unambiguous; keep it near-opaque
-		# (self_modulate, NOT modulate: take_damage's flash tween owns modulate)
-		_visual().self_modulate = Color(1, 1, 1, 0.85)
+		# (_tint_alpha folds the fade into the damage tint, so opening or
+		# closing keeps a battered door dark)
+		_refresh_tint()
 	else:
 		collision_layer = CollisionLayers.STRUCTURE_LAYERS
 		for t in occupied_tiles:
 			GridManager.register_obstacle(t)
-		_visual().self_modulate = Color.WHITE
+		_refresh_tint()
 	_animate_swing()
 	_sync_door_pass()
 	# A door flip is the common way vision-blocking geometry changes: kick the
@@ -142,6 +143,20 @@ func _animate_swing() -> void:
 func _set_swing(a: float, art: Node2D, pivot: Vector2) -> void:
 	art.rotation = a
 	art.position = pivot - pivot.rotated(a)
+
+
+func _tint_alpha() -> float:
+	return 0.85 if is_open else 1.0
+
+
+## Hover readout: "Locked" when a key exists somewhere, "Barred" when locked
+## with no key (sealed, bash-only), so the player knows whether to look for one.
+func get_hover_status() -> String:
+	if is_open:
+		return "Open"
+	if locked:
+		return "Locked" if key_id != "" else "Barred"
+	return ""
 
 
 # Closed UNLOCKED doors are pathable-with-cost (GridManager.door_pass): A*

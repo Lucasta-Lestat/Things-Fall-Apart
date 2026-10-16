@@ -7,16 +7,21 @@
 #     (exact HP for the party), stance toward the party, active conditions.
 #     Only characters the party can see (Game.is_seen_by_party, and drawn:
 #     ground view hides roof-walkers), so hidden NPCs aren't revealed.
+#   structures (priority 20, paused or not): name, door status, damage state
+#     and HP. Structures are drawn regardless of fog, so no sight gate; the
+#     exploration mask keeps never-seen buildings quiet.
 # =====================
 
 extends Node
 
 const PICK_RADIUS := 40.0            # world px from a character's origin (covers its overhead icons)
+const STRUCTURE_PICK_RADIUS := 8.0
 const MAX_CONDITION_LINES := 8
 const ICON_PX := 14
 const NAME_FONT_SIZE := 16
 const SHOW_FACTION_NAME := false     # stance only; some factions may be meant to stay secret
 const PRIORITY_CHARACTERS := 30
+const PRIORITY_STRUCTURES := 20
 
 const COLOR_UNHURT := Color(0.2, 0.8, 0.2)
 const COLOR_WOUNDED := Color(0.9, 0.8, 0.1)
@@ -31,6 +36,8 @@ const COLOR_MUTED := Color(0.65, 0.62, 0.56)
 
 var game: Node = null
 
+var _struct_query: PhysicsShapeQueryParameters2D = null
+
 func _ready() -> void:
 	name = "WorldHoverInfo"
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -39,11 +46,13 @@ func _ready() -> void:
 	var tip = game.get("world_tooltip") if game != null else null
 	if tip != null:
 		tip.add_provider("characters", character_text, false, PRIORITY_CHARACTERS)
+		tip.add_provider("structures", structure_text, false, PRIORITY_STRUCTURES)
 
 func _exit_tree() -> void:
 	var tip = game.get("world_tooltip") if game != null and is_instance_valid(game) else null
 	if tip != null and is_instance_valid(tip):
 		tip.remove_provider("characters")
+		tip.remove_provider("structures")
 
 ## True when the world readouts should stay quiet: world map (banners, and
 ## its fast clock makes timers meaningless), downtime board, or a mouse
@@ -208,6 +217,69 @@ static func stance_color(stance: String) -> Color:
 		"ally": return COLOR_ALLY
 		"party": return COLOR_PARTY
 		_: return COLOR_NEUTRAL
+
+# ---------------------------------------------------------------------------
+# Structures
+# ---------------------------------------------------------------------------
+
+func structure_text(world_pos: Vector2) -> String:
+	if _quiet():
+		return ""
+	# The same exploration gate as the structures' own damage text: a building
+	# under the unexplored fog isn't named.
+	if ExplorationManager.active and not ExplorationManager.is_explored(GridManager.world_to_map(world_pos)):
+		return ""
+	var s = pick_structure(world_pos)
+	if s == null:
+		return ""
+	return describe_structure(s)
+
+## The structure under world_pos (a Door wins over the wall it sits in), or
+## null. Walkable decks are skipped: they're floors the party stands on.
+func pick_structure(world_pos: Vector2):
+	if game == null or not is_instance_valid(game) or not game.is_inside_tree():
+		return null
+	var w2d: World2D = game.get_viewport().find_world_2d()
+	if w2d == null:
+		return null
+	var space := w2d.direct_space_state
+	if space == null:
+		return null
+	if _struct_query == null:
+		var shape := CircleShape2D.new()
+		shape.radius = STRUCTURE_PICK_RADIUS
+		_struct_query = PhysicsShapeQueryParameters2D.new()
+		_struct_query.shape = shape
+		# Open doors sit on INTERACTABLES only.
+		_struct_query.collision_mask = CollisionLayers.STRUCTURES | CollisionLayers.INTERACTABLES
+		_struct_query.collide_with_bodies = true
+		_struct_query.collide_with_areas = false
+	_struct_query.transform = Transform2D(0.0, world_pos)
+	var best = null
+	for hit in space.intersect_shape(_struct_query, 8):
+		var col = hit.get("collider")
+		if not (col is Structure) or not is_instance_valid(col) or col.is_queued_for_deletion() or col.is_deck:
+			continue
+		if col is Door:
+			return col
+		if best == null:
+			best = col
+	return best
+
+func describe_structure(s) -> String:
+	var title := "[font_size=%d][b]%s[/b][/font_size]" % [NAME_FONT_SIZE, _esc(s.get_display_name())]
+	var status: String = s.get_hover_status()
+	if status != "":
+		title += " (%s)" % _esc(status)
+	var lines: PackedStringArray = [title]
+	if s.max_health > 0:
+		var state: int = s.get_damage_state()
+		var word := Structure.damage_state_word(state)
+		lines.append("%s · %d/%d HP" % [_col(word, structure_state_color(state)), s.current_health, s.max_health])
+	return "\n".join(lines)
+
+static func structure_state_color(state: int) -> Color:
+	return [COLOR_UNHURT, COLOR_WOUNDED, COLOR_BADLY, COLOR_NEAR_DEATH][clampi(state, 0, 3)]
 
 # ---------------------------------------------------------------------------
 # BBCode helpers

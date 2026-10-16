@@ -46,6 +46,7 @@ func _ready() -> void:
 		PauseManager.unpause()
 	await _case_characters()
 	await _case_party_panel()
+	await _case_structures()
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -239,3 +240,118 @@ func _case_party_panel() -> void:
 	_check("panel tooltip is get_tooltip_text", tips.has(inst.get_tooltip_text(TimeManager.absolute_time())) if inst != null else false, tips)
 	_check("panel tooltip carries the description", tips.any(func(t): return t.contains("Probe (") and t.contains("\nProbes things.")), tips)
 	cm.remove_condition("test_world_info")
+
+# ---------------------------------------------------------------------------
+# Structures (damage states, tint, threshold notices, door status, hover)
+# ---------------------------------------------------------------------------
+
+const STRUCTURE_SCENE := preload("res://Structures/Structure.tscn")
+const DOOR_SCRIPT := preload("res://Structures/Door.gd")
+var _blank: ImageTexture
+
+func _blank_tex() -> ImageTexture:
+	if _blank == null:
+		_blank = ImageTexture.create_from_image(Image.create(8, 8, false, Image.FORMAT_RGBA8))
+	return _blank
+
+func _spawn(id: StringName, pos: Vector2, as_door: bool = false):
+	var inst = STRUCTURE_SCENE.instantiate()
+	if as_door:
+		inst.set_script(DOOR_SCRIPT)
+	inst.structure_id = id
+	inst.skip_grid_snap = true
+	inst.use_custom_texture = true
+	inst.custom_texture = _blank_tex()
+	inst.custom_size = Vector2(32, 32)
+	inst.position = pos
+	game.add_child(inst)
+	return inst
+
+func _floats_with(parent: Node, text: String) -> int:
+	var n := 0
+	for ch in parent.get_children():
+		if ch is Label and ch.text == text:
+			n += 1
+	return n
+
+const STATE := {"INTACT": 0, "DAMAGED": 1, "CRACKING": 2, "CRUMBLING": 3}
+
+func _case_structures() -> void:
+	var hover = game.get_node("WorldHoverInfo")
+	_check("structures provider registered", game.world_tooltip._providers.has("structures"))
+	# Unexplored fog would (rightly) silence the notices and the hover, so
+	# test with the exploration mask off.
+	var explore_was: bool = ExplorationManager.active
+	ExplorationManager.active = false
+	var where: Vector2 = game.party_chars[0].global_position + Vector2(-5000, -5000)
+	var wall = _spawn(&"stone_wall", where)
+	await _frames(1)
+	wall.max_health = 100
+	wall.current_health = 100
+	_check("label: Stone wall", wall.get_display_name() == "Stone wall", wall.get_display_name())
+	_check("unknown ids read from the id", StructureDatabase.get_structure_label(&"iron_gate") == "Iron Gate")
+	_check("intact", wall.get_damage_state() == STATE.INTACT)
+	wall.take_damage({"bludgeoning": 49})
+	_check("51/100 damaged", wall.get_damage_state() == STATE.DAMAGED, wall.current_health)
+	_check("damaged keeps full brightness", is_equal_approx(wall._visual().self_modulate.r, 1.0), wall._visual().self_modulate)
+	_check("no notice for Damaged", _floats_with(game, "Damaged") == 0)
+	wall.take_damage({"bludgeoning": 2})
+	_check("49/100 cracking", wall.get_damage_state() == STATE.CRACKING, wall.current_health)
+	_check("cracking darkens to 0.75", is_equal_approx(wall._visual().self_modulate.r, 0.75), wall._visual().self_modulate)
+	_check("'Cracking' floats once", _floats_with(game, "Cracking") == 1, _floats_with(game, "Cracking"))
+	wall.take_damage({"bludgeoning": 1})
+	_check("no repeat notice within a state", _floats_with(game, "Cracking") == 1)
+	wall.take_damage({"bludgeoning": 24})
+	_check("24/100 crumbling", wall.get_damage_state() == STATE.CRUMBLING and wall.current_health == 24, wall.current_health)
+	_check("crumbling darkens to 0.55", is_equal_approx(wall._visual().self_modulate.r, 0.55))
+	_check("'Crumbling' floats", _floats_with(game, "Crumbling") == 1)
+	var desc: String = hover.describe_structure(wall)
+	print("structure hover: ", desc.replace("\n", " | "))
+	_check("hover: name, state, HP", desc.contains("Stone wall") and desc.contains("Crumbling") and desc.contains("24/100 HP"), desc)
+
+	await _physics_frames(3)
+	var picked = hover.pick_structure(where + Vector2(3, 2))
+	_check("pick_structure finds the wall", picked == wall, picked)
+	var via_provider: String = hover.structure_text(where)
+	_check("structures provider text", via_provider.contains("Stone wall"), via_provider)
+	_check("nothing off the wall", hover.pick_structure(where + Vector2(200, 0)) == null)
+
+	# Unexplored ground: the notice and the hover stay quiet.
+	ExplorationManager.active = true
+	var unexplored: bool = not ExplorationManager.is_explored(GridManager.world_to_map(where))
+	if unexplored:
+		_check("no hover under the unexplored fog", hover.structure_text(where) == "")
+		var before: int = _floats_with(game, "Crumbling")
+		wall.current_health = 40
+		wall.take_damage({"bludgeoning": 20})
+		_check("no notice under the unexplored fog", _floats_with(game, "Crumbling") == before)
+	else:
+		print("SKIP exploration gate (spot already explored)")
+	ExplorationManager.active = false
+
+	# Door: the open fade and the damage darkening compose.
+	var door = _spawn(&"door_wood", where + Vector2(400, 0), true)
+	await _frames(1)
+	door.max_health = 80
+	door.current_health = 80
+	door.take_damage({"bludgeoning": 40})
+	_check("door cracking", door.get_damage_state() == STATE.CRACKING, door.current_health)
+	door.open_door()
+	var m: Color = door._visual().self_modulate
+	_check("open door: faded and still dark", is_equal_approx(m.a, 0.85) and is_equal_approx(m.r, 0.75), m)
+	_check("open door status", door.get_hover_status() == "Open")
+	await _frames(1)
+	door.close_door()
+	m = door._visual().self_modulate
+	_check("closed door: opaque and still dark", is_equal_approx(m.a, 1.0) and is_equal_approx(m.r, 0.75), m)
+	door.locked = true
+	door.key_id = ""
+	_check("locked, no key: Barred", door.get_hover_status() == "Barred")
+	door.key_id = "iron_key"
+	_check("locked with a key: Locked", door.get_hover_status() == "Locked")
+	_check("door hover title", hover.describe_structure(door).contains("Wooden door[/b][/font_size] (Locked)"), hover.describe_structure(door))
+	await _physics_frames(3)
+	_check("pick_structure prefers the door", hover.pick_structure(door.global_position) == door)
+	wall.queue_free()
+	door.queue_free()
+	ExplorationManager.active = explore_was
