@@ -456,28 +456,30 @@ func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -
 			}
 			pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
 	elif item is WeaponShape:
-		# Weapon attack: on a character if one is under the cursor, else at the point.
-		_assign_attack_to_pending_node(mouse_pos)
+		# Weapon attack: on a character if one is under the cursor, else at the
+		# point, swung with the hand that was clicked.
+		_assign_attack_to_pending_node(mouse_pos, hand)
 	else:
-		# Nothing equipped — basic unarmed attack
-		_assign_attack_to_pending_node(mouse_pos)
+		# Nothing equipped — basic unarmed attack, with the main hand as before
+		_assign_attack_to_pending_node(mouse_pos, "Main")
 
 	pending_action_node = null
 	state = PathInputState.IDLE
 	path_drawer.queue_redraw()
 
-func _assign_attack_to_pending_node(mouse_pos: Vector2) -> void:
+func _assign_attack_to_pending_node(mouse_pos: Vector2, hand: String = "Main") -> void:
 	"""Plan a weapon/unarmed attack on the pending node. A character under the
 	cursor is designated as the victim (ATTACK_TARGET, which re-reads their live
 	position when the swing actually happens); bare ground plans the old
-	fixed-point ATTACK."""
+	fixed-point ATTACK. `hand` is the hand that swings (ActionQueue sets
+	character.current_hand from it at execution)."""
 	var designated := character._find_character_at(mouse_pos)
 	if designated != null:
 		pending_action_node.action_type = ActionQueue.ActionType.ATTACK_TARGET
-		pending_action_node.action_data = {"target": designated}
+		pending_action_node.action_data = {"target": designated, "hand": hand}
 	else:
 		pending_action_node.action_type = ActionQueue.ActionType.ATTACK
-		pending_action_node.action_data = {"target_position": mouse_pos}
+		pending_action_node.action_data = {"target_position": mouse_pos, "hand": hand}
 	pending_action_node.icon_texture = _attack_icon
 
 

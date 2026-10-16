@@ -3692,9 +3692,9 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		if paused:
 			if designated != null:
-				action_queue.queue_attack_target(designated)
+				action_queue.queue_attack_target(designated, hand_str)
 			else:
-				action_queue.queue_attack(mouse_pos)
+				action_queue.queue_attack(mouse_pos, hand_str)
 		else:
 			if designated != null:
 				attack(hand_str, designated.global_position, designated)
