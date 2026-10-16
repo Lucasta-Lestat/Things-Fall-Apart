@@ -26,6 +26,9 @@ var world_tooltip: Control = null
 var hud_status: Control = null
 var _pending_rival_spawns: Array = []
 var _pending_rival_override_faction: bool = false
+# Set by start_combat_test around its load_map: party_state already holds the
+# fresh test loadouts, which the outgoing party must not be saved over.
+var _skip_party_save: bool = false
 
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
@@ -52,8 +55,9 @@ var stealth_overlay: Node2D = null
 # Session-scoped unlock memory, keyed "<map_id>|door|<hinge_x>,<hinge_y>" (export-px
 # ints from the geometry JSON hinge). Written by Door.interact on successful unlock,
 # re-applied by MapLoader on door spawn. Intentionally NOT cleared in
-# _unload_current_map: every warp (incl. same-map stairs) is a full reload, and a
-# consumed key must never soft-lock the player. Include in the save system when one lands.
+# _unload_current_map: every map change is a full reload (same-map stairs only move
+# the party, see _relocate_party), and a consumed key must never soft-lock the
+# player. Include in the save system when one lands.
 var unlocked_locks: Dictionary = {}
 
 const WORLD_MAP_ID: String = "scarlatti_world"
@@ -845,7 +849,13 @@ func start_combat_test(player_configs: Array, rival_configs: Array, override_riv
 	_pending_rival_spawns = rival_configs.duplicate(true)
 	_pending_rival_override_faction = override_rival_faction
 
+	# load_map would snapshot the outgoing party into the new rows (paired by
+	# party_index) and rebuild each test character from it (inventory, worn
+	# gear, equip conditions, HP) instead of the configured loadout, and its
+	# departure pass could stamp "away" on them.
+	_skip_party_save = true
 	load_map("colosseum")
+	_skip_party_save = false
 
 func _spawn_rival_party() -> void:
 	# Anchor on the actual player spawn so we line up with whatever Maps.json says.
@@ -953,6 +963,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	var new_map_data: Dictionary = MapDatabase.get_map_data(map_id)
 	if new_map_data.is_empty():
 		push_error("Unknown map: " + map_id)
+		# A blank id is a harness/boot path, never a clicked warp.
+		if not map_id.is_empty():
+			_announce_way_closed("That way leads nowhere yet.")
 		return
 	var new_images: Dictionary = new_map_data.get("images", {})
 	var validate_path: String = new_images.get("structures", "")
@@ -960,10 +973,19 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		validate_path = new_images.get("map", "")
 	if validate_path.is_empty() or not ResourceLoader.exists(validate_path):
 		push_error("Map '%s' has no loadable image (looked for %s); aborting load." % [map_id, new_images])
+		_announce_way_closed("The way to %s is not open yet." % str(new_map_data.get("name", map_id)))
+		return
+
+	# Same-map stairs and ladders just move the party. A full reload would
+	# respawn living enemies at full health and reset alertness, close opened
+	# doors, and clear fires, fluids and surfaces.
+	if map_id == current_map_id and not spawn_override.is_empty() \
+			and current_map_data.get("player_spawns", {}).has(spawn_override):
+		_relocate_party(spawn_override)
 		return
 
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
-	if not party_chars.is_empty():
+	if not party_chars.is_empty() and not _skip_party_save:
 		save_party_state()
 		# Runs while the party is still assembled and current_map_id still names
 		# the map being left: anyone mid-training here decides whether to follow.
@@ -1316,6 +1338,8 @@ func setup_map_weather(map_data: Dictionary) -> void:
 			weather_vfx_controller.setup_for_map(weather_group)
 	if weather_debug_window and weather_debug_window.has_method("set_weather_group"):
 		weather_debug_window.set_weather_group(weather_group)
+	# Arriving in weather is visible on screen; only later changes are announced.
+	_announced_precip = WeatherManager.get_precipitation(weather_group) if not weather_group.is_empty() else "clear"
 	# Apply initial weather effects to fluids
 	if not weather_group.is_empty():
 		var weather = WeatherManager.get_weather(weather_group)
@@ -1348,15 +1372,42 @@ func force_weather(precip_type: String, duration: float = 0.0, caster: Node = nu
 	_forced_precip = precip_type
 	if weather_vfx_controller and weather_vfx_controller.has_method("force_precipitation"):
 		weather_vfx_controller.force_precipitation(precip_type)
+	_announce_weather_change(precip_type, _refresh_weather_state(true))
 	_apply_weather_fluid_effects({"precipitation": precip_type})
-	_refresh_weather_state(true)
 
 func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 	var map_group = current_map_data.get("weather_group", "")
 	if group != map_group or map_group.is_empty():
 		return
+	_announce_weather_change(String(weather_state.get("precipitation", "clear")), _refresh_weather_state(true))
 	_apply_weather_fluid_effects(weather_state)
-	_refresh_weather_state(true)
+
+# Precipitation last announced (or present on arrival) for the current map.
+# weather_changed also fires for wind-only changes and same-weather daily
+# rolls, so only an actual precipitation change is logged.
+var _announced_precip: String = "clear"
+
+## One log line per change: "The weather turns: Heavy Rain." and then what it
+## does to the party (`effects`, _refresh_weather_state's note: "Sight drops
+## to 50%.", the exposure text), so the line says why the cones just shrank.
+func _announce_weather_change(precip: String, effects: String = "") -> void:
+	if precip == _announced_precip:
+		if not effects.is_empty():
+			GameLog.add_entry(effects)
+		return
+	_announced_precip = precip
+	var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
+	var line: String = "The weather turns: %s." % str(pd.get("display_name", precip.replace("_", " ").capitalize()))
+	if not effects.is_empty():
+		line += " " + effects
+	GameLog.add_entry(line)
+
+func _count_ice_tiles() -> int:
+	var n: int = 0
+	for tile_pos in surface_manager.surface_grid:
+		if surface_manager.surface_grid[tile_pos].get("surface_id", "") == "ice":
+			n += 1
+	return n
 
 func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 	var precip = weather.get("precipitation", "clear")
@@ -1364,7 +1415,10 @@ func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 		"snow", "heavy_snow", "freezing_rain":
 			# Freeze all existing fluids
 			if surface_manager:
+				var ice_before: int = _count_ice_tiles()
 				surface_manager.try_freeze_all_fluids()
+				if _count_ice_tiles() > ice_before:
+					GameLog.add_entry("Standing puddles freeze into slick ice.")
 		"rain", "heavy_rain", "acid_rain":
 			# Spawn random water puddles across walkable tiles
 			_spawn_rain_puddles(precip)
@@ -1430,8 +1484,10 @@ func current_precipitation() -> String:
 	return _forced_precip if not _forced_precip.is_empty() else "clear"
 
 ## Re-reads the falling weather's effect on sight. With `announce` (a real
-## change, not a map arrival) the log says how far sight drops or recovers.
-func _refresh_weather_state(announce: bool = false) -> void:
+## change, not a map arrival) it returns how far sight drops or recovers
+## (_weather_effects_note, "" when nothing changes for the party), which
+## _announce_weather_change adds to its line; otherwise "".
+func _refresh_weather_state(announce: bool = false) -> String:
 	var precip: String = current_precipitation()
 	var prev_mult: float = _weather_vis_mult
 	if is_map_indoors():
@@ -1439,11 +1495,11 @@ func _refresh_weather_state(announce: bool = false) -> void:
 	else:
 		var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
 		_weather_vis_mult = clampf(float(pd.get("visibility_modifier", 1.0)), 0.1, 1.0)
+	var note: String = ""
 	if announce and precip != _weather_effects_precip:
-		var note: String = _weather_effects_note(prev_mult, _weather_vis_mult, precip)
-		if not note.is_empty():
-			GameLog.add_entry(note)
+		note = _weather_effects_note(prev_mult, _weather_vis_mult, precip)
 	_weather_effects_precip = precip
+	return note
 
 ## What a weather change does to the party, for the log: "Sight drops to 50%.",
 ## "Sight recovers to 75%." or "Full sight returns.", then the weather's
@@ -1585,18 +1641,7 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 		# to take other work, has no body in the world until they come back.
 		if is_party_member_away(entry):
 			continue
-		var offset = Vector2(i * 40, 0) if not is_world_map else Vector2.ZERO
-		# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
-		# battlement walkway ~20px wide) the +x row walks later members off the
-		# edge — they'd land at ground level beside the wall, or inside it.
-		# Collapse onto the base position when the offset tile's surface
-		# differs; the separation nudge spreads them out safely after spawn.
-		if offset != Vector2.ZERO:
-			var bt := GridManager.world_to_map(base_pos)
-			var ot := GridManager.world_to_map(base_pos + offset)
-			if ot != bt and (not GridManager.can_step(bt, ot)
-					or GridManager.grid_costs.get(ot, INF) == INF):
-				offset = Vector2.ZERO
+		var offset = _party_line_offset(base_pos, i) if not is_world_map else Vector2.ZERO
 		# Same guard as _spawn_npcs: a party member built from a race-rolling
 		# template must rebuild the race their live_state was captured with,
 		# not roll a fresh one for the snapshot to stamp over.
@@ -1648,6 +1693,91 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 
 		# Add line-of-sight light
 		_add_line_of_sight_light(character)
+
+# Offset of the i-th party member in the arrival line at base_pos.
+# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
+# battlement walkway ~20px wide) the +x row walks later members off the
+# edge — they'd land at ground level beside the wall, or inside it.
+# Collapse onto the base position when the offset tile's surface
+# differs; the separation nudge spreads them out safely after spawn.
+func _party_line_offset(base_pos: Vector2, i: int) -> Vector2:
+	var offset := Vector2(i * 40, 0)
+	if offset != Vector2.ZERO:
+		var bt := GridManager.world_to_map(base_pos)
+		var ot := GridManager.world_to_map(base_pos + offset)
+		if ot != bt and (not GridManager.can_step(bt, ot)
+				or GridManager.grid_costs.get(ot, INF) == INF):
+			offset = Vector2.ZERO
+	return offset
+
+## Same-map warp (ladder/stairs): move the living party to the arrival marker
+## instead of rebuilding the map, so enemies, doors, fires and fluids stay as
+## the player left them. Corpses stay where they fell. Like a full reload it
+## drops plans made on the level being left; unlike one it keeps the current
+## selection, standing WAIT orders and music, and emits no map_loaded (nor
+## re-runs on-load dialogue triggers): the map didn't change.
+func _relocate_party(spawn_key: String) -> void:
+	var spawn_data = current_map_data.get("player_spawns", {}).get(spawn_key, {})
+	var base_pos_arr = spawn_data.get("position", [400, 400])
+	var base_pos = Vector2(base_pos_arr[0], base_pos_arr[1])
+	var slot: int = 0
+	for character in party_chars:
+		if not is_instance_valid(character) or not character.is_alive():
+			continue
+		# A jump in flight re-lerps from its takeoff every frame, so it would
+		# carry the body back to its landing on the level being left.
+		if character._jump_active:
+			character.collision_mask = character._jump_saved_mask
+			character._jump_active = false
+		character.global_position = base_pos + _party_line_offset(base_pos, slot)
+		slot += 1
+		character.velocity = Vector2.ZERO
+		character.target_position = character.global_position
+		# Drop orders and paths planned on the level being left.
+		character.abort_planning_input()
+		if character.action_queue:
+			character.action_queue.cancel_all()
+		if character.path_input_handler:
+			character.path_input_handler.cancel_path()
+		character._nav_waypoints.clear()
+		character._nav_index = 0
+		character.is_moving = false
+		# Spawn semantics: arrivals stand on the surface under the marker
+		# (only jumpers ever ride a roof). Re-derives elevation, the sight
+		# light tier and the roof-view layer.
+		character.on_roof = false
+		character._refresh_elevation()
+		var ai = character.get_node_or_null("AI")
+		if ai:
+			ai.nav_path.clear()
+			ai.nav_path_index = 0
+		ExplorationManager.seed_explored(GridManager.world_to_map(character.global_position), 2)
+	# Warp conditions are evaluated when zones are built; rebuild them as the
+	# full reload did, so e.g. a key picked up on this level opens its stair.
+	for zone in warp_zones:
+		if is_instance_valid(zone):
+			zone.queue_free()
+	warp_zones.clear()
+	_create_warp_zones(current_map_data.get("warp_points", []))
+	# The LOS passes only run unpaused; refresh now so a warp taken while
+	# planning shows who is (and isn't) in view on the new level.
+	_update_npc_los_visibility()
+	_update_item_los_visibility()
+	var focus = primary_selected if is_instance_valid(primary_selected) else player
+	if player_camera and focus and is_instance_valid(focus):
+		player_camera.manual_pan_active = false
+		player_camera.global_position = focus.global_position
+		player_camera.reset_smoothing()
+	print("[GameScene] Moved party within %s (spawn: %s)" % [current_map_id, spawn_key])
+
+## A warp whose destination can't load: say so instead of silently staying put
+## (load_map keeps its push_error for developers).
+func _announce_way_closed(log_text: String) -> void:
+	var who = primary_selected if is_instance_valid(primary_selected) else player
+	if who and is_instance_valid(who):
+		who.notify("Way closed", Color(1.0, 0.6, 0.4), log_text)
+	else:
+		GameLog.add_entry(log_text)
 
 # ---------------------------------------------------------------------------
 # Item spawning
@@ -1764,8 +1894,10 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
 		# Inject "Trade" for any non-hostile character. FactionDatabase is the
 		# authoritative relationship source. Treat allies/neutrals as
-		# tradeable; only true hostiles are blocked.
-		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options:
+		# tradeable; only true hostiles are blocked. Party members share items
+		# through the party panel, so they get no Trade.
+		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options \
+				and not (target in party_chars):
 			options.append("Trade")
 		# Party members take a hold-ground order: WAIT stops all AI movement
 		# (they still auto-attack hostiles entering their line of sight);
@@ -1831,7 +1963,10 @@ func _world_item_options(item: Item) -> Array:
 ## Pick up a world item into a party member's inventory, then remove it from the
 ## world. Returns true on success. Readables are excluded (they use Read/Take).
 func pick_up_item(item: Item) -> bool:
-	if not is_instance_valid(item):
+	# Queued for free = already taken this frame. Several selected characters all
+	# see the same left-click, and remove_world_item leaves the node in the tree
+	# until the free, so the second one's probe can still find it.
+	if not is_instance_valid(item) or item.is_queued_for_deletion():
 		return false
 	var character = _resolve_pickup_character()
 	if character == null:
@@ -1848,6 +1983,10 @@ func pick_up_item(item: Item) -> bool:
 	var data: Dictionary = item.to_inventory_data()
 	if data.is_empty():
 		return false
+	var item_name: String = str(data.get("display_name", item.display_name if item.display_name != "" else str(item.id).replace("_", " ")))
+	# Non-stackables carry "num_stacks": null from Items.json.
+	var stacks_v = data.get("num_stacks", 1)
+	var count: int = int(stacks_v) if (stacks_v is int or stacks_v is float) else 1
 	var equip_slot: String = str(data.get("equip_slot", ""))
 	var ok: bool = false
 	if (equip_slot == "Main Hand" or equip_slot == "Off Hand") and character.inventory.has_method("stow_weapon_from_data"):
@@ -1857,7 +1996,8 @@ func pick_up_item(item: Item) -> bool:
 		ok = character.inventory.add_stack(data)
 	if ok:
 		if SfxManager and SfxManager.has_method("play"):
-			SfxManager.play("pickup", item.global_position)
+			SfxManager.play("chest_item_in", item.global_position)
+		GameLog.add_entry("%s picks up %s%s." % [character.Name, item_name, " (x%d)" % count if count > 1 else ""])
 		# Report BEFORE the node dies — the payload reads the item's fields.
 		# A refused pickup (full inventory) is not a theft.
 		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
@@ -1867,7 +2007,8 @@ func pick_up_item(item: Item) -> bool:
 		# add_stack may still have merged part of the stack into one already
 		# carried, writing back what is left to `data` (a copy): that part was
 		# taken, so it is reported, and only the remainder stays on the ground.
-		var left: int = int(data.get("num_stacks", item.stack_count))
+		var left_v = data.get("num_stacks", item.stack_count)
+		var left: int = int(left_v) if (left_v is int or left_v is float) else item.stack_count
 		if item.is_stackable and left > 0 and left < item.stack_count:
 			CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 			item.remove_from_stack(item.stack_count - left)
@@ -2470,17 +2611,31 @@ func _toggle_npc_los_cones() -> void:
 			continue
 		if character in party_chars:
 			continue
-		var npc_los = character.get_node_or_null("NPCLineOfSight")
-		if npc_los:
-			npc_los.visible = _npc_cones_shown(character)
+		_sync_npc_cones(character)
 
 ## Whether an NPC's sight cone shows: stealth mode on, off the world map
-## (nobody sneaks there, and every other stealth readout hides there too), and
-## the NPC alive (a corpse sees nothing). An NPC hidden outright hides its cone
-## with it.
+## (nobody sneaks there, and every other stealth readout hides there too), the
+## NPC alive (a corpse sees nothing), and not drawn only by a hearing pulse.
+## The pulse's low alpha is modulate, which Light2D ignores, so a glimpsed cone
+## would draw at full strength and give away an unseen onlooker's facing and
+## range. An NPC hidden outright hides its cone with it, so that case needs
+## nothing here.
 func _npc_cones_shown(npc) -> bool:
-	return stealth_mode and is_instance_valid(npc) and npc.is_alive() \
-			and not current_map_data.get("is_world_map", false)
+	return stealth_mode and is_instance_valid(npc) and npc.is_alive() 			and not current_map_data.get("is_world_map", false) 			and not _npc_only_glimpsed(npc)
+
+## Drawn only by a hearing pulse: pulsing and not truly seen.
+func _npc_only_glimpsed(npc) -> bool:
+	return _npc_pulse_remaining.has(npc) and not _npc_was_truly_seen.get(npc, false)
+
+## Apply _npc_cones_shown to every sight cone the NPC carries: the red one and
+## stealth mode's pink elevated-surface twin (sync_npc_elevated_cone also
+## follows the red one each frame).
+func _sync_npc_cones(npc) -> void:
+	var show_cones: bool = _npc_cones_shown(npc)
+	for cone_name in ["NPCLineOfSight", "NPCLineOfSightHigh"]:
+		var cone = npc.get_node_or_null(cone_name)
+		if cone and cone.visible != show_cones:
+			cone.visible = show_cones
 
 ## The one way to switch stealth mode (the C key). While it is on, party
 ## members sneak (ProceduralCharacter.is_sneaking: quieter footsteps, slower
@@ -2498,7 +2653,7 @@ func set_stealth_mode(active: bool) -> void:
 		else:
 			GameLog.add_entry(("Stealth mode [b]on[/b]: the party sneaks (footsteps %d%% as loud, %d%% walking pace) and is noticed only inside an onlooker's sight cone, even up close. "
 				+ "Cones show what onlookers see (pink: raised walkways they can see onto), and an eye marks a party member an onlooker you can see has in view. "
-				+ "Relaxed onlookers who spot you sneaking become wary.") % [
+				+ "Relaxed onlookers who spot you sneaking become wary. Left-clicking someone no longer talks to them; right-click for Talk.") % [
 				roundi(ProceduralCharacter.SNEAK_NOISE_MULT * 100.0), roundi(ProceduralCharacter.SNEAK_SPEED_MULT * 100.0)])
 	else:
 		GameLog.add_entry("Stealth mode [b]off[/b].")
@@ -2801,6 +2956,10 @@ func _tick_hearing_pulses(delta: float) -> void:
 			_npc_pulse_remaining[npc] = t
 	for npc in expired:
 		_npc_pulse_remaining.erase(npc)
+		# Back to hidden outright: the cone returns to its rule (it hides with
+		# the NPC until the NPC is seen).
+		if is_instance_valid(npc):
+			_sync_npc_cones(npc)
 
 
 func _update_npc_los_visibility() -> void:
@@ -2820,7 +2979,10 @@ func _update_npc_los_visibility() -> void:
 
 		if seen:
 			# Direct line of sight overrides any pulse.
+			var was_pulsing: bool = _npc_pulse_remaining.has(npc)
 			_npc_pulse_remaining.erase(npc)
+			if was_pulsing:
+				_sync_npc_cones(npc)   # spotted mid-pulse: its cone comes back
 			# Mark as "ever seen" for the radar-vs-sprite-pulse branch in
 			# trigger_hearing_pulse. Persists for the map session.
 			_npc_ever_seen[npc] = true
@@ -2846,6 +3008,9 @@ func _update_npc_los_visibility() -> void:
 			var alpha: float = _hearing_pulse_curve(t_norm) * PULSE_ALPHA
 			npc.visible = true
 			npc.modulate.a = alpha
+			# Light2D ignores modulate: an unseen onlooker's cone would flash at
+			# full strength, so it stays dark while only the pulse draws it.
+			_sync_npc_cones(npc)
 		else:
 			npc.visible = false
 			npc.modulate.a = 0.0
@@ -3193,7 +3358,8 @@ func process_object_hit(
 		SfxManager.play("clash", target.global_position)
 		HearingManager.emit(target.global_position, 0.9, attacker)
 	else:
-		SfxManager.play("impact", target.global_position)
+		# sfx/ has no "impact" key; armor-impact is the solid-object thud.
+		SfxManager.play("armor-impact", target.global_position)
 		HearingManager.emit(target.global_position, 0.8, attacker)
 
 	# Unique-item on-hit procs on non-bounced hits (condition effects no-op on
@@ -3222,8 +3388,10 @@ func _input(event: InputEvent) -> void:
 			return
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			# F12 / R / P are developer hotkeys: R reloads the scene with no save
+			# (autoloads keep quest/time state), so they stay out of release builds.
 			KEY_F12:
-				if not event.echo:
+				if not event.echo and OS.is_debug_build():
 					DebugManager.toggle()
 			KEY_F11:
 				# Save round-trip smoke test: build -> apply -> build must be
@@ -3246,10 +3414,12 @@ func _input(event: InputEvent) -> void:
 					show_character_sheet()
 			KEY_R:
 				# Restart
-				get_tree().reload_current_scene()
+				if not event.echo and OS.is_debug_build():
+					get_tree().reload_current_scene()
 			KEY_P:
 				# Print status
-				_print_status()
+				if not event.echo and OS.is_debug_build():
+					_print_status()
 			KEY_C:
 				if not event.echo:
 					set_stealth_mode(not stealth_mode)
@@ -3400,8 +3570,11 @@ func _sync_character_flags() -> void:
 		if not is_instance_valid(character):
 			continue
 		if character in selected_characters:
+			var was_ai: bool = character.AI_enabled
 			character.is_player_controlled = true
 			character.AI_enabled = false
+			if was_ai:
+				_clear_companion_ai(character)
 		else:
 			# Losing input authority must also end any planning gesture still in
 			# flight. ProceduralCharacter._handle_input is is_player_controlled-
@@ -3416,8 +3589,34 @@ func _sync_character_flags() -> void:
 			# Confirmed plans are never touched.
 			if character.is_player_controlled:
 				character.abort_planning_input()
+			var was_player: bool = not character.AI_enabled
 			character.is_player_controlled = false
 			character.AI_enabled = true
+			if was_player:
+				_clear_companion_ai(character)
+
+## Called once when control of a party member changes hands, never per frame.
+## process_ai doesn't run while AI_enabled is false, so a "?" raised while the
+## companion was AI-driven would never decay or hide once the player took over,
+## and alertness piled up while player-driven (hits, party call-outs) would send
+## it SEARCHING toward a stale spot once control is handed back. A fight still
+## in view is re-acquired by the next target scan.
+func _clear_companion_ai(character: ProceduralCharacter) -> void:
+	var ai = character.get_node_or_null("AI")
+	if ai and ai.current_state != ai.AIState.DEAD:
+		ai.current_target = null
+		ai.nav_path.clear()
+		ai.nav_path_index = 0
+		ai._change_state(ai.AIState.IDLE)
+		ai._set_alertness_value(0.0)
+	if character._alertness_flash_tween and character._alertness_flash_tween.is_valid():
+		character._alertness_flash_tween.kill()
+	character._alertness_flash_tween = null
+	character._outcry_flash_period = -1.0
+	var indicator = character.get_node_or_null("AlertnessIndicator")
+	if indicator:
+		indicator.visible = false
+		indicator.modulate.a = 1.0
 
 func is_character_selected(character: ProceduralCharacter) -> bool:
 	return character in selected_characters
@@ -3493,7 +3692,7 @@ func _on_character_died(character: ProceduralCharacter) -> void:
 	_drop_quest_trophies(character)
 	if character == player:
 		print("\n=== GAME OVER ===")
-		print("Press R to restart")
+		print("(debug: press R to restart)")
 
 ## Quest-proof harvesting. When a character dies, any active quest that declares
 ## proof sourced from that character's template gets its trophy appended to the
@@ -3532,16 +3731,15 @@ func _drop_quest_trophies(character) -> void:
 		inv.add_item(character.build_trophy_item(item_id))
 
 func _print_status() -> void:
+	# get_stats_string no longer exists (P threw a script error) and `enemies`
+	# is never filled.
+	if not (player and is_instance_valid(player)):
+		return
 	print("\n=== STATUS ===")
-	print("Player: %s" % player.get_stats_string())
 	# get_status_string now lives on ProceduralCharacter itself and prints
 	# the single HP pool plus any severed/disabled limbs.
-	print(player.get_status_string())
+	print("Player: %s" % player.get_status_string())
 	print("")
-	for i in range(enemies.size()):
-		var enemy = enemies[i]
-		if enemy.is_alive():
-			print("Enemy %d: %s" % [i+1, enemy.get_stats_string()])
 
 
 
@@ -3667,8 +3865,14 @@ func process_weapon_hit(
 	if "bide_pending_bonus" in attacker and attacker.bide_pending_bonus > 0.0:
 		var dt_keys = attack_damage.keys()
 		if dt_keys.size() > 0:
+			var bide_bonus: float = attacker.bide_pending_bonus
 			attack_damage[dt_keys[0]] += attacker.bide_pending_bonus
 			attacker.bide_pending_bonus = 0.0
+			# Announce the payoff so the big number has a visible cause.
+			var shown_bonus: int = int(round(bide_bonus))
+			if shown_bonus > 0 and is_seen_by_party(attacker):
+				Globals.show_floating_text("Bide +%d!" % shown_bonus, hit_position, self, Color.ORANGE, 1, Globals.NOTICE_FONT_SIZE)
+				GameLog.add_entry("%s unleashes Bide: +%d damage." % [attacker.Name, shown_bonus])
 
 	# Track whether this swing was an unarmed strike so post-damage mutation
 	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
@@ -4121,10 +4325,19 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	proj.add_child(sprite)
 
 	proj.hit.connect(_on_weapon_projectile_hit.bind(shooter, weapon))
+	proj.expired.connect(_on_weapon_projectile_expired.bind(shooter))
 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(shooter.get_weapon_tip_world_position(), direction, shooter)
 	return proj
+
+
+func _on_weapon_projectile_expired(final_pos: Vector2, shooter) -> void:
+	# The shot reached max_range (700 px pistol / 900 px bow) without hitting
+	# anything; mark where it fell so a party shot doesn't just vanish.
+	_splash_if_fluid(final_pos, 1.0)
+	if is_instance_valid(shooter) and shooter in party_chars:
+		Globals.show_floating_text("Max range", final_pos, self, Color(0.8, 0.8, 0.8), 0, Globals.NOTICE_FONT_SIZE)
 
 
 func _splash_if_fluid(world_pos: Vector2, strength: float = 1.1) -> void:
@@ -4165,7 +4378,11 @@ func _process_projectile_hit_character(
 	if dealt > 0:
 		_apply_item_on_hit_effects(shooter, target, weapon, dealt, hit_position)
 
-	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
+	# A shot fully stopped by armour sounds like armour, not flesh.
+	if dealt <= 0:
+		SfxManager.play("armor-impact", hit_position)
+		HearingManager.emit(hit_position, 1.5 if weapon.weapon_type == WeaponShape.WeaponType.PISTOL else 0.4, shooter)
+	elif weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
 		HearingManager.emit(hit_position, 1.5, shooter)  # gunshot — very loud
 	else:
@@ -4265,6 +4482,10 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 			# dealt > 0 mirrors the melee BOUNCED gate
 			if dealt > 0 and not thrown_data.is_empty():
 				_apply_item_on_hit_effects(shooter, collider, thrown_data, dealt, hit_pos)
+			# A thrown hit on a body was silent: flesh or armour by what got
+			# through, and audible to the AI like an arrow strike.
+			SfxManager.play("arrow-body-impact" if dealt > 0 else "armor-impact", hit_pos)
+			HearingManager.emit(hit_pos, 0.4, shooter if is_instance_valid(shooter) else null)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
@@ -4388,16 +4609,24 @@ func gather_water_at_party() -> void:
 		return
 	if not actor.inventory:
 		return
-	var added: bool = actor.inventory.add_item({
-		"display_name": "Waterskin",
-		"id": "waterskin",
-		"is_stackable": true,
-		"max_stack_size": 10,
-	})
+	# Use the real database waterskin (sprite, Consume option, satiety) so the
+	# gathered water drinks like any other; the stub is only a fallback.
+	var water: Dictionary = _lookup_any_item("waterskin").duplicate(true)
+	if water.is_empty():
+		water = {
+			"display_name": "Waterskin",
+			"id": "waterskin",
+			"is_stackable": true,
+			"max_stack_size": 10,
+		}
+	# Drawn from a river, not taken from anyone: no ownership rides along.
+	for k in ["owner_faction", "owner_uid", "stolen_from", "stolen_value"]:
+		water.erase(k)
+	var added: bool = actor.inventory.add_item(water)
 	# A full pack is announced by the inventory itself (add_failed).
 	if added:
 		GameLog.add_entry(actor.Name + " gathers water into a waterskin.")
-		SfxManager.play("pickup", actor.global_position)
+		SfxManager.play("chest_item_in", actor.global_position)
 
 func _is_water_adjacent(tile: Vector2i) -> bool:
 	# Checks the tile itself plus 8 neighbours. Counts a 'world_water' floor
@@ -4587,6 +4816,34 @@ func check_spawn_conditions(spawn_conditions: Dictionary) -> bool:
 		if not _check_condition(key, spawn_conditions[key]):
 			return false
 	return true
+
+## After ConditionManager.from_dict on a respawned character: from_dict emits no
+## condition_applied, and its clear_all_conditions already took the build-time
+## VFX, SFX and icons down, so redo what that signal's handler shows for each
+## restored instance (and re-suppress what was suppressed). A corpse gets none
+## of it. Periodic saves only start once a last-save time exists
+## (_try_periodic_save defaults it to "now" and returns), so seed one on the
+## condition clock for every condition that rolls them.
+func _restore_condition_presentation(character: ProceduralCharacter) -> void:
+	var cm = character.condition_manager
+	var now: float = TimeManager.absolute_time()
+	var alive: bool = character.current_health > 0
+	for inst in cm.conditions.values():
+		if inst == null or inst.condition == null:
+			continue
+		if inst.condition.save_stat != "" and inst.condition.save_interval > 0.0:
+			cm.last_save_times[inst.condition.id] = now
+		if alive:
+			character._spawn_condition_vfx(inst)
+			character._start_condition_sfx(inst)
+			if inst.is_suppressed:
+				character._on_condition_suppressed(inst)
+	if alive:
+		character._refresh_condition_display()
+		# _on_condition_applied's Invisible translucency.
+		if cm.has_condition("invisible"):
+			character.modulate.a = 0.35
+
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
 # ---------------------------------------------------------------------------
@@ -4652,6 +4909,17 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["vow_poverty_points"] = character.vow_poverty_points
 	state["holy_tier_next_day_pending"] = character.holy_tier_next_day_pending
 	state["holy_tier_today"] = character.holy_tier_today
+	# School pools, luck and a stored Bide payoff. build_character refills every
+	# pool to max (TopDownCharacterDatabase._init_school_resources), so without
+	# these each warp refilled spent pools and dropped a pending Bide bonus.
+	# Concentration is left out on purpose: it ends with the unload.
+	state["adrenaline"] = character.adrenaline
+	state["focus"] = character.focus
+	state["harmony"] = character.harmony
+	state["devotion"] = character.devotion
+	state["saint_day_devotion_bonus"] = character.saint_day_devotion_bonus
+	state["luck"] = character.luck
+	state["bide_pending_bonus"] = character.bide_pending_bonus
 
 	# --- Standing orders ---
 	# WAIT survives map transitions and saves: party members are freed and
@@ -4830,6 +5098,17 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("holy_tier_next_day_pending"):
 		character.holy_tier_next_day_pending = int(state["holy_tier_next_day_pending"])
 	if state.has("holy_tier_today"): character.holy_tier_today = int(state["holy_tier_today"])
+	# School pools over the build-time refill, clamped to their maxima (traits
+	# and vow_holy_bonus, which max_devotion reads, are restored by now).
+	if state.has("saint_day_devotion_bonus"):
+		character.saint_day_devotion_bonus = int(state["saint_day_devotion_bonus"])
+	if state.has("adrenaline"): character.adrenaline = clamp(int(state["adrenaline"]), 0, character.max_adrenaline)
+	if state.has("focus"):      character.focus = clamp(int(state["focus"]), 0, character.max_focus)
+	if state.has("harmony"):    character.harmony = clamp(int(state["harmony"]), 0, character.max_harmony)
+	if state.has("devotion"):   character.devotion = clamp(int(state["devotion"]), 0, character.max_devotion)
+	if state.has("luck"):       character.luck = int(state["luck"])
+	if state.has("bide_pending_bonus"):
+		character.bide_pending_bonus = maxf(0.0, float(state["bide_pending_bonus"]))
 
 	# setter drives the stop-hand indicator, so restore re-shows the badge
 	character.hold_position = bool(state.get("hold_position", false))
@@ -4955,6 +5234,7 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# grants_ability re-grant guard relies on) ---
 	if character.condition_manager and state.has("condition_state"):
 		character.condition_manager.from_dict(state["condition_state"])
+		_restore_condition_presentation(character)
  
 	# --- Cooldowns ---
 	if state.has("cooldowns"):
