@@ -115,5 +115,24 @@ func format_duration_short(seconds: float) -> String:
 		return "%dm" % (s / 60)
 	return "%ds" % s
 
+## Screen compass point of a direction (up the screen = N): RIGHT -> "E",
+## (0, 1) -> "S". Shared by the wind HUD, the hazard tooltip and the F9 window.
+func compass_name(dir: Vector2) -> String:
+	var a := rad_to_deg(atan2(-dir.y, dir.x))
+	return ["E", "NE", "N", "NW", "W", "SW", "S", "SE"][posmod(int(round(a / 45.0)), 8)]
+
+## Wind speed (WeatherManager, 0-100) as a word. Cell fire's wind bias
+## saturates at 15, so Moderate and up push fire equally hard.
+func wind_strength_word(speed: float) -> String:
+	if speed < 3.0:
+		return "Calm"
+	if speed < 15.0:
+		return "Light"
+	if speed < 35.0:
+		return "Moderate"
+	if speed < 65.0:
+		return "Strong"
+	return "Gale"
+
 func name_to_id(input_name: String) -> String:
 	return input_name.to_lower().replace(" ", "_")

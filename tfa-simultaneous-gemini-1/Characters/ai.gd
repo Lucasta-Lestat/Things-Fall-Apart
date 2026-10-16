@@ -81,6 +81,12 @@ var state_timer: float = 0.0
 # Target tracking
 var current_target: ProceduralCharacter = null
 var last_known_target_pos: Vector2 = Vector2.ZERO
+# target_acquired (the '!' replay) fires for a new target, or a re-find after
+# at least TARGET_REANNOUNCE_GAP s without one, not for the per-frame
+# re-acquire while apathy nulls the target every frame.
+const TARGET_REANNOUNCE_GAP: float = 1.0
+var _announced_target_id: int = 0
+var _time_without_target: float = 0.0
 # Seconds since we last had a wall-clear sight line to current_target (or had
 # them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
 var _target_occluded_time: float = 0.0
@@ -494,6 +500,8 @@ func process_ai(delta: float) -> void:
 	state_timer += delta
 	time_since_last_stimulus += delta
 	ally_share_timer -= delta
+	if current_target == null:
+		_time_without_target += delta
 	# Outcry fuse ticks BEFORE the unconscious early-out on purpose: a
 	# knocked-out witness's fuse must still reach zero so the fire-time
 	# guard cancels it — a frozen fuse would scream when they wake up.
@@ -928,7 +936,20 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 		return false
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
+## Whether we have eyes on our target right now: false while chasing where it
+## was last seen behind a wall. The occluded-chase clock's answer
+## (_target_occluded_time: a clear sight line, close quarters or the target's
+## own hit keep it at zero), so the paused intent lines agree with the demotion.
+func is_target_in_sight() -> bool:
+	if current_target == null or not is_instance_valid(current_target):
+		return false
+	return _target_occluded_time <= 0.0
+
 func _acquire_target(target: ProceduralCharacter) -> void:
+	var tid: int = target.get_instance_id()
+	var announce: bool = tid != _announced_target_id or _time_without_target >= TARGET_REANNOUNCE_GAP
+	_announced_target_id = tid
+	_time_without_target = 0.0
 	current_target = target
 	last_known_target_pos = target.global_position
 	_target_occluded_time = 0.0
@@ -943,10 +964,12 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	# second melee used to queue into his comrade's back on the same line.
 	_engage_ang = (character.global_position - target.global_position).angle() \
 		+ float((character.get_instance_id() % 5) - 2) * 0.5
-	emit_signal("target_acquired", target)
 	# Visual identification locks alertness to HOSTILE — sound alone can't do
 	# this, only LOS via _update_target reaches here.
 	_set_alertness_value(ALERTNESS_MAX)
+	# After the lock, so a listener sees the HOSTILE meter it explains.
+	if announce:
+		emit_signal("target_acquired", target)
 	# Clear any wander/seek path
 	nav_path.clear()
 	current_goal = "idle"

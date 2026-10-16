@@ -107,6 +107,35 @@ func get_remaining_duration(game_time: float) -> float:
 	return max(0.0, expires_at - game_time)
 
 
+func get_display_name() -> String:
+	if not condition:
+		return "?"
+	return condition.display_name if condition.display_name != "" else condition.id.capitalize()
+
+
+## One-line label, the single wording for every condition display:
+## "Poisoned x3 (12s) (suppressed)". Time left only for a timed instance and
+## only when `now` (TimeManager.absolute_time(), the clock expires_at is on)
+## is given.
+func get_summary(now: float = -1.0) -> String:
+	var text := get_display_name()
+	if stacks > 1:
+		text += " x%d" % stacks
+	if now >= 0.0 and expires_at >= 0.0:
+		text += " (%s)" % Globals.format_duration_short(get_remaining_duration(now))
+	if is_suppressed:
+		text += " (suppressed)"
+	return text
+
+
+## get_summary plus the description: conditions are explained nowhere else.
+func get_tooltip_text(now: float = -1.0) -> String:
+	var text := get_summary(now)
+	if condition and condition.description != "":
+		text += "\n" + condition.description
+	return text
+
+
 func add_stacks(amount: int) -> int:
 	if not condition:
 		return stacks

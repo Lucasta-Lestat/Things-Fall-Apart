@@ -91,7 +91,11 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.duration = data.get("duration", -1.0)
 	if data.has("duration_hours"):
 		condition.duration = float(data["duration_hours"]) * 3600.0
-	condition.icon = load(data.get("icon","dummy_icon.png")) ####
+	# A missing or bad path falls back to the placeholder so the icon slot is never blank.
+	var icon_path := str(data.get("icon", ""))
+	condition.icon = load(icon_path) if icon_path != "" and ResourceLoader.exists(icon_path) else load("res://Icons/dummy_icon.png")
+	if condition.icon == null:   # listed for import but not imported yet
+		condition.icon = load("res://Icons/dummy_icon.png")
 	condition.transforms_into = data.get("transforms_into", {})
 	condition.canceled_by_trait = data.get("canceled_by_trait", []) ####
 	condition.on_action_trait_stack = data.get("on_action_trait_stack", {})

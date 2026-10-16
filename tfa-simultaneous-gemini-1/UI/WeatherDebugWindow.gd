@@ -212,9 +212,9 @@ func _refresh() -> void:
 	_wind_angle_slider.set_value_no_signal(wind_angle)
 
 func _angle_to_compass(angle: float) -> String:
-	var directions = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"]
-	var index = int(round(angle / 45.0)) % 8
-	return directions[index]
+	# Screen compass (up = N), the same naming as the wind HUD: the angle is
+	# Vector2.RIGHT rotated, so 90 deg points down the screen (S).
+	return Globals.compass_name(Vector2.RIGHT.rotated(deg_to_rad(angle)))
 
 func _on_weather_changed(_group: String, _weather: Dictionary) -> void:
 	if _visible and _group == _current_group:

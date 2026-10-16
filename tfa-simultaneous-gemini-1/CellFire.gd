@@ -68,6 +68,21 @@ func active() -> bool:
 	return graph != null and graph.cell_count > 0
 
 
+# Point queries for the hazard tooltip (SurfaceManager.describe_hazards_at).
+func is_burning_at(world_pos: Vector2) -> bool:
+	if not active():
+		return false
+	var cid := graph.cell_at(world_pos)
+	return cid >= 0 and burning.has(cid)
+
+
+func is_burnt_at(world_pos: Vector2) -> bool:
+	if not active():
+		return false
+	var cid := graph.cell_at(world_pos)
+	return cid >= 0 and cid < burnt.size() and burnt[cid] == 1
+
+
 # Structures changed (a wall/tree burned down, was destroyed, a door opened)
 # -> the tile index is rebuilt on the next fuel query. Fluids are NOT indexed
 # (read live per cell), so fluid motion never needs to call this.

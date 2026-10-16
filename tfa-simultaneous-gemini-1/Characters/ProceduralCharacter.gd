@@ -1488,6 +1488,8 @@ func _setup_alertness_indicator() -> void:
 	_alertness_indicator.visible = false
 	add_child(_alertness_indicator)
 	ai_node.alertness_changed.connect(_on_alertness_changed)
+	if ai_node.has_signal("target_acquired"):
+		ai_node.target_acquired.connect(_on_ai_target_acquired)
 	# The outcry fuse gets the same Label: an accelerating amber ! that
 	# communicates time-remaining with no new art (law/crime Phase 5-6).
 	if ai_node.has_signal("outcry_state_changed"):
@@ -1502,6 +1504,17 @@ func _on_alertness_character_died() -> void:
 		_alertness_flash_tween = null
 	if _alertness_indicator and is_instance_valid(_alertness_indicator):
 		_alertness_indicator.visible = false
+
+
+# A new target (a switch, or a re-find after a search) replays the HOSTILE '!'
+# flash: the meter is already HOSTILE then, so alertness_changed stays quiet.
+# NPCs only (unselected party members are AI-driven too); _on_alertness_changed
+# keeps non-AI characters blank and yields to a burning outcry fuse.
+func _on_ai_target_acquired(_target) -> void:
+	if not is_alive() or is_party_member():
+		return
+	var hostile: int = $AI.Alertness.HOSTILE
+	_on_alertness_changed(hostile, hostile)
 
 
 # Accelerating amber ! while an outcry fuse burns. It reads as a fuse
@@ -1604,6 +1617,10 @@ func _refresh_condition_display() -> void:
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Which condition this icon is: the world hover tooltip names it when
+		# the cursor is over the icon (UI/WorldHoverInfo.gd). IGNORE stays, so
+		# the icon never takes a click meant for the character.
+		tex_rect.set_meta("cond_id", cond_id)
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
 		_condition_display.add_child(tex_rect)

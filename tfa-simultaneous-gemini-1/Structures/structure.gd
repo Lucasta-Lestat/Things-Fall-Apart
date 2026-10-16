@@ -34,6 +34,18 @@ var is_deck: bool = false
 var deck_elevation: float = 0.0
 var deck_tiles: Array[Vector2i] = []
 
+# Damage states, by fraction of max_health: Damaged below full, Cracking at
+# half, Crumbling at a quarter. Each darkens the art a step (DAMAGE_TINT, RGB
+# of self_modulate) and a hit that crosses into Cracking/Crumbling floats the
+# word once. _refresh_tint is the only writer of _visual().self_modulate;
+# Door folds its open-door fade in through _tint_alpha().
+enum DamageState { INTACT, DAMAGED, CRACKING, CRUMBLING }
+const CRACKING_FRAC := 0.5
+const CRUMBLING_FRAC := 0.25
+const DAMAGE_TINT := [1.0, 1.0, 0.75, 0.55]
+const DAMAGE_STATE_NOTICE_COLOR := Color(0.9, 0.75, 0.55)
+var _display_name := ""
+
 
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
@@ -91,6 +103,7 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		# a no-damage hit must not flash/emit -- it reads as "wall is immortal"
 		push_warning("%s hit with an empty damage dict" % name)
 		return
+	var state_before := get_damage_state()
 	var damage_multiplier = pow(1.5,success_level)
 	var took_fire_damage = false
 
@@ -134,6 +147,15 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 	tween.tween_property(vis, "modulate", Color.WHITE, 0.1)
 
 	emit_signal("health_changed", current_health, max_health, self)
+
+	# A new damage state darkens the art; crossing into Cracking/Crumbling says
+	# so once (a hit that skips a state names the worst). Globals' float, not
+	# the shared label above, so the damage number isn't overwritten.
+	var state_after := get_damage_state()
+	if state_after != state_before:
+		_refresh_tint()
+		if current_health > 0 and state_after > state_before and state_after >= DamageState.CRACKING:
+			_show_damage_state_notice(damage_state_word(state_after))
 
 	if current_health <= 0:
 		_destroy_structure()
@@ -183,6 +205,52 @@ func _destroy_structure():
 func _visual() -> CanvasItem:
 	var art := get_node_or_null("Art")
 	return art if art != null else sprite
+
+func get_damage_state() -> int:
+	if max_health <= 0 or current_health >= max_health:
+		return DamageState.INTACT
+	var frac := float(current_health) / float(max_health)
+	if frac <= CRUMBLING_FRAC:
+		return DamageState.CRUMBLING
+	if frac <= CRACKING_FRAC:
+		return DamageState.CRACKING
+	return DamageState.DAMAGED
+
+static func damage_state_word(state: int) -> String:
+	return ["Intact", "Damaged", "Cracking", "Crumbling"][clampi(state, 0, 3)]
+
+## Player-facing name ("Stone wall"), for the hover readout.
+func get_display_name() -> String:
+	if _display_name == "":
+		_display_name = StructureDatabase.get_structure_label(structure_id)
+	return _display_name
+
+## Extra state for the hover readout after the name ("Locked"); "" for none.
+func get_hover_status() -> String:
+	return ""
+
+## Alpha folded into the damage tint (Door fades while open).
+func _tint_alpha() -> float:
+	return 1.0
+
+# self_modulate, NOT modulate: take_damage's hit-flash tween owns modulate.
+func _refresh_tint() -> void:
+	var vis: CanvasItem = _visual()
+	if vis == null:
+		return
+	var v: float = DAMAGE_TINT[get_damage_state()]
+	vis.self_modulate = Color(v, v, v, _tint_alpha())
+
+# The same exploration gate as show_floating_text: a fire chewing through a
+# never-seen building must not announce its walls through the fog.
+func _show_damage_state_notice(text: String) -> void:
+	if ExplorationManager.active \
+			and not ExplorationManager.is_explored(GridManager.world_to_map(global_position)):
+		return
+	var parent := get_parent()
+	if parent == null:
+		return
+	Globals.show_floating_text(text, global_position, parent, DAMAGE_STATE_NOTICE_COLOR, 0, Globals.NOTICE_FONT_SIZE)
 
 func change_texture(texture_path):
 	#print("attempting to update structure texture with: ", texture_path)
