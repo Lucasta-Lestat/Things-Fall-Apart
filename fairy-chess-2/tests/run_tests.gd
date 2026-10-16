@@ -77,6 +77,9 @@ func _initialize():
 	test_every_promoting_piece_promotes()
 	test_promotion_choices_follow_the_army()
 	test_threatened_royals()
+	test_every_piece_has_a_description()
+	test_doppelganger_royal_status_changes()
+	test_described_rules_match_resolution()
 
 	print("")
 	print("=== %d checks, %d failures ===" % [checks, failures])
@@ -1374,6 +1377,125 @@ func test_threatened_royals():
 	var wk4 = Rules.add_piece(st4, "King", "white", Vector2(4, 2))
 	Rules.add_piece(st4, "Rifleman", "black", Vector2(0, 2))
 	check(Rules.threatened_royals(st4).has(wk4.id), "royal in a rifleman's line is in check")
+
+
+# Every piece type has player-facing rules text, and it fits a tooltip.
+func test_every_piece_has_a_description():
+	var missing = []
+	for type in Rules.PIECE_INFO:
+		if str(Rules.PIECE_DESC.get(type, "")).strip_edges() == "":
+			missing.append(type)
+	check(missing.is_empty(), "every piece type has a description (missing: %s)" % [missing])
+	var extra = []
+	for type in Rules.PIECE_DESC:
+		if not Rules.PIECE_INFO.has(type):
+			extra.append(type)
+	check(extra.is_empty(), "no description for an unknown piece type (extra: %s)" % [extra])
+	var too_long = []
+	for type in Rules.PIECE_INFO:
+		var wrapped = Rules.wrap_text(type + "\n" + Rules.describe_piece(type))
+		for line in wrapped.split("\n"):
+			if line.length() > 56:
+				too_long.append("%s: %s" % [type, line])
+	check(too_long.is_empty(), "wrapped descriptions fit 56 columns (%s)" % [too_long])
+	# describe_piece adds the category and the category-wide notes.
+	check(Rules.describe_piece("Rook").begins_with("Noble. "), "noble description names its category")
+	check(Rules.describe_piece("Pawn").begins_with("Peasant. ") and Rules.PEASANT_PROMOTION_NOTE in Rules.describe_piece("Pawn"),
+		"peasant description carries the far-row promotion note")
+	check(not Rules.PEASANT_PROMOTION_NOTE in Rules.describe_piece("Zombie"), "zombie (self-promoting) skips the promotion note")
+	check(Rules.describe_piece("King").begins_with("Royal. ") and Rules.ROYAL_NOTE in Rules.describe_piece("King"),
+		"royal description carries the royal-loss note")
+	check(not Rules.ROYAL_NOTE in Rules.describe_piece("Queen"), "non-royals skip the royal-loss note")
+	# Wrapping only swaps spaces for line breaks, and keeps existing breaks.
+	var text = Rules.describe_piece("Spymaster")
+	check(Rules.wrap_text(text).replace("\n", " ") == text, "wrap_text keeps every word in order")
+	check(Rules.wrap_text("A\nB") == "A\nB", "wrap_text keeps existing line breaks")
+
+
+# A Doppelganger's royalty follows the form it copies; every flip is reported.
+func test_doppelganger_royal_status_changes():
+	var st = Rules.new_state()
+	var doppel = Rules.add_piece(st, "Doppelganger", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	var bk = Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(0, 0))
+	var res = Rules.resolve(st, {bk.id: {"action": "move", "target": Vector2(4, 0)}})
+	var copy = Rules.find_piece(res.state, doppel.id)
+	check(copy.type == "King" and copy.royal, "doppelganger copying a King becomes royal (got %s, royal=%s)" % [copy.type, copy.royal])
+	var gained = null
+	for e in res.events:
+		if e.type == "royal_changed" and e.id == doppel.id:
+			gained = e
+	check(gained != null and gained.gained and gained.cause == "transform" and gained.color == "white",
+		"copying a royal emits royal_changed (gained)")
+	check(Rules.royal_count(res.state, "white") == 2, "the copy counts as a second white royal")
+
+	# Lose the real King, then copy a Rook: the copy was the last royal.
+	var st2 = res.state
+	st2.board[5][5] = null
+	var res2 = Rules.resolve(st2, {rook.id: {"action": "move", "target": Vector2(0, 1)}})
+	var copy2 = Rules.find_piece(res2.state, doppel.id)
+	check(copy2.type == "Rook" and not copy2.royal, "doppelganger copying a Rook stops being royal")
+	var lost = null
+	for e in res2.events:
+		if e.type == "royal_changed" and e.id == doppel.id:
+			lost = e
+	check(lost != null and not lost.gained and lost.cause == "transform" and lost.old_type == "King" and lost.new_type == "Rook",
+		"dropping a royal form emits royal_changed (lost)")
+	check(res2.outcome == "black", "losing the last royal by copying loses the game (outcome %s)" % res2.outcome)
+
+	# Non-royal to non-royal changes of form report nothing extra.
+	var st3 = Rules.new_state()
+	var doppel3 = Rules.add_piece(st3, "Doppelganger", "white", Vector2(0, 5))
+	Rules.add_piece(st3, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st3, "King", "black", Vector2(5, 0))
+	var rook3 = Rules.add_piece(st3, "Rook", "black", Vector2(0, 0))
+	var res3 = Rules.resolve(st3, {rook3.id: {"action": "move", "target": Vector2(0, 1)}})
+	var flips = 0
+	for e in res3.events:
+		if e.type == "royal_changed":
+			flips += 1
+	check(Rules.find_piece(res3.state, doppel3.id).type == "Rook" and flips == 0, "a non-royal copy emits no royal_changed")
+
+	# A Lady of the Lake's crowning is a royal gain too.
+	var st4 = Rules.new_state()
+	var lady = Rules.add_piece(st4, "Lady of the Lake", "white", Vector2(2, 5))
+	var pawn = Rules.add_piece(st4, "Pawn", "white", Vector2(2, 4))
+	Rules.add_piece(st4, "King", "black", Vector2(5, 0))
+	var res4 = Rules.resolve(st4, {lady.id: {"action": "promote", "target": Vector2(2, 4), "promote_to": "King"}})
+	var crowned = null
+	for e in res4.events:
+		if e.type == "royal_changed" and e.id == pawn.id:
+			crowned = e
+	check(crowned != null and crowned.gained and crowned.cause == "promote", "crowning a peasant emits royal_changed (promote)")
+
+
+# Pins the PIECE_DESC claims that are easiest to get wrong: the cannon catches
+# a piece leaving its column and one stepping onto an empty square in it, and
+# a Valkyrie killed mid-move comes back where she stood when the turn began.
+func test_described_rules_match_resolution():
+	var st = Rules.new_state()
+	var can = Rules.add_piece(st, "Cannonier", "white", Vector2(3, 5))
+	var leaver = Rules.add_piece(st, "Rook", "black", Vector2(3, 1))
+	var stepper = Rules.add_piece(st, "Knight", "black", Vector2(1, 2))
+	var res = Rules.resolve(st, {
+		can.id: {"action": "fire_cannon"},
+		leaver.id: {"action": "move", "target": Vector2(0, 1)},
+		stepper.id: {"action": "move", "target": Vector2(3, 3)},
+	})
+	check(Rules.find_piece(res.state, leaver.id) == null, "cannon catches a piece moving out of its column")
+	check(Rules.find_piece(res.state, stepper.id) == null, "cannon catches a piece moving onto an empty square in its column")
+
+	var st2 = Rules.new_state()
+	var valk = Rules.add_piece(st2, "Valkyrie", "white", Vector2(3, 3))
+	var rook = Rules.add_piece(st2, "Rook", "black", Vector2(0, 1))
+	var res2 = Rules.resolve(st2, {
+		valk.id: {"action": "move", "target": Vector2(3, 1)},
+		rook.id: {"action": "move", "target": Vector2(3, 1)},
+	})
+	check(Rules.find_piece(res2.state, valk.id) == null and res2.state.phased_out.size() == 1, "valkyrie killed in a clash phases out")
+	var back = Rules.find_piece(Rules.resolve(res2.state, {}).state, valk.id)
+	check(back != null and back.pos == Vector2(3, 3), "valkyrie returns on the square she started the turn on (got %s)" % [back.pos if back != null else null])
 
 
 func test_legal_actions():

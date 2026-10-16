@@ -33,6 +33,7 @@ func _initialize():
 
 	# --- Roster / profile validation (autoloads are live in the scene tree) --
 	_validate_roster()
+	_validate_royal_change_text(gb, display)
 
 	# The scene opens in "pregame" with the champion picker up. Verify it, then
 	# skip it: lock in the sandbox army for white (so the fixed placement plan
@@ -70,6 +71,7 @@ func _initialize():
 		fail("begin_setup did not enter setup phase")
 
 	_validate_piece_panel(ui.white_piece_panel, gb.white_profile)
+	_validate_piece_tooltips(ui.white_piece_panel)
 	_validate_theme(ui)
 	await process_frame # let the reserve column lay out before measuring it
 	_validate_panel_geometry(ui)
@@ -142,6 +144,15 @@ func _initialize():
 		fail("AI placed no royal")
 	if Rules.all_pieces(gb.state).size() != 16:
 		fail("expected 16 pieces after setup, got %d" % Rules.all_pieces(gb.state).size())
+
+	# Hovering a placed piece describes it (white's Queen is at (0, 5)); an
+	# empty square with nothing selected shows no tooltip.
+	display._update_hover_tooltip(Vector2(0, 5))
+	if not Rules.PIECE_DESC["Queen"] in display.tooltip_text.replace("\n", " "):
+		fail("hovering the Queen did not describe it: '%s'" % display.tooltip_text)
+	display._update_hover_tooltip(Vector2(5, 2))
+	if display.tooltip_text != "":
+		fail("hovering an empty square showed '%s'" % display.tooltip_text)
 
 	# --- Play ----------------------------------------------------------------
 	gb.start_game()
@@ -273,6 +284,64 @@ func _validate_piece_panel(panel, profile):
 		fail("piece panel shows %d icons, profile stocks %d" % [found, expected])
 	else:
 		print("PANEL OK: %d icons, each with art and a name label" % found)
+
+
+# Every panel icon's tooltip names the piece and explains its rules, dimmed
+# icons included (they add why they can't be placed).
+func _validate_piece_tooltips(panel):
+	var bad = []
+	for child in panel.get_children():
+		if child is Label or child.is_queued_for_deletion():
+			continue
+		var tip = child.tooltip_text.replace("\n", " ")
+		if not tip.begins_with(child.piece_type) or not Rules.PIECE_DESC.get(child.piece_type, "?") in tip:
+			bad.append(child.piece_type)
+	if not bad.is_empty():
+		fail("panel icons without a rules tooltip: %s" % str(bad))
+	else:
+		print("TOOLTIPS OK: every panel icon describes its piece")
+
+
+# The Doppelganger royalty texts, against a hand-built position (the board's
+# own state is put back afterwards): the turn summary says when a copy makes or
+# unmakes a royal, hover names a disguised Doppelganger, and the game-over
+# reason names the copy that cost the last royal.
+func _validate_royal_change_text(gb, display):
+	var saved_state = gb.state
+	var st = Rules.new_state()
+	var doppel = Rules.add_piece(st, "Doppelganger", "white", Vector2(0, 5))
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	var bk = Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(0, 0))
+	var res = Rules.resolve(st, {bk.id: {"action": "move", "target": Vector2(4, 0)}})
+	gb.state = res.state
+	var summary = gb._summarise(res.events)
+	if not "took the form of a King and is now royal" in summary:
+		fail("summary does not say the Doppelganger became royal: %s" % summary)
+	if not "A Doppelganger counts as royal only while it copies a royal piece." in summary:
+		fail("summary lacks the Doppelganger royalty hint: %s" % summary)
+	var fake = load("res://piece.gd").new() # a display node, never added to the tree
+	fake.piece_type = "King"
+	fake.color = "white"
+	fake.is_royal = true
+	fake.state_id = doppel.id
+	var tip = display._piece_tooltip(fake)
+	fake.free()
+	if not "(a Doppelganger in disguise)" in tip.replace("\n", " "):
+		fail("hover does not name the disguised Doppelganger: %s" % tip)
+
+	var st2 = res.state.duplicate(true)
+	st2.board[5][5] = null # the real King falls
+	var res2 = Rules.resolve(st2, {rook.id: {"action": "move", "target": Vector2(0, 1)}})
+	gb.state = res2.state
+	summary = gb._summarise(res2.events)
+	if not "took the form of a Rook and is no longer royal" in summary:
+		fail("summary does not say the Doppelganger stopped being royal: %s" % summary)
+	var reason = gb._outcome_reason(res2.events)
+	if not ("Doppelganger" in reason and "stopped being royal" in reason):
+		fail("game-over reason does not name the Doppelganger: %s" % reason)
+	gb.state = saved_state
+	print("ROYALTY TEXT OK: %s | %s" % [summary, reason])
 
 
 # The theme is deliberately two-tier: Cinzel for display text, the engine's

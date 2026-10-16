@@ -360,7 +360,7 @@ func resolve_turn():
 	last_turn_summary = _summarise(result.events)
 
 	if result.outcome != "":
-		var reason = _outcome_reason()
+		var reason = _outcome_reason(result.events)
 		match result.outcome:
 			"white":
 				end_game("White Wins!", reason)
@@ -373,15 +373,19 @@ func resolve_turn():
 
 
 # Why the game just ended, read off the final state (mirrors Rules._outcome).
-func _outcome_reason() -> String:
+# events: the final turn's resolution events, used to name a Doppelganger whose
+# change of form took away its side's last royal.
+func _outcome_reason(events: Array = []) -> String:
 	var white_left = Rules.royal_count(state, "white")
 	var black_left = Rules.royal_count(state, "black")
 	if white_left == 0 and black_left == 0:
-		return "Both sides lost their last royal."
+		return "Both sides lost their last royal." + _royal_lost_by_copy(events, "white") + _royal_lost_by_copy(events, "black")
 	if black_left == 0:
-		return "Black has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("black") else "")
+		return "Black has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("black") else "") \
+			+ _royal_lost_by_copy(events, "black")
 	if white_left == 0:
-		return "White has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("white") else "")
+		return "White has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("white") else "") \
+			+ _royal_lost_by_copy(events, "white")
 	var why = "Turn limit reached" if state.turn >= Rules.HARD_TURN_LIMIT \
 		else "%d turns without progress" % Rules.NO_PROGRESS_LIMIT
 	return "%s: decided on material, White %.1f vs Black %.1f." \
@@ -396,6 +400,18 @@ func _royal_stoned(color: String) -> bool:
 	return false
 
 
+# " Black's Doppelganger, which had been royal, took the form of a Rook and
+# stopped being royal." when a copy cost `color` a royal this turn, else "".
+# Without it the game just ends with the side's royal still on the board.
+func _royal_lost_by_copy(events: Array, color: String) -> String:
+	for event in events:
+		if event.get("type", "") == "royal_changed" and not event.get("gained", true) \
+				and event.get("color", "") == color and event.get("cause", "") == "transform":
+			return " %s Doppelganger, which had been royal, took the form of %s and stopped being royal." \
+				% [_owner(color, true), _a(str(event.get("new_type", "")))]
+	return ""
+
+
 # A short plain-language account of what the turn actually did. Simultaneous
 # resolution can quietly swallow an order -- a mark killed before the spy could
 # turn it, a capture that lands on a piece that ran -- and without a word the
@@ -405,7 +421,14 @@ func _summarise(events: Array) -> String:
 	var deaths = {} # clause -> how many pieces it covers (insertion-ordered)
 	var notes = []
 	var hints = [] # rule explanations, appended once as full sentences
-	for event in events:
+	# Royal status flips ride directly behind the promote / transform event that
+	# caused them (Rules._replace_piece), so key each one by its cause's index.
+	var royal_flip = {} # cause event index -> royal_changed event
+	for i in range(1, events.size()):
+		if events[i].type == "royal_changed":
+			royal_flip[i - 1] = events[i]
+	for event_index in range(events.size()):
+		var event = events[event_index]
 		match event.type:
 			"capture", "phase_out":
 				var clause = _death_clause(event)
@@ -444,14 +467,20 @@ func _summarise(events: Array) -> String:
 				var old_side = "black" if event.color == "white" else "white"
 				notes.append("%s %s changed sides (now %s %s)" % [_owner(old_side), event.get("old_type", "piece"), _owner(event.color), event.new_type])
 			"promote":
-				notes.append("%s %s was promoted to %s" % [_owner(event.color), event.get("old_type", "piece"), event.new_type])
+				var crowned = royal_flip.has(event_index) and royal_flip[event_index].gained
+				notes.append("%s %s was promoted to %s%s" % [_owner(event.color), event.get("old_type", "piece"), event.new_type,
+					" (a new royal)" if crowned else ""])
 			"transform":
 				var old_type = str(event.get("old_type", ""))
 				if Rules.WEREWOLF_TOGGLE.has(old_type) and Rules.WEREWOLF_TOGGLE.has(event.new_type):
 					# "Werewolf (wolf form)" -> "wolf form"
 					notes.append("%s Werewolf shifted to %s" % [_owner(event.color), event.new_type.get_slice("(", 1).trim_suffix(")")])
 				else:
-					notes.append("%s Doppelganger took the form of %s" % [_owner(event.color), _a(event.new_type)])
+					var royalty = ""
+					if royal_flip.has(event_index):
+						royalty = " and is now royal" if royal_flip[event_index].gained else " and is no longer royal"
+						hints.append("A Doppelganger counts as royal only while it copies a royal piece.")
+					notes.append("%s Doppelganger took the form of %s%s" % [_owner(event.color), _a(event.new_type), royalty])
 			"spawn":
 				if event.piece_type == "Basic Automata":
 					notes.append("%s Factory built a Basic Automata" % _owner(event.color))
@@ -632,7 +661,7 @@ func _apply_events(events: Array) -> void:
 					tw.tween_property(node, "position", origin + Vector2(7, 0), 0.05)
 					tw.tween_property(node, "position", origin - Vector2(7, 0), 0.08)
 					tw.tween_property(node, "position", origin, 0.05)
-			"credit", "spawn_failed":
+			"credit", "spawn_failed", "royal_changed":
 				pass
 	# Always emit (even with no moves) so the display can clear stale
 	# selections after every resolution.

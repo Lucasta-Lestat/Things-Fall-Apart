@@ -224,7 +224,7 @@ func _dim_icon(icon, why: String):
 	if icon == null or why == "":
 		return
 	icon.modulate.a = 0.4
-	icon.tooltip_text = "%s (%s)" % [icon.piece_type, why]
+	icon.tooltip_text = Rules.wrap_text("%s (%s)\n%s" % [icon.piece_type, why, Rules.describe_piece(icon.piece_type)])
 
 
 # A column heading ("Reserves" / "Peasants" / "Nobles & Royals"). These are the

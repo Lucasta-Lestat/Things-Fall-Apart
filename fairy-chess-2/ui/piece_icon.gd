@@ -29,8 +29,8 @@ func setup(data: Dictionary, type: String, side: String, art_size: Vector2) -> v
 	art.custom_minimum_size = art_size
 	name_label.text = type
 	# Long names wrap to two or three lines; the tooltip keeps the full name
-	# readable at a glance either way.
-	tooltip_text = type
+	# readable at a glance either way, followed by what the piece does.
+	tooltip_text = Rules.wrap_text(type + "\n" + Rules.describe_piece(type))
 
 
 # --- Drag and Drop ---

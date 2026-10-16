@@ -124,10 +124,32 @@ func _update_hover_tooltip(grid_pos):
 				text = _action_tooltip(action)
 				if text != "":
 					break
-		if text == "" and grid_pos == selected_piece.grid_position:
-			text = _self_tooltip(selected_piece)
+	# Otherwise describe whatever piece is under the cursor, so every piece's
+	# rules can be learned before it acts.
+	if text == "" and game_board.is_valid_square(grid_pos):
+		var node = game_board.board[int(grid_pos.x)][int(grid_pos.y)]
+		if node != null and is_instance_valid(node):
+			text = _piece_tooltip(node)
 	if tooltip_text != text:
 		tooltip_text = text
+
+
+# Hover text for a piece on the board: whose it is, its rules (Rules.
+# describe_piece) and, for stone or self-driven pieces, its status. A
+# Doppelganger wearing another form is named as one.
+func _piece_tooltip(node) -> String:
+	var header = "%s %s" % [game_board._owner(node.color, true), node.piece_type]
+	var lines = []
+	var sp = Rules.find_piece(game_board.state, node.state_id) if node.state_id >= 0 else null
+	if sp != null and sp.get("mimic", false) and node.piece_type != "Doppelganger":
+		header += " (a Doppelganger in disguise)"
+		lines.append("Doppelganger: at the end of each turn it copies the last piece the enemy ordered to move; it is royal only while it copies a royal.")
+	lines.append(Rules.describe_piece(node.piece_type))
+	var traits = Rules.PIECE_INFO.get(node.piece_type, {}).get("traits", [])
+	# The Factory's status line would only repeat its description.
+	if node.is_petrified or "Automatic" in traits:
+		lines.append(_self_tooltip(node))
+	return Rules.wrap_text(header + "\n" + "\n".join(lines))
 
 
 # Hover text on the selected piece's own square for pieces that take no
@@ -410,6 +432,7 @@ func _open_promotion_picker(piece):
 			"label": piece_type,
 			"icon": load(path) if ResourceLoader.exists(path) else null,
 			"payload": piece_type,
+			"tooltip": Rules.wrap_text(Rules.describe_piece(piece_type)),
 		})
 	_picker().open("Promote to", entries)
 

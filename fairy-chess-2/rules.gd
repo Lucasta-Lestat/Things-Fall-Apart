@@ -92,6 +92,52 @@ const PIECE_INFO = {
 	"Chieftain":               {"category": "royal", "value": 3.5, "traits": ["Viking"]},
 }
 
+# Player-facing rules text for every piece, written from the movegen and the
+# special rules in resolve() below. describe_piece() adds the category and the
+# far-row promotion / royal-loss notes. A test makes sure every PIECE_INFO type
+# has an entry, but not that the wording still matches the code: when a
+# piece's movegen or special rule changes, update its line here too.
+const PIECE_DESC = {
+	"Pawn": "Steps one square forward (two from its starting row) and captures one square diagonally forward, including en passant.",
+	"Kulak": "A mirrored Pawn: steps one square diagonally forward (two diagonally from its starting row) without capturing, and captures the square straight ahead. It takes en passant by stepping diagonally onto the passed square.",
+	"Basic Automata": "Rolls one or two squares straight ahead (up to three from its starting row) without capturing, and captures diagonally forward up to two squares away; the first piece on that diagonal stops it. Factories build these.",
+	"Zombie": "Moves and captures like a Pawn, but takes no orders: every turn it acts by itself, promoting on the far row if it can, otherwise capturing, otherwise stepping forward.",
+	"Raider": "Viking. Moves and captures like a Pawn. Valhalla: if it dies on the same turn it captures a piece by moving onto it, it returns to your reserves to be deployed again.",
+	"Cultist": "Moves and captures like a Pawn. Instead of moving, it can convert an enemy peasant directly beside, in front of or behind it into one of your Cultists. The conversion fails if that peasant is killed this turn.",
+	"Werewolf (human form)": "Shapeshifter. Moves and captures like a Pawn. At the end of every turn it survives it changes into its wolf form, and back again the turn after.",
+	"Anarch": "Steps one square in any direction, or teleports to any empty square next to an enemy royal, however far away that royal is.",
+	"Bishop": "Slides any distance diagonally.",
+	"Cannonier": "Steps one square straight ahead (it can't capture by moving), or fires its cannon: every piece in the column ahead of it is destroyed, yours included. A piece standing there can't dodge out, and one moving onto an empty square there is hit too.",
+	"Centaur": "Moves as a Knight or as a King: an L-shaped leap, or one step in any direction.",
+	"Devil Toad": "Slides diagonally and ricochets off the edges of the board until it meets a piece, capturing it if it is an enemy. Other moving pieces can't cut its path.",
+	"Dragonrider": "Leaps four squares in a straight line and one to the side, over anything. Instead of moving it can breathe fire in one of four directions, burning the square in front of it and the row of three squares just beyond, friend or foe.",
+	"Elephant Rider": "Leaps like a Knight. It can also charge two squares straight ahead, jumping the square between and trampling whatever stands on the landing square, friend or foe, even if that piece moves away.",
+	"Gorgon": "Steps one square in any direction. At the end of every turn, every enemy piece next to her (diagonals included) turns to stone: it can never act again and no longer counts as a royal. Stone pieces still block their square and can be captured.",
+	"Grasshopper": "Moves along any straight or diagonal line by hopping over the first piece in that line, friend or foe, and landing on the square just beyond it, capturing an enemy there.",
+	"Knight": "Leaps in an L shape (two squares one way, one square to the side), over anything.",
+	"Minister": "Steps one square diagonally.",
+	"Monk": "Slides diagonally like a Bishop, and can also step one square straight ahead (two from the back row) without capturing. It can capture en passant.",
+	"Nightrider": "Makes repeated Knight leaps in one direction for as long as the landing squares are empty, and can capture the first enemy it lands on.",
+	"Princess": "Moves as a Bishop or a Knight: slides diagonally or leaps in an L shape.",
+	"Queen": "Slides any distance in a straight or diagonal line.",
+	"Rifleman": "Steps one square in any direction, or shoots along its row or column. The bullet kills the first piece in that line when the turn resolves, friend or foe: a piece standing in the line can't dodge it, and one that steps onto an empty square in the line nearer the Rifleman takes it instead.",
+	"Rook": "Slides any distance along a row or column.",
+	"Valkyrie": "Moves as a Queen or a Knight. When she is killed she leaves the board and returns at the end of the next turn, on the square she stood on when that turn began, or the nearest empty one. If she has been turned to stone, killing her destroys her for good.",
+	"Werewolf (wolf form)": "Shapeshifter. Moves one or two king steps in any direction, jumping over anything in between, and captures where it lands. At the end of every turn it survives it returns to human form.",
+	"Factory": "Immobile: never moves and takes no orders. At the end of every turn it builds a Basic Automata on an empty square next to it, if one is free.",
+	"Doppelganger": "Mimic. Steps one square in any direction until it copies something. At the end of every turn it takes the form of the last piece your opponent moved by order (zombies don't count), and it keeps copying after that. It is royal only while it copies a royal piece, so a single copy can win or lose you the game.",
+	"Berserker": "Viking. Slides like a Rook forward or sideways, but never backward. Valhalla: if it dies on the same turn it captures a piece by moving onto it, it returns to your reserves.",
+	"Spymaster": "Slides like a Rook backward or sideways and steps one square diagonally forward. Instead of moving, it can turn an enemy piece standing directly beside, in front of or behind an enemy royal into one of your Pawns, wherever on the board that is. Royals themselves can't be turned.",
+	"Chancellor": "Steps one square in any direction. Instead of moving, it can promote a friendly peasant directly beside, in front of or behind it into a Minister.",
+	"King": "Steps one square in any direction.",
+	"Lady of the Lake": "Steps one square in any direction. Instead of moving, she can crown a friendly peasant directly beside, in front of or behind her, turning it into a King: an extra royal.",
+	"Pontifex": "Steps one square in any direction. Instead of moving, it can promote a friendly peasant directly beside, in front of or behind it into a Bishop.",
+	"Praetor": "Steps one square in any direction. Instead of moving, it can turn a friendly peasant directly beside, in front of or behind it into a Factory.",
+	"Chieftain": "Viking. Steps one square in any direction. Valhalla: if he dies on the same turn he captures a piece by moving onto it, he returns to your reserves, which only helps while you still have another royal.",
+}
+const PEASANT_PROMOTION_NOTE = "On the far row it can promote into a noble from your army; promoting uses your turn."
+const ROYAL_NOTE = "Lose every royal (captured or turned to stone) and you lose."
+
 # Pieces a pawn-family unit may promote INTO when it reaches the last rank.
 # Curated (non-royal nobles), strongest first so the picker and AI pruning
 # lead with the marquee choices.
@@ -213,6 +259,37 @@ static func set_army(state: Dictionary, color: String, types: Array) -> void:
 		seen[type] = true
 		out.append(type)
 	state.armies[color] = out
+
+
+# Player-facing description of a piece type: "<Category>. <PIECE_DESC>", plus
+# the far-row promotion note for peasants that take orders (a Zombie's own text
+# covers its self-promotion) and the royal-loss note for royals.
+static func describe_piece(piece_type: String) -> String:
+	var info = PIECE_INFO.get(piece_type, {"category": "noble", "traits": []})
+	var text = "%s. %s" % [str(info.category).capitalize(), PIECE_DESC.get(piece_type, "")]
+	if "Peasant" in info.traits and not "Automatic" in info.traits:
+		text += " " + PEASANT_PROMOTION_NOTE
+	elif info.category == "royal":
+		text += " " + ROYAL_NOTE
+	return text.strip_edges()
+
+
+# Greedy word wrap at `width` characters, keeping existing line breaks. Godot's
+# tooltip label never wraps on its own, so long rules text needs hard breaks.
+static func wrap_text(text: String, width: int = 56) -> String:
+	var out = []
+	for paragraph in text.split("\n"):
+		var line = ""
+		for word in paragraph.split(" ", false):
+			if line == "":
+				line = word
+			elif line.length() + 1 + word.length() <= width:
+				line += " " + word
+			else:
+				out.append(line)
+				line = word
+		out.append(line)
+	return "\n".join(out)
 
 
 # --- Action precedence -----------------------------------------------------
@@ -1378,12 +1455,19 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 static func _replace_piece(st: Dictionary, piece: Dictionary, new_type: String, new_color: String, events: Array, event_type: String) -> void:
 	var info = PIECE_INFO.get(new_type, {"category": "noble", "traits": []})
 	var old_type = piece.type
+	var was_royal = piece.royal
 	piece.type = new_type
 	piece.color = new_color
 	piece.royal = info.category == "royal"
 	piece.traits = info.traits.duplicate()
 	events.append({"type": event_type, "id": piece.id, "new_type": new_type, "old_type": old_type,
 		"color": new_color, "pos": piece.pos})
+	# A change of form can make or unmake a royal: a Doppelganger copying (or
+	# dropping) a royal form, a Lady of the Lake crowning a peasant. Recorded
+	# right behind the event that caused it, for the summary and game-over text.
+	if was_royal != piece.royal:
+		events.append({"type": "royal_changed", "id": piece.id, "color": new_color, "gained": piece.royal,
+			"new_type": new_type, "old_type": old_type, "cause": event_type})
 
 
 # Marks a piece as killed this turn, recording why and by whom (a piece id, or

@@ -48,6 +48,7 @@ func _initialize():
 	_test_markers_and_tooltips()
 	_test_zombie_factory_and_stone()
 	_test_last_turn_marks()
+	_test_rules_text_and_royalty()
 	_test_game_over_reason()
 
 	print("")
@@ -73,19 +74,25 @@ func _test_setup_prompt_and_drop_reasons():
 	var dim_peasant = false
 	var dim_noble = false
 	var lit_royal = false
+	var undescribed = []
 	for icon in ui.white_piece_panel.get_children():
 		if icon is Label or icon.is_queued_for_deletion():
 			continue
+		var tip = icon.tooltip_text.replace("\n", " ")
 		var category = Rules.PIECE_INFO.get(icon.piece_type, {}).get("category", "")
-		if category == "peasant" and icon.modulate.a < 1.0 and "all peasant slots are filled" in icon.tooltip_text:
+		if category == "peasant" and icon.modulate.a < 1.0 and "all peasant slots are filled" in tip:
 			dim_peasant = true
-		elif category == "noble" and icon.modulate.a < 1.0 and "the last back-row slot must be a royal" in icon.tooltip_text.replace("\n", " "):
+		elif category == "noble" and icon.modulate.a < 1.0 and "the last back-row slot must be a royal" in tip:
 			dim_noble = true
 		elif category == "royal" and icon.modulate.a == 1.0:
 			lit_royal = true
+		# A dimmed icon keeps its rules text next to the reason (I12).
+		if not Rules.PIECE_DESC.get(icon.piece_type, "?") in tip:
+			undescribed.append(icon.piece_type)
 	check(dim_peasant, "peasant icons are dimmed with a reason once the peasant slots are full")
 	check(dim_noble, "noble icons are dimmed with a reason while the last slot is held for a royal")
 	check(lit_royal, "royal icons stay placeable for the held slot")
+	check(undescribed.is_empty(), "dimmed icons still describe their piece (%s)" % [undescribed])
 	counts.peasant = 0
 	counts.non_peasant = 0
 	ui._on_setup_state_changed()
@@ -487,6 +494,41 @@ func _test_last_turn_marks():
 	check({"attack": Vector2(3, 5), "hit": Vector2(3, 1)} in marks, "a shot outlines the shooter and the square hit (%s)" % [marks])
 	check({"attack": Vector2(4, 5)} in marks, "a miss outlines the shooter")
 	check({"from": Vector2(0, 4), "to": Vector2(0, 3)} in marks, "a move outlines where it came from and went")
+
+
+# --- Rules text and royal changes (R2 I12) ----------------------------------
+
+func _test_rules_text_and_royalty():
+	_clear_board()
+	_spawn("Rook", "black", Vector2(2, 0))
+	var bishop = _spawn("Bishop", "white", Vector2(0, 5))
+	var king = _spawn("King", "white", Vector2(5, 5))
+	_spawn("Pawn", "white", Vector2(4, 5))
+	_spawn("King", "black", Vector2(5, 0))
+	display.clear_selection()
+	display._update_hover_tooltip(Vector2(2, 0))
+	var tip = display.tooltip_text.replace("\n", " ")
+	check(tip.begins_with("Black's Rook") and Rules.PIECE_DESC["Rook"] in tip,
+		"hovering an enemy piece with nothing selected describes it: '%s'" % tip)
+	check(Array(display.tooltip_text.split("\n")).all(func(line): return line.length() <= 56), "board hover text is wrapped")
+	bishop.is_petrified = true
+	display._update_hover_tooltip(Vector2(0, 5))
+	tip = display.tooltip_text.replace("\n", " ")
+	check(tip.begins_with("Your Bishop") and "Turned to stone" in tip, "a stone piece's hover gives its status: '%s'" % tip)
+	bishop.is_petrified = false
+	# A marker's own explanation still wins over the piece standing under it.
+	display.select_piece(king, false)
+	display._update_hover_tooltip(Vector2(4, 5))
+	check(display.tooltip_text.begins_with("Conditional move:"), "a marker's tooltip beats the piece description: '%s'" % display.tooltip_text)
+	display.clear_selection()
+
+	# Crowning a peasant names the new royal.
+	gb.state = Rules.new_state()
+	_kings()
+	var lady = Rules.add_piece(gb.state, "Lady of the Lake", "white", Vector2(2, 5))
+	Rules.add_piece(gb.state, "Pawn", "white", Vector2(2, 4))
+	var text = _resolve_and_summarise({lady.id: {"action": "promote", "target": Vector2(2, 4), "promote_to": "King"}})
+	check("your Pawn was promoted to King (a new royal)" in text, "crowning a peasant says it is a new royal: '%s'" % text)
 
 
 # --- Game over (fairy-chess-03) ----------------------------------------------
