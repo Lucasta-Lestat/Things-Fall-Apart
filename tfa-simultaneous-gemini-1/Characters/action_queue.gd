@@ -421,25 +421,10 @@ func _execute_action(action: Action) -> void:
 			var item_data = action.data.get("item_data", {})
 			var item_index = action.data.get("item_index", -1)
 			if item_index >= 0 and character.inventory:
-				# Apply item effects
-				var healing = item_data.get("healing", 0.0)
-				if healing > 0 and character.has_method("heal"):
-					character.heal(healing)
-				var satiety = item_data.get("satiety", 0.0)
-				if satiety > 0 and "hunger" in character:
-					character.hunger = max(0, character.hunger - satiety)
-				var condition_id = item_data.get("adds_condition_on_equip", "")
-				if condition_id is String and not condition_id.is_empty():
-					var cm = character.get_node_or_null("ConditionManager")
-					if cm:
-						cm.apply_condition(condition_id, character)
-				var use_ability_id = item_data.get("use_ability", "")
-				if use_ability_id is String and not use_ability_id.is_empty():
-					var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
-					if not ability_data.is_empty() and character.ability_manager:
-						var ability_obj = Ability.from_dict(ability_data)
-						character.ability_manager.use_ability(ability_obj, {"position": character.global_position})
-				character.inventory.remove_item(item_index)
+				# Same rules as the party panel's Consume (apply_consumable).
+				# A use that took no effect keeps the item.
+				if apply_consumable(character, character, item_data):
+					character.inventory.remove_item(item_index)
 		
 		ActionType.CUSTOM:
 			# Custom actions can have a callable
@@ -461,6 +446,75 @@ func _execute_action(action: Action) -> void:
 					"targets": queued_targets,
 					"anchor": queued_anchor,
 				})
+
+## `user` consumes `item_data`, or gives it to `target` to drink. Shared by the
+## queued USE_ITEM and the party panel's Consume so both behave the same.
+## An item with flat "healing" heals by that amount only: a pure-heal
+## use_ability on top (a Potion of Healing's "heal") would heal twice and start
+## a cast, so it isn't cast. Any other use_ability is cast for free, on the
+## target alone. Returns false when nothing took effect (the cast failed and
+## there is no flat healing or satiety): the caller keeps the item, and no
+## "consumes" line is logged. A failed cast is announced by the character.
+static func apply_consumable(user, target, item_data: Dictionary) -> bool:
+	var item_name := _consumable_name(item_data)
+	var h = item_data.get("healing", 0.0)
+	var healing: float = float(h) if h != null else 0.0
+	var s = item_data.get("satiety", 0.0)
+	var satiety: float = float(s) if s != null else 0.0
+	var has_flat_effect := healing > 0 or satiety > 0
+
+	var use_ability_id = item_data.get("use_ability", "")
+	if use_ability_id is String and not use_ability_id.is_empty():
+		var ability_data: Dictionary = AbilityDatabase.get_ability_data(use_ability_id)
+		if not (healing > 0 and _is_pure_heal_ability(use_ability_id, ability_data)):
+			var am = target.get_node_or_null("AbilityManager")
+			var cast_ok := false
+			if not ability_data.is_empty() and am:
+				# The item pays for the spell ("free"), and it lands on the
+				# recipient alone, not on everyone standing in its area.
+				cast_ok = am.use_ability(Ability.from_dict(ability_data),
+					{"position": target.global_position, "targets": [target], "free": true})
+			elif not has_flat_effect:
+				# No cast-failure notice will come from the manager: say why.
+				user.notify("Nothing happens", Color(1.0, 0.6, 0.4),
+					"%s can't use the %s: it does nothing on its own." % [user.Name, item_name])
+				return false
+			if not cast_ok and not has_flat_effect:
+				return false
+
+	if target == user:
+		GameLog.add_entry("%s consumes the %s." % [user.Name, item_name])
+	else:
+		GameLog.add_entry("%s gives the %s to %s." % [user.Name, item_name, target.Name])
+	if satiety > 0 and "hunger" in target:
+		target.hunger = max(0, target.hunger - satiety)
+	if healing > 0 and target.has_method("heal"):
+		target.heal(int(healing))
+	var condition_id = item_data.get("adds_condition_on_equip", "")
+	if condition_id is String and not condition_id.is_empty():
+		var cm = target.get_node_or_null("ConditionManager")
+		if cm:
+			cm.apply_condition(condition_id, user)
+	return true
+
+## A use_ability that only restores health: "heal" itself, or one whose
+## effects are all "heal".
+static func _is_pure_heal_ability(ability_id: String, ability_data: Dictionary) -> bool:
+	if ability_id.to_lower() == "heal" or str(ability_data.get("id", "")).to_lower() == "heal":
+		return true
+	var effects = ability_data.get("effects", [])
+	if not (effects is Array) or effects.is_empty():
+		return false
+	for effect in effects:
+		if not (effect is Dictionary and str(effect.get("type", "")) == "heal"):
+			return false
+	return true
+
+static func _consumable_name(item_data: Dictionary) -> String:
+	var n = item_data.get("display_name")
+	if n != null and str(n) != "":
+		return str(n)
+	return str(item_data.get("id", "item")).replace("_", " ")
 
 func _execute_action_immediate(type: ActionType, data: Dictionary) -> void:
 	"""Execute an action immediately without queueing"""
