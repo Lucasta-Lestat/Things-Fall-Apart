@@ -248,7 +248,11 @@ func _cast(data: Dictionary, pos: Vector2, target_node, explicit := false) -> bo
 	var shape := String((data.get("targeting", {}) as Dictionary).get("shape", "none"))
 	if explicit or not shape in ["circle", "cone", "line", "rectangle"]:
 		params["targets"] = [target_node]
+	# Flagged so a refusal isn't announced as if the player had ordered the
+	# cast: we retry on _cast_timer (ProceduralCharacter._announce_cast_failure).
+	character.ai_cast_attempt = true
 	var ok: bool = character.use_ability(ab, params)
+	character.ai_cast_attempt = false
 	_cast_timer = randf_range(2.6, 4.2) if ok else 1.2
 	return ok
 

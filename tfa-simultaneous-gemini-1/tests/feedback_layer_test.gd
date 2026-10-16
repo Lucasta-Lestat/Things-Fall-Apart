@@ -212,6 +212,26 @@ func _case_cast_failure() -> void:
 		npc.ability_manager.cast_failed.emit(ab, "Not enough Focus")
 		_check("cast.npc-silent", GameLog.get_entries().size() == n0 and _floats_under(npc.get_parent()).size() == nf)
 
+	# An AI-driven party member retries its own refused casts every 1.2 s
+	# (ai._cast), so those refusals stay quiet; the same refusal on an ordered
+	# cast is still announced. current_cast forces "Already casting".
+	var ai_node = p0.get_node_or_null("AI")
+	var fb: Dictionary = AbilityDatabase.get_ability_data("fireball")
+	_check("cast.ai-fixture", ai_node != null and not fb.is_empty())
+	if ai_node != null and not fb.is_empty():
+		var saved_cast: Dictionary = p0.ability_manager.current_cast
+		p0.ability_manager.current_cast = {"state": "casting"}
+		p0._last_notify_text = ""
+		n0 = GameLog.get_entries().size()
+		var f1: int = _floats_under(parent).size()
+		var ai_ok: bool = ai_node._cast(fb, p0.global_position + Vector2(200, 0), null)
+		_check("cast.ai-attempt-silent", not ai_ok and GameLog.get_entries().size() == n0 \
+			and _floats_under(parent).size() == f1 and not p0.ai_cast_attempt)
+		var ordered_ok: bool = p0.use_ability(Ability.from_dict(fb), {"position": p0.global_position + Vector2(200, 0)})
+		_check("cast.ordered-attempt-announced", not ordered_ok and GameLog.get_entries().size() == n0 + 1 \
+			and str(GameLog.get_entries()[-1].text).begins_with("%s can't use" % p0.Name), str(GameLog.get_entries()[-1].text))
+		p0.ability_manager.current_cast = saved_cast
+
 func _fill(inv, keep: Array) -> void:
 	inv.items.clear()
 	for k in keep:

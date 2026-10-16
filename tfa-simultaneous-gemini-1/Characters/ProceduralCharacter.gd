@@ -7118,11 +7118,16 @@ func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	_announce_cast_failure(ability, reason)
 	cast_failed.emit(ability, reason)
 
+## True only inside ai.gd's own use_ability call (ai._cast). An AI-driven party
+## member (any unselected one) retries a refused cast every 1.2 s, so those
+## refusals stay quiet: the notices below are for casts the player ordered.
+var ai_cast_attempt: bool = false
+
 ## Tell the player why a party member's ability didn't go off. The reasons
 ## come from AbilityManager._check_ability_usable / use_ability ("Not enough
 ## <resource>", "Already casting", "Cannot act", "Cannot pay costs", ...).
 func _announce_cast_failure(ability: Ability, reason: String) -> void:
-	if not is_party_member():
+	if not is_party_member() or ai_cast_attempt:
 		return
 	var ability_name: String = ability.display_name if ability else "ability"
 	var readable := reason.replace("_", " ")
