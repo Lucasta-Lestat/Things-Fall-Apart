@@ -2048,7 +2048,9 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
-	light.visible = false
+	# Follow the current stealth mode (the shared cone rule), so NPCs spawned
+	# after a map load or mid-mission match it instead of starting hidden.
+	light.visible = _npc_cones_shown(npc)
 	npc.add_child(light)
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
@@ -2470,7 +2472,15 @@ func _toggle_npc_los_cones() -> void:
 			continue
 		var npc_los = character.get_node_or_null("NPCLineOfSight")
 		if npc_los:
-			npc_los.visible = stealth_mode
+			npc_los.visible = _npc_cones_shown(character)
+
+## Whether an NPC's sight cone shows: stealth mode on, off the world map
+## (nobody sneaks there, and every other stealth readout hides there too), and
+## the NPC alive (a corpse sees nothing). An NPC hidden outright hides its cone
+## with it.
+func _npc_cones_shown(npc) -> bool:
+	return stealth_mode and is_instance_valid(npc) and npc.is_alive() \
+			and not current_map_data.get("is_world_map", false)
 
 ## The one way to switch stealth mode (the C key). While it is on, party
 ## members sneak (ProceduralCharacter.is_sneaking: quieter footsteps, slower
@@ -3906,6 +3916,7 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 		return false
 	# Melee cannot reach across stories (deck walker vs ground character).
 	if absf(_elev_of(attacker) - _elev_of(target)) > MELEE_ELEV_TOLERANCE:
+		_warn_out_of_reach(attacker, target)
 		return false
 
 	var attacker_id = attacker.get_instance_id()
@@ -3915,6 +3926,36 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 		return true
 
 	return not active_hits[attacker_id].has(target_id)
+
+## Tell the player why their melee swing passed through a character on
+## another level. Only a selected (player-controlled) swinger warns, never an
+## AI-driven companion's automatic swing. With a live target (attack_aim_node,
+## set by Attack Target orders) only that body warns; a swing at a clicked
+## point warns for the first visible hostile it skips. At most once per swing:
+## register_attack_start resets active_hits[aid], and the String key can't
+## collide with the int target ids stored there. The key also leaves the hit
+## set non-empty, so register_attack_end's generic "connects with nothing"
+## line gives way to this more specific one.
+func _warn_out_of_reach(attacker: Node2D, target: Node2D) -> void:
+	if not (attacker is ProceduralCharacter and target is ProceduralCharacter):
+		return
+	if not (attacker in selected_characters) or not target.visible:
+		return
+	var aid: int = attacker.get_instance_id()
+	if not active_hits.has(aid) or active_hits[aid].has("_elev_warned"):
+		return
+	var swinger := attacker as ProceduralCharacter
+	var body := target as ProceduralCharacter
+	var intended = swinger.attack_aim_node  # untyped: may hold a freed node
+	if is_instance_valid(intended):
+		if body != intended:
+			return
+	elif body in party_chars or not body.is_alive() \
+			or not body.is_hostile_to_party():
+		return
+	active_hits[aid]["_elev_warned"] = true
+	swinger.notify("Out of reach", Color(1.0, 0.6, 0.4),
+		"%s can't reach %s: melee can't strike between levels." % [swinger.Name, body.Name])
 
 # ===== CHARACTER MELEE: REACH + ARC =====
 #
@@ -4412,7 +4453,8 @@ func _create_warp_zones(warp_list: Array) -> void:
 		arrow.z_index = 100
 		area.add_child(arrow)
 
-		# Hover label with the destination map's name (falls back to warp label)
+		# Hover label: the destination map's name, or the warp's own label for
+		# same-map ladders/stairs and world-map settlements (_warp_hover_text)
 		var hover_label := Label.new()
 		hover_label.name = "HoverLabel"
 		hover_label.text = _warp_hover_text(warp_def)
@@ -4496,6 +4538,11 @@ func _warp_arrow_rotation(warp_def: Dictionary, pos: Vector2) -> float:
 
 func _warp_hover_text(warp_def: Dictionary) -> String:
 	var target_id: String = warp_def.get("target_map", "")
+	# Same-map ladders/stairs and world-map settlements name themselves: the
+	# destination map's name would read "Tg Castle Demo" or the wrong town.
+	var label: String = str(warp_def.get("label", ""))
+	if not label.is_empty() and (warp_def.get("world_warp", false) or target_id == current_map_id):
+		return label
 	if not target_id.is_empty() and MapDatabase.get_all_map_ids().has(target_id):
 		var target_data: Dictionary = MapDatabase.get_map_data(target_id)
 		var map_name: String = target_data.get("name", "")

@@ -34,6 +34,9 @@ const ALERTNESS_MAX: float = 100.0
 const ALERTNESS_SUSPICIOUS_THRESHOLD: float = 25.0
 const ALERTNESS_SEARCHING_THRESHOLD: float = 60.0
 const ALERTNESS_HOSTILE_THRESHOLD: float = 90.0
+# The SEARCHING state gives up below this. Until then the '?' stays up, so it
+# doesn't vanish while the NPC is still walking to the noise.
+const SEARCH_GIVE_UP_THRESHOLD: float = ALERTNESS_SEARCHING_THRESHOLD * 0.6
 # Cap on sound-driven gains so audio alone can't unlock HOSTILE.
 const ALERTNESS_SOUND_CAP: float = ALERTNESS_HOSTILE_THRESHOLD - 5.0
 # Per-second decay applied when no recent stimulus.
@@ -80,6 +83,9 @@ var state_timer: float = 0.0
 
 # Target tracking
 var current_target: ProceduralCharacter = null
+# True once confusion has re-rolled our target; cleared (and the random target
+# dropped) when the condition ends.
+var _confused_pick_done: bool = false
 var last_known_target_pos: Vector2 = Vector2.ZERO
 # target_acquired (the '!' replay) fires for a new target, or a re-find after
 # at least TARGET_REANNOUNCE_GAP s without one, not for the per-frame
@@ -94,6 +100,9 @@ var _target_occluded_time: float = 0.0
 # Goal system
 var current_goal: String = "idle"
 var target_item: Node = null
+# instance_id -> true for world items we tried to take but couldn't carry, so
+# we don't keep walking back to them.
+var _untakeable_items: Dictionary = {}
 var goal_reassess_timer: float = 0.0
 const GOAL_REASSESS_INTERVAL: float = 2.0
 
@@ -752,12 +761,56 @@ func has_in_view(c) -> bool:
 	return is_in_line_of_sight(c.global_position, c.get_elevation())
 
 
+# ===== PERCEPTION QUERIES (readouts) =====
+# What this AI sees of a character right now, by the same rules _update_target
+# acts on, for UI that must agree with the AI (the stealth 'in view' eye, the
+# paused intent line). Read-only: nothing here changes targeting. The held
+# target's answer is is_target_in_sight() (the world-info lane's target
+# indication adds it: the hold rule, _target_occluded_time == 0).
+
+## Whether this AI would acquire `other` by sight now (faction aside): alive,
+## inside detection range, not invisible to us, and either in the sight cone or
+## in close quarters with a clear wall ray unless `other` is sneaking. Blinded
+## or unconscious, nothing. For our current target use is_target_in_sight().
+func can_see_character(other) -> bool:
+	if other == null or not is_instance_valid(other) or other == character:
+		return false
+	if not (other is ProceduralCharacter) or not other.is_alive():
+		return false
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+		return false
+	if character.traits.get("true_sight", 0) == 0:
+		var other_cm = other.get_node_or_null("ConditionManager")
+		if other_cm and other_cm.has_active_condition("invisible"):
+			return false
+	var dist: float = character.global_position.distance_to(other.global_position)
+	if dist >= detection_range:
+		return false
+	if dist <= _close_quarters_radius() and not _is_sneaking(other):
+		return _has_clear_sight_line(other.global_position, other.get_elevation())
+	return is_in_line_of_sight(other.global_position, other.get_elevation())
+
+
 func _update_target(delta: float = 0.0) -> void:
 	# Compulsion outranks the hysteresis below on purpose: a musked guard
 	# mid-chase has to turn on his own kind, not finish the fight he was already
 	# in. Above the apathetic suppression too -- a directed compulsion beats an
 	# undirected mood.
 	if _apply_compulsion():
+		return
+	var _cm2 = character.get_node_or_null("ConditionManager")
+	# Confusion re-rolls the target once when it lands, even mid-fight (the
+	# random pick below otherwise only runs with no target), and the random
+	# target is dropped when it wears off so faction targeting resumes.
+	var is_confused: bool = _cm2 != null and _cm2.has_active_condition("confused")
+	if is_confused and not _confused_pick_done:
+		if current_target:
+			_lose_target()
+	elif not is_confused and _confused_pick_done:
+		_confused_pick_done = false
+		if current_target:
+			_lose_target()
 		return
 	# Validate existing target
 	if current_target:
@@ -794,6 +847,13 @@ func _update_target(delta: float = 0.0) -> void:
 			# live position. Blind, the last seen point stands — sounds and
 			# their hits keep it fresh (on_sound_heard / _on_self_damaged).
 			last_known_target_pos = current_target.global_position
+			# Seeing the target is a live stimulus: hold the meter at HOSTILE
+			# so it can't decay into the SEARCHING band (and its yellow '?')
+			# mid-fight, and keep the search point on them in case we lose them.
+			time_since_last_stimulus = 0.0
+			last_heard_position = current_target.global_position
+			if alertness_value < ALERTNESS_MAX:
+				_set_alertness_value(ALERTNESS_MAX)
 		else:
 			_target_occluded_time += delta
 			if _target_occluded_time > TARGET_OCCLUSION_GIVE_UP:
@@ -809,9 +869,15 @@ func _update_target(delta: float = 0.0) -> void:
 				_announce_lost_sight(lost)
 		return
 
+	# Get infatuation source to exclude from targeting
+	var infatuation_source: Node = null
+	if _cm2 and _cm2.has_active_condition("infatuated"):
+		var inf_instance = _cm2.conditions.get("infatuated")
+		if inf_instance:
+			infatuation_source = inf_instance.source
+
 	# Check for confusion — pick random target from all visible living characters
-	var _cm2 = character.get_node_or_null("ConditionManager")
-	if _cm2 and _cm2.has_active_condition("confused"):
+	if is_confused:
 		var visible_chars: Array = []
 		for node in game.characters_in_scene:
 			if node == character:
@@ -819,21 +885,23 @@ func _update_target(delta: float = 0.0) -> void:
 			var other = node as ProceduralCharacter
 			if not other or not other.is_alive():
 				continue
+			# Not the charmer: confusion doesn't override the infatuation.
+			if infatuation_source and other == infatuation_source:
+				continue
 			if not is_in_line_of_sight(other.global_position, other.get_elevation()):
 				continue
 			var dist = character.global_position.distance_to(other.global_position)
 			if dist < detection_range:
 				visible_chars.append(other)
 		if not visible_chars.is_empty():
-			_acquire_target(visible_chars[randi() % visible_chars.size()])
+			var picked: ProceduralCharacter = visible_chars[randi() % visible_chars.size()]
+			var first_pick: bool = not _confused_pick_done
+			_acquire_target(picked)
+			_confused_pick_done = true
+			# Once per bout of confusion (apathy can null the target every frame).
+			if first_pick and _party_can_see(character):
+				GameLog.add_entry("%s lashes out at %s in confusion!" % [character.Name, picked.Name])
 		return
-
-	# Get infatuation source to exclude from targeting
-	var infatuation_source: Node = null
-	if _cm2 and _cm2.has_active_condition("infatuated"):
-		var inf_instance = _cm2.conditions.get("infatuated")
-		if inf_instance:
-			infatuation_source = inf_instance.source
 
 	# Search for new target (must be in LOS)
 	var best_target: ProceduralCharacter = null
@@ -1056,6 +1124,9 @@ func _change_state(new_state: AIState) -> void:
 	var old_state = current_state
 	current_state = new_state
 	state_timer = 0.0
+	# Leaving SEARCHING: re-classify so the '?' (held up while searching) drops.
+	if old_state == AIState.SEARCHING:
+		_set_alertness_value(alertness_value)
 	emit_signal("state_changed", old_state, new_state)
 
 
@@ -1695,6 +1766,9 @@ func _check_path_progress() -> void:
 # ===== GOAL REASSESSMENT =====
 
 func reassess_goals():
+	# Party members never run the civilian goal loop (see execute_current_goal).
+	if character.is_player_controlled or character.is_party_member():
+		return
 	if character.is_moving:
 		return
 
@@ -1727,8 +1801,10 @@ func is_hungry() -> bool:
 
 func execute_current_goal():
 	# Player-controlled characters (e.g. the world-map banner) shouldn't auto-
-	# wander or auto-pick up — the human drives those decisions.
-	if character.is_player_controlled:
+	# wander or auto-pick up — the human drives those decisions. Unselected
+	# party members keep their combat AI but stand still when idle instead of
+	# drifting off or helping themselves to loot.
+	if character.is_player_controlled or character.is_party_member():
 		return
 	match current_goal:
 		"idle":
@@ -1766,6 +1842,8 @@ func find_best_food_in_sight() -> Node:
 	var best_calories: float = 0.0
 
 	for item in items:
+		if not _is_takeable_item(item):
+			continue
 		if not "calories" in item or item.calories <= 0:
 			continue
 		if is_item_owned_by_ally(item):
@@ -1779,11 +1857,16 @@ func find_best_food_in_sight() -> Node:
 	return best_food
 
 func find_most_valuable_item_in_sight() -> Node:
+	# Nowhere to put it: don't go after it (we used to just delete it).
+	if character.inventory == null:
+		return null
 	var items = get_items_in_line_of_sight()
 	var best_item: Node = null
 	var best_value: float = 0.0
 
 	for item in items:
+		if not _is_takeable_item(item):
+			continue
 		if is_item_owned_by_ally(item):
 			continue
 		if not can_reach_item(item):
@@ -1794,6 +1877,21 @@ func find_most_valuable_item_in_sight() -> Node:
 			best_item = item
 
 	return best_item
+
+# Only loose pickups (what the player's own "Pick Up" applies to). Chests and
+# other containers, readables and keys stay put: an NPC walking off with a
+# chest or a door key leaves the player stuck with no idea why. Owned items
+# ("Pick Up (owned)") stay fair game for non-allies: that theft is reported to
+# CrimeManager like the party's own (pickup_item).
+func _is_takeable_item(item: Node) -> bool:
+	if not (item is Item) or _untakeable_items.has(item.get_instance_id()):
+		return false
+	if item.item_type == "key":
+		return false
+	if game == null or not game.has_method("_world_item_options"):
+		return false
+	var opts: Array = game._world_item_options(item)
+	return opts.size() == 1 and String(opts[0]) in ["Pick Up", "Pick Up (owned)"]
 
 # Correct for the first time in Phase 4: reads Item.owner_faction (the old
 # version read Godot's built-in Node.owner — always null for runtime items).
@@ -1809,40 +1907,80 @@ func can_reach_item(item: Node) -> bool:
 	return not test_path.is_empty()
 
 func pickup_item(item: Node):
-	if not is_instance_valid(item):
+	# Queued-for-deletion: someone already took it this frame (it stays
+	# physics-visible until the frame ends), so don't copy it a second time.
+	if not is_instance_valid(item) or item.is_queued_for_deletion():
 		return
 	# Refusal, not report: guards don't loot their own barracks and allies
 	# don't loot each other. (find_most_valuable_item_in_sight also filters,
 	# but seek-goal paths can hand us an item directly.)
 	if is_item_owned_by_ally(item):
 		return
-	# Law: instrumented now so enabling NPC crime later is a JSON edit
-	# (laws.json applies_to). For player-faction summons this already
-	# attributes the theft to the summoner today.
-	CrimeManager.report(character, "take", CrimeManager.take_payload(item))
-
-	GameLog.add_entry(character.Name + " picks up " + item.display_name)
 
 	# If food and hungry, eat immediately
 	if current_goal == "seek_food" and "calories" in item:
 		eat_food(item)
-	else:
-		# Add to inventory if possible
-		if character.inventory:
-			character.inventory.add_item({"display_name": item.display_name, "id": item.id, "node": item})
-		item.get_parent().remove_child(item)
-		if item in game.items_in_scene:
-			game.items_in_scene.erase(item)
-		item.queue_free()
+		return
+
+	# Take a proper inventory copy (same data the player's Pick Up uses). If it
+	# won't fit, the item stays on the floor and we stop eyeing it.
+	var wanted: int = item.stack_count if item is Item else 1
+	var data: Dictionary = item.to_inventory_data() if item.has_method("to_inventory_data") else {}
+	# Items.json gives non-stackables (weapons, armour, helms) "num_stacks":
+	# null, which add_stack's int() can't read: a SCRIPT ERROR, and no take.
+	var ns = data.get("num_stacks")
+	if not data.is_empty() and not (ns is int or ns is float):
+		data["num_stacks"] = wanted
+	if data.is_empty() or character.inventory == null or not character.inventory.add_stack(data):
+		# A stackable may have topped up an existing stack before running out
+		# of room; trim the floor pile to what's actually left.
+		if item is Item and item.is_stackable:
+			var left: int = int(data.get("num_stacks", wanted))
+			if left > 0 and left < wanted:
+				# Law: the part taken is a take (Game.pick_up_item does the same).
+				# Reported before the pile shrinks: the payload reads the item.
+				CrimeManager.report(character, "take", CrimeManager.take_payload(item))
+				item.remove_from_stack(wanted - left)
+				if _party_can_see(character):
+					GameLog.add_entry("%s picks up %s (x%d)." % [character.Name, item.display_name, wanted - left])
+		_untakeable_items[item.get_instance_id()] = true
+		return
+
+	# Law: instrumented now so enabling NPC crime later is a JSON edit
+	# (laws.json applies_to). For player-faction summons this already
+	# attributes the theft to the summoner today. Reported only once the item
+	# is really taken (a pickup that didn't fit is not a theft), and before
+	# the node dies: the payload reads the item's fields.
+	CrimeManager.report(character, "take", CrimeManager.take_payload(item))
+	# Same wording as the party's own Pick Up (Game.pick_up_item).
+	if _party_can_see(character):
+		GameLog.add_entry("%s picks up %s%s." % [character.Name, item.display_name, " (x%d)" % wanted if wanted > 1 else ""])
+	_remove_world_item(item)
 
 func eat_food(item: Node):
 	if "calories" in item:
 		var hunger_reduced = item.calories * 0.1
 		hunger = max(0, hunger - hunger_reduced)
-		GameLog.add_entry(character.Name + " eats " + item.display_name)
-		if item in game.items_in_scene:
-			game.items_in_scene.erase(item)
-		item.queue_free()
+		# Eating it takes it too (see pickup_item).
+		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
+		if _party_can_see(character):
+			GameLog.add_entry("%s eats the %s." % [character.Name, item.display_name])
+		_remove_world_item(item)
+
+# Remove a world item we've taken. Not _destroy_item(): that fires `destroyed`,
+# and Game._on_item_destroyed would scatter the item's salvage on the floor.
+func _remove_world_item(item: Node) -> void:
+	if item is Item:
+		GridManager.unregister_object(item._grid_pos, item)
+	if item in game.items_in_scene:
+		game.items_in_scene.erase(item)
+	item.queue_free()
+
+# Only log what the party could actually have seen happen: whether the party
+# sees the acting character (Game.is_seen_by_party: the per-frame LOS cache,
+# elevation included), not merely the spot it acts on.
+func _party_can_see(c) -> bool:
+	return game != null and game.has_method("is_seen_by_party") and game.is_seen_by_party(c)
 
 
 # ===== WANDERING =====
@@ -1938,6 +2076,10 @@ func _classify_alertness(v: float) -> Alertness:
 	if v >= ALERTNESS_HOSTILE_THRESHOLD:
 		return Alertness.HOSTILE
 	if v >= ALERTNESS_SEARCHING_THRESHOLD:
+		return Alertness.SEARCHING
+	# Still walking to the noise / looking around: keep the '?' up until
+	# _process_searching actually gives up (_change_state re-classifies then).
+	if current_state == AIState.SEARCHING and v >= SEARCH_GIVE_UP_THRESHOLD:
 		return Alertness.SEARCHING
 	if v >= ALERTNESS_SUSPICIOUS_THRESHOLD:
 		return Alertness.SUSPICIOUS
@@ -2182,7 +2324,7 @@ func _process_searching(delta: float) -> void:
 		return
 
 	# Alertness decayed below the threshold — give up and return to normal.
-	if alertness_value < ALERTNESS_SEARCHING_THRESHOLD * 0.6:
+	if alertness_value < SEARCH_GIVE_UP_THRESHOLD:
 		_change_state(AIState.IDLE)
 		return
 

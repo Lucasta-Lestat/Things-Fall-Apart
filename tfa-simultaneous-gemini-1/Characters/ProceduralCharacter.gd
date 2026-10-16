@@ -401,6 +401,8 @@ var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 # The last held-click goal came back pathless: don't re-drain the whole A*
 # component every frame while the button is held on the same tile.
 var _nav_goal_failed: bool = false
+# "No path" was shown during the current middle-button hold
+var _cant_reach_shown: bool = false
 
 # Ice sliding state
 var is_ice_sliding: bool = false
@@ -1895,6 +1897,12 @@ func _on_stats_recalculated() -> void:
 		restricted_actions_by_trait[action_trait] = val >= 1.0
 
 
+## True while a condition's damage tick (Shocked, Burning...) is being applied.
+## The electric branch of handle_damage_effect_based_on_type skips
+## try_electrify then: Shocked's own tick would otherwise re-electrify the
+## tile, which re-applies Shocked, for as long as the character stands there.
+var _condition_tick_damage: bool = false
+
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
 	if result.has("damage"):
 		var damage_amount = result["damage"]
@@ -1904,7 +1912,9 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		# condition isn't pinned to a specific limb (bleeding, poison, etc.).
 		var hit_limb: int = instance.target_limb if instance.target_limb != null else LimbType.TORSO
 		var damage_dict = {damage_type: damage_amount}
+		_condition_tick_damage = true
 		take_damage(damage_dict, global_position, instance.source, hit_limb)
+		_condition_tick_damage = false
 
 	if result.has("heal"):
 		# Heals now go to the single HP pool. `target_limb` no longer affects
@@ -4088,10 +4098,20 @@ func _handle_input() -> void:
 						# straight-line fallback ground into the wall forever)
 						is_moving = false
 						_nav_goal_failed = true
+						# Say so, once per press: a held drag re-plans for
+						# every new tile it crosses.
+						if not _cant_reach_shown:
+							_cant_reach_shown = true
+							notify("No path", Color(1.0, 0.6, 0.4), "%s can't reach that spot: no walkable route." % Name)
 					else:
 						target_position = _nav_waypoints[0]
 						target_rotation = (target_position - global_position).angle() + PI / 2
 						is_moving = true
+		else:
+			_cant_reach_shown = false
+			# A new press re-plans even to the same tile, so a repeat click on an
+			# unreachable spot says "No path" again instead of doing nothing.
+			_nav_goal_failed = false
 
 	# Per-hand weapon cycling: E/Shift+E for main hand, Q/Shift+Q for off hand
 	if Input.is_action_just_pressed("cycle_main_hand_next"):
@@ -7261,8 +7281,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# Propagate the hit through any contiguous conductive surface
 				# or fluid the character is standing on (water, blood, etc.).
 				# The electrified surface itself ticks shocked + CON-save stun.
+				# A condition tick (Shocked's own damage) doesn't propagate, or
+				# the tile and the condition would keep refreshing each other.
 				var game = get_tree().current_scene
-				if game and "surface_manager" in game and game.surface_manager:
+				if not _condition_tick_damage and game and "surface_manager" in game and game.surface_manager:
 					var tile = GridManager.world_to_map(global_position)
 					game.surface_manager.try_electrify(tile)
 
