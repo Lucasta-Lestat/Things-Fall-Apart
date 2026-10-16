@@ -1297,7 +1297,7 @@
 					"type": "custom",
 					"method": "_change_weather",
 					"precipitation_type": "rain",
-					"group_id": "Scarlatti"
+					"duration": 60
 				}
 			],
 			"visuals": {
@@ -1331,7 +1331,7 @@
 					"type": "custom",
 					"method": "_change_weather",
 					"precipitation_type": "acid_rain",
-					"group_id": "Scarlatti"
+					"duration": 60
 				}
 			],
 			"visuals": {
@@ -1365,7 +1365,7 @@
 					"type": "custom",
 					"method": "_change_weather",
 					"precipitation_type": "freezing_rain",
-					"group_id": "Scarlatti"
+					"duration": 60
 				}
 			],
 			"visuals": {

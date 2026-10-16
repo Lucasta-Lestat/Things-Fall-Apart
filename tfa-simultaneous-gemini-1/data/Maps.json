@@ -614,6 +614,7 @@
 				"structures": "res://Maps/perrow_tavern.png",
 				"structures_mask": "res://Maps/perrow_tavern_structures_mask.png"
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"music_track": "tavern_theme",
 			"name": "Perrow Tavern",
@@ -688,6 +689,7 @@
 				"structures": "res://Maps/dock-tavern.png",
 				"structures_mask": "res://Maps/dock_tavern_structures_mask.png"
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"music_track": "tavern_theme",
 			"name": "Dock Tavern",
@@ -1029,6 +1031,7 @@
 				"structures": "res://Maps/eeler floor two.png",
 				"structures_mask": "res://Maps/eeler_floor_two_structures_mask.png"
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"music_track": "",
 			"name": "Eeler Floor Two",
@@ -1058,6 +1061,7 @@
 			"images": {
 
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"name": "Skarsgaard Throne Hall",
 			"npc_spawns": [],
@@ -1170,6 +1174,7 @@
 			"images": {
 
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"name": "Bortelinian Catacombs",
 			"npc_spawns": [],
@@ -1472,6 +1477,7 @@
 				"structures": "res://Maps/argentiara_mine.png",
 				"structures_mask": "res://Maps/argentiara_mine_structures_mask.png"
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"music_track": "",
 			"name": "Argentiara Mine",
@@ -1549,6 +1555,7 @@
 				"structures": "res://Maps/argentiara_deep_shaft.png",
 				"structures_mask": "res://Maps/argentiara_deep_shaft_structures_mask.png"
 			},
+			"indoors": true,
 			"item_spawns": [],
 			"music_track": "",
 			"name": "Argentiara Deep Shaft",

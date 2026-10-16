@@ -1242,8 +1242,20 @@ func _unload_current_map() -> void:
 	GridManager.set_elevation_data(null)
 
 	_forced_precip = ""
+	var leaving_group: String = current_map_data.get("weather_group", "")
 	current_map_id = ""
 	current_map_data = {}
+	# Timed spell weather on a group map would otherwise keep raining acid on
+	# every map sharing the group until the next daily roll. Reverted after
+	# current_map_data is cleared, so the old map doesn't announce it.
+	if _forced_weather_left > 0.0 and not leaving_group.is_empty() \
+			and WeatherManager.get_precipitation(leaving_group) == _forced_weather_type:
+		WeatherManager.set_precipitation(leaving_group, _forced_weather_revert)
+	_forced_weather_left = 0.0
+	_forced_weather_type = ""
+	_forced_weather_revert = ""
+	_weather_caster = null
+	_weather_condition_timers.clear()
 
 # ---------------------------------------------------------------------------
 # Ambient setup (fog + music)
@@ -1290,7 +1302,17 @@ func setup_map_weather(map_data: Dictionary) -> void:
 
 ## Force a precipitation type onto the current map, e.g. from a weather spell.
 ## Works regardless of the map's configured weather_group (most maps have none).
-func force_weather(precip_type: String) -> void:
+## A duration > 0 (spell weather) reverts to the previous precipitation when it
+## runs out, unless the weather has changed again in the meantime; while it
+## lasts, the conditions it applies (Acid Rain, Freezing Rain) are the
+## caster's doing.
+func force_weather(precip_type: String, duration: float = 0.0, caster: Node = null) -> void:
+	if duration > 0.0:
+		if _forced_weather_left <= 0.0:
+			_forced_weather_revert = current_precipitation()
+		_forced_weather_type = precip_type
+		_forced_weather_left = duration
+		_weather_caster = caster
 	var map_group: String = current_map_data.get("weather_group", "")
 	if not map_group.is_empty():
 		# Map has a real weather group: update it normally. The resulting
@@ -1326,6 +1348,9 @@ func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 func _spawn_rain_puddles(precip_type: String) -> void:
 	if not fluid_manager:
 		return
+	# Nothing pools from the sky indoors or on the world map.
+	if current_map_data.get("is_world_map", false) or is_map_indoors():
+		return
 	# What falls is what pools: acid rain leaves acid, everything else water.
 	var fluid_type: String = "acid" if precip_type == "acid_rain" else "water"
 	var puddle_count: int = 5 if precip_type == "rain" else 12
@@ -1345,6 +1370,9 @@ func _spawn_rain_puddles(precip_type: String) -> void:
 		if surface_manager and surface_manager.has_surface_at(tile):
 			continue
 		if fluid_manager.get_fluid_type_at(tile) != "":
+			continue
+		# No puddles under roofs.
+		if not is_tile_exposed_to_sky(tile):
 			continue
 		# gentle: weather must never erase an authored slick (oil etc.)
 		fluid_manager.rain_puddle(tile, fluid_type, amount)
@@ -1394,15 +1422,19 @@ func _refresh_weather_state(announce: bool = false) -> void:
 	_weather_effects_precip = precip
 
 ## What a weather change does to the party, for the log: "Sight drops to 50%.",
-## "Sight recovers to 75%." or "Full sight returns.", or "" when sight is
-## unchanged.
-func _weather_effects_note(prev_mult: float, mult: float, _precip: String) -> String:
+## "Sight recovers to 75%." or "Full sight returns.", then the weather's
+## exposure_text where it can fall on anyone ("Anyone caught in the open
+## starts to corrode."). "" when nothing changes for them.
+func _weather_effects_note(prev_mult: float, mult: float, precip: String) -> String:
 	var parts := PackedStringArray()
 	if not is_equal_approx(prev_mult, mult):
 		if mult >= 0.999:
 			parts.append("Full sight returns.")
 		else:
 			parts.append("Sight %s to %d%%." % ["drops" if mult < prev_mult else "recovers", roundi(mult * 100.0)])
+	var exposure: String = str(WeatherManager.get_precipitation_data(precip).get("exposure_text", ""))
+	if not exposure.is_empty() and not is_map_indoors() and not current_map_data.get("is_world_map", false):
+		parts.append(exposure)
 	return " ".join(parts)
 
 func get_weather_visibility_mult() -> float:
@@ -1413,6 +1445,98 @@ func get_fog_sight_mult_at(world_pos: Vector2) -> float:
 	if fog_manager and fog_manager.has_method("get_sight_multiplier_at"):
 		return fog_manager.get_sight_multiplier_at(world_pos)
 	return 1.0
+
+# ---------------------------------------------------------------------------
+# Weather on whoever stands under open sky
+# ---------------------------------------------------------------------------
+
+## Open sky over a tile: not an indoors map, not the world map, and no roof
+## (structured maps carry a roof layer; legacy maps have none, so they are
+## open everywhere unless flagged indoors).
+func is_tile_exposed_to_sky(t: Vector2i) -> bool:
+	if is_map_indoors() or current_map_data.get("is_world_map", false):
+		return false
+	return not GridManager.has_roof(t)
+
+## Whether weather falls on `c`: standing on a roof, or on an unroofed tile.
+func is_exposed_to_sky(c) -> bool:
+	if is_map_indoors() or current_map_data.get("is_world_map", false):
+		return false
+	if "on_roof" in c and c.on_roof:
+		return true
+	return is_tile_exposed_to_sky(GridManager.world_to_map(c.global_position))
+
+# Spell weather with a duration (force_weather): seconds left, the type it
+# forced, the precipitation to restore when it runs out, and who cast it.
+var _forced_weather_left: float = 0.0
+var _forced_weather_type: String = ""
+var _forced_weather_revert: String = ""
+var _weather_caster: Node = null
+# instance_id -> seconds of continuous exposure to condition-bearing weather.
+var _weather_condition_timers: Dictionary = {}
+
+## Acid Rain, Freezing Rain: weather.json applies_condition lands on everyone
+## out in the open after apply_interval seconds of exposure, and again every
+## interval while they stay out, up to max_stacks (so rain alone never
+## freezes). Shelter resets the timer. While a caster's spell weather lasts
+## the condition is theirs, so its damage counts as their attack.
+func _tick_weather_conditions(delta: float) -> void:
+	var precip: String = current_precipitation()
+	var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
+	var cond: String = str(pd.get("applies_condition", ""))
+	if cond.is_empty() or is_map_indoors() or current_map_data.get("is_world_map", false):
+		if not _weather_condition_timers.is_empty():
+			_weather_condition_timers.clear()
+		return
+	var interval: float = maxf(0.1, float(pd.get("apply_interval", 3.0)))
+	var cap: int = int(pd.get("max_stacks", 0))
+	var source: Node = null
+	if _forced_weather_left > 0.0 and precip == _forced_weather_type and is_instance_valid(_weather_caster):
+		source = _weather_caster
+	for c in characters_in_scene:
+		if not is_instance_valid(c) or not c.is_alive():
+			continue
+		var id: int = c.get_instance_id()
+		if not is_exposed_to_sky(c):
+			_weather_condition_timers.erase(id)
+			continue
+		var t: float = float(_weather_condition_timers.get(id, 0.0)) + delta
+		if t < interval:
+			_weather_condition_timers[id] = t
+			continue
+		_weather_condition_timers[id] = 0.0
+		var cm = c.get_node_or_null("ConditionManager")
+		if cm == null:
+			continue
+		var existing = cm.conditions.get(cond)
+		if cap > 0 and existing != null and existing.stacks >= cap:
+			# At the cap: keep it from lapsing while they stay out (re-applying
+			# a stackable doesn't refresh its timer).
+			var dur: float = float(existing.condition.duration)
+			if dur > 0.0 and existing.expires_at > 0.0:
+				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)
+			continue
+		cm.apply_condition(cond, source, 1)
+
+## Counts down timed spell weather and restores the previous precipitation.
+func _tick_forced_weather(delta: float) -> void:
+	if _forced_weather_left <= 0.0:
+		return
+	_forced_weather_left -= delta
+	if _forced_weather_left > 0.0:
+		return
+	var passing: String = _forced_weather_type
+	var revert: String = _forced_weather_revert
+	_forced_weather_left = 0.0
+	_forced_weather_type = ""
+	_forced_weather_revert = ""
+	_weather_caster = null
+	# A daily reroll (or another spell) may already have replaced it.
+	if passing.is_empty() or passing == revert or current_precipitation() != passing:
+		return
+	var pd: Dictionary = WeatherManager.get_precipitation_data(passing)
+	GameLog.add_entry("%s passes." % str(pd.get("display_name", passing.replace("_", " ").capitalize())))
+	force_weather(revert)
 
 # ---------------------------------------------------------------------------
 # Party spawning
@@ -2650,6 +2774,10 @@ func _process(delta: float) -> void:
 			fluid_manager.update_fluid_tick(delta)
 		if surface_manager:
 			surface_manager.update_surfaces(delta, characters_in_scene, self)
+		# Weather that corrodes or chills anyone out in the open; spell
+		# weather running out.
+		_tick_weather_conditions(delta)
+		_tick_forced_weather(delta)
 		# Hearing-pulse decay and the party LOS sweeps only run unpaused —
 		# they are the most raycast-heavy per-frame work we do, and nothing
 		# may change LOS during tactical pause: characters are frozen and

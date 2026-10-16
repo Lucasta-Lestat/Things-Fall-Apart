@@ -1636,7 +1636,14 @@ func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_posi
 	var game_node = get_tree().current_scene
 	if not game_node or not game_node.has_method("force_weather"):
 		return {"success": false, "error": "force_weather not available on current scene"}
-	game_node.force_weather(precip_type)
+	# No sky to call weather from: refuse rather than rain inside a tavern.
+	if game_node.has_method("is_map_indoors") and game_node.is_map_indoors():
+		if is_party_member():
+			notify("No open sky here", Color(1.0, 0.6, 0.4), "%s calls for the weather, but there is no open sky here." % Name)
+		return {"success": false, "error": "indoors"}
+	# Spell weather lasts `duration` seconds (0 = until something changes it),
+	# and what it does to anyone out in it is the caster's doing.
+	game_node.force_weather(precip_type, float(effect.get("duration", 0.0)), self)
 	return {"success": true, "precipitation_type": precip_type}
 
 
