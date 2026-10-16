@@ -1757,6 +1757,9 @@ func _on_stats_recalculated() -> void:
 	# --- Crit thresholds ---
 	crit_threshold_modifier = condition_manager.calculate_effective_stat(0.0, "crit_threshold")
 	crit_fail_modifier = condition_manager.calculate_effective_stat(0.0, "crit_fail_threshold")
+
+	# --- Concealment (Shrouded): multiplies observers' sight range to us ---
+	visibility_mult = condition_manager.calculate_effective_stat(1.0, "visibility")
 	
 	# --- Bonus damage against trait (each trait is its own stat key) ---
 	for trait_key in bonus_damage_against_trait:
@@ -5398,25 +5401,16 @@ func _on_active_weapon_changed(weapon, hand) -> void:
 # same treatment per-slot in equip_equipment/unequip_slot.
 var _drawn_weapon_conditions := {}  # hand -> Array[String] of condition ids we applied
 
+## Item helpers (condition ids, worn-pack slots, light) shared with the
+## inventory, the item tooltips and WeaponShape.
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+
 func _resolve_equip_condition_ids(raw) -> Array:
-	var ids: Array = []
-	if raw is String and raw != "" and raw != "null":
-		ids = [raw]
-	elif raw is Dictionary and raw.has("condition_id"):
-		ids = [raw["condition_id"]]
-	elif raw is Array:
-		ids = raw
-	var out: Array = []
-	for cid in ids:
-		# Items author display-style names ("Inspired"); condition ids are
-		# lowercase_snake. Normalize, and skip unregistered ids with a warning
-		# instead of letting apply_condition push per-frame errors.
-		var key := String(cid).to_lower().replace(" ", "_")
-		if ConditionManager.condition_registry.has(key):
-			out.append(key)
-		else:
-			push_warning("equip condition '%s' is not a registered condition" % cid)
-	return out
+	# Items author display-style names ("Inspired"); condition ids are
+	# lowercase_snake. EquipmentEffects normalises them, and skips unregistered
+	# ids with one warning instead of letting apply_condition push per-frame
+	# errors. The item tooltips read effects through the same resolver.
+	return EquipmentEffects.resolve_condition_ids(raw)
 
 func _apply_drawn_weapon_conditions(weapon: WeaponShape, hand: String) -> void:
 	if condition_manager == null:
@@ -5819,21 +5813,36 @@ func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 		_rig_show_wearable(slot, equipment_data, equipment)
 		_apply_worn_conditions(slot, equipment_data)
 	_refresh_limb_armor()
+	_refresh_worn_gear_effects()
 
 	return equipment
 
 
 # ---- while-worn armor conditions (crown's Inspired, cloak's Invisible...) ----
 var _worn_slot_conditions := {}  # slot enum -> Array[String] of condition ids we applied
+## ConditionInstance.custom_data key: the instance's own expiry from before a
+## worn item made it permanent (a spell's timed Invisible when the cloak went
+## on; -1 when another permanent source holds it). Taking the item off hands
+## that expiry back instead of stripping the condition. custom_data is
+## serialized, so the mark survives map warps.
+const EQUIP_PREV_EXPIRY_KEY := "equip_prev_expires_at"
+var _worn_recheck_pending := false
 
 func _apply_worn_conditions(slot: int, equipment_data: Dictionary) -> void:
 	_remove_worn_conditions(slot)
 	if condition_manager == null:
 		return
+	_watch_worn_conditions()
 	var applied: Array = []
 	for key in _resolve_equip_condition_ids(equipment_data.get("adds_condition_on_equip")):
-		if condition_manager.apply_condition(key, self, 1, -1.0):
+		var before: ConditionInstance = condition_manager.get_condition(key)
+		var prev_expiry: float = before.expires_at if before != null else -1.0
+		var shared: bool = _equip_condition_held_elsewhere(key)
+		var inst: ConditionInstance = condition_manager.apply_condition(key, self, 1, -1.0)
+		if inst:
 			applied.append(key)
+			if before != null and not shared and not inst.custom_data.has(EQUIP_PREV_EXPIRY_KEY):
+				inst.custom_data[EQUIP_PREV_EXPIRY_KEY] = prev_expiry
 	if not applied.is_empty():
 		_worn_slot_conditions[slot] = applied
 
@@ -5841,9 +5850,83 @@ func _remove_worn_conditions(slot: int) -> void:
 	if condition_manager == null or not _worn_slot_conditions.has(slot):
 		_worn_slot_conditions.erase(slot)
 		return
-	for cid in _worn_slot_conditions[slot]:
-		condition_manager.remove_condition(cid)
+	var ids: Array = _worn_slot_conditions[slot]
 	_worn_slot_conditions.erase(slot)
+	for cid in ids:
+		# Another worn item or a drawn weapon still grants it: it stays.
+		if _equip_condition_held_elsewhere(cid):
+			continue
+		var inst: ConditionInstance = condition_manager.get_condition(cid)
+		if inst != null and inst.custom_data.has(EQUIP_PREV_EXPIRY_KEY):
+			# It was already on from another source when the item went on:
+			# that source's own expiry comes back while it has time left.
+			var prev := float(inst.custom_data[EQUIP_PREV_EXPIRY_KEY])
+			inst.custom_data.erase(EQUIP_PREV_EXPIRY_KEY)
+			# (A timed re-cast while it was worn may have given it a later one.)
+			if prev >= 0.0 and inst.expires_at > prev:
+				prev = inst.expires_at
+			if prev < 0.0 or prev > TimeManager.absolute_time():
+				inst.expires_at = prev
+				continue
+		elif inst != null and inst.expires_at > TimeManager.absolute_time():
+			# The item applied it, but a timed re-cast while it was worn (an
+			# explicit duration) gave it an expiry of its own: that remainder
+			# outlasts the item instead of being stripped with it.
+			continue
+		condition_manager.remove_condition(cid)
+
+## True when a worn slot or a drawn hand holds condition `cid` (the slot being
+## changed is already out of the table when its caller asks).
+func _equip_condition_held_elsewhere(cid: String) -> bool:
+	for ids in _worn_slot_conditions.values():
+		if cid in ids:
+			return true
+	for ids in _drawn_weapon_conditions.values():
+		if cid in ids:
+			return true
+	return false
+
+## A worn item's condition that ends while the item is still on (a purge by
+## trait, or Illuminated evicting the cloak's Invisible) comes back once
+## nothing blocks it: any condition leaving re-checks what is worn.
+func _watch_worn_conditions() -> void:
+	if not condition_manager.condition_removed.is_connected(_on_condition_left_recheck_worn):
+		condition_manager.condition_removed.connect(_on_condition_left_recheck_worn)
+		condition_manager.condition_expired.connect(_on_condition_left_recheck_worn)
+
+func _on_condition_left_recheck_worn(_instance: ConditionInstance) -> void:
+	if _worn_recheck_pending or not is_alive():
+		return
+	# Deferred, so the removal (or the whole equip/unequip) finishes first.
+	_worn_recheck_pending = true
+	_recheck_worn_conditions.call_deferred()
+
+func _recheck_worn_conditions() -> void:
+	_worn_recheck_pending = false
+	if condition_manager == null or not is_alive():
+		return
+	var worn := {
+		EquipmentShape.EquipmentSlot.HEAD: head_equipment,
+		EquipmentShape.EquipmentSlot.TORSO: torso_equipment,
+		EquipmentShape.EquipmentSlot.BACK: back_equipment,
+		EquipmentShape.EquipmentSlot.LEGS: legs_equipment,
+		EquipmentShape.EquipmentSlot.FEET: feet_equipment,
+	}
+	for slot in worn:
+		var shape = worn[slot]
+		if shape == null or not is_instance_valid(shape) or not shape.has_meta("item_data"):
+			continue
+		var data = shape.get_meta("item_data")
+		if not (data is Dictionary):
+			continue
+		for key in _resolve_equip_condition_ids(data.get("adds_condition_on_equip")):
+			if condition_manager.has_condition(key):
+				continue
+			if condition_manager.apply_condition(key, self, 1, -1.0) != null:
+				var held: Array = _worn_slot_conditions.get(slot, [])
+				if not key in held:
+					held.append(key)
+				_worn_slot_conditions[slot] = held
 
 func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 	"""Remove equipment from a slot"""
@@ -5876,6 +5959,7 @@ func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 	_rig_hide_wearable(slot)
 	_remove_worn_conditions(slot)
 	_refresh_limb_armor()
+	_refresh_worn_gear_effects()
 
 func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 	"""Equip equipment by looking up its name in the database"""
@@ -5887,6 +5971,118 @@ func equip_equipment_by_name(equipment_name: String) -> EquipmentShape:
 			return equip_equipment(data)
 	push_warning("Could not find equipment: %s" % equipment_name)
 	return null
+
+# ===== WORN GEAR: PACK SLOTS, LIGHT, WARP REBUILD =====
+# What worn gear does beyond armour DR and its conditions (above): a worn
+# pack's num_slots raise the inventory cap, and the brightest worn item's
+# emits_light lights its wearer. equip_equipment and unequip_slot keep both
+# current. rebuild_worn_from_inventory re-wears the _equipped inventory dicts
+# (after a warp the body still wears the template's gear).
+
+## equip_slot string -> EquipmentShape.EquipmentSlot, as PartySidePanel maps
+## them. Capes share the BACK slot (the rig has one back layer), so a cloak
+## displaces a worn pack.
+const WEAR_SLOT_BY_NAME := {
+	"Head": EquipmentShape.EquipmentSlot.HEAD,
+	"Torso": EquipmentShape.EquipmentSlot.TORSO,
+	"Back": EquipmentShape.EquipmentSlot.BACK,
+	"Legs": EquipmentShape.EquipmentSlot.LEGS,
+	"Feet": EquipmentShape.EquipmentSlot.FEET,
+	"Cape": EquipmentShape.EquipmentSlot.BACK,
+}
+
+## item_data of every worn EquipmentShape (head, torso, back, legs, feet).
+func worn_item_datas() -> Array:
+	var out := []
+	for shape in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
+		if shape != null and is_instance_valid(shape) and shape.has_meta("item_data"):
+			var d = shape.get_meta("item_data")
+			if d is Dictionary:
+				out.append(d)
+	return out
+
+## Worn-pack carry slots (Inventory.bonus_slots) and the worn light follow
+## what is worn now. Idempotent.
+func _refresh_worn_gear_effects() -> void:
+	if inventory:
+		var bonus := 0
+		for d in worn_item_datas():
+			bonus += EquipmentEffects.container_slots(d)
+		inventory.bonus_slots = bonus
+	_refresh_worn_light()
+
+## The brightest worn item's emits_light as one "WornLight" on the torso slot,
+## which hides with it on death. Held weapons carry their own light.
+func _refresh_worn_light() -> void:
+	if torso_slot == null:
+		return
+	var old := torso_slot.get_node_or_null("WornLight")
+	if old:
+		torso_slot.remove_child(old)
+		old.queue_free()
+	var best := 0.0
+	var best_data := {}
+	for d in worn_item_datas():
+		var lv := EquipmentEffects.light_level(d)
+		if lv > best:
+			best = lv
+			best_data = d
+	if best <= 0.0:
+		return
+	var light: PointLight2D = EquipmentEffects.make_light(best, best_data.get("traits", {}))
+	light.name = "WornLight"
+	torso_slot.add_child(light)
+
+## Re-wears exactly the inventory dicts flagged _equipped, replacing whatever
+## is on the body (after a warp that is still the template's gear). A flag
+## with no wearable slot, a second item for a filled slot, or a slot whose
+## limb is gone (a helmet on a severed head) is cleared instead.
+func rebuild_worn_from_inventory() -> void:
+	if inventory == null:
+		return
+	for slot in [EquipmentShape.EquipmentSlot.HEAD, EquipmentShape.EquipmentSlot.TORSO,
+			EquipmentShape.EquipmentSlot.BACK, EquipmentShape.EquipmentSlot.LEGS,
+			EquipmentShape.EquipmentSlot.FEET]:
+		unequip_slot(slot)
+	var filled := {}
+	for it in inventory.items:
+		if not (it is Dictionary) or not it.get("_equipped", false):
+			continue
+		var raw_slot = it.get("equip_slot")
+		var slot = WEAR_SLOT_BY_NAME.get(str(raw_slot) if raw_slot != null else "", -1)
+		if slot == -1 or filled.has(slot) or _wear_slot_lost(slot):
+			it["_equipped"] = false
+			continue
+		filled[slot] = true
+		equip_equipment(it)
+
+## True when the limb a slot sits on is severed (head; feet once both legs are).
+func _wear_slot_lost(slot: int) -> bool:
+	if slot == EquipmentShape.EquipmentSlot.HEAD:
+		return bool(severed_limbs.get(LimbType.HEAD, false))
+	if slot == EquipmentShape.EquipmentSlot.FEET:
+		return bool(severed_limbs.get(LimbType.LEFT_LEG, false)) and bool(severed_limbs.get(LimbType.RIGHT_LEG, false))
+	return false
+
+## "" when a gear change keeps everything carried within the cap: `taking_off`
+## comes off (counts only if worn), `putting_on` goes on, and `leaving` items
+## also leave the inventory (a dropped pack takes itself). Otherwise the
+## player-facing reason. Only a worn pack's num_slots can shrink the cap.
+func worn_capacity_problem(taking_off: Dictionary, putting_on: Dictionary = {}, leaving: int = 0) -> String:
+	if inventory == null:
+		return ""
+	var off: int = EquipmentEffects.container_slots(taking_off) if taking_off.get("_equipped", false) else 0
+	var on: int = EquipmentEffects.container_slots(putting_on)
+	if off <= on:
+		return ""
+	var new_cap: int = inventory.max_slots - off + on
+	var used: int = inventory.slots_used() - leaving
+	if used <= new_cap:
+		return ""
+	var verb: String = "take off the %s" % EquipmentEffects.item_name(taking_off)
+	if not putting_on.is_empty():
+		verb = "swap the %s for the %s" % [EquipmentEffects.item_name(taking_off), EquipmentEffects.item_name(putting_on)]
+	return "%s can't %s: carrying %d items, and only %d fit without it. Drop %d first." % [Name, verb, used, new_cap, used - new_cap]
 
 # ===== PUBLIC FACTION API =====
 
@@ -5943,7 +6139,28 @@ func get_sight_range_px() -> float:
 ## normal). The "invisible" condition is separate and binary: the AI can't
 ## acquire an invisible foe at all (ai.gd checks the condition itself).
 func effective_visibility() -> float:
-	return 1.0
+	# Worn concealment (a Dark Hood's Shrouded, x0.5) via the "visibility"
+	# stat; attacking or casting shows us in full for REVEAL_SECONDS
+	# (reveal()). A corpse doesn't hide.
+	if visibility_mult >= 1.0 or not is_alive() or TimeManager.absolute_time() < _revealed_until:
+		return 1.0
+	return clampf(visibility_mult, 0.0, 1.0)
+
+## Concealment from conditions (the "visibility" stat, 1.0 = normal; a Dark
+## Hood's Shrouded halves it), cached by _on_stats_recalculated.
+## effective_visibility() is the answer to use.
+var visibility_mult: float = 1.0
+## TimeManager.absolute_time() until which concealment is off after an
+## attack or a cast.
+var _revealed_until: float = -1.0
+const REVEAL_SECONDS := 3.0
+
+## Attacking (Game.register_attack_start) or casting (use_ability) gives a
+## concealed character away for a few seconds. The binary "invisible"
+## condition is its own rule and is left alone.
+func reveal(seconds: float = REVEAL_SECONDS) -> void:
+	if visibility_mult < 1.0:
+		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
 
 ## True while this character is moving stealthily. Same answer as
 ## ai._is_sneaking(other): party members sneak while Game.stealth_mode is on;
@@ -6950,7 +7167,11 @@ signal targeting_started(ability: Ability)
 signal targeting_cancelled(ability: Ability)
 
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
-	return ability_manager.use_ability(ability, target_data)
+	var ok: bool = ability_manager.use_ability(ability, target_data)
+	# Casting gives a concealed caster away (reveal()).
+	if ok:
+		reveal()
+	return ok
 
 
 ## Start targeting mode for an ability

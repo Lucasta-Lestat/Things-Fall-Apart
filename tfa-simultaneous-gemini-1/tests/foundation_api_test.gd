@@ -321,9 +321,12 @@ func _case_character_queries() -> void:
 	_check("chars.bandits-hostile-both-ways", p0.is_hostile_to(npcs[0]) == FactionDatabase.are_hostile(p0.faction_id, "bandits") \
 		and npcs[0].is_hostile_to_party() == FactionDatabase.are_hostile("player", "bandits"))
 	npcs[0].faction_id = saved
+	# Visibility: 1.0, except worn concealment (the equipment lane's Shrouded,
+	# from a Dark Hood such as Djargo's) halves it.
 	for c in everyone:
-		if not is_equal_approx(c.effective_visibility(), 1.0):
-			_check("chars.visibility-baseline " + str(c.Name), false, str(c.effective_visibility()))
+		var want: float = 0.5 if c.condition_manager.has_active_condition("shrouded") else 1.0
+		if not is_equal_approx(c.effective_visibility(), want):
+			_check("chars.visibility-baseline " + str(c.Name), false, "%s, want %s" % [c.effective_visibility(), want])
 
 func _case_stealth_and_sight() -> void:
 	var party: Array = game.party_chars

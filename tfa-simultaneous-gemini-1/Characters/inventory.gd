@@ -11,9 +11,30 @@ signal active_weapon_changed(weapon, hand)
 ## Emitted whenever add_item/add_stack refuses an item, so failures are never
 ## silent. Party members show "Inventory full" over their head (see _ready).
 signal add_failed(item_data: Dictionary, reason: String)
+
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
 # Inventory storage
 var items: Array[Dictionary] = []
-var max_slots: int = 20
+## Carry cap: base_max_slots plus bonus_slots from worn packs (a Leather
+## Backpack's num_slots), which ProceduralCharacter keeps current from what it
+## wears. Assigning max_slots sets the base.
+var base_max_slots: int = 20
+var bonus_slots: int = 0
+var max_slots: int:
+	get:
+		return base_max_slots + bonus_slots
+	set(value):
+		base_max_slots = value
+
+## Slots taken toward max_slots: every entry but the hidden hand-weapon dicts
+## that mirror a held WeaponShape (starting weapons get one each; no window
+## shows them, so they mustn't fill the bag either).
+func slots_used() -> int:
+	var n := 0
+	for it in items:
+		if not EquipmentEffects.is_hand_ghost(it):
+			n += 1
+	return n
 
 # Hand slots — each hand holds exactly one item (weapon or ability) or null
 var main_hand_item: Node2D = null
@@ -36,7 +57,7 @@ func _on_add_failed(item_data: Dictionary, reason: String) -> void:
 		return
 	var item_name := String(item_data.get("display_name", item_data.get("name", "item")))
 	possessor.notify(reason, Color(1.0, 0.75, 0.3),
-		"%s can't carry the %s: %s (%d/%d slots)." % [possessor.Name, item_name, reason.to_lower(), items.size(), max_slots])
+		"%s can't carry the %s: %s (%d/%d slots)." % [possessor.Name, item_name, reason.to_lower(), slots_used(), max_slots])
 
 # ===== INVENTORY MANAGEMENT =====
 
@@ -53,7 +74,7 @@ func add_item(item_data: Dictionary) -> bool:
 					emit_signal("item_added", item_data)
 					return true
 
-	if items.size() >= max_slots:
+	if slots_used() >= max_slots and not EquipmentEffects.is_hand_ghost(item_data):
 		add_failed.emit(item_data, "Inventory full")
 		return false
 
@@ -103,7 +124,7 @@ func add_stack(item_data: Dictionary) -> bool:
 			emit_signal("item_added", item_data)
 			return true
 
-	if items.size() >= max_slots:
+	if slots_used() >= max_slots and not EquipmentEffects.is_hand_ghost(item_data):
 		# Keep the caller's dict honest about what is still left to place —
 		# any stacks merged above are already in this inventory, and are
 		# announced like any other addition (panels redraw, quests count it).
@@ -586,8 +607,13 @@ func load_from_dict(data: Dictionary) -> void:
 	off_hand_item = null
 	stowed_items.clear()
 
-	# Load items
+	# Load items. Worn packs raise the cap: size it first, or add_item refuses
+	# a full pack's overflow.
 	if data.has("items"):
+		bonus_slots = 0
+		for item in data["items"]:
+			if item is Dictionary and item.get("_equipped", false):
+				bonus_slots += EquipmentEffects.container_slots(item)
 		for item in data["items"]:
 			add_item(item)
 
@@ -599,7 +625,7 @@ func load_from_dict(data: Dictionary) -> void:
 	# Re-equip worn armor: items keep their _equipped flag through save, but
 	# nothing rebuilt the EquipmentShape (no visuals, no DR, no boot-step
 	# noise after a load). Route back through equip_equipment.
-	var _armor_slots := ["Head", "Torso", "Back", "Legs", "Feet"]
+	var _armor_slots := ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]
 	for item in items:
 		if item is Dictionary and item.get("_equipped", false) 				and str(item.get("equip_slot", "")) in _armor_slots 				and possessor and possessor.has_method("equip_equipment"):
 			possessor.equip_equipment(item)

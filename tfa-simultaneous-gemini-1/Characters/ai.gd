@@ -436,6 +436,10 @@ func _check_stealth_wake() -> void:
 	for pc in party:
 		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
 			continue
+		# Concealment (Shrouded) shortens how far away we notice them.
+		var pc_vis: float = pc.effective_visibility() if pc.has_method("effective_visibility") else 1.0
+		if pc_vis < 1.0 and character.global_position.distance_to(pc.global_position) > get_sight_range_pixels() * pc_vis:
+			continue
 		if is_in_line_of_sight(pc.global_position, pc.get_elevation()):
 			wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, pc.global_position)
 			return  # is_at_ease is now false; caller's early-out blocks re-entry
@@ -819,6 +823,11 @@ func _update_target(delta: float = 0.0) -> void:
 				continue
 
 		var dist: float = character.global_position.distance_to(other.global_position)
+		# Concealment (a Dark Hood's Shrouded): seen only within our sight range
+		# scaled by the target's effective_visibility().
+		var other_vis: float = other.effective_visibility()
+		if other_vis < 1.0 and dist > get_sight_range_pixels() * other_vis:
+			continue
 		# CLOSE QUARTERS — the cone does not apply. is_in_line_of_sight gates on
 		# a ±75° forward arc (150° is the fov_angle_degrees default and NOTHING
 		# moves it: no condition declares that stat key, so fov_modifier is

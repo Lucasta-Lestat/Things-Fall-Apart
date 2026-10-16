@@ -3486,6 +3486,10 @@ func _get_clash_key(char1: CharacterBody2D, char2: CharacterBody2D) -> String:
 func register_attack_start(attacker: Node2D) -> void:
 	"""Called when an attack begins - resets hit tracking for this attack"""
 	active_hits[attacker.get_instance_id()] = {}
+	# Every melee and ranged swing comes through here: it gives away a
+	# concealed (Shrouded) attacker for a few seconds.
+	if attacker.has_method("reveal"):
+		attacker.reveal()
 
 func register_attack_end(attacker: Node2D) -> void:
 	"""Called when an attack ends - clears hit tracking. Also reports a melee
@@ -4475,8 +4479,16 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# --- Inventory: clear template items, restore saved ones ---
 	if character.inventory and state.has("inventory_items"):
 		character.inventory.items.clear()
+		# Restoring saved items must refuse none of them: lift the cap while
+		# they go back in (a worn pack's overflow, or a pack that left its
+		# wearer without coming off, e.g. robbed). rebuild_worn_from_inventory
+		# below sets the real cap (worn packs' slots) again.
+		character.inventory.bonus_slots = state["inventory_items"].size()
 		for item_data in state["inventory_items"]:
 			character.inventory.add_item(item_data)
+		# The body still wears the template's gear (and its worn conditions):
+		# put the saved gear back on from the _equipped flags.
+		character.rebuild_worn_from_inventory()
  
 	# --- Equipped weapons: reconstruct and equip ---
 	if character.inventory and state.has("equipped_weapons"):

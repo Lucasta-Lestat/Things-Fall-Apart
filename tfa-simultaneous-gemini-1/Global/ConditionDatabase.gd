@@ -474,6 +474,56 @@ func get_all_conditions() -> Array:
 		],
 		"immunities": {}
 	},
+	# ----- Worn-gear conditions (Items.json adds_condition_on_equip) ---------
+	# Held while the item is worn: ProceduralCharacter._apply_worn_conditions
+	# applies them permanently and takes them off with the item. No "mental"
+	# or "magical" trait, so Carousing and trait dispels leave them alone. The
+	# Shadow Cloak's Invisible is the binary "invisible" above. "visibility"
+	# multiplies how far away others can see the bearer
+	# (ProceduralCharacter.effective_visibility); attacking or casting resets
+	# it to full for a few seconds (ProceduralCharacter.reveal). The icons are
+	# borrowed from Invisible and Courageous until these get their own cond_*.
+	{
+		"id": "shrouded",
+		"display_name": "Shrouded",
+		"description": "Wrapped in shadow: others see you at half their usual range. Attacking or casting reveals you for 3 seconds.",
+		"traits": {"buff": 1, "concealment": 1, "equipment": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/invisible.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "visibility", "operation": "multiply", "value": 0.5}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
+	{
+		"id": "inspired",
+		"display_name": "Inspired",
+		"description": "Bearing a crown: +10 Will and +10 Charisma.",
+		"traits": {"buff": 1, "morale": 1, "equipment": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1.0,
+		"icon": "res://UI/UI Icons/cond_courageous.png",
+		"transforms_into": {},
+		"canceled_by_trait": [],
+		"custom_vfx": "",
+		"custom_sfx": "",
+		"stat_modifiers": [
+			{"stat": "will", "operation": "add", "value": 10},
+			{"stat": "charisma", "operation": "add", "value": 10}
+		],
+		"triggered_effects": [],
+		"conditional_modifiers": [],
+		"immunities": {}
+	},
 	{
 		"id": "metallacized",
 		"display_name": "Metallacized",

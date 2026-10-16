@@ -18,6 +18,8 @@
 
 extends RefCounted
 
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+
 ## PartySidePanel (default): the name.
 const CONTEXT_PARTY := ""
 ## TradeWindow: "Name (N gold)".
@@ -75,5 +77,16 @@ static func noise_lines(_entry: Dictionary) -> PackedStringArray:
 	return PackedStringArray()
 
 ## Effects while equipped (conditions granted, light, on-hit abilities).
-static func effect_lines(_entry: Dictionary) -> PackedStringArray:
-	return PackedStringArray()
+## Worn gear: each condition it grants with what it does, worn-pack slots and
+## light; a weapon (WeaponShape, or a hand-slot dict in the chest window): its
+## while-drawn conditions and light.
+static func effect_lines(entry: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	var raw = entry.get("raw")
+	match str(entry.get("kind", "")):
+		"item":
+			if raw is Dictionary:
+				out.append_array(EquipmentEffects.worn_lines(raw))
+		"weapon":
+			out.append_array(EquipmentEffects.held_lines(raw))
+	return out

@@ -836,6 +836,12 @@ func _drop_data(at_position: Vector2, data) -> void:
 
 	match entry.get("kind", ""):
 		"item":
+			# Handing over worn gear takes it off first, as Drop does (refused
+			# while it is a pack holding more than its wearer could carry).
+			var src_raw = entry.get("raw", {})
+			if src_raw is Dictionary and src_raw.get("_equipped", false) \
+					and not _unequip_item(source_char, entry.get("source_index", -1), src_raw, 1):
+				return
 			var item = source_char.inventory.remove_item(entry.get("source_index", -1))
 			if not item.is_empty():
 				target_char.inventory.add_item(item)
@@ -929,6 +935,9 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:
 			if item_data.get("_equipped", false):
 				options.insert(0, "Unequip")
+				# Throw/Use/Consume on a worn item would take the dict away
+				# and leave the item (and what it grants) on the body.
+				options = options.filter(func(o): return o in ["Unequip", "Drop"])
 			else:
 				options.insert(0, "Equip")
 	elif kind == "weapon" or kind == "ability":
@@ -1197,9 +1206,10 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
 		return
 
-	# If item is currently equipped, unequip it first
-	if item_data.get("_equipped", false):
-		_unequip_item(character, item_index, item_data)
+	# If item is currently equipped, unequip it first (refused when it is a
+	# pack holding more than its wearer could carry without it)
+	if item_data.get("_equipped", false) and not _unequip_item(character, item_index, item_data, 1):
+		return
 
 	var item = character.inventory.remove_item(item_index)
 	if item.is_empty():
@@ -1221,8 +1231,8 @@ func _drop_item_amount(character, item_index: int, item_data: Dictionary, amount
 	var total: int = int(ns_val) if ns_val != null else 1
 	amount = clampi(amount, 1, total)
 	# Equipped items are single (num_stacks 1), but guard anyway.
-	if item_data.get("_equipped", false):
-		_unequip_item(character, item_index, item_data)
+	if item_data.get("_equipped", false) and not _unequip_item(character, item_index, item_data, 1):
+		return
 	var item = character.inventory.remove_amount(item_index, amount)
 	if item.is_empty():
 		return
@@ -1368,6 +1378,8 @@ func _drop_weapon(character, entry: Dictionary) -> void:
 	game_node.create_item(weapon_id, character.global_position)
 	SfxManager.play("sword-fall", character.global_position)
 
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+
 # Map equip_slot strings to EquipmentShape.EquipmentSlot enum values
 const _EQUIP_SLOT_MAP: Dictionary = {
 	"Head": 0,   # EquipmentShape.EquipmentSlot.HEAD
@@ -1391,6 +1403,15 @@ func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	# Unequip whatever is currently in that slot first, returning it to inventory
 	var slot_enum: int = _EQUIP_SLOT_MAP[equip_slot]
+	# A worn pack displaced by this item (capes share its slot) must leave
+	# room for everything carried.
+	var current: Dictionary = _worn_in_slot(character, slot_enum)
+	if not current.is_empty() and current != item_data and character.has_method("worn_capacity_problem"):
+		var why: String = character.worn_capacity_problem(current, item_data, 0)
+		if why != "":
+			character.notify("Too full to swap", Color(1.0, 0.75, 0.3), why)
+			SfxManager.play_ui("trade_decline")
+			return
 	_unequip_current_in_slot(character, slot_enum)
 
 	# Equip the new item
@@ -1400,14 +1421,34 @@ func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
 	# Mark this inventory item as equipped
 	item_data["_equipped"] = true
 
+	if not current.is_empty() and current != item_data:
+		var lost := EquipmentEffects.describe_worn(current)
+		if not lost.is_empty():
+			GameLog.add_entry("%s takes off the %s and loses %s." % [character.Name, EquipmentEffects.item_name(current), ", ".join(lost)])
+
+	# Say what it does while worn (Shrouded, +10 inventory slots...).
+	var fx := EquipmentEffects.describe_worn(item_data)
+	if not fx.is_empty():
+		character.notify(fx[0], Color(0.7, 0.9, 1.0),
+			"%s puts on the %s: %s while worn." % [character.Name, EquipmentEffects.item_name(item_data), ", ".join(fx)])
+
 	# Refresh UI to show the change
 	_refresh_all_inventories()
 
-func _unequip_item(character, item_index: int, item_data: Dictionary) -> void:
-	"""Unequip an equipped item, keeping it in inventory."""
+func _unequip_item(character, item_index: int, item_data: Dictionary, leaving: int = 0) -> bool:
+	"""Unequip an equipped item, keeping it in inventory. False (with a notice)
+	when it is a worn pack and what is carried wouldn't fit without it; `leaving`
+	counts items about to leave the inventory too (a Drop takes the pack itself)."""
 	var equip_slot: String = item_data.get("equip_slot", "")
 	if equip_slot.is_empty() or equip_slot not in _EQUIP_SLOT_MAP:
-		return
+		return true
+
+	if character.has_method("worn_capacity_problem"):
+		var why: String = character.worn_capacity_problem(item_data, {}, leaving)
+		if why != "":
+			character.notify("Too full to remove", Color(1.0, 0.75, 0.3), why)
+			SfxManager.play_ui("trade_decline")
+			return false
 
 	var slot_enum: int = _EQUIP_SLOT_MAP[equip_slot]
 	if character.has_method("unequip_slot"):
@@ -1416,8 +1457,20 @@ func _unequip_item(character, item_index: int, item_data: Dictionary) -> void:
 	# Clear equipped flag on the inventory item
 	item_data["_equipped"] = false
 
+	var fx := EquipmentEffects.describe_worn(item_data)
+	if not fx.is_empty():
+		GameLog.add_entry("%s takes off the %s and loses %s." % [character.Name, EquipmentEffects.item_name(item_data), ", ".join(fx)])
+
 	# Refresh UI
 	_refresh_all_inventories()
+	return true
+
+## The inventory dict worn in `slot_enum`, or {} when the slot is empty.
+func _worn_in_slot(character, slot_enum: int) -> Dictionary:
+	for item in character.inventory.items:
+		if item.get("_equipped", false) and _EQUIP_SLOT_MAP.get(str(item.get("equip_slot", "")), -1) == slot_enum:
+			return item
+	return {}
 
 func _unequip_current_in_slot(character, slot_enum: int) -> void:
 	"""If something is already equipped in the given slot, clear its _equipped flag."""
