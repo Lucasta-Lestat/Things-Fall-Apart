@@ -56,6 +56,12 @@ func _ready() -> void:
 	# Try to load action icons (graceful fallback if not found)
 	_attack_icon = _try_load("res://targeting icon.png")
 	_dash_icon = _try_load("res://UI/UI Icons/Dash.png")
+	# Input is only handled while paused, so a gesture left open at unpause (an
+	# unassigned node, half-finished node targeting, a drag) would otherwise
+	# swallow the first click of the next pause. Connected here, before
+	# ProceduralCharacter connects _on_game_unpaused_convert_path, so the orphan
+	# node is gone before the path is converted.
+	PauseManager.game_unpaused.connect(abort_pending_input)
 
 func _try_load(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -267,6 +273,25 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 			character.targeting_system.cancel_targeting()
 			_targeting_for_node = false
 			return true
+
+		# Character-pick abilities (e.g. Hitch, Fatal Attraction): each click with
+		# the targeting hand's button toggles a character until target_count are
+		# picked, then the ability is assigned to the node. The other button
+		# cancels targeting (the node stays pending, as with Escape).
+		var ts = character.targeting_system
+		if ts.target_shape == ts.TargetShape.CHARACTERS:
+			var pick_button := "left_click" if ts.current_hand == "Main" else "right_click"
+			var other_button := "right_click" if pick_button == "left_click" else "left_click"
+			if Input.is_action_just_pressed(pick_button):
+				ts._handle_character_click(mouse_pos)
+				if ts.selected_targets.size() == ts.target_count:
+					_confirm_targeting_for_node(mouse_pos)
+				return true
+			if Input.is_action_just_pressed(other_button):
+				ts.cancel_targeting()
+				_targeting_for_node = false
+				return true
+			return false
 
 		# Left-click or right-click while targeting: confirm targeting
 		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("right_click"):

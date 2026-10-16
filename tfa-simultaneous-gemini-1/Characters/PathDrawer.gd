@@ -119,6 +119,9 @@ const BADGE_NODE_OFFSET := Vector2(0.72, -0.72)  # * NODE_RADIUS, from disc cent
 const ARROW_COLOR := Color(0.8, 0.8, 1.0, 0.8)
 const ARROW_DRAWING_COLOR := Color(1.0, 1.0, 0.5, 0.6)
 const DESIGNATION_COLOR := Color(0.95, 0.35, 0.3, 0.65)
+# Ring at a fixed-point ATTACK node's aim spot (a designated character gets a
+# body-sized NODE_RADIUS ring instead).
+const ATTACK_AIM_RING_RADIUS := 6.0
 const ARROW_LENGTH := 30.0
 const ARROW_WIDTH := 2.0
 const ARROWHEAD_SIZE := 8.0
@@ -347,6 +350,13 @@ func _draw_node_ground(node) -> void:
 		if designated != null:
 			draw_dashed_line(pos, designated.global_position, DESIGNATION_COLOR, 1.5, 6.0, true)
 			draw_arc(designated.global_position, NODE_RADIUS * 0.9, 0, TAU, 24, DESIGNATION_COLOR, 1.5, true)
+		elif node.action_type == ActionQueue.ActionType.ATTACK and node.action_data.has("target_position"):
+			# Fixed-point attack (planned over bare ground): the same dashed leash
+			# to the spot the swing aims at, ending in a small ring rather than
+			# the body-sized one, so "this spot" reads apart from "this character".
+			var attack_target: Vector2 = node.action_data["target_position"]
+			draw_dashed_line(pos, attack_target, DESIGNATION_COLOR, 1.5, 6.0, true)
+			draw_arc(attack_target, ATTACK_AIM_RING_RADIUS, 0, TAU, 16, DESIGNATION_COLOR, 1.5, true)
 
 	# Independent of has_action(): a FACE node carries only a facing angle.
 	if node.has_facing():
