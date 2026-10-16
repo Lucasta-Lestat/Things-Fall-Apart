@@ -402,7 +402,7 @@ func parse_arg_value(arg: String):
 	if arg.begins_with("[") and arg.ends_with("]"):
 		return parse_function_args(arg.substr(1, arg.length() - 2))
 	
-# Try to parse as number
+	# Try to parse as number
 	if arg.is_valid_int():
 		return int(arg)
 	if arg.is_valid_float():

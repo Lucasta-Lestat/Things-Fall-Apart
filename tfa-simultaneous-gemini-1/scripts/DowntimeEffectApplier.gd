@@ -504,6 +504,10 @@ static func _apply_ration_delta(character, amount: int) -> Array:
 	var data: Dictionary = {}
 	if idx >= 0:
 		data = inv.items[idx].duplicate(true)
+		# A gift, not loot: the carried stack's theft tags (law/crime) must
+		# not ride along onto a new slot when the stack is full.
+		data.erase("stolen_from")
+		data.erase("stolen_value")
 	else:
 		data = ItemDatabase.items.get("ration", ItemDatabase.items.get("rations", {})).duplicate(true)
 	if data.is_empty():

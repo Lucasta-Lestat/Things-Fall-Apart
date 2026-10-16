@@ -461,6 +461,13 @@ func _case_rations() -> void:
 	_report("ration.gained-merges", gained == ["+1 Ration"] and int(c.inventory.items[0]["num_stacks"]) == 2, str(gained))
 	DowntimeEffectApplier.apply(c, {"ration_delta": -5})
 	_report("ration.empty-slot-dropped", c.inventory.find_item_by_id("ration") < 0, str(c.inventory.items))
+	# A full stolen stack: the feast's ration lands in a new slot, untagged.
+	c.inventory.items.append({"id": "ration", "display_name": "Ration", "num_stacks": 20, "max_stack_size": 20,
+		"is_stackable": true, "stolen_from": "town_guard", "stolen_value": 5})
+	DowntimeEffectApplier.apply(c, {"ration_delta": 1})
+	var fresh: Dictionary = c.inventory.items[c.inventory.items.size() - 1]
+	_report("ration.gift-not-stolen", c.inventory.items.size() == 2 and int(fresh.get("num_stacks", 0)) == 1
+		and not fresh.has("stolen_from") and not fresh.has("stolen_value"), str(c.inventory.items))
 	c.queue_free()
 
 
