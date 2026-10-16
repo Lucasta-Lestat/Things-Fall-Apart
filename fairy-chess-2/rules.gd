@@ -122,7 +122,7 @@ const PIECE_DESC = {
 	"Queen": "Slides any distance in a straight or diagonal line.",
 	"Rifleman": "Steps one square in any direction, or shoots along its row or column. The bullet kills the first piece in that line when the turn resolves, friend or foe: a piece standing in the line can't dodge it, and one that steps onto an empty square in the line nearer the Rifleman takes it instead.",
 	"Rook": "Slides any distance along a row or column.",
-	"Valkyrie": "Moves as a Queen or a Knight. When she is killed she leaves the board and returns at the end of the next turn, on the square she stood on when that turn began, or the nearest empty one. If she has been turned to stone, killing her destroys her for good.",
+	"Valkyrie": "Moves as a Queen or a Knight. When she is killed she leaves the board and returns at the end of the next turn, on the square she stood on at the start of the turn she was killed, or the nearest empty one. If she has been turned to stone, killing her destroys her for good.",
 	"Werewolf (wolf form)": "Shapeshifter. Moves one or two king steps in any direction, jumping over anything in between, and captures where it lands. At the end of every turn it survives it returns to human form.",
 	"Factory": "Immobile: never moves and takes no orders. At the end of every turn it builds a Basic Automata on an empty square next to it, if one is free.",
 	"Doppelganger": "Mimic. Steps one square in any direction until it copies something. At the end of every turn it takes the form of the last piece your opponent moved by order (zombies don't count), and it keeps copying after that. It is royal only while it copies a royal piece, so a single copy can win or lose you the game.",
