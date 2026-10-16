@@ -14,6 +14,7 @@ extends PanelContainer
 
 const PORTRAIT_SIZE := Vector2(64, 64)
 const DUMMY_ICON_PATH := "res://Icons/dummy_icon.png"
+const DEAD_TINT := Color(1.0, 0.3, 0.3, 1.0)  # matches PartySidePanel
 
 var game_node: Node = null
 var _row: HBoxContainer = null
@@ -81,11 +82,25 @@ func _rebuild_portraits() -> void:
 		rect.custom_minimum_size = PORTRAIT_SIZE
 		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		# IGNORE so drags reach this panel; the hover tooltip comes from
+		# _get_tooltip below, since an IGNORE rect never shows its own.
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_load_portrait(rect, c)
-		rect.tooltip_text = String(c.display_name) if "display_name" in c else String(c.name)
+		_tint_if_dead(rect, c)
+		# Downtime mishaps can drop HP to 0 while the strip is up; re-tint then.
+		if c.has_signal("health_changed") and not c.health_changed.is_connected(_on_party_health_changed):
+			c.health_changed.connect(_on_party_health_changed)
 		_row.add_child(rect)
 		_portraits.append({"rect": rect, "character": c})
+
+func _tint_if_dead(rect: TextureRect, character) -> void:
+	var dead: bool = character.has_method("is_alive") and not character.is_alive()
+	rect.modulate = DEAD_TINT if dead else Color.WHITE
+
+func _on_party_health_changed(_new_health: int, _max_health: int, character) -> void:
+	for entry in _portraits:
+		if entry["character"] == character and is_instance_valid(entry["rect"]):
+			_tint_if_dead(entry["rect"], character)
 
 func _load_portrait(rect: TextureRect, character) -> void:
 	# Per-character portrait (character creation) first, template icon second.
@@ -104,6 +119,35 @@ func _load_portrait(rect: TextureRect, character) -> void:
 		img.fill(Color(0.5, 0.5, 0.5))
 		rect.texture = ImageTexture.create_from_image(img)
 
+func _char_name(character) -> String:
+	return String(character.display_name) if "display_name" in character else String(character.name)
+
+# Hover tooltip for the portrait under the cursor. Built on demand so HP,
+# stress and conditions are current; the party side panel that normally
+# shows them is hidden during downtime.
+func _get_tooltip(at_position: Vector2) -> String:
+	var portrait = _find_portrait_at(at_position)
+	if portrait == null:
+		return ""
+	var c = portrait["character"]
+	if not is_instance_valid(c):
+		return ""
+	var dead: bool = c.has_method("is_alive") and not c.is_alive()
+	var lines: Array[String] = [_char_name(c) + (" (dead)" if dead else "")]
+	if "current_health" in c and "max_health" in c:
+		lines.append("HP %d/%d" % [int(c.current_health), int(c.max_health)])
+	if "stress" in c and "max_stress" in c:
+		lines.append("Stress %d/%d" % [int(c.stress), int(c.max_stress)])
+	var cm = c.get_node_or_null("ConditionManager")
+	if cm:
+		var names: Array[String] = []
+		for cond_id in cm.conditions:
+			var cond_res = cm.conditions[cond_id].condition
+			names.append(cond_res.display_name if cond_res and cond_res.display_name else String(cond_id).replace("_", " "))
+		if not names.is_empty():
+			lines.append(", ".join(names))
+	return "\n".join(lines)
+
 # ---------------------------------------------------------------------------
 # Drag source
 # ---------------------------------------------------------------------------
@@ -115,6 +159,11 @@ func _get_drag_data(at_position: Vector2):
 	if portrait == null:
 		return null
 	var character = portrait["character"]
+	if not is_instance_valid(character):
+		return null
+	if character.has_method("is_alive") and not character.is_alive():
+		GameLog.add_entry("%s is dead and can't take part in downtime." % _char_name(character))
+		return null
 	var rect: TextureRect = portrait["rect"]
 	# Drag preview is a copy of the portrait sprite.
 	var preview := TextureRect.new()
