@@ -4158,6 +4158,33 @@ func check_spawn_conditions(spawn_conditions: Dictionary) -> bool:
 		if not _check_condition(key, spawn_conditions[key]):
 			return false
 	return true
+
+## After ConditionManager.from_dict on a respawned character: from_dict emits no
+## condition_applied, and its clear_all_conditions already took the build-time
+## VFX, SFX and icons down, so redo what that signal's handler shows for each
+## restored instance (and re-suppress what was suppressed). A corpse gets none
+## of it. Periodic saves only start once a last-save time exists
+## (_try_periodic_save defaults it to "now" and returns), so seed one on the
+## condition clock for every condition that rolls them.
+func _restore_condition_presentation(character: ProceduralCharacter) -> void:
+	var cm = character.condition_manager
+	var now: float = TimeManager.absolute_time()
+	var alive: bool = character.current_health > 0
+	for inst in cm.conditions.values():
+		if inst == null or inst.condition == null:
+			continue
+		if inst.condition.save_stat != "" and inst.condition.save_interval > 0.0:
+			cm.last_save_times[inst.condition.id] = now
+		if alive:
+			character._spawn_condition_vfx(inst)
+			character._start_condition_sfx(inst)
+			if inst.is_suppressed:
+				character._on_condition_suppressed(inst)
+	if alive:
+		character._refresh_condition_display()
+		# _on_condition_applied's Invisible translucency.
+		if cm.has_condition("invisible"):
+			character.modulate.a = 0.35
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
 # ---------------------------------------------------------------------------
@@ -4222,6 +4249,17 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["vow_holy_bonus"] = character.vow_holy_bonus
 	state["vow_poverty_points"] = character.vow_poverty_points
 	state["holy_tier_next_day_pending"] = character.holy_tier_next_day_pending
+	# School pools, luck and a stored Bide payoff. build_character refills every
+	# pool to max (TopDownCharacterDatabase._init_school_resources), so without
+	# these each warp refilled spent pools and dropped a pending Bide bonus.
+	# Concentration is left out on purpose: it ends with the unload.
+	state["adrenaline"] = character.adrenaline
+	state["focus"] = character.focus
+	state["harmony"] = character.harmony
+	state["devotion"] = character.devotion
+	state["saint_day_devotion_bonus"] = character.saint_day_devotion_bonus
+	state["luck"] = character.luck
+	state["bide_pending_bonus"] = character.bide_pending_bonus
 
 	# --- Standing orders ---
 	# WAIT survives map transitions and saves: party members are freed and
@@ -4399,6 +4437,17 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("vow_poverty_points"): character.vow_poverty_points = int(state["vow_poverty_points"])
 	if state.has("holy_tier_next_day_pending"):
 		character.holy_tier_next_day_pending = int(state["holy_tier_next_day_pending"])
+	# School pools over the build-time refill, clamped to their maxima (traits
+	# and vow_holy_bonus, which max_devotion reads, are restored by now).
+	if state.has("saint_day_devotion_bonus"):
+		character.saint_day_devotion_bonus = int(state["saint_day_devotion_bonus"])
+	if state.has("adrenaline"): character.adrenaline = clamp(int(state["adrenaline"]), 0, character.max_adrenaline)
+	if state.has("focus"):      character.focus = clamp(int(state["focus"]), 0, character.max_focus)
+	if state.has("harmony"):    character.harmony = clamp(int(state["harmony"]), 0, character.max_harmony)
+	if state.has("devotion"):   character.devotion = clamp(int(state["devotion"]), 0, character.max_devotion)
+	if state.has("luck"):       character.luck = int(state["luck"])
+	if state.has("bide_pending_bonus"):
+		character.bide_pending_bonus = maxf(0.0, float(state["bide_pending_bonus"]))
 
 	# setter drives the stop-hand indicator, so restore re-shows the badge
 	character.hold_position = bool(state.get("hold_position", false))
@@ -4516,7 +4565,8 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# grants_ability re-grant guard relies on) ---
 	if character.condition_manager and state.has("condition_state"):
 		character.condition_manager.from_dict(state["condition_state"])
- 
+		_restore_condition_presentation(character)
+
 	# --- Cooldowns ---
 	if state.has("cooldowns"):
 		character.cooldowns = state["cooldowns"]
