@@ -48,8 +48,21 @@ func _connect_signals() -> void:
 	if TimeManager and not TimeManager.date_changed.is_connected(_on_date_changed):
 		TimeManager.date_changed.connect(_on_date_changed)
 	# Apply once at startup so day-1 saints take effect without waiting for a
-	# rollover.
+	# rollover. This also hooks Game.map_loaded once Game exists.
 	_refresh_party_bonuses()
+
+
+# Party characters are re-instantiated on every map load and the bonus isn't
+# carried across, so today's is re-applied after each load. Game isn't in the
+# tree when autoloads are ready, so every refresh retries the connection.
+func _connect_game_signals(game: Node) -> void:
+	if game.has_signal("map_loaded") and not game.map_loaded.is_connected(_on_map_loaded):
+		game.map_loaded.connect(_on_map_loaded)
+
+
+func _on_map_loaded(_map_id: String) -> void:
+	# Quietly: the feast was already announced for these characters today.
+	_refresh_party_bonuses(false)
 
 
 # ---------------------------------------------------------------------------
@@ -97,15 +110,23 @@ func observes_saint_day(character) -> bool:
 # ---------------------------------------------------------------------------
 
 func _on_date_changed(_day: int, _month: int, _year: int) -> void:
+	var today := saints_today()
+	if not today.is_empty():
+		var names: Array = []
+		for s in today:
+			names.append(String(s.get("name", "")))
+		GameLog.add_entry("Feast of %s today. Observers (%s) gain +1 max Devotion; the parish lays a feast table in town." % [" and ".join(names), ", ".join(observer_traits)])
 	_refresh_party_bonuses()
 
 
 # Clear every party character's saint-day bonus, then set it to 1 for those
-# who observe (and only when today is actually a saint day).
-func _refresh_party_bonuses() -> void:
+# who observe (and only when today is actually a saint day). The bonus is set,
+# not added, so refreshing again the same day changes nothing.
+func _refresh_party_bonuses(announce: bool = true) -> void:
 	var game = get_tree().root.get_node_or_null("Game") if get_tree() else null
 	if game == null:
 		return
+	_connect_game_signals(game)
 	var party: Array = game.get("party_chars") if "party_chars" in game else []
 	var saint_day := is_saint_day()
 	for character in party:
@@ -118,6 +139,12 @@ func _refresh_party_bonuses() -> void:
 		if previous == new_bonus:
 			continue
 		character.saint_day_devotion_bonus = new_bonus
-		# Nudge the resource UI; max_devotion is a getter so just emit.
+		if new_bonus == 1 and announce:
+			var who: String = String(character.Name) if "Name" in character and not String(character.Name).is_empty() else String(character.display_name)
+			GameLog.add_entry("%s observes the feast: +1 max Devotion today." % who)
+		# Nudge the resource UI; max_devotion is a getter so just emit. When the
+		# feast ends, Devotion banked above the new max goes with it.
 		if "devotion" in character and "max_devotion" in character:
+			if int(character.devotion) > int(character.max_devotion):
+				character.devotion = int(character.max_devotion)
 			character.emit_signal("resource_changed", "devotion", int(character.devotion), int(character.max_devotion))

@@ -789,6 +789,7 @@ var vow_holy_bonus: int = 0           # daily Holy tier bonus from vows
 var saint_day_devotion_bonus: int = 0  # +1 today if any observed saint's feast falls today
 var vow_poverty_points: int = 0       # accumulated Poverty points
 var holy_tier_next_day_pending: int = 0  # queued from meditation/devotion/flagellation/ration burn
+var holy_tier_today: int = 0  # the one-day part of vow_holy_bonus; VowManager takes it back next day
 
 # Patron pact (Occult). Empty string = no patron.
 var patron_id: String = ""

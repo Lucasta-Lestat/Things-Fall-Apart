@@ -4225,6 +4225,7 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["vow_holy_bonus"] = character.vow_holy_bonus
 	state["vow_poverty_points"] = character.vow_poverty_points
 	state["holy_tier_next_day_pending"] = character.holy_tier_next_day_pending
+	state["holy_tier_today"] = character.holy_tier_today
 
 	# --- Standing orders ---
 	# WAIT survives map transitions and saves: party members are freed and
@@ -4402,6 +4403,7 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("vow_poverty_points"): character.vow_poverty_points = int(state["vow_poverty_points"])
 	if state.has("holy_tier_next_day_pending"):
 		character.holy_tier_next_day_pending = int(state["holy_tier_next_day_pending"])
+	if state.has("holy_tier_today"): character.holy_tier_today = int(state["holy_tier_today"])
 
 	# setter drives the stop-hand indicator, so restore re-shows the badge
 	character.hold_position = bool(state.get("hold_position", false))
