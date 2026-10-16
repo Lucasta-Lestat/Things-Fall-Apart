@@ -187,11 +187,16 @@ func _remove_all_reticles() -> void:
 func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	"""Add an action to the queue. Returns false if queue is full."""
 	print("attempting to queue an action of type: ", type)
-	# Check queue size limit
-	if max_queue_size > 0 and queue.size() >= max_queue_size:
-		print("exceeded queue size limit")
+	# Check queue size limit. Steps converted from a drawn tactical path
+	# ("from_path", see TacticalPath.to_action_queue_actions) are exempt: the
+	# path planner has no node limit, so capping them would silently cut the end
+	# off the route. A refused direct order is announced (party members only).
+	if not data.get("from_path", false) and not has_space():
+		if character and character.is_party_member():
+			character.notify("Plan full", Color(1.0, 0.6, 0.4),
+				"%s can't plan another action: the plan is full (%d max)." % [character.Name, max_queue_size])
 		return false
-	
+
 	var action = Action.new(type, data)
 	
 	# Create reticle for targeted actions
@@ -205,6 +210,16 @@ func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	queue.append(action)
 	emit_signal("action_queued", action)
 	return true
+
+func has_space(n: int = 1) -> bool:
+	"""True if n more direct orders fit under max_queue_size (path steps don't count)."""
+	if max_queue_size <= 0:
+		return true
+	var direct := 0
+	for a in queue:
+		if not a.data.get("from_path", false):
+			direct += 1
+	return direct + n <= max_queue_size
 
 func _action_needs_reticle(type: ActionType, data: Dictionary) -> bool:
 	"""Determine if an action type should display a targeting reticle"""
@@ -378,6 +393,10 @@ func _execute_action(action: Action) -> void:
 			character._nav_waypoints.clear()
 			character._nav_index = 0
 			var waypoints = action.data.get("waypoints", [])
+			if action.data.get("resume_nearest", false) and waypoints.size() >= 2:
+				# After a planned dash: rejoin the route ahead of where the dash
+				# landed instead of walking back to the dash node first.
+				action.data["waypoint_index"] = _nearest_waypoint_ahead(waypoints, character.global_position)
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
 				var wp = waypoints[wp_index]
@@ -529,10 +548,18 @@ func _is_action_complete(action: Action) -> bool:
 				return not character.attack_animator.is_attacking
 			return true
 		
-		ActionType.CYCLE_WEAPON, ActionType.USE_ITEM, ActionType.CUSTOM:
+		ActionType.CYCLE_WEAPON, ActionType.USE_ITEM:
 			# These are instant actions
 			return true
-		
+
+		ActionType.CUSTOM:
+			# A dash (queue_dash, or a path-node dash) finishes when the body
+			# lands, so a following MOVE starts from the landing point. Other
+			# custom actions are instant.
+			if action.data.has("dash_target"):
+				return not character._dash_motion_active
+			return true
+
 		ActionType.USE_ABILITY:
 			return character.current_cast.is_empty()
 	
@@ -560,6 +587,23 @@ func _complete_current_action() -> void:
 		_remove_reticle(current_action)
 		emit_signal("action_completed", current_action)
 		current_action = null
+
+func _nearest_waypoint_ahead(waypoints: Array, pos: Vector2) -> int:
+	"""Index of the waypoint that ends the route segment closest to pos."""
+	var best_i := 0
+	var best_dist := INF
+	for i in range(waypoints.size() - 1):
+		var a: Vector2 = waypoints[i]
+		var b: Vector2 = waypoints[i + 1]
+		var ab := b - a
+		var t := 0.0
+		if ab.length_squared() > 0.001:
+			t = clampf((pos - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var dist := pos.distance_to(a.lerp(b, t))
+		if dist < best_dist:
+			best_dist = dist
+			best_i = i
+	return mini(best_i + 1, waypoints.size() - 1)
 
 func _exit_tree() -> void:
 	"""Cleanup when the node is removed"""

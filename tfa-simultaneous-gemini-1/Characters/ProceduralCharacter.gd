@@ -7129,6 +7129,16 @@ var ai_cast_attempt: bool = false
 func _announce_cast_failure(ability: Ability, reason: String) -> void:
 	if not is_party_member() or ai_cast_attempt:
 		return
+	# A planned cast re-queued on unpause while that same cast is still going
+	# fails as "Already casting", but the cast itself is fine. Compared by id:
+	# Ability objects are rebuilt for every use_ability call. Only that
+	# re-queued path step ("from_path", TacticalPath) is silenced; clicking the
+	# spell again mid-cast still says "Already casting".
+	if reason == "Already casting" and ability:
+		var casting = current_cast.get("ability")
+		var step: ActionQueue.Action = action_queue.current_action if action_queue else null
+		if casting is Ability and casting.id == ability.id and step != null and step.data.get("from_path", false):
+			return
 	var ability_name: String = ability.display_name if ability else "ability"
 	var readable := reason.replace("_", " ")
 	if reason == "Cannot harm charm source":
