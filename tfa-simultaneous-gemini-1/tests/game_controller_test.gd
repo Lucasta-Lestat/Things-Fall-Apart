@@ -5,7 +5,8 @@
 #   2. A warp to a map that can't load says "Way closed" instead of nothing.
 #   3. Party members get no "Trade" in the context menu; other non-hostiles do.
 #   4. C logs what stealth mode does, and NPC cones spawned later follow it.
-#   5. Pick Up logs, plays a real SFX key, leaves no salvage, and can't double-take.
+#   5. Pick Up logs, plays a real SFX key, leaves no salvage, and can't double-take;
+#      armour (Items.json num_stacks null) picks up too.
 #   6. G gathers the database waterskin (sprite, Consume), with no ownership.
 #   7. Bide's payoff floats "Bide +N!" and logs it.
 #   8. A party shot that runs out of range floats "Max range".
@@ -17,7 +18,8 @@
 #  13. Weather changes and freezing puddles are announced, once.
 #  14. School pools, luck, pending Bide and condition VFX/icons/periodic saves
 #      survive a warp.
-#  15. A same-map ladder moves the party instead of rebuilding the map.
+#  15. A same-map ladder moves the party instead of rebuilding the map (a member
+#      caught mid-jump isn't carried back).
 #  16. The Combat Test loadout isn't overwritten by the outgoing party.
 # Run:  godot --headless --path . res://tests/game_controller_test.tscn
 # Judge by PASS/FAIL lines, not exit code alone (startup noise is normal).
@@ -181,6 +183,28 @@ func _case_pick_up() -> void:
 	_check("pickup.no-salvage-scattered", game.items_in_scene.size() == items_before - 1,
 		"before=%d after=%d" % [items_before, game.items_in_scene.size()])
 	_check("pickup.sfx-key-exists", SfxManager.sound_library.has("chest_item_in"))
+	# Armour goes through add_stack with Items.json's "num_stacks": null, which
+	# threw in int() before the pack ever saw it.
+	var helm = game.create_item("full_face_helmet", p.global_position + Vector2(10, 0))
+	await _await_frames(1)
+	var inv_before: int = p.inventory.items.size()
+	since = _log_size()
+	_check("pickup.armour-succeeds", helm != null and game.pick_up_item(helm)
+		and p.inventory.items.size() == inv_before + 1, "inv %d -> %d" % [inv_before, p.inventory.items.size()])
+	_check("pickup.armour-logged", _log_has("picks up", since) and not _log_has("(x", since))
+	# A full pack refuses it and leaves it on the ground.
+	var helm2 = game.create_item("full_face_helmet", p.global_position + Vector2(10, 0))
+	await _await_frames(1)
+	var fillers: int = 0
+	while p.inventory.items.size() < p.inventory.max_slots:
+		p.inventory.items.append({"id": "gc_filler", "display_name": "Filler"})
+		fillers += 1
+	_check("pickup.armour-full-pack-refused", helm2 != null and not game.pick_up_item(helm2)
+		and is_instance_valid(helm2) and not helm2.is_queued_for_deletion())
+	for i in range(fillers):
+		p.inventory.items.pop_back()
+	if is_instance_valid(helm2):
+		game.remove_world_item(helm2)
 
 func _case_gather_water() -> void:
 	var p = game.party_chars[0]
@@ -416,11 +440,23 @@ func _case_same_map_relocation() -> void:
 		if is_instance_valid(c) and not (c in game.party_chars):
 			npcs.append(c)
 	var party_before: Array = game.party_chars.duplicate()
+	# One member caught mid-jump: the arc re-lerps from its takeoff every frame.
+	var jumper = game.party_chars[game.party_chars.size() - 1]
+	var jump_mask: int = jumper.collision_mask
+	jumper._jump_from = jumper.global_position
+	jumper._jump_to_world = jumper.global_position + Vector2(-600, 0)
+	jumper._jump_duration = 5.0
+	jumper._jump_elapsed = 0.0
+	jumper._jump_saved_mask = jump_mask
+	jumper.collision_mask = jump_mask & ~CollisionLayers.STRUCTURES
+	jumper._jump_active = true
 	var loads: Array = [0]
 	var on_loaded := func(_id): loads[0] += 1
 	game.map_loaded.connect(on_loaded)
 	game.load_map("tg_castle_keep", "tg_castle_keep", "ladder_1_top")
 	await _await_frames(2)
+	for i in range(3):
+		await get_tree().physics_frame
 	game.map_loaded.disconnect(on_loaded)
 	var same_npcs: bool = true
 	for c in npcs:
@@ -436,6 +472,9 @@ func _case_same_map_relocation() -> void:
 	_check("relocate.party-at-marker", game.party_chars[0].global_position.distance_to(target) < 200.0,
 		"%s vs %s" % [game.party_chars[0].global_position, target])
 	_check("relocate.warps-rebuilt", not game.warp_zones.is_empty())
+	_check("relocate.jump-cancelled", not jumper._jump_active and jumper.collision_mask == jump_mask)
+	_check("relocate.jumper-stays-at-marker", jumper.global_position.distance_to(target) < 200.0,
+		"%s vs %s (paused=%s)" % [jumper.global_position, target, PauseManager.is_paused])
 
 func _case_combat_test_loadout() -> void:
 	var p = game.party_chars[0]

@@ -1492,6 +1492,11 @@ func _relocate_party(spawn_key: String) -> void:
 	for character in party_chars:
 		if not is_instance_valid(character) or not character.is_alive():
 			continue
+		# A jump in flight re-lerps from its takeoff every frame, so it would
+		# carry the body back to its landing on the level being left.
+		if character._jump_active:
+			character.collision_mask = character._jump_saved_mask
+			character._jump_active = false
 		character.global_position = base_pos + _party_line_offset(base_pos, slot)
 		slot += 1
 		character.velocity = Vector2.ZERO
@@ -4455,6 +4460,7 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 		# _on_condition_applied's Invisible translucency.
 		if cm.has_condition("invisible"):
 			character.modulate.a = 0.35
+
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
 # ---------------------------------------------------------------------------
@@ -4836,7 +4842,7 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if character.condition_manager and state.has("condition_state"):
 		character.condition_manager.from_dict(state["condition_state"])
 		_restore_condition_presentation(character)
-
+ 
 	# --- Cooldowns ---
 	if state.has("cooldowns"):
 		character.cooldowns = state["cooldowns"]

@@ -72,7 +72,10 @@ func add_item(item_data: Dictionary) -> bool:
 # num_stacks is written back to the count still unplaced, so a caller holding
 # the source dict (a chest's contents) can leave just the remainder there.
 func add_stack(item_data: Dictionary) -> bool:
-	var stacks := int(item_data.get("num_stacks", 1))
+	# Items.json gives non-stackables (armour, helmets) "num_stacks": null, and
+	# int(null) throws: a world Pick Up or chest take of one never got past here.
+	var stacks_v = item_data.get("num_stacks", 1)
+	var stacks := int(stacks_v) if stacks_v != null else 1
 	if stacks < 1:
 		stacks = 1
 	var is_stackable := bool(item_data.get("is_stackable", false))
