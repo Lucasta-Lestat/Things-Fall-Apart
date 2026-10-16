@@ -617,7 +617,10 @@ static func _resolve_apply_condition(
 			result["conditions_applied"].append({
 				"target": target,
 				"condition": condition_id,
-				"stacks": instance.stacks
+				"stacks": instance.stacks,
+				# The exact instance, so Concentration can tell its own
+				# application from a later one.
+				"instance": instance,
 			})
 
 	return result

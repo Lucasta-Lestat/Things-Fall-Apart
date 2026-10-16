@@ -773,10 +773,14 @@ var devotion: int = 0
 var souls: int = 0
 var stress: int = 0  # Will-based stress meter; at max it rolls an affliction
 
-# Focus paid into an active Concentration spell stays locked until the spell ends.
+# Focus held by an active Concentration spell (part of `focus`, not spendable)
+# until the spell ends.
 var concentration_locked_focus: int = 0
-# Concentration tracking: ability_id -> locked_focus_amount
+# Concentration tracking: ability_id -> {"name": String, "focus": int,
+# "conditions": Array of {"target", "condition_id", "instance"},
+# "objects": Array of Nodes (force fields, clouds)}: what the cast installed.
 var active_concentrations: Dictionary = {}
+const CONCENTRATION_COLOR := Color(0.8, 0.65, 1.0)
 
 # Rich soul records captured by bind_soul. Each entry is a Dictionary describing
 # the source victim (name, race, gender, intelligence, traits...). Overflow beyond
@@ -1630,7 +1634,10 @@ func _react_to_incapacitation(instance: ConditionInstance) -> void:
 		return
 	if not instance.condition.traits.has("incapacitate"):
 		return
-	interrupt_cast(AbilityEffect.condition_display_name(instance.condition.id), true)
+	var cond_name: String = AbilityEffect.condition_display_name(instance.condition.id)
+	interrupt_cast(cond_name, true)
+	if not active_concentrations.is_empty():
+		end_concentration("incapacitated", cond_name)
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -3507,6 +3514,8 @@ func _process(delta: float) -> void:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
 		_tick_school_resources(delta)
+		if not active_concentrations.is_empty():
+			_tick_concentration()
 		# Delegate to AI child node. A party member EXECUTING a drawn tactical
 		# path keeps its brain even while selected: the path takes MOVEMENT
 		# authority (ai.gd _movement_locked), not the right to fight. Without this
@@ -7090,6 +7099,10 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	# Law: the crime report fires on completion, beside the trait-stacking
 	# hook — an interrupted cast is not a crime.
 	CrimeManager.report(self, "cast", CrimeManager.cast_payload(ability))
+	# A Concentration spell holds its focus once it has landed (an item's cast
+	# doesn't concentrate; an interrupted windup never gets here).
+	if ability and ability.is_concentration() and not ability.get_meta("free_cast", false):
+		begin_concentration(ability, results)
 	_rig_ik_release("cast")
 	cast_completed.emit(ability, results)
 
@@ -7888,38 +7901,170 @@ func _on_self_damaged(amount: int) -> void:
 			emit_signal("resource_changed", "focus", focus, max_focus)
 
 
-# Begin a concentration lock on `focus_amount`. Replaces any existing
-# concentration (only one active per character).
-func _begin_concentration(ability_id: String, focus_amount: int) -> void:
+# A landed Concentration spell holds its focus cost for as long as what it
+# installed lasts: the conditions it applied (by instance) and the fields and
+# clouds it created. Nothing trackable installed (weather, surfaces, a missed
+# condition roll, summons) means nothing to hold. One spell at a time.
+func begin_concentration(ability: Ability, results: Array) -> void:
+	if ability == null or not is_alive():
+		return
+	if ability_manager and ability_manager._get_incapacitating_condition() != null:
+		return
+	var entry := {
+		"name": ability.display_name if ability.display_name != "" else ability.id,
+		"focus": 0,
+		"conditions": [],
+		"objects": [],
+	}
+	_collect_concentration_installs(results, entry)
+	if entry["conditions"].is_empty() and entry["objects"].is_empty():
+		return
+	# Normally let go when this spell was committed (AbilityManager.use_ability);
+	# this catches one that landed in the meantime (a projectile in flight).
 	if not active_concentrations.is_empty():
-		_release_concentration_all()
-	active_concentrations[ability_id] = focus_amount
-	concentration_locked_focus = focus_amount
+		end_concentration("replaced", entry["name"])
+	var held: int = 0
+	if not npc_unlimited_resources:
+		held = mini(int(AbilityManager.school_costs_for(ability).get("focus", 0)), focus)
+	entry["focus"] = held
+	active_concentrations[ability.id] = entry
+	concentration_locked_focus = held
 	emit_signal("resource_changed", "focus", focus, max_focus)
+	if is_party_member():
+		GameLog.add_entry("%s concentrates on %s (%d focus held)." % [Name, entry["name"], held])
 
 
-# Release a concentration spell by id. Unlocks the focus it held.
-func _release_concentration(ability_id: String) -> void:
+# Gathers the conditions and objects a cast installed. Multi-step casts report
+# an array per step.
+func _collect_concentration_installs(results: Array, entry: Dictionary) -> void:
+	for r in results:
+		if r is Array:
+			_collect_concentration_installs(r, entry)
+		elif r is Dictionary:
+			for applied in r.get("conditions_applied", []):
+				if not (applied is Dictionary) or not is_instance_valid(applied.get("target")):
+					continue
+				var inst = applied.get("instance")
+				# Only this caster's own application: a non-stackable condition
+				# someone else already put there comes back as their instance.
+				# Keyed by the instance's own id (Chilled may have become Frozen).
+				if inst is ConditionInstance and inst.condition and inst.source == self:
+					entry["conditions"].append({"target": applied["target"], "condition_id": String(inst.condition.id), "instance": inst})
+			for obj in r.get("created_objects", []):
+				# Only fields and clouds: summoned characters, items and
+				# structures aren't dispelled, and fluid tiles aren't nodes.
+				if is_instance_valid(obj) and (obj is ForceField or obj is FogOverlay):
+					entry["objects"].append(obj)
+
+
+# Whether a tracked condition is still the one this spell applied.
+func _concentration_condition_holds(c: Dictionary) -> bool:
+	var tgt = c.get("target")
+	if not is_instance_valid(tgt) or (tgt.has_method("is_alive") and not tgt.is_alive()):
+		return false
+	var cm = AbilityEffect._get_condition_manager(tgt)
+	return cm != null and cm.conditions.get(c.get("condition_id", "")) == c.get("instance")
+
+
+func _concentration_installs_remain(entry: Dictionary) -> bool:
+	for obj in entry.get("objects", []):
+		if is_instance_valid(obj) and not obj.is_queued_for_deletion():
+			return true
+	for c in entry.get("conditions", []):
+		if _concentration_condition_holds(c):
+			return true
+	return false
+
+
+# Natural end: a spell whose installs have all run out frees its focus.
+func _release_concentration(ability_id: String, announce: bool = false) -> void:
 	if not active_concentrations.has(ability_id):
 		return
-	var locked: int = int(active_concentrations[ability_id])
+	var entry: Dictionary = active_concentrations[ability_id]
+	var held: int = int(entry.get("focus", 0))
 	active_concentrations.erase(ability_id)
-	concentration_locked_focus = max(0, concentration_locked_focus - locked)
+	concentration_locked_focus = max(0, concentration_locked_focus - held)
 	emit_signal("resource_changed", "focus", focus, max_focus)
+	if announce and is_party_member():
+		if held > 0:
+			GameLog.add_entry("%s's %s ends; %d focus is free again." % [Name, entry.get("name", ability_id), held])
+		else:
+			GameLog.add_entry("%s's %s ends." % [Name, entry.get("name", ability_id)])
 
 
-func _release_concentration_all() -> void:
+## Ends every held Concentration spell: removes the conditions it applied
+## (only while that same application is still on the target) and its fields
+## and clouds, and frees the held focus. Damage already dealt stays. reason:
+## "broken" (a hit, or focus fell below what is held), "incapacitated" (cause
+## is the condition's name), "replaced" (cause is the new spell's name), or ""
+## for silent (death).
+func end_concentration(reason: String = "", cause: String = "") -> void:
+	if active_concentrations.is_empty():
+		return
+	var spell_names: String = ", ".join(get_concentration_names())
+	for ability_id in active_concentrations:
+		_dispel_concentration_installs(active_concentrations[ability_id])
 	active_concentrations.clear()
 	concentration_locked_focus = 0
 	emit_signal("resource_changed", "focus", focus, max_focus)
-
-
-func _break_concentration_under_pressure() -> void:
-	if active_concentrations.is_empty():
+	if reason == "" or not _announces_to_party():
 		return
-	# End every active concentration spell. ConditionManager-side cleanup
-	# happens via the existing condition lifecycle if the spell installed one.
-	_release_concentration_all()
+	match reason:
+		"broken":
+			notify("Concentration broken", CONCENTRATION_COLOR, "%s loses concentration: %s ends." % [Name, spell_names])
+		"incapacitated":
+			notify("Concentration broken", CONCENTRATION_COLOR, "%s is %s and loses concentration: %s ends." % [Name, cause, spell_names])
+		"replaced":
+			GameLog.add_entry("%s lets %s go to concentrate on %s." % [Name, spell_names, cause])
+
+
+func _dispel_concentration_installs(entry: Dictionary) -> void:
+	for c in entry.get("conditions", []):
+		if _concentration_condition_holds(c):
+			AbilityEffect._get_condition_manager(c["target"]).remove_condition(String(c["condition_id"]))
+	for obj in entry.get("objects", []):
+		if not is_instance_valid(obj) or obj.is_queued_for_deletion():
+			continue
+		# A cloud goes through its FogManager, which would otherwise keep
+		# ticking a stale entry.
+		var holder = obj.get_parent()
+		if obj is FogOverlay and holder and holder.has_method("remove_fog"):
+			holder.remove_fog(obj)
+		else:
+			obj.queue_free()
+
+
+# Per frame while concentrating: focus pushed below what is held (max_focus
+# shrank, say) breaks the spell; a spell whose installs have all run out ends
+# naturally.
+func _tick_concentration() -> void:
+	if focus < concentration_locked_focus:
+		end_concentration("broken")
+		return
+	for ability_id in active_concentrations.keys():
+		if not _concentration_installs_remain(active_concentrations[ability_id]):
+			_release_concentration(ability_id, true)
+
+
+## Names of the Concentration spells being held, for the UI.
+func get_concentration_names() -> PackedStringArray:
+	var names: PackedStringArray = []
+	for ability_id in active_concentrations:
+		names.append(String(active_concentrations[ability_id].get("name", ability_id)))
+	return names
+
+
+func _release_concentration_all() -> void:
+	end_concentration("")
+
+
+# A hit that would dip into held focus breaks the spell. Nothing held (an NPC
+# with npc_unlimited_resources concentrates for free) means a hit can't: only
+# incapacitation, death or a new Concentration spell ends theirs.
+func _break_concentration_under_pressure() -> void:
+	if concentration_locked_focus <= 0:
+		return
+	end_concentration("broken")
 
 
 # Called by allies' signal handlers when they take damage / lose a limb / die

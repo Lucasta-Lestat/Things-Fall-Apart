@@ -78,7 +78,8 @@
 				"magical": 1,
 				"attack": 1,
 				"aoe": 2,
-				"Arcane": 2
+				"Arcane": 2,
+				"Concentration": 1
 			},
 			"target_shape": "circle",
 			"targeting": {
@@ -288,7 +289,8 @@
 				"magical": 1,
 				"control": 3,
 				"aoe": 2,
-				"Arcane": 2
+				"Arcane": 2,
+				"Concentration": 1
 			},
 			"targeting": {
 				"type": "point",

@@ -50,6 +50,7 @@ func _ready() -> void:
 	await _f5_cases()
 	await _impact_cases()
 	await _f6_cases()
+	await _f7_cases()
 
 	for c in spawned:
 		if is_instance_valid(c):
@@ -531,4 +532,241 @@ func _f6_cases() -> void:
 	_check("manager.point-windup-clamped", started.size() == 2 and _near(started[1], start + Vector2(150, 0)), started)
 	c.ability_manager.cancel_cast("")
 	c.ability_manager.cast_started.disconnect(sb)
+	await _frames(2)
+
+# ---------------------------------------------------------------------------
+# F7: Concentration
+# ---------------------------------------------------------------------------
+
+## Arcane 2 + Concentration: a gravity field plus Slowed on the picked target.
+func _conc_ability(id: String, cast_time: float = 0.0, field_duration: float = 30.0) -> Ability:
+	return Ability.from_dict({
+		"id": id, "display_name": id.capitalize(), "cast_time": cast_time,
+		"traits": {"Arcane": 2, "Concentration": 1, "spell": 1},
+		"targeting": {"type": "point", "range": 0.0, "shape": "circle", "radius": 60.0},
+		"effects": [
+			{"type": "force_field", "field_type": "gravity", "radius": 60.0, "strength": 1.0, "duration": field_duration},
+			{"type": "apply_condition", "condition_id": "slowed", "duration": 60.0},
+		],
+	})
+
+## An Arcane 3 caster with full focus (3) who pays for spells.
+func _sage(char_name: String, pos: Vector2) -> Node:
+	var c = _spawn(char_name, pos)
+	c.npc_unlimited_resources = false
+	c.traits["Arcane"] = 3
+	c.focus = 3
+	return c
+
+## Casts `ab` at `enemy` and returns the force field it created (or null).
+func _cast_conc(c, ab, enemy, extra: Dictionary = {}):
+	var got := []
+	var cb := func(_a, results): got.append(results)
+	c.ability_manager.cast_completed.connect(cb)
+	var data := {"position": enemy.global_position, "targets": [enemy]}
+	data.merge(extra, true)
+	c.use_ability(ab, data)
+	c.ability_manager.cast_completed.disconnect(cb)
+	if got.is_empty():
+		return null
+	for r in got[0]:
+		if r is Dictionary and not r.get("created_objects", []).is_empty():
+			return r["created_objects"][0]
+	return null
+
+func _gone(obj) -> bool:
+	return not is_instance_valid(obj) or obj.is_queued_for_deletion()
+
+func _slowed_by(enemy):
+	return enemy.condition_manager.conditions.get("slowed")
+
+func _f7_cases() -> void:
+	_check("data.cloud_kill-concentration", Ability.from_dict(AbilityDatabase.get_ability_data("cloud_kill")).is_concentration())
+	_check("data.gravity_well-concentration", Ability.from_dict(AbilityDatabase.get_ability_data("gravity_well")).is_concentration())
+	_check("data.fireball-not-concentration", not Ability.from_dict(AbilityDatabase.get_ability_data("fireball")).is_concentration())
+	var ItemTooltip = preload("res://UI/ItemTooltip.gd")
+	_check("tooltip.concentration", ItemTooltip.ability_lines({"kind": "ability", "ability_id": "gravity_well"}).has("Concentration"))
+
+	var enemy = _spawn("Dummy", Vector2(4200, 4200))
+
+	# conc.reserves: the focus is held, not spent (a party member, so the log
+	# lines reach the player)
+	var c = _party()
+	var arcane0: int = int(c.traits.get("Arcane", 0))
+	var focus0: int = c.focus
+	var saved: Dictionary = c.condition_manager.to_dict()
+	c.traits["Arcane"] = 3
+	c.focus = 3
+	await _frames(1)
+	c.focus = 3
+	var field = _cast_conc(c, _conc_ability("test_conc"), enemy)
+	_check("conc.reserves", c.focus == 3 and c.concentration_locked_focus == 2 and c.spendable_focus == 1,
+		[c.focus, c.concentration_locked_focus, c.spendable_focus])
+	_check("conc.tracks-installs", field != null and not _gone(field) and _slowed_by(enemy) != null and c.get_concentration_names() == PackedStringArray(["Test Conc"]),
+		[field, _slowed_by(enemy), c.get_concentration_names()])
+	_check("conc.logged", _logged("%s concentrates on Test Conc (2 focus held)." % c.Name), log_lines.slice(-3))
+	var plain := Ability.from_dict({"id": "test_plain", "display_name": "Test Plain", "traits": {"Arcane": 2}, "targeting": {"type": "point"}, "effects": []})
+	var usable: Dictionary = c.ability_manager._check_ability_usable(plain)
+	_check("conc.held-focus-not-spendable", not usable["success"] and "focus" in String(usable.get("reason", "")).to_lower(), usable)
+
+	# panel: held focus pips are lavender, after the spendable ones, and named
+	var panel = load("res://UI/PartySidePanel.gd").new()
+	var blue := Color(0.3, 0.5, 0.95)
+	_check("panel.pip-colours", panel._pip_color(0, 3, 2, blue) == blue and panel._pip_color(1, 3, 2, blue) == Color(0.8, 0.65, 1.0)
+		and panel._pip_color(2, 3, 2, blue) == Color(0.8, 0.65, 1.0) and panel._pip_color(3, 3, 2, blue) == Color(0.3, 0.3, 0.3, 1.0))
+	var tip: String = panel._held_tooltip(c, "focus")
+	_check("panel.tooltip-names-held", "2 held by Concentration: Test Conc" in tip, tip)
+	_check("panel.no-held-no-line", panel._held_tooltip(c, "devotion") == "")
+	panel.free()
+
+	# conc.break-on-hit: the first hit costs free focus, the second would dip
+	# into held focus and breaks the spell instead
+	c.take_damage({"force": 1}, c.global_position, enemy)
+	_check("conc.first-hit-spends-free-focus", c.focus == 2 and c.concentration_locked_focus == 2, [c.focus, c.concentration_locked_focus])
+	c._last_notify_text = ""
+	c.take_damage({"force": 1}, c.global_position, enemy)
+	_check("conc.break-on-hit", c.concentration_locked_focus == 0 and c.active_concentrations.is_empty() and c.focus == 2,
+		[c.focus, c.concentration_locked_focus, c.active_concentrations])
+	_check("conc.break-dispels-field", _gone(field))
+	_check("conc.break-removes-condition", _slowed_by(enemy) == null)
+	_check("conc.break-logged", c._last_notify_text == "Concentration broken" and _logged("%s loses concentration: Test Conc ends." % c.Name), log_lines.slice(-3))
+
+	# conc.natural-end: when everything it installed is gone, the focus is free
+	c.focus = 3
+	var short_field = _cast_conc(c, _conc_ability("test_conc_short", 0.0, 0.2), enemy)
+	_check("conc.natural-start", c.concentration_locked_focus == 2 and short_field != null)
+	enemy.condition_manager.remove_condition("slowed")
+	await get_tree().create_timer(0.6).timeout
+	await _frames(3)
+	_check("conc.natural-end", c.concentration_locked_focus == 0 and c.active_concentrations.is_empty() and c.focus == 3,
+		[c.focus, c.concentration_locked_focus, c.active_concentrations])
+	_check("conc.natural-end-logged", _logged("%s's Test Conc Short ends; 2 focus is free again." % c.Name), log_lines.slice(-3))
+
+	# conc.replaced: a new Concentration spell lets the old one go; its held
+	# focus counts toward the new cost
+	c.focus = 3
+	var first_field = _cast_conc(c, _conc_ability("test_conc_a"), enemy)
+	var second_ab := _conc_ability("test_conc_b")
+	_check("conc.replace-usable", c.ability_manager._check_ability_usable(second_ab)["success"])
+	var second_field = _cast_conc(c, second_ab, enemy)
+	_check("conc.replaced", _gone(first_field) and second_field != null and not _gone(second_field)
+		and c.active_concentrations.keys() == ["test_conc_b"] and c.concentration_locked_focus == 2 and c.focus == 3,
+		[c.active_concentrations.keys(), c.concentration_locked_focus, c.focus])
+	_check("conc.replaced-keeps-new-condition", _slowed_by(enemy) != null and _slowed_by(enemy) == c.active_concentrations["test_conc_b"]["conditions"][0]["instance"])
+	_check("conc.replaced-logged", _logged("%s lets Test Conc A go to concentrate on Test Conc B." % c.Name), log_lines.slice(-3))
+
+	# conc.incapacitated: Stunned ends the spell
+	c._last_notify_text = ""
+	c.condition_manager.apply_condition("stunned", enemy, 1, 5.0)
+	_check("conc.incapacitated", c.active_concentrations.is_empty() and c.concentration_locked_focus == 0 and _gone(second_field) and _slowed_by(enemy) == null,
+		[c.active_concentrations, _slowed_by(enemy)])
+	_check("conc.incapacitated-logged", _logged("%s is Stunned and loses concentration: Test Conc B ends." % c.Name), log_lines.slice(-3))
+	c.condition_manager.from_dict(saved)
+	c.traits["Arcane"] = arcane0
+	c.focus = focus0
+
+	# conc.death: dying ends it, field and all
+	var d = _sage("Mortal", Vector2(4000, 4300))
+	await _frames(2)
+	var death_field = _cast_conc(d, _conc_ability("test_conc_d"), enemy)
+	_check("conc.death-fixture", not d.active_concentrations.is_empty())
+	d.current_health = 0
+	d._check_death()
+	_check("conc.death", d.concentration_locked_focus == 0 and d.active_concentrations.is_empty() and _gone(death_field) and _slowed_by(enemy) == null)
+
+	# conc.focus-drop-breaks: focus pushed below the hold (max_focus shrank)
+	var fdrop = _sage("Drained", Vector2(4000, 4400))
+	await _frames(2)
+	var drop_field = _cast_conc(fdrop, _conc_ability("test_conc_f"), enemy)
+	fdrop.focus = 1
+	await _frames(3)
+	_check("conc.focus-drop-breaks", fdrop.active_concentrations.is_empty() and fdrop.concentration_locked_focus == 0 and _gone(drop_field))
+	_despawn(fdrop)
+
+	# conc.interrupted-windup-holds-nothing: nothing is held or spent until it lands
+	var w = _sage("Slowpoke", Vector2(4000, 4500))
+	await _frames(2)
+	var wrec := _watch(w)
+	w.use_ability(_conc_ability("test_conc_w", 1.0), {"position": enemy.global_position, "targets": [enemy]})
+	w.take_damage({"force": 1}, w.global_position, enemy)
+	# Only the hit's -1: committing the windup spent no focus.
+	var focus_after_hit: int = w.focus
+	await get_tree().create_timer(1.3).timeout
+	_check("conc.interrupted-windup-holds-nothing", wrec["interrupted"].size() == 1 and wrec["completed"] == 0
+		and w.concentration_locked_focus == 0 and focus_after_hit == 2 and w.active_concentrations.is_empty(),
+		[wrec, focus_after_hit, w.concentration_locked_focus])
+	_despawn(w)
+
+	# conc.free-cast-no-lock: an item's cast never concentrates
+	var fr = _sage("Quaffer", Vector2(4000, 4600))
+	await _frames(2)
+	var free_field = _cast_conc(fr, _conc_ability("test_conc_free"), enemy, {"free": true})
+	_check("conc.free-cast-no-lock", free_field != null and fr.active_concentrations.is_empty() and fr.concentration_locked_focus == 0 and fr.focus == 3)
+	if is_instance_valid(free_field):
+		free_field.queue_free()
+	enemy.condition_manager.remove_condition("slowed")
+	# The same Ability cast normally afterwards does concentrate.
+	var reused := _conc_ability("test_conc_reuse")
+	reused.set_meta("free_cast", true)
+	var reused_field = _cast_conc(fr, reused, enemy)
+	_check("conc.free-flag-cleared-on-normal-cast", not fr.active_concentrations.is_empty() and reused_field != null)
+	fr.end_concentration("")
+	_despawn(fr)
+
+	# conc.npc-unlimited: concentrates for free; hits don't break it, a stun does
+	var npc = _spawn("Hexer", Vector2(4000, 4700))
+	npc.traits["Arcane"] = 2
+	await _frames(2)
+	var npc_field = _cast_conc(npc, _conc_ability("test_conc_npc"), enemy)
+	npc.take_damage({"force": 1}, npc.global_position, enemy)
+	_check("conc.npc-unlimited-holds", not npc.active_concentrations.is_empty() and npc.concentration_locked_focus == 0 and not _gone(npc_field))
+	npc.condition_manager.apply_condition("stunned", enemy, 1, 5.0)
+	_check("conc.npc-stun-ends", npc.active_concentrations.is_empty() and _gone(npc_field))
+	_despawn(npc)
+
+	# conc.others-condition-kept: Slowed someone else already put on the target
+	# comes back as their instance; breaking this spell must not remove it.
+	var other = _spawn("Other", Vector2(4100, 4800))
+	var own = _sage("Owner", Vector2(4000, 4800))
+	await _frames(2)
+	enemy.condition_manager.apply_condition("slowed", other, 1, 60.0)
+	var others_slowed = _slowed_by(enemy)
+	var own_field = _cast_conc(own, _conc_ability("test_conc_o"), enemy)
+	var tracked_conditions: Array = own.active_concentrations.get("test_conc_o", {}).get("conditions", [])
+	_check("conc.others-condition-untracked", not own.active_concentrations.is_empty() and tracked_conditions.is_empty(), tracked_conditions)
+	own.end_concentration("broken")
+	_check("conc.others-condition-kept", _gone(own_field) and others_slowed != null and _slowed_by(enemy) == others_slowed)
+	enemy.condition_manager.remove_condition("slowed")
+	# Only fields and clouds are dispelled: a summoned item or structure isn't
+	# tracked (breaking the spell would delete it).
+	var loot := Node2D.new()
+	game.add_child(loot)
+	var entry := {"conditions": [], "objects": []}
+	own._collect_concentration_installs([{"created_objects": [loot, Vector2i(3, 4)]}], entry)
+	_check("conc.items-not-tracked", entry["objects"].is_empty(), entry)
+	loot.queue_free()
+	_despawn(own)
+	_despawn(other)
+
+	# conc.cloud: Cloud Kill's cloud is tracked and dispelled through FogManager
+	var cloud_caster = _sage("Fumer", Vector2(4000, 4900))
+	await _frames(2)
+	var ck := Ability.from_dict(AbilityDatabase.get_ability_data("cloud_kill"))
+	var got := []
+	var cb := func(_a, results): got.append(results)
+	cloud_caster.ability_manager.cast_completed.connect(cb)
+	# Resolve the cloud directly, as the projectile's landing does.
+	cloud_caster._resolve_ability_at(ck, cloud_caster.global_position + Vector2(100, 0))
+	cloud_caster.ability_manager.cast_completed.disconnect(cb)
+	var overlay = null
+	if not got.is_empty():
+		for r in got[0]:
+			if r is Dictionary and not r.get("created_objects", []).is_empty():
+				overlay = r["created_objects"][0]
+	var fm = game.get_node_or_null("FogManager")
+	_check("conc.cloud-tracked", overlay is FogOverlay and not cloud_caster.active_concentrations.is_empty(), [overlay, cloud_caster.active_concentrations])
+	cloud_caster.end_concentration("broken")
+	_check("conc.cloud-dispelled", _gone(overlay) and (fm == null or not fm._active_fogs.has(overlay)))
+	_despawn(cloud_caster)
+	_despawn(enemy)
 	await _frames(2)

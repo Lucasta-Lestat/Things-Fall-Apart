@@ -64,8 +64,9 @@ static func trade_value(entry: Dictionary) -> float:
 	return float(raw.get("cost", 0.0)) * max(stacks, 1)
 
 ## Casting rules for an ability slot (party panel): "Interruptible" when a
-## windup can be broken by a hit, knockback or being incapacitated, and each
-## equipment need ("Needs a shield") before a cast fails on it.
+## windup can be broken by a hit, knockback or being incapacitated,
+## "Concentration" for a spell that holds its focus, and each equipment need
+## ("Needs a shield") before a cast fails on it.
 static func ability_lines(entry: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	var aid := str(entry.get("ability_id", ""))
@@ -75,6 +76,10 @@ static func ability_lines(entry: Dictionary) -> PackedStringArray:
 	var data: Dictionary = AbilityDatabase.get_ability_data(aid)
 	if float(data.get("cast_time", 0.0)) > 0.0 and bool(data.get("interruptible", true)):
 		out.append("Interruptible")
+	# Holds its focus while what it installed lasts (lavender focus pips).
+	var ab_traits = data.get("traits", {})
+	if ab_traits is Dictionary and (ab_traits.has("Concentration") or ab_traits.has("concentration")):
+		out.append("Concentration")
 	var reqs = data.get("requirements", {})
 	if reqs is Dictionary:
 		for t in reqs.get("traits", []):

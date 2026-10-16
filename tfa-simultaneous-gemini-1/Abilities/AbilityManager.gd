@@ -187,6 +187,16 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
 
+	# Concentration: an item's cast never concentrates (the item pays). A new
+	# Concentration spell lets the held one go as soon as it is committed.
+	if free:
+		ability.set_meta("free_cast", true)
+	else:
+		if ability.has_meta("free_cast"):
+			ability.remove_meta("free_cast")
+		if ability.is_concentration() and character.has_method("end_concentration") and not character.active_concentrations.is_empty():
+			character.end_concentration("replaced", ability.display_name)
+
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position, explicit_targets, target_anchor)
 		return true
@@ -552,6 +562,10 @@ func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
 			var cost: int = int(costs[resource_name])
 			if character.has_method("_get_character_resource"):
 				var current = character._get_character_resource(resource_name)
+				# Casting a new Concentration spell ends the held one, so the
+				# focus it holds counts as available.
+				if resource_name == "focus" and ability.is_concentration() and "concentration_locked_focus" in character:
+					current += character.concentration_locked_focus
 				if current < cost:
 					return {"success": false, "reason": "Not enough %s" % resource_name}
 
@@ -659,15 +673,16 @@ func _pay_ability_costs(ability: Ability) -> bool:
 	if _is_innate_ability(ability):
 		return true
 	var costs := school_costs_for(ability)
-	# Concentration spells lock the focus they pay until the spell ends.
-	var concentration: bool = ability.traits.has("Concentration") or ability.traits.has("concentration")
 	for resource_name in costs:
+		# A Concentration spell's focus is held, not spent: the character
+		# locks it when the spell lands (ProceduralCharacter.begin_concentration)
+		# and gets it back when the spell ends.
+		if resource_name == "focus" and ability.is_concentration():
+			continue
 		var cost: int = int(costs[resource_name])
 		if character.has_method("_spend_character_resource"):
 			if not character._spend_character_resource(resource_name, cost):
 				return false
-	if concentration and costs.has("focus") and character.has_method("_begin_concentration"):
-		character._begin_concentration(ability.id, int(costs["focus"]))
 	return true
 
 
