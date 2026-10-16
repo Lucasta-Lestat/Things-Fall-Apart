@@ -6513,9 +6513,10 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	# A real hit that condition DR or Rage soaked up entirely (armour alone
 	# can't: the chip floor) gets no damage number, so say so; otherwise it
 	# looks like a miss. notify() drops repeats within 1 s (e.g. DoT ticks).
-	# NPCs the party doesn't see (only hears, at most) stay quiet.
-	if raw_total > 0.0 and total_damage == 0 and is_alive() and is_inside_tree() \
-			and _announces_to_party():
+	# NPCs the party doesn't see (only hears, at most) stay quiet. A sub-1 hit
+	# on an unarmoured spot truncates to 0 without anything blocking it.
+	if raw_total > 0.0 and total_damage == 0 and absorbed_total > 0.0 and is_alive() \
+			and is_inside_tree() and _announces_to_party():
 		notify("Blocked", Color(0.75, 0.75, 0.75))
 	# A hit armour only partly stopped: a small grey "-N blocked" stacked just
 	# above its damage numbers (same parent and spot, so Globals stacks it).

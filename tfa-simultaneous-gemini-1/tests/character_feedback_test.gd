@@ -191,6 +191,11 @@ func _case_damage_path() -> void:
 	dealt = ch.take_damage({"bludgeoning": 5.0}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
 	ch._condition_tick_damage = false
 	_check("dr.tick-quiet", dealt == 2 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, _floats(stub))
+	# A sub-1 hit on an unarmoured type truncates to 0: nothing blocked it.
+	_reset_notify(ch)
+	var blocked_n: int = _floated(stub, "Blocked")
+	dealt = ch.take_damage({"fire": 0.5}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
+	_check("dr.truncation-not-blocked", dealt == 0 and _floated(stub, "Blocked") == blocked_n, [dealt, _floats(stub)])
 	# Condition DR soaking a hit completely: "Blocked".
 	ch.condition_manager.apply_condition("physically_resistant", null, 1, 30.0)
 	_reset_notify(ch)
