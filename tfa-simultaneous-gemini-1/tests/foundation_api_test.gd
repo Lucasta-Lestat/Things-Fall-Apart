@@ -278,7 +278,8 @@ func _case_game_hosts() -> void:
 	_check("game.world_tooltip-under-GameUI", game.world_tooltip != null and game.world_tooltip.get_parent() == ui)
 	_check("game.hud_status-under-GameUI", game.hud_status != null and game.hud_status.get_parent() == ui)
 	_check("game.world_tooltip-ships-empty", game.world_tooltip._providers.is_empty())
-	_check("game.hud_status-ships-empty", game.hud_status.get_child_count() == 0)
+	# The stealth lane registers the STEALTH badge at boot.
+	_check("game.hud_status-has-stealth-badge", game.hud_status.get_node_or_null("StealthBadge") != null)
 	_check("game.hud_status-ignore", game.hud_status.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 	var tl: Control = ui.get_node("TimeLabel")
 	_check("game.hud_status-below-clock", is_equal_approx(game.hud_status.offset_top, tl.position.y + tl.size.y + 4.0),

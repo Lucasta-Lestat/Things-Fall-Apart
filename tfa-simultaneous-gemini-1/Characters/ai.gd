@@ -438,6 +438,9 @@ func _check_stealth_wake() -> void:
 	for pc in party:
 		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
 			continue
+		# Only sneaking looks suspicious (nobody sneaks on the world map).
+		if pc.has_method("is_sneaking") and not pc.is_sneaking():
+			continue
 		if is_in_line_of_sight(pc.global_position, pc.get_elevation()):
 			wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, pc.global_position)
 			return  # is_at_ease is now false; caller's early-out blocks re-entry
@@ -685,12 +688,35 @@ func _close_quarters_radius() -> float:
 # must not quietly delete it. Sneaking buys you the approach, not immunity:
 # the moment you strike, _on_self_damaged acquires you by name regardless of
 # angle, and stepping into the cone still gets you seen.
+# ProceduralCharacter.is_sneaking is the one rule (party members in stealth
+# mode, never on the world map), so this and the quieter, slower steps agree.
 func _is_sneaking(other: ProceduralCharacter) -> bool:
-	if game == null or not ("stealth_mode" in game) or not game.stealth_mode:
+	return other != null and is_instance_valid(other) and other.is_sneaking()
+
+## Whether this NPC has `c` in view right now, by the rules _update_target
+## acts on: a held target while it isn't occluded (a wall-clear sight line or
+## close quarters, out to 1.5x sight); anyone else as acquisition sees them
+## (the sight cone, or close quarters with a wall-clear line unless they are
+## sneaking; an invisible character only with true_sight). StealthOverlay's
+## eye shows this, so it matches what the NPC acts on.
+func has_in_view(c) -> bool:
+	if c == null or not is_instance_valid(c) or c == character or not c.has_method("is_alive") or not c.is_alive():
 		return false
-	if not ("party_chars" in game):
+	if not character.is_alive():
 		return false
-	return other in game.party_chars
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+		return false
+	var dist: float = character.global_position.distance_to(c.global_position)
+	if c == current_target:
+		return dist <= detection_range * 1.5 and _target_occluded_time <= 0.0
+	if character.traits.get("true_sight", 0) == 0:
+		var c_cm = c.get_node_or_null("ConditionManager")
+		if c_cm and c_cm.has_active_condition("invisible"):
+			return false
+	if dist <= _close_quarters_radius() and not _is_sneaking(c):
+		return _has_clear_sight_line(c.global_position, c.get_elevation())
+	return is_in_line_of_sight(c.global_position, c.get_elevation())
 
 
 func _update_target(delta: float = 0.0) -> void:

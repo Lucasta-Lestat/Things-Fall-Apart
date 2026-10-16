@@ -659,6 +659,10 @@ func _refresh_elevation() -> void:
 		var l := get_node_or_null(n)
 		if l:
 			l.shadow_item_cull_mask = mask
+	# Stealth mode's elevated-surface cone shows what a GROUND viewer sees on
+	# raised walkways; from up on one, the main cone already covers it.
+	if has_node("NPCLineOfSightHigh") and game != null and is_instance_valid(game) and game.has_method("sync_npc_elevated_cone"):
+		game.sync_npc_elevated_cone(self)
 
 # Configuration
 @export_group("Wound Lines")
@@ -4588,7 +4592,7 @@ func _update_movement(delta: float) -> void:
 					if not ground_walkable and mountable:
 						_begin_jump(wp_mt)
 						return
-			var step: Vector2 = move_dir * move_speed * delta
+			var step: Vector2 = move_dir * walk_speed() * delta
 			var to_t := GridManager.world_to_map(global_position + step)
 			if to_t != from_t and not _step_ok(from_t, to_t):
 				# JUMP dispatch: a jumper whose current WAYPOINT is leapable
@@ -4637,7 +4641,7 @@ func _update_movement(delta: float) -> void:
 			# parallel frames broke contact, resetting the stuck timer below =
 			# jitter in place forever. Only exact head-on and inside-corner
 			# presses stop dead now, and the stuck escape handles those.)
-			velocity = move_dir * move_speed
+			velocity = move_dir * walk_speed()
 			var prev_pos := global_position
 			move_and_slide()
 			# unlocked doors give way when walked into (push_open self-guards
@@ -4821,6 +4825,8 @@ func _emit_footstep() -> void:
 	# silent-footed up to 1.5 for the heavy) — set in load_from_data alongside
 	# the other race stats.
 	var loudness: float = (base_sound * footwear_mult + item_noise) * walking_noise
+	if is_sneaking():
+		loudness *= SNEAK_NOISE_MULT
 
 	if sfx_key != "":
 		var full_key := "%s_%s" % [sfx_key, footwear_suffix]
@@ -6036,13 +6042,25 @@ func can_see_point(target_pos: Vector2, target_elev: float = 0.0, range_mult: fl
 func effective_visibility() -> float:
 	return 1.0
 
-## True while this character is moving stealthily. Same answer as
-## ai._is_sneaking(other): party members sneak while Game.stealth_mode is on;
-## NPCs never do.
+## True while this character is moving stealthily: stealth mode
+## (Game.stealth_mode, the C key) makes every party member sneak, whether
+## selected, walking a drawn plan or following its AI. Nobody sneaks on the
+## world map; NPCs never do. ai._is_sneaking asks this, so the AI's
+## close-quarters carve-out and the quieter, slower steps agree.
 func is_sneaking() -> bool:
 	if game == null or not is_instance_valid(game) or not ("stealth_mode" in game) or not game.stealth_mode:
 		return false
-	return is_party_member()
+	return not on_world_map and is_party_member()
+
+## Sneaking: footsteps this much as loud (halves the distance they carry) ...
+const SNEAK_NOISE_MULT := 0.5
+## ... and walking at this fraction of normal pace.
+const SNEAK_SPEED_MULT := 0.7
+
+## Walking pace: move_speed, slowed while sneaking. Dashes, ice slides and
+## jumps keep the full move_speed, so an escape is never slowed by stealth.
+func walk_speed() -> float:
+	return move_speed * (SNEAK_SPEED_MULT if is_sneaking() else 1.0)
 
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }

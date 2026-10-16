@@ -45,6 +45,10 @@ var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
 var stealth_mode: bool = false
+# Change stealth_mode through set_stealth_mode (the C key), which emits this.
+signal stealth_mode_changed(active: bool)
+# vfx/StealthOverlay.gd: in-view eyes and noise rings while stealth_mode.
+var stealth_overlay: Node2D = null
 # Session-scoped unlock memory, keyed "<map_id>|door|<hinge_x>,<hinge_y>" (export-px
 # ints from the geometry JSON hinge). Written by Door.interact on successful unlock,
 # re-applied by MapLoader on door spawn. Intentionally NOT cleared in
@@ -299,6 +303,12 @@ func _ready() -> void:
 	$GameUI.add_child(world_tooltip)
 	hud_status = preload("res://UI/HudStatusBar.gd").new()
 	$GameUI.add_child(hud_status)
+
+	# Stealth mode readouts: the STEALTH badge on the status strip, and the
+	# world-space overlay (in-view eyes, noise rings).
+	hud_status.add_widget(preload("res://UI/StealthBadge.gd").new())
+	stealth_overlay = preload("res://vfx/StealthOverlay.gd").new()
+	add_child(stealth_overlay)
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
@@ -1925,6 +1935,8 @@ func _update_sight_cones() -> void:
 			var light = c.get_node_or_null(n)
 			if light is PointLight2D:
 				_fit_sight_light(light, c)
+		if c.has_node("NPCLineOfSightHigh"):
+			sync_npc_elevated_cone(c)
 
 func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var light = PointLight2D.new()
@@ -2397,6 +2409,88 @@ func _toggle_npc_los_cones() -> void:
 		var npc_los = character.get_node_or_null("NPCLineOfSight")
 		if npc_los:
 			npc_los.visible = stealth_mode
+
+## The one way to switch stealth mode (the C key). While it is on, party
+## members sneak (ProceduralCharacter.is_sneaking: quieter footsteps, slower
+## walk, noticed only inside an onlooker's sight cone), NPC sight cones show,
+## and the STEALTH badge and StealthOverlay follow stealth_mode_changed.
+func set_stealth_mode(active: bool) -> void:
+	if stealth_mode == active:
+		return
+	stealth_mode = active
+	_toggle_npc_los_cones()
+	if active:
+		sync_npc_elevated_cones()
+		if current_map_data.get("is_world_map", false):
+			GameLog.add_entry("Stealth mode [b]on[/b]. Nobody sneaks on the world map; the party sneaks once it arrives somewhere.")
+		else:
+			GameLog.add_entry(("Stealth mode [b]on[/b]: the party sneaks (footsteps %d%% as loud, %d%% walking pace) and is noticed only inside an onlooker's sight cone, even up close. "
+				+ "Cones show what onlookers see (pink: raised walkways they can see onto), and an eye marks a party member an onlooker you can see has in view. "
+				+ "Relaxed onlookers who spot you sneaking become wary.") % [
+				roundi(ProceduralCharacter.SNEAK_NOISE_MULT * 100.0), roundi(ProceduralCharacter.SNEAK_SPEED_MULT * 100.0)])
+	else:
+		GameLog.add_entry("Stealth mode [b]off[/b].")
+	stealth_mode_changed.emit(active)
+
+## Give every NPC that has a sight cone its elevated-surface cone (made on
+## first use) and match it to the red one. Called when stealth mode turns on
+## and periodically by StealthOverlay while it is on. None on the world map.
+func sync_npc_elevated_cones() -> void:
+	if current_map_data.get("is_world_map", false):
+		return
+	for character in characters_in_scene:
+		if not is_instance_valid(character) or character in party_chars:
+			continue
+		if not character.has_node("NPCLineOfSight"):
+			continue
+		if not character.has_node("NPCLineOfSightHigh"):
+			_add_npc_elevated_sight_light(character)
+		sync_npc_elevated_cone(character)
+
+## Stealth mode's second, pink cone for an NPC. The red cone of a ground
+## viewer is shadowed by every wall, so it drew battlements and decks as
+## unseen even though GridManager.sight_line_clear lets the NPC see someone
+## standing up there (the target's raised eye tops the wall). This cone is
+## shadowed only by tall occluders (SIGHT_MASK_HIGH) and lights only walkway
+## art (CollisionLayers.ELEVATED_SURFACE_LIGHT, set by MapLoader on deck art),
+## so a walkway glows pink where standing on it would be seen. (Not amber:
+## amber is the Suspicious cone tint and the outcry fuse.)
+const ELEVATED_CONE_COLOR := Color(1.0, 0.4, 0.65)
+func _add_npc_elevated_sight_light(npc: ProceduralCharacter) -> PointLight2D:
+	var light := PointLight2D.new()
+	light.name = "NPCLineOfSightHigh"
+	_fit_sight_light(light, npc)
+	light.energy = 0.35
+	light.color = ELEVATED_CONE_COLOR
+	light.rotation_degrees = -90
+	light.shadow_enabled = true
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH
+	light.range_item_cull_mask = CollisionLayers.ELEVATED_SURFACE_LIGHT
+	light.z_index = 102
+	npc.add_child(light)
+	sync_npc_elevated_cone(npc)
+	return light
+
+## Keep an NPC's elevated-surface cone the same wedge, radius and visibility
+## as its red one (whatever rule shows or hides the red one), and lit only
+## while the NPC stands on the ground (from a walkway the red cone already
+## sees onto other walkways). ProceduralCharacter._refresh_elevation calls it
+## when the NPC climbs; _update_sight_cones every frame.
+func sync_npc_elevated_cone(npc) -> void:
+	if npc == null or not is_instance_valid(npc):
+		return
+	var main_light := npc.get_node_or_null("NPCLineOfSight") as PointLight2D
+	var high := npc.get_node_or_null("NPCLineOfSightHigh") as PointLight2D
+	if main_light == null or high == null:
+		return
+	if high.texture != main_light.texture:
+		high.texture = main_light.texture
+	if not is_equal_approx(high.texture_scale, main_light.texture_scale):
+		high.texture_scale = main_light.texture_scale
+	high.rotation = main_light.rotation
+	if high.visible != main_light.visible:
+		high.visible = main_light.visible
+	high.enabled = main_light.enabled and npc.get_elevation() < 1.0
 
 # ===== Hearing visibility pulse =====
 # When a party member can HEAR an NPC (but doesn't see them), the NPC briefly
@@ -3086,8 +3180,7 @@ func _input(event: InputEvent) -> void:
 				_print_status()
 			KEY_C:
 				if not event.echo:
-					stealth_mode = not stealth_mode
-					_toggle_npc_los_cones()
+					set_stealth_mode(not stealth_mode)
 			KEY_T:
 				# WAIT toggle for the selected party members — the hotkey twin
 				# of the context menu's Wait Here / Resume pair.
