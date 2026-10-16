@@ -664,12 +664,13 @@ static func _announce_effect_save(target: Node, caster: Node, condition_id: Stri
 	_notify_rider(target, "Resisted", log_text)
 
 
-## Floats a rider notice over a target the party can see (a hidden NPC stays
-## quiet, as ConditionManager's notices do); the log line goes out regardless,
-## since it is only built when the party is involved.
+## Floats a rider notice over a target the party can see, with its log line
+## (only built when the party is involved). A hidden NPC stays quiet, float
+## and log alike, as ConditionManager's notices do: the log would name it.
 static func _notify_rider(target: Node, text: String, log_text: String, color: Color = Color(0.6, 0.85, 1.0)) -> void:
-	var noticeable: bool = _involves_party(target) or (target is CanvasItem and target.visible)
-	if noticeable and target.has_method("notify"):
+	if not (_involves_party(target) or (target is CanvasItem and target.visible)):
+		return
+	if target.has_method("notify"):
 		target.notify(text, color, log_text)
 	elif not log_text.is_empty():
 		GameLog.add_entry(log_text)

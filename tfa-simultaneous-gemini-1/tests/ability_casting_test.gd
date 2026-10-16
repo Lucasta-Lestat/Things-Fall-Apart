@@ -479,7 +479,10 @@ func _f6_cases() -> void:
 	c.use_ability(well, {"position": start + Vector2(1000, 0)})
 	var field = _field_in(got)
 	_check("manager.use_ability-clamps", field != null and _near(field.global_position, start + Vector2(220, 0)), field.global_position - start if field else got)
-	_check("manager.falls-short-notice", c._last_notify_text == "Out of range" and _logged("%s's Test Well falls short: the target was 1000 away, range 220." % c.Name), c._last_notify_text)
+	# The distance is read from the caster's live position, which can settle by
+	# a pixel between frames (999 or 1000), so only the wording is pinned.
+	_check("manager.falls-short-notice", c._last_notify_text == "Out of range" and _logged("%s's Test Well falls short: the target was " % c.Name) \
+		and _logged(" away, range 220."), [c._last_notify_text, log_lines.slice(-2)])
 	if field and is_instance_valid(field):
 		field.queue_free()
 	# A small slip (within RANGE_CLAMP_NOTICE_PX) is clamped silently.
@@ -490,13 +493,26 @@ func _f6_cases() -> void:
 	_check("manager.small-clamp-silent", field != null and _near(field.global_position, start + Vector2(220, 0)) and c._last_notify_text == "", c._last_notify_text)
 	if field and is_instance_valid(field):
 		field.queue_free()
-	# A designated character re-aims the cast: no clamp.
+	# A designated character re-aims a cast that follows it: no clamp.
 	got.clear()
 	var mark = _spawn("Mark", start + Vector2(600, 0))
 	await _frames(1)
-	c.use_ability(well, {"position": mark.global_position, "anchor": mark})
+	var homing := Ability.from_dict({
+		"id": "test_homing_well", "display_name": "Test Homing Well", "cast_time": 0.0, "traits": {},
+		"targeting": {"type": "point", "range": 220.0, "shape": "single", "radius": 60.0},
+		"effects": [{"type": "force_field", "field_type": "gravity", "radius": 60.0, "strength": 1.0, "duration": 2.0}],
+	})
+	c.use_ability(homing, {"position": mark.global_position, "anchor": mark})
 	field = _field_in(got)
 	_check("manager.anchor-unclamped", field != null and _near(field.global_position, mark.global_position), field.global_position - start if field else got)
+	if field and is_instance_valid(field):
+		field.queue_free()
+	# A ground AoE keeps its patch of ground: the anchor it doesn't follow (the
+	# AI passes one with every cast) doesn't lift the clamp.
+	got.clear()
+	c.use_ability(well, {"position": mark.global_position, "anchor": mark})
+	field = _field_in(got)
+	_check("manager.ground-aoe-anchor-clamped", field != null and _near(field.global_position, start + Vector2(220, 0)), field.global_position - start if field else got)
 	if field and is_instance_valid(field):
 		field.queue_free()
 	_despawn(mark)

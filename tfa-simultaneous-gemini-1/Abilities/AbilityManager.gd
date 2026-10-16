@@ -147,8 +147,11 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	# that skipped targeting. Picked characters were range-checked when picked,
 	# and a designated character (anchor) re-aims the cast anyway. A cone's
 	# point only aims it (its reach is its radius), so it is left alone.
+	# Only an anchor that actually re-aimed counts: a ground AoE ignores the
+	# anchor the AI passes with every cast, and a dead one falls back to the
+	# planned point, which the clamp still covers.
 	var max_range: float = float(ability.targeting.get("range", 0.0))
-	var has_anchor: bool = target_anchor != null and is_instance_valid(target_anchor)
+	var has_anchor: bool = _anchored_position(ability, target_anchor, Vector2.INF) != Vector2.INF
 	if ability.targeting.get("type", "") != "self" and max_range > 0.0 and explicit_targets.is_empty() \
 			and not has_anchor and not free and String(ability.targeting.get("shape", "")) != "cone":
 		var clamped := clamp_point_to_range(character.global_position, target_position, max_range)

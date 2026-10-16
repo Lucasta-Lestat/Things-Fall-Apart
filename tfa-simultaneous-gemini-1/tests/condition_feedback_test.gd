@@ -3,7 +3,8 @@
 # trait-keyed immunities, apply-time and periodic save notices (and their
 # silence for hidden NPCs and corpses), transforms_into (Chilled 3 -> Frozen,
 # which roots), missed chance riders and effect-level saves, Chasten's
-# cleanse report, and force fields (outline, Magnetic Pull's traits).
+# cleanse report, force fields (outline, Magnetic Pull's traits), and a
+# throw giving its thrower away.
 # Drives the real game scene the way feedback_layer_test does.
 # Run:  godot --headless --path . res://tests/condition_feedback_test.tscn
 # Judge by PASS/FAIL lines, not exit code alone (startup noise is normal).
@@ -46,6 +47,7 @@ func _ready() -> void:
 	await _case_chasten()
 	await _case_force_fields()
 	await _case_ai_ticks()
+	await _case_throw_reveal()
 
 	for c in spawned:
 		if is_instance_valid(c):
@@ -100,6 +102,10 @@ func _case_immunity() -> void:
 	cm.clear_all_conditions()
 	cm.apply_condition("shielded", null)
 	_check("immunity.shielded-blocks-burning", cm.apply_condition("burning", null) == null)
+	# A trait key wards off debuffs only: Winter's Grip (the drawn blade's item
+	# condition, cold-flavoured) still lands under Shielded; its bite doesn't.
+	_check("immunity.trait-spares-item-condition", cm.apply_condition("winters_grip", null) != null)
+	_check("immunity.trait-blocks-item-debuff", cm.apply_condition("winters_grip_bite", null) == null)
 	cm.clear_all_conditions()
 	# Frozen carries the cold trait it is immune to: re-applying refreshes it.
 	var f1 = cm.apply_condition("frozen", null)
@@ -327,11 +333,13 @@ func _case_riders() -> void:
 	_check("rider.buff-miss-no-effect", npc._last_notify_text == "No effect", npc._last_notify_text)
 	_check("rider.buff-miss-wording", "doesn't gain Hasted" in _last_log(), _last_log())
 
-	# Hidden targets: logged for the party's own cast, but no float.
+	# Hidden targets stay quiet, even for the party's own cast: the log line
+	# would name an NPC the party can't see.
 	npc.visible = false
 	npc._last_notify_text = ""
+	n0 = GameLog.get_entries().size()
 	AbilityEffect.resolve_effect(eff, p, [npc], ab, npc.global_position)
-	_check("rider.hidden-target-no-float", npc._last_notify_text == "")
+	_check("rider.hidden-target-quiet", npc._last_notify_text == "" and GameLog.get_entries().size() == n0, _last_log())
 	npc.visible = true
 
 	# NPC on NPC: floats, no log.
@@ -484,3 +492,30 @@ func _case_ai_ticks() -> void:
 	_check("ai.tick-no-acquire", bai.current_target == null, bai.current_target)
 	_check("ai.tick-still-wakes", bai.alertness_value >= bai.ALERTNESS_SEARCHING_THRESHOLD, bai.alertness_value)
 	_check("ai.flag-cleared", not bystander.condition_manager.firing_triggered_effect)
+
+# ---------------------------------------------------------------------------
+# A throw gives a concealed thrower away (R2-final-1). reveal() itself comes
+# from the equipment lane's concealment; a stub stands in for it here.
+# ---------------------------------------------------------------------------
+
+class RevealStub extends CharacterBody2D:
+	var reveals: int = 0
+	func reveal(_seconds: float = 3.0) -> void:
+		reveals += 1
+
+func _case_throw_reveal() -> void:
+	var stub := RevealStub.new()
+	game.add_child(stub)
+	stub.global_position = Vector2(5000, 3000)
+	game._add_thrown_projectile({
+		"type": "thrown_item", "item_data": {"id": "dagger"},
+		"position": stub.global_position, "velocity": Vector2(300, 0),
+		"shooter": stub, "max_range": 400.0, "damage": {"piercing": 1},
+	})
+	_check("throw.reveals-thrower", stub.reveals == 1, stub.reveals)
+	# Clear the flight before it lands, so no dagger is dropped in the scene.
+	for n in get_tree().current_scene.get_children():
+		if n.name.begins_with("ThrownProjectile"):
+			n.queue_free()
+	stub.queue_free()
+	await _await_frames(1)

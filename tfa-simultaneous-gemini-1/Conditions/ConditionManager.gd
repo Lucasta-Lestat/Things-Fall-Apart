@@ -440,7 +440,10 @@ func unsuppress_condition(condition_id: String) -> bool:
 ## Return the active condition that makes the character immune to `template`,
 ## or null. Immunity keys may be condition ids ("sickened") or traits ("cold",
 ## "slow"), so Hasted blocks Slowed and Chilled, and Shielded blocks Burning.
+## A trait key only wards off debuffs: Shielded's "cold" stops Chilled, not
+## Winter's Grip, the drawn blade's own (cold-flavoured) item condition.
 func _get_immunity_source(template: Condition) -> ConditionInstance:
+	var harmful: bool = template.traits.has("debuff")
 	for cond_id in conditions:
 		var instance: ConditionInstance = conditions[cond_id]
 		# A condition never blocks itself (Frozen has the "cold" trait it is
@@ -448,7 +451,7 @@ func _get_immunity_source(template: Condition) -> ConditionInstance:
 		if not instance.is_active() or instance.condition.id == template.id:
 			continue
 		for key in instance.condition.immunities:
-			if key == template.id or template.traits.has(key):
+			if key == template.id or (harmful and template.traits.has(key)):
 				return instance
 	return null
 

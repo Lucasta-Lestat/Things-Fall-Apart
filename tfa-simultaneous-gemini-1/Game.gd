@@ -3775,6 +3775,12 @@ func _process_projectile_hit_object(
 
 func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	"""Spawn a unified Projectile for a thrown item; spins in flight and drops the item on hit/expire."""
+	# A throw is an attack: it gives a concealed thrower away as a swing does
+	# (register_attack_start). Both throw paths (ProceduralCharacter's
+	# _execute_pending_throw and PartySidePanel's _execute_throw) come here.
+	var thrower = proj_data.get("shooter")
+	if is_instance_valid(thrower) and thrower.has_method("reveal"):
+		thrower.reveal()
 	var item_data: Dictionary = proj_data.get("item_data", {})
 	var item_id: String = item_data.get("id", "")
 	var thrown_damage: Dictionary = proj_data.get("damage", {"bludgeoning": 2})
