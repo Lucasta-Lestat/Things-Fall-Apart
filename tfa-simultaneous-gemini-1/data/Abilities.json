@@ -66,7 +66,7 @@
 		{
 			"id": "cloud_kill",
 			"display_name": "Cloud Kill",
-			"description": "Conjure a cloud of deadly poison.",
+			"description": "Conjure a cloud of deadly poison that also shortens sight through it.",
 			"icon": "res://UI/UI Icons/ability_cloud_kill.png",
 			"visual_duration": 1.5,
 			"costs": {},
@@ -93,11 +93,11 @@
 				"type": "cloud",
 				"radius": 80,
 				"duration": 15.0,
-				"color": "#40804020",
+				"color": "#73389980",
 				"condition_id": "poisoned",
 				"condition_stacks": 1,
 				"apply_interval": 2.0,
-				"density": 0.99
+				"density": 0.6
 			},
 			"visuals": {
 				"in_hand_effect": "res://vfx/poison_cloud.tscn",
