@@ -42,6 +42,8 @@ func _set_panel_visible(v: bool) -> void:
 			_refresh()
 
 func _input(event: InputEvent) -> void:
+	if not OS.is_debug_build():
+		return
 	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_F9 or event.physical_keycode == KEY_F9):
 		_visible = !_visible
 		_panel.visible = _visible

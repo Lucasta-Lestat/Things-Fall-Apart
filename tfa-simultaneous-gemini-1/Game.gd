@@ -1852,7 +1852,9 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
-	light.visible = false
+	# Follow the current stealth mode (the shared cone rule), so NPCs spawned
+	# after a map load or mid-mission match it instead of starting hidden.
+	light.visible = _npc_cones_shown(npc)
 	npc.add_child(light)
 
 func _apply_material_recursive(node: Node, material: Material) -> void:
@@ -2283,9 +2285,30 @@ func _toggle_npc_los_cones() -> void:
 			continue
 		if character in party_chars:
 			continue
-		var npc_los = character.get_node_or_null("NPCLineOfSight")
-		if npc_los:
-			npc_los.visible = stealth_mode
+		_sync_npc_cones(character)
+
+## Whether an NPC's sight cone shows: stealth mode on, off the world map
+## (nobody sneaks there), the NPC alive (a corpse sees nothing), and not drawn
+## only by a hearing pulse. The pulse's low alpha is modulate, which Light2D
+## ignores, so a glimpsed cone would draw at full strength and give away an
+## unseen onlooker's facing and range. An NPC hidden outright hides its cone
+## with it, so that case needs nothing here.
+func _npc_cones_shown(npc) -> bool:
+	return stealth_mode and npc.is_alive() \
+			and not current_map_data.get("is_world_map", false) \
+			and not _npc_only_glimpsed(npc)
+
+## Drawn only by a hearing pulse: pulsing and not truly seen.
+func _npc_only_glimpsed(npc) -> bool:
+	return _npc_pulse_remaining.has(npc) and not _npc_was_truly_seen.get(npc, false)
+
+## Apply _npc_cones_shown to every sight cone the NPC carries.
+func _sync_npc_cones(npc) -> void:
+	var show_cones: bool = _npc_cones_shown(npc)
+	for cone_name in ["NPCLineOfSight"]:
+		var cone = npc.get_node_or_null(cone_name)
+		if cone and cone.visible != show_cones:
+			cone.visible = show_cones
 
 # ===== Hearing visibility pulse =====
 # When a party member can HEAR an NPC (but doesn't see them), the NPC briefly
@@ -2524,6 +2547,10 @@ func _tick_hearing_pulses(delta: float) -> void:
 			_npc_pulse_remaining[npc] = t
 	for npc in expired:
 		_npc_pulse_remaining.erase(npc)
+		# Back to hidden outright: the cone returns to its rule (it hides with
+		# the NPC until the NPC is seen).
+		if is_instance_valid(npc):
+			_sync_npc_cones(npc)
 
 
 func _update_npc_los_visibility() -> void:
@@ -2560,7 +2587,10 @@ func _update_npc_los_visibility() -> void:
 
 		if seen:
 			# Direct line of sight overrides any pulse.
+			var was_pulsing: bool = _npc_pulse_remaining.has(npc)
 			_npc_pulse_remaining.erase(npc)
+			if was_pulsing:
+				_sync_npc_cones(npc)   # spotted mid-pulse: its cone comes back
 			# Mark as "ever seen" for the radar-vs-sprite-pulse branch in
 			# trigger_hearing_pulse. Persists for the map session.
 			_npc_ever_seen[npc] = true
@@ -2586,6 +2616,9 @@ func _update_npc_los_visibility() -> void:
 			var alpha: float = _hearing_pulse_curve(t_norm) * PULSE_ALPHA
 			npc.visible = true
 			npc.modulate.a = alpha
+			# Light2D ignores modulate: an unseen onlooker's cone would flash at
+			# full strength, so it stays dark while only the pulse draws it.
+			_sync_npc_cones(npc)
 		else:
 			npc.visible = false
 			npc.modulate.a = 0.0
@@ -2951,8 +2984,10 @@ func _input(event: InputEvent) -> void:
 			return
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			# F12 / R / P are developer hotkeys: R reloads the scene with no save
+			# (autoloads keep quest/time state), so they stay out of release builds.
 			KEY_F12:
-				if not event.echo:
+				if not event.echo and OS.is_debug_build():
 					DebugManager.toggle()
 			KEY_F11:
 				# Save round-trip smoke test: build -> apply -> build must be
@@ -2975,14 +3010,19 @@ func _input(event: InputEvent) -> void:
 					show_character_sheet()
 			KEY_R:
 				# Restart
-				get_tree().reload_current_scene()
+				if not event.echo and OS.is_debug_build():
+					get_tree().reload_current_scene()
 			KEY_P:
 				# Print status
-				_print_status()
+				if not event.echo and OS.is_debug_build():
+					_print_status()
 			KEY_C:
 				if not event.echo:
 					stealth_mode = not stealth_mode
 					_toggle_npc_los_cones()
+					# Say what the mode does (ai._is_sneaking, ai._check_stealth_wake,
+					# ProceduralCharacter._can_be_talked_to); C toggled silently.
+					GameLog.add_entry("Stealth mode [b]on[/b]: sight cones shown. Onlookers spot the party only inside their cones, not at close quarters, but relaxed ones who spot you turn wary. Left-clicking someone no longer talks to them; right-click for Talk." if stealth_mode else "Stealth mode [b]off[/b].")
 			KEY_T:
 				# WAIT toggle for the selected party members — the hotkey twin
 				# of the context menu's Wait Here / Resume pair.
@@ -3223,7 +3263,7 @@ func _on_character_died(character: ProceduralCharacter) -> void:
 	_drop_quest_trophies(character)
 	if character == player:
 		print("\n=== GAME OVER ===")
-		print("Press R to restart")
+		print("(debug: press R to restart)")
 
 ## Quest-proof harvesting. When a character dies, any active quest that declares
 ## proof sourced from that character's template gets its trophy appended to the
@@ -3262,16 +3302,15 @@ func _drop_quest_trophies(character) -> void:
 		inv.add_item(character.build_trophy_item(item_id))
 
 func _print_status() -> void:
+	# get_stats_string no longer exists (P threw a script error) and `enemies`
+	# is never filled.
+	if not (player and is_instance_valid(player)):
+		return
 	print("\n=== STATUS ===")
-	print("Player: %s" % player.get_stats_string())
 	# get_status_string now lives on ProceduralCharacter itself and prints
 	# the single HP pool plus any severed/disabled limbs.
-	print(player.get_status_string())
+	print("Player: %s" % player.get_status_string())
 	print("")
-	for i in range(enemies.size()):
-		var enemy = enemies[i]
-		if enemy.is_alive():
-			print("Enemy %d: %s" % [i+1, enemy.get_stats_string()])
 
 
 

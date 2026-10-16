@@ -55,6 +55,9 @@ func _set_panel_visible_no_pause(v: bool) -> void:
 			_status_label.text = ""
 
 func _input(event: InputEvent) -> void:
+	# Debug-only: start_combat_test replaces the live party.
+	if not OS.is_debug_build():
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		var kc = event.physical_keycode if event.physical_keycode != 0 else event.keycode
 		if kc == KEY_F10:
