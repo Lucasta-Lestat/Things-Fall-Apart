@@ -1598,7 +1598,14 @@ func pick_up_item(item: Item) -> bool:
 		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 		item._destroy_item()
 	else:
-		GameLog.add_entry("%s's inventory is full." % character.Name)
+		# The inventory announces "Inventory full" itself (Inventory.add_failed).
+		# add_stack may still have merged part of the stack into one already
+		# carried, writing back what is left to `data` (a copy): that part was
+		# taken, so it is reported, and only the remainder stays on the ground.
+		var left: int = int(data.get("num_stacks", item.stack_count))
+		if item.is_stackable and left > 0 and left < item.stack_count:
+			CrimeManager.report(character, "take", CrimeManager.take_payload(item))
+			item.remove_from_stack(item.stack_count - left)
 	return ok
 
 # Pick the party member who should receive a picked-up item: the primary-selected
@@ -3924,11 +3931,10 @@ func gather_water_at_party() -> void:
 		"is_stackable": true,
 		"max_stack_size": 10,
 	})
+	# A full pack is announced by the inventory itself (add_failed).
 	if added:
 		GameLog.add_entry(actor.Name + " gathers water into a waterskin.")
 		SfxManager.play("pickup", actor.global_position)
-	else:
-		GameLog.add_entry("Inventory full — can't carry more water.")
 
 func _is_water_adjacent(tile: Vector2i) -> bool:
 	# Checks the tile itself plus 8 neighbours. Counts a 'world_water' floor
@@ -4285,7 +4291,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		return
  
 	# --- Identity ---
-	if state.has("Name"):
+	# A blank Name is from a snapshot taken before build_character set it;
+	# keep the template's (display) name rather than restoring the blank.
+	if state.has("Name") and str(state["Name"]) != "":
 		character.Name = state["Name"]
 	if state.has("display_name"):
 		character.display_name = state["display_name"]

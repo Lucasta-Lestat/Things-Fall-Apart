@@ -755,6 +755,8 @@ func _drop_data(at_position: Vector2, data) -> void:
 		# Transfer first; only erase from the chest if the target accepted it
 		# (full inventory shouldn't lose the dragged item).
 		var transferred := false
+		var stacks_val = item_dict.get("num_stacks", 1)
+		var stacks_before: int = int(stacks_val) if stacks_val != null else 1
 		if entry.get("kind", "") == "weapon":
 			target_char.inventory.stow_weapon_from_data(item_dict)
 			transferred = true
@@ -762,6 +764,14 @@ func _drop_data(at_position: Vector2, data) -> void:
 			# add_stack transfers the full num_stacks (add_item would only +1).
 			transferred = target_char.inventory.add_stack(item_dict)
 		if not transferred:
+			# Full pack, but part of the stack may have merged into one carried
+			# (add_stack writes the remainder back): report that take and redraw.
+			var left_val = item_dict.get("num_stacks", 1)
+			if (int(left_val) if left_val != null else 1) < stacks_before:
+				CrimeManager.report(target_char, "loot", CrimeManager.loot_payload(chest_item))
+				var partial_window = data.get("source_window")
+				if partial_window != null and is_instance_valid(partial_window) and partial_window.has_method("_populate_grid"):
+					partial_window._populate_grid()
 			return
 		# Law: the drag-take twin of ChestInventoryWindow's tap-take.
 		CrimeManager.report(target_char, "loot", CrimeManager.loot_payload(chest_item))

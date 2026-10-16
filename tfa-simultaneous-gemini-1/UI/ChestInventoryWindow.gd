@@ -220,6 +220,8 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	# Transfer first; only erase from chest on success so a full inventory
 	# doesn't lose the item.
 	var transferred := false
+	var stacks_val = item_dict.get("num_stacks", 1)
+	var stacks_before: int = int(stacks_val) if stacks_val != null else 1
 	if entry.get("kind", "") == "weapon":
 		if selected.inventory.has_method("stow_weapon_from_data"):
 			selected.inventory.stow_weapon_from_data(item_dict)
@@ -229,6 +231,14 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 		# 50+, and add_item would only increment by 1).
 		transferred = selected.inventory.add_stack(item_dict)
 	if not transferred:
+		# A full pack can still have merged part of a stack into one it
+		# carries; add_stack writes the remainder back into item_dict, which
+		# stays here. The merged part was taken, so it is reported and shown.
+		var left_val = item_dict.get("num_stacks", 1)
+		if (int(left_val) if left_val != null else 1) < stacks_before:
+			CrimeManager.report(selected, "loot", CrimeManager.loot_payload(chest_item))
+			SfxManager.play_ui("chest_item_out")
+			_populate_grid()
 		return
 	# Law: a successful take from an owned container is a burglary. The
 	# deposit side (_drop_data) is deliberately NOT gated — giving items

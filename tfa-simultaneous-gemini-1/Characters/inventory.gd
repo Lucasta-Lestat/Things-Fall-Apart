@@ -8,6 +8,9 @@ signal item_removed(item_data: Dictionary)
 signal weapon_equipped(weapon: WeaponShape)
 signal weapon_unequipped(weapon: WeaponShape)
 signal active_weapon_changed(weapon, hand)
+## Emitted whenever add_item/add_stack refuses an item, so failures are never
+## silent. Party members show "Inventory full" over their head (see _ready).
+signal add_failed(item_data: Dictionary, reason: String)
 # Inventory storage
 var items: Array[Dictionary] = []
 var max_slots: int = 20
@@ -24,6 +27,16 @@ var possessor: Node2D
 
 func _ready() -> void:
 	possessor = get_parent()
+	add_failed.connect(_on_add_failed)
+
+func _on_add_failed(item_data: Dictionary, reason: String) -> void:
+	if possessor == null or not possessor.has_method("notify"):
+		return
+	if not possessor.has_method("is_party_member") or not possessor.is_party_member():
+		return
+	var item_name := String(item_data.get("display_name", item_data.get("name", "item")))
+	possessor.notify(reason, Color(1.0, 0.75, 0.3),
+		"%s can't carry the %s: %s (%d/%d slots)." % [possessor.Name, item_name, reason.to_lower(), items.size(), max_slots])
 
 # ===== INVENTORY MANAGEMENT =====
 
@@ -41,7 +54,7 @@ func add_item(item_data: Dictionary) -> bool:
 					return true
 
 	if items.size() >= max_slots:
-		push_warning("Inventory full!")
+		add_failed.emit(item_data, "Inventory full")
 		return false
 
 	items.append(item_data)
@@ -54,9 +67,10 @@ func add_item(item_data: Dictionary) -> bool:
 # the receiving inventory gets all the stacks, merging into existing
 # matching stacks first and appending the remainder as a new stack.
 #
-# Returns false only when the inventory is full AND no merge happened.
-# Otherwise returns true; partial overflow into max_slots is treated as
-# success (we'd rather drop a few stacks than lose all of them).
+# Returns false when what is left can't be placed (no free slot). Stacks
+# merged into existing ones before that stay merged, and item_data's
+# num_stacks is written back to the count still unplaced, so a caller holding
+# the source dict (a chest's contents) can leave just the remainder there.
 func add_stack(item_data: Dictionary) -> bool:
 	var stacks := int(item_data.get("num_stacks", 1))
 	if stacks < 1:
@@ -90,7 +104,15 @@ func add_stack(item_data: Dictionary) -> bool:
 			return true
 
 	if items.size() >= max_slots:
-		push_warning("Inventory full")
+		# Keep the caller's dict honest about what is still left to place —
+		# any stacks merged above are already in this inventory, and are
+		# announced like any other addition (panels redraw, quests count it).
+		if is_stackable:
+			var merged_any: bool = stacks < maxi(int(item_data.get("num_stacks", 1)), 1)
+			item_data["num_stacks"] = stacks
+			if merged_any:
+				emit_signal("item_added", item_data)
+		add_failed.emit(item_data, "Inventory full")
 		return false
 
 	# Append the (possibly partial) remainder. Mutate item_data in place —

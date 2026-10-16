@@ -119,6 +119,10 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 		character.display_name = unique_name
 	else:
 		character.display_name = template.get("name", "Unknown")
+	# Log lines, crime reports, door/trade text and soul records read the
+	# legacy Name field; keep it in step so they don't print a blank where the
+	# name should be (character creation passes the chosen name as unique_name).
+	character.Name = character.display_name
 
 	# --- Titles (per-spawn override wins, else template) ---
 	var override_titles: Array = overrides.get("titles", [])
