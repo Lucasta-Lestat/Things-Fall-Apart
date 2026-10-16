@@ -2057,5 +2057,10 @@ func _update_conditions(data: Dictionary, character) -> void:
 			hidden_names.append(res.display_name if res and res.display_name else str(cond_id))
 		var more_tip := "Also: " + ", ".join(hidden_names)
 		var tag = children[cond_ids.size()]
+		# A condition landing past the shown pips doesn't rebuild the row (only
+		# those are compared above), so keep the count in step with the list.
+		var more_text := "+%d" % overflow
+		if tag is Label and tag.text != more_text:
+			tag.text = more_text
 		if tag.tooltip_text != more_tip:
 			tag.tooltip_text = more_tip

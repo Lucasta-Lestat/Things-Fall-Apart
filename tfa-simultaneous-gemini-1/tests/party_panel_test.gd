@@ -315,6 +315,17 @@ func _case_conditions() -> void:
 		if str(child.get_meta("cond_id", "")) == "__overflow__":
 			tag_tip = str(child.tooltip_text)
 	_check("conditions.overflow-lists-hidden", tag_tip.begins_with("Also: ") and tag_tip.contains("Extra"), tag_tip)
+	# One more past the shown pips: no rebuild, but the "+N" count follows.
+	cm.register_condition(Condition.create_from_data({"id": "pp_extra_more", "display_name": "Extra more", "duration": 60.0, "traits": {}}))
+	cm.apply_condition("pp_extra_more")
+	extra.append("pp_extra_more")
+	await _await_frames(2)
+	var tag_text := ""
+	for child in pd["condition_container"].get_children():
+		if str(child.get_meta("cond_id", "")) == "__overflow__" and not child.is_queued_for_deletion():
+			tag_text = str(child.text)
+	var want_more := "+%d" % (cm.conditions.size() - psp.MAX_COND_PIPS)
+	_check("conditions.overflow-count-follows", tag_text == want_more, "%s vs %s" % [tag_text, want_more])
 	cm.remove_condition("pp_test_cond")
 	for cid in extra:
 		cm.remove_condition(cid)
