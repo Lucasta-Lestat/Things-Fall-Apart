@@ -3340,11 +3340,14 @@ func process_weapon_hit(
 
 	if penetration_result.state == PenetrationState.BOUNCED:
 		result["blocked"] = attack_damage
-		SfxManager.play("clash", attacker.position)
+		# A fist on plate thuds; only steel on steel clangs.
+		SfxManager.play("armor-impact" if is_unarmed else "clash", attacker.position)
 		HearingManager.emit(attacker.position, 0.9, attacker)
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
-		SfxManager.play("sword-on-flesh", target.position)
+		# Punches and kicks thud; claws and bites (slashing/piercing) tear.
+		var punch: bool = is_unarmed and str(attacker.unarmed_strike_damage_type) == "bludgeoning"
+		SfxManager.play("stun_impact" if punch else "sword-on-flesh", target.position)
 		HearingManager.emit(target.position, 0.7, attacker)
 
 	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):

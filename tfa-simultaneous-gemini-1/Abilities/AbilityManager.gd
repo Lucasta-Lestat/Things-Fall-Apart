@@ -399,6 +399,16 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 	if exclude_caster:
 		targets.erase(character)
 
+	# A list that applies Burning (Fireball) or Chilled (Ice Storm) itself owns
+	# that condition: its fire/cold damage mustn't add a stack on top.
+	var explicit_conditions: Dictionary = AbilityEffect.explicit_condition_ids(effects)
+	var suppressed: Array = []
+	if not explicit_conditions.is_empty():
+		for t in targets:
+			if is_instance_valid(t) and t.has_method("begin_damage_condition_suppression"):
+				t.begin_damage_condition_suppression(explicit_conditions)
+				suppressed.append(t)
+
 	var results: Array = []
 	var dealt_fire_damage = false
 	for effect in effects:
@@ -421,6 +431,10 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 			var dmg = effect.get("damage", {})
 			if dmg.has("fire") and dmg["fire"] > 0:
 				dealt_fire_damage = true
+
+	for t in suppressed:
+		if is_instance_valid(t):
+			t.end_damage_condition_suppression()
 
 	# If fire damage was dealt, try to ignite floors/fluids in the AoE
 	if dealt_fire_damage:
