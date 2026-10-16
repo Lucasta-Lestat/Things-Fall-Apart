@@ -34,10 +34,25 @@ func _on_date_changed(_day: int, _month: int, _year: int) -> void:
 	_gold_touched_today.clear()
 
 func _process_daily_tick(character) -> void:
-	# Apply any queued bonus from meditation / devotion / flagellation / ration burn.
-	if "holy_tier_next_day_pending" in character and int(character.holy_tier_next_day_pending) > 0:
-		character.vow_holy_bonus = int(character.vow_holy_bonus) + int(character.holy_tier_next_day_pending)
-		character.holy_tier_next_day_pending = 0
+	# Apply any queued bonus from meditation / devotion / flagellation / ration
+	# burn. It lasts one day: yesterday's one-day portion (holy_tier_today,
+	# saved with the character so a warp or a load can't make it permanent) is
+	# taken back first, and Chastity's lasting vow_holy_bonus increments are
+	# untouched.
+	if "holy_tier_next_day_pending" in character and "holy_tier_today" in character:
+		var expired: int = int(character.holy_tier_today)
+		var today: int = int(character.holy_tier_next_day_pending)
+		if expired != 0 or today != 0:
+			character.vow_holy_bonus = maxi(0, int(character.vow_holy_bonus) - expired + today)
+			character.holy_tier_today = today
+			character.holy_tier_next_day_pending = 0
+			if "devotion" in character and "max_devotion" in character:
+				if int(character.devotion) > int(character.max_devotion):
+					character.devotion = int(character.max_devotion)
+				character.emit_signal("resource_changed", "devotion", int(character.devotion), int(character.max_devotion))
+			if today > 0:
+				var who: String = String(character.Name) if "Name" in character and not String(character.Name).is_empty() else String(character.display_name)
+				GameLog.add_entry("%s's devotion swells: +%d max Devotion today." % [who, today])
 
 	if not ("active_vows" in character) or character.active_vows.is_empty():
 		return

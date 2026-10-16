@@ -39,6 +39,11 @@ var completed: Array = []
 var failed: Array = []
 # quest_id -> packed int Y*10000 + M*100 + D when started
 var _quest_start_day: Dictionary = {}
+# quest_id -> stage_id the quest was on when it failed. Failed quests leave
+# `active`, but the quest log still shows how far they got.
+var _failed_at: Dictionary = {}
+# quest_id -> player-facing reason the quest failed ("" if unknown).
+var _fail_reasons: Dictionary = {}
 # Inventories already wired so we don't double-connect on re-registration.
 var _wired_inventories: Array = []
 
@@ -84,7 +89,7 @@ func start_quest(quest_id: String) -> void:
 	active[quest_id] = start_stage
 	_quest_start_day[quest_id] = _today_stamp()
 	if GameLog:
-		GameLog.add_entry("Quest started: " + str(q.get("display_name", quest_id)))
+		GameLog.add_entry("Quest started: %s [color=gray](press J for the quest log)[/color]" % str(q.get("display_name", quest_id)))
 	print("[QuestManager] start_quest about to emit quest_updated id=", quest_id)
 	emit_signal("quest_updated", quest_id)
 	print("[QuestManager] start_quest about to reevaluate id=", quest_id)
@@ -116,15 +121,21 @@ func get_current_stage(quest_id: String) -> Dictionary:
 		return {}
 	return QuestDatabase.get_stage(quest_id, active[quest_id])
 
+# Why a failed quest failed, for the quest log ("" if unknown or not failed).
+func get_fail_reason(quest_id: String) -> String:
+	return str(_fail_reasons.get(quest_id, ""))
+
 # Returns [{stage_id, name, description, status}] for the quest log UI.
 # status ∈ "done" | "current" | "failed" | "completed".
+# The current entry also carries "days_left" when the quest has a deadline.
 # Per design, FUTURE stages are not included (hide-until-reached).
 func get_quest_checklist(quest_id: String) -> Array:
 	var out: Array = []
 	if QuestDatabase == null:
 		return out
 	var stages: Array = QuestDatabase.get_stages(quest_id)
-	var current_stage_id: String = active.get(quest_id, "")
+	# A failed quest has left `active`; it keeps the stage it failed on.
+	var current_stage_id: String = active.get(quest_id, _failed_at.get(quest_id, ""))
 	var current_idx: int = -1
 	if not current_stage_id.is_empty():
 		current_idx = QuestDatabase.get_stage_index(quest_id, current_stage_id)
@@ -157,10 +168,35 @@ func get_quest_checklist(quest_id: String) -> Array:
 				entry["status"] = "done"
 			elif i == current_idx:
 				entry["status"] = "current"
+				var deadline: int = _fail_deadline_days(stages, i, quest_id)
+				if deadline >= 0:
+					entry["days_left"] = deadline - int(Globals.world_state.get("quest_days::" + quest_id, 0))
 			else:
 				continue  # hide future stages per spec
 		out.append(entry)
 	return out
+
+# The smallest ">=N" quest_days fail deadline on this stage or a later one,
+# or -1 if none. quest_days counts from the quest's start, so a deadline
+# checked in a later stage already applies now.
+func _fail_deadline_days(stages: Array, from_idx: int, quest_id: String) -> int:
+	var key := "quest_days::" + quest_id
+	var best := -1
+	for i in range(from_idx, stages.size()):
+		if not (stages[i] is Dictionary):
+			continue
+		for t in stages[i].get("transitions", []):
+			if not (t is Dictionary) or str(t.get("next_stage", "")) != FAIL_STAGE:
+				continue
+			var conditions = t.get("conditions", {})
+			if not (conditions is Dictionary) or not conditions.has(key):
+				continue
+			var value := str(conditions[key])
+			if value.begins_with(">="):
+				var days := int(value.substr(2).strip_edges())
+				if best < 0 or days < best:
+					best = days
+	return best
 
 # ---------------------------------------------------------------------------
 # Proof and turn-in
@@ -284,6 +320,8 @@ func get_save_data() -> Dictionary:
 		"completed": completed.duplicate(),
 		"failed": failed.duplicate(),
 		"quest_start_day": _quest_start_day.duplicate(),
+		"failed_at": _failed_at.duplicate(),
+		"fail_reasons": _fail_reasons.duplicate(),
 	}
 
 func load_save_data(data: Dictionary) -> void:
@@ -291,6 +329,8 @@ func load_save_data(data: Dictionary) -> void:
 	completed = data.get("completed", []).duplicate() if data.has("completed") else []
 	failed = data.get("failed", []).duplicate() if data.has("failed") else []
 	_quest_start_day = data.get("quest_start_day", {}).duplicate() if data.has("quest_start_day") else {}
+	_failed_at = data.get("failed_at", {}).duplicate() if data.has("failed_at") else {}
+	_fail_reasons = data.get("fail_reasons", {}).duplicate() if data.has("fail_reasons") else {}
 	_reevaluate_all()
 
 # ---------------------------------------------------------------------------
@@ -394,10 +434,11 @@ func _reevaluate(quest_id: String, _visited: Dictionary = {}) -> void:
 			var next_stage: String = str(t.get("next_stage", ""))
 			if next_stage.is_empty():
 				continue
-			_advance(quest_id, next_stage, _visited)
+			_advance(quest_id, next_stage, _visited, t)
 			return
 
-func _advance(quest_id: String, next_stage: String, visited: Dictionary) -> void:
+# `transition` is the matched transition dict, used to explain a failure.
+func _advance(quest_id: String, next_stage: String, visited: Dictionary, transition: Dictionary = {}) -> void:
 	var old_stage: String = active.get(quest_id, "")
 	var q: Dictionary = QuestDatabase.get_quest(quest_id)
 	var display_name: String = str(q.get("display_name", quest_id))
@@ -414,10 +455,16 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary) -> void
 		return
 	if next_stage == FAIL_STAGE:
 		active.erase(quest_id)
+		_failed_at[quest_id] = old_stage
+		var reason := _describe_fail(transition)
+		_fail_reasons[quest_id] = reason
 		if not (quest_id in failed):
 			failed.append(quest_id)
 		if GameLog:
-			GameLog.add_entry("Quest failed: " + display_name)
+			if reason.is_empty():
+				GameLog.add_entry("Quest failed: " + display_name)
+			else:
+				GameLog.add_entry("Quest failed: %s — %s" % [display_name, reason])
 		emit_signal("quest_stage_changed", quest_id, old_stage, FAIL_STAGE)
 		emit_signal("quest_failed", quest_id)
 		emit_signal("quest_updated", quest_id)
@@ -439,6 +486,30 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary) -> void
 		return
 	visited[visit_key] = true
 	_reevaluate(quest_id, visited)
+
+# Player-facing reason for a fail transition: its authored "reason", else one
+# built from its conditions ("Town Guard was killed.").
+func _describe_fail(transition: Dictionary) -> String:
+	if transition.has("reason"):
+		return str(transition["reason"])
+	var parts: Array = []
+	var conditions = transition.get("conditions", {})
+	if conditions is Dictionary:
+		for key in conditions:
+			var k := str(key)
+			if k.begins_with("char_dead::"):
+				parts.append("%s was killed" % _template_display_name(k.substr("char_dead::".length())))
+			elif k.begins_with("quest_days::"):
+				parts.append("time ran out")
+	if parts.is_empty():
+		return ""
+	var text: String = ", ".join(parts)
+	return text.substr(0, 1).to_upper() + text.substr(1) + "."
+
+func _template_display_name(template_id: String) -> String:
+	if TopDownCharacterDatabase and TopDownCharacterDatabase.get_all_template_ids().has(template_id):
+		return str(TopDownCharacterDatabase.get_template(template_id).get("name", template_id))
+	return template_id.replace("_", " ")
 
 # AND semantics across a conditions dict, mirroring Game._check_condition.
 func _conditions_pass(conditions) -> bool:

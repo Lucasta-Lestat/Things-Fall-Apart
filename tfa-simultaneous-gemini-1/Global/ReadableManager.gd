@@ -48,7 +48,7 @@ func collect(id: String) -> void:
 	if ReadableDatabase != null:
 		title = ReadableDatabase.get_title(id)
 	if GameLog != null and GameLog.has_method("add_entry"):
-		GameLog.add_entry("Added to your journal: %s" % title)
+		GameLog.add_entry("Added to your notes: %s [color=gray](press J, Notes tab)[/color]" % title)
 	emit_signal("journal_updated", id)
 
 func mark_read(id: String) -> void:

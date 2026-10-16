@@ -54,19 +54,19 @@
         {
           "id": "retrieve_sword",
           "name": "Acquire a Longsword",
-          "description": "Find a longsword somewhere in the world.",
+          "description": "Find a longsword somewhere in the world, and bring it to the guard within 7 days. Keep the town guards alive.",
           "transitions": [
             { "conditions": { "item_picked::longsword": true }, "next_stage": "deliver" },
-            { "conditions": { "char_dead::town_guard": true }, "next_stage": "__fail__" }
+            { "conditions": { "char_dead::town_guard": true }, "next_stage": "__fail__", "reason": "A town guard was killed." }
           ]
         },
         {
           "id": "deliver",
           "name": "Return to the Town Square",
-          "description": "Bring the longsword back to the guard.",
+          "description": "Bring the longsword back to the guard within 7 days.",
           "transitions": [
             { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "__complete__" },
-            { "conditions": { "quest_days::tutorial_quest": ">=7" }, "next_stage": "__fail__" }
+            { "conditions": { "quest_days::tutorial_quest": ">=7" }, "next_stage": "__fail__", "reason": "The longsword wasn't delivered within 7 days." }
           ]
         }
       ]
@@ -248,7 +248,7 @@
           "description": "A drug deal went bad and the Vermincelli are holding Made men from the other families. Get inside.",
           "transitions": [
             { "conditions": { "char_at::protagonist": "vermincelli_hideout" }, "next_stage": "kill_capo" },
-            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__" }
+            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__", "reason": "A hostage was killed." }
           ]
         },
         {
@@ -257,7 +257,7 @@
           "description": "End the standoff at the top.",
           "transitions": [
             { "conditions": { "char_dead::vermincelli_capo": true }, "next_stage": "__complete__" },
-            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__" }
+            { "conditions": { "char_dead::vermincelli_hostage": true }, "next_stage": "__fail__", "reason": "A hostage was killed." }
           ]
         }
       ]
@@ -292,7 +292,7 @@
           "description": "A cheesemonger slave is fleeing his chef-master, who pursues him brandishing a rolling pin. Stop the chef before the slave is killed.",
           "transitions": [
             { "conditions": { "char_dead::chef_master": true }, "next_stage": "__complete__" },
-            { "conditions": { "char_dead::cheese_monger": true }, "next_stage": "__fail__" }
+            { "conditions": { "char_dead::cheese_monger": true }, "next_stage": "__fail__", "reason": "The cheesemonger was killed." }
           ]
         }
       ]
@@ -351,7 +351,7 @@
           "description": "Claim your reward at his tower.",
           "transitions": [
             { "conditions": { "char_at::protagonist": "alamonean_tower" }, "next_stage": "__complete__" },
-            { "conditions": { "char_dead::alamonean_magician": true }, "next_stage": "__fail__" }
+            { "conditions": { "char_dead::alamonean_magician": true }, "next_stage": "__fail__", "reason": "The Alamonean magician was killed." }
           ]
         }
       ]

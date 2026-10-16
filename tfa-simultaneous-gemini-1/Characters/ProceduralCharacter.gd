@@ -793,6 +793,7 @@ var vow_holy_bonus: int = 0           # daily Holy tier bonus from vows
 var saint_day_devotion_bonus: int = 0  # +1 today if any observed saint's feast falls today
 var vow_poverty_points: int = 0       # accumulated Poverty points
 var holy_tier_next_day_pending: int = 0  # queued from meditation/devotion/flagellation/ration burn
+var holy_tier_today: int = 0  # the one-day part of vow_holy_bonus; VowManager takes it back next day
 
 # Patron pact (Occult). Empty string = no patron.
 var patron_id: String = ""
@@ -7323,7 +7324,14 @@ func ability_check(stat, domain) -> int:
 	for trait_id in disadvs:
 		if traits.has(trait_id): bonus -= 20 * traits[trait_id]
 	success_target += bonus
+	# Exposed for the log lines of otherwise hidden rolls (dialogue checks,
+	# downtime checks).
+	last_check = {"roll": roll, "target": success_target}
 	return _calculate_success_level(roll, success_target)
+
+## The last ability_check's {"roll", "target"}, read by the log lines that
+## report hidden rolls (Dialogue_Manager, DowntimeResolver).
+var last_check: Dictionary = {}
 
 func get_stat_by_name(stat_name) -> int:
 	# Accept either String or StringName; normalize so callers don't have to care.

@@ -21,6 +21,10 @@ var activities: Dictionary = {}
 # Ordered list of activity ids that fill the right-side camp panel.
 var camp_activity_ids: Array = []
 
+# Why the last pick_result came back empty: "cooldown" when eligible results
+# existed but were all used recently, "no_outcome" otherwise, "" on a pick.
+var last_empty_reason: String = ""
+
 func _ready() -> void:
 	_load()
 
@@ -208,20 +212,26 @@ func _current_day_abs() -> int:
 	var d := int(TimeManager.current_day)
 	return y * 372 + m * 36 + d
 
-func is_on_cooldown(character_uid: String, result_id: String) -> bool:
+# Cooldowns are keyed per activity so results sharing an id across activities
+# (quiet_night, the_pox, close_call) don't block each other.
+static func _cooldown_key(activity_id: String, result_id: String) -> String:
+	return result_id if activity_id.is_empty() else activity_id + ":" + result_id
+
+func is_on_cooldown(character_uid: String, result_id: String, activity_id: String = "") -> bool:
 	var game = _game()
 	if game == null:
 		return false
+	var key := _cooldown_key(activity_id, result_id)
 	var bucket: Array = game.downtime_recent_events.get(character_uid, [])
 	var now := _current_day_abs()
 	for entry in bucket:
-		if String(entry.get("result_id", "")) != result_id:
+		if String(entry.get("result_id", "")) != key:
 			continue
 		if now - int(entry.get("day_abs", 0)) < COOLDOWN_DAYS:
 			return true
 	return false
 
-func mark_used(character_uid: String, result_id: String) -> void:
+func mark_used(character_uid: String, result_id: String, activity_id: String = "") -> void:
 	var game = _game()
 	if game == null:
 		return
@@ -232,7 +242,7 @@ func mark_used(character_uid: String, result_id: String) -> void:
 	for entry in bucket:
 		if now - int(entry.get("day_abs", 0)) < COOLDOWN_DAYS:
 			keep.append(entry)
-	keep.append({"result_id": result_id, "day_abs": now})
+	keep.append({"result_id": _cooldown_key(activity_id, result_id), "day_abs": now})
 	game.downtime_recent_events[character_uid] = keep
 
 static func character_uid(character) -> String:
@@ -247,27 +257,36 @@ static func character_uid(character) -> String:
 	return String(character.name)
 
 ## Pick a result. Returns {"id": ..., "data": ...} or empty dict if no
-## candidate passed the filters (caller falls back to a "nothing happens" line).
-func pick_result(activity: Dictionary, region_id: String, character, success_tier: int) -> Dictionary:
+## candidate passed the filters (caller falls back to a "nothing happens" line
+## and can read last_empty_reason to say why).
+func pick_result(activity: Dictionary, region_id: String, character, success_tier: int, activity_id: String = "") -> Dictionary:
+	last_empty_reason = ""
 	var raw: Array = _gather_result_candidates(activity, region_id)
 	if raw.is_empty():
+		last_empty_reason = "no_outcome"
 		return {}
 	var char_traits: Dictionary = character.traits if character != null and "traits" in character else {}
 	var uid := character_uid(character)
+	# Training is a booked run of consecutive days with a handful of outcomes;
+	# the 7-day variety cooldown would use them up partway through a stay.
+	var use_cooldown: bool = not bool(activity.get("requires_training", false))
 	var filtered: Array = []
 	var total_weight: int = 0
+	var cooled_down: int = 0
 	for cand in raw:
 		var data: Dictionary = cand["data"]
 		if int(data.get("min_success_tier", 0)) > success_tier:
 			continue
 		if not passes_trait_filter(char_traits, data.get("required_traits", {}), data.get("forbidden_traits", {})):
 			continue
-		if is_on_cooldown(uid, String(cand["id"])):
+		if use_cooldown and is_on_cooldown(uid, String(cand["id"]), activity_id):
+			cooled_down += 1
 			continue
 		var weight: int = max(1, int(data.get("weight", 1)))
 		filtered.append({"id": cand["id"], "data": data, "weight": weight})
 		total_weight += weight
 	if filtered.is_empty():
+		last_empty_reason = "cooldown" if cooled_down > 0 else "no_outcome"
 		return {}
 	var roll := randi() % total_weight
 	var acc := 0

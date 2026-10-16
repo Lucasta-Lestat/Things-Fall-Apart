@@ -393,12 +393,11 @@ func _case_downtime_order() -> void:
 		"%s -> %s" % [t0, TimeManager.absolute_time()])
 	_check("downtime.condition-applied", inst != null)
 	if inst != null:
-		# Stamped after the skip. (DowntimeEffectApplier passes duration
-		# override -1, which apply_condition reads as permanent, so expiry is
-		# either -1 or the full two hours from the end of the activity.)
+		# Stamped after the skip, with the template's two hours from the end of
+		# the activity (DowntimeEffectApplier passes the -2 template default).
 		_check("downtime.effect-starts-after-the-skip", is_equal_approx(inst.applied_at, t0 + 8.0 * 3600.0),
 			"applied %s, want %s" % [inst.applied_at, t0 + 8.0 * 3600.0])
-		_check("downtime.expiry-not-eaten-by-the-skip", inst.expires_at < 0.0 or is_equal_approx(inst.expires_at, t0 + 10.0 * 3600.0),
+		_check("downtime.expiry-not-eaten-by-the-skip", is_equal_approx(inst.expires_at, t0 + 10.0 * 3600.0),
 			"expires %s" % inst.expires_at)
 		cm.remove_condition("test_downtime_hours")
 	game.downtime_day_assignments.clear()
