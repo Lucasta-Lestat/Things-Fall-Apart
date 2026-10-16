@@ -8,6 +8,7 @@
 extends Control
 
 signal chosen(payload)
+signal cancelled() # closed without a choice (Cancel button, click outside, Esc)
 
 # Three columns rather than four: Rules.promotion_choices() returns eight
 # entries, so four columns fills routinely and pushes the modal very wide.
@@ -35,6 +36,8 @@ func _build_ui():
 	dim.color = get_theme_color("scrim", "Modal")
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Clicking anywhere outside the panel backs out, like Esc.
+	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)
 
 	var center = CenterContainer.new()
@@ -63,6 +66,13 @@ func _build_ui():
 	_grid = GridContainer.new()
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_grid)
+
+	# An on-screen way out: Esc alone is undiscoverable for a mouse player.
+	var cancel_button = Button.new()
+	cancel_button.text = "Cancel (Esc)"
+	cancel_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cancel_button.pressed.connect(cancel)
+	vbox.add_child(cancel_button)
 
 
 # entries: [{ "label": String, "icon": Texture2D or null, "payload": Variant,
@@ -103,7 +113,17 @@ func open(title: String, entries: Array) -> void:
 
 
 func cancel() -> void:
+	if not visible:
+		return
 	visible = false
+	cancelled.emit()
+
+
+func _on_dim_input(event: InputEvent) -> void:
+	# Clicks only: a wheel scroll that strays off the panel should not close it.
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		cancel()
 
 
 func _on_button_pressed(index: int) -> void:

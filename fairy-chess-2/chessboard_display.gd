@@ -19,6 +19,7 @@ var _all_actions = [] # every action for the selection, best-first (may share sq
 var _picker_mode = "" # "action" | "promotion": which question the picker is asking
 var _pending_promotion_piece = null # awaiting a choice from the promotion picker
 var _shudder = {} # royal state id -> looping tween (in-check tremble)
+var _drop_reason = "" # refusal currently shown in the prompt while dragging a piece
 
 
 func _unhandled_input(event):
@@ -79,15 +80,23 @@ func _gui_input(event):
 
 	# 1. Did the player click a square this piece can act on? One option
 	#    declares straight away; several open the chooser. (A previewed enemy
-	#    is read-only, so it never declares.)
+	#    is read-only, so it never declares.) Two lone options still ask: an
+	#    order aimed at another of your pieces (a conditional move, a charge
+	#    or a shot into it -- that click far more often means "select that
+	#    one"; a promotion is the deliberate exception), and firing the cannon
+	#    (its marker sits on the Cannonier, so "click again to deselect" would
+	#    fire it).
 	if not previewing and selected_piece != null:
 		var here = _actions_for_square(grid_pos)
-		if here.size() == 1:
+		var clicked = game_board.board[grid_pos.x][grid_pos.y]
+		var own_other = clicked != null and clicked != selected_piece and clicked.color == selected_piece.color
+		var ask_first = own_other and here.all(func(a): return a.action != "promote")
+		if here.size() == 1 and not ask_first and here[0].action != "fire_cannon":
 			_take_action(here[0])
 			accept_event()
 			return
-		elif here.size() > 1:
-			_open_action_picker(here)
+		elif not here.is_empty():
+			_open_action_picker(here, clicked if own_other else null)
 			accept_event()
 			return
 
@@ -107,22 +116,40 @@ func _gui_input(event):
 
 func _update_hover_tooltip(grid_pos):
 	var text = ""
-	if selected_piece != null and is_instance_valid(selected_piece) and not previewing:
-		for action in valid_actions_to_show:
-			if not action.has("target") or action.target != grid_pos:
-				continue
-			if action.action == "move" and action.get("is_conditional", false):
-				text = "Conditional move: resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
-				break
-			if action.action == "shoot" and action.get("friendly_fire", false):
-				text = "Friendly fire — this shot hits the first piece in the line, and right now that is your own piece. An enemy stepping into the line would intercept it instead."
-				break
+	if selected_piece != null and is_instance_valid(selected_piece):
+		if not previewing:
+			for action in valid_actions_to_show:
+				if _square_for_action(action) != grid_pos:
+					continue
+				text = _action_tooltip(action)
+				if text != "":
+					break
+		if text == "" and grid_pos == selected_piece.grid_position:
+			text = _self_tooltip(selected_piece)
 	if tooltip_text != text:
 		tooltip_text = text
 
 
+# Hover text on the selected piece's own square for pieces that take no
+# orders, so an empty (or predicted-only) set of markers isn't a mystery.
+func _self_tooltip(piece) -> String:
+	if piece.is_petrified:
+		return "Turned to stone: it can never act again%s." % (" and no longer counts as a royal" if piece.is_royal else "")
+	var traits = Rules.PIECE_INFO.get(piece.piece_type, {}).get("traits", [])
+	if "Automatic" in traits:
+		return "%s: acts on its own every turn; the marker, if any, shows where it will go (on the far row it promotes itself)." % piece.piece_type
+	if "Immobile" in traits:
+		return "%s: never moves; each turn it builds a Basic Automata on an empty neighbouring square." % piece.piece_type
+	return ""
+
+
 func _controllable(piece) -> bool:
 	if piece.is_petrified:
+		return false
+	# Zombies act on their own and Factories never move: they open as a
+	# read-only preview rather than an empty "your piece" selection.
+	var traits = Rules.PIECE_INFO.get(piece.piece_type, {}).get("traits", [])
+	if "Automatic" in traits or "Immobile" in traits:
 		return false
 	if piece.color == "white":
 		return game_board.white_pending == null
@@ -137,14 +164,30 @@ func select_piece(piece, preview := false):
 	previewing = preview
 	# Keep every action (best-first) so a square offering several options can
 	# ask; draw only the winning marker per square so the board stays readable.
-	_all_actions = Rules.sort_actions(piece.get_valid_actions())
+	# Breath facing off an edge is dropped: its whole cone is off the board and
+	# its marker would land outside the board, where it can't be clicked.
+	var actions = piece.get_valid_actions().filter(func(a): return a.action != "dragon_breath" or Rules.is_valid_square(piece.grid_position + a.direction))
+	_all_actions = Rules.sort_actions(actions)
 	valid_actions_to_show = Rules.prioritize_actions(_all_actions)
-	# Annotate capture moves so the highlight layer can colour them red.
+	# Annotate the markers: red for captures (en passant too, though its square
+	# is empty), amber where the action would also hit your own pieces.
 	for action in valid_actions_to_show:
 		if action.action == "move" and action.has("target"):
 			var occ = game_board.board[action.target.x][action.target.y]
 			if occ != null and occ.color != piece.color:
 				action["is_capture_hint"] = true
+			if action.get("is_en_passant", false):
+				action["is_capture_hint"] = true
+			if action.get("is_charge", false) and occ != null and occ.color == piece.color:
+				action["friendly_fire"] = true # the charge tramples friends too
+		elif action.action in ["fire_cannon", "dragon_breath"]:
+			var own = 0
+			for sq in _area_squares(piece, action):
+				var occ = game_board.board[sq.x][sq.y]
+				if occ != null and occ.color == piece.color:
+					own += 1
+			action["own_hits"] = own
+			action["friendly_fire"] = own > 0
 	# Mark squares offering more than one option so the board can flag them.
 	var counts = {}
 	for action in _all_actions:
@@ -184,6 +227,20 @@ func _square_for_action(action) -> Vector2:
 	return selected_piece.grid_position
 
 
+# Board squares a cannon or a breath would rake from the piece's square (the
+# same shapes Rules.resolve uses), clipped to the board.
+func _area_squares(piece, action) -> Array:
+	var out = []
+	if action.action == "fire_cannon":
+		var fwd = Rules.forward_dir(piece.color)
+		for i in range(1, BOARD_SIZE):
+			out.append(piece.grid_position + Vector2(0, i * fwd))
+	else:
+		for offset in Rules.breath_cone(action.direction):
+			out.append(piece.grid_position + offset)
+	return out.filter(func(sq): return Rules.is_valid_square(sq))
+
+
 func _actions_for_square(grid_pos: Vector2) -> Array:
 	var out = []
 	for action in _all_actions:
@@ -206,10 +263,14 @@ func _action_label(action) -> String:
 		"move":
 			if action.get("is_conditional", false):
 				return "Move here if vacated"
+			if action.get("is_en_passant", false):
+				return "Capture en passant"
 			var occ = game_board.board[action.target.x][action.target.y]
 			if occ != null and occ.color != selected_piece.color:
 				return "Capture " + occ.piece_type
 			if action.get("is_charge", false):
+				if occ != null:
+					return "Charge (tramples your %s)" % occ.piece_type
 				return "Charge"
 			return "Move here"
 		"promote":
@@ -239,9 +300,18 @@ func _action_icon(action):
 	return null
 
 
-func _open_action_picker(actions) -> void:
+# reselect_node: another of your pieces standing on the clicked square; the
+# chooser then also offers to simply select it instead of giving an order.
+func _open_action_picker(actions, reselect_node = null) -> void:
 	_picker_mode = "action"
 	var entries = []
+	if reselect_node != null:
+		entries.append({
+			"label": "Select " + reselect_node.piece_type,
+			"icon": null,
+			"payload": {"action": "select", "node": reselect_node},
+			"tooltip": "Select this piece instead. No order is given.",
+		})
 	for action in actions:
 		entries.append({
 			"label": _action_label(action),
@@ -252,9 +322,24 @@ func _open_action_picker(actions) -> void:
 	_picker().open("Choose an action", entries)
 
 
+# Explains an action whose outcome isn't obvious from its marker. Shown on
+# hover over the marker and on the chooser's buttons.
 func _action_tooltip(action) -> String:
-	if action.get("is_conditional", false):
-		return "Resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
+	match action.action:
+		"move":
+			if action.get("is_conditional", false):
+				return "Conditional move: resolves only if your piece here moves or is killed this turn. If it is, you take the square and cut down whatever enemy claimed it."
+			if action.get("is_charge", false):
+				return "Charge: tramples whatever stands on this square now, friend or foe, even if it moves away this turn."
+			if action.get("is_en_passant", false):
+				return "En passant: captures the piece that just double-stepped past this square, even if it moves this turn."
+		"shoot":
+			if action.get("friendly_fire", false):
+				return "Friendly fire — this shot hits the first piece in the line, and right now that is your own piece. An enemy stepping into the line would intercept it instead."
+		"fire_cannon":
+			return "Cannon: destroys every piece in the column ahead, including any that step into it, yours too (%d of yours there now)." % int(action.get("own_hits", 0))
+		"dragon_breath":
+			return "Dragon breath: burns the square ahead and the three beyond it, friend or foe (%d of yours there now)." % int(action.get("own_hits", 0))
 	return ""
 
 
@@ -293,14 +378,26 @@ func _picker():
 	var picker = ui.choice_picker
 	if not picker.chosen.is_connected(_on_picker_chosen):
 		picker.chosen.connect(_on_picker_chosen)
+	if not picker.cancelled.is_connected(_on_picker_cancelled):
+		picker.cancelled.connect(_on_picker_cancelled)
 	return picker
 
 
 func _on_picker_chosen(payload):
 	if _picker_mode == "promotion":
 		_on_promotion_picked(payload)
+	elif payload is Dictionary and payload.get("action", "") == "select":
+		if is_instance_valid(payload.node):
+			select_piece(payload.node, not _controllable(payload.node))
 	else:
 		_take_action(payload)
+
+
+# Backed out of the chooser (Cancel button, a click outside it, or Esc): no
+# order is given and the selection stays as it was.
+func _on_picker_cancelled():
+	_pending_promotion_piece = null
+	_picker_mode = ""
 
 
 func _open_promotion_picker(piece):
@@ -371,6 +468,8 @@ func place_piece_on_board(data, grid_pos):
 
 # --- Signal Callbacks ---
 func _on_turn_resolved(moves):
+	# Outline what the resolution touched; clear_selection() below redraws.
+	highlight_layer.last_turn_marks = game_board.last_turn_marks
 	clear_selection() # actions computed before the resolution are stale now
 	for piece in moves.keys():
 		if not piece.is_inside_tree():
@@ -393,6 +492,7 @@ func _can_drop_data(_at_position, data) -> bool:
 	var local_mouse_pos = global_mouse_pos - self.global_position
 	var grid_pos = (local_mouse_pos / TILE_SIZE).floor()
 	if not game_board.is_valid_square(grid_pos) or game_board.board[grid_pos.x][grid_pos.y] != null:
+		_clear_drop_reason() # an occupied square explains itself
 		return false
 
 	var color = data.color
@@ -401,40 +501,72 @@ func _can_drop_data(_at_position, data) -> bool:
 	var back_row = 5 if color == "white" else 0
 	var second_row = 4 if color == "white" else 1
 
-	# Row rules are shared by setup and credit spawns.
-	if is_peasant and grid_pos.y != second_row:
-		return false
-	if not is_peasant and grid_pos.y != back_row:
-		return false
-
+	# Whose piece it is comes first: "go on your back row" would mislead
+	# about a piece that can't be placed right now at all.
 	if game_board.game_phase == "setup":
 		var placer = game_board.setup_placer
 		if color != placer:
-			return false
+			return _reject("It is %s's turn to place a piece." % placer.capitalize())
 		if game_board.ai_enabled and placer == "black":
-			return false # the AI places its own pieces
+			return _reject("Black (AI) places its own pieces.")
+	elif game_board.game_phase == "playing":
+		if color == "black" and game_board.ai_enabled:
+			return _reject("Black's reserves are played by the AI.")
+		if color == "white" and game_board.white_pending != null:
+			return _reject("White has already given an order this turn.")
+		if color == "black" and game_board.black_pending != null:
+			return _reject("Black has already given an order this turn.")
+	else:
+		return false
+
+	# Row rules are shared by setup and credit spawns.
+	if is_peasant and grid_pos.y != second_row:
+		return _reject("Peasants go on your 2nd row.")
+	if not is_peasant and grid_pos.y != back_row:
+		return _reject("Nobles and royals go on your back row.")
+
+	if game_board.game_phase == "setup":
+		var placer = game_board.setup_placer
 		var counts = game_board.white_placed_pieces if placer == "white" else game_board.black_placed_pieces
 		if is_peasant and counts.peasant >= game_board.MAX_PEASANTS:
-			return false
+			return _reject("All %d peasant slots are filled." % game_board.MAX_PEASANTS)
 		if not is_peasant:
 			if counts.non_peasant >= game_board.MAX_NON_PEASANTS:
-				return false
+				return _reject("All %d back-row slots are filled." % game_board.MAX_NON_PEASANTS)
 			# Reserve the last non-peasant slot for a royal, otherwise the
 			# setup can become impossible to complete.
 			if not is_royal and counts.royal == 0 and counts.non_peasant == game_board.MAX_NON_PEASANTS - 1:
-				return false
+				return _reject("Your last back-row slot must be a royal.")
+		_clear_drop_reason()
 		return true
 
 	elif game_board.game_phase == "playing":
-		if color == "black" and game_board.ai_enabled:
-			return false
-		if color == "white" and game_board.white_pending != null:
-			return false
-		if color == "black" and game_board.black_pending != null:
-			return false
+		_clear_drop_reason()
 		return game_board.spawn_credits(color).get(data.piece_type, 0) > 0
 
 	return false
+
+
+# Refuses a drop and says why in the prompt (once per new reason, since this
+# runs on every mouse motion of the drag).
+func _reject(reason: String) -> bool:
+	if reason != _drop_reason:
+		_drop_reason = reason
+		ui.show_drop_reason(reason)
+	return false
+
+
+# Puts the normal prompt back once no refusal is being explained.
+func _clear_drop_reason() -> void:
+	if _drop_reason != "":
+		_drop_reason = ""
+		ui.restore_prompt()
+
+
+func _notification(what):
+	# A drag dropped or abandoned anywhere: drop any refusal still showing.
+	if what == NOTIFICATION_DRAG_END:
+		_clear_drop_reason()
 
 
 func _drop_data(_at_position, data):

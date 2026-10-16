@@ -14,6 +14,7 @@ var selected_piece = null
 var valid_actions_to_show = []
 var preview = false # read-only look at an enemy's moves: render muted
 var multi_option_squares = {} # squares offering more than one action -> true
+var last_turn_marks = [] # GameBoard.last_turn_marks: what the previous resolution touched
 
 
 # Board and marker colours all live in the theme's "Chessboard" type, so they
@@ -29,6 +30,16 @@ func _draw():
 		for y in range(BOARD_SIZE):
 			var color = light if (x + y) % 2 == 0 else dark
 			draw_rect(Rect2(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), color)
+
+	# Outline last turn's moves (from and to) and fire (shooter and the square
+	# hit), so a resolution can still be read after its 0.4 s tween is over.
+	var moved = _tint("select_preview")
+	moved.a = 0.6
+	for mark in last_turn_marks:
+		for key in ["from", "to", "attack", "hit"]:
+			if mark.has(key):
+				var tint = moved if key in ["from", "to"] else _tint("shoot")
+				draw_rect(Rect2(mark[key] * TILE_SIZE + Vector2(3, 3), Vector2(TILE_SIZE - 6, TILE_SIZE - 6)), tint, false, 3.0)
 
 	if selected_piece == null:
 		return
@@ -52,6 +63,9 @@ func _draw():
 					# hollow ring so it reads as "not guaranteed".
 					conditional = true
 					highlight_color = _tint("move_conditional")
+				elif action.get("friendly_fire", false):
+					# Amber: a charge that would trample your own piece.
+					highlight_color = _tint("friendly_fire")
 				elif action.get("is_capture_hint", false):
 					highlight_color = _tint("capture_hint")
 			"shoot":
@@ -68,11 +82,13 @@ func _draw():
 				highlight_color = _tint("convert")
 			"dragon_breath":
 				target_pos = selected_pos + action.direction
-				highlight_color = _tint("shoot")
+				# Amber when the cone would also burn your own pieces.
+				highlight_color = _tint("friendly_fire") if action.get("friendly_fire", false) else _tint("shoot")
 				icon_to_draw = attack_icon
 			_:
-				# Targetless actions (fire_cannon): shown on the piece itself.
-				highlight_color = _tint("cannon")
+				# Targetless actions (fire_cannon): shown on the piece itself,
+				# amber when your own pieces stand in the column it rakes.
+				highlight_color = _tint("friendly_fire") if action.get("friendly_fire", false) else _tint("cannon")
 				icon_to_draw = attack_icon
 
 		# Muted, smaller markers when merely previewing an enemy's reach.
