@@ -1422,10 +1422,22 @@ func _setup_condition_display() -> void:
 	add_child(_condition_display)
 
 
-# Yellow "?" when AI is SEARCHING; red flashing "!" when AI enters HOSTILE.
-# Inherits parent modulate so it fades with the hearing-pulse visibility.
+# Three stages of escalation over an AI-driven NPC: a small pale "?" when it
+# is SUSPICIOUS (heard something, still wary after a search), a yellow "?"
+# while SEARCHING, and a red flashing "!" when it turns HOSTILE (the outcry
+# fuse's amber "!" shares the Label). Kept upright and above the head
+# whatever the facing. Inherits parent modulate so it fades with the
+# hearing-pulse visibility.
 var _alertness_indicator: Label = null
 var _alertness_flash_tween: Tween = null
+const ALERT_FONT_SIZE := 28
+const SUSPICIOUS_FONT_SIZE := 20
+const SUSPICIOUS_COLOR := Color(0.92, 0.92, 0.92)
+const SEARCHING_COLOR := Color(1.0, 0.9, 0.2)
+const HOSTILE_COLOR := Color(1.0, 0.15, 0.15)
+# Screen-space centre of the glyph relative to the character (above the head,
+# over the condition icons).
+const ALERT_INDICATOR_CENTER := Vector2(0, COND_DISPLAY_OFFSET_Y - 14)
 
 # Stop-hand over the head while hold_position is set (WAIT order). Same badge
 # as the party panel's — one glance says "this one was told to stand here".
@@ -1467,7 +1479,8 @@ func _setup_alertness_indicator() -> void:
 	_alertness_indicator.name = "AlertnessIndicator"
 	_alertness_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_alertness_indicator.z_index = 110
-	_alertness_indicator.add_theme_font_size_override("font_size", 28)
+	_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+	_alertness_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_alertness_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
 	_alertness_indicator.add_theme_constant_override("outline_size", 4)
 	_alertness_indicator.position = Vector2(-8, COND_DISPLAY_OFFSET_Y - 28)
@@ -1521,12 +1534,15 @@ func _on_outcry_state_changed(active: bool, frac: float) -> void:
 	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
 		_alertness_flash_tween.kill()
 	_alertness_indicator.text = "!"
+	# Full size even straight after a (smaller) Suspicious "?".
+	_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
 	# Amber: distinct from red-HOSTILE and yellow-SEARCHING.
 	_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.72, 0.2))
 	_alertness_indicator.visible = true
 	_alertness_flash_tween = create_tween().set_loops()
 	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, period)
 	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 1.0, period)
+	_keep_alertness_indicator_upright()
 
 func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
@@ -1551,7 +1567,8 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	match new_alertness:
 		4:  # HOSTILE — red ! that flashes briefly
 			_alertness_indicator.text = "!"
-			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.15, 0.15))
+			_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", HOSTILE_COLOR)
 			_alertness_indicator.visible = true
 			_alertness_flash_tween = create_tween().set_loops(6)
 			_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, 0.12)
@@ -1565,12 +1582,30 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 			)
 		3:  # SEARCHING — steady yellow ?
 			_alertness_indicator.text = "?"
-			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.9, 0.2))
+			_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", SEARCHING_COLOR)
 			_alertness_indicator.modulate.a = 1.0
 			_alertness_indicator.visible = true
-		_:  # AT_EASE / UNAWARE / SUSPICIOUS — hide
+		2:  # SUSPICIOUS — smaller, paler ?: heard something, not coming yet
+			_alertness_indicator.text = "?"
+			_alertness_indicator.add_theme_font_size_override("font_size", SUSPICIOUS_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", SUSPICIOUS_COLOR)
+			_alertness_indicator.modulate.a = 0.8
+			_alertness_indicator.visible = true
+		_:  # AT_EASE / UNAWARE — hide
 			_alertness_indicator.visible = false
 			_alertness_indicator.modulate.a = 1.0
+	_keep_alertness_indicator_upright()
+
+## Counter-rotates the alertness glyph so a '?' never reads upside down, and
+## keeps it screen-above the head whatever way the character faces. Runs
+## every frame (paused too) from _process, and after each stage change.
+func _keep_alertness_indicator_upright() -> void:
+	if _alertness_indicator == null or not _alertness_indicator.visible:
+		return
+	_alertness_indicator.pivot_offset = _alertness_indicator.size * 0.5
+	_alertness_indicator.rotation = -rotation
+	_alertness_indicator.position = ALERT_INDICATOR_CENTER.rotated(-rotation) - _alertness_indicator.pivot_offset
 
 func _refresh_condition_display() -> void:
 	if not _condition_display:
@@ -3460,6 +3495,7 @@ func set_sprite_overlays_enabled(enabled: bool) -> void:
 func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
+	_keep_alertness_indicator_upright()
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
