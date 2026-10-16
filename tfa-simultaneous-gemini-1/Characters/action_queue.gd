@@ -118,8 +118,14 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 		var ability_id = data.get("ability_id", "")
 		if ability_id != "":
 			var ability = AbilityDatabase.get_ability_data(ability_id)
-			if not ability.is_empty() and _ability_has_healing(ability):
-				color = reticle_color_healing
+			if not ability.is_empty():
+				# The same classifier that colours the queued AoE ghost and the
+				# path leader line, so the reticle can't disagree with them.
+				var intent: int = Ability.classify_intent(ability)
+				if intent == Ability.Intent.BENEFICIAL:
+					color = reticle_color_healing
+				elif intent == Ability.Intent.NEUTRAL:
+					color = Ability.intent_border_color(intent, true)
 	
 	reticle.modulate = color
 	reticle_container.add_child(reticle)
@@ -129,28 +135,15 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 	
 	return reticle
 
-func _ability_has_healing(ability) -> bool:
-	"""Safely check if an ability has healing in its effects"""
-	if ability == null:
-		return false
-	
-	# Try to access effects safely
-	var effects = null
-	
-	# Check if ability has effects property/method
-	if "effects" in ability:
-		effects = ability.effects
-	if effects == null:
-		return false
-	# Check if healing is in effects
-	if effects is Dictionary:
-		return effects.has("healing")
-	
-	return false
-
 func _add_reticle_animation(reticle: Sprite2D) -> void:
 	"""Add a pulsing animation to the reticle"""
+	# Bound to the reticle so the looping tween dies with it: left bound to this
+	# queue it outlived the freed reticle and Godot logged "Infinite loop
+	# detected" for every finished or cancelled order. PAUSE_PROCESS keeps it
+	# pulsing while paused for planning, as it did under this always-on queue.
 	var tween = create_tween()
+	tween.bind_node(reticle)
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_loops()
 	tween.tween_property(reticle, "scale", reticle_scale * 1.1, 0.5)
 	tween.tween_property(reticle, "scale", reticle_scale, 0.5)
@@ -187,11 +180,16 @@ func _remove_all_reticles() -> void:
 func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	"""Add an action to the queue. Returns false if queue is full."""
 	print("attempting to queue an action of type: ", type)
-	# Check queue size limit
-	if max_queue_size > 0 and queue.size() >= max_queue_size:
-		print("exceeded queue size limit")
+	# Check queue size limit. Steps converted from a drawn tactical path
+	# ("from_path", see TacticalPath.to_action_queue_actions) are exempt: the
+	# path planner has no node limit, so capping them would silently cut the end
+	# off the route. A refused direct order is announced (party members only).
+	if not data.get("from_path", false) and not has_space():
+		if character and character.is_party_member():
+			character.notify("Plan full", Color(1.0, 0.6, 0.4),
+				"%s can't plan another action: the plan is full (%d max)." % [character.Name, max_queue_size])
 		return false
-	
+
 	var action = Action.new(type, data)
 	
 	# Create reticle for targeted actions
@@ -205,6 +203,16 @@ func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 	queue.append(action)
 	emit_signal("action_queued", action)
 	return true
+
+func has_space(n: int = 1) -> bool:
+	"""True if n more direct orders fit under max_queue_size (path steps don't count)."""
+	if max_queue_size <= 0:
+		return true
+	var direct := 0
+	for a in queue:
+		if not a.data.get("from_path", false):
+			direct += 1
+	return direct + n <= max_queue_size
 
 func _action_needs_reticle(type: ActionType, data: Dictionary) -> bool:
 	"""Determine if an action type should display a targeting reticle"""
@@ -279,13 +287,13 @@ func queue_face(target_pos: Vector2) -> bool:
 	var angle = (target_pos - character.global_position).angle() + PI / 2
 	return queue_action(ActionType.FACE, {"target_rotation": angle})
 
-func queue_attack(target_pos: Vector2) -> bool:
-	"""Queue a basic attack with target position for reticle"""
-	return queue_action(ActionType.ATTACK, {"target_position": target_pos})
+func queue_attack(target_pos: Vector2, hand: String = "Main") -> bool:
+	"""Queue a basic attack with target position for reticle, swung with `hand`"""
+	return queue_action(ActionType.ATTACK, {"target_position": target_pos, "hand": hand})
 
-func queue_attack_target(target: ProceduralCharacter) -> bool:
-	"""Queue an attack on a specific target"""
-	return queue_action(ActionType.ATTACK_TARGET, {"target": target})
+func queue_attack_target(target: ProceduralCharacter, hand: String = "Main") -> bool:
+	"""Queue an attack on a specific target, swung with `hand`"""
+	return queue_action(ActionType.ATTACK_TARGET, {"target": target, "hand": hand})
 
 func queue_cycle_weapon(direction: int, hand: String = "Main") -> bool:
 	"""Queue a weapon switch for a specific hand"""
@@ -378,6 +386,10 @@ func _execute_action(action: Action) -> void:
 			character._nav_waypoints.clear()
 			character._nav_index = 0
 			var waypoints = action.data.get("waypoints", [])
+			if action.data.get("resume_nearest", false) and waypoints.size() >= 2:
+				# After a planned dash: rejoin the route ahead of where the dash
+				# landed instead of walking back to the dash node first.
+				action.data["waypoint_index"] = _nearest_waypoint_ahead(waypoints, character.global_position)
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
 				var wp = waypoints[wp_index]
@@ -398,19 +410,24 @@ func _execute_action(action: Action) -> void:
 		
 		ActionType.ATTACK:
 			var target_pos = action.data.get("target_position", null)
+			var hand: String = action.data.get("hand", "Main")
 			if target_pos:
 				character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
-			character.attack("Main", target_pos)
-		
+			# Same as a live click: the active hand drives which arm swings
+			character.current_hand = hand
+			character.attack(hand, target_pos)
+
 		ActionType.ATTACK_TARGET:
 			var target = action.data.get("target")
 			if target and is_instance_valid(target):
+				var hand: String = action.data.get("hand", "Main")
 				# Face the target then attack (live node: rig aim tracks its movement).
 				# The position rides along as a last-known fallback, so a target
 				# that dies or is freed mid-swing leaves the attack pointed where
 				# it was rather than at nothing.
 				character.target_rotation = (target.global_position - character.global_position).angle() + PI / 2
-				character.attack("Main", target.global_position, target)
+				character.current_hand = hand
+				character.attack(hand, target.global_position, target)
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)
@@ -529,10 +546,18 @@ func _is_action_complete(action: Action) -> bool:
 				return not character.attack_animator.is_attacking
 			return true
 		
-		ActionType.CYCLE_WEAPON, ActionType.USE_ITEM, ActionType.CUSTOM:
+		ActionType.CYCLE_WEAPON, ActionType.USE_ITEM:
 			# These are instant actions
 			return true
-		
+
+		ActionType.CUSTOM:
+			# A dash (queue_dash, or a path-node dash) finishes when the body
+			# lands, so a following MOVE starts from the landing point. Other
+			# custom actions are instant.
+			if action.data.has("dash_target"):
+				return not character._dash_motion_active
+			return true
+
 		ActionType.USE_ABILITY:
 			return character.current_cast.is_empty()
 	
@@ -560,6 +585,23 @@ func _complete_current_action() -> void:
 		_remove_reticle(current_action)
 		emit_signal("action_completed", current_action)
 		current_action = null
+
+func _nearest_waypoint_ahead(waypoints: Array, pos: Vector2) -> int:
+	"""Index of the waypoint that ends the route segment closest to pos."""
+	var best_i := 0
+	var best_dist := INF
+	for i in range(waypoints.size() - 1):
+		var a: Vector2 = waypoints[i]
+		var b: Vector2 = waypoints[i + 1]
+		var ab := b - a
+		var t := 0.0
+		if ab.length_squared() > 0.001:
+			t = clampf((pos - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var dist := pos.distance_to(a.lerp(b, t))
+		if dist < best_dist:
+			best_dist = dist
+			best_i = i
+	return mini(best_i + 1, waypoints.size() - 1)
 
 func _exit_tree() -> void:
 	"""Cleanup when the node is removed"""

@@ -995,6 +995,12 @@ func _on_game_unpaused_convert_path() -> void:
 	# gated), and every NPC's path stays permanently empty so the is_empty()
 	# early-out above still costs them nothing.
 
+	# Out cold, stunned, fleeing or compelled: the plan is dropped, not run.
+	var plan_blocker := _get_plan_blocking_condition()
+	if plan_blocker != null:
+		_abandon_plan(plan_blocker)
+		return
+
 	# If the path was being executed (paused mid-execution), trim the consumed portion
 	# so the character continues from their current position instead of restarting.
 	if tactical_path.is_executing:
@@ -1103,6 +1109,50 @@ func has_player_orders() -> bool:
 	if action_queue == null:
 		return false
 	return action_queue.current_action != null or action_queue.get_queue_size() > 0
+
+## The condition that stops this character following a drawn plan, or null:
+## Unconscious (checked the way _handle_input checks it), any active condition
+## with the "incapacitate" trait (Stunned, Frozen, Apathetic), or a condition
+## that takes the legs or the will (Panicked, the Panic affliction, Frightened,
+## and the Transfixed / Incited compulsions, the set _handle_input refuses
+## orders for).
+func _get_plan_blocking_condition() -> ConditionInstance:
+	if condition_manager == null:
+		return null
+	if condition_manager.has_condition("unconscious"):
+		return condition_manager.get_condition("unconscious")
+	for inst in condition_manager.get_conditions_with_trait("incapacitate"):
+		if inst.is_active():
+			return inst
+	for cond_id in ["panicked", "panic", "frightened", "transfixed", "incited"]:
+		if condition_manager.has_active_condition(cond_id):
+			return condition_manager.get_condition(cond_id)
+	return null
+
+## Drop the drawn plan: its queued steps, the direct orders queued with it, its
+## AoE ghosts and its drawn path (the same teardown as Esc while paused). With
+## the queue empty has_player_orders() is false, so the AI gets the legs back,
+## as when a plan finishes. `blocking` names the reason for a party member's
+## one-time notice; clearing the path makes a repeat impossible.
+func _abandon_plan(blocking: ConditionInstance) -> void:
+	if action_queue != null:
+		action_queue.cancel_all()
+	_nav_waypoints.clear()
+	_nav_index = 0
+	is_moving = false
+	if path_input_handler != null:
+		path_input_handler.cancel_path()
+	elif tactical_path != null:
+		tactical_path.clear()
+	if targeting_system != null:
+		targeting_system.clear_all_queued_indicators()
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	if blocking != null and is_party_member():
+		var cond_name := "Incapacitated"
+		if blocking.condition:
+			cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
+		notify("Can't follow plan", Color(1.0, 0.6, 0.4), "%s abandons their plan: %s." % [Name, cond_name])
 
 # --- Throw targeting helpers ---
 
@@ -3520,6 +3570,15 @@ func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
 	_keep_alertness_indicator_upright()
+	# A drawn plan that's running when its character is knocked out, stunned,
+	# set fleeing or compelled is dropped at once, with a notice, before the
+	# action queue (a child, processed after us) can start its next step. Ahead
+	# of the forced movement below, so the drop's is_moving = false can't cancel
+	# the flee step that same frame starts.
+	if not PauseManager.is_paused and has_player_orders() and tactical_path != null and tactical_path.is_executing:
+		var plan_blocker := _get_plan_blocking_condition()
+		if plan_blocker != null:
+			_abandon_plan(plan_blocker)
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -3745,9 +3804,9 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		if paused:
 			if designated != null:
-				action_queue.queue_attack_target(designated)
+				action_queue.queue_attack_target(designated, hand_str)
 			else:
-				action_queue.queue_attack(mouse_pos)
+				action_queue.queue_attack(mouse_pos, hand_str)
 		else:
 			if designated != null:
 				attack(hand_str, designated.global_position, designated)
@@ -6756,6 +6815,10 @@ func _enter_corpse_state() -> void:
 		tactical_path.clear()
 		if path_drawer != null:
 			path_drawer.queue_redraw()
+	# ...and its queued steps. ActionQueue is a child with PROCESS_MODE_ALWAYS
+	# too, so without this a corpse's queue went on to cast, swing or dash.
+	if action_queue != null:
+		action_queue.cancel_all()
 	if ability_manager != null:
 		ability_manager.interrupt_cast("caster died")
 	# Corpse body physics: move the body OFF the CHARACTERS layer instead of
@@ -7498,6 +7561,16 @@ var ai_cast_attempt: bool = false
 func _announce_cast_failure(ability: Ability, reason: String) -> void:
 	if not is_party_member() or ai_cast_attempt:
 		return
+	# A planned cast re-queued on unpause while that same cast is still going
+	# fails as "Already casting", but the cast itself is fine. Compared by id:
+	# Ability objects are rebuilt for every use_ability call. Only that
+	# re-queued path step ("from_path", TacticalPath) is silenced; clicking the
+	# spell again mid-cast still says "Already casting".
+	if reason == "Already casting" and ability:
+		var casting = current_cast.get("ability")
+		var step: ActionQueue.Action = action_queue.current_action if action_queue else null
+		if casting is Ability and casting.id == ability.id and step != null and step.data.get("from_path", false):
+			return
 	var ability_name: String = ability.display_name if ability else "ability"
 	var readable := reason.replace("_", " ")
 	if reason == "Cannot harm charm source":

@@ -261,6 +261,9 @@ func to_action_queue_actions() -> Array:
 	var current_segment: PackedVector2Array = PackedVector2Array()
 	current_segment.append(waypoints[0])
 	var wp_idx = 0  # Current waypoint index we've processed up to
+	# Set after a dash node: the next MOVE rejoins the route ahead of the
+	# landing point instead of walking back to the node.
+	var resume_after_dash := false
 
 	for node in sorted_nodes:
 		# Add all full waypoints up to this node's segment
@@ -274,15 +277,28 @@ func to_action_queue_actions() -> Array:
 
 		# Emit MOVE for this segment (if it has actual distance)
 		if current_segment.size() >= 2:
-			actions.append(_make_move_action(current_segment))
+			var move: Dictionary = _make_move_action(current_segment)
+			if resume_after_dash:
+				move["data"]["resume_nearest"] = true
+			actions.append(move)
 
-		# Emit the action at this node
+		# Emit the action at this node. A shallow copy, tagged so the queue knows
+		# it came from the path ("from_path": exempt from ActionQueue's size cap)
+		# and which node it belongs to. The copy keeps the node's own references
+		# (queued_indicator, targets, target_anchor, callable).
 		if node.has_action():
-			actions.append({"type": node.action_type, "data": node.action_data})
+			var node_data: Dictionary = node.action_data.duplicate()
+			node_data["from_path"] = true
+			node_data["path_node"] = node
+			actions.append({"type": node.action_type, "data": node_data})
 
-		# Emit FACE if this node has a facing direction
-		if node.has_facing():
-			actions.append({"type": ActionQueue.ActionType.FACE, "data": {"target_rotation": node.facing_angle}})
+		# Emit FACE if this node has a facing direction. A rotation node's FACE
+		# was already emitted as its action above; emitting it twice would use a
+		# second queue step and pop a second node icon one step early.
+		if node.has_facing() and node.action_type != ActionQueue.ActionType.FACE:
+			actions.append({"type": ActionQueue.ActionType.FACE, "data": {"target_rotation": node.facing_angle, "from_path": true, "path_node": node}})
+
+		resume_after_dash = node.has_action() and node.action_data.has("dash_target")
 
 		# Start new segment from this node's position
 		current_segment = PackedVector2Array()
@@ -297,7 +313,10 @@ func to_action_queue_actions() -> Array:
 
 	# Emit final MOVE segment if it has distance
 	if current_segment.size() >= 2:
-		actions.append(_make_move_action(current_segment))
+		var final_move: Dictionary = _make_move_action(current_segment)
+		if resume_after_dash:
+			final_move["data"]["resume_nearest"] = true
+		actions.append(final_move)
 
 	return actions
 
@@ -312,5 +331,6 @@ func _make_move_action(segment_waypoints: PackedVector2Array) -> Dictionary:
 			"waypoints": wp_array,
 			"waypoint_index": 0,
 			"freeform": true,  # Flag to skip A* recalculation
+			"from_path": true,  # Path steps are exempt from ActionQueue.max_queue_size
 		}
 	}
