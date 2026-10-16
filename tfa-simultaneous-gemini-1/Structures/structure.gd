@@ -93,31 +93,28 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		return
 	var damage_multiplier = pow(1.5,success_level)
 	var took_fire_damage = false
+	var any_dealt := false
+	var any_blocked := false
 
 	for damage_type in amount.keys():
 		# clamp per type: resistance exceeding damage must never HEAL, and an
-		# unknown damage type must not abort the hit
-		var dealt = max(0.0, amount[damage_type]*damage_multiplier - self.damage_resistances.get(damage_type, 0))
+		# unknown damage type must not abort the hit. Rounded to the whole HP
+		# actually lost, which is also the number shown (like character hits).
+		var dealt := int(round(maxf(0.0, float(amount[damage_type]) * damage_multiplier - float(self.damage_resistances.get(damage_type, 0)))))
 		current_health = max(0, current_health - dealt)
 		if LOG_DAMAGE:
 			print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
 		if damage_type == "fire":
 			took_fire_damage = true
-			show_floating_text(str(amount[damage_type]), Color.CRIMSON, success_level)
-		elif damage_type == "electric":
-			show_floating_text(str(amount[damage_type]), Color.YELLOW, success_level)
-		elif damage_type == "cold":
-			show_floating_text(str(amount[damage_type]), Color.ALICE_BLUE, success_level)
-		elif damage_type == "acid":
-			show_floating_text(str(amount[damage_type]), Color.DARK_GREEN, success_level)
-		elif damage_type == "radiant":
-			show_floating_text(str(amount[damage_type]), Color.LIGHT_GOLDENROD, success_level)
-		elif damage_type == "necrotic":
-			show_floating_text(str(amount[damage_type]), Color.BLACK, success_level)
-		elif damage_type == "poison":
-			show_floating_text(str(amount[damage_type]), Color.BLUE_VIOLET, success_level)
-		else:
-			show_floating_text(str(amount[damage_type]), Color.WHITE_SMOKE, success_level)
+		if dealt > 0:
+			any_dealt = true
+			show_floating_text(str(dealt), Globals.damage_color(damage_type), success_level)
+		elif float(amount[damage_type]) > 0.0:
+			any_blocked = true
+	# One shared label: a fully resisted rider type must not overwrite the
+	# number of a type that got through, so "Blocked" only when nothing did.
+	if any_blocked and not any_dealt:
+		show_floating_text("Blocked", Color(0.75, 0.75, 0.75), success_level)
 
 	# Fire damage on flammable structures triggers ignition on occupied tiles
 	if took_fire_damage and flammable:

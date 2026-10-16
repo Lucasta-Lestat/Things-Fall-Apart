@@ -288,7 +288,10 @@ func sight_line_clear(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_po
 	# old viewer-only behavior for every ground target.
 	var high := maxf(viewer_elev, target_elev) + EYE_HEIGHT_STORIES
 	var excluded: Array[RID] = []
-	for i in range(8):
+	# Each cleared occluder joins the exclude list, so this ends as soon as the
+	# ray stops hitting; 64 is only a safety cap. (8 was low enough that an
+	# elevated eye over many short wall segments lost targets in its lit cone.)
+	for i in range(64):
 		var hit := space.intersect_ray(params)
 		if hit.is_empty():
 			return true
