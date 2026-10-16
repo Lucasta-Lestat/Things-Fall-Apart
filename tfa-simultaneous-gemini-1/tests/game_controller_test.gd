@@ -156,7 +156,9 @@ func _case_stealth_toggle() -> void:
 	_press_c()
 	_check("stealth.toggles-on", game.stealth_mode == not was)
 	_check("stealth.on-logged", _log_has("Stealth mode [b]on[/b]", since))
-	_check("stealth.on-says-what-it-does", _log_has("relaxed ones who spot you turn wary", since))
+	# C goes through Game.set_stealth_mode (vision-stealth), whose line says it.
+	_check("stealth.on-says-what-it-does", _log_has("Relaxed onlookers who spot you sneaking become wary", since))
+	_check("stealth.on-says-talk-moves-to-right-click", _log_has("right-click for Talk", since))
 	# An NPC spawned while stealth is on gets a cone that shows.
 	game._add_npc_line_of_sight_light(bandit)
 	var cone = bandit.get_node_or_null("NPCLineOfSight")
@@ -196,7 +198,8 @@ func _case_pick_up() -> void:
 	var helm2 = game.create_item("full_face_helmet", p.global_position + Vector2(10, 0))
 	await _await_frames(1)
 	var fillers: int = 0
-	while p.inventory.items.size() < p.inventory.max_slots:
+	# slots_used: the hidden hand-weapon dicts take no slot (equipment lane).
+	while p.inventory.slots_used() < p.inventory.max_slots:
 		p.inventory.items.append({"id": "gc_filler", "display_name": "Filler"})
 		fillers += 1
 	_check("pickup.armour-full-pack-refused", helm2 != null and not game.pick_up_item(helm2)
