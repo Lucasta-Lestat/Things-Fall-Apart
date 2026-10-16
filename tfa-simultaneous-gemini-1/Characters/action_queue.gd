@@ -416,7 +416,7 @@ func _execute_action(action: Action) -> void:
 			# Same as a live click: the active hand drives which arm swings
 			character.current_hand = hand
 			character.attack(hand, target_pos)
-
+		
 		ActionType.ATTACK_TARGET:
 			var target = action.data.get("target")
 			if target and is_instance_valid(target):

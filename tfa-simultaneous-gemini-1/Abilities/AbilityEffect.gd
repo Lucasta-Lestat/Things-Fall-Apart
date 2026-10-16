@@ -102,6 +102,20 @@ static func resolve_effect(
 	
 	return result
 
+## Condition ids an effect list applies itself ({condition_id: true}), from its
+## apply_condition effects. While those effects resolve, the list's damage
+## doesn't add the same condition again (see
+## ProceduralCharacter.begin_damage_condition_suppression).
+static func explicit_condition_ids(effects: Array) -> Dictionary:
+	var ids := {}
+	for effect in effects:
+		if not (effect is Dictionary) or effect.get("type", "") != "apply_condition":
+			continue
+		var cid = effect.get("condition_id", "")
+		if cid != null and str(cid) != "":
+			ids[str(cid)] = true
+	return ids
+
 ## Resolve summon effect
 static func _resolve_summon(
 	effect: Dictionary,

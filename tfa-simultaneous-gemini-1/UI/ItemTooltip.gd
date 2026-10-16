@@ -168,14 +168,118 @@ static func party_text(entry: Dictionary) -> String:
 		tip += "\nStolen from " + owner_name
 	return tip
 
+# --- Armour ---------------------------------------------------------------
+# What a worn piece or a held shield actually does, read the way
+# ProceduralCharacter applies it: per-type DR on every limb it covers
+# (get_limb_for_equipment_slot for worn slots, _SHIELD_COVERED_LIMBS for a
+# shield in the off hand), subtracted from each hit on those limbs.
+
+## Item equip_slot -> EquipmentShape.EquipmentSlot. Mirrors
+## PartySidePanel._EQUIP_SLOT_MAP (the slots a piece can be worn in).
+const ARMOUR_SLOTS := {"Head": 0, "Torso": 1, "Back": 2, "Legs": 3, "Feet": 4, "Cape": 2}
+## Display order for damage types; anything else follows alphabetically.
+const DR_ORDER := ["slashing", "bludgeoning", "piercing", "fire", "cold", "electric", "acid", "poison", "sonic", "radiant", "necrotic", "force"]
+
+## The non-zero DR a wearer gets from this item, {} if none. Only worn slots
+## qualify (a shield is shield_dr's), and a slot that covers no limb gives
+## nothing, as in play.
+static func armour_dr(item_data: Dictionary) -> Dictionary:
+	var slot_name := str(item_data.get("equip_slot", ""))
+	if not ARMOUR_SLOTS.has(slot_name):
+		return {}
+	if ProceduralCharacter.get_limb_for_equipment_slot(int(ARMOUR_SLOTS[slot_name])).is_empty():
+		return {}
+	return _nonzero_dr(item_data.get("damage_resitances", item_data.get("damage_resistances")))
+
+## The non-zero DR a shield adds while held in the off hand, {} for anything
+## that isn't a shield. Takes the item dict or the held WeaponShape.
+static func shield_dr(raw) -> Dictionary:
+	if raw is WeaponShape:
+		if raw.weapon_type != WeaponShape.WeaponType.SHIELD:
+			return {}
+		return _nonzero_dr(raw.damage_resitances)
+	if raw is Dictionary and str(raw.get("type", "")).to_lower() == "shield":
+		return _nonzero_dr(raw.get("damage_resitances", raw.get("damage_resistances")))
+	return {}
+
+static func _nonzero_dr(dr) -> Dictionary:
+	if not (dr is Dictionary):
+		return {}
+	var out := {}
+	for k in dr:
+		if dr[k] != null and int(dr[k]) != 0:
+			out[str(k)] = int(dr[k])
+	return out
+
+## The limbs a slot protects, in words: "torso and arms", "legs".
+static func covered_limbs_text(slot_enum: int) -> String:
+	return _limbs_text(ProceduralCharacter.get_limb_for_equipment_slot(slot_enum))
+
+static func _limbs_text(limbs: Array) -> String:
+	var words: PackedStringArray = []
+	for lt in limbs:
+		var w := "legs"
+		if lt == ProceduralCharacter.LimbType.HEAD:
+			w = "head"
+		elif lt == ProceduralCharacter.LimbType.TORSO:
+			w = "torso"
+		elif lt == ProceduralCharacter.LimbType.LEFT_ARM or lt == ProceduralCharacter.LimbType.RIGHT_ARM:
+			w = "arms"
+		if not words.has(w):
+			words.append(w)
+	if words.size() <= 1:
+		return "".join(words)
+	return ", ".join(words.slice(0, words.size() - 1)) + " and " + words[words.size() - 1]
+
+static func _dr_order(dr: Dictionary) -> Array:
+	var keys: Array = []
+	for t in DR_ORDER:
+		if dr.has(t):
+			keys.append(t)
+	var rest: Array = []
+	for k in dr:
+		if not keys.has(k):
+			rest.append(k)
+	rest.sort()
+	return keys + rest
+
+## "Armour (torso and arms): blocks 4 slashing, ... per hit" plus a
+## "Weakness: +1 electric damage per hit" line for negative DR.
+static func _dr_lines(label: String, dr: Dictionary) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var blocks: PackedStringArray = []
+	var weak: PackedStringArray = []
+	for dtype in _dr_order(dr):
+		var v: int = int(dr[dtype])
+		if v > 0:
+			blocks.append("%d %s" % [v, dtype])
+		else:
+			weak.append("+%d %s" % [-v, dtype])
+	if not blocks.is_empty():
+		lines.append("%s: blocks %s per hit" % [label, ", ".join(blocks)])
+	if not weak.is_empty():
+		lines.append("Weakness: %s damage per hit" % ", ".join(weak))
+	return lines
+
 # ---------------------------------------------------------------------------
 # Hooks: extra lines appended in every window, one line per array element.
 # Each gets the slot entry and returns nothing for entries it doesn't cover.
 # ---------------------------------------------------------------------------
 
 ## Armour: limbs covered and damage blocked per hit.
-static func armour_lines(_entry: Dictionary) -> PackedStringArray:
-	return PackedStringArray()
+static func armour_lines(entry: Dictionary) -> PackedStringArray:
+	var raw = entry.get("raw")
+	var sdr: Dictionary = shield_dr(raw)
+	if not sdr.is_empty():
+		var shield_limbs: String = _limbs_text(ProceduralCharacter._SHIELD_COVERED_LIMBS)
+		return _dr_lines("Shield (%s, held in the off hand)" % shield_limbs, sdr)
+	if entry.get("kind", "") != "item" or not (raw is Dictionary):
+		return PackedStringArray()
+	var dr: Dictionary = armour_dr(raw)
+	if dr.is_empty():
+		return PackedStringArray()
+	var limbs: String = covered_limbs_text(int(ARMOUR_SLOTS[str(raw.get("equip_slot", ""))]))
+	return _dr_lines("Armour (%s)" % limbs, dr)
 
 ## Noise the item makes when worn: the same per-step number the worn piece
 ## adds to every footstep NPCs hear (EquipmentShape.noise_for_item_data).

@@ -184,6 +184,13 @@ func _process(delta: float) -> void:
 	if current_state == AttackState.IDLE:
 		return
 	
+	# Swings, shots and cast arms hold still while the game is paused, like
+	# the ActionQueue. This node inherits PROCESS_MODE_ALWAYS from the
+	# character, and every melee swing resolves its damage at the hit frame
+	# (ProceduralCharacter._on_attack_hit -> Game.resolve_melee_swing), so a
+	# swing in flight must not land during the pause.
+	if PauseManager.is_paused:
+		return
 	attack_timer += delta
 	_update_animation(delta)
 	

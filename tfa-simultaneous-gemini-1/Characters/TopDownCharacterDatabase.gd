@@ -188,6 +188,18 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 	if not sensory.is_empty() and character.get("condition_manager") != null:
 		character._on_stats_recalculated()
 
+	# --- Natural weapons (a wolf's bite, a skeleton's claws) ---
+	# The template's combat block overrides the race's unarmed strike (most
+	# races have no "unarmed_strike" entry and leave the 5 bludgeoning punch).
+	# combat.bonus_damage is not applied here: _on_stats_recalculated rebuilds
+	# bonus_damage from conditions and would overwrite it.
+	var combat = template.get("combat", {})
+	if combat is Dictionary:
+		if combat.has("unarmed_strike_damage"):
+			_set_if_exists(character, "unarmed_strike_damage", int(combat["unarmed_strike_damage"]))
+		if combat.get("unarmed_strike_damage_type") != null:
+			_set_if_exists(character, "unarmed_strike_damage_type", str(combat["unarmed_strike_damage_type"]))
+
 	# --- Resolve and grant equipment ---
 	var equipment = _resolve_equipment(template, faction_data, overrides)
 	# Append any caller-supplied extra equipment (used by combat test mode for
