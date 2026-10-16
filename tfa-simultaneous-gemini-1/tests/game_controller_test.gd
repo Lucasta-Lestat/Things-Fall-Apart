@@ -334,7 +334,10 @@ func _case_companion_ai_reset() -> void:
 	var glyph = c.get_node_or_null("AlertnessIndicator")
 	_check("companion.has-glyph", glyph != null)
 	ai._set_alertness_value(ai.ALERTNESS_SEARCHING_THRESHOLD + 5.0)
-	_check("companion.ai-driven-shows-search", glyph != null and glyph.visible and str(glyph.text) == "?")
+	# The AI is searching, but a companion shows no ?/! (character lane,
+	# character-state-12: the glyphs are for AI-driven NPCs only).
+	_check("companion.ai-driven-searches-without-glyph", ai.alertness_value >= ai.ALERTNESS_SEARCHING_THRESHOLD
+		and glyph != null and not glyph.visible)
 	game.select_character(c, 1)
 	_check("companion.take-control-clears-glyph", glyph != null and not glyph.visible)
 	_check("companion.take-control-clears-alertness", ai.alertness_value < ai.ALERTNESS_SUSPICIOUS_THRESHOLD)
@@ -404,10 +407,11 @@ func _case_persistence_across_warp() -> void:
 	# bleeding's vfx/bleeding.tscn exists (weakened's scene doesn't ship).
 	if cm.has_condition("bleeding"):
 		_check("persist.condition-vfx-respawned", np._active_condition_vfx.has("bleeding"))
+	# An icon for every condition not shown by a VFX that actually spawned
+	# (character lane: weakened's vfx scene doesn't ship, so it keeps its icon).
 	var expected_icons: int = 0
-	for inst in cm.conditions.values():
-		var cv: String = inst.condition.custom_vfx if inst.condition else ""
-		if cv == "" or cv == "no vfx scene":
+	for cond_id in cm.conditions:
+		if not (np._active_condition_vfx.has(cond_id) and is_instance_valid(np._active_condition_vfx[cond_id])):
 			expected_icons += 1
 	var icons: int = 0
 	for ch in np._condition_display.get_children():

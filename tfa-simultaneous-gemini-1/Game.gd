@@ -2621,7 +2621,9 @@ func _toggle_npc_los_cones() -> void:
 ## range. An NPC hidden outright hides its cone with it, so that case needs
 ## nothing here.
 func _npc_cones_shown(npc) -> bool:
-	return stealth_mode and is_instance_valid(npc) and npc.is_alive() 			and not current_map_data.get("is_world_map", false) 			and not _npc_only_glimpsed(npc)
+	return stealth_mode and is_instance_valid(npc) and npc.is_alive() \
+			and not current_map_data.get("is_world_map", false) \
+			and not _npc_only_glimpsed(npc)
 
 ## Drawn only by a hearing pulse: pulsing and not truly seen.
 func _npc_only_glimpsed(npc) -> bool:

@@ -142,6 +142,9 @@ func _case_save_notices() -> void:
 	var pcm = p.condition_manager
 	var saved: Dictionary = pcm.to_dict()
 	var con0: int = p.constitution
+	# The -500 CON fixture clamps HP to 1 when the conditions recalculate
+	# (max HP is 20 + CON/5, character lane): give it back afterwards.
+	var hp0: int = p.current_health
 	pcm.clear_all_conditions()
 
 	# A sure pass (margin >= 50) throws the whole application off.
@@ -202,6 +205,7 @@ func _case_save_notices() -> void:
 	_check("save.party-source-logs", _logged_since(n0, "Lurker resists Bleeding"), _last_log())
 
 	p.constitution = con0
+	p.current_health = hp0
 	pcm.from_dict(saved)
 
 # ---------------------------------------------------------------------------
@@ -214,6 +218,9 @@ func _case_periodic_and_corpse() -> void:
 	var pcm = p.condition_manager
 	var saved: Dictionary = pcm.to_dict()
 	var con0: int = p.constitution
+	# CON swings max HP (20 + CON/5) and a recalculation clamps HP down to it
+	# (character lane): keep the fixture alive and give its HP back after.
+	var hp0: int = p.current_health
 	pcm.clear_all_conditions()
 	p.constitution = 0  # lands at a plain fail (roll 1..100 vs 0, margin > -50 mostly)
 	var inst = null
@@ -224,6 +231,7 @@ func _case_periodic_and_corpse() -> void:
 	_check("periodic.fixture", inst != null)
 	if inst != null:
 		p.constitution = 500
+		p.current_health = p.max_health   # CON 0 above clamped HP to 20; ticks follow
 		_reset_notices(p)
 		var n0: int = GameLog.get_entries().size()
 		var now: float = TimeManager.absolute_time()
@@ -240,6 +248,7 @@ func _case_periodic_and_corpse() -> void:
 		_check("periodic.shook-off-floats", p._last_notify_text == "Shook off Bleeding", p._last_notify_text)
 		_check("periodic.shook-off-logged", _logged_since(n0, "%s shakes off Bleeding (CON save: rolled" % p.Name), _last_log())
 	p.constitution = con0
+	p.current_health = hp0
 	pcm.from_dict(saved)
 
 	# A corpse keeps its conditions but rolls nothing.
