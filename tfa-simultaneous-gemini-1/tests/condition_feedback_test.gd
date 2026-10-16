@@ -15,12 +15,12 @@ var failures := 0
 var game = null
 var spawned: Array = []
 
-func _check(check_name: String, cond: bool, detail: String = "") -> void:
+func _check(check_name: String, cond: bool, detail = "") -> void:
 	if cond:
 		print("PASS %s" % check_name)
 	else:
 		failures += 1
-		print("FAIL %s: %s" % [check_name, detail])
+		print("FAIL %s: %s" % [check_name, str(detail)])
 
 func _await_frames(n: int) -> void:
 	for i in range(n):
@@ -45,6 +45,7 @@ func _ready() -> void:
 	await _case_riders()
 	await _case_chasten()
 	await _case_force_fields()
+	await _case_ai_ticks()
 
 	for c in spawned:
 		if is_instance_valid(c):
@@ -439,3 +440,47 @@ func _case_force_fields() -> void:
 		bare.queue_free()
 		grav.queue_free()
 	await _await_frames(1)
+
+# ---------------------------------------------------------------------------
+# AI: damage-over-time ticks are no sighting of whoever applied them
+# ---------------------------------------------------------------------------
+
+func _case_ai_ticks() -> void:
+	var victim = _spawn("Guard", Vector2(3800, 3000))
+	var foe = _spawn("Poisoner", Vector2(3900, 3000))
+	await _await_frames(2)
+	victim.faction_id = "golden_guard"
+	foe.faction_id = "bandits"
+	var ai = victim.get_node("AI")
+	_check("ai.fixture-enemies", ai._is_enemy(foe))
+	# Already chasing the poisoner, who has slipped out of sight.
+	ai._acquire_target(foe)
+	foe.global_position = Vector2(4400, 3400)
+	ai._target_occluded_time = 1.5
+	var seen_at: Vector2 = ai.last_known_target_pos
+	var burn = victim.condition_manager.apply_condition("poisoned", foe, 1, 10.0)
+	_check("ai.tick-fixture", burn != null)
+	if burn != null:
+		var hp0: int = victim.current_health
+		burn.last_trigger_times.clear()
+		victim.condition_manager._process(0.016)
+		_check("ai.tick-dealt-damage", victim.current_health < hp0, [hp0, victim.current_health])
+		_check("ai.tick-keeps-last-known", ai.last_known_target_pos == seen_at, [ai.last_known_target_pos, seen_at])
+		_check("ai.tick-keeps-occlusion-clock", is_equal_approx(ai._target_occluded_time, 1.5), ai._target_occluded_time)
+	# A real hit from them is still identification.
+	victim.take_damage({"slashing": 1}, victim.global_position, foe)
+	_check("ai.hit-refreshes", ai.last_known_target_pos == foe.global_position and is_equal_approx(ai._target_occluded_time, 0.0),
+		[ai.last_known_target_pos, ai._target_occluded_time])
+
+	# A victim with no target isn't handed one by a tick.
+	var bystander = _spawn("Watchman", Vector2(3800, 3200))
+	await _await_frames(2)
+	bystander.faction_id = "golden_guard"
+	var bai = bystander.get_node("AI")
+	var p2 = bystander.condition_manager.apply_condition("poisoned", foe, 1, 10.0)
+	if p2 != null:
+		p2.last_trigger_times.clear()
+		bystander.condition_manager._process(0.016)
+	_check("ai.tick-no-acquire", bai.current_target == null, bai.current_target)
+	_check("ai.tick-still-wakes", bai.alertness_value >= bai.ALERTNESS_SEARCHING_THRESHOLD, bai.alertness_value)
+	_check("ai.flag-cleared", not bystander.condition_manager.firing_triggered_effect)

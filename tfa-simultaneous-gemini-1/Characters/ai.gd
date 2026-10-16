@@ -450,6 +450,14 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	# OWN body (ProceduralCharacter.gd:6038 re-globalizes the local hit pos), so
 	# the fallback below sends SEARCHING to the ground under our feet: arrive
 	# instantly, spin for 2.5s, stand down, get killed.
+	# A damage-over-time tick (Burning, Poisoned... carries the condition's
+	# applier as `attacker`) is no fresh sighting: refreshing from their live
+	# position every tick reset the occluded-chase give-up and let a blinded
+	# victim acquire its poisoner through walls. It still wakes us; the lead is
+	# only set when we have none at all.
+	if _is_condition_tick():
+		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location if last_heard_position == Vector2.ZERO else Vector2.INF)
+		return
 	var foe := attacker as ProceduralCharacter
 	if foe != null and is_instance_valid(foe) and foe.is_alive() and _is_enemy(foe):
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
@@ -476,6 +484,18 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
 	if attacker:
 		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
+
+
+# True while our character's damage comes from one of its own conditions'
+# ticks: ConditionManager.firing_triggered_effect, or the character's
+# _condition_tick_damage flag where that exists.
+func _is_condition_tick() -> bool:
+	if character == null:
+		return false
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm != null and cm.firing_triggered_effect:
+		return true
+	return "_condition_tick_damage" in character and bool(character.get("_condition_tick_damage"))
 
 
 # Reads `default_alertness` from the character (set by spawn flow from Maps
