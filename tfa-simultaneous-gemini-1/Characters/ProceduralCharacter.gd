@@ -1617,6 +1617,10 @@ func _refresh_condition_display() -> void:
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Which condition this icon is: the world hover tooltip names it when
+		# the cursor is over the icon (UI/WorldHoverInfo.gd). IGNORE stays, so
+		# the icon never takes a click meant for the character.
+		tex_rect.set_meta("cond_id", cond_id)
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
 		_condition_display.add_child(tex_rect)

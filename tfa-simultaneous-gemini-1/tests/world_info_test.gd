@@ -46,6 +46,7 @@ func _ready() -> void:
 		PauseManager.unpause()
 	await _case_characters()
 	await _case_party_panel()
+	await _case_condition_icons()
 	await _case_structures()
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -240,6 +241,100 @@ func _case_party_panel() -> void:
 	_check("panel tooltip is get_tooltip_text", tips.has(inst.get_tooltip_text(TimeManager.absolute_time())) if inst != null else false, tips)
 	_check("panel tooltip carries the description", tips.any(func(t): return t.contains("Probe (") and t.contains("\nProbes things.")), tips)
 	cm.remove_condition("test_world_info")
+
+# ---------------------------------------------------------------------------
+# Overhead condition icons (hover explains the icon; corpses are not explained)
+# ---------------------------------------------------------------------------
+
+func _icon_for(c, cond_id: String):
+	var display = c.get_node_or_null("ConditionDisplay")
+	if display == null:
+		return null
+	for icon in display.get_children():
+		if icon is Control and not icon.is_queued_for_deletion() and icon.get_meta("cond_id", "") == cond_id:
+			return icon
+	return null
+
+func _case_condition_icons() -> void:
+	# A missing or unloadable icon path falls back to the placeholder.
+	var no_icon = Condition.create_from_data({"id": "t_no_icon"})
+	_check("no icon listed: placeholder", no_icon.icon != null)
+	var bad_icon = Condition.create_from_data({"id": "t_bad_icon", "icon": "res://nowhere/missing.png"})
+	_check("bad icon path: placeholder", bad_icon.icon != null)
+
+	var hover = game.get_node("WorldHoverInfo")
+	var party: Array = game.party_chars
+	var npc = _away_npc(party)
+	if npc == null:
+		print("SKIP condition icons (no NPC)")
+		return
+	ConditionManager.register_condition(Condition.create_from_data({"id": "test_icon_probe", "display_name": "Icon Probe",
+		"description": "Marks the probe.", "icon": "res://UI/UI Icons/cond_blessed.png", "duration": 60.0, "traits": {}}))
+	ConditionManager.register_condition(Condition.create_from_data({"id": "test_icon_first", "display_name": "First Probe",
+		"icon": "res://UI/UI Icons/cond_focused.png", "traits": {}}))
+	# Another icon ahead of it in the row, so the hit test must pick the right one.
+	npc.condition_manager.apply_condition("test_icon_first")
+	var inst = npc.condition_manager.apply_condition("test_icon_probe")
+	_check("icon probe applied", inst != null)
+	if inst == null:
+		return
+	# The row only lays out while the NPC is drawn (a hidden HBox skips its
+	# children), so show it as seen; pause first so the LOS pass, which is
+	# frozen while planning, doesn't hide it again. Other conditions (a drawn
+	# blade's ink) can rebuild the row: wait for a laid-out row, then probe
+	# within one frame.
+	var was_visible: bool = npc.visible
+	var was_seen = game._npc_was_truly_seen.get(npc)
+	PauseManager.pause()
+	npc.visible = true
+	game._npc_was_truly_seen[npc] = true
+	await _frames(2)
+	for i in 30:
+		var xs := {}
+		var live := 0
+		for ch in npc.get_node("ConditionDisplay").get_children():
+			if ch is Control and not ch.is_queued_for_deletion():
+				live += 1
+				xs[ch.position.x] = true
+		if xs.size() == live:
+			break
+		await get_tree().process_frame
+	var icon = _icon_for(npc, "test_icon_probe")
+	_check("overhead icon tagged with its condition", icon != null)
+	if icon == null:
+		npc.condition_manager.remove_condition("test_icon_probe")
+		npc.condition_manager.remove_condition("test_icon_first")
+		PauseManager.unpause()
+		return
+	_check("overhead icon stays click-through", icon.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	var centre: Vector2 = icon.get_global_transform() * (icon.size * 0.5)
+	var text: String = hover.condition_icon_text(centre)
+	print("icon hover: ", text.replace("\n", " | "))
+	_check("icon hover: name, time, description, bearer", text.contains("Icon Probe (") and text.contains("Marks the probe.") and text.contains("on " + hover.character_name(npc)), text)
+	_check("icon wins over the character card", hover.character_text(centre) == text)
+	_check("off the icon: no icon text", hover.condition_icon_text(centre + Vector2(0, 40)) == "")
+	game._npc_was_truly_seen[npc] = false
+	_check("unseen NPC: icon not explained", hover.condition_icon_text(centre) == "")
+	game._npc_was_truly_seen[npc] = true
+	# A corpse keeps its conditions, but reads only "Dead".
+	var saved_hp: int = npc.current_health
+	npc.current_health = 0
+	_check("corpse icon not explained", hover.condition_icon_text(centre) == "")
+	var corpse_card: String = hover.character_text(centre)
+	_check("corpse card reads Dead", corpse_card.contains("Dead") and not corpse_card.contains("Icon Probe"), corpse_card)
+	npc.current_health = saved_hp
+	var first = _icon_for(npc, "test_icon_first")
+	if first != null:
+		var first_text: String = hover.condition_icon_text(first.get_global_transform() * (first.size * 0.5))
+		_check("the neighbouring icon explains its own condition", first_text.contains("First Probe") and not first_text.contains("Icon Probe"), first_text)
+	npc.condition_manager.remove_condition("test_icon_probe")
+	npc.condition_manager.remove_condition("test_icon_first")
+	PauseManager.unpause()
+	npc.visible = was_visible
+	if was_seen == null:
+		game._npc_was_truly_seen.erase(npc)
+	else:
+		game._npc_was_truly_seen[npc] = was_seen
 
 # ---------------------------------------------------------------------------
 # Structures (damage states, tint, threshold notices, door status, hover)

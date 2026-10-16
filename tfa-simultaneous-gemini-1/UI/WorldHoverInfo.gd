@@ -7,6 +7,7 @@
 #     (exact HP for the party), stance toward the party, active conditions.
 #     Only characters the party can see (Game.is_seen_by_party, and drawn:
 #     ground view hides roof-walkers), so hidden NPCs aren't revealed.
+#     Over an overhead condition icon: that condition.
 #   structures (priority 20, paused or not): name, door status, damage state
 #     and HP. Structures are drawn regardless of fog, so no sight gate; the
 #     exploration mask keeps never-seen buildings quiet.
@@ -19,6 +20,8 @@ extends Node
 
 const PICK_RADIUS := 40.0            # world px from a character's origin (covers its overhead icons)
 const STRUCTURE_PICK_RADIUS := 8.0
+const ICON_PICK_MARGIN := 1.0        # world px of slack around an overhead condition icon
+const ICON_SEARCH_RADIUS := 160.0    # characters whose icon row could be under the cursor
 const MAX_CONDITION_LINES := 8
 const ICON_PX := 14
 const NAME_FONT_SIZE := 16
@@ -82,6 +85,10 @@ func _quiet() -> bool:
 func character_text(world_pos: Vector2) -> String:
 	if _quiet():
 		return ""
+	# Over one of a character's overhead condition icons: that condition.
+	var icon_text := condition_icon_text(world_pos)
+	if icon_text != "":
+		return icon_text
 	var c = pick_character(world_pos)
 	if c == null:
 		return ""
@@ -160,6 +167,48 @@ func condition_lines(c) -> PackedStringArray:
 	if hidden > 0:
 		out.append(_col("+%d more" % hidden, COLOR_MUTED))
 	return out
+
+## The overhead condition icon (ProceduralCharacter's ConditionDisplay) under
+## world_pos, explained: icon, name, stacks, time left, description. "" when
+## the cursor isn't on one. The icons stay MOUSE_FILTER_IGNORE, so this hit
+## test (in each icon's own frame: they turn with the character) stands in
+## for a Control tooltip without taking clicks from the character.
+func condition_icon_text(world_pos: Vector2) -> String:
+	if game == null or not ("characters_in_scene" in game):
+		return ""
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c) or not c.visible:
+			continue
+		# A corpse reads only "Dead": its frozen conditions are not explained.
+		if c.has_method("is_alive") and not c.is_alive():
+			continue
+		if world_pos.distance_to(c.global_position) > ICON_SEARCH_RADIUS:
+			continue
+		var display = c.get_node_or_null("ConditionDisplay")
+		if display == null or not display.visible:
+			continue
+		if game.has_method("is_seen_by_party") and not game.is_seen_by_party(c):
+			continue
+		for icon in display.get_children():
+			if not (icon is Control) or icon.is_queued_for_deletion() or not icon.has_meta("cond_id"):
+				continue
+			var local: Vector2 = icon.get_global_transform().affine_inverse() * world_pos
+			if not Rect2(Vector2.ZERO, icon.size).grow(ICON_PICK_MARGIN).has_point(local):
+				continue
+			var cm = c.get("condition_manager")
+			var inst = cm.conditions.get(icon.get_meta("cond_id")) if cm != null and is_instance_valid(cm) else null
+			if inst != null:
+				return describe_condition(inst, c)
+	return ""
+
+func describe_condition(inst, c = null) -> String:
+	var line := "%s[b]%s[/b]" % [_icon_bb(inst), _esc(inst.get_summary(TimeManager.absolute_time()))]
+	var lines: PackedStringArray = [line]
+	if inst.condition and inst.condition.description != "":
+		lines.append(_esc(inst.condition.description))
+	if c != null:
+		lines.append(_col("on " + _esc(character_name(c)), COLOR_MUTED))
+	return "\n".join(lines)
 
 func character_name(c) -> String:
 	var n := str(c.get("Name")) if c.get("Name") != null else ""
