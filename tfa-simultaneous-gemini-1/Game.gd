@@ -1295,6 +1295,8 @@ func setup_map_weather(map_data: Dictionary) -> void:
 			weather_vfx_controller.setup_for_map(weather_group)
 	if weather_debug_window and weather_debug_window.has_method("set_weather_group"):
 		weather_debug_window.set_weather_group(weather_group)
+	# Arriving in weather is visible on screen; only later changes are announced.
+	_announced_precip = WeatherManager.get_precipitation(weather_group) if not weather_group.is_empty() else "clear"
 	# Apply initial weather effects to fluids
 	if not weather_group.is_empty():
 		var weather = WeatherManager.get_weather(weather_group)
@@ -1314,13 +1316,34 @@ func force_weather(precip_type: String) -> void:
 	# effects directly, since no group state exists for the signal path to use.
 	if weather_vfx_controller and weather_vfx_controller.has_method("force_precipitation"):
 		weather_vfx_controller.force_precipitation(precip_type)
+	_announce_weather_change(precip_type)
 	_apply_weather_fluid_effects({"precipitation": precip_type})
 
 func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 	var map_group = current_map_data.get("weather_group", "")
 	if group != map_group or map_group.is_empty():
 		return
+	_announce_weather_change(String(weather_state.get("precipitation", "clear")))
 	_apply_weather_fluid_effects(weather_state)
+
+# Precipitation last announced (or present on arrival) for the current map.
+# weather_changed also fires for wind-only changes and same-weather daily
+# rolls, so only an actual precipitation change is logged.
+var _announced_precip: String = "clear"
+
+func _announce_weather_change(precip: String) -> void:
+	if precip == _announced_precip:
+		return
+	_announced_precip = precip
+	var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
+	GameLog.add_entry("The weather turns: %s." % str(pd.get("display_name", precip.replace("_", " ").capitalize())))
+
+func _count_ice_tiles() -> int:
+	var n: int = 0
+	for tile_pos in surface_manager.surface_grid:
+		if surface_manager.surface_grid[tile_pos].get("surface_id", "") == "ice":
+			n += 1
+	return n
 
 func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 	var precip = weather.get("precipitation", "clear")
@@ -1328,7 +1351,10 @@ func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 		"snow", "heavy_snow", "freezing_rain":
 			# Freeze all existing fluids
 			if surface_manager:
+				var ice_before: int = _count_ice_tiles()
 				surface_manager.try_freeze_all_fluids()
+				if _count_ice_tiles() > ice_before:
+					GameLog.add_entry("Standing puddles freeze into slick ice.")
 		"rain", "heavy_rain", "acid_rain":
 			# Spawn random water puddles across walkable tiles
 			_spawn_rain_puddles(precip)
@@ -1631,8 +1657,10 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 		options = target.get("interact_options").duplicate() if "interact_options" in target else ["Inspect"]
 		# Inject "Trade" for any non-hostile character. FactionDatabase is the
 		# authoritative relationship source. Treat allies/neutrals as
-		# tradeable; only true hostiles are blocked.
-		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options:
+		# tradeable; only true hostiles are blocked. Party members share items
+		# through the party panel, so they get no Trade.
+		if not FactionDatabase.are_hostile("player", target.faction_id) and not "Trade" in options \
+				and not (target in party_chars):
 			options.append("Trade")
 		# Party members take a hold-ground order: WAIT stops all AI movement
 		# (they still auto-attack hostiles entering their line of sight);
@@ -3170,8 +3198,11 @@ func _sync_character_flags() -> void:
 		if not is_instance_valid(character):
 			continue
 		if character in selected_characters:
+			var was_ai: bool = character.AI_enabled
 			character.is_player_controlled = true
 			character.AI_enabled = false
+			if was_ai:
+				_clear_companion_ai(character)
 		else:
 			# Losing input authority must also end any planning gesture still in
 			# flight. ProceduralCharacter._handle_input is is_player_controlled-
@@ -3186,8 +3217,34 @@ func _sync_character_flags() -> void:
 			# Confirmed plans are never touched.
 			if character.is_player_controlled:
 				character.abort_planning_input()
+			var was_player: bool = not character.AI_enabled
 			character.is_player_controlled = false
 			character.AI_enabled = true
+			if was_player:
+				_clear_companion_ai(character)
+
+## Called once when control of a party member changes hands, never per frame.
+## process_ai doesn't run while AI_enabled is false, so a "?" raised while the
+## companion was AI-driven would never decay or hide once the player took over,
+## and alertness piled up while player-driven (hits, party call-outs) would send
+## it SEARCHING toward a stale spot once control is handed back. A fight still
+## in view is re-acquired by the next target scan.
+func _clear_companion_ai(character: ProceduralCharacter) -> void:
+	var ai = character.get_node_or_null("AI")
+	if ai and ai.current_state != ai.AIState.DEAD:
+		ai.current_target = null
+		ai.nav_path.clear()
+		ai.nav_path_index = 0
+		ai._change_state(ai.AIState.IDLE)
+		ai._set_alertness_value(0.0)
+	if character._alertness_flash_tween and character._alertness_flash_tween.is_valid():
+		character._alertness_flash_tween.kill()
+	character._alertness_flash_tween = null
+	character._outcry_flash_period = -1.0
+	var indicator = character.get_node_or_null("AlertnessIndicator")
+	if indicator:
+		indicator.visible = false
+		indicator.modulate.a = 1.0
 
 func is_character_selected(character: ProceduralCharacter) -> bool:
 	return character in selected_characters
