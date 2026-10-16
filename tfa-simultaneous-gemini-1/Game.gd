@@ -281,6 +281,12 @@ func _ready() -> void:
 	_setup_surrender_button()
 	_setup_threat_indicators()
 
+	# On-screen game log (GameLog.add_entry is the standard channel for
+	# refusals and announcements; this is what makes it visible).
+	var log_panel := PanelContainer.new()
+	log_panel.set_script(preload("res://game_log_panel.gd"))
+	$GameUI.add_child(log_panel)
+
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
 	# nothing may be added below the load_map call.

@@ -9,8 +9,38 @@ signal game_unpaused
 
 var is_paused: bool = false
 
+# On-screen "PAUSED" banner. Clicks queue orders while paused and act at
+# once while running, so the player always needs to know which mode they're in.
+var _indicator_layer: CanvasLayer
+var _indicator: Label
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_build_indicator()
+
+func _build_indicator() -> void:
+	_indicator_layer = CanvasLayer.new()
+	_indicator_layer.layer = 50
+	add_child(_indicator_layer)
+	_indicator = Label.new()
+	_indicator.text = "PAUSED — planning  ·  Space to resume"
+	_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_indicator.add_theme_font_size_override("font_size", 20)
+	_indicator.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
+	_indicator.add_theme_constant_override("outline_size", 6)
+	_indicator.anchor_left = 0.5
+	_indicator.anchor_right = 0.5
+	_indicator.offset_left = -250
+	_indicator.offset_right = 250
+	_indicator.offset_top = 12
+	_indicator.visible = false
+	_indicator_layer.add_child(_indicator)
+
+func _update_indicator() -> void:
+	if _indicator:
+		_indicator.visible = is_paused
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
@@ -32,6 +62,7 @@ func pause() -> void:
 	# Also pause TimeManager's game time
 	if TimeManager:
 		TimeManager.pause_time()
+	_update_indicator()
 	
 	emit_signal("game_paused")
 
@@ -44,5 +75,6 @@ func unpause() -> void:
 	# Also resume TimeManager's game time
 	if TimeManager:
 		TimeManager.resume_time()
+	_update_indicator()
 	
 	emit_signal("game_unpaused")
