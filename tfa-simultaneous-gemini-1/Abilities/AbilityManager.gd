@@ -16,6 +16,16 @@ const SCHOOL_RESOURCE_MAP := {
 	"Occult": "souls",
 }
 
+## An execution-time range clamp that moves the point further than this is
+## announced (a planned cast whose caster stopped short of its node).
+const RANGE_CLAMP_NOTICE_PX := 16.0
+
+## Player-facing text for an unmet requirements.traits entry; any other id
+## reads "Requires <Id>".
+const REQUIREMENT_REASONS := {
+	"has_shield": "Needs a shield",
+}
+
 ## Reference to the character this manager belongs to
 @export var character_path: NodePath = ".."
 var character: Node
@@ -44,6 +54,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if current_cast.is_empty():
+		return
+	# Casts hold still while the game is paused, like ActionQueue. This node
+	# inherits PROCESS_MODE_ALWAYS from the character, so it must check itself.
+	if PauseManager.is_paused:
 		return
 
 	var state = current_cast.get("state", "")
@@ -95,11 +109,16 @@ func _anchored_position(ability: Ability, anchor, fallback: Vector2) -> Vector2:
 
 
 ## Use an ability. Entry point for all ability execution.
+## target_data keys: "position", "targets" (explicitly picked characters),
+## "anchor" (a designated character to re-aim at) and "free" (an item's cast:
+## skips the incapacitation, requirement and school-resource gates and the
+## cost; the item already paid).
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if ability == null:
 		push_warning("AbilityManager.use_ability: received null ability")
 		return false
-	var can_use = _check_ability_usable(ability)
+	var free: bool = bool(target_data.get("free", false))
+	var can_use = _check_ability_usable(ability, free)
 	if not can_use["success"]:
 		cast_failed.emit(ability, can_use["reason"])
 		return false
@@ -121,6 +140,27 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	# to the cast point. Mirrors the per-step "self" override in _execute_current_step.
 	if ability.targeting.get("type", "") == "self":
 		target_position = character.global_position
+
+	# Ability range is measured from where the caster actually stands now. The
+	# targeting preview already clamps to the ring around the caster (or the
+	# planned node); this covers a caster who stopped short, and any caller
+	# that skipped targeting. Picked characters were range-checked when picked,
+	# and a designated character (anchor) re-aims the cast anyway. A cone's
+	# point only aims it (its reach is its radius), so it is left alone.
+	# Only an anchor that actually re-aimed counts: a ground AoE ignores the
+	# anchor the AI passes with every cast, and a dead one falls back to the
+	# planned point, which the clamp still covers.
+	var max_range: float = float(ability.targeting.get("range", 0.0))
+	var has_anchor: bool = _anchored_position(ability, target_anchor, Vector2.INF) != Vector2.INF
+	if ability.targeting.get("type", "") != "self" and max_range > 0.0 and explicit_targets.is_empty() \
+			and not has_anchor and not free and String(ability.targeting.get("shape", "")) != "cone":
+		var clamped := clamp_point_to_range(character.global_position, target_position, max_range)
+		if clamped != target_position and clamped.distance_to(target_position) > RANGE_CLAMP_NOTICE_PX \
+				and character.has_method("is_party_member") and character.is_party_member() \
+				and not (character.get("ai_cast_attempt") == true):
+			character.notify("Out of range", Color(1.0, 0.6, 0.4), "%s's %s falls short: the target was %d away, range %d." % [
+				character.Name, ability.display_name, int(character.global_position.distance_to(target_position)), int(max_range)])
+		target_position = clamped
 
 	# Infatuated: block offensive abilities that would hit the charm source
 	if _would_hit_infatuation_source(ability, target_position):
@@ -146,20 +186,31 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, "Illegal here: " + str(verdict.get("display_name", "")))
 		return false
 
-	if not _pay_ability_costs(ability):
+	if not free and not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
+
+	# Concentration: an item's cast never concentrates (the item pays). A new
+	# Concentration spell lets the held one go as soon as it is committed.
+	if free:
+		ability.set_meta("free_cast", true)
+	else:
+		if ability.has_meta("free_cast"):
+			ability.remove_meta("free_cast")
+		if ability.is_concentration() and character.has_method("end_concentration") and not character.active_concentrations.is_empty():
+			character.end_concentration("replaced", ability.display_name)
 
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position, explicit_targets, target_anchor)
 		return true
 
-	_start_casting(ability, target_position, explicit_targets, target_anchor)
+	_start_casting(ability, target_position, explicit_targets, target_anchor, free)
 	return true
 
 
-## Start the casting process (windup before execution)
-func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null) -> void:
+## Start the casting process (windup before execution). A free (item) cast
+## is never interrupted: the item is already spent.
+func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null, free: bool = false) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "casting",
@@ -167,7 +218,8 @@ func _start_casting(ability: Ability, target_position: Vector2, explicit_targets
 		"explicit_targets": explicit_targets,
 		"anchor": target_anchor,
 		"cast_progress": 0.0,
-		"cast_time": ability.cast_time
+		"cast_time": ability.cast_time,
+		"free": free,
 	}
 
 	if character and character.has_node("AttackAnimator"):
@@ -308,6 +360,9 @@ func _execute_current_step() -> void:
 
 ## Resolve a step's effects and advance
 func _resolve_step_and_advance(ability: Ability, step: Dictionary, target_pos: Vector2) -> void:
+	# The sequence was cancelled (the caster died) while a dash was under way.
+	if current_cast.is_empty() or current_cast.get("ability") != ability:
+		return
 	var step_effects = step.get("effects", [])
 
 	# Per-step animation
@@ -439,6 +494,18 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 	return results
 
 
+## `point` pulled back along the line from `origin` to at most `max_range`
+## away (unchanged when max_range <= 0 or it is already in range). The one
+## clamp shared by the targeting preview, its confirm and execution.
+static func clamp_point_to_range(origin: Vector2, point: Vector2, max_range: float) -> Vector2:
+	if max_range <= 0.0 or not point.is_finite() or not origin.is_finite():
+		return point
+	var offset := point - origin
+	if offset.length() <= max_range:
+		return point
+	return origin + offset.normalized() * max_range
+
+
 ## Build the per-school resource cost dict for an ability from its trait tags.
 ## { "Arcane": 2, "Fire": 3 } → { "focus": 2 } (Fire is not a school tag).
 static func school_costs_for(ability: Ability) -> Dictionary:
@@ -468,16 +535,28 @@ func _is_innate_ability(ability: Ability) -> bool:
 	return ability.id in RaceDatabase.get_race_data(rid).get("active_abilities", [])
 
 
-## Check if ability can be used
-func _check_ability_usable(ability: Ability) -> Dictionary:
-	var cm = _get_condition_manager()
-	if cm and (cm.has_active_condition("apathetic") or cm.has_active_condition("stunned")):
-		return {"success": false, "reason": "Cannot act"}
+## Check if ability can be used. Reasons are player-facing (floated over the
+## caster and logged by ProceduralCharacter._announce_cast_failure).
+## A "free" cast (an item's use_ability, e.g. a potion handed to an ally) is a
+## passive effect on the recipient: only the "Already casting" gate applies.
+func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
+	# Stunned / Frozen / Apathetic / Unconscious (the "incapacitate" trait): no
+	# casting, though a free cast (a potion poured into a stunned ally) lands.
+	var incap = null if free else _get_incapacitating_condition()
+	if incap != null:
+		return {"success": false, "reason": AbilityEffect.condition_display_name(incap.condition.id)}
+
+	# Equipment / trait requirements (Shield Bash needs a shield) come before
+	# the resource gate: "Needs a shield" is the reason that helps.
+	if not free:
+		for t in ability.requirements.get("traits", []):
+			if not _meets_requirement(String(t)):
+				return {"success": false, "reason": requirement_reason(String(t))}
 
 	# NPCs without school tiers opt out of the cost gate so legacy enemies
 	# don't lose their kit until their data is hand-tagged. Racial actives opt
 	# out for the same reason — see _is_innate_ability.
-	var skip_resource_gate: bool = ("npc_unlimited_resources" in character and character.npc_unlimited_resources) \
+	var skip_resource_gate: bool = free or ("npc_unlimited_resources" in character and character.npc_unlimited_resources) \
 		or _is_innate_ability(ability)
 
 	if not skip_resource_gate:
@@ -486,10 +565,14 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 			var cost: int = int(costs[resource_name])
 			if character.has_method("_get_character_resource"):
 				var current = character._get_character_resource(resource_name)
+				# Casting a new Concentration spell ends the held one, so the
+				# focus it holds counts as available.
+				if resource_name == "focus" and ability.is_concentration() and "concentration_locked_focus" in character:
+					current += character.concentration_locked_focus
 				if current < cost:
 					return {"success": false, "reason": "Not enough %s" % resource_name}
 
-	var reqs = ability.requirements
+	var reqs: Dictionary = {} if free else ability.requirements
 	var required_conditions = reqs.get("conditions", [])
 	if not required_conditions.is_empty():
 		var cond_manager = _get_condition_manager()
@@ -512,6 +595,36 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 			return {"success": false, "reason": "Already casting"}
 
 	return {"success": true}
+
+
+## Player-facing text for an unmet requirements.traits entry.
+static func requirement_reason(trait_id: String) -> String:
+	if REQUIREMENT_REASONS.has(trait_id):
+		return String(REQUIREMENT_REASONS[trait_id])
+	return "Requires %s" % trait_id.capitalize()
+
+
+## A requirements.traits entry: the character's own predicate when it has one
+## (has_shield checks the hands), else its trait tier.
+func _meets_requirement(trait_id: String) -> bool:
+	if character.has_method("meets_ability_requirement"):
+		return character.meets_ability_requirement(trait_id)
+	return "traits" in character and int(character.traits.get(trait_id, 0)) > 0
+
+
+## The active condition that keeps the caster from acting (Stunned, Frozen,
+## Apathetic, Unconscious: the "incapacitate" trait), or null. Uses the
+## character's own query when it has one.
+func _get_incapacitating_condition():
+	if character and character.has_method("get_incapacitating_condition"):
+		return character.get_incapacitating_condition()
+	var cm = _get_condition_manager()
+	if cm == null:
+		return null
+	for inst in cm.get_conditions_with_trait("incapacitate"):
+		if inst.is_active():
+			return inst
+	return null
 
 
 ## Check if an ability would offensively affect the caster's infatuation source
@@ -563,25 +676,32 @@ func _pay_ability_costs(ability: Ability) -> bool:
 	if _is_innate_ability(ability):
 		return true
 	var costs := school_costs_for(ability)
-	# Concentration spells lock the focus they pay until the spell ends.
-	var concentration: bool = ability.traits.has("Concentration") or ability.traits.has("concentration")
 	for resource_name in costs:
+		# A Concentration spell's focus is held, not spent: the character
+		# locks it when the spell lands (ProceduralCharacter.begin_concentration)
+		# and gets it back when the spell ends.
+		if resource_name == "focus" and ability.is_concentration():
+			continue
 		var cost: int = int(costs[resource_name])
 		if character.has_method("_spend_character_resource"):
 			if not character._spend_character_resource(resource_name, cost):
 				return false
-	if concentration and costs.has("focus") and character.has_method("_begin_concentration"):
-		character._begin_concentration(ability.id, int(costs["focus"]))
 	return true
 
 
-## Interrupt current cast
-func interrupt_cast(reason: String = "Interrupted") -> bool:
-	if current_cast.is_empty():
+## Interrupt the current windup. Only a cast still winding up ("casting") can
+## be interrupted: a multi-step sequence may be mid-dash. An item (free) cast
+## never is. An "interruptible": false ability shrugs off hits and knockback,
+## but `force` (an incapacitating condition) still ends it. Returns true when
+## the cast was stopped; cast_interrupted carries the reason for feedback.
+func interrupt_cast(reason: String = "Interrupted", force: bool = false) -> bool:
+	if current_cast.get("state", "") != "casting":
+		return false
+	if current_cast.get("free", false):
 		return false
 
 	var ability = current_cast.get("ability") as Ability
-	if ability and not ability.interruptible:
+	if ability and not ability.interruptible and not force:
 		return false
 
 	current_cast.clear()
@@ -592,6 +712,23 @@ func interrupt_cast(reason: String = "Interrupted") -> bool:
 		cast_interrupted.emit(ability, reason)
 
 	return true
+
+
+## Drop any windup or step sequence outright (the caster died). With
+## `keep_uninterruptible`, an "interruptible": false ability is left to finish
+## (a dying breath). Still emits cast_interrupted so the character's preview and
+## arm pose are cleaned up; an empty reason means no announcement.
+func cancel_cast(reason: String = "", keep_uninterruptible: bool = false) -> void:
+	if current_cast.is_empty():
+		return
+	var ability = current_cast.get("ability") as Ability
+	if keep_uninterruptible and ability and not ability.interruptible:
+		return
+	current_cast.clear()
+	_current_step_index = -1
+	_step_waiting = false
+	if ability:
+		cast_interrupted.emit(ability, reason)
 
 
 ## Whether the manager is currently executing an ability

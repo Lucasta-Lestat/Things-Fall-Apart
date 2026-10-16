@@ -62,6 +62,11 @@ func _calculate_magnitude(entity: Node2D) -> float:
 	return base_magnitude
 
 
+## Outline colour for ForceField._draw
+func _field_tint() -> Color:
+	return field_color
+
+
 ## Flip polarity
 func flip_polarity() -> void:
 	match polarity:

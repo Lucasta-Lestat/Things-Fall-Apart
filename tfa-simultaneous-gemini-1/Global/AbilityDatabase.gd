@@ -22,12 +22,39 @@ func _load_database() -> void:
 		#print("ability data: ")
 		for entry in data.get("abilities", []):
 			_abilities[entry["id"]] = entry
+			_validate_concentration(entry)
 		#	print(_abilities[entry["id"]])
 	else:
 		push_error("Failed to parse Ability JSON: ", json.get_error_message())
 	print(" 
 	
 	===== end Ability list")
+
+# A Concentration spell holds Arcane focus and is tied to the conditions,
+# fields and clouds it installs; flag data that can't work that way.
+func _validate_concentration(entry: Dictionary) -> void:
+	var traits = entry.get("traits", {})
+	if not (traits is Dictionary) or not (traits.has("Concentration") or traits.has("concentration")):
+		return
+	var id := String(entry.get("id", "?"))
+	if int(traits.get("Arcane", 0)) <= 0:
+		push_warning("AbilityDatabase: %s has Concentration but no Arcane tier, so it holds no focus." % id)
+	var effects: Array = []
+	var effect_lists: Array = [entry.get("effects", [])]
+	for step in entry.get("steps", []):
+		if step is Dictionary:
+			effect_lists.append(step.get("effects", []))
+	# An effects block may be one dict or a list of them.
+	for list in effect_lists:
+		if list is Dictionary:
+			effects.append(list)
+		elif list is Array:
+			effects.append_array(list)
+	for eff in effects:
+		if eff is Dictionary and String(eff.get("type", "")) in ["apply_condition", "force_field", "cloud"]:
+			return
+	push_warning("AbilityDatabase: %s has Concentration but no condition, field or cloud to hold; it never concentrates." % id)
+
 func get_ability_data(ability_id: String) -> Dictionary:
 	if _abilities.has(ability_id):
 		return _abilities[ability_id]

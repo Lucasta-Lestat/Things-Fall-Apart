@@ -1708,7 +1708,7 @@ func _build_resource_bars(character, row: Container) -> Array:
 		pip_box.add_theme_constant_override("separation", 2)
 		pip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(pip_box)
-		var pips: Array = _rebuild_pips(pip_box, tex, _resource_max(character, resource_name), entry["color"], int(character.get(resource_name)), resource_name, school)
+		var pips: Array = _rebuild_pips(pip_box, tex, _resource_max(character, resource_name), entry["color"], int(character.get(resource_name)), resource_name, school, character)
 		bars.append({
 			"pip_box": pip_box,
 			"pips": pips,
@@ -1721,10 +1721,12 @@ func _build_resource_bars(character, row: Container) -> Array:
 
 
 # Creates `max_val` TextureRect pips inside `pip_box`, returns the array.
-# Pips with index < current are tinted with the school colour; the rest grey.
-func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: Color, current: int, resource_name: String, school: String) -> Array:
+# Pips with index < current are tinted with the school colour (focus held by
+# Concentration in lavender, after the spendable ones); the rest grey.
+func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: Color, current: int, resource_name: String, school: String, character = null) -> Array:
 	for child in pip_box.get_children():
 		child.queue_free()
+	var held: int = _held_amount(character, resource_name)
 	var pips: Array = []
 	for i in range(max(0, max_val)):
 		var pip := TextureRect.new()
@@ -1732,11 +1734,36 @@ func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: 
 		pip.custom_minimum_size = RESOURCE_ICON_SIZE
 		pip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pip.mouse_filter = Control.MOUSE_FILTER_STOP
-		pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
-		pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
+		pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val] + _held_tooltip(character, resource_name)
+		pip.modulate = _pip_color(i, current, held, color)
 		pip_box.add_child(pip)
 		pips.append(pip)
 	return pips
+
+
+# How much of a pool is held and can't be spent: focus held by Concentration.
+func _held_amount(character, resource_name: String) -> int:
+	if character != null and resource_name == "focus" and "concentration_locked_focus" in character:
+		return int(character.concentration_locked_focus)
+	return 0
+
+
+# Spendable pips in the school colour, then held pips in lavender (the
+# Concentration colour), then empty grey.
+func _pip_color(i: int, current: int, held: int, color: Color) -> Color:
+	if i < current - held:
+		return color
+	if i < current:
+		return Color(0.8, 0.65, 1.0)
+	return Color(0.3, 0.3, 0.3, 1.0)
+
+
+# "\n2 held by Concentration: Gravity Well" for the focus pip tooltip, else "".
+func _held_tooltip(character, resource_name: String) -> String:
+	var held: int = _held_amount(character, resource_name)
+	if held <= 0 or not character.has_method("get_concentration_names"):
+		return ""
+	return "\n%d held by Concentration: %s" % [held, ", ".join(character.get_concentration_names())]
 
 
 # Per-school resource cap (mirrors max_<resource> getters on ProceduralCharacter,
@@ -1782,14 +1809,15 @@ func _update_resource_bars(data: Dictionary, character) -> void:
 		# Max can grow mid-run (vow_holy_bonus from Chastity, saint-day bonuses,
 		# etc.) so rebuild the pip row if the displayed count is stale.
 		if pips.size() != max_val:
-			pips = _rebuild_pips(entry["pip_box"], entry["icon"], max_val, entry["color"], current, resource_name, school)
+			pips = _rebuild_pips(entry["pip_box"], entry["icon"], max_val, entry["color"], current, resource_name, school, character)
 			entry["pips"] = pips
 			continue
 		var color: Color = entry["color"]
+		var held: int = _held_amount(character, resource_name)
 		for i in range(pips.size()):
 			var pip: TextureRect = pips[i]
-			pip.modulate = color if i < current else Color(0.3, 0.3, 0.3, 1.0)
-			pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val]
+			pip.modulate = _pip_color(i, current, held, color)
+			pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val] + _held_tooltip(character, resource_name)
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]

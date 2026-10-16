@@ -777,10 +777,14 @@ var devotion: int = 0
 var souls: int = 0
 var stress: int = 0  # Will-based stress meter; at max it rolls an affliction
 
-# Focus paid into an active Concentration spell stays locked until the spell ends.
+# Focus held by an active Concentration spell (part of `focus`, not spendable)
+# until the spell ends.
 var concentration_locked_focus: int = 0
-# Concentration tracking: ability_id -> locked_focus_amount
+# Concentration tracking: ability_id -> {"name": String, "focus": int,
+# "conditions": Array of {"target", "condition_id", "instance"},
+# "objects": Array of Nodes (force fields, clouds)}: what the cast installed.
 var active_concentrations: Dictionary = {}
+const CONCENTRATION_COLOR := Color(0.8, 0.65, 1.0)
 
 # Rich soul records captured by bind_soul. Each entry is a Dictionary describing
 # the source victim (name, race, gender, intelligence, traits...). Overflow beyond
@@ -1713,6 +1717,20 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 		# Ghostly translucency: the player can still find their own invisible
 		# characters; AI target selection is what actually ignores them.
 		modulate.a = 0.35
+	_react_to_incapacitation(instance)
+
+## Stunned / Frozen / Apathetic / Unconscious (the "incapacitate" trait)
+## landing, or coming out of suppression, ends a windup, even one marked
+## "interruptible": false.
+func _react_to_incapacitation(instance: ConditionInstance) -> void:
+	if instance == null or instance.condition == null or not instance.is_active():
+		return
+	if not instance.condition.traits.has("incapacitate"):
+		return
+	var cond_name: String = AbilityEffect.condition_display_name(instance.condition.id)
+	interrupt_cast(cond_name, true)
+	if not active_concentrations.is_empty():
+		end_concentration("incapacitated", cond_name)
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -3609,6 +3627,8 @@ func _process(delta: float) -> void:
 				mp_regen_timer -= mp_regen_interval
 				MP = min(MP + mp_regen_amount, max_MP)
 		_tick_school_resources(delta)
+		if not active_concentrations.is_empty():
+			_tick_concentration()
 		# Delegate to AI child node. A party member EXECUTING a drawn tactical
 		# path keeps its brain even while selected: the path takes MOVEMENT
 		# authority (ai.gd _movement_locked), not the right to fight. Without this
@@ -5785,6 +5805,29 @@ func has_weapon_equipped() -> bool:
 	"""Check if character is holding a weapon"""
 	return current_main_hand_item != null or current_off_hand_item != null
 
+## True when either hand holds a shield (buckler, iron_shield): a WeaponShape
+## of the SHIELD type, or one whose Items.json entry is a shield. The dict is
+## read directly so a procedural id that isn't in Items.json doesn't push a
+## lookup warning.
+func has_shield() -> bool:
+	for item in [current_off_hand_item, current_main_hand_item]:
+		if not is_instance_valid(item) or not (item is WeaponShape):
+			continue
+		if item.weapon_type == WeaponShape.WeaponType.SHIELD:
+			return true
+		if String(item.id) != "":
+			var entry = ItemDatabase.equipment.get(Globals.name_to_id(String(item.id)), {})
+			if entry is Dictionary and String(entry.get("type", "")).to_lower() == "shield":
+				return true
+	return false
+
+## An ability's requirements.traits entry ("has_shield"), else a trait tier.
+func meets_ability_requirement(trait_id: String) -> bool:
+	match trait_id:
+		"has_shield":
+			return has_shield()
+	return int(traits.get(trait_id, 0)) > 0
+
 # ===== PUBLIC EQUIPMENT API =====
 
 
@@ -6602,6 +6645,16 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		emit_signal("damaged_by", attacker, world_hit, float(total_damage))
 		health_changed.emit(current_health, max_health, self)
 	_check_death()
+	# A hit that gets through breaks a windup. Damage-over-time ticks (fired
+	# from inside the ConditionManager's tick) and hits armour soaked up
+	# entirely don't; a lethal hit goes through the death path.
+	var dot_tick: bool = condition_manager != null and condition_manager.firing_triggered_effect
+	if total_damage > 0 and is_alive() and not dot_tick:
+		# Named only when the party can see the attacker; a hidden archer stays hidden.
+		var hit_by: String = "took a hit"
+		if is_instance_valid(attacker) and attacker is ProceduralCharacter and attacker != self and attacker._announces_to_party():
+			hit_by = "hit by %s" % attacker.Name
+		interrupt_cast(hit_by)
 	return total_damage
 
 
@@ -6813,8 +6866,8 @@ func _enter_corpse_state() -> void:
 	# corpse. An armed targeting preview kept following the mouse forever over
 	# the battlefield and overlapped every later cast's preview (playtest
 	# find); queued ghost indicators outlived their caster; an in-flight cast
-	# would complete from a corpse. Scrub all three. (interrupt_cast respects
-	# non-interruptible abilities — a dying breath may still finish those.)
+	# would complete from a corpse. Scrub all three. (Non-interruptible
+	# abilities are kept — a dying breath may still finish those.)
 	if targeting_system != null:
 		targeting_system.cancel_targeting()
 		targeting_system.clear_all_queued_indicators()
@@ -6831,7 +6884,9 @@ func _enter_corpse_state() -> void:
 	if action_queue != null:
 		action_queue.cancel_all()
 	if ability_manager != null:
-		ability_manager.interrupt_cast("caster died")
+		# Windups and step sequences alike, silently; interrupt_cast now only
+		# covers windups and announces.
+		ability_manager.cancel_cast("", true)
 	# Corpse body physics: move the body OFF the CHARACTERS layer instead of
 	# disabling its shape. Melee kills arrive inside the weapon-hitbox
 	# body_entered flush, where the physics server silently REJECTS
@@ -7358,6 +7413,8 @@ func get_stat_by_name(stat_name) -> int:
 func saving_throw(stat_name, save_bonus: int = 0) -> int:
 	var stat: int = get_stat_by_name(stat_name)
 	var roll: int = randi() % 100 + 1
+	last_save_roll = roll
+	last_save_target = stat + save_bonus
 	var margin: int = stat + save_bonus - roll
 	# Explicit `: bool` rather than `:=` — CRIT_THRESHOLD / CRIT_FAIL_THRESHOLD
 	# are declared untyped (var CRIT_THRESHOLD = 5), so the comparison result
@@ -7372,6 +7429,12 @@ func saving_throw(stat_name, save_bonus: int = 0) -> int:
 		if margin <= -50 or crit_fail:
 			return 1
 		return 0
+
+## saving_throw's last d100 roll and the target it rolled against (-1 before
+## any save), read by ConditionManager's save notices and log lines.
+var last_save_roll: int = -1
+var last_save_target: int = -1
+
 func _calculate_success_level(roll: int, target: int) -> int:
 	var margin = target - roll
 	var level = 0
@@ -7401,70 +7464,6 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if ok:
 		reveal()
 	return ok
-
-
-## Start targeting mode for an ability
-'''
-func _start_targeting(ability: Ability) -> void:
-	
-	if not targeting_system:
-		# No targeting system - just cast at mouse position
-		print("Couldn't find targeting system, just cast at mouse position")
-		var target_pos = get_viewport().get_mouse_position()
-		use_ability(ability, {"position": target_pos})
-		return
-	
-	# Configure targeting system
-	var targeting_data = {
-		"target_shape": ability.get_target_shape(),
-		"radius": ability.get_aoe_radius(),
-		"size": ability.get_aoe_size(),
-		"range": ability.targeting.get("range", 0.0),
-	}
-	
-	# Store ability for when targeting confirms
-	current_cast = {
-		"ability": ability,
-		"state": "targeting"
-	}
-	
-	# Start targeting (assuming hand slot, adjust as needed)
-	targeting_system.start_targeting(0, targeting_data)
-	targeting_started.emit(ability)
-'''
-## Called when targeting is confirmed
-func on_targeting_confirmed(target_position: Vector2) -> void:
-	if current_cast.is_empty() or current_cast.get("state") != "targeting":
-		return
-	
-	var ability = current_cast.get("ability") as Ability
-	if not ability:
-		return
-	
-	# Check range
-	var range_limit = ability.targeting.get("range", 0.0)
-	if range_limit > 0:
-		var distance = global_position.distance_to(target_position)
-		if distance > range_limit:
-			cast_failed.emit(ability, "Out of range")
-			_cancel_current()
-			return
-	
-	# Clear targeting state and use ability
-	current_cast.clear()
-	use_ability(ability, {"position": target_position})
-
-
-## Called when targeting is cancelled
-func on_targeting_cancelled() -> void:
-	if current_cast.is_empty():
-		return
-	
-	var ability = current_cast.get("ability") as Ability
-	current_cast.clear()
-	
-	if ability:
-		targeting_cancelled.emit(ability)
 
 
 ## AbilityManager signal handlers
@@ -7550,6 +7549,10 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	# Law: the crime report fires on completion, beside the trait-stacking
 	# hook — an interrupted cast is not a crime.
 	CrimeManager.report(self, "cast", CrimeManager.cast_payload(ability))
+	# A Concentration spell holds its focus once it has landed (an item's cast
+	# doesn't concentrate; an interrupted windup never gets here).
+	if ability and ability.is_concentration() and not ability.get_meta("free_cast", false):
+		begin_concentration(ability, results)
 	_rig_ik_release("cast")
 	cast_completed.emit(ability, results)
 
@@ -7558,7 +7561,23 @@ func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
+	# Drop the casting arm pose along with the cast.
+	if attack_animator and attack_animator.is_casting:
+		attack_animator.interrupt_attack()
+	# Death cancels with an empty reason, silently.
+	if reason != "" and is_alive() and _announces_to_party():
+		var ability_name: String = ability.display_name if ability else "spell"
+		notify("Interrupted!", Color(1.0, 0.6, 0.4), "%s's %s is interrupted: %s." % [Name, ability_name, reason])
 	cast_interrupted.emit(ability, reason)
+
+## Whether a notice about this character should reach the player: always for
+## the party, and for others only while the party can see them.
+func _announces_to_party() -> bool:
+	if is_party_member():
+		return true
+	if game != null and is_instance_valid(game) and game.has_method("is_seen_by_party"):
+		return game.is_seen_by_party(self)
+	return visible
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
@@ -8084,6 +8103,7 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
+	_react_to_incapacitation(instance)
 ## Spawn a visual effect
 func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0, aoe_radius: float = 0.0) -> Node:
 	var scene = _load_effect_scene(scene_path)
@@ -8161,16 +8181,11 @@ func _load_effect_scene(path: String) -> PackedScene:
 	return scene
 
 
-## Delegates to AbilityManager
-func interrupt_cast(reason: String = "Interrupted") -> bool:
-	return ability_manager.interrupt_cast(reason)
-
-func _cancel_current() -> void:
-	if current_cast.get("state") == "targeting":
-		if targeting_system:
-			targeting_system.cancel_targeting()
-	ability_manager.current_cast.clear()
-
+## The one entry point for interrupting a windup (see
+## AbilityManager.interrupt_cast for the rule); the "Interrupted!" notice comes
+## from _on_ability_cast_interrupted. `force` also ends uninterruptible casts.
+func interrupt_cast(cause: String = "Interrupted", force: bool = false) -> bool:
+	return ability_manager.interrupt_cast(cause, force) if ability_manager else false
 
 ## Get character resource value. For school resources, returns the current pool;
 ## for focus, returns the spendable amount (excluding concentration-locked).
@@ -8346,38 +8361,170 @@ func _on_self_damaged(amount: int) -> void:
 			emit_signal("resource_changed", "focus", focus, max_focus)
 
 
-# Begin a concentration lock on `focus_amount`. Replaces any existing
-# concentration (only one active per character).
-func _begin_concentration(ability_id: String, focus_amount: int) -> void:
+# A landed Concentration spell holds its focus cost for as long as what it
+# installed lasts: the conditions it applied (by instance) and the fields and
+# clouds it created. Nothing trackable installed (weather, surfaces, a missed
+# condition roll, summons) means nothing to hold. One spell at a time.
+func begin_concentration(ability: Ability, results: Array) -> void:
+	if ability == null or not is_alive():
+		return
+	if ability_manager and ability_manager._get_incapacitating_condition() != null:
+		return
+	var entry := {
+		"name": ability.display_name if ability.display_name != "" else ability.id,
+		"focus": 0,
+		"conditions": [],
+		"objects": [],
+	}
+	_collect_concentration_installs(results, entry)
+	if entry["conditions"].is_empty() and entry["objects"].is_empty():
+		return
+	# Normally let go when this spell was committed (AbilityManager.use_ability);
+	# this catches one that landed in the meantime (a projectile in flight).
 	if not active_concentrations.is_empty():
-		_release_concentration_all()
-	active_concentrations[ability_id] = focus_amount
-	concentration_locked_focus = focus_amount
+		end_concentration("replaced", entry["name"])
+	var held: int = 0
+	if not npc_unlimited_resources:
+		held = mini(int(AbilityManager.school_costs_for(ability).get("focus", 0)), focus)
+	entry["focus"] = held
+	active_concentrations[ability.id] = entry
+	concentration_locked_focus = held
 	emit_signal("resource_changed", "focus", focus, max_focus)
+	if is_party_member():
+		GameLog.add_entry("%s concentrates on %s (%d focus held)." % [Name, entry["name"], held])
 
 
-# Release a concentration spell by id. Unlocks the focus it held.
-func _release_concentration(ability_id: String) -> void:
+# Gathers the conditions and objects a cast installed. Multi-step casts report
+# an array per step.
+func _collect_concentration_installs(results: Array, entry: Dictionary) -> void:
+	for r in results:
+		if r is Array:
+			_collect_concentration_installs(r, entry)
+		elif r is Dictionary:
+			for applied in r.get("conditions_applied", []):
+				if not (applied is Dictionary) or not is_instance_valid(applied.get("target")):
+					continue
+				var inst = applied.get("instance")
+				# Only this caster's own application: a non-stackable condition
+				# someone else already put there comes back as their instance.
+				# Keyed by the instance's own id (Chilled may have become Frozen).
+				if inst is ConditionInstance and inst.condition and inst.source == self:
+					entry["conditions"].append({"target": applied["target"], "condition_id": String(inst.condition.id), "instance": inst})
+			for obj in r.get("created_objects", []):
+				# Only fields and clouds: summoned characters, items and
+				# structures aren't dispelled, and fluid tiles aren't nodes.
+				if is_instance_valid(obj) and (obj is ForceField or obj is FogOverlay):
+					entry["objects"].append(obj)
+
+
+# Whether a tracked condition is still the one this spell applied.
+func _concentration_condition_holds(c: Dictionary) -> bool:
+	var tgt = c.get("target")
+	if not is_instance_valid(tgt) or (tgt.has_method("is_alive") and not tgt.is_alive()):
+		return false
+	var cm = AbilityEffect._get_condition_manager(tgt)
+	return cm != null and cm.conditions.get(c.get("condition_id", "")) == c.get("instance")
+
+
+func _concentration_installs_remain(entry: Dictionary) -> bool:
+	for obj in entry.get("objects", []):
+		if is_instance_valid(obj) and not obj.is_queued_for_deletion():
+			return true
+	for c in entry.get("conditions", []):
+		if _concentration_condition_holds(c):
+			return true
+	return false
+
+
+# Natural end: a spell whose installs have all run out frees its focus.
+func _release_concentration(ability_id: String, announce: bool = false) -> void:
 	if not active_concentrations.has(ability_id):
 		return
-	var locked: int = int(active_concentrations[ability_id])
+	var entry: Dictionary = active_concentrations[ability_id]
+	var held: int = int(entry.get("focus", 0))
 	active_concentrations.erase(ability_id)
-	concentration_locked_focus = max(0, concentration_locked_focus - locked)
+	concentration_locked_focus = max(0, concentration_locked_focus - held)
 	emit_signal("resource_changed", "focus", focus, max_focus)
+	if announce and is_party_member():
+		if held > 0:
+			GameLog.add_entry("%s's %s ends; %d focus is free again." % [Name, entry.get("name", ability_id), held])
+		else:
+			GameLog.add_entry("%s's %s ends." % [Name, entry.get("name", ability_id)])
 
 
-func _release_concentration_all() -> void:
+## Ends every held Concentration spell: removes the conditions it applied
+## (only while that same application is still on the target) and its fields
+## and clouds, and frees the held focus. Damage already dealt stays. reason:
+## "broken" (a hit, or focus fell below what is held), "incapacitated" (cause
+## is the condition's name), "replaced" (cause is the new spell's name), or ""
+## for silent (death).
+func end_concentration(reason: String = "", cause: String = "") -> void:
+	if active_concentrations.is_empty():
+		return
+	var spell_names: String = ", ".join(get_concentration_names())
+	for ability_id in active_concentrations:
+		_dispel_concentration_installs(active_concentrations[ability_id])
 	active_concentrations.clear()
 	concentration_locked_focus = 0
 	emit_signal("resource_changed", "focus", focus, max_focus)
-
-
-func _break_concentration_under_pressure() -> void:
-	if active_concentrations.is_empty():
+	if reason == "" or not _announces_to_party():
 		return
-	# End every active concentration spell. ConditionManager-side cleanup
-	# happens via the existing condition lifecycle if the spell installed one.
-	_release_concentration_all()
+	match reason:
+		"broken":
+			notify("Concentration broken", CONCENTRATION_COLOR, "%s loses concentration: %s ends." % [Name, spell_names])
+		"incapacitated":
+			notify("Concentration broken", CONCENTRATION_COLOR, "%s is %s and loses concentration: %s ends." % [Name, cause, spell_names])
+		"replaced":
+			GameLog.add_entry("%s lets %s go to concentrate on %s." % [Name, spell_names, cause])
+
+
+func _dispel_concentration_installs(entry: Dictionary) -> void:
+	for c in entry.get("conditions", []):
+		if _concentration_condition_holds(c):
+			AbilityEffect._get_condition_manager(c["target"]).remove_condition(String(c["condition_id"]))
+	for obj in entry.get("objects", []):
+		if not is_instance_valid(obj) or obj.is_queued_for_deletion():
+			continue
+		# A cloud goes through its FogManager, which would otherwise keep
+		# ticking a stale entry.
+		var holder = obj.get_parent()
+		if obj is FogOverlay and holder and holder.has_method("remove_fog"):
+			holder.remove_fog(obj)
+		else:
+			obj.queue_free()
+
+
+# Per frame while concentrating: focus pushed below what is held (max_focus
+# shrank, say) breaks the spell; a spell whose installs have all run out ends
+# naturally.
+func _tick_concentration() -> void:
+	if focus < concentration_locked_focus:
+		end_concentration("broken")
+		return
+	for ability_id in active_concentrations.keys():
+		if not _concentration_installs_remain(active_concentrations[ability_id]):
+			_release_concentration(ability_id, true)
+
+
+## Names of the Concentration spells being held, for the UI.
+func get_concentration_names() -> PackedStringArray:
+	var names: PackedStringArray = []
+	for ability_id in active_concentrations:
+		names.append(String(active_concentrations[ability_id].get("name", ability_id)))
+	return names
+
+
+func _release_concentration_all() -> void:
+	end_concentration("")
+
+
+# A hit that would dip into held focus breaks the spell. Nothing held (an NPC
+# with npc_unlimited_resources concentrates for free) means a hit can't: only
+# incapacitation, death or a new Concentration spell ends theirs.
+func _break_concentration_under_pressure() -> void:
+	if concentration_locked_focus <= 0:
+		return
+	end_concentration("broken")
 
 
 # Called by allies' signal handlers when they take damage / lose a limb / die
