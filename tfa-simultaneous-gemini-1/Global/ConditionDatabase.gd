@@ -1381,7 +1381,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "perceptive",
 		"display_name": "Perceptive",
-		"description": "Sees further than most. Extended line of sight.",
+		"description": "Sees further than most: +20% sight range.",
 		"traits": {"buff": 1, "mental": 1},
 		"stackable": false,
 		"max_tier": 1,
@@ -1392,7 +1392,7 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [
-			{"stat": "sight", "operation": "add", "value": 2}
+			{"stat": "sight", "operation": "multiply", "value": 1.2}
 		],
 		"triggered_effects": [],
 		"conditional_modifiers": [],

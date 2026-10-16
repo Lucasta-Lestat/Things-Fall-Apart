@@ -18,12 +18,23 @@ var fade_in: float = 0.0            # seconds of alpha ramp-up after spawning
 var fade_out: float = 0.0           # seconds of alpha ramp-down before expiry
 var _base_color: Color = Color.WHITE
 var _has_base_color: bool = false
+# Fog density as seen by vision (FogManager.get_sight_multiplier_at); 0 for the
+# invisible condition-only overlays so a fog isn't counted twice. The
+# silhouette and fade mirror the shader's, so sight ends where the fog
+# visibly ends.
+var vision_density: float = 0.0
+var _vis_falloff_radius: float = 1.0
+var _vis_falloff_softness: float = 0.5
+var _vis_edge_wobble: float = 0.35
+var _fade_k: float = 1.0
 
 const FOG_SHADER = preload("res://vfx/Shaders/fog.gdshader")
 
 signal fog_expired(fog: FogOverlay)
 
 func _ready() -> void:
+	# Fog is scenery: wheel zoom and clicks pass through to the world.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Ensure we have a shader material when created via code
 	if not material or not material is ShaderMaterial:
 		var mat = ShaderMaterial.new()
@@ -50,6 +61,10 @@ func apply_data(data: FogData) -> void:
 	material.set_shader_parameter("falloff_radius", data.falloff_radius)
 	material.set_shader_parameter("falloff_softness", data.falloff_softness)
 	material.set_shader_parameter("edge_wobble", data.edge_wobble)
+	vision_density = data.density
+	_vis_falloff_radius = data.falloff_radius
+	_vis_falloff_softness = data.falloff_softness
+	_vis_edge_wobble = data.edge_wobble
 	# Unique seed per overlay: the noise is otherwise identical for every cloud,
 	# so a cluster of smoke puffs would all share one silhouette.
 	material.set_shader_parameter("noise_seed", Vector2(randf() * 128.0, randf() * 128.0))
@@ -108,6 +123,22 @@ func _update_opacity() -> void:
 	var c: Color = _base_color
 	c.a = _base_color.a * k
 	material.set_shader_parameter("fog_color", c)
+	_fade_k = k
+
+## Fog density at a world point for vision, following fog.gdshader's
+## silhouette: full inside the body, fading out by the rect's inscribed
+## ellipse (the noise bite on the rim taken at its average), times the fade
+## envelope of a drifting cloud.
+func get_vision_density_at(world_pos: Vector2) -> float:
+	if vision_density <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
+		return 0.0
+	var uv: Vector2 = (world_pos - global_position) / size
+	if uv.x < 0.0 or uv.y < 0.0 or uv.x > 1.0 or uv.y > 1.0:
+		return 0.0
+	var dist: float = ((uv - Vector2(0.5, 0.5)) * 2.0).length()
+	var radius: float = _vis_falloff_radius * (1.0 - _vis_edge_wobble * 0.5)
+	var body: float = 1.0 - smoothstep(maxf(radius - _vis_falloff_softness, 0.0), radius, dist)
+	return vision_density * body * _fade_k
 
 
 func _get_condition_manager(character: Node) -> ConditionManager:

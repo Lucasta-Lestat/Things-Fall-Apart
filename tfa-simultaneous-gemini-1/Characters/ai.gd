@@ -109,13 +109,16 @@ const HUNGER_THRESHOLD: float = 50.0
 # Interaction
 var interact_options = ["Attack", "Talk"]
 
-# Detection settings — initialized in _ready() from character stats
-var detection_range: float
+# Detection settings — initialized in _ready() from character stats.
+# detection_range is live: the character's current sight range (senses,
+# Perceptive, Blinded, weather, fog), not a value cached at spawn.
+var detection_range: float:
+	get: return get_sight_range_pixels()
 var attack_range: float
 var preferred_range: float
 var too_close_range: float
 
-# Line of sight — uses character.effective_fov() for FOV
+# Line of sight — character.can_see_point (effective FOV, live sight range)
 
 # Minimum approach distance
 var min_approach_distance: float:
@@ -395,7 +398,6 @@ func _engagement_bands(target: Node2D) -> Dictionary:
 func _ready():
 	character = get_parent()
 	game = get_tree().current_scene
-	detection_range = 1440.0 * character.sight
 	_refresh_engagement_ranges(null)
 	# ranges follow the EQUIPPED weapon (a shortbow keeps its wielder ~5 tiles
 	# out); equipment lands after _ready, so refresh on every swap
@@ -442,6 +444,9 @@ func _check_stealth_wake() -> void:
 	for pc in party:
 		if not is_instance_valid(pc) or not pc.has_method("is_alive") or not pc.is_alive():
 			continue
+		# Only sneaking looks suspicious (nobody sneaks on the world map).
+		if pc.has_method("is_sneaking") and not pc.is_sneaking():
+			continue
 		# Concealment (Shrouded) shortens how far away we notice them.
 		var pc_vis: float = pc.effective_visibility() if pc.has_method("effective_visibility") else 1.0
 		if pc_vis < 1.0 and character.global_position.distance_to(pc.global_position) > get_sight_range_pixels() * pc_vis:
@@ -463,7 +468,10 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	var foe := attacker as ProceduralCharacter
 	if foe != null and is_instance_valid(foe) and foe.is_alive() and _is_enemy(foe):
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
-		last_known_target_pos = foe.global_position
+		# A third party's hit doesn't redirect the search for the held target:
+		# last_known_target_pos is where THAT target was last seen.
+		if current_target == null or foe == current_target:
+			last_known_target_pos = foe.global_position
 		if current_target != null:
 			# Their hit is positive identification — an "occluded" target who is
 			# still striking us (through a window, over a ledge) stays a target.
@@ -484,7 +492,7 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	# Not an enemy (friendly fire, a condition tick, falling damage): wake, but
 	# nothing to fight.
 	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
-	if attacker:
+	if attacker and (current_target == null or attacker == current_target):
 		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
 
 
@@ -628,7 +636,7 @@ func die() -> void:
 # ===== LINE OF SIGHT =====
 
 func get_sight_range_pixels() -> float:
-	return 1440.0 * character.sight
+	return character.get_sight_range_px()
 
 func get_sight_range_tiles() -> int:
 	return int(ceil(get_sight_range_pixels() / GridManager.TILE_SIZE))
@@ -636,27 +644,13 @@ func get_sight_range_tiles() -> int:
 func get_facing_vector() -> Vector2:
 	return Vector2.UP.rotated(character.rotation)
 
+# The character's canonical visual test (ProceduralCharacter.can_see_point,
+# shared with party visibility and crime witnesses): blinded/unconscious see
+# nothing, live sight range (weather, fog at either end), effective FOV, and
+# an elevation-aware sight line. Passing the target's elevation lets a street
+# guard acquire a character standing on a roof.
 func is_in_line_of_sight(target_position: Vector2, target_elev: float = 0.0) -> bool:
-	# Blinded/unconscious characters see nothing — the party-side wrapper
-	# (Game._has_visual_los) always checked this; now both wrappers agree.
-	var cm_sight = character.get_node_or_null("ConditionManager")
-	if cm_sight and (cm_sight.has_condition("blinded") or cm_sight.has_condition("unconscious")):
-		return false
-
-	var to_target = target_position - character.global_position
-	var distance = to_target.length()
-
-	if distance > get_sight_range_pixels():
-		return false
-
-	var facing = get_facing_vector()
-	var angle_to_target = rad_to_deg(facing.angle_to(to_target.normalized()))
-	var half_fov = character.effective_fov() / 2.0
-
-	if abs(angle_to_target) > half_fov:
-		return false
-
-	return _has_clear_sight_line(target_position, target_elev)
+	return character.can_see_point(target_position, target_elev)
 
 func _has_clear_sight_line(target_position: Vector2, target_elev: float = 0.0) -> bool:
 	var world := character.get_world_2d()
@@ -706,12 +700,36 @@ func _close_quarters_radius() -> float:
 # must not quietly delete it. Sneaking buys you the approach, not immunity:
 # the moment you strike, _on_self_damaged acquires you by name regardless of
 # angle, and stepping into the cone still gets you seen.
+# ProceduralCharacter.is_sneaking is the one rule (party members in stealth
+# mode, never on the world map), so this and the quieter, slower steps agree.
 func _is_sneaking(other: ProceduralCharacter) -> bool:
-	if game == null or not ("stealth_mode" in game) or not game.stealth_mode:
+	return other != null and is_instance_valid(other) and other.is_sneaking()
+
+## Whether this NPC has `c` in view right now, by the rules _update_target
+## acts on: a held target while it isn't occluded (a wall-clear sight line or
+## close quarters, out to 1.5x sight but never less than close quarters);
+## anyone else as acquisition sees them
+## (the sight cone, or close quarters with a wall-clear line unless they are
+## sneaking; an invisible character only with true_sight). StealthOverlay's
+## eye shows this, so it matches what the NPC acts on.
+func has_in_view(c) -> bool:
+	if c == null or not is_instance_valid(c) or c == character or not c.has_method("is_alive") or not c.is_alive():
 		return false
-	if not ("party_chars" in game):
+	if not character.is_alive():
 		return false
-	return other in game.party_chars
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
+		return false
+	var dist: float = character.global_position.distance_to(c.global_position)
+	if c == current_target:
+		return dist <= maxf(detection_range * 1.5, _close_quarters_radius()) and _target_occluded_time <= 0.0
+	if character.traits.get("true_sight", 0) == 0:
+		var c_cm = c.get_node_or_null("ConditionManager")
+		if c_cm and c_cm.has_active_condition("invisible"):
+			return false
+	if dist <= _close_quarters_radius() and not _is_sneaking(c):
+		return _has_clear_sight_line(c.global_position, c.get_elevation())
+	return is_in_line_of_sight(c.global_position, c.get_elevation())
 
 
 func _update_target(delta: float = 0.0) -> void:
@@ -731,9 +749,11 @@ func _update_target(delta: float = 0.0) -> void:
 			_lose_target()
 			return
 
-		# Hysteresis: lose target at 1.5x detection range
+		# Hysteresis: lose target at 1.5x detection range (live: weather, fog,
+		# Blinded's zero), never inside close quarters: a foe at our elbow,
+		# whose blows already identified them (_on_self_damaged), stays held.
 		var dist = character.global_position.distance_to(current_target.global_position)
-		if dist > detection_range * 1.5:
+		if dist > maxf(detection_range * 1.5, _close_quarters_radius()):
 			_lose_target()
 			return
 
@@ -764,7 +784,9 @@ func _update_target(delta: float = 0.0) -> void:
 				# and far over both the SEARCHING promotion (60) and give-up
 				# floor (36): routing is unchanged, only the glyph flips to `?`.
 				_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
+				var lost = current_target
 				_lose_target()
+				_announce_lost_sight(lost)
 		return
 
 	# Check for confusion — pick random target from all visible living characters
@@ -983,6 +1005,17 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
+
+# '<NPC> loses sight of <Name>.' when an NPC the party can see gives up on a
+# party member it has had no sight line to (the occlusion demotion above). The
+# party learns why the chase turned into a search; a hidden NPC stays hidden.
+func _announce_lost_sight(lost) -> void:
+	if lost == null or not is_instance_valid(lost) or not lost.has_method("is_party_member") \
+			or not lost.is_party_member() or character.is_party_member():
+		return
+	if game == null or not game.has_method("is_seen_by_party") or not game.is_seen_by_party(character):
+		return
+	GameLog.add_entry("%s loses sight of %s." % [character.Name, lost.Name])
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
@@ -1957,9 +1990,10 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 
 	var gain := loudness * ALERTNESS_SOUND_GAIN
 	if current_alertness == Alertness.HOSTILE:
-		# Already alarmed and probably chasing — sounds inform position but
-		# don't need to bump meter further.
-		if current_target:
+		# Already alarmed and probably chasing — the target's own sounds
+		# inform where it went (a blind chase follows them); others' don't,
+		# and none of them bump the meter further.
+		if current_target and _source == current_target:
 			last_known_target_pos = world_pos
 		return
 

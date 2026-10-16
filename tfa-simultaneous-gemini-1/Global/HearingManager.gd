@@ -21,8 +21,36 @@ const WALL_OCCLUSION_FACTOR: float = 0.45
 # above which the sound carries at extended range (see range_mult in emit).
 # Muzzle blast is 1.9, bullet impact 1.5; melee swings/bows are <= 0.9.
 const LOUD_SOUND_THRESHOLD: float = 1.2
+# How much farther a sound at or above LOUD_SOUND_THRESHOLD carries (range,
+# not arousal; see emit).
+const LOUD_RANGE_MULT: float = 2.5
+
+# Loudness words for the party's noise readouts (footsteps panel, noise rings):
+# below QUIET_MAX is "Quiet" (heard within ~1.5 tiles), from LOUD_MIN up is
+# "Loud" (carries past the base hearing radius), in between "Normal".
+const QUIET_MAX_LOUDNESS: float = 0.4
+const LOUD_MIN_LOUDNESS: float = 1.0
 
 signal sound_emitted(world_pos: Vector2, loudness: float, source)
+
+## How far (px) an ambient sound of this loudness carries to a listener with
+## this hearing, through `walls` walls (each takes WALL_OCCLUSION_FACTOR off,
+## up to MAX_OCCLUDERS): exactly emit()'s reach, loud sounds' extended range
+## included. The party's noise readouts (footsteps panel, noise rings) use it.
+func audible_radius(loudness: float, hearing: float = 1.0, walls: int = 0) -> float:
+	if loudness <= 0.0:
+		return 0.0
+	var eff: float = loudness * pow(WALL_OCCLUSION_FACTOR, clampi(walls, 0, MAX_OCCLUDERS))
+	var range_mult: float = LOUD_RANGE_MULT if loudness >= LOUD_SOUND_THRESHOLD else 1.0
+	return BASE_HEARING_RADIUS * hearing * eff * range_mult
+
+## "Quiet", "Normal" or "Loud", for readouts.
+func loudness_tier(loudness: float) -> String:
+	if loudness < QUIET_MAX_LOUDNESS:
+		return "Quiet"
+	if loudness >= LOUD_MIN_LOUDNESS:
+		return "Loud"
+	return "Normal"
 
 # --- Sound-suppression zones ---------------------------------------------
 #
@@ -117,7 +145,7 @@ func emit(world_pos: Vector2, loudness: float, source = null,
 		# tuned for footstep stealth (~3 tiles), which left whole firefights
 		# inaudible one house over. 1.9-loud muzzle × 2.5 ≈ 18 tiles open air,
 		# ~8 tiles through one wall.
-		range_mult = 2.5
+		range_mult = LOUD_RANGE_MULT
 
 	var party: Array = game.party_chars if "party_chars" in game else []
 	var any_party_heard := false

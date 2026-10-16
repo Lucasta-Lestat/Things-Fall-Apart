@@ -57,7 +57,9 @@
 			"visibility_modifier": 0.7,
 			"tint": [0.6, 0.9, 0.4, 1.0],
 			"applies_condition": "corroding",
-			"apply_interval": 3.0
+			"apply_interval": 3.0,
+			"max_stacks": 1,
+			"exposure_text": "Anyone caught in the open starts to corrode."
 		},
 		"freezing_rain": {
 			"display_name": "Freezing Rain",
@@ -66,7 +68,9 @@
 			"visibility_modifier": 0.65,
 			"tint": [0.7, 0.85, 1.0, 1.0],
 			"applies_condition": "chilled",
-			"apply_interval": 4.0
+			"apply_interval": 4.0,
+			"max_stacks": 2,
+			"exposure_text": "Anyone caught in the open is chilled to the bone."
 		}
 	}
 }

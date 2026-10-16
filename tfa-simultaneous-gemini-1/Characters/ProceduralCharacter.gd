@@ -659,6 +659,10 @@ func _refresh_elevation() -> void:
 		var l := get_node_or_null(n)
 		if l:
 			l.shadow_item_cull_mask = mask
+	# Stealth mode's elevated-surface cone shows what a GROUND viewer sees on
+	# raised walkways; from up on one, the main cone already covers it.
+	if has_node("NPCLineOfSightHigh") and game != null and is_instance_valid(game) and game.has_method("sync_npc_elevated_cone"):
+		game.sync_npc_elevated_cone(self)
 
 # Configuration
 @export_group("Wound Lines")
@@ -1247,20 +1251,6 @@ func _hide_aim_line() -> void:
 	if _aim_line:
 		_aim_line.hide_aim()
 
-func _setup_los_visual() -> void:
-	var light = PointLight2D.new()
-	light.texture = Globals.SIGHT_TEXTURE
-	light.energy = 0.3
-	var master_radius = 512.0
-	var desired_radius = 1440.0 * sight
-	light.texture_scale = desired_radius / master_radius
-	light.name = "LineOfSight"
-	light.rotation_degrees = 90
-	light.shadow_enabled = true
-	light.shadow_item_cull_mask = 1
-	light.z_index = 102
-	add_child(light)
-
 func _setup_inventory() -> void:
 	inventory = Inventory.new()
 	inventory.name = "Inventory"
@@ -1436,10 +1426,22 @@ func _setup_condition_display() -> void:
 	add_child(_condition_display)
 
 
-# Yellow "?" when AI is SEARCHING; red flashing "!" when AI enters HOSTILE.
-# Inherits parent modulate so it fades with the hearing-pulse visibility.
+# Three stages of escalation over an AI-driven NPC: a small pale "?" when it
+# is SUSPICIOUS (heard something, still wary after a search), a yellow "?"
+# while SEARCHING, and a red flashing "!" when it turns HOSTILE (the outcry
+# fuse's amber "!" shares the Label). Kept upright and above the head
+# whatever the facing. Inherits parent modulate so it fades with the
+# hearing-pulse visibility.
 var _alertness_indicator: Label = null
 var _alertness_flash_tween: Tween = null
+const ALERT_FONT_SIZE := 28
+const SUSPICIOUS_FONT_SIZE := 20
+const SUSPICIOUS_COLOR := Color(0.92, 0.92, 0.92)
+const SEARCHING_COLOR := Color(1.0, 0.9, 0.2)
+const HOSTILE_COLOR := Color(1.0, 0.15, 0.15)
+# Screen-space centre of the glyph relative to the character (above the head,
+# over the condition icons).
+const ALERT_INDICATOR_CENTER := Vector2(0, COND_DISPLAY_OFFSET_Y - 14)
 
 # Stop-hand over the head while hold_position is set (WAIT order). Same badge
 # as the party panel's — one glance says "this one was told to stand here".
@@ -1481,7 +1483,8 @@ func _setup_alertness_indicator() -> void:
 	_alertness_indicator.name = "AlertnessIndicator"
 	_alertness_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_alertness_indicator.z_index = 110
-	_alertness_indicator.add_theme_font_size_override("font_size", 28)
+	_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+	_alertness_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_alertness_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
 	_alertness_indicator.add_theme_constant_override("outline_size", 4)
 	_alertness_indicator.position = Vector2(-8, COND_DISPLAY_OFFSET_Y - 28)
@@ -1548,12 +1551,15 @@ func _on_outcry_state_changed(active: bool, frac: float) -> void:
 	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
 		_alertness_flash_tween.kill()
 	_alertness_indicator.text = "!"
+	# Full size even straight after a (smaller) Suspicious "?".
+	_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
 	# Amber: distinct from red-HOSTILE and yellow-SEARCHING.
 	_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.72, 0.2))
 	_alertness_indicator.visible = true
 	_alertness_flash_tween = create_tween().set_loops()
 	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, period)
 	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 1.0, period)
+	_keep_alertness_indicator_upright()
 
 func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
@@ -1578,7 +1584,8 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	match new_alertness:
 		4:  # HOSTILE — red ! that flashes briefly
 			_alertness_indicator.text = "!"
-			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.15, 0.15))
+			_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", HOSTILE_COLOR)
 			_alertness_indicator.visible = true
 			_alertness_flash_tween = create_tween().set_loops(6)
 			_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 0.25, 0.12)
@@ -1592,12 +1599,30 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 			)
 		3:  # SEARCHING — steady yellow ?
 			_alertness_indicator.text = "?"
-			_alertness_indicator.add_theme_color_override("font_color", Color(1.0, 0.9, 0.2))
+			_alertness_indicator.add_theme_font_size_override("font_size", ALERT_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", SEARCHING_COLOR)
 			_alertness_indicator.modulate.a = 1.0
 			_alertness_indicator.visible = true
-		_:  # AT_EASE / UNAWARE / SUSPICIOUS — hide
+		2:  # SUSPICIOUS — smaller, paler ?: heard something, not coming yet
+			_alertness_indicator.text = "?"
+			_alertness_indicator.add_theme_font_size_override("font_size", SUSPICIOUS_FONT_SIZE)
+			_alertness_indicator.add_theme_color_override("font_color", SUSPICIOUS_COLOR)
+			_alertness_indicator.modulate.a = 0.8
+			_alertness_indicator.visible = true
+		_:  # AT_EASE / UNAWARE — hide
 			_alertness_indicator.visible = false
 			_alertness_indicator.modulate.a = 1.0
+	_keep_alertness_indicator_upright()
+
+## Counter-rotates the alertness glyph so a '?' never reads upside down, and
+## keeps it screen-above the head whatever way the character faces. Runs
+## every frame (paused too) from _process, and after each stage change.
+func _keep_alertness_indicator_upright() -> void:
+	if _alertness_indicator == null or not _alertness_indicator.visible:
+		return
+	_alertness_indicator.pivot_offset = _alertness_indicator.size * 0.5
+	_alertness_indicator.rotation = -rotation
+	_alertness_indicator.position = ALERT_INDICATOR_CENTER.rotated(-rotation) - _alertness_indicator.pivot_offset
 
 func _refresh_condition_display() -> void:
 	if not _condition_display:
@@ -1667,7 +1692,14 @@ func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_posi
 	var game_node = get_tree().current_scene
 	if not game_node or not game_node.has_method("force_weather"):
 		return {"success": false, "error": "force_weather not available on current scene"}
-	game_node.force_weather(precip_type)
+	# No sky to call weather from: refuse rather than rain inside a tavern.
+	if game_node.has_method("is_map_indoors") and game_node.is_map_indoors():
+		if is_party_member():
+			notify("No open sky here", Color(1.0, 0.6, 0.4), "%s calls for the weather, but there is no open sky here." % Name)
+		return {"success": false, "error": "indoors"}
+	# Spell weather lasts `duration` seconds (0 = until something changes it),
+	# and what it does to anyone out in it is the caster's doing.
+	game_node.force_weather(precip_type, float(effect.get("duration", 0.0)), self)
 	return {"success": true, "precipitation_type": precip_type}
 
 
@@ -3487,6 +3519,7 @@ func set_sprite_overlays_enabled(enabled: bool) -> void:
 func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
+	_keep_alertness_indicator_upright()
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -4579,7 +4612,7 @@ func _update_movement(delta: float) -> void:
 					if not ground_walkable and mountable:
 						_begin_jump(wp_mt)
 						return
-			var step: Vector2 = move_dir * move_speed * delta
+			var step: Vector2 = move_dir * walk_speed() * delta
 			var to_t := GridManager.world_to_map(global_position + step)
 			if to_t != from_t and not _step_ok(from_t, to_t):
 				# JUMP dispatch: a jumper whose current WAYPOINT is leapable
@@ -4628,7 +4661,7 @@ func _update_movement(delta: float) -> void:
 			# parallel frames broke contact, resetting the stuck timer below =
 			# jitter in place forever. Only exact head-on and inside-corner
 			# presses stop dead now, and the stuck escape handles those.)
-			velocity = move_dir * move_speed
+			velocity = move_dir * walk_speed()
 			var prev_pos := global_position
 			move_and_slide()
 			# unlocked doors give way when walked into (push_open self-guards
@@ -4775,7 +4808,11 @@ func _accumulate_step(distance_moved: float) -> void:
 		_emit_footstep()
 
 
-func _emit_footstep() -> void:
+## One footstep's loudness and what makes it up. The step itself
+## (_emit_footstep: its sound and the HearingManager event NPCs hear) and every
+## readout (party panel, noise rings) use this, so they always agree:
+##   loudness = (floor_base x footwear_mult + gear) x race_mult x sneak_mult
+func footstep_noise() -> Dictionary:
 	var tile := GridManager.world_to_map(global_position)
 	var floor_id := ""
 	if "floors" in GridManager:
@@ -4795,33 +4832,53 @@ func _emit_footstep() -> void:
 	var sfx_key: String = String(floor_data.get("footstep_sfx", ""))
 
 	var wears_boots := feet_equipment != null
-	var footwear_suffix := "boots" if wears_boots else "bare"
 	# Bare feet are notably quieter on the same surface; boots = 1.0 baseline.
 	var footwear_mult := 1.0 if wears_boots else 0.5
 
 	# Worn-item noise sums across all 5 equipment slots. Each EquipmentShape
-	# exposes noise_per_step, defaulted from its type/name if not set in data.
+	# exposes noise_per_step (its item's authored value, else a type/name guess).
 	var item_noise := 0.0
+	var gear_items: Array = []   # [name, noise] per piece that adds any
 	for slot in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
 		if slot and "noise_per_step" in slot:
 			var n: float = slot.noise_per_step
 			if n > 0.0:
 				item_noise += n
+				var item_data = slot.get_meta("item_data", {})
+				gear_items.append([str(item_data.get("display_name", slot.equipment_name)) if item_data is Dictionary else str(slot.equipment_name), n])
 
 	# walking_noise is the racial gait multiplier from races.json (0.3 for the
 	# silent-footed up to 1.5 for the heavy) — set in load_from_data alongside
-	# the other race stats.
-	var loudness: float = (base_sound * footwear_mult + item_noise) * walking_noise
+	# the other race stats. Sneaking scales the whole step again.
+	var sneak_mult: float = SNEAK_NOISE_MULT if is_sneaking() else 1.0
+	return {
+		"floor_id": floor_id,
+		"floor_name": str(floor_data.get("name", "ground")) if not floor_data.is_empty() else "ground",
+		"floor_base": base_sound,
+		"wading": floor_id == "shallow_water",
+		"boots": wears_boots,
+		"footwear_mult": footwear_mult,
+		"gear": item_noise,
+		"gear_items": gear_items,
+		"race_mult": walking_noise,
+		"sneak_mult": sneak_mult,
+		"loudness": (base_sound * footwear_mult + item_noise) * walking_noise * sneak_mult,
+		"sfx_key": sfx_key,
+	}
 
-	if sfx_key != "":
-		var full_key := "%s_%s" % [sfx_key, footwear_suffix]
+func _emit_footstep() -> void:
+	var noise := footstep_noise()
+	var loudness: float = noise["loudness"]
+
+	if noise["sfx_key"] != "":
+		var full_key := "%s_%s" % [noise["sfx_key"], "boots" if noise["boots"] else "bare"]
 		# Map loudness to a reasonable dB range: ~1.0 -> 0dB, ~0.25 -> -12dB.
 		var vol_db: float = linear_to_db(clamp(loudness, 0.05, 1.5))
 		SfxManager.play(full_key, global_position, Vector2(0.9, 1.1), vol_db)
 	HearingManager.emit(global_position, loudness, self)
 
 	# Wading ripple: a character moving through a fluid tile pushes out a ring.
-	if floor_id == "shallow_water":
+	if noise["wading"]:
 		var game := get_tree().current_scene
 		if game and "fluid_manager" in game and game.fluid_manager:
 			game.fluid_manager.add_ripple(global_position, 0.55)
@@ -6136,21 +6193,83 @@ func is_hostile_to_party() -> bool:
 	return FactionDatabase.are_hostile("player", faction_id)
 
 ## Sight range in world pixels: Globals.SIGHT_PX_PER_POINT times the sight
-## stat, times the environment multiplier at our position when Game provides
-## one (Game.get_sight_multiplier_at; 1.0 without a Game, e.g. headless
-## tests). 0 while blinded or unconscious, the viewers every LOS check skips.
-## The base is the raw `sight` stat, as in every existing sight check (AI
-## detection, party LOS, crime witnesses, cone radii): effective_sight() can't
-## carry it yet, since a "set" modifier (Blinded) reads as +0 there and
-## Perceptive's +2 would triple the range.
+## stat with its condition modifiers (_sight_stat: creature senses are the
+## base, Perceptive x1.2, Blinded 0), times the environment multiplier at our
+## position (weather, fog: Game.get_sight_multiplier_at; 1.0 without a Game,
+## e.g. headless tests). 0 while blinded or unconscious, the viewers every LOS
+## check skips. This is the drawn cone's radius and the AI's detection range.
 func get_sight_range_px() -> float:
-	if condition_manager != null and (condition_manager.has_condition("blinded") \
-			or condition_manager.has_condition("unconscious")):
+	if _sight_disabled():
 		return 0.0
-	var range_px: float = Globals.SIGHT_PX_PER_POINT * maxf(0.0, sight)
+	return Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * _env_sight_mult(global_position)
+
+## Sight range toward a specific point: as get_sight_range_px, but the thicker
+## fog of viewer and target applies, so someone standing in fog or smoke is
+## only seen up close.
+func get_sight_range_px_to(target_pos: Vector2) -> float:
+	if _sight_disabled():
+		return 0.0
+	var env: float = minf(_env_sight_mult(global_position), _env_sight_mult(target_pos))
+	return Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * env
+
+func _env_sight_mult(world_pos: Vector2) -> float:
 	if game != null and is_instance_valid(game) and game.has_method("get_sight_multiplier_at"):
-		range_px *= float(game.get_sight_multiplier_at(global_position))
-	return range_px
+		return float(game.get_sight_multiplier_at(world_pos))
+	return 1.0
+
+func _sight_disabled() -> bool:
+	return condition_manager != null and (condition_manager.has_condition("blinded") \
+		or condition_manager.has_condition("unconscious"))
+
+# The sight stat with condition modifiers applied to it, computed from the
+# base so "multiply" and "set" act on the real stat (Perceptive x1.2, Blinded
+# 0) whatever sight_modifier holds. Cached until the conditions or the base
+# change: can_see_point runs per item and NPC per party member every frame.
+var _sight_stat_cache: float = 0.0
+var _sight_stat_base: float = -1.0
+var _sight_stat_dirty: bool = true
+
+func _sight_stat() -> float:
+	if condition_manager == null:
+		return sight
+	if _sight_stat_dirty or _sight_stat_base != sight:
+		if not condition_manager.stats_recalculated.is_connected(_on_sight_mods_changed):
+			condition_manager.stats_recalculated.connect(_on_sight_mods_changed)
+		_sight_stat_cache = condition_manager.calculate_effective_stat(sight, "sight")
+		_sight_stat_base = sight
+		_sight_stat_dirty = false
+	return _sight_stat_cache
+
+func _on_sight_mods_changed() -> void:
+	_sight_stat_dirty = true
+
+## THE visual test, shared by AI detection, party visibility and crime
+## witnesses: alive and sighted, the point within sight range (fog at either
+## end counts), inside the effective FOV cone, and an elevation-aware sight
+## line clear of walls. range_mult scales the range (a held or hard-to-see
+## target); within fov_free_radius px facing doesn't matter (close contact).
+func can_see_point(target_pos: Vector2, target_elev: float = 0.0, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
+	if not is_alive() or _sight_disabled():
+		return false
+	var to_target: Vector2 = target_pos - global_position
+	var dist: float = to_target.length()
+	# Cheap tests first (this runs per item and NPC per party member each
+	# frame): the environment only ever shortens sight, so the bare stat range
+	# bounds it before any weather or fog lookup.
+	var base_px: float = Globals.SIGHT_PX_PER_POINT * maxf(0.0, _sight_stat()) * range_mult
+	if base_px <= 0.0 or dist > base_px:
+		return false
+	var half_fov: float = effective_fov() * 0.5
+	if half_fov < 180.0 and dist > 0.01 and dist > fov_free_radius:
+		var facing: Vector2 = Vector2.UP.rotated(rotation)
+		if absf(rad_to_deg(facing.angle_to(to_target))) > half_fov:
+			return false
+	if dist > get_sight_range_px_to(target_pos) * range_mult:
+		return false
+	var world: World2D = get_world_2d() if is_inside_tree() else null
+	if world == null:
+		return true
+	return GridManager.sight_line_clear(world.direct_space_state, global_position, target_pos, get_elevation(), target_elev)
 
 ## How easy we are to see, as a multiplier on observers' sight (1.0 =
 ## normal). The "invisible" condition is separate and binary: the AI can't
@@ -6179,13 +6298,25 @@ func reveal(seconds: float = REVEAL_SECONDS) -> void:
 	if visibility_mult < 1.0:
 		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
 
-## True while this character is moving stealthily. Same answer as
-## ai._is_sneaking(other): party members sneak while Game.stealth_mode is on;
-## NPCs never do.
+## True while this character is moving stealthily: stealth mode
+## (Game.stealth_mode, the C key) makes every party member sneak, whether
+## selected, walking a drawn plan or following its AI. Nobody sneaks on the
+## world map; NPCs never do. ai._is_sneaking asks this, so the AI's
+## close-quarters carve-out and the quieter, slower steps agree.
 func is_sneaking() -> bool:
 	if game == null or not is_instance_valid(game) or not ("stealth_mode" in game) or not game.stealth_mode:
 		return false
-	return is_party_member()
+	return not on_world_map and is_party_member()
+
+## Sneaking: footsteps this much as loud (halves the distance they carry) ...
+const SNEAK_NOISE_MULT := 0.5
+## ... and walking at this fraction of normal pace.
+const SNEAK_SPEED_MULT := 0.7
+
+## Walking pace: move_speed, slowed while sneaking. Dashes, ice slides and
+## jumps keep the full move_speed, so an escape is never slowed by stealth.
+func walk_speed() -> float:
+	return move_speed * (SNEAK_SPEED_MULT if is_sneaking() else 1.0)
 
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }

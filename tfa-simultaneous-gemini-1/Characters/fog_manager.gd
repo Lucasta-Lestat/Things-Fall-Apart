@@ -128,6 +128,60 @@ func _make_invisible_data(fog_size: Vector2) -> FogData:
 	data.density = 0.0
 	return data
 
+# Vision through fog: sight multiplier = 1 - FOG_SIGHT_FACTOR * density, never
+# below FOG_MIN_SIGHT_MULT (thick fog 0.8 -> x0.4; smoke 0.7 -> x0.475).
+const FOG_SIGHT_FACTOR := 0.75
+const FOG_MIN_SIGHT_MULT := 0.25
+
+## Sight multiplier at a world point from the densest fog or cloud covering it
+## (FogOverlay.get_vision_density_at). 1.0 where there is none.
+func get_sight_multiplier_at(world_pos: Vector2) -> float:
+	var d: float = 0.0
+	for fog in _active_fogs:
+		if is_instance_valid(fog):
+			d = maxf(d, fog.get_vision_density_at(world_pos))
+	if d <= 0.0:
+		return 1.0
+	return clampf(1.0 - FOG_SIGHT_FACTOR * d, FOG_MIN_SIGHT_MULT, 1.0)
+
+# A map-wide fog's rect overshoots the map by this factor so its faded rim
+# (and the rect edge) falls outside the map: the map corners sit at 0.88 of
+# the silhouette radius, inside its dense body.
+const MAP_FOG_OVERSIZE := 1.6
+
+## Creates a Maps.json ambient fog covering the whole map (map_px in pixels,
+## top-left at origin_px): an even, unwobbled body centred on the map, its
+## noise stretched so the blobs keep the authored pixel size. Returns the
+## overlays, as create_fog_from_id.
+func create_map_fog(fog_id: String, map_px: Vector2, origin_px: Vector2 = Vector2.ZERO) -> Array:
+	if map_px.x <= 0.0 or map_px.y <= 0.0:
+		return create_fog_from_id(fog_id, origin_px)
+	if not _fog_db.has(fog_id):
+		push_error("FogManager: Unknown fog_id '%s'" % fog_id)
+		return []
+	var entry: Dictionary = _fog_db[fog_id]
+	var data := _fog_data_from_entry(entry)
+	var authored_w: float = float(entry.get("size", [1920, 1080])[0])
+	data.size = map_px * MAP_FOG_OVERSIZE
+	data.falloff_radius = 1.0
+	data.falloff_softness = 0.1
+	data.edge_wobble = 0.0
+	if authored_w > 0.0:
+		data.scale = data.scale * data.size.x / authored_w
+	var centre: Vector2 = origin_px + map_px * 0.5
+	var overlays: Array = []
+	var conditions: Array = entry.get("conditions", [])
+	if conditions.is_empty():
+		overlays.append(create_fog(data, centre))
+	else:
+		var first := true
+		for condition_id in conditions:
+			var overlay = create_fog(data if first else _make_invisible_data(data.size), centre)
+			overlay.condition_id = condition_id
+			overlays.append(overlay)
+			first = false
+	return overlays
+
 func update_fogs(delta: float, characters: Array) -> void:
 	"""Called from main scene _process to tick all active fogs"""
 	# Iterate a copy since fogs may expire and remove themselves

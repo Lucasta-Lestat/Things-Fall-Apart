@@ -7,6 +7,8 @@ var _panel: PanelContainer
 var _vbox: VBoxContainer
 var _visible: bool = false
 var _current_group: String = ""
+# Every precipitation the debug picker offers (acid and freezing rain included).
+const PRECIP_TYPES := ["clear", "overcast", "rain", "heavy_rain", "snow", "heavy_snow", "acid_rain", "freezing_rain"]
 
 # UI references
 var _title_label: Label
@@ -122,7 +124,7 @@ func _build_ui() -> void:
 	precip_hbox.add_child(precip_lbl)
 	_precip_option = OptionButton.new()
 	_precip_option.custom_minimum_size.x = 150
-	for precip_type in ["clear", "overcast", "rain", "heavy_rain", "snow", "heavy_snow"]:
+	for precip_type in PRECIP_TYPES:
 		_precip_option.add_item(precip_type)
 	_precip_option.item_selected.connect(_on_precip_selected)
 	precip_hbox.add_child(_precip_option)
@@ -204,8 +206,7 @@ func _refresh() -> void:
 	]
 
 	# Sync override controls
-	var precip_types = ["clear", "overcast", "rain", "heavy_rain", "snow", "heavy_snow"]
-	var idx = precip_types.find(precip)
+	var idx = PRECIP_TYPES.find(precip)
 	if idx >= 0:
 		_precip_option.selected = idx
 	_wind_speed_slider.set_value_no_signal(wind_speed)
@@ -222,9 +223,12 @@ func _on_weather_changed(_group: String, _weather: Dictionary) -> void:
 
 func _on_precip_selected(index: int) -> void:
 	if _current_group.is_empty():
+		# Maps with no weather group: force it on the map.
+		var scene = get_tree().current_scene
+		if scene and scene.has_method("force_weather"):
+			scene.force_weather(PRECIP_TYPES[index])
 		return
-	var precip_types = ["clear", "overcast", "rain", "heavy_rain", "snow", "heavy_snow"]
-	WeatherManager.set_precipitation(_current_group, precip_types[index])
+	WeatherManager.set_precipitation(_current_group, PRECIP_TYPES[index])
 
 func _on_wind_speed_changed(value: float) -> void:
 	if _current_group.is_empty():

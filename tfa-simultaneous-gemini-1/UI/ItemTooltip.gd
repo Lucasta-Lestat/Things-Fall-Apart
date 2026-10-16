@@ -72,9 +72,40 @@ static func trade_value(entry: Dictionary) -> float:
 static func armour_lines(_entry: Dictionary) -> PackedStringArray:
 	return PackedStringArray()
 
-## Noise the item makes when worn or carried.
-static func noise_lines(_entry: Dictionary) -> PackedStringArray:
-	return PackedStringArray()
+## Noise the item makes when worn: the same per-step number the worn piece
+## adds to every footstep NPCs hear (EquipmentShape.noise_for_item_data).
+static func noise_lines(entry: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	if entry.get("kind", "") != "item":
+		return out
+	var item = entry.get("raw", {})
+	if not (item is Dictionary) or not (str(item.get("equip_slot", "")) in WEARABLE_SLOTS):
+		return out
+	var n := EquipmentShape.noise_for_item_data(item)
+	if n <= 0.0:
+		out.append("Noise when worn: silent")
+	else:
+		out.append("Noise when worn: %s (+%.2f per step)" % [noise_word(n), n])
+	var t := str(item.get("type", "")).to_lower()
+	if t == "boots" or t == "greaves":
+		out.append("Boots: steps at full floor volume (bare feet: half)")
+	return out
+
+## Equip slots a worn piece can go in (PartySidePanel._EQUIP_SLOT_MAP).
+const WEARABLE_SLOTS := ["Head", "Torso", "Back", "Cape", "Legs", "Feet"]
+
+## A word for a worn piece's per-step noise. Floors run about 0.25 (grass)
+## to 0.9 (water) per step, so these are relative to that scale.
+static func noise_word(noise_per_step: float) -> String:
+	if noise_per_step <= 0.0:
+		return "silent"
+	if noise_per_step < 0.05:
+		return "faint"
+	if noise_per_step < 0.15:
+		return "light"
+	if noise_per_step < 0.30:
+		return "noticeable"
+	return "loud"
 
 ## Effects while equipped (conditions granted, light, on-hit abilities).
 ## Worn gear: each condition it grants with what it does, worn-pack slots and

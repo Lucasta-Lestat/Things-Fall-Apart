@@ -45,6 +45,10 @@ var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
 var stealth_mode: bool = false
+# Change stealth_mode through set_stealth_mode (the C key), which emits this.
+signal stealth_mode_changed(active: bool)
+# vfx/StealthOverlay.gd: in-view eyes and noise rings while stealth_mode.
+var stealth_overlay: Node2D = null
 # Session-scoped unlock memory, keyed "<map_id>|door|<hinge_x>,<hinge_y>" (export-px
 # ints from the geometry JSON hinge). Written by Door.interact on successful unlock,
 # re-applied by MapLoader on door spawn. Intentionally NOT cleared in
@@ -305,6 +309,12 @@ func _ready() -> void:
 	# Character, structure and hazard readouts on the hover tooltip; wind on the HUD.
 	add_child(preload("res://UI/WorldHoverInfo.gd").new())
 	hud_status.add_widget(preload("res://UI/WindIndicator.gd").new())
+
+	# Stealth mode readouts: the STEALTH badge on the status strip, and the
+	# world-space overlay (in-view eyes, noise rings).
+	hud_status.add_widget(preload("res://UI/StealthBadge.gd").new())
+	stealth_overlay = preload("res://vfx/StealthOverlay.gd").new()
+	add_child(stealth_overlay)
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
@@ -1247,8 +1257,21 @@ func _unload_current_map() -> void:
 
 	GridManager.set_elevation_data(null)
 
+	_forced_precip = ""
+	var leaving_group: String = current_map_data.get("weather_group", "")
 	current_map_id = ""
 	current_map_data = {}
+	# Timed spell weather on a group map would otherwise keep raining acid on
+	# every map sharing the group until the next daily roll. Reverted after
+	# current_map_data is cleared, so the old map doesn't announce it.
+	if _forced_weather_left > 0.0 and not leaving_group.is_empty() \
+			and WeatherManager.get_precipitation(leaving_group) == _forced_weather_type:
+		WeatherManager.set_precipitation(leaving_group, _forced_weather_revert)
+	_forced_weather_left = 0.0
+	_forced_weather_type = ""
+	_forced_weather_revert = ""
+	_weather_caster = null
+	_weather_condition_timers.clear()
 
 # ---------------------------------------------------------------------------
 # Ambient setup (fog + music)
@@ -1258,8 +1281,13 @@ func setup_map_fogs(map_data: Dictionary) -> void:
 	if not fog_manager:
 		return
 	fog_manager.clear_all_fog()
+	# Ambient map fog covers the whole map (create_fog_from_id would centre one
+	# authored-size cloud on the origin, over the top-left corner only); vision
+	# reads the same fog (get_fog_sight_mult_at).
+	var map_px := Vector2(GridManager.map_rect.size) * GridManager.TILE_SIZE
+	var map_origin := Vector2(GridManager.map_rect.position) * GridManager.TILE_SIZE
 	for fog_id in map_data.get("fog_ids", []):
-		fog_manager.create_fog_from_id(fog_id)
+		fog_manager.create_map_fog(fog_id, map_px, map_origin)
 
 func setup_map_music(map_data: Dictionary) -> void:
 	var track: String = map_data.get("music_track", "")
@@ -1271,6 +1299,7 @@ func setup_map_music(map_data: Dictionary) -> void:
 	MusicManager.set_ambient_track(track)
 
 func setup_map_weather(map_data: Dictionary) -> void:
+	_forced_precip = ""
 	var weather_group: String = map_data.get("weather_group", "")
 	if weather_vfx_controller:
 		if weather_group.is_empty():
@@ -1284,10 +1313,22 @@ func setup_map_weather(map_data: Dictionary) -> void:
 		var weather = WeatherManager.get_weather(weather_group)
 		if not weather.is_empty():
 			_apply_weather_fluid_effects(weather)
+	# Arriving under some weather: its sight effect applies, unannounced.
+	_refresh_weather_state()
 
 ## Force a precipitation type onto the current map, e.g. from a weather spell.
 ## Works regardless of the map's configured weather_group (most maps have none).
-func force_weather(precip_type: String) -> void:
+## A duration > 0 (spell weather) reverts to the previous precipitation when it
+## runs out, unless the weather has changed again in the meantime; while it
+## lasts, the conditions it applies (Acid Rain, Freezing Rain) are the
+## caster's doing.
+func force_weather(precip_type: String, duration: float = 0.0, caster: Node = null) -> void:
+	if duration > 0.0:
+		if _forced_weather_left <= 0.0:
+			_forced_weather_revert = current_precipitation()
+		_forced_weather_type = precip_type
+		_forced_weather_left = duration
+		_weather_caster = caster
 	var map_group: String = current_map_data.get("weather_group", "")
 	if not map_group.is_empty():
 		# Map has a real weather group: update it normally. The resulting
@@ -1296,15 +1337,18 @@ func force_weather(precip_type: String) -> void:
 		return
 	# Map has no weather group (interiors/dungeons): drive the VFX and fluid
 	# effects directly, since no group state exists for the signal path to use.
+	_forced_precip = precip_type
 	if weather_vfx_controller and weather_vfx_controller.has_method("force_precipitation"):
 		weather_vfx_controller.force_precipitation(precip_type)
 	_apply_weather_fluid_effects({"precipitation": precip_type})
+	_refresh_weather_state(true)
 
 func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 	var map_group = current_map_data.get("weather_group", "")
 	if group != map_group or map_group.is_empty():
 		return
 	_apply_weather_fluid_effects(weather_state)
+	_refresh_weather_state(true)
 
 func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 	var precip = weather.get("precipitation", "clear")
@@ -1319,6 +1363,9 @@ func _apply_weather_fluid_effects(weather: Dictionary) -> void:
 
 func _spawn_rain_puddles(precip_type: String) -> void:
 	if not fluid_manager:
+		return
+	# Nothing pools from the sky indoors or on the world map.
+	if current_map_data.get("is_world_map", false) or is_map_indoors():
 		return
 	# What falls is what pools: acid rain leaves acid, everything else water.
 	var fluid_type: String = "acid" if precip_type == "acid_rain" else "water"
@@ -1340,9 +1387,172 @@ func _spawn_rain_puddles(precip_type: String) -> void:
 			continue
 		if fluid_manager.get_fluid_type_at(tile) != "":
 			continue
+		# No puddles under roofs.
+		if not is_tile_exposed_to_sky(tile):
+			continue
 		# gentle: weather must never erase an authored slick (oil etc.)
 		fluid_manager.rain_puddle(tile, fluid_type, amount)
 		placed += 1
+
+# ---------------------------------------------------------------------------
+# Weather and fog vs sight
+# ---------------------------------------------------------------------------
+
+# Weather's effect on sight (weather.json visibility_modifier), cached on every
+# precipitation change. Map-wide on outdoor maps, the world map included; 1.0
+# on maps flagged indoors.
+var _weather_vis_mult: float = 1.0
+# Precipitation forced by a spell on a map with no weather_group (no
+# WeatherManager state holds it there).
+var _forced_precip: String = ""
+# The precipitation whose effects the log last described (_refresh_weather_state).
+var _weather_effects_precip: String = "clear"
+
+## Maps.json "indoors": interiors and underground maps, where weather neither
+## falls nor affects sight.
+func is_map_indoors() -> bool:
+	return bool(current_map_data.get("indoors", false))
+
+## The precipitation actually falling on this map: the weather group's, or a
+## spell-forced one on a map without a group.
+func current_precipitation() -> String:
+	var group: String = current_map_data.get("weather_group", "")
+	if not group.is_empty():
+		return WeatherManager.get_precipitation(group)
+	return _forced_precip if not _forced_precip.is_empty() else "clear"
+
+## Re-reads the falling weather's effect on sight. With `announce` (a real
+## change, not a map arrival) the log says how far sight drops or recovers.
+func _refresh_weather_state(announce: bool = false) -> void:
+	var precip: String = current_precipitation()
+	var prev_mult: float = _weather_vis_mult
+	if is_map_indoors():
+		_weather_vis_mult = 1.0
+	else:
+		var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
+		_weather_vis_mult = clampf(float(pd.get("visibility_modifier", 1.0)), 0.1, 1.0)
+	if announce and precip != _weather_effects_precip:
+		var note: String = _weather_effects_note(prev_mult, _weather_vis_mult, precip)
+		if not note.is_empty():
+			GameLog.add_entry(note)
+	_weather_effects_precip = precip
+
+## What a weather change does to the party, for the log: "Sight drops to 50%.",
+## "Sight recovers to 75%." or "Full sight returns.", then the weather's
+## exposure_text where it can fall on anyone ("Anyone caught in the open
+## starts to corrode."). "" when nothing changes for them.
+func _weather_effects_note(prev_mult: float, mult: float, precip: String) -> String:
+	var parts := PackedStringArray()
+	if not is_equal_approx(prev_mult, mult):
+		if mult >= 0.999:
+			parts.append("Full sight returns.")
+		else:
+			parts.append("Sight %s to %d%%." % ["drops" if mult < prev_mult else "recovers", roundi(mult * 100.0)])
+	var exposure: String = str(WeatherManager.get_precipitation_data(precip).get("exposure_text", ""))
+	if not exposure.is_empty() and not is_map_indoors() and not current_map_data.get("is_world_map", false):
+		parts.append(exposure)
+	return " ".join(parts)
+
+func get_weather_visibility_mult() -> float:
+	return _weather_vis_mult
+
+## Sight multiplier from the densest fog or cloud at a world point (1.0 clear).
+func get_fog_sight_mult_at(world_pos: Vector2) -> float:
+	if fog_manager and fog_manager.has_method("get_sight_multiplier_at"):
+		return fog_manager.get_sight_multiplier_at(world_pos)
+	return 1.0
+
+# ---------------------------------------------------------------------------
+# Weather on whoever stands under open sky
+# ---------------------------------------------------------------------------
+
+## Open sky over a tile: not an indoors map, not the world map, and no roof
+## (structured maps carry a roof layer; legacy maps have none, so they are
+## open everywhere unless flagged indoors).
+func is_tile_exposed_to_sky(t: Vector2i) -> bool:
+	if is_map_indoors() or current_map_data.get("is_world_map", false):
+		return false
+	return not GridManager.has_roof(t)
+
+## Whether weather falls on `c`: standing on a roof, or on an unroofed tile.
+func is_exposed_to_sky(c) -> bool:
+	if is_map_indoors() or current_map_data.get("is_world_map", false):
+		return false
+	if "on_roof" in c and c.on_roof:
+		return true
+	return is_tile_exposed_to_sky(GridManager.world_to_map(c.global_position))
+
+# Spell weather with a duration (force_weather): seconds left, the type it
+# forced, the precipitation to restore when it runs out, and who cast it.
+var _forced_weather_left: float = 0.0
+var _forced_weather_type: String = ""
+var _forced_weather_revert: String = ""
+var _weather_caster: Node = null
+# instance_id -> seconds of continuous exposure to condition-bearing weather.
+var _weather_condition_timers: Dictionary = {}
+
+## Acid Rain, Freezing Rain: weather.json applies_condition lands on everyone
+## out in the open after apply_interval seconds of exposure, and again every
+## interval while they stay out, up to max_stacks (so rain alone never
+## freezes). Shelter resets the timer. While a caster's spell weather lasts
+## the condition is theirs, so its damage counts as their attack.
+func _tick_weather_conditions(delta: float) -> void:
+	var precip: String = current_precipitation()
+	var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
+	var cond: String = str(pd.get("applies_condition", ""))
+	if cond.is_empty() or is_map_indoors() or current_map_data.get("is_world_map", false):
+		if not _weather_condition_timers.is_empty():
+			_weather_condition_timers.clear()
+		return
+	var interval: float = maxf(0.1, float(pd.get("apply_interval", 3.0)))
+	var cap: int = int(pd.get("max_stacks", 0))
+	var source: Node = null
+	if _forced_weather_left > 0.0 and precip == _forced_weather_type and is_instance_valid(_weather_caster):
+		source = _weather_caster
+	for c in characters_in_scene:
+		if not is_instance_valid(c) or not c.is_alive():
+			continue
+		var id: int = c.get_instance_id()
+		if not is_exposed_to_sky(c):
+			_weather_condition_timers.erase(id)
+			continue
+		var t: float = float(_weather_condition_timers.get(id, 0.0)) + delta
+		if t < interval:
+			_weather_condition_timers[id] = t
+			continue
+		_weather_condition_timers[id] = 0.0
+		var cm = c.get_node_or_null("ConditionManager")
+		if cm == null:
+			continue
+		var existing = cm.conditions.get(cond)
+		if cap > 0 and existing != null and existing.stacks >= cap:
+			# At the cap: keep it from lapsing while they stay out (re-applying
+			# a stackable doesn't refresh its timer).
+			var dur: float = float(existing.condition.duration)
+			if dur > 0.0 and existing.expires_at > 0.0:
+				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)
+			continue
+		cm.apply_condition(cond, source, 1)
+
+## Counts down timed spell weather and restores the previous precipitation.
+func _tick_forced_weather(delta: float) -> void:
+	if _forced_weather_left <= 0.0:
+		return
+	_forced_weather_left -= delta
+	if _forced_weather_left > 0.0:
+		return
+	var passing: String = _forced_weather_type
+	var revert: String = _forced_weather_revert
+	_forced_weather_left = 0.0
+	_forced_weather_type = ""
+	_forced_weather_revert = ""
+	_weather_caster = null
+	# A daily reroll (or another spell) may already have replaced it.
+	if passing.is_empty() or passing == revert or current_precipitation() != passing:
+		return
+	var pd: Dictionary = WeatherManager.get_precipitation_data(passing)
+	GameLog.add_entry("%s passes." % str(pd.get("display_name", passing.replace("_", " ").capitalize())))
+	force_weather(revert)
 
 # ---------------------------------------------------------------------------
 # Party spawning
@@ -1704,13 +1914,40 @@ func show_trade_window(npc) -> void:
 # Lighting helpers
 # ---------------------------------------------------------------------------
 
+## Fits a sight-cone light to its character's real sight: the wedge matches the
+## effective FOV and the radius the current range (conditions, weather, fog at
+## the viewer). A zero range (Blinded, Unconscious, dead: can_see_point sees
+## nothing) switches the light off via `enabled`, since stealth mode owns
+## `visible` on NPC cones.
+func _fit_sight_light(light: PointLight2D, c: ProceduralCharacter) -> void:
+	var tex: Texture2D = Globals.get_sight_cone_texture(c.effective_fov())
+	if light.texture != tex:
+		light.texture = tex
+	var r: float = c.get_sight_range_px() if c.is_alive() else 0.0
+	light.enabled = r >= 1.0
+	if r >= 1.0:
+		var s: float = r / (tex.get_width() * 0.5)
+		if not is_equal_approx(light.texture_scale, s):
+			light.texture_scale = s
+
+## Re-fits every drawn cone each frame, paused or not (the party plans while
+## paused), so Perceptive, Blinded, weather and walking into fog show at once.
+const SIGHT_CONE_NAMES := ["LineOfSight", "NPCLineOfSight", "NPCLineOfSightHigh"]
+func _update_sight_cones() -> void:
+	for c in characters_in_scene:
+		if not is_instance_valid(c):
+			continue
+		for n in SIGHT_CONE_NAMES:
+			var light = c.get_node_or_null(n)
+			if light is PointLight2D:
+				_fit_sight_light(light, c)
+		if c.has_node("NPCLineOfSightHigh"):
+			sync_npc_elevated_cone(c)
+
 func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	var light = PointLight2D.new()
-	light.texture = Globals.SIGHT_TEXTURE
+	_fit_sight_light(light, character)
 	light.energy = 0.1
-	var master_radius = 512.0
-	var desired_radius = 1440.0 * character.sight
-	light.texture_scale = desired_radius / master_radius
 	light.name = "LineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
@@ -1745,12 +1982,9 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	"""Add a LOS cone as a child of the NPC. Hidden unless stealth mode is on.
 	When the NPC is hidden (not in party LOS), the light hides with it."""
 	var light = PointLight2D.new()
-	light.texture = Globals.SIGHT_TEXTURE
+	_fit_sight_light(light, npc)
 	light.energy = 0.5
 	light.color = Color(1.0, 0.3, 0.2)  # strong red tint
-	var master_radius = 512.0
-	var desired_radius = 1440.0 * npc.sight
-	light.texture_scale = desired_radius / master_radius
 	light.name = "NPCLineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
@@ -2182,6 +2416,88 @@ func _toggle_npc_los_cones() -> void:
 		if npc_los:
 			npc_los.visible = stealth_mode
 
+## The one way to switch stealth mode (the C key). While it is on, party
+## members sneak (ProceduralCharacter.is_sneaking: quieter footsteps, slower
+## walk, noticed only inside an onlooker's sight cone), NPC sight cones show,
+## and the STEALTH badge and StealthOverlay follow stealth_mode_changed.
+func set_stealth_mode(active: bool) -> void:
+	if stealth_mode == active:
+		return
+	stealth_mode = active
+	_toggle_npc_los_cones()
+	if active:
+		sync_npc_elevated_cones()
+		if current_map_data.get("is_world_map", false):
+			GameLog.add_entry("Stealth mode [b]on[/b]. Nobody sneaks on the world map; the party sneaks once it arrives somewhere.")
+		else:
+			GameLog.add_entry(("Stealth mode [b]on[/b]: the party sneaks (footsteps %d%% as loud, %d%% walking pace) and is noticed only inside an onlooker's sight cone, even up close. "
+				+ "Cones show what onlookers see (pink: raised walkways they can see onto), and an eye marks a party member an onlooker you can see has in view. "
+				+ "Relaxed onlookers who spot you sneaking become wary.") % [
+				roundi(ProceduralCharacter.SNEAK_NOISE_MULT * 100.0), roundi(ProceduralCharacter.SNEAK_SPEED_MULT * 100.0)])
+	else:
+		GameLog.add_entry("Stealth mode [b]off[/b].")
+	stealth_mode_changed.emit(active)
+
+## Give every NPC that has a sight cone its elevated-surface cone (made on
+## first use) and match it to the red one. Called when stealth mode turns on
+## and periodically by StealthOverlay while it is on. None on the world map.
+func sync_npc_elevated_cones() -> void:
+	if current_map_data.get("is_world_map", false):
+		return
+	for character in characters_in_scene:
+		if not is_instance_valid(character) or character in party_chars:
+			continue
+		if not character.has_node("NPCLineOfSight"):
+			continue
+		if not character.has_node("NPCLineOfSightHigh"):
+			_add_npc_elevated_sight_light(character)
+		sync_npc_elevated_cone(character)
+
+## Stealth mode's second, pink cone for an NPC. The red cone of a ground
+## viewer is shadowed by every wall, so it drew battlements and decks as
+## unseen even though GridManager.sight_line_clear lets the NPC see someone
+## standing up there (the target's raised eye tops the wall). This cone is
+## shadowed only by tall occluders (SIGHT_MASK_HIGH) and lights only walkway
+## art (CollisionLayers.ELEVATED_SURFACE_LIGHT, set by MapLoader on deck art),
+## so a walkway glows pink where standing on it would be seen. (Not amber:
+## amber is the Suspicious cone tint and the outcry fuse.)
+const ELEVATED_CONE_COLOR := Color(1.0, 0.4, 0.65)
+func _add_npc_elevated_sight_light(npc: ProceduralCharacter) -> PointLight2D:
+	var light := PointLight2D.new()
+	light.name = "NPCLineOfSightHigh"
+	_fit_sight_light(light, npc)
+	light.energy = 0.35
+	light.color = ELEVATED_CONE_COLOR
+	light.rotation_degrees = -90
+	light.shadow_enabled = true
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH
+	light.range_item_cull_mask = CollisionLayers.ELEVATED_SURFACE_LIGHT
+	light.z_index = 102
+	npc.add_child(light)
+	sync_npc_elevated_cone(npc)
+	return light
+
+## Keep an NPC's elevated-surface cone the same wedge, radius and visibility
+## as its red one (whatever rule shows or hides the red one), and lit only
+## while the NPC stands on the ground (from a walkway the red cone already
+## sees onto other walkways). ProceduralCharacter._refresh_elevation calls it
+## when the NPC climbs; _update_sight_cones every frame.
+func sync_npc_elevated_cone(npc) -> void:
+	if npc == null or not is_instance_valid(npc):
+		return
+	var main_light := npc.get_node_or_null("NPCLineOfSight") as PointLight2D
+	var high := npc.get_node_or_null("NPCLineOfSightHigh") as PointLight2D
+	if main_light == null or high == null:
+		return
+	if high.texture != main_light.texture:
+		high.texture = main_light.texture
+	if not is_equal_approx(high.texture_scale, main_light.texture_scale):
+		high.texture_scale = main_light.texture_scale
+	high.rotation = main_light.rotation
+	if high.visible != main_light.visible:
+		high.visible = main_light.visible
+	high.enabled = main_light.enabled and npc.get_elevation() < 1.0
+
 # ===== Hearing visibility pulse =====
 # When a party member can HEAR an NPC (but doesn't see them), the NPC briefly
 # flashes at low alpha so the player gets a momentary fix on their location.
@@ -2431,24 +2747,7 @@ func _update_npc_los_visibility() -> void:
 			continue
 		if npc in party_chars:
 			continue
-		var seen = false
-		for ally in party_chars:
-			if not is_instance_valid(ally) or not ally.is_alive():
-				continue
-			var _cm = ally.get_node_or_null("ConditionManager")
-			if _cm and (_cm.has_condition("blinded") or _cm.has_condition("unconscious")):
-				continue
-			var to_npc = npc.global_position - ally.global_position
-			var dist = to_npc.length()
-			var sight_range = 1440.0 * ally.sight
-			if dist > sight_range:
-				continue
-			var facing_dir = Vector2.UP.rotated(ally.rotation)
-			var angle_to_npc = facing_dir.angle_to(to_npc.normalized())
-			var half_fov = deg_to_rad(ally.fov_angle_degrees * 0.5)
-			if abs(angle_to_npc) <= half_fov and _sight_line_clear(ally.global_position, npc.global_position, ally.get_elevation(), npc.get_elevation()):
-				seen = true
-				break
+		var seen = _is_character_visible_to_party(npc)
 
 		var was_truly_seen: bool = _npc_was_truly_seen.get(npc, false)
 		_npc_was_truly_seen[npc] = seen
@@ -2492,27 +2791,26 @@ func _sight_line_clear(from_pos: Vector2, to_pos: Vector2, viewer_elev: float = 
 	return GridManager.sight_line_clear(viewport.world_2d.direct_space_state, from_pos, to_pos, viewer_elev, target_elev)
 
 
-func _is_position_visible_to_party(target_pos: Vector2) -> bool:
-	"""True if any non-blinded party member has the position in sight range,
-	inside their FOV cone, and on a clear LOS line. Mirrors the per-ally
-	checks in _update_npc_los_visibility."""
+func _is_position_visible_to_party(target_pos: Vector2, target_elev: float = 0.0, range_mult: float = 1.0) -> bool:
+	"""True if any living, sighted party member can see the position: in
+	sight range (weather and fog included), inside their FOV cone, and on a
+	clear LOS line (ProceduralCharacter.can_see_point, the same test AI
+	detection and crime witnesses use). range_mult scales the range (a
+	target's visibility)."""
 	for ally in party_chars:
-		if not is_instance_valid(ally) or not ally.is_alive():
+		if not is_instance_valid(ally):
 			continue
-		var cm = ally.get_node_or_null("ConditionManager")
-		if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
-			continue
-		var to_target = target_pos - ally.global_position
-		var dist = to_target.length()
-		if dist > 1440.0 * ally.sight:
-			continue
-		var facing_dir = Vector2.UP.rotated(ally.rotation)
-		var angle = facing_dir.angle_to(to_target.normalized())
-		if abs(angle) > deg_to_rad(ally.fov_angle_degrees * 0.5):
-			continue
-		if _sight_line_clear(ally.global_position, target_pos, ally.get_elevation()):
+		if ally.can_see_point(target_pos, target_elev, range_mult):
 			return true
 	return false
+
+
+## The party-visibility rule for a character: some party member sees its
+## position at its elevation, with its visibility scaling their range.
+func _is_character_visible_to_party(c) -> bool:
+	var elev: float = c.get_elevation() if c.has_method("get_elevation") else 0.0
+	var vis: float = c.effective_visibility() if c.has_method("effective_visibility") else 1.0
+	return _is_position_visible_to_party(c.global_position, elev, vis)
 
 
 func _update_item_los_visibility() -> void:
@@ -2523,30 +2821,36 @@ func _update_item_los_visibility() -> void:
 		item.visible = _is_position_visible_to_party(item.global_position)
 
 
-## Environmental multiplier on sight range at a world position (weather, fog).
-## ProceduralCharacter.get_sight_range_px multiplies it in. 1.0 = clear.
-func get_sight_multiplier_at(_world_pos: Vector2) -> float:
-	return 1.0
+## Environmental multiplier on sight range at a world position: the map's
+## weather (visibility_modifier) times the densest fog there.
+## ProceduralCharacter.get_sight_range_px multiplies it in. 1.0 = clear; it
+## never exceeds 1.0 (can_see_point bounds range by the bare stat first).
+func get_sight_multiplier_at(world_pos: Vector2) -> float:
+	return _weather_vis_mult * get_fog_sight_mult_at(world_pos)
 
 
 ## Whether the party can see `c` right now, by line of sight. Party members
-## always count. An NPC gets this frame's answer from _update_npc_los_visibility
-## (range, FOV cone, walls and elevation; blinded/unconscious viewers skipped;
-## a hearing pulse doesn't count as seen). That pass is frozen while paused
-## (nothing can move), so the answer holds through planning. It is the LOS
-## answer, not "drawn now": in ground view a seen roof-walker is still hidden
-## (check c.visible for that). Anything that pass hasn't reached (items,
-## structures, a character spawned this frame) gets the same test on its
-## position. Corpses in view count as seen; check is_alive() if that matters.
+## always count. An NPC gets this frame's answer from _update_npc_los_visibility,
+## i.e. _is_character_visible_to_party: some living, sighted party member has
+## it in range (weather, fog at either end, its visibility), inside their FOV
+## cone, on a clear elevation-aware sight line; a hearing pulse doesn't count
+## as seen. That pass is frozen while paused (nothing can move), so the answer
+## holds through planning. It is the LOS answer, not "drawn now": in ground
+## view a seen roof-walker is still hidden (check c.visible for that). Anything
+## that pass doesn't cover (items, structures, a character spawned this frame
+## or no longer in characters_in_scene) gets the same test directly. Corpses
+## in view count as seen; check is_alive() if that matters.
 func is_seen_by_party(c) -> bool:
 	if c == null or not is_instance_valid(c):
 		return false
 	if c in party_chars:
 		return true
-	if _npc_was_truly_seen.has(c):
+	if _npc_was_truly_seen.has(c) and c in characters_in_scene:
 		return bool(_npc_was_truly_seen[c])
 	if not (c is Node2D):
 		return false
+	if c is ProceduralCharacter:
+		return _is_character_visible_to_party(c)
 	return _is_position_visible_to_party(c.global_position)
 
 func _process(delta: float) -> void:
@@ -2570,6 +2874,10 @@ func _process(delta: float) -> void:
 			fluid_manager.update_fluid_tick(delta)
 		if surface_manager:
 			surface_manager.update_surfaces(delta, characters_in_scene, self)
+		# Weather that corrodes or chills anyone out in the open; spell
+		# weather running out.
+		_tick_weather_conditions(delta)
+		_tick_forced_weather(delta)
 		# Hearing-pulse decay and the party LOS sweeps only run unpaused —
 		# they are the most raycast-heavy per-frame work we do, and nothing
 		# may change LOS during tactical pause: characters are frozen and
@@ -2597,6 +2905,9 @@ func _process(delta: float) -> void:
 			var hostiles: Array = hostile_characters_near_party()
 			_update_surrender_button(hostiles)
 			_update_combat_music(hostiles)
+	# Keep drawn cones equal to real sight, paused too (the party plans while
+	# paused): Perceptive, Blinded, weather and fog show at once.
+	_update_sight_cones()
 	# Update all selection indicators
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
@@ -2875,8 +3186,7 @@ func _input(event: InputEvent) -> void:
 				_print_status()
 			KEY_C:
 				if not event.echo:
-					stealth_mode = not stealth_mode
-					_toggle_npc_los_cones()
+					set_stealth_mode(not stealth_mode)
 			KEY_T:
 				# WAIT toggle for the selected party members — the hotkey twin
 				# of the context menu's Wait Here / Resume pair.

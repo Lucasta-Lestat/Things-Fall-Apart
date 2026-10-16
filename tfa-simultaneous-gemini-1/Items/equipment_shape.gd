@@ -15,8 +15,9 @@ enum EquipmentSlot { HEAD, TORSO, BACK, LEGS, FEET }
 @export var base_height: float = 16.0
 @export var attachment_offset: Vector2 = Vector2.ZERO  # Offset from slot position
 @export var DR: int = 1
-# Per-step noise contribution while equipped. Set from item data when known,
-# otherwise inferred from equipment_type + name in _default_noise_per_step().
+# Per-step noise contribution while equipped. load_from_data sets it from the
+# item data (noise_for_item_data); otherwise inferred from equipment_type +
+# name in _default_noise_per_step().
 @export var noise_per_step: float = -1.0
 # Sprite overlay
 var sprite: Sprite2D = null
@@ -44,37 +45,59 @@ func _ready() -> void:
 
 
 func _default_noise_per_step() -> float:
-	# Falls back when load_from_data didn't carry a noise value. Mirrors the
-	# heuristic in Item.gd so equipped shapes and inventory items agree.
-	var lname := equipment_name.to_lower()
-	match equipment_type:
-		EquipmentType.BOOTS:
-			if lname.contains("plate") or lname.contains("iron") or lname.contains("steel"):
+	# Falls back when load_from_data didn't run (factory-made shapes).
+	return noise_for_item_data({"type": EquipmentType.keys()[equipment_type].to_lower(), "name": equipment_name})
+
+## Per-step noise of a wearable item dict (an Items.json entry): its authored
+## "noise_per_step" when it has one, otherwise a guess from its type and the
+## metal / mail / leather words in its name. Equipped shapes, world Items and
+## the item tooltips all use this, so a tooltip says what NPCs actually hear.
+static func noise_for_item_data(data: Dictionary) -> float:
+	var authored = data.get("noise_per_step")
+	if authored != null:
+		return maxf(float(authored), 0.0)
+	var t := str(data.get("type", "")).to_lower()
+	# Items.json entries carry display_name and id, not name.
+	var lname := ""
+	for key in ["display_name", "name", "id"]:
+		var v = data.get(key)
+		if v != null and str(v) != "":
+			lname = str(v).to_lower()
+			break
+	var metal := lname.contains("plate") or lname.contains("iron") or lname.contains("steel") \
+		or lname.contains("armored") or lname.contains("greave")
+	var mail := lname.contains("mail") or lname.contains("chain") or lname.contains("scale")
+	var leather := lname.contains("leather") or lname.contains("hide")
+	match t:
+		"boots", "greaves":
+			if metal:
 				return 0.30
-			if lname.contains("leather") or lname.contains("hide"):
+			if leather:
 				return 0.10
 			if lname.contains("cloth") or lname.contains("soft") or lname.contains("slipper"):
 				return 0.03
 			return 0.15
-		EquipmentType.TORSO_ARMOR:
-			if lname.contains("plate") or lname.contains("iron") or lname.contains("steel"):
+		"armor", "torso", "torso_armor", "breastplate", "chestplate":
+			if metal:
 				return 0.40
-			if lname.contains("mail") or lname.contains("chain") or lname.contains("scale"):
+			if mail:
 				return 0.30
-			if lname.contains("leather") or lname.contains("hide"):
+			if leather:
 				return 0.06
+			if lname.contains("cloth") or lname.contains("robe"):
+				return 0.0
 			return 0.05
-		EquipmentType.PANTS:
-			if lname.contains("plate") or lname.contains("greave"):
+		"pants", "leggings":
+			if metal:
 				return 0.20
-			if lname.contains("mail") or lname.contains("chain"):
+			if mail:
 				return 0.15
 			return 0.02
-		EquipmentType.HELMET:
+		"helmet":
 			return 0.05
-		EquipmentType.BACKPACK:
+		"backpack":
 			return 0.05
-		EquipmentType.CAPE, EquipmentType.HOOD:
+		"cape", "cloak", "hood":
 			return 0.0
 	return 0.0
 
@@ -272,6 +295,7 @@ func load_from_data(data: Dictionary) -> void:
 			sprite_scale = Vector2(data["sprite_scale"], data["sprite_scale"])
 	if data.has("sprite_offset"):
 		sprite_offset = data["sprite_offset"]
+	noise_per_step = noise_for_item_data(data)
 
 	_loaded_from_data = true
 

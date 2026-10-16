@@ -382,6 +382,11 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var pm := CanvasItemMaterial.new()
 		pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
 		art.material = pm
+		if is_deck:
+			# walkway art: stealth mode's elevated-surface cone (a ground NPC
+			# seeing someone standing up here) lights it as well as the
+			# ordinary bit-1 lights
+			art.light_mask = 1 | CollisionLayers.ELEVATED_SURFACE_LIGHT
 		inst.add_child(art)
 	# per-instance health: the editor scales wall hp by run length
 	if s.has("hp"):

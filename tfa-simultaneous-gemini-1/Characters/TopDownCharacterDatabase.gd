@@ -174,6 +174,20 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 		var bg_options: Dictionary = overrides.get("bg_options", {})
 		BackgroundDatabase.apply_background_to_character(character, bg_id, bg_options)
 
+	# --- Sensory (creature senses; 100 = human baseline) ---
+	# After race/background so template senses win; before Game adds the cone
+	# lights, which are fitted from these.
+	var sensory: Dictionary = template.get("sensory", {})
+	if sensory.has("sight"):
+		character.sight = float(sensory["sight"]) / 100.0
+	if sensory.has("hearing"):
+		character.hearing = float(sensory["hearing"]) / 100.0
+	if sensory.has("fov_angle_degrees"):
+		character.fov_angle_degrees = clampf(float(sensory["fov_angle_degrees"]), 1.0, 360.0)
+	# Re-derive condition modifiers against the new bases.
+	if not sensory.is_empty() and character.get("condition_manager") != null:
+		character._on_stats_recalculated()
+
 	# --- Resolve and grant equipment ---
 	var equipment = _resolve_equipment(template, faction_data, overrides)
 	# Append any caller-supplied extra equipment (used by combat test mode for

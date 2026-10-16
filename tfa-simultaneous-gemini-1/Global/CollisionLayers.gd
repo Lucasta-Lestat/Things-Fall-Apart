@@ -46,3 +46,8 @@ const VISION_RAY_MASK := VISION_BLOCKERS
 # These are NOT physics layers. Tier by viewer elevation: >= 1 story = HIGH.
 const SIGHT_MASK_GROUND := 1   # existing bit: occluded by everything
 const SIGHT_MASK_HIGH := 2     # elevated viewers: occluded only by occluders carrying bit 2 (occlude_top >= 2.0)
+
+# CanvasItem.light_mask bit carried by elevated-surface art (deck / battlement
+# walkways). Only stealth mode's NPCLineOfSightHigh cone lights it
+# (range_item_cull_mask); ordinary lights use bit 1 as before. Not a physics layer.
+const ELEVATED_SURFACE_LIGHT := 4
