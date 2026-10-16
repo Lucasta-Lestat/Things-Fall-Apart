@@ -3486,6 +3486,10 @@ func _get_clash_key(char1: CharacterBody2D, char2: CharacterBody2D) -> String:
 func register_attack_start(attacker: Node2D) -> void:
 	"""Called when an attack begins - resets hit tracking for this attack"""
 	active_hits[attacker.get_instance_id()] = {}
+	# Every melee and ranged swing comes through here: it gives away a
+	# concealed (Shrouded) attacker for a few seconds.
+	if attacker.has_method("reveal"):
+		attacker.reveal()
 
 func register_attack_end(attacker: Node2D) -> void:
 	"""Called when an attack ends - clears hit tracking. Also reports a melee

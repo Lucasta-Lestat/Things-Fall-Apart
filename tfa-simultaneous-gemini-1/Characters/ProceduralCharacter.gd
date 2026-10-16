@@ -1757,6 +1757,9 @@ func _on_stats_recalculated() -> void:
 	# --- Crit thresholds ---
 	crit_threshold_modifier = condition_manager.calculate_effective_stat(0.0, "crit_threshold")
 	crit_fail_modifier = condition_manager.calculate_effective_stat(0.0, "crit_fail_threshold")
+
+	# --- Concealment (Shrouded): multiplies observers' sight range to us ---
+	visibility_mult = condition_manager.calculate_effective_stat(1.0, "visibility")
 	
 	# --- Bonus damage against trait (each trait is its own stat key) ---
 	for trait_key in bonus_damage_against_trait:
@@ -6128,7 +6131,28 @@ func get_sight_range_px() -> float:
 ## normal). The "invisible" condition is separate and binary: the AI can't
 ## acquire an invisible foe at all (ai.gd checks the condition itself).
 func effective_visibility() -> float:
-	return 1.0
+	# Worn concealment (a Dark Hood's Shrouded, x0.5) via the "visibility"
+	# stat; attacking or casting shows us in full for REVEAL_SECONDS
+	# (reveal()). A corpse doesn't hide.
+	if visibility_mult >= 1.0 or not is_alive() or TimeManager.absolute_time() < _revealed_until:
+		return 1.0
+	return clampf(visibility_mult, 0.0, 1.0)
+
+## Concealment from conditions (the "visibility" stat, 1.0 = normal; a Dark
+## Hood's Shrouded halves it), cached by _on_stats_recalculated.
+## effective_visibility() is the answer to use.
+var visibility_mult: float = 1.0
+## TimeManager.absolute_time() until which concealment is off after an
+## attack or a cast.
+var _revealed_until: float = -1.0
+const REVEAL_SECONDS := 3.0
+
+## Attacking (Game.register_attack_start) or casting (use_ability) gives a
+## concealed character away for a few seconds. The binary "invisible"
+## condition is its own rule and is left alone.
+func reveal(seconds: float = REVEAL_SECONDS) -> void:
+	if visibility_mult < 1.0:
+		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
 
 ## True while this character is moving stealthily. Same answer as
 ## ai._is_sneaking(other): party members sneak while Game.stealth_mode is on;
@@ -7135,7 +7159,11 @@ signal targeting_started(ability: Ability)
 signal targeting_cancelled(ability: Ability)
 
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
-	return ability_manager.use_ability(ability, target_data)
+	var ok: bool = ability_manager.use_ability(ability, target_data)
+	# Casting gives a concealed caster away (reveal()).
+	if ok:
+		reveal()
+	return ok
 
 
 ## Start targeting mode for an ability
