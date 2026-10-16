@@ -715,7 +715,8 @@ func _is_sneaking(other: ProceduralCharacter) -> bool:
 # What this AI sees of a character right now, by the same rules _update_target
 # acts on, for UI that must agree with the AI (the stealth 'in view' eye, the
 # paused intent line). Read-only: nothing here changes targeting. The held
-# target's answer is is_target_in_sight() (below _acquire_target).
+# target's answer is is_target_in_sight() (the world-info lane's target
+# indication adds it: the hold rule, _target_occluded_time == 0).
 
 ## Whether this AI would acquire `other` by sight now (faction aside): alive,
 ## inside detection range, not invisible to us, and either in the sight cone or
@@ -1018,15 +1019,6 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
-
-## Whether we have eyes on our target right now: false while chasing where it
-## was last seen behind a wall. The occluded-chase clock's answer
-## (_target_occluded_time: a clear sight line, close quarters or the target's
-## own hit keep it at zero), so the paused intent lines agree with the demotion.
-func is_target_in_sight() -> bool:
-	if current_target == null or not is_instance_valid(current_target):
-		return false
-	return _target_occluded_time <= 0.0
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target

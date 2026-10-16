@@ -550,10 +550,14 @@ func _case_ai() -> void:
 		aai.alertness_value >= aai.ALERTNESS_MAX and aai.current_alertness == aai.Alertness.HOSTILE,
 		"alert %.0f class %d" % [aai.alertness_value, aai.current_alertness])
 	_report("ai.fighting-refreshes-stimulus", aai.time_since_last_stimulus == 0.0 and aai.last_heard_position == b.global_position)
-	_report("ai.held-target-in-sight", aai.is_target_in_sight())
-	aai._target_occluded_time = 1.0
-	_report("ai.occluded-held-target-not-in-sight", not aai.is_target_in_sight())
-	aai._target_occluded_time = 0.0
+	# The held-target readout, is_target_in_sight(), comes with the world-info
+	# lane and reads this clock: zero while the hold has the target in sight.
+	_report("ai.held-target-seen-by-hold", aai._target_occluded_time == 0.0)
+	if aai.has_method("is_target_in_sight"):
+		_report("ai.held-target-in-sight", aai.is_target_in_sight())
+		aai._target_occluded_time = 1.0
+		_report("ai.occluded-held-target-not-in-sight", not aai.is_target_in_sight())
+		aai._target_occluded_time = 0.0
 	aai._lose_target()
 	# park everyone so far behind the next onlooker (it faces up the map), so
 	# the only one its confused eye can pick is `ahead`
