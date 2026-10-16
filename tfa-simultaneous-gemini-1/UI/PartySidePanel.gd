@@ -299,11 +299,19 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	container.add_child(header)
 
 	# --- Health Bar (single bar replaces the old head + torso pair) ---
+	# The HP caption shares its row with the footsteps readout (added on the
+	# right by _add_footsteps_label), keeping it off the crowded header.
+	var hp_row = HBoxContainer.new()
+	hp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.add_child(hp_row)
+
 	var hp_label = Label.new()
 	hp_label.text = "HP"
 	hp_label.add_theme_font_size_override("font_size", 9)
+	hp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	container.add_child(hp_label)
+	hp_row.add_child(hp_label)
 
 	var health_bar = ProgressBar.new()
 	health_bar.custom_minimum_size = Vector2(0, 12)
@@ -413,6 +421,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		character.inventory.weapon_unequipped.connect(on_changed)
 		character.inventory.active_weapon_changed.connect(on_active)
 
+	_add_footsteps_label(data, hp_row)
 	_refresh_inventory(data)
 	# Seed the name width for the no-conditions case. _update_conditions re-fits
 	# it as pips come and go, but it early-returns for a character with no
@@ -1513,6 +1522,7 @@ func _process(_delta: float) -> void:
 		_update_conditions(data, character)
 
 		_update_resource_bars(data, character)
+		_update_footsteps(data, character, _delta)
 
 func _update_health_bar(data: Dictionary, character) -> void:
 	var bar: ProgressBar = data["health_bar"]
@@ -1537,6 +1547,83 @@ func _update_stress_bar(data: Dictionary, character) -> void:
 	var cap: int = max(1, int(character.max_stress)) if "max_stress" in character else 1
 	var cur: int = int(character.stress) if "stress" in character else 0
 	bar.value = clamp(float(cur) / float(cap) * 100.0, 0.0, 100.0)
+
+
+# --- Footstep noise readout ---
+# "<Quiet|Normal|Loud> steps" on the right of the HP row, with the breakdown
+# (floor, boots, gear, race, sneaking, how far a step carries) in its tooltip.
+# The numbers are ProceduralCharacter.footstep_noise and
+# HearingManager.audible_radius, the same calculation the step itself sends
+# to HearingManager, so the readout is what NPCs hear.
+const FOOTSTEP_REFRESH_SEC := 0.25
+const FOOTSTEP_TIER_COLORS := {
+	"Quiet": Color(0.55, 0.85, 1.0),
+	"Normal": Color(1.0, 0.9, 0.45),
+	"Loud": Color(1.0, 0.5, 0.35),
+}
+
+func _add_footsteps_label(data: Dictionary, row: Control) -> void:
+	var lbl := Label.new()
+	lbl.add_theme_font_size_override("font_size", 9)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# PASS: its own tooltip shows, and clicks still pass on.
+	lbl.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(lbl)
+	data["noise_label"] = lbl
+	data["_noise_t"] = 0.0
+
+func _update_footsteps(data: Dictionary, character, delta: float) -> void:
+	var lbl = data.get("noise_label")
+	if lbl == null or not is_instance_valid(lbl):
+		return
+	data["_noise_t"] = float(data.get("_noise_t", 0.0)) - delta
+	if data["_noise_t"] > 0.0:
+		return
+	data["_noise_t"] = FOOTSTEP_REFRESH_SEC
+	# Nobody hears footsteps on the world map, and the dead don't walk.
+	var on_world_map: bool = game_node != null and game_node.current_map_data.get("is_world_map", false)
+	if on_world_map or not character.is_alive() or not character.has_method("footstep_noise"):
+		lbl.text = ""
+		lbl.tooltip_text = ""
+		return
+	var noise: Dictionary = character.footstep_noise()
+	var tier: String = HearingManager.loudness_tier(float(noise["loudness"]))
+	var text := "%s steps" % tier
+	if lbl.text != text:
+		lbl.text = text
+		lbl.add_theme_color_override("font_color", FOOTSTEP_TIER_COLORS.get(tier, Color.WHITE))
+	var tip := _footsteps_tooltip(noise, tier)
+	if lbl.tooltip_text != tip:
+		lbl.tooltip_text = tip
+
+func _footsteps_tooltip(noise: Dictionary, tier: String) -> String:
+	var loudness: float = noise["loudness"]
+	var tile := float(GridManager.TILE_SIZE)
+	var lines := PackedStringArray()
+	lines.append("Footsteps: %s. Heard about %.1f tiles away in the open, %.1f through a wall (normal hearing)." % [
+		tier, HearingManager.audible_radius(loudness) / tile, HearingManager.audible_radius(loudness, 1.0, 1) / tile])
+	lines.append("Floor: %s %.2f, %s" % [noise["floor_name"], float(noise["floor_base"]),
+		"in boots" if noise["boots"] else "bare feet x0.5"])
+	var gear: float = noise["gear"]
+	if gear > 0.0:
+		var parts := PackedStringArray()
+		for g in noise["gear_items"]:
+			parts.append("%s %.2f" % [g[0], float(g[1])])
+		lines.append("Gear: +%.2f (%s)" % [gear, ", ".join(parts)])
+	if not is_equal_approx(float(noise["race_mult"]), 1.0):
+		lines.append("Race tread: x%.1f" % float(noise["race_mult"]))
+	if float(noise["sneak_mult"]) < 1.0:
+		lines.append("Sneaking: x%.1f" % float(noise["sneak_mult"]))
+	# (floor x footwear + gear) x race x sneaking, as ProceduralCharacter.footstep_noise
+	var sum_text := "%.2f" % (float(noise["floor_base"]) * float(noise["footwear_mult"]))
+	if gear > 0.0:
+		sum_text += " + %.2f" % gear
+	var mult: float = float(noise["race_mult"]) * float(noise["sneak_mult"])
+	if is_equal_approx(mult, 1.0):
+		lines.append("Per step: %s" % ("%.2f" % loudness if gear <= 0.0 else "%s = %.2f" % [sum_text, loudness]))
+	else:
+		lines.append("Per step: (%s) x %.2f = %.2f" % [sum_text, mult, loudness])
+	return "\n".join(lines)
 
 
 # Build one TextureProgressBar per school resource for which the character has

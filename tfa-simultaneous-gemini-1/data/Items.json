@@ -1128,6 +1128,7 @@
 	"weight": 2.2,
 	"cost": 35.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.05,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -1588,6 +1589,7 @@
 	"weight": 2.5,
 	"cost": 50.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.05,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -1650,6 +1652,7 @@
 	"weight": 2.5,
 	"cost": 50.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.05,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -1712,6 +1715,7 @@
 	"weight": 3.0,
 	"cost": 1000.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.05,
 	"use_ability": "King's Aura",
 	"damage": {
 	  "bludgeoning": 1
@@ -1776,6 +1780,7 @@
 	"weight": 0.5,
 	"cost": 25.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -1839,6 +1844,7 @@
 	"weight": 0.5,
 	"cost": 20.0,
 	"equip_slot": "Head",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -1901,6 +1907,7 @@
 	"weight": 2.0,
 	"cost": 15.0,
 	"equip_slot": "Back",
+	"noise_per_step": 0.05,
 	"use_ability": "Open",
 	"damage": {
 	  "bludgeoning": 0
@@ -1963,6 +1970,7 @@
 	"weight": 3.0,
 	"cost": 40.0,
 	"equip_slot": "Back",
+	"noise_per_step": 0.08,
 	"use_ability": "Open",
 	"damage": {
 	  "bludgeoning": 0
@@ -2089,6 +2097,7 @@
 	"weight": 1.0,
 	"cost": 15.0,
 	"equip_slot": "Cape",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -2151,6 +2160,7 @@
 	"weight": 1.0,
 	"cost": 15.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.0,
 	"use_ability": "chasten",
 	"damage": {
 	  "bludgeoning": 0
@@ -2215,6 +2225,7 @@
 	"weight": 0.8,
 	"cost": 400.0,
 	"equip_slot": "Cape",
+	"noise_per_step": 0.0,
 	"use_ability": "vanish",
 	"damage": {
 	  "bludgeoning": 0
@@ -2279,6 +2290,7 @@
 	"weight": 4.0,
 	"cost": 60.0,
 	"equip_slot": "Shoulders",
+	"noise_per_step": 0.1,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 2
@@ -2341,6 +2353,7 @@
 	"weight": 1.5,
 	"cost": 12.0,
 	"equip_slot": "Legs",
+	"noise_per_step": 0.02,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -2402,6 +2415,7 @@
 	"weight": 5.0,
 	"cost": 75.0,
 	"equip_slot": "Legs",
+	"noise_per_step": 0.2,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -2464,6 +2478,7 @@
 	"weight": 1.0,
 	"cost": 10.0,
 	"equip_slot": "Feet",
+	"noise_per_step": 0.1,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -2526,6 +2541,7 @@
 	"weight": 3.0,
 	"cost": 45.0,
 	"equip_slot": "Feet",
+	"noise_per_step": 0.3,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 2
@@ -2588,6 +2604,7 @@
 	"weight": 10.0,
 	"cost": 500.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.4,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -3867,6 +3884,7 @@
 	"weight": 6.0,
 	"cost": 80.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.06,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -3929,6 +3947,7 @@
 	"weight": 12.0,
 	"cost": 750.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.35,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 1
@@ -4107,6 +4126,7 @@
 	"weight": 3.0,
 	"cost": 45.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -4169,6 +4189,7 @@
 	"weight": 4.0,
 	"cost": 35.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.03,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -4233,6 +4254,7 @@
 	"weight": 1.0,
 	"cost": 5.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0
@@ -4296,6 +4318,7 @@
 	"weight": 1.0,
 	"cost": 120.0,
 	"equip_slot": "Torso",
+	"noise_per_step": 0.0,
 	"use_ability": null,
 	"damage": {
 	  "bludgeoning": 0

@@ -35,7 +35,7 @@ var walkability: float = 1.1
 var item_type: String = ""
 # Per-step noise contribution when this item is worn/equipped. Overridable
 # from Items.json via the "noise_per_step" key; otherwise inferred from
-# item_type + equip_slot in _apply_default_noise_per_step().
+# type + name by EquipmentShape.noise_for_item_data (same as when worn).
 var noise_per_step: float = 0.0
 
 var current_health: int = 1
@@ -207,10 +207,7 @@ func _apply_item_data():
 	walkability = float(data.get("walkability", 1.1) if data.get("walkability") != null else 1.1)
 	var _itype = data.get("type", "item")
 	item_type = str(_itype) if _itype != null else "item"
-	if data.has("noise_per_step"):
-		noise_per_step = float(data["noise_per_step"])
-	else:
-		noise_per_step = _default_noise_per_step()
+	noise_per_step = EquipmentShape.noise_for_item_data(data)
 
 	# Conditional properties
 	adds_condition_on_equip = data.get("adds_condition_on_equip", null)
@@ -346,52 +343,6 @@ func to_inventory_data() -> Dictionary:
 	if not origin_display_name.is_empty():
 		dict["display_name"] = origin_display_name
 	return dict
-
-func _default_noise_per_step() -> float:
-	# Inferred from item_type + equip_slot when Items.json doesn't specify
-	# noise_per_step explicitly. Values are calibrated against floor
-	# base_sound_level (~0.25..0.9) so a full plate kit roughly doubles the
-	# noise of bare feet on the same floor.
-	var t := item_type.to_lower()
-	var slot := equip_slot.to_lower()
-	# Feet
-	if slot == "feet" or t.contains("boot"):
-		if t.contains("plate") or t.contains("iron") or t.contains("steel"):
-			return 0.30
-		if t.contains("leather") or t.contains("hide"):
-			return 0.10
-		if t.contains("cloth") or t.contains("soft") or t.contains("slipper"):
-			return 0.03
-		return 0.15  # generic boot
-	# Torso
-	if slot == "torso" or slot == "chest" or t.contains("breastplate"):
-		if t.contains("plate") or t.contains("iron") or t.contains("steel"):
-			return 0.40
-		if t.contains("mail") or t.contains("chain") or t.contains("scale"):
-			return 0.30
-		if t.contains("leather") or t.contains("hide"):
-			return 0.06
-		if t.contains("cloth") or t.contains("robe"):
-			return 0.0
-		return 0.05
-	# Legs / pants
-	if slot == "legs" or t.contains("greave") or t.contains("pants"):
-		if t.contains("plate") or t.contains("iron") or t.contains("steel"):
-			return 0.20
-		if t.contains("mail") or t.contains("chain"):
-			return 0.15
-		return 0.02
-	# Helmet
-	if slot == "head" or t.contains("helm"):
-		if t.contains("plate") or t.contains("great"):
-			return 0.05
-		return 0.01
-	# Back / cape / pack
-	if slot == "back":
-		if t.contains("pack"):
-			return 0.05  # buckle rattle
-		return 0.0
-	return 0.0
 
 
 func _generate_chest_contents(faction_id: String, target_value: float) -> Array:

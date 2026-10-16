@@ -4788,7 +4788,11 @@ func _accumulate_step(distance_moved: float) -> void:
 		_emit_footstep()
 
 
-func _emit_footstep() -> void:
+## One footstep's loudness and what makes it up. The step itself
+## (_emit_footstep: its sound and the HearingManager event NPCs hear) and every
+## readout (party panel, noise rings) use this, so they always agree:
+##   loudness = (floor_base x footwear_mult + gear) x race_mult x sneak_mult
+func footstep_noise() -> Dictionary:
 	var tile := GridManager.world_to_map(global_position)
 	var floor_id := ""
 	if "floors" in GridManager:
@@ -4808,35 +4812,53 @@ func _emit_footstep() -> void:
 	var sfx_key: String = String(floor_data.get("footstep_sfx", ""))
 
 	var wears_boots := feet_equipment != null
-	var footwear_suffix := "boots" if wears_boots else "bare"
 	# Bare feet are notably quieter on the same surface; boots = 1.0 baseline.
 	var footwear_mult := 1.0 if wears_boots else 0.5
 
 	# Worn-item noise sums across all 5 equipment slots. Each EquipmentShape
-	# exposes noise_per_step, defaulted from its type/name if not set in data.
+	# exposes noise_per_step (its item's authored value, else a type/name guess).
 	var item_noise := 0.0
+	var gear_items: Array = []   # [name, noise] per piece that adds any
 	for slot in [head_equipment, torso_equipment, back_equipment, legs_equipment, feet_equipment]:
 		if slot and "noise_per_step" in slot:
 			var n: float = slot.noise_per_step
 			if n > 0.0:
 				item_noise += n
+				var item_data = slot.get_meta("item_data", {})
+				gear_items.append([str(item_data.get("display_name", slot.equipment_name)) if item_data is Dictionary else str(slot.equipment_name), n])
 
 	# walking_noise is the racial gait multiplier from races.json (0.3 for the
 	# silent-footed up to 1.5 for the heavy) — set in load_from_data alongside
-	# the other race stats.
-	var loudness: float = (base_sound * footwear_mult + item_noise) * walking_noise
-	if is_sneaking():
-		loudness *= SNEAK_NOISE_MULT
+	# the other race stats. Sneaking scales the whole step again.
+	var sneak_mult: float = SNEAK_NOISE_MULT if is_sneaking() else 1.0
+	return {
+		"floor_id": floor_id,
+		"floor_name": str(floor_data.get("name", "ground")) if not floor_data.is_empty() else "ground",
+		"floor_base": base_sound,
+		"wading": floor_id == "shallow_water",
+		"boots": wears_boots,
+		"footwear_mult": footwear_mult,
+		"gear": item_noise,
+		"gear_items": gear_items,
+		"race_mult": walking_noise,
+		"sneak_mult": sneak_mult,
+		"loudness": (base_sound * footwear_mult + item_noise) * walking_noise * sneak_mult,
+		"sfx_key": sfx_key,
+	}
 
-	if sfx_key != "":
-		var full_key := "%s_%s" % [sfx_key, footwear_suffix]
+func _emit_footstep() -> void:
+	var noise := footstep_noise()
+	var loudness: float = noise["loudness"]
+
+	if noise["sfx_key"] != "":
+		var full_key := "%s_%s" % [noise["sfx_key"], "boots" if noise["boots"] else "bare"]
 		# Map loudness to a reasonable dB range: ~1.0 -> 0dB, ~0.25 -> -12dB.
 		var vol_db: float = linear_to_db(clamp(loudness, 0.05, 1.5))
 		SfxManager.play(full_key, global_position, Vector2(0.9, 1.1), vol_db)
 	HearingManager.emit(global_position, loudness, self)
 
 	# Wading ripple: a character moving through a fluid tile pushes out a ring.
-	if floor_id == "shallow_water":
+	if noise["wading"]:
 		var game := get_tree().current_scene
 		if game and "fluid_manager" in game and game.fluid_manager:
 			game.fluid_manager.add_ripple(global_position, 0.55)

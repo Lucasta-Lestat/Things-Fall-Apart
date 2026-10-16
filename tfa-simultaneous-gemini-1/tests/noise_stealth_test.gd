@@ -45,9 +45,13 @@ func _ready() -> void:
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
-# Lanes append their cases here.
+# I5: noise visibility.
 func _extra_cases() -> void:
-	pass
+	_hearing_helper_cases()
+	await _hearing_matches_emit_cases()
+	_item_noise_cases()
+	await _readout_cases()
+	await _ring_cases()
 
 # ---------------------------------------------------------------------------
 # I6: sneaking, badge, cones, in-view eyes
@@ -321,3 +325,227 @@ func _measure_footstep(p) -> float:
 	p._emit_footstep()
 	HearingManager.sound_emitted.disconnect(cb)
 	return float(got[0]) if not got.is_empty() else 0.0
+
+# ---------------------------------------------------------------------------
+# I5: noise visibility
+# ---------------------------------------------------------------------------
+
+const AUTHORED_NOISE := {
+	"kettle_helm": 0.05, "fancy_metal_helmet": 0.05, "full_face_helmet": 0.05, "golden_crown_helm": 0.05,
+	"dark_hood": 0.0, "purple_hood": 0.0, "leather_backpack": 0.05, "adventurer's_pack": 0.08,
+	"red_travel_cape": 0.0, "shadow_cloak": 0.0, "venonan_vestments": 0.0, "steel_pauldrons": 0.1,
+	"leather_pants": 0.02, "armored_leggings": 0.2, "leather_boots": 0.1, "steel_greaves": 0.3,
+	"breastplate_2": 0.4, "leather_armor": 0.06, "legionnaires_armor": 0.35, "dark_robes": 0.0,
+	"padded_vest": 0.03, "peasant's_stained_shirt": 0.0, "noble's_blouse": 0.0,
+}
+
+func _hearing_helper_cases() -> void:
+	var HM = HearingManager
+	_check("hearing.radius-1.0-is-240px", is_equal_approx(HM.audible_radius(1.0), 240.0), HM.audible_radius(1.0))
+	_check("hearing.radius-scales-with-hearing", is_equal_approx(HM.audible_radius(0.5, 2.0), 240.0))
+	_check("hearing.radius-negative-is-0", is_equal_approx(HM.audible_radius(-1.0), 0.0))
+	_check("hearing.loud-sounds-carry-2.5x", is_equal_approx(HM.audible_radius(1.5), 240.0 * 1.5 * HM.LOUD_RANGE_MULT), HM.audible_radius(1.5))
+	_check("hearing.one-wall", is_equal_approx(HM.audible_radius(1.0, 1.0, 1), 240.0 * HM.WALL_OCCLUSION_FACTOR))
+	_check("hearing.walls-capped", is_equal_approx(HM.audible_radius(1.0, 1.0, 9), HM.audible_radius(1.0, 1.0, HM.MAX_OCCLUDERS)))
+	var tiers := {0.0: "Quiet", 0.39: "Quiet", 0.4: "Normal", 0.99: "Normal", 1.0: "Loud", 1.5: "Loud"}
+	for l in tiers:
+		_check("hearing.tier-%.2f-%s" % [l, tiers[l]], HM.loudness_tier(l) == tiers[l], HM.loudness_tier(l))
+
+# The readout radius is the reach NPCs actually hear at: a listener just
+# inside it hears the step, one just outside doesn't.
+func _hearing_matches_emit_cases() -> void:
+	var p = game.party_chars[0]
+	var listener = null
+	for n in _npcs():
+		if is_instance_valid(n) and n.is_alive() and n.has_node("AI"):
+			listener = n
+			break
+	if listener == null:
+		print("SKIP hearing.matches-emit (no NPC)")
+		return
+	var ai = listener.get_node("AI")
+	var old_pos: Vector2 = listener.global_position
+	var old_ease: bool = ai.is_at_ease
+	ai.is_at_ease = false
+	var loud := 0.6
+	var r: float = HearingManager.audible_radius(loud, listener.effective_hearing())
+	var dir := Vector2.ZERO
+	for d in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+		if game._sight_line_clear(p.global_position, p.global_position + d * (r + 20.0)):
+			dir = d
+			break
+	if dir == Vector2.ZERO:
+		print("SKIP hearing.matches-emit (no open line)")
+	else:
+		var marker := Vector2(-9999, -9999)
+		listener.global_position = p.global_position + dir * (r - 4.0)
+		ai.last_heard_position = marker
+		HearingManager.emit(p.global_position, loud, p)
+		_check("hearing.inside-the-radius-heard", ai.last_heard_position != marker, ai.last_heard_position)
+		listener.global_position = p.global_position + dir * (r + 4.0)
+		ai.last_heard_position = marker
+		HearingManager.emit(p.global_position, loud, p)
+		_check("hearing.outside-the-radius-not-heard", ai.last_heard_position == marker, ai.last_heard_position)
+	listener.global_position = old_pos
+	ai.is_at_ease = old_ease
+	await _frames(1)
+
+func _item_noise_cases() -> void:
+	var f := FileAccess.open("res://data/Items.json", FileAccess.READ)
+	var items = JSON.parse_string(f.get_as_text())
+	_check("items.json-parses", items is Array)
+	if not (items is Array):
+		return
+	var found := 0
+	var wrong := []
+	var item_vs_shape := []
+	for d in items:
+		if not (d is Dictionary) or not AUTHORED_NOISE.has(d.get("id")):
+			continue
+		found += 1
+		var want: float = AUTHORED_NOISE[d["id"]]
+		var got: float = EquipmentShape.noise_for_item_data(d)
+		if not is_equal_approx(got, want):
+			wrong.append("%s %.2f != %.2f" % [d["id"], got, want])
+		# The equipped shape must carry the same number (it read nothing before).
+		var shape = EquipmentShape.new()
+		shape.load_from_data(d)
+		if not is_equal_approx(shape.noise_per_step, want):
+			wrong.append("%s shape %.2f" % [d["id"], shape.noise_per_step])
+		shape.free()
+		# A world Item made from the same entry agrees too.
+		var it = game.create_item(d["id"], Vector2(-5000, -5000))
+		if it != null:
+			if not is_equal_approx(it.noise_per_step, want):
+				item_vs_shape.append("%s item %.2f" % [d["id"], it.noise_per_step])
+			game.items_in_scene.erase(it)
+			it.queue_free()
+	var wearables := 0
+	for d in items:
+		if d is Dictionary and str(d.get("equip_slot", "")) in ["Head", "Torso", "Back", "Cape", "Legs", "Feet", "Shoulders"]:
+			wearables += 1
+			if d.get("noise_per_step") == null:
+				wrong.append("%s has no authored noise" % d.get("id"))
+	_check("items.all-%d-wearables-authored" % wearables, found == 23 and found == wearables, [found, wearables])
+	_check("items.shapes-and-data-match-the-authored-value", wrong.is_empty(), wrong)
+	_check("items.world-items-match-the-worn-value", item_vs_shape.is_empty(), item_vs_shape)
+	# Heuristic fallback (no authored value): keyed on type + display_name.
+	_check("fallback.steel-greaves-0.30", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "boots", "display_name": "Steel Greaves"}), 0.30))
+	_check("fallback.leather-armor-0.06", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "armor", "display_name": "Leather Armor"}), 0.06))
+	_check("fallback.chain-mail-0.30", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "armor", "id": "chain_mail"}), 0.30))
+	_check("fallback.plain-boots-0.15", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "boots"}), 0.15))
+	_check("fallback.a-chest-is-not-armour", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "chest", "display_name": "Treasure Chest"}), 0.0))
+	_check("fallback.authored-wins", is_equal_approx(EquipmentShape.noise_for_item_data({"type": "boots", "display_name": "Steel Greaves", "noise_per_step": 0.05}), 0.05))
+
+	# Tooltips: the same number, in every item window.
+	var IT = load("res://UI/ItemTooltip.gd")
+	var greaves: Dictionary = ItemDatabase.get_item_data("steel_greaves")
+	var lines: PackedStringArray = IT.noise_lines({"kind": "item", "raw": greaves})
+	_check("tooltip.greaves-noise-line", lines.size() >= 1 and lines[0] == "Noise when worn: loud (+0.30 per step)", lines)
+	_check("tooltip.greaves-boots-line", lines.size() == 2 and lines[1].begins_with("Boots:"), lines)
+	var hood_lines: PackedStringArray = IT.noise_lines({"kind": "item", "raw": ItemDatabase.get_item_data("dark_hood")})
+	_check("tooltip.hood-silent", hood_lines.size() == 1 and hood_lines[0] == "Noise when worn: silent", hood_lines)
+	var leather_lines: PackedStringArray = IT.noise_lines({"kind": "item", "raw": ItemDatabase.get_item_data("leather_armor")})
+	_check("tooltip.leather-armour-light", leather_lines.size() == 1 and leather_lines[0] == "Noise when worn: light (+0.06 per step)", leather_lines)
+	_check("tooltip.pauldrons-no-slot-no-line", IT.noise_lines({"kind": "item", "raw": ItemDatabase.get_item_data("steel_pauldrons")}).is_empty())
+	_check("tooltip.non-wearables-no-line", IT.noise_lines({"kind": "item", "raw": {"id": "bread", "equip_slot": null}}).is_empty() and IT.noise_lines({"kind": "weapon", "raw": null}).is_empty())
+	for ctx in ["", "trade", "chest", "service"]:
+		var txt: String = IT.detail_text({"kind": "item", "display_name": "Steel Greaves", "raw": greaves, "num_stacks": 1}, ctx)
+		_check("tooltip.detail-text-'%s'-shows-the-noise" % ctx, txt.contains("Noise when worn: loud (+0.30 per step)"), txt)
+
+func _readout_cases() -> void:
+	var p = game.party_chars[0]
+	# Wear Steel Greaves: the worn shape reads 0.30 and the step includes it.
+	var greaves: Dictionary = ItemDatabase.get_item_data("steel_greaves").duplicate(true)
+	var old_feet = p.feet_equipment.get_meta("item_data") if p.feet_equipment and p.feet_equipment.has_meta("item_data") else null
+	p.equip_equipment(greaves)
+	_check("readout.worn-greaves-add-0.30", p.feet_equipment != null and is_equal_approx(p.feet_equipment.noise_per_step, 0.30), p.feet_equipment.noise_per_step if p.feet_equipment else -1)
+	var n: Dictionary = p.footstep_noise()
+	var expect: float = (float(n["floor_base"]) * float(n["footwear_mult"]) + float(n["gear"])) * float(n["race_mult"]) * float(n["sneak_mult"])
+	_check("readout.loudness-formula", is_equal_approx(float(n["loudness"]), expect), [n["loudness"], expect])
+	_check("readout.boots-worn-footwear-1", n["boots"] and is_equal_approx(float(n["footwear_mult"]), 1.0))
+	_check("readout.race-mult-is-walking-noise", is_equal_approx(float(n["race_mult"]), p.walking_noise))
+	var names := []
+	for g in n["gear_items"]:
+		names.append(g[0])
+	_check("readout.names-the-greaves", "Steel Greaves" in names, names)
+	var heard := _measure_footstep(p)
+	_check("readout.equals-what-npcs-hear", is_equal_approx(heard, float(n["loudness"])), [heard, n["loudness"]])
+	game.set_stealth_mode(true)
+	var ns: Dictionary = p.footstep_noise()
+	_check("readout.sneaking-in-the-breakdown", is_equal_approx(float(ns["sneak_mult"]), p.SNEAK_NOISE_MULT) and is_equal_approx(float(ns["loudness"]), float(n["loudness"]) * p.SNEAK_NOISE_MULT), [ns["sneak_mult"], ns["loudness"]])
+
+	# Party panel: "<tier> steps" + breakdown tooltip, on the HP row.
+	var panel = game.get_node_or_null("GameUI/PartySidePanel")
+	_check("panel.present", panel != null)
+	if panel:
+		var data = null
+		for d in panel._character_panels:
+			if d.get("character") == p:
+				data = d
+		_check("panel.has-a-footsteps-label", data != null and data.get("noise_label") != null)
+		if data != null and data.get("noise_label") != null:
+			var lbl: Label = data["noise_label"]
+			var row = lbl.get_parent()
+			_check("panel.label-on-the-hp-row-not-the-header", row is HBoxContainer and row.get_parent() == data["container"] \
+				and row.get_child(0) is Label and (row.get_child(0) as Label).text == "HP")
+			panel._update_footsteps(data, p, 1.0)
+			var tier: String = HearingManager.loudness_tier(float(p.footstep_noise()["loudness"]))
+			_check("panel.label-reads-tier-steps", lbl.text == "%s steps" % tier, [lbl.text, tier])
+			_check("panel.tooltip-breaks-it-down", lbl.tooltip_text.begins_with("Footsteps: " + tier) and lbl.tooltip_text.contains("Sneaking: x0.5") and lbl.tooltip_text.contains("Steel Greaves 0.30") and lbl.tooltip_text.contains("Per step: ("), lbl.tooltip_text)
+			print("  tooltip: ", lbl.tooltip_text.replace("\n", " | "))
+			_check("panel.label-passes-clicks-on (MOUSE_FILTER_PASS)", lbl.mouse_filter == Control.MOUSE_FILTER_PASS)
+			game.set_stealth_mode(false)
+			panel._update_footsteps(data, p, 1.0)
+			_check("panel.tooltip-drops-sneaking-when-off", not lbl.tooltip_text.contains("Sneaking"), lbl.tooltip_text)
+			var was_wm: bool = game.current_map_data.get("is_world_map", false)
+			game.current_map_data["is_world_map"] = true
+			panel._update_footsteps(data, p, 1.0)
+			_check("panel.label-hidden-on-the-world-map", lbl.text == "")
+			game.current_map_data["is_world_map"] = was_wm
+			panel._update_footsteps(data, p, 1.0)
+	game.set_stealth_mode(false)
+	# Put the old boots back (or go barefoot as before).
+	if old_feet is Dictionary:
+		p.equip_equipment(old_feet)
+	else:
+		p.unequip_slot(EquipmentShape.EquipmentSlot.FEET)
+	await _frames(1)
+
+func _ring_cases() -> void:
+	var overlay = game.stealth_overlay
+	var p = game.party_chars[0]
+	await get_tree().create_timer(0.5, true).timeout   # clear the per-source throttle
+	var before: int = overlay.get_rings().size()
+	p._emit_footstep()
+	_check("rings.none-while-stealth-off", overlay.get_rings().size() == before)
+	game.set_stealth_mode(true)
+	await get_tree().create_timer(0.4, true).timeout
+	var loud: float = float(p.footstep_noise()["loudness"])
+	p._emit_footstep()
+	var rings: Array = overlay.get_rings()
+	_check("rings.a-footstep-draws-one", rings.size() == 1, rings.size())
+	if rings.size() >= 1:
+		_check("rings.sized-to-the-audible-radius", is_equal_approx(float(rings[-1]["r"]), HearingManager.audible_radius(loud)), [rings[-1]["r"], HearingManager.audible_radius(loud)])
+		_check("rings.inner-ring-one-wall", is_equal_approx(float(rings[-1]["r_wall"]), HearingManager.audible_radius(loud, 1.0, 1)))
+		_check("rings.at-the-character", (rings[-1]["pos"] as Vector2).distance_to(p.global_position) < 0.01)
+	p._emit_footstep()
+	_check("rings.throttled", overlay.get_rings().size() == 1, overlay.get_rings().size())
+	HearingManager.emit(p.global_position, 1.5, p)
+	_check("rings.a-loud-sound-always-draws", overlay.get_rings().size() == 2, overlay.get_rings().size())
+	var npc = null
+	for c in _npcs():
+		npc = c
+		break
+	if npc:
+		HearingManager.emit(npc.global_position, 1.5, npc)
+		_check("rings.none-for-an-npc", overlay.get_rings().size() == 2, overlay.get_rings().size())
+	p.on_world_map = true
+	HearingManager.emit(p.global_position, 1.5, p)
+	_check("rings.none-on-the-world-map", overlay.get_rings().size() == 2, overlay.get_rings().size())
+	p.on_world_map = false
+	await get_tree().create_timer(1.0, true).timeout
+	_check("rings.fade-out", overlay.get_rings().is_empty(), overlay.get_rings().size())
+	HearingManager.emit(p.global_position, 1.5, p)
+	game.set_stealth_mode(false)
+	_check("rings.stealth-off-clears", overlay.get_rings().is_empty())
