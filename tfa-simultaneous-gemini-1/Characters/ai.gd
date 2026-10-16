@@ -83,13 +83,13 @@ var state_timer: float = 0.0
 
 # Target tracking
 var current_target: ProceduralCharacter = null
+# True once confusion has re-rolled our target; cleared (and the random target
+# dropped) when the condition ends.
+var _confused_pick_done: bool = false
 var last_known_target_pos: Vector2 = Vector2.ZERO
 # Seconds since we last had a wall-clear sight line to current_target (or had
 # them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
 var _target_occluded_time: float = 0.0
-# True once confusion has re-rolled our target; cleared (and the random target
-# dropped) when the condition ends.
-var _confused_pick_done: bool = false
 
 # Goal system
 var current_goal: String = "idle"
@@ -714,18 +714,8 @@ func _is_sneaking(other: ProceduralCharacter) -> bool:
 # ===== PERCEPTION QUERIES (readouts) =====
 # What this AI sees of a character right now, by the same rules _update_target
 # acts on, for UI that must agree with the AI (the stealth 'in view' eye, the
-# paused intent line). Read-only: nothing here changes targeting.
-
-## The held target is in sight by the hold rule of _update_target: inside 1.5x
-## detection range and not occluded as of the last AI tick (a wall-clear sight
-## line or close quarters; facing ignored, as the hold ignores it). Looser than
-## can_see_character, which is the test for acquiring someone new.
-func is_target_in_sight() -> bool:
-	if current_target == null or not is_instance_valid(current_target) or not current_target.is_alive():
-		return false
-	if character.global_position.distance_to(current_target.global_position) > detection_range * 1.5:
-		return false
-	return _target_occluded_time <= 0.0
+# paused intent line). Read-only: nothing here changes targeting. The held
+# target's answer is is_target_in_sight() (below _acquire_target).
 
 ## Whether this AI would acquire `other` by sight now (faction aside): alive,
 ## inside detection range, not invisible to us, and either in the sight cone or
@@ -1028,6 +1018,15 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
+
+## Whether we have eyes on our target right now: false while chasing where it
+## was last seen behind a wall. The occluded-chase clock's answer
+## (_target_occluded_time: a clear sight line, close quarters or the target's
+## own hit keep it at zero), so the paused intent lines agree with the demotion.
+func is_target_in_sight() -> bool:
+	if current_target == null or not is_instance_valid(current_target):
+		return false
+	return _target_occluded_time <= 0.0
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
@@ -1850,6 +1849,11 @@ func pickup_item(item: Node):
 	# won't fit, the item stays on the floor and we stop eyeing it.
 	var wanted: int = item.stack_count if item is Item else 1
 	var data: Dictionary = item.to_inventory_data() if item.has_method("to_inventory_data") else {}
+	# Items.json gives non-stackables (weapons, armour, helms) "num_stacks":
+	# null, which add_stack's int() can't read: a SCRIPT ERROR, and no take.
+	var ns = data.get("num_stacks")
+	if not data.is_empty() and not (ns is int or ns is float):
+		data["num_stacks"] = wanted
 	if data.is_empty() or character.inventory == null or not character.inventory.add_stack(data):
 		# A stackable may have topped up an existing stack before running out
 		# of room; trim the floor pile to what's actually left.

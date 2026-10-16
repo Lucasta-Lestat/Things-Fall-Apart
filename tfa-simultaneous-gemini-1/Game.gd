@@ -1752,7 +1752,8 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
-	# Follow the current stealth mode so NPCs spawned after a warp match it.
+	# Follow the current stealth mode (the shared cone rule), so NPCs spawned
+	# after a map load or mid-mission match it instead of starting hidden.
 	light.visible = _npc_cones_shown(npc)
 	npc.add_child(light)
 
@@ -3554,10 +3555,11 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 ## another level. Only a selected (player-controlled) swinger warns, never an
 ## AI-driven companion's automatic swing. With a live target (attack_aim_node,
 ## set by Attack Target orders) only that body warns; a swing at a clicked
-## point warns for the first visible enemy it skips. At most once per swing:
+## point warns for the first visible hostile it skips. At most once per swing:
 ## register_attack_start resets active_hits[aid], and the String key can't
-## collide with the int target ids stored there (it also keeps the swing from
-## logging as a whiff: "Out of reach" already says what happened).
+## collide with the int target ids stored there. The key also leaves the hit
+## set non-empty, so register_attack_end's generic "connects with nothing"
+## line gives way to this more specific one.
 func _warn_out_of_reach(attacker: Node2D, target: Node2D) -> void:
 	if not (attacker is ProceduralCharacter and target is ProceduralCharacter):
 		return

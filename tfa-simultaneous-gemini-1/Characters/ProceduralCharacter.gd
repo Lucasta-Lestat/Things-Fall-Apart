@@ -3962,9 +3962,8 @@ func _handle_input() -> void:
 						# straight-line fallback ground into the wall forever)
 						is_moving = false
 						_nav_goal_failed = true
-						# Say so (same wording as PathInputHandler's paused
-						# case), once per press: a held drag re-plans for every
-						# new tile it crosses.
+						# Say so, once per press: a held drag re-plans for
+						# every new tile it crosses.
 						if not _cant_reach_shown:
 							_cant_reach_shown = true
 							notify("No path", Color(1.0, 0.6, 0.4), "%s can't reach that spot: no walkable route." % Name)

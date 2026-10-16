@@ -464,6 +464,15 @@ func _case_fluids() -> void:
 	_report("fluid.water-douses-burning", lit and not _cond(p, "burning"), "lit=%s" % str(lit))
 	_report("fluid.douse-logged-for-party", _log_count("is doused by the water and stops burning") == logs + 1)
 	_report("fluid.douse-floats-extinguished", _floats_with(self, "Extinguished") >= 1)
+	# an NPC the party doesn't see is doused too, without a float or a log line
+	var q := _spawn(Vector2i(12, 28), "bandits")
+	var qlit := _apply(q, "burning")
+	q.global_position = GridManager.map_to_world(wt)
+	var floats := _floats_with(self, "Extinguished")
+	logs = _log_count("is doused by the water")
+	fm.update_fluid_conditions(0.05, [q])
+	_report("fluid.unseen-npc-doused-silently", qlit and not _cond(q, "burning") \
+		and _floats_with(self, "Extinguished") <= floats and _log_count("is doused by the water") == logs)
 	fm.remove_fluid_tile(wt)
 
 
@@ -642,6 +651,16 @@ func _case_ai() -> void:
 	_report("ai.loot-seen-logged", _log_count("picks up") == picks + 1 and _log_count("(x5)") >= 1,
 		"log: %s" % String(GameLog.get_entries()[-1].get("text", "")))
 	_report("ai.loot-chest-untouched", is_instance_valid(chest) and chest in items_in_scene and not chest.is_queued_for_deletion())
+	# a non-stackable (Items.json "num_stacks": null) is taken too, not refused
+	# by add_stack's int(null)
+	var helm2 := _item("fancy_metal_helmet", Vector2i(27, 22))
+	lai.current_goal = "seek_wealth"
+	lai.pickup_item(helm2)
+	var has_helm := false
+	for d in looter.inventory.items:
+		if String(d.get("id", "")) == "fancy_metal_helmet":
+			has_helm = true
+	_report("ai.loot-takes-non-stackable", has_helm and helm2.is_queued_for_deletion())
 
 
 # ---------------------------------------------------------------------------

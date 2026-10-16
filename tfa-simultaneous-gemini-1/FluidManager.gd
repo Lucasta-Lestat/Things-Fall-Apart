@@ -295,9 +295,15 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 				var log_text := ""
 				if character.has_method("is_party_member") and character.is_party_member():
 					log_text = "%s is doused by the water and stops burning." % character.Name
-				# The float only over someone the player can see: an unseen NPC's
-				# label would give its position away.
-				if character.visible and character.has_method("notify"):
+				# The float only over someone the party sees (Game.is_seen_by_party:
+				# party always, NPCs by the LOS pass, not a hearing pulse): an
+				# unseen NPC's label would give its position away.
+				var game = get_tree().get_first_node_in_group("game")
+				if not game:
+					game = get_tree().current_scene
+				var seen: bool = game.is_seen_by_party(character) \
+					if game != null and game.has_method("is_seen_by_party") else character.visible
+				if seen and character.has_method("notify"):
 					character.notify("Extinguished", Color.LIGHT_BLUE, log_text)
 				elif not log_text.is_empty():
 					GameLog.add_entry(log_text)
