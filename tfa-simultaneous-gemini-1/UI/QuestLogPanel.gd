@@ -2,7 +2,8 @@
 # Parchment-styled quest log toggled with the J key. Renders active quests
 # (icon + display name) and a nested checklist of their stages:
 #   done    -> [s]☑ name[/s]
-#   current -> ☐ name + description
+#   current -> ☐ name (+ days left on a deadline) + description
+#   failed  -> ✗ name, under the quest's failure reason
 # Future stages are hidden (decision: "hide until reached").
 # Listens to QuestManager signals and refreshes live.
 extends PanelContainer
@@ -85,6 +86,9 @@ func _ready() -> void:
 func _connect_quest_manager() -> void:
 	if ReadableManager != null and not ReadableManager.journal_updated.is_connected(_on_readable_event):
 		ReadableManager.journal_updated.connect(_on_readable_event)
+	# Quest deadlines count down by day.
+	if TimeManager != null and not TimeManager.date_changed.is_connected(_on_date_changed):
+		TimeManager.date_changed.connect(_on_date_changed)
 	if QuestManager == null:
 		return
 	if not QuestManager.quest_updated.is_connected(_on_quest_event):
@@ -106,6 +110,9 @@ func _on_quest_stage_changed(_quest_id: String, _old: String, _new: String) -> v
 	call_deferred("_refresh")
 
 func _on_readable_event(_readable_id: String) -> void:
+	call_deferred("_refresh")
+
+func _on_date_changed(_day, _month, _year) -> void:
 	call_deferred("_refresh")
 
 # ---------------------------------------------------------------------------
@@ -230,6 +237,19 @@ func _build_quest_block(quest_id: String, group: String) -> Control:
 	header.add_child(name_label)
 	block.add_child(header)
 
+	# Why a failed quest failed
+	if group == "failed":
+		var reason: String = QuestManager.get_fail_reason(quest_id)
+		if not reason.is_empty():
+			var reason_label := RichTextLabel.new()
+			reason_label.bbcode_enabled = true
+			reason_label.fit_content = true
+			reason_label.scroll_active = false
+			reason_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			reason_label.add_theme_font_size_override("normal_font_size", 12)
+			reason_label.text = "    [i][color=#7a1f1f]%s[/color][/i]" % reason
+			block.add_child(reason_label)
+
 	# Nested checklist
 	var checklist: Array = QuestManager.get_quest_checklist(quest_id)
 	for entry in checklist:
@@ -260,6 +280,8 @@ func _build_checklist_row(entry: Dictionary) -> Control:
 			label.text = "%s[s][color=#5a4225]☑ %s[/color][/s]" % [indent, name_text]
 		"current":
 			label.text = "%s[color=#2c1f08]☐ %s[/color]" % [indent, name_text]
+			if entry.has("days_left"):
+				label.text += "  [color=#7a1f1f](%s)[/color]" % _format_days_left(int(entry["days_left"]))
 		"failed":
 			label.text = "%s[color=#7a1f1f]✗ %s[/color]" % [indent, name_text]
 		_:
@@ -278,6 +300,13 @@ func _build_checklist_row(entry: Dictionary) -> Control:
 		row.add_child(desc)
 
 	return row
+
+func _format_days_left(days: int) -> String:
+	if days <= 0:
+		return "out of time"
+	if days == 1:
+		return "1 day left"
+	return "%d days left" % days
 
 # ---------------------------------------------------------------------------
 # Tabs + Library (readables)
