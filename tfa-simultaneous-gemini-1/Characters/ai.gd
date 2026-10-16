@@ -695,7 +695,8 @@ func _is_sneaking(other: ProceduralCharacter) -> bool:
 
 ## Whether this NPC has `c` in view right now, by the rules _update_target
 ## acts on: a held target while it isn't occluded (a wall-clear sight line or
-## close quarters, out to 1.5x sight); anyone else as acquisition sees them
+## close quarters, out to 1.5x sight but never less than close quarters);
+## anyone else as acquisition sees them
 ## (the sight cone, or close quarters with a wall-clear line unless they are
 ## sneaking; an invisible character only with true_sight). StealthOverlay's
 ## eye shows this, so it matches what the NPC acts on.
@@ -709,7 +710,7 @@ func has_in_view(c) -> bool:
 		return false
 	var dist: float = character.global_position.distance_to(c.global_position)
 	if c == current_target:
-		return dist <= detection_range * 1.5 and _target_occluded_time <= 0.0
+		return dist <= maxf(detection_range * 1.5, _close_quarters_radius()) and _target_occluded_time <= 0.0
 	if character.traits.get("true_sight", 0) == 0:
 		var c_cm = c.get_node_or_null("ConditionManager")
 		if c_cm and c_cm.has_active_condition("invisible"):
@@ -736,9 +737,11 @@ func _update_target(delta: float = 0.0) -> void:
 			_lose_target()
 			return
 
-		# Hysteresis: lose target at 1.5x detection range
+		# Hysteresis: lose target at 1.5x detection range (live: weather, fog,
+		# Blinded's zero), never inside close quarters: a foe at our elbow,
+		# whose blows already identified them (_on_self_damaged), stays held.
 		var dist = character.global_position.distance_to(current_target.global_position)
-		if dist > detection_range * 1.5:
+		if dist > maxf(detection_range * 1.5, _close_quarters_radius()):
 			_lose_target()
 			return
 

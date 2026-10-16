@@ -4,7 +4,8 @@
 #     the NPC searches its last-seen point with the yellow '?', and
 #     '<NPC> loses sight of <Name>.' is logged when the party can see the NPC;
 #   - only the held target's own sounds and hits move last_known_target_pos;
-#   - the 1.5x held-target range follows the live sight range;
+#   - the 1.5x held-target range follows the live sight range, floored at
+#     close quarters (a Blinded NPC keeps the foe at its elbow);
 #   - the alertness glyph's three stages (pale small '?', yellow '?', red '!'),
 #     the outcry fuse's full-size '!', and the glyph staying upright.
 # Run:  godot --headless --path . res://tests/perception_ai_test.tscn
@@ -109,6 +110,27 @@ func _run() -> void:
 	_face(bandit, p.global_position)
 	_step(0.3)
 	_check("range.re-acquired", ai.current_target == p, ai.current_target)
+
+	# ---------------- Blinded (live range 0): a foe at its elbow stays held,
+	# one out of close quarters is dropped; cured, it re-acquires by sight.
+	var cq: float = ai._close_quarters_radius()
+	var bcm = bandit.get_node("ConditionManager")
+	p.global_position = bandit.global_position + Vector2(0, -cq * 0.6)
+	_face(bandit, p.global_position)
+	_step(0.3)
+	bcm.apply_condition("blinded", null, 1, 60.0)
+	_step(0.3)
+	_check("blinded.range-zero", is_zero_approx(ai.detection_range), ai.detection_range)
+	_check("blinded.keeps-the-foe-at-its-elbow", ai.current_target == p, ai.current_target)
+	_check("blinded.eye-says-not-in-view", not ai.has_in_view(p))
+	p.global_position = bandit.global_position + Vector2(0, -(cq + 60.0))
+	_step(0.3)
+	_check("blinded.drops-a-target-out-of-reach", ai.current_target == null, ai.current_target)
+	bcm.remove_condition("blinded")
+	p.global_position = centre
+	_face(bandit, p.global_position)
+	_step(0.3)
+	_check("blinded.cured-re-acquires", ai.current_target == p, ai.current_target)
 
 	# ---------------- a wall between them: dropped after the give-up time
 	var wall := StaticBody2D.new()

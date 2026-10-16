@@ -350,7 +350,8 @@ func _case_stealth_and_sight() -> void:
 	for p in party:
 		# 1440 x the sight stat with its condition modifiers (Perceptive x1.2)
 		# x the environment at the viewer (weather, fog).
-		var want: float = 1440.0 * maxf(0.0, p.condition_manager.calculate_effective_stat(p.sight, "sight")) 			* game.get_sight_multiplier_at(p.global_position)
+		var want: float = 1440.0 * maxf(0.0, p.condition_manager.calculate_effective_stat(p.sight, "sight")) \
+			* game.get_sight_multiplier_at(p.global_position)
 		_check("sight.range-1440x-sight " + str(p.Name), is_equal_approx(p.get_sight_range_px(), want),
 			"%s vs sight %s (want %s)" % [p.get_sight_range_px(), p.sight, want])
 	var cm = p0.condition_manager
