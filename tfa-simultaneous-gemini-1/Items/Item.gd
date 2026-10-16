@@ -297,6 +297,12 @@ func _apply_readable_data(data: Dictionary) -> void:
 	walkability = 1.1
 	noise_per_step = 0.0
 
+# Options interact() actually handles. Game._world_item_options hides any other
+# data option on a world container (e.g. "Inspect", or a backpack's
+# inventory-only "Drop"/"Equip") rather than offer a click that does nothing.
+# "Open" is handled by the context menu itself. Keep in sync with interact().
+const INTERACT_OPTIONS := ["Read", "Take", "Pick Up", "Pick Up (owned)"]
+
 # Called by the context menu (UI/context_menu.gd default branch) and by the
 # left-click fast-path in ProceduralCharacter. Reading or taking a readable
 # files it into the journal and removes the world object.
@@ -323,6 +329,23 @@ func _take_from_world() -> void:
 	if ReadableManager != null:
 		ReadableManager.collect(str(id))
 	_destroy_item()
+
+# Container lock gate, same feedback as Door: a container with a "key" opens
+# only if a living party member carries that key (not consumed). Returns true
+# when the container may open; unlocking clears the key so it stays open.
+# Game.show_chest_inventory (the menu's "Open" and the left-click fast path)
+# calls it before showing the window.
+func try_unlock_for_party(party: Array) -> bool:
+	if not (key is String) or (key as String).is_empty():
+		return true
+	var res: Dictionary = Door.try_party_unlock(party, key, false)
+	if not res.ok:
+		show_floating_text("Locked", Color.WHITE_SMOKE)
+		GameLog.add_entry("The %s is locked." % display_name)
+		return false
+	GameLog.add_entry("%s unlocks the %s with the %s." % [res.holder_name, display_name, res.key_name])
+	key = null
+	return true
 
 # Build an inventory item dict for this world item (used by Pick Up). Pulls the
 # canonical data from the item database and carries the current stack count.

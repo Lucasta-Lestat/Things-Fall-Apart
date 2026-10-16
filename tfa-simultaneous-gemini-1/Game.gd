@@ -703,8 +703,8 @@ func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> 
 		_deserialize_character(npc, bucket[ordinal_uid])
 
 func mark_service_seen(npc) -> void:
-	## Records discovery so an illegal service shows up in the panel even
-	## after the party leaves the map.
+	## Records discovery. The panel lists a service only when it is legal AND
+	## seen, and the record keeps it listed after the party leaves the map.
 	if not _is_service_npc(npc):
 		return
 	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
@@ -717,8 +717,13 @@ func mark_service_seen(npc) -> void:
 		known_services_per_region[region_id] = []
 	if uid not in known_services_per_region[region_id]:
 		known_services_per_region[region_id].append(uid)
- 
- 
+		# List them in the open panel now, so a merchant met on this visit
+		# appears without leaving and coming back.
+		var services_panel = get_node_or_null("GameUI/TownServicesPanel")
+		if services_panel != null and services_panel.has_method("list_newly_seen_service"):
+			services_panel.call_deferred("list_newly_seen_service", uid)
+
+
 func add_party_member(template_id: String, overrides: Dictionary = {}) -> void:
 	party_state.append({
 		"template_id": template_id,
@@ -1548,6 +1553,13 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 		# FOLLOW releases it.
 		if target in party_chars:
 			options.append("Resume" if bool(target.get("hold_position")) else "Wait Here")
+			# A companion is never an attack target.
+			options.erase("Attack")
+		# "Talk" only when they have something to say: active_dialogue_id is
+		# the talk cursor's and the left-click fast path's test too, so the
+		# menu never offers a conversation that opens nothing.
+		if "Talk" in options and target.active_dialogue_id() == "":
+			options.erase("Talk")
 	elif target is Area2D and target.has_meta("target_map"):
 		options = ["Enter " + target.get_meta("label", "area")]
 	elif target is Door:
@@ -1558,17 +1570,35 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 		# Item context menu — use interact_options from item data
 		options = target.get("interact_options", ["Use", "Drop"])
 
+	# Nothing handles "Inspect" (no context-menu arm, characters have no
+	# interact(), Item.interact has no case for it), so it is never offered.
+	# filter() copies, so item data's own option list is left alone.
+	options = options.filter(func(o): return str(o) != "Inspect")
+	if options.is_empty():
+		# Every option was a dead end: no empty box.
+		context_menu.free()
+		call_deferred("set", "context_menu_open", false)
+		return
+
 	context_menu.setup(target, options, actor)
 	$GameUI.add_child(context_menu)
 
 ## World-item context menu options. Readables keep Read/Take; containers keep
-## their own options (Open/Inspect); every other world item is pick-up-able.
+## the options something handles ("Open", Item.INTERACT_OPTIONS); every other
+## world item is pick-up-able.
 func _world_item_options(item: Item) -> Array:
 	if item.item_type == "readable":
 		return item.options.duplicate() if item.options else ["Read"]
 	var is_container: bool = item.num_slots > 0 or (item.options.size() > 0 and str(item.options[0]) == "Open")
 	if is_container:
-		return item.options.duplicate() if item.options else ["Open"]
+		# A treasure chest's "Inspect" and a world backpack's inventory-only
+		# "Drop"/"Equip" have no handler here: they'd close the menu and do
+		# nothing, so a chest offers just "Open".
+		var usable: Array = []
+		for o in item.options:
+			if str(o) == "Open" or str(o) in Item.INTERACT_OPTIONS:
+				usable.append(o)
+		return usable if not usable.is_empty() else ["Open"]
 	# A loose world item: the world action is to pick it up. Intrinsic actions
 	# (Consume/Throw/Equip) and "Drop" belong to the inventory context menu.
 	# Owned items read differently — one string of legibility, no new art.
@@ -1609,7 +1639,7 @@ func pick_up_item(item: Item) -> bool:
 		# Report BEFORE the node dies — the payload reads the item's fields.
 		# A refused pickup (full inventory) is not a theft.
 		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
-		item._destroy_item()
+		remove_world_item(item)
 	else:
 		# The inventory announces "Inventory full" itself (Inventory.add_failed).
 		# add_stack may still have merged part of the stack into one already
@@ -1620,6 +1650,21 @@ func pick_up_item(item: Item) -> bool:
 			CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 			item.remove_from_stack(item.stack_count - left)
 	return ok
+
+## Take a world item out of the world because it went into a pack whole: off
+## the grid, out of items_in_scene, then freed. Unlike Item._destroy_item it
+## emits no "destroyed", so _on_item_destroyed's salvage (a crate's planks)
+## never spawns for an item that was picked up, not broken.
+func remove_world_item(item: Item) -> void:
+	if not is_instance_valid(item):
+		return
+	GridManager.unregister_object(item._grid_pos, item)
+	items_in_scene.erase(item)
+	if item.sprite:
+		item.sprite.visible = false
+	if item.collision_shape:
+		item.collision_shape.disabled = true
+	item.queue_free()
 
 # Pick the party member who should receive a picked-up item: the primary-selected
 # character, else the first LIVING party member with an inventory. Nothing clears
@@ -1646,6 +1691,11 @@ func show_chest_inventory(item: Item) -> void:
 	var opener = _resolve_pickup_character()
 	if opener != null and opener.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
 		GameLog.add_entry("%s is too far away to reach that." % opener.Name)
+		return
+	# Locked containers (an Items.json "key") open only for a party carrying the
+	# key; otherwise the chest floats "Locked" and the log says so. Corpses
+	# (show_loot_window) never lock. Both ways of opening a chest end here.
+	if not item.try_unlock_for_party(party_chars):
 		return
 	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
 	var w = ChestWindow.instantiate()
