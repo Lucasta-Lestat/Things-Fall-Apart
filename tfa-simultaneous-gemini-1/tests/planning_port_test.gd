@@ -437,21 +437,34 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	a._on_game_unpaused_convert_path()
 	_check("abandon.no-blocker-converts", a.has_player_orders() and a.tactical_path.is_executing)
 
-	# Mid-plan: a compulsion lands while the plan runs
+	# Mid-plan: a stun lands while the plan runs (stunned rolls no save)
 	PauseManager.is_paused = false
 	await get_tree().process_frame
 	a._last_notify_text = ""
 	n0 = GameLog.get_entries().size()
-	cm.apply_condition("transfixed", null, 1, 30.0)
+	cm.apply_condition("stunned", null, 1, 30.0)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_check("abandon.mid-plan", not a.has_player_orders() and a.tactical_path.is_empty(),
-		"queue=%d" % a.action_queue.get_queue_size())
-	_check("abandon.mid-plan-notice", _log_texts().slice(n0).has("Harness Planner abandons their plan: Transfixed."),
-		str(_log_texts().slice(n0)))
+		"queue=%d current=%s path_empty=%s" % [a.action_queue.get_queue_size(),
+		str(a.action_queue.current_action != null), str(a.tactical_path.is_empty())])
+	# GameLog folds an identical line within 1.5 s into a repeat count, so read
+	# the last entry rather than counting entries.
+	_check("abandon.mid-plan-notice", a._last_notify_text == "Can't follow plan" \
+		and _log_texts()[-1] == "Harness Planner abandons their plan: Stunned.", str(_log_texts()[-1]))
 	PauseManager.is_paused = true
-	cm.remove_condition("transfixed")
+	cm.remove_condition("stunned")
 	a.is_moving = false
+
+	# Compulsions block too. Transfixed rolls a Will save when it lands, so
+	# retry until it sticks.
+	for i in range(40):
+		if cm.has_active_condition("transfixed"):
+			break
+		cm.apply_condition("transfixed", null, 1, 30.0)
+	var compelled = a._get_plan_blocking_condition()
+	_check("abandon.compulsion-blocks", compelled != null and compelled.condition.id == "transfixed")
+	cm.remove_condition("transfixed")
 
 	# Frozen counts through the "incapacitate" trait
 	cm.apply_condition("frozen", null, 1, 30.0)
