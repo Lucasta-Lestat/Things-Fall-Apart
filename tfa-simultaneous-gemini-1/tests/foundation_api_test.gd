@@ -171,7 +171,12 @@ func _case_item_tooltip() -> void:
 		var nm: String = str(e.get("display_name", "<none>"))
 		var party: String = ItemTooltip.detail_text(e)
 		var chest: String = ItemTooltip.detail_text(e, "chest")
-		_check("tooltip.party " + nm, party == str(e.get("display_name", "Unknown")), party)
+		# Party slots (party-ui lane): the name, then "(N gold)" priced like
+		# the trade window, for anything with a value. Abilities show no price.
+		var want_party: String = str(e.get("display_name", "Unknown"))
+		if e.kind != "ability" and _old_cost(e) > 0.0:
+			want_party += " (%.0f gold)" % _old_cost(e)
+		_check("tooltip.party " + nm, party == want_party, "%s vs %s" % [party, want_party])
 		_check("tooltip.chest " + nm, chest == str(e.get("display_name", "Unknown")), chest)
 		if e.kind == "ability":
 			continue
