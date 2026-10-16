@@ -4409,11 +4409,21 @@ func _can_be_talked_to(other: ProceduralCharacter) -> bool:
 ## The dialogue this character would open right now, or "" when they have nothing
 ## to say. The right-click "Talk" verb, the left-click fast path, and the hover
 ## cursor all read it from here rather than re-deriving the index bounds.
+## The id must also name a loaded dialogue with nodes to show: templates that
+## point at a dialogue Dialogues.json lacks would otherwise offer a Talk that
+## opens nothing.
 func active_dialogue_id() -> String:
 	var idx: int = current_dialogue_index
 	if idx < 0 or idx >= dialogues.size():
 		return ""
-	return str(dialogues[idx])
+	var dlg_id := str(dialogues[idx])
+	var dlg = DialogueManager.dialogues.get(dlg_id)
+	if not (dlg is Dictionary):
+		return ""
+	var nodes = dlg.get("dialogueNodes")
+	if not (nodes is Dictionary) or nodes.is_empty():
+		return ""
+	return dlg_id
 
 ## Probe the world for a warp Area2D at mouse_pos. Warps sit on a dedicated
 ## layer (CollisionLayers.WARPS) and carry their destination in the

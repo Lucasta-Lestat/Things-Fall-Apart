@@ -30,6 +30,8 @@ var context_menu_open: bool = false
 var failures := 0
 var _viewer: ProceduralCharacter = null
 
+const _STUB_DIALOGUES := ["test_dialogue", "first", "second"]
+
 
 func _check(check_name: String, cond: bool, detail: String = "") -> void:
 	if cond:
@@ -66,9 +68,17 @@ func _ready() -> void:
 		FactionDatabase.are_hostile("player", "bandits"),
 		"expected player/bandits hostile; pick another faction for this test")
 
+	# active_dialogue_id() only answers for dialogues DialogueManager has loaded
+	# with nodes, so the fixtures' ids get stub entries for the run.
+	for stub_id in _STUB_DIALOGUES:
+		DialogueManager.dialogues[stub_id] = {"dialogueNodes": {stub_id: {"narrator": "..."}}}
+
 	_case_verb_cursors()
 	_case_talk_gates()
 	_case_click_agrees_with_cursor()
+
+	for stub_id in _STUB_DIALOGUES:
+		DialogueManager.dialogues.erase(stub_id)
 
 	if failures == 0:
 		print("ALL PASS")
@@ -126,6 +136,13 @@ func _case_talk_gates() -> void:
 
 	npc.dialogues = []
 	_check("talk.no-dialogues", not _viewer._can_be_talked_to(npc))
+	# Gate 2b: the id must name a loaded dialogue that has nodes to show.
+	npc.dialogues = ["no_such_dialogue_harness"]
+	_check("talk.unknown-dialogue", not _viewer._can_be_talked_to(npc))
+	DialogueManager.dialogues["empty_dialogue_harness"] = {"dialogueNodes": {}}
+	npc.dialogues = ["empty_dialogue_harness"]
+	_check("talk.dialogue-without-nodes", not _viewer._can_be_talked_to(npc))
+	DialogueManager.dialogues.erase("empty_dialogue_harness")
 	npc.dialogues = ["test_dialogue"]
 	_check("talk.restored", _viewer._can_be_talked_to(npc))
 

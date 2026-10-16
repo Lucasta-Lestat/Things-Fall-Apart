@@ -387,6 +387,15 @@ func _drop_data(at_position: Vector2, data) -> void:
 		return
 	match entry.get("kind", ""):
 		"item":
+			# Check before removing: add_item on a full NPC would drop the item.
+			var raw = entry.get("raw", {})
+			if raw is Dictionary and npc.inventory and not npc.inventory.can_accept(raw):
+				if source_char.has_method("notify"):
+					source_char.notify("No room", Color(1.0, 0.6, 0.4),
+						"%s can't give the %s to %s: their inventory is full." % [
+							source_char.Name, entry.get("display_name", "item"), npc.Name])
+				SfxManager.play_ui("trade_decline")
+				return
 			var item = source_char.inventory.remove_item(entry.get("source_index", -1))
 			if not item.is_empty():
 				npc.inventory.add_item(item)
@@ -452,9 +461,20 @@ func _rollback_all() -> void:
 	_disconnect_inventory_signals()
 	if is_instance_valid(npc):
 		_rollback_character(npc, _npc_snapshot)
+		_resync_worn(npc)
 	for member in _player_snapshots.keys():
 		if is_instance_valid(member):
 			_rollback_character(member, _player_snapshots[member])
+			_resync_worn(member)
+
+# Worn gear (and its while-worn conditions and DR) follows the body's
+# EquipmentShapes, not the restored dicts' _equipped flags. An Equip/Unequip
+# from the side panel mid-trade, or worn armour dragged across (the grids list
+# it), would leave the two out of step, so re-wear exactly what the snapshot
+# flags. Untouched gear stays on (Inventory.resync_worn_from_items).
+func _resync_worn(character) -> void:
+	if character.inventory and character.inventory.has_method("resync_worn_from_items"):
+		character.inventory.resync_worn_from_items()
 
 func _disconnect_inventory_signals() -> void:
 	if is_instance_valid(npc) and npc.inventory:

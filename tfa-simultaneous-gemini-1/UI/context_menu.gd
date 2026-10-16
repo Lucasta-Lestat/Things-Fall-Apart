@@ -59,15 +59,19 @@ func _on_option_selected(option: String):
 			# The actor attacks the target, designating them as the aim node so
 			# the swing tracks them. Previously this called attack() on the
 			# TARGET, i.e. the victim swung at their own facing.
-			if is_instance_valid(actor_character) and actor_character.has_method("attack"):
-				actor_character.attack("Main", target_character.global_position, target_character)
+			_order_attack(target_character)
 		"Talk":
-			# active_dialogue_id() owns the index bounds so this branch and the
-			# left-click talk fast path always open the same conversation.
+			# active_dialogue_id() owns the index bounds (and that the dialogue
+			# exists) so this branch and the left-click talk fast path always
+			# open the same conversation.
 			if target_character is ProceduralCharacter:
 				var dlg_id: String = target_character.active_dialogue_id()
 				if not dlg_id.is_empty():
 					DialogueManager.start_dialogue(dlg_id)
+				else:
+					# Safety net: show_context_menu only lists Talk when there
+					# is a dialogue, but the index can move while the menu is up.
+					GameLog.add_entry("%s has nothing to say." % target_character.Name)
 		"Trade":
 			if target_character is ProceduralCharacter:
 				game.show_trade_window(target_character)
@@ -93,6 +97,72 @@ func _on_option_selected(option: String):
 	# this frame, preventing _process-based input polls from acting on the click.
 	queue_free()
 	game.call_deferred("set", "context_menu_open", false)
+
+# "Attack" only on a living character outside the party: not on items, doors,
+# warps, corpses or a companion (Game.show_context_menu leaves it off those).
+func _is_attackable(target) -> bool:
+	return is_instance_valid(target) and target is ProceduralCharacter \
+		and target.is_alive() and not target.is_party_member()
+
+# The party's order to attack `target`: the menu's actor (the party member who
+# right-clicked), else the primary selection, else the first living selected
+# member, swings its main hand at it (a punch when that hand holds no weapon),
+# exactly as a click on the target would. Paused, the swing is planned
+# (queued) instead. Never the target's own swing.
+func _order_attack(target) -> void:
+	if not _is_attackable(target):
+		return
+	var actor = _attacking_party_member()
+	if actor == null:
+		GameLog.add_entry("No party member is selected to attack %s: select one first." % target.Name)
+		return
+	# Same rule as a click on the world (ProceduralCharacter._handle_input):
+	# someone who can't take orders doesn't take this one either.
+	if _refuses_orders(actor):
+		return
+	if PauseManager.is_paused:
+		if actor.action_queue:
+			actor.action_queue.queue_attack_target(target)
+	else:
+		actor.target_rotation = (target.global_position - actor.global_position).angle() + PI / 2
+		actor.attack("Main", target.global_position, target)
+
+# True (and says why) when `actor` can't take orders now, as _handle_input
+# ignores a click: Unconscious, or Panicked/Frightened/Transfixed/Incited.
+func _refuses_orders(actor) -> bool:
+	var cm = actor.condition_manager
+	if cm == null:
+		return false
+	var blocking_id := ""
+	if cm.has_condition("unconscious"):
+		blocking_id = "unconscious"
+	else:
+		for cid in ["panicked", "frightened", "transfixed", "incited"]:
+			if cm.has_active_condition(cid):
+				blocking_id = cid
+				break
+	if blocking_id == "":
+		return false
+	var inst = cm.get_condition(blocking_id)
+	var blocking_name: String = inst.condition.display_name \
+		if inst and inst.condition and inst.condition.display_name != "" else blocking_id.capitalize()
+	actor.notify(blocking_name, Color(1.0, 0.6, 0.4), "%s can't take orders: %s." % [actor.Name, blocking_name])
+	return true
+
+# The party member who carries out an attack order: the actor that opened the
+# menu, else the primary selection, else the first living selected member;
+# null when there is none.
+func _attacking_party_member():
+	var candidates: Array = [actor_character]
+	if game != null and game.has_method("get_selected"):
+		candidates.append(game.get_selected())
+	if game != null and game.get("selected_characters") is Array:
+		candidates.append_array(game.selected_characters)
+	for c in candidates:
+		if is_instance_valid(c) and c is ProceduralCharacter and c.is_alive() and c.is_party_member():
+			return c
+	return null
+
 # Close the menu when the user clicks outside it. Use _unhandled_input rather
 # than _input so the menu's own Buttons get the click first via GUI dispatch
 # — calling set_input_as_handled() from _input on a click inside the rect

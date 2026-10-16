@@ -26,6 +26,10 @@ const CONTEXT_PARTY := ""
 const CONTEXT_TRADE := "trade"
 ## TownServicesPanel card slots: "Name (N gold)".
 const CONTEXT_SERVICE := "service"
+## TownServicesPanel's greyed weapons of an away NPC (entry kind
+## "weapon_preview", raw = the snapshot's weapon data dict):
+## "Name (N gold) - visit to trade".
+const CONTEXT_SERVICE_PREVIEW := "service_preview"
 ## ChestInventoryWindow (chests and corpses): the name only, as contents
 ## aren't priced there.
 const CONTEXT_CHEST := "chest"
@@ -37,6 +41,8 @@ static func detail_text(entry: Dictionary, context: String = CONTEXT_PARTY) -> S
 			tip = "%s (%.0f gold)" % [entry.get("display_name", "Unknown"), trade_value(entry)]
 		CONTEXT_SERVICE:
 			tip = "%s (%.0f gold)" % [entry.get("display_name", "?"), trade_value(entry)]
+		CONTEXT_SERVICE_PREVIEW:
+			tip = "%s (%.0f gold) - visit to trade" % [entry.get("display_name", "?"), trade_value(entry)]
 		_:
 			# Party panel and chest: the bare name.
 			tip = str(entry.get("display_name", "Unknown"))

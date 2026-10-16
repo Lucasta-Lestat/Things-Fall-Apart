@@ -206,7 +206,8 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 		return
 	var selected = _resolve_target_character()
 	if selected == null:
-		push_warning("ChestInventoryWindow: no party character available to receive item")
+		GameLog.add_entry("No one is free to take that.")
+		SfxManager.play_ui("trade_decline")
 		return
 	# A container must never receive from itself: with corpse looting the
 	# container CAN be a (dead) party character, and routing its own item back
@@ -238,7 +239,12 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 		if (int(left_val) if left_val != null else 1) < stacks_before:
 			CrimeManager.report(selected, "loot", CrimeManager.loot_payload(chest_item))
 			SfxManager.play_ui("chest_item_out")
-			_populate_grid()
+		else:
+			# Nothing fit. add_stack already announced "Inventory full" over
+			# the party member (Inventory.add_failed), so no second notice;
+			# the refusal sound says the click was heard.
+			SfxManager.play_ui("trade_decline")
+		_populate_grid()
 		return
 	# Law: a successful take from an owned container is a burglary. The
 	# deposit side (_drop_data) is deliberately NOT gated — giving items
