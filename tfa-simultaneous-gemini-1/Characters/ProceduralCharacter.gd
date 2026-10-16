@@ -6737,7 +6737,16 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
 		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
 		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
-		Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
+		# Only over characters the party sees (Game.is_seen_by_party: party
+		# always, NPCs by this frame's LOS pass). The label is parented beside
+		# the character, so an unseen NPC's hidden sprite wouldn't hide it, and
+		# DoT ticks and AoE would float numbers through walls and fog.
+		var shown_to_party: bool = is_party_member()
+		if not shown_to_party:
+			shown_to_party = game.is_seen_by_party(self) \
+					if game != null and is_instance_valid(game) and game.has_method("is_seen_by_party") else visible
+		if shown_to_party:
+			Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
