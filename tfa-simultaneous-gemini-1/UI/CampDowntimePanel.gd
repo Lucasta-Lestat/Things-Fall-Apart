@@ -184,10 +184,17 @@ func _build_activity_card(activity_id: String, activity: Dictionary) -> Control:
 	desc_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(desc_label)
 
+	# Same meta line as the town board's cards (TownServicesPanel).
+	var meta_parts: Array = []
 	var check: String = String(activity.get("ability_check", ""))
 	if not check.is_empty():
+		meta_parts.append("Check: %s" % check)
+	var hours: float = float(activity.get("duration_hours", 0))
+	if hours > 0.0:
+		meta_parts.append("%dh" % int(hours))
+	if not meta_parts.is_empty():
 		var meta_label := Label.new()
-		meta_label.text = "Check: %s" % check
+		meta_label.text = "  ".join(meta_parts)
 		meta_label.add_theme_font_size_override("font_size", 9)
 		meta_label.add_theme_color_override("font_color", Color(0.40, 0.28, 0.10))
 		meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

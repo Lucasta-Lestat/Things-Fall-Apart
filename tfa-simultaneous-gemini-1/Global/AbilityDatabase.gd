@@ -37,7 +37,7 @@ func get_ability_data(ability_id: String) -> Dictionary:
 func get_all_ability_ids() -> Array:
 	return _abilities.keys()
 
-# Full ability dicts. DowntimeEffectApplier._pick_random_unknown_spell has called
+# Full ability dicts. DowntimeEffectApplier.pick_random_unknown_spell has called
 # this behind a has_method guard since it was written; the method never existed,
 # so the guard always failed and the Research activity's "new_spell" outcome
 # (learn_spell: "random_spell") silently did nothing. Returns copies so a caller

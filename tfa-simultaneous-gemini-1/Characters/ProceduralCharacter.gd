@@ -6885,7 +6885,14 @@ func ability_check(stat, domain) -> int:
 	for trait_id in disadvs:
 		if traits.has(trait_id): bonus -= 20 * traits[trait_id]
 	success_target += bonus
+	# Exposed for the log lines of otherwise hidden rolls (dialogue checks,
+	# downtime checks).
+	last_check = {"roll": roll, "target": success_target}
 	return _calculate_success_level(roll, success_target)
+
+## The last ability_check's {"roll", "target"}, read by the log lines that
+## report hidden rolls (Dialogue_Manager, DowntimeResolver).
+var last_check: Dictionary = {}
 
 func get_stat_by_name(stat_name) -> int:
 	# Accept either String or StringName; normalize so callers don't have to care.

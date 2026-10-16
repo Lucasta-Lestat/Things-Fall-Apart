@@ -60,7 +60,7 @@
 	 },
 	 "rodomontade": {
 	  "weight": 2,
-	  "event_description": " boasted loudly about their exploits all night, amplifying the reputational impact (good and bad) of recent adventures.",
+	  "event_description": " boasted loudly about their exploits all night and woke up bruised and lighter in the purse.",
 	  "effects": {
 	   "hp": -2,
 	   "money": -10
@@ -116,7 +116,7 @@
 	 "good_gossip": {
 	  "weight": 3,
 	  "min_success_tier": 1,
-	  "event_description": " loosened tongues with a few rounds and picked up something interesting about the local powers.",
+	  "event_description": " loosened tongues with a few rounds and let the evening's worries drain away.",
 	  "effects": {
 	   "remove_mental_affliction": 1
 	  }
@@ -373,7 +373,7 @@
 	 "new_spell": {
 	  "weight": 2,
 	  "min_success_tier": 2,
-	  "event_description": " puzzled out a folio of cramped notation and added a working to their repertoire.",
+	  "event_description": " puzzled out a folio of cramped notation.",
 	  "effects": {
 	   "learn_spell": "random_spell"
 	  }

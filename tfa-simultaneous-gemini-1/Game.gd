@@ -215,6 +215,9 @@ func _auto_pick_downtime(character, region_id: String) -> void:
 			continue
 		if not String(a.get("legal_title", "")).is_empty():
 			continue
+		# Nor for one that can't happen for them (no patron to offer souls to).
+		if not DowntimeResolver.unavailable_reason(character, a).is_empty():
+			continue
 		var score: int = 0
 		if character.has_method("rate_choice"):
 			score = int(character.rate_choice(a.get("preferred_traits", []), a.get("disliked_traits", [])))
