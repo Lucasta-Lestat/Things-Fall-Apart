@@ -470,6 +470,11 @@ func resync_worn_from_items() -> void:
 	if possessor == null or not possessor.has_method("equip_equipment") \
 			or not possessor.has_method("unequip_slot"):
 		return
+	# Corpses don't dress or undress: death strips the `_equipped` marks but
+	# leaves the worn pieces on the body (as PartySidePanel._equip_item), so
+	# a dead party member must not be stripped by an unrelated trade's cancel.
+	if possessor.has_method("is_alive") and not possessor.is_alive():
+		return
 	var flagged := {}  # slot -> Array of flagged armour dicts, in items order
 	for item in items:
 		if not (item is Dictionary) or not item.get("_equipped", false):

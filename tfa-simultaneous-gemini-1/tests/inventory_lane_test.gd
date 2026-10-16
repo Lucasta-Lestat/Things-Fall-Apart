@@ -328,6 +328,18 @@ func _case_trade_cancel_resyncs_worn() -> void:
 		and is_same(pc.feet_equipment.get_meta("item_data"), restored_boots))
 	_check("worn.untouched-stays-on", pc.torso_equipment == torso_before and is_instance_valid(torso_before))
 	_check("worn.untouched-repointed", restored_shirt != null and is_same(pc.torso_equipment.get_meta("item_data"), restored_shirt))
+
+	# A corpse keeps what it died in: death strips the _equipped marks but
+	# not the worn pieces, and a cancelled trade must not undress it.
+	var dead_torso = pc.torso_equipment
+	for d in pc.inventory.items:
+		d.erase("_equipped")
+	var hp_saved = pc.current_health
+	pc.current_health = 0
+	pc.inventory.resync_worn_from_items()
+	_check("worn.corpse-keeps-look", pc.torso_equipment == dead_torso and is_instance_valid(dead_torso) \
+		and pc.feet_equipment != null)
+	pc.current_health = hp_saved
 	_drop_temp(pc)
 
 # ---------------------------------------------------------------------------
@@ -493,8 +505,12 @@ func _case_context_menu_options() -> void:
 	var mute := _spawn_temp(false)
 	mute.interact_options = ["Inspect"]
 	mute.faction_id = "bandits"
+	var orphans0: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
 	opts = _menu_options(mute, p0)
 	_check("menu.empty-not-shown", opts == ["<no menu>"], str(opts))
+	# The unshown menu leaves no orphan behind (its vbox is parented in _ready).
+	var orphans1: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
+	_check("menu.empty-no-orphans", orphans1 <= orphans0, "%d -> %d" % [orphans0, orphans1])
 	await get_tree().process_frame
 	_check("menu.flag-reset", not game.context_menu_open)
 	_drop_temp(mute)

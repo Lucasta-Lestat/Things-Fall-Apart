@@ -1575,7 +1575,10 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 	# filter() copies, so item data's own option list is left alone.
 	options = options.filter(func(o): return str(o) != "Inspect")
 	if options.is_empty():
-		# Every option was a dead end: no empty box.
+		# Every option was a dead end: no empty box. Its vbox is only
+		# parented in the menu's _ready, so free it too or it leaks.
+		if is_instance_valid(context_menu.vbox) and context_menu.vbox.get_parent() == null:
+			context_menu.vbox.free()
 		context_menu.free()
 		call_deferred("set", "context_menu_open", false)
 		return
