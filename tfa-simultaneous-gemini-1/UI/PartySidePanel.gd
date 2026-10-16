@@ -1720,12 +1720,6 @@ func _update_conditions(data: Dictionary, character) -> void:
 			break
 		var cond_id = cond_ids[i]
 		var instance = conditions[cond_id]
-		var cond_res = instance.condition
-		var display_name = cond_res.display_name if cond_res and cond_res.display_name else cond_id
-		var tip = display_name
-		if instance.stacks > 1:
-			tip += " x%d" % instance.stacks
-		if instance.expires_at > 0 and cond_res.duration > 0:
-			var time_left = max(0.0, instance.expires_at - game_time)
-			tip += " (%s)" % Globals.format_duration_short(time_left)
-		children[i].tooltip_text = tip
+		# Name, stacks, time left, suppressed, description: the same wording
+		# as the world hover (ConditionInstance.get_tooltip_text).
+		children[i].tooltip_text = instance.get_tooltip_text(game_time)

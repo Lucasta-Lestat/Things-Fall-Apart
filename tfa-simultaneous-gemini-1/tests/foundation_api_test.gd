@@ -277,7 +277,10 @@ func _case_game_hosts() -> void:
 	var ui: Node = game.get_node("GameUI")
 	_check("game.world_tooltip-under-GameUI", game.world_tooltip != null and game.world_tooltip.get_parent() == ui)
 	_check("game.hud_status-under-GameUI", game.hud_status != null and game.hud_status.get_parent() == ui)
-	_check("game.world_tooltip-ships-empty", game.world_tooltip._providers.is_empty())
+	# Lanes register providers at boot (world-info: characters, structures,
+	# hazards); every one must be a live callable.
+	_check("game.world_tooltip-providers-valid", game.world_tooltip._providers.values().all(
+		func(r): return (r.callable as Callable).is_valid()), str(game.world_tooltip._providers.keys()))
 	_check("game.hud_status-ships-empty", game.hud_status.get_child_count() == 0)
 	_check("game.hud_status-ignore", game.hud_status.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 	var tl: Control = ui.get_node("TimeLabel")
