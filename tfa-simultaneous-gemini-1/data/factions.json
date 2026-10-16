@@ -41,13 +41,10 @@
 			"tier": 1,
 			"icon": "res://icons/player.png",
 			"flag": "res://icons/player_flag.png",
-			"allies": [
-				"merchants"
-			],
+			"allies": [],
 			"enemies": [
 				"bandits",
 				"undead",
-				"demons",
 				"rival_party"
 			],
 			"equipment_traits": {
@@ -86,7 +83,6 @@
 			"enemies": [
 				"bandits",
 				"undead",
-				"demons",
 				"rebels"
 			],
 			"equipment_traits": {
@@ -262,9 +258,8 @@
 			"allies": [],
 			"enemies": [
 				"player",
-				"town_guard",
-				"merchants",
-				"nobles"
+				"golden_guard",
+				"patriciate"
 			],
 			"equipment_traits": {
 				"required": {},
@@ -303,8 +298,8 @@
 			"law_code": "none",
 			"allies": [],
 			"enemies": [
-				"town_guard",
-				"nobles"
+				"golden_guard",
+				"patriciate"
 			],
 			"equipment_traits": {
 				"required": {},
@@ -352,7 +347,7 @@
 				"required": {
 				},
 				"forbidden": {
-					"Holy": 1,
+					"Holy": 1
 				}
 			},
 			"race_weights": {
@@ -360,7 +355,7 @@
 			},
 			"default_backgrounds": [
 				"plague_survivor"
-			],
+			]
 		},
 		{
 			"id": "wildlife",
@@ -426,13 +421,11 @@
 			"hostile_by_default": true,
 			"law_code": "none",
 			"allies": [
-				"demons",
 				"patriciate"
 			],
 			"enemies": [
 				"player",
-				"town_guard",
-				"nobles"
+				"golden_guard"
 			],
 			"equipment_traits": {
 				"required": {},

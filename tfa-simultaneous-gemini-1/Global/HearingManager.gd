@@ -166,9 +166,12 @@ func emit(world_pos: Vector2, loudness: float, source = null,
 			# are the inverse (meant to be heard) and bypass it. Player-made
 			# sound is always audible, so sneaking is detectable BEFORE the
 			# player is hostile — the only ordering under which pre-crime
-			# stealth exists.
+			# stealth exists. A very loud sound (gunshot, explosion) still
+			# reaches an AT_EASE listener whoever made it, a guard's shot
+			# included: on_sound_heard only wakes them to UNAWARE.
 			if not is_alarm and src_faction != "" and src_faction != "player" \
-					and not FactionDatabase.are_hostile(listener.faction_id, src_faction):
+					and not FactionDatabase.are_hostile(listener.faction_id, src_faction) \
+					and not (eff_loudness >= LOUD_SOUND_THRESHOLD and "is_at_ease" in ai_node and ai_node.is_at_ease):
 				continue
 			ai_node.on_sound_heard(world_pos, eff_loudness, source, channel, payload)
 
