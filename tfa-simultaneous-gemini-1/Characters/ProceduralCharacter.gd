@@ -1620,6 +1620,17 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 		# Ghostly translucency: the player can still find their own invisible
 		# characters; AI target selection is what actually ignores them.
 		modulate.a = 0.35
+	_react_to_incapacitation(instance)
+
+## Stunned / Frozen / Apathetic / Unconscious (the "incapacitate" trait)
+## landing, or coming out of suppression, ends a windup, even one marked
+## "interruptible": false.
+func _react_to_incapacitation(instance: ConditionInstance) -> void:
+	if instance == null or instance.condition == null or not instance.is_active():
+		return
+	if not instance.condition.traits.has("incapacitate"):
+		return
+	interrupt_cast(AbilityEffect.condition_display_name(instance.condition.id), true)
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -5647,6 +5658,29 @@ func has_weapon_equipped() -> bool:
 	"""Check if character is holding a weapon"""
 	return current_main_hand_item != null or current_off_hand_item != null
 
+## True when either hand holds a shield (buckler, iron_shield): a WeaponShape
+## of the SHIELD type, or one whose Items.json entry is a shield. The dict is
+## read directly so a procedural id that isn't in Items.json doesn't push a
+## lookup warning.
+func has_shield() -> bool:
+	for item in [current_off_hand_item, current_main_hand_item]:
+		if not is_instance_valid(item) or not (item is WeaponShape):
+			continue
+		if item.weapon_type == WeaponShape.WeaponType.SHIELD:
+			return true
+		if String(item.id) != "":
+			var entry = ItemDatabase.equipment.get(Globals.name_to_id(String(item.id)), {})
+			if entry is Dictionary and String(entry.get("type", "")).to_lower() == "shield":
+				return true
+	return false
+
+## An ability's requirements.traits entry ("has_shield"), else a trait tier.
+func meets_ability_requirement(trait_id: String) -> bool:
+	match trait_id:
+		"has_shield":
+			return has_shield()
+	return int(traits.get(trait_id, 0)) > 0
+
 # ===== PUBLIC EQUIPMENT API =====
 
 
@@ -6167,6 +6201,16 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		emit_signal("damaged_by", attacker, world_hit, float(total_damage))
 		health_changed.emit(current_health, max_health, self)
 	_check_death()
+	# A hit that gets through breaks a windup. Damage-over-time ticks (fired
+	# from inside the ConditionManager's tick) and hits armour soaked up
+	# entirely don't; a lethal hit goes through the death path.
+	var dot_tick: bool = condition_manager != null and condition_manager.firing_triggered_effect
+	if total_damage > 0 and is_alive() and not dot_tick:
+		# Named only when the party can see the attacker; a hidden archer stays hidden.
+		var hit_by: String = "took a hit"
+		if is_instance_valid(attacker) and attacker is ProceduralCharacter and attacker != self and attacker._announces_to_party():
+			hit_by = "hit by %s" % attacker.Name
+		interrupt_cast(hit_by)
 	return total_damage
 
 
@@ -6378,8 +6422,8 @@ func _enter_corpse_state() -> void:
 	# corpse. An armed targeting preview kept following the mouse forever over
 	# the battlefield and overlapped every later cast's preview (playtest
 	# find); queued ghost indicators outlived their caster; an in-flight cast
-	# would complete from a corpse. Scrub all three. (interrupt_cast respects
-	# non-interruptible abilities — a dying breath may still finish those.)
+	# would complete from a corpse. Scrub all three. (Non-interruptible
+	# abilities are kept — a dying breath may still finish those.)
 	if targeting_system != null:
 		targeting_system.cancel_targeting()
 		targeting_system.clear_all_queued_indicators()
@@ -6392,7 +6436,9 @@ func _enter_corpse_state() -> void:
 		if path_drawer != null:
 			path_drawer.queue_redraw()
 	if ability_manager != null:
-		ability_manager.interrupt_cast("caster died")
+		# Windups and step sequences alike, silently; interrupt_cast now only
+		# covers windups and announces.
+		ability_manager.cancel_cast("", true)
 	# Corpse body physics: move the body OFF the CHARACTERS layer instead of
 	# disabling its shape. Melee kills arrive inside the weapon-hitbox
 	# body_entered flush, where the physics server silently REJECTS
@@ -7116,7 +7162,23 @@ func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
+	# Drop the casting arm pose along with the cast.
+	if attack_animator and attack_animator.is_casting:
+		attack_animator.interrupt_attack()
+	# Death cancels with an empty reason, silently.
+	if reason != "" and is_alive() and _announces_to_party():
+		var ability_name: String = ability.display_name if ability else "spell"
+		notify("Interrupted!", Color(1.0, 0.6, 0.4), "%s's %s is interrupted: %s." % [Name, ability_name, reason])
 	cast_interrupted.emit(ability, reason)
+
+## Whether a notice about this character should reach the player: always for
+## the party, and for others only while the party can see them.
+func _announces_to_party() -> bool:
+	if is_party_member():
+		return true
+	if game != null and is_instance_valid(game) and game.has_method("is_seen_by_party"):
+		return game.is_seen_by_party(self)
+	return visible
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 	if targeting_system:
@@ -7632,6 +7694,7 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
+	_react_to_incapacitation(instance)
 ## Spawn a visual effect
 func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0, aoe_radius: float = 0.0) -> Node:
 	var scene = _load_effect_scene(scene_path)
@@ -7709,9 +7772,11 @@ func _load_effect_scene(path: String) -> PackedScene:
 	return scene
 
 
-## Delegates to AbilityManager
-func interrupt_cast(reason: String = "Interrupted") -> bool:
-	return ability_manager.interrupt_cast(reason)
+## The one entry point for interrupting a windup (see
+## AbilityManager.interrupt_cast for the rule); the "Interrupted!" notice comes
+## from _on_ability_cast_interrupted. `force` also ends uninterruptible casts.
+func interrupt_cast(cause: String = "Interrupted", force: bool = false) -> bool:
+	return ability_manager.interrupt_cast(cause, force) if ability_manager else false
 
 func _cancel_current() -> void:
 	if current_cast.get("state") == "targeting":

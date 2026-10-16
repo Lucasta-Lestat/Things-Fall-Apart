@@ -34,6 +34,10 @@ const AREA_NOTICE_REPEAT_MS := 8000
 const RESIST_COLOR := Color(0.6, 0.85, 1.0)
 const WORSEN_COLOR := Color(1.0, 0.45, 0.35)
 
+## True only while triggered_effect_fired is being emitted, i.e. during a
+## condition's own tick (Burning's fire, Poisoned's poison...).
+var firing_triggered_effect: bool = false
+
 ## Registry of all known condition templates
 ## Should be populated from your data files
 static var condition_registry: Dictionary = {}  # condition_id -> Condition
@@ -169,7 +173,12 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 		if current_time - last_time >= interval:
 			instance.last_trigger_times[i] = current_time
 			var result = _execute_triggered_effect(instance, effect)
+			# Listeners (the bearer's damage tick) can tell a condition's own
+			# tick from a fresh hit: ticks don't interrupt casts or count as
+			# a sighting of whoever applied the condition.
+			firing_triggered_effect = true
 			triggered_effect_fired.emit(instance, effect, result)
+			firing_triggered_effect = false
 
 
 func _execute_triggered_effect(instance: ConditionInstance, effect: Dictionary) -> Dictionary:

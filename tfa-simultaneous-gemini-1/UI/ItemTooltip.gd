@@ -44,6 +44,8 @@ static func detail_text(entry: Dictionary, context: String = CONTEXT_PARTY) -> S
 		tip += "\n" + line
 	for line in effect_lines(entry):
 		tip += "\n" + line
+	for line in ability_lines(entry):
+		tip += "\n" + line
 	return tip
 
 ## The slot's trade value as the trade and services windows price it: a
@@ -60,6 +62,24 @@ static func trade_value(entry: Dictionary) -> float:
 	var stacks_val = raw.get("num_stacks", 1)
 	var stacks: int = int(stacks_val) if stacks_val != null else 1
 	return float(raw.get("cost", 0.0)) * max(stacks, 1)
+
+## Casting rules for an ability slot (party panel): "Interruptible" when a
+## windup can be broken by a hit, knockback or being incapacitated, and each
+## equipment need ("Needs a shield") before a cast fails on it.
+static func ability_lines(entry: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	var aid := str(entry.get("ability_id", ""))
+	# Checked first: get_ability_data reports unknown ids as errors.
+	if entry.get("kind", "") != "ability" or not AbilityDatabase.get_all_ability_ids().has(aid):
+		return out
+	var data: Dictionary = AbilityDatabase.get_ability_data(aid)
+	if float(data.get("cast_time", 0.0)) > 0.0 and bool(data.get("interruptible", true)):
+		out.append("Interruptible")
+	var reqs = data.get("requirements", {})
+	if reqs is Dictionary:
+		for t in reqs.get("traits", []):
+			out.append(AbilityManager.requirement_reason(String(t)))
+	return out
 
 # ---------------------------------------------------------------------------
 # Hooks: extra lines appended in every window, one line per array element.

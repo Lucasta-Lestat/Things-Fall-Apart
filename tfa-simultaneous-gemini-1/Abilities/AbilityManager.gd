@@ -16,6 +16,12 @@ const SCHOOL_RESOURCE_MAP := {
 	"Occult": "souls",
 }
 
+## Player-facing text for an unmet requirements.traits entry; any other id
+## reads "Requires <Id>".
+const REQUIREMENT_REASONS := {
+	"has_shield": "Needs a shield",
+}
+
 ## Reference to the character this manager belongs to
 @export var character_path: NodePath = ".."
 var character: Node
@@ -44,6 +50,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if current_cast.is_empty():
+		return
+	# Casts hold still while the game is paused, like ActionQueue. This node
+	# inherits PROCESS_MODE_ALWAYS from the character, so it must check itself.
+	if PauseManager.is_paused:
 		return
 
 	var state = current_cast.get("state", "")
@@ -159,12 +169,13 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		_execute_ability(ability, target_position, explicit_targets, target_anchor)
 		return true
 
-	_start_casting(ability, target_position, explicit_targets, target_anchor)
+	_start_casting(ability, target_position, explicit_targets, target_anchor, free)
 	return true
 
 
-## Start the casting process (windup before execution)
-func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null) -> void:
+## Start the casting process (windup before execution). A free (item) cast
+## is never interrupted: the item is already spent.
+func _start_casting(ability: Ability, target_position: Vector2, explicit_targets: Array = [], target_anchor = null, free: bool = false) -> void:
 	current_cast = {
 		"ability": ability,
 		"state": "casting",
@@ -172,7 +183,8 @@ func _start_casting(ability: Ability, target_position: Vector2, explicit_targets
 		"explicit_targets": explicit_targets,
 		"anchor": target_anchor,
 		"cast_progress": 0.0,
-		"cast_time": ability.cast_time
+		"cast_time": ability.cast_time,
+		"free": free,
 	}
 
 	if character and character.has_node("AttackAnimator"):
@@ -313,6 +325,9 @@ func _execute_current_step() -> void:
 
 ## Resolve a step's effects and advance
 func _resolve_step_and_advance(ability: Ability, step: Dictionary, target_pos: Vector2) -> void:
+	# The sequence was cancelled (the caster died) while a dash was under way.
+	if current_cast.is_empty() or current_cast.get("ability") != ability:
+		return
 	var step_effects = step.get("effects", [])
 
 	# Per-step animation
@@ -484,6 +499,13 @@ func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
 	if incap != null:
 		return {"success": false, "reason": AbilityEffect.condition_display_name(incap.condition.id)}
 
+	# Equipment / trait requirements (Shield Bash needs a shield) come before
+	# the resource gate: "Needs a shield" is the reason that helps.
+	if not free:
+		for t in ability.requirements.get("traits", []):
+			if not _meets_requirement(String(t)):
+				return {"success": false, "reason": requirement_reason(String(t))}
+
 	# NPCs without school tiers opt out of the cost gate so legacy enemies
 	# don't lose their kit until their data is hand-tagged. Racial actives opt
 	# out for the same reason — see _is_innate_ability.
@@ -522,6 +544,21 @@ func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
 			return {"success": false, "reason": "Already casting"}
 
 	return {"success": true}
+
+
+## Player-facing text for an unmet requirements.traits entry.
+static func requirement_reason(trait_id: String) -> String:
+	if REQUIREMENT_REASONS.has(trait_id):
+		return String(REQUIREMENT_REASONS[trait_id])
+	return "Requires %s" % trait_id.capitalize()
+
+
+## A requirements.traits entry: the character's own predicate when it has one
+## (has_shield checks the hands), else its trait tier.
+func _meets_requirement(trait_id: String) -> bool:
+	if character.has_method("meets_ability_requirement"):
+		return character.meets_ability_requirement(trait_id)
+	return "traits" in character and int(character.traits.get(trait_id, 0)) > 0
 
 
 ## The active condition that keeps the caster from acting (Stunned, Frozen,
@@ -600,13 +637,19 @@ func _pay_ability_costs(ability: Ability) -> bool:
 	return true
 
 
-## Interrupt current cast
-func interrupt_cast(reason: String = "Interrupted") -> bool:
-	if current_cast.is_empty():
+## Interrupt the current windup. Only a cast still winding up ("casting") can
+## be interrupted: a multi-step sequence may be mid-dash. An item (free) cast
+## never is. An "interruptible": false ability shrugs off hits and knockback,
+## but `force` (an incapacitating condition) still ends it. Returns true when
+## the cast was stopped; cast_interrupted carries the reason for feedback.
+func interrupt_cast(reason: String = "Interrupted", force: bool = false) -> bool:
+	if current_cast.get("state", "") != "casting":
+		return false
+	if current_cast.get("free", false):
 		return false
 
 	var ability = current_cast.get("ability") as Ability
-	if ability and not ability.interruptible:
+	if ability and not ability.interruptible and not force:
 		return false
 
 	current_cast.clear()
@@ -617,6 +660,23 @@ func interrupt_cast(reason: String = "Interrupted") -> bool:
 		cast_interrupted.emit(ability, reason)
 
 	return true
+
+
+## Drop any windup or step sequence outright (the caster died). With
+## `keep_uninterruptible`, an "interruptible": false ability is left to finish
+## (a dying breath). Still emits cast_interrupted so the character's preview and
+## arm pose are cleaned up; an empty reason means no announcement.
+func cancel_cast(reason: String = "", keep_uninterruptible: bool = false) -> void:
+	if current_cast.is_empty():
+		return
+	var ability = current_cast.get("ability") as Ability
+	if keep_uninterruptible and ability and not ability.interruptible:
+		return
+	current_cast.clear()
+	_current_step_index = -1
+	_step_waiting = false
+	if ability:
+		cast_interrupted.emit(ability, reason)
 
 
 ## Whether the manager is currently executing an ability

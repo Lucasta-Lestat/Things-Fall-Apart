@@ -1292,6 +1292,10 @@ static func _resolve_knockback(
 		# velocity. RigidBody2D targets receive a direct impulse.
 		if target.has_method("apply_external_force"):
 			target.apply_external_force(force, KNOCKBACK_IMPULSE_DURATION)
+			# Being knocked back breaks a windup. Hooked here, not in
+			# apply_external_force, which force fields call every frame.
+			if force != Vector2.ZERO and target.has_method("interrupt_cast"):
+				target.interrupt_cast("knocked back")
 		elif target is RigidBody2D:
 			target.apply_central_impulse(force)
 
