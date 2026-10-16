@@ -60,8 +60,20 @@ func rate_choice(preferred: Array, disliked: Array) -> int:
 func apply_favorability_delta(delta: int, reason: String = "") -> void:
 	if delta == 0:
 		return
+	var old_favorability: int = favorability
 	favorability = clamp(favorability + delta, -100, 100)
 	favorability_changed.emit(delta, favorability, reason)
+	# Favour decides whether a companion refuses downtime work, so announce
+	# every change (dialogue choices, forced downtime, downtime results).
+	var applied: int = favorability - old_favorability
+	if applied == 0 or is_protagonist:
+		return
+	GameLog.add_entry("%s %s (%+d favour, now %d)." % [Name, "approves" if applied > 0 else "disapproves", applied, favorability])
+	if is_inside_tree() and get_parent():
+		# While paused only PROCESS_MODE_ALWAYS nodes tween (see notify()).
+		var host: Node = self if PauseManager.is_paused else get_parent()
+		Globals.show_floating_text("%+d favour" % applied, global_position, host,
+			Color.LIGHT_GREEN if applied > 0 else Color.SALMON, 0, Globals.NOTICE_FONT_SIZE)
 
 # Titles (e.g. "Reverend Mother", "Smith"). Drives town services panel and
 # is shown above the speaker name in dialogue. The first title is the primary.
@@ -71,6 +83,9 @@ var action_queue: ActionQueue = null
 var _was_paused: bool = false
 
 const DEATH_MARKER_TEXTURE_PATH := "res://Items/tombstone.png"
+# Meta set on a character whose coming death is already explained in the log,
+# so _on_character_died skips its generic "<Name> has died." line.
+const DEATH_LOGGED_META := &"death_already_logged"
 
 # Throw targeting state — set by PartySidePanel when "Throw" is selected
 var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
@@ -398,6 +413,8 @@ var _last_nav_target_tile: Vector2i = Vector2i(-999, -999)
 # The last held-click goal came back pathless: don't re-drain the whole A*
 # component every frame while the button is held on the same tile.
 var _nav_goal_failed: bool = false
+# Queued MOVE already announced as "Path blocked" (its instance id)
+var _blocked_move_id: int = 0
 
 # Ice sliding state
 var is_ice_sliding: bool = false
@@ -523,6 +540,10 @@ var fov_modifier: float = 0.0
 var mp_regen_modifier: float = 0.0
 var crit_threshold_modifier: float = 0.0
 var crit_fail_modifier: float = 0.0
+# Pool-size modifiers from conditions (Hypochondria halves max HP, Focused adds
+# a focus pip), cached by _on_stats_recalculated.
+var max_hp_mult: float = 1.0
+var max_focus_bonus: int = 0
 
 # --- Helper to get effective attribute values ---
 func effective_strength() -> float:
@@ -692,7 +713,7 @@ var conditions = {}
 # Note the /5.0 is float division on purpose: the old `int(con) / 10` was
 # integer division and made HP a coarse step function.
 var max_hp: int:
-	get: return 20 + int(effective_constitution() / 5.0) + int(traits.get("Martial", 0)) * 2
+	get: return maxi(1, int((20 + int(effective_constitution() / 5.0) + int(traits.get("Martial", 0)) * 2) * max_hp_mult))
 
 # --- Single-bar character HP (replaces the old per-limb HP system) ---
 # `max_health` is an alias of `max_hp` so the conventional name lives alongside
@@ -812,7 +833,7 @@ const ALLY_VISION_RADIUS := 500.0
 var max_adrenaline: int:
 	get: return int(traits.get("Martial", 0))
 var max_focus: int:
-	get: return int(traits.get("Arcane", 0))
+	get: return int(traits.get("Arcane", 0)) + max_focus_bonus
 var max_harmony: int:
 	get: return int(traits.get("Primal", 0))
 var max_devotion: int:
@@ -896,6 +917,7 @@ func _ready() -> void:
 	condition_manager.triggered_effect_fired.connect(_on_triggered_effect_fired)
 	condition_manager.condition_suppressed.connect(_on_condition_suppressed)
 	condition_manager.condition_unsuppressed.connect(_on_condition_unsuppressed)
+	condition_manager.condition_stacks_changed.connect(_on_condition_stacks_changed)
 	# 2. Name it (optional, but helps with debugging)
 	targeting_system.name = "AbilityTargeting"
 	add_child(targeting_system)
@@ -952,8 +974,49 @@ func _setup_action_queue() -> void:
 	action_queue.action_completed.connect(_on_action_completed)
 
 # Optional signal handlers for UI feedback
+# Orders given while paused that get no target reticle (weapon swap, turn,
+# item use, throw) would leave no trace until unpause, so confirm each with a
+# short label and a log line. Path conversions run unpaused and are drawn by
+# PathDrawer; a queued dash shows its own aim ribbon (its reticle).
 func _on_action_queued(action: ActionQueue.Action) -> void:
-	pass
+	if not PauseManager.is_paused or action.reticle != null or action.data.get("from_path", false):
+		return
+	if not is_party_member():
+		return
+	var label := ""
+	var what := ""
+	match action.type:
+		ActionQueue.ActionType.CYCLE_WEAPON:
+			label = "Swap planned"
+			what = "swap %s-hand weapon" % String(action.data.get("hand", "Main")).to_lower()
+		ActionQueue.ActionType.FACE:
+			label = "Turn planned"
+			what = "turn"
+		ActionQueue.ActionType.USE_ITEM:
+			label = "Item planned"
+			what = "use an item"
+		ActionQueue.ActionType.USE_ABILITY:
+			var ability_id: String = action.data.get("ability_id", "")
+			var ability_data: Dictionary = AbilityDatabase.get_ability_data(ability_id)
+			label = "Cast planned"
+			what = "use %s" % ability_data.get("display_name", ability_id.replace("_", " "))
+		ActionQueue.ActionType.CUSTOM:
+			var callable = action.data.get("callable")
+			var method: String = String(callable.get_method()) if callable is Callable and callable.is_valid() else ""
+			if method == "dash" or action.data.has("dash_target"):
+				label = "Dash planned"
+				what = "dash"
+			elif method == "_execute_throw":
+				label = "Throw planned"
+				what = "throw an item"
+			else:
+				label = "Item planned"
+				what = "use an item"
+	if label.is_empty():
+		return
+	# Parented to self (PROCESS_MODE_ALWAYS) so the label animates while paused.
+	Globals.show_floating_text(label, global_position, self, Color.LIGHT_BLUE, 0, Globals.NOTICE_FONT_SIZE)
+	GameLog.add_entry("%s will %s." % [Name, what])
 
 func _on_action_started(action: ActionQueue.Action) -> void:
 	pass
@@ -998,13 +1061,25 @@ func _on_game_unpaused_convert_path() -> void:
 		if snap.distance < INF:
 			tactical_path.truncate_before(snap)
 
-	# Clear any stale actions from a previous path before queuing the new one
-	action_queue.cancel_all()
+	# Clear the stale actions a previous conversion of this path queued
+	# (every step is tagged "from_path"). Orders given directly while paused
+	# (attacks, weapon swaps, dashes, turns, item use) are kept, and run
+	# before the re-queued path.
+	if action_queue.current_action != null and action_queue.current_action.data.get("from_path", false):
+		action_queue.cancel_current()
+	var pending := action_queue.get_queue()
+	for i in range(pending.size() - 1, -1, -1):
+		if pending[i].data.get("from_path", false):
+			action_queue.remove_action(i)
 	_nav_waypoints.clear()
 	_nav_index = 0
 	var actions = tactical_path.to_action_queue_actions()
 	for a in actions:
-		action_queue.queue_action(a.type, a.data)
+		# Tag each step as this path's (TacticalPath may have already), so the
+		# next conversion removes exactly these and nothing given directly.
+		var step_data: Dictionary = a.data if a.data.get("from_path", false) else a.data.duplicate()
+		step_data["from_path"] = true
+		action_queue.queue_action(a.type, step_data)
 	tactical_path.is_executing = true
 	path_drawer.queue_redraw()
 
@@ -1020,9 +1095,14 @@ func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 		if indicator and is_instance_valid(indicator) and targeting_system:
 			targeting_system.remove_queued_indicator(indicator)
 
-	if action.type != ActionQueue.ActionType.MOVE:
-		# Remove the first remaining action node (they execute in order)
-		if not tactical_path.action_nodes.is_empty():
+	if action.type != ActionQueue.ActionType.MOVE and action.data.get("from_path", false):
+		# Remove this step's node. Direct orders that run during the plan
+		# don't consume one; a node's action and FACE share it (erase is a no-op
+		# the second time).
+		var path_node = action.data.get("path_node")
+		if path_node != null:
+			tactical_path.action_nodes.erase(path_node)
+		elif not tactical_path.action_nodes.is_empty():
 			tactical_path.action_nodes.remove_at(0)
 	# Defer the empty check so the action queue has time to dequeue the next action
 	call_deferred("_check_tactical_path_finished")
@@ -1089,12 +1169,11 @@ func abort_planning_input() -> void:
 ## cleared a deferred frame later and from more places.
 ##
 ## Cleared by natural completion (_complete_current_action), ESC and unpaused
-## middle-click (action_queue.cancel_all), and re-conversion at unpause.
-## NOT cleared by _begin_ice_slide / _begin_fall: those call clear_queue(),
-## which empties the pending queue but leaves current_action set. That is
-## harmless - control is lost during a slide/fall anyway, and the running MOVE
-## self-completes through _is_action_complete's `not character.is_moving`
-## branch once the body stops - but do not read those two as "queue emptied".
+## middle-click (action_queue.cancel_all). Re-conversion at unpause replaces
+## only the path's own ("from_path") steps; direct paused orders stay queued.
+## Also cleared by _begin_ice_slide / _begin_fall (_drop_plan_on_lost_control
+## cancels the whole plan, the running MOVE included), so a slipping or
+## falling member's AI gets its movement back at once.
 func has_player_orders() -> bool:
 	if action_queue == null:
 		return false
@@ -1178,7 +1257,11 @@ func start_dash_targeting() -> void:
 	"""Enter dash-targeting mode. Aim line follows the cursor (truncated at the
 	first wall, clamped to get_dash_range()) until the player commits with
 	left-click or cancels with right-click / escape / shift."""
-	if dash_cooldown_timer > 0.0 or _dash_motion_active:
+	if _dash_motion_active:
+		return
+	if dash_cooldown_timer > 0.0:
+		if is_party_member():
+			notify("Dash recovering", Color(1.0, 0.6, 0.4), "%s can't dash yet: still recovering from the last dash." % Name)
 		return
 	pending_dash = true
 	_ensure_aim_line()
@@ -1224,7 +1307,10 @@ func _execute_pending_bite(mouse_pos: Vector2) -> void:
 	if data.is_empty():
 		return
 	var ability := Ability.from_dict(data)
-	use_ability(ability, {"position": mouse_pos})
+	# Land the bite where the preview line ends (clamped to its range and
+	# stopped by walls), not wherever the cursor happens to be.
+	var hit_pos := AimLine.compute_endpoint(get_world_2d(), global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range())
+	use_ability(ability, {"position": hit_pos})
 
 func _cancel_pending_bite() -> void:
 	pending_bite = false
@@ -1511,7 +1597,8 @@ var _outcry_flash_period: float = -1.0
 var _outcry_flash_restart_ms: int = 0
 
 func _on_outcry_state_changed(active: bool, frac: float) -> void:
-	if not _alertness_indicator or not AI_enabled:
+	# Party members never show the AI glyphs (see _on_alertness_changed).
+	if not _alertness_indicator or not AI_enabled or is_party_member():
 		return
 	if not active:
 		_outcry_flash_period = -1.0
@@ -1545,13 +1632,19 @@ func _on_outcry_state_changed(active: bool, frac: float) -> void:
 func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
 		return
-	# Player-controlled characters (party) don't use the AI alertness UI.
-	# Their AI_enabled flag is false — only AI-driven NPCs get ? / !. This is
-	# a belt-and-suspenders pair with the party_chars skip in
+	# Party members don't use the AI alertness UI — only AI-driven NPCs get
+	# ? / !. Unselected party members run with AI_enabled (and Game.alert_party
+	# raises idle ones to SEARCHING), so check party membership too, or a
+	# companion who is hit or called to alert shows a '?'. This is a
+	# belt-and-suspenders pair with the party_chars skip in
 	# Game._on_character_damaged so incidental alertness bumps still don't
 	# surface as icons on PCs.
-	if not AI_enabled:
+	if not AI_enabled or is_party_member():
+		if _alertness_flash_tween and _alertness_flash_tween.is_valid():
+			_alertness_flash_tween.kill()
+			_alertness_flash_tween = null
 		_alertness_indicator.visible = false
+		_alertness_indicator.modulate.a = 1.0
 		return
 	# An outcry fuse owns the indicator while it burns.
 	if _outcry_flash_period > 0.0:
@@ -1595,8 +1688,9 @@ func _refresh_condition_display() -> void:
 	for cond_id in condition_manager.conditions:
 		var instance = condition_manager.conditions[cond_id]
 		var cond_res = instance.condition
-		# Skip conditions that use VFX instead of icon overlay
-		if cond_res and cond_res.custom_vfx != "" and cond_res.custom_vfx != "no vfx scene":
+		# Skip conditions shown by a VFX that actually spawned. One whose VFX
+		# scene failed to load falls back to its icon so it stays visible.
+		if _active_condition_vfx.has(cond_id) and is_instance_valid(_active_condition_vfx[cond_id]):
 			continue
 		var icon_tex = cond_res.icon if cond_res else null
 		var tex_rect = TextureRect.new()
@@ -1606,11 +1700,25 @@ func _refresh_condition_display() -> void:
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
+		# Stack count in the icon's bottom-right corner (Poisoned x7, Chilled x2).
+		if instance.stacks > 1:
+			var stack_label := Label.new()
+			stack_label.text = str(instance.stacks)
+			stack_label.add_theme_font_size_override("font_size", 9)
+			stack_label.add_theme_color_override("font_outline_color", Color.BLACK)
+			stack_label.add_theme_constant_override("outline_size", 2)
+			stack_label.position = Vector2(10, 4)
+			stack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			tex_rect.add_child(stack_label)
 		_condition_display.add_child(tex_rect)
 		icon_count += 1
 	# Center the icons above the character
 	var total_width = icon_count * (COND_DISPLAY_ICON_SIZE.x + 2)
 	_condition_display.position = Vector2(-total_width * 0.5, COND_DISPLAY_OFFSET_Y)
+	# A corpse hides its icons (_enter_corpse_state); anyone alive again shows
+	# them on their next refresh. Only ever re-shows: a corpse stays hidden.
+	if not _condition_display.visible and is_alive():
+		_condition_display.visible = true
 
 func _on_condition_applied(instance: ConditionInstance) -> void:
 	_spawn_condition_vfx(instance)
@@ -1638,7 +1746,22 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 	if instance and instance.condition and instance.condition.id == "bide":
 		var absorbed = float(instance.custom_data.get("absorbed", 0.0))
 		var ratio = float(instance.custom_data.get("ratio", 1.0))
-		bide_pending_bonus += absorbed * ratio
+		var gained: float = absorbed * ratio
+		bide_pending_bonus += gained
+		# Show what was stored (Game.process_weapon_hit adds it to the next
+		# weapon hit); only damage that got past armour and DR counts. NPCs the
+		# party doesn't see stay quiet, and only the party hears about an
+		# empty Bide.
+		var shown_gain: int = int(round(gained))
+		if shown_gain > 0 and _announces_to_party():
+			notify("Bide stored +%d" % shown_gain, Color.ORANGE,
+				"%s's Bide stores %d bonus damage for the next weapon hit." % [Name, shown_gain])
+		elif shown_gain <= 0 and is_party_member():
+			notify("Bide: nothing stored", Color.ORANGE,
+				"%s's Bide ends with nothing stored: no physical damage got through." % Name)
+
+func _on_condition_stacks_changed(_instance: ConditionInstance, _old_stacks: int, _new_stacks: int) -> void:
+	_refresh_condition_display()
 
 
 func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_position: Vector2) -> Dictionary:
@@ -1680,9 +1803,12 @@ func _self_heal(effect: Dictionary, _targets: Array, _ability, _target_position:
 
 func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
 	var result = {"success": true, "copied": []}
+	var ability_name: String = _ability.display_name if _ability is Ability and _ability.display_name != "" else "Psych Up"
 	if targets.is_empty():
 		result["success"] = false
 		result["error"] = "No target"
+		if is_party_member():
+			notify("No target", Color(1.0, 0.6, 0.4), "%s's %s found no one to copy." % [Name, ability_name])
 		return result
 
 	var source_target = targets[0]
@@ -1694,10 +1820,13 @@ func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_posi
 	if not source_cm:
 		result["success"] = false
 		result["error"] = "Target has no ConditionManager"
+		if is_party_member():
+			notify("No target", Color(1.0, 0.6, 0.4), "%s's %s needs a creature as its target." % [Name, ability_name])
 		return result
 
 	var duration = float(effect.get("duration", 12.0))
 	var filter_traits = effect.get("filter_traits", [])
+	var attempted := 0   # conditions that qualified and were tried
 
 	for cond_id in source_cm.conditions:
 		var inst: ConditionInstance = source_cm.conditions[cond_id]
@@ -1711,8 +1840,27 @@ func _copy_conditions(effect: Dictionary, targets: Array, _ability, _target_posi
 					break
 			if not has_match:
 				continue
-		condition_manager.apply_condition(cond_id, source_target, inst.stacks, duration)
-		result["copied"].append(cond_id)
+		attempted += 1
+		# apply_condition returns null when the copy is saved against or immune.
+		if condition_manager.apply_condition(cond_id, source_target, inst.stacks, duration):
+			result["copied"].append(cond_id)
+
+	var source_name: String = str(source_target.Name) if "Name" in source_target else "the target"
+	if result["copied"].is_empty() and attempted > 0:
+		# There were conditions, but every copy was resisted or blocked by an
+		# immunity, so say so in the log (when the party is involved).
+		var target_in_party: bool = source_target.has_method("is_party_member") and source_target.is_party_member()
+		if is_party_member() or target_in_party:
+			GameLog.add_entry("None of %s's conditions took hold." % source_name)
+	elif result["copied"].is_empty():
+		if is_party_member():
+			notify("Nothing copied", Color(1.0, 0.6, 0.4), "%s finds nothing in %s to mirror." % [Name, source_name])
+	elif _announces_to_party():
+		var copied_names: PackedStringArray = []
+		for cid in result["copied"]:
+			var cond = ConditionManager.condition_registry.get(cid)
+			copied_names.append(cond.display_name if cond and cond.display_name != "" else String(cid).replace("_", " "))
+		GameLog.add_entry("%s mirrors %s: %s." % [Name, source_name, ", ".join(copied_names)])
 
 	return result
 
@@ -1736,23 +1884,26 @@ func _on_stats_recalculated() -> void:
 	bonus_damage = condition_manager.calculate_effective_stat(0.0, "bonus_damage")
 	
 	# --- Attribute modifiers (applied on top of base attributes) ---
-	# These are separate floats that getters can incorporate
-	strength_modifier = condition_manager.calculate_effective_stat(0.0, "strength")
-	constitution_modifier = condition_manager.calculate_effective_stat(0.0, "constitution")
-	dexterity_modifier = condition_manager.calculate_effective_stat(0.0, "dexterity")
-	will_modifier = condition_manager.calculate_effective_stat(0.0, "will")
-	intelligence_modifier = condition_manager.calculate_effective_stat(0.0, "intelligence")
-	charisma_modifier = condition_manager.calculate_effective_stat(0.0, "charisma")
-	luck_modifier = condition_manager.calculate_effective_stat(0.0, "luck")
+	# These are separate floats that getters can incorporate. Each is the
+	# condition-adjusted value minus the base, so "multiply" and "set"
+	# operations act on the real attribute (against a 0.0 base, Hasted's x1.5
+	# or Frozen's set-to-0 came out as +0).
+	strength_modifier = condition_manager.calculate_effective_stat(float(strength), "strength") - strength
+	constitution_modifier = condition_manager.calculate_effective_stat(float(constitution), "constitution") - constitution
+	dexterity_modifier = condition_manager.calculate_effective_stat(float(dexterity), "dexterity") - dexterity
+	will_modifier = condition_manager.calculate_effective_stat(float(will), "will") - will
+	intelligence_modifier = condition_manager.calculate_effective_stat(float(intelligence), "intelligence") - intelligence
+	charisma_modifier = condition_manager.calculate_effective_stat(float(charisma), "charisma") - charisma
+	luck_modifier = condition_manager.calculate_effective_stat(float(luck), "luck") - luck
 
-	# --- Sensory stats ---
-	sight_modifier = condition_manager.calculate_effective_stat(0.0, "sight")
-	hearing_modifier = condition_manager.calculate_effective_stat(0.0, "hearing")
-	fov_modifier = condition_manager.calculate_effective_stat(0.0, "fov_angle_degrees")
+	# --- Sensory stats (same delta-from-base scheme) ---
+	sight_modifier = condition_manager.calculate_effective_stat(sight, "sight") - sight
+	hearing_modifier = condition_manager.calculate_effective_stat(hearing, "hearing") - hearing
+	fov_modifier = condition_manager.calculate_effective_stat(fov_angle_degrees, "fov_angle_degrees") - fov_angle_degrees
 	targeting_confusion = condition_manager.calculate_effective_stat(0.0, "targeting_confusion")
 	
 	# --- MP regen ---
-	mp_regen_modifier = condition_manager.calculate_effective_stat(0.0, "mp_regen_amount")
+	mp_regen_modifier = condition_manager.calculate_effective_stat(float(mp_regen_amount), "mp_regen_amount") - mp_regen_amount
 	
 	# --- Crit thresholds ---
 	crit_threshold_modifier = condition_manager.calculate_effective_stat(0.0, "crit_threshold")
@@ -1770,6 +1921,49 @@ func _on_stats_recalculated() -> void:
 		var val = condition_manager.calculate_effective_stat(0.0, "restrict_%s" % action_trait)
 		restricted_actions_by_trait[action_trait] = val >= 1.0
 
+	# --- Pool maximums (Hypochondria: max_hp_multiplier -0.5; Focused: max_focus +1) ---
+	max_hp_mult = maxf(0.1, 1.0 + condition_manager.calculate_effective_stat(0.0, "max_hp_multiplier"))
+	var old_focus_bonus: int = max_focus_bonus
+	max_focus_bonus = int(condition_manager.calculate_effective_stat(0.0, "max_focus"))
+	if current_health > max_health:
+		current_health = max_health
+		health_changed.emit(current_health, max_health, self)
+	if max_focus_bonus != old_focus_bonus:
+		emit_signal("resource_changed", "focus", focus, max_focus)
+
+
+## True while a condition's damage tick (Shocked, Burning...) is being applied.
+## A tick isn't a fresh wound: it brings no new damage-type condition (Burning
+## would feed itself), no "-N blocked" float, no stress, focus drain or
+## Concentration break, and allies don't witness it.
+var _condition_tick_damage: bool = false
+
+## Damage types that bring their own condition with every damaging hit
+## (slashing and piercing bleed; see handle_damage_effect_based_on_type).
+const DAMAGE_TYPE_CONDITIONS := {"fire": "burning", "poison": "poisoned", "cold": "chilled"}
+## Conditions an ability is applying itself in the effect list being resolved
+## (condition_id -> true); its damage doesn't add a second stack of them.
+var _suppressed_damage_conditions: Dictionary = {}
+
+## Wrap damage that arrives with an explicit application of the same condition
+## (Fireball's Burning): between begin and end, damage of that type doesn't
+## also apply the condition.
+func begin_damage_condition_suppression(condition_ids: Dictionary) -> void:
+	_suppressed_damage_conditions = condition_ids.duplicate()
+
+func end_damage_condition_suppression() -> void:
+	_suppressed_damage_conditions = {}
+
+## One stack of the condition a damaging hit of some type brings (Bleeding,
+## Burning, Poisoned, Chilled). Not from a condition's own damage tick (Burning
+## would feed itself), not on top of an ability applying it explicitly, and
+## not on a corpse.
+func _apply_damage_type_condition(condition_id: String, limb = null) -> void:
+	if _condition_tick_damage or _suppressed_damage_conditions.has(condition_id):
+		return
+	if condition_manager == null or not is_alive():
+		return
+	condition_manager.apply_condition(condition_id, null, 1, -2.0, limb)
 
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
 	if result.has("damage"):
@@ -1780,7 +1974,9 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		# condition isn't pinned to a specific limb (bleeding, poison, etc.).
 		var hit_limb: int = instance.target_limb if instance.target_limb != null else LimbType.TORSO
 		var damage_dict = {damage_type: damage_amount}
+		_condition_tick_damage = true
 		take_damage(damage_dict, global_position, instance.source, hit_limb)
+		_condition_tick_damage = false
 
 	if result.has("heal"):
 		# Heals now go to the single HP pool. `target_limb` no longer affects
@@ -1839,8 +2035,10 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 			if randf() <= chance:
 				var their_cm = c.get_node_or_null("ConditionManager")
 				if their_cm and not their_cm.has_condition("sickened"):
-					their_cm.apply_condition("sickened", self, 1)
-					GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+					# Only log a spread that landed (apply_condition returns
+					# null on immunity or a passed save).
+					if their_cm.apply_condition("sickened", self, 1):
+						GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
 
 
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
@@ -1940,7 +2138,7 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 	for target in targets:
 		if not is_instance_valid(target) or target == self:
 			continue
-		if target is ProceduralCharacter:
+		if target is ProceduralCharacter and target.is_alive():
 			# Target becomes infatuated with caster
 			var target_cm = target.get_node_or_null("ConditionManager")
 			if target_cm:
@@ -1949,6 +2147,10 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 			condition_manager.apply_condition("infatuated", target, 1)
 			GameLog.add_entry(Name + " and " + target.Name + " confess their feelings!")
 			return {"success": true}
+	# The cost is already spent, so say why nothing happened (Hitch and Fatal
+	# Attraction log their misses too).
+	if is_party_member():
+		notify("No target", Color(1.0, 0.6, 0.4), "There is no one there to hear %s's confession." % Name)
 	return {"success": false}
 
 func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
@@ -3684,17 +3886,25 @@ func _update_tail_animation(delta: float) -> void:
 		tail.add_point(Vector2(lateral, tail_base_y + t * tail_length))
 # Helper to distinguish Weapon vs Ability logic
 func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, paused: bool) -> void:
-	if item is WeaponShape:
-		# Standard Weapon Logic. Clicking a character designates them, so the
+	# An empty off hand beside a two-handed weapon is on its grip: the off
+	# button swings the two-hander.
+	if item == null and hand_str == "Off" and _main_hand_is_two_handed():
+		hand_str = "Main"
+		current_hand = "Main"
+		item = current_main_hand_item
+	if item == null or item is WeaponShape:
+		# Weapon swing, or an unarmed strike (punch, bite, claw) with an empty
+		# hand, as a planned attack node with nothing equipped already does.
+		# Clicking a character designates them, so the
 		# swing/shot follows them as they move; clicking bare ground keeps the
-		# old "attack this spot" behaviour.
+		# old "attack this spot" behaviour. A planned attack keeps its hand.
 		var designated := _find_character_at(mouse_pos)
 		target_rotation = (mouse_pos - global_position).angle() + PI / 2
 		if paused:
 			if designated != null:
-				action_queue.queue_attack_target(designated)
+				action_queue.queue_attack_target(designated, hand_str)
 			else:
-				action_queue.queue_attack(mouse_pos)
+				action_queue.queue_attack(mouse_pos, hand_str)
 		else:
 			if designated != null:
 				attack(hand_str, designated.global_position, designated)
@@ -3708,12 +3918,14 @@ func _process_hand_action(item: Node2D, hand_str: String, mouse_pos: Vector2, pa
 		if ability_data.get("requires_targeting", false):
 			targeting_system.start_targeting(hand_str, ability_data, mouse_pos)
 		else:
-			# Instant cast (self buffs, etc)
+			# Instant cast (self buffs, etc). A self buff is centred on the caster,
+			# so a paused plan's reticle sits on them rather than at the cursor.
+			var cast_pos: Vector2 = global_position if ability_data.get("target_type", "") == "self" else mouse_pos
 			if paused:
-				action_queue.queue_ability(item.ability_id, mouse_pos)
+				action_queue.queue_ability(item.ability_id, cast_pos)
 			else:
 				var ability_obj = Ability.from_dict(ability_data)
-				use_ability(ability_obj, {"position": mouse_pos})
+				use_ability(ability_obj, {"position": cast_pos})
 
 func cast_ability(ability: AbilityShape):
 	if attack_animator.is_attacking: return
@@ -3763,11 +3975,6 @@ func _handle_input() -> void:
 		return
 	if not is_alive():
 		return
-	if condition_manager.has_condition("unconscious"):
-		return
-	# Block player input when panicked or frightened — movement is forced
-	if condition_manager.has_active_condition("panicked") 			or condition_manager.has_active_condition("frightened") 			or condition_manager.has_active_condition("transfixed") 			or condition_manager.has_active_condition("incited"):
-		return
 	# Block game-world clicks when a popup menu is open (PopupMenu lives in
 	# its own Window, invisible to gui_get_hovered_control).
 	if game and game.context_menu_open:
@@ -3780,11 +3987,34 @@ func _handle_input() -> void:
 			if node is CanvasLayer:
 				return
 			node = node.get_parent()
+	# Unconscious, or panicked / frightened / transfixed / incited (movement
+	# is forced): no orders. Checked after the UI guards so only clicks on the
+	# world get the notice.
+	var blocking_id := ""
+	if condition_manager.has_condition("unconscious"):
+		blocking_id = "unconscious"
+	else:
+		for cond_id in ["panicked", "frightened", "transfixed", "incited"]:
+			if condition_manager.has_active_condition(cond_id):
+				blocking_id = cond_id
+				break
+	if blocking_id != "":
+		if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("right_click") or Input.is_action_just_pressed("middle_mouse"):
+			var blocking_inst = condition_manager.get_condition(blocking_id)
+			var blocking_name: String = blocking_inst.condition.display_name if blocking_inst and blocking_inst.condition and blocking_inst.condition.display_name != "" else blocking_id.capitalize()
+			notify(blocking_name, Color(1.0, 0.6, 0.4), "%s can't take orders: %s." % [Name, blocking_name])
+		return
 	var mouse_pos = get_global_mouse_position()
 	var paused = PauseManager.is_paused
 
 	if paused != _was_paused:
 		_was_paused = paused
+		return
+
+	# Several selected characters all see the same click. One meant for another
+	# selected character's body, path or open gesture belongs to that plan;
+	# don't also turn it into an attack, a talk or a new path here.
+	if paused and _click_belongs_to_other_selected(mouse_pos):
 		return
 
 	# Tactical path input (only when paused)
@@ -3949,13 +4179,19 @@ func _handle_input() -> void:
 					_nav_index = 0
 					if _nav_waypoints.is_empty():
 						# genuinely unreachable — refuse the order (the old
-						# straight-line fallback ground into the wall forever)
+						# straight-line fallback ground into the wall forever),
+						# and say so (same wording as the paused planner)
 						is_moving = false
 						_nav_goal_failed = true
+						notify("No path", Color(1.0, 0.6, 0.4), "%s can't reach that spot: no walkable route." % Name)
 					else:
 						target_position = _nav_waypoints[0]
 						target_rotation = (target_position - global_position).angle() + PI / 2
 						is_moving = true
+		else:
+			# A new press re-plans even to the same tile, so a repeat click on an
+			# unreachable spot says "No path" again instead of doing nothing.
+			_nav_goal_failed = false
 
 	# Per-hand weapon cycling: E/Shift+E for main hand, Q/Shift+Q for off hand
 	if Input.is_action_just_pressed("cycle_main_hand_next"):
@@ -4000,6 +4236,46 @@ func _handle_input() -> void:
 		start_bite_targeting()
 	if Input.is_action_just_pressed("ui_cancel") and targeting_system.is_targeting:
 		targeting_system.cancel_targeting()
+
+## Paused multi-select: true when this frame's click belongs to another
+## selected character's tactical path gesture (a press on its body or drawn
+## path, or any click while its handler is mid-gesture), so this character
+## must not also read it as an attack, ability, talk or new path.
+func _click_belongs_to_other_selected(mouse_pos: Vector2) -> bool:
+	if game == null or not ("selected_characters" in game) or game.selected_characters.size() < 2 or path_input_handler == null:
+		return false
+	# Aiming an ability, throw, dash or bite: the click is our confirm, even
+	# when it lands on another selected character's body or path.
+	if (targeting_system != null and targeting_system.is_targeting) \
+			or not pending_throw.is_empty() or pending_dash or pending_bite:
+		return false
+	if path_input_handler.state != PathInputHandler.PathInputState.IDLE:
+		return false   # our own gesture: our handler consumes the click
+	var left := Input.is_action_just_pressed("left_click")
+	var middle := Input.is_action_just_pressed("middle_mouse")
+	if not (left or middle or Input.is_action_just_pressed("right_click")):
+		return false
+	# A press on our own body or path is ours as well (characters standing
+	# close, paths that cross); defer only a click that is purely another's,
+	# or both characters would drop it.
+	var own_hit: bool = mouse_pos.distance_to(global_position) < PathInputHandler.CHARACTER_HIT_RADIUS \
+			or (tactical_path != null and not tactical_path.is_empty() \
+				and tactical_path.find_nearest_point_on_path(mouse_pos).distance < PathInputHandler.PATH_HIT_DISTANCE)
+	for c in game.selected_characters:
+		if c == self or not is_instance_valid(c) or not c.is_alive() or c.path_input_handler == null:
+			continue
+		if c.path_input_handler.state != PathInputHandler.PathInputState.IDLE:
+			return true
+		# An idle handler only starts gestures on left / middle presses
+		if not (left or middle) or own_hit:
+			continue
+		if mouse_pos.distance_to(c.global_position) < PathInputHandler.CHARACTER_HIT_RADIUS:
+			return true
+		if c.tactical_path != null and not c.tactical_path.is_empty() \
+				and c.tactical_path.find_nearest_point_on_path(mouse_pos).distance < PathInputHandler.PATH_HIT_DISTANCE:
+			return true
+	return false
+
 ## Probe the world at mouse_pos for a right-click context-menu target. Returns the
 ## first Door, Item, or non-hostile ProceduralCharacter under the cursor, or null.
 ## Hostile characters, plain structures (walls/trees), and empty space return null
@@ -4361,9 +4637,10 @@ func _confirm_ability_target(paused: bool) -> void:
 	if paused:
 		# End targeting — queued indicator takes over the visual role
 		targeting_system.end_targeting()
-		action_queue.queue_ability(ability_id, target_pos, explicit_targets, target_anchor)
+		var queued := action_queue.queue_ability(ability_id, target_pos, explicit_targets, target_anchor)
 
-		if not is_character_mode:
+		# A refused order (plan full) must not leave a ghost preview behind.
+		if queued and not is_character_mode:
 			# Create persistent ghost indicator for the queued ability
 			targeting_system.create_queued_indicator(
 				target_pos,
@@ -4597,6 +4874,7 @@ func _update_movement(delta: float) -> void:
 						_nav_waypoints.clear()
 						_nav_index = 0
 						is_moving = false
+						_announce_move_blocked("Too steep", "the ground is too steep")
 						emit_signal("character_reached_target")
 					return
 			# No manual wall-glide here: with wall_min_slide_angle 0 the FLOATING
@@ -4641,6 +4919,7 @@ func _update_movement(delta: float) -> void:
 					_nav_waypoints.clear()
 					_nav_index = 0
 					is_moving = false
+					_announce_move_blocked("Too steep", "the ground is too steep")
 					emit_signal("character_reached_target")
 				return
 			# Wall-stuck detection by NET PROGRESS, not per-frame displacement:
@@ -4675,6 +4954,7 @@ func _update_movement(delta: float) -> void:
 						_nav_waypoints.clear()
 						_nav_index = 0
 						is_moving = false
+						_announce_move_blocked()
 						emit_signal("character_reached_target")
 					return
 			# Check if we just stepped onto an ice tile
@@ -4746,6 +5026,28 @@ func _try_stuck_repath() -> bool:
 	target_position = _nav_waypoints[0]
 	target_rotation = (target_position - global_position).angle() + PI / 2
 	return true
+
+## A move the player ordered (selected character, or a party member's drawn
+## plan) gave up against a wall or cliff. AI movement stays quiet: it re-paths
+## and could repeat this every half second. A queued MOVE whose next
+## waypoints are also inside the wall is announced once, not per waypoint.
+## Cliffs pass "Too steep"; a wall or body in the way uses the defaults.
+func _announce_move_blocked(short_text: String = "Path blocked", reason: String = "something is in the way") -> void:
+	if not is_party_member():
+		return
+	var running_plan: bool = has_player_orders() and tactical_path != null and tactical_path.is_executing
+	if not is_player_controlled and not running_plan:
+		return
+	# Forced movement (panic, fear, compulsion) isn't an order and re-paths
+	# every second or two; a corner would repeat the notice for its whole span.
+	for cond_id in ["panicked", "frightened", "transfixed", "incited"]:
+		if condition_manager.has_active_condition(cond_id):
+			return
+	var move_id: int = action_queue.current_action.get_instance_id() if action_queue and action_queue.current_action != null else 0
+	if move_id != 0 and move_id == _blocked_move_id:
+		return
+	_blocked_move_id = move_id
+	notify(short_text, Color(1.0, 0.6, 0.4), "%s can't go that way: %s." % [Name, reason])
 
 
 func _accumulate_step(distance_moved: float) -> void:
@@ -4829,8 +5131,21 @@ func _begin_ice_slide(direction: Vector2) -> void:
 	# Cancel existing pathfinding — player has lost control
 	_nav_waypoints.clear()
 	_nav_index = 0
-	if action_queue and action_queue.current_action != null:
-		action_queue.clear_queue()
+	var had_plan := _drop_plan_on_lost_control()
+	if is_party_member():
+		notify("Slipped!", Color.LIGHT_BLUE,
+			"%s slips on the ice; the rest of their plan is cancelled." % Name if had_plan else "")
+
+## Control is lost (ice slide, fall): cancel the whole plan, including the
+## MOVE driving it, or that MOVE resumes the stale route once the slide or
+## fall ends. The drawn path goes at once too. True if anything was planned.
+func _drop_plan_on_lost_control() -> bool:
+	var had_plan := tactical_path != null and tactical_path.is_executing and not tactical_path.is_empty()
+	if action_queue and (action_queue.current_action != null or action_queue.get_queue_size() > 0):
+		had_plan = true
+		action_queue.cancel_all()
+	_clear_tactical_path_if_executing()
+	return had_plan
 
 func _update_ice_slide(delta: float) -> void:
 	"""Move the character in a straight line while on ice. Stops on hitting a
@@ -5076,11 +5391,12 @@ func _begin_fall(to_elev: float) -> void:
 	_nav_waypoints.clear()
 	_nav_index = 0
 	is_moving = false
-	# Control is lost — release the driving queue (same as an ice slide). Else
-	# the MOVE's `not is_moving` completion check advances the waypoint mid-fall
-	# and the now-stale path resumes from the landing surface.
-	if action_queue and action_queue.current_action != null:
-		action_queue.clear_queue()
+	# Control is lost — drop the whole plan (same as an ice slide), the driving
+	# MOVE included. Else the MOVE's `not is_moving` completion check advances
+	# the waypoint mid-fall and the now-stale path resumes from the landing surface.
+	if _drop_plan_on_lost_control() and is_party_member():
+		# The fall itself is visible; any damage is labelled on landing.
+		GameLog.add_entry("%s falls; the rest of their plan is cancelled." % Name)
 
 
 func _update_fall_motion(delta: float) -> void:
@@ -5148,7 +5464,11 @@ func fall_damage_for(drop: float) -> int:
 func _apply_fall_damage(drop: float) -> void:
 	var dmg := fall_damage_for(drop)
 	if dmg > 0:
-		take_damage({"bludgeoning": dmg}, global_position, null, LimbType.LEFT_LEG)
+		var dealt := take_damage({"bludgeoning": dmg}, global_position, null, LimbType.LEFT_LEG)
+		# Name the source next to the bare damage number. NPCs the party
+		# doesn't see stay quiet.
+		if dealt > 0 and _announces_to_party():
+			notify("Fall", Color.LIGHT_GRAY, "%s takes %d damage from the fall." % [Name, dealt])
 
 func _update_arm_ik() -> void:
 	# Skip for armless quadrupeds
@@ -5492,8 +5812,12 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 	"""Perform an attack with current weapon. aim_point/aim_node (optional) name
 	the attack's target; committed to the aim stash only once the attack really
 	starts, so a refused attack can't redirect an in-flight one."""
-	# Apathetic / stunned: cannot act except for movement
-	if condition_manager.has_active_condition("apathetic") or condition_manager.has_active_condition("stunned"):
+	# Stunned / Frozen / Apathetic / Unconscious ("incapacitate"): no attacks.
+	# Say why, as Infatuated does below.
+	var incap := get_incapacitating_condition()
+	if incap != null:
+		var incap_name: String = incap.condition.display_name if incap.condition and incap.condition.display_name != "" else "Incapacitated"
+		_announce_attack_refusal(incap_name, "%s can't attack: %s." % [Name, incap_name])
 		return
 	# Infatuated: refuse to swing if infatuation source is in front and in melee range
 	if condition_manager.has_active_condition("infatuated"):
@@ -5505,11 +5829,19 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 				var facing = Vector2.UP.rotated(rotation)
 				var angle = abs(facing.angle_to(to_source.normalized()))
 				if angle < PI / 2:  # Source is in the forward arc
-					GameLog.add_entry(Name + " can't bring themselves to attack " + inf_instance.source.Name + "!")
+					# Logged once per Infatuated; an attack the player ordered
+					# still gets the floating notice each time (AI retries stay quiet).
+					if not inf_instance.custom_data.get("refusal_logged", false):
+						inf_instance.custom_data["refusal_logged"] = true
+						GameLog.add_entry("%s can't bring themselves to attack %s." % [Name, inf_instance.source.Name])
+					_announce_attack_refusal("Infatuated", "")
 					return
 	if Ability == "Main":
 		if attack_animator.is_attacking:
 			return  # Already attacking
+		# No ammo: don't draw (or make noise) for a shot that can't be fired
+		if not _has_ammo_for(current_main_hand_item):
+			return
 
 		# Get damage type from weapon and start appropriate animation
 		var damage_type
@@ -5540,6 +5872,8 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 	if Ability == "Off":
 		if attack_animator.is_attacking:
 			return  # Already attacking
+		if not _has_ammo_for(current_off_hand_item):
+			return
 		# Get damage type from weapon and start appropriate animation
 		var damage_type
 		if current_off_hand_item != null:
@@ -5569,7 +5903,9 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 	if weapon.ammo_type != "":
 		var ammo_index = _find_ammo_in_inventory(weapon.ammo_type)
 		if ammo_index == -1:
-			return  # No ammo available, skip firing
+			# Ran out during the draw (attack() checks before it starts)
+			_announce_out_of_ammo(weapon)
+			return
 		inventory.remove_item(ammo_index)
 	# Play the appropriate firing sound at the moment of release
 	if weapon.primary_damage_type == "ranged_bullet":
@@ -5597,6 +5933,23 @@ func _find_ammo_in_inventory(ammo_id: String) -> int:
 		if inventory.items[i].get("id", "") == ammo_id:
 			return i
 	return -1
+
+func _has_ammo_for(item) -> bool:
+	"""False (and say so) when `item` is a ranged weapon whose ammo isn't in
+	the inventory. Anything else needs no ammo."""
+	if not (item is WeaponShape) or item.ammo_type == "":
+		return true
+	if item.primary_damage_type not in ["ranged_arrow", "ranged_bullet"]:
+		return true
+	if _find_ammo_in_inventory(item.ammo_type) != -1:
+		return true
+	_announce_out_of_ammo(item)
+	return false
+
+func _announce_out_of_ammo(weapon: WeaponShape) -> void:
+	var ammo_name: String = weapon.ammo_type.replace("_", " ") + "s"
+	_announce_attack_refusal("Out of %s" % ammo_name,
+		"%s can't fire the %s: no %s left." % [Name, weapon.display_name, ammo_name])
 
 func is_attacking() -> bool:
 	"""Check if currently performing an attack"""
@@ -6010,6 +6363,12 @@ func heal(amount: int) -> int:
 	var healed: int = current_health - before
 	if healed > 0:
 		health_changed.emit(current_health, max_health, self)
+		# The one place heal numbers are shown (potions, Drain, Regenerating,
+		# downtime all come through here). NPCs the party doesn't see stay quiet.
+		if is_inside_tree() and get_parent() and _announces_to_party():
+			# While paused only PROCESS_MODE_ALWAYS nodes tween (see notify()).
+			var host: Node = self if PauseManager.is_paused else get_parent()
+			Globals.show_floating_text("+%d" % healed, global_position, host, Color(0.4, 1.0, 0.4))
 	return healed
 
 func _check_death() -> void:
@@ -6045,6 +6404,11 @@ func _show_death_marker() -> void:
 	_death_marker.texture = load(DEATH_MARKER_TEXTURE_PATH)
 	_death_marker.z_index = 5
 	add_child(_death_marker)
+
+## "-N blocked" (armour that partly stopped a hit): the grey of "Blocked", and
+## smaller than both the 30 px damage numbers and the 18 px notices.
+const ABSORBED_TEXT_COLOR := Color(0.72, 0.72, 0.72)
+const ABSORBED_FONT_SIZE := 16
 
 
 ## Rage's payoff, sized from how badly hurt this character is RIGHT NOW:
@@ -6100,6 +6464,7 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	var armor_dr = get_limb_armor(hit_limb)
 	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
+	var raw_total: float = 0.0
 	var raw_val
 	var dr_val
 
@@ -6117,8 +6482,13 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	character_dr_remaining += float(rage_bonus())
 
 	# 2. Calculate damage for each type after resistances
+	# Damage armour and condition DR actually stopped (raw minus what got
+	# through, positive DR only, the chip floor and Rage included), for the
+	# "-N blocked" float below.
+	var absorbed_total: float = 0.0
 	for damage_type in damage:
 		raw_val = damage[damage_type]
+		raw_total += max(0.0, float(raw_val))
 		dr_val = armor_dr.get(damage_type, 0)  # Default to 0 if type not in DR
 		var after_armor = max(0, raw_val - dr_val)
 		# Chip floor: DR is flat subtraction, so a heavily armoured target could
@@ -6131,12 +6501,28 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		if character_dr_remaining > 0 and damage_type in ["slashing", "bludgeoning", "piercing"]:
 			char_dr_used = min(character_dr_remaining, after_armor)
 			character_dr_remaining -= char_dr_used
+		if raw_val > 0:
+			absorbed_total += maxf(0.0, float(raw_val) - float(after_armor)) + char_dr_used
 		var dealt: int = int(after_armor - char_dr_used)
 		if dealt > 0:
 			handle_damage_effect_based_on_type(dealt, damage_type, hit_limb, location)
 		total_damage += dealt
 		if damage_type in ["slashing", "bludgeoning", "piercing"]:
 			physical_damage_taken += dealt
+
+	# A real hit that condition DR or Rage soaked up entirely (armour alone
+	# can't: the chip floor) gets no damage number, so say so; otherwise it
+	# looks like a miss. notify() drops repeats within 1 s (e.g. DoT ticks).
+	# NPCs the party doesn't see (only hears, at most) stay quiet.
+	if raw_total > 0.0 and total_damage == 0 and is_alive() and is_inside_tree() 			and _announces_to_party():
+		notify("Blocked", Color(0.75, 0.75, 0.75))
+	# A hit armour only partly stopped: a small grey "-N blocked" stacked just
+	# above its damage numbers (same parent and spot, so Globals stacks it).
+	# Not on DoT ticks, where the same number would float every second.
+	var shown_absorbed: int = int(round(absorbed_total))
+	if total_damage > 0 and shown_absorbed >= 1 and not _condition_tick_damage 			and is_inside_tree() and get_parent() and _announces_to_party():
+		var text_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
+		Globals.show_floating_text("-%d blocked" % shown_absorbed, text_pos, get_parent(), ABSORBED_TEXT_COLOR, 0, ABSORBED_FONT_SIZE)
 
 	# Bide: track actual physical damage that hit HP, for delayed payoff
 	if condition_manager and condition_manager.has_active_condition("bide") and physical_damage_taken > 0:
@@ -6150,11 +6536,22 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	if prospective_hp < 1 and condition_manager and condition_manager.has_active_condition("deny_ending"):
 		prospective_hp = 1
 		total_damage = current_health - prospective_hp
+		# The full damage number already floated up; show why HP stopped at 1.
+		# Logged once per Deny Ending, since every later hit at 1 HP lands here too.
+		if _announces_to_party():
+			var deny_inst = condition_manager.get_condition("deny_ending")
+			var first_denial: bool = deny_inst != null and not deny_inst.custom_data.get("death_denied", false)
+			if deny_inst:
+				deny_inst.custom_data["death_denied"] = true
+			notify("Denied!", Color.GOLD)
+			if first_denial:
+				GameLog.add_entry("%s refuses to die (Deny Ending)." % Name)
 
 	current_health = clamp(prospective_hp, 0, max_health)
 
 	if total_damage > 0:
-		_on_self_damaged(int(total_damage))
+		_on_self_damaged(int(total_damage), _condition_tick_damage)
+		# Allies' witness handlers skip DoT ticks (_on_ally_took_damage).
 		emit_signal("took_damage", self, int(total_damage))
 		# Broadcast for the AT_EASE wake / witness systems. attacker may be null
 		# for condition-driven damage; subscribers handle that gracefully.
@@ -6303,7 +6700,12 @@ func dash(target_pos: Vector2) -> void:
 	walls actually stop the dash. Distance is clamped to one dash_duration
 	worth of dash-speed travel so abilities and shift-dash share the same
 	bounded burst feel."""
-	if dash_cooldown_timer > 0.0 or _dash_motion_active:
+	if _dash_motion_active:
+		return
+	if dash_cooldown_timer > 0.0:
+		# Also reached by a planned dash that comes up during the cooldown.
+		if is_party_member():
+			notify("Dash recovering", Color(1.0, 0.6, 0.4), "%s can't dash yet: still recovering from the last dash." % Name)
 		return
 	var to_target = target_pos - global_position
 	var distance = to_target.length()
@@ -6350,6 +6752,13 @@ func _on_character_died() -> void:
 		HearingManager.emit(global_position, 1.5, self, "alarm", {})
 	$AI.die()
 	character_died.emit()
+	# The one death line in the log (Game.gd only prints). Deaths of NPCs the
+	# party can't see stay unannounced. restore_dead_state skips this path, so
+	# re-entering a map doesn't repeat it. A death whose cause was already
+	# logged (DEATH_LOGGED_META, set by the Fatal Attraction chain) isn't
+	# announced twice.
+	if _announces_to_party() and not has_meta(DEATH_LOGGED_META):
+		GameLog.add_entry("[color=#cc3333]%s has died.[/color]" % (Name if Name != "" else String(name)))
 	_enter_corpse_state()
 
 	# Fatal Attraction: linked death — if partner is still alive, kill them too
@@ -6363,10 +6772,14 @@ func _on_character_died() -> void:
 			if partner_cm:
 				partner_cm.remove_condition("fatal_attraction")
 			# Kill the partner directly — the single HP pool replaces the old
-			# "zero out torso HP" trick.
+			# "zero out torso HP" trick. The line above explains this death, so
+			# the partner skips the generic "has died." line.
+			partner.set_meta(DEATH_LOGGED_META, true)
 			partner.current_health = 0
 			partner.health_changed.emit(partner.current_health, partner.max_health, partner)
 			partner._check_death()
+			if is_instance_valid(partner):
+				partner.remove_meta(DEATH_LOGGED_META)
 
 func _enter_corpse_state() -> void:
 	## Visual + physics state of a corpse, with no death events. Shared by
@@ -6374,6 +6787,20 @@ func _enter_corpse_state() -> void:
 	_hide_living_visuals()
 	_show_death_marker()
 	set_process(false)
+	# A corpse keeps its conditions (only worn and drawn-weapon ones are
+	# stripped below) and takes no tick damage, so a killing fire blow's
+	# flames, frost or poison bubbles would play over the marker for as long
+	# as the condition lasts. The conditions stay; only their presentation goes.
+	if condition_manager:
+		for inst in condition_manager.conditions.values():
+			_remove_condition_vfx(inst)
+			_stop_condition_sfx(inst)
+	# Nor do their overhead condition icons stay: a corpse reads only as dead.
+	# Nothing brings a corpse back today; should one live again,
+	# _refresh_condition_display shows them (a revive path should call it, as
+	# it must undo the rest of this state).
+	if _condition_display:
+		_condition_display.visible = false
 	# set_process(false) is PER-NODE: child systems keep processing on the
 	# corpse. An armed targeting preview kept following the mouse forever over
 	# the battlefield and overlapped every later cast's preview (playtest
@@ -6648,6 +7075,41 @@ func notify(text: String, color: Color = Color.WHITE, log_text: String = "") -> 
 func is_party_member() -> bool:
 	return game != null and is_instance_valid(game) and "party_chars" in game and self in game.party_chars
 
+## True when what happens to this character may be shown to the player: a
+## party member, or an NPC the party currently sees (Game.is_seen_by_party:
+## line of sight, not a hearing pulse). Without a Game (headless harnesses)
+## falls back to `visible`.
+func _announces_to_party() -> bool:
+	if is_party_member():
+		return true
+	if game != null and is_instance_valid(game) and game.has_method("is_seen_by_party"):
+		return game.is_seen_by_party(self)
+	return visible
+
+## The active condition that stops this character acting (Stunned, Frozen,
+## Apathetic, Unconscious: the "incapacitate" trait), or null. Suppressed
+## instances don't count.
+func get_incapacitating_condition() -> ConditionInstance:
+	if condition_manager == null:
+		return null
+	for inst in condition_manager.get_conditions_with_trait("incapacitate"):
+		if inst.is_active():
+			return inst
+	return null
+
+## Refusal notice for an attack the player ordered: a click on a selected
+## character, or a queued attack coming up. AI-driven attacks (an unselected
+## member's combat AI keeps swinging even while its plan walks it) can retry
+## every frame, so they stay silent.
+func _announce_attack_refusal(short_text: String, log_text: String) -> void:
+	if not is_party_member():
+		return
+	var queued_attack: bool = action_queue != null and action_queue.current_action != null \
+			and action_queue.current_action.type in [ActionQueue.ActionType.ATTACK, ActionQueue.ActionType.ATTACK_TARGET]
+	if not is_player_controlled and not queued_attack:
+		return
+	notify(short_text, Color(1.0, 0.6, 0.4), log_text)
+
 func _get_limb_center_position(limb_type: ProceduralCharacter.LimbType) -> Vector2:
 	"""Get the center position of a limb in local coordinates"""
 	match limb_type:
@@ -6746,19 +7208,16 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# _on_triggered_effect_fired). Limbs are no longer severed by
 				# raw slash damage; severing only happens via a condition or
 				# ability effect (see _on_limb_severed callers).
-				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
+				_apply_damage_type_condition("bleeding", limb)
 				_spawn_bleed_burst(location, 2.0)
 			"piercing":
-				condition_manager.apply_condition("bleeding", null, 1, -2.0, limb)
+				_apply_damage_type_condition("bleeding", limb)
 				_spawn_bleed_burst(location, 1.5)
-			"fire":
-				conditions["burning"] = conditions.get("burning", 0) + 1
-				
-			"poison":
-				conditions["poisoned"] = conditions.get("poisoned", 0) + 1
-
-			"cold":
-				conditions["chilled"] = conditions.get("chilled", 0) + 1
+			"fire", "poison", "cold":
+				# Burning / Poisoned / Chilled through ConditionManager (they
+				# used to land in the dead legacy `conditions` dict). Whole-body,
+				# so no target limb.
+				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type])
 
 			"electric", "lightning":
 				# Propagate the hit through any contiguous conductive surface
@@ -6887,18 +7346,21 @@ func ability_check(stat, domain) -> int:
 	success_target += bonus
 	return _calculate_success_level(roll, success_target)
 
+## Check / save target for a stat, condition modifiers included (Weakened's
+## -STR, Courageous's +Will, Hasted's x1.5 DEX). Unknown names (dialogue
+## domains like "persuasion") fall back to an average 50.
 func get_stat_by_name(stat_name) -> int:
 	# Accept either String or StringName; normalize so callers don't have to care.
 	var key := StringName(str(stat_name).to_lower())
 	match key:
-		&"str", &"strength": return strength
-		&"dex", &"dexterity": return dexterity
-		&"con", &"constitution": return constitution
-		&"int", &"intelligence": return intelligence
-		&"cha", &"charisma": return charisma
+		&"str", &"strength": return int(effective_strength())
+		&"dex", &"dexterity": return int(effective_dexterity())
+		&"con", &"constitution": return int(effective_constitution())
+		&"int", &"intelligence": return int(effective_intelligence())
+		&"cha", &"charisma": return int(effective_charisma())
 		# Missing arm meant every will-save (frightened, panicked, charms)
 		# silently rolled against the flat-50 fallback below.
-		&"will", &"wis", &"wisdom": return will
+		&"wil", &"will", &"wis", &"wisdom": return int(effective_will())
 	return 50
 
 ## Roll a saving throw against `stat_name` and return the tier delta to apply to
@@ -7849,6 +8311,8 @@ func reduce_stress(amount: int) -> void:
 # Will save; failure -> affliction, strong success -> virtue, else endure.
 func _resolve_stress_breakdown(auto: bool) -> void:
 	var give_virtue: bool = false
+	# Why it happened, for the log: the hidden Will roll, or a full stress bar.
+	var cause: String = "stress at its limit"
 	if not auto:
 		var roll: int = randi() % 100 + 1
 		var w: float = effective_will()
@@ -7856,27 +8320,52 @@ func _resolve_stress_breakdown(auto: bool) -> void:
 			if w - roll >= 50:
 				give_virtue = true
 			else:
+				# Endured. Not announced: this rolls on every stress gain in
+				# the danger zone.
 				return
+		cause = "Will save: rolled %d vs %d" % [roll, int(w)]
 	if not give_virtue and condition_manager.has_condition("courageous"):
 		condition_manager.remove_condition("courageous")
 		stress = 0
 		emit_signal("resource_changed", "stress", stress, max_stress)
+		if is_party_member():
+			notify("Courage holds", Color.GOLD,
+				"%s's courage holds (%s): Courageous is spent and their stress is shaken off." % [Name, cause])
 		return
 	var pool: Array = ConditionDatabase.get_stress_virtue_ids() if give_virtue else ConditionDatabase.get_stress_affliction_ids()
 	if not pool.is_empty():
 		var cid: String = String(pool[randi() % pool.size()])
-		condition_manager.call_deferred("apply_condition", cid, self, 1, -2.0, null)
+		call_deferred("_apply_stress_response", cid, give_virtue, cause)
 	stress = 0
 	emit_signal("resource_changed", "stress", stress, max_stress)
 
+## Apply the affliction / virtue a stress breakdown rolled (deferred, as
+## before) and, if it took, tell the player what it was and why.
+func _apply_stress_response(cid: String, virtue: bool, cause: String) -> void:
+	if not is_instance_valid(condition_manager):
+		return
+	var inst = condition_manager.apply_condition(cid, self, 1, -2.0, null)
+	if inst == null or not is_party_member():
+		return
+	var cond_name: String = inst.condition.display_name if inst.condition and inst.condition.display_name != "" else cid.replace("_", " ").capitalize()
+	if virtue:
+		notify(cond_name, Color.GOLD, "%s rises to the occasion (%s): %s." % [Name, cause, cond_name])
+	else:
+		notify(cond_name, Color(0.63, 0.44, 1.0),
+			"[color=#a070ff]%s breaks under the strain (%s): %s.[/color]" % [Name, cause, cond_name])
+
 
 # Damage-side hooks: increment adrenaline, decrement focus, break concentration
-# if pressure pushes focus below the locked threshold.
-func _on_self_damaged(amount: int) -> void:
+# if pressure pushes focus below the locked threshold. A damage-over-time tick
+# (from_tick) only feeds adrenaline: the hit that applied it was the wound, so
+# Concentration holds through Burning or Acid Rain.
+func _on_self_damaged(amount: int, from_tick: bool = false) -> void:
 	if amount <= 0:
 		return
-	gain_stress(1)
 	_grant_character_resource("adrenaline", 1)
+	if from_tick:
+		return
+	gain_stress(1)
 	# Focus loss never drops the locked portion; instead it breaks concentration.
 	if max_focus > 0:
 		if focus - 1 < concentration_locked_focus:
@@ -7921,15 +8410,20 @@ func _break_concentration_under_pressure() -> void:
 
 
 # Called by allies' signal handlers when they take damage / lose a limb / die
-# within vision range. Each event grants one adrenaline.
+# within vision range. Each event grants one stress and one adrenaline, but only
+# if this character actually sees it (range, facing, walls and both
+# elevations: CrimeManager's witness test), so a fight behind a wall doesn't
+# fill the bars.
 func _on_visible_ally_event(other) -> void:
 	if other == self or not is_instance_valid(other):
 		return
-	if global_position.distance_to(other.global_position) <= ALLY_VISION_RADIUS:
-		gain_stress(1)
-	if max_adrenaline <= 0:
-		return
 	if global_position.distance_to(other.global_position) > ALLY_VISION_RADIUS:
+		return
+	var other_elev: float = float(other.get_elevation()) if other.has_method("get_elevation") else 0.0
+	if not CrimeManager.has_visual_los(self, other.global_position, other_elev):
+		return
+	gain_stress(1)
+	if max_adrenaline <= 0:
 		return
 	_grant_character_resource("adrenaline", 1)
 
@@ -7959,6 +8453,10 @@ func connect_ally_witness(other) -> void:
 
 
 func _on_ally_took_damage(other, _amount: int) -> void:
+	# A DoT tick isn't a fresh wound to witness: the hit that applied it was
+	# (took_damage is synchronous, so the tick flag is still set).
+	if is_instance_valid(other) and other._condition_tick_damage:
+		return
 	_on_visible_ally_event(other)
 
 
@@ -7976,26 +8474,42 @@ func _on_ally_died(other) -> void:
 # eligible target, captures a rich soul record.
 func bind_soul_effect(_effect: Dictionary, targets: Array, _ability, _target_position: Vector2) -> Dictionary:
 	var captured: Array = []
+	var lost: Array = []
 	for t in targets:
 		if not is_instance_valid(t):
 			continue
 		if t == self:
 			continue
-		# Only the dead surrender souls.
-		if t.has_method("is_alive") and t.is_alive():
+		# Only dead creatures surrender souls (items and structures in the
+		# circle have no is_alive and used to count as corpses).
+		if not (t is ProceduralCharacter) or t.is_alive():
 			continue
 		# Don't double-bind: tag the corpse so a second bind_soul over the same
-		# AOE doesn't replicate the soul.
-		if "soul_bound" in t and t.get("soul_bound"):
+		# AOE doesn't replicate the soul. Characters carry the tag as meta.
+		if t.has_meta("soul_bound") or ("soul_bound" in t and t.get("soul_bound")):
 			continue
 		var soul := _build_soul_record(t)
-		_grant_soul(soul)
+		if not _grant_soul(soul):
+			# Nowhere to keep it: the soul stays in the corpse for a later bind
+			lost.append(soul)
+			continue
 		if "soul_bound" in t:
 			t.set("soul_bound", true)
 		else:
 			# Attach as meta so corpses without a soul_bound field still mark.
 			t.set_meta("soul_bound", true)
 		captured.append(soul)
+	if is_party_member():
+		if not captured.is_empty():
+			var names: PackedStringArray = []
+			for soul in captured:
+				names.append(String(soul.get("name", "Unknown")))
+			GameLog.add_entry("%s binds the soul%s of %s." % [Name, "" if captured.size() == 1 else "s", ", ".join(names)])
+		for soul in lost:
+			# Inventory already announced the full pack; say what it cost.
+			GameLog.add_entry("%s has no room for the soul of %s; it stays with the body." % [Name, String(soul.get("name", "Unknown"))])
+		if captured.is_empty() and lost.is_empty():
+			notify("No souls to bind", Color(0.75, 0.75, 0.75), "%s finds no unbound souls there." % Name)
 	return {"souls_captured": captured.size()}
 
 
@@ -8055,16 +8569,19 @@ func build_trophy_item(item_id: String) -> Dictionary:
 
 
 # Grant a captured soul. Souls beyond `max_souls` overflow into the inventory.
-func _grant_soul(soul_record: Dictionary) -> void:
-	captured_souls.append(soul_record)
+# False when the pack is full too: nothing is recorded, so the soul isn't
+# silently lost (Inventory.add_failed announces the full pack).
+func _grant_soul(soul_record: Dictionary) -> bool:
 	if souls < max_souls:
+		captured_souls.append(soul_record)
 		souls += 1
 		emit_signal("resource_changed", "souls", souls, max_souls)
-		return
+		return true
 	# Overflow → inventory item
 	var inv = get_node_or_null("Inventory")
 	if inv == null:
-		return
+		captured_souls.append(soul_record)
+		return true
 	var victim_name: String = String(soul_record.get("name", "Unknown"))
 	var item := {
 		"id": "soul_" + String(soul_record.get("id", str(Time.get_ticks_msec()))),
@@ -8074,10 +8591,16 @@ func _grant_soul(soul_record: Dictionary) -> void:
 		"max_stack_size": null,
 		"num_stacks": null,
 		"weight": 0.0,
-		"interact_options": ["Offer to Patron", "Drop"],
+		# No menu can offer it (that's a downtime activity), so don't list
+		# "Offer to Patron"; the description says where it's done.
+		"interact_options": ["Drop"],
+		"description": "A bound soul. Offer it to your patron with the 'Offer Souls to Patron' downtime activity.",
 		"soul_record": soul_record,
 	}
-	inv.add_item(item)
+	if not inv.add_item(item):
+		return false
+	captured_souls.append(soul_record)
+	return true
 
 func _on_targeting_confirmed(_hand, _ability, _pos):
 	# Signal listener if you need audio/UI feedback outside the input flow

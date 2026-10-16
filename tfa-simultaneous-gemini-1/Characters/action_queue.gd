@@ -279,13 +279,13 @@ func queue_face(target_pos: Vector2) -> bool:
 	var angle = (target_pos - character.global_position).angle() + PI / 2
 	return queue_action(ActionType.FACE, {"target_rotation": angle})
 
-func queue_attack(target_pos: Vector2) -> bool:
-	"""Queue a basic attack with target position for reticle"""
-	return queue_action(ActionType.ATTACK, {"target_position": target_pos})
+func queue_attack(target_pos: Vector2, hand: String = "Main") -> bool:
+	"""Queue a basic attack with target position for reticle, swung with `hand`"""
+	return queue_action(ActionType.ATTACK, {"target_position": target_pos, "hand": hand})
 
-func queue_attack_target(target: ProceduralCharacter) -> bool:
-	"""Queue an attack on a specific target"""
-	return queue_action(ActionType.ATTACK_TARGET, {"target": target})
+func queue_attack_target(target: ProceduralCharacter, hand: String = "Main") -> bool:
+	"""Queue an attack on a specific target, swung with `hand`"""
+	return queue_action(ActionType.ATTACK_TARGET, {"target": target, "hand": hand})
 
 func queue_cycle_weapon(direction: int, hand: String = "Main") -> bool:
 	"""Queue a weapon switch for a specific hand"""
@@ -398,19 +398,24 @@ func _execute_action(action: Action) -> void:
 		
 		ActionType.ATTACK:
 			var target_pos = action.data.get("target_position", null)
+			var hand: String = action.data.get("hand", "Main")
 			if target_pos:
 				character.target_rotation = (target_pos - character.global_position).angle() + PI / 2
-			character.attack("Main", target_pos)
-		
+			# Same as a live click: the active hand drives which arm swings
+			character.current_hand = hand
+			character.attack(hand, target_pos)
+
 		ActionType.ATTACK_TARGET:
 			var target = action.data.get("target")
 			if target and is_instance_valid(target):
+				var hand: String = action.data.get("hand", "Main")
 				# Face the target then attack (live node: rig aim tracks its movement).
 				# The position rides along as a last-known fallback, so a target
 				# that dies or is freed mid-swing leaves the attack pointed where
 				# it was rather than at nothing.
 				character.target_rotation = (target.global_position - character.global_position).angle() + PI / 2
-				character.attack("Main", target.global_position, target)
+				character.current_hand = hand
+				character.attack(hand, target.global_position, target)
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)
