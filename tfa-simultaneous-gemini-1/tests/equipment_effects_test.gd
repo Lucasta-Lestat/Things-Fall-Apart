@@ -153,6 +153,29 @@ func _run_conditions() -> void:
 		_check("cond.prior-mark-cleared", not post.custom_data.has(c.EQUIP_PREV_EXPIRY_KEY))
 	cm.remove_condition("hasted")
 
+	# Re-cast while the circlet is on (the circlet applied it): the re-cast's
+	# own expiry outlasts the item instead of being stripped with it.
+	c.equip_equipment(_circlet())
+	cm.apply_condition("hasted", null, 1, 20.0)
+	var recast_expiry: float = cm.get_condition("hasted").expires_at
+	c.unequip_slot(HEAD)
+	var kept: ConditionInstance = cm.get_condition("hasted")
+	_check("cond.recast-outlasts-item", kept != null and is_equal_approx(kept.expires_at, recast_expiry),
+		str(kept.expires_at) if kept else "removed")
+	cm.remove_condition("hasted")
+
+	# On from a spell (10 s) when the circlet went on, then re-cast for longer
+	# while worn: the later expiry wins.
+	cm.apply_condition("hasted", null, 1, 10.0)
+	c.equip_equipment(_circlet())
+	cm.apply_condition("hasted", null, 1, 40.0)
+	var later: float = cm.get_condition("hasted").expires_at
+	c.unequip_slot(HEAD)
+	var both: ConditionInstance = cm.get_condition("hasted")
+	_check("cond.prior-and-recast-keeps-later", both != null and is_equal_approx(both.expires_at, later),
+		str(both.expires_at) if both else "removed")
+	cm.remove_condition("hasted")
+
 	# Two worn items grant the same condition: it stays until both are off.
 	c.equip_equipment(_circlet())
 	c.equip_equipment(_boots())
@@ -299,6 +322,21 @@ func _run_warp() -> void:
 		if not b.inventory.items.has(d):
 			worn_dicts_are_inventory = false
 	_check("warp.worn-shapes-hold-inventory-dicts", worn_dicts_are_inventory)
+
+	# The pack's dict leaves without the pack coming off (SurrenderPanel's
+	# robbery and CrimeManager.settle_with remove dicts only): a warp still
+	# keeps every carried item, over the real cap of 20, refusing none.
+	a.inventory.items.erase(pack)
+	var left: int = a.inventory.slots_used()
+	var robbed_snap: Dictionary = game._serialize_character(a)
+	var r := _new_char("Warper")
+	game._deserialize_character(r, robbed_snap)
+	await get_tree().process_frame
+	_check("warp.over-cap-nothing-refused", r.inventory.slots_used() == left and left > 20,
+		"%d vs %d" % [r.inventory.slots_used(), left])
+	_check("warp.over-cap-real-cap", r.inventory.max_slots == 20 and r.back_equipment == null,
+		str(r.inventory.max_slots))
+	r.queue_free()
 	a.queue_free()
 	b.queue_free()
 	game.free()

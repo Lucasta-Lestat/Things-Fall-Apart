@@ -5862,9 +5862,17 @@ func _remove_worn_conditions(slot: int) -> void:
 			# that source's own expiry comes back while it has time left.
 			var prev := float(inst.custom_data[EQUIP_PREV_EXPIRY_KEY])
 			inst.custom_data.erase(EQUIP_PREV_EXPIRY_KEY)
+			# (A timed re-cast while it was worn may have given it a later one.)
+			if prev >= 0.0 and inst.expires_at > prev:
+				prev = inst.expires_at
 			if prev < 0.0 or prev > TimeManager.absolute_time():
 				inst.expires_at = prev
 				continue
+		elif inst != null and inst.expires_at > TimeManager.absolute_time():
+			# The item applied it, but a timed re-cast while it was worn (an
+			# explicit duration) gave it an expiry of its own: that remainder
+			# outlasts the item instead of being stripped with it.
+			continue
 		condition_manager.remove_condition(cid)
 
 ## True when a worn slot or a drawn hand holds condition `cid` (the slot being

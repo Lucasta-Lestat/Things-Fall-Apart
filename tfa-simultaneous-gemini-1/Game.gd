@@ -4479,13 +4479,11 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# --- Inventory: clear template items, restore saved ones ---
 	if character.inventory and state.has("inventory_items"):
 		character.inventory.items.clear()
-		# Worn packs raise the cap: size it first, or add_item refuses a full
-		# pack's overflow on every warp.
-		var worn_bonus := 0
-		for item_data in state["inventory_items"]:
-			if item_data is Dictionary and item_data.get("_equipped", false):
-				worn_bonus += ProceduralCharacter.EquipmentEffects.container_slots(item_data)
-		character.inventory.bonus_slots = worn_bonus
+		# Restoring saved items must refuse none of them: lift the cap while
+		# they go back in (a worn pack's overflow, or a pack that left its
+		# wearer without coming off, e.g. robbed). rebuild_worn_from_inventory
+		# below sets the real cap (worn packs' slots) again.
+		character.inventory.bonus_slots = state["inventory_items"].size()
 		for item_data in state["inventory_items"]:
 			character.inventory.add_item(item_data)
 		# The body still wears the template's gear (and its worn conditions):
