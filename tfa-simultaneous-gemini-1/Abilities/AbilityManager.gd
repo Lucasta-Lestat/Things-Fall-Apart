@@ -95,11 +95,16 @@ func _anchored_position(ability: Ability, anchor, fallback: Vector2) -> Vector2:
 
 
 ## Use an ability. Entry point for all ability execution.
+## target_data keys: "position", "targets" (explicitly picked characters),
+## "anchor" (a designated character to re-aim at) and "free" (an item's cast:
+## skips the incapacitation, requirement and school-resource gates and the
+## cost; the item already paid).
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if ability == null:
 		push_warning("AbilityManager.use_ability: received null ability")
 		return false
-	var can_use = _check_ability_usable(ability)
+	var free: bool = bool(target_data.get("free", false))
+	var can_use = _check_ability_usable(ability, free)
 	if not can_use["success"]:
 		cast_failed.emit(ability, can_use["reason"])
 		return false
@@ -146,7 +151,7 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		cast_failed.emit(ability, "Illegal here: " + str(verdict.get("display_name", "")))
 		return false
 
-	if not _pay_ability_costs(ability):
+	if not free and not _pay_ability_costs(ability):
 		cast_failed.emit(ability, "Cannot pay costs")
 		return false
 
@@ -468,16 +473,21 @@ func _is_innate_ability(ability: Ability) -> bool:
 	return ability.id in RaceDatabase.get_race_data(rid).get("active_abilities", [])
 
 
-## Check if ability can be used
-func _check_ability_usable(ability: Ability) -> Dictionary:
-	var cm = _get_condition_manager()
-	if cm and (cm.has_active_condition("apathetic") or cm.has_active_condition("stunned")):
-		return {"success": false, "reason": "Cannot act"}
+## Check if ability can be used. Reasons are player-facing (floated over the
+## caster and logged by ProceduralCharacter._announce_cast_failure).
+## A "free" cast (an item's use_ability, e.g. a potion handed to an ally) is a
+## passive effect on the recipient: only the "Already casting" gate applies.
+func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
+	# Stunned / Frozen / Apathetic / Unconscious (the "incapacitate" trait): no
+	# casting, though a free cast (a potion poured into a stunned ally) lands.
+	var incap = null if free else _get_incapacitating_condition()
+	if incap != null:
+		return {"success": false, "reason": AbilityEffect.condition_display_name(incap.condition.id)}
 
 	# NPCs without school tiers opt out of the cost gate so legacy enemies
 	# don't lose their kit until their data is hand-tagged. Racial actives opt
 	# out for the same reason — see _is_innate_ability.
-	var skip_resource_gate: bool = ("npc_unlimited_resources" in character and character.npc_unlimited_resources) \
+	var skip_resource_gate: bool = free or ("npc_unlimited_resources" in character and character.npc_unlimited_resources) \
 		or _is_innate_ability(ability)
 
 	if not skip_resource_gate:
@@ -489,7 +499,7 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 				if current < cost:
 					return {"success": false, "reason": "Not enough %s" % resource_name}
 
-	var reqs = ability.requirements
+	var reqs: Dictionary = {} if free else ability.requirements
 	var required_conditions = reqs.get("conditions", [])
 	if not required_conditions.is_empty():
 		var cond_manager = _get_condition_manager()
@@ -512,6 +522,21 @@ func _check_ability_usable(ability: Ability) -> Dictionary:
 			return {"success": false, "reason": "Already casting"}
 
 	return {"success": true}
+
+
+## The active condition that keeps the caster from acting (Stunned, Frozen,
+## Apathetic, Unconscious: the "incapacitate" trait), or null. Uses the
+## character's own query when it has one.
+func _get_incapacitating_condition():
+	if character and character.has_method("get_incapacitating_condition"):
+		return character.get_incapacitating_condition()
+	var cm = _get_condition_manager()
+	if cm == null:
+		return null
+	for inst in cm.get_conditions_with_trait("incapacitate"):
+		if inst.is_active():
+			return inst
+	return null
 
 
 ## Check if an ability would offensively affect the caster's infatuation source
