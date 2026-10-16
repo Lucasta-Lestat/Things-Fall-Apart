@@ -1579,7 +1579,10 @@ func _world_item_options(item: Item) -> Array:
 ## Pick up a world item into a party member's inventory, then remove it from the
 ## world. Returns true on success. Readables are excluded (they use Read/Take).
 func pick_up_item(item: Item) -> bool:
-	if not is_instance_valid(item):
+	# Queued for free = already taken this frame. Several selected characters all
+	# see the same left-click, and remove_world_item leaves the body in physics
+	# until the free, so the second one's probe still finds it.
+	if not is_instance_valid(item) or item.is_queued_for_deletion():
 		return false
 	var character = _resolve_pickup_character()
 	if character == null:
@@ -1596,6 +1599,10 @@ func pick_up_item(item: Item) -> bool:
 	var data: Dictionary = item.to_inventory_data()
 	if data.is_empty():
 		return false
+	var item_name: String = str(data.get("display_name", item.display_name if item.display_name != "" else str(item.id).replace("_", " ")))
+	# Non-stackables carry "num_stacks": null from Items.json.
+	var stacks_v = data.get("num_stacks", 1)
+	var count: int = int(stacks_v) if (stacks_v is int or stacks_v is float) else 1
 	var equip_slot: String = str(data.get("equip_slot", ""))
 	var ok: bool = false
 	if (equip_slot == "Main Hand" or equip_slot == "Off Hand") and character.inventory.has_method("stow_weapon_from_data"):
@@ -1605,17 +1612,19 @@ func pick_up_item(item: Item) -> bool:
 		ok = character.inventory.add_stack(data)
 	if ok:
 		if SfxManager and SfxManager.has_method("play"):
-			SfxManager.play("pickup", item.global_position)
+			SfxManager.play("chest_item_in", item.global_position)
+		GameLog.add_entry("%s picks up %s%s." % [character.Name, item_name, " (x%d)" % count if count > 1 else ""])
 		# Report BEFORE the node dies — the payload reads the item's fields.
 		# A refused pickup (full inventory) is not a theft.
 		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
-		item._destroy_item()
+		remove_world_item(item)
 	else:
 		# The inventory announces "Inventory full" itself (Inventory.add_failed).
 		# add_stack may still have merged part of the stack into one already
 		# carried, writing back what is left to `data` (a copy): that part was
 		# taken, so it is reported, and only the remainder stays on the ground.
-		var left: int = int(data.get("num_stacks", item.stack_count))
+		var left_v = data.get("num_stacks", item.stack_count)
+		var left: int = int(left_v) if (left_v is int or left_v is float) else item.stack_count
 		if item.is_stackable and left > 0 and left < item.stack_count:
 			CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 			item.remove_from_stack(item.stack_count - left)
@@ -2069,6 +2078,17 @@ func items_owned_by(faction_id: String) -> Array:
 			if w != null and ("stolen_from" in w) and w.stolen_from == faction_id:
 				out.append(w)
 	return out
+
+## Take a world item off the map because it went into an inventory (Pick Up).
+## Not item._destroy_item(): that emits `destroyed`, the smashed-item path,
+## and _on_item_destroyed would scatter the item's salvage on the floor.
+func remove_world_item(item: Node) -> void:
+	if not is_instance_valid(item):
+		return
+	if item is Item:
+		GridManager.unregister_object(item._grid_pos, item)
+	items_in_scene.erase(item)
+	item.queue_free()
 
 func _on_item_destroyed(item: Item):
 	# Remove from tracking
@@ -2810,7 +2830,8 @@ func process_object_hit(
 		SfxManager.play("clash", target.global_position)
 		HearingManager.emit(target.global_position, 0.9, attacker)
 	else:
-		SfxManager.play("impact", target.global_position)
+		# sfx/ has no "impact" key; armor-impact is the solid-object thud.
+		SfxManager.play("armor-impact", target.global_position)
 		HearingManager.emit(target.global_position, 0.8, attacker)
 
 	# Unique-item on-hit procs on non-bounced hits (condition effects no-op on
@@ -3285,8 +3306,14 @@ func process_weapon_hit(
 	if "bide_pending_bonus" in attacker and attacker.bide_pending_bonus > 0.0:
 		var dt_keys = attack_damage.keys()
 		if dt_keys.size() > 0:
+			var bide_bonus: float = attacker.bide_pending_bonus
 			attack_damage[dt_keys[0]] += attacker.bide_pending_bonus
 			attacker.bide_pending_bonus = 0.0
+			# Announce the payoff so the big number has a visible cause.
+			var shown_bonus: int = int(round(bide_bonus))
+			if shown_bonus > 0 and is_seen_by_party(attacker):
+				Globals.show_floating_text("Bide +%d!" % shown_bonus, hit_position, self, Color.ORANGE, 1, Globals.NOTICE_FONT_SIZE)
+				GameLog.add_entry("%s unleashes Bide: +%d damage." % [attacker.Name, shown_bonus])
 
 	# Track whether this swing was an unarmed strike so post-damage mutation
 	# procs (e.g. The Claws That Catch) only fire on punches/kicks.
@@ -3530,6 +3557,7 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 		return false
 	# Melee cannot reach across stories (deck walker vs ground character).
 	if absf(_elev_of(attacker) - _elev_of(target)) > MELEE_ELEV_TOLERANCE:
+		_warn_out_of_reach(attacker, target)
 		return false
 
 	var attacker_id = attacker.get_instance_id()
@@ -3539,6 +3567,36 @@ func can_hit_target(attacker: Node2D, target: Node2D) -> bool:
 		return true
 
 	return not active_hits[attacker_id].has(target_id)
+
+## Tell the player why their melee swing passed through a character on
+## another level. Only a selected (player-controlled) swinger warns, never an
+## AI-driven companion's automatic swing. With a live target (attack_aim_node,
+## set by Attack Target orders) only that body warns; a swing at a clicked
+## point warns for the first visible hostile it skips. At most once per swing:
+## register_attack_start resets active_hits[aid], and the String key can't
+## collide with the int target ids stored there. The key also leaves the hit
+## set non-empty, so register_attack_end's generic "connects with nothing"
+## line gives way to this more specific one.
+func _warn_out_of_reach(attacker: Node2D, target: Node2D) -> void:
+	if not (attacker is ProceduralCharacter and target is ProceduralCharacter):
+		return
+	if not (attacker in selected_characters) or not target.visible:
+		return
+	var aid: int = attacker.get_instance_id()
+	if not active_hits.has(aid) or active_hits[aid].has("_elev_warned"):
+		return
+	var swinger := attacker as ProceduralCharacter
+	var body := target as ProceduralCharacter
+	var intended = swinger.attack_aim_node  # untyped: may hold a freed node
+	if is_instance_valid(intended):
+		if body != intended:
+			return
+	elif body in party_chars or not body.is_alive() \
+			or not body.is_hostile_to_party():
+		return
+	active_hits[aid]["_elev_warned"] = true
+	swinger.notify("Out of reach", Color(1.0, 0.6, 0.4),
+		"%s can't reach %s: melee can't strike between levels." % [swinger.Name, body.Name])
 
 # ===== CHARACTER MELEE: REACH + ARC =====
 #
@@ -3704,10 +3762,19 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	proj.add_child(sprite)
 
 	proj.hit.connect(_on_weapon_projectile_hit.bind(shooter, weapon))
+	proj.expired.connect(_on_weapon_projectile_expired.bind(shooter))
 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(shooter.get_weapon_tip_world_position(), direction, shooter)
 	return proj
+
+
+func _on_weapon_projectile_expired(final_pos: Vector2, shooter) -> void:
+	# The shot reached max_range (700 px pistol / 900 px bow) without hitting
+	# anything; mark where it fell so a party shot doesn't just vanish.
+	_splash_if_fluid(final_pos, 1.0)
+	if is_instance_valid(shooter) and shooter in party_chars:
+		Globals.show_floating_text("Max range", final_pos, self, Color(0.8, 0.8, 0.8), 0, Globals.NOTICE_FONT_SIZE)
 
 
 func _splash_if_fluid(world_pos: Vector2, strength: float = 1.1) -> void:
@@ -3748,7 +3815,11 @@ func _process_projectile_hit_character(
 	if dealt > 0:
 		_apply_item_on_hit_effects(shooter, target, weapon, dealt, hit_position)
 
-	if weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
+	# A shot fully stopped by armour sounds like armour, not flesh.
+	if dealt <= 0:
+		SfxManager.play("armor-impact", hit_position)
+		HearingManager.emit(hit_position, 1.5 if weapon.weapon_type == WeaponShape.WeaponType.PISTOL else 0.4, shooter)
+	elif weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
 		SfxManager.play("sword-on-flesh", hit_position)
 		HearingManager.emit(hit_position, 1.5, shooter)  # gunshot — very loud
 	else:
@@ -3842,6 +3913,10 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 			# dealt > 0 mirrors the melee BOUNCED gate
 			if dealt > 0 and not thrown_data.is_empty():
 				_apply_item_on_hit_effects(shooter, collider, thrown_data, dealt, hit_pos)
+			# A thrown hit on a body was silent: flesh or armour by what got
+			# through, and audible to the AI like an arrow strike.
+			SfxManager.play("arrow-body-impact" if dealt > 0 else "armor-impact", hit_pos)
+			HearingManager.emit(hit_pos, 0.4, shooter if is_instance_valid(shooter) else null)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos)
@@ -3965,16 +4040,24 @@ func gather_water_at_party() -> void:
 		return
 	if not actor.inventory:
 		return
-	var added: bool = actor.inventory.add_item({
-		"display_name": "Waterskin",
-		"id": "waterskin",
-		"is_stackable": true,
-		"max_stack_size": 10,
-	})
+	# Use the real database waterskin (sprite, Consume option, satiety) so the
+	# gathered water drinks like any other; the stub is only a fallback.
+	var water: Dictionary = _lookup_any_item("waterskin").duplicate(true)
+	if water.is_empty():
+		water = {
+			"display_name": "Waterskin",
+			"id": "waterskin",
+			"is_stackable": true,
+			"max_stack_size": 10,
+		}
+	# Drawn from a river, not taken from anyone: no ownership rides along.
+	for k in ["owner_faction", "owner_uid", "stolen_from", "stolen_value"]:
+		water.erase(k)
+	var added: bool = actor.inventory.add_item(water)
 	# A full pack is announced by the inventory itself (add_failed).
 	if added:
 		GameLog.add_entry(actor.Name + " gathers water into a waterskin.")
-		SfxManager.play("pickup", actor.global_position)
+		SfxManager.play("chest_item_in", actor.global_position)
 
 func _is_water_adjacent(tile: Vector2i) -> bool:
 	# Checks the tile itself plus 8 neighbours. Counts a 'world_water' floor
