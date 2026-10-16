@@ -99,6 +99,10 @@ func _initialize():
 		fail("picker offered a Queen, which is not in this side's army: %s" % [labels])
 	if not ("Gorgon" in labels and "Devil Toad" in labels):
 		fail("picker did not offer the army's own pieces: %s" % [labels])
+	# Each choice explains what the piece does before the player commits.
+	for child in ui.choice_picker._grid.get_children():
+		if not Rules.PIECE_DESC.get(child.text, "?") in child.tooltip_text.replace("\n", " "):
+			fail("picker button %s has no rules tooltip: '%s'" % [child.text, child.tooltip_text])
 
 	# Choose "Gorgon" by pressing its button, exactly as a real click would
 	# (the button handler hides the picker and emits `picked`).
