@@ -6912,6 +6912,8 @@ func get_stat_by_name(stat_name) -> int:
 func saving_throw(stat_name, save_bonus: int = 0) -> int:
 	var stat: int = get_stat_by_name(stat_name)
 	var roll: int = randi() % 100 + 1
+	last_save_roll = roll
+	last_save_target = stat + save_bonus
 	var margin: int = stat + save_bonus - roll
 	# Explicit `: bool` rather than `:=` — CRIT_THRESHOLD / CRIT_FAIL_THRESHOLD
 	# are declared untyped (var CRIT_THRESHOLD = 5), so the comparison result
@@ -6926,6 +6928,12 @@ func saving_throw(stat_name, save_bonus: int = 0) -> int:
 		if margin <= -50 or crit_fail:
 			return 1
 		return 0
+
+## saving_throw's last d100 roll and the target it rolled against (-1 before
+## any save), read by ConditionManager's save notices and log lines.
+var last_save_roll: int = -1
+var last_save_target: int = -1
+
 func _calculate_success_level(roll: int, target: int) -> int:
 	var margin = target - roll
 	var level = 0

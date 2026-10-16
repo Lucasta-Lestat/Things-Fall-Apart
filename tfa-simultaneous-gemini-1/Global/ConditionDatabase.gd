@@ -212,6 +212,8 @@ func get_all_conditions() -> Array:
 		"custom_vfx": "res://vfx/ice_block.tscn",
 		"custom_sfx": "res://sfx/frozen_solid.mp3",
 		"stat_modifiers": [
+			# move_speed scales by (1 + speed_modifier): -1 roots the bearer.
+			{"stat": "speed_modifier", "operation": "set", "value": -1.0},
 			{"stat": "dexterity", "operation": "set", "value": 0}
 		],
 		"immunities": {

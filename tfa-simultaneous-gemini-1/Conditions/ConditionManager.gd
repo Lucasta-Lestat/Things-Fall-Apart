@@ -21,6 +21,19 @@ var conditions: Dictionary = {}  # condition_id -> ConditionInstance
 ## Only populated for conditions with save_stat != "" and save_interval > 0.
 var last_save_times: Dictionary = {}  # condition_id -> float
 
+## Last real time (msec) a resist/immune notice was shown, keyed by
+## "condition_id:text". Fogs and fields re-apply on a timer, so repeats are
+## throttled.
+var _last_notice_ms: Dictionary = {}  # "condition_id:text" -> int
+const NOTICE_REPEAT_MS := 2000
+## A field, fog or cloud (any source that is not a character) re-applies on its
+## own clock: fogs every second, CompulsionField every 3 s pulse. Its repeats
+## wait longer, so a bystander who keeps resisting doesn't float "Resisted"
+## on every pulse.
+const AREA_NOTICE_REPEAT_MS := 8000
+const RESIST_COLOR := Color(0.6, 0.85, 1.0)
+const WORSEN_COLOR := Color(1.0, 0.45, 0.35)
+
 ## Registry of all known condition templates
 ## Should be populated from your data files
 static var condition_registry: Dictionary = {}  # condition_id -> Condition
@@ -53,6 +66,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not time_manager:
+		return
+	# Corpses don't roll saves or tick. take_damage already ignores the dead,
+	# but periodic saves kept rolling and would log "shakes off" for a corpse.
+	if character and character.has_method("is_alive") and not character.is_alive():
 		return
 
 	# absolute_time, not game_time: game_time wraps to [0, 86400) at midnight,
@@ -115,15 +132,27 @@ func _try_periodic_save(instance: ConditionInstance, current_time: float) -> boo
 		return false
 
 	var old_stacks := instance.stacks
+	# Hidden NPCs stay quiet; the log is for saves the party is part of.
+	var cond_name := _condition_name(template)
+	var shown := _bearer_noticeable()
+	var log_it := shown and _player_involved(instance.source)
 	if delta > 0:
 		instance.add_stacks(delta)
 		condition_stacks_changed.emit(instance, old_stacks, instance.stacks)
+		if log_it and instance.stacks > old_stacks:
+			GameLog.add_entry("%s's %s worsens to tier %d%s." % [_bearer_name(), cond_name, instance.stacks, _save_detail(template.save_stat)])
 	else:
 		# delta is negative; remove_stacks expects a positive amount.
 		instance.remove_stacks(-delta)
 		condition_stacks_changed.emit(instance, old_stacks, instance.stacks)
 		if instance.stacks <= 0:
+			if shown and character.has_method("notify"):
+				character.notify("Shook off " + cond_name, RESIST_COLOR)
+			if log_it:
+				GameLog.add_entry("%s shakes off %s%s." % [_bearer_name(), cond_name, _save_detail(template.save_stat)])
 			return true
+		if log_it:
+			GameLog.add_entry("%s's %s eases to tier %d%s." % [_bearer_name(), cond_name, instance.stacks, _save_detail(template.save_stat)])
 	return false
 
 
@@ -205,7 +234,13 @@ func apply_condition(
 		push_warning("Unknown condition: %s" % condition_id)
 		return null
 
-	if _is_immune_to(condition_id):
+	# Feedback below is only for applications with a source (abilities, attacks,
+	# fogs, fields). Surfaces, fire and every slashing hit's Bleeding pass null
+	# and would spam.
+	var immune_by: ConditionInstance = _get_immunity_source(template)
+	if immune_by:
+		if source != null:
+			_announce_resist(condition_id, "Immune", "%s is immune to %s (%s)." % [_bearer_name(), _condition_name(template), _condition_name(immune_by.condition)], source)
 		return null
 
 	# --- Saving throw (apply-time) ---
@@ -217,7 +252,14 @@ func apply_condition(
 		var save_delta: int = character.saving_throw(template.save_stat, fear_bonus)
 		stacks += save_delta
 		if stacks <= 0:
+			if source != null:
+				_announce_resist(condition_id, "Resisted", "%s resists %s%s." % [_bearer_name(), _condition_name(template), _save_detail(template.save_stat)], source)
 			return null
+		if source != null and save_delta < 0:
+			_announce_resist(condition_id, "", "%s partly resists %s%s." % [_bearer_name(), _condition_name(template), _save_detail(template.save_stat)], source)
+		elif source != null and save_delta > 0 and template.stackable:
+			# Only stackables gain the extra stack; a non-stackable just lands as normal.
+			_announce_resist(condition_id, "Critical fail", "%s critically fails against %s%s." % [_bearer_name(), _condition_name(template), _save_detail(template.save_stat)], source, WORSEN_COLOR)
 
 	var current_time: float = time_manager.absolute_time() if time_manager else 0.0
 	var existing = conditions.get(condition_id)
@@ -238,6 +280,7 @@ func apply_condition(
 			if added > 0:
 				condition_stacks_changed.emit(existing, old_stacks, existing.stacks)
 				stats_recalculated.emit()
+				return _check_transform(existing)
 			return existing
 		else:
 			# Never shorten a PERMANENT instance (equip-granted, expires_at < 0)
@@ -295,7 +338,35 @@ func apply_condition(
 	condition_applied.emit(instance)
 	stats_recalculated.emit()
 
-	return instance
+	return _check_transform(instance)
+
+
+## When a stackable condition reaches its transforms_into tier (Chilled 3 ->
+## Frozen, Fatigued 3 -> Exhausted), replace it with that condition. Targets
+## that aren't registered (toxic_shock) are skipped. Returns the instance now
+## on the bearer.
+func _check_transform(instance: ConditionInstance) -> ConditionInstance:
+	var tf: Dictionary = instance.condition.transforms_into
+	var into_id := str(tf.get("id", ""))
+	if into_id == "" or not condition_registry.has(into_id):
+		return instance
+	if instance.stacks < int(tf.get("required_tier", 999)):
+		return instance
+	if _get_immunity_source(condition_registry[into_id]):
+		return instance
+
+	# The original applier may have died since; a freed source can't be passed on.
+	var src: Node = instance.source if is_instance_valid(instance.source) else null
+	remove_condition(instance.condition.id)
+	var out := apply_condition(into_id, src)
+	if out and _bearer_noticeable():
+		if character.has_method("notify"):
+			character.notify(_condition_name(out.condition) + "!", WORSEN_COLOR)
+		if _player_involved(src):
+			GameLog.add_entry("%s is now %s (%s reached tier %d)." % [_bearer_name(), _condition_name(out.condition), _condition_name(instance.condition), instance.stacks])
+	return out
+
+
 ## Remove a condition completely
 func remove_condition(condition_id: String) -> bool:
 	if condition_id not in conditions:
@@ -357,13 +428,80 @@ func unsuppress_condition(condition_id: String) -> bool:
 	return true
 
 
-## Check if character is immune to a condition
-func _is_immune_to(condition_id: String) -> bool:
+## Return the active condition that makes the character immune to `template`,
+## or null. Immunity keys may be condition ids ("sickened") or traits ("cold",
+## "slow"), so Hasted blocks Slowed and Chilled, and Shielded blocks Burning.
+func _get_immunity_source(template: Condition) -> ConditionInstance:
 	for cond_id in conditions:
 		var instance: ConditionInstance = conditions[cond_id]
-		if instance.is_active() and condition_id in instance.condition.immunities:
+		# A condition never blocks itself (Frozen has the "cold" trait it is
+		# immune to); re-applying it refreshes it instead.
+		if not instance.is_active() or instance.condition.id == template.id:
+			continue
+		for key in instance.condition.immunities:
+			if key == template.id or template.traits.has(key):
+				return instance
+	return null
+
+
+## Float `text` over the bearer and, when the player is involved, log
+## `log_text`. Throttled per condition and text so re-applying fogs and fields
+## don't spam (see AREA_NOTICE_REPEAT_MS).
+func _announce_resist(condition_id: String, text: String, log_text: String, source: Node, color: Color = RESIST_COLOR) -> void:
+	# Checked before the throttle stamp, so a hidden NPC doesn't use up the window.
+	if not _bearer_noticeable():
+		return
+	var key := condition_id + ":" + text
+	var now := Time.get_ticks_msec()
+	var window: int = NOTICE_REPEAT_MS if is_instance_valid(source) and source is ProceduralCharacter else AREA_NOTICE_REPEAT_MS
+	if _last_notice_ms.has(key) and now - int(_last_notice_ms[key]) < window:
+		return
+	_last_notice_ms[key] = now
+	if text != "" and character and character.has_method("notify"):
+		character.notify(text, color)
+	if log_text != "" and _player_involved(source):
+		GameLog.add_entry(log_text)
+
+
+## True when the bearer or `source` is in the player's party. Untyped because a
+## condition's stored source may already be freed.
+func _player_involved(source) -> bool:
+	for c in [character, source]:
+		if is_instance_valid(c) and c.has_method("is_party_member") and c.is_party_member():
 			return true
 	return false
+
+
+## True when notices about the bearer may be shown: a party member, or an NPC
+## the party can currently see (Game._update_npc_los_visibility hides unseen
+## NPCs). Hidden NPCs stay quiet, so a notice never gives one away.
+func _bearer_noticeable() -> bool:
+	if not is_instance_valid(character):
+		return false
+	if character.has_method("is_party_member") and character.is_party_member():
+		return true
+	return character is CanvasItem and character.visible
+
+
+func _bearer_name() -> String:
+	var n = character.get("Name") if character else null
+	if n != null and str(n) != "":
+		return str(n)
+	return str(character.name) if character else "Someone"
+
+
+func _condition_name(template: Condition) -> String:
+	return template.display_name if template.display_name != "" else template.id.capitalize()
+
+
+## " (STR save: rolled 12 vs 55)" for the save the bearer just made. The roll
+## and target are shown when the bearer's saving_throw records them.
+func _save_detail(stat_name: String) -> String:
+	var roll = character.get("last_save_roll") if character else null
+	var target = character.get("last_save_target") if character else null
+	if roll is int and target is int and roll >= 0:
+		return " (%s save: rolled %d vs %d)" % [stat_name.to_upper(), roll, target]
+	return " (%s save)" % stat_name.to_upper()
 
 
 ## Get all active (non-suppressed) stat modifiers
