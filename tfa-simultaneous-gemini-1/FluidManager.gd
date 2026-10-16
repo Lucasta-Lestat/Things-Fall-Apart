@@ -50,8 +50,8 @@ var active_fluid_tiles: Dictionary = {}
 # Fluid database loaded from fluids.json
 var _fluid_db: Dictionary = {}
 
-# Condition application timer per fluid type per tile
-var _condition_timers: Dictionary = {}  # Dictionary[Vector2i, float]
+# Condition application timer per character: the fluid they stand in + time in it
+var _condition_timers: Dictionary = {}  # Dictionary[int, {"fluid": String, "t": float}]
 
 # Coalesce repeated edge-mask refresh requests within a frame
 var _edge_mask_update_pending: bool = false
@@ -253,51 +253,75 @@ func _broadcast_ripples() -> void:
 # --- Condition Application (modeled after FogOverlay) ---
 
 func update_fluid_conditions(delta: float, characters: Array) -> void:
-	"""Check each character's position against fluid tiles and apply conditions."""
-	for tile_pos in fluid_grid:
-		for fluid_type in fluid_grid[tile_pos]:
-			var amount = fluid_grid[tile_pos][fluid_type]
-			if amount < PUDDLE_HEIGHT:
-				continue
+	"""Check each character's position against fluid tiles and apply conditions.
+	Timers are per character (like SurfaceManager and CellFire): how long YOU
+	stand in a fluid decides when it affects you, not a hidden per-tile clock."""
+	for character in characters:
+		if not is_instance_valid(character):
+			continue
+		if not character.has_method("is_alive") or not character.is_alive():
+			continue
+		var char_id: int = character.get_instance_id()
+		# A roof-walker passing over a fluid cell is a story up, not
+		# standing in it — don't apply the fluid's condition.
+		if "on_roof" in character and character.on_roof:
+			_condition_timers.erase(char_id)
+			continue
+		var fluid_type := get_fluid_type_at(GridManager.world_to_map(character.global_position))
+		if fluid_type.is_empty() or not _fluid_db.has(fluid_type):
+			_condition_timers.erase(char_id)
+			continue
+		var cm = character.get_node_or_null("ConditionManager")
+		if not cm and character.has_method("get_condition_manager"):
+			cm = character.get_condition_manager()
+		if not cm:
+			continue
 
-			# Look up fluid definition
-			if not _fluid_db.has(fluid_type):
-				continue
-			var fluid_def = _fluid_db[fluid_type]
-			var condition_id = fluid_def.get("condition_id", "")
-			if condition_id.is_empty():
-				continue
+		# Water puts out a burning character (Burning is canceled_by_trait
+		# "water"), the same way it douses the ground fire around them. Burning
+		# only: stuck_in_fire comes from the Fire Spin surface, which water
+		# doesn't douse and which would re-apply it every 0.5 s.
+		if fluid_type == FLUID_TYPE_WATER and cm.has_condition("burning"):
+			# Structured maps: the tile reports its deepest cell, so check the
+			# character's own cell -- a dry, burning cell at the puddle's edge
+			# re-applies Burning every second and would repeat the notice.
+			var wet := true
+			if cell_fluid != null and cell_fluid.active_sim():
+				var ccid := cell_fluid.graph.cell_at(character.global_position)
+				wet = ccid >= 0 and cell_fluid.type_at(ccid) == FLUID_TYPE_WATER \
+					and cell_fluid.amount_at(ccid) > PUDDLE_HEIGHT
+			if wet:
+				cm.remove_condition("burning")
+				var log_text := ""
+				if character.has_method("is_party_member") and character.is_party_member():
+					log_text = "%s is doused by the water and stops burning." % character.Name
+				# The float only over someone the player can see: an unseen NPC's
+				# label would give its position away.
+				if character.visible and character.has_method("notify"):
+					character.notify("Extinguished", Color.LIGHT_BLUE, log_text)
+				elif not log_text.is_empty():
+					GameLog.add_entry(log_text)
 
-			var apply_interval = fluid_def.get("apply_interval", 1.0)
-			var stacks = int(fluid_def.get("condition_stacks", 1))
+		var fluid_def = _fluid_db[fluid_type]
+		var condition_id = fluid_def.get("condition_id", "")
+		if condition_id.is_empty():
+			_condition_timers.erase(char_id)
+			continue
 
-			# Update timer for this tile
-			var timer_key = tile_pos
-			if not _condition_timers.has(timer_key):
-				_condition_timers[timer_key] = 0.0
-			_condition_timers[timer_key] += delta
-			if _condition_timers[timer_key] < apply_interval:
-				continue
-			_condition_timers[timer_key] = 0.0
+		var apply_interval = fluid_def.get("apply_interval", 1.0)
+		var stacks = int(fluid_def.get("condition_stacks", 1))
 
-			# Check each character
-			for character in characters:
-				if not is_instance_valid(character):
-					continue
-				if not character.has_method("is_alive") or not character.is_alive():
-					continue
-				# A roof-walker passing over a fluid cell is a story up, not
-				# standing in it — don't apply the fluid's condition.
-				if "on_roof" in character and character.on_roof:
-					continue
-				var char_tile = GridManager.world_to_map(character.global_position)
-				if char_tile != tile_pos:
-					continue
-				var cm = character.get_node_or_null("ConditionManager")
-				if not cm and character.has_method("get_condition_manager"):
-					cm = character.get_condition_manager()
-				if cm:
-					cm.apply_condition(condition_id, null, stacks)
+		# Per-character timer, restarted when the character steps into a
+		# different fluid
+		var timer = _condition_timers.get(char_id)
+		if timer == null or timer["fluid"] != fluid_type:
+			timer = {"fluid": fluid_type, "t": 0.0}
+			_condition_timers[char_id] = timer
+		timer["t"] += delta
+		if timer["t"] < apply_interval:
+			continue
+		timer["t"] = 0.0
+		cm.apply_condition(condition_id, null, stacks)
 
 # Tiles whose standing fluid applies a condition in `damaging` (SurfaceManager's
 # hazard-map rebuild passes its DAMAGING_CONDITIONS set). Depth gate matches the
@@ -341,7 +365,6 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float, gentl
 		active_fluid_tiles.erase(tile_pos)
 		flow_directions.erase(tile_pos)
 		flow_speeds.erase(tile_pos)
-		_condition_timers.erase(tile_pos)
 
 	if not fluid_grid.has(tile_pos):
 		fluid_grid[tile_pos] = {}
@@ -724,6 +747,8 @@ func update_fluid_tile(grid_pos: Vector2i, water_amount: float) -> void:
 func remove_fluid_tile(grid_pos: Vector2i) -> void:
 	if not active_fluid_tiles.has(grid_pos):
 		return
+	# dried / burnt-off / frozen: footsteps here must stop splashing
+	GridManager.fluids[grid_pos] = ""
 	var water_tile = active_fluid_tiles[grid_pos]
 	if water_tile and is_instance_valid(water_tile):
 		water_tile.queue_free()
@@ -733,7 +758,6 @@ func remove_fluid_tile(grid_pos: Vector2i) -> void:
 	flow_directions.erase(grid_pos)
 	flow_speeds.erase(grid_pos)
 	_display_flow.erase(grid_pos)
-	_condition_timers.erase(grid_pos)
 	_request_edge_mask_update()
 
 func clear_all_water_tiles() -> void:

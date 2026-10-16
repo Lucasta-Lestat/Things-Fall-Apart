@@ -264,6 +264,16 @@ func _damage(game: Node) -> void:
 		for cid in burning:
 			if cf.is_flammable_at(cid):
 				cf.burn_off(cid, 0.06)
+	else:
+		# legacy maps keep the flat tile fluid sim (no cell_fluid): burn the oil
+		# off the tile under each burning cell, at the tile fire's rate
+		var fm = _tile_fluids()
+		if fm != null:
+			var rate := float(_fire_def.get("fluid_consume_rate", 0.05))
+			for cid in burning:
+				var t := _tile_of(cid)
+				if fm.is_fluid_flammable(t):
+					fm.remove_fluid(t, rate)
 	# progressive ground char, ported from the editor's FireSim._damage: each
 	# damage tick deepens the cell's char and restamps -- fully black after ~5
 	# ticks, so ground blackens WHILE it burns, not just at burnout
@@ -312,12 +322,26 @@ func _lifetime(delta: float) -> void:
 		# final full-depth char stamp on burnout (editor _lifetime emits k=1.0)
 		if scorch_fx != null and is_instance_valid(scorch_fx):
 			scorch_fx.stamp(cid, 1.0, float(burning[cid]["seed"]))
+		# Legacy square-graph maps draw real Floor nodes at z -4, over the char
+		# layer (-5), so a burnt-out tile would look untouched while it can
+		# never burn again. Scorch the floor itself there, as tile fire did.
+		if graph._square:
+			_scorch_tile_floor(cid)
 		var vfx = burning[cid].get("vfx")
 		if vfx and is_instance_valid(vfx):
 			vfx.queue_free()
 		burning.erase(cid)
 	if not out.is_empty():
 		burn_rev += 1
+
+
+# SurfaceManager's ash shader on every Floor node of the cell's tile (none on
+# tiles without floors, where the char layer already shows).
+func _scorch_tile_floor(cid: int) -> void:
+	if sm == null or not sm.has_method("_scorch_floor"):
+		return
+	var sc: Array = _fire_def.get("scorch_color", [0.15, 0.12, 0.1, 1.0])
+	sm._scorch_floor(_tile_of(cid), Color(sc[0], sc[1], sc[2], sc[3]), _game())
 
 
 # Apply the "burning" condition to characters whose cell is on fire.
@@ -503,6 +527,16 @@ func _fuel(cid: int) -> float:
 			return 2.5
 		if cf.amount_at(cid) > 0.01:
 			return 0.0
+	else:
+		# legacy maps (square graph, no cell_fluid): the same rule, read live
+		# from the flat tile fluid sim -- an oil slick there is fuel too
+		var fm = _tile_fluids()
+		if fm != null:
+			var t := _tile_of(cid)
+			if fm.is_fluid_flammable(t):
+				return 2.5
+			if fm.get_fluid_type_at(t) != "":
+				return 0.0
 	return graph.ground_fuel(cid)
 
 
@@ -543,6 +577,14 @@ func _cell_fluid():
 	if game == null or not ("fluid_manager" in game) or game.fluid_manager == null:
 		return null
 	return game.fluid_manager.cell_fluid
+
+
+# The flat tile FluidManager, for legacy maps where cell_fluid is null.
+func _tile_fluids():
+	var game := _game()
+	if game == null or not ("fluid_manager" in game):
+		return null
+	return game.fluid_manager
 
 
 func _wind() -> Vector2:

@@ -367,7 +367,9 @@ func _process_lifetime(delta: float, game: Node) -> void:
 
 	for tile_pos in tiles_to_scorch:
 		var source_type = surface_grid[tile_pos].get("source_type", "floor")
-		if source_type != "fluid":
+		# only real fire leaves ash -- Bumper Crop's grass or a Fire Spin ring
+		# expiring must not char the floor
+		if source_type != "fluid" and surface_grid[tile_pos]["surface_id"] == "fire":
 			_scorch_floor(tile_pos, scorch_color, game)
 		_remove_surface(tile_pos)
 
@@ -395,7 +397,8 @@ func try_ignite_area(center_world: Vector2, radius: float) -> void:
 
 func place_surface_in_area(surface_id: String, center_world: Vector2, radius: float, duration_override: float = -2.0) -> int:
 	"""Place a surface (other than fire — use try_ignite for that) on every tile in radius.
-	Overwrites nothing already occupied. Returns the number of tiles placed."""
+	Tiles already holding the same surface get their duration refreshed; nothing
+	else is overwritten. Returns the number of tiles placed or refreshed."""
 	var surface_def = _surface_defs.get(surface_id, {})
 	if surface_def.is_empty():
 		push_warning("SurfaceManager: unknown surface_id '%s'" % surface_id)
@@ -411,6 +414,10 @@ func place_surface_in_area(surface_id: String, center_world: Vector2, radius: fl
 			if center_world.distance_to(tile_world) > radius:
 				continue
 			if surface_grid.has(tile_pos):
+				# recasting on the same footprint refreshes it rather than doing nothing
+				if surface_grid[tile_pos]["surface_id"] == surface_id:
+					surface_grid[tile_pos]["time_remaining"] = duration
+					placed += 1
 				continue
 			var vfx_node = _spawn_surface_vfx(tile_pos, surface_def)
 			surface_grid[tile_pos] = {
@@ -420,6 +427,9 @@ func place_surface_in_area(surface_id: String, center_world: Vector2, radius: fl
 				"source_type": "direct"
 			}
 			placed += 1
+	if placed == 0:
+		# every tile was taken by another surface (e.g. ice): say so at the target
+		Globals.show_floating_text("No effect", center_world, self, Color.GRAY, 0, Globals.NOTICE_FONT_SIZE)
 	return placed
 
 func try_ignite(tile_pos: Vector2i) -> void:
@@ -429,8 +439,10 @@ func try_ignite(tile_pos: Vector2i) -> void:
 		thaw_ice_at(tile_pos)
 		return
 	if _cell_fire_active():
-		# route ground ignition to the cell fire (the tile's centre cell). Fluid
-		# flood-ignition stays on the tile FluidManager until stage 2.
+		# route ground ignition to the cell fire (the tile's centre cell). Oil is
+		# heavy fuel and water a firebreak there (CellFire._fuel reads the cell
+		# fluid sim, or the tile FluidManager on legacy maps), so a slick burns
+		# by spreading cell to cell rather than by flood-ignition.
 		cell_fire.ignite_at(GridManager.map_to_world(tile_pos))
 		return
 	if surface_grid.has(tile_pos):
