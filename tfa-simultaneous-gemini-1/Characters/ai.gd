@@ -81,15 +81,15 @@ var state_timer: float = 0.0
 # Target tracking
 var current_target: ProceduralCharacter = null
 var last_known_target_pos: Vector2 = Vector2.ZERO
-# Seconds since we last had a wall-clear sight line to current_target (or had
-# them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
-var _target_occluded_time: float = 0.0
 # target_acquired (the '!' replay) fires for a new target, or a re-find after
 # at least TARGET_REANNOUNCE_GAP s without one, not for the per-frame
 # re-acquire while apathy nulls the target every frame.
 const TARGET_REANNOUNCE_GAP: float = 1.0
 var _announced_target_id: int = 0
 var _time_without_target: float = 0.0
+# Seconds since we last had a wall-clear sight line to current_target (or had
+# them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
+var _target_occluded_time: float = 0.0
 
 # Goal system
 var current_goal: String = "idle"
@@ -927,6 +927,15 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 		return false
 	return FactionDatabase.are_hostile(character.faction_id, other.faction_id)
 
+## Whether we have eyes on our target right now: false while chasing where it
+## was last seen behind a wall. The occluded-chase clock's answer
+## (_target_occluded_time: a clear sight line, close quarters or the target's
+## own hit keep it at zero), so the paused intent lines agree with the demotion.
+func is_target_in_sight() -> bool:
+	if current_target == null or not is_instance_valid(current_target):
+		return false
+	return _target_occluded_time <= 0.0
+
 func _acquire_target(target: ProceduralCharacter) -> void:
 	var tid: int = target.get_instance_id()
 	var announce: bool = tid != _announced_target_id or _time_without_target >= TARGET_REANNOUNCE_GAP
@@ -965,15 +974,6 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
-
-## Whether we have eyes on our target right now: false while chasing where it
-## was last seen behind a wall. The occluded-chase clock's answer
-## (_target_occluded_time: a clear sight line, close quarters or the target's
-## own hit keep it at zero), so the paused intent lines agree with the demotion.
-func is_target_in_sight() -> bool:
-	if current_target == null or not is_instance_valid(current_target):
-		return false
-	return _target_occluded_time <= 0.0
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
