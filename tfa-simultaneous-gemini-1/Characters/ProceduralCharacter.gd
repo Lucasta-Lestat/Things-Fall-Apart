@@ -6514,13 +6514,15 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	# can't: the chip floor) gets no damage number, so say so; otherwise it
 	# looks like a miss. notify() drops repeats within 1 s (e.g. DoT ticks).
 	# NPCs the party doesn't see (only hears, at most) stay quiet.
-	if raw_total > 0.0 and total_damage == 0 and is_alive() and is_inside_tree() 			and _announces_to_party():
+	if raw_total > 0.0 and total_damage == 0 and is_alive() and is_inside_tree() \
+			and _announces_to_party():
 		notify("Blocked", Color(0.75, 0.75, 0.75))
 	# A hit armour only partly stopped: a small grey "-N blocked" stacked just
 	# above its damage numbers (same parent and spot, so Globals stacks it).
 	# Not on DoT ticks, where the same number would float every second.
 	var shown_absorbed: int = int(round(absorbed_total))
-	if total_damage > 0 and shown_absorbed >= 1 and not _condition_tick_damage 			and is_inside_tree() and get_parent() and _announces_to_party():
+	if total_damage > 0 and shown_absorbed >= 1 and not _condition_tick_damage \
+			and is_inside_tree() and get_parent() and _announces_to_party():
 		var text_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
 		Globals.show_floating_text("-%d blocked" % shown_absorbed, text_pos, get_parent(), ABSORBED_TEXT_COLOR, 0, ABSORBED_FONT_SIZE)
 
