@@ -2,6 +2,8 @@
 extends AnimatableBody2D
 class_name Item
 
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+
 # TODO(phase-b): switch to RigidBody2D with gravity_scale = 0 so items can be
 # moved by force fields and projectile impacts as part of the KE-based gameplay
 # pass. AnimatableBody2D is kinematic — forces don't affect it without a custom
@@ -242,6 +244,12 @@ func _apply_item_data():
 	# "options" is accepted as a legacy fallback.
 	traits = data.get("traits", {})
 	options = data.get("interact_options", data.get("options", []))
+
+	# A dropped glowing item (Flaming Sword, Golden Crown) keeps glowing; the
+	# light hides with the item when the party can't see it.
+	var glow := EquipmentEffects.light_level(data)
+	if glow > 0.0 and get_node_or_null("EmittedLight") == null:
+		add_child(EquipmentEffects.make_light(glow, traits))
 
 	# Size (equipment has base_width/base_height, others may not)
 	var w = float(data.get("base_width", 16.0))

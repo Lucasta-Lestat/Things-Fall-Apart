@@ -111,7 +111,9 @@ var resources: Dictionary = {}
 var max_health: float = 1.0
 var current_health: float = 1.0
 var is_cursed: bool = false
-var emits_light: bool = false
+## Light radius level 0..1 (Items.json emits_light); lit only while held, as
+## the light is a child of this node (_refresh_emitted_light).
+var emits_light: float = 0.0
 var satiety: float = 0.0
 var healing: float = 0.0
 var walkability: float = 1.0
@@ -134,6 +136,7 @@ var restricted_item_type: String = ""
 func _ready() -> void:
 	_setup_sprite()
 	_setup_hitbox()
+	_refresh_emitted_light()
 	# Sync debug draw to global DebugManager state and listen for toggles.
 	if typeof(DebugManager) != TYPE_NIL:
 		debug_draw = DebugManager.enabled
@@ -551,7 +554,9 @@ func load_from_data(data: Dictionary) -> void:
 
 	# Basic Properties
 	if data.has("id"): id = data["id"]
-	if data.has("name"): display_name = data["name"]
+	# Items.json names weapons in display_name; to_data writes "name".
+	var dn = data.get("display_name", data.get("name"))
+	if dn != null and str(dn) != "": display_name = str(dn)
 	if data.has("cost"): cost = data["cost"]
 	if data.has("weight"): weight = data["weight"]
 	if data.has("equip_slot"): equip_slot = data["equip_slot"]
@@ -580,7 +585,7 @@ func load_from_data(data: Dictionary) -> void:
 	if data.has("max_health"): max_health = data["max_health"]
 	if data.has("current_health"): current_health = data["current_health"]
 	if data.has("is_cursed"): is_cursed = bool(data["is_cursed"])
-	if data.has("emits_light"): emits_light = bool(data["emits_light"])
+	if data.has("emits_light"): emits_light = EquipmentEffects.light_level(data)
 	if data.has("satiety"): satiety = data["satiety"]
 	if data.has("healing"): healing = data["healing"]
 	if data.has("walkability"): walkability = data["walkability"]
@@ -685,8 +690,25 @@ func load_from_data(data: Dictionary) -> void:
 	_auto_scale_sprite()
 	_update_sprite_transform()
 	_refresh_hitbox_shape()
+	if is_inside_tree():
+		_refresh_emitted_light()
 	if debug_draw:
 		_create_debug_visualization()
+
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+
+## Rebuilds the "EmittedLight" child at the blade from emits_light (none at
+## 0), so a glowing weapon lights its surroundings only while it is held.
+func _refresh_emitted_light() -> void:
+	var old := get_node_or_null("EmittedLight")
+	if old:
+		remove_child(old)
+		old.queue_free()
+	if emits_light <= 0.0:
+		return
+	var light: PointLight2D = EquipmentEffects.make_light(emits_light, traits)
+	light.position = get_blade_collision_rect().get_center()
+	add_child(light)
 
 func to_data() -> Dictionary:
 	return {
