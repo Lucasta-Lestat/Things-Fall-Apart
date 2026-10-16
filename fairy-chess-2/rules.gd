@@ -986,7 +986,7 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 				converts.append([id, action])
 
 	# --- Movement conflict resolution --------------------------------------
-	var captured = {}  # id -> true (removed from the board)
+	var captured = {}  # id -> {"cause", "by"} (removed from the board; see _kill)
 	var cancelled = {} # id -> true (move did not happen; the piece stays put)
 	var en_route = {}  # id -> true (destroyed in transit, before reaching target)
 	var origin_of = {} # id -> pre-turn position
@@ -1013,8 +1013,8 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			var a = normal_ids[i]
 			var b = normal_ids[j]
 			if movers[a].target == origin_of[b] and movers[b].target == origin_of[a]:
-				captured[a] = true
-				captured[b] = true
+				_kill(captured, a, "swap", b)
+				_kill(captured, b, "swap", a)
 
 	# 2. Path collisions: a mover whose declared destination lands on another
 	#    mover's path is struck in transit -- both are destroyed on that square.
@@ -1026,8 +1026,8 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			if a == b or movers[b].target == movers[a].target:
 				continue
 			if movers[b].target in path:
-				captured[a] = true
-				captured[b] = true
+				_kill(captured, a, "collision", b)
+				_kill(captured, b, "intercept", a)
 				en_route[a] = true # died before reaching its target
 				events.append({"type": "collision", "id": a, "other": b, "pos": movers[b].target})
 				break
@@ -1042,7 +1042,7 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		if victim == null or victim.id == a or not by_id.has(victim.id):
 			continue
 		if victim.color != by_id[a].color or movers[a].get("is_charge", false):
-			captured[victim.id] = true
+			_kill(captured, victim.id, "trampled" if movers[a].get("is_charge", false) else "struck", a)
 
 	# 4. Converging movers annihilate each other on the contested square.
 	var by_dest = {}
@@ -1057,7 +1057,7 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		var arrivers = by_dest[dest]
 		if arrivers.size() > 1:
 			for a in arrivers:
-				captured[a] = true
+				_kill(captured, a, "clash")
 
 	# 5. Backfill wave: a conditional move resolves only if the friendly piece
 	#    holding its target square is gone (dead or moved). The backfiller then
@@ -1087,7 +1087,7 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			if b == a or captured.has(b):
 				continue
 			if movers[b].target == dest and by_id[b].color != by_id[a].color:
-				captured[b] = true # the backfiller cuts down the claimant
+				_kill(captured, b, "backfill", a) # the backfiller cuts down the claimant
 		events.append({"type": "backfill", "id": a, "pos": dest})
 
 	# 4. En passant victims die even if they ran -- and even if the ep-mover
@@ -1098,7 +1098,7 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		if movers[a].get("is_en_passant", false):
 			var victim_id = state.ep_targets.get(movers[a].target, -1)
 			if victim_id != -1 and by_id.has(victim_id):
-				captured[victim_id] = true
+				_kill(captured, victim_id, "en_passant", a)
 
 	# --- Ranged attacks ------------------------------------------------------
 	# Fire resolves against a square's occupant taken as the UNION of where
@@ -1120,12 +1120,14 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		var shooter = by_id[entry[0]]
 		var action = entry[1]
 		var victim_id = -1
+		var hit_pos = Vector2(-1, -1)
 		if action.has("direction"):
 			# Projectile: travels until it meets the first piece, friend or foe.
 			var pos = shooter.pos + action.direction
 			while is_valid_square(pos):
 				if attack_occupant.has(pos):
 					victim_id = attack_occupant[pos]
+					hit_pos = pos
 					break
 				pos += action.direction
 		else:
@@ -1133,9 +1135,13 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			var target = piece_at(st, action.target)
 			if target != null and target.color != shooter.color:
 				victim_id = target.id
+				hit_pos = action.target
 		if victim_id != -1 and victim_id != entry[0]:
-			captured[victim_id] = true
-			events.append({"type": "shot", "shooter": entry[0], "victim": victim_id})
+			_kill(captured, victim_id, "shot", entry[0])
+			events.append({"type": "shot", "shooter": entry[0], "victim": victim_id, "pos": hit_pos})
+		else:
+			# A miss is still a shot: report it so the turn isn't silent.
+			events.append({"type": "shot_missed", "shooter": entry[0], "color": shooter.color})
 
 	for entry in aoes:
 		var attacker = by_id[entry[0]]
@@ -1145,13 +1151,13 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 			for i in range(1, BOARD_SIZE):
 				var q = attacker.pos + Vector2(0, i * fwd)
 				if attack_occupant.has(q):
-					captured[attack_occupant[q]] = true # friendly fire included
+					_kill(captured, attack_occupant[q], "cannon", attacker.id) # friendly fire included
 			events.append({"type": "cannon", "id": attacker.id})
 		elif action.action == "dragon_breath":
 			for offset in breath_cone(action.direction):
 				var q = attacker.pos + offset
 				if attack_occupant.has(q):
-					captured[attack_occupant[q]] = true # friendly fire included
+					_kill(captured, attack_occupant[q], "breath", attacker.id) # friendly fire included
 			events.append({"type": "breath", "id": attacker.id, "direction": action.direction})
 
 	# Dying strikes need no separate pass: step 3 lands a mover's committed
@@ -1187,14 +1193,24 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		if piece_at(st, piece.pos) == piece:
 			st.board[int(piece.pos.x)][int(piece.pos.y)] = null
 		progress = true
+		# Why it died, for the turn summary. Types are still the pre-turn ones
+		# here (promotions and transformations are applied further down).
+		var killer = by_id.get(captured[id].by)
+		var event = {
+			"id": id, "pos": piece.pos, "cause": captured[id].cause,
+			"by_type": killer.type if killer != null else "",
+			"piece_type": piece.type, "color": piece.color,
+			"fled": movers.has(id) and not cancelled.has(id),
+		}
 		if piece.type == "Valkyrie" and not piece.petrified:
 			# Death rattle: leaves the battlefield, returns at the end of the
 			# NEXT turn (turns=2 because the countdown below runs this turn).
 			# A petrified Valkyrie is stone -- she shatters like anyone else.
 			st.phased_out.append({"piece": piece, "turns": 2})
-			events.append({"type": "phase_out", "id": id, "pos": piece.pos})
+			event["type"] = "phase_out"
 		else:
-			events.append({"type": "capture", "id": id, "pos": piece.pos})
+			event["type"] = "capture"
+		events.append(event)
 
 	# Valhalla: a Viking who dies on the same turn he takes a life is carried
 	# home and returns as a spawn credit for his owner. Dying while killing is
@@ -1232,6 +1248,9 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 		if pre_target == null:
 			continue
 		if not by_id.has(pre_target.id) or captured.has(pre_target.id):
+			# Same as a failed conversion: the blessing has no one to land on.
+			events.append({"type": "promote_failed", "id": entry[0], "color": promoter.color,
+				"target_type": pre_target.type, "reason": "target_destroyed"})
 			continue
 		var target = by_id[pre_target.id]
 		if target.color != promoter.color:
@@ -1358,11 +1377,20 @@ static func resolve(state: Dictionary, declared: Dictionary) -> Dictionary:
 
 static func _replace_piece(st: Dictionary, piece: Dictionary, new_type: String, new_color: String, events: Array, event_type: String) -> void:
 	var info = PIECE_INFO.get(new_type, {"category": "noble", "traits": []})
+	var old_type = piece.type
 	piece.type = new_type
 	piece.color = new_color
 	piece.royal = info.category == "royal"
 	piece.traits = info.traits.duplicate()
-	events.append({"type": event_type, "id": piece.id, "new_type": new_type, "color": new_color, "pos": piece.pos})
+	events.append({"type": event_type, "id": piece.id, "new_type": new_type, "old_type": old_type,
+		"color": new_color, "pos": piece.pos})
+
+
+# Marks a piece as killed this turn, recording why and by whom (a piece id, or
+# -1). The first cause recorded wins: later steps only add new victims.
+static func _kill(captured: Dictionary, id: int, cause: String, by: int = -1) -> void:
+	if not captured.has(id):
+		captured[id] = {"cause": cause, "by": by}
 
 
 static func _nearest_empty(st: Dictionary, origin: Vector2) -> Vector2:

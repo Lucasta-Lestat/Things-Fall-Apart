@@ -22,6 +22,8 @@ signal check_status_changed(threatened_ids) # royal state ids currently "in chec
 const BOARD_SIZE = 6
 const MAX_PEASANTS = 4
 const MAX_NON_PEASANTS = 4
+const MAX_DEATH_CLAUSES = 4 # deaths named one by one in the summary before "and N more"
+const ADJUDICATION_WARNING = 6 # turns before a material verdict at which the prompt warns
 
 # --- Game State ---
 var state = Rules.new_state() # authoritative rules state
@@ -33,6 +35,9 @@ var white_pending = null # {"id": int, "action": Dictionary}
 var black_pending = null
 var ai_enabled = true
 var last_turn_summary = "" # plain-language account of the previous resolution
+# Squares the previous resolution touched, for the board to outline:
+# [{"from": V2, "to": V2}] for moves, [{"attack": V2, ["hit": V2]}] for fire.
+var last_turn_marks = []
 
 # --- Setup State ---
 var setup_placer = "white"
@@ -220,6 +225,11 @@ func get_actions_for_node(piece_node) -> Array:
 	var piece = Rules.find_piece(state, piece_node.state_id)
 	if piece == null:
 		return []
+	if "Automatic" in piece.traits:
+		# Zombies can't be ordered, but show the move they will make on their
+		# own (same pre-turn state resolve uses, so it is an exact prediction).
+		var auto = Rules.automatic_action(state, piece)
+		return [auto] if auto != null else []
 	return Rules.get_actions(state, piece)
 
 
@@ -267,7 +277,7 @@ func _prompt_next():
 			var prompt = "White to move."
 			if last_turn_summary != "":
 				prompt = last_turn_summary + "   " + prompt
-			emit_signal("turn_info_changed", prompt)
+			emit_signal("turn_info_changed", prompt + _status_notes("white"))
 			return
 	if black_pending == null:
 		if Rules.legal_actions(state, "black").is_empty():
@@ -279,10 +289,50 @@ func _prompt_next():
 				emit_signal("turn_info_changed", "Black is thinking...")
 				ai.request_move()
 			else:
-				emit_signal("turn_info_changed", "Black to move.")
+				emit_signal("turn_info_changed", "Black to move." + _status_notes("black"))
 			return
 	if white_pending != null and black_pending != null:
 		call_deferred("resolve_turn")
+
+
+# Standing warnings for the side about to declare: its royals under attack, a
+# Valkyrie about to return, and the no-progress clock running out. Each starts
+# with two spaces so it can be appended straight onto the prompt.
+func _status_notes(color: String) -> String:
+	var text = ""
+	var royals = []
+	for id in Rules.threatened_royals(state):
+		var royal = Rules.find_piece(state, id)
+		if royal != null and royal.color == color:
+			royals.append(royal.type)
+	if not royals.is_empty():
+		text += "  %s %s %s under attack: an attack aimed at a piece kills it even if it moves away (only a Gorgon's gaze can be dodged). A slider or a rifle shot can be blocked by stepping a piece into its path (the blocker is lost)." \
+			% [_owner(color, true), " and ".join(royals), "is" if royals.size() == 1 else "are"]
+	for entry in state.phased_out:
+		var when = "when this turn resolves" if entry.turns <= 1 else "in %d turns" % entry.turns
+		# Rules.resolve keeps a fallen Valkyrie's pre-turn square, so she comes
+		# back where she stood when the turn began, not where a move ended.
+		text += "  %s Valkyrie returns %s, on the square she stood on before the turn she fell (or the nearest free one)." % [_owner(entry.piece.color, true), when]
+	# Rules._outcome adjudicates once no_progress reaches the limit (or the
+	# hard turn cap is hit) after a resolve, so "left" counts this turn too.
+	var quiet_left = Rules.NO_PROGRESS_LIMIT - state.no_progress
+	var turns_left = Rules.HARD_TURN_LIMIT - state.turn
+	var material = "the game is decided on material (White %.1f, Black %.1f)." \
+		% [Rules.material_value(state, "white"), Rules.material_value(state, "black")]
+	if quiet_left <= ADJUDICATION_WARNING and quiet_left <= turns_left:
+		text += "  %d quiet turn%s left: with no capture, promotion, conversion, petrification or new piece, %s" \
+			% [quiet_left, "" if quiet_left == 1 else "s", material]
+	elif turns_left <= ADJUDICATION_WARNING:
+		text += "  %d turn%s left before the turn limit, then %s" % [turns_left, "" if turns_left == 1 else "s", material]
+	return text
+
+
+# Possessive for a side in player-facing text: "your" for the human's pieces
+# against the AI, otherwise "White's" / "Black's".
+func _owner(color: String, capital := false) -> String:
+	if ai_enabled and color == "white":
+		return "Your" if capital else "your"
+	return color.capitalize() + "'s"
 
 
 # =========================================================================
@@ -310,57 +360,187 @@ func resolve_turn():
 	last_turn_summary = _summarise(result.events)
 
 	if result.outcome != "":
+		var reason = _outcome_reason()
 		match result.outcome:
 			"white":
-				end_game("White Wins!")
+				end_game("White Wins!", reason)
 			"black":
-				end_game("Black Wins!")
+				end_game("Black Wins!", reason)
 			_:
-				end_game("Draw")
+				end_game("Draw", reason)
 		return
 	_prompt_next()
 
 
+# Why the game just ended, read off the final state (mirrors Rules._outcome).
+func _outcome_reason() -> String:
+	var white_left = Rules.royal_count(state, "white")
+	var black_left = Rules.royal_count(state, "black")
+	if white_left == 0 and black_left == 0:
+		return "Both sides lost their last royal."
+	if black_left == 0:
+		return "Black has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("black") else "")
+	if white_left == 0:
+		return "White has no royal left standing%s." % (" (turned to stone)" if _royal_stoned("white") else "")
+	var why = "Turn limit reached" if state.turn >= Rules.HARD_TURN_LIMIT \
+		else "%d turns without progress" % Rules.NO_PROGRESS_LIMIT
+	return "%s: decided on material, White %.1f vs Black %.1f." \
+		% [why, Rules.material_value(state, "white"), Rules.material_value(state, "black")]
+
+
+# A petrified royal still stands on the board but no longer counts as one.
+func _royal_stoned(color: String) -> bool:
+	for piece in Rules.all_pieces(state, color):
+		if piece.royal and piece.petrified:
+			return true
+	return false
+
+
 # A short plain-language account of what the turn actually did. Simultaneous
 # resolution can quietly swallow an order -- a mark killed before the spy could
-# turn it, a move bounced off a blocker -- and without a word the player just
-# sees a piece vanish.
+# turn it, a capture that lands on a piece that ran -- and without a word the
+# player just sees a piece vanish. Reads `state`, which is already the
+# post-resolution state when resolve_turn calls this.
 func _summarise(events: Array) -> String:
-	var captured = 0
+	var deaths = {} # clause -> how many pieces it covers (insertion-ordered)
 	var notes = []
+	var hints = [] # rule explanations, appended once as full sentences
 	for event in events:
 		match event.type:
-			"capture":
-				captured += 1
+			"capture", "phase_out":
+				var clause = _death_clause(event)
+				if event.type == "phase_out":
+					clause += " (she will return)"
+				deaths[clause] = int(deaths.get(clause, 0)) + 1
+				if event.get("cause", "") in ["struck", "trampled"] and event.get("fled", false):
+					hints.append("A declared capture lands even if the target moves away.")
+			"collision":
+				hints.append("Stepping into a moving piece's path destroys both pieces.")
+			"backfill":
+				notes.append("a conditional move triggered and took the vacated square")
+			"blocked":
+				notes.append("a conditional move did not trigger (the square was not vacated), so the piece stayed put")
 			"convert_failed":
 				if event.get("reason", "") == "target_destroyed":
 					notes.append("conversion failed: the target was killed this turn")
 				else:
 					notes.append("conversion failed: no valid target")
-			"blocked":
-				notes.append("a move was blocked and bounced back")
+			"promote_failed":
+				notes.append("promotion failed: the %s was killed this turn" % event.get("target_type", "piece"))
+			"shot_missed":
+				notes.append("%s shot found no target" % _owner(str(event.get("color", ""))))
 			"spawn_failed":
 				notes.append("a reinforcement had nowhere to land")
 			"petrify":
-				notes.append("a piece was turned to stone")
-			"phase_out":
-				notes.append("a Valkyrie left the field")
+				var stone = Rules.find_piece(state, event.id)
+				if stone != null:
+					notes.append("%s %s was turned to stone by a Gorgon" % [_owner(stone.color), stone.type])
+				else:
+					notes.append("a piece was turned to stone")
 			"return":
-				notes.append("a Valkyrie returned")
+				var valkyrie = Rules.find_piece(state, event.id)
+				notes.append("%s Valkyrie returned" % (_owner(valkyrie.color) if valkyrie != null else "a"))
 			"convert":
-				notes.append("a piece changed sides")
+				var old_side = "black" if event.color == "white" else "white"
+				notes.append("%s %s changed sides (now %s %s)" % [_owner(old_side), event.get("old_type", "piece"), _owner(event.color), event.new_type])
+			"promote":
+				notes.append("%s %s was promoted to %s" % [_owner(event.color), event.get("old_type", "piece"), event.new_type])
+			"transform":
+				var old_type = str(event.get("old_type", ""))
+				if Rules.WEREWOLF_TOGGLE.has(old_type) and Rules.WEREWOLF_TOGGLE.has(event.new_type):
+					# "Werewolf (wolf form)" -> "wolf form"
+					notes.append("%s Werewolf shifted to %s" % [_owner(event.color), event.new_type.get_slice("(", 1).trim_suffix(")")])
+				else:
+					notes.append("%s Doppelganger took the form of %s" % [_owner(event.color), _a(event.new_type)])
+			"spawn":
+				if event.piece_type == "Basic Automata":
+					notes.append("%s Factory built a Basic Automata" % _owner(event.color))
+				else:
+					notes.append("%s %s returned from reserves" % [_owner(event.color), event.piece_type])
 			"credit":
-				notes.append("a fallen Viking will return")
+				var row = "2nd row" if Rules.PIECE_INFO.get(event.piece_type, {}).get("category", "") == "peasant" else "back row"
+				var how = ""
+				if event.color == "white" or not ai_enabled:
+					how = " (drag it from Reserves onto an empty square on the %s to bring it back; that uses the turn)" % row
+				notes.append("a fallen %s joined %s reserves%s" % [event.piece_type, _owner(event.color), how])
+			"move":
+				# Reaching the far row does not promote by itself: promotion
+				# is a separate order (zombies excepted -- they do it alone).
+				# Only a human side is told how; the AI's peasant is just noted.
+				var mover = Rules.find_piece(state, event.id)
+				if mover != null and "Peasant" in mover.traits and not "Automatic" in mover.traits \
+						and mover.pos.y == Rules._promotion_row(mover.color) \
+						and not Rules.promotion_choices(state, mover.color, mover.type).is_empty():
+					var how = ": select it and click it to promote (that uses a turn)"
+					if mover.color == "black" and ai_enabled:
+						how = " and can promote"
+					notes.append("%s %s reached the far row%s" % [_owner(mover.color), mover.type, how])
 	var parts = []
-	if captured > 0:
-		parts.append("%d piece%s lost" % [captured, "" if captured == 1 else "s"])
+	# One clause per death; identical ones (a cannon raking two Pawns) merge.
+	var lost = 0
+	for clause in deaths:
+		if parts.size() >= MAX_DEATH_CLAUSES:
+			lost += deaths[clause]
+			continue
+		parts.append(clause if deaths[clause] == 1 else "%s (x%d)" % [clause, deaths[clause]])
+	if lost > 0:
+		parts.append("and %d more piece%s lost" % [lost, "" if lost == 1 else "s"])
 	# De-duplicate so a busy turn doesn't produce a wall of identical clauses.
 	var seen = {}
 	for note in notes:
 		if not seen.has(note):
 			seen[note] = true
 			parts.append(note)
-	return "" if parts.is_empty() else "Last turn: " + ", ".join(parts) + "."
+	if parts.is_empty():
+		return ""
+	var text = "Last turn: " + "; ".join(parts) + "."
+	for hint in hints:
+		if not seen.has(hint):
+			seen[hint] = true
+			text += " " + hint
+	return text
+
+
+# "your Knight was taken by a Rook" -- why one piece died, from the cause
+# Rules.resolve records on its capture / phase_out event.
+func _death_clause(event: Dictionary) -> String:
+	var who = "%s %s" % [_owner(str(event.get("color", ""))), event.get("piece_type", "piece")]
+	var by = str(event.get("by_type", ""))
+	match event.get("cause", ""):
+		"struck":
+			if event.get("fled", false):
+				return "%s was struck by %s even though it moved away" % [who, _a(by)]
+			return "%s was taken by %s" % [who, _a(by)]
+		"trampled":
+			if event.get("fled", false):
+				return "%s was trampled by %s's charge even though it moved away" % [who, _a(by)]
+			return "%s was trampled by %s's charge" % [who, _a(by)]
+		"swap":
+			return "%s died in a head-on clash with %s" % [who, _a(by)]
+		"collision":
+			return "%s was struck in transit when %s stepped into its path" % [who, _a(by)]
+		"intercept":
+			return "%s died stepping into the path of %s" % [who, _a(by)]
+		"clash":
+			return "%s collided with another piece arriving on the same square" % who
+		"backfill":
+			return "%s was cut down by %s's conditional move" % [who, _a(by)]
+		"en_passant":
+			return "%s was taken en passant by %s" % [who, _a(by)]
+		"shot":
+			return "%s was shot by %s" % [who, _a(by)]
+		"cannon":
+			return "%s was caught in %s's cannon fire" % [who, _a(by)]
+		"breath":
+			return "%s was burned by %s's breath" % [who, _a(by)]
+	return "%s was lost" % who
+
+
+# Piece type with its indefinite article: "a Rook", "an Elephant Rider".
+func _a(piece_type: String) -> String:
+	if piece_type == "":
+		return "a piece"
+	return ("an " if piece_type[0].to_lower() in "aeiou" else "a ") + piece_type
 
 
 func _add_declared(declared: Dictionary, pending, spawn_key: int) -> void:
@@ -375,6 +555,7 @@ func _add_declared(declared: Dictionary, pending, spawn_key: int) -> void:
 func _apply_events(events: Array) -> void:
 	var moves = {} # node -> destination (for tweening)
 	var played = {} # dedupe sfx
+	last_turn_marks = []
 	# Pieces replaced later in this batch (promote/convert/transform) get a
 	# fresh node at the final position, so don't tween the doomed old node.
 	var replaced = {}
@@ -408,16 +589,27 @@ func _apply_events(events: Array) -> void:
 			"move":
 				var node = piece_nodes.get(event.id)
 				if node != null:
+					last_turn_marks.append({"from": node.grid_position, "to": event.to})
 					node.grid_position = event.to
 					if not replaced.has(event.id):
 						moves[node] = event.to
 					_play_once(played, "move")
 			"shot":
+				# Fire events precede the captures, so shooter nodes still exist.
 				_play_once(played, "shoot")
-			"cannon":
+				if piece_nodes.has(event.shooter):
+					var mark = {"attack": piece_nodes[event.shooter].grid_position}
+					if event.has("pos"):
+						mark["hit"] = event.pos
+					last_turn_marks.append(mark)
+			"shot_missed":
+				_play_once(played, "shoot")
+				if piece_nodes.has(event.shooter):
+					last_turn_marks.append({"attack": piece_nodes[event.shooter].grid_position})
+			"cannon", "breath":
 				_play_once(played, "cannon")
-			"breath":
-				_play_once(played, "cannon")
+				if piece_nodes.has(event.id):
+					last_turn_marks.append({"attack": piece_nodes[event.id].grid_position})
 			"promote", "convert", "transform":
 				if event.type == "promote":
 					_play_once(played, "promote")
@@ -491,13 +683,21 @@ func _sync_board_nodes() -> void:
 # Game over
 # =========================================================================
 
-func end_game(outcome_text: String):
+# reason: why it ended (see _outcome_reason). The HUD line also keeps the final
+# turn's summary, which would otherwise never be shown.
+func end_game(outcome_text: String, reason: String = ""):
 	audio_manager.play_sfx("win")
 	audio_manager.stop_music()
 	game_phase = "game_over"
 	emit_signal("game_state_changed", "game_over")
-	emit_signal("turn_info_changed", outcome_text)
-	emit_signal("game_ended", outcome_text)
+	var info = outcome_text
+	if reason != "":
+		info += "  " + reason
+	if last_turn_summary != "":
+		info += "  " + last_turn_summary
+	emit_signal("turn_info_changed", info)
+	# Title and reason travel together; the game-over panel splits them at "\n".
+	emit_signal("game_ended", outcome_text if reason == "" else outcome_text + "\n" + reason)
 
 
 func restart_game():

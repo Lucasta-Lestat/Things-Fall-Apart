@@ -48,6 +48,9 @@ func _initialize():
 	test_chieftain()
 	test_spymaster()
 	test_conversion_reports_failure()
+	test_death_events_record_cause()
+	test_shot_events_report_hits_and_misses()
+	test_promotion_reports_failure_and_old_type()
 	test_shot_still_catches_a_fleeing_victim()
 	test_shot_is_intercepted_and_friendly_fire()
 	test_cannon_friendly_fire()
@@ -797,6 +800,169 @@ func test_conversion_reports_failure():
 		if e.type == "convert_failed" and e.get("reason", "") == "target_destroyed":
 			reported = true
 	check(reported, "a lost conversion is reported, not silently dropped")
+
+
+# The capture / phase_out event for `id`, or null.
+func death_event(events: Array, id: int):
+	for e in events:
+		if e.type in ["capture", "phase_out"] and e.get("id", -1) == id:
+			return e
+	return null
+
+
+# Every death says why, by what and whose it was (the turn summary reads these).
+func test_death_events_record_cause():
+	# A declared capture lands on a piece that moved away.
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var knight = Rules.add_piece(st, "Knight", "white", Vector2(2, 3))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(2, 0))
+	var res = Rules.resolve(st, {
+		knight.id: {"action": "move", "target": Vector2(4, 4)},
+		rook.id: {"action": "move", "target": Vector2(2, 3)},
+	})
+	var e = death_event(res.events, knight.id)
+	check(e != null and e.cause == "struck" and e.by_type == "Rook" and e.fled
+		and e.piece_type == "Knight" and e.color == "white",
+		"a struck runner's event names the cause, the killer and the flight (%s)" % [e])
+
+	# Head-on swap: the first cause recorded wins over the later strike.
+	var st2 = Rules.new_state()
+	Rules.add_piece(st2, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st2, "King", "black", Vector2(5, 0))
+	var wr = Rules.add_piece(st2, "Rook", "white", Vector2(0, 5))
+	var br = Rules.add_piece(st2, "Rook", "black", Vector2(0, 3))
+	var res2 = Rules.resolve(st2, {
+		wr.id: {"action": "move", "target": Vector2(0, 3)},
+		br.id: {"action": "move", "target": Vector2(0, 5)},
+	})
+	var e2 = death_event(res2.events, wr.id)
+	check(e2 != null and e2.cause == "swap" and e2.by_type == "Rook", "a head-on swap is recorded as a swap (%s)" % [e2])
+
+	# Path collision: the slider is struck in transit, the interceptor dies too.
+	var st3 = Rules.new_state()
+	Rules.add_piece(st3, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st3, "King", "black", Vector2(5, 0))
+	var slider = Rules.add_piece(st3, "Rook", "white", Vector2(0, 5))
+	var leaper = Rules.add_piece(st3, "Knight", "black", Vector2(2, 1))
+	var res3 = Rules.resolve(st3, {
+		slider.id: {"action": "move", "target": Vector2(0, 0)},
+		leaper.id: {"action": "move", "target": Vector2(0, 2)},
+	})
+	var e3a = death_event(res3.events, slider.id)
+	var e3b = death_event(res3.events, leaper.id)
+	check(e3a != null and e3a.cause == "collision" and e3a.by_type == "Knight", "the slider dies in a collision (%s)" % [e3a])
+	check(e3b != null and e3b.cause == "intercept" and e3b.by_type == "Rook", "the interceptor dies intercepting (%s)" % [e3b])
+
+	# Two movers arriving on one square: a clash with no single killer.
+	var st4 = Rules.new_state()
+	Rules.add_piece(st4, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st4, "King", "black", Vector2(5, 0))
+	var wn = Rules.add_piece(st4, "Knight", "white", Vector2(1, 5))
+	var bn = Rules.add_piece(st4, "Knight", "black", Vector2(1, 1))
+	var res4 = Rules.resolve(st4, {
+		wn.id: {"action": "move", "target": Vector2(2, 3)},
+		bn.id: {"action": "move", "target": Vector2(2, 3)},
+	})
+	var e4 = death_event(res4.events, bn.id)
+	check(e4 != null and e4.cause == "clash" and e4.by_type == "", "converging movers clash (%s)" % [e4])
+
+	# Cannon fire names the Cannonier for friend and foe alike.
+	var st5 = Rules.new_state()
+	Rules.add_piece(st5, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st5, "King", "black", Vector2(5, 0))
+	var can = Rules.add_piece(st5, "Cannonier", "white", Vector2(2, 5))
+	var friend = Rules.add_piece(st5, "Pawn", "white", Vector2(2, 4))
+	var foe = Rules.add_piece(st5, "Pawn", "black", Vector2(2, 1))
+	var res5 = Rules.resolve(st5, {can.id: {"action": "fire_cannon"}})
+	var e5a = death_event(res5.events, friend.id)
+	var e5b = death_event(res5.events, foe.id)
+	check(e5a != null and e5a.cause == "cannon" and e5a.by_type == "Cannonier" and e5a.color == "white",
+		"cannon fire on a friend is recorded with its owner (%s)" % [e5a])
+	check(e5b != null and e5b.cause == "cannon" and not e5b.fled, "cannon fire on a foe is recorded (%s)" % [e5b])
+
+	# A Valkyrie's phase-out carries the same detail as a capture.
+	var st6 = Rules.new_state()
+	Rules.add_piece(st6, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st6, "King", "black", Vector2(5, 0))
+	var valk = Rules.add_piece(st6, "Valkyrie", "white", Vector2(4, 4))
+	var bkn = Rules.add_piece(st6, "Knight", "black", Vector2(3, 2))
+	var res6 = Rules.resolve(st6, {bkn.id: {"action": "move", "target": Vector2(4, 4)}})
+	var e6 = death_event(res6.events, valk.id)
+	check(e6 != null and e6.type == "phase_out" and e6.cause == "struck" and e6.by_type == "Knight"
+		and e6.color == "white", "a Valkyrie's phase-out names its cause (%s)" % [e6])
+
+
+# Shots report the square they hit; a shot that finds nothing still reports.
+func test_shot_events_report_hits_and_misses():
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(5, 4))
+	Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var rifle = Rules.add_piece(st, "Rifleman", "white", Vector2(0, 5))
+	var pawn = Rules.add_piece(st, "Pawn", "black", Vector2(0, 2))
+	var res = Rules.resolve(st, {rifle.id: {"action": "shoot", "direction": Vector2(0, -1), "target": Vector2(0, 2)}})
+	var shot = null
+	for e in res.events:
+		if e.type == "shot":
+			shot = e
+	check(shot != null and shot.victim == pawn.id and shot.pos == Vector2(0, 2), "a hit reports the square it hit (%s)" % [shot])
+	var hit = death_event(res.events, pawn.id)
+	check(hit != null and hit.cause == "shot" and hit.by_type == "Rifleman", "the victim's event says it was shot (%s)" % [hit])
+
+	# Along the empty back row: nothing to hit.
+	var res2 = Rules.resolve(st, {rifle.id: {"action": "shoot", "direction": Vector2(1, 0), "target": Vector2(5, 5)}})
+	var missed = null
+	var hits = 0
+	for e in res2.events:
+		if e.type == "shot_missed":
+			missed = e
+		elif e.type == "shot":
+			hits += 1
+	check(hits == 0 and missed != null and missed.shooter == rifle.id and missed.color == "white",
+		"a miss is reported and emits no hit (%s)" % [missed])
+
+
+# A promotion whose target dies is reported like a failed conversion, and a
+# change of form records the type it replaced.
+func test_promotion_reports_failure_and_old_type():
+	var st = Rules.new_state()
+	Rules.add_piece(st, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st, "King", "black", Vector2(5, 0))
+	var chancellor = Rules.add_piece(st, "Chancellor", "white", Vector2(2, 5))
+	var pawn = Rules.add_piece(st, "Pawn", "white", Vector2(2, 4))
+	var rook = Rules.add_piece(st, "Rook", "black", Vector2(2, 0))
+	var promo = {"action": "promote", "target": Vector2(2, 4), "promote_to": "Minister"}
+	var res = Rules.resolve(st, {chancellor.id: promo, rook.id: {"action": "move", "target": Vector2(2, 4)}})
+	var failed = null
+	var promoted_dead = false
+	for e in res.events:
+		if e.type == "promote_failed":
+			failed = e
+		elif e.type == "promote":
+			promoted_dead = true
+	check(not promoted_dead and failed != null and failed.id == chancellor.id and failed.color == "white"
+		and failed.target_type == "Pawn" and failed.reason == "target_destroyed",
+		"a promotion onto a killed piece is reported (%s)" % [failed])
+
+	var res2 = Rules.resolve(st, {chancellor.id: promo})
+	var promoted = null
+	for e in res2.events:
+		if e.type == "promote" and e.id == pawn.id:
+			promoted = e
+	check(promoted != null and promoted.old_type == "Pawn" and promoted.new_type == "Minister",
+		"a promotion event records the old type (%s)" % [promoted])
+
+	var st3 = Rules.new_state()
+	Rules.add_piece(st3, "King", "white", Vector2(5, 5))
+	Rules.add_piece(st3, "King", "black", Vector2(5, 0))
+	var wolf = Rules.add_piece(st3, "Werewolf (human form)", "white", Vector2(0, 4))
+	var shifted = null
+	for e in Rules.resolve(st3, {}).events:
+		if e.type == "transform" and e.id == wolf.id:
+			shifted = e
+	check(shifted != null and shifted.old_type == "Werewolf (human form)" and shifted.new_type == "Werewolf (wolf form)",
+		"a change of form records the old type (%s)" % [shifted])
 
 
 func test_shot_still_catches_a_fleeing_victim():
