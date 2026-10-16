@@ -5896,6 +5896,63 @@ func get_faction() -> String:
 func set_faction(new_faction_id: String) -> void:
 	faction_id = new_faction_id
 
+# ===== SHARED QUERY API =====
+# One answer per question for every system (AI, hearing, abilities, UI). The
+# baselines below are what features extend; call these rather than
+# re-deriving faction, sight or stealth rules locally.
+
+## Faction-level hostility toward `other` (untyped: any node, or already
+## freed). A thin wrapper over FactionDatabase.are_hostile, the one hostility
+## oracle: false for null, freed, self, or a node without a faction_id,
+## otherwise exactly are_hostile(faction_id, other.faction_id). AI targeting
+## adds per-character exceptions on top (ai._is_enemy: manhunt target,
+## compulsion victim, post-robbery truce), so "will this NPC attack X right
+## now" is its AI node's question, not this one.
+func is_hostile_to(other) -> bool:
+	if other == null or not is_instance_valid(other) or other == self:
+		return false
+	var other_faction = other.get("faction_id")
+	if other_faction == null:
+		return false
+	return FactionDatabase.are_hostile(faction_id, str(other_faction))
+
+## The party's point of view, for UI (hover cursor, context menu, colouring):
+## are_hostile("player", faction_id), the same question the attack cursor and
+## the right-click attack-vs-talk split ask.
+func is_hostile_to_party() -> bool:
+	return FactionDatabase.are_hostile("player", faction_id)
+
+## Sight range in world pixels: Globals.SIGHT_PX_PER_POINT times the sight
+## stat, times the environment multiplier at our position when Game provides
+## one (Game.get_sight_multiplier_at; 1.0 without a Game, e.g. headless
+## tests). 0 while blinded or unconscious, the viewers every LOS check skips.
+## The base is the raw `sight` stat, as in every existing sight check (AI
+## detection, party LOS, crime witnesses, cone radii): effective_sight() can't
+## carry it yet, since a "set" modifier (Blinded) reads as +0 there and
+## Perceptive's +2 would triple the range.
+func get_sight_range_px() -> float:
+	if condition_manager != null and (condition_manager.has_condition("blinded") \
+			or condition_manager.has_condition("unconscious")):
+		return 0.0
+	var range_px: float = Globals.SIGHT_PX_PER_POINT * maxf(0.0, sight)
+	if game != null and is_instance_valid(game) and game.has_method("get_sight_multiplier_at"):
+		range_px *= float(game.get_sight_multiplier_at(global_position))
+	return range_px
+
+## How easy we are to see, as a multiplier on observers' sight (1.0 =
+## normal). The "invisible" condition is separate and binary: the AI can't
+## acquire an invisible foe at all (ai.gd checks the condition itself).
+func effective_visibility() -> float:
+	return 1.0
+
+## True while this character is moving stealthily. Same answer as
+## ai._is_sneaking(other): party members sneak while Game.stealth_mode is on;
+## NPCs never do.
+func is_sneaking() -> bool:
+	if game == null or not is_instance_valid(game) or not ("stealth_mode" in game) or not game.stealth_mode:
+		return false
+	return is_party_member()
+
 # Limb identifiers
 enum LimbType { HEAD, TORSO, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
 

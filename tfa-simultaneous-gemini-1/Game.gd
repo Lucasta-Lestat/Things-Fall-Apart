@@ -18,6 +18,12 @@ const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 var weather_vfx_controller: Node = null
 var weather_debug_window: CanvasLayer = null
 var combat_test_window: CanvasLayer = null
+# Shared HUD hosts under GameUI, built in _ready. Features plug into them:
+# world_tooltip (UI/WorldHoverTooltip.gd) is the one hover tooltip for the map
+# (add_provider), hud_status (UI/HudStatusBar.gd) the always-on status strip
+# under the clock (add_widget).
+var world_tooltip: Control = null
+var hud_status: Control = null
 var _pending_rival_spawns: Array = []
 var _pending_rival_override_faction: bool = false
 
@@ -286,6 +292,13 @@ func _ready() -> void:
 	var log_panel := PanelContainer.new()
 	log_panel.set_script(preload("res://game_log_panel.gd"))
 	$GameUI.add_child(log_panel)
+
+	# World hover tooltip and HUD status strip. Both ship empty; features
+	# register providers / widgets on them.
+	world_tooltip = preload("res://UI/WorldHoverTooltip.gd").new()
+	$GameUI.add_child(world_tooltip)
+	hud_status = preload("res://UI/HudStatusBar.gd").new()
+	$GameUI.add_child(hud_status)
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
@@ -2502,6 +2515,33 @@ func _update_item_los_visibility() -> void:
 		if not is_instance_valid(item):
 			continue
 		item.visible = _is_position_visible_to_party(item.global_position)
+
+
+## Environmental multiplier on sight range at a world position (weather, fog).
+## ProceduralCharacter.get_sight_range_px multiplies it in. 1.0 = clear.
+func get_sight_multiplier_at(_world_pos: Vector2) -> float:
+	return 1.0
+
+
+## Whether the party can see `c` right now, by line of sight. Party members
+## always count. An NPC gets this frame's answer from _update_npc_los_visibility
+## (range, FOV cone, walls and elevation; blinded/unconscious viewers skipped;
+## a hearing pulse doesn't count as seen). That pass is frozen while paused
+## (nothing can move), so the answer holds through planning. It is the LOS
+## answer, not "drawn now": in ground view a seen roof-walker is still hidden
+## (check c.visible for that). Anything that pass hasn't reached (items,
+## structures, a character spawned this frame) gets the same test on its
+## position. Corpses in view count as seen; check is_alive() if that matters.
+func is_seen_by_party(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	if c in party_chars:
+		return true
+	if _npc_was_truly_seen.has(c):
+		return bool(_npc_was_truly_seen[c])
+	if not (c is Node2D):
+		return false
+	return _is_position_visible_to_party(c.global_position)
 
 func _process(delta: float) -> void:
 	# Update clash cooldowns. Combat collisions are now driven by the

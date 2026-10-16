@@ -11,6 +11,8 @@ var dialogue_interaction_distance = 250.0
 var default_body_proportions = {}
 var default_leg_swing_time: float = 0.0
 const SIGHT_TEXTURE = preload("res://sight_cone_smooth.png")
+## Pixels of sight range per 1.0 of the sight stat (the vision code's 1440 * sight).
+const SIGHT_PX_PER_POINT := 1440.0
 var default_body_scale = 1.7
 @export var default_leg_swing_speed: float = 12.0  # How fast default_legs oscillate
 @export var default_leg_swing_amount: float = 8.0  # How far default_legs swing
@@ -102,6 +104,16 @@ func format_time(seconds: float) -> String:
 	var mins = int(seconds) / 60
 	var secs = int(seconds) % 60
 	return "%02d:%02d" % [mins, secs]
-	
+
+## Compact remaining-time label: "2h 05m" from an hour up, "7m" from two
+## minutes up, else "45s". Rounds up, so a timer reads "1s" until it ends.
+func format_duration_short(seconds: float) -> String:
+	var s := int(ceil(maxf(0.0, seconds)))
+	if s >= 3600:
+		return "%dh %02dm" % [s / 3600, (s % 3600) / 60]
+	if s >= 120:
+		return "%dm" % (s / 60)
+	return "%ds" % s
+
 func name_to_id(input_name: String) -> String:
 	return input_name.to_lower().replace(" ", "_")

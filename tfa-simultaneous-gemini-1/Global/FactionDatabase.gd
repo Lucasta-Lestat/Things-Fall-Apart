@@ -214,6 +214,24 @@ func player_stance_toward(other_faction: String) -> String:
 		return "friendly"
 	return "neutral"
 
+# How `observer_faction` regards `other_faction`: "hostile", "ally" or
+# "neutral", for display (stance colours, tooltips). Derived from the oracle,
+# never beside it: "hostile" exactly when are_hostile says so. Otherwise a pair
+# involving the player reads player_stance_toward ("friendly" -> "ally"), so
+# standing shows; any other pair is "ally" when are_friendly (same faction or
+# allied either way). Symmetric, and quiet for ids factions.json doesn't define.
+func get_stance(observer_faction: String, other_faction: String) -> String:
+	if observer_faction == other_faction:
+		return "ally"
+	if are_hostile(observer_faction, other_faction):
+		return "hostile"
+	if observer_faction == "player" or other_faction == "player":
+		var other: String = other_faction if observer_faction == "player" else observer_faction
+		return "ally" if player_stance_toward(other) == "friendly" else "neutral"
+	if are_friendly(observer_faction, other_faction):
+		return "ally"
+	return "neutral"
+
 # ---------------------------------------------------------------------------
 # Standing / ledger / override API (mirrors the tier API above)
 # ---------------------------------------------------------------------------
