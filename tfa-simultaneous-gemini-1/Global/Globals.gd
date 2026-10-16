@@ -39,22 +39,57 @@ const ARM_JOINT_CONSTRAINTS: Array[Vector2] = [
 	Vector2(0, 145),      # Elbow
 	Vector2(-45, 45)      # Wrist
 ]
+# Floats spawned at the same spot in quick succession (one per damage type of
+# a single hit, a burst of DoT ticks) stack upward instead of overlapping.
+# Key: parent instance + coarse world cell -> {"t": msec, "n": stack index}.
+const FLOAT_STACK_MS := 300
+const FLOAT_STACK_STEP := 30.0
+const FLOAT_STACK_MAX := 4
+var _float_stack := {}
+
 # === GLOBAL FUNCTIONS ===
-func show_floating_text(text: String, world_pos: Vector2, parent: Node, color: Color = Color.WHITE, success_level: int = 0) -> void:
+func show_floating_text(text: String, world_pos: Vector2, parent: Node, color: Color = Color.WHITE, success_level: int = 0, font_size: int = 0) -> void:
+	var key := str(parent.get_instance_id()) + ":" + str(Vector2i(world_pos / 24.0))
+	var now := Time.get_ticks_msec()
+	var rec = _float_stack.get(key)
+	var n := 0
+	if rec != null and now - int(rec.t) < FLOAT_STACK_MS:
+		n = (int(rec.n) + 1) % FLOAT_STACK_MAX
+	if _float_stack.size() > 64:
+		_float_stack.clear()
+	_float_stack[key] = {"t": now, "n": n}
+	world_pos.y -= FLOAT_STACK_STEP * n
+
 	var ft := FloatingTextScene.instantiate()
+	# Notices raised while paused (planning refusals) must still float and fade.
+	# Only then: numbers already on screen when the player pauses stay frozen
+	# so they can still be read.
+	if get_tree().paused:
+		ft.process_mode = Node.PROCESS_MODE_ALWAYS
+	if font_size > 0:
+		ft.add_theme_font_size_override("font_size", font_size)
 	parent.add_child(ft)
 	ft.setup(text, color, success_level, world_pos)
 
+## Font size for word notices ("Immune", "Out of ammo") — smaller than the
+## 30 px damage numbers so a sentence fits over a character.
+const NOTICE_FONT_SIZE := 18
+
+## Damage-number colour per type. Each must read against FloatingText's black
+## outline under the world's CanvasModulate, and stand apart from the
+## WHITE_SMOKE used for physical damage and the green of "+N" heal numbers.
 func damage_color(damage_type: String) -> Color:
 	match damage_type:
 		"fire": return Color.CRIMSON
-		"electric": return Color.YELLOW
-		"cold": return Color.ALICE_BLUE
-		"acid": return Color.DARK_GREEN
+		"electric", "lightning": return Color.YELLOW
+		"cold": return Color(0.45, 0.8, 1.0)
+		"acid": return Color(0.6, 1.0, 0.2)
 		"radiant": return Color.LIGHT_GOLDENROD
-		"necrotic": return Color.BLACK
+		"necrotic": return Color(0.35, 0.9, 0.8)
 		"poison": return Color.BLUE_VIOLET
 		"psychic": return Color.MEDIUM_ORCHID
+		"force": return Color(0.8, 0.6, 1.0)
+		"sonic": return Color(1.0, 0.6, 0.8)
 		_: return Color.WHITE_SMOKE
 
 func clamp_to_screen(pos: Vector2, screen_size: Vector2) -> Vector2:

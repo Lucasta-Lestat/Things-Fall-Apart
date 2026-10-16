@@ -6564,6 +6564,33 @@ func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 
 # ===== HELPER FUNCTIONS =====
 
+const NOTIFY_REPEAT_MS := 1000
+var _last_notify_text: String = ""
+var _last_notify_ms: int = -NOTIFY_REPEAT_MS
+
+## Player-facing notice over this character: a short floating word/phrase,
+## plus a GameLog line when log_text is given. The standard channel for
+## refusals and hidden outcomes ("Out of ammo", "Immune", "Blocked").
+## Identical notices within NOTIFY_REPEAT_MS are dropped, so callers that run
+## every frame can't stack labels.
+func notify(text: String, color: Color = Color.WHITE, log_text: String = "") -> void:
+	var now := Time.get_ticks_msec()
+	if text == _last_notify_text and now - _last_notify_ms < NOTIFY_REPEAT_MS:
+		return
+	_last_notify_text = text
+	_last_notify_ms = now
+	if get_parent():
+		# While paused only PROCESS_MODE_ALWAYS nodes tween, so parent the label
+		# to the character then (it is top_level) or it hangs until unpause.
+		var host: Node = self if PauseManager.is_paused else get_parent()
+		Globals.show_floating_text(text, global_position, host, color, 0, Globals.NOTICE_FONT_SIZE)
+	if not log_text.is_empty():
+		GameLog.add_entry(log_text)
+
+## True for characters in the player's party (controlled or not).
+func is_party_member() -> bool:
+	return game != null and is_instance_valid(game) and "party_chars" in game and self in game.party_chars
+
 func _get_limb_center_position(limb_type: ProceduralCharacter.LimbType) -> Vector2:
 	"""Get the center position of a limb in local coordinates"""
 	match limb_type:
@@ -7031,7 +7058,27 @@ func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
 		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
+	_announce_cast_failure(ability, reason)
 	cast_failed.emit(ability, reason)
+
+## Tell the player why a party member's ability didn't go off. The reasons
+## come from AbilityManager._check_ability_usable / use_ability ("Not enough
+## <resource>", "Already casting", "Cannot act", "Cannot pay costs", ...).
+func _announce_cast_failure(ability: Ability, reason: String) -> void:
+	if not is_party_member():
+		return
+	var ability_name: String = ability.display_name if ability else "ability"
+	var readable := reason.replace("_", " ")
+	if reason == "Cannot harm charm source":
+		# AbilityManager already logged "<name> can't use X against <charmer>!"
+		notify("Charmed", Color(1.0, 0.55, 0.75))
+		return
+	if reason.begins_with("Illegal here"):
+		# AbilityManager already logged the statute and the cast-again-to-confirm
+		# line; the float only flags which character was stopped.
+		notify("Illegal here", Color(1.0, 0.75, 0.3))
+		return
+	notify(readable, Color(1.0, 0.6, 0.4), "%s can't use %s: %s." % [Name, ability_name, readable])
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:
 	pass

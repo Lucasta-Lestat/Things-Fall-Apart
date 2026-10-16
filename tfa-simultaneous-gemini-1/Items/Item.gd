@@ -500,7 +500,7 @@ func take_damage(amount: Dictionary, success_level: int = 0):
 		var resistance = damage_resistances.get(damage_type, 0)
 		current_health = max(0, current_health - int(amount[damage_type] * damage_multiplier - resistance))
 
-		var color = _get_damage_color(damage_type)
+		var color = Globals.damage_color(damage_type)
 		show_floating_text(str(amount[damage_type]), color, success_level)
 
 	var tween = create_tween()
@@ -511,17 +511,6 @@ func take_damage(amount: Dictionary, success_level: int = 0):
 
 	if current_health <= 0:
 		_destroy_item()
-
-func _get_damage_color(damage_type: String) -> Color:
-	match damage_type:
-		"fire": return Color.CRIMSON
-		"electric": return Color.YELLOW
-		"cold": return Color.ALICE_BLUE
-		"acid": return Color.DARK_GREEN
-		"radiant": return Color.LIGHT_GOLDENROD
-		"necrotic": return Color.BLACK
-		"poison": return Color.BLUE_VIOLET
-		_: return Color.WHITE_SMOKE
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level: int = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
