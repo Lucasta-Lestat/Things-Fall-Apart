@@ -2,40 +2,6 @@
 	"maps": [
 		{
 			"description": "A crumbling graveyard on the outskirts of town, thick with fog and the stench of decay.",
-			"dialogue_time_triggers": [
-				{
-					"dialogue": "demo_scheduled_dialogue",
-					"id": "demo_midnight_bell",
-					"recurrence": "daily",
-					"scope": {
-						"map": "cemetery"
-					},
-					"when": {
-						"hour": 0.0,
-						"minute": 0.0
-					}
-				}
-			],
-			"dialogue_triggers_on_load": [
-				{
-					"dialogue": "demo_cemetery_on_load",
-					"id": "demo_cemetery_arrival",
-					"one_shot": true
-				}
-			],
-			"dialogue_zones": [
-				{
-					"dialogue": "demo_cemetery_zone",
-					"id": "demo_altar_zone",
-					"one_shot": true,
-					"position": [
-						600.0,
-						300.0
-					],
-					"radius": 80.0,
-					"trigger_on": "protagonist"
-				}
-			],
 			"fluid_spawns": [
 				{
 					"amount": 0.5,
@@ -121,14 +87,6 @@
 						200.0
 					],
 					"template_id": "surgeon_captain_federica"
-				},
-				{
-					"count": 1.0,
-					"position": [
-						150.0,
-						100.0
-					],
-					"template_id": "test_male_elf"
 				}
 			],
 			"party_spawns": {

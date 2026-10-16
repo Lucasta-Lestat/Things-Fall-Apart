@@ -11,8 +11,10 @@
   "dialogueNodes": {
    "Zak_intro": {
     "Narrator": "A priestess kneels among a cluster of hollow-eyed and filthy children.  Her purple robes are in tatters, almost to the point of indecency. She seems to have torn strips from her own vestment to bandage a boy's wounds",
-    "Jacana": "something to do with taking the orphans to the soup kitchen.  Being fed turtle soup.  Jacana knows",
-    "ZAKARIAH": "It is a drug, Sister. A soporific. A substance which deadens pain by deadening the mind along with it. Which is precisely what you're doing. (to the children, not unkindly but relentlessly) Your fathers died because this city's defenses were managed according to principles laid down three hundred years ago by men who had never seen a Skaarsgaardian raiding formation. It is a logistics problem. It is a solvable logistics problem, and the Senate has the solution sitting in a drawer somewhere because the man who wrote it also wrote an essay arguing that church tithes were a form of taxation without representation"
+    "Jacana": "May it be the hour you first believed",
+    "ZAKARIAH": "Oh, this is marvelous. This is simply marvelous. I arrive to find a nun administering the opiate.",
+    "ZAKARIAH#2": "It is a drug, Sister. A soporific. A substance which deadens pain by deadening the mind along with it. Which is precisely what you're doing. (to the children, not unkindly but relentlessly) Your fathers died because this city's defenses were managed according to principles laid down three hundred years ago by men who had never seen a Skaarsgaardian raiding formation. It is a logistics problem. It is a solvable logistics problem, and the Senate has the solution sitting in a drawer somewhere because the man who wrote it also wrote an essay arguing that church tithes were a form of taxation without representation",
+    "Jacana#2": "something to do with taking the orphans to the soup kitchen.  Being fed turtle soup.  Jacana knows"
    }
   }
  },
@@ -29,16 +31,18 @@
      },
      {
       "text": "Lovely night, aye?",
-      "nextNode": "Frederica-intro-spiel"
+      "nextNode": "Federica-intro-spiel"
      },
      {
       "text": "**Pass by quietly, hoping the plunderers don't see you witnessing their crime.**",
-      "nextNode": "end_convo"
+      "nextNode": "end-convo"
      }
     ]
    },
    "Federica-intro-talk-down": {
-    "Surgeon-Captain Federica": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** 'That is, if there are any witnesses to testify.'",
+    "Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**) You would be within your rights. I won't insult you with denials — the evidence is plain.",
+    "Surgeon-Captain Federica#2": "Two foreign strangers desecrating graves — in wartime no less. I'd expect a speedy trial and an expeditious execution.",
+    "Surgeon-Captain Federica#3": "**You spot a weapon of unusual shape hanging from her belt, which her hand begins to drift to.** 'That is, if there are any witnesses to testify.'",
     "choices": [
      {
       "text": "**Shout for the guards!**",
@@ -51,12 +55,14 @@
     ]
    },
    "Federica-intro-spiel": {
-    "Surgeon-Captain Federica": "We perform a service for the living, though it requires a brief discourtesy to the dead.",
-    "choice": [
+    "Surgeon-Captain Federica": "(**freezing mid-crouch, she peers up at you from the shallow grave.  Her companion does not stop digging**)",
+    "Surgeon-Captain Federica#2": "Stand easy, we are not thieves.",
+    "Surgeon-Captain Federica#3": "We perform a service for the living, though it requires a brief discourtesy to the dead.",
+    "choices": [
      {
       "text": "Not to be presumptous, but I suspect you could perhaps instruct me in the noble art of necromancy?",
       "branch": {
-       "protagonist.ability_check('charisma', ['secular', 'occult', 'persuasive'])": "Federica-apprenticeship",
+       "protagonist.ability_check('charisma', ['secular', 'occult', 'persuasive'])": "Federica-intro-apprenticeship",
        "default": "Federica-intro-fight"
       }
      }
@@ -67,14 +73,22 @@
    },
    "Federica-intro-apprenticeship": {
     "narrator": "**She smiles at you**",
-    "Surgeon-Captain Federica": "Certainly I can teach you.  **She hands you a shovel**. The first, and, I suppose most fundamental lesson, is how to dig a hole.",
-    "nextNode": "Federica-intro-agree-to-help"
+    "Surgeon-Captain Federica": "I am, in fact, in dire need of an apprentice.  And you seem an eager pupil.",
+    "Surgeon-Captain Federica#2": "Certainly I can teach you.  **She hands you a shovel**. The first, and, I suppose most fundamental lesson, is how to dig a hole.",
+    "next": "Federica-intro-agree-to-help"
    },
    "Federica-intro-agree-to-help": {
-    "narrator": "Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She puts a jack boot on its chest and wrenches both its arms loose from the torso, placing these in a large canvas bag that smells of rot and hay. [[Federica.add_item_to_inventory('Arms of Octavian')]]",
-    "Surgeon Captain Federica": "Verhoeven. Deeper.",
-    "THE KNIGHT": "He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice. **The rotten limbs begin to thrash harder.**",
-    "The KNIGHT": "(weeping without tears, without eyes)",
+    "narrator": "Your new master imparts a few pointers in the use of a shovel, and you join Verhoeven, who has been digging mechanically this whole time.",
+    "narrator#2": "The first coffin yields a woman in corroded plate armor — a knight-commander, by the heraldry. Federica kneels beside the remains, produces a leather case of surgical instruments, and inserts three long needles into precise points along the skull.",
+    "Surgeon Captain Federica": "Stand back.",
+    "narrator#3": "The corpse convulses.  A wet shriek whistles through a throat half-collapsed with rot.",
+    "THE KNIGHT": "(thrashing, clawing at his own ruined face) — it BURNS — what have you —",
+    "Surgeon Captain Federica#2": "You served under General Maratesta. You campaigned against Emperor Regalus in the Year of Broken Standards.",
+    "THE KNIGHT#2": "(weeping without tears, without eyes)",
+    "Surgeon Captain Federica#3": "His weaknesses. His habits in battle. Speak and I will let you sleep again.",
+    "THE KNIGHT#3": "He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice. **The rotten limbs begin to thrash harder.**",
+    "narrator#4": "Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She puts a jack boot on its chest and wrenches both its arms loose from the torso, placing these in a large canvas bag that smells of rot and hay. [[Federica.add_item_to_inventory('Arms of Octavian')]]",
+    "Surgeon Captain Federica#4": "Verhoeven. Deeper.",
     "Verhoeven": "Outstanding, Ma'am.",
     "choices": [
      {
@@ -112,13 +126,24 @@
     ]
    },
    "Federica-intro-interrogation-continued": {
-    "narrator": "Four city guards pour through the churchyard gate, halberds leveled. They surround the open grave in which the three of you stand, caked in dirt.",
-    "THE ASTROLOGER": "Fire. He IS fire. A creature from the First Age.  But even he has a touch of impurity.  A drop of human blood.  He is not timeless, he...",
-    "Surgeon-Captain Federica": "(quietly, to you) I will not kneel. That is not negotiable. What you do next, that is your affair.",
+    "narrator": "The second coffin holds a robed man — a court astrologer, judging by the celestial charts crumbling against his chest. The needles go in. He wakes screaming.",
+    "THE ASTROLOGER": "MY HANDS — I can't feel my — no, I CAN feel them, I can feel them ROTTING —",
+    "Surgeon-Captain Federica": "You served in the court of Regalus. You were executed for treason. Why?",
+    "THE ASTROLOGER#2": "(shuddering, jaw clicking loose and resetting with each word) I cast his... his true horoscope. Not the man's. The thing beneath the man. The Living Stars do not lie",
     "Surgeon Captain Federica": "What did you learn?",
-    "Verhoeven": "(setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am.",
+    "THE ASTROLOGER#3": "Fire. He IS fire. A creature from the First Age.  But even he has a touch of impurity.  A drop of human blood.  He is not timeless, he...",
+    "narrator#2": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag. [[Federica.add_item_to_inventory('Skull of a Scholar')]]",
+    "Surgeon-Captain Federica#2": "Promising. Verhoeven — keep digging",
+    "narrator#3": "By now you are over twenty feet deep in the same plot. The third coffin you strike is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.",
+    "Verhoeven": "...Ma'am?",
+    "narrator#4": "The lid explodes upward. A skeleton sits bolt upright in the ruined casket wearing the rotted vestments of a Scarlattian senator. Its jaw unhinges with a sound like tearing leather.",
     "THE SENATOR": "Heavy is the heart that releases me again upon the world.",
-    "Centurion": "Graverobbers and a gods-damned necromancer. On your knees, the lot of you."
+    "narrator#5": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness. Then, torchlight at the cemetery gates, and the clatter of armor from the lane. [[spawn_character_from_name('golden_guard',4)]]",
+    "Centurion": "Halt! Stand where you are — all of you!",
+    "narrator#6": "Four city guards pour through the churchyard gate, halberds leveled. They surround the open grave in which the three of you stand, caked in dirt.",
+    "Centurion#2": "Graverobbers and a gods-damned necromancer. On your knees, the lot of you.",
+    "Surgeon-Captain Federica#3": "(quietly, to you) I will not kneel. That is not negotiable. What you do next, that is your affair.",
+    "Verhoeven#2": "(setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am."
    },
    "Federica-intro-guard-fight": {
     "narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard',4)]]"
@@ -141,7 +166,7 @@
       "nextNode": "guard_traveler"
      },
      {
-      "text": "My name is [[game.protagonist.name]], on official business for the Jarl.",
+      "text": "My name is [[protagonist.name]], on official business for the Jarl.",
       "branch": {
        "protagonist.ability_check('persuasion', 15)": "guard_persuade_success",
        "default": "guard_persuade_failure"
@@ -154,15 +179,18 @@
     ]
    },
    "guard_traveler": {
-    "guard": "Move along, but I'm watching you.",
+    "guard": "Is that so? We've had trouble with *travelers* lately.",
+    "guard#2": "Move along, but I'm watching you.",
     "next": "end_convo_watched"
    },
    "guard_persuade_success": {
-    "guard": "Very well, [[game.protagonist.name]]. Go on in. Don't cause any trouble.",
+    "guard": "The Jarl? Ah, I see the **Jarl's sigil** on your cloak.",
+    "guard#2": "Very well, [[protagonist.name]]. Go on in. Don't cause any trouble.",
     "next": "end_convo_pass"
    },
    "guard_persuade_failure": {
-    "guard": "I don't believe you. Move along!",
+    "guard": "The Jarl? Hmm... you don't look like his usual company.",
+    "guard#2": "I don't believe you. Move along!",
     "next": "end_convo_watched"
    },
    "end_convo": {
@@ -182,7 +210,9 @@
     "prerequisites": [
      "protagonist.gold >= 10"
     ],
-    "merchant": "What catches your eye?",
+    "merchant": "Welcome, welcome! I am **Gareth the Trader**.",
+    "merchant#2": "I have *rare goods* from across the realm, [[protagonist.name]]!",
+    "merchant#3": "What catches your eye?",
     "choices": [
      {
       "text": "Show me your weapons.",
@@ -203,7 +233,8 @@
     ]
    },
    "merchant_weapons": {
-    "merchant": "Each one has tasted **victory** in battle!",
+    "merchant": "Ah, a warrior! I have some *fine blades* here.",
+    "merchant#2": "Each one has tasted **victory** in battle!",
     "next": "merchant_trade"
    },
    "merchant_potions": {
@@ -211,7 +242,8 @@
     "next": "merchant_trade"
    },
    "merchant_browse": {
-    "merchant": "Let me know if anything interests you.",
+    "merchant": "Of course, of course! Take your time.",
+    "merchant#2": "Let me know if anything interests you.",
     "next": "merchant_trade"
    },
    "merchant_end": {
@@ -250,7 +282,8 @@
  "complex_branch_example": {
   "dialogueNodes": {
    "complex_branch": {
-    "wizard": "Only those worthy may possess it.",
+    "wizard": "You seek the **Ancient Tome**?",
+    "wizard#2": "Only those worthy may possess it.",
     "branch": {
      "protagonist.has_item('elder_seal') and protagonist.level >= 10": "worthy_path",
      "protagonist.ability_check('arcana', 18)": "knowledge_path",
@@ -262,7 +295,8 @@
     "narrator": "The wizard hands you the ancient tome."
    },
    "knowledge_path": {
-    "wizard": "Perhaps you are worthy after all...",
+    "wizard": "Your knowledge of the arcane is impressive.",
+    "wizard#2": "Perhaps you are worthy after all...",
     "narrator": "The wizard reluctantly gives you the tome."
    },
    "unworthy_path": {
@@ -371,27 +405,6 @@
   "dialogueNodes": {
    "downtime_hunting_good_kill": {
     "narrator": "You move slow against the wind and the buck never sees you. The shot is clean. The deer takes two steps and lies down in the leaves like it was tired. Field-dressing takes the better part of an hour. You bring back enough meat to feed the party twice over and a hide worth selling."
-   }
-  }
- },
- "demo_cemetery_on_load": {
-  "dialogueNodes": {
-   "demo_cemetery_on_load": {
-    "narrator": "*DEMO trigger:* The cemetery gate creaks open before you. (This dialogue is a placeholder demonstrating Maps.json dialogue_triggers_on_load — safe to delete.)"
-   }
-  }
- },
- "demo_cemetery_zone": {
-  "dialogueNodes": {
-   "demo_cemetery_zone": {
-    "narrator": "*DEMO trigger:* You step into the marked zone. (Placeholder demonstrating Maps.json dialogue_zones — safe to delete.)"
-   }
-  }
- },
- "demo_scheduled_dialogue": {
-  "dialogueNodes": {
-   "demo_scheduled_dialogue": {
-    "narrator": "*DEMO trigger:* The bells toll the hour. (Placeholder demonstrating Maps.json dialogue_time_triggers — safe to delete.)"
    }
   }
  },

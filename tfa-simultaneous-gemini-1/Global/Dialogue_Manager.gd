@@ -61,29 +61,46 @@ func load_dialogues():
 func is_active() -> bool:
 	return current_dialogue_id != ""
 
+# The Game scene. Looked up on use: this autoload is ready before /root/Game
+# exists, so the @onready `game` above is always null.
+func _get_game() -> Node:
+	if game != null and is_instance_valid(game):
+		return game
+	return get_node_or_null("/root/Game")
+
 # Start a dialogue by its ID. If another dialogue is already active, queue this
-# one and start it when the current one ends.
-func start_dialogue(dialogue_id: String):
+# one and start it when the current one ends. `npc_name` is the character the
+# player asked to talk to, if any; when the dialogue can't start, the log says
+# they have nothing to say instead of the click doing nothing.
+func start_dialogue(dialogue_id: String, npc_name: String = ""):
 	if not dialogues.has(dialogue_id):
 		push_error("Dialogue not found: " + dialogue_id)
+		_log_nothing_to_say(npc_name)
 		return
 	if is_active():
 		_pending_dialogues.append(dialogue_id)
 		return
 	print("starting dialouges dialogues: ", dialogues[dialogue_id])
-	current_dialogue_id = dialogue_id
 	var dialogue_data = dialogues[dialogue_id]
 	
-	# Find the first node (usually same as dialogue_id)
-	if dialogue_data.has("dialogueNodes"):
-		var nodes = dialogue_data["dialogueNodes"]
-		if nodes.has(dialogue_id):
-			current_node_id = dialogue_id
-			show_node(current_node_id)
-		else:
-			push_error("Starting node not found: " + dialogue_id)
-	else:
+	# Resolve the first node before touching any state, so a malformed dialogue
+	# can't leave the manager "active" with nothing on screen (which would queue
+	# every later dialogue forever). The first node is usually named after the
+	# dialogue; otherwise use the first authored node (JSON keeps file order):
+	# guild_bounty_offer starts at "start", Federica_greet at "Federica_intro".
+	var nodes = dialogue_data.get("dialogueNodes", {}) if dialogue_data is Dictionary else {}
+	if not (nodes is Dictionary) or nodes.is_empty():
 		push_error("Dialogue has no dialogueNodes: " + dialogue_id)
+		_log_nothing_to_say(npc_name)
+		return
+	var start_node: String = dialogue_id if nodes.has(dialogue_id) else str(nodes.keys()[0])
+	current_dialogue_id = dialogue_id
+	current_node_id = start_node
+	show_node(start_node)
+
+func _log_nothing_to_say(npc_name: String) -> void:
+	if npc_name != "" and GameLog:
+		GameLog.add_entry("%s has nothing to say." % npc_name)
 
 # Display a specific dialogue node
 func show_node(node_id: String):
@@ -93,6 +110,11 @@ func show_node(node_id: String):
 	
 	if not nodes.has(node_id):
 		push_error("Node not found: " + node_id)
+		# Close the conversation instead of leaving dead choice buttons on
+		# screen and the manager stuck active.
+		if GameLog:
+			GameLog.add_entry("[i]The conversation trails off.[/i]")
+		end_dialogue()
 		return
 	
 	var node = nodes[node_id]
@@ -109,12 +131,15 @@ func show_node(node_id: String):
 			end_dialogue()
 			return
 	
-	# Parse all dialogue lines from the node (excluding reserved keywords)
+	# Parse all dialogue lines from the node (excluding reserved keywords).
+	# JSON can't repeat a key, so a speaker's second and later lines in one
+	# node are keyed "Name#2", "Name#3"...; the suffix is dropped here.
+	# Non-string values (a misspelled reserved key) aren't spoken lines.
 	current_node_lines = []
 	for key in node.keys():
-		if key not in RESERVED_KEYS:
+		if key not in RESERVED_KEYS and node[key] is String:
 			current_node_lines.append({
-				"speaker": key,
+				"speaker": str(key).get_slice("#", 0).strip_edges(),
 				"text": node[key]
 			})
 	
@@ -136,11 +161,11 @@ func show_current_line(node: Dictionary):
 		return
 	
 	var line = current_node_lines[current_line_index]
-	var speaker_name = line["speaker"]
+	var speaker_name = _resolve_speaker_name(line["speaker"])
 	var text = line["text"]
 	
 	# Get character portrait texture
-	var portrait = get_character_portrait(speaker_name)
+	var portrait = get_character_portrait(line["speaker"])
 	
 	# Process text with variable substitution and formatting
 	var processed_text = process_text(text)
@@ -153,6 +178,8 @@ func show_current_line(node: Dictionary):
 
 # Advance to the next line in the current node
 func advance_line():
+	if not is_active():
+		return
 	current_line_index += 1
 	
 	var dialogue_data = dialogues[current_dialogue_id]
@@ -253,7 +280,14 @@ func evaluate_condition(condition: String) -> bool:
 	# Check if it's a function call (contains parentheses)
 	if "(" in condition:
 		var result = evaluate_function_call(condition)
-		return bool(result)
+		# Checks return a success level, where a critical failure is -1. A
+		# call that couldn't be made returns null, which fails the condition.
+		match typeof(result):
+			TYPE_INT, TYPE_FLOAT:
+				return result > 0
+			TYPE_BOOL:
+				return result
+		return result != null
 	
 	# Otherwise, evaluate as expression
 	return evaluate_expression(condition)
@@ -290,10 +324,31 @@ func evaluate_function_call(call_string: String):
 	
 	# Call the method
 	if obj.has_method(method_name):
-		return obj.callv(method_name, args)
+		var result = obj.callv(method_name, args)
+		if method_name == "ability_check":
+			_log_ability_check(obj, args, result)
+		return result
 	else:
 		push_error("Method not found: " + method_name + " on " + object_path)
 		return null
+
+# Dialogue checks branch silently, so say in the log who rolled what and how
+# it went. The roll and target are included when the character exposes them
+# as `last_check` ({"roll", "target"}).
+func _log_ability_check(character: Object, args: Array, result) -> void:
+	if not GameLog:
+		return
+	var who: String = str(character.get("Name")) if character.get("Name") else ""
+	if who == "" and "display_name" in character:
+		who = str(character.display_name)
+	var stat_name: String = str(args[0]).replace("_", " ").capitalize() if args.size() > 0 else "Ability"
+	var passed: bool = result > 0 if typeof(result) in [TYPE_INT, TYPE_FLOAT] else (result is bool and result)
+	var detail := ""
+	var last = character.get("last_check")
+	if last is Dictionary and last.has("roll") and last.has("target"):
+		detail = " (rolled %d vs %d)" % [int(last["roll"]), int(last["target"])]
+	var article: String = "an" if stat_name.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a"
+	GameLog.add_entry("%s %s %s %s check%s." % [who, "passes" if passed else "fails", article, stat_name, detail])
 
 # Parse function arguments from string
 func parse_function_args(args_string: String) -> Array:
@@ -304,10 +359,14 @@ func parse_function_args(args_string: String) -> Array:
 	var current_arg = ""
 	var in_quotes = false
 	var quote_char = ""
+	# Nesting depth of [...] list literals; their commas don't split arguments.
+	var bracket_depth = 0
 	
 	for i in range(args_string.length()):
 		var c = args_string[i]
 		
+		# Quote characters are kept so parse_arg_value can tell a quoted
+		# literal ('charisma') from a variable path (protagonist.level).
 		if c in ["'", '"'] and (i == 0 or args_string[i-1] != "\\"):
 			if not in_quotes:
 				in_quotes = true
@@ -315,9 +374,14 @@ func parse_function_args(args_string: String) -> Array:
 			elif c == quote_char:
 				in_quotes = false
 				quote_char = ""
-			else:
-				current_arg += c
-		elif c == "," and not in_quotes:
+			current_arg += c
+		elif c == "[" and not in_quotes:
+			bracket_depth += 1
+			current_arg += c
+		elif c == "]" and not in_quotes:
+			bracket_depth -= 1
+			current_arg += c
+		elif c == "," and not in_quotes and bracket_depth == 0:
 			args.append(parse_arg_value(current_arg.strip_edges()))
 			current_arg = ""
 		else:
@@ -334,7 +398,11 @@ func parse_arg_value(arg: String):
 	if (arg.begins_with("'") and arg.ends_with("'")) or (arg.begins_with('"') and arg.ends_with('"')):
 		return arg.substr(1, arg.length() - 2)
 	
-	# Try to parse as number
+	# List literal, e.g. ['secular', 'occult']
+	if arg.begins_with("[") and arg.ends_with("]"):
+		return parse_function_args(arg.substr(1, arg.length() - 2))
+	
+# Try to parse as number
 	if arg.is_valid_int():
 		return int(arg)
 	if arg.is_valid_float():
@@ -392,8 +460,9 @@ func _compute_ally_reactions(preferred: Array, disliked: Array) -> Array:
 		return []
 	var out: Array = []
 	var party: Array = []
-	if game and game.has_method("get_party"):
-		party = game.get_party()
+	var g = _get_game()
+	if g and g.has_method("get_party"):
+		party = g.get_party()
 	for ally in party:
 		if not is_instance_valid(ally):
 			continue
@@ -438,6 +507,13 @@ func substitute_variables(text: String) -> String:
 	
 	for match_obj in matches:
 		var variable_path = match_obj.get_string(1).strip_edges()
+		# Inline actions ([[spawn_character_from_name(...)]] etc.) aren't run
+		# from dialogue text (use the node's "actions" list); drop them rather
+		# than show raw code to the player.
+		if "(" in variable_path:
+			push_warning("Dialogue action not supported, skipped: " + variable_path)
+			result = result.replace(match_obj.get_string(0), "")
+			continue
 		var value = get_variable_value(variable_path)
 		result = result.replace(match_obj.get_string(0), str(value))
 	
@@ -480,7 +556,10 @@ func get_variable_value(path: String):
 				push_warning("Variable path not found: " + path)
 				return "[" + path + "]"
 		elif current is Object:
-			if parts[i] in current:
+			# A character's "name" is its display name, not its scene-node name.
+			if parts[i] == "name" and "display_name" in current:
+				current = current.get("display_name")
+			elif parts[i] in current:
 				current = current.get(parts[i])
 			else:
 				push_warning("Variable path not found: " + path)
@@ -576,22 +655,53 @@ func evaluate_expression(expression: String) -> bool:
 	
 	return bool(result)
 
-# Get character portrait from CharacterDatabase
+# Get character portrait from the speaking character's template icon
 func get_character_portrait(speaker_name: String) -> Texture:
 	if TopDownCharacterDatabase == null:
 		push_warning("TopDownCharacterDatabase not found")
 		return null
-	for character in game.characters_in_scene:
-		if character.character_id == speaker_name:
-			return load(character["icon"])
-		else: 
-			push_warning("Character not found for dialogue")
-	#var key = speaker_name.to_lower()
-	#var character = game.characters_in_scene(key)
-	
-	
-	push_warning("Character portrait not found for: " + speaker_name)
+	var character = _find_speaker_character(speaker_name)
+	if character == null or not ("template_id" in character):
+		return null
+	var template_id: String = str(character.template_id)
+	if template_id == "" or not TopDownCharacterDatabase.get_all_template_ids().has(template_id):
+		return null
+	var icon_path: String = str(TopDownCharacterDatabase.get_template(template_id).get("icon", ""))
+	if icon_path != "" and ResourceLoader.exists(icon_path):
+		return load(icon_path)
 	return null
+
+# The in-scene character a speaker key refers to, or null. "protagonist" is
+# the party leader; other keys match a display name ignoring case and hyphens
+# ("Surgeon-Captain Federica" is "Surgeon Captain Federica"), or a template id.
+func _find_speaker_character(speaker_name: String):
+	var g = _get_game()
+	if g == null:
+		return null
+	var key := speaker_name.to_lower().replace("-", " ").strip_edges()
+	if key == "protagonist" or key == "player":
+		var p = g.get("player")
+		return p if p != null and is_instance_valid(p) else null
+	if not ("characters_in_scene" in g):
+		return null
+	for c in g.characters_in_scene:
+		if not is_instance_valid(c):
+			continue
+		if "display_name" in c and str(c.display_name).to_lower().replace("-", " ") == key:
+			return c
+		if "template_id" in c and str(c.template_id) == speaker_name.to_lower():
+			return c
+	return null
+
+# The name shown above a line: narration has no speaker label, and a key
+# that matches an in-scene character shows that character's name.
+func _resolve_speaker_name(speaker_name: String) -> String:
+	if speaker_name.to_lower() == "narrator":
+		return ""
+	var character = _find_speaker_character(speaker_name)
+	if character != null and "display_name" in character:
+		return str(character.display_name)
+	return speaker_name
 
 # End current dialogue
 func end_dialogue():

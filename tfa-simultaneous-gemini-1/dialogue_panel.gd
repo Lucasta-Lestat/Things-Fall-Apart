@@ -31,19 +31,30 @@ func _ready():
 		dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
 
 func _input(event):
-	# Only process input when panel is visible and no choices are shown
-	if visible and choices_container.get_child_count() == 0:
-		if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_SPACE):
+	# Only process input when panel is visible
+	if not visible:
+		return
+	# SPACE is also the "pause" key. While a conversation is on screen it only
+	# drives the dialogue, so consume it before PauseManager toggles pause.
+	# (is_action_pressed ignores key-repeat, so holding SPACE doesn't skip lines.)
+	if event.is_action_pressed("ui_accept") or event.is_action_pressed("pause"):
+		if choices_container.get_child_count() == 0:
 			# Advance dialogue
 			if dialogue_manager:
 				dialogue_manager.advance_line()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("pause"):
+			# Choices are up: SPACE does nothing (Enter still reaches a focused
+			# choice button).
+			get_viewport().set_input_as_handled()
 
-func _on_dialogue_updated(speaker_name: String, portrait: Texture2D, text: String, has_next: bool):
+func _on_dialogue_updated(speaker_name: String, portrait: Texture2D, text: String, _has_next: bool):
 	# Show the panel
 	show()
 
-	# Update speaker name
+	# Update speaker name (empty for narration)
 	speaker_name_label.text = speaker_name
+	speaker_name_label.visible = not speaker_name.is_empty()
 
 	# Update title (above speaker name, smaller font)
 	var title: String = _lookup_title_for_speaker(speaker_name)
@@ -66,12 +77,10 @@ func _on_dialogue_updated(speaker_name: String, portrait: Texture2D, text: Strin
 	# Clear any existing choices
 	_clear_choices()
 	
-	# Show/hide continue indicator
-	if has_next:
-		continue_indicator.show()
-		continue_indicator.text = "Press SPACE to continue..."
-	else:
-		continue_indicator.hide()
+	# Every line needs one SPACE to reach the next line, the choices, or the
+	# end, so the prompt always shows. _on_choices_available hides it.
+	continue_indicator.show()
+	continue_indicator.text = "Press SPACE to continue..."
 
 func _on_choices_available(choices: Array):
 	# Clear existing choices
@@ -131,6 +140,8 @@ func _clear_choices():
 func _lookup_title_for_speaker(speaker_name: String) -> String:
 	## Find the in-scene character whose display_name matches the speaker and
 	## return their primary title (first entry of `titles`). Empty if no match.
+	if speaker_name.is_empty():
+		return ""
 	var game = get_node_or_null("/root/Game")
 	if not game or not "characters_in_scene" in game:
 		return ""
