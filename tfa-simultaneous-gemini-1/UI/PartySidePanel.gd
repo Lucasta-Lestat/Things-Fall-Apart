@@ -1038,7 +1038,8 @@ func _equip_shape_to_hand(character, entry: Dictionary, hand: String) -> void:
 	else:  # weapon
 		if node in character.inventory.stowed_items:
 			character.inventory.stowed_items.erase(node)
-		character.inventory.equip_item(node, hand)
+		# The menu named the hand; don't let _pick_hand move it to the other.
+		character.inventory.equip_item(node, hand, true)
 
 func _use_item(character, item_index: int, item_data: Dictionary) -> void:
 	var use_ability_id = item_data.get("use_ability", "")

@@ -61,6 +61,19 @@ func add_item(item_data: Dictionary) -> bool:
 	emit_signal("item_added", item_data)
 	return true
 
+## True when add_item(item_data) would succeed: a same-id stack has room or a
+## slot is free. Transfer code checks this before removing from the source, so
+## a full receiver refuses the item instead of swallowing it. Mirrors add_item's
+## slot test (items.size()); keep the two in step.
+func can_accept(item_data: Dictionary) -> bool:
+	if item_data.get("is_stackable", false):
+		var item_id = item_data.get("id", "")
+		var max_stack = int(item_data.get("max_stack_size", 20))
+		for it in items:
+			if it.get("id", "") == item_id and int(it.get("num_stacks", 1)) < max_stack:
+				return true
+	return items.size() < max_slots
+
 # Like add_item, but transfers the full num_stacks count from item_data
 # rather than always adding 1. Use this when receiving an item dict that
 # already represents a multi-count stack (chest loot, NPC drops, etc.) so
@@ -221,10 +234,18 @@ func _pick_hand(preferred: String) -> String:
 # ===== WEAPON / ABILITY EQUIPMENT =====
 
 ## Equip an item to a hand. If the hand is occupied, the current item is stowed.
-func equip_item(item: Node2D, hand: String = "Main") -> bool:
+## explicit = the player chose this hand ("Equip to Main/Off"), so honour it
+## instead of letting _pick_hand move the item to whichever hand is free.
+func equip_item(item: Node2D, hand: String = "Main", explicit: bool = false) -> bool:
 	# Two-handed weapons always go to main hand
 	if _is_two_handed(item):
+		if explicit and hand == "Off" and possessor and possessor.has_method("notify") \
+				and possessor.has_method("is_party_member") and possessor.is_party_member():
+			possessor.notify("Two-handed", Color(1.0, 0.6, 0.4),
+				"%s can't hold the %s in the off hand: it is two-handed." % [possessor.Name, item.display_name])
 		hand = "Main"
+	elif explicit:
+		hand = hand if hand == "Off" else "Main"
 	else:
 		hand = _pick_hand(hand)
 
@@ -319,12 +340,13 @@ func stow_ability_from_id(ability_id: String) -> bool:
 	return true
 
 ## Equip a fresh copy of an existing canonical ability (already in stowed_items) to a hand.
-## Used when the player wants the same ability in both hands.
-func equip_ability_to_hand(canonical: AbilityShape, hand: String) -> bool:
+## Used when the player wants the same ability in both hands. The hand is the
+## player's explicit menu choice, so it isn't redirected to a free hand.
+func equip_ability_to_hand(canonical: AbilityShape, hand: String, explicit: bool = true) -> bool:
 	if canonical == null:
 		return false
 	var copy = _spawn_ability_copy(canonical)
-	return equip_item(copy, hand)
+	return equip_item(copy, hand, explicit)
 
 func equip_weapon_from_data(weapon_data: Dictionary, hand = "Main") -> WeaponShape:
 	var weapon = WeaponShape.new()
@@ -429,6 +451,57 @@ func flatten_for_corpse() -> void:
 		possessor.current_main_hand_item = null
 		possessor.current_off_hand_item = null
 
+## equip_slot -> EquipmentShape.EquipmentSlot, as PartySidePanel._EQUIP_SLOT_MAP
+## (capes share the back slot).
+const _WORN_SLOT_BY_NAME := {"Head": 0, "Torso": 1, "Back": 2, "Legs": 3, "Feet": 4, "Cape": 2}
+## The possessor's worn-shape property per EquipmentShape.EquipmentSlot value.
+const _WORN_SLOT_PROPS := ["head_equipment", "torso_equipment", "back_equipment", "legs_equipment", "feet_equipment"]
+
+## Worn armour on the body (the possessor's EquipmentShapes, with their
+## while-worn conditions and DR) follows equip_equipment / unequip_slot, not
+## the items' `_equipped` flags. After `items` is replaced wholesale (a
+## cancelled trade restores it from deep-copied snapshots), bring the body back
+## in line with the flags: a slot with no flagged dict is emptied, a slot whose
+## worn piece matches a flagged dict (same id) keeps it and re-points its
+## item_data at the restored dict, and any other flagged dict is put on. Gear
+## nobody touched is therefore not taken off and put back on, which would strip
+## and re-apply its conditions.
+func resync_worn_from_items() -> void:
+	if possessor == null or not possessor.has_method("equip_equipment") \
+			or not possessor.has_method("unequip_slot"):
+		return
+	var flagged := {}  # slot -> Array of flagged armour dicts, in items order
+	for item in items:
+		if not (item is Dictionary) or not item.get("_equipped", false):
+			continue
+		var raw_slot = item.get("equip_slot", "")
+		var slot: int = _WORN_SLOT_BY_NAME.get(str(raw_slot) if raw_slot != null else "", -1)
+		if slot == -1:
+			continue
+		if not flagged.has(slot):
+			flagged[slot] = []
+		flagged[slot].append(item)
+	for slot in range(_WORN_SLOT_PROPS.size()):
+		var shape = possessor.get(_WORN_SLOT_PROPS[slot])
+		var worn = shape if (shape != null and is_instance_valid(shape)) else null
+		var wanted: Array = flagged.get(slot, [])
+		if wanted.is_empty():
+			if worn != null:
+				possessor.unequip_slot(slot)
+			continue
+		var keep = null
+		if worn != null and worn.has_meta("item_data"):
+			var worn_data = worn.get_meta("item_data")
+			var worn_id := str(worn_data.get("id", "")) if worn_data is Dictionary else ""
+			for d in wanted:
+				if worn_id != "" and str(d.get("id", "")) == worn_id:
+					keep = d
+					break
+		if keep != null:
+			worn.set_meta("item_data", keep)
+		else:
+			possessor.equip_equipment(wanted[0])
+
 ## Legacy: the old equipped_weapons array — now computed dynamically.
 var equipped_weapons: Array:
 	get:
@@ -450,9 +523,12 @@ func get_equipped_weapon_count() -> int:
 ## copy is spawned for the hand, so the same ability can occupy both hands at once.
 func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	if stowed_items.is_empty():
+		_notify_swap_refused("Nothing to swap", "nothing is stowed")
 		return
 	# Can't cycle off-hand while main holds a two-handed weapon
 	if hand == "Off" and main_hand_item != null and _is_two_handed(main_hand_item):
+		_notify_swap_refused("Both hands on %s" % main_hand_item.display_name,
+			"both hands are on the %s" % main_hand_item.display_name)
 		return
 
 	var pick_index = 0 if direction >= 0 else stowed_items.size() - 1
@@ -503,6 +579,15 @@ func cycle_weapon_for_hand(hand: String, direction: int = 1) -> void:
 	# If a two-handed weapon was cycled into main hand, stow the off-hand
 	if hand == "Main" and _is_two_handed(to_equip) and off_hand_item != null:
 		_stow_item(off_hand_item, "Off")
+
+## Swap keys (and queued swaps) come only from the player, so a refused swap
+## says why over the party member instead of doing nothing.
+func _notify_swap_refused(text: String, reason: String) -> void:
+	if not is_instance_valid(possessor) or not possessor.has_method("notify"):
+		return
+	if not possessor.has_method("is_party_member") or not possessor.is_party_member():
+		return
+	possessor.notify(text, Color(1.0, 0.6, 0.4), "%s can't swap weapons: %s." % [possessor.Name, reason])
 
 ## Legacy cycle_weapon — cycles main hand by default.
 func cycle_weapon(direction: int = 1) -> void:
