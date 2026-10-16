@@ -299,6 +299,9 @@ func _ready() -> void:
 	$GameUI.add_child(world_tooltip)
 	hud_status = preload("res://UI/HudStatusBar.gd").new()
 	$GameUI.add_child(hud_status)
+	# While paused: a faint line from each visible NPC to whoever it is after.
+	# World-space child of Game (not GameUI), so it survives map changes.
+	add_child(preload("res://UI/TargetIntentOverlay.gd").new())
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
