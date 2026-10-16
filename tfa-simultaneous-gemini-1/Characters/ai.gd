@@ -763,10 +763,10 @@ func has_in_view(c) -> bool:
 
 # ===== PERCEPTION QUERIES (readouts) =====
 # What this AI sees of a character right now, by the same rules _update_target
-# acts on, for UI that must agree with the AI (the stealth 'in view' eye, the
-# paused intent line). Read-only: nothing here changes targeting. The held
-# target's answer is is_target_in_sight() (the world-info lane's target
-# indication adds it: the hold rule, _target_occluded_time == 0).
+# acts on, for UI that must agree with the AI (the paused intent line).
+# Read-only: nothing here changes targeting. The held target's answer is
+# is_target_in_sight() (the hold rule, _target_occluded_time == 0). The
+# stealth 'in view' eye asks has_in_view() above, which answers both cases.
 
 ## Whether this AI would acquire `other` by sight now (faction aside): alive,
 ## inside detection range, not invisible to us, and either in the sight cone or
@@ -1969,7 +1969,11 @@ func eat_food(item: Node):
 
 # Remove a world item we've taken. Not _destroy_item(): that fires `destroyed`,
 # and Game._on_item_destroyed would scatter the item's salvage on the floor.
+# Game.remove_world_item is the shared helper the party's pick-up uses.
 func _remove_world_item(item: Node) -> void:
+	if item is Item and game != null and game.has_method("remove_world_item"):
+		game.remove_world_item(item)
+		return
 	if item is Item:
 		GridManager.unregister_object(item._grid_pos, item)
 	if item in game.items_in_scene:
