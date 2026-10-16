@@ -4,7 +4,7 @@
 
 [sub_resource type="Gradient" id="Gradient_color_ramp"]
 offsets = PackedFloat32Array(0, 0.4, 1)
-colors = PackedColorArray(0.3, 0.9, 0.2, 1, 0.15, 0.6, 0.1, 0.85, 0.05, 0.3, 0.05, 0)
+colors = PackedColorArray(0.62, 0.36, 0.8, 1, 0.45, 0.22, 0.6, 0.85, 0.2, 0.08, 0.28, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_ramp"]
 gradient = SubResource("Gradient_color_ramp")
@@ -34,7 +34,7 @@ turbulence_noise_strength = 5.0
 turbulence_noise_speed_random = 0.5
 
 [sub_resource type="Gradient" id="Gradient_light"]
-colors = PackedColorArray(0.2, 0.7, 0.2, 1, 0, 0, 0, 0)
+colors = PackedColorArray(0.45, 0.22, 0.6, 1, 0, 0, 0, 0)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_light"]
 gradient = SubResource("Gradient_light")
@@ -54,7 +54,7 @@ lifetime = 2.5
 process_material = SubResource("ParticleProcessMaterial_poison")
 
 [node name="PointLight2D" type="PointLight2D" parent="."]
-color = Color(0.2, 0.7, 0.2, 1)
+color = Color(0.45, 0.22, 0.6, 1)
 energy = 0.7
 texture = SubResource("GradientTexture2D_light")
 texture_scale = 4.0

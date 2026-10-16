@@ -302,8 +302,9 @@ func _ready() -> void:
 	# While paused: a faint line from each visible NPC to whoever it is after.
 	# World-space child of Game (not GameUI), so it survives map changes.
 	add_child(preload("res://UI/TargetIntentOverlay.gd").new())
-	# Character readouts on the hover tooltip.
+	# Character, structure and hazard readouts on the hover tooltip; wind on the HUD.
 	add_child(preload("res://UI/WorldHoverInfo.gd").new())
+	hud_status.add_widget(preload("res://UI/WindIndicator.gd").new())
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so

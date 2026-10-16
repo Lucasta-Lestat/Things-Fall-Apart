@@ -391,6 +391,13 @@ func get_fluid_type_at(tile_pos: Vector2i) -> String:
 			return fluid_type
 	return ""
 
+## A fluid's fluids.json entry (condition, conductive, flammable...), {} if unknown.
+func get_fluid_def(fluid_type: String) -> Dictionary:
+	return _fluid_db.get(fluid_type, {})
+
+func fluid_display_name(fluid_type: String) -> String:
+	return str(get_fluid_def(fluid_type).get("display_name", fluid_type.capitalize()))
+
 func is_fluid_flammable(tile_pos: Vector2i) -> bool:
 	"""Returns whether the fluid at this tile is flammable."""
 	var fluid_type = get_fluid_type_at(tile_pos)

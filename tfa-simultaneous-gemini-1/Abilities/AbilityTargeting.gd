@@ -82,6 +82,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	z_index = 50  # Above ground, below UI
 	_create_indicators()
+	# Electric abilities: tiles the current would flood (reads this node only)
+	add_child(preload("res://Abilities/ElectrifyPreview.gd").new())
 
 func _process(_delta: float) -> void:
 	if is_targeting:

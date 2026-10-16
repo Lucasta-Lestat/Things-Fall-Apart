@@ -523,6 +523,145 @@ func get_surface_id_at(tile_pos: Vector2i) -> String:
 func is_ice_at(tile_pos: Vector2i) -> bool:
 	return get_surface_id_at(tile_pos) == "ice"
 
+# --- Hazard identification (paused hover tooltip) ---
+
+## What is on the ground at world_pos and what it does to whoever stands there.
+## Each entry: {kind, id, name, condition_id, interval, conditions: [{id,
+## interval}], notes: PackedStringArray}. Fluids are read by TILE, as
+## FluidManager.update_fluid_conditions applies them.
+func describe_hazards_at(world_pos: Vector2) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var tile := GridManager.world_to_map(world_pos)
+	var game = _get_game()
+	var fluid_manager = _get_fluid_manager(game)
+
+	# Tile surfaces: ice, grassy, fire spin, legacy tile fire
+	if surface_grid.has(tile):
+		var sid: String = surface_grid[tile].get("surface_id", "")
+		var sdef: Dictionary = _surface_defs.get(sid, {})
+		var notes: PackedStringArray = []
+		var name_text := str(sdef.get("display_name", sid.capitalize()))
+		if sid == "ice":
+			var frozen := str(surface_grid[tile].get("frozen_fluid_type", ""))
+			if frozen != "" and fluid_manager:
+				name_text = "Ice (frozen %s)" % fluid_manager.fluid_display_name(frozen).to_lower()
+			if sdef.get("causes_sliding", false):
+				notes.append("Slippery: whoever steps on it slides until they're off the ice, losing their plan.")
+			if sdef.get("thaw_on_fire", false):
+				notes.append("Fire thaws it.")
+		elif sid == "fire":
+			notes.append("Spreads to flammable ground.")
+			var wind := _wind_note()
+			if wind != "":
+				notes.append(wind)
+		out.append(_hazard_entry("surface", sid, name_text, str(sdef.get("condition_id", "")), float(sdef.get("apply_interval", 1.0)), notes))
+
+	# Cell-graph fire (structured and legacy maps with a CellGraph)
+	if _cell_fire_active():
+		var fire_def: Dictionary = _surface_defs.get("fire", {})
+		if cell_fire.is_burning_at(world_pos):
+			var notes: PackedStringArray = ["Spreads to flammable ground; stone and water stop it."]
+			var wind := _wind_note()
+			if wind != "":
+				notes.append(wind)
+			out.append(_hazard_entry("fire", "fire", str(fire_def.get("display_name", "Fire")), str(fire_def.get("condition_id", "burning")), float(fire_def.get("apply_interval", 1.0)), notes))
+		elif cell_fire.is_burnt_at(world_pos):
+			# Burnt out, even though the char is now drawn: say it can't burn again.
+			out.append(_hazard_entry("burnt", "burnt", "Burnt ground", "", 0.0, ["Burnt out: it won't catch fire again."] as PackedStringArray))
+
+	# Electrified ground
+	if electrified_grid.has(tile):
+		var edef: Dictionary = _surface_defs.get("electrified", {})
+		var interval := float(edef.get("apply_interval", 0.3))
+		var stat := String(edef.get("stun_save_stat", "constitution")).substr(0, 3).to_upper()
+		var notes: PackedStringArray = ["%s save every %s or Stunned." % [stat, _fmt_secs(interval)]]
+		out.append(_hazard_entry("electrified", "electrified", str(edef.get("display_name", "Electrified")) + " ground", str(edef.get("condition_id", "shocked")), interval, notes))
+
+	# Fluid (water, poison, oil, acid, ink, blood...)
+	if fluid_manager:
+		var ft: String = fluid_manager.get_fluid_type_at(tile)
+		if ft != "":
+			var fdef: Dictionary = fluid_manager.get_fluid_def(ft)
+			var notes: PackedStringArray = []
+			if fdef.get("conductive", false):
+				notes.append("Conducts electricity: a shock spreads through the whole pool.")
+			if fdef.get("flammable", false):
+				notes.append("Flammable: fire races across it.")
+			if ft == "water":
+				notes.append("Puts out fire.")
+			out.append(_hazard_entry("fluid", ft, fluid_manager.fluid_display_name(ft), str(fdef.get("condition_id", "")), float(fdef.get("apply_interval", 1.0)), notes))
+
+	# Clouds that apply conditions (poison, fire smoke, acidic mist...). One
+	# entry for every cloud over the point; a multi-condition fog is one
+	# overlay per condition.
+	if game and "fog_manager" in game and game.fog_manager and "_active_fogs" in game.fog_manager:
+		var conds: Array = []
+		var seen: Dictionary = {}
+		for fog in game.fog_manager._active_fogs:
+			if not is_instance_valid(fog) or str(fog.condition_id) == "" or seen.has(fog.condition_id):
+				continue
+			if Rect2(fog.global_position, fog.size).has_point(world_pos):
+				seen[fog.condition_id] = true
+				conds.append({"id": str(fog.condition_id), "interval": float(fog.apply_interval)})
+		if not conds.is_empty():
+			var e := _hazard_entry("fog", "fog", "Cloud", conds[0]["id"], conds[0]["interval"], PackedStringArray())
+			e["conditions"] = conds
+			out.append(e)
+	return out
+
+func _hazard_entry(kind: String, id: String, name_text: String, condition_id: String, interval: float, notes: PackedStringArray) -> Dictionary:
+	var conds: Array = []
+	if condition_id != "":
+		conds.append({"id": condition_id, "interval": interval})
+	return {"kind": kind, "id": id, "name": name_text, "condition_id": condition_id, "interval": interval, "conditions": conds, "notes": notes}
+
+## BBCode for the paused hover tooltip (Game.world_tooltip "hazards"). "" when
+## the ground there is plain.
+func hazard_tooltip_text(world_pos: Vector2) -> String:
+	var parts: PackedStringArray = []
+	for h in describe_hazards_at(world_pos):
+		var lines: PackedStringArray = []
+		var title := "[b]%s[/b]" % h["name"]
+		if h["kind"] == "fluid" or h["kind"] == "fog":
+			title += " [color=#a69f8f](%s)[/color]" % h["kind"]
+		lines.append(title)
+		for c in h["conditions"]:
+			var cond = ConditionManager.condition_registry.get(c["id"])
+			var cname: String = c["id"].capitalize()
+			var verb := "Applies"
+			var desc := ""
+			if cond:
+				if cond.display_name != "":
+					cname = cond.display_name
+				if cond.traits.has("buff"):
+					verb = "Grants"
+				desc = cond.description
+			var line := "%s [b]%s[/b] every %s" % [verb, cname, _fmt_secs(c["interval"])]
+			if desc != "":
+				line += ": " + desc
+			lines.append(line)
+		for n in h["notes"]:
+			lines.append(n)
+		parts.append("\n".join(lines))
+	return "\n\n".join(parts)
+
+func _fmt_secs(seconds: float) -> String:
+	if is_equal_approx(seconds, roundf(seconds)):
+		return "%d s" % int(roundf(seconds))
+	return "%.1f s" % seconds
+
+## "The wind pushes it toward the SE." when the map's weather has wind worth
+## mentioning (cell fire leans with it from about speed 3), else "".
+func _wind_note() -> String:
+	var grp := _get_map_weather_group(null)
+	if grp == "":
+		return ""
+	var spd: float = WeatherManager.get_wind_speed(grp)
+	var dir: Vector2 = WeatherManager.get_wind_direction(grp)
+	if spd < 3.0 or dir.length() < 0.01:
+		return ""
+	return "The wind pushes it toward the %s." % Globals.compass_name(dir)
+
 # --- Ice / Freeze API ---
 
 func try_freeze_at(tile_pos: Vector2i) -> void:
@@ -865,80 +1004,53 @@ func try_electrify(tile_pos: Vector2i) -> int:
 	(same-type conductive fluid, or contiguous conductive floor). Instantaneous
 	BFS. Re-hits refresh the duration of every tile in the connected region.
 	Returns the number of tiles newly electrified (already-electrified tiles
-	are refreshed but not counted)."""
-	var game = _get_game()
-	var fluid_manager = _get_fluid_manager(game)
-
-	# Conductive fluid → flood-fill the contiguous body of that fluid type.
-	# BFS refreshes any already-electrified tiles it visits.
-	if fluid_manager and fluid_manager.is_conductive(tile_pos):
-		var fluid_type = fluid_manager.get_fluid_type_at(tile_pos)
-		return _electrify_fluid_body(tile_pos, fluid_type, fluid_manager)
-
-	# Conductive floor → flood-fill across contiguous conductive floor.
-	if _is_floor_conductive(tile_pos):
-		return _electrify_floor_region(tile_pos)
-
-	# Bare ground arc: refresh if already electrified, else place a single tile.
-	if electrified_grid.has(tile_pos):
-		var elec_def = _surface_defs.get("electrified", {})
-		electrified_grid[tile_pos]["time_remaining"] = elec_def.get("base_duration", 1.2)
-		return 0
-	_electrify_tile(tile_pos, "direct")
-	return 1
-
-func _electrify_fluid_body(start_tile: Vector2i, fluid_type: String, fluid_manager: FluidManager) -> int:
-	"""BFS flood-fill to electrify an entire contiguous body of conductive fluid
-	of the same type. Mirrors _ignite_fluid_body."""
-	var visited: Dictionary = {}
-	var queue: Array[Vector2i] = [start_tile]
-	visited[start_tile] = true
+	are refreshed but not counted). The region is electrify_region's, which the
+	targeting preview also draws, so the two can't disagree."""
+	var region := electrify_region(tile_pos)
+	var source: String = region["source"]
 	var count: int = 0
-
-	while not queue.is_empty():
-		var tile = queue.pop_front()
-		if not electrified_grid.has(tile):
-			_electrify_tile(tile, "fluid")
-			count += 1
-		else:
+	for tile in region["tiles"]:
+		if electrified_grid.has(tile):
 			# Refresh duration even if already electrified.
 			var elec_def = _surface_defs.get("electrified", {})
 			electrified_grid[tile]["time_remaining"] = elec_def.get("base_duration", 1.2)
-
-		var neighbors = GridManager.get_neighboring_coords(tile)
-		for neighbor in neighbors:
-			if visited.has(neighbor):
-				continue
-			visited[neighbor] = true
-			var neighbor_fluid = fluid_manager.get_fluid_type_at(neighbor)
-			if neighbor_fluid == fluid_type:
-				queue.append(neighbor)
-	return count
-
-func _electrify_floor_region(start_tile: Vector2i) -> int:
-	"""BFS flood-fill across contiguous conductive floor tiles."""
-	var visited: Dictionary = {}
-	var queue: Array[Vector2i] = [start_tile]
-	visited[start_tile] = true
-	var count: int = 0
-
-	while not queue.is_empty():
-		var tile = queue.pop_front()
-		if not electrified_grid.has(tile):
-			_electrify_tile(tile, "floor")
-			count += 1
 		else:
-			var elec_def = _surface_defs.get("electrified", {})
-			electrified_grid[tile]["time_remaining"] = elec_def.get("base_duration", 1.2)
+			_electrify_tile(tile, source)
+			count += 1
+	return count
 
-		var neighbors = GridManager.get_neighboring_coords(tile)
-		for neighbor in neighbors:
+## Dry run of try_electrify: the tiles a current entering tile_pos would reach,
+## changing nothing. {"tiles": Array[Vector2i], "source": "fluid"|"floor"|"direct"}.
+## A conductive fluid floods its contiguous same-type body, a conductive floor
+## its contiguous conductive floor; bare ground is just the tile. cap > 0 bounds
+## the search (the per-frame preview passes one); try_electrify doesn't.
+func electrify_region(tile_pos: Vector2i, cap: int = 0) -> Dictionary:
+	var fluid_manager = _get_fluid_manager(_get_game())
+	if fluid_manager and fluid_manager.is_conductive(tile_pos):
+		var fluid_type: String = fluid_manager.get_fluid_type_at(tile_pos)
+		return {"tiles": _flood(tile_pos, func(t: Vector2i) -> bool: return fluid_manager.get_fluid_type_at(t) == fluid_type, cap), "source": "fluid"}
+	if _is_floor_conductive(tile_pos):
+		return {"tiles": _flood(tile_pos, _is_floor_conductive, cap), "source": "floor"}
+	return {"tiles": [tile_pos] as Array[Vector2i], "source": "direct"}
+
+## 4-neighbour BFS from start over tiles where joins(tile) holds (start is
+## always included). Breadth-first order, as the old per-source fills were.
+func _flood(start: Vector2i, joins: Callable, cap: int = 0) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var visited: Dictionary = {start: true}
+	var queue: Array[Vector2i] = [start]
+	while not queue.is_empty():
+		var tile: Vector2i = queue.pop_front()
+		out.append(tile)
+		if cap > 0 and out.size() >= cap:
+			break
+		for neighbor in GridManager.get_neighboring_coords(tile):
 			if visited.has(neighbor):
 				continue
 			visited[neighbor] = true
-			if _is_floor_conductive(neighbor):
+			if joins.call(neighbor):
 				queue.append(neighbor)
-	return count
+	return out
 
 func _electrify_tile(tile_pos: Vector2i, source_type: String) -> void:
 	"""Place an electrified surface on a single tile (parallel to _ignite_tile)."""

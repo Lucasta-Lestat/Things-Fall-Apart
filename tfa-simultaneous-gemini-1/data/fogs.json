@@ -17,7 +17,7 @@
 			"conditions": []
 		},
 		"poison": {
-			"color": [0.2, 0.7, 0.2, 0.5],
+			"color": [0.45, 0.22, 0.60, 0.5],
 			"size": [1920, 1080],
 			"density": 0.55,
 			"noise_scale": 5.0,

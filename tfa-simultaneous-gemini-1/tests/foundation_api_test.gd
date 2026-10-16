@@ -281,7 +281,10 @@ func _case_game_hosts() -> void:
 	# hazards); every one must be a live callable.
 	_check("game.world_tooltip-providers-valid", game.world_tooltip._providers.values().all(
 		func(r): return (r.callable as Callable).is_valid()), str(game.world_tooltip._providers.keys()))
-	_check("game.hud_status-ships-empty", game.hud_status.get_child_count() == 0)
+	# Lanes add widgets at boot (world-info: the wind readout); each must leave
+	# world clicks alone unless it asked for a tooltip (PASS).
+	_check("game.hud_status-widgets-click-through", game.hud_status.get_children().all(
+		func(w): return w is Control and w.mouse_filter != Control.MOUSE_FILTER_STOP))
 	_check("game.hud_status-ignore", game.hud_status.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 	var tl: Control = ui.get_node("TimeLabel")
 	_check("game.hud_status-below-clock", is_equal_approx(game.hud_status.offset_top, tl.position.y + tl.size.y + 4.0),

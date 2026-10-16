@@ -10,6 +10,9 @@
 #   structures (priority 20, paused or not): name, door status, damage state
 #     and HP. Structures are drawn regardless of fog, so no sight gate; the
 #     exploration mask keeps never-seen buildings quiet.
+#   hazards (priority 10, paused only, for planning): fire, fluids, ice,
+#     electrified ground and clouds under the cursor, what each applies and
+#     how often (SurfaceManager.hazard_tooltip_text).
 # =====================
 
 extends Node
@@ -22,6 +25,7 @@ const NAME_FONT_SIZE := 16
 const SHOW_FACTION_NAME := false     # stance only; some factions may be meant to stay secret
 const PRIORITY_CHARACTERS := 30
 const PRIORITY_STRUCTURES := 20
+const PRIORITY_HAZARDS := 10
 
 const COLOR_UNHURT := Color(0.2, 0.8, 0.2)
 const COLOR_WOUNDED := Color(0.9, 0.8, 0.1)
@@ -47,12 +51,14 @@ func _ready() -> void:
 	if tip != null:
 		tip.add_provider("characters", character_text, false, PRIORITY_CHARACTERS)
 		tip.add_provider("structures", structure_text, false, PRIORITY_STRUCTURES)
+		tip.add_provider("hazards", hazard_text, true, PRIORITY_HAZARDS)
 
 func _exit_tree() -> void:
 	var tip = game.get("world_tooltip") if game != null and is_instance_valid(game) else null
 	if tip != null and is_instance_valid(tip):
 		tip.remove_provider("characters")
 		tip.remove_provider("structures")
+		tip.remove_provider("hazards")
 
 ## True when the world readouts should stay quiet: world map (banners, and
 ## its fast clock makes timers meaningless), downtime board, or a mouse
@@ -280,6 +286,21 @@ func describe_structure(s) -> String:
 
 static func structure_state_color(state: int) -> Color:
 	return [COLOR_UNHURT, COLOR_WOUNDED, COLOR_BADLY, COLOR_NEAR_DEATH][clampi(state, 0, 3)]
+
+# ---------------------------------------------------------------------------
+# Hazards
+# ---------------------------------------------------------------------------
+
+func hazard_text(world_pos: Vector2) -> String:
+	if _quiet():
+		return ""
+	# Never-seen ground stays unnamed, like its buildings.
+	if ExplorationManager.active and not ExplorationManager.is_explored(GridManager.world_to_map(world_pos)):
+		return ""
+	var sm = game.get("surface_manager")
+	if sm == null or not is_instance_valid(sm):
+		return ""
+	return sm.hazard_tooltip_text(world_pos)
 
 # ---------------------------------------------------------------------------
 # BBCode helpers
