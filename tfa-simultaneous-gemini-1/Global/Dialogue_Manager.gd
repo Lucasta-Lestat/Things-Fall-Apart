@@ -71,8 +71,13 @@ func _get_game() -> Node:
 # Start a dialogue by its ID. If another dialogue is already active, queue this
 # one and start it when the current one ends. `npc_name` is the character the
 # player asked to talk to, if any; when the dialogue can't start, the log says
-# they have nothing to say instead of the click doing nothing.
+# they have nothing to say instead of the click doing nothing. Talk arms pass
+# the NPC's active_dialogue_id() as is: an empty id with a name is just "has
+# nothing to say" (the one place that line is written), not a data error.
 func start_dialogue(dialogue_id: String, npc_name: String = ""):
+	if dialogue_id == "" and npc_name != "":
+		_log_nothing_to_say(npc_name)
+		return
 	if not dialogues.has(dialogue_id):
 		push_error("Dialogue not found: " + dialogue_id)
 		_log_nothing_to_say(npc_name)

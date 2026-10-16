@@ -2,7 +2,8 @@
 # Headless assertion harness for the inventory/trade/services feedback port:
 # weapon-swap refusals, explicit "Equip to Main/Off", Inventory.can_accept and
 # the full-receiver refusals (trade window, service card), the trade-cancel
-# worn-gear resync, the chest window's full-pack and no-recipient feedback,
+# worn-gear resync, a cancelled trade keeping abilities and weapons (and a
+# given starting weapon's hand dict), the chest window's full-pack and no-recipient feedback,
 # locked containers, the world context menu's options (Talk, Inspect,
 # Attack, containers) and the Attack order, Pick Up leaving no salvage, and
 # the Town Services panel (new-service listing, credit, weapon refusal, warp
@@ -13,6 +14,7 @@
 extends Node2D
 
 const PC_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
+const EquipmentEffects := preload("res://Items/equipment_effects.gd")
 
 var failures := 0
 var game = null
@@ -44,6 +46,7 @@ func _ready() -> void:
 	_case_can_accept()
 	_case_trade_full_npc()
 	_case_trade_cancel_resyncs_worn()
+	await _case_trade_cancel_keeps_shapes()
 	await _case_chest_window()
 	_case_locked_chest()
 	await _case_context_menu_options()
@@ -341,6 +344,70 @@ func _case_trade_cancel_resyncs_worn() -> void:
 		and pc.feet_equipment != null)
 	pc.current_health = hp_saved
 	_drop_temp(pc)
+
+func _count_shapes(c, script: Script) -> int:
+	var n := 0
+	for s in c.inventory.get_all_equipped():
+		if is_instance_valid(s) and not s.is_queued_for_deletion() and s.get_script() == script:
+			n += 1
+	return n
+
+func _hand_ghosts(c, item_id: String) -> int:
+	var n := 0
+	for d in c.inventory.items:
+		if EquipmentEffects.is_hand_ghost(d) and str(d.get("id", "")) == item_id:
+			n += 1
+	return n
+
+# Cancel restores the party's pack from its snapshot. It used to rebuild the
+# hands from item dicts, freeing the AbilityShapes (stowed spells) and every
+# weapon node (inv-1). A weapon given away mid-trade comes back on Cancel, and
+# a starting weapon's hidden hand dict goes with it and comes back with it.
+func _case_trade_cancel_keeps_shapes() -> void:
+	var npc = _npc()
+	var p0 = game.party_chars[0]
+	if npc == null:
+		_check("shapes.fixtures", false, "no npc")
+		return
+	var AS: Script = load("res://Abilities/ability_shape.gd")
+	var WS: Script = load("res://data/weapon_shape.gd")
+	if _count_shapes(p0, AS) == 0:
+		p0.inventory.add_ability_by_id(String(AbilityDatabase.get_all_ability_ids()[0]))
+	var ab_before := _count_shapes(p0, AS)
+	var wp_before := _count_shapes(p0, WS)
+	var w := _open_trade(npc)
+	_check("shapes.window-open", w != null)
+	if w == null:
+		return
+	w._on_cancel_pressed()
+	await _await_frames(3)
+	_check("shapes.cancel-keeps-abilities", _count_shapes(p0, AS) == ab_before, "%d -> %d" % [ab_before, _count_shapes(p0, AS)])
+	_check("shapes.cancel-keeps-weapons", _count_shapes(p0, WS) == wp_before, "%d -> %d" % [wp_before, _count_shapes(p0, WS)])
+	var given = null
+	for s in p0.inventory.stowed_items:
+		if is_instance_valid(s) and s.get_script() == WS:
+			given = s
+			break
+	if given == null and p0.inventory.main_hand_item != null and p0.inventory.main_hand_item.get_script() == WS:
+		given = p0.inventory.main_hand_item
+	if given == null:
+		print("SKIP shapes.given-weapon-* (no weapon to give)")
+		return
+	var given_id: String = str(given.id)
+	var ghosts_before := _hand_ghosts(p0, given_id)
+	w = _open_trade(npc)
+	w._drop_data(Vector2.ZERO, {"source_character": p0, "entry": {"kind": "weapon", "raw": given, "display_name": str(given.display_name)}})
+	await _await_frames(2)
+	var mid := _count_shapes(p0, WS)
+	var ghosts_mid := _hand_ghosts(p0, given_id)
+	w._on_cancel_pressed()
+	await _await_frames(3)
+	_check("shapes.given-weapon-leaves", mid == wp_before - 1, "%d -> %d" % [wp_before, mid])
+	_check("shapes.given-weapon-returns", _count_shapes(p0, WS) == wp_before, "%d -> %d" % [mid, _count_shapes(p0, WS)])
+	_check("shapes.given-weapon-abilities-kept", _count_shapes(p0, AS) == ab_before)
+	if ghosts_before > 0:
+		_check("shapes.given-weapon-ghost-leaves", ghosts_mid == ghosts_before - 1, "%d -> %d" % [ghosts_before, ghosts_mid])
+		_check("shapes.given-weapon-ghost-returns", _hand_ghosts(p0, given_id) == ghosts_before, "%d -> %d" % [ghosts_mid, _hand_ghosts(p0, given_id)])
 
 # ---------------------------------------------------------------------------
 # Chest window (full pack, no recipient) and locked containers

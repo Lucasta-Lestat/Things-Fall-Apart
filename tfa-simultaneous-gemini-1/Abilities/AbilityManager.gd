@@ -144,22 +144,27 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	# Ability range is measured from where the caster actually stands now. The
 	# targeting preview already clamps to the ring around the caster (or the
 	# planned node); this covers a caster who stopped short, and any caller
-	# that skipped targeting. Picked characters were range-checked when picked,
-	# and a designated character (anchor) re-aims the cast anyway. A cone's
+	# that skipped targeting. Picked characters and single-target designations
+	# were range-checked at confirm (AbilityTargeting), and a designated
+	# character (anchor) re-aims the cast anyway. A cone's
 	# point only aims it (its reach is its radius), so it is left alone.
 	# Only an anchor that actually re-aimed counts: a ground AoE ignores the
 	# anchor the AI passes with every cast, and a dead one falls back to the
 	# planned point, which the clamp still covers.
 	var max_range: float = float(ability.targeting.get("range", 0.0))
 	var has_anchor: bool = _anchored_position(ability, target_anchor, Vector2.INF) != Vector2.INF
+	var ai_attempt: bool = character.get("ai_cast_attempt") == true
+	# The notice goes out only once the cast is committed (costs paid, below):
+	# a cast the charm veto or the law gate then refuses never fell short.
+	var range_notice_log := ""
 	if ability.targeting.get("type", "") != "self" and max_range > 0.0 and explicit_targets.is_empty() \
 			and not has_anchor and not free and String(ability.targeting.get("shape", "")) != "cone":
 		var clamped := clamp_point_to_range(character.global_position, target_position, max_range)
 		if clamped != target_position and clamped.distance_to(target_position) > RANGE_CLAMP_NOTICE_PX \
 				and character.has_method("is_party_member") and character.is_party_member() \
-				and not (character.get("ai_cast_attempt") == true):
-			character.notify("Out of range", Color(1.0, 0.6, 0.4), "%s's %s falls short: the target was %d away, range %d." % [
-				character.Name, ability.display_name, int(character.global_position.distance_to(target_position)), int(max_range)])
+				and not ai_attempt:
+			range_notice_log = "%s's %s falls short: the target was %d away, range %d." % [
+				character.Name, ability.display_name, int(character.global_position.distance_to(target_position)), int(max_range)]
 		target_position = clamped
 
 	# Infatuated: block offensive abilities that would hit the charm source
@@ -167,9 +172,22 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		var cond_mgr = _get_condition_manager()
 		var inf_instance = cond_mgr.conditions.get("infatuated") if cond_mgr else null
 		var source_name = inf_instance.source.Name if inf_instance and is_instance_valid(inf_instance.source) else "them"
-		GameLog.add_entry(character.Name + " can't use " + ability.display_name + " against " + source_name + "!")
+		# The AI retries a refused cast every 1.2 s (ai._cast): log only ordered casts.
+		if not ai_attempt:
+			GameLog.add_entry(character.Name + " can't use " + ability.display_name + " against " + source_name + "!")
 		cast_failed.emit(ability, "Cannot harm charm source")
 		return false
+
+	# Law, for the AI's own casts (an unselected party member, a summon): the
+	# cast-again confirmation below is the player's consent, so the AI never
+	# arms or consumes it. It skips any cast at confirm severity, silently,
+	# and falls through to its next ability or its weapon. preview() writes
+	# nothing.
+	if ai_attempt:
+		var ai_verdict: Dictionary = CrimeManager.preview(character, "cast", CrimeManager.cast_payload(ability))
+		if not ai_verdict.is_empty() and int(ai_verdict.get("severity", 0)) >= LawDatabase.confirm_threshold():
+			cast_failed.emit(ability, "Illegal here: " + str(ai_verdict.get("display_name", "")))
+			return false
 
 	# Law: a severely illegal cast asks for one cast-again confirmation per
 	# map — legality is jurisdiction-dependent and invisible, and committing
@@ -177,7 +195,7 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	# protocol as the infatuation veto above. The crime report itself fires
 	# on COMPLETION (ProceduralCharacter._on_ability_cast_completed), so an
 	# interrupted cast is never a crime.
-	var law_confirm: Dictionary = CrimeManager.cast_needs_confirmation(character, ability)
+	var law_confirm: Dictionary = {} if ai_attempt else CrimeManager.cast_needs_confirmation(character, ability)
 	if not law_confirm.is_empty():
 		var verdict: Dictionary = law_confirm.get("verdict", {})
 		GameLog.add_entry("%s here is %s — a crime under the law of %s (severity %d). Cast again if you mean to break the law." % [
@@ -199,6 +217,9 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 			ability.remove_meta("free_cast")
 		if ability.is_concentration() and character.has_method("end_concentration") and not character.active_concentrations.is_empty():
 			character.end_concentration("replaced", ability.display_name)
+
+	if range_notice_log != "":
+		character.notify("Out of range", Color(1.0, 0.6, 0.4), range_notice_log)
 
 	if ability.cast_time <= 0:
 		_execute_ability(ability, target_position, explicit_targets, target_anchor)

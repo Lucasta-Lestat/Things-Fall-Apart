@@ -16,7 +16,8 @@
 #       the branch, and a dialogue check is logged with roll vs target,
 #   (6) speakers resolve to in-scene characters ("narrator" has no label),
 #   (7) the panel: SPACE advances without toggling pause, the continue prompt
-#       always shows, an empty speaker label hides,
+#       always shows, an empty speaker label hides; SPACE (advancing or
+#       closing) never reaches a selected member as a main-hand click,
 #   (8) the quest log: a deadline's days left, the failure reason, a failed
 #       quest's checklist, and the J hints in the log lines,
 #   (9) the cemetery's DEMO dialogues and the test elf are gone.
@@ -41,6 +42,14 @@ class StubGame:
 	var characters_in_scene: Array = []
 	var party_chars: Array = []
 	var party_state: Array = []
+	# Read by a player-controlled member's input handling (_case_space_no_swing).
+	var structures_in_scene: Array = []
+	var items_in_scene: Array = []
+	var selected_characters: Array = []
+	var primary_selected = null
+	var context_menu_open: bool = false
+	var stealth_mode: bool = false
+	var roof_view: bool = false
 	func get_party() -> Array:
 		return party_chars
 
@@ -80,6 +89,7 @@ func _ready() -> void:
 	_case_speakers()
 	_case_ally_reactions()
 	await _case_panel()
+	await _case_space_no_swing()
 	_case_quest_deadline_and_failure()
 	_case_quest_and_note_hints()
 	_case_cemetery_demo_gone()
@@ -359,6 +369,82 @@ func _case_panel() -> void:
 			PauseManager.pause()
 		else:
 			PauseManager.unpause()
+	panel.queue_free()
+	await get_tree().process_frame
+
+
+# --- 7b. SPACE in a dialogue is not a click ---------------------------------
+# SPACE advances (and closes) the dialogue. ProceduralCharacter used to read it
+# as ui_select, a main-hand click, so the selected member also swung at (or,
+# paused, queued an attack on) whoever stood under the cursor (DQC-1). A real
+# key event, as the keyboard sends it.
+
+func _press_space() -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_SPACE
+	ev.physical_keycode = KEY_SPACE
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var up := InputEventKey.new()
+	up.keycode = KEY_SPACE
+	up.physical_keycode = KEY_SPACE
+	up.pressed = false
+	Input.parse_input_event(up)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+
+
+func _case_space_no_swing() -> void:
+	_reset_dialogue()
+	var was_paused: bool = PauseManager.is_paused
+	var panel := _build_panel()
+	add_child(panel)
+	var npc = CHAR_SCENE.instantiate()
+	npc.Name = "Bystander"
+	game.add_child(npc)
+	npc.global_position = Vector2(420, 300)
+	game.characters_in_scene.append(npc)
+	player.global_position = Vector2(360, 300)
+	player.is_player_controlled = true
+	game.selected_characters = [player]
+	game.primary_selected = player
+	await get_tree().process_frame
+	var m := InputEventMouseMotion.new()
+	m.position = Vector2(420, 300)
+	m.global_position = m.position
+	Input.parse_input_event(m)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+
+	DialogueManager.dialogues["test_space"] = {"dialogueNodes": {"test_space": {"narrator": "First.", "guard": "Second."}}}
+	DialogueManager.start_dialogue("test_space")
+	await get_tree().process_frame
+	await _press_space()
+	_report("space.advances", DialogueManager.current_line_index == 1, str(DialogueManager.current_line_index))
+	_report("space.advance-queues-nothing", player.action_queue.get_queue_size() == 0 and player.action_queue.current_action == null,
+		"queue %d" % player.action_queue.get_queue_size())
+	_report("space.advance-no-swing", not player.attack_animator.is_attacking, "")
+	await _press_space()
+	_report("space.closes", not DialogueManager.is_active(), "")
+	_report("space.close-queues-nothing", player.action_queue.get_queue_size() == 0 and player.action_queue.current_action == null,
+		"queue %d" % player.action_queue.get_queue_size())
+	_report("space.close-no-swing", not player.attack_animator.is_attacking, "")
+
+	player.is_player_controlled = false
+	game.selected_characters = []
+	game.primary_selected = null
+	game.characters_in_scene.erase(npc)
+	DialogueManager.dialogues.erase("test_space")
+	_reset_dialogue()
+	if PauseManager.is_paused != was_paused:
+		if was_paused:
+			PauseManager.pause()
+		else:
+			PauseManager.unpause()
+	npc.queue_free()
 	panel.queue_free()
 	await get_tree().process_frame
 

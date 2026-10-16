@@ -1,8 +1,10 @@
 # res://tests/feedback_layer_test.gd
 # Headless assertion harness for the player-feedback layer: the on-screen game
-# log, notify(), floating-text stacking and colours, the PAUSED banner,
-# ability cast-failure reasons, the "Inventory full" notice and partial-stack
-# honesty, and template characters' Name. Drives the real game scene the way
+# log, notify(), floating-text stacking and colours, the PAUSED banner (and
+# its in-conversation wording), ability cast-failure reasons (the AI's own
+# illegal casts stay silent and never touch the law confirmation), the
+# "Inventory full" notice and partial-stack honesty, and template characters'
+# Name. Drives the real game scene the way
 # law_persist_test does.
 # Run:  godot --headless --path . res://tests/feedback_layer_test.tscn
 # Judge by PASS/FAIL lines, not exit code alone (startup noise is normal).
@@ -41,6 +43,7 @@ func _ready() -> void:
 	_case_floating_text()
 	_case_notify()
 	_case_cast_failure()
+	_case_ai_law_cast()
 	_case_inventory_full()
 	_case_pickup_partial()
 	_case_names()
@@ -109,6 +112,13 @@ func _case_pause_banner() -> void:
 	PauseManager.pause()
 	_check("pause.banner-shown", PauseManager._indicator != null and PauseManager._indicator.visible)
 	_check("pause.banner-text", PauseManager._indicator.text.begins_with("PAUSED"))
+	# In a conversation Space advances lines, so the banner doesn't offer it.
+	DialogueManager.dialogues["harness_banner_talk"] = {"dialogueNodes": {"harness_banner_talk": {"narrator": "Hello."}}}
+	DialogueManager.start_dialogue("harness_banner_talk")
+	_check("pause.banner-talking", PauseManager._indicator.text == PauseManager.BANNER_TALKING, PauseManager._indicator.text)
+	DialogueManager.end_dialogue()
+	_check("pause.banner-planning-again", PauseManager._indicator.text == PauseManager.BANNER_PLANNING, PauseManager._indicator.text)
+	DialogueManager.dialogues.erase("harness_banner_talk")
 	PauseManager.unpause()
 	_check("pause.banner-hidden", not PauseManager._indicator.visible)
 	_check("pause.banner-click-through", PauseManager._indicator.mouse_filter == Control.MOUSE_FILTER_IGNORE)
@@ -231,6 +241,50 @@ func _case_cast_failure() -> void:
 		_check("cast.ordered-attempt-announced", not ordered_ok and GameLog.get_entries().size() == n0 + 1 \
 			and str(GameLog.get_entries()[-1].text).begins_with("%s can't use" % p0.Name), str(GameLog.get_entries()[-1].text))
 		p0.ability_manager.current_cast = saved_cast
+
+# The AI's own cast attempts (ai_cast_attempt) at a cast crime are refused
+# silently and neither arm nor use the map's cast-again confirmation; an
+# ordered cast still gets the "Cast again" prompt.
+func _case_ai_law_cast() -> void:
+	var p0 = game.party_chars[0]
+	var saved_map: String = game.current_map_id
+	var saved_unlimited: bool = p0.npc_unlimited_resources
+	MapDatabase._maps["__crime_waldau"] = {"id": "__crime_waldau", "controlling_faction": "waldau"}
+	game.current_map_id = "__crime_waldau"
+	CrimeManager._pending_cast_confirms.clear()
+	CrimeManager._confirmed_cast_maps.clear()
+	p0.npc_unlimited_resources = true
+	var mk := func(): return Ability.from_dict({
+		"id": "harness_necro_bolt", "display_name": "Harness Necro Bolt", "cast_time": 0.0,
+		"traits": {"necrotic": 3},
+		"targeting": {"type": "point", "range": 220.0, "shape": "circle", "radius": 10.0},
+		"effects": [],
+	})
+	var parent: Node = p0.get_parent()
+	var n0: int = GameLog.get_entries().size()
+	var f0: int = _floats_under(parent).size()
+	p0._last_notify_text = ""
+	p0.ai_cast_attempt = true
+	var results: Array = []
+	for i in 3:
+		results.append(p0.use_ability(mk.call(), {"position": p0.global_position + Vector2(100, 0)}))
+	p0.ai_cast_attempt = false
+	_check("cast.ai-law-silent", results == [false, false, false] and GameLog.get_entries().size() == n0 		and _floats_under(parent).size() == f0 and p0._last_notify_text == "",
+		"%s, %d new log lines" % [str(results), GameLog.get_entries().size() - n0])
+	_check("cast.ai-law-no-confirm", CrimeManager._pending_cast_confirms.is_empty() and CrimeManager._confirmed_cast_maps.is_empty(),
+		"%s %s" % [str(CrimeManager._pending_cast_confirms), str(CrimeManager._confirmed_cast_maps)])
+	n0 = GameLog.get_entries().size()
+	var ordered: bool = p0.use_ability(mk.call(), {"position": p0.global_position + Vector2(100, 0)})
+	var prompted := false
+	for i in range(n0, GameLog.get_entries().size()):
+		if "Cast again if you mean to break the law" in str(GameLog.get_entries()[i].text):
+			prompted = true
+	_check("cast.ordered-law-prompts", not ordered and prompted, str(GameLog.get_entries()[-1].text))
+	CrimeManager._pending_cast_confirms.clear()
+	CrimeManager._confirmed_cast_maps.clear()
+	MapDatabase._maps.erase("__crime_waldau")
+	game.current_map_id = saved_map
+	p0.npc_unlimited_resources = saved_unlimited
 
 func _fill(inv, keep: Array) -> void:
 	inv.items.clear()

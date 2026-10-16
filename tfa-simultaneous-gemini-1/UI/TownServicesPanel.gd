@@ -962,11 +962,7 @@ func _on_warp_menu_selected(id: int, card_data: Dictionary) -> void:
 		2:
 			var npc = card_data["live_npc"]
 			if is_instance_valid(npc):
-				var dlg_id: String = npc.active_dialogue_id()
-				if dlg_id != "":
-					DialogueManager.start_dialogue(dlg_id)
-				else:
-					GameLog.add_entry("%s has nothing to say." % npc.Name)
+				DialogueManager.start_dialogue(npc.active_dialogue_id(), str(npc.Name))
 
 func _handle_left_click(card_data: Dictionary) -> void:
 	# Same as right-click "Trade" if NPC is local, else fall back to warp menu.

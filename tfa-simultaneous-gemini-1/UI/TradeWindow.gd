@@ -187,19 +187,23 @@ func _snapshot_character(character) -> Dictionary:
 
 func _rollback_character(character, snapshot: Dictionary) -> void:
 	var inv = character.inventory
-	# Free current weapons (hands + stowed).
-	var current_weapons = inv.get_all_equipped()
-	if inv.main_hand_item != null:
-		inv.unequip_hand("Main")
-	if inv.off_hand_item != null:
-		inv.unequip_hand("Off")
+	# Free current weapons (hands + stowed). Only WeaponShapes: trades never
+	# move abilities, and the snapshot holds no AbilityShapes to restore, so
+	# the canonical abilities in stowed_items and the copies in the hands stay
+	# (freeing them deleted every ability on Cancel).
+	var current_weapons: Array = []
+	if inv.main_hand_item is WeaponShape:
+		current_weapons.append(inv.unequip_hand("Main"))
+	if inv.off_hand_item is WeaponShape:
+		current_weapons.append(inv.unequip_hand("Off"))
 	for w in inv.stowed_items.duplicate():
-		inv.stowed_items.erase(w)
-		inv.emit_signal("weapon_unequipped", w)
+		if w is WeaponShape:
+			inv.stowed_items.erase(w)
+			inv.emit_signal("weapon_unequipped", w)
+			current_weapons.append(w)
 	for w in current_weapons:
 		if is_instance_valid(w):
 			w.queue_free()
-	inv.stowed_items.clear()
 
 	# Restore items (signal-emitting append so the side panel refreshes).
 	inv.items.clear()
@@ -456,6 +460,9 @@ func _drop_data(at_position: Vector2, data) -> void:
 			else:
 				src_inv.stowed_items.erase(weapon)
 				src_inv.emit_signal("weapon_unequipped", weapon)
+			# A starting weapon's hidden hand dict leaves with it (a Cancel
+			# restores both from the snapshot).
+			src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 			weapon.queue_free()
 			npc.inventory.stow_weapon_from_data(weapon_data)
 	SfxManager.play_ui("coin_pickup")

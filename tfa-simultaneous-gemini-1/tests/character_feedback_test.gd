@@ -103,6 +103,7 @@ func _ready() -> void:
 	await _case_damage_path()
 	await _case_elemental()
 	await _case_ticks_and_stress()
+	await _case_rider_source_and_lethal()
 	_case_stats()
 	await _case_icons()
 	await _case_heal_deny_death()
@@ -366,6 +367,68 @@ func _case_icons() -> void:
 				stack_text = ch.text
 	_check("icons.stack-count-shown", stack_text == "3", stack_text)
 	c.condition_manager.clear_all_conditions()
+
+# ---------------------------------------------------------------------------
+
+# dmg-01: an elemental hit's Burning / Poisoned / Chilled carries the attacker
+# (their ticks are the attacker's: kill credit, the law); Bleeding and a hit
+# from oneself stay sourceless. dmg-05: a killing blow is no wound to react
+# to: no stress, no focus loss, no breakdown or concentration line after the
+# death line.
+func _case_rider_source_and_lethal() -> void:
+	var v := _spawn(Vector2(900, 600))
+	var atk := _spawn(Vector2(950, 600))
+	await get_tree().process_frame
+	v.constitution = 1000
+	v.current_health = v.max_health
+	v.take_damage({"fire": 3}, v.global_position, atk)
+	var burn = v.condition_manager.get_condition("burning")
+	_check("rider.fire-source-is-attacker", burn != null and burn.source == atk, burn.source if burn else "no burning")
+	# Bleeding rolls a CON save on application: an ordinary victim, a few cuts.
+	var cut := _spawn(Vector2(900, 650))
+	await get_tree().process_frame
+	cut.constitution = 1
+	var bleed = null
+	for i in 10:
+		cut.current_health = cut.max_health
+		cut.take_damage({"slashing": 3}, cut.global_position, atk)
+		bleed = cut.condition_manager.get_condition("bleeding")
+		if bleed != null:
+			break
+	_check("rider.bleeding-sourceless", bleed != null and bleed.source == null, bleed.source if bleed else "no bleeding")
+	cut.condition_manager.clear_all_conditions()
+	v.condition_manager.clear_all_conditions()
+	v.take_damage({"fire": 3}, v.global_position, v)
+	burn = v.condition_manager.get_condition("burning")
+	_check("rider.self-hit-sourceless", burn != null and burn.source == null, burn.source if burn else "no burning")
+	v.condition_manager.clear_all_conditions()
+
+	var pm := _spawn(Vector2(1000, 600), true)
+	stub.seen[pm] = true
+	await get_tree().process_frame
+	pm.stress = max(0, pm.max_stress - 1)
+	var stress_before: int = pm.stress
+	pm.focus = 1
+	pm.concentration_locked_focus = 1
+	pm.active_concentrations["harness_spell"] = {"name": "Harness Spell", "focus": 1, "conditions": [], "objects": []}
+	pm.current_health = 1
+	var n0: int = log_lines.size()
+	pm.take_damage({"fire": 50}, pm.global_position, atk)
+	_check("lethal.dead", not pm.is_alive())
+	_check("lethal.no-stress", pm.stress == stress_before, "%d -> %d" % [stress_before, pm.stress])
+	var after_death: Array = []
+	var seen_death := false
+	for i in range(n0, log_lines.size()):
+		var line := String(log_lines[i])
+		if seen_death:
+			after_death.append(line)
+		elif line.contains("has died."):
+			seen_death = true
+	var reactions := 0
+	for line in after_death:
+		if String(line).contains("loses concentration") or String(line).contains("breaks under the strain"):
+			reactions += 1
+	_check("lethal.no-reaction-after-death-line", seen_death and reactions == 0, log_lines.slice(n0))
 
 # ---------------------------------------------------------------------------
 

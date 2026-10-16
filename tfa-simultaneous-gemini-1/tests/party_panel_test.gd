@@ -13,7 +13,7 @@
 #      paused, keep the item when nothing happens, and a planned weapon throw
 #      leaves the weapon carried until it runs.
 #   5. Consumables (ActionQueue.apply_consumable): a Potion of Healing heals
-#      once and starts no cast; a dead recipient is refused.
+#      once, cures poison and starts no cast; a dead recipient is refused.
 #   6. Slot, bar, pip and condition tooltips and labels; ability slots grey
 #      out when unaffordable; a school gained mid-run gets its pip row.
 #   7. The downtime portrait strip: dead tint, refusal and tooltip.
@@ -420,6 +420,15 @@ func _case_consume() -> void:
 	_check("consume.potion-no-cast", not a.ability_manager.is_casting())
 	_check("consume.potion-used", _count(a.inventory, "potion_of_healing") == count0 - 1)
 	_check("consume.logged", _log_has("consumes the Potion of Healing", n0))
+	# The potion also cures poison (inv-6), still without a Holy cast.
+	a.current_health = max(1, a.max_health - 40)
+	a.condition_manager.apply_condition("poisoned", null, 1, 30.0)
+	a.inventory.add_item(_item("potion_of_healing"))
+	idx = _index_of(a.inventory, "potion_of_healing")
+	n0 = GameLog.get_entries().size()
+	psp._consume_item(a, idx, a.inventory.items[idx])
+	_check("consume.potion-cures-poison", not a.condition_manager.conditions.has("poisoned") and _log_has("ends Poisoned", n0), str(a.condition_manager.conditions.keys()))
+	_check("consume.potion-cure-no-cast", not a.ability_manager.is_casting())
 	# A dead recipient is refused and the item kept.
 	a.inventory.add_item(_item("apple"))
 	idx = _index_of(a.inventory, "apple")

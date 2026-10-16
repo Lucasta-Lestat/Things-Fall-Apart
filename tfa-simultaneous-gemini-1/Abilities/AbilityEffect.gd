@@ -602,6 +602,11 @@ static func _resolve_apply_condition(
 		var target_cond_manager = _get_condition_manager(target)
 		if not target_cond_manager:
 			continue
+		# Corpses take no conditions (ConditionManager refuses them); skip them
+		# before the roll and the save so no "Resisted" or "No effect" floats
+		# over a tombstone.
+		if target.has_method("is_alive") and not target.is_alive():
+			continue
 
 		if chance < 1.0:
 			var roll := randf()
@@ -682,7 +687,12 @@ static func _announce_effect_save(target: Node, caster: Node, condition_id: Stri
 ## (only built when the party is involved). A hidden NPC stays quiet, float
 ## and log alike, as ConditionManager's notices do: the log would name it.
 static func _notify_rider(target: Node, text: String, log_text: String, color: Color = Color(0.6, 0.85, 1.0)) -> void:
-	if not (_involves_party(target) or (target is CanvasItem and target.visible)):
+	# "Seen" is line of sight (_announces_to_party: Game.is_seen_by_party), as
+	# for condition notices and damage numbers: a hearing pulse also sets
+	# `visible` on an NPC the party only heard.
+	var seen: bool = (target._announces_to_party() if target.has_method("_announces_to_party")
+			else (target is CanvasItem and target.visible))
+	if not (_involves_party(target) or seen):
 		return
 	if target.has_method("notify"):
 		target.notify(text, color, log_text)

@@ -227,13 +227,21 @@ func _case_world_tooltip() -> void:
 	_check("hover.blocked-by-context-menu", tip._blocked())
 	stub.context_menu_open = false
 	_check("hover.not-blocked-over-world", not tip._blocked())
-	tip._set_text("Short")
+	# The tooltip re-asks its providers on its own (at once after a provider
+	# change, then every REFRESH_SEC of real time, which one slow frame can
+	# pass): a top provider answering the probed text keeps it from swapping
+	# in "B" between _set_text and the size check.
+	var probe := ["Short"]
+	tip.add_provider("probe", func(_p): return probe[0], false, 100)
+	tip._set_text(probe[0])
 	await get_tree().process_frame
 	var short_w: float = tip.size.x
-	tip._set_text("A very long hover text that keeps on going well past the maximum width so that it has to wrap onto several lines instead of running off.")
+	probe[0] = "A very long hover text that keeps on going well past the maximum width so that it has to wrap onto several lines instead of running off."
+	tip._set_text(probe[0])
 	await get_tree().process_frame
 	_check("hover.long-text-wraps", tip._label.autowrap_mode != TextServer.AUTOWRAP_OFF and tip.size.x <= 320.0 + 20.0, str(tip.size))
 	_check("hover.short-text-narrow", short_w < 120.0, str(short_w))
+	tip.remove_provider("probe")
 	tip._game = null
 	layer.queue_free()
 	stub.queue_free()

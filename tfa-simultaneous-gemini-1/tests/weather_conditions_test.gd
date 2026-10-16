@@ -150,6 +150,8 @@ func _run() -> void:
 	game._tick_forced_weather(1.5)
 	_check("timed.reverts-when-it-runs-out", game.current_precipitation() == "clear", game.current_precipitation())
 	_check("timed.log-passes", _log_has(["Acid Rain passes."]))
+	# One line for the change, the passing spell leading it (GWT-1).
+	_check("timed.log-one-line", _log_has(["Acid Rain passes. The weather turns: Clear."]))
 	_check("timed.log-full-sight-returns", _log_has(["Full sight returns."]))
 	game._weather_condition_timers.clear()
 	game._tick_weather_conditions(10.0)

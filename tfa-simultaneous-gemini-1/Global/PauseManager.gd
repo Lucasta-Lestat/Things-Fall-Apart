@@ -14,16 +14,26 @@ var is_paused: bool = false
 var _indicator_layer: CanvasLayer
 var _indicator: Label
 
+const BANNER_PLANNING := "PAUSED — planning  ·  Space to resume"
+# While a conversation is up, Space advances its lines (dialogue_panel.gd
+# consumes the pause action), so the banner mustn't promise that it resumes.
+const BANNER_TALKING := "PAUSED — in conversation"
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_indicator()
+	# DialogueManager is an earlier autoload, so it is already in the tree.
+	var dm = get_node_or_null("/root/DialogueManager")
+	if dm:
+		dm.dialogue_updated.connect(_update_indicator.unbind(4))
+		dm.dialogue_ended.connect(_update_indicator)
 
 func _build_indicator() -> void:
 	_indicator_layer = CanvasLayer.new()
 	_indicator_layer.layer = 50
 	add_child(_indicator_layer)
 	_indicator = Label.new()
-	_indicator.text = "PAUSED — planning  ·  Space to resume"
+	_indicator.text = BANNER_PLANNING
 	_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_indicator.add_theme_font_size_override("font_size", 20)
@@ -41,6 +51,9 @@ func _build_indicator() -> void:
 func _update_indicator() -> void:
 	if _indicator:
 		_indicator.visible = is_paused
+		var dm = get_node_or_null("/root/DialogueManager")
+		var talking: bool = dm != null and dm.has_method("is_active") and dm.is_active()
+		_indicator.text = BANNER_TALKING if talking else BANNER_PLANNING
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):

@@ -9,7 +9,8 @@
 #   talkable non-hostile -> talk cursor
 #   everyone else        -> the plain reticle
 # and the three ways "talkable" can fail: no Talk verb, no dialogue at the
-# current index, and the player sneaking.
+# current index, and the player sneaking. A peaceful NPC whose dialogue id is
+# missing from Dialogues.json is a talk click with nothing to say: the arrow.
 #
 # The scene root is deliberately named "Game": ProceduralCharacter resolves its
 # `game` reference as get_node_or_null("/root/Game"), so the stealth_mode gate
@@ -76,6 +77,7 @@ func _ready() -> void:
 	_case_verb_cursors()
 	_case_talk_gates()
 	_case_click_agrees_with_cursor()
+	_case_nothing_to_say()
 
 	for stub_id in _STUB_DIALOGUES:
 		DialogueManager.dialogues.erase(stub_id)
@@ -185,3 +187,36 @@ func _case_click_agrees_with_cursor() -> void:
 	friendly.current_dialogue_index = 7
 	_check("dialogue-id.empty-when-out-of-range", friendly.active_dialogue_id() == "")
 	_check("dialogue-id.gates-the-click", not _viewer._would_talk_to(friendly))
+
+
+# A peaceful NPC whose dialogue id Dialogues.json lacks (a town guard, a
+# merchant): not a conversation (no talk cursor), but still a talk click that
+# says "nothing to say" rather than swinging, so the cursor is the plain arrow,
+# not the reticle. Sneaking, hostility and an empty dialogues list keep dev's
+# behaviour: the click designates (reticle).
+func _case_nothing_to_say() -> void:
+	var reticle := _viewer._get_targeting_cursor()
+	var guard := _spawn("player", "Guard")
+	guard.interact_options = ["Talk"]
+	guard.dialogues = ["no_such_dialogue_harness"]
+	guard.current_dialogue_index = 0
+	_check("mute.not-a-conversation", not _viewer._would_talk_to(guard))
+	_check("mute.click-is-talk", _viewer._click_is_talk(guard))
+	_check("mute.cursor-is-arrow", _viewer._hover_cursor_for_character(guard) == null)
+
+	stealth_mode = true
+	_check("mute.sneaking-click-not-talk", not _viewer._click_is_talk(guard))
+	_check("mute.sneaking-cursor-is-reticle", _viewer._hover_cursor_for_character(guard) == reticle)
+	stealth_mode = false
+
+	var brigand := _spawn("bandits", "Brigand")
+	brigand.interact_options = ["Talk"]
+	brigand.dialogues = ["no_such_dialogue_harness"]
+	brigand.current_dialogue_index = 0
+	_check("mute.hostile-click-not-talk", not _viewer._click_is_talk(brigand))
+
+	var blank := _spawn("player", "Blank")
+	blank.interact_options = ["Talk"]
+	blank.dialogues = []
+	_check("mute.no-dialogues-click-not-talk", not _viewer._click_is_talk(blank))
+	_check("mute.no-dialogues-designatable", _viewer._hover_cursor_for_character(blank) == reticle)

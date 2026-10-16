@@ -349,10 +349,13 @@ func _case_reward_screen_builds() -> void:
 	empty.queue_free()
 
 	# And the applier honours each type.
-	var before: int = game.player.inventory.items.size()
+	# A hand item (Winter's Grip is a Main Hand weapon) is stowed as a weapon,
+	# as a pick-up is, so it lands in stowed_items rather than items.
+	var inv = game.player.inventory
+	var before: int = inv.items.size() + inv.stowed_items.size()
 	game._apply_quest_reward({"type": "item", "item_id": "winters_grip"}, game.player)
-	_report("screen.item-reward-lands", game.player.inventory.items.size() > before,
-		"%d -> %d" % [before, game.player.inventory.items.size()])
+	var after: int = inv.items.size() + inv.stowed_items.size()
+	_report("screen.item-reward-lands", after > before, "%d -> %d" % [before, after])
 
 	TrainingManager.commitments.clear()
 	game._apply_quest_reward(

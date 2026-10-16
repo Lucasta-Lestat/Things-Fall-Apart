@@ -530,7 +530,8 @@ func _refresh_inventory(data: Dictionary) -> void:
 		var slot = _create_item_slot(entry, data)
 		grid.add_child(slot)
 		if entry.get("kind", "") == "ability" and not entry.get("costs", {}).is_empty():
-			ability_slots.append({"slot": slot, "costs": entry["costs"]})
+			ability_slots.append({"slot": slot, "costs": entry["costs"],
+				"concentration": entry.get("concentration", false)})
 	data["ability_slots"] = ability_slots
 
 # The real cost of an ability slot comes from its school traits (Arcane 2 ->
@@ -550,6 +551,9 @@ func _set_ability_costs(entry: Dictionary, character) -> void:
 			entry["innate"] = innate
 		else:
 			costs = AbilityManager.school_costs_for(ability)
+			# A new Concentration cast ends the held one, so the slot counts
+			# held focus as available (AbilityManager._check_ability_usable).
+			entry["concentration"] = ability.is_concentration()
 	entry["costs"] = costs
 
 # Builds a unified list of display entries covering inventory.items, hand-equipped
@@ -1065,6 +1069,8 @@ func _transfer_weapon(source_char, target_char, weapon) -> void:
 	else:
 		src_inv.stowed_items.erase(weapon)
 		src_inv.emit_signal("weapon_unequipped", weapon)
+	# A starting weapon's hidden hand dict leaves with it.
+	src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 	weapon.queue_free()
 	target_char.inventory.stow_weapon_from_data(weapon_data)
 
@@ -1157,7 +1163,7 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 		# "Drop"). "Sheathe"/"Equip"/"Stow" are synonyms for the state-dependent
 		# entries appended below, so filter them out to avoid duplicates.
 		var node = entry.get("raw")
-		if kind == "weapon" and node is WeaponShape:
+		if kind == "weapon" and is_instance_valid(node) and node is WeaponShape:
 			for opt in node.options:
 				if opt in ["Sheathe", "Equip", "Stow"]:
 					continue
@@ -1554,17 +1560,22 @@ func _drop_split(character, item_index: int, item_data: Dictionary, slider: HSli
 
 # Remove a WeaponShape node from wherever it lives in the inventory
 # (main hand, off hand, or stowed). Returns true if found and removed.
+# A starting weapon's hidden hand dict leaves with it (Drop, and the planned
+# or paused weapon throw).
 func _remove_weapon_from_inventory(inventory, weapon) -> bool:
 	if weapon == inventory.main_hand_item:
 		inventory.unequip_hand("Main")
-		return true
-	if weapon == inventory.off_hand_item:
+	elif weapon == inventory.off_hand_item:
 		inventory.unequip_hand("Off")
-		return true
-	if weapon in inventory.stowed_items:
+	elif weapon in inventory.stowed_items:
 		inventory.stowed_items.erase(weapon)
-		return true
-	return false
+		# unequip_hand signals for the hands; a stowed weapon needs it too, or
+		# its panel slot outlives the freed node (as _transfer_weapon does).
+		inventory.emit_signal("weapon_unequipped", weapon)
+	else:
+		return false
+	inventory.drop_hand_ghost(str(weapon.id))
+	return true
 
 func _throw_weapon(character, entry: Dictionary) -> void:
 	if not game_node:
@@ -1601,10 +1612,13 @@ func _drop_weapon(character, entry: Dictionary) -> void:
 	if node == null or not is_instance_valid(node) or not (node is WeaponShape):
 		return
 	var weapon_id: String = node.id
+	# Theft mark rides along, as for items: a fresh canonical copy would
+	# launder a stolen weapon clean on drop-and-retake.
+	var extras: Dictionary = _drop_extras({"stolen_from": node.stolen_from})
 	if not _remove_weapon_from_inventory(character.inventory, node):
 		return
 	node.queue_free()
-	game_node.create_item(weapon_id, character.global_position)
+	game_node.create_item(weapon_id, character.global_position, 1, extras)
 	SfxManager.play("sword-fall", character.global_position)
 
 const EquipmentEffects = preload("res://Items/equipment_effects.gd")
@@ -2121,7 +2135,10 @@ func _update_ability_slots(data: Dictionary, character) -> void:
 		var affordable := true
 		var costs: Dictionary = a["costs"]
 		for res in costs:
-			if character._get_character_resource(res) < int(costs[res]):
+			var have = character._get_character_resource(res)
+			if res == "focus" and a.get("concentration", false) and "concentration_locked_focus" in character:
+				have += character.concentration_locked_focus
+			if have < int(costs[res]):
 				affordable = false
 				break
 		var tint := Color.WHITE if affordable else Color(0.55, 0.55, 0.55)

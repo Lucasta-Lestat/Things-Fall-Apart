@@ -109,7 +109,8 @@ func _entry_from_dict(item_dict: Dictionary, index: int) -> Dictionary:
 	var raw_stacks = item_dict.get("num_stacks", 1)
 	return {
 		"kind": kind,
-		"display_name": item_dict.get("display_name", item_dict.get("id", "?")),
+		# WeaponShape.to_data() dicts (deposited or corpse weapons) carry "name".
+		"display_name": item_dict.get("display_name", item_dict.get("name", item_dict.get("id", "?"))),
 		"sprite_path": str(item_dict.get("sprite_path", "")) if item_dict.get("sprite_path") != null else "",
 		"num_stacks": int(raw_stacks) if raw_stacks != null else 1,
 		"equipped": false,
@@ -394,6 +395,8 @@ func _drop_data(at_position: Vector2, data) -> void:
 				else:
 					src_inv.stowed_items.erase(weapon)
 					src_inv.emit_signal("weapon_unequipped", weapon)
+				# A starting weapon's hidden hand dict leaves with it.
+				src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 				weapon.queue_free()
 				chest_item.contents.append(weapon_data)
 		SfxManager.play_ui("chest_item_in")

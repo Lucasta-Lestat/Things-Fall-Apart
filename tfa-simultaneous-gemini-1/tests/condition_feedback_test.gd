@@ -44,6 +44,7 @@ func _ready() -> void:
 	await _case_periodic_and_corpse()
 	await _case_transforms()
 	await _case_riders()
+	await _case_lethal_rider()
 	await _case_chasten()
 	await _case_force_fields()
 	await _case_ai_ticks()
@@ -194,15 +195,22 @@ func _case_save_notices() -> void:
 	await _await_frames(2)
 	hidden.constitution = 500
 	hidden.visible = false
+	# "Seen" is line of sight (Game.is_seen_by_party, via the bearer's
+	# _announces_to_party), not `visible`: a hearing pulse shows unseen NPCs.
+	game.characters_in_scene.append(hidden)
+	game._npc_was_truly_seen[hidden] = false
 	_reset_notices(hidden)
 	n0 = GameLog.get_entries().size()
 	hidden.condition_manager.apply_condition("bleeding", p, 1)
 	_check("save.hidden-npc-quiet", hidden._last_notify_text == "" and GameLog.get_entries().size() == n0 \
 		and hidden.condition_manager._last_notice_ms.is_empty())
 	hidden.visible = true
+	game._npc_was_truly_seen[hidden] = true
 	hidden.condition_manager.apply_condition("bleeding", p, 1)
 	_check("save.seen-npc-floats", hidden._last_notify_text == "Resisted", hidden._last_notify_text)
 	_check("save.party-source-logs", _logged_since(n0, "Lurker resists Bleeding"), _last_log())
+	game.characters_in_scene.erase(hidden)
+	game._npc_was_truly_seen.erase(hidden)
 
 	p.constitution = con0
 	p.current_health = hp0
@@ -326,6 +334,11 @@ func _case_riders() -> void:
 	var p = _party()
 	var npc = _spawn("Target", Vector2(3600, 3000))
 	await _await_frames(2)
+	# Rider notices need the target in the party's line of sight
+	# (_announces_to_party), not just `visible`. Set after every await: the
+	# LOS pass rewrites the cache each unpaused frame.
+	game.characters_in_scene.append(npc)
+	game._npc_was_truly_seen[npc] = true
 	var eff := {"type": "apply_condition", "condition_id": "chilled", "chance": 0.0}
 	var ab := _rider_ability(eff)
 	_reset_notices(npc)
@@ -345,15 +358,20 @@ func _case_riders() -> void:
 	# Hidden targets stay quiet, even for the party's own cast: the log line
 	# would name an NPC the party can't see.
 	npc.visible = false
+	game._npc_was_truly_seen[npc] = false
 	npc._last_notify_text = ""
 	n0 = GameLog.get_entries().size()
 	AbilityEffect.resolve_effect(eff, p, [npc], ab, npc.global_position)
 	_check("rider.hidden-target-quiet", npc._last_notify_text == "" and GameLog.get_entries().size() == n0, _last_log())
 	npc.visible = true
 
-	# NPC on NPC: floats, no log.
+	# NPC on NPC: floats, no log. Both in view; the caster's seen state only
+	# matters as the caster.
 	var other = _spawn("Bystander", Vector2(3650, 3000))
 	await _await_frames(1)
+	game.characters_in_scene.append(other)
+	game._npc_was_truly_seen[other] = true
+	game._npc_was_truly_seen[npc] = true
 	npc._last_notify_text = ""
 	n0 = GameLog.get_entries().size()
 	AbilityEffect.resolve_effect(eff, other, [npc], ab, npc.global_position)
@@ -368,6 +386,10 @@ func _case_riders() -> void:
 	_check("rider.effect-save-floats", npc._last_notify_text == "Resisted" and not npc.condition_manager.has_condition("slowed"), npc._last_notify_text)
 	_check("rider.effect-save-logged", _logged_since(n0, "Target resists Slowed from Harness Rider (CON save: rolled "), _last_log())
 
+	for c in [npc, other]:
+		game.characters_in_scene.erase(c)
+		game._npc_was_truly_seen.erase(c)
+
 	_check("rider.display-name", AbilityEffect.condition_display_name("chilled") == "Chilled" \
 		and AbilityEffect.condition_display_name("no_such_thing") == "No Such Thing")
 
@@ -375,6 +397,26 @@ func _case_riders() -> void:
 	for pair in [["ice_storm", "80%"], ["gravity_well", "60%"], ["shield_bash", "70%"], ["creepy_beam", "50%"]]:
 		var desc := str(AbilityDatabase.get_ability_data(pair[0]).get("description", ""))
 		_check("data.%s-states-chance" % pair[0], pair[1] in desc, desc)
+
+# ---------------------------------------------------------------------------
+# A killing blow's rider (dmg-03): Fireball's damage kills, then its own
+# Burning lands on the corpse. ConditionManager refuses corpses, so no Burning
+# and no flames stay on the tombstone.
+# ---------------------------------------------------------------------------
+
+func _case_lethal_rider() -> void:
+	var p = _party()
+	var npc = _spawn("Kindling", Vector2(3700, 3000))
+	await _await_frames(2)
+	npc.current_health = 1
+	var fb := Ability.from_dict(AbilityDatabase.get_ability_data("fireball"))
+	npc.begin_damage_condition_suppression({"burning": true})
+	for eff in fb.effects:
+		AbilityEffect.resolve_effect(eff, p, [npc], fb, npc.global_position)
+	npc.end_damage_condition_suppression()
+	_check("lethal-rider.dead", not npc.is_alive())
+	_check("lethal-rider.no-burning", not npc.condition_manager.has_condition("burning"))
+	_check("lethal-rider.no-flames", npc._active_condition_vfx.is_empty(), npc._active_condition_vfx.keys())
 
 # ---------------------------------------------------------------------------
 # Chasten

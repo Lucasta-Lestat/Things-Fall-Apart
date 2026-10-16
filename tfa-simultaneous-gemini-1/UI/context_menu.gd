@@ -63,15 +63,11 @@ func _on_option_selected(option: String):
 		"Talk":
 			# active_dialogue_id() owns the index bounds (and that the dialogue
 			# exists) so this branch and the left-click talk fast path always
-			# open the same conversation.
+			# open the same conversation. An empty id (the index moved while
+			# the menu was up) logs "<Name> has nothing to say." in
+			# DialogueManager, the one place that line is written.
 			if target_character is ProceduralCharacter:
-				var dlg_id: String = target_character.active_dialogue_id()
-				if not dlg_id.is_empty():
-					DialogueManager.start_dialogue(dlg_id)
-				else:
-					# Safety net: show_context_menu only lists Talk when there
-					# is a dialogue, but the index can move while the menu is up.
-					GameLog.add_entry("%s has nothing to say." % target_character.Name)
+				DialogueManager.start_dialogue(target_character.active_dialogue_id(), str(target_character.Name))
 		"Trade":
 			if target_character is ProceduralCharacter:
 				game.show_trade_window(target_character)

@@ -29,6 +29,9 @@ var _pending_rival_override_faction: bool = false
 # Set by start_combat_test around its load_map: party_state already holds the
 # fresh test loadouts, which the outgoing party must not be saved over.
 var _skip_party_save: bool = false
+# Set by load_save around its load_map: the service-NPC and world-item state
+# just loaded must not be overwritten from the outgoing map's live scene.
+var _skip_unload_capture: bool = false
 
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
@@ -458,9 +461,19 @@ func _apply_quest_reward(offer: Dictionary, character) -> void:
 				push_warning("Quest reward: unknown item '%s'" % item_id)
 				return
 			var inv = character.get_node_or_null("Inventory")
-			if inv != null and inv.has_method("add_item"):
-				inv.add_item(data)
-				if GameLog:
+			if inv != null and inv.has_method("add_stack"):
+				# A hand item is stowed as a weapon, as a pick-up is: a bare hand
+				# dict is hidden in every grid and can't be drawn. A full pack is
+				# announced by the inventory itself (add_failed), so no
+				# "Received" line then.
+				var equip_slot: String = str(data.get("equip_slot", ""))
+				var ok: bool = false
+				if (equip_slot == "Main Hand" or equip_slot == "Off Hand") and inv.has_method("stow_weapon_from_data"):
+					inv.stow_weapon_from_data(data)
+					ok = true
+				else:
+					ok = inv.add_stack(data)
+				if ok and GameLog:
 					GameLog.add_entry("Received %s." % str(data.get("display_name", item_id)))
 		"training":
 			TrainingManager.accept_offer(character, offer, current_map_id)
@@ -984,6 +997,12 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		_relocate_party(spawn_override)
 		return
 
+	# A warp frees the trading NPC and saves the party's packs as they stand,
+	# so an open trade is cancelled first: its staged moves go back.
+	for w in get_tree().get_nodes_in_group("trade_window"):
+		if not w.is_queued_for_deletion() and w.has_method("_on_cancel_pressed"):
+			w._on_cancel_pressed()
+
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
 	if not party_chars.is_empty() and not _skip_party_save:
 		save_party_state()
@@ -1230,14 +1249,16 @@ func _process_on_load_dialogue_triggers(map_data: Dictionary) -> void:
 
 func _unload_current_map() -> void:
 	# Snapshot any service-NPC live state so trades stick across map transitions.
-	_save_service_npc_states()
+	if not _skip_unload_capture:
+		_save_service_npc_states()
 
 	# Snapshot world-item state, then actually clear the item nodes. Items
 	# were previously LEAKED across transitions — never freed and never
 	# erased from items_in_scene, so each revisit re-spawned duplicates on
 	# top of ghost nodes. queue_free (not _destroy_item: that path spawns
 	# resource drops and fires the destroyed signal).
-	_capture_item_state()
+	if not _skip_unload_capture:
+		_capture_item_state()
 	for it in items_in_scene:
 		if is_instance_valid(it):
 			GridManager.unregister_object(GridManager.world_to_map(it.global_position), it)
@@ -1386,18 +1407,26 @@ func _on_weather_changed(group: String, weather_state: Dictionary) -> void:
 # weather_changed also fires for wind-only changes and same-weather daily
 # rolls, so only an actual precipitation change is logged.
 var _announced_precip: String = "clear"
+# "<Spell weather> passes.", set by _tick_forced_weather just before it restores
+# the old weather, so the end of a timed spell and the turn are one line.
+var _weather_lead: String = ""
 
 ## One log line per change: "The weather turns: Heavy Rain." and then what it
 ## does to the party (`effects`, _refresh_weather_state's note: "Sight drops
 ## to 50%.", the exposure text), so the line says why the cones just shrank.
 func _announce_weather_change(precip: String, effects: String = "") -> void:
+	var lead: String = _weather_lead
+	_weather_lead = ""
 	if precip == _announced_precip:
-		if not effects.is_empty():
-			GameLog.add_entry(effects)
+		var same: String = (lead + " " + effects).strip_edges()
+		if not same.is_empty():
+			GameLog.add_entry(same)
 		return
 	_announced_precip = precip
 	var pd: Dictionary = WeatherManager.get_precipitation_data(precip)
 	var line: String = "The weather turns: %s." % str(pd.get("display_name", precip.replace("_", " ").capitalize()))
+	if not lead.is_empty():
+		line = lead + " " + line
 	if not effects.is_empty():
 		line += " " + effects
 	GameLog.add_entry(line)
@@ -1615,8 +1644,13 @@ func _tick_forced_weather(delta: float) -> void:
 	if passing.is_empty() or passing == revert or current_precipitation() != passing:
 		return
 	var pd: Dictionary = WeatherManager.get_precipitation_data(passing)
-	GameLog.add_entry("%s passes." % str(pd.get("display_name", passing.replace("_", " ").capitalize())))
+	# Leads the turn's announcement: "Acid Rain passes. The weather turns: Clear."
+	_weather_lead = "%s passes." % str(pd.get("display_name", passing.replace("_", " ").capitalize()))
 	force_weather(revert)
+	# Nothing announced the turn (no weather_changed came through): say it alone.
+	if not _weather_lead.is_empty():
+		GameLog.add_entry(_weather_lead)
+		_weather_lead = ""
 
 # ---------------------------------------------------------------------------
 # Party spawning
@@ -1980,6 +2014,8 @@ func pick_up_item(item: Item) -> bool:
 	if character.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
 		GameLog.add_entry("%s is too far away to reach that." % character.Name)
 		return false
+	if _refuse_during_trade(character, "pick up", "the " + (item.display_name if item.display_name != "" else str(item.id).replace("_", " "))):
+		return false
 	var data: Dictionary = item.to_inventory_data()
 	if data.is_empty():
 		return false
@@ -2028,6 +2064,26 @@ func remove_world_item(item: Item) -> void:
 	if item.collision_shape:
 		item.collision_shape.disabled = true
 	item.queue_free()
+
+## True while a TradeWindow is open. Its Cancel puts every party inventory
+## back from the snapshot taken at open, so a pack change made meanwhile (a
+## pick-up, gathered water) would be undone: those wait for the trade, as the
+## party, chest and service panels' moves do.
+func trade_open() -> bool:
+	for w in get_tree().get_nodes_in_group("trade_window"):
+		if not w.is_queued_for_deletion():
+			return true
+	return false
+
+## The panels' trade refusal for Game's own pack changes: says so and returns
+## true while a trade is open. `what` names the thing in the log line.
+func _refuse_during_trade(character, verb: String, what: String) -> bool:
+	if not trade_open():
+		return false
+	SfxManager.play_ui("trade_decline")
+	character.notify("Finish the trade first", Color(1.0, 0.6, 0.4),
+		"%s can't %s %s while a trade is open: accept or cancel it first." % [character.Name, verb, what])
+	return true
 
 # Pick the party member who should receive a picked-up item: the primary-selected
 # character, else the first LIVING party member with an inventory. Nothing clears
@@ -2387,8 +2443,19 @@ func build_save_dict() -> Dictionary:
 		"current_map_id": current_map_id,
 	}
 
-## Symmetric restore. Does NOT reload the map — a disk-load flow calls
-## load_map(d.current_map_id) after applying.
+## A disk load: apply the save, then rebuild its map from it. load_map would
+## first snapshot the outgoing live party, service NPCs and world items over
+## the state just loaded, so those captures are skipped for this one load.
+func load_save(d: Dictionary) -> void:
+	apply_save_dict(d)
+	_skip_party_save = true
+	_skip_unload_capture = true
+	load_map(str(d.get("current_map_id", current_map_id)))
+	_skip_party_save = false
+	_skip_unload_capture = false
+
+## Symmetric restore. Does NOT reload the map — a disk load goes through
+## load_save, which calls load_map(d.current_map_id) after applying.
 func apply_save_dict(d: Dictionary) -> void:
 	party_state = d.get("party_state", party_state).duplicate(true)
 	npc_state_per_region = d.get("npc_state_per_region", {}).duplicate(true)
@@ -2655,7 +2722,7 @@ func set_stealth_mode(active: bool) -> void:
 		else:
 			GameLog.add_entry(("Stealth mode [b]on[/b]: the party sneaks (footsteps %d%% as loud, %d%% walking pace) and is noticed only inside an onlooker's sight cone, even up close. "
 				+ "Cones show what onlookers see (pink: raised walkways they can see onto), and an eye marks a party member an onlooker you can see has in view. "
-				+ "Relaxed onlookers who spot you sneaking become wary. Left-clicking someone no longer talks to them; right-click for Talk.") % [
+				+ "Relaxed onlookers who spot you sneaking become wary. Left-clicking someone now attacks them rather than talking; right-click for Talk.") % [
 				roundi(ProceduralCharacter.SNEAK_NOISE_MULT * 100.0), roundi(ProceduralCharacter.SNEAK_SPEED_MULT * 100.0)])
 	else:
 		GameLog.add_entry("Stealth mode [b]off[/b].")
@@ -2806,8 +2873,18 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 	# in CrimeManager/LawDatabase, not here. If the attack IS a crime, the
 	# witness fan-out inside report() starts outcry fuses on top of the
 	# generic wake below.
+	# A condition's damage tick (Burning, Corroding from a caster's spell
+	# weather...) carries its applier as `attacker` but is no fresh blow: the
+	# hit that applied it already raised the alarm. Ticks reach the law only
+	# when they kill or open a new spell of harm (weather has no hit of its
+	# own), and never wake bystanders or call the party (see alert_party).
+	var dot_tick: bool = victim._condition_tick_damage
 	if attacker != null and is_instance_valid(attacker) and attacker != victim:
-		CrimeManager.report(attacker, "attack", CrimeManager.attack_payload(attacker, victim))
+		if not dot_tick or _dot_tick_reportable(attacker, victim):
+			CrimeManager.report(attacker, "attack", CrimeManager.attack_payload(attacker, victim))
+		victim.set_meta("dot_harm_by_%d" % attacker.get_instance_id(), TimeManager.absolute_time())
+	if dot_tick:
+		return
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
 	# this loop only wakes bystanders (legal fights startle people too).
 	# Enumeration is shared with the crime pipeline: CrimeManager.witnesses_of
@@ -2835,6 +2912,23 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		alert_party(victim.global_position)
 	elif victim in party_chars and attacker != null and is_instance_valid(attacker):
 		alert_party(attacker.global_position)
+
+
+## Seconds without harm from the same attacker after which their next damage
+## tick on that victim is a fresh offence again. Longer than any damage tick's
+## interval (Chilled's 6 s), so one condition's ticks are a single act.
+const DOT_HARM_GAP: float = 10.0
+
+## Whether a condition tick from `attacker` should go to the law: a killing
+## tick (murder), or the first harm from them in DOT_HARM_GAP. A companion
+## caught in the party's own weather or flames is not an assault.
+func _dot_tick_reportable(attacker, victim) -> bool:
+	if attacker in party_chars and victim in party_chars:
+		return false
+	if not victim.is_alive():
+		return true
+	var last: float = float(victim.get_meta("dot_harm_by_%d" % attacker.get_instance_id(), -1.0e12))
+	return TimeManager.absolute_time() - last > DOT_HARM_GAP
 
 
 # Shared LOS check helper — delegates to the canonical witness-LOS wrapper on
@@ -3399,7 +3493,7 @@ func _input(event: InputEvent) -> void:
 				# Save round-trip smoke test: build -> apply -> build must be
 				# byte-identical. The debug caller that keeps build_save_dict
 				# from rotting the way the three orphaned serializers did.
-				if not event.echo:
+				if not event.echo and OS.is_debug_build():
 					var first: Dictionary = build_save_dict()
 					apply_save_dict(first)
 					var second: Dictionary = build_save_dict()
@@ -4461,14 +4555,32 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	sprite.rotation = PI / 2.0
 	proj.add_child(sprite)
 
-	proj.hit.connect(_on_thrown_projectile_hit.bind(item_id, thrown_damage, proj_data["shooter"]))
-	proj.expired.connect(_on_thrown_projectile_expired.bind(item_id))
+	# The respawned item keeps its owner (a stolen throw stays stolen) and its
+	# quest-proof origin, as a drop does (PartySidePanel._drop_extras).
+	var extras: Dictionary = _thrown_item_extras(item_data)
+	proj.hit.connect(_on_thrown_projectile_hit.bind(item_id, thrown_damage, proj_data["shooter"], extras))
+	proj.expired.connect(_on_thrown_projectile_expired.bind(item_id, extras))
 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(proj_data["position"], velocity_vec, proj_data["shooter"])
 
 
-func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary, shooter) -> void:
+## create_item extras for a thrown item's respawn: ownership (stolen_from) and
+## the quest-proof origin, the same keys PartySidePanel._drop_extras gives a drop.
+func _thrown_item_extras(item: Dictionary) -> Dictionary:
+	var extras: Dictionary = {}
+	var src: String = str(item.get("stolen_from", ""))
+	if not src.is_empty():
+		extras["owner_faction"] = src
+		extras["stolen_from"] = src
+	var origin = item.get("origin", null)
+	if origin is Dictionary and not (origin as Dictionary).is_empty():
+		extras["origin"] = (origin as Dictionary).duplicate(true)
+		extras["origin_display_name"] = str(item.get("display_name", ""))
+	return extras
+
+
+func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary, shooter, extras: Dictionary = {}) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
 	_splash_if_fluid(hit_pos, 1.1)
@@ -4493,19 +4605,19 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 			HearingManager.emit(hit_pos, 0.4, shooter if is_instance_valid(shooter) else null)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
-			create_item(item_id, hit_pos)
+			create_item(item_id, hit_pos, 1, extras)
 	elif collider != null:
 		if collider.has_method("take_damage"):
 			collider.take_damage(thrown_damage.duplicate(), 0)
 		if not item_id.is_empty():
-			create_item(item_id, hit_pos)
+			create_item(item_id, hit_pos, 1, extras)
 		SfxManager.play("sword-fall", hit_pos)
 
 
-func _on_thrown_projectile_expired(final_position: Vector2, item_id: String) -> void:
+func _on_thrown_projectile_expired(final_position: Vector2, item_id: String, extras: Dictionary = {}) -> void:
 	_splash_if_fluid(final_position, 1.0)
 	if not item_id.is_empty():
-		create_item(item_id, final_position)
+		create_item(item_id, final_position, 1, extras)
 	SfxManager.play("sword-fall", final_position)
 
 # ===== SELECTION CIRCLE DRAWER =====
@@ -4614,6 +4726,8 @@ func gather_water_at_party() -> void:
 		return
 	if not actor.inventory:
 		return
+	if _refuse_during_trade(actor, "gather", "water"):
+		return
 	# Use the real database waterskin (sprite, Consume option, satiety) so the
 	# gathered water drinks like any other; the stub is only a fallback.
 	var water: Dictionary = _lookup_any_item("waterskin").duplicate(true)
@@ -4667,7 +4781,10 @@ func _create_warp_zones(warp_list: Array) -> void:
 		area.name = "Warp_" + warp_def.get("id", "unknown")
 		area.position = pos
 		area.set_meta("target_map", warp_def.get("target_map", ""))
-		area.set_meta("target_spawn", warp_def.get("target_spawn", "default"))
+		# Unset stays "" (as the readers default it): load_map then picks the
+		# from_<map> arrival spawn, and a same-map warp reloads rather than
+		# relocating the party to "default".
+		area.set_meta("target_spawn", warp_def.get("target_spawn", ""))
 		area.set_meta("label", warp_def.get("label", ""))
 		# World-map warps stay hidden + unclickable until the party banner
 		# gets within reveal_radius_px. _update_world_warp_reveal() flips the
@@ -5103,14 +5220,10 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	if state.has("holy_tier_next_day_pending"):
 		character.holy_tier_next_day_pending = int(state["holy_tier_next_day_pending"])
 	if state.has("holy_tier_today"): character.holy_tier_today = int(state["holy_tier_today"])
-	# School pools over the build-time refill, clamped to their maxima (traits
-	# and vow_holy_bonus, which max_devotion reads, are restored by now).
+	# School pools go back below, after the saved conditions (their maxima read
+	# condition bonuses); saint_day_devotion_bonus feeds max_devotion.
 	if state.has("saint_day_devotion_bonus"):
 		character.saint_day_devotion_bonus = int(state["saint_day_devotion_bonus"])
-	if state.has("adrenaline"): character.adrenaline = clamp(int(state["adrenaline"]), 0, character.max_adrenaline)
-	if state.has("focus"):      character.focus = clamp(int(state["focus"]), 0, character.max_focus)
-	if state.has("harmony"):    character.harmony = clamp(int(state["harmony"]), 0, character.max_harmony)
-	if state.has("devotion"):   character.devotion = clamp(int(state["devotion"]), 0, character.max_devotion)
 	if state.has("luck"):       character.luck = int(state["luck"])
 	if state.has("bide_pending_bonus"):
 		character.bide_pending_bonus = maxf(0.0, float(state["bide_pending_bonus"]))
@@ -5190,13 +5303,17 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# --- Inventory: clear template items, restore saved ones ---
 	if character.inventory and state.has("inventory_items"):
 		character.inventory.items.clear()
-		# Restoring saved items must refuse none of them: lift the cap while
-		# they go back in (a worn pack's overflow, or a pack that left its
-		# wearer without coming off, e.g. robbed). rebuild_worn_from_inventory
-		# below sets the real cap (worn packs' slots) again.
-		character.inventory.bonus_slots = state["inventory_items"].size()
+		# Restoring saved items must refuse none of them, and merge none: put
+		# each saved dict back as it was. add_item would cap (a worn pack's
+		# overflow, or a pack that left its wearer without coming off, e.g.
+		# robbed) and fold a second stack of one id into the first one +1 at a
+		# time ([10, 5, 7] arrows came back as [12]), dropping a stolen tag.
+		# rebuild_worn_from_inventory below sets the real cap (worn packs' slots).
+		# Announced per item as add_item did (panels, quest and vow listeners).
 		for item_data in state["inventory_items"]:
-			character.inventory.add_item(item_data)
+			if item_data is Dictionary:
+				character.inventory.items.append(item_data)
+				character.inventory.item_added.emit(item_data)
 		# The body still wears the template's gear (and its worn conditions):
 		# put the saved gear back on from the _equipped flags.
 		character.rebuild_worn_from_inventory()
@@ -5241,6 +5358,15 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.condition_manager.from_dict(state["condition_state"])
 		_restore_condition_presentation(character)
  
+	# School pools over the build-time refill, clamped to their maxima. Here,
+	# not with the other stats: a maximum a condition raises (downtime's
+	# Focused, +1 max focus) only counts once from_dict has recalculated the
+	# stats; traits and vow_holy_bonus (max_devotion) were restored above.
+	if state.has("adrenaline"): character.adrenaline = clamp(int(state["adrenaline"]), 0, character.max_adrenaline)
+	if state.has("focus"):      character.focus = clamp(int(state["focus"]), 0, character.max_focus)
+	if state.has("harmony"):    character.harmony = clamp(int(state["harmony"]), 0, character.max_harmony)
+	if state.has("devotion"):   character.devotion = clamp(int(state["devotion"]), 0, character.max_devotion)
+
 	# --- Cooldowns ---
 	if state.has("cooldowns"):
 		character.cooldowns = state["cooldowns"]

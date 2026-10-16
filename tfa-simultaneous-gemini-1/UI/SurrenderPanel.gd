@@ -148,6 +148,7 @@ func _do_rob(fraction: float) -> void:
 			break
 		if not is_instance_valid(c) or not ("inventory" in c) or c.inventory == null:
 			continue
+		var robbed := false
 		for i in range(c.inventory.items.size() - 1, -1, -1):
 			if taken >= to_take:
 				break
@@ -155,6 +156,14 @@ func _do_rob(fraction: float) -> void:
 			if entry is Dictionary:
 				taken += _entry_value(entry)
 				c.inventory.items.remove_at(i)
+				robbed = true
+		if robbed:
+			# Removed in place, so tell the panels (their slots index `items`)
+			# and take off any worn piece that went with the goods (a pack's
+			# slots, its while-worn conditions and light).
+			c.inventory.emit_signal("item_removed", {})
+			if c.inventory.has_method("resync_worn_from_items"):
+				c.inventory.resync_worn_from_items()
 	GameLog.add_entry("Robbed: goods worth ~%d handed over. They let you live." % int(taken))
 	# A short truce, or the robbery is pointless — hostile_by_default
 	# factions would re-acquire on the next AI tick. Standing untouched.

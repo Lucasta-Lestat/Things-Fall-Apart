@@ -485,8 +485,11 @@ func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -
 		# point, swung with the hand that was clicked.
 		_assign_attack_to_pending_node(mouse_pos, hand)
 	else:
-		# Nothing equipped — basic unarmed attack, with the main hand as before
-		_assign_attack_to_pending_node(mouse_pos, "Main")
+		# Nothing equipped — an unarmed strike with the clicked hand, as a
+		# direct click does (ProceduralCharacter._process_hand_action). An
+		# empty off hand beside a two-hander is on its grip: it swings that.
+		var swing_hand: String = "Main" if (hand == "Off" and character._main_hand_is_two_handed()) else hand
+		_assign_attack_to_pending_node(mouse_pos, swing_hand)
 
 	pending_action_node = null
 	state = PathInputState.IDLE
@@ -535,10 +538,12 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 	}
 	pending_action_node.icon_texture = _resolve_ability_icon(ability_data)
 
-	# End targeting and create persistent queued indicator (AOE preview)
+	# End targeting and create persistent queued indicator (AOE preview). A
+	# projectile AoE's ghost sits at its burst point, red when that falls short
+	# of the aim, as the live preview showed; target_position stays the aim.
 	character.targeting_system.end_targeting()
 	var indicator = character.targeting_system.create_queued_indicator(
-		target_pos,
+		result.get("burst_position", target_pos),
 		result.get("shape"),
 		result.get("radius", 0),
 		result.get("size", Vector2.ZERO),
@@ -547,6 +552,10 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 		Ability.classify_intent(ability_data)
 	)
 	if indicator:
+		if (result.get("burst_blocked", false) and indicator.get_child_count() > 0
+				and "is_blocked" in indicator.get_child(0)):
+			indicator.get_child(0).is_blocked = true
+			indicator.get_child(0).queue_redraw()
 		pending_action_node.action_data["queued_indicator"] = indicator
 		_bind_aoe_to_node(pending_action_node, result)
 
@@ -628,7 +637,8 @@ func _bind_aoe_to_node(node: TacticalPath.PathActionNode, result: Dictionary) ->
 	var shape = result.get("shape", null)
 	var center: Vector2 = result.get("position", node.world_position)
 	if shape == shapes.CIRCLE:
-		node.aoe_center = center
+		# The ghost's centre: a projectile AoE bursts short of the aim.
+		node.aoe_center = result.get("burst_position", center)
 		node.aoe_extent = float(result.get("radius", 0.0))
 	elif shape == shapes.RECTANGLE:
 		var rect_size: Vector2 = result.get("size", Vector2.ZERO)

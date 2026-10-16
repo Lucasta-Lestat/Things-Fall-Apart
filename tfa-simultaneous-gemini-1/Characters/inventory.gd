@@ -70,6 +70,12 @@ func add_item(item_data: Dictionary) -> bool:
 			if items[i].get("id", "") == item_id:
 				var current_stacks = int(items[i].get("num_stacks", 1))
 				if current_stacks < max_stack:
+					# As in add_stack: ownership survives the merge, or handing a
+					# stolen arrow to someone carrying clean ones launders it.
+					if item_data.has("stolen_from"):
+						items[i]["stolen_from"] = item_data["stolen_from"]
+						if item_data.has("stolen_value"):
+							items[i]["stolen_value"] = item_data["stolen_value"]
 					items[i]["num_stacks"] = current_stacks + 1
 					emit_signal("item_added", item_data)
 					return true
@@ -221,6 +227,25 @@ func find_item_by_id(item_id: String) -> int:
 
 func get_all_items() -> Array:
 	return items
+
+## Starting weapons leave a hidden hand-slot dict in `items` beside their
+## WeaponShape (see slots_used). Call this with the shape's id whenever the
+## shape leaves this inventory (given, dropped, thrown, traded, put in a
+## chest) so the dict goes with it: flatten_for_corpse keeps unclaimed hand
+## dicts as loot, so an orphaned one brought a dropped starter sword back on
+## its owner's corpse. Erases one matching dict; false when there was none (a
+## picked-up weapon never had one). No signal: no window lists hand dicts.
+## Not for unequip_hand/unequip_weapon themselves: save restore and the trade
+## rollback clear weapons that their restored `items` still mirror.
+func drop_hand_ghost(item_id: String) -> bool:
+	if item_id == "":
+		return false
+	for i in range(items.size()):
+		var it = items[i]
+		if EquipmentEffects.is_hand_ghost(it) and str(it.get("id", "")) == item_id:
+			items.remove_at(i)
+			return true
+	return false
 
 func clear_inventory() -> void:
 	items.clear()
@@ -700,15 +725,15 @@ func load_from_dict(data: Dictionary) -> void:
 	off_hand_item = null
 	stowed_items.clear()
 
-	# Load items. Worn packs raise the cap: size it first, or add_item refuses
-	# a full pack's overflow.
+	# Load items verbatim, as Game._deserialize_character does: add_item would
+	# cap (a worn pack's overflow) and fold a second stack of one id into the
+	# first +1 at a time, dropping a stolen tag. Re-wearing below sets the cap.
+	# Announced per item as add_item did (panels, quest and vow listeners).
 	if data.has("items"):
-		bonus_slots = 0
 		for item in data["items"]:
-			if item is Dictionary and item.get("_equipped", false):
-				bonus_slots += EquipmentEffects.container_slots(item)
-		for item in data["items"]:
-			add_item(item)
+			if item is Dictionary:
+				items.append(item)
+				item_added.emit(item)
 
 	# Load weapons
 	if data.has("equipped_weapons"):

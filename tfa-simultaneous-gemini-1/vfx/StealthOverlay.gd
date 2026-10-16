@@ -7,7 +7,8 @@
 #   has_in_view: a held target while it isn't occluded, anyone else as target
 #   acquisition sees them), the same rules the NPC acts on, so it is exact on
 #   battlements and roofs where the drawn cones are only an approximation.
-#   Onlookers the party can't see never reveal themselves this way.
+#   Onlookers the party can't see, or that the current view slice hides,
+#   never reveal themselves this way.
 #
 #   Noise rings: a faint expanding ring for each sound a party member makes
 #   (HearingManager.sound_emitted: footsteps, swings, casts...), sized to how
@@ -110,6 +111,10 @@ func _refresh_in_view() -> void:
 	for pc in _game.party_chars:
 		if not is_instance_valid(pc) or not pc.is_alive() or pc.on_world_map:
 			continue
+		# Not drawn (a member on the high layer in ground view): no eye over
+		# empty ground.
+		if not pc.visible:
+			continue
 		if is_in_view_of_onlooker(pc):
 			_in_view.append(pc)
 	if had_any or not _in_view.is_empty():
@@ -126,8 +131,9 @@ func is_in_view_of_onlooker(pc) -> bool:
 		var cm = npc.get_node_or_null("ConditionManager")
 		if cm and cm.has_condition("unconscious"):
 			continue
-		# Never reveal an onlooker the party can't see.
-		if not _game.is_seen_by_party(npc):
+		# Never reveal an onlooker the party can't see. `visible` too: in
+		# ground view a roof-walker the party sees is still hidden.
+		if not npc.visible or not _game.is_seen_by_party(npc):
 			continue
 		var ai = npc.get_node_or_null("AI")
 		if ai == null:

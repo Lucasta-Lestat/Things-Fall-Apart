@@ -572,8 +572,10 @@ func effective_charisma() -> float:
 func effective_luck() -> float:
 	return luck + luck_modifier
 
+## The sight stat with its condition modifiers: the same value the vision code
+## uses (_sight_stat), which also re-derives when the base `sight` changes.
 func effective_sight() -> float:
-	return sight + sight_modifier
+	return _sight_stat()
 
 func effective_hearing() -> float:
 	return hearing + hearing_modifier
@@ -1095,8 +1097,10 @@ func _on_game_unpaused_convert_path() -> void:
 	_nav_index = 0
 	var actions = tactical_path.to_action_queue_actions()
 	for a in actions:
-		# Tag each step as this path's (TacticalPath may have already), so the
-		# next conversion removes exactly these and nothing given directly.
+		# Tag each step as this path's, so the next conversion removes exactly
+		# these and nothing given directly. TacticalPath.to_action_queue_actions
+		# already tags every step (MOVE and FACE included); this is only a guard
+		# should one ever come back untagged.
 		var step_data: Dictionary = a.data if a.data.get("from_path", false) else a.data.duplicate()
 		step_data["from_path"] = true
 		action_queue.queue_action(a.type, step_data)
@@ -1210,9 +1214,9 @@ func _get_plan_blocking_condition() -> ConditionInstance:
 		return null
 	if condition_manager.has_condition("unconscious"):
 		return condition_manager.get_condition("unconscious")
-	for inst in condition_manager.get_conditions_with_trait("incapacitate"):
-		if inst.is_active():
-			return inst
+	var incap := get_incapacitating_condition()
+	if incap != null:
+		return incap
 	for cond_id in ["panicked", "panic", "frightened", "transfixed", "incited"]:
 		if condition_manager.has_active_condition(cond_id):
 			return condition_manager.get_condition(cond_id)
@@ -1283,6 +1287,12 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 			inventory.unequip_hand("Off")
 		else:
 			inventory.stowed_items.erase(source_node)
+			# unequip_hand signals for the hands; a stowed weapon needs it too,
+			# or its party-panel slot outlives the freed node.
+			inventory.emit_signal("weapon_unequipped", source_node)
+		# A starting weapon's hidden hand dict leaves with it.
+		if "id" in source_node:
+			inventory.drop_hand_ghost(str(source_node.id))
 		source_node.queue_free()
 		item = item_data
 	else:
@@ -2086,13 +2096,14 @@ func end_damage_condition_suppression() -> void:
 ## One stack of the condition a damaging hit of some type brings (Bleeding,
 ## Burning, Poisoned, Chilled). Not from a condition's own damage tick (Burning
 ## would feed itself), not on top of an ability applying it explicitly, and
-## not on a corpse.
-func _apply_damage_type_condition(condition_id: String, limb = null) -> void:
+## not on a corpse. `source` (the attacker) makes the ticks the attacker's, as
+## an ability's Burning is, so a burn death still counts as their kill.
+func _apply_damage_type_condition(condition_id: String, limb = null, source: Node = null) -> void:
 	if _condition_tick_damage or _suppressed_damage_conditions.has(condition_id):
 		return
 	if condition_manager == null or not is_alive():
 		return
-	condition_manager.apply_condition(condition_id, null, 1, -2.0, limb)
+	condition_manager.apply_condition(condition_id, source, 1, -2.0, limb)
 
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
 	if result.has("damage"):
@@ -4266,11 +4277,21 @@ func _handle_input() -> void:
 	if Input.is_action_just_pressed("left_click"):
 		var talk_target := _find_character_at(mouse_pos)
 		if talk_target != null and _would_talk_to(talk_target):
-			DialogueManager.start_dialogue(talk_target.active_dialogue_id())
+			DialogueManager.start_dialogue(talk_target.active_dialogue_id(), str(talk_target.Name))
+			return
+		# A peaceful NPC with a dialogue assigned that Dialogues.json lacks
+		# (town guard, merchant...): still a talk click, never a swing, which
+		# a guard would take as assault. Say so instead (on the NPC, so every
+		# selected member seeing this click makes one notice, not several).
+		if talk_target != null and _click_is_talk(talk_target):
+			talk_target.notify("Nothing to say", Color(1.0, 0.6, 0.4), "%s has nothing to say." % talk_target.Name)
 			return
 
 	# --- Left mouse button - Main hand ---
-	if Input.is_action_just_pressed("left_click") or Input.is_action_just_pressed("ui_select"):
+	# Not on ui_select: that is Space, the pause key. While a dialogue is open,
+	# its panel consumes Space before PauseManager, and the press would swing
+	# the main hand at whoever is under the cursor.
+	if Input.is_action_just_pressed("left_click"):
 		current_hand = "Main"
 		_handle_hand_input("Main", current_main_hand_item, mouse_pos, paused)
 
@@ -4686,6 +4707,10 @@ func _hover_cursor_for_character(other: ProceduralCharacter) -> Texture2D:
 		var talk_cursor := _get_hover_cursor(TALK_CURSOR_PATH)
 		if talk_cursor != null:
 			return talk_cursor
+	elif _click_is_talk(other):
+		# Nothing to say, but the click won't designate them either: the
+		# default arrow, not the reticle.
+		return null
 	return _get_targeting_cursor()
 
 
@@ -4696,6 +4721,22 @@ func _would_talk_to(other: ProceduralCharacter) -> bool:
 	if FactionDatabase.are_hostile("player", other.faction_id):
 		return false
 	return _can_be_talked_to(other)
+
+
+## True when left-clicking `other` is a talk click, whether or not the dialogue
+## exists: not hostile, not sneaking, the Talk verb, and a dialogue id at the
+## current index. A superset of _would_talk_to; the rest (an id Dialogues.json
+## lacks) say they have nothing to say rather than take the main-hand swing,
+## as the click did before active_dialogue_id checked the file.
+func _click_is_talk(other: ProceduralCharacter) -> bool:
+	if FactionDatabase.are_hostile("player", other.faction_id):
+		return false
+	if game != null and "stealth_mode" in game and bool(game.stealth_mode):
+		return false
+	if not ("Talk" in other.interact_options):
+		return false
+	var idx: int = other.current_dialogue_index
+	return idx >= 0 and idx < other.dialogues.size()
 
 
 ## True when right-clicking `other` would offer a "Talk" that actually opens a
@@ -4797,9 +4838,11 @@ func _confirm_ability_target(paused: bool) -> void:
 
 		# A refused order (plan full) must not leave a ghost preview behind.
 		if queued and not is_character_mode:
-			# Create persistent ghost indicator for the queued ability
-			targeting_system.create_queued_indicator(
-				target_pos,
+			# Create persistent ghost indicator for the queued ability, where
+			# the live preview showed it: a projectile AoE's burst point (red
+			# when that falls short of the aim), not the aimed point.
+			var ghost = targeting_system.create_queued_indicator(
+				result.get("burst_position", target_pos),
 				result.get("shape"),
 				result.get("radius", 0),
 				result.get("size", Vector2.ZERO),
@@ -4807,6 +4850,10 @@ func _confirm_ability_target(paused: bool) -> void:
 				result.get("caster_position", global_position),
 				Ability.classify_intent(ability_data)
 			)
+			if (ghost != null and is_instance_valid(ghost) and result.get("burst_blocked", false)
+					and ghost.get_child_count() > 0 and "is_blocked" in ghost.get_child(0)):
+				ghost.get_child(0).is_blocked = true
+				ghost.get_child(0).queue_redraw()
 	else:
 		# Keep the targeting indicator visible until the ability actually lands.
 		# Disable interactivity but preserve the visual preview.
@@ -6977,6 +7024,8 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	# through, positive DR only, the chip floor and Rage included), for the
 	# "-N blocked" float below.
 	var absorbed_total: float = 0.0
+	# Who a Burning / Poisoned / Chilled this hit brings belongs to.
+	var condition_source: Node = attacker if is_instance_valid(attacker) and attacker is ProceduralCharacter and attacker != self else null
 	for damage_type in damage:
 		raw_val = damage[damage_type]
 		raw_total += max(0.0, float(raw_val))
@@ -6996,7 +7045,7 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 			absorbed_total += maxf(0.0, float(raw_val) - float(after_armor)) + char_dr_used
 		var dealt: int = int(after_armor - char_dr_used)
 		if dealt > 0:
-			handle_damage_effect_based_on_type(dealt, damage_type, hit_limb, location)
+			handle_damage_effect_based_on_type(dealt, damage_type, hit_limb, location, condition_source)
 		total_damage += dealt
 		if damage_type in ["slashing", "bludgeoning", "piercing"]:
 			physical_damage_taken += dealt
@@ -7058,10 +7107,10 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		emit_signal("damaged_by", attacker, world_hit, float(total_damage))
 		health_changed.emit(current_health, max_health, self)
 	_check_death()
-	# A hit that gets through breaks a windup. Damage-over-time ticks (fired
-	# from inside the ConditionManager's tick) and hits armour soaked up
+	# A hit that gets through breaks a windup. Damage-over-time ticks
+	# (_condition_tick_damage, the one tick flag) and hits armour soaked up
 	# entirely don't; a lethal hit goes through the death path.
-	var dot_tick: bool = condition_manager != null and condition_manager.firing_triggered_effect
+	var dot_tick: bool = _condition_tick_damage
 	if total_damage > 0 and is_alive() and not dot_tick:
 		# Named only when the party can see the attacker; a hidden archer stays hidden.
 		var hit_by: String = "took a hit"
@@ -7705,7 +7754,7 @@ func reset_severed_limbs() -> void:
 		if child.name.begins_with("Stump_"):
 			child.queue_free()
 
-func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2):
+func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: LimbType, location: Vector2, attacker: Node = null):
 		# Floating damage number. Callers pass either local hit pos (Game.gd weapon/projectile/thrown)
 		# or global pos (AbilityEffect, condition tick); discriminate by magnitude.
 		var world_pos: Vector2 = location if location.length() > 200.0 else to_global(location)
@@ -7731,8 +7780,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 			"fire", "poison", "cold":
 				# Burning / Poisoned / Chilled through ConditionManager (they
 				# used to land in the dead legacy `conditions` dict). Whole-body,
-				# so no target limb.
-				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type])
+				# so no target limb. Carries the attacker (kill credit for a burn
+				# death). Bleeding above stays sourceless: with a source its CON
+				# save would announce on every slash.
+				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type], null, attacker)
 
 			"electric", "lightning":
 				# Propagate the hit through any contiguous conductive surface
@@ -8056,7 +8107,10 @@ func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	cast_interrupted.emit(ability, reason)
 
 func _on_ability_cast_failed(ability: Ability, reason: String) -> void:
-	if targeting_system:
+	# The AI never aims through targeting_system, so its own refused cast has
+	# nothing to tear down there; doing it anyway would cancel an aim the
+	# player has started and sweep the ghosts of casts queued directly.
+	if targeting_system and not ai_cast_attempt:
 		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
 	_rig_ik_release("cast")
@@ -8831,7 +8885,8 @@ func _resolve_stress_breakdown(auto: bool) -> void:
 ## Apply the affliction / virtue a stress breakdown rolled (deferred, as
 ## before) and, if it took, tell the player what it was and why.
 func _apply_stress_response(cid: String, virtue: bool, cause: String) -> void:
-	if not is_instance_valid(condition_manager):
+	# Died between the roll and this deferred call: no affliction on a corpse.
+	if not is_instance_valid(condition_manager) or not is_alive():
 		return
 	var inst = condition_manager.apply_condition(cid, self, 1, -2.0, null)
 	if inst == null or not is_party_member():
@@ -8847,9 +8902,11 @@ func _apply_stress_response(cid: String, virtue: bool, cause: String) -> void:
 # Damage-side hooks: increment adrenaline, decrement focus, break concentration
 # if pressure pushes focus below the locked threshold. A damage-over-time tick
 # (from_tick) only feeds adrenaline: the hit that applied it was the wound, so
-# Concentration holds through Burning or Acid Rain.
+# Concentration holds through Burning or Acid Rain. A lethal hit (HP is already
+# applied; Deny Ending keeps 1) skips all of it: death ends Concentration
+# silently, and a corpse rolls no stress breakdown.
 func _on_self_damaged(amount: int, from_tick: bool = false) -> void:
-	if amount <= 0:
+	if amount <= 0 or not is_alive():
 		return
 	_grant_character_resource("adrenaline", 1)
 	if from_tick:
@@ -9204,6 +9261,14 @@ func _grant_soul(soul_record: Dictionary) -> bool:
 		captured_souls.append(soul_record)
 		return true
 	var victim_name: String = String(soul_record.get("name", "Unknown"))
+	# A trade is open: its Cancel restores the pack from its snapshot and would
+	# wipe a soul item added now. Keep the soul recorded (as with no pack, so
+	# it can still be offered) and say why it isn't in the pack.
+	if game != null and game.has_method("trade_open") and game.trade_open():
+		captured_souls.append(soul_record)
+		notify("Finish the trade first", Color(1.0, 0.6, 0.4),
+			"%s can't stow the soul of %s while a trade is open; it stays bound to them without a pack slot." % [Name, victim_name])
+		return true
 	var item := {
 		"id": "soul_" + String(soul_record.get("id", str(Time.get_ticks_msec()))),
 		"display_name": "Soul of %s" % victim_name,

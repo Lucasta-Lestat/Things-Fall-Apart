@@ -505,16 +505,33 @@ func settle_with(law_faction: String, mode: String) -> void:
 		for c in game.party_chars:
 			if not is_instance_valid(c) or not ("inventory" in c) or c.inventory == null:
 				continue
+			var removed_any := false
 			for i in range(c.inventory.items.size() - 1, -1, -1):
 				var entry = c.inventory.items[i]
 				if entry is Dictionary and str(entry.get("stolen_from", "")) == law_faction:
 					c.inventory.items.remove_at(i)
 					returned += 1
+					removed_any = true
+			var returned_weapons: Array = []
 			for i in range(c.inventory.stowed_items.size() - 1, -1, -1):
 				var w = c.inventory.stowed_items[i]
 				if w != null and ("stolen_from" in w) and w.stolen_from == law_faction:
 					c.inventory.stowed_items.remove_at(i)
+					returned_weapons.append(w)
 					returned += 1
+					removed_any = true
+			# Removed in place, so tell the panels (their slots index `items`
+			# and hold the weapon nodes) and take off any worn piece that went
+			# back (a pack's slots, its while-worn conditions and light), as
+			# SurrenderPanel._do_rob does.
+			for w in returned_weapons:
+				c.inventory.emit_signal("weapon_unequipped", w)
+				if is_instance_valid(w):
+					w.queue_free()
+			if removed_any:
+				c.inventory.emit_signal("item_removed", {})
+				if c.inventory.has_method("resync_worn_from_items"):
+					c.inventory.resync_worn_from_items()
 	if returned > 0:
 		GameLog.add_entry("Stolen goods returned (%d)." % returned)
 	match mode:

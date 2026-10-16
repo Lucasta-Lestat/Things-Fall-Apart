@@ -267,6 +267,7 @@ func _eye_cases(p, npcs: Array) -> void:
 	_check("eye.onlooker-has-the-member-in-view", overlay.is_in_view_of_onlooker(p))
 	await get_tree().create_timer(0.3, true).timeout   # > EYE_REFRESH_SEC
 	_check("eye.drawn-over-the-member", overlay.is_marked_in_view(p))
+	await _shrouded_eye_cases(p, onlooker, npcs, spot)
 	# An onlooker the party can't see must not reveal itself.
 	game._npc_was_truly_seen[onlooker] = false
 	var revealed: bool = false
@@ -296,6 +297,38 @@ func _eye_cases(p, npcs: Array) -> void:
 	p.global_position = old_pos
 	p.rotation = old_rot
 	game._update_npc_los_visibility()
+
+# A Shrouded member (a Dark Hood's visibility x0.5) is noticed only within the
+# onlooker's sight x 0.5, cone or not, and the eye says what the AI acts on
+# (ai.has_in_view -> can_see_character).
+func _shrouded_eye_cases(p, onlooker, npcs: Array, spot: Vector2) -> void:
+	var overlay = game.stealth_overlay
+	var oai = onlooker.get_node("AI")
+	var old_sight: float = onlooker.sight
+	onlooker.sight = 0.3   # about 432 px
+	var sight_px: float = oai.get_sight_range_pixels()
+	var dir: Vector2 = oai.get_facing_vector()
+	var far_pt: Vector2 = onlooker.global_position + dir * sight_px * 0.7
+	var near_pt: Vector2 = onlooker.global_position + dir * sight_px * 0.4
+	p.global_position = far_pt
+	if not oai.has_in_view(p):
+		print("SKIP eye.shrouded-* (no clear sight line at 0.7x range)")
+	else:
+		p.visibility_mult = 0.5
+		p._revealed_until = -1.0
+		var others_see := false
+		for n in npcs:
+			if n != onlooker and is_instance_valid(n) and n.has_node("AI") and n.AI_enabled and n.get_node("AI").has_in_view(p):
+				others_see = true
+		_check("eye.shrouded-0.7x-ai-not-in-view", not oai.has_in_view(p), [sight_px, p.effective_visibility()])
+		if not others_see:
+			_check("eye.shrouded-0.7x-no-eye", not overlay.is_in_view_of_onlooker(p))
+		p.global_position = near_pt
+		_check("eye.shrouded-0.4x-in-view", oai.has_in_view(p), [sight_px, oai._close_quarters_radius()])
+		p.visibility_mult = 1.0
+	onlooker.sight = old_sight
+	p.global_position = spot
+	await get_tree().process_frame
 
 # Velocity one movement step gives the character, walking toward a point 300
 # px away (tries four directions; returns 0 if every one is blocked).

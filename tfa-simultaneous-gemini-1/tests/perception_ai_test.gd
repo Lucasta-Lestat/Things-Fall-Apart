@@ -5,7 +5,10 @@
 #     '<NPC> loses sight of <Name>.' is logged when the party can see the NPC;
 #   - only the held target's own sounds and hits move last_known_target_pos;
 #   - the 1.5x held-target range follows the live sight range, floored at
-#     close quarters (a Blinded NPC keeps the foe at its elbow);
+#     close quarters (a Blinded NPC keeps the foe at its elbow); losing a
+#     target out of range is losing sight too (the '?', capped alertness);
+#   - an infatuated NPC drops its charmer and the charmer's hits don't
+#     re-acquire it;
 #   - the alertness glyph's three stages (pale small '?', yellow '?', red '!'),
 #     the outcry fuse's full-size '!', and the glyph staying upright.
 # Run:  godot --headless --path . res://tests/perception_ai_test.tscn
@@ -36,11 +39,13 @@ func _step(seconds: float) -> void:
 		ai.process_ai(0.1)
 		t += 0.1
 
+# Lines, counting repeats: GameLog folds an identical line within
+# REPEAT_WINDOW_MS (wall clock) into the previous entry's "count".
 func _log_count(text: String) -> int:
 	var n := 0
 	for e in GameLog.get_entries():
 		if text in str(e.get("text", "")):
-			n += 1
+			n += int(e.get("count", 1))
 	return n
 
 func _face(who, at: Vector2) -> void:
@@ -88,6 +93,11 @@ func _run() -> void:
 		if c != bandit and not (c in game.party_chars):
 			c.global_position = centre + Vector2(5000, 5000)
 	await _frames(3)
+	# The bandit's loadout is random: a drawn Winter's Grip pours frost fog off
+	# the blade (its item condition), and fog shortens sight, so the range
+	# checks below would depend on the roll. Clear air and no item conditions.
+	bandit.condition_manager.clear_all_conditions()
+	game.fog_manager.clear_all_fog()
 
 	# ---------------- acquisition
 	_face(bandit, p.global_position)
@@ -101,15 +111,35 @@ func _run() -> void:
 	p.global_position = bandit.global_position + Vector2(0, -180)
 	_face(bandit, p.global_position)
 	_step(0.3)
-	_check("range.held-at-1.25x-live-sight", ai.current_target == p, ai.current_target)
+	_check("range.held-at-1.25x-live-sight", ai.current_target == p,
+		[ai.current_target, ai.detection_range, bandit.global_position.distance_to(p.global_position)])
 	p.global_position = bandit.global_position + Vector2(0, -260)
 	_step(0.3)
 	_check("range.lost-beyond-1.5x-live-sight", ai.current_target == null, ai.current_target)
+	_check("range.lost-shows-question-mark", ai.current_alertness == ai.Alertness.SEARCHING, ai.current_alertness)
+	_check("range.lost-capped", ai.alertness_value <= ai.ALERTNESS_SOUND_CAP, ai.alertness_value)
 	bandit.sight = base_sight
 	p.global_position = centre
 	_face(bandit, p.global_position)
 	_step(0.3)
 	_check("range.re-acquired", ai.current_target == p, ai.current_target)
+
+	# ---------------- infatuated by the held target: drops it, and the
+	# charmer's own hits wake it without turning it on them.
+	var icm = bandit.get_node("ConditionManager")
+	icm.apply_condition("infatuated", p, 1, 20.0)
+	if icm.has_active_condition("infatuated"):
+		_step(0.2)
+		_check("charm.drops-the-charmer", ai.current_target != p, ai.current_target)
+		ai._on_self_damaged(p, bandit.global_position, 1.0)
+		_step(0.2)
+		_check("charm.charmer-hit-no-acquire", ai.current_target != p, ai.current_target)
+		icm.remove_condition("infatuated")
+		_face(bandit, p.global_position)
+		_step(0.3)
+		_check("charm.cured-re-acquires", ai.current_target == p, ai.current_target)
+	else:
+		print("SKIP charm.* (infatuation resisted)")
 
 	# ---------------- Blinded (live range 0): a foe at its elbow stays held,
 	# one out of close quarters is dropped; cured, it re-acquires by sight.

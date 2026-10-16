@@ -112,10 +112,22 @@ func _ready() -> void:
 	cai.last_heard_position = sentinel
 	var c_alert: float = float(cai.alertness_value)
 	aai.current_target = null
+	# Past TARGET_REANNOUNCE_GAP, or re-finding the same target is no call-out
+	# at all and alert_party's mid-fight guard goes unexercised.
+	aai._time_without_target = aai.TARGET_REANNOUNCE_GAP + 0.1
 	aai._acquire_target(e)   # fresh party-wide call-out
 	_report("party.no-redirect-mid-fight",
 		cai.last_heard_position == sentinel and float(cai.alertness_value) == c_alert,
 		"c heard=%s alert=%.0f" % [str(cai.last_heard_position), float(cai.alertness_value)])
+	# Re-finding the same target inside the gap (apathy nulls the target every
+	# frame and acquisition re-runs) doesn't call the party out again.
+	if bai.current_target == null:
+		var b_sentinel := Vector2(555.0, 666.0)
+		bai.last_heard_position = b_sentinel
+		aai.current_target = null
+		aai._acquire_target(e)
+		_report("party.no-repeat-call-out-in-gap", bai.last_heard_position == b_sentinel,
+			"b heard=%s" % str(bai.last_heard_position))
 
 	# --- 3. periodic share: party bypasses LOS, non-party still needs it ------
 	# b2 and f sit SOUTH of a while a faces its enemy — outside the sharer's

@@ -474,9 +474,11 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 	if _clamps_point():
 		target_position = AbilityManager.clamp_point_to_range(_origin_pos(), target_position, range_limit)
 	# Every ranged pick shows its reach (cones reach their radius; self casts
-	# have none).
+	# have none). Single-target abilities (Heal, Chasten...) flatten to NONE but
+	# designate a character, which confirm_targeting range-checks.
 	range_indicator.visible = range_limit > 0.0 and not lock_to_caster \
-		and target_shape in [TargetShape.CIRCLE, TargetShape.RECTANGLE, TargetShape.LINE, TargetShape.CHARACTERS]
+		and (target_shape in [TargetShape.CIRCLE, TargetShape.RECTANGLE, TargetShape.LINE, TargetShape.CHARACTERS] \
+			or (target_shape == TargetShape.NONE and _is_single_target_ability()))
 	_update_range_ring()
 
 	# Force an immediate update to ensure visual appears this frame
@@ -525,6 +527,20 @@ func confirm_targeting() -> Dictionary:
 			final_position = caster_position + direction.normalized() * line_range
 	elif _clamps_point():
 		final_position = AbilityManager.clamp_point_to_range(_origin_pos(), target_position, range_limit)
+
+	# Designation: whoever the player confirmed on top of. Null over bare ground,
+	# which is what preserves plain area targeting.
+	var designated = _designated_character_at(final_position)
+
+	# A single-target ability's aim point is never clamped (it has no area), and
+	# its explicit target skips AbilityManager's execution clamp, so its range is
+	# enforced here, as a character pick's is: refuse, say why, keep aiming.
+	if designated != null and range_limit > 0.0 and _is_single_target_ability():
+		var dist := _origin_pos().distance_to(designated.global_position)
+		if dist > range_limit:
+			_reject_target(designated, get_parent(), "Out of range", "out of range (%d / %d)" % [int(dist), int(range_limit)])
+			return {}
+
 	# The ring is only for aiming: a live cast's AoE preview stays up through
 	# the windup, but the ring goes now.
 	range_indicator.visible = false
@@ -539,10 +555,12 @@ func confirm_targeting() -> Dictionary:
 		"rotation": rectangle_rotation,
 		"caster_position": caster_position,
 	}
-
-	# Designation: whoever the player confirmed on top of. Null over bare ground,
-	# which is what preserves plain area targeting.
-	var designated = _designated_character_at(final_position)
+	# A projectile AoE bursts on the first body or wall in its path. 'position'
+	# stays the aimed point (execution fires at it); the queued ghost and the
+	# path leader belong where the live preview showed the burst.
+	if _projectile_impact.is_finite():
+		result["burst_position"] = _projectile_impact
+		result["burst_blocked"] = _projectile_impact.distance_to(final_position) > circle_radius
 
 	# Only record an anchor the executor will actually honor. Ground AoE keeps
 	# the patch of ground the player chose, so storing an anchor for it would be

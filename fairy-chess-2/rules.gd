@@ -34,8 +34,8 @@
 # * Two pieces swapping squares head-on capture each other.
 # * Two or more pieces arriving on the same square capture each other (and any
 #   occupant that stayed put).
-# * A mover whose path is stepped on by another mover's DESTINATION is blocked
-#   and bounces back to its origin (it is NOT captured -- fixes the old rule).
+# * A mover whose path is stepped on by another mover's DESTINATION is struck
+#   in transit: both it and the interceptor die on that contested square.
 # * A mover arriving on a square where a FRIENDLY piece unexpectedly still
 #   stands (its own move got cancelled) bounces back instead of trampling it.
 #   The Elephant Rider's charge tramples anything, friend or foe.

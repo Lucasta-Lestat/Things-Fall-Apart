@@ -236,6 +236,12 @@ func _try_cast_ability(delta: float) -> bool:
 		if data.is_empty():
 			continue
 		var tr: Dictionary = data.get("traits", {})
+		# Already concentrating: a held Concentration spell's focus counts toward
+		# its own recast and isn't spent, so recasting would be free and would
+		# dispel the spell we hold (or one the player planned) every few seconds.
+		if (tr.has("Concentration") or tr.has("concentration")) \
+				and "active_concentrations" in character and not character.active_concentrations.is_empty():
+			continue
 		var rng_px: float = float((data.get("targeting", {}) as Dictionary).get("range", 0.0))
 		if int(tr.get("healing", 0)) > 0 or int(tr.get("support", 0)) > 2:
 			var patient = _most_wounded_ally(maxf(rng_px, 120.0))
@@ -501,6 +507,10 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 			var foe_cm = foe.get_node_or_null("ConditionManager")
 			if foe_cm and foe_cm.has_active_condition("invisible"):
 				return
+		# Charmed: the charmer's blows wake us, but we won't turn on them
+		# (_update_target would only drop them again next tick).
+		if foe == _infatuation_source():
+			return
 		# No _change_state here: _acquire_target re-arms reaction_timer (the
 		# flinch delay) and IDLE/SEARCHING both promote to CHASE on their own.
 		_acquire_target(foe)
@@ -514,15 +524,12 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 
 
 # True while our character's damage comes from one of its own conditions'
-# ticks: ConditionManager.firing_triggered_effect, or the character's
-# _condition_tick_damage flag where that exists.
+# ticks (ProceduralCharacter._condition_tick_damage, set around the tick's
+# take_damage in _on_triggered_effect_fired).
 func _is_condition_tick() -> bool:
 	if character == null:
 		return false
-	var cm = character.get_node_or_null("ConditionManager")
-	if cm != null and cm.firing_triggered_effect:
-		return true
-	return "_condition_tick_damage" in character and bool(character.get("_condition_tick_damage"))
+	return bool(character._condition_tick_damage)
 
 
 # Reads `default_alertness` from the character (set by spawn flow from Maps
@@ -737,10 +744,11 @@ func _is_sneaking(other: ProceduralCharacter) -> bool:
 ## Whether this NPC has `c` in view right now, by the rules _update_target
 ## acts on: a held target while it isn't occluded (a wall-clear sight line or
 ## close quarters, out to 1.5x sight but never less than close quarters);
-## anyone else as acquisition sees them
-## (the sight cone, or close quarters with a wall-clear line unless they are
-## sneaking; an invisible character only with true_sight). StealthOverlay's
-## eye shows this, so it matches what the NPC acts on.
+## anyone else as acquisition sees them (can_see_character: the sight cone, or
+## close quarters with a wall-clear line unless they are sneaking; Shrouded
+## only within sight x their visibility; an invisible character only with
+## true_sight). StealthOverlay's eye shows this, so it matches what the NPC
+## acts on.
 func has_in_view(c) -> bool:
 	if c == null or not is_instance_valid(c) or c == character or not c.has_method("is_alive") or not c.is_alive():
 		return false
@@ -749,16 +757,10 @@ func has_in_view(c) -> bool:
 	var cm = character.get_node_or_null("ConditionManager")
 	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
 		return false
-	var dist: float = character.global_position.distance_to(c.global_position)
 	if c == current_target:
+		var dist: float = character.global_position.distance_to(c.global_position)
 		return dist <= maxf(detection_range * 1.5, _close_quarters_radius()) and _target_occluded_time <= 0.0
-	if character.traits.get("true_sight", 0) == 0:
-		var c_cm = c.get_node_or_null("ConditionManager")
-		if c_cm and c_cm.has_active_condition("invisible"):
-			return false
-	if dist <= _close_quarters_radius() and not _is_sneaking(c):
-		return _has_clear_sight_line(c.global_position, c.get_elevation())
-	return is_in_line_of_sight(c.global_position, c.get_elevation())
+	return can_see_character(c)
 
 
 # ===== PERCEPTION QUERIES (readouts) =====
@@ -769,9 +771,11 @@ func has_in_view(c) -> bool:
 # stealth 'in view' eye asks has_in_view() above, which answers both cases.
 
 ## Whether this AI would acquire `other` by sight now (faction aside): alive,
-## inside detection range, not invisible to us, and either in the sight cone or
+## inside detection range (a Shrouded one only within range x its
+## effective_visibility()), not invisible to us, and either in the sight cone or
 ## in close quarters with a clear wall ray unless `other` is sneaking. Blinded
 ## or unconscious, nothing. For our current target use is_target_in_sight().
+## The one copy of the acquisition rule for readouts: has_in_view uses it.
 func can_see_character(other) -> bool:
 	if other == null or not is_instance_valid(other) or other == character:
 		return false
@@ -786,6 +790,10 @@ func can_see_character(other) -> bool:
 			return false
 	var dist: float = character.global_position.distance_to(other.global_position)
 	if dist >= detection_range:
+		return false
+	# Concealment (a Dark Hood's Shrouded), as _update_target applies it.
+	var vis: float = other.effective_visibility() if other.has_method("effective_visibility") else 1.0
+	if vis < 1.0 and dist > get_sight_range_pixels() * vis:
 		return false
 	if dist <= _close_quarters_radius() and not _is_sneaking(other):
 		return _has_clear_sight_line(other.global_position, other.get_elevation())
@@ -812,6 +820,9 @@ func _update_target(delta: float = 0.0) -> void:
 		if current_target:
 			_lose_target()
 		return
+	# Get infatuation source to exclude from targeting
+	var infatuation_source: Node = _infatuation_source()
+
 	# Validate existing target
 	if current_target:
 		if not is_instance_valid(current_target):
@@ -822,12 +833,21 @@ func _update_target(delta: float = 0.0) -> void:
 			_lose_target()
 			return
 
+		# Infatuated: stop fighting the charmer even if we were already on them
+		# (the new-target search below skips them, but a held target bypasses
+		# it), so we turn to the next enemy or search.
+		if infatuation_source != null and current_target == infatuation_source:
+			_lose_target()
+			return
+
 		# Hysteresis: lose target at 1.5x detection range (live: weather, fog,
 		# Blinded's zero), never inside close quarters: a foe at our elbow,
 		# whose blows already identified them (_on_self_damaged), stays held.
+		# Out of range is losing sight too: same '?' and log line as the
+		# occlusion demotion below (_demote_lost_target).
 		var dist = character.global_position.distance_to(current_target.global_position)
 		if dist > maxf(detection_range * 1.5, _close_quarters_radius()):
-			_lose_target()
+			_demote_lost_target()
 			return
 
 		# Occlusion staleness: a target we haven't had a wall-clear sight line
@@ -857,24 +877,8 @@ func _update_target(delta: float = 0.0) -> void:
 		else:
 			_target_occluded_time += delta
 			if _target_occluded_time > TARGET_OCCLUSION_GIVE_UP:
-				# The `?` glyph keys on the Alertness ENUM, which acquisition
-				# pinned at MAX (= HOSTILE class, whose `!` self-hides after its
-				# flash) — without this drop the demotion would search with NO
-				# overhead tell. SOUND_CAP (85) sits under the HOSTILE band (90)
-				# and far over both the SEARCHING promotion (60) and give-up
-				# floor (36): routing is unchanged, only the glyph flips to `?`.
-				_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
-				var lost = current_target
-				_lose_target()
-				_announce_lost_sight(lost)
+				_demote_lost_target()
 		return
-
-	# Get infatuation source to exclude from targeting
-	var infatuation_source: Node = null
-	if _cm2 and _cm2.has_active_condition("infatuated"):
-		var inf_instance = _cm2.conditions.get("infatuated")
-		if inf_instance:
-			infatuation_source = inf_instance.source
 
 	# Check for confusion — pick random target from all visible living characters
 	if is_confused:
@@ -1090,13 +1094,39 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	# ally share left an indoor member deaf to the entire fight). One-shot per
 	# acquisition, so it can't recreate the decay-holiday bug; per-member
 	# guards (never redirect someone mid-fight) live in Game.alert_party.
-	if game != null and ("party_chars" in game) and character in game.party_chars \
+	# Gated like the signal: apathy nulls the target every frame and this
+	# re-runs, which would re-pin every targetless companion per tick.
+	if announce and game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
 
+# The creature charming us (the 'infatuated' condition's source), or null.
+# Never targeted: not by sight, not by confusion, not held, not by its own hits.
+func _infatuation_source() -> Node:
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm and cm.has_active_condition("infatuated"):
+		var inf_instance = cm.conditions.get("infatuated")
+		if inf_instance and is_instance_valid(inf_instance.source):
+			return inf_instance.source
+	return null
+
+# A held target we can no longer see (out of 1.5x range, or occluded past the
+# give-up time) becomes a search of where it was last seen.
+# The `?` glyph keys on the Alertness ENUM, which acquisition pinned at MAX
+# (= HOSTILE class, whose `!` self-hides after its flash) — without this drop
+# the demotion would search with NO overhead tell. SOUND_CAP (85) sits under
+# the HOSTILE band (90) and far over both the SEARCHING promotion (60) and
+# give-up floor (36): routing is unchanged, only the glyph flips to `?`.
+func _demote_lost_target() -> void:
+	_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
+	var lost = current_target
+	_lose_target()
+	_announce_lost_sight(lost)
+
 # '<NPC> loses sight of <Name>.' when an NPC the party can see gives up on a
-# party member it has had no sight line to (the occlusion demotion above). The
-# party learns why the chase turned into a search; a hidden NPC stays hidden.
+# party member it has no sight of any more (_demote_lost_target: out of range
+# or occluded). The party learns why the chase turned into a search; a hidden
+# NPC stays hidden.
 func _announce_lost_sight(lost) -> void:
 	if lost == null or not is_instance_valid(lost) or not lost.has_method("is_party_member") \
 			or not lost.is_party_member() or character.is_party_member():

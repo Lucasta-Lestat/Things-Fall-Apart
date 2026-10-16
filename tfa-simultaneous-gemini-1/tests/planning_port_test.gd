@@ -300,7 +300,9 @@ func _case_offhand(a: ProceduralCharacter, target: ProceduralCharacter) -> void:
 	h.state = PathInputHandler.PathInputState.PLACING_ACTION
 	var n3 = h.pending_action_node
 	h._initiate_action_for_node(null, "Off", Vector2(1800, 1800))
-	_check("hand.node-empty-hand-swings-main", n3.action_data.get("hand") == "Main")
+	# An empty off hand swings itself, as a direct right-click does; beside a
+	# two-hander it is on the grip and swings Main (AP-5).
+	_check("hand.node-empty-off-hand-keeps-its-hand", n3.action_data.get("hand") == ("Main" if a._main_hand_is_two_handed() else "Off"), n3.action_data.get("hand"))
 	var steps: Array = a.tactical_path.to_action_queue_actions()
 	var attacks := steps.filter(func(x): return x.type == AQ.ATTACK or x.type == AQ.ATTACK_TARGET)
 	_check("hand.carried-into-queue-steps", attacks.size() == 3 and attacks[0].data.get("hand") == "Off")
@@ -500,8 +502,11 @@ func _case_reticles(a: ProceduralCharacter) -> void:
 	var cols: Array = q.map(func(x): return x.reticle.modulate if x.reticle != null else Color.BLACK)
 	_check("reticle.fixture", q.size() == 4 and q.all(func(x): return x.reticle != null))
 	if q.size() == 4:
-		_check("reticle.beneficial-ability-green", cols[0] == aq.reticle_color_healing, str(cols[0]))
-		_check("reticle.hostile-ability-red", cols[1] == aq.reticle_color_attack, str(cols[1]))
+		# Ability reticles use the queued intent palette for all three intents
+		# (as the ghosts and path leaders do); plain attacks stay
+		# reticle_color_attack (AP-6).
+		_check("reticle.beneficial-ability-olive", cols[0] == Ability.intent_border_color(Ability.Intent.BENEFICIAL, true), str(cols[0]))
+		_check("reticle.hostile-ability-iron", cols[1] == Ability.intent_border_color(Ability.Intent.HOSTILE, true), str(cols[1]))
 		_check("reticle.neutral-ability-sepia", cols[2] == Ability.intent_border_color(Ability.Intent.NEUTRAL, true), str(cols[2]))
 		_check("reticle.attack-red", cols[3] == aq.reticle_color_attack, str(cols[3]))
 	# Planning pauses the tree; the pulse tween, now bound to the reticle,

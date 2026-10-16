@@ -119,13 +119,11 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 		if ability_id != "":
 			var ability = AbilityDatabase.get_ability_data(ability_id)
 			if not ability.is_empty():
-				# The same classifier that colours the queued AoE ghost and the
-				# path leader line, so the reticle can't disagree with them.
+				# The same classifier and queued palette that colour the AoE
+				# ghost and the path leader line, so the reticle can't disagree
+				# with them. Plain attack orders keep reticle_color_attack.
 				var intent: int = Ability.classify_intent(ability)
-				if intent == Ability.Intent.BENEFICIAL:
-					color = reticle_color_healing
-				elif intent == Ability.Intent.NEUTRAL:
-					color = Ability.intent_border_color(intent, true)
+				color = Ability.intent_border_color(intent, true)
 	
 	reticle.modulate = color
 	reticle_container.add_child(reticle)
@@ -466,9 +464,10 @@ func _execute_action(action: Action) -> void:
 
 ## `user` consumes `item_data`, or gives it to `target` to drink. Shared by the
 ## queued USE_ITEM and the party panel's Consume so both behave the same.
-## An item with flat "healing" heals by that amount only: a pure-heal
-## use_ability on top (a Potion of Healing's "heal") would heal twice and start
-## a cast, so it isn't cast. Any other use_ability is cast for free, on the
+## An item with flat "healing" heals by that amount only: a use_ability that
+## heals too (a Potion of Healing's "heal") would heal twice and start a cast,
+## so it isn't cast; its other effects (Heal's poison cure) still land on the
+## target, with no cast. Any other use_ability is cast for free, on the
 ## target alone. Returns false when nothing took effect (the cast failed and
 ## there is no flat healing or satiety): the caller keeps the item, and no
 ## "consumes" line is logged. A failed cast is announced by the character.
@@ -479,11 +478,14 @@ static func apply_consumable(user, target, item_data: Dictionary) -> bool:
 	var s = item_data.get("satiety", 0.0)
 	var satiety: float = float(s) if s != null else 0.0
 	var has_flat_effect := healing > 0 or satiety > 0
+	var uncast_ability: Dictionary = {}
 
 	var use_ability_id = item_data.get("use_ability", "")
 	if use_ability_id is String and not use_ability_id.is_empty():
 		var ability_data: Dictionary = AbilityDatabase.get_ability_data(use_ability_id)
-		if not (healing > 0 and _is_pure_heal_ability(use_ability_id, ability_data)):
+		if healing > 0 and _ability_heals(ability_data):
+			uncast_ability = ability_data
+		else:
 			var am = target.get_node_or_null("AbilityManager")
 			var cast_ok := false
 			if not ability_data.is_empty() and am:
@@ -512,20 +514,36 @@ static func apply_consumable(user, target, item_data: Dictionary) -> bool:
 		var cm = target.get_node_or_null("ConditionManager")
 		if cm:
 			cm.apply_condition(condition_id, user)
+	if not uncast_ability.is_empty():
+		_resolve_non_heal_effects(target, uncast_ability, item_name)
 	return true
 
-## A use_ability that only restores health: "heal" itself, or one whose
-## effects are all "heal".
-static func _is_pure_heal_ability(ability_id: String, ability_data: Dictionary) -> bool:
-	if ability_id.to_lower() == "heal" or str(ability_data.get("id", "")).to_lower() == "heal":
-		return true
+## True when the ability has a "heal" effect, which a flat-healing item's own
+## healing replaces (judged by effects, not by id).
+static func _ability_heals(ability_data: Dictionary) -> bool:
 	var effects = ability_data.get("effects", [])
-	if not (effects is Array) or effects.is_empty():
+	if not (effects is Array):
 		return false
 	for effect in effects:
-		if not (effect is Dictionary and str(effect.get("type", "")) == "heal"):
-			return false
-	return true
+		if effect is Dictionary and str(effect.get("type", "")) == "heal":
+			return true
+	return false
+
+## Resolves the ability's effects other than "heal" on `target` alone, without a
+## cast: the rest of a flat-healing item's spell (Heal's poison cure). Its
+## feedback names the item ("Potion of Healing ends Poisoned on ...").
+static func _resolve_non_heal_effects(target, ability_data: Dictionary, item_name: String) -> void:
+	var effects = ability_data.get("effects", [])
+	if not (effects is Array):
+		return
+	var ability: Ability = null
+	for effect in effects:
+		if not (effect is Dictionary) or str(effect.get("type", "")) == "heal":
+			continue
+		if ability == null:
+			ability = Ability.from_dict(ability_data)
+			ability.display_name = item_name
+		AbilityEffect.resolve_effect(effect, target, [target], ability, target.global_position)
 
 static func _consumable_name(item_data: Dictionary) -> String:
 	var n = item_data.get("display_name")

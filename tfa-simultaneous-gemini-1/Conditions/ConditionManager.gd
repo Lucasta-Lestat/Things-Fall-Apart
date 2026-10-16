@@ -242,6 +242,13 @@ func apply_condition(
 	if not template:
 		push_warning("Unknown condition: %s" % condition_id)
 		return null
+	# Corpses take no new conditions. A killing blow's rider (Fireball's
+	# Burning, Ice Storm's Chilled, a bite's Bleeding) lands after the damage,
+	# once _enter_corpse_state has already stripped condition VFX, and _process
+	# skips corpses, so it would never expire and its flames would play on the
+	# tombstone for good. Saved corpse conditions come back through from_dict.
+	if character and character.has_method("is_alive") and not character.is_alive():
+		return null
 
 	# Feedback below is only for applications with a source (abilities, attacks,
 	# fogs, fields). Surfaces, fire and every slashing hit's Bleeding pass null
@@ -485,11 +492,15 @@ func _player_involved(source) -> bool:
 
 
 ## True when notices about the bearer may be shown: a party member, or an NPC
-## the party can currently see (Game._update_npc_los_visibility hides unseen
-## NPCs). Hidden NPCs stay quiet, so a notice never gives one away.
+## the party can currently see. Hidden NPCs stay quiet, so a notice never gives
+## one away. "See" is the bearer's _announces_to_party (Game.is_seen_by_party,
+## line of sight), the same test as the damage numbers on the same hit: a
+## hearing pulse also sets `visible` on an NPC the party only heard.
 func _bearer_noticeable() -> bool:
 	if not is_instance_valid(character):
 		return false
+	if character.has_method("_announces_to_party"):
+		return character._announces_to_party()
 	if character.has_method("is_party_member") and character.is_party_member():
 		return true
 	return character is CanvasItem and character.visible

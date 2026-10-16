@@ -1,7 +1,9 @@
 # res://tests/ability_casting_test.gd
 # Headless assertion harness for the casting rules: the incapacitation gate and
-# free item casts, interruptible windups (F5), the projectile AoE preview,
-# ability range (F6) and Concentration (F7). Drives the real game scene the
+# free item casts, interruptible windups (F5), the projectile AoE preview and
+# its burst point, ability range (F6, including single-target designations and
+# a law-refused cast that never "falls short") and Concentration (F7, and the
+# AI not recasting while it concentrates). Drives the real game scene the
 # way feedback_layer_test does; party members are the ones whose notices and
 # log lines always reach the player.
 # Run:  godot --headless --path . res://tests/ability_casting_test.tscn
@@ -51,6 +53,7 @@ func _ready() -> void:
 	await _impact_cases()
 	await _f6_cases()
 	await _f7_cases()
+	await _ai_concentration_cases()
 
 	for c in spawned:
 		if is_instance_valid(c):
@@ -356,6 +359,31 @@ func _impact_cases() -> void:
 	t._update_active_indicator()
 	_check("impact.plain-aoe-on-cursor", t._projectile_impact == Vector2.INF and t.circle_indicator.global_position.distance_to(origin + Vector2(400, -20)) < 0.5)
 	t.end_targeting()
+
+	# The confirmed result keeps the aimed point as `position` and carries the
+	# burst point (for the queued ghost and the path leader) and whether it
+	# falls short of the aim.
+	t.start_targeting("Main", burst, origin + Vector2(400, -20))
+	t.target_position = origin + Vector2(400, -20)
+	t._update_active_indicator()
+	var impact: Vector2 = t._projectile_impact
+	res = t.confirm_targeting()
+	_check("burst.position-is-aim", _near(res.get("position", Vector2.INF), origin + Vector2(400, -20)), res.get("position"))
+	_check("burst.burst-position", res.has("burst_position") and _near(res["burst_position"], impact) and res["burst_position"].x < origin.x + 160.0, res.get("burst_position"))
+	_check("burst.blocked", res.get("burst_blocked", false) == true, res)
+	t.end_targeting()
+	t.start_targeting("Main", burst, origin + Vector2(150, -20))
+	t.target_position = origin + Vector2(150, -20)
+	t._update_active_indicator()
+	res = t.confirm_targeting()
+	_check("burst.on-body-not-blocked", res.has("burst_position") and res.get("burst_blocked", true) == false, res)
+	t.end_targeting()
+	t.start_targeting("Main", plain, origin + Vector2(400, -20))
+	t.target_position = origin + Vector2(400, -20)
+	t._update_active_indicator()
+	res = t.confirm_targeting()
+	_check("burst.none-without-projectile", not res.has("burst_position") and not res.has("burst_blocked"), res)
+	t.end_targeting()
 	_despawn(wall)
 	_despawn(p)
 	await _frames(2)
@@ -462,6 +490,7 @@ func _f6_cases() -> void:
 	_despawn(far)
 	_despawn(near)
 	t.get_parent().queue_free()
+	await _single_target_cases()
 
 	# manager.use_ability-clamps: execution clamps from where the caster stands,
 	# and a party member hears that it fell short
@@ -548,6 +577,93 @@ func _f6_cases() -> void:
 	_check("manager.point-windup-clamped", started.size() == 2 and _near(started[1], start + Vector2(150, 0)), started)
 	c.ability_manager.cancel_cast("")
 	c.ability_manager.cast_started.disconnect(sb)
+	await _frames(2)
+
+	# A far cast the law gate refuses never "falls short": the range notice
+	# comes after the gates. The confirmed recast does fall short, and says so.
+	var saved_map: String = game.current_map_id
+	var saved_unlimited: bool = c.npc_unlimited_resources
+	MapDatabase._maps["__crime_waldau"] = {"id": "__crime_waldau", "controlling_faction": "waldau"}
+	game.current_map_id = "__crime_waldau"
+	CrimeManager._pending_cast_confirms.clear()
+	CrimeManager._confirmed_cast_maps.clear()
+	c.npc_unlimited_resources = true
+	var necro := Ability.from_dict({
+		"id": "test_necro_bolt", "display_name": "Test Necro Bolt", "cast_time": 0.0,
+		"traits": {"necrotic": 3},
+		"targeting": {"type": "point", "range": 220.0, "shape": "circle", "radius": 10.0},
+		"effects": [],
+	})
+	log_lines.clear()
+	c._last_notify_text = ""
+	var refused: bool = c.use_ability(necro, {"position": start + Vector2(1000, 0)})
+	_check("manager.refused-cast-no-falls-short", not refused and not _logged("falls short") and c._last_notify_text == "Illegal here",
+		[log_lines, c._last_notify_text])
+	log_lines.clear()
+	c._last_notify_text = ""
+	var committed: bool = c.use_ability(necro, {"position": start + Vector2(1000, 0)})
+	_check("manager.committed-cast-falls-short", committed and _logged("Test Necro Bolt falls short") and c._last_notify_text == "Out of range",
+		[log_lines, c._last_notify_text])
+	CrimeManager._pending_cast_confirms.clear()
+	CrimeManager._confirmed_cast_maps.clear()
+	MapDatabase._maps.erase("__crime_waldau")
+	game.current_map_id = saved_map
+	c.npc_unlimited_resources = saved_unlimited
+	await _frames(2)
+
+# Single-target designations (shape "single", e.g. Heal as AbilityShape
+# flattens it) get the range ring and are refused beyond range at confirm,
+# saying why; bare ground passes (execution clamps it).
+func _single_target_cases() -> void:
+	var o := Vector2(5000, 5600)
+	var caster = _spawn("Healer", o)
+	var far = _spawn("Faraway", o + Vector2(400, 0))
+	var near = _spawn("Nearby", o + Vector2(120, 0))
+	await _physics(3)
+	var t = caster.targeting_system
+	var heal := {"id": "test_heal", "display_name": "Test Heal", "target_shape": "none", "range": 200.0, "target_type": "target",
+		"visuals": {}, "targeting": {"type": "target", "shape": "single", "range": 200.0}}
+	t.start_targeting("Main", heal, far.global_position)
+	_check("single.ring-visible", t.range_indicator.visible and is_equal_approx((t.range_indicator.get_child(0)).radius, 200.0) and _near(t.range_indicator.global_position, o),
+		[t.range_indicator.visible, t.range_indicator.global_position])
+	t.target_position = far.global_position
+	var res: Dictionary = t.confirm_targeting()
+	_check("single.reject-out-of-range", res.is_empty() and t.is_targeting and t.range_indicator.visible, [res, t.is_targeting, t.range_indicator.visible])
+	_check("single.reject-says-why", far._last_notify_text == "Out of range" and _logged("can't target Faraway with Test Heal: out of range (400 / 200)"), [far._last_notify_text, log_lines.slice(-3)])
+	t.target_position = near.global_position
+	res = t.confirm_targeting()
+	_check("single.accept-in-range", res.get("targets", []) == [near] and not t.range_indicator.visible, res)
+	t.end_targeting()
+	t.start_targeting("Main", heal, o + Vector2(0, 900))
+	t.target_position = o + Vector2(0, 900)
+	res = t.confirm_targeting()
+	_check("single.bare-ground-passes", not res.is_empty() and not res.has("targets"), res)
+	t.end_targeting()
+	# Planned from a path node: measured from the node.
+	t.start_targeting("Main", heal, far.global_position, o + Vector2(300, 0))
+	_check("single.ring-on-node", _near(t.range_indicator.global_position, o + Vector2(300, 0)), t.range_indicator.global_position)
+	t.target_position = far.global_position
+	res = t.confirm_targeting()
+	_check("single.node-origin-range", res.get("targets", []) == [far], res)
+	t.end_targeting()
+	# Unlimited (range 0, e.g. on-hit abilities): no ring, no rejection.
+	var unl := heal.duplicate(true)
+	unl["range"] = 0.0
+	t.start_targeting("Main", unl, far.global_position)
+	_check("single.unlimited-no-ring", not t.range_indicator.visible)
+	t.target_position = far.global_position
+	res = t.confirm_targeting()
+	_check("single.unlimited-accepts", res.get("targets", []) == [far], res)
+	t.end_targeting()
+	# Self casts authored shape single: no ring.
+	var bide := {"id": "test_bide", "display_name": "Test Bide", "target_shape": "none", "range": 200.0, "target_type": "self",
+		"visuals": {}, "targeting": {"type": "self", "shape": "single", "range": 200.0}}
+	t.start_targeting("Main", bide, far.global_position)
+	_check("single.self-no-ring", not t.range_indicator.visible)
+	t.end_targeting()
+	_despawn(far)
+	_despawn(near)
+	_despawn(caster)
 	await _frames(2)
 
 # ---------------------------------------------------------------------------
@@ -785,4 +901,32 @@ func _f7_cases() -> void:
 	_check("conc.cloud-dispelled", _gone(overlay) and (fm == null or not fm._active_fogs.has(overlay)))
 	_despawn(cloud_caster)
 	_despawn(enemy)
+	await _frames(2)
+
+
+# The AI doesn't recast a Concentration spell while it holds one: the held
+# focus counts toward the recast, so it would be free, and it would dispel the
+# spell it holds (AP-2). With nothing held it casts.
+func _ai_concentration_cases() -> void:
+	var o := Vector2(5600, 4200)
+	var sorcerer = _spawn("Sorcerer", o)
+	var victim = _spawn("Victim", o + Vector2(0, -200))
+	await _physics(3)
+	sorcerer.rotation = 0.0   # facing up, at the victim
+	sorcerer.get_node("Inventory").add_ability_by_id("cloud_kill")
+	var sai = sorcerer.get_node("AI")
+	sai.current_target = victim
+	sorcerer.active_concentrations = {"dummy": {"name": "Dummy", "conditions": [], "objects": []}}
+	sai._cast_timer = 0.0
+	var cast: bool = sai._try_cast_ability(0.1)
+	_check("ai.no-recast-while-concentrating", not cast and sorcerer.active_concentrations.has("dummy"), [cast, sorcerer.active_concentrations.keys()])
+	sorcerer.active_concentrations = {}
+	sai._cast_timer = 0.0
+	cast = sai._try_cast_ability(0.1)
+	_check("ai.casts-when-not-concentrating", cast, cast)
+	sorcerer.ability_manager.cancel_cast("")
+	if not sorcerer.active_concentrations.is_empty():
+		sorcerer.end_concentration("test")
+	_despawn(sorcerer)
+	_despawn(victim)
 	await _frames(2)
