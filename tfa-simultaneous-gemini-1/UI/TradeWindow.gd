@@ -36,6 +36,17 @@ var _committed: bool = false
 var _handled: bool = false  # set to true on either Accept or Cancel; suppresses _exit_tree rollback
 
 func _ready() -> void:
+	# One trade at a time: Cancel puts every party inventory back from this
+	# window's snapshot, so a second open trade would undo the first's moves
+	# on one side only. The chest, service and party panels check this group.
+	for other in get_tree().get_nodes_in_group("trade_window"):
+		if not other.is_queued_for_deletion():
+			GameLog.add_entry("Finish the current trade first.")
+			_handled = true  # nothing to roll back
+			visible = false
+			queue_free()
+			return
+	add_to_group("trade_window")
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size = Vector2(380, 460)
 	anchor_left = 0.5
@@ -78,7 +89,9 @@ func _ready() -> void:
 	hint.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	vbox.add_child(hint)
 
-	vbox.add_child(HSeparator.new())
+	var top_sep = HSeparator.new()
+	vbox.add_child(top_sep)
+	_forward_dnd(top_sep)
 
 	# NPC inventory grid.
 	var grid_label = Label.new()
@@ -96,7 +109,9 @@ func _ready() -> void:
 	scroll.add_child(_grid)
 
 	# Balance row.
-	vbox.add_child(HSeparator.new())
+	var balance_sep = HSeparator.new()
+	vbox.add_child(balance_sep)
+	_forward_dnd(balance_sep)
 	_balance_label = Label.new()
 	_balance_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(_balance_label)
@@ -340,11 +355,31 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 		slot.add_child(stack_label)
 
 	slot.set_meta("entry", entry)
+	_forward_dnd(slot)
 	return slot
 
 # ---------------------------------------------------------------------------
 # Drag and drop
 # ---------------------------------------------------------------------------
+
+# Godot starts a drag, and looks for a drop target, at the control under the
+# cursor and climbs to its parents only through MOUSE_FILTER_PASS controls. The
+# slots and separators are STOP, so they forward to the window's own methods
+# below, with the position moved into the window's space.
+func _forward_dnd(ctrl: Control) -> void:
+	ctrl.set_drag_forwarding(_fwd_get_drag_data.bind(ctrl), _fwd_can_drop_data.bind(ctrl), _fwd_drop_data.bind(ctrl))
+
+func _to_window_local(ctrl: Control, pos: Vector2) -> Vector2:
+	return get_global_transform_with_canvas().affine_inverse() * (ctrl.get_global_transform_with_canvas() * pos)
+
+func _fwd_get_drag_data(at_position: Vector2, ctrl: Control):
+	return _get_drag_data(_to_window_local(ctrl, at_position))
+
+func _fwd_can_drop_data(at_position: Vector2, data, ctrl: Control) -> bool:
+	return _can_drop_data(_to_window_local(ctrl, at_position), data)
+
+func _fwd_drop_data(at_position: Vector2, data, ctrl: Control) -> void:
+	_drop_data(_to_window_local(ctrl, at_position), data)
 
 func _get_drag_data(at_position: Vector2):
 	var slot = _find_slot_at(at_position)
@@ -375,8 +410,9 @@ func _create_drag_preview(entry: Dictionary) -> Control:
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
-	# Accept party-member drops (player giving items to NPC).
-	return data.has("source_character")
+	# Accept party-member drops (player giving items to NPC). Downtime portrait
+	# drags also carry a source_character, but no item entry.
+	return data.has("source_character") and data.get("entry") is Dictionary
 
 func _drop_data(at_position: Vector2, data) -> void:
 	if not is_instance_valid(npc):
@@ -387,6 +423,15 @@ func _drop_data(at_position: Vector2, data) -> void:
 		return
 	match entry.get("kind", ""):
 		"item":
+			# Moving only the inventory entry would leave worn armour on the
+			# body as well as with the NPC.
+			var worn = entry.get("raw", {})
+			if worn is Dictionary and worn.get("_equipped", false):
+				if source_char.has_method("notify"):
+					source_char.notify("Unequip it first", Color(1.0, 0.6, 0.4),
+						"%s can't trade away the %s while wearing it." % [source_char.Name, entry.get("display_name", "item")])
+				SfxManager.play_ui("trade_decline")
+				return
 			var item = source_char.inventory.remove_item(entry.get("source_index", -1))
 			if not item.is_empty():
 				npc.inventory.add_item(item)

@@ -64,9 +64,10 @@ func _ready() -> void:
 	close_btn.pressed.connect(_on_close_pressed)
 	header.add_child(close_btn)
 
-	# Spacer.
+	# Spacer. HSeparator is STOP by default, so it forwards drops too.
 	var sep = HSeparator.new()
 	vbox.add_child(sep)
+	_forward_dnd(sep)
 
 	# Grid of slots.
 	_grid = GridContainer.new()
@@ -169,8 +170,8 @@ func _create_slot(entry: Dictionary) -> PanelContainer:
 	slot.gui_input.connect(_on_slot_gui_input.bind(slot))
 	slot.set_drag_forwarding(
 		Callable(self, "_slot_get_drag_data").bind(entry),
-		Callable(self, "_slot_can_drop_data"),
-		Callable(self, "_slot_drop_data"),
+		_fwd_can_drop_data.bind(slot),
+		_fwd_drop_data.bind(slot),
 	)
 	return slot
 
@@ -216,6 +217,8 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	var entry: Dictionary = slot.get_meta("entry")
 	var item_dict = entry.get("raw")
 	if not (item_dict is Dictionary) or (item_dict as Dictionary).is_empty():
+		return
+	if _refuse_during_trade(selected, entry, "take"):
 		return
 	# Transfer first; only erase from chest on success so a full inventory
 	# doesn't lose the item.
@@ -302,11 +305,21 @@ func _slot_get_drag_data(at_position: Vector2, entry: Dictionary) -> Variant:
 		"source_window": self,
 	}
 
-func _slot_can_drop_data(at_position: Vector2, data) -> bool:
-	return _can_drop_data(at_position, data)
+# Godot looks for a drop target at the control under the cursor and climbs to
+# its parents only through MOUSE_FILTER_PASS controls, so STOP controls (the
+# slots, the separator) hand drops to the window's own methods, with the
+# position moved into the window's space.
+func _forward_dnd(ctrl: Control) -> void:
+	ctrl.set_drag_forwarding(Callable(), _fwd_can_drop_data.bind(ctrl), _fwd_drop_data.bind(ctrl))
 
-func _slot_drop_data(at_position: Vector2, data) -> void:
-	_drop_data(at_position, data)
+func _to_window_local(ctrl: Control, pos: Vector2) -> Vector2:
+	return get_global_transform_with_canvas().affine_inverse() * (ctrl.get_global_transform_with_canvas() * pos)
+
+func _fwd_can_drop_data(at_position: Vector2, data, ctrl: Control) -> bool:
+	return _can_drop_data(_to_window_local(ctrl, at_position), data)
+
+func _fwd_drop_data(at_position: Vector2, data, ctrl: Control) -> void:
+	_drop_data(_to_window_local(ctrl, at_position), data)
 
 func _create_drag_preview(entry: Dictionary) -> Control:
 	var sprite_path: String = str(entry.get("sprite_path", ""))
@@ -324,6 +337,9 @@ func _create_drag_preview(entry: Dictionary) -> Control:
 
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
+		return false
+	# Downtime portrait drags carry a source_character but no item entry.
+	if not (data.get("entry") is Dictionary):
 		return false
 	# Drop from a party member's slot in the side panel. A corpse's own panel
 	# row must not deposit into its own loot window (same-inventory transfer
@@ -344,8 +360,18 @@ func _drop_data(at_position: Vector2, data) -> void:
 		var source_char = data["source_character"]
 		if not is_instance_valid(source_char):
 			return
+		if _refuse_during_trade(source_char, entry, "put away"):
+			return
 		match entry.get("kind", ""):
 			"item":
+				# Moving only the inventory entry would leave worn armour on
+				# the body as well as in the chest.
+				var worn = entry.get("raw", {})
+				if worn is Dictionary and worn.get("_equipped", false):
+					source_char.notify("Unequip it first", Color(1.0, 0.6, 0.4),
+						"%s can't put the %s away while wearing it." % [source_char.Name, entry.get("display_name", "item")])
+					SfxManager.play_ui("trade_decline")
+					return
 				var item = source_char.inventory.remove_item(entry.get("source_index", -1))
 				if not item.is_empty():
 					chest_item.contents.append(item)
@@ -382,6 +408,19 @@ func _drop_data(at_position: Vector2, data) -> void:
 		if src_window != null and is_instance_valid(src_window) and src_window.has_method("_populate_grid"):
 			src_window._populate_grid()
 		return
+
+# An open TradeWindow puts every party inventory back from its snapshot on
+# Cancel, so an item moved between the party and this chest meanwhile would be
+# duplicated or lost. Refuse those moves until the trade is closed.
+func _refuse_during_trade(character, entry: Dictionary, verb: String) -> bool:
+	for w in get_tree().get_nodes_in_group("trade_window"):
+		if not w.is_queued_for_deletion():
+			SfxManager.play_ui("trade_decline")
+			if character.has_method("notify"):
+				character.notify("Finish the trade first", Color(1.0, 0.6, 0.4),
+					"%s can't %s the %s while a trade is open: accept or cancel it first." % [character.Name, verb, entry.get("display_name", "item")])
+			return true
+	return false
 
 func _find_slot_at(pos: Vector2) -> PanelContainer:
 	var global_pos = get_global_transform() * pos

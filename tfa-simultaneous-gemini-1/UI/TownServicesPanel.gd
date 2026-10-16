@@ -149,6 +149,17 @@ func _on_map_loaded(_map_id: String) -> void:
 # ---------------------------------------------------------------------------
 
 func _repopulate() -> void:
+	# Old cards stop listening to their live NPC. Signals match a bound
+	# callable by its method alone, so the new card's connect would otherwise
+	# be refused as a duplicate and the NPC's next trade would refresh the old
+	# card's freed grid.
+	for card in _cards:
+		var card_npc = card.get("live_npc")
+		if is_instance_valid(card_npc) and card_npc.inventory:
+			var card_inv = card_npc.inventory
+			for sig in [card_inv.item_added, card_inv.item_removed, card_inv.weapon_equipped, card_inv.weapon_unequipped]:
+				if sig.is_connected(_on_live_inventory_changed):
+					sig.disconnect(_on_live_inventory_changed)
 	for child in vbox.get_children():
 		child.queue_free()
 	_cards.clear()
@@ -201,8 +212,7 @@ func _repopulate() -> void:
 
 func _build_service_card(entry: Dictionary):
 	var live_npc = _find_live_npc(entry)
-	var inventory_items: Array = _get_service_inventory(entry, live_npc)
-	_value_baseline[entry["npc_uid"]] = _compute_inventory_value(inventory_items)
+	_value_baseline[entry["npc_uid"]] = _service_value(entry, live_npc)
 
 	# Outer wrapper carries the parchment-with-icon background for this service.
 	var card_panel = PanelContainer.new()
@@ -280,6 +290,9 @@ func _build_service_card(entry: Dictionary):
 
 	# Reparent the inner VBox into the textured PanelContainer wrapper.
 	card_panel.add_child(container)
+	# Item drops land on whichever of these STOP controls is under the cursor.
+	for c in [card_panel, container, header, inv_grid]:
+		_forward_dnd(c)
 
 	var card_data: Dictionary = {
 		"entry": entry,
@@ -297,6 +310,10 @@ func _build_service_card(entry: Dictionary):
 	if live_npc and live_npc.inventory:
 		live_npc.inventory.item_added.connect(_on_live_inventory_changed.bind(card_data))
 		live_npc.inventory.item_removed.connect(_on_live_inventory_changed.bind(card_data))
+		# Weapons dragged off (or traded onto) the card move through these
+		# instead, and a weapon taken off the card is freed.
+		live_npc.inventory.weapon_equipped.connect(_on_live_inventory_changed.bind(card_data))
+		live_npc.inventory.weapon_unequipped.connect(_on_live_inventory_changed.bind(card_data))
 
 	return card_panel
 
@@ -592,11 +609,33 @@ func _create_slot(slot_entry: Dictionary, card_data: Dictionary) -> PanelContain
 
 	slot.set_meta("slot_entry", slot_entry)
 	slot.set_meta("card_data", card_data)
+	_forward_dnd(slot)
 	return slot
 
 # ---------------------------------------------------------------------------
 # Drag/drop
 # ---------------------------------------------------------------------------
+
+# Godot starts a drag, and looks for a drop target, at the control under the
+# cursor and climbs to its parents only through MOUSE_FILTER_PASS controls. A
+# service card's slots, grid, header and wrappers are STOP, so they forward to
+# the panel's own methods below, with the position moved into panel space.
+# The scroll/vbox between cards are left alone: a drop there has no card.
+# (Downtime activity cards keep their own per-card forwarding.)
+func _forward_dnd(ctrl: Control) -> void:
+	ctrl.set_drag_forwarding(_fwd_get_drag_data.bind(ctrl), _fwd_can_drop_data.bind(ctrl), _fwd_drop_data.bind(ctrl))
+
+func _to_panel_local(ctrl: Control, pos: Vector2) -> Vector2:
+	return get_global_transform_with_canvas().affine_inverse() * (ctrl.get_global_transform_with_canvas() * pos)
+
+func _fwd_get_drag_data(at_position: Vector2, ctrl: Control):
+	return _get_drag_data(_to_panel_local(ctrl, at_position))
+
+func _fwd_can_drop_data(at_position: Vector2, data, ctrl: Control) -> bool:
+	return _can_drop_data(_to_panel_local(ctrl, at_position), data)
+
+func _fwd_drop_data(at_position: Vector2, data, ctrl: Control) -> void:
+	_drop_data(_to_panel_local(ctrl, at_position), data)
 
 func _get_drag_data(at_position: Vector2):
 	var slot = _find_slot_at(at_position)
@@ -649,6 +688,9 @@ func _can_drop_data(at_position: Vector2, data) -> bool:
 	# downtime mode); accept the existing item-drop dicts.
 	if String(data.get("kind", "")) == "portrait":
 		return false
+	# Downtime portrait drags carry a source_character but no item entry.
+	if not (data.get("entry") is Dictionary):
+		return false
 	return true
 
 func _drop_data(at_position: Vector2, data) -> void:
@@ -677,6 +719,25 @@ func _drop_data(at_position: Vector2, data) -> void:
 	# We only support items here (weapons could be added later — they need
 	# WeaponShape -> data conversion in snapshot mode).
 	if slot_entry.get("kind", "") != "item":
+		return
+
+	# An open TradeWindow puts every party inventory back from its snapshot on
+	# Cancel, so an item given to a service meanwhile would be duplicated.
+	for w in get_tree().get_nodes_in_group("trade_window"):
+		if not w.is_queued_for_deletion():
+			if source_char.has_method("notify"):
+				source_char.notify("Finish the trade first", Color(1.0, 0.6, 0.4),
+					"%s can't give the %s away while a trade is open: accept or cancel it first." % [source_char.Name, slot_entry.get("display_name", "item")])
+			SfxManager.play_ui("trade_decline")
+			return
+	# Moving only the inventory entry would leave worn armour on the body as
+	# well as with the service.
+	var given = slot_entry.get("raw", {})
+	if given is Dictionary and given.get("_equipped", false):
+		if source_char.has_method("notify"):
+			source_char.notify("Unequip it first", Color(1.0, 0.6, 0.4),
+				"%s can't trade away the %s while wearing it." % [source_char.Name, slot_entry.get("display_name", "item")])
+		SfxManager.play_ui("trade_decline")
 		return
 
 	# Pull the item from the party member.
@@ -726,10 +787,20 @@ func can_accept_value_loss(uid: String, item_value: float) -> bool:
 		if card["entry"]["npc_uid"] == uid:
 			var entry: Dictionary = card["entry"]
 			var live_npc = card["live_npc"]
-			var current: float = _compute_inventory_value(_get_service_inventory(entry, live_npc))
+			var current: float = _service_value(entry, live_npc)
 			var baseline: float = float(_value_baseline.get(uid, current))
 			return (current - item_value) >= baseline
 	return false
+
+# What the service holds, in gold: its items, plus the weapons a live NPC
+# carries (those can be dragged out too, so taking one must use up credit).
+func _service_value(entry: Dictionary, live_npc) -> float:
+	var total: float = _compute_inventory_value(_get_service_inventory(entry, live_npc))
+	if live_npc and live_npc.inventory:
+		for w in live_npc.inventory.get_all_equipped():
+			if w is WeaponShape:
+				total += float(w.cost)
+	return total
 
 func _compute_inventory_value(items: Array) -> float:
 	var total: float = 0.0
