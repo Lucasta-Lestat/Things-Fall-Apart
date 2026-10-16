@@ -12217,6 +12217,7 @@
 					"target_spawn": "warp_1_arrival"
 				},
 				{
+					"direction": "up",
 					"id": "ladder_up_1",
 					"label": "Ladder up",
 					"position": [
@@ -12231,6 +12232,7 @@
 					"target_spawn": "ladder_1_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_1",
 					"label": "Ladder down",
 					"position": [
@@ -12245,6 +12247,7 @@
 					"target_spawn": "ladder_1_base"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_1",
 					"label": "Ladder up",
 					"position": [
@@ -12259,6 +12262,7 @@
 					"target_spawn": "fort_tower_1_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_1",
 					"label": "Ladder down",
 					"position": [
@@ -12273,6 +12277,7 @@
 					"target_spawn": "fort_tower_1_base"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_2",
 					"label": "Ladder up",
 					"position": [
@@ -12287,6 +12292,7 @@
 					"target_spawn": "fort_tower_2_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_2",
 					"label": "Ladder down",
 					"position": [
@@ -21508,6 +21514,7 @@
 					"target_spawn": "warp_1_arrival"
 				},
 				{
+					"direction": "up",
 					"id": "ladder_up_2",
 					"label": "Ladder up",
 					"position": [
@@ -21522,6 +21529,7 @@
 					"target_spawn": "ladder_2_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_2",
 					"label": "Ladder down",
 					"position": [
@@ -21536,6 +21544,7 @@
 					"target_spawn": "ladder_2_base"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_1",
 					"label": "Ladder up",
 					"position": [
@@ -21550,6 +21559,7 @@
 					"target_spawn": "fort_tower_1_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_1",
 					"label": "Ladder down",
 					"position": [
@@ -21564,6 +21574,7 @@
 					"target_spawn": "fort_tower_1_base"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_2",
 					"label": "Ladder up",
 					"position": [
@@ -21578,6 +21589,7 @@
 					"target_spawn": "fort_tower_2_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_2",
 					"label": "Ladder down",
 					"position": [
@@ -31222,6 +31234,7 @@
 					"target_spawn": "warp_1_arrival"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_1",
 					"label": "Ladder up",
 					"position": [
@@ -31236,6 +31249,7 @@
 					"target_spawn": "fort_tower_1_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_1",
 					"label": "Ladder down",
 					"position": [
@@ -31250,6 +31264,7 @@
 					"target_spawn": "fort_tower_1_base"
 				},
 				{
+					"direction": "up",
 					"id": "fort_ladder_up_2",
 					"label": "Ladder up",
 					"position": [
@@ -31264,6 +31279,7 @@
 					"target_spawn": "fort_tower_2_top"
 				},
 				{
+					"direction": "down",
 					"id": "fort_ladder_down_2",
 					"label": "Ladder down",
 					"position": [
@@ -37759,6 +37775,7 @@
 			"tile_size": 64.0,
 			"warp_points": [
 				{
+					"direction": "up",
 					"id": "ladder_up_1",
 					"label": "Stairs up",
 					"position": [
@@ -37773,6 +37790,7 @@
 					"target_spawn": "ladder_1_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_1",
 					"label": "Stairs down",
 					"position": [
@@ -37787,6 +37805,7 @@
 					"target_spawn": "ladder_1_base"
 				},
 				{
+					"direction": "up",
 					"id": "ladder_up_2",
 					"label": "Stairs up",
 					"position": [
@@ -37801,6 +37820,7 @@
 					"target_spawn": "ladder_2_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_2",
 					"label": "Stairs down",
 					"position": [
@@ -37815,6 +37835,7 @@
 					"target_spawn": "ladder_2_base"
 				},
 				{
+					"direction": "up",
 					"id": "ladder_up_3",
 					"label": "Ladder up",
 					"position": [
@@ -37829,6 +37850,7 @@
 					"target_spawn": "ladder_3_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_3",
 					"label": "Ladder down",
 					"position": [
@@ -37843,6 +37865,7 @@
 					"target_spawn": "ladder_3_base"
 				},
 				{
+					"direction": "up",
 					"id": "ladder_up_4",
 					"label": "Ladder up",
 					"position": [
@@ -37857,6 +37880,7 @@
 					"target_spawn": "ladder_4_top"
 				},
 				{
+					"direction": "down",
 					"id": "ladder_down_4",
 					"label": "Ladder down",
 					"position": [
