@@ -27,7 +27,8 @@ extends Resource
 ## Maximum tier if stackable
 @export var max_tier: int = 1
 
-## Duration in game seconds (-1 for permanent until removed)
+## Duration in in-world seconds (-1 for permanent until removed). Data may give
+## "duration_hours" instead (create_from_data), handy for overworld/downtime.
 @export var duration: float = -1.0
 
 ## Stat modifiers this condition applies
@@ -88,6 +89,8 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.stackable = data.get("stackable", false)
 	condition.max_tier = data.get("max_tier", 1) ####
 	condition.duration = data.get("duration", -1.0)
+	if data.has("duration_hours"):
+		condition.duration = float(data["duration_hours"]) * 3600.0
 	condition.icon = load(data.get("icon","dummy_icon.png")) ####
 	condition.transforms_into = data.get("transforms_into", {})
 	condition.canceled_by_trait = data.get("canceled_by_trait", []) ####

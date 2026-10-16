@@ -1727,5 +1727,5 @@ func _update_conditions(data: Dictionary, character) -> void:
 			tip += " x%d" % instance.stacks
 		if instance.expires_at > 0 and cond_res.duration > 0:
 			var time_left = max(0.0, instance.expires_at - game_time)
-			tip += " (%.0fs)" % time_left
+			tip += " (%s)" % Globals.format_duration_short(time_left)
 		children[i].tooltip_text = tip

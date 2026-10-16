@@ -258,6 +258,15 @@ func _finish_resolution() -> void:
 	var success_tier: int = int(_pending.get("pending_success_tier", 1))
 	var activity: Dictionary = _pending["activity"]
 
+	# Advance in-game time by the activity's duration BEFORE applying the
+	# result, so a condition it gives (Hungover) starts when the activity ends
+	# rather than being half spent by the skip: expires_at is stamped on
+	# TimeManager.absolute_time(), which includes game_time at once. The date
+	# itself rolls over on TimeManager's next _process, as before.
+	var hours := float(activity.get("duration_hours", 0))
+	if hours > 0.0:
+		TimeManager.game_time += hours * float(TimeManager.SECONDS_PER_MINUTE) * float(TimeManager.MINUTES_PER_HOUR)
+
 	DowntimeEffectApplier.apply(character, effects, success_tier)
 
 	# A day of study counts against the commitment. Credited here rather than in
@@ -272,11 +281,5 @@ func _finish_resolution() -> void:
 	var game := get_node_or_null("/root/Game")
 	if game != null and game.has_method("record_downtime_assignment"):
 		game.record_downtime_assignment(character, String(_pending["activity_id"]))
-
-	# Advance in-game time by the activity's duration. TimeManager advances
-	# date/clock automatically as game_time crosses thresholds in _process.
-	var hours := float(activity.get("duration_hours", 0))
-	if hours > 0.0:
-		TimeManager.game_time += hours * float(TimeManager.SECONDS_PER_MINUTE) * float(TimeManager.MINUTES_PER_HOUR)
 
 	_pending = {}
