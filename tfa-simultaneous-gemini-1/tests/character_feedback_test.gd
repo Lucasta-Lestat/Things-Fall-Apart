@@ -569,6 +569,21 @@ func _case_planning() -> void:
 	var step := ActionQueue.Action.new(ActionQueue.ActionType.FACE, {"target_rotation": 0.0, "from_path": true, "path_node": node})
 	pm._on_tactical_action_completed(step)
 	_check("plan.step-consumes-its-node", not pm.tactical_path.action_nodes.has(node))
+	# A planned cast re-queued while that same cast still runs isn't a failure.
+	var fb := Ability.from_dict(AbilityDatabase.get_ability_data("fireball"))
+	var saved_cast: Dictionary = pm.current_cast
+	pm.current_cast = {"ability": fb}
+	var saved_current = pm.action_queue.current_action
+	pm.action_queue.current_action = ActionQueue.Action.new(ActionQueue.ActionType.USE_ABILITY, {"ability_id": "fireball", "from_path": true})
+	_reset_notify(pm)
+	pm._announce_cast_failure(Ability.from_dict(AbilityDatabase.get_ability_data("fireball")), "Already casting")
+	_check("cast.requeued-step-quiet", _logged("%s can't use Fireball: Already casting." % pm.Name) == 0)
+	pm.action_queue.current_action = ActionQueue.Action.new(ActionQueue.ActionType.USE_ABILITY, {"ability_id": "fireball"})
+	_reset_notify(pm)
+	pm._announce_cast_failure(Ability.from_dict(AbilityDatabase.get_ability_data("fireball")), "Already casting")
+	_check("cast.direct-recast-announced", _logged("%s can't use Fireball: Already casting." % pm.Name) == 1, log_lines.slice(-2))
+	pm.action_queue.current_action = saved_current
+	pm.current_cast = saved_cast
 	# Losing control on ice drops the whole plan, with a notice.
 	_reset_notify(pm)
 	pm._begin_ice_slide(Vector2.RIGHT)
