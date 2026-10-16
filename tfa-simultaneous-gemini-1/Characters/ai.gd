@@ -455,7 +455,10 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	var foe := attacker as ProceduralCharacter
 	if foe != null and is_instance_valid(foe) and foe.is_alive() and _is_enemy(foe):
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
-		last_known_target_pos = foe.global_position
+		# A third party's hit doesn't redirect the search for the held target:
+		# last_known_target_pos is where THAT target was last seen.
+		if current_target == null or foe == current_target:
+			last_known_target_pos = foe.global_position
 		if current_target != null:
 			# Their hit is positive identification — an "occluded" target who is
 			# still striking us (through a window, over a ledge) stays a target.
@@ -476,7 +479,7 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	# Not an enemy (friendly fire, a condition tick, falling damage): wake, but
 	# nothing to fight.
 	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
-	if attacker:
+	if attacker and (current_target == null or attacker == current_target):
 		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
 
 
@@ -740,7 +743,9 @@ func _update_target(delta: float = 0.0) -> void:
 				# and far over both the SEARCHING promotion (60) and give-up
 				# floor (36): routing is unchanged, only the glyph flips to `?`.
 				_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
+				var lost = current_target
 				_lose_target()
+				_announce_lost_sight(lost)
 		return
 
 	# Check for confusion — pick random target from all visible living characters
@@ -939,6 +944,17 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
+
+# '<NPC> loses sight of <Name>.' when an NPC the party can see gives up on a
+# party member it has had no sight line to (the occlusion demotion above). The
+# party learns why the chase turned into a search; a hidden NPC stays hidden.
+func _announce_lost_sight(lost) -> void:
+	if lost == null or not is_instance_valid(lost) or not lost.has_method("is_party_member") \
+			or not lost.is_party_member() or character.is_party_member():
+		return
+	if game == null or not game.has_method("is_seen_by_party") or not game.is_seen_by_party(character):
+		return
+	GameLog.add_entry("%s loses sight of %s." % [character.Name, lost.Name])
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
@@ -1913,9 +1929,10 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 
 	var gain := loudness * ALERTNESS_SOUND_GAIN
 	if current_alertness == Alertness.HOSTILE:
-		# Already alarmed and probably chasing — sounds inform position but
-		# don't need to bump meter further.
-		if current_target:
+		# Already alarmed and probably chasing — the target's own sounds
+		# inform where it went (a blind chase follows them); others' don't,
+		# and none of them bump the meter further.
+		if current_target and _source == current_target:
 			last_known_target_pos = world_pos
 		return
 
