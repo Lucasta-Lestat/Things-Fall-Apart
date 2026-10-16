@@ -26,6 +26,9 @@ var world_tooltip: Control = null
 var hud_status: Control = null
 var _pending_rival_spawns: Array = []
 var _pending_rival_override_faction: bool = false
+# Set by start_combat_test around its load_map: party_state already holds the
+# fresh test loadouts, which the outgoing party must not be saved over.
+var _skip_party_save: bool = false
 
 
 var CharacterScene = preload("res://Characters/ProceduralCharacter.tscn")
@@ -48,8 +51,9 @@ var stealth_mode: bool = false
 # Session-scoped unlock memory, keyed "<map_id>|door|<hinge_x>,<hinge_y>" (export-px
 # ints from the geometry JSON hinge). Written by Door.interact on successful unlock,
 # re-applied by MapLoader on door spawn. Intentionally NOT cleared in
-# _unload_current_map: every warp (incl. same-map stairs) is a full reload, and a
-# consumed key must never soft-lock the player. Include in the save system when one lands.
+# _unload_current_map: every map change is a full reload (same-map stairs only move
+# the party, see _relocate_party), and a consumed key must never soft-lock the
+# player. Include in the save system when one lands.
 var unlocked_locks: Dictionary = {}
 
 const WORLD_MAP_ID: String = "scarlatti_world"
@@ -821,7 +825,13 @@ func start_combat_test(player_configs: Array, rival_configs: Array, override_riv
 	_pending_rival_spawns = rival_configs.duplicate(true)
 	_pending_rival_override_faction = override_rival_faction
 
+	# load_map would snapshot the outgoing party into the new rows (paired by
+	# party_index) and rebuild each test character from it (inventory, worn
+	# gear, equip conditions, HP) instead of the configured loadout, and its
+	# departure pass could stamp "away" on them.
+	_skip_party_save = true
 	load_map("colosseum")
+	_skip_party_save = false
 
 func _spawn_rival_party() -> void:
 	# Anchor on the actual player spawn so we line up with whatever Maps.json says.
@@ -929,6 +939,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	var new_map_data: Dictionary = MapDatabase.get_map_data(map_id)
 	if new_map_data.is_empty():
 		push_error("Unknown map: " + map_id)
+		# A blank id is a harness/boot path, never a clicked warp.
+		if not map_id.is_empty():
+			_announce_way_closed("That way leads nowhere yet.")
 		return
 	var new_images: Dictionary = new_map_data.get("images", {})
 	var validate_path: String = new_images.get("structures", "")
@@ -936,10 +949,19 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		validate_path = new_images.get("map", "")
 	if validate_path.is_empty() or not ResourceLoader.exists(validate_path):
 		push_error("Map '%s' has no loadable image (looked for %s); aborting load." % [map_id, new_images])
+		_announce_way_closed("The way to %s is not open yet." % str(new_map_data.get("name", map_id)))
+		return
+
+	# Same-map stairs and ladders just move the party. A full reload would
+	# respawn living enemies at full health and reset alertness, close opened
+	# doors, and clear fires, fluids and surfaces.
+	if map_id == current_map_id and not spawn_override.is_empty() \
+			and current_map_data.get("player_spawns", {}).has(spawn_override):
+		_relocate_party(spawn_override)
 		return
 
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
-	if not party_chars.is_empty():
+	if not party_chars.is_empty() and not _skip_party_save:
 		save_party_state()
 		# Runs while the party is still assembled and current_map_id still names
 		# the map being left: anyone mid-training here decides whether to follow.
@@ -1361,18 +1383,7 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 		# to take other work, has no body in the world until they come back.
 		if is_party_member_away(entry):
 			continue
-		var offset = Vector2(i * 40, 0) if not is_world_map else Vector2.ZERO
-		# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
-		# battlement walkway ~20px wide) the +x row walks later members off the
-		# edge — they'd land at ground level beside the wall, or inside it.
-		# Collapse onto the base position when the offset tile's surface
-		# differs; the separation nudge spreads them out safely after spawn.
-		if offset != Vector2.ZERO:
-			var bt := GridManager.world_to_map(base_pos)
-			var ot := GridManager.world_to_map(base_pos + offset)
-			if ot != bt and (not GridManager.can_step(bt, ot)
-					or GridManager.grid_costs.get(ot, INF) == INF):
-				offset = Vector2.ZERO
+		var offset = _party_line_offset(base_pos, i) if not is_world_map else Vector2.ZERO
 		# Same guard as _spawn_npcs: a party member built from a race-rolling
 		# template must rebuild the race their live_state was captured with,
 		# not roll a fresh one for the snapshot to stamp over.
@@ -1424,6 +1435,86 @@ func _spawn_player_and_party(spawn_key: String) -> void:
 
 		# Add line-of-sight light
 		_add_line_of_sight_light(character)
+
+# Offset of the i-th party member in the arrival line at base_pos.
+# Elevation-aware line spawn: on a narrow surface (ladder-top deck, a
+# battlement walkway ~20px wide) the +x row walks later members off the
+# edge — they'd land at ground level beside the wall, or inside it.
+# Collapse onto the base position when the offset tile's surface
+# differs; the separation nudge spreads them out safely after spawn.
+func _party_line_offset(base_pos: Vector2, i: int) -> Vector2:
+	var offset := Vector2(i * 40, 0)
+	if offset != Vector2.ZERO:
+		var bt := GridManager.world_to_map(base_pos)
+		var ot := GridManager.world_to_map(base_pos + offset)
+		if ot != bt and (not GridManager.can_step(bt, ot)
+				or GridManager.grid_costs.get(ot, INF) == INF):
+			offset = Vector2.ZERO
+	return offset
+
+## Same-map warp (ladder/stairs): move the living party to the arrival marker
+## instead of rebuilding the map, so enemies, doors, fires and fluids stay as
+## the player left them. Corpses stay where they fell. Like a full reload it
+## drops plans made on the level being left; unlike one it keeps the current
+## selection, standing WAIT orders and music, and emits no map_loaded (nor
+## re-runs on-load dialogue triggers): the map didn't change.
+func _relocate_party(spawn_key: String) -> void:
+	var spawn_data = current_map_data.get("player_spawns", {}).get(spawn_key, {})
+	var base_pos_arr = spawn_data.get("position", [400, 400])
+	var base_pos = Vector2(base_pos_arr[0], base_pos_arr[1])
+	var slot: int = 0
+	for character in party_chars:
+		if not is_instance_valid(character) or not character.is_alive():
+			continue
+		character.global_position = base_pos + _party_line_offset(base_pos, slot)
+		slot += 1
+		character.velocity = Vector2.ZERO
+		character.target_position = character.global_position
+		# Drop orders and paths planned on the level being left.
+		character.abort_planning_input()
+		if character.action_queue:
+			character.action_queue.cancel_all()
+		if character.path_input_handler:
+			character.path_input_handler.cancel_path()
+		character._nav_waypoints.clear()
+		character._nav_index = 0
+		character.is_moving = false
+		# Spawn semantics: arrivals stand on the surface under the marker
+		# (only jumpers ever ride a roof). Re-derives elevation, the sight
+		# light tier and the roof-view layer.
+		character.on_roof = false
+		character._refresh_elevation()
+		var ai = character.get_node_or_null("AI")
+		if ai:
+			ai.nav_path.clear()
+			ai.nav_path_index = 0
+		ExplorationManager.seed_explored(GridManager.world_to_map(character.global_position), 2)
+	# Warp conditions are evaluated when zones are built; rebuild them as the
+	# full reload did, so e.g. a key picked up on this level opens its stair.
+	for zone in warp_zones:
+		if is_instance_valid(zone):
+			zone.queue_free()
+	warp_zones.clear()
+	_create_warp_zones(current_map_data.get("warp_points", []))
+	# The LOS passes only run unpaused; refresh now so a warp taken while
+	# planning shows who is (and isn't) in view on the new level.
+	_update_npc_los_visibility()
+	_update_item_los_visibility()
+	var focus = primary_selected if is_instance_valid(primary_selected) else player
+	if player_camera and focus and is_instance_valid(focus):
+		player_camera.manual_pan_active = false
+		player_camera.global_position = focus.global_position
+		player_camera.reset_smoothing()
+	print("[GameScene] Moved party within %s (spawn: %s)" % [current_map_id, spawn_key])
+
+## A warp whose destination can't load: say so instead of silently staying put
+## (load_map keeps its push_error for developers).
+func _announce_way_closed(log_text: String) -> void:
+	var who = primary_selected if is_instance_valid(primary_selected) else player
+	if who and is_instance_valid(who):
+		who.notify("Way closed", Color(1.0, 0.6, 0.4), log_text)
+	else:
+		GameLog.add_entry(log_text)
 
 # ---------------------------------------------------------------------------
 # Item spawning
