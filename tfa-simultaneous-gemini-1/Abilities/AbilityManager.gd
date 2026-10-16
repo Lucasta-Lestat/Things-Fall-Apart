@@ -16,6 +16,10 @@ const SCHOOL_RESOURCE_MAP := {
 	"Occult": "souls",
 }
 
+## An execution-time range clamp that moves the point further than this is
+## announced (a planned cast whose caster stopped short of its node).
+const RANGE_CLAMP_NOTICE_PX := 16.0
+
 ## Player-facing text for an unmet requirements.traits entry; any other id
 ## reads "Requires <Id>".
 const REQUIREMENT_REASONS := {
@@ -136,6 +140,24 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	# to the cast point. Mirrors the per-step "self" override in _execute_current_step.
 	if ability.targeting.get("type", "") == "self":
 		target_position = character.global_position
+
+	# Ability range is measured from where the caster actually stands now. The
+	# targeting preview already clamps to the ring around the caster (or the
+	# planned node); this covers a caster who stopped short, and any caller
+	# that skipped targeting. Picked characters were range-checked when picked,
+	# and a designated character (anchor) re-aims the cast anyway. A cone's
+	# point only aims it (its reach is its radius), so it is left alone.
+	var max_range: float = float(ability.targeting.get("range", 0.0))
+	var has_anchor: bool = target_anchor != null and is_instance_valid(target_anchor)
+	if ability.targeting.get("type", "") != "self" and max_range > 0.0 and explicit_targets.is_empty() \
+			and not has_anchor and not free and String(ability.targeting.get("shape", "")) != "cone":
+		var clamped := clamp_point_to_range(character.global_position, target_position, max_range)
+		if clamped != target_position and clamped.distance_to(target_position) > RANGE_CLAMP_NOTICE_PX \
+				and character.has_method("is_party_member") and character.is_party_member() \
+				and not (character.get("ai_cast_attempt") == true):
+			character.notify("Out of range", Color(1.0, 0.6, 0.4), "%s's %s falls short: the target was %d away, range %d." % [
+				character.Name, ability.display_name, int(character.global_position.distance_to(target_position)), int(max_range)])
+		target_position = clamped
 
 	# Infatuated: block offensive abilities that would hit the charm source
 	if _would_hit_infatuation_source(ability, target_position):
@@ -457,6 +479,18 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 				game.surface_manager.try_ignite(tile)
 
 	return results
+
+
+## `point` pulled back along the line from `origin` to at most `max_range`
+## away (unchanged when max_range <= 0 or it is already in range). The one
+## clamp shared by the targeting preview, its confirm and execution.
+static func clamp_point_to_range(origin: Vector2, point: Vector2, max_range: float) -> Vector2:
+	if max_range <= 0.0 or not point.is_finite() or not origin.is_finite():
+		return point
+	var offset := point - origin
+	if offset.length() <= max_range:
+		return point
+	return origin + offset.normalized() * max_range
 
 
 ## Build the per-school resource cost dict for an ability from its trait tags.

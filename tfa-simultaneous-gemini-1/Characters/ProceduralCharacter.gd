@@ -7007,70 +7007,6 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	return ability_manager.use_ability(ability, target_data)
 
 
-## Start targeting mode for an ability
-'''
-func _start_targeting(ability: Ability) -> void:
-	
-	if not targeting_system:
-		# No targeting system - just cast at mouse position
-		print("Couldn't find targeting system, just cast at mouse position")
-		var target_pos = get_viewport().get_mouse_position()
-		use_ability(ability, {"position": target_pos})
-		return
-	
-	# Configure targeting system
-	var targeting_data = {
-		"target_shape": ability.get_target_shape(),
-		"radius": ability.get_aoe_radius(),
-		"size": ability.get_aoe_size(),
-		"range": ability.targeting.get("range", 0.0),
-	}
-	
-	# Store ability for when targeting confirms
-	current_cast = {
-		"ability": ability,
-		"state": "targeting"
-	}
-	
-	# Start targeting (assuming hand slot, adjust as needed)
-	targeting_system.start_targeting(0, targeting_data)
-	targeting_started.emit(ability)
-'''
-## Called when targeting is confirmed
-func on_targeting_confirmed(target_position: Vector2) -> void:
-	if current_cast.is_empty() or current_cast.get("state") != "targeting":
-		return
-	
-	var ability = current_cast.get("ability") as Ability
-	if not ability:
-		return
-	
-	# Check range
-	var range_limit = ability.targeting.get("range", 0.0)
-	if range_limit > 0:
-		var distance = global_position.distance_to(target_position)
-		if distance > range_limit:
-			cast_failed.emit(ability, "Out of range")
-			_cancel_current()
-			return
-	
-	# Clear targeting state and use ability
-	current_cast.clear()
-	use_ability(ability, {"position": target_position})
-
-
-## Called when targeting is cancelled
-func on_targeting_cancelled() -> void:
-	if current_cast.is_empty():
-		return
-	
-	var ability = current_cast.get("ability") as Ability
-	current_cast.clear()
-	
-	if ability:
-		targeting_cancelled.emit(ability)
-
-
 ## AbilityManager signal handlers
 func _on_ability_cast_started(ability: Ability, target_position: Vector2) -> void:
 	# Casting an ability is a sound source. Loudness picks up from the ability
@@ -7777,13 +7713,6 @@ func _load_effect_scene(path: String) -> PackedScene:
 ## from _on_ability_cast_interrupted. `force` also ends uninterruptible casts.
 func interrupt_cast(cause: String = "Interrupted", force: bool = false) -> bool:
 	return ability_manager.interrupt_cast(cause, force) if ability_manager else false
-
-func _cancel_current() -> void:
-	if current_cast.get("state") == "targeting":
-		if targeting_system:
-			targeting_system.cancel_targeting()
-	ability_manager.current_cast.clear()
-
 
 ## Get character resource value. For school resources, returns the current pool;
 ## for focus, returns the spendable amount (excluding concentration-locked).

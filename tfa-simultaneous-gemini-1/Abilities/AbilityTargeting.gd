@@ -22,6 +22,7 @@ var circle_indicator: Node2D = null
 var rectangle_indicator: Node2D = null
 var line_indicator: Node2D = null
 var cone_indicator: Node2D = null
+var range_indicator: Node2D = null  # Outline ring of range_limit around the cast origin
 
 # Projectile AoEs (Fireball...) burst on the first body or wall in their path.
 # While targeting one, this is where it would burst (Vector2.INF = clear path);
@@ -46,7 +47,6 @@ var cone_angle: float = 45.0  # Degrees
 # Character-targeting state
 var target_count: int = 1
 var target_filter: String = "any"  # "any" | "allies" | "enemies"
-var character_range: float = 0.0  # 0 = unlimited
 var selected_targets: Array = []
 var target_highlights: Array[Node2D] = []
 var count_label: Label = null
@@ -55,6 +55,11 @@ var count_label_layer: CanvasLayer = null
 # When true, the targeting indicator is anchored to the caster (self-targeted abilities)
 # instead of following the mouse cursor
 var lock_to_caster: bool = false
+
+# The ability's targeting.range, measured from _origin_pos(); 0 = unlimited.
+# Circle and rectangle aim points stop on the ring, line ends are clamped to
+# it, and character picks beyond it are refused.
+var range_limit: float = 0.0
 
 # When set (not INF), the preview's origin (line/cone start, self/circle anchor)
 # is this world position — the planned action-node position — instead of the live
@@ -99,8 +104,10 @@ func _process(_delta: float) -> void:
 			caster_position = _origin_pos()
 			target_position = caster_position
 		else:
-			# Update target position to mouse
+			# Update target position to mouse, held inside the range ring
 			target_position = _get_mouse_world_position()
+			if _clamps_point():
+				target_position = AbilityManager.clamp_point_to_range(_origin_pos(), target_position, range_limit)
 
 		# For line and cone, keep caster_position in sync with the character
 		if target_shape == TargetShape.LINE or target_shape == TargetShape.CONE:
@@ -111,6 +118,7 @@ func _process(_delta: float) -> void:
 			_update_character_targeting_visuals()
 		else:
 			_update_active_indicator()
+		_update_range_ring()
 
 		_update_knockback_preview()
 	elif lock_to_caster and circle_indicator != null and circle_indicator.visible:
@@ -121,6 +129,23 @@ func _process(_delta: float) -> void:
 		# an immediate confirm (which drops is_targeting but leaves the preview up)
 		# and the ability actually landing.
 		circle_indicator.global_position = _origin_pos()
+
+## Whether the aim point itself is held inside range_limit (circle and
+## rectangle casts aimed at a point; lines clamp their end separately, cones
+## reach their radius, and self casts sit on the caster).
+func _clamps_point() -> bool:
+	return not lock_to_caster and range_limit > 0.0 and target_shape in [TargetShape.CIRCLE, TargetShape.RECTANGLE]
+
+## Keep the range ring on the cast origin (the live caster, or the planned
+## path node) at range_limit.
+func _update_range_ring() -> void:
+	if range_indicator == null or not range_indicator.visible:
+		return
+	range_indicator.global_position = _origin_pos()
+	var range_drawer = range_indicator.get_child(0) as CircleDrawer
+	if range_drawer and range_drawer.radius != range_limit:
+		range_drawer.radius = range_limit
+		range_drawer.queue_redraw()
 
 func _create_indicators() -> void:
 	"""Create the targeting indicator nodes"""
@@ -184,6 +209,20 @@ func _create_indicators() -> void:
 	cone_indicator.add_child(cone_drawer)
 	cone_indicator.visible = false
 	add_child(cone_indicator)
+
+	# Range ring around the cast origin — outline only, it can be large. Same
+	# absolute z as the live AoE preview, so it reads over the unexplored fog.
+	range_indicator = Node2D.new()
+	range_indicator.name = "RangeIndicator"
+	range_indicator.top_level = true
+	range_indicator.z_as_relative = false
+	range_indicator.z_index = 155
+	var range_drawer = CircleDrawer.new()
+	range_drawer.draw_fill = false
+	range_drawer.num_segments = 64
+	range_indicator.add_child(range_drawer)
+	range_indicator.visible = false
+	add_child(range_indicator)
 
 	# Knockback landing preview — top_level and pinned to the origin, so its
 	# local space IS world space and the arrows don't swing with the caster's
@@ -382,6 +421,7 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 	# Self-targeted abilities anchor the AoE preview to the caster instead of the cursor
 	var target_type_str = ability.get("target_type", "point")
 	lock_to_caster = (target_type_str == "self")
+	range_limit = float(ability.get("range", 0.0))
 
 	if lock_to_caster:
 		caster_position = _origin_pos()
@@ -415,7 +455,6 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 			target_shape = TargetShape.CHARACTERS
 			target_count = int(ability.get("target_count", 1))
 			target_filter = String(ability.get("target_filter", "any"))
-			character_range = float(ability.get("range", 0.0))
 			caster_position = _origin_pos()
 			selected_targets.clear()
 			_clear_target_highlights()
@@ -430,6 +469,13 @@ func start_targeting(hand: String, ability: Dictionary, mouse_pos:Vector2, origi
 	_knockback_last_pos = Vector2.INF
 
 	_projectile_impact = Vector2.INF
+	if _clamps_point():
+		target_position = AbilityManager.clamp_point_to_range(_origin_pos(), target_position, range_limit)
+	# Every ranged pick shows its reach (cones reach their radius; self casts
+	# have none).
+	range_indicator.visible = range_limit > 0.0 and not lock_to_caster \
+		and target_shape in [TargetShape.CIRCLE, TargetShape.RECTANGLE, TargetShape.LINE, TargetShape.CHARACTERS]
+	_update_range_ring()
 
 	# Force an immediate update to ensure visual appears this frame
 	if target_shape == TargetShape.CHARACTERS:
@@ -454,6 +500,7 @@ func confirm_targeting() -> Dictionary:
 				centroid += t.global_position
 		if not selected_targets.is_empty():
 			centroid /= selected_targets.size()
+		range_indicator.visible = false
 		var result_chars = {
 			"hand": current_hand,
 			"ability": current_ability,
@@ -474,6 +521,11 @@ func confirm_targeting() -> Dictionary:
 		var direction = target_position - caster_position
 		if direction.length() > line_range:
 			final_position = caster_position + direction.normalized() * line_range
+	elif _clamps_point():
+		final_position = AbilityManager.clamp_point_to_range(_origin_pos(), target_position, range_limit)
+	# The ring is only for aiming: a live cast's AoE preview stays up through
+	# the windup, but the ring goes now.
+	range_indicator.visible = false
 
 	var result = {
 		"hand": current_hand,
@@ -504,8 +556,8 @@ func confirm_targeting() -> Dictionary:
 	if designated != null and _is_single_target_ability():
 		result["targets"] = [designated]
 
-	print("targeting confirmed with position: ", target_position)
-	emit_signal("targeting_confirmed", current_hand, current_ability, target_position)
+	print("targeting confirmed with position: ", final_position)
+	emit_signal("targeting_confirmed", current_hand, current_ability, final_position)
 	return result
 
 func cancel_targeting() -> void:
@@ -531,6 +583,7 @@ func end_targeting() -> void:
 	rectangle_indicator.visible = false
 	line_indicator.visible = false
 	cone_indicator.visible = false
+	range_indicator.visible = false
 	_clear_target_highlights()
 	selected_targets.clear()
 	if count_label:
@@ -694,16 +747,22 @@ func _handle_character_click(world_pos: Vector2) -> bool:
 			_remove_highlight_for(collider)
 			_update_character_targeting_visuals()
 			return true
-		# Validate range
-		if character_range > 0.0 and caster:
-			var dist = caster.global_position.distance_to(collider.global_position)
-			if dist > character_range:
-				return true  # consumed but rejected
-		# Validate filter
-		if not _passes_filter(collider, caster):
-			return true
+		# Rejected clicks are consumed, and say why over the clicked character
 		# Validate alive
 		if collider.has_method("is_alive") and not collider.is_alive():
+			_reject_target(collider, caster, "Already dead", "already dead")
+			return true
+		# Validate range, measured from the cast origin (the planned node when
+		# planning a path) — the point the range ring is drawn around
+		if range_limit > 0.0 and caster:
+			var dist = _origin_pos().distance_to(collider.global_position)
+			if dist > range_limit:
+				_reject_target(collider, caster, "Out of range", "out of range (%d / %d)" % [int(dist), int(range_limit)])
+				return true
+		# Validate filter
+		if not _passes_filter(collider, caster):
+			var wanted := "Not an enemy" if target_filter == "enemies" else "Not an ally"
+			_reject_target(collider, caster, wanted, wanted.to_lower())
 			return true
 		selected_targets.append(collider)
 		_add_highlight_for(collider)
@@ -728,6 +787,14 @@ func _passes_filter(target: Node, caster: Node) -> bool:
 	if target_filter == "allies":
 		return not enemies and target != caster
 	return true
+
+func _reject_target(target: Node, caster: Node, notice: String, reason: String) -> void:
+	"""Floats why a character pick was refused over that character, and logs it."""
+	if not target.has_method("notify"):
+		return
+	var caster_name: String = str(caster.Name) if caster and "Name" in caster else "You"
+	var ability_name: String = String(current_ability.get("display_name", "that ability"))
+	target.notify(notice, Color(1.0, 0.6, 0.4), "%s can't target %s with %s: %s." % [caster_name, target.Name, ability_name, reason])
 
 func _add_highlight_for(target: Node) -> void:
 	var indicator = Node2D.new()
@@ -920,6 +987,7 @@ class CircleDrawer extends Node2D:
 	# (ghost); NEUTRAL is the honest default for a drawer nobody has classified.
 	var intent: int = Ability.Intent.NEUTRAL
 	var num_segments: int = 32
+	var draw_fill: bool = true  # Off for the outline-only range ring
 	# Red over the intent colours: a projectile AoE will burst too far short
 	# of the cursor to reach it (AbilityTargeting._find_projectile_impact).
 	var is_blocked: bool = false
@@ -934,7 +1002,8 @@ class CircleDrawer extends Node2D:
 			border_color = Color(1.0, 0.35, 0.3, 0.8)
 		
 		# Fill
-		draw_circle(Vector2.ZERO, radius, color)
+		if draw_fill:
+			draw_circle(Vector2.ZERO, radius, color)
 		
 		# Border
 		var points = PackedVector2Array()

@@ -49,6 +49,7 @@ func _ready() -> void:
 	await _gate_cases()
 	await _f5_cases()
 	await _impact_cases()
+	await _f6_cases()
 
 	for c in spawned:
 		if is_instance_valid(c):
@@ -356,4 +357,178 @@ func _impact_cases() -> void:
 	t.end_targeting()
 	_despawn(wall)
 	_despawn(p)
+	await _frames(2)
+
+# ---------------------------------------------------------------------------
+# F6: ability range
+# ---------------------------------------------------------------------------
+
+## A targeting node on a bare host at `pos`, as ProceduralCharacter has one.
+func _targeting_host(pos: Vector2) -> Node2D:
+	var host := Node2D.new()
+	game.add_child(host)
+	host.global_position = pos
+	var t = load("res://Abilities/AbilityTargeting.gd").new()
+	host.add_child(t)
+	return t
+
+func _near(a: Vector2, b: Vector2) -> bool:
+	return a.distance_to(b) < 0.5
+
+## The force field a cast_completed result list created, or null.
+func _field_in(got: Array):
+	if got.size() == 1 and got[0].size() >= 1 and got[0][0] is Dictionary and not got[0][0].get("created_objects", []).is_empty():
+		return got[0][0]["created_objects"][0]
+	return null
+
+func _f6_cases() -> void:
+	# manager.clamp: the one shared clamp
+	_check("manager.clamp-pulls-back", _near(AbilityManager.clamp_point_to_range(Vector2.ZERO, Vector2(1000, 0), 200.0), Vector2(200, 0)))
+	_check("manager.clamp-in-range-untouched", _near(AbilityManager.clamp_point_to_range(Vector2.ZERO, Vector2(120, 50), 200.0), Vector2(120, 50)))
+	_check("manager.clamp-unlimited", _near(AbilityManager.clamp_point_to_range(Vector2.ZERO, Vector2(5000, 0), 0.0), Vector2(5000, 0)))
+	_check("manager.clamp-inf-untouched", AbilityManager.clamp_point_to_range(Vector2.ZERO, Vector2.INF, 200.0) == Vector2.INF)
+
+	# targeting.circle-clamps: the aim point stops on the ring around the caster
+	var o := Vector2(5000, 5000)
+	var t = _targeting_host(o)
+	await _frames(1)
+	var burst := {"display_name": "Test Burst", "target_shape": "circle", "radius": 50.0, "range": 200.0, "target_type": "point", "visuals": {}}
+	t.start_targeting("Main", burst, o + Vector2(1000, 0))
+	_check("targeting.initial-point-clamped", _near(t.target_position, o + Vector2(200, 0)), t.target_position)
+	_check("targeting.ring-visible", t.range_indicator.visible and _near(t.range_indicator.global_position, o), [t.range_indicator.visible, t.range_indicator.global_position])
+	_check("targeting.ring-radius", is_equal_approx((t.range_indicator.get_child(0)).radius, 200.0))
+	_check("targeting.ring-outline-only", not (t.range_indicator.get_child(0)).draw_fill)
+	t.target_position = o + Vector2(1000, 0)
+	var res: Dictionary = t.confirm_targeting()
+	_check("targeting.circle-clamps", _near(res.get("position", Vector2.INF), o + Vector2(200, 0)), res.get("position"))
+	_check("targeting.ring-hidden-on-confirm", not t.range_indicator.visible)
+	t.end_targeting()
+
+	# targeting.node-origin: planning from a path node measures from the node
+	t.start_targeting("Main", burst, o + Vector2(1000, 0), o + Vector2(500, 0))
+	_check("targeting.ring-on-node", _near(t.range_indicator.global_position, o + Vector2(500, 0)), t.range_indicator.global_position)
+	t.target_position = o + Vector2(1000, 0)
+	res = t.confirm_targeting()
+	_check("targeting.node-origin", _near(res.get("position", Vector2.INF), o + Vector2(700, 0)), res.get("position"))
+	t.end_targeting()
+
+	# targeting.rectangle-clamps
+	t.start_targeting("Main", {"display_name": "Test Wall", "target_shape": "rectangle", "size": Vector2(100, 40), "range": 150.0, "target_type": "point", "visuals": {}}, o + Vector2(0, 900))
+	t.target_position = o + Vector2(0, 900)
+	res = t.confirm_targeting()
+	_check("targeting.rectangle-clamps", _near(res.get("position", Vector2.INF), o + Vector2(0, 150)), res.get("position"))
+	t.end_targeting()
+
+	# targeting.self-unclamped: self casts sit on the caster, no ring
+	t.start_targeting("Main", {"display_name": "Test Aura", "target_shape": "circle", "radius": 80.0, "range": 200.0, "target_type": "self", "visuals": {}}, o + Vector2(1000, 0))
+	_check("targeting.self-no-ring", not t.range_indicator.visible)
+	res = t.confirm_targeting()
+	_check("targeting.self-unclamped", _near(res.get("position", Vector2.INF), o), res.get("position"))
+	t.end_targeting()
+
+	# targeting.line-ring: lines keep their own end clamp and show a ring
+	t.start_targeting("Main", {"display_name": "Test Bolt", "target_shape": "line", "size": Vector2(300, 20), "range": 300.0, "target_type": "point", "visuals": {}}, o + Vector2(1000, 0))
+	_check("targeting.line-ring", t.range_indicator.visible)
+	t.target_position = o + Vector2(1000, 0)
+	res = t.confirm_targeting()
+	_check("targeting.line-clamped", _near(res.get("position", Vector2.INF), o + Vector2(300, 0)), res.get("position"))
+	t.end_targeting()
+
+	# targeting.cone-no-ring: a cone reaches its radius
+	t.start_targeting("Main", {"display_name": "Test Wave", "target_shape": "cone", "radius": 150.0, "angle": 60.0, "range": 150.0, "target_type": "point", "visuals": {}}, o + Vector2(1000, 0))
+	_check("targeting.cone-no-ring", not t.range_indicator.visible)
+	t.end_targeting()
+	_check("targeting.ring-hidden-on-end", not t.range_indicator.visible)
+
+	# characters: picks beyond range_limit are refused, and say why
+	var far = _spawn("Faraway", o + Vector2(400, 0))
+	var near = _spawn("Nearby", o + Vector2(80, 0))
+	await _physics(3)
+	var hitch := {"display_name": "Test Hitch", "target_shape": "characters", "range": 150.0, "target_type": "target", "target_count": 2, "target_filter": "any", "visuals": {}}
+	t.start_targeting("Main", hitch, o + Vector2(80, 0))
+	_check("characters.ring-visible", t.range_indicator.visible and is_equal_approx((t.range_indicator.get_child(0)).radius, 150.0))
+	var consumed_far: bool = t._handle_character_click(far.global_position)
+	_check("characters.reject-out-of-range", consumed_far and not (far in t.selected_targets) and far._last_notify_text == "Out of range" \
+		and _logged("can't target Faraway with Test Hitch: out of range"), [consumed_far, t.selected_targets, far._last_notify_text])
+	var consumed_near: bool = t._handle_character_click(near.global_position)
+	_check("characters.accept-in-range", consumed_near and (near in t.selected_targets), [consumed_near, t.selected_targets])
+	t.end_targeting()
+	# Measured from the planned node, not the live body.
+	t.start_targeting("Main", hitch, far.global_position, o + Vector2(350, 0))
+	t._handle_character_click(far.global_position)
+	_check("characters.node-origin-range", far in t.selected_targets, t.selected_targets)
+	t.end_targeting()
+	_despawn(far)
+	_despawn(near)
+	t.get_parent().queue_free()
+
+	# manager.use_ability-clamps: execution clamps from where the caster stands,
+	# and a party member hears that it fell short
+	var c = _party()
+	var start: Vector2 = c.global_position
+	var got := []
+	var cb := func(_a, results): got.append(results)
+	c.ability_manager.cast_completed.connect(cb)
+	var well := Ability.from_dict({
+		"id": "test_well", "display_name": "Test Well", "cast_time": 0.0, "traits": {},
+		"targeting": {"type": "point", "range": 220.0, "shape": "circle", "radius": 60.0},
+		"effects": [{"type": "force_field", "field_type": "gravity", "radius": 60.0, "strength": 1.0, "duration": 2.0}],
+	})
+	c._last_notify_text = ""
+	c.use_ability(well, {"position": start + Vector2(1000, 0)})
+	var field = _field_in(got)
+	_check("manager.use_ability-clamps", field != null and _near(field.global_position, start + Vector2(220, 0)), field.global_position - start if field else got)
+	_check("manager.falls-short-notice", c._last_notify_text == "Out of range" and _logged("%s's Test Well falls short: the target was 1000 away, range 220." % c.Name), c._last_notify_text)
+	if field and is_instance_valid(field):
+		field.queue_free()
+	# A small slip (within RANGE_CLAMP_NOTICE_PX) is clamped silently.
+	got.clear()
+	c._last_notify_text = ""
+	c.use_ability(well, {"position": start + Vector2(230, 0)})
+	field = _field_in(got)
+	_check("manager.small-clamp-silent", field != null and _near(field.global_position, start + Vector2(220, 0)) and c._last_notify_text == "", c._last_notify_text)
+	if field and is_instance_valid(field):
+		field.queue_free()
+	# A designated character re-aims the cast: no clamp.
+	got.clear()
+	var mark = _spawn("Mark", start + Vector2(600, 0))
+	await _frames(1)
+	c.use_ability(well, {"position": mark.global_position, "anchor": mark})
+	field = _field_in(got)
+	_check("manager.anchor-unclamped", field != null and _near(field.global_position, mark.global_position), field.global_position - start if field else got)
+	if field and is_instance_valid(field):
+		field.queue_free()
+	_despawn(mark)
+	# A free (item) cast isn't clamped either.
+	got.clear()
+	c.use_ability(well, {"position": start + Vector2(1000, 0), "free": true})
+	field = _field_in(got)
+	_check("manager.free-unclamped", field != null and _near(field.global_position, start + Vector2(1000, 0)))
+	if field and is_instance_valid(field):
+		field.queue_free()
+	c.ability_manager.cast_completed.disconnect(cb)
+
+	# manager.cone-unclamped: a cone's point only aims it, so a far cursor is
+	# kept (no "falls short" notice); a point windup is clamped as it starts.
+	var started := []
+	var sb := func(_a, pos): started.append(pos)
+	c.ability_manager.cast_started.connect(sb)
+	var cone := Ability.from_dict({
+		"id": "test_cone", "display_name": "Test Cone", "cast_time": 1.0, "traits": {},
+		"targeting": {"type": "direction", "range": 150.0, "shape": "cone", "radius": 150.0, "angle": 60.0},
+		"effects": [],
+	})
+	c._last_notify_text = ""
+	c.use_ability(cone, {"position": start + Vector2(1000, 0)})
+	_check("manager.cone-unclamped", started.size() == 1 and _near(started[0], start + Vector2(1000, 0)) and c._last_notify_text == "", started)
+	c.ability_manager.cancel_cast("")
+	var point_windup := Ability.from_dict({
+		"id": "test_point_windup", "display_name": "Test Point", "cast_time": 1.0, "traits": {},
+		"targeting": {"type": "point", "range": 150.0, "shape": "circle", "radius": 30.0},
+		"effects": [],
+	})
+	c.use_ability(point_windup, {"position": start + Vector2(1000, 0)})
+	_check("manager.point-windup-clamped", started.size() == 2 and _near(started[1], start + Vector2(150, 0)), started)
+	c.ability_manager.cancel_cast("")
+	c.ability_manager.cast_started.disconnect(sb)
 	await _frames(2)
