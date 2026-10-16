@@ -179,15 +179,12 @@ func _project_cells_to_tiles() -> void:
 			GridManager.fluids.erase(t)
 	_proj_tiles = cur
 	update_water_tile_flows()
-	# fluid moved under the fire (oil flowed in, water arrived): CellFire keys its
-	# per-cell fuel off cell_fluid, so drop that cache while both are live. Water
-	# extinguishes fire per-EXACT-cell in CellFluid._fire_interactions (no tile
-	# round-trip), so no try_extinguish sweep is needed here.
-	var game = get_parent()
-	if game != null and "surface_manager" in game and game.surface_manager:
-		var cf = game.surface_manager.cell_fire
-		if cf != null and is_instance_valid(cf) and not cf.burning.is_empty():
-			cf.invalidate_fuel()
+	# Fluid moved under the fire (oil flowed in, water arrived): CellFire reads
+	# cell_fluid LIVE per fuel query (nothing cached per cell), so no
+	# invalidation is needed here -- calling invalidate_fuel 4x/s used to throw
+	# away its structure index while a fire burned. Water extinguishes fire
+	# per-EXACT-cell in CellFluid._fire_interactions (no tile round-trip), so
+	# no try_extinguish sweep is needed either.
 
 
 # Set a tile's fluid to an ABSOLUTE depth from the projection (register_fluid

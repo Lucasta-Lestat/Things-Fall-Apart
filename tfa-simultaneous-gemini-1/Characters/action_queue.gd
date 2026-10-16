@@ -155,6 +155,21 @@ func _add_reticle_animation(reticle: Sprite2D) -> void:
 	tween.tween_property(reticle, "scale", reticle_scale * 1.1, 0.5)
 	tween.tween_property(reticle, "scale", reticle_scale, 0.5)
 
+func _create_dash_aim_preview(data: Dictionary) -> AimLine:
+	"""Persistent aim ribbon for a directly queued dash (shift while paused):
+	the same wall-truncated, range-clamped amber line the live dash-targeting
+	mode shows. Stored in action.reticle so the existing complete/cancel
+	lifecycle tears it down."""
+	if reticle_container == null or character == null:
+		return null
+	var line := AimLine.new()
+	line.default_color = PathDrawer.DASH_COLOR
+	reticle_container.add_child(line)
+	var target: Vector2 = data.get("dash_target", character.global_position)
+	var max_range: float = data.get("dash_max_range", 0.0)
+	line.show_aim(character.global_position, target, CollisionLayers.STRUCTURES, max_range)
+	return line
+
 func _remove_reticle(action: Action) -> void:
 	"""Remove the reticle associated with an action"""
 	if action.reticle != null and is_instance_valid(action.reticle):
@@ -184,6 +199,8 @@ func queue_action(type: ActionType, data: Dictionary = {}) -> bool:
 		var target_pos = _get_action_target_position(type, data)
 		if target_pos != Vector2.INF:
 			action.reticle = _create_reticle(target_pos, type, data)
+	elif type == ActionType.CUSTOM and data.get("dash_preview", false):
+		action.reticle = _create_dash_aim_preview(data)
 	
 	queue.append(action)
 	emit_signal("action_queued", action)
@@ -246,8 +263,16 @@ func queue_move_waypoints(waypoints: PackedVector2Array) -> bool:
 	})
 
 func queue_dash(target_pos: Vector2) -> bool:
-	"""Queue a dash action (straight-line, no pathfinding)"""
-	return queue_action(ActionType.CUSTOM, {"callable": Callable(character, "dash").bind(target_pos)})
+	"""Queue a dash action (straight-line, no pathfinding). dash_preview asks
+	queue_action for a persistent amber aim ribbon while the dash is pending —
+	node-planted dashes (PathInputHandler) omit it because PathDrawer already
+	draws theirs from the node position, not from where the body stands now."""
+	return queue_action(ActionType.CUSTOM, {
+		"callable": Callable(character, "dash").bind(target_pos),
+		"dash_target": target_pos,
+		"dash_max_range": character.get_dash_range(),
+		"dash_preview": true,
+	})
 
 func queue_face(target_pos: Vector2) -> bool:
 	"""Queue a face direction action"""

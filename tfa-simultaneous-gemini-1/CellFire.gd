@@ -26,10 +26,25 @@ var burn_rev := 0                     # bumped whenever the burning KEY SET
                                       # CellFireFX recomputes cluster lights
 var scorch_fx: CellScorchFX = null    # persistent ground char (SurfaceManager wires it)
 
+var sim_time := 0.0                   # seconds this fire has ticked. CellFireFX
+                                      # animates its GPU flames off this clock, so
+                                      # the flames freeze exactly when the sim does
+
 var _spread_timer := 0.0
 var _damage_timer := 0.0
 var _rng := RandomNumberGenerator.new()
-var _fuel_cache: Dictionary = {}
+# Structure fuel index: tile -> FUEL_* flags and tile -> claiming structures.
+# Rebuilt lazily (one O(fire tiles) sweep) after invalidate_fuel; every fuel
+# query and the damage tick are then O(1) per tile. The old per-CELL cache was
+# dropped by the fluid projection 4x/s and by every timber death, and each
+# miss re-walked every structure's whole footprint -- a big fire spent
+# 300-500 ms per damage tick in that scan.
+const FUEL_BLOCKED := 1               # a non-flammable claimer (stone): firebreak
+const FUEL_FLAMMABLE := 2             # a flammable claimer (timber/tree): heavy fuel
+var _tile_index: Dictionary = {}      # Vector2i -> int flags
+var _tile_structs: Dictionary = {}    # Vector2i -> Array of structures
+var _index_dirty := true
+var _game_ref: Node = null
 var _cond_timers: Dictionary = {}     # character instance_id -> accumulated time
 var _smoke_timer := 0.0
 var _smoke_clouds: Array[FogOverlay] = []   # live plumes this fire owns
@@ -41,8 +56,9 @@ func setup(p_graph: CellGraph, p_sm: Node, fire_def: Dictionary) -> void:
 	sm = p_sm
 	_fire_def = fire_def
 	burning.clear()
-	_fuel_cache.clear()
+	_index_dirty = true
 	_cond_timers.clear()
+	sim_time = 0.0
 	burnt = PackedByteArray()
 	if graph != null:
 		burnt.resize(graph.cell_count)
@@ -52,9 +68,11 @@ func active() -> bool:
 	return graph != null and graph.cell_count > 0
 
 
-# Structures changed (a wall/tree burned down or was destroyed) -> refresh fuel.
+# Structures changed (a wall/tree burned down, was destroyed, a door opened)
+# -> the tile index is rebuilt on the next fuel query. Fluids are NOT indexed
+# (read live per cell), so fluid motion never needs to call this.
 func invalidate_fuel() -> void:
-	_fuel_cache.clear()
+	_index_dirty = true
 
 
 # --- ignition API (mirrors SurfaceManager's) --------------------------------
@@ -63,9 +81,10 @@ func ignite_area(center_world: Vector2, radius: float) -> int:
 	if not active():
 		return 0
 	var n := 0
-	# ignite the cell under the point plus every cell whose centroid is in range
-	for cid in graph.cell_count:
-		if graph.centroid(cid).distance_to(center_world) <= radius and _try_ignite(cid):
+	# every cell whose centroid is in range (bucket-bounded, not a walk of the
+	# whole 10-25k-cell graph per fireball)
+	for cid in graph.cells_within(center_world, radius):
+		if _try_ignite(cid):
 			n += 1
 	return n
 
@@ -98,7 +117,10 @@ func douse(cid: int) -> void:
 # --- tick --------------------------------------------------------------------
 
 func tick(delta: float, characters: Array, game: Node) -> void:
-	if not active() or burning.is_empty():
+	if not active():
+		return
+	sim_time += delta
+	if burning.is_empty():
 		return
 	_spread_timer += delta
 	if _spread_timer >= float(_fire_def.get("spread_interval", 2.0)):
@@ -121,7 +143,7 @@ func clear_all() -> void:
 			vfx.queue_free()
 	burning.clear()
 	burn_rev += 1
-	_fuel_cache.clear()
+	_index_dirty = true
 	_cond_timers.clear()
 	_clear_smoke()
 	burnt = PackedByteArray()
@@ -215,14 +237,16 @@ func _damage(game: Node) -> void:
 		burning_tiles[t + Vector2i(-1, 0)] = true
 		burning_tiles[t + Vector2i(0, 1)] = true
 		burning_tiles[t + Vector2i(0, -1)] = true
+	# tile -> claimers index: O(burning tiles), not O(structures x footprint)
+	_ensure_index()
 	var hit := {}   # structure -> true, deduped this tick
-	for structure in game.structures_in_scene:
-		if not is_instance_valid(structure) or hit.has(structure):
+	for t in burning_tiles:
+		var claimers = _tile_structs.get(t)
+		if claimers == null:
 			continue
-		for ft in sm._fire_tiles_of(structure):
-			if burning_tiles.has(ft):
+		for structure in claimers:
+			if is_instance_valid(structure):
 				hit[structure] = true
-				break
 	var any_dead := false
 	for structure in hit:
 		if not is_instance_valid(structure):
@@ -231,18 +255,15 @@ func _damage(game: Node) -> void:
 		if not is_instance_valid(structure) or structure.current_health <= 0:
 			any_dead = true
 	if any_dead:
-		_fuel_cache.clear()
+		_index_dirty = true
 	# fire consumes the flammable fluid (oil) it burns on, so slicks deplete and
-	# eventually go out instead of the fuel reading 2.5 forever
-	var cf = game.fluid_manager.cell_fluid if ("fluid_manager" in game and game.fluid_manager) else null
+	# eventually go out instead of the fuel reading 2.5 forever (fuel reads the
+	# fluid live, so nothing to invalidate)
+	var cf = _cell_fluid()
 	if cf != null and cf.active_sim():
-		var consumed := false
 		for cid in burning:
 			if cf.is_flammable_at(cid):
 				cf.burn_off(cid, 0.06)
-				consumed = true
-		if consumed:
-			_fuel_cache.clear()
 	# progressive ground char, ported from the editor's FireSim._damage: each
 	# damage tick deepens the cell's char and restamps -- fully black after ~5
 	# ticks, so ground blackens WHILE it burns, not just at burnout
@@ -255,7 +276,7 @@ func _damage(game: Node) -> void:
 
 # Fire melts ice. Ice is a TILE surface (SurfaceManager.surface_grid) even on
 # cell-fire maps -- freezing DRAINS the cells under the tile, so no burning cell
-# ever sits "in" ice and neither _compute_fuel nor CellFluid._fire_interactions
+# ever sits "in" ice and neither _fuel nor CellFluid._fire_interactions
 # can see it. Melting is therefore driven by ADJACENCY: every tile the flames
 # reach (a burning cell's tile plus its 4-neighbourhood -- the same footprint
 # _damage uses for structures, since cells are ~half a tile) takes one melt
@@ -335,7 +356,7 @@ func _apply_burning(delta: float, characters: Array) -> void:
 
 # REAL smoke: burning cells feed the game's cloud system (FogManager ->
 # FogOverlay, the same persistent volume cloud_kill and the map's ambient fogs
-# use) instead of only the cosmetic puffs CellFireFX._draw_smoke paints. One
+# use) instead of only the cosmetic wisps CellFireFX draws. One
 # cloud per burning cell per tick would be hundreds of overlapping full-rect fbm
 # shaders, so emission is throttled four ways: a fixed interval, coarse spatial
 # bucketing (one plume per SMOKE_BUCKET-sized patch of fire), a per-tick plume
@@ -462,46 +483,66 @@ func _clear_smoke() -> void:
 
 
 # Cell fuel: non-flammable structure -> firebreak; flammable structure -> heavy
-# fuel; else the graph's static ground fuel. Cached; structure sweeps are the
-# cost and only change on structure death (invalidate_fuel).
+# fuel; else standing fluid (oil = fuel, water = break); else the graph's
+# static ground fuel. Every layer is an O(1) lookup, so nothing is cached per
+# cell -- the structure index is the only derived state (see invalidate_fuel).
 func _fuel(cid: int) -> float:
-	if _fuel_cache.has(cid):
-		return _fuel_cache[cid]
-	var f := _compute_fuel(cid)
-	_fuel_cache[cid] = f
-	return f
-
-
-func _compute_fuel(cid: int) -> float:
-	var game = sm._get_game() if sm.has_method("_get_game") else null
-	if game != null and "structures_in_scene" in game:
-		var tile := _tile_of(cid)
-		var blocked := false
-		var flammable_fuel := 0.0
-		for structure in game.structures_in_scene:
-			if not is_instance_valid(structure):
-				continue
-			if tile in sm._fire_tiles_of(structure):
-				if structure.flammable:
-					flammable_fuel = maxf(flammable_fuel, 1.25)   # timber/tree: heavy fuel
-				else:
-					blocked = true                                 # stone: firebreak
-		# ANY flammable claimer wins over a co-located stone one (iteration order
-		# must not decide) -- must scan ALL claimers before returning the break,
-		# matching SurfaceManager._is_tile_flammable's contract.
-		if flammable_fuel > 0.0:
-			return flammable_fuel
-		if blocked:
+	_ensure_index()
+	var flags := int(_tile_index.get(_tile_of(cid), 0))
+	# ANY flammable claimer wins over a co-located stone one, matching
+	# SurfaceManager._is_tile_flammable's contract (the index ORs all claimers)
+	if flags & FUEL_FLAMMABLE:
+		return 1.25                                            # timber/tree: heavy fuel
+	if flags & FUEL_BLOCKED:
+		return 0.0                                             # stone: firebreak
+	# cell fluids: standing OIL is heavy fuel (a spark takes the slick), any
+	# other fluid (water) is a firebreak. Structures already decided above.
+	var cf = _cell_fluid()
+	if cf != null and cf.active_sim():
+		if cf.is_flammable_at(cid):
+			return 2.5
+		if cf.amount_at(cid) > 0.01:
 			return 0.0
-		# cell fluids: standing OIL is heavy fuel (a spark takes the slick), any
-		# other fluid (water) is a firebreak. Structures already decided above.
-		var cf = game.fluid_manager.cell_fluid if ("fluid_manager" in game and game.fluid_manager) else null
-		if cf != null and cf.active_sim():
-			if cf.is_flammable_at(cid):
-				return 2.5
-			if cf.amount_at(cid) > 0.01:
-				return 0.0
 	return graph.ground_fuel(cid)
+
+
+# One sweep over every structure's fire footprint -> per-tile flags + claimer
+# lists. Runs only after invalidate_fuel (structure death / destruction / a
+# door opening), never per query.
+func _ensure_index() -> void:
+	if not _index_dirty:
+		return
+	_index_dirty = false
+	_tile_index.clear()
+	_tile_structs.clear()
+	var game := _game()
+	if game == null or not ("structures_in_scene" in game):
+		return
+	for structure in game.structures_in_scene:
+		if not is_instance_valid(structure):
+			continue
+		var flag := FUEL_FLAMMABLE if structure.flammable else FUEL_BLOCKED
+		for ft in sm._fire_tiles_of(structure):
+			_tile_index[ft] = int(_tile_index.get(ft, 0)) | flag
+			var claimers = _tile_structs.get(ft)
+			if claimers == null:
+				claimers = []
+				_tile_structs[ft] = claimers
+			claimers.append(structure)
+
+
+func _game() -> Node:
+	if _game_ref != null and is_instance_valid(_game_ref):
+		return _game_ref
+	_game_ref = sm._get_game() if sm != null and sm.has_method("_get_game") else null
+	return _game_ref
+
+
+func _cell_fluid():
+	var game := _game()
+	if game == null or not ("fluid_manager" in game) or game.fluid_manager == null:
+		return null
+	return game.fluid_manager.cell_fluid
 
 
 func _wind() -> Vector2:

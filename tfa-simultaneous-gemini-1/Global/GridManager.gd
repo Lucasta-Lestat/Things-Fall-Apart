@@ -2,6 +2,12 @@
 extends Node
 
 var TILE_SIZE: int = 64
+# Gameplay-unit tile size in px. TILE_SIZE is multiplied by world_render_scale
+# on world maps so the grid matches the visually-inflated art; character and
+# weapon art is NOT scaled with it, so any tiles->px conversion that measures
+# against characters (ranged stand-off, projectile ranges) must use this one.
+# Game.load_map keeps it at the map's raw tile size.
+var COMBAT_TILE_SIZE: int = 64
 var map_rect: Rect2i
 var grid_costs: Dictionary = {}
 var walls: Dictionary = {}

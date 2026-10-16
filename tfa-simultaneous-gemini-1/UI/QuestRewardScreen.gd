@@ -10,7 +10,22 @@
 ##                        "teacher_title": "Guildmaster"}
 ##
 ## A training offer grants NOTHING here. It books time with a teacher, which the
-## learner then has to actually spend — see TrainingManager.
+## learner then has to actually spend - see TrainingManager.
+##
+## LAYOUT NOTES, every one of them learned by rendering the thing rather than by
+## reading it (tests/reward_screen_preview.tscn shoots this screen windowed):
+##
+##  - Prose sits on its own flat parchment PLATE. GuillocheRect's wave field is
+##    drawn at 0.17 alpha directly under whatever you put on top of it, and
+##    small type over that pattern swims.
+##  - The icon gets a deliberate MEDALLION and GuillocheRect's own rosette is
+##    switched off. The rosette was a fixed size, so a large round icon (Heal, a
+##    coin) covered most of it and left a ragged crescent poking out behind.
+##  - A Label with no `autowrap_mode` reports its full single-line width as a
+##    MINIMUM and drags the whole VBox out past the card edge.
+##  - Never combine `_letterspace` with AUTOWRAP_WORD_SMART: the letterspacing
+##    injects real spaces between characters and the wrap then breaks words
+##    mid-way ("Potion of Heal / ing").
 ##
 ## Instantiate from code (no .tscn, matching every other panel in UI/):
 ##     var screen = load("res://UI/QuestRewardScreen.gd").new()
@@ -29,16 +44,25 @@ signal dismissed()
 ## Above every gameplay layer, same as CharacterCreationScreen.
 const SCREEN_LAYER: int = 128
 const MARGIN := Vector2(48, 48)
-const CARD_SIZE := Vector2(260, 380)
-const CARD_GAP: float = 24.0
+const CARD_SIZE := Vector2(320, 524)
+const CARD_GAP: float = 26.0
 const FONT_PATH: String = "res://Fonts/Cinzel-Regular.ttf"
 
-# Ink shared with the carta d'identità so the two documents read as one hand.
+## Diameter of the disc behind the icon, and the icon's box inside it. The gap
+## between the two is the ring of paper that makes it read as a medallion rather
+## than as a circle the art failed to cover.
+const MEDALLION_SIZE: float = 118.0
+const ICON_SIZE: float = 78.0
+
+# Ink shared with the carta d'identita so the two documents read as one hand.
 const ENGRAVED := Color(0.365, 0.110, 0.180)
 const TYPED := Color(0.176, 0.129, 0.098)
-const TYPED_BODY := Color(0.176, 0.129, 0.098, 0.90)
-const TYPED_DIM := Color(0.176, 0.129, 0.098, 0.62)
+const TYPED_DIM := Color(0.176, 0.129, 0.098, 0.75)
 const RULE := Color(0.365, 0.110, 0.180, 0.40)
+## Flat paper for the plates that carry text, a shade lighter than
+## GuillocheRect's own paper so the wave field reads as sitting behind them.
+const PLATE := Color(0.965, 0.933, 0.878, 0.94)
+const PLATE_SUNK := Color(0.878, 0.816, 0.729, 0.80)
 
 var quest_id: String = ""
 var offers: Array = []
@@ -48,7 +72,7 @@ var _root: Control = null
 var _row: Control = null
 var _cards: Array = []
 var _font: FontFile = null
-var _typewriter: SystemFont = null
+var _body_font: SystemFont = null
 var _resolved: bool = false
 
 # ---------------------------------------------------------------------------
@@ -81,7 +105,7 @@ func _ready() -> void:
 	var dim := ColorRect.new()
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.color = Color(0.05, 0.04, 0.03, 0.78)
-	# STOP so a click that misses a card doesn't fall through to the world.
+	# STOP so a click that misses a card does not fall through to the world.
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(dim)
 
@@ -117,20 +141,16 @@ func _sanitise(raw: Array) -> Array:
 func _build() -> void:
 	var column := VBoxContainer.new()
 	column.name = "Column"
-	column.add_theme_constant_override("separation", 18)
+	column.add_theme_constant_override("separation", 22)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	_root.add_child(column)
 
-	# The heading sits on the dim overlay, not on paper, so it takes the parchment
-	# colour rather than the engraved plate ink — maroon on near-black is
-	# unreadable, which is not obvious until you actually render it.
-	var heading := _engraved("YOUR REWARD", 26, 5.0)
-	heading.add_theme_color_override("font_color", Color(0.898, 0.839, 0.760, 0.95))
+	# The heading sits on the dim overlay, not on paper, so it takes the
+	# parchment colour rather than the engraved plate ink. Maroon on near-black
+	# is unreadable, which is not obvious until you actually render it.
+	var heading := _engraved("YOUR REWARD", 30, 5.0)
+	heading.add_theme_color_override("font_color", Color(0.918, 0.867, 0.796, 0.96))
 	column.add_child(heading)
-
-	var sub := _typed("Take one.", 14, Color(0.898, 0.839, 0.760, 0.75))
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(sub)
 
 	_row = HBoxContainer.new()
 	_row.add_theme_constant_override("separation", int(CARD_GAP))
@@ -146,85 +166,147 @@ func _build_card(offer: Dictionary) -> Control:
 	var card := Control.new()
 	card.custom_minimum_size = CARD_SIZE
 	card.size = CARD_SIZE
-	# Backstop for the overflow above: a long unwrapped string in any future
-	# offer type gets cut at the card edge instead of sprawling across its
-	# neighbour. The autowrap is the fix; this is the seatbelt.
+	# Backstop: a long unwrapped string in a future offer type gets cut at the
+	# card edge instead of sprawling across its neighbour.
 	card.clip_contents = true
 
 	var paper := GuillocheRect.new()
 	paper.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# One rosette per card at the top, no sunburst — the sunburst is the carta's
-	# signature and a row of them reads as noise.
+	# Both of GuillocheRect's centrepieces are off. They are sized for the carta
+	# d'identita's portrait, and behind a reward icon the rosette showed as a
+	# ragged ring peeking out from under whatever art happened to sit on it.
 	paper.show_sunburst = false
-	# Centred behind the ICON, not the caption above it — at 0.18 the engine
-	# turning ran straight through the "PURSE" / "GOODS" lettering.
-	paper.rosette_center = Vector2(0.5, 0.26)
-	paper.rosette_radius = 0.13
-	# Vary the engine-turning per card so three cards don't look printed from one
-	# plate. Deterministic in the offer, not random, so a re-layout is stable.
+	paper.show_rosette = false
+	# Vary the engine-turning per card so a row does not look printed from one
+	# plate. Deterministic in the offer, not random, so a relayout is stable.
 	paper.pattern_seed = 43454 + abs(hash(_offer_key(offer))) % 9973
 	card.add_child(paper)
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	# GuillocheRect's border band occupies roughly the first 20px of the card, so
-	# a 20px margin lands the prose flush against the engraved frame with no
-	# gutter at all. 30 clears the band and gives the text somewhere to sit.
+	# a 20px margin lands content flush against the engraved frame.
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 30)
 	card.add_child(margin)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", 12)
 	margin.add_child(box)
 
-	box.add_child(_engraved(_kind_caption(offer), 10, 2.5, 0.75))
+	box.add_child(_build_medallion(offer))
 
-	var icon := _build_icon(offer)
-	if icon != null:
-		box.add_child(icon)
-
-	# NO letterspacing on the title. _letterspace injects a real space between
-	# every character, and WORD_SMART then treats each of those as a legal break
-	# — "Potion of Healing" came out as "Potion of Heal / ing". The short
-	# non-wrapping captions above can afford the tracking; a title that has to
-	# wrap cannot.
-	var title := _engraved(_offer_title(offer), 17, 0.0)
+	# NO letterspacing on the title. See the header note about autowrap.
+	var title := _engraved(_offer_title(offer), 21, 0.0)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(title)
 
 	box.add_child(_build_rule(1.0))
 
-	var body := _typed(_offer_body(offer), 12, TYPED_BODY)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(body)
+	# The one number that decides whether you take this card, stamped rather
+	# than buried in a sentence.
+	var figure: Dictionary = _offer_figure(offer)
+	if not figure.is_empty():
+		box.add_child(_build_figure_plaque(str(figure["value"]), str(figure["unit"])))
 
-	var note := _offer_note(offer)
-	if not note.is_empty():
-		var note_label := _typed(note, 11, TYPED_DIM)
-		# MUST autowrap. A Label without it reports its full single-line text
-		# width as a minimum, which drags the whole VBox — and therefore the
-		# title, icon and button — wider than the card and out past its frame.
-		note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(note_label)
+	var body := _offer_body(offer)
+	var footnote := _offer_footnote(offer)
+	if not body.strip_edges().is_empty() or not footnote.strip_edges().is_empty():
+		box.add_child(_build_text_plate(body, footnote))
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
 
 	box.add_child(_small_button("TAKE", _on_take.bind(offer), true))
 	return card
 
-## The icon strip. Deliberately a plain TextureRect with an explicit minimum
-## size and EXPAND_IGNORE_SIZE: a proportional expand mode next to an expanding
-## sibling is the Godot 4.6 layout crash documented at QuestLogPanel.gd:200-205.
-func _build_icon(offer: Dictionary) -> Control:
+## The icon on its disc. A PanelContainer with a full corner radius IS a circle
+## and costs nothing extra; the inner margin guarantees a ring of paper all the
+## way round whatever shape the art turns out to be.
+func _build_medallion(offer: Dictionary) -> Control:
+	var centre := CenterContainer.new()
+
+	var disc := PanelContainer.new()
+	disc.custom_minimum_size = Vector2(MEDALLION_SIZE, MEDALLION_SIZE)
+	var style := StyleBoxFlat.new()
+	style.bg_color = PLATE_SUNK
+	style.set_corner_radius_all(int(MEDALLION_SIZE * 0.5))
+	style.set_border_width_all(1)
+	style.border_color = RULE
+	disc.add_theme_stylebox_override("panel", style)
+	centre.add_child(disc)
+
+	var pad := MarginContainer.new()
+	var inset: int = int((MEDALLION_SIZE - ICON_SIZE) * 0.5)
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, inset)
+	disc.add_child(pad)
+
 	var path := _offer_icon_path(offer)
 	if path.is_empty() or not ResourceLoader.exists(path):
-		return null
+		return centre
 	var tex := TextureRect.new()
 	tex.texture = load(path)
+	# EXPAND_IGNORE_SIZE plus an explicit minimum: a proportional expand mode
+	# beside an expanding sibling is the Godot 4.6 layout crash documented at
+	# UI/QuestLogPanel.gd:200-205.
 	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	tex.custom_minimum_size = Vector2(0, 84)
-	return tex
+	tex.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+	pad.add_child(tex)
+	return centre
+
+## Big numeral, small unit beneath, on a sunken plate. Reads at a glance from
+## across the row, which the same fact in a sentence does not.
+func _build_figure_plaque(value: String, unit: String) -> Control:
+	var plaque := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PLATE_SUNK
+	style.set_corner_radius_all(2)
+	style.set_border_width_all(1)
+	style.border_color = RULE
+	style.content_margin_top = 4
+	style.content_margin_bottom = 6
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	plaque.add_theme_stylebox_override("panel", style)
+
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 0)
+	plaque.add_child(stack)
+
+	stack.add_child(_engraved(value, 34, 0.0))
+	stack.add_child(_engraved(unit, 11, 2.5, 0.80))
+	return plaque
+
+## Prose on flat paper. The plate IS the readability fix: the wave field beneath
+## is drawn at 0.17 alpha and small type sitting directly on it swims.
+func _build_text_plate(body: String, footnote: String) -> Control:
+	var plate := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PLATE
+	style.set_corner_radius_all(2)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	plate.add_theme_stylebox_override("panel", style)
+
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 6)
+	plate.add_child(stack)
+
+	if not body.strip_edges().is_empty():
+		var body_label := _typed(body, 15, TYPED)
+		body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stack.add_child(body_label)
+
+	if not footnote.strip_edges().is_empty():
+		var foot := _typed(footnote, 13, TYPED_DIM)
+		foot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stack.add_child(foot)
+	return plate
 
 # ---------------------------------------------------------------------------
 # Offer presentation
@@ -234,24 +316,31 @@ func _offer_key(offer: Dictionary) -> String:
 	return "%s:%s:%s" % [str(offer.get("type", "")), str(offer.get("item_id", "")),
 		str(offer.get("ability_id", str(offer.get("amount", ""))))]
 
-func _kind_caption(offer: Dictionary) -> String:
-	match str(offer.get("type", "")):
-		"item":     return "GOODS"
-		"money":    return "PURSE"
-		"training": return "INSTRUCTION"
-	return "REWARD"
-
 func _offer_title(offer: Dictionary) -> String:
 	match str(offer.get("type", "")):
 		"item":
 			var data: Dictionary = ItemDatabase.get_item_data(str(offer.get("item_id", "")))
 			return str(data.get("display_name", offer.get("item_id", "")))
 		"money":
-			return "%d Coin" % int(offer.get("amount", 0))
+			# The amount is the plaque's job; repeating it here wastes the title.
+			return "Payment"
 		"training":
 			var ability: Dictionary = AbilityDatabase.get_ability_data(str(offer.get("ability_id", "")))
 			return str(ability.get("display_name", offer.get("ability_id", "")))
 	return "Reward"
+
+## The single number worth stamping, or {} for offers that have none.
+func _offer_figure(offer: Dictionary) -> Dictionary:
+	match str(offer.get("type", "")):
+		"money":
+			return {"value": str(int(offer.get("amount", 0))), "unit": "COIN"}
+		"training":
+			var days: int = maxi(1, int(offer.get("base_days", 3)))
+			var unit: String = "DAYS OF STUDY"
+			if days == 1:
+				unit = "DAY OF STUDY"
+			return {"value": str(days), "unit": unit}
+	return {}
 
 func _offer_body(offer: Dictionary) -> String:
 	match str(offer.get("type", "")):
@@ -266,13 +355,12 @@ func _offer_body(offer: Dictionary) -> String:
 	return ""
 
 ## The line that says a training offer is not a thing you walk away with.
-func _offer_note(offer: Dictionary) -> String:
+func _offer_footnote(offer: Dictionary) -> String:
 	if str(offer.get("type", "")) != "training":
 		return ""
 	var teacher: String = str(offer.get("teacher_title", "")).strip_edges()
-	var days: int = max(1, int(offer.get("base_days", 3)))
 	var who: String = teacher if not teacher.is_empty() else "your teacher"
-	return "Roughly %d days' study with %s. You must stay and do the work." % [days, who]
+	return "Taught by %s. You must stay in town and do the work." % who
 
 func _offer_icon_path(offer: Dictionary) -> String:
 	match str(offer.get("type", "")):
@@ -292,15 +380,15 @@ func _offer_icon_path(offer: Dictionary) -> String:
 # ---------------------------------------------------------------------------
 
 func _on_take(offer: Dictionary) -> void:
-	# Guard the double-click: the tween below leaves the buttons live for a beat.
+	# Guard the double-click: the buttons stay live for a beat after the first.
 	if _resolved:
 		return
 	_resolved = true
 	chosen.emit(offer)
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	# Escape declines the whole thing. The quest is already complete either way —
-	# turn_in() ran before this screen opened — so this forfeits the reward
+	# Escape declines the whole thing. The quest is already complete either way,
+	# since turn_in() ran before this screen opened, so this forfeits the reward
 	# rather than rolling anything back.
 	if event is InputEventKey and event.pressed and not event.echo \
 			and event.keycode == KEY_ESCAPE:
@@ -324,7 +412,7 @@ func _layout() -> void:
 	var count: int = maxi(1, _cards.size())
 	var wanted := Vector2(
 		CARD_SIZE.x * count + CARD_GAP * (count - 1),
-		CARD_SIZE.y + 110.0)
+		CARD_SIZE.y + 100.0)
 	column.size = wanted
 	var scale_factor: float = minf(1.0, minf(
 			(view.x - MARGIN.x) / wanted.x,
@@ -334,8 +422,8 @@ func _layout() -> void:
 	column.position = ((view - wanted * scale_factor) * 0.5).floor()
 
 # ---------------------------------------------------------------------------
-# Type builders — deliberate twins of CartaIdentita's, kept local because those
-# are private methods on that Control. Same palette, same faces.
+# Type builders. Deliberate twins of CartaIdentita's, kept local because those
+# are private methods on that Control. Same palette, same display face.
 # ---------------------------------------------------------------------------
 
 func _engraved(text: String, font_size: int, spacing: float = 0.0,
@@ -350,20 +438,24 @@ func _engraved(text: String, font_size: int, spacing: float = 0.0,
 		label.add_theme_font_override("font", _font)
 	return label
 
-## Cinzel is an all-caps display face and it is also ThemeDB.fallback_font here,
+## Cinzel is an all-caps display face and it is ALSO ThemeDB.fallback_font here,
 ## so prose left on the default comes out engraved and barely readable.
-func _typewriter_font() -> SystemFont:
-	if _typewriter == null:
-		_typewriter = SystemFont.new()
-		_typewriter.font_names = PackedStringArray([
-			"Courier New", "Consolas", "Liberation Mono", "DejaVu Sans Mono",
-			"Menlo", "monospace"])
-	return _typewriter
+##
+## The carta d'identita uses a monospace typewriter face for its field entries,
+## which is right for a clerk filling in a form. This card is prose being read
+## at a glance, and a serif book face is markedly more legible at these sizes.
+func _body_face() -> SystemFont:
+	if _body_font == null:
+		_body_font = SystemFont.new()
+		_body_font.font_names = PackedStringArray([
+			"Georgia", "Palatino Linotype", "Book Antiqua", "Cambria",
+			"Constantia", "Liberation Serif", "DejaVu Serif", "serif"])
+	return _body_font
 
 func _typed(text: String, font_size: int, color: Color = TYPED) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_override("font", _typewriter_font())
+	label.add_theme_font_override("font", _body_face())
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	return label
@@ -394,7 +486,7 @@ func _small_button(text: String, handler: Callable, emphatic: bool = false) -> B
 	var btn := Button.new()
 	btn.text = text
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	btn.add_theme_font_size_override("font_size", 13 if not emphatic else 15)
+	btn.add_theme_font_size_override("font_size", 15 if not emphatic else 18)
 	if _font:
 		btn.add_theme_font_override("font", _font)
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
@@ -407,8 +499,8 @@ func _small_button(text: String, handler: Callable, emphatic: bool = false) -> B
 		style.set_corner_radius_all(2)
 		style.content_margin_left = 12
 		style.content_margin_right = 12
-		style.content_margin_top = 4
-		style.content_margin_bottom = 4
+		style.content_margin_top = 8
+		style.content_margin_bottom = 8
 		btn.add_theme_stylebox_override(state, style)
 	btn.add_theme_color_override("font_color", ENGRAVED)
 	btn.add_theme_color_override("font_hover_color", TYPED)

@@ -123,15 +123,19 @@ func _create_indicators() -> void:
 	# (ProceduralCharacter._confirm_ability_target). From that moment the AoE was
 	# dragged along and swung through an arc by the moving body — the "jerk". The
 	# planned path never showed it because it swaps in a top_level queued ghost.
-	# z is absolute so the old effective order survives (character z 5 + this node's
-	# relative 50 = 55): under the knockback arrows (60) and VFX (100), over the
-	# queued ghosts (49). A top_level CanvasItem is reparented to the canvas root in
+	# z is absolute: under the knockback arrows (160), over the path markers
+	# (PathDrawer.Z_MARKERS 152) and the queued ghosts (49). 155 rather than the
+	# old 55 so the LIVE preview clears the unexplored-fog quad
+	# (UnexploredFogLayer.FOG_Z 140) — aiming into never-seen territory is
+	# routine and the validity colors must survive it (VFX at 100 no longer
+	# covers the live preview; accepted, the fog has to sit above VFX anyway).
+	# A top_level CanvasItem is reparented to the canvas root in
 	# the RenderingServer, so it would otherwise fall to z 0 and draw under bodies.
 	circle_indicator = Node2D.new()
 	circle_indicator.name = "CircleIndicator"
 	circle_indicator.top_level = true
 	circle_indicator.z_as_relative = false
-	circle_indicator.z_index = 55
+	circle_indicator.z_index = 155
 	var circle_drawer = CircleDrawer.new()
 	circle_indicator.add_child(circle_drawer)
 	circle_indicator.visible = false
@@ -148,7 +152,7 @@ func _create_indicators() -> void:
 	rectangle_indicator.name = "RectangleIndicator"
 	rectangle_indicator.top_level = true
 	rectangle_indicator.z_as_relative = false
-	rectangle_indicator.z_index = 55
+	rectangle_indicator.z_index = 155  # matches CircleIndicator; above fog (140)
 	var rect_drawer = RectangleDrawer.new()
 	rectangle_indicator.add_child(rect_drawer)
 	rectangle_indicator.visible = false
@@ -179,10 +183,11 @@ func _create_indicators() -> void:
 	_knockback_layer.name = "KnockbackPreview"
 	_knockback_layer.top_level = true
 	# Absolute, not inherited: this node is two levels below a character root, and
-	# the whole point is being above every body it draws an arrow over. 60 clears
-	# characters (5) and this node's own AoE fill (~55), and stays under VFX (100).
+	# the whole point is being above every body it draws an arrow over. 160 clears
+	# characters (5), this node's own AoE fill (155), and the unexplored-fog quad
+	# (140) — the shove preview must stay readable when aimed into fog.
 	_knockback_layer.z_as_relative = false
-	_knockback_layer.z_index = 60
+	_knockback_layer.z_index = 160
 	_knockback_layer.visible = false
 	add_child(_knockback_layer)
 	_knockback_layer.global_position = Vector2.ZERO

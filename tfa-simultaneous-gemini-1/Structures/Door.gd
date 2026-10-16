@@ -108,6 +108,10 @@ func _apply_open_state() -> void:
 		_visual().self_modulate = Color.WHITE
 	_animate_swing()
 	_sync_door_pass()
+	# A door flip is the common way vision-blocking geometry changes: kick the
+	# fog sweep's standing-still memo so the room behind reveals immediately
+	# instead of on the next periodic re-test.
+	ExplorationManager.notify_occlusion_changed()
 	var occ: Node = get_node_or_null("Occluder")   # named by MapLoader
 	if occ == null:
 		for c in get_children():

@@ -25,6 +25,9 @@ var occupied_tiles: Array[Vector2i] = []
 # invisible stone-wall margins veto ignition of plain grass around buildings.
 # Empty = legacy map -> consumers fall back to occupied_tiles (tile-exact there).
 var fire_blocking_tiles: Array[Vector2i] = []
+# Per-hit console log. Off: a spreading fire damages ~100 walls every second
+# and each print_rich is a synchronous stdout write (a measurable hitch).
+const LOG_DAMAGE := false
 # Walkable elevated deck (structured maps, "walk_elev" instances): the body sits
 # on VISION_BLOCKERS only and registers deck elevations instead of obstacles.
 var is_deck: bool = false
@@ -96,7 +99,8 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		# unknown damage type must not abort the hit
 		var dealt = max(0.0, amount[damage_type]*damage_multiplier - self.damage_resistances.get(damage_type, 0))
 		current_health = max(0, current_health - dealt)
-		print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
+		if LOG_DAMAGE:
+			print_rich(name, " takes ", amount[damage_type], damage_type,  " damage.", "crit tier:", success_level, " Health: ", current_health, "/", max_health)
 		if damage_type == "fire":
 			took_fire_damage = true
 			show_floating_text(str(amount[damage_type]), Color.CRIMSON, success_level)
@@ -135,6 +139,15 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		_destroy_structure()
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
+	# The label rides at absolute z 200, above the unexplored-fog quad (140) —
+	# and structures are never LOS-hidden, so a fire chewing through a
+	# never-seen building would pop crisp damage numbers on top of the fog and
+	# leak the layout. Gate on the exploration mask (cheap array read, no
+	# raycast): once-explored rooms are permanently fog-free, so their text
+	# still shows even with nobody currently watching.
+	if ExplorationManager.active \
+			and not ExplorationManager.is_explored(GridManager.world_to_map(global_position)):
+		return
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
 	floating_text_label.text = formatted_text; floating_text_label.modulate = color
 	# Make critical hit text bigger too

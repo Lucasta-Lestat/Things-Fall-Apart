@@ -587,7 +587,9 @@ var current_elevation: float = 0.0
 var on_roof: bool = false
 # Render-layer boost while on_roof: above the RoofLayer cover quads (z 120) so
 # roof-walkers draw ON the roof instead of vanishing under it in roof view.
-# Managed exclusively by _refresh_elevation.
+# Managed exclusively by _refresh_elevation. Must stay BELOW
+# UnexploredFogLayer.FOG_Z (140): a roof-walker in never-seen territory has to
+# be filtered blue-grey like everything else.
 const ROOF_WALKER_Z := 135
 var _roof_z_boosted: bool = false
 var _pre_roof_z: int = 5

@@ -149,7 +149,7 @@ func invalidate_edges() -> void:
 	_edge_cache.clear()
 
 
-# --- fire bridge (CellFire._compute_fuel consults these) ---------------------
+# --- fire bridge (CellFire._fuel consults these) ---------------------
 
 func amount_at(cid: int) -> float:
 	return amount[cid] if cid >= 0 and cid < amount.size() else 0.0

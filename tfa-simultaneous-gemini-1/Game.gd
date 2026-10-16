@@ -4,6 +4,7 @@ extends Node
 
 const ProceduralCharacterScript = preload("res://Characters/ProceduralCharacter.gd")
 const WORLD_MAP_OVERLAY_SCRIPT = preload("res://WorldMap/WorldMapOverlay.gd")
+const UNEXPLORED_FOG_SCRIPT = preload("res://vfx/unexplored_fog_layer.gd")
 const WARP_ARROW_TEXTURE: Texture2D = preload("res://UI/UI Icons/warp_arrow.png")
 const WARP_ARROW_DISPLAY_HEIGHT: float = 64.0
 
@@ -33,7 +34,7 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = "combat_test"  # TEMP: combat test arena ("tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
+var current_map_id: String = "tg_town_square"  # TEMP: piazza review ("combat_test" = arena, "tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
@@ -278,6 +279,7 @@ func _ready() -> void:
 	# Law/crime Phase 7: the Surrender button (visible whenever a hostile is
 	# near — a missing button is confusion, a visible one is information).
 	_setup_surrender_button()
+	_setup_threat_indicators()
 
 	# Character creation gates the first map load: Scarlatti issues the carta
 	# d'identità before it lets anyone in. _ready becomes a coroutine here, so
@@ -1012,6 +1014,24 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		map_loader.structure_mask_path = images.get("structures_mask", "")
 		map_loader.generate_map()
 
+	# 2a'. Door Kickers-style unexplored fog: restore (or start) this map's
+	# explored mask and hang the filter quad over the whole map. The quad is
+	# parented under map_loader so the unload sweep frees it with the map; the
+	# MASK persists across warps inside ExplorationManager (MapTriggerState
+	# pattern). World maps keep their own warp-reveal loop instead, and a map
+	# can opt out in Maps.json with "no_exploration_fog": true.
+	var fog_of_war: bool = not current_map_data.get("is_world_map", false) \
+		and not current_map_data.get("no_exploration_fog", false)
+	ExplorationManager.begin_map(map_id, fog_of_war)
+	if fog_of_war:
+		var unexplored_fog: ColorRect = UNEXPLORED_FOG_SCRIPT.new()
+		unexplored_fog.name = "UnexploredFogLayer"
+		map_loader.add_child(unexplored_fog)
+	# Hold the first reveal sweep until physics has synced the freshly spawned
+	# wall colliders: a sweep before that sees through every wall and would
+	# permanently burn the leak into the explored mask.
+	_fog_sweep_accum = -0.25
+
 	# 2b. Hand the shared graph to the sims.
 	if surface_manager:
 		surface_manager.setup_cell_graph(graph)
@@ -1044,6 +1064,14 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
  
 	# 5. Spawn the player and party
 	_spawn_player_and_party(spawn_key)
+
+	# Seed the unexplored fog around each spawned party member (instant, no
+	# raycasts): the first budgeted sweep is deliberately delayed until the
+	# map's colliders reach the physics space, and without seeding the party
+	# would render as blue-grey silhouettes inside its own fog until then.
+	for pc in party_chars:
+		if is_instance_valid(pc):
+			ExplorationManager.seed_explored(GridManager.world_to_map(pc.global_position), 2)
 
 	# 6. Spawn NPCs
 	_spawn_npcs(current_map_data.get("npc_spawns", []))
@@ -1753,6 +1781,9 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 
 var _surrender_button: Button = null
 var _surrender_poll_accum: float = 0.0
+# Unexplored-fog sweep cadence; set negative by load_map to delay the first
+# sweep until the new map's colliders are in the physics space.
+var _fog_sweep_accum: float = 0.0
 const SURRENDER_RADIUS: float = 800.0
 
 func _setup_surrender_button() -> void:
@@ -1793,6 +1824,40 @@ func hostile_characters_near_party(radius: float = SURRENDER_RADIUS) -> Array:
 		if near_and_hostile:
 			out.append(c)
 	return out
+
+## Every living, conscious hostile that a party member has in sight RIGHT
+## NOW — the same LOS answer _update_npc_los_visibility renders sprites from,
+## so nothing here is information the player hasn't been shown. Feeds the
+## off-screen threat arrows (UI/OffscreenThreatIndicators.gd).
+func hostiles_in_party_los() -> Array:
+	var out: Array = []
+	for c in characters_in_scene:
+		if not is_instance_valid(c) or c in party_chars:
+			continue
+		if not _npc_was_truly_seen.get(c, false):
+			continue
+		if not c.has_method("is_alive") or not c.is_alive():
+			continue
+		var cm = c.get_node_or_null("ConditionManager")
+		if cm and cm.has_condition("unconscious"):
+			continue
+		var ai_node = c.get_node_or_null("AI")
+		if ai_node == null:
+			continue
+		for pc in party_chars:
+			if is_instance_valid(pc) and pc.is_alive() and ai_node._is_enemy(pc):
+				out.append(c)
+				break
+	return out
+
+func _setup_threat_indicators() -> void:
+	var ThreatIndicators = load("res://UI/OffscreenThreatIndicators.gd")
+	var ind = ThreatIndicators.new()
+	ind.name = "OffscreenThreatIndicators"
+	ind.game = self
+	$GameUI.add_child(ind)
+	# Bottom of the GameUI stack: panels and dialogue draw over the arrows.
+	$GameUI.move_child(ind, 0)
 
 func _update_surrender_button(hostiles: Array = []) -> void:
 	if _surrender_button == null:
@@ -2029,6 +2094,11 @@ func create_structure(structure_id: String, world_position: Vector2) -> Structur
 
 	add_child(structure_instance)
 	structures_in_scene.append(structure_instance)
+	# a structure raised mid-map (conjured wall, placed barricade) changes the
+	# fuel map exactly like a destroyed one: CellFire indexes structures by
+	# tile and only re-sweeps on invalidate_fuel
+	if surface_manager and surface_manager.cell_fire and is_instance_valid(surface_manager.cell_fire):
+		surface_manager.cell_fire.invalidate_fuel()
 
 	structure_instance.destroyed.connect(_on_structure_destroyed)
 
@@ -2449,6 +2519,17 @@ func _process(delta: float) -> void:
 		_tick_hearing_pulses(delta)
 		_update_npc_los_visibility()
 		_update_item_los_visibility()
+		# Unexplored-fog reveal sweep. Slower cadence than the per-frame LOS
+		# sweeps above and ray-budgeted inside ExplorationManager; frozen with
+		# them during pause (LOS cannot change while paused). The accumulator
+		# starts negative on map load so the first sweep waits for physics to
+		# sync the new map's wall colliders.
+		_fog_sweep_accum += delta
+		if _fog_sweep_accum >= ExplorationManager.SWEEP_INTERVAL:
+			_fog_sweep_accum = 0.0
+			var fog_vp := get_viewport()
+			if fog_vp and fog_vp.world_2d:
+				ExplorationManager.sweep(party_chars, fog_vp.world_2d.direct_space_state)
 		# Surrender button visibility and combat music, polled at 2 Hz off the
 		# same hostility sweep.
 		_surrender_poll_accum += delta

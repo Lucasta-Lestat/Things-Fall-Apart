@@ -139,6 +139,11 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 			area.monitoring = false
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
+	# Same fog gate as Structure.show_floating_text: the z-200 label would
+	# pierce the unexplored-fog quad (z 140) over never-seen ground.
+	if ExplorationManager.active \
+			and not ExplorationManager.is_explored(GridManager.world_to_map(global_position)):
+		return
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text
 	floating_text_label.text = formatted_text; floating_text_label.modulate = color
 	# Make critical hit text bigger too

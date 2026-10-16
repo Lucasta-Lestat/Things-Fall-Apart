@@ -23,16 +23,20 @@ var rotation_current: Vector2 = Vector2.ZERO
 # --- Layers -----------------------------------------------------------------
 # Above floors (-4) and structures (-3), below the character root (5).
 const Z_GROUND := 2
-# Above characters and their gear; icons must stay legible. 52 specifically:
-# it clears the queued AoE ghosts (z 49, AbilityTargeting.create_queued_indicator),
-# the targeting root (50) and character highlights (51), so a blast never washes
-# out the icon or the order badge sitting inside it — while staying UNDER the
-# live targeting indicator (55), knockback preview (60) and VFX (100), which
-# should still cover the plan while you are actively aiming.
-# Side effect of clearing 50: node discs now also draw over in-flight projectiles
-# and the floating "unconscious" label. Both are z 50 and only overlap a drawn
-# path, so this is accepted deliberately rather than overlooked.
-const Z_MARKERS := 52
+# Above characters and their gear; icons must stay legible. 152 specifically:
+# planning into never-seen territory is the core loop, so the read-the-icon
+# layer must clear the unexplored-fog filter quad (UnexploredFogLayer.FOG_Z,
+# 140) or node icons and order badges get repainted blue-grey the moment a
+# path enters fog. It still clears the queued AoE ghosts (z 49), the targeting
+# root (50) and character highlights (51) — those stay below the fog as area
+# fills whose shape survives the tint — while staying UNDER the live targeting
+# indicator (155) and knockback preview (160), which should still cover the
+# plan while you are actively aiming.
+# Accepted side effects, deliberate: node discs draw over in-flight
+# projectiles and the floating "unconscious" label (both z 50, only ever
+# overlapping a drawn path), and — since clearing the fog necessarily clears
+# VFX (100) — a blast effect no longer covers the marker icons.
+const Z_MARKERS := 152
 
 # --- Route ribbon -----------------------------------------------------------
 # Two passes: a dark shadow stroke, then a bright core on top. A single flat line

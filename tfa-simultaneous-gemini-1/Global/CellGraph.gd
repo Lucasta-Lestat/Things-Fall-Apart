@@ -109,8 +109,20 @@ func neighbors(cid: int) -> Array:
 # and fluids are combined on top by the sim, not here.
 func ground_fuel(cid: int) -> float:
 	if not _square:
-		return _fuel[cid] if cid >= 0 and cid < _fuel.size() else 0.0
-	var tile := Vector2i(cid % _cols, cid / _cols)
+		var baked: float = _fuel[cid] if cid >= 0 and cid < _fuel.size() else 0.0
+		if baked > 0.0 or cid < 0 or cid >= _cx.size():
+			return baked
+		# The terrain editor bakes fuel 0 under every BUILT floor (it gates
+		# scatter and fuel off floor rects), so a parquet floor exported as a
+		# firebreak and fireballs never spread indoors. The registered floor
+		# (MapLoader's per-tile codes -> FloorDatabase) decides instead: wood
+		# burns, stone/dirt/water stay breaks.
+		return _floor_fuel(GridManager.world_to_map(Vector2(_cx[cid], _cy[cid])))
+	return _floor_fuel(Vector2i(cid % _cols, cid / _cols))
+
+
+# 1.0 when the floor registered on `tile` is flammable (FloorDatabase), else 0.
+func _floor_fuel(tile: Vector2i) -> float:
 	var fid = GridManager.floors.get(tile, "")
 	if fid == "":
 		return 0.0
@@ -158,6 +170,43 @@ func cell_at(world_pos: Vector2) -> int:
 					bestd = d
 					best = cid
 	return best
+
+
+# Cells whose centroid lies within `radius` of `center` (AoE ignition and the
+# like), ascending id. Bucket-bounded on structured maps and a tile-range scan
+# on square maps -- never a walk of all cell_count cells per query.
+func cells_within(center: Vector2, radius: float) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	if radius < 0.0:
+		return out
+	var r2 := radius * radius
+	if _square:
+		var tx0 := maxi(int(floor((center.x - radius) / _tile)), 0)
+		var tx1 := mini(int(floor((center.x + radius) / _tile)), _cols - 1)
+		var ty0 := maxi(int(floor((center.y - radius) / _tile)), 0)
+		var ty1 := mini(int(floor((center.y + radius) / _tile)), _rows - 1)
+		for ty in range(ty0, ty1 + 1):
+			for tx in range(tx0, tx1 + 1):
+				var cid := ty * _cols + tx
+				if centroid(cid).distance_squared_to(center) <= r2:
+					out.append(cid)
+		return out
+	var bx0 := int(floor((center.x - radius) / _bucket_size))
+	var bx1 := int(floor((center.x + radius) / _bucket_size))
+	var by0 := int(floor((center.y - radius) / _bucket_size))
+	var by1 := int(floor((center.y + radius) / _bucket_size))
+	for by in range(by0, by1 + 1):
+		for bx in range(bx0, bx1 + 1):
+			var key := Vector2i(bx, by)
+			if not _buckets.has(key):
+				continue
+			for cid in _buckets[key]:
+				var dx: float = _cx[cid] - center.x
+				var dy: float = _cy[cid] - center.y
+				if dx * dx + dy * dy <= r2:
+					out.append(cid)
+	out.sort()
+	return out
 
 
 # --- internals ---------------------------------------------------------------
