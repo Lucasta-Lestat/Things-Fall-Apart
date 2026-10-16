@@ -48,6 +48,8 @@ const SCHOOL_RESOURCES := [
 # Health bar color thresholds (matching old dual_health_bars style)
 const HP_COLOR_FULL := Color(0.2, 0.8, 0.2)
 const STRESS_COLOR := Color(0.6, 0.3, 0.8)
+# Stress at or past ProceduralCharacter.STRESS_DANGER_RATIO: each gain rolls Will.
+const STRESS_DANGER_COLOR := Color(0.9, 0.2, 0.7)
 const HP_COLOR_MID := Color(0.9, 0.8, 0.1)
 const HP_COLOR_LOW := Color(0.8, 0.1, 0.1)
 const HP_MID_THRESHOLD := 0.5
@@ -102,6 +104,8 @@ func _ready() -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.mouse_filter = Control.MOUSE_FILTER_STOP
 	scroll.add_child(vbox)
+	_forward_dnd(scroll)
+	_forward_dnd(vbox)
 
 	# Populate after a frame so characters exist
 	call_deferred("_populate_party")
@@ -140,6 +144,9 @@ func _disconnect_panel_signals(data: Dictionary) -> void:
 		return
 	var on_changed: Callable = data.get("_sig_on_changed", Callable())
 	var on_active: Callable = data.get("_sig_on_active", Callable())
+	var on_add_failed: Callable = data.get("_sig_on_add_failed", Callable())
+	if on_add_failed.is_valid() and inv.add_failed.is_connected(on_add_failed):
+		inv.add_failed.disconnect(on_add_failed)
 	if on_changed.is_valid():
 		if inv.item_added.is_connected(on_changed):
 			inv.item_added.disconnect(on_changed)
@@ -283,6 +290,8 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	# is what widened the whole panel.
 	name_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	name_label.clip_text = true
+	# A name cut by a crowded header ends in "…" rather than mid-letter.
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(name_label)
 
@@ -299,8 +308,9 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	container.add_child(header)
 
 	# --- Health Bar (single bar replaces the old head + torso pair) ---
-	# The HP caption shares its row with the footsteps readout (added on the
-	# right by _add_footsteps_label), keeping it off the crowded header.
+	# The HP numbers sit on their own row, which per-character readouts (the
+	# footsteps label, added on the right by _add_footsteps_label) share,
+	# keeping them off the crowded header whose width _fit_name_column budgets.
 	var hp_row = HBoxContainer.new()
 	hp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -318,7 +328,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	health_bar.max_value = 100
 	health_bar.value = 100
 	health_bar.show_percentage = false
-	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	health_bar.mouse_filter = Control.MOUSE_FILTER_PASS  # PASS so the HP tooltip shows
 	var health_fill = StyleBoxFlat.new()
 	health_fill.bg_color = HP_COLOR_FULL
 	health_bar.add_theme_stylebox_override("fill", health_fill)
@@ -339,7 +349,7 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	stress_bar.max_value = 100
 	stress_bar.value = 0
 	stress_bar.show_percentage = false
-	stress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stress_bar.mouse_filter = Control.MOUSE_FILTER_PASS  # PASS so the stress tooltip shows
 	var stress_fill = StyleBoxFlat.new()
 	stress_fill.bg_color = STRESS_COLOR
 	stress_bar.add_theme_stylebox_override("fill", stress_fill)
@@ -387,6 +397,8 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	container.add_child(sep)
 
 	vbox.add_child(container)
+	for c in [container, header, inv_grid, sep]:
+		_forward_dnd(c)
 
 	var data = {
 		"character": character,
@@ -395,12 +407,18 @@ func _create_character_panel(character, index: int) -> Dictionary:
 		"icon": icon,
 		"wait_icon": wait_icon,
 		"name_label": name_label,
+		"hp_row": hp_row,
+		"hp_label": hp_label,
 		"health_bar": health_bar,
 		"health_fill": health_fill,
+		"stress_label": stress_label,
 		"stress_bar": stress_bar,
+		"stress_fill": stress_fill,
 		"condition_container": cond_container,
 		"resource_row": resource_row,
 		"resource_bars": resource_bars,
+		"resource_schools": _resource_schools(character),
+		"inv_label": inv_label,
 		"inv_grid": inv_grid,
 	}
 
@@ -412,11 +430,14 @@ func _create_character_panel(character, index: int) -> Dictionary:
 	# freed grid and crashes.
 	var on_changed: Callable = _on_inventory_changed.bind(data)
 	var on_active: Callable = _on_active_weapon_changed.bind(data)
+	var on_add_failed: Callable = _on_inventory_add_failed.bind(data)
 	data["_sig_on_changed"] = on_changed
 	data["_sig_on_active"] = on_active
+	data["_sig_on_add_failed"] = on_add_failed
 	if character.inventory:
 		character.inventory.item_added.connect(on_changed)
 		character.inventory.item_removed.connect(on_changed)
+		character.inventory.add_failed.connect(on_add_failed)
 		character.inventory.weapon_equipped.connect(on_changed)
 		character.inventory.weapon_unequipped.connect(on_changed)
 		character.inventory.active_weapon_changed.connect(on_active)
@@ -480,6 +501,16 @@ func _refresh_inventory(data: Dictionary) -> void:
 	if not character.inventory:
 		return
 
+	# Item slots used vs the hard cap that makes pick-ups and transfers fail.
+	# Weapons and abilities don't count; hidden hand-weapon dicts do (the cap
+	# in Inventory.add_item counts items.size()).
+	var inv_label: Label = data.get("inv_label")
+	if inv_label:
+		var used: int = character.inventory.items.size()
+		var cap: int = character.inventory.max_slots
+		inv_label.text = "Inventory %d/%d" % [used, cap]
+		inv_label.modulate = Color.ORANGE if used >= cap else Color.WHITE
+
 	var entries = _build_inventory_entries(character.inventory)
 	# On the world map, show only abilities that carry the "overworld" trait
 	# (e.g. Force March). Items and weapons are unaffected — they're still
@@ -491,9 +522,35 @@ func _refresh_inventory(data: Dictionary) -> void:
 			var aid: String = str(e.get("ability_id", ""))
 			var ability_data: Dictionary = AbilityDatabase.get_ability_data(aid)
 			return ability_data.get("traits", {}).has("overworld"))
+	# Ability slots grey out while their cost can't be paid (see _process).
+	var ability_slots: Array = []
 	for entry in entries:
+		if entry.get("kind", "") == "ability":
+			_set_ability_costs(entry, character)
 		var slot = _create_item_slot(entry, data)
 		grid.add_child(slot)
+		if entry.get("kind", "") == "ability" and not entry.get("costs", {}).is_empty():
+			ability_slots.append({"slot": slot, "costs": entry["costs"]})
+	data["ability_slots"] = ability_slots
+
+# The real cost of an ability slot comes from its school traits (Arcane 2 ->
+# 2 focus), not the deprecated "costs" field, so ask AbilityManager. Racial
+# abilities, and casters with unlimited resources, pay nothing: AbilityManager
+# skips their resource gate, so show them free and never grey them out.
+func _set_ability_costs(entry: Dictionary, character) -> void:
+	var node = entry.get("raw")
+	var costs: Dictionary = {}
+	if is_instance_valid(node) and node.raw_data is Dictionary and not node.raw_data.is_empty():
+		var ability: Ability = Ability.from_dict(node.raw_data)
+		var am = character.get("ability_manager")
+		var innate: bool = am != null and is_instance_valid(am) and am.has_method("_is_innate_ability") \
+			and am._is_innate_ability(ability)
+		var unlimited: bool = "npc_unlimited_resources" in character and character.npc_unlimited_resources
+		if innate or unlimited:
+			entry["innate"] = innate
+		else:
+			costs = AbilityManager.school_costs_for(ability)
+	entry["costs"] = costs
 
 # Builds a unified list of display entries covering inventory.items, hand-equipped
 # weapons/abilities, and stowed weapons/abilities. Abilities are deduped by ability_id
@@ -663,6 +720,7 @@ func _create_item_slot(entry: Dictionary, panel_data: Dictionary) -> PanelContai
 	slot.set_meta("entry", entry)
 	slot.set_meta("panel_data", panel_data)
 	slot.gui_input.connect(_on_slot_gui_input.bind(slot))
+	_forward_dnd(slot)
 	return slot
 
 func _make_hand_label(text: String, alignment: int) -> Label:
@@ -685,9 +743,42 @@ func _get_entry_short_name(entry: Dictionary) -> String:
 		return n.substr(0, 4) + "."
 	return n
 
+# Player-facing item name: display_name, else the id with underscores spaced.
+func _item_name(item_data: Dictionary) -> String:
+	var n = item_data.get("display_name")
+	if n != null and str(n) != "":
+		return str(n)
+	return str(item_data.get("id", "item")).replace("_", " ")
+
+func _item_icon(item_data: Dictionary) -> Texture2D:
+	var sprite_path = item_data.get("sprite_path", "")
+	if sprite_path is String and not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+		return load(sprite_path)
+	return null
+
 # ---------------------------------------------------------------------------
 # Drag and Drop
 # ---------------------------------------------------------------------------
+
+# Godot starts a drag, and looks for a drop target, at the control under the
+# cursor and climbs to its parents only through MOUSE_FILTER_PASS controls. The
+# slots, grids and containers here are STOP, so the panel's own drag-and-drop
+# methods below never ran. Each STOP control that can be under the cursor
+# forwards to them instead, with the position moved into the panel's space.
+func _forward_dnd(ctrl: Control) -> void:
+	ctrl.set_drag_forwarding(_fwd_get_drag_data.bind(ctrl), _fwd_can_drop_data.bind(ctrl), _fwd_drop_data.bind(ctrl))
+
+func _to_panel_local(ctrl: Control, pos: Vector2) -> Vector2:
+	return get_global_transform_with_canvas().affine_inverse() * (ctrl.get_global_transform_with_canvas() * pos)
+
+func _fwd_get_drag_data(at_position: Vector2, ctrl: Control):
+	return _get_drag_data(_to_panel_local(ctrl, at_position))
+
+func _fwd_can_drop_data(at_position: Vector2, data, ctrl: Control) -> bool:
+	return _can_drop_data(_to_panel_local(ctrl, at_position), data)
+
+func _fwd_drop_data(at_position: Vector2, data, ctrl: Control) -> void:
+	_drop_data(_to_panel_local(ctrl, at_position), data)
 
 func _get_drag_data(at_position: Vector2):
 	var slot = _find_slot_at(at_position)
@@ -726,6 +817,9 @@ func _create_drag_preview_from_entry(entry: Dictionary) -> Control:
 func _can_drop_data(at_position: Vector2, data) -> bool:
 	if data is not Dictionary:
 		return false
+	# Downtime portrait drags carry a source_character but no item entry.
+	if not (data.get("entry") is Dictionary):
+		return false
 	var target_panel = _find_panel_at(at_position)
 	if not target_panel:
 		return false
@@ -759,6 +853,8 @@ func _drop_data(at_position: Vector2, data) -> void:
 	if data.has("source_chest"):
 		var chest_item = data["source_chest"]
 		if not is_instance_valid(chest_item):
+			return
+		if _refuse_during_trade(target_char, entry):
 			return
 		var item_dict: Dictionary = entry.get("raw", {})
 		# Transfer first; only erase from the chest if the target accepted it
@@ -798,6 +894,10 @@ func _drop_data(at_position: Vector2, data) -> void:
 	if data.has("source_npc"):
 		var npc = data["source_npc"]
 		var source_window = data.get("source_window")
+		# The TradeWindow's own NPC side is the trade itself; a service card isn't.
+		var from_trade: bool = is_instance_valid(source_window) and source_window is TradeWindow
+		if not from_trade and _refuse_during_trade(target_char, entry):
+			return
 
 		# Snapshot mode: NPC isn't on this map. Pull from the persisted
 		# snapshot via the source window. Enforce TradeWindow's value-balance
@@ -815,27 +915,34 @@ func _drop_data(at_position: Vector2, data) -> void:
 			var item_cost: float = _entry_cost_for_balance(entry)
 			if source_window.has_method("can_accept_value_loss") \
 					and not source_window.can_accept_value_loss(uid, item_cost):
-				SfxManager.play_ui("trade_decline")
+				_refuse_service_take(target_char, source_window, uid, entry, item_cost)
+				return
+			# The snapshot has no put-back, so check room before removing.
+			var snap_raw = entry.get("raw", {})
+			if snap_raw is Dictionary and not _inventory_can_take(target_char.inventory, snap_raw):
+				_refuse_full(target_char, snap_raw)
 				return
 			var snap_item = source_window.remove_snapshot_item(uid, region_id, entry.get("source_index", -1))
 			if not snap_item.is_empty():
-				target_char.inventory.add_item(snap_item)
+				# The NPC's worn flag stays behind, as in _transfer_one_item.
+				snap_item.erase("_equipped")
+				# The whole snapshot stack moves (add_item would keep only one).
+				target_char.inventory.add_stack(snap_item)
 			return
 
 		# Live NPC path. If the source window enforces a per-drop balance
 		# (TownServicesPanel does), respect it. TradeWindow doesn't and the
 		# call is a no-op safe-default.
 		if source_window and is_instance_valid(source_window) and source_window.has_method("can_accept_value_loss"):
-			var item_cost_live: float = _entry_cost_for_balance(entry)
+			# One unit moves from a live inventory, so check one unit's value.
+			var item_cost_live: float = _entry_cost_for_balance(entry, true)
 			var uid_live: String = str(data.get("snapshot_uid", ""))
 			if not uid_live.is_empty() and not source_window.can_accept_value_loss(uid_live, item_cost_live):
-				SfxManager.play_ui("trade_decline")
+				_refuse_service_take(target_char, source_window, uid_live, entry, item_cost_live)
 				return
 		match entry.get("kind", ""):
 			"item":
-				var item = npc.inventory.remove_item(entry.get("source_index", -1))
-				if not item.is_empty():
-					target_char.inventory.add_item(item)
+				_transfer_one_item(npc, target_char, entry.get("source_index", -1))
 			"weapon":
 				_transfer_weapon(npc, target_char, entry.get("raw"))
 		return
@@ -845,20 +952,96 @@ func _drop_data(at_position: Vector2, data) -> void:
 
 	match entry.get("kind", ""):
 		"item":
-			# Handing over worn gear takes it off first, as Drop does (refused
-			# while it is a pack holding more than its wearer could carry).
-			var src_raw = entry.get("raw", {})
-			if src_raw is Dictionary and src_raw.get("_equipped", false) \
-					and not _unequip_item(source_char, entry.get("source_index", -1), src_raw, 1):
-				return
-			var item = source_char.inventory.remove_item(entry.get("source_index", -1))
-			if not item.is_empty():
-				target_char.inventory.add_item(item)
+			_transfer_one_item(source_char, target_char, entry.get("source_index", -1))
 		"weapon":
 			_transfer_weapon(source_char, target_char, entry.get("raw"))
 
-func _entry_cost_for_balance(entry: Dictionary) -> float:
-	## Cost lookup safe for both item dicts and WeaponShape Nodes.
+# Move one unit of the item at `index` between inventories. The target gets a
+# copy first and the source loses it only if that worked, so a full target
+# refuses the drop (add_item shows "Inventory full") instead of eating the item.
+func _transfer_one_item(source_char, target_char, index: int) -> void:
+	var src_inv = source_char.inventory
+	var src_item: Dictionary = src_inv.get_item(index)
+	if src_item.is_empty():
+		return
+	# A 1-count copy: the source's dict stays with the source's stack. The
+	# worn flag stays behind too; the receiver hasn't put it on.
+	var one: Dictionary = src_item.duplicate(true)
+	one["num_stacks"] = 1
+	one.erase("_equipped")
+	# Handing over worn gear takes it off first, as Drop does, which is refused
+	# while it is a pack holding more than its wearer could carry without it.
+	# Asked before anything moves, so a refusal leaves both sides as they were.
+	var worn: bool = src_item.get("_equipped", false)
+	if worn and source_char.has_method("worn_capacity_problem"):
+		var why: String = source_char.worn_capacity_problem(src_item, {}, 1)
+		if why != "":
+			source_char.notify("Too full to remove", Color(1.0, 0.75, 0.3), why)
+			SfxManager.play_ui("trade_decline")
+			return
+	if not target_char.inventory.add_item(one):
+		SfxManager.play_ui("trade_decline")
+		return
+	if worn:
+		_unequip_item(source_char, index, src_item, 1)
+	src_inv.remove_item(index)
+
+# True if `inv` can hold every unit of `item`: a free slot, or enough room in
+# matching stacks for the whole count (the way add_stack merges).
+func _inventory_can_take(inv, item: Dictionary) -> bool:
+	if inv.items.size() < inv.max_slots:
+		return true
+	if not item.get("is_stackable", false):
+		return false
+	var ns = item.get("num_stacks", 1)
+	var need: int = max(1, int(ns) if ns != null else 1)
+	var ms = item.get("max_stack_size", 20)
+	var max_stack: int = int(ms) if ms != null else 20
+	var item_id := str(item.get("id", ""))
+	for it in inv.items:
+		if str(it.get("id", "")) == item_id:
+			var cur = it.get("num_stacks", 1)
+			need -= max(0, max_stack - (int(cur) if cur != null else 1))
+	return need <= 0
+
+# A drop the target can't hold: decline sound, and the inventory's add_failed,
+# which gives party members the usual "Inventory full" notice and log line.
+func _refuse_full(target_char, item: Dictionary) -> void:
+	SfxManager.play_ui("trade_decline")
+	target_char.inventory.add_failed.emit(item, "Inventory full")
+
+# An open TradeWindow puts every party inventory back from its snapshot on
+# Cancel, so an item taken from a chest or a service card meanwhile would
+# vanish from both, and one dropped, thrown or used would come back while its
+# copy stays on the ground (or its effect stays spent). Refuse those moves
+# until the trade is closed. `verb` names the move in the log line.
+func _refuse_during_trade(character, entry: Dictionary, verb: String = "take") -> bool:
+	for w in get_tree().get_nodes_in_group("trade_window"):
+		if not w.is_queued_for_deletion():
+			SfxManager.play_ui("trade_decline")
+			character.notify("Finish the trade first", Color(1.0, 0.6, 0.4),
+				"%s can't %s the %s while a trade is open: accept or cancel it first." % [character.Name, verb, entry.get("display_name", "item")])
+			return true
+	return false
+
+# A service NPC won't hand over goods until the player has traded them at
+# least as much value (TownServicesPanel.can_accept_value_loss). Say so.
+func _refuse_service_take(target_char, source_window, uid: String, entry: Dictionary, item_cost: float) -> void:
+	SfxManager.play_ui("trade_decline")
+	var raw = entry.get("raw")
+	var item_name := _item_name(raw) if raw is Dictionary else str(entry.get("display_name", "item"))
+	var log_text := "%s can't take the %s (%d gold) for nothing: drop goods of equal value on their card first." \
+			% [target_char.Name, item_name, int(ceil(item_cost))]
+	if source_window.has_method("get_credit"):
+		# Credit = value already given beyond the baseline; say what's missing.
+		var short: float = item_cost - float(source_window.get_credit(uid))
+		log_text = "%s can't take the %s (%d gold): drop %d gold more in goods on their card first." \
+				% [target_char.Name, item_name, int(ceil(item_cost)), max(1, int(ceil(short)))]
+	target_char.notify("Trade goods first", Color(1.0, 0.6, 0.4), log_text)
+
+func _entry_cost_for_balance(entry: Dictionary, one_unit: bool = false) -> float:
+	## Cost lookup safe for both item dicts and WeaponShape Nodes. one_unit
+	## prices a single item from a stack instead of the whole stack.
 	if entry.get("kind", "") == "weapon":
 		var w = entry.get("raw")
 		if w != null and "cost" in w:
@@ -866,7 +1049,7 @@ func _entry_cost_for_balance(entry: Dictionary) -> float:
 		return 0.0
 	var raw = entry.get("raw", {})
 	if raw is Dictionary:
-		var stacks: int = max(1, int(entry.get("num_stacks", 1)))
+		var stacks: int = 1 if one_unit else max(1, int(entry.get("num_stacks", 1)))
 		return float(raw.get("cost", 0.0)) * stacks
 	return 0.0
 
@@ -905,6 +1088,16 @@ func _find_panel_at(pos: Vector2) -> Dictionary:
 # Right-click context menu
 # ---------------------------------------------------------------------------
 
+# Item options _on_item_menu_selected handles (Equip/Unequip are added by state).
+const _ITEM_MENU_OPTIONS := ["Use", "Consume", "Throw", "Drop", "Drop All", "Split"]
+# Menu options refused while a trade window is open (_refuse_during_trade),
+# by entry kind, and how the refusal names them.
+const _TRADE_LOCKED_OPTIONS := {
+	"item": ["Equip", "Unequip", "Drop", "Drop All", "Split", "Use", "Consume", "Throw"],
+	"weapon": ["Drop", "Throw"],
+}
+const _TRADE_LOCKED_VERBS := {"Drop All": "drop"}
+
 func _on_slot_gui_input(event: InputEvent, slot: PanelContainer) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
@@ -924,12 +1117,20 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 
 	if kind == "item":
 		var item_data: Dictionary = entry.get("raw", {})
-		options = item_data.get("interact_options", ["Use", "Drop"]).duplicate()
-		# Containers are openable only via right-click in the world; suppress
-		# "Open" from the inventory context menu.
-		options.erase("Open")
-		# Inventory invariant: items can always be dropped, never "picked up".
-		options.erase("Pick Up")
+		# Undeclared options: "Use" only when there is an ability to use
+		# (arrows and bullets have none, and Use would just delete one).
+		var default_opts: Array = ["Drop"]
+		var use_id = item_data.get("use_ability", "")
+		if use_id is String and not use_id.is_empty():
+			default_opts.push_front("Use")
+		var declared = item_data.get("interact_options")
+		options = (declared if declared is Array else default_opts).duplicate()
+		# Offer only what _on_item_menu_selected can carry out. This drops
+		# "Open" (containers open from the world), "Pick Up" (items in the
+		# inventory are never picked up), and "Inspect"/"Offer to Patron",
+		# which have no handler. Equip/Unequip are re-added below by state.
+		options = options.filter(func(o): return o in _ITEM_MENU_OPTIONS)
+		# Inventory invariant: items can always be dropped.
 		if not options.has("Drop"):
 			options.append("Drop")
 		# Stack drop controls: whole stack + a slider split.
@@ -940,8 +1141,10 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 				options.append("Drop All")
 			if not options.has("Split"):
 				options.append("Split")
+		# Only slots the character can wear (no "Shoulders" slot yet), and
+		# exactly one of Equip/Unequip.
 		var equip_slot: String = str(item_data.get("equip_slot", ""))
-		if equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:
+		if _EQUIP_SLOT_MAP.has(equip_slot):
 			if item_data.get("_equipped", false):
 				options.insert(0, "Unequip")
 				# Throw/Use/Consume on a worn item would take the dict away
@@ -997,6 +1200,15 @@ func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Arra
 	SfxManager.play_ui("ui-click")
 	var option_name = options[id] if id < options.size() else ""
 	var kind: String = entry.get("kind", "")
+
+	# Cancelling an open trade restores every party inventory from its
+	# snapshot, so what changes hands, body or ground meanwhile would be
+	# duplicated or desynced (worn gear and its conditions follow the body,
+	# not the restored dicts). These wait until the trade is closed.
+	if option_name in _TRADE_LOCKED_OPTIONS.get(kind, []):
+		var verb: String = _TRADE_LOCKED_VERBS.get(option_name, option_name.to_lower())
+		if _refuse_during_trade(character, entry, verb):
+			return
 
 	if kind == "item":
 		var item_index: int = entry.get("source_index", -1)
@@ -1059,65 +1271,91 @@ func _equip_shape_to_hand(character, entry: Dictionary, hand: String) -> void:
 		# The menu named the hand; don't let _pick_hand move it to the other.
 		character.inventory.equip_item(node, hand, true)
 
+# Paused inventory orders go onto the path node being placed, else onto the
+# action queue. Returns false when the queue is full.
+func _plan_item_action(character, callable: Callable, icon: Texture2D) -> bool:
+	if character.path_input_handler and character.path_input_handler.is_placing_action():
+		character.path_input_handler.assign_item_to_pending_node(
+			ActionQueue.ActionType.CUSTOM,
+			{"callable": callable},
+			icon
+		)
+		return true
+	return character.action_queue.queue_action(ActionQueue.ActionType.CUSTOM, {"callable": callable})
+
+# Where `item_data` sits in the inventory now. A planned use captured the
+# index at click time; the inventory may have shifted since. -1 if it's gone.
+func _current_item_index(inventory, item_index: int, item_data: Dictionary) -> int:
+	if is_same(inventory.get_item(item_index), item_data):
+		return item_index
+	for i in range(inventory.items.size()):
+		if is_same(inventory.items[i], item_data):
+			return i
+	return -1
+
 func _use_item(character, item_index: int, item_data: Dictionary) -> void:
+	# When paused: plan it at the pending path node or queue it, like Consume.
+	if PauseManager.is_paused:
+		_plan_item_action(character, Callable(self, "_execute_use").bind(character, item_index, item_data),
+			_item_icon(item_data))
+		return
+	_execute_use(character, item_index, item_data)
+
+func _execute_use(character, item_index: int, item_data: Dictionary) -> void:
+	var item_name := _item_name(item_data)
+	var index := _current_item_index(character.inventory, item_index, item_data)
+	if index < 0:
+		character.notify("Item gone", Color(1.0, 0.6, 0.4),
+			"%s can't use the %s: it is no longer in the inventory." % [character.Name, item_name])
+		return
+	var ability_data: Dictionary = {}
 	var use_ability_id = item_data.get("use_ability", "")
 	if use_ability_id is String and not use_ability_id.is_empty():
-		var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
-		if not ability_data.is_empty() and character.ability_manager:
-			var ability_obj = Ability.from_dict(ability_data)
-			character.ability_manager.use_ability(ability_obj, {"position": character.global_position})
-	# Consume the item
-	character.inventory.remove_item(item_index)
+		ability_data = AbilityDatabase.get_ability_data(use_ability_id)
+	if ability_data.is_empty() or not character.ability_manager:
+		# Nothing to use: keep the item rather than deleting one silently.
+		character.notify("Nothing happens", Color(1.0, 0.6, 0.4),
+			"%s can't use the %s: it does nothing on its own." % [character.Name, item_name])
+		return
+	var ability_obj = Ability.from_dict(ability_data)
+	# The item pays for the spell ("free"). A failed cast (including a law
+	# refusal) is announced by the character, and the item is kept.
+	if not character.ability_manager.use_ability(ability_obj, {"position": character.global_position, "free": true}):
+		return
+	character.inventory.remove_item(index)
 
 func _consume_item(character, item_index: int, item_data: Dictionary) -> void:
 	"""Use an item on the currently selected character (e.g. potions, food)."""
+	# The recipient is whoever is selected at the click, not whoever happens
+	# to be selected when a planned consume finally runs.
+	var recipient = game_node.selected_character if game_node and game_node.selected_character else character
 	# When paused: assign to pending action node or queue
 	if PauseManager.is_paused:
-		var icon: Texture2D = null
-		var sprite_path = item_data.get("sprite_path", "")
-		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
-			icon = load(sprite_path)
-
-		if character.path_input_handler and character.path_input_handler.is_placing_action():
-			character.path_input_handler.assign_item_to_pending_node(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_consume").bind(character, item_index, item_data)},
-				icon
-			)
-		else:
-			character.action_queue.queue_action(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_consume").bind(character, item_index, item_data)}
-			)
+		_plan_item_action(character, Callable(self, "_execute_consume").bind(character, recipient, item_index, item_data),
+			_item_icon(item_data))
 		return
 
 	# Unpaused: consume immediately
-	_execute_consume(character, item_index, item_data)
+	_execute_consume(character, recipient, item_index, item_data)
 
-func _execute_consume(character, item_index: int, item_data: Dictionary) -> void:
-	var target = game_node.selected_character if game_node and game_node.selected_character else character
-	var use_ability_id = item_data.get("use_ability", "")
-	if use_ability_id is String and not use_ability_id.is_empty():
-		var ability_data = AbilityDatabase.get_ability_data(use_ability_id)
-		if not ability_data.is_empty() and target.has_node("AbilityManager"):
-			var ability_obj = Ability.from_dict(ability_data)
-			target.get_node("AbilityManager").use_ability(ability_obj, {"position": target.global_position})
-	# Apply satiety if the item has it
-	var satiety = item_data.get("satiety", 0.0)
-	if satiety > 0 and "hunger" in target:
-		target.hunger = max(0, target.hunger - satiety)
-	# Apply healing if the item has it
-	var healing = item_data.get("healing", 0.0)
-	if healing > 0 and target.has_method("heal"):
-		target.heal(healing)
-	# Apply conditions if the item adds any
-	var condition_id = item_data.get("adds_condition_on_equip", "")
-	if condition_id is String and not condition_id.is_empty():
-		var cm = target.get_node_or_null("ConditionManager")
-		if cm:
-			cm.apply_condition(condition_id, character)
-	# Remove from inventory
-	character.inventory.remove_item(item_index)
+func _execute_consume(character, recipient, item_index: int, item_data: Dictionary) -> void:
+	var item_name := _item_name(item_data)
+	var index := _current_item_index(character.inventory, item_index, item_data)
+	if index < 0:
+		character.notify("Item gone", Color(1.0, 0.6, 0.4),
+			"%s can't use the %s: it is no longer in the inventory." % [character.Name, item_name])
+		return
+	var target = recipient if is_instance_valid(recipient) else character
+	if target.has_method("is_alive") and not target.is_alive():
+		character.notify("Recipient is dead", Color(1.0, 0.6, 0.4),
+			"%s can't give the %s to %s: they are dead." % [character.Name, item_name, target.Name])
+		return
+	# Same rules as a queued USE_ITEM: one heal for a healing item, and the
+	# log line. False when nothing took effect (a failed cast is announced
+	# by the character): keep the item, like _execute_use.
+	if not ActionQueue.apply_consumable(character, target, item_data):
+		return
+	character.inventory.remove_item(index)
 
 func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
 	if not game_node:
@@ -1125,44 +1363,39 @@ func _throw_item(character, item_index: int, item_data: Dictionary) -> void:
 
 	# When paused: assign to pending action node on tactical path, or queue to ActionQueue
 	if PauseManager.is_paused:
-		var icon: Texture2D = null
-		var sprite_path = item_data.get("sprite_path", "")
-		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
-			icon = load(sprite_path)
-
-		var throw_data = {
-			"item_index": item_index,
-			"item_data": item_data.duplicate(),
-			"character": character,
-		}
-
-		# Check if the character has a pending action node on their tactical path
-		if character.path_input_handler and character.path_input_handler.is_placing_action():
-			character.path_input_handler.assign_item_to_pending_node(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_throw").bind(character, item_index, item_data)},
-				icon
-			)
-		else:
-			# Queue directly to action queue
-			character.action_queue.queue_action(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_throw").bind(character, item_index, item_data)}
-			)
+		# Pending action node on the tactical path if there is one, else the queue
+		_plan_item_action(character, Callable(self, "_execute_throw").bind(character, item_index, item_data),
+			_item_icon(item_data))
 		return
 
 	# Unpaused: enter throw targeting mode on the character
 	character.start_throw_targeting(item_index, item_data)
 
-func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
+func _execute_throw(character, item_index: int, item_data: Dictionary, weapon_node = null) -> void:
 	if not game_node:
 		return
 
+	# A planned weapon throw (see _throw_weapon) takes the weapon out of the
+	# inventory only now. It may have been thrown, dropped or handed over since.
+	if typeof(weapon_node) == TYPE_OBJECT:
+		if not is_instance_valid(weapon_node) or not _remove_weapon_from_inventory(character.inventory, weapon_node):
+			var weapon_name := str(item_data.get("name", "weapon"))
+			character.notify("Weapon gone", Color(1.0, 0.6, 0.4),
+				"%s can't throw the %s: it is no longer carried." % [character.Name, weapon_name])
+			return
+		weapon_node.queue_free()
+
 	# item_index == -1 means the projectile data is already fully in item_data
-	# (e.g. a weapon node was removed from inventory before queueing).
+	# (e.g. a weapon node already taken out of the inventory).
 	var item: Dictionary
 	if item_index >= 0:
-		item = character.inventory.remove_item(item_index)
+		# Planned at click time; find the item again in case the inventory shifted.
+		var index := _current_item_index(character.inventory, item_index, item_data)
+		if index < 0:
+			character.notify("Item gone", Color(1.0, 0.6, 0.4),
+				"%s can't throw the %s: it is no longer in the inventory." % [character.Name, _item_name(item_data)])
+			return
+		item = character.inventory.remove_item(index)
 	else:
 		item = item_data
 	if item.is_empty():
@@ -1180,7 +1413,7 @@ func _execute_throw(character, item_index: int, item_data: Dictionary) -> void:
 		"position": character.global_position,
 		"velocity": direction * speed,
 		"shooter": character,
-		"max_range": 400.0,
+		"max_range": ProceduralCharacter.THROW_RANGE,
 		"distance_traveled": 0.0,
 		"damage": item.get("damage", {"bludgeoning": 2}),
 		"size": Vector2(8, 8),
@@ -1350,24 +1583,10 @@ func _throw_weapon(character, entry: Dictionary) -> void:
 		if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 			icon = load(sprite_path)
 
-		# Paused: pre-remove so the inventory display updates immediately, then
-		# queue the throw. (Unqueueing the action won't restore the weapon —
-		# same trade-off as the paused item-throw path that pre-captures index.)
-		if not _remove_weapon_from_inventory(character.inventory, node):
-			return
-		node.queue_free()
-
-		if character.path_input_handler and character.path_input_handler.is_placing_action():
-			character.path_input_handler.assign_item_to_pending_node(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)},
-				icon
-			)
-		else:
-			character.action_queue.queue_action(
-				ActionQueue.ActionType.CUSTOM,
-				{"callable": Callable(self, "_execute_throw").bind(character, -1, weapon_data)}
-			)
+		# Paused: the weapon stays in the inventory until the planned throw
+		# runs (as with the unpaused targeting flow), so cancelling the plan
+		# by any route (Escape, a new path, a cleared node) never loses it.
+		_plan_item_action(character, Callable(self, "_execute_throw").bind(character, -1, weapon_data, node), icon)
 		return
 
 	# Unpaused: hand the node to the character so it removes the weapon only
@@ -1409,6 +1628,8 @@ func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
 		return
 	var equip_slot: String = item_data.get("equip_slot", "")
 	if equip_slot.is_empty() or equip_slot not in _EQUIP_SLOT_MAP:
+		character.notify("Can't wear that", Color(1.0, 0.6, 0.4),
+			"%s can't wear the %s: there is no slot for it." % [character.Name, _item_name(item_data)])
 		return
 
 	# Unequip whatever is currently in that slot first, returning it to inventory
@@ -1507,6 +1728,11 @@ func _on_inventory_changed(_payload, panel_data: Dictionary) -> void:
 func _on_active_weapon_changed(_weapon, _hand, panel_data: Dictionary) -> void:
 	_refresh_inventory(panel_data)
 
+# add_stack can merge part of a stack into existing ones and then run out of
+# slots, emitting only add_failed: the merged counts still need showing.
+func _on_inventory_add_failed(_item_data, _reason, panel_data: Dictionary) -> void:
+	_refresh_inventory(panel_data)
+
 # ---------------------------------------------------------------------------
 # Tab toggle with slide tween
 # ---------------------------------------------------------------------------
@@ -1577,6 +1803,7 @@ func _process(_delta: float) -> void:
 
 		_update_resource_bars(data, character)
 		_update_footsteps(data, character, _delta)
+		_update_ability_slots(data, character)
 
 func _update_health_bar(data: Dictionary, character) -> void:
 	var bar: ProgressBar = data["health_bar"]
@@ -1590,6 +1817,12 @@ func _update_health_bar(data: Dictionary, character) -> void:
 		fill_style.bg_color = HP_COLOR_MID
 	else:
 		fill_style.bg_color = HP_COLOR_FULL
+	# Numbers on the label and the bar's tooltip; only touch them on change.
+	var hp_label: Label = data.get("hp_label")
+	var hp_text := "HP %d/%d" % [character.current_health, character.max_health]
+	if hp_label and hp_label.text != hp_text:
+		hp_label.text = hp_text
+		bar.tooltip_text = hp_text
 
 
 func _update_stress_bar(data: Dictionary, character) -> void:
@@ -1601,6 +1834,21 @@ func _update_stress_bar(data: Dictionary, character) -> void:
 	var cap: int = max(1, int(character.max_stress)) if "max_stress" in character else 1
 	var cur: int = int(character.stress) if "stress" in character else 0
 	bar.value = clamp(float(cur) / float(cap) * 100.0, 0.0, 100.0)
+	# Show the numbers and where breakdown rolls start. The cap follows Will,
+	# so the same fill means different amounts on different characters.
+	var stress_label: Label = data.get("stress_label")
+	var stress_text := "Stress %d/%d" % [cur, cap]
+	if stress_label == null or stress_label.text == stress_text:
+		return
+	stress_label.text = stress_text
+	var danger: int = int(ceil(cap * ProceduralCharacter.STRESS_DANGER_RATIO))
+	if danger < cap:
+		bar.tooltip_text = "%s\nFrom %d up, every stress gain risks a breakdown (Will save); at %d a breakdown is certain." % [stress_text, danger, cap]
+	else:
+		bar.tooltip_text = "%s\nAt %d a breakdown is certain." % [stress_text, cap]
+	var stress_fill: StyleBoxFlat = data.get("stress_fill")
+	if stress_fill:
+		stress_fill.bg_color = STRESS_DANGER_COLOR if cur >= danger else STRESS_COLOR
 
 
 # --- Footstep noise readout ---
@@ -1734,8 +1982,9 @@ func _rebuild_pips(pip_box: HBoxContainer, tex: Texture2D, max_val: int, color: 
 		pip.custom_minimum_size = RESOURCE_ICON_SIZE
 		pip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pip.mouse_filter = Control.MOUSE_FILTER_STOP
-		pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val] + _held_tooltip(character, resource_name)
+		pip.tooltip_text = _resource_tooltip(resource_name, school, current, max_val, character)
 		pip.modulate = _pip_color(i, current, held, color)
+		_forward_dnd(pip)
 		pip_box.add_child(pip)
 		pips.append(pip)
 	return pips
@@ -1779,6 +2028,25 @@ func _resource_max(character, resource_name: String) -> int:
 	return 0
 
 
+# How each pool fills, from ProceduralCharacter (_tick_school_resources, the
+# damage and ally-witness hooks, soul binding), shown under the pip count.
+const RESOURCE_RULES := {
+	"adrenaline": "Recovers over time (Constitution). +1 when hit or when a nearby ally is hurt.",
+	"focus": "Recovers over time (Intelligence). -1 when hit; a hit that would dip into focus held by Concentration ends the spell instead.",
+	"harmony": "Recovers over time (Will).",
+	"devotion": "Recovers over time (Will).",
+	"souls": "Gained by binding the souls of the dead; extras become Soul items.",
+}
+
+# The pip count, any focus held by Concentration (_held_tooltip), then how
+# the pool fills.
+func _resource_tooltip(resource_name: String, school: String, current: int, max_val: int, character = null) -> String:
+	var tip := "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val] + _held_tooltip(character, resource_name)
+	if RESOURCE_RULES.has(resource_name):
+		tip += "\n" + RESOURCE_RULES[resource_name]
+	return tip
+
+
 # Returns a downsampled copy of an icon at the requested size, cached so we
 # don't reload + resize on every panel rebuild. Returns null if the source
 # can't be read as an Image (e.g. a streaming-only texture).
@@ -1798,7 +2066,28 @@ func _get_scaled_icon(icon_path: String, target: Vector2) -> Texture2D:
 	return scaled
 
 
+# Schools the character has a tier in, i.e. the ones that get a pip row.
+func _resource_schools(character) -> Array:
+	var schools: Array = []
+	for entry in SCHOOL_RESOURCES:
+		if int(character.traits.get(entry["school"], 0)) > 0:
+			schools.append(entry["school"])
+	return schools
+
+
 func _update_resource_bars(data: Dictionary, character) -> void:
+	# A school gained or lost mid-run (patron reward, downtime trait, vow)
+	# needs its own pip row, so rebuild the row when the set changes.
+	var schools: Array = _resource_schools(character)
+	if schools != data.get("resource_schools", []):
+		var row: Container = data["resource_row"]
+		for child in row.get_children():
+			row.remove_child(child)
+			child.queue_free()
+		data["resource_bars"] = _build_resource_bars(character, row)
+		data["resource_schools"] = schools
+		call_deferred("_warn_if_too_wide")
+		return
 	var bars: Array = data.get("resource_bars", [])
 	for entry in bars:
 		var resource_name: String = entry["resource"]
@@ -1817,7 +2106,27 @@ func _update_resource_bars(data: Dictionary, character) -> void:
 		for i in range(pips.size()):
 			var pip: TextureRect = pips[i]
 			pip.modulate = _pip_color(i, current, held, color)
-			pip.tooltip_text = "%s (%s) %d/%d" % [resource_name.capitalize(), school, current, max_val] + _held_tooltip(character, resource_name)
+			pip.tooltip_text = _resource_tooltip(resource_name, school, current, max_val, character)
+
+# Grey an ability slot while the character can't pay its school cost, so an
+# unaffordable spell is visible before the cast fails. Costs were worked out
+# at refresh (_set_ability_costs); free abilities have none and stay lit.
+func _update_ability_slots(data: Dictionary, character) -> void:
+	if not character.has_method("_get_character_resource"):
+		return
+	for a in data.get("ability_slots", []):
+		var slot = a["slot"]
+		if not is_instance_valid(slot):
+			continue
+		var affordable := true
+		var costs: Dictionary = a["costs"]
+		for res in costs:
+			if character._get_character_resource(res) < int(costs[res]):
+				affordable = false
+				break
+		var tint := Color.WHITE if affordable else Color(0.55, 0.55, 0.55)
+		if slot.modulate != tint:
+			slot.modulate = tint
 
 func _update_conditions(data: Dictionary, character) -> void:
 	var cond_container: HBoxContainer = data["condition_container"]
@@ -1866,6 +2175,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 			if icon_tex and icon_tex is Texture2D:
 				tex_rect.texture = icon_tex
 			tex_rect.set_meta("cond_id", cond_id)
+			_forward_dnd(tex_rect)
 			cond_container.add_child(tex_rect)
 		if overflow > 0:
 			var more := Label.new()
@@ -1876,6 +2186,7 @@ func _update_conditions(data: Dictionary, character) -> void:
 			# Tagged so the ID-match check above treats it as a stable child
 			# rather than seeing a mismatch and rebuilding the row every frame.
 			more.set_meta("cond_id", "__overflow__")
+			_forward_dnd(more)
 			cond_container.add_child(more)
 
 	# Update tooltips with current stacks/duration
@@ -1891,4 +2202,21 @@ func _update_conditions(data: Dictionary, character) -> void:
 		var instance = conditions[cond_id]
 		# Name, stacks, time left, suppressed, description: the same wording
 		# as the world hover (ConditionInstance.get_tooltip_text).
-		children[i].tooltip_text = instance.get_tooltip_text(game_time)
+		var tip: String = instance.get_tooltip_text(game_time)
+		if children[i].tooltip_text != tip:
+			children[i].tooltip_text = tip
+	# The "+N" tag names the conditions it folds away.
+	if overflow > 0 and children.size() > cond_ids.size():
+		var hidden_names: PackedStringArray = []
+		for cond_id in all_ids.slice(cond_ids.size()):
+			var res = conditions[cond_id].condition
+			hidden_names.append(res.display_name if res and res.display_name else str(cond_id))
+		var more_tip := "Also: " + ", ".join(hidden_names)
+		var tag = children[cond_ids.size()]
+		# A condition landing past the shown pips doesn't rebuild the row (only
+		# those are compared above), so keep the count in step with the list.
+		var more_text := "+%d" % overflow
+		if tag is Label and tag.text != more_text:
+			tag.text = more_text
+		if tag.tooltip_text != more_tip:
+			tag.tooltip_text = more_tip

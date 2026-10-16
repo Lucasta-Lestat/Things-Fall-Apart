@@ -77,6 +77,9 @@ var pending_throw: Dictionary = {}  # {item_index, item_data} or empty
 var pending_dash: bool = false
 var pending_bite: bool = false
 var _aim_line: AimLine = null
+# Thrown items fly this far whatever the clicked distance; the aim line is
+# clamped to match (PartySidePanel's paused throws use it too).
+const THROW_RANGE := 400.0
 
 var _death_marker: Sprite2D = null
 
@@ -1172,11 +1175,11 @@ func start_throw_targeting(item_index: int, item_data: Dictionary, source_node =
 	}
 	_ensure_aim_line()
 	_aim_line.default_color = Color(1, 1, 1, 0.5)
-	_aim_line.show_aim(global_position, global_position, 0)
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, THROW_RANGE)
 
 func _update_throw_reticle(mouse_pos: Vector2) -> void:
 	if _aim_line:
-		_aim_line.update_aim(global_position, mouse_pos, 0)
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, THROW_RANGE)
 
 func _execute_pending_throw(mouse_pos: Vector2) -> void:
 	var item_index = pending_throw.get("item_index", -1)
@@ -1215,7 +1218,7 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 		"position": global_position,
 		"velocity": direction * speed,
 		"shooter": self,
-		"max_range": 400.0,
+		"max_range": THROW_RANGE,
 		"distance_traveled": 0.0,
 		"damage": item.get("damage", {"bludgeoning": 1}),
 		"size": Vector2(8, 8),
