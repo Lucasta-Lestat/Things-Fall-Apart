@@ -118,8 +118,14 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 		var ability_id = data.get("ability_id", "")
 		if ability_id != "":
 			var ability = AbilityDatabase.get_ability_data(ability_id)
-			if not ability.is_empty() and _ability_has_healing(ability):
-				color = reticle_color_healing
+			if not ability.is_empty():
+				# The same classifier that colours the queued AoE ghost and the
+				# path leader line, so the reticle can't disagree with them.
+				var intent: int = Ability.classify_intent(ability)
+				if intent == Ability.Intent.BENEFICIAL:
+					color = reticle_color_healing
+				elif intent == Ability.Intent.NEUTRAL:
+					color = Ability.intent_border_color(intent, true)
 	
 	reticle.modulate = color
 	reticle_container.add_child(reticle)
@@ -129,28 +135,15 @@ func _create_reticle(position: Vector2, action_type: ActionType, data: Dictionar
 	
 	return reticle
 
-func _ability_has_healing(ability) -> bool:
-	"""Safely check if an ability has healing in its effects"""
-	if ability == null:
-		return false
-	
-	# Try to access effects safely
-	var effects = null
-	
-	# Check if ability has effects property/method
-	if "effects" in ability:
-		effects = ability.effects
-	if effects == null:
-		return false
-	# Check if healing is in effects
-	if effects is Dictionary:
-		return effects.has("healing")
-	
-	return false
-
 func _add_reticle_animation(reticle: Sprite2D) -> void:
 	"""Add a pulsing animation to the reticle"""
+	# Bound to the reticle so the looping tween dies with it: left bound to this
+	# queue it outlived the freed reticle and Godot logged "Infinite loop
+	# detected" for every finished or cancelled order. PAUSE_PROCESS keeps it
+	# pulsing while paused for planning, as it did under this always-on queue.
 	var tween = create_tween()
+	tween.bind_node(reticle)
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_loops()
 	tween.tween_property(reticle, "scale", reticle_scale * 1.1, 0.5)
 	tween.tween_property(reticle, "scale", reticle_scale, 0.5)

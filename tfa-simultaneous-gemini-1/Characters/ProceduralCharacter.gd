@@ -3517,16 +3517,18 @@ func set_sprite_overlays_enabled(enabled: bool) -> void:
 func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
-	# Condition-driven forced movement (applies to all characters, not just AI)
-	if not PauseManager.is_paused and is_player_controlled:
-		_process_condition_movement_overrides(delta)
 	# A drawn plan that's running when its character is knocked out, stunned,
 	# set fleeing or compelled is dropped at once, with a notice, before the
-	# action queue (a child, processed after us) can start its next step.
+	# action queue (a child, processed after us) can start its next step. Ahead
+	# of the forced movement below, so the drop's is_moving = false can't cancel
+	# the flee step that same frame starts.
 	if not PauseManager.is_paused and has_player_orders() and tactical_path != null and tactical_path.is_executing:
 		var plan_blocker := _get_plan_blocking_condition()
 		if plan_blocker != null:
 			_abandon_plan(plan_blocker)
+	# Condition-driven forced movement (applies to all characters, not just AI)
+	if not PauseManager.is_paused and is_player_controlled:
+		_process_condition_movement_overrides(delta)
 	if not PauseManager.is_paused:
 		# Airborne: the tile under the lerped mid-arc position is meaningless
 		# (it may be an INF wall or the unroofed landing before we've landed).

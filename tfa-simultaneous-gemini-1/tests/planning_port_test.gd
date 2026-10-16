@@ -15,6 +15,8 @@ extends Node2D
 #     corpse's queue is cancelled
 #   * a re-queued path cast that is already going doesn't announce
 #     "Already casting"
+#   * queued ability reticles are coloured by Ability.classify_intent, and
+#     their pulse keeps running while the tree is paused
 # Headless-safe.  Run:  godot --headless --path . res://tests/planning_port_test.tscn
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
 const AQ := ActionQueue.ActionType
@@ -101,6 +103,7 @@ func _ready() -> void:
 	await _case_node_character_pick(a, t1, t2)
 	_case_stale_placing(a)
 	_case_already_casting(a)
+	await _case_reticles(a)
 	await _case_plan_abandon(a, npc)
 	await _case_death(a)
 
@@ -482,6 +485,38 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	_check("abandon.non-party-silent", npc.tactical_path.is_empty() and GameLog.get_entries().size() == n0)
 	npc.condition_manager.remove_condition("stunned")
 	_reset(a)
+
+
+# --- review: queued reticles take dev's intent colour; the pulse runs while paused
+func _case_reticles(a: ProceduralCharacter) -> void:
+	_reset(a)
+	var aq: ActionQueue = a.action_queue
+	var spot: Vector2 = a.global_position + Vector2(0, -120)
+	aq.queue_ability("heal", spot)
+	aq.queue_ability("fireball", spot)
+	aq.queue_ability("silence", spot)
+	aq.queue_attack(spot)
+	var q: Array = aq.get_queue()
+	var cols: Array = q.map(func(x): return x.reticle.modulate if x.reticle != null else Color.BLACK)
+	_check("reticle.fixture", q.size() == 4 and q.all(func(x): return x.reticle != null))
+	if q.size() == 4:
+		_check("reticle.beneficial-ability-green", cols[0] == aq.reticle_color_healing, str(cols[0]))
+		_check("reticle.hostile-ability-red", cols[1] == aq.reticle_color_attack, str(cols[1]))
+		_check("reticle.neutral-ability-sepia", cols[2] == Ability.intent_border_color(Ability.Intent.NEUTRAL, true), str(cols[2]))
+		_check("reticle.attack-red", cols[3] == aq.reticle_color_attack, str(cols[3]))
+	# Planning pauses the tree; the pulse tween, now bound to the reticle,
+	# must keep running then (it did while the always-on queue owned it).
+	var r = q[0].reticle if not q.is_empty() else null
+	if r != null:
+		var s0: Vector2 = r.scale
+		get_tree().paused = true
+		for i in range(8):
+			await get_tree().process_frame
+		var s1: Vector2 = r.scale
+		get_tree().paused = false
+		_check("reticle.pulses-while-paused", not s1.is_equal_approx(s0), "%s -> %s" % [s0, s1])
+	_reset(a)
+	await get_tree().process_frame
 
 
 # --- R1-repair-pc-1 (death half): a corpse's queue is cancelled
