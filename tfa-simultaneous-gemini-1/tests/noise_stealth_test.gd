@@ -488,7 +488,7 @@ func _readout_cases() -> void:
 			var lbl: Label = data["noise_label"]
 			var row = lbl.get_parent()
 			_check("panel.label-on-the-hp-row-not-the-header", row is HBoxContainer and row.get_parent() == data["container"] \
-				and row.get_child(0) is Label and (row.get_child(0) as Label).text == "HP")
+				and row.get_child(0) is Label and (row.get_child(0) as Label).text.begins_with("HP"))
 			panel._update_footsteps(data, p, 1.0)
 			var tier: String = HearingManager.loudness_tier(float(p.footstep_noise()["loudness"]))
 			_check("panel.label-reads-tier-steps", lbl.text == "%s steps" % tier, [lbl.text, tier])

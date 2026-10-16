@@ -85,7 +85,7 @@ func add_item(item_data: Dictionary) -> bool:
 ## True when add_item(item_data) would succeed: a same-id stack has room or a
 ## slot is free. Transfer code checks this before removing from the source, so
 ## a full receiver refuses the item instead of swallowing it. Mirrors add_item's
-## slot test (items.size()); keep the two in step.
+## slot test (slots_used, hand ghosts always fit); keep the two in step.
 func can_accept(item_data: Dictionary) -> bool:
 	if item_data.get("is_stackable", false):
 		var item_id = item_data.get("id", "")
@@ -93,7 +93,7 @@ func can_accept(item_data: Dictionary) -> bool:
 		for it in items:
 			if it.get("id", "") == item_id and int(it.get("num_stacks", 1)) < max_stack:
 				return true
-	return items.size() < max_slots
+	return slots_used() < max_slots or EquipmentEffects.is_hand_ghost(item_data)
 
 # Like add_item, but transfers the full num_stacks count from item_data
 # rather than always adding 1. Use this when receiving an item dict that

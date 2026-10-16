@@ -649,8 +649,9 @@ func _case_services_panel() -> void:
 	if card.is_empty():
 		return
 
-	# Credit: value dropped beyond what was taken back.
-	var current: float = panel._compute_inventory_value(panel._get_service_inventory(card["entry"], smith))
+	# Credit: value dropped beyond what was taken back, on the same value rule
+	# as can_accept_value_loss (_service_value: items plus a live NPC's weapons).
+	var current: float = panel._service_value(card["entry"], smith)
 	panel._value_baseline[uid] = current - 7.0
 	_check("svc.credit", is_equal_approx(panel.get_credit(uid), 7.0), str(panel.get_credit(uid)))
 	panel._value_baseline[uid] = current

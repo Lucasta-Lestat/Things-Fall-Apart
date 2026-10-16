@@ -281,7 +281,7 @@ func _case_hud() -> void:
 	a.stress = old_stress
 	await _await_frames(1)
 	_check("hud.stress-colour-back", pd["stress_fill"].bg_color == psp.STRESS_COLOR)
-	_check("hud.inventory-count", pd["inv_label"].text == "Inventory %d/%d" % [a.inventory.items.size(), a.inventory.max_slots], pd["inv_label"].text)
+	_check("hud.inventory-count", pd["inv_label"].text == "Inventory %d/%d" % [a.inventory.slots_used(), a.inventory.max_slots], pd["inv_label"].text)
 
 func _case_conditions() -> void:
 	var a = game.party_chars[0]
@@ -506,7 +506,9 @@ func _case_transfers() -> void:
 	a.inventory.add_item(_item("iron_key"))
 	var key_entry := _entry_for(a.inventory, "iron_key")
 	var b_max: int = b.inventory.max_slots
-	b.inventory.max_slots = b.inventory.items.size()
+	# max_slots sets the base; worn packs add bonus_slots on top. Hidden
+	# hand-weapon dicts take no slot (slots_used).
+	b.inventory.max_slots = b.inventory.slots_used() - b.inventory.bonus_slots
 	var bpos: Vector2 = psp.get_global_transform().affine_inverse() * _panel(b)["container"].get_global_rect().get_center()
 	var n0: int = GameLog.get_entries().size()
 	var keys_a0 := _count(a.inventory, "iron_key")

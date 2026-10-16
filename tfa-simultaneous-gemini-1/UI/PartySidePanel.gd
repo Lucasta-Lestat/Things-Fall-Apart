@@ -502,11 +502,11 @@ func _refresh_inventory(data: Dictionary) -> void:
 		return
 
 	# Item slots used vs the hard cap that makes pick-ups and transfers fail.
-	# Weapons and abilities don't count; hidden hand-weapon dicts do (the cap
-	# in Inventory.add_item counts items.size()).
+	# Weapons, abilities and the hidden hand-weapon dicts don't count
+	# (Inventory.slots_used, the count add_item checks).
 	var inv_label: Label = data.get("inv_label")
 	if inv_label:
-		var used: int = character.inventory.items.size()
+		var used: int = character.inventory.slots_used()
 		var cap: int = character.inventory.max_slots
 		inv_label.text = "Inventory %d/%d" % [used, cap]
 		inv_label.modulate = Color.ORANGE if used >= cap else Color.WHITE
@@ -989,7 +989,7 @@ func _transfer_one_item(source_char, target_char, index: int) -> void:
 # True if `inv` can hold every unit of `item`: a free slot, or enough room in
 # matching stacks for the whole count (the way add_stack merges).
 func _inventory_can_take(inv, item: Dictionary) -> bool:
-	if inv.items.size() < inv.max_slots:
+	if inv.slots_used() < inv.max_slots:
 		return true
 	if not item.get("is_stackable", false):
 		return false
