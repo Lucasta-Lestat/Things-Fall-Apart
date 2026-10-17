@@ -248,6 +248,19 @@ func _case_flags() -> void:
 	_check("flag.per-character-check", api.check({"type": "flag", "flag": "met", "who": "protagonist"})
 		and not api.check({"type": "flag", "flag": "met"}))
 
+	# any / all, and the reason an "all" gives for a greyed-out option.
+	var unset := {"type": "flag", "flag": "r3_never_set"}
+	var five := {"type": "flag", "flag": "r3_count", "at_least": 5}
+	_check("check.any", api.check({"type": "any", "of": [unset, five]}) and not api.check({"type": "any", "of": [unset]}))
+	_check("check.all", api.check({"type": "all", "of": [five]}) and not api.check({"type": "all", "of": [unset, five]}))
+	_check("check.all-reason", api.unmet_reason({"type": "all", "of": [{"type": "has_gold", "amount": 100000}]}) == "Needs 100000 gold",
+		api.unmet_reason({"type": "all", "of": [{"type": "has_gold", "amount": 100000}]}))
+	# A dice check in a branch rolls for real and says so.
+	var n0 := _log_n()
+	var rolled = api.check({"type": "ability_check", "stat": "charisma", "advantages": ["Subtle"]})
+	_check("check.ability-roll", rolled is bool)
+	_check("check.ability-roll-logged", _logged(n0, " a Charisma check (rolled "), str(_logs_since(n0)))
+
 
 # --- 2. quests -----------------------------------------------------------------------
 
