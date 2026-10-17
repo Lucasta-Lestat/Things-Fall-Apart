@@ -161,7 +161,12 @@ func start_dialogue(dialogue_id: String, npc_name: String = ""):
 
 func _log_nothing_to_say(npc_name: String) -> void:
 	if npc_name != "" and GameLog:
-		GameLog.add_entry("%s has nothing to say." % npc_name)
+		# Over them too: the game log starts closed.
+		var who = _find_partner(npc_name)
+		if who != null and who.has_method("notify"):
+			who.notify("Nothing to say", Color(0.85, 0.85, 0.85), "%s has nothing to say." % npc_name)
+		else:
+			GameLog.add_entry("%s has nothing to say." % npc_name)
 
 # Display a specific dialogue node
 func show_node(node_id: String):
@@ -446,7 +451,14 @@ func _log_ability_check(character: Object, args: Array, result) -> void:
 	if last is Dictionary and last.has("roll") and last.has("target"):
 		detail = " (rolled %d vs %d)" % [int(last["roll"]), int(last["target"])]
 	var article: String = "an" if stat_name.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a"
-	GameLog.add_entry("%s %s %s %s check%s." % [who, "passes" if passed else "fails", article, stat_name, detail])
+	var line: String = "%s %s %s %s check%s." % [who, "passes" if passed else "fails", article, stat_name, detail]
+	GameLog.add_entry(line)
+	# The game log starts closed, so the roll also floats over whoever made it
+	# (every roll: not notify, which drops a repeat within a second).
+	if character is Node2D and (character as Node2D).is_inside_tree():
+		Globals.show_floating_text("%s %s" % [stat_name, "passed" if passed else "failed"],
+			character.global_position, character,
+			Color(0.55, 1.0, 0.55) if passed else Color(1.0, 0.6, 0.4), 0, Globals.NOTICE_FONT_SIZE)
 
 # Parse function arguments from string
 func parse_function_args(args_string: String) -> Array:

@@ -245,6 +245,9 @@ func _plan_pause_cases() -> void:
 	var badge: Vector2 = pd.pause_badge_position()
 	_check("visual.badge-on-route-ahead", absf(badge.x - a.global_position.x) < 1.0 \
 		and absf(badge.y - (a.global_position.y + PathDrawer.PAUSE_BADGE_AHEAD)) < 2.0, str(badge))
+	# integration: the badge names the stun, so it can't be read as the game's
+	# own pause (whose banner, round 3, reads just PAUSED)
+	_check("visual.badge-names-cause", pd.pause_badge_text() == "Paused: Stunned", pd.pause_badge_text())
 	var phase: float = pd._flow_phase
 	await _frames(3)
 	_check("visual.chevrons-still", is_equal_approx(pd._flow_phase, phase))

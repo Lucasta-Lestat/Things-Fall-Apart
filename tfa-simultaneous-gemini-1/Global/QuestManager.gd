@@ -90,6 +90,7 @@ func start_quest(quest_id: String) -> void:
 	_quest_start_day[quest_id] = _today_stamp()
 	if GameLog:
 		GameLog.add_entry("Quest started: %s [color=gray](press J for the quest log)[/color]" % str(q.get("display_name", quest_id)))
+	_quest_float("New quest: " + str(q.get("display_name", quest_id)), QUEST_FLOAT_COLOR)
 	print("[QuestManager] start_quest about to emit quest_updated id=", quest_id)
 	emit_signal("quest_updated", quest_id)
 	print("[QuestManager] start_quest about to reevaluate id=", quest_id)
@@ -483,6 +484,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 			completed.append(quest_id)
 		if GameLog:
 			GameLog.add_entry("Quest complete: " + display_name)
+		_quest_float("Quest complete: " + display_name, QUEST_FLOAT_COLOR)
 		emit_signal("quest_stage_changed", quest_id, old_stage, COMPLETE_STAGE)
 		emit_signal("quest_completed", quest_id)
 		emit_signal("quest_updated", quest_id)
@@ -499,6 +501,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 				GameLog.add_entry("Quest failed: " + display_name)
 			else:
 				GameLog.add_entry("Quest failed: %s — %s" % [display_name, reason])
+		_quest_float("Quest failed: " + display_name, Color(1.0, 0.5, 0.4))
 		emit_signal("quest_stage_changed", quest_id, old_stage, FAIL_STAGE)
 		emit_signal("quest_failed", quest_id)
 		emit_signal("quest_updated", quest_id)
@@ -510,6 +513,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 		var st := QuestDatabase.get_stage(quest_id, next_stage)
 		var stage_name := str(st.get("name", next_stage)) if not st.is_empty() else next_stage
 		GameLog.add_entry("%s: %s" % [display_name, stage_name])
+	_quest_float("Quest updated: " + display_name, QUEST_FLOAT_COLOR)
 	emit_signal("quest_stage_changed", quest_id, old_stage, next_stage)
 	emit_signal("quest_updated", quest_id)
 
@@ -612,6 +616,18 @@ func _write_world_state(key: String, value) -> void:
 # ---------------------------------------------------------------------------
 # Date helpers (match EventScheduler._today_stamp packing)
 # ---------------------------------------------------------------------------
+
+## Quest news floats over the protagonist as well as going in the log: the
+## game log starts closed (L or the Log button opens it).
+const QUEST_FLOAT_COLOR := Color(1.0, 0.85, 0.4)
+func _quest_float(text: String, color: Color) -> void:
+	var game = get_tree().current_scene if is_inside_tree() else null
+	if game == null or not ("party_chars" in game) or game.party_chars.is_empty():
+		return
+	var p = game.party_chars[0]
+	if not (p is Node2D) or not is_instance_valid(p) or not p.is_inside_tree():
+		return
+	Globals.show_floating_text(text, p.global_position, p, color, 0, Globals.NOTICE_FONT_SIZE)
 
 func _today_stamp() -> int:
 	if TimeManager == null:

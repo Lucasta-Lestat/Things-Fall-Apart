@@ -52,6 +52,8 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 		if not TrainingManager.can_train_here(character, region_id):
 			if GameLog:
 				GameLog.add_entry("%s has no teacher waiting here." % who)
+			# The log starts closed: say it in the usual Unavailable dialog too.
+			_show_unavailable(character, activity, "No teacher is waiting here for %s." % who)
 			return
 		# A day of study is a day. Unlike the four-hour activities you can stack
 		# two of in an evening, training is credited per day, so a second session
@@ -60,6 +62,7 @@ func begin_drop(character, activity_id: String, region_id: String) -> void:
 		if game_node != null and game_node.has_method("trained_today") and game_node.trained_today(character):
 			if GameLog:
 				GameLog.add_entry("%s has already done today's work." % who)
+			_show_unavailable(character, activity, "%s has already done today's work." % who)
 			return
 
 	var preferred: Array = activity.get("preferred_traits", [])
@@ -165,6 +168,13 @@ func resolve_silently(character, activity_id: String, region_id: String) -> void
 			GameLog.add_entry(who + event_text)
 		# The day-advance moves the clock, so no hours here.
 		GameLog.add_entry(_summary_line(who, activity, check_line, empty_reason, lines, 0.0))
+	# Nobody watched this one: the game log starts closed, so what they did
+	# (and the first thing it changed) floats over them too.
+	if character is Node2D and character.is_inside_tree():
+		var shown: String = String(activity.get("name", activity_id))
+		if not lines.is_empty():
+			shown += ": " + str(lines[0])
+		Globals.show_floating_text(shown, character.global_position, character, Color(0.8, 0.85, 1.0), 0, Globals.NOTICE_FONT_SIZE)
 
 	var game := get_node_or_null("/root/Game")
 	if game != null and game.has_method("record_downtime_assignment"):
@@ -288,6 +298,16 @@ func _show_fallback_dialogue(character, event_text: String) -> void:
 # Godot 4 has no popup_hide signal; visibility_changed is the equivalent. Not
 # one-shot: the first emission is the popup itself (visible), which would
 # disconnect it before the hide ever arrived.
+## The Unavailable dialog for a drop refused before any resolution starts (the
+## busy refusal above, training without a teacher or done for the day). Not
+## wired to _pending, so it changes nothing.
+func _show_unavailable(character, activity: Dictionary, reason: String) -> void:
+	var dlg := ConfirmDialogScript.new()
+	dlg.populate(character, activity, 0, true, reason)
+	_attach_dialog_autofree(dlg)
+	get_tree().root.add_child(dlg)
+	dlg.popup_centered()
+
 func _attach_dialog_autofree(dlg: Window) -> void:
 	dlg.visibility_changed.connect(func():
 		if not dlg.visible:

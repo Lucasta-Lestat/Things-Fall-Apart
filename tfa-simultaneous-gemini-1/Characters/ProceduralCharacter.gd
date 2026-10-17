@@ -1274,6 +1274,10 @@ func is_plan_paused() -> bool:
 	return _plan_paused_by != "" and is_alive() \
 		and (has_player_orders() or (tactical_path != null and not tactical_path.is_empty()))
 
+## The condition holding a paused plan ("Stunned"), or "" (PathDrawer's badge).
+func plan_pause_cause() -> String:
+	return _plan_paused_by if is_plan_paused() else ""
+
 ## Whether `blocking` ends the plan instead of pausing it. Unconscious ends the
 ## fight for them; the conditions that take the legs or the will (Panicked,
 ## Frightened, the compulsions) exist to replace the plan (ai.gd
@@ -7077,9 +7081,12 @@ func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_
 
 ## reveal()'s half for the binary "invisible" condition. While the window runs
 ## the AI can acquire us (it only skips an ACTIVE Invisible); a further attack
-## inside it stretches the window without another notice.
+## inside it stretches the window without another notice. Not on the world
+## map: no one there acquires targets, and a travel cast (Force March) would
+## only break the cloak's Invisible for a 3 s window the 7200x clock ends at
+## once, a "broken" / "returns" pair for nothing.
 func _break_invisibility(seconds: float, cause: String) -> void:
-	if condition_manager == null or not is_alive():
+	if condition_manager == null or not is_alive() or on_world_map:
 		return
 	var inst: ConditionInstance = condition_manager.get_condition("invisible")
 	if inst == null or not inst.is_active():
@@ -8136,7 +8143,12 @@ func drop_held_weapon(hand: String = "Main") -> bool:
 		if weapon.stolen_from != "":
 			extras["stolen_from"] = weapon.stolen_from
 		game.create_item(wid, drop_pos, 1, extras)
-	GameLog.add_entry("%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name])
+	var disarm_line := "%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name]
+	# Floats too where the party can see it: the game log starts closed.
+	if _announces_to_party():
+		notify("Disarmed!", Color(1.0, 0.6, 0.4), disarm_line)
+	else:
+		GameLog.add_entry(disarm_line)
 	return true
 # INTERUPTION AND KNOCKBACK
 func apply_knockback(duration: float) -> void:

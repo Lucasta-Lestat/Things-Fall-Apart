@@ -164,7 +164,11 @@ func _get_drag_data(at_position: Vector2):
 	if not is_instance_valid(character):
 		return null
 	if character.has_method("is_alive") and not character.is_alive():
-		GameLog.add_entry("%s is dead and can't take part in downtime." % _char_name(character))
+		# Floats over them too: the game log starts closed.
+		if character.has_method("notify"):
+			character.notify("Dead", Color(1.0, 0.6, 0.4), "%s is dead and can't take part in downtime." % _char_name(character))
+		else:
+			GameLog.add_entry("%s is dead and can't take part in downtime." % _char_name(character))
 		return null
 	var rect: TextureRect = portrait["rect"]
 	# Drag preview is a copy of the portrait sprite.

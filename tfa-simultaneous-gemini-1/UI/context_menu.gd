@@ -160,7 +160,9 @@ func _order_attack(target) -> void:
 		return
 	var attackers: Array = _attacking_party_members()
 	if attackers.is_empty():
-		GameLog.add_entry("No party member is selected to attack %s: select one first." % target.Name)
+		# Over the target too: the game log starts closed.
+		target.notify("Select someone first", Color(1.0, 0.6, 0.4),
+			"No party member is selected to attack %s: select one first." % target.Name)
 		return
 	# Same rule as a click on the world (ProceduralCharacter._handle_input):
 	# someone who can't take orders doesn't take this one either.

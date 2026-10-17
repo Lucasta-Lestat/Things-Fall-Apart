@@ -117,8 +117,20 @@ func report(actor, verb: String, payload: Dictionary) -> void:
 	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
 		actor_name, str(verdict.get("display_name", "?")), int(verdict.get("severity", 0)),
 		str(verdict.get("law_faction", "?"))])
+	_party_float(effective, "Crime: " + str(verdict.get("display_name", "?")), CRIME_FLOAT_COLOR)
 	crime_committed.emit(effective, verdict, payload)
 	_fan_out_witnesses(effective, actor, verdict, payload)
+
+## The game log starts closed, so the crime lines above also float over the
+## party member they are about ("Crime: Theft", "Accused: Theft", "No alarm").
+## Parented to the character like "Unseen." below, so the two stack.
+const CRIME_FLOAT_COLOR := Color(1.0, 0.45, 0.35)
+func _party_float(who, text: String, color: Color) -> void:
+	if not (who is Node2D) or not is_instance_valid(who) or not who.is_inside_tree():
+		return
+	if not (who.has_method("is_party_member") and who.is_party_member()):
+		return
+	Globals.show_floating_text(text, who.global_position, who, color, 0, Globals.NOTICE_FONT_SIZE)
 
 # ---------------------------------------------------------------------------
 # Attribution and jurisdiction
@@ -330,6 +342,7 @@ func accuse(actor, statute_id: String, witnesses: Array = [], law_faction: Strin
 	var actor_name: String = str(effective.Name) if ("Name" in effective) else "Someone"
 	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
 		actor_name, verdict["display_name"], verdict["severity"], law_faction])
+	_party_float(effective, "Crime: " + str(verdict["display_name"]), CRIME_FLOAT_COLOR)
 	crime_committed.emit(effective, verdict, payload)
 	# Same filter as witnesses_of: living, AI-driven, not the party.
 	var game = get_tree().current_scene
@@ -433,6 +446,7 @@ func on_outcry_resolved(crime_id: int, fired: bool) -> void:
 	if bool(entry["escaped"]):
 		return
 	GameLog.add_entry("No one raised the alarm.")
+	_party_float(entry.get("actor"), "No alarm", Color(0.7, 0.7, 0.7))
 	_grant_thrill(entry.get("actor"), str(entry.get("thrill_key", "")))
 
 ## thrill_of_sin, correctly triggered: no static `criminal` ability trait
@@ -560,6 +574,8 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 		who = str(perp.Name)
 	GameLog.add_entry("The alarm is raised: %s — %s stands accused." % [
 		str(payload.get("display_name", "a crime")), who])
+	if identified:
+		_party_float(perp, "Accused: " + str(payload.get("display_name", "a crime")), CRIME_FLOAT_COLOR)
 	# Consequence (identified only — an anonymous alarm rouses the town but
 	# moves no standing, writes no ledger, sets no manhunt): standing drops
 	# by severity, the override flips (D8's binary — enforcement is one
@@ -629,6 +645,9 @@ func settle_with(law_faction: String, mode: String) -> void:
 	FactionDatabase.settle(law_faction, mode)
 	clear_manhunts(law_faction)
 	GameLog.add_entry("You are square with %s. Nobody has forgotten." % law_faction)
+	var law_name: String = str(FactionDatabase.get_faction_data(law_faction).get("name", law_faction)) \
+		if FactionDatabase.has_faction(law_faction) else law_faction
+	_party_float(protagonist, "Square with " + law_name, Color(0.55, 1.0, 0.55))
 
 ## A settled account calls off the hunt: every enforcer of this law faction
 ## drops its manhunt_target.

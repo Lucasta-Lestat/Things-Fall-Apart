@@ -646,7 +646,8 @@ func _do_give_item(a: Dictionary) -> bool:
 		if _is_party(ch):
 			ch.notify("+" + label, GAIN_COLOR, "%s receives %s." % [_name(ch), label])
 		elif _seen(ch):
-			GameLog.add_entry("%s takes %s." % [_name(ch), label])
+			# A float over them too: the game log starts closed.
+			ch.notify("+" + label, GAIN_COLOR, "%s takes %s." % [_name(ch), label])
 	return any_ok
 
 
@@ -687,10 +688,9 @@ func _do_take_item(a: Dictionary) -> bool:
 		var label: String = item_name if n == 1 else "%s (x%d)" % [item_name, n]
 		var line: String = "%s gives %s to %s." % [_name(who), label, _name(receiver)] if receiver != null \
 			else "%s loses %s." % [_name(who), label]
-		if _is_party(who):
+		# An NPC's loss floats too (when seen): the game log starts closed.
+		if _is_party(who) or _seen(who):
 			who.notify("-" + label, LOSS_COLOR, line)
-		elif _seen(who):
-			GameLog.add_entry(line)
 	if receiver != null and _is_party(receiver):
 		receiver.notify("+" + item_name, GAIN_COLOR)
 	return true
@@ -719,7 +719,7 @@ func _do_give_gold(a: Dictionary) -> bool:
 	if _is_party(ch):
 		ch.notify("+%d gold" % placed, GAIN_COLOR, "%s receives %d gold." % [_name(ch), placed])
 	elif _seen(ch):
-		GameLog.add_entry("%s takes %d gold." % [_name(ch), placed])
+		ch.notify("+%d gold" % placed, GAIN_COLOR, "%s takes %d gold." % [_name(ch), placed])
 	return true
 
 
@@ -752,10 +752,8 @@ func _do_take_gold(a: Dictionary) -> bool:
 		var n: int = int(paid[who])
 		var line: String = "%s pays %d gold to %s." % [_name(who), n, _name(receiver)] if receiver != null \
 			else "%s pays %d gold." % [_name(who), n]
-		if _is_party(who):
+		if _is_party(who) or _seen(who):
 			who.notify("-%d gold" % n, LOSS_COLOR, line)
-		elif _seen(who):
-			GameLog.add_entry(line)
 	return true
 
 
@@ -1293,7 +1291,14 @@ func _do_set_relation(a: Dictionary) -> bool:
 	var now_hostile: bool = FactionDatabase.are_hostile(fa, fb)
 	if fa == "player" or fb == "player":
 		var other: String = fb if fa == "player" else fa
-		GameLog.add_entry("%s now counts you as %s." % [_faction_name(other), {"enemy": "an enemy", "ally": "an ally", "neutral": "neither friend nor foe"}[rel]])
+		var line: String = "%s now counts you as %s." % [_faction_name(other), {"enemy": "an enemy", "ally": "an ally", "neutral": "neither friend nor foe"}[rel]]
+		# Over the protagonist as well, as change_standing does: the log starts closed.
+		var p = _first("protagonist", true)
+		if p != null:
+			p.notify("%s: %s" % [_faction_name(other), {"enemy": "enemy", "ally": "ally", "neutral": "neutral"}[rel]],
+				HOSTILE_COLOR if rel == "enemy" else (GAIN_COLOR if rel == "ally" else Color.WHITE), line)
+		else:
+			GameLog.add_entry(line)
 	elif was_hostile != now_hostile or rel != "neutral":
 		GameLog.add_entry("%s and %s are now %s." % [_faction_name(fa), _faction_name(fb), {"enemy": "enemies", "ally": "allies", "neutral": "at peace"}[rel]])
 	_drop_stale_targets()

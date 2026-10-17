@@ -209,6 +209,9 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	var selected = _resolve_target_character()
 	if selected == null:
 		GameLog.add_entry("No one is free to take that.")
+		# Over the container too: the game log starts closed.
+		if chest_item is Node2D and chest_item.is_inside_tree():
+			Globals.show_floating_text("No one free", chest_item.global_position, chest_item, Color(1.0, 0.6, 0.4), 0, Globals.NOTICE_FONT_SIZE)
 		SfxManager.play_ui("trade_decline")
 		return
 	# A container must never receive from itself: with corpse looting the

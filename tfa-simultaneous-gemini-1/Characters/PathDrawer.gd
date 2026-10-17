@@ -217,7 +217,9 @@ func pause_badge_position() -> Vector2:
 		travelled += seg_len
 	return route[route.size() - 1]
 
-## The pause badge: a node-style disc with two bars, and "Paused" beside it.
+## The pause badge: a node-style disc with two bars, and "Paused: Stunned"
+## (the condition holding the plan) beside it. Naming the cause keeps it apart
+## from the game's own pause, whose banner also reads PAUSED.
 func _draw_pause_badge(canvas: CanvasItem) -> void:
 	var center := pause_badge_position()
 	canvas.draw_circle(center + Vector2(0, 1.0), PAUSE_BADGE_RADIUS + 0.8, NODE_SHADOW_COLOR)
@@ -231,9 +233,17 @@ func _draw_pause_badge(canvas: CanvasItem) -> void:
 		return
 	var baseline := Vector2(center.x + PAUSE_BADGE_RADIUS + 4.0,
 		center.y + (font.get_ascent(BADGE_FONT_SIZE) - font.get_descent(BADGE_FONT_SIZE)) * 0.5)
+	var word := pause_badge_text()
 	# Dark outline first, so the word reads over pale stone and dark ground.
-	canvas.draw_string_outline(font, baseline, "Paused", HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, 3, PATH_SHADOW_COLOR)
-	canvas.draw_string(font, baseline, "Paused", HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, NODE_OUTLINE_COLOR)
+	canvas.draw_string_outline(font, baseline, word, HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, 3, PATH_SHADOW_COLOR)
+	canvas.draw_string(font, baseline, word, HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, NODE_OUTLINE_COLOR)
+
+## "Paused: Stunned", or just "Paused" if the cause isn't known.
+func pause_badge_text() -> String:
+	var cause: String = ""
+	if character != null and is_instance_valid(character) and character.has_method("plan_pause_cause"):
+		cause = character.plan_pause_cause()
+	return "Paused: " + cause if cause != "" else "Paused"
 
 func _draw() -> void:
 	if tactical_path == null:
