@@ -1114,7 +1114,7 @@ func _on_game_unpaused_convert_path() -> void:
 			_pause_plan(plan_blocker)
 		else:
 			# Re-planned while still paused: judge the new route from here.
-			_plan_route_was_clear = _plan_route_clear()
+			_plan_route_blocked_before = _plan_route_blocked_segments()
 
 func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 	# Remove action nodes as they execute; path line trimming is handled
@@ -1262,13 +1262,17 @@ func _abandon_plan(blocking: ConditionInstance) -> void:
 ## queue holds every step where it is (ActionQueue._process) and PathDrawer
 ## dims the route and marks it paused; the player can still edit or clear it.
 var _plan_paused_by: String = ""
-## Whether the route ahead was walkable when the plan paused (_plan_route_clear):
-## only a route that was clear then and isn't now counts as newly blocked.
-var _plan_route_was_clear: bool = false
+## The legs of the route ahead that were already blocked when the plan paused
+## (_plan_route_blocked_segments): only a leg that was clear then and isn't
+## now counts as newly blocked.
+var _plan_route_blocked_before: Dictionary = {}
 
 ## True while this character's plan waits out Stunned, Frozen or Apathetic.
+## A plan cleared during a planning pause stops counting at once (its flag
+## clears on the next unpaused frame), so no pause badge is left on nothing.
 func is_plan_paused() -> bool:
-	return _plan_paused_by != "" and is_alive()
+	return _plan_paused_by != "" and is_alive() \
+		and (has_player_orders() or (tactical_path != null and not tactical_path.is_empty()))
 
 ## Whether `blocking` ends the plan instead of pausing it. Unconscious ends the
 ## fight for them; the conditions that take the legs or the will (Panicked,
@@ -1313,7 +1317,7 @@ func _pause_plan(blocking: ConditionInstance) -> void:
 	if blocking != null and blocking.condition:
 		cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
 	_plan_paused_by = cond_name
-	_plan_route_was_clear = _plan_route_clear()
+	_plan_route_blocked_before = _plan_route_blocked_segments()
 	_nav_waypoints.clear()
 	_nav_index = 0
 	is_moving = false
@@ -1353,8 +1357,9 @@ func _plan_resume_problem() -> String:
 		var lost := _plan_step_target_lost(step)
 		if lost != "":
 			return lost
-	if _plan_route_was_clear and not _plan_route_clear():
-		return "the way is blocked"
+	for leg in _plan_route_blocked_segments():
+		if not _plan_route_blocked_before.has(leg):
+			return "the way is blocked"
 	return ""
 
 ## "Bandit is dead" / "the target is gone" when every character `step` aims at
@@ -1379,16 +1384,18 @@ func _plan_step_target_lost(step) -> String:
 			reason = "%s is dead" % str(t.get("Name")) if dead else "the target is gone"
 	return reason
 
-## Whether the route the plan still has to walk is walkable for this body (no
-## locked door or new wall across it): the same test the path pen applies
-## while drawing (PathInputHandler._segment_standable), along the running MOVE
-## from the leg it is on and every later MOVE. Compared against the same test
-## when the plan paused (_plan_route_was_clear), so clutter the route already
-## brushed past never reads as a new block. Roof routes count as clear: the
-## pen doesn't draw them.
-func _plan_route_clear() -> bool:
+## The legs of the route the plan still has to walk that aren't walkable for
+## this body (a locked door or a wall across them), keyed by their end points:
+## the same test the path pen applies while drawing (PathInputHandler.
+## _segment_standable), along the running MOVE from the leg it is on and every
+## later MOVE. Compared leg by leg against the same test when the plan paused
+## (_plan_route_blocked_before), so clutter one leg already brushed past never
+## reads as a new block, nor hides one on another leg. Roof routes count as
+## clear: the pen doesn't draw them.
+func _plan_route_blocked_segments() -> Dictionary:
+	var blocked := {}
 	if path_input_handler == null or action_queue == null or on_roof:
-		return true
+		return blocked
 	var steps: Array = []
 	if action_queue.current_action != null:
 		steps.append(action_queue.current_action)
@@ -1405,11 +1412,13 @@ func _plan_route_clear() -> bool:
 			points.append(wps[i])
 	for p in points:
 		if GridManager.has_roof(GridManager.world_to_map(p)):
-			return true
+			return blocked
 	for i in range(points.size() - 1):
-		if not path_input_handler._segment_standable(points[i], points[i + 1]):
-			return false
-	return true
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
+		if not path_input_handler._segment_standable(a, b):
+			blocked[Vector4(a.x, a.y, b.x, b.y)] = true
+	return blocked
 
 # --- Throw targeting helpers ---
 

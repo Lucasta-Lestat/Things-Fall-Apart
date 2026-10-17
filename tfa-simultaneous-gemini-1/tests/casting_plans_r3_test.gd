@@ -51,6 +51,20 @@ func _spawn(pos: Vector2, party: bool, char_name: String) -> ProceduralCharacter
 	return c
 
 
+func _make_wall(at: Vector2) -> StaticBody2D:
+	var wall := StaticBody2D.new()
+	wall.collision_layer = CollisionLayers.STRUCTURES
+	wall.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(600, 40)
+	shape.shape = rect
+	wall.add_child(shape)
+	add_child(wall)
+	wall.global_position = at
+	return wall
+
+
 func _frames(n: int) -> void:
 	for i in range(n):
 		await get_tree().process_frame
@@ -239,6 +253,9 @@ func _plan_pause_cases() -> void:
 	# and recovering then says nothing
 	a.action_queue.cancel_all()
 	a.path_input_handler.cancel_path()
+	await _frames(2)
+	# review: still in the planning pause, no badge is left on nothing
+	_check("edit.cleared-no-badge-while-paused", not pd.is_plan_paused() and is_equal_approx(pd.self_modulate.a, 1.0))
 	PauseManager.is_paused = false
 	await _frames(1)
 	_check("edit.cleared-not-paused", not a.is_plan_paused() and not a.has_player_orders())
@@ -289,6 +306,32 @@ func _plan_pause_cases() -> void:
 	await _frames(1)
 	_check("shove.rejoins-ahead", not a.is_plan_paused() and a.is_moving and a.target_position.y >= origin.y + 150.0,
 		"target=%s origin=%s" % [a.target_position, origin])
+	PauseManager.is_paused = true
+	_reset_plan(a)
+	a.global_position = Vector2(300, 300)
+
+	# --- review: a route that doubles back close beside itself resumes on the
+	# stretch not yet walked, not on the way out
+	_draw_path(a, a.global_position + Vector2(0, 300))
+	for i in range(0, 7):
+		a.tactical_path.add_waypoint(Vector2(305, 600 - 50 * i))
+	a._on_game_unpaused_convert_path()
+	PauseManager.is_paused = false
+	await _frames(2)
+	var back_move = a.action_queue.current_action
+	if back_move != null and back_move.type == AQ.MOVE:
+		var bwps: Array = back_move.data["waypoints"]
+		var back_i: int = bwps.size() - 4
+		# On the way back, a few px nearer the outward leg than its own
+		back_move.data["waypoint_index"] = back_i
+		a.global_position = bwps[back_i - 1].lerp(bwps[back_i], 0.5) + Vector2(-3.5, 0)
+		cm.apply_condition("stunned", null, 1, 30.0)
+		cm.remove_condition("stunned")
+		await _frames(1)
+		_check("uturn.no-backtrack", int(back_move.data["waypoint_index"]) >= back_i,
+			"index %d -> %d, target=%s" % [back_i, int(back_move.data["waypoint_index"]), a.target_position])
+	else:
+		_check("uturn.no-backtrack", false, "no running MOVE")
 	PauseManager.is_paused = true
 	_reset_plan(a)
 	a.global_position = Vector2(300, 300)
@@ -355,13 +398,32 @@ func _plan_pause_cases() -> void:
 	_draw_path(a, a.global_position + Vector2(0, 300))
 	cm.apply_condition("stunned", null, 1, 30.0)
 	a._on_game_unpaused_convert_path()
-	_check("blocked.preexisting-fixture", a.is_plan_paused() and not a._plan_route_was_clear)
+	_check("blocked.preexisting-fixture", a.is_plan_paused() and not a._plan_route_blocked_before.is_empty())
 	cm.remove_condition("stunned")
 	PauseManager.is_paused = false
 	await _frames(2)
-	_check("blocked.preexisting-resumes", a.has_player_orders() and not a.is_plan_paused() 		and _log_texts()[-1] == "Harness Aldric recovers: plan resumes.", str(_log_texts().slice(-2)))
+	_check("blocked.preexisting-resumes", a.has_player_orders() and not a.is_plan_paused() \
+		and _log_texts()[-1] == "Harness Aldric recovers: plan resumes.", str(_log_texts().slice(-2)))
+	PauseManager.is_paused = true
+
+	# --- review: a leg already brushing that clutter doesn't hide a new wall
+	# across another leg of the same route
+	_reset_plan(a)
+	a.global_position = Vector2(300, 300)
+	_draw_path(a, a.global_position + Vector2(0, 300))
+	cm.apply_condition("stunned", null, 1, 30.0)
+	a._on_game_unpaused_convert_path()
+	var wall2 := _make_wall(a.global_position + Vector2(0, 262))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	cm.remove_condition("stunned")
+	PauseManager.is_paused = false
+	await _frames(2)
+	_check("blocked.new-leg-dropped", not a.has_player_orders() \
+		and _log_texts()[-1] == "Harness Aldric recovers, but the way is blocked: plan dropped.", str(_log_texts().slice(-2)))
 	PauseManager.is_paused = true
 	wall.queue_free()
+	wall2.queue_free()
 	await get_tree().physics_frame
 	_reset_plan(a)
 

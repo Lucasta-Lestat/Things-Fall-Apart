@@ -433,7 +433,8 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	a._on_game_unpaused_convert_path()
 	_check("pause.at-unpause", a.is_plan_paused() and a.has_player_orders() and a.tactical_path.is_executing,
 		"paused=%s orders=%s" % [a.is_plan_paused(), a.has_player_orders()])
-	_check("pause.notice-logged", GameLog.get_entries().size() == n0 + 1 		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
+	_check("pause.notice-logged", GameLog.get_entries().size() == n0 + 1 \
+		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
 	_check("pause.notice-float", a._last_notify_text == "Plan paused")
 	# The queue holds while paused: nothing starts, the body stays put
 	var queued: int = a.action_queue.get_queue_size()
@@ -441,13 +442,15 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	PauseManager.is_paused = false
 	for i in range(4):
 		await get_tree().process_frame
-	_check("pause.queue-holds", a.action_queue.current_action == null and a.action_queue.get_queue_size() == queued 		and a.global_position.distance_to(start_pos) < 1.0 and a.is_plan_paused(),
+	_check("pause.queue-holds", a.action_queue.current_action == null and a.action_queue.get_queue_size() == queued \
+		and a.global_position.distance_to(start_pos) < 1.0 and a.is_plan_paused(),
 		"current=%s queued=%d moved=%.1f" % [str(a.action_queue.current_action != null), a.action_queue.get_queue_size(), a.global_position.distance_to(start_pos)])
 	# Recovering resumes it
 	cm.remove_condition("stunned")
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_check("pause.resumes", not a.is_plan_paused() and a.has_player_orders() and a.action_queue.current_action != null 		and a.action_queue.current_action.type == AQ.MOVE)
+	_check("pause.resumes", not a.is_plan_paused() and a.has_player_orders() and a.action_queue.current_action != null \
+		and a.action_queue.current_action.type == AQ.MOVE)
 	_check("pause.resume-logged", _log_texts().has("Harness Planner recovers: plan resumes."), str(_log_texts().slice(-3)))
 	_check("pause.resume-float", a._last_notify_text == "Plan resumes", a._last_notify_text)
 
@@ -455,10 +458,12 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	# pauses it the same frame, holding the running MOVE
 	a._last_notify_text = ""
 	cm.apply_condition("stunned", null, 1, 30.0)
-	_check("pause.mid-plan", a.is_plan_paused() and a.has_player_orders() and not a.tactical_path.is_empty() 		and a.action_queue.current_action != null and not a.is_moving,
+	_check("pause.mid-plan", a.is_plan_paused() and a.has_player_orders() and not a.tactical_path.is_empty() \
+		and a.action_queue.current_action != null and not a.is_moving,
 		"queue=%d current=%s path_empty=%s" % [a.action_queue.get_queue_size(),
 		str(a.action_queue.current_action != null), str(a.tactical_path.is_empty())])
-	_check("pause.mid-plan-notice", a._last_notify_text == "Plan paused" 		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
+	_check("pause.mid-plan-notice", a._last_notify_text == "Plan paused" \
+		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
 	await get_tree().process_frame
 	cm.remove_condition("stunned")
 	await get_tree().process_frame
@@ -468,7 +473,8 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 	cm.apply_condition("unconscious", null, 1, 30.0)
 	await get_tree().process_frame
 	_check("drop.unconscious", not a.has_player_orders() and a.tactical_path.is_empty() and not a.is_plan_paused())
-	_check("drop.unconscious-notice", a._last_notify_text == "Can't follow plan" 		and _log_texts()[-1] == "Harness Planner abandons their plan: Unconscious.", str(_log_texts()[-1]))
+	_check("drop.unconscious-notice", a._last_notify_text == "Can't follow plan" \
+		and _log_texts()[-1] == "Harness Planner abandons their plan: Unconscious.", str(_log_texts()[-1]))
 	cm.remove_condition("unconscious")
 	PauseManager.is_paused = true
 	a.is_moving = false
@@ -480,13 +486,15 @@ func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> voi
 			break
 		cm.apply_condition("transfixed", null, 1, 30.0)
 	var compelled = a._get_plan_blocking_condition()
-	_check("abandon.compulsion-blocks", compelled != null and compelled.condition.id == "transfixed" 		and a._plan_blocker_drops(compelled))
+	_check("abandon.compulsion-blocks", compelled != null and compelled.condition.id == "transfixed" \
+		and a._plan_blocker_drops(compelled))
 	cm.remove_condition("transfixed")
 
 	# Frozen counts through the "incapacitate" trait, and pauses
 	cm.apply_condition("frozen", null, 1, 30.0)
 	var blocker = a._get_plan_blocking_condition()
-	_check("abandon.incapacitate-trait", blocker != null and blocker.condition.id == "frozen" 		and not a._plan_blocker_drops(blocker))
+	_check("abandon.incapacitate-trait", blocker != null and blocker.condition.id == "frozen" \
+		and not a._plan_blocker_drops(blocker))
 	cm.remove_condition("frozen")
 	_check("abandon.clear-when-able", a._get_plan_blocking_condition() == null)
 
