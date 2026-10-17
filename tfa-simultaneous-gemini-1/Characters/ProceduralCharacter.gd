@@ -1070,9 +1070,12 @@ func _on_game_unpaused_convert_path() -> void:
 	# gated), and every NPC's path stays permanently empty so the is_empty()
 	# early-out above still costs them nothing.
 
-	# Out cold, stunned, fleeing or compelled: the plan is dropped, not run.
+	# Out cold, fleeing or compelled: the plan is dropped, not run. Stunned,
+	# Frozen or Apathetic: it converts as usual but waits, paused, until the
+	# character can act (_update_plan_pause).
 	var plan_blocker := _get_plan_blocking_condition()
-	if plan_blocker != null:
+	if plan_blocker != null and _plan_blocker_drops(plan_blocker):
+		_plan_paused_by = ""
 		_abandon_plan(plan_blocker)
 		return
 
@@ -1106,6 +1109,12 @@ func _on_game_unpaused_convert_path() -> void:
 		action_queue.queue_action(a.type, step_data)
 	tactical_path.is_executing = true
 	path_drawer.queue_redraw()
+	if plan_blocker != null:
+		if _plan_paused_by == "":
+			_pause_plan(plan_blocker)
+		else:
+			# Re-planned while still paused: judge the new route from here.
+			_plan_route_was_clear = _plan_route_clear()
 
 func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 	# Remove action nodes as they execute; path line trimming is handled
@@ -1197,7 +1206,8 @@ func abort_planning_input() -> void:
 ## only the path's own ("from_path") steps; direct paused orders stay queued.
 ## Also cleared by _begin_ice_slide / _begin_fall (_drop_plan_on_lost_control
 ## cancels the whole plan, the running MOVE included), so a slipping or
-## falling member's AI gets its movement back at once.
+## falling member's AI gets its movement back at once. A plan PAUSED by a
+## stun (_update_plan_pause) still counts: it resumes when the stun ends.
 func has_player_orders() -> bool:
 	if action_queue == null:
 		return false
@@ -1246,6 +1256,160 @@ func _abandon_plan(blocking: ConditionInstance) -> void:
 		if blocking.condition:
 			cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
 		notify("Can't follow plan", Color(1.0, 0.6, 0.4), "%s abandons their plan: %s." % [Name, cond_name])
+
+## The plan's state while a condition stops this character acting: the
+## condition's name while the plan is paused, "" otherwise. Paused, the action
+## queue holds every step where it is (ActionQueue._process) and PathDrawer
+## dims the route and marks it paused; the player can still edit or clear it.
+var _plan_paused_by: String = ""
+## Whether the route ahead was walkable when the plan paused (_plan_route_clear):
+## only a route that was clear then and isn't now counts as newly blocked.
+var _plan_route_was_clear: bool = false
+
+## True while this character's plan waits out Stunned, Frozen or Apathetic.
+func is_plan_paused() -> bool:
+	return _plan_paused_by != "" and is_alive()
+
+## Whether `blocking` ends the plan instead of pausing it. Unconscious ends the
+## fight for them; the conditions that take the legs or the will (Panicked,
+## Frightened, the compulsions) exist to replace the plan (ai.gd
+## _break_player_orders tears an unselected member's plan down the same way).
+## The "incapacitate" conditions that only stop the body (Stunned, Frozen,
+## Apathetic) pause it.
+func _plan_blocker_drops(blocking: ConditionInstance) -> bool:
+	if blocking == null or blocking.condition == null:
+		return true
+	return blocking.condition.id == "unconscious" or not blocking.condition.traits.has("incapacitate")
+
+## Keeps the plan in step with whether this character can act. Runs every
+## unpaused frame while there are orders or a paused plan, and the moment an
+## incapacitating condition lands (_react_to_incapacitation): pauses the plan
+## while the character can't act, resumes it when they can, and drops it, with
+## the reason, when it can't go on.
+func _update_plan_pause() -> void:
+	if not has_player_orders():
+		# Cleared while paused (Esc, a manual move, a fall, death): nothing
+		# left to resume.
+		if _plan_paused_by != "":
+			_plan_paused_by = ""
+			if path_drawer != null:
+				path_drawer.queue_redraw()
+		return
+	var blocker := _get_plan_blocking_condition()
+	if blocker != null:
+		if _plan_blocker_drops(blocker):
+			_plan_paused_by = ""
+			_abandon_plan(blocker)
+		elif _plan_paused_by == "":
+			_pause_plan(blocker)
+		return
+	if _plan_paused_by != "":
+		_resume_plan()
+
+## Hold the plan where it is: the body stops (the running MOVE picks up from
+## wherever it stands when the plan resumes). Party members say so.
+func _pause_plan(blocking: ConditionInstance) -> void:
+	var cond_name := "Incapacitated"
+	if blocking != null and blocking.condition:
+		cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
+	_plan_paused_by = cond_name
+	_plan_route_was_clear = _plan_route_clear()
+	_nav_waypoints.clear()
+	_nav_index = 0
+	is_moving = false
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	if is_party_member():
+		notify("Plan paused", Color.LIGHT_BLUE, "%s is %s: plan paused." % [Name, cond_name])
+
+## The character can act again: the plan carries on from where it stopped, or
+## is dropped with the reason when it can't (_plan_resume_problem).
+func _resume_plan() -> void:
+	_plan_paused_by = ""
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	var problem := _plan_resume_problem()
+	if problem != "":
+		_abandon_plan(null)
+		if is_party_member():
+			notify("Plan dropped", Color(1.0, 0.6, 0.4), "%s recovers, but %s: plan dropped." % [Name, problem])
+		return
+	if action_queue != null:
+		action_queue.resume_current()
+	if is_party_member():
+		notify("Plan resumes", Color.LIGHT_BLUE, "%s recovers: plan resumes." % Name)
+
+## Why a paused plan can't go on, or "" when it can: a planned attack's target,
+## or every character a planned spell picked, is dead or gone; or the route
+## ahead, walkable when the plan paused, is blocked now.
+func _plan_resume_problem() -> String:
+	if action_queue == null:
+		return ""
+	var steps: Array = []
+	if action_queue.current_action != null:
+		steps.append(action_queue.current_action)
+	steps.append_array(action_queue.get_queue())
+	for step in steps:
+		var lost := _plan_step_target_lost(step)
+		if lost != "":
+			return lost
+	if _plan_route_was_clear and not _plan_route_clear():
+		return "the way is blocked"
+	return ""
+
+## "Bandit is dead" / "the target is gone" when every character `step` aims at
+## (an attack's target, a spell's picked targets) is dead or has left; else "".
+## A spell aimed at a spot, or following a designated character, still has
+## somewhere to land (AbilityManager falls back to the planned point).
+func _plan_step_target_lost(step) -> String:
+	var aimed: Array = []
+	if step.type == ActionQueue.ActionType.ATTACK_TARGET:
+		aimed = [step.data.get("target")]
+	elif step.type == ActionQueue.ActionType.USE_ABILITY:
+		aimed = step.data.get("targets", [])
+	if aimed.is_empty():
+		return ""
+	var reason := ""
+	for t in aimed:
+		var gone: bool = not is_instance_valid(t) or not t.is_inside_tree()
+		var dead: bool = not gone and t.has_method("is_alive") and not t.is_alive()
+		if not gone and not dead:
+			return ""
+		if reason == "":
+			reason = "%s is dead" % str(t.get("Name")) if dead else "the target is gone"
+	return reason
+
+## Whether the route the plan still has to walk is walkable for this body (no
+## locked door or new wall across it): the same test the path pen applies
+## while drawing (PathInputHandler._segment_standable), along the running MOVE
+## from the leg it is on and every later MOVE. Compared against the same test
+## when the plan paused (_plan_route_was_clear), so clutter the route already
+## brushed past never reads as a new block. Roof routes count as clear: the
+## pen doesn't draw them.
+func _plan_route_clear() -> bool:
+	if path_input_handler == null or action_queue == null or on_roof:
+		return true
+	var steps: Array = []
+	if action_queue.current_action != null:
+		steps.append(action_queue.current_action)
+	steps.append_array(action_queue.get_queue())
+	var points: Array = []
+	for step in steps:
+		if step.type != ActionQueue.ActionType.MOVE:
+			continue
+		var wps: Array = step.data.get("waypoints", [])
+		var from_i := 0
+		if step == action_queue.current_action:
+			from_i = maxi(0, int(step.data.get("waypoint_index", 0)) - 1)
+		for i in range(from_i, wps.size()):
+			points.append(wps[i])
+	for p in points:
+		if GridManager.has_roof(GridManager.world_to_map(p)):
+			return true
+	for i in range(points.size() - 1):
+		if not path_input_handler._segment_standable(points[i], points[i + 1]):
+			return false
+	return true
 
 # --- Throw targeting helpers ---
 
@@ -1854,6 +2018,10 @@ func _react_to_incapacitation(instance: ConditionInstance) -> void:
 	interrupt_cast(cond_name, true)
 	if not active_concentrations.is_empty():
 		end_concentration("incapacitated", cond_name)
+	# Pause (or drop) the plan now, not next frame: a condition can land
+	# between our _process and the action queue's.
+	if has_player_orders():
+		_update_plan_pause()
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -3810,15 +3978,14 @@ func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
 	_keep_alertness_indicator_upright()
-	# A drawn plan that's running when its character is knocked out, stunned,
-	# set fleeing or compelled is dropped at once, with a notice, before the
-	# action queue (a child, processed after us) can start its next step. Ahead
-	# of the forced movement below, so the drop's is_moving = false can't cancel
-	# the flee step that same frame starts.
-	if not PauseManager.is_paused and has_player_orders() and tactical_path != null and tactical_path.is_executing:
-		var plan_blocker := _get_plan_blocking_condition()
-		if plan_blocker != null:
-			_abandon_plan(plan_blocker)
+	# A plan whose character is stunned, frozen or apathetic is paused, and
+	# resumes when they can act again; knocked out, set fleeing or compelled,
+	# it is dropped. Either way at once, with a notice, before the action queue
+	# (a child, processed after us) can start its next step. Ahead of the
+	# forced movement below, so a drop's is_moving = false can't cancel the
+	# flee step that same frame starts.
+	if not PauseManager.is_paused and (has_player_orders() or _plan_paused_by != ""):
+		_update_plan_pause()
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -8100,6 +8267,11 @@ func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	# Drop the casting arm pose along with the cast.
 	if attack_animator and attack_animator.is_casting:
 		attack_animator.interrupt_attack()
+	# A planned cast cut off by a stun is tried again when the paused plan
+	# resumes (ActionQueue.resume_current). Unpaused, the queue just moves on.
+	if action_queue != null and action_queue.current_action != null \
+			and action_queue.current_action.type == ActionQueue.ActionType.USE_ABILITY:
+		action_queue.current_action.data["cast_interrupted"] = true
 	# Death cancels with an empty reason, silently.
 	if reason != "" and is_alive() and _announces_to_party():
 		var ability_name: String = ability.display_name if ability else "spell"

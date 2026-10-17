@@ -89,6 +89,11 @@ func _process(_delta: float) -> void:
 	# Don't process actions while paused
 	if PauseManager.is_paused:
 		return
+	# A plan paused by Stunned / Frozen / Apathetic holds every step where it
+	# is (no new step starts, the running one doesn't advance) until the
+	# character can act again (ProceduralCharacter._update_plan_pause).
+	if character != null and character.is_plan_paused():
+		return
 	
 	# If no current action and queue has items, start next action
 	if current_action == null and queue.size() > 0:
@@ -333,6 +338,22 @@ func cancel_all() -> void:
 	"""Cancel current action and clear queue"""
 	cancel_current()
 	clear_queue()
+
+func resume_current() -> void:
+	"""The plan picks up again after a pause (ProceduralCharacter._resume_plan).
+	A MOVE re-steers from where the body stands now, rejoining its route ahead
+	(a shove may have moved it); a cast the pause interrupted is tried again.
+	Any other step carries on as it was."""
+	if current_action == null or character == null:
+		return
+	match current_action.type:
+		ActionType.MOVE:
+			current_action.data["resume_nearest"] = true
+			_execute_action(current_action)
+		ActionType.USE_ABILITY:
+			if current_action.data.get("cast_interrupted", false) and character.current_cast.is_empty():
+				current_action.data.erase("cast_interrupted")
+				_execute_action(current_action)
 
 func get_queue_size() -> int:
 	return queue.size()
