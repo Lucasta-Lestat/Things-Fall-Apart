@@ -9,6 +9,9 @@
 #   - the service is legal under that faction's laws, AND
 #   - the player has personally seen the NPC at least once. An NPC first seen
 #     while the panel is up is listed at once (list_newly_seen_service).
+# The panel itself stays hidden until at least one service in the town has
+# been discovered; the first discovery reveals it with a "New service
+# discovered" notice. Re-checked on every map load (which a save load does).
 #
 # Inventory source per service:
 #   - Live mode: the NPC is on the current map -> we use its real Inventory.
@@ -183,21 +186,12 @@ func _repopulate() -> void:
 		_repopulate_downtime()
 		return
 
-	var current_map_id: String = str(game_node.get("current_map_id"))
-	var region_id: String = RegionDatabase.get_region_for_map(current_map_id)
+	var region_id: String = _services_region()
 	if region_id.is_empty():
 		visible = false
 		return
 
-	var controlling_faction: String = RegionDatabase.get_controlling_faction(region_id)
-	if not controlling_faction.is_empty() and FactionDatabase.are_hostile("player", controlling_faction):
-		visible = false
-		return
-
-	visible = true
-
-	var region_data: Dictionary = RegionDatabase.get_region_data(region_id)
-	header_label.text = str(region_data.get("name", region_id)) + " — Services"
+	_set_services_header(region_id)
 
 	var entries: Array = RegionDatabase.get_service_npcs_in_region(region_id)
 	var known: Array = game_node.known_services_per_region.get(region_id, [])
@@ -215,29 +209,75 @@ func _repopulate() -> void:
 		if card:
 			vbox.add_child(card)
 
+	# Hidden until the party has discovered a service in this town: an empty
+	# board says nothing. list_newly_seen_service shows it on the first one.
+	visible = not _cards.is_empty()
+
+## The region whose services this map may list, or "" where there are none to
+## show: the world map, a map outside any region, or a town whose controlling
+## faction is hostile to the party.
+func _services_region() -> String:
+	if game_node == null or game_node.current_map_data.get("is_world_map", false):
+		return ""
+	var region_id: String = RegionDatabase.get_region_for_map(str(game_node.get("current_map_id")))
+	if region_id.is_empty():
+		return ""
+	var controlling_faction: String = RegionDatabase.get_controlling_faction(region_id)
+	if not controlling_faction.is_empty() and FactionDatabase.are_hostile("player", controlling_faction):
+		return ""
+	return region_id
+
+func _set_services_header(region_id: String) -> void:
+	var region_data: Dictionary = RegionDatabase.get_region_data(region_id)
+	header_label.text = str(region_data.get("name", region_id)) + " — Services"
+
 ## Game.mark_service_seen calls this (deferred) when the party sees a service
 ## NPC for the first time, so a merchant met on this visit is listed without
 ## leaving the map. Only that card is added: a full _repopulate would reset
 ## every card's trade baseline (the credit for items already handed over).
+## A service this town's panel would list is announced, and the first one
+## found reveals the panel.
 func list_newly_seen_service(uid: String) -> void:
-	if game_node == null or mode != "services" or not visible:
+	if game_node == null:
+		return
+	var region_id: String = _services_region()
+	if region_id.is_empty():
+		return
+	var entry: Dictionary = {}
+	for e in RegionDatabase.get_service_npcs_in_region(region_id):
+		if e["npc_uid"] == uid:
+			entry = e
+			break
+	# Same rule as _repopulate: listed only when legal AND seen.
+	if entry.is_empty() or not RegionDatabase.is_service_legal(entry["titles"], region_id):
+		return
+	_announce_discovery(entry)
+	# The downtime board is up: the card appears when services come back.
+	if mode != "services":
 		return
 	for card in _cards:
 		var card_entry = card.get("entry")
 		if card_entry is Dictionary and card_entry.get("npc_uid", "") == uid:
 			return  # a map-load repopulate already listed it
-	var region_id: String = RegionDatabase.get_region_for_map(str(game_node.get("current_map_id")))
-	if region_id.is_empty():
-		return
-	for entry in RegionDatabase.get_service_npcs_in_region(region_id):
-		if entry["npc_uid"] != uid:
-			continue
-		# Same rule as _repopulate: listed only when legal AND seen.
-		if RegionDatabase.is_service_legal(entry["titles"], region_id):
-			var card = _build_service_card(entry)
-			if card:
-				vbox.add_child(card)
-		return
+	var card = _build_service_card(entry)
+	if card:
+		vbox.add_child(card)
+	if not visible and not _cards.is_empty():
+		_set_services_header(region_id)
+		visible = true
+
+## "New service discovered: Blacksmith (Darcy)": over the NPC when they are
+## on this map (they were just seen), and in the log either way.
+func _announce_discovery(entry: Dictionary) -> void:
+	var title: String = str(entry["titles"][0]) if not entry["titles"].is_empty() else "Service"
+	var who: String = str(entry.get("display_name", ""))
+	var what: String = title if who.is_empty() or who.to_lower() == title.to_lower() else "%s (%s)" % [title, who]
+	var log_line := "New service discovered: %s. It is listed under Town Services." % what
+	var npc = _find_live_npc(entry)
+	if npc != null and npc.has_method("notify"):
+		npc.notify("New service: " + title, GoldFrame.HEADER_COLOR, log_line)
+	else:
+		GameLog.add_entry(log_line)
 
 func _build_service_card(entry: Dictionary):
 	var live_npc = _find_live_npc(entry)

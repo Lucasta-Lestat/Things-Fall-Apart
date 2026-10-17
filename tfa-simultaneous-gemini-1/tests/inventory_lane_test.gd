@@ -701,7 +701,8 @@ func _case_services_panel() -> void:
 		game.known_services_per_region[region_id].erase(uid)
 	panel._repopulate()
 	await _await_frames(2)
-	_check("svc.visible", panel.visible)
+	# Shown only while it lists something (r3: hidden until a discovery).
+	_check("svc.visible-iff-listed", panel.visible == not panel._cards.is_empty(), "%s %d" % [panel.visible, panel._cards.size()])
 	_check("svc.unseen-not-listed", _card_for(panel, uid).is_empty())
 	panel._value_baseline["harness_other"] = 42.0
 	game.mark_service_seen(smith)
@@ -711,6 +712,7 @@ func _case_services_panel() -> void:
 		if card.get("entry", {}).get("npc_uid", "") == uid:
 			listed += 1
 	_check("svc.newly-seen-listed", listed == 1, str(listed))
+	_check("svc.visible", panel.visible)
 	_check("svc.other-baselines-kept", float(panel._value_baseline.get("harness_other", -1.0)) == 42.0)
 	var card: Dictionary = _card_for(panel, uid)
 	if card.is_empty():
