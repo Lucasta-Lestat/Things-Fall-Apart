@@ -483,8 +483,9 @@ func get_all_conditions() -> Array:
 	# Shadow Cloak's Invisible is the binary "invisible" above. "visibility"
 	# multiplies how far away others can see the bearer
 	# (ProceduralCharacter.effective_visibility); attacking or casting resets
-	# it to full for a few seconds (ProceduralCharacter.reveal). The icons are
-	# borrowed from Invisible and Courageous until these get their own cond_*.
+	# it to full for a few seconds (ProceduralCharacter.reveal). Their cond_*
+	# icons come from tools/generate_condition_icons_gemini.py; "icon_fallback"
+	# is the art they borrowed before, shown until the editor imports the PNGs.
 	{
 		"id": "shrouded",
 		"display_name": "Shrouded",
@@ -493,7 +494,8 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": -1.0,
-		"icon": "res://UI/UI Icons/invisible.png",
+		"icon": "res://UI/UI Icons/cond_shrouded.png",
+		"icon_fallback": "res://UI/UI Icons/invisible.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
@@ -513,7 +515,8 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": -1.0,
-		"icon": "res://UI/UI Icons/cond_courageous.png",
+		"icon": "res://UI/UI Icons/cond_inspired.png",
+		"icon_fallback": "res://UI/UI Icons/cond_courageous.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
