@@ -292,14 +292,49 @@ func _check_flag(c: Dictionary) -> bool:
 	if key.is_empty():
 		return false
 	var v = Globals.world_state.get(key, null)
+	# world_state holds bools, numbers and strings side by side, and GDScript
+	# raises a script error on == / != between different types (an int flag
+	# compared with false), so every comparison below is type-safe.
 	if c.has("equals"):
-		return v != null and (v == c["equals"] or str(v) == str(c["equals"]))
+		return v != null and _same_value(v, c["equals"])
 	if c.has("at_least"):
-		return float(v if v != null and not (v is bool) else (1 if v == true else 0)) >= float(c["at_least"])
+		return _flag_number(v) >= float(c["at_least"])
 	if c.has("at_most"):
-		return float(v if v != null and not (v is bool) else (1 if v == true else 0)) <= float(c["at_most"])
+		return _flag_number(v) <= float(c["at_most"])
 	# Bare "is it set": anything but missing, false, 0 or "".
-	return v != null and v != false and str(v) != "0" and str(v) != ""
+	if v == null:
+		return false
+	if v is bool:
+		return v
+	if v is int or v is float:
+		return float(v) != 0.0
+	return str(v) != "" and str(v) != "0"
+
+
+## A flag's value as a number: true = 1, false / missing / text = 0.
+func _flag_number(v) -> float:
+	if v is bool:
+		return 1.0 if v else 0.0
+	if v is int or v is float:
+		return float(v)
+	if v is String and v.is_valid_float():
+		return float(v)
+	return 0.0
+
+
+## Equality across the types JSON and world_state mix (3 == 3.0, "3" == 3).
+func _same_value(a, b) -> bool:
+	var a_num: bool = a is int or a is float
+	var b_num: bool = b is int or b is float
+	if a_num and b_num:
+		return is_equal_approx(float(a), float(b))
+	if typeof(a) == typeof(b):
+		return a == b
+	if a_num and b is String and b.is_valid_float():
+		return is_equal_approx(float(a), float(b))
+	if b_num and a is String and a.is_valid_float():
+		return is_equal_approx(float(a), float(b))
+	return str(a) == str(b)
 
 
 func _check_quest(c: Dictionary) -> bool:
@@ -643,7 +678,9 @@ func _do_take_item(a: Dictionary) -> bool:
 		if receiver != null:
 			var rinv = receiver.get_node_or_null("Inventory")
 			var data: Dictionary = r["data"]
-			if rinv == null or not rinv.add_stack(data):
+			if rinv != null and bool(r.get("weapon", false)):
+				rinv.stow_weapon_from_data(data)
+			elif rinv == null or not rinv.add_stack(data):
 				_warn("take_item: %s couldn't hold %s; it was dropped from the conversation" % [_name(receiver), item_name])
 	for who in taken_from:
 		var n: int = int(taken_from[who])
@@ -709,8 +746,8 @@ func _do_take_gold(a: Dictionary) -> bool:
 		var gdata: Dictionary = ItemDatabase.get_item_data("gold")
 		gdata["num_stacks"] = amount
 		gdata["is_stackable"] = true
-		if rinv != null:
-			rinv.add_stack(gdata)
+		if rinv == null or not rinv.add_stack(gdata):
+			_warn("take_gold: %s couldn't hold the gold; it was dropped from the conversation" % _name(receiver))
 	for who in paid:
 		var n: int = int(paid[who])
 		var line: String = "%s pays %d gold to %s." % [_name(who), n, _name(receiver)] if receiver != null \
@@ -764,7 +801,8 @@ func _do_spawn(a: Dictionary) -> bool:
 	# keep the template's name).
 	var names = a.get("name", null)
 	var spawned: Array = []
-	var used: Dictionary = {}
+	# Nobody lands on a tile someone already stands on (the party included).
+	var used: Dictionary = _occupied_tiles([])
 	for i in range(count):
 		var pos: Vector2 = _placement(anchor, i, count, spread, used)
 		var ov: Dictionary = overrides.duplicate()
@@ -869,7 +907,7 @@ func _do_teleport(a: Dictionary) -> bool:
 	if pos == null:
 		return false
 	var found: Array = _chars(a["who"], false, false, "teleport")
-	var used: Dictionary = {}
+	var used: Dictionary = _occupied_tiles(found)
 	for i in range(found.size()):
 		var c = found[i]
 		c.global_position = _placement(pos, i, found.size(), 40.0 if found.size() > 1 else 0.0, used)
@@ -1661,6 +1699,22 @@ func _placement(anchor: Vector2, i: int, n: int, distance: float, used: Dictiona
 	return out
 
 
+## Tiles living characters stand on (but not `moving`), to seed _placement's
+## `used` so a spawn or teleport never lands on someone.
+func _occupied_tiles(moving: Array) -> Dictionary:
+	var out: Dictionary = {}
+	var g = _game()
+	if g == null or not ("characters_in_scene" in g) or GridManager.grid_costs.is_empty():
+		return out
+	for c in g.characters_in_scene:
+		if not is_instance_valid(c) or not (c is Node2D) or c in moving:
+			continue
+		if c.has_method("is_alive") and not c.is_alive():
+			continue
+		out[GridManager.world_to_map(c.global_position)] = true
+	return out
+
+
 func _walkable(t: Vector2i) -> bool:
 	return GridManager.grid_costs.get(t, INF) != INF
 
@@ -1776,7 +1830,22 @@ func _count_items(pool: Array, item_id: String) -> int:
 			if str(it.get("id", "")) == want and not _is_hand_ghost(it):
 				var n = it.get("num_stacks", 1)
 				total += int(n) if (n is int or n is float) and int(n) > 0 else 1
+		# Weapons live as nodes in the hands or stowed, not in `items`.
+		total += _weapons_of(inv, want).size()
 	return total
+
+
+## The weapon nodes (held or stowed) of an inventory with this item id,
+## stowed first, then off hand, then main hand: the order take_item uses.
+func _weapons_of(inv, want: String) -> Array:
+	var out: Array = []
+	for w in inv.stowed_items:
+		if w is WeaponShape and is_instance_valid(w) and str(w.id) == want:
+			out.append(w)
+	for w in [inv.off_hand_item, inv.main_hand_item]:
+		if w is WeaponShape and is_instance_valid(w) and str(w.id) == want:
+			out.append(w)
+	return out
 
 
 ## Take `count` of an item from the pool, in pool order. Returns
@@ -1805,11 +1874,29 @@ func _remove_items(pool: Array, item_id: String, count: int) -> Array:
 				out.append({"from": c, "count": take, "data": copy})
 				left -= take
 			i -= 1
+		# Then weapons, as the trade window hands one over: out of the hand
+		# or the stowed list, with the starting weapon's hidden hand dict.
+		for w in _weapons_of(inv, want):
+			if left <= 0:
+				break
+			var wdata: Dictionary = w.to_data()
+			if w == inv.main_hand_item:
+				inv.unequip_hand("Main")
+			elif w == inv.off_hand_item:
+				inv.unequip_hand("Off")
+			else:
+				inv.stowed_items.erase(w)
+				inv.emit_signal("weapon_unequipped", w)
+			inv.drop_hand_ghost(want)
+			w.queue_free()
+			out.append({"from": c, "count": 1, "data": wdata, "weapon": true})
+			left -= 1
 	return out
 
 
 ## Hand-slot dicts mirror a weapon held or stowed as a WeaponShape; they are
-## not loose pack items, so take_item and has_item leave them alone.
+## not loose pack items, so take_item and has_item count the weapon node
+## (_weapons_of) instead, never the dict as well.
 func _is_hand_ghost(it: Dictionary) -> bool:
 	return EquipmentEffects.is_hand_ghost(it)
 

@@ -92,7 +92,7 @@ Only living characters in the current map count. When several match, the one nea
 | `"my_marker"` | An entry in an optional `"markers": {"my_marker": [x, y]}` block you can add to a map in `Maps.json`. |
 | a character reference | Where that character stands. |
 
-If the place is inside a wall, people are put on the nearest open ground, and two people never land on the same tile.
+If the place is inside a wall, people are put on the nearest open ground, and nobody lands on a tile someone already stands on (the party included).
 
 ---
 
@@ -133,7 +133,7 @@ Quest moves write the usual quest lines in the log: `Quest started:`, `<Quest>: 
 | `give_gold` | **amount**, to (protagonist) | `Mira receives 25 gold.` |
 | `take_gold` | **amount**, from (party), to | `Mira pays 10 gold to Gareth.`, or `Mira can't pay 50 gold (has 12).` and nothing is taken. |
 
-`name` and `description` let one conversation hand out a one-off thing without a new `Items.json` entry. It is an existing item with a new name, for example the bones Federica bags become "Arms of Octavian". Checks still go by the item's id (`bones`). Only use this on items that don't stack, or the new name is lost when it stacks. Weapons a character holds in hand aren't counted or taken by these actions; loose items in the pack are.
+`name` and `description` let one conversation hand out a one-off thing without a new `Items.json` entry. It is an existing item with a new name, for example the bones Federica bags become "Arms of Octavian". Checks still go by the item's id (`bones`). Only use this on items that don't stack, or the new name is lost when it stacks. Weapons count too, whether held or stowed: `has_item` sees them, `give_item` stows one, and `take_item` takes stowed ones first, then one from the hand (as the trade window does).
 
 ### Characters
 
@@ -185,7 +185,7 @@ Every check is `{"type": "...", ...fields}` and can carry `"not": true` to flip 
 
 | Type | Fields | Passes when | Greyed-out reason |
 |---|---|---|---|
-| `flag` | **flag**, who, equals / at_least / at_most | The flag has that value or range. With none of those: the flag is set, and isn't false, 0 or empty. | Not available (write a `locked_text`) |
+| `flag` | **flag**, who, equals / at_least / at_most | The flag has that value or range (`equals` matches `3` and `"3"` alike; `true` counts as 1 for a range). With none of those: the flag is set, and isn't false, 0 or empty. | Not available (write a `locked_text`) |
 | `quest` | **quest**, **state** (`active`, `completed`, `failed`, `not_started`, `started`), stage | The quest is in that state (and, with `stage`, active at that stage). | Needs the quest X / Finish X first |
 | `can_turn_in` | **quest**, who | They carry everything the current stage asks for. | Needs what X asks for |
 | `has_item` | **item**, count (1), who (party) | Carrying at least that many. | Needs 2 x Torch |
@@ -211,7 +211,7 @@ A check about someone who isn't on the map simply fails, without a warning.
 
 Who fights whom is decided in one place, `FactionDatabase.are_hostile`, which reads faction relations. The AI, the attack cursor, the menus and the law all ask it. These actions only ever change the **data** it reads; they never add a second rule beside it.
 
-- `make_hostile` / `start_combat` put the characters into a faction made during play, named after them ("Surgeon Captain Federica's band"). It is a copy of their own faction: their old friends stay friends, and it is at war with whoever they turned on. All of Waldau does **not** turn on you because Federica did. Attacking someone in that band counts as self-defence, not assault. Use `group` to put several characters into one named band.
+- `make_hostile` / `start_combat` put the characters into a faction made during play, named after them ("Surgeon Captain Federica's band"). It is a copy of their own faction: their old friends stay friends, and it is at war with whoever they turned on. All of Waldau does **not** turn on you because Federica did. When the band is hostile to the party, attacking its members counts as self-defence, not assault. When it only turned on someone else (Federica on the guards), it is still under the local law's protection, so killing her there is murder unless she is also at war with that law's faction (add a `set_relation` with it). Use `group` to put several characters into one named band.
 - `set_relation` changes how two whole factions regard each other.
 - Factions made during play and relation changes are saved with the game.
 - Crimes go through `CrimeManager` (`report_crime` uses the same verdict, log line and witness outcry as a crime the player commits by hand), and `pardon` through `CrimeManager.pardon`. Whether something is a crime is up to the law code of the place, never the dialogue.

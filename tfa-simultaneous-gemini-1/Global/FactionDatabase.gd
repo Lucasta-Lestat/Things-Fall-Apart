@@ -27,6 +27,11 @@ var _hostile_override: Dictionary = {}   # faction_id -> true
 # are_hostile stays the one oracle; both are saved with standing_to_dict.
 var _runtime_factions: Dictionary = {}    # faction_id -> data (also in _factions)
 var _relation_overrides: Dictionary = {}  # "a|b" (ids sorted) -> "ally" | "enemy" | "neutral"
+# The same overrides as a -> {b: relation}, both ways round, for the lookup:
+# are_allies / are_enemies run per frame inside every AI's target scan, so
+# they must not build a key string per call. Derived; never saved.
+var _relation_index: Dictionary = {}
+const _NO_RELATIONS: Dictionary = {}
 
 func _ready() -> void:
 	_load_database()
@@ -169,7 +174,22 @@ func _relation_key(faction_a: String, faction_b: String) -> String:
 	return faction_a + "|" + faction_b if faction_a < faction_b else faction_b + "|" + faction_a
 
 func _relation_override(faction_a: String, faction_b: String) -> String:
-	return str(_relation_overrides.get(_relation_key(faction_a, faction_b), ""))
+	var row: Dictionary = _relation_index.get(faction_a, _NO_RELATIONS)
+	return row.get(faction_b, "")
+
+func _rebuild_relation_index() -> void:
+	_relation_index.clear()
+	for key in _relation_overrides:
+		var ids: PackedStringArray = str(key).split("|")
+		if ids.size() != 2:
+			continue
+		var rel: String = str(_relation_overrides[key])
+		if not _relation_index.has(ids[0]):
+			_relation_index[ids[0]] = {}
+		if not _relation_index.has(ids[1]):
+			_relation_index[ids[1]] = {}
+		_relation_index[ids[0]][ids[1]] = rel
+		_relation_index[ids[1]][ids[0]] = rel
 
 ## How two factions regard each other from now on, both ways: "enemy",
 ## "ally" or "neutral" (neither). Overrides factions.json for that one pair.
@@ -180,6 +200,7 @@ func set_relation(faction_a: String, faction_b: String, relation: String) -> boo
 	if not relation in ["enemy", "ally", "neutral"]:
 		return false
 	_relation_overrides[_relation_key(faction_a, faction_b)] = relation
+	_rebuild_relation_index()
 	return true
 
 func is_runtime_faction(faction_id: String) -> bool:
@@ -403,6 +424,7 @@ func standing_from_dict(data: Dictionary) -> void:
 	for fid in _runtime_factions.keys():
 		_factions[fid] = _runtime_factions[fid]
 	_relation_overrides = data.get("relation_overrides", {}).duplicate(true)
+	_rebuild_relation_index()
 	for fid in _player_standing.keys():
 		var v: int = int(_player_standing[fid])
 		player_standing_changed.emit(str(fid), v, v)

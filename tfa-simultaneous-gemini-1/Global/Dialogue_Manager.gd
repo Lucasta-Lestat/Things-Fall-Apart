@@ -298,7 +298,9 @@ func handle_node_navigation(node: Dictionary):
 				continue
 			var locked_reason := ""
 			if choice.has("requires") and not actions_api.check_all(choice["requires"]):
-				locked_reason = str(choice.get("locked_text", actions_api.unmet_reason(choice["requires"])))
+				# (Only worked out when there is no locked_text: it re-runs the checks.)
+				locked_reason = str(choice["locked_text"]) if choice.has("locked_text") \
+					else actions_api.unmet_reason(choice["requires"])
 				if locked_reason.is_empty():
 					locked_reason = "Not available"
 			else:

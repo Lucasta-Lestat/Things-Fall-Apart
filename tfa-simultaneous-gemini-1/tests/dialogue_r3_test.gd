@@ -240,6 +240,21 @@ func _case_flags() -> void:
 	_check("flag.at-least", api.check({"type": "flag", "flag": "r3_count", "at_least": 5})
 		and not api.check({"type": "flag", "flag": "r3_count", "at_most": 4}))
 	_check("flag.not", api.check({"type": "flag", "flag": "r3_count", "at_least": 6, "not": true}))
+	# world_state mixes numbers, text and bools: checks compare them without a
+	# script error ("int != bool"), and "equals" matches 3 and "3" alike.
+	Globals.world_state["r3_num"] = 3
+	Globals.world_state["r3_text"] = "spared"
+	Globals.world_state["r3_zero"] = 0
+	_check("flag.bare-number", api.check({"type": "flag", "flag": "r3_num"}) and not api.check({"type": "flag", "flag": "r3_zero"}))
+	_check("flag.bare-text", api.check({"type": "flag", "flag": "r3_text"}))
+	_check("flag.equals-across-types", api.check({"type": "flag", "flag": "r3_num", "equals": "3"})
+		and api.check({"type": "flag", "flag": "r3_num", "equals": 3.0})
+		and not api.check({"type": "flag", "flag": "r3_text", "equals": 3})
+		and not api.check({"type": "flag", "flag": "r3_num", "equals": true}))
+	_check("flag.range-on-text-and-bool", not api.check({"type": "flag", "flag": "r3_text", "at_least": 1})
+		and api.check({"type": "flag", "flag": "r3_zero", "at_most": 0}))
+	for k in ["r3_num", "r3_text", "r3_zero"]:
+		Globals.world_state.erase(k)
 	_run({"type": "clear_flag", "flag": "r3_flag"})
 	_check("flag.clear", not Globals.world_state.has("r3_flag"))
 	_run({"type": "set_flag", "flag": "met", "who": "protagonist"})
@@ -350,6 +365,27 @@ func _case_items_and_gold() -> void:
 		and api._count_items([npc], item) >= 1 and api._count_items([P], item) == before)
 	_check("item.hand-over-said", _logged(n0, "%s gives Potion of Healing to %s." % [P.Name, npc_name]), str(_logs_since(n0)))
 
+	# Weapons are nodes (held or stowed), not pack items: has_item and
+	# take_item still see them, and a hand-over stows it on the receiver.
+	var weapon := "handaxe"
+	var w0: int = api._count_items([P], weapon)
+	var nw0: int = api._count_items([npc], weapon)
+	_check("weapon.give-stowed", _run({"type": "give_item", "item": weapon}) and api._count_items([P], weapon) == w0 + 1,
+		"%d -> %d" % [w0, api._count_items([P], weapon)])
+	_check("weapon.has-check", api.check({"type": "has_item", "who": "protagonist", "item": weapon, "count": w0 + 1}))
+	n0 = _log_n()
+	_check("weapon.hand-over", _run({"type": "take_item", "item": weapon, "from": "protagonist", "to": npc_name})
+		and api._count_items([P], weapon) == w0 and api._count_items([npc], weapon) == nw0 + 1)
+	_check("weapon.hand-over-said", _logged(n0, "%s gives Handaxe to %s." % [P.Name, npc_name]), str(_logs_since(n0)))
+	var held = npc.inventory.main_hand_item
+	if held is WeaponShape and api._item_known(str(held.id)):
+		var hid: String = str(held.id)
+		var have_n: int = api._count_items([npc], hid)
+		_check("weapon.take-from-hand", _run({"type": "take_item", "item": hid, "from": npc_name, "count": have_n})
+			and api._count_items([npc], hid) == 0 and npc.inventory.main_hand_item == null
+			and npc.inventory.items.all(func(it): return str(it.get("id", "")) != hid),
+			"%s left %d" % [hid, api._count_items([npc], hid)])
+
 	var gold_before: int = api._count_items([P], "gold")
 	n0 = _log_n()
 	_check("gold.give", _run({"type": "give_gold", "amount": 25}) and api._count_items([P], "gold") == gold_before + 25)
@@ -396,6 +432,13 @@ func _case_characters() -> void:
 	var near: Array = _tagged("near_squad")
 	_check("spawn.near-someone", near.size() == 1 and near[0].global_position.distance_to(P.global_position) < 140.0,
 		str(near.map(func(c): return c.global_position.distance_to(P.global_position))))
+	# Aimed at the leader's own tile, a spawn lands beside the party, not on it.
+	_run({"type": "spawn", "template": "town_guard", "at": [P.global_position.x, P.global_position.y], "tag": "on_top"})
+	var on_top: Array = _tagged("on_top")
+	var party_tiles: Array = game.party_chars.map(func(c): return GridManager.world_to_map(c.global_position))
+	_check("spawn.not-on-anyone", on_top.size() == 1 and not GridManager.world_to_map(on_top[0].global_position) in party_tiles
+		and on_top[0].global_position.distance_to(P.global_position) < 200.0,
+		str(on_top.map(func(c): return c.global_position)) + " vs " + str(P.global_position))
 	_check("spawn.unknown-template-refused", not _run({"type": "spawn", "template": "nobody_at_all", "at": [0, 0]}))
 	_check("spawn.unknown-marker-refused", not _run({"type": "spawn", "template": "town_guard", "at": "nowhere_marker"}))
 
@@ -793,7 +836,9 @@ func _case_federica_guard_patrol() -> void:
 	# They come from the town: the map's arrival point from the town square.
 	var arrival: Array = game.current_map_data.get("player_spawns", {}).get("from_town_square", {}).get("position", [0, 0])
 	var arrive_at := Vector2(float(arrival[0]), float(arrival[1]))
-	_check("federica.patrol.from-the-town", patrol.all(func(c): return c.global_position.distance_to(arrive_at) < 160.0),
+	# (Here the party itself stands on that arrival point, so the guards fan out
+	# round it onto free tiles rather than on top of the party.)
+	_check("federica.patrol.from-the-town", patrol.all(func(c): return c.global_position.distance_to(arrive_at) < 240.0),
 		str(patrol.map(func(c): return c.global_position)))
 	_check("federica.patrol.federica-fights-guards", FactionDatabase.are_hostile(fed.faction_id, "golden_guard")
 		and patrol.all(func(c): return c.get_node("AI")._is_enemy(fed)))
