@@ -315,9 +315,9 @@ func _case_game() -> void:
 	ExplorationManager.active = explore_was
 	PauseManager.is_paused = was_paused
 
-	# Wind widget on the HUD strip.
-	var wind = game.hud_status.get_node_or_null("WindIndicator")
-	_check("wind indicator on hud_status", wind != null)
+	# Wind widget in the clock cluster (beside the date and downtime button).
+	var wind = game.get_node_or_null("GameUI/WindIndicator")
+	_check("wind indicator beside the clock", wind != null)
 	if wind == null:
 		return
 	_check("wind keeps its tooltip (PASS)", wind.mouse_filter == Control.MOUSE_FILTER_PASS)

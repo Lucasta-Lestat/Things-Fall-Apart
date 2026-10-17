@@ -316,9 +316,10 @@ func _ready() -> void:
 	# While paused: a faint line from each visible NPC to whoever it is after.
 	# World-space child of Game (not GameUI), so it survives map changes.
 	add_child(preload("res://UI/TargetIntentOverlay.gd").new())
-	# Character, structure and hazard readouts on the hover tooltip; wind on the HUD.
+	# Character, structure and hazard readouts on the hover tooltip; wind in
+	# the clock cluster, beside the date and the downtime (moon) button.
 	add_child(preload("res://UI/WorldHoverInfo.gd").new())
-	hud_status.add_widget(preload("res://UI/WindIndicator.gd").new())
+	$GameUI.add_child(preload("res://UI/WindIndicator.gd").new())
 
 	# Stealth mode readouts: the STEALTH badge on the status strip, and the
 	# world-space overlay (in-view eyes, noise rings).

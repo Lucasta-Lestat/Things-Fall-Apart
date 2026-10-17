@@ -1,9 +1,14 @@
 # =====================
-# UI/WindIndicator.gd - Wind readout for the HUD status strip (Game.hud_status):
-# an arrow pointing DOWNWIND (the way fire spreads; WeatherManager's wind
-# vector is already that direction) and "<Strength> wind toward <compass>".
-# The tooltip says what that means for fire. Hidden on maps without a
-# weather_group (no wind: cell fire spreads evenly there) and on the world map.
+# UI/WindIndicator.gd - Wind readout in the top-left clock cluster: Game._ready
+# puts it under GameUI, where it docks just right of the date/time (TimeLabel)
+# and the downtime (moon) button, centred on the clock, in the clock's font
+# and size. An arrow points DOWNWIND (the way fire spreads; WeatherManager's
+# wind vector is already that direction) beside "<Strength> wind toward
+# <compass>". The tooltip says what that means for fire. Hidden on maps without
+# a weather_group (no wind: cell fire spreads evenly there) and on the world
+# map. It ignores the Tab HUD toggle (the wind is always worth knowing): with
+# the clock hidden it moves into the clock's spot. Placed in a container (the
+# HUD status strip) it leaves positioning to the container.
 # =====================
 
 extends Control
@@ -13,7 +18,9 @@ const DIAL_RADIUS := 12.0
 const DIAL_CENTER := Vector2(14, 14)
 const ARROW_COLOR := Color(0.95, 0.9, 0.75)
 const DIAL_COLOR := Color(0.0, 0.0, 0.0, 0.55)
-const LABEL_FONT_SIZE := 12
+const DOCK_GAP := 8.0           # same gap the moon button keeps from the clock
+const DOCK_LEFT := 16.0         # TimeLabel's offset_left / offset_top
+const DOCK_FALLBACK_TOP := 16.0
 
 var _label: Label
 var _game: Node = null
@@ -30,14 +37,18 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# PASS (not IGNORE) so the tooltip shows; HudStatusBar.add_widget keeps it.
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	custom_minimum_size = Vector2(150, 28)
+	custom_minimum_size = Vector2(150, DIAL_CENTER.y * 2.0)
+	# No font overrides: the clock (TimeLabel) has none either, so the wind
+	# reads in the same theme font, size and colour as the date beside it.
 	_label = Label.new()
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_label.position = Vector2(DIAL_CENTER.x + DIAL_RADIUS + 6, 5)
-	_label.add_theme_font_size_override("font_size", LABEL_FONT_SIZE)
-	_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_label.add_theme_constant_override("outline_size", 3)
+	_label.position = Vector2(DIAL_CENTER.x + DIAL_RADIUS + 6, 0)
 	add_child(_label)
+	if not (get_parent() is Container):
+		anchor_left = 0.0
+		anchor_top = 0.0
+		anchor_right = 0.0
+		anchor_bottom = 0.0
 	_game = get_node_or_null("/root/Game")
 	if not WeatherManager.weather_changed.is_connected(_on_weather_changed):
 		WeatherManager.weather_changed.connect(_on_weather_changed)
@@ -52,6 +63,37 @@ func _process(delta: float) -> void:
 	if _poll_left <= 0.0:
 		_poll_left = POLL_SEC
 		refresh()
+	# Every frame: the clock's width changes with the date string and the
+	# moon button shows and hides with the Tab toggle, neither with a signal
+	# that carries the new rect.
+	_dock()
+
+## Beside the clock cluster: right of the moon button when it shows, else of
+## the clock, else in the clock's own spot; centred on the clock's two lines.
+func _dock() -> void:
+	var parent := get_parent()
+	if parent == null or parent is Container:
+		return
+	var clock := parent.get_node_or_null("TimeLabel") as Control
+	var moon := parent.get_node_or_null("MoonToggleButton") as Control
+	var left := DOCK_LEFT
+	var center_y := DOCK_FALLBACK_TOP + custom_minimum_size.y * 0.5
+	if clock:
+		# Hidden by Tab or not, the clock keeps its rect.
+		var r := clock.get_rect()
+		center_y = r.position.y + r.size.y * 0.5
+		if clock.visible:
+			left = r.end.x + DOCK_GAP
+	if moon and moon.visible:
+		left = maxf(left, moon.get_rect().end.x + DOCK_GAP)
+	var top := roundf(center_y - custom_minimum_size.y * 0.5)
+	if is_equal_approx(offset_left, left) and is_equal_approx(offset_top, top) \
+			and is_equal_approx(offset_right, left + custom_minimum_size.x):
+		return
+	offset_left = left
+	offset_top = top
+	offset_right = left + custom_minimum_size.x
+	offset_bottom = top + custom_minimum_size.y
 
 func _on_weather_changed(_group: String, _state: Dictionary) -> void:
 	refresh()
@@ -85,7 +127,13 @@ func refresh() -> void:
 		_label.text = text
 		# The label is placed by hand, so size the widget to it: the strip's
 		# next widget must start after the text, and the tooltip covers it all.
-		custom_minimum_size.x = maxf(DIAL_CENTER.x * 2.0, _label.position.x + _label.get_combined_minimum_size().x + 2.0)
+		var text_size: Vector2 = _label.get_combined_minimum_size()
+		custom_minimum_size = Vector2(
+			maxf(DIAL_CENTER.x * 2.0, _label.position.x + text_size.x + 2.0),
+			maxf(DIAL_CENTER.y * 2.0, text_size.y))
+		_label.position.y = roundf((custom_minimum_size.y - text_size.y) * 0.5)
+		_dock()
+		queue_redraw()
 	if tip != tooltip_text:
 		tooltip_text = tip
 	var new_dir := Vector2.ZERO if calm else dir.normalized()
@@ -107,18 +155,20 @@ func describe(speed: float, dir: Vector2) -> String:
 	return head + "\nFire spreads about twice as fast downwind and almost never upwind."
 
 func _draw() -> void:
-	draw_circle(DIAL_CENTER, DIAL_RADIUS, DIAL_COLOR)
+	# Centred on the widget's height, which follows the label's line height.
+	var c := Vector2(DIAL_CENTER.x, maxf(DIAL_CENTER.y, custom_minimum_size.y * 0.5))
+	draw_circle(c, DIAL_RADIUS, DIAL_COLOR)
 	if _dir == Vector2.ZERO:
-		draw_circle(DIAL_CENTER, 2.5, ARROW_COLOR)
+		draw_circle(c, 2.5, ARROW_COLOR)
 		return
 	# Arrow along +x, rotated to the wind: shaft plus a filled head.
 	var rot := _dir.angle()
-	var tail := DIAL_CENTER + Vector2(-8, 0).rotated(rot)
-	var neck := DIAL_CENTER + Vector2(2, 0).rotated(rot)
+	var tail := c + Vector2(-8, 0).rotated(rot)
+	var neck := c + Vector2(2, 0).rotated(rot)
 	draw_line(tail, neck, ARROW_COLOR, 2.5, true)
 	var head := PackedVector2Array([
-		DIAL_CENTER + Vector2(9, 0).rotated(rot),
-		DIAL_CENTER + Vector2(1, -5).rotated(rot),
-		DIAL_CENTER + Vector2(1, 5).rotated(rot),
+		c + Vector2(9, 0).rotated(rot),
+		c + Vector2(1, -5).rotated(rot),
+		c + Vector2(1, 5).rotated(rot),
 	])
 	draw_colored_polygon(head, ARROW_COLOR)
