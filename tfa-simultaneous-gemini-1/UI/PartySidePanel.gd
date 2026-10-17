@@ -2046,7 +2046,7 @@ func _resource_max(character, resource_name: String) -> int:
 # damage and ally-witness hooks, soul binding), shown under the pip count.
 const RESOURCE_RULES := {
 	"adrenaline": "Recovers over time (Constitution). +1 when hit or when a nearby ally is hurt.",
-	"focus": "Recovers over time (Intelligence). -1 when hit; a hit that would dip into focus held by Concentration ends the spell instead.",
+	"focus": "Recovers over time (Intelligence). -1 when hit; while concentrating, a hit with no free focus left to take (only focus held by Concentration) ends the spell instead.",
 	"harmony": "Recovers over time (Will).",
 	"devotion": "Recovers over time (Will).",
 	"souls": "Gained by binding the souls of the dead; extras become Soul items.",

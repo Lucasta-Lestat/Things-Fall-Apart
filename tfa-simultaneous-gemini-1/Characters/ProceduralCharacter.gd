@@ -8921,10 +8921,13 @@ func _on_self_damaged(amount: int, from_tick: bool = false) -> void:
 			emit_signal("resource_changed", "focus", focus, max_focus)
 
 
-# A landed Concentration spell holds its focus cost for as long as what it
-# installed lasts: the conditions it applied (by instance) and the fields and
-# clouds it created. Nothing trackable installed (weather, surfaces, a missed
-# condition roll, summons) means nothing to hold. One spell at a time.
+# A Concentration spell pays its focus cost when it is cast (AbilityManager.
+# _pay_ability_costs), and once it lands it also holds up to that much again
+# of the focus left, for as long as what it installed lasts: the conditions it
+# applied (by instance) and the fields and clouds it created. The hold is best
+# effort (less focus left, less held). Nothing trackable installed (weather,
+# surfaces, a missed condition roll, summons) means nothing to hold. One spell
+# at a time.
 func begin_concentration(ability: Ability, results: Array) -> void:
 	if ability == null or not is_alive():
 		return
@@ -8943,15 +8946,20 @@ func begin_concentration(ability: Ability, results: Array) -> void:
 	# this catches one that landed in the meantime (a projectile in flight).
 	if not active_concentrations.is_empty():
 		end_concentration("replaced", entry["name"])
+	var spent: int = 0
 	var held: int = 0
 	if not npc_unlimited_resources:
-		held = mini(int(AbilityManager.school_costs_for(ability).get("focus", 0)), focus)
+		var cost: int = int(AbilityManager.school_costs_for(ability).get("focus", 0))
+		# What the cast already paid: innate abilities pay nothing.
+		if not (ability_manager and ability_manager._is_innate_ability(ability)):
+			spent = cost
+		held = mini(cost, focus)
 	entry["focus"] = held
 	active_concentrations[ability.id] = entry
 	concentration_locked_focus = held
 	emit_signal("resource_changed", "focus", focus, max_focus)
 	if is_party_member():
-		GameLog.add_entry("%s concentrates on %s (%d focus held)." % [Name, entry["name"], held])
+		GameLog.add_entry("%s concentrates on %s (%d focus spent, %d held)." % [Name, entry["name"], spent, held])
 
 
 # Gathers the conditions and objects a cast installed. Multi-step casts report
@@ -9078,11 +9086,14 @@ func _release_concentration_all() -> void:
 	end_concentration("")
 
 
-# A hit that would dip into held focus breaks the spell. Nothing held (an NPC
-# with npc_unlimited_resources concentrates for free) means a hit can't: only
-# incapacitation, death or a new Concentration spell ends theirs.
+# A hit that finds no free focus to take (it would dip into held focus) breaks
+# the spell. That includes a spell holding nothing because the cast spent the
+# last of the caster's focus: otherwise casting with exactly the cost would
+# make it unbreakable. An NPC with npc_unlimited_resources concentrates for
+# free, so a hit can't: only incapacitation, death or a new Concentration
+# spell ends theirs.
 func _break_concentration_under_pressure() -> void:
-	if concentration_locked_focus <= 0:
+	if npc_unlimited_resources:
 		return
 	end_concentration("broken")
 

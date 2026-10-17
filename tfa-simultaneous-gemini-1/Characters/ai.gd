@@ -236,9 +236,8 @@ func _try_cast_ability(delta: float) -> bool:
 		if data.is_empty():
 			continue
 		var tr: Dictionary = data.get("traits", {})
-		# Already concentrating: a held Concentration spell's focus counts toward
-		# its own recast and isn't spent, so recasting would be free and would
-		# dispel the spell we hold (or one the player planned) every few seconds.
+		# Already concentrating: recasting would pay the focus again and dispel
+		# the spell we hold (or one the player planned) every few seconds.
 		if (tr.has("Concentration") or tr.has("concentration")) \
 				and "active_concentrations" in character and not character.active_concentrations.is_empty():
 			continue
