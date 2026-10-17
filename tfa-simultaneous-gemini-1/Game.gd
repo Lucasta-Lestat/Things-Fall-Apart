@@ -316,9 +316,10 @@ func _ready() -> void:
 	# While paused: a faint line from each visible NPC to whoever it is after.
 	# World-space child of Game (not GameUI), so it survives map changes.
 	add_child(preload("res://UI/TargetIntentOverlay.gd").new())
-	# Character, structure and hazard readouts on the hover tooltip; wind on the HUD.
+	# Character, structure and hazard readouts on the hover tooltip; wind in
+	# the clock cluster, beside the date and the downtime (moon) button.
 	add_child(preload("res://UI/WorldHoverInfo.gd").new())
-	hud_status.add_widget(preload("res://UI/WindIndicator.gd").new())
+	$GameUI.add_child(preload("res://UI/WindIndicator.gd").new())
 
 	# Stealth mode readouts: the STEALTH badge on the status strip, and the
 	# world-space overlay (in-view eyes, noise rings).
@@ -1940,6 +1941,13 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 			options.append("Resume" if bool(target.get("hold_position")) else "Wait Here")
 			# A companion is never an attack target.
 			options.erase("Attack")
+		elif not "Attack" in options and not FactionDatabase.are_hostile("player", target.faction_id) \
+				and not (CrimeManager.attribute(target) in party_chars):
+			# The peaceful: left-click talks to them, so this is the deliberate
+			# way to start a fight (a right-click on a hostile swings instead of
+			# opening a menu). The menu names the crime and asks again when the
+			# law would (context_menu.gd). Not the party's own summons.
+			options.append("Attack")
 		# "Talk" only when they have something to say: active_dialogue_id is
 		# the talk cursor's and the left-click fast path's test too, so the
 		# menu never offers a conversation that opens nothing.

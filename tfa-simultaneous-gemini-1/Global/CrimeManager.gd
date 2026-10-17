@@ -35,6 +35,9 @@ var _recent_reports: Dictionary = {}  # "statute|actor_iid|target_iid" -> absolu
 # stops the asking for the rest of the map visit.
 var _pending_cast_confirms: Dictionary = {}  # "map_id|ability_id" -> true
 var _confirmed_cast_maps: Dictionary = {}    # map_id -> true
+# The same for a menu-ordered attack on a non-hostile (attack_needs_confirmation).
+var _pending_attack_confirms: Dictionary = {}  # "map_id|victim_iid" -> true
+var _confirmed_attack_maps: Dictionary = {}    # map_id -> true
 
 func _ready() -> void:
 	# The `wanted` condition on the protagonist is a pure display derivative
@@ -214,6 +217,30 @@ func cast_needs_confirmation(actor, ability) -> Dictionary:
 		_confirmed_cast_maps[map_id] = true
 		return {}
 	_pending_cast_confirms[key] = true
+	return {"verdict": verdict}
+
+## The same confirmation for an attack the player orders on someone who isn't
+## hostile (the right-click menu's "Attack"): {} = go ahead, else {verdict} —
+## refuse this once. Same severity threshold, choose-again-to-confirm on the
+## same victim, and a confirmation holds for the rest of the map visit.
+func attack_needs_confirmation(actor, victim) -> Dictionary:
+	if not is_instance_valid(victim):
+		return {}
+	var verdict: Dictionary = preview(actor, "attack", attack_payload(actor, victim))
+	if verdict.is_empty():
+		return {}
+	if int(verdict.get("severity", 0)) < LawDatabase.confirm_threshold():
+		return {}
+	var game = get_tree().current_scene
+	var map_id: String = str(game.current_map_id) if (game != null and "current_map_id" in game) else ""
+	if bool(_confirmed_attack_maps.get(map_id, false)):
+		return {}
+	var key: String = "%s|%d" % [map_id, victim.get_instance_id()]
+	if bool(_pending_attack_confirms.get(key, false)):
+		_pending_attack_confirms.erase(key)
+		_confirmed_attack_maps[map_id] = true
+		return {}
+	_pending_attack_confirms[key] = true
 	return {"verdict": verdict}
 
 # ---------------------------------------------------------------------------
