@@ -92,8 +92,8 @@ func _case_log_panel() -> void:
 	_check("log.label-shows-xN", last.text.contains("Feedback harness line.") and last.text.contains("(x3)"), last.text)
 	_check("log.labels-ignore-mouse", last.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 
-	# The log is closed until the player opens it; its button is HUD chrome
-	# and follows the Tab toggle, the log itself stays as the player left it.
+	# The log is closed until the player opens it; it and its button follow
+	# the Tab toggle, and a closed log stays closed when the HUD comes back.
 	var btn: Button = panel.toggle_button
 	_check("log.hidden-by-default", not panel.visible and not panel.is_open())
 	_check("log.button-under-GameUI", btn != null and btn.get_parent() == ui)
@@ -101,9 +101,10 @@ func _case_log_panel() -> void:
 	var btn_was: bool = btn.visible
 	psp._toggle_panel()
 	_check("log.button-follows-tab", btn.visible == psp.panel_visible and btn.visible != btn_was)
-	_check("log.tab-leaves-log-alone", not panel.visible)
+	_check("log.tab-keeps-closed-log-hidden", not panel.visible)
 	psp._toggle_panel()
 	_check("log.button-follows-tab-back", btn.visible == btn_was)
+	_check("log.closed-log-stays-closed", not panel.visible)
 
 	var dlg: Control = ui.get_node("DialoguePanel")
 	var dlg_was: bool = dlg.visible

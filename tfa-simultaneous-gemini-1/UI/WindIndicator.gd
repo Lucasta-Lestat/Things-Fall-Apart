@@ -54,6 +54,7 @@ func _ready() -> void:
 		WeatherManager.weather_changed.connect(_on_weather_changed)
 	if _game and _game.has_signal("map_loaded"):
 		_game.connect("map_loaded", _on_map_loaded)
+	_hook_dock_signals()
 	refresh()
 
 func _process(delta: float) -> void:
@@ -63,14 +64,30 @@ func _process(delta: float) -> void:
 	if _poll_left <= 0.0:
 		_poll_left = POLL_SEC
 		refresh()
-	# Every frame: the clock's width changes with the date string and the
-	# moon button shows and hides with the Tab toggle, neither with a signal
-	# that carries the new rect.
-	_dock()
+
+## Re-dock when the cluster moves, not every frame: the clock's rect changes
+## with the date string (the moon button follows it), and both show and hide
+## with the Tab toggle.
+func _hook_dock_signals() -> void:
+	var parent := get_parent()
+	if parent == null or parent is Container:
+		return
+	for n in ["TimeLabel", "MoonToggleButton"]:
+		var c := parent.get_node_or_null(n) as Control
+		if c == null:
+			continue
+		if not c.item_rect_changed.is_connected(_dock):
+			c.item_rect_changed.connect(_dock)
+		if not c.visibility_changed.is_connected(_dock):
+			c.visibility_changed.connect(_dock)
+	# The moon places itself (deferred) on its first frame.
+	_dock.call_deferred()
 
 ## Beside the clock cluster: right of the moon button when it shows, else of
 ## the clock, else in the clock's own spot; centred on the clock's two lines.
 func _dock() -> void:
+	if not is_inside_tree():
+		return
 	var parent := get_parent()
 	if parent == null or parent is Container:
 		return

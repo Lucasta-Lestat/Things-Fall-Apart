@@ -218,12 +218,25 @@ func _case_log_panel() -> void:
 	field.queue_free()
 	await get_tree().process_frame
 
-	# Tab hides the button with the rest of the HUD; the log stays as left.
+	# Tab hides the button and the open log with the rest of the HUD, and
+	# brings both back; L still shows the log while the HUD is hidden.
 	var psp = ui.get_node("PartySidePanel")
 	psp._toggle_panel()
-	_check("log.tab-hides-button", not btn.visible and panel.visible)
+	_check("log.tab-hides-button-and-log", not btn.visible and not panel.visible and panel.is_open())
 	psp._toggle_panel()
-	_check("log.tab-shows-button", btn.visible)
+	_check("log.tab-shows-button-and-log", btn.visible and panel.visible and panel.is_open())
+	psp._toggle_panel()
+	Input.parse_input_event(_key(KEY_L))
+	await _await_frames(2)
+	_check("log.L-shows-under-hidden-hud", panel.visible and panel.is_open())
+	Input.parse_input_event(_key(KEY_L))
+	await _await_frames(2)
+	_check("log.L-hides-under-hidden-hud", not panel.visible and not panel.is_open())
+	psp._toggle_panel()
+	_check("log.closed-log-stays-closed-after-tab", btn.visible and not panel.visible)
+	Input.parse_input_event(_key(KEY_L))
+	await _await_frames(2)
+	_check("log.L-reopens", panel.visible and panel.is_open())
 
 	Input.parse_input_event(_key(KEY_L))
 	await _await_frames(2)
@@ -273,6 +286,20 @@ func _case_wind() -> void:
 	_check("wind.keeps-tooltip", wind.mouse_filter == Control.MOUSE_FILTER_PASS and wind.tooltip_text.contains("Wind 25"), wind.tooltip_text)
 	_check("wind.covers-label", wind.size.x >= lbl.position.x + lbl.size.x, "%s %s %s" % [wind.size, lbl.position, lbl.size])
 
+	# Docking follows the clock by signal, not by polling every frame: with
+	# its _process off, a wider date still pushes the wind along.
+	wind.set_process(false)
+	var old_clock_text: String = clock.text
+	clock.text = old_clock_text + "  WWWWWWWWWWWW"
+	await _await_frames(3)
+	var moved_moon: Rect2 = moon.get_rect()
+	_check("wind.follows-wider-clock", moved_moon.position.x >= clock.get_rect().end.x \
+		and is_equal_approx(wind.offset_left, moved_moon.end.x + 8.0),
+		"wind %s moon %s clock end %s" % [wind.offset_left, moved_moon, clock.get_rect().end.x])
+	clock.text = old_clock_text
+	await _await_frames(3)
+	_check("wind.follows-narrower-clock", is_equal_approx(wind.offset_left, moon.get_rect().end.x + 8.0), str(wind.offset_left))
+
 	# Tab hides the clock and moon; the wind stays and takes the clock's spot.
 	var psp = ui.get_node("PartySidePanel")
 	psp._toggle_panel()
@@ -282,6 +309,7 @@ func _case_wind() -> void:
 	psp._toggle_panel()
 	await _await_frames(2)
 	_check("wind.back-beside-moon", is_equal_approx(wind.offset_left, moon.get_rect().end.x + 8.0), str(wind.offset_left))
+	wind.set_process(true)
 
 	WeatherManager.set_wind_speed(wgrp, old_speed)
 	WeatherManager.set_wind_angle(wgrp, old_angle)
@@ -310,13 +338,35 @@ func _case_attack_menu() -> void:
 	# Perrow (Liziti custom) repealed assault: no crime, plain "Attack".
 	_check("attack.legal-here-plain", texts.has("Attack"), str(texts))
 	if not buttons.is_empty():
-		_check("attack.legal-tooltip", str(buttons[-1].tooltip_text).contains("Not a crime here"), str(buttons[-1].tooltip_text))
+		_check("attack.legal-tooltip", str(buttons[-1].tooltip_text).contains("ot a crime here"), str(buttons[-1].tooltip_text))
 	_close_menu(menu)
 	# Never on a companion.
 	menu = _menu(game.party_chars[1] if game.party_chars.size() > 1 else p0, p0)
 	texts = _menu_buttons(menu).map(func(b): return str(b.text))
 	_check("attack.not-on-companion", not texts.any(func(t): return str(t).begins_with("Attack")), str(texts))
 	_close_menu(menu)
+	await get_tree().process_frame
+
+	# Perrow repealed assault but not murder: a Liziti townsman's Attack is
+	# plain, and its tooltip warns that killing them is still Murder.
+	var townsman := _spawn_temp("liziti")
+	menu = _menu(townsman, p0)
+	buttons = _menu_buttons(menu)
+	texts = buttons.map(func(b): return str(b.text))
+	_check("attack.perrow-plain", texts.has("Attack"), str(texts))
+	var tip: String = str(buttons[-1].tooltip_text) if not buttons.is_empty() else ""
+	_check("attack.perrow-warns-murder", tip.contains("Fighting is not a crime here") and tip.contains("Murder (severity 90)") \
+		and not tip.contains("Not a crime here"), tip)
+	_close_menu(menu)
+	# Nor on the party's own summon.
+	var pet := _spawn_temp("player")
+	pet.set_meta("summoned_by", p0)
+	menu = _menu(pet, p0)
+	texts = _menu_buttons(menu).map(func(b): return str(b.text))
+	_check("attack.not-on-party-summon", not texts.any(func(t): return str(t).begins_with("Attack")), str(texts))
+	_close_menu(menu)
+	townsman.queue_free()
+	pet.queue_free()
 	await get_tree().process_frame
 
 	# Severe crime (Martial Law: Assault 55 >= the confirm threshold 50):

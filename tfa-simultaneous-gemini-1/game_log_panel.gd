@@ -5,8 +5,9 @@
 #
 # Hidden until the player opens it: the "Log" button at the bottom right (left
 # of the party panel) or the L key toggles it. While it is closed the button
-# counts the entries that arrived unseen. Drawn on the shared gold frame
-# (UI/GoldFrame.gd) like the Town Services and Camp panels.
+# counts the entries that arrived unseen. Tab hides the button and an open log
+# with the rest of the HUD and brings them back. Drawn on the shared gold
+# frame (UI/GoldFrame.gd) like the Town Services and Camp panels.
 # =====================
 
 extends PanelContainer
@@ -32,6 +33,7 @@ const TOGGLE_KEY := KEY_L
 const TIME_COLOR := GoldFrame.MUTED_COLOR
 
 var _dialogue_panel: Control = null
+# The player's open/closed choice; `visible` also follows the Tab HUD toggle.
 var _user_open: bool = false
 
 func _ready():
@@ -81,12 +83,13 @@ func _ready():
 		_dialogue_panel = parent.get_node("DialoguePanel")
 		_dialogue_panel.visibility_changed.connect(_on_dialogue_visibility_changed)
 		_place(_dialogue_panel.visible)
-	# The button is HUD chrome: it follows the party panel's Tab toggle like
-	# the clock does. The log itself stays as the player left it.
+	# Both are HUD: they follow the party panel's Tab toggle like the clock
+	# does. An open log comes back with the HUD; L still shows it while the
+	# HUD is hidden.
 	if parent and parent.has_node("PartySidePanel"):
 		var panel = parent.get_node("PartySidePanel")
-		toggle_button.visible = panel.panel_visible
-		panel.panel_visibility_changed.connect(func(now_visible): toggle_button.visible = now_visible)
+		_on_hud_toggled(panel.panel_visible)
+		panel.panel_visibility_changed.connect(_on_hud_toggled)
 
 	GameLog.entry_added.connect(_on_entry_added)
 	GameLog.entry_repeated.connect(_on_entry_repeated)
@@ -151,12 +154,13 @@ func _input(event: InputEvent) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
 		return
-	set_open(not _user_open)
+	# What the player sees decides: an open log hidden by Tab is shown.
+	set_open(not visible)
 	get_viewport().set_input_as_handled()
 
 ## Open or close the log. Opening marks everything read and shows the latest.
 func set_open(open: bool) -> void:
-	if open == _user_open:
+	if open == _user_open and open == visible:
 		return
 	_user_open = open
 	visible = open
@@ -173,6 +177,12 @@ func is_open() -> bool:
 
 func _on_button_toggled(pressed: bool) -> void:
 	set_open(pressed)
+
+# Tab: the button and an open log hide with the rest of the HUD and return
+# with it; the log's open/closed choice is kept.
+func _on_hud_toggled(now_visible: bool) -> void:
+	toggle_button.visible = now_visible
+	visible = _user_open and now_visible
 
 func _update_button() -> void:
 	if unread_badge:

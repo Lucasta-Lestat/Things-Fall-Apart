@@ -50,21 +50,37 @@ func _label_attack(button: Button, target) -> void:
 	if not _is_attackable(target):
 		return
 	var verdict: Dictionary = _attack_verdict(target)
+	# A fight that kills is judged again as a killing (Murder): say so too, or
+	# "not a crime" in Perrow (assault repealed, killing not) would mislead.
+	var kill_verdict: Dictionary = _attack_verdict(target, true)
+	var kill_line := ""
+	if not kill_verdict.is_empty():
+		kill_line = "Killing them would be %s (severity %d)." % [
+			str(kill_verdict.get("display_name", "a crime")), int(kill_verdict.get("severity", 0))]
 	if verdict.is_empty():
-		button.tooltip_text = "Attack %s. Not a crime here." % target.Name
+		if kill_line.is_empty():
+			button.tooltip_text = "Attack %s. Not a crime here." % target.Name
+		else:
+			button.tooltip_text = "Attack %s. Fighting is not a crime here under the law of %s, but %s" % [
+				target.Name, _law_name(kill_verdict), kill_line.substr(0, 1).to_lower() + kill_line.substr(1)]
 		return
 	button.text = "Attack (%s)" % str(verdict.get("display_name", "crime"))
 	button.tooltip_text = "Attack %s. Here that is %s, a crime under the law of %s (severity %d): witnesses will report it." % [
 		target.Name, str(verdict.get("display_name", "a crime")),
 		_law_name(verdict), int(verdict.get("severity", 0))]
+	if not kill_line.is_empty():
+		button.tooltip_text += "\n" + kill_line
 
 # What attacking `target` would be under the law here ({} = no crime), judged
-# for the party member who would carry it out.
-func _attack_verdict(target) -> Dictionary:
+# for the party member who would carry it out; `lethal` judges a killing blow.
+func _attack_verdict(target, lethal: bool = false) -> Dictionary:
 	var actor = _attacking_party_member()
 	if actor == null:
 		return {}
-	return CrimeManager.preview(actor, "attack", CrimeManager.attack_payload(actor, target))
+	var payload: Dictionary = CrimeManager.attack_payload(actor, target)
+	if lethal:
+		payload["lethal"] = true
+	return CrimeManager.preview(actor, "attack", payload)
 
 func _law_name(verdict: Dictionary) -> String:
 	var law_faction: String = str(verdict.get("law_faction", ""))
