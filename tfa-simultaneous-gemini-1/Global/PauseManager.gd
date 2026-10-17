@@ -14,7 +14,7 @@ var is_paused: bool = false
 var _indicator_layer: CanvasLayer
 var _indicator: Label
 
-const BANNER_PLANNING := "PAUSED — planning  ·  Space to resume"
+const BANNER_PLANNING := "PAUSED  ·  Space to resume"
 # While a conversation is up, Space advances its lines (dialogue_panel.gd
 # consumes the pause action), so the banner mustn't promise that it resumes.
 const BANNER_TALKING := "PAUSED — in conversation"

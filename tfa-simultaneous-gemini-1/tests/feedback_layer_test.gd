@@ -112,6 +112,8 @@ func _case_pause_banner() -> void:
 	PauseManager.pause()
 	_check("pause.banner-shown", PauseManager._indicator != null and PauseManager._indicator.visible)
 	_check("pause.banner-text", PauseManager._indicator.text.begins_with("PAUSED"))
+	# Just PAUSED and how to resume: no "planning".
+	_check("pause.banner-wording", PauseManager._indicator.text == "PAUSED  ·  Space to resume", PauseManager._indicator.text)
 	# In a conversation Space advances lines, so the banner doesn't offer it.
 	DialogueManager.dialogues["harness_banner_talk"] = {"dialogueNodes": {"harness_banner_talk": {"narrator": "Hello."}}}
 	DialogueManager.start_dialogue("harness_banner_talk")
