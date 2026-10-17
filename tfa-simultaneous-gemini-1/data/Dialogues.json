@@ -69,7 +69,14 @@
     ]
    },
    "Federica-intro-fight": {
-    "Surgeon-Captain Federica": "If you possess any familiarity with my art, then I'm afraid you've seen too much. [[start_combat(game.characters_in_scene)]]"
+    "Surgeon-Captain Federica": "If you possess any familiarity with my art, then I'm afraid you've seen too much.",
+    "actions": [
+     {
+      "type": "start_combat",
+      "attackers": "surgeon_captain_federica",
+      "targets": "party"
+     }
+    ]
    },
    "Federica-intro-apprenticeship": {
     "narrator": "**She smiles at you**",
@@ -87,9 +94,19 @@
     "THE KNIGHT#2": "(weeping without tears, without eyes)",
     "Surgeon Captain Federica#3": "His weaknesses. His habits in battle. Speak and I will let you sleep again.",
     "THE KNIGHT#3": "He... he never took the field himself. Always proxies. We never saw him bleed. Not once. We thought it cowardice. **The rotten limbs begin to thrash harder.**",
-    "narrator#4": "Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She puts a jack boot on its chest and wrenches both its arms loose from the torso, placing these in a large canvas bag that smells of rot and hay. [[Federica.add_item_to_inventory('Arms of Octavian')]]",
+    "narrator#4": "Federica withdraws the needles. The corpse drops like a puppet cut from its strings. She puts a jack boot on its chest and wrenches both its arms loose from the torso, placing these in a large canvas bag that smells of rot and hay.",
     "Surgeon Captain Federica#4": "Verhoeven. Deeper.",
     "Verhoeven": "Outstanding, Ma'am.",
+    "actions": [
+     {
+      "type": "give_item",
+      "to": "surgeon_captain_federica",
+      "item": "bones",
+      "name": "Arms of Octavian",
+      "description": "Both arms of a knight-commander in corroded plate, wrenched from her corpse in the Old Cemetery by Surgeon Captain Federica.",
+      "once": true
+     }
+    ],
     "choices": [
      {
       "text": "**You've seen enough to know whatever they're doing isn't ethical.  You shout for the guard.**",
@@ -132,27 +149,79 @@
     "THE ASTROLOGER#2": "(shuddering, jaw clicking loose and resetting with each word) I cast his... his true horoscope. Not the man's. The thing beneath the man. The Living Stars do not lie",
     "Surgeon Captain Federica": "What did you learn?",
     "THE ASTROLOGER#3": "Fire. He IS fire. A creature from the First Age.  But even he has a touch of impurity.  A drop of human blood.  He is not timeless, he...",
-    "narrator#2": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag. [[Federica.add_item_to_inventory('Skull of a Scholar')]]",
+    "narrator#2": "His jaw detaches fully. Federica catches it, examines it briefly, then sets it aside and withdraws the needles. She puts her hands on the thin vertebrae of the scholar's neck and snaps off the rest of his head, tossing it in her bag.",
     "Surgeon-Captain Federica#2": "Promising. Verhoeven — keep digging",
     "narrator#3": "By now you are over twenty feet deep in the same plot. The third coffin you strike is older than the others — black oak, iron-banded, buried deep. Verhoeven's shovel cracks the lid and something inside cracks back.",
     "Verhoeven": "...Ma'am?",
     "narrator#4": "The lid explodes upward. A skeleton sits bolt upright in the ruined casket wearing the rotted vestments of a Scarlattian senator. Its jaw unhinges with a sound like tearing leather.",
     "THE SENATOR": "Heavy is the heart that releases me again upon the world.",
-    "narrator#5": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness. Then, torchlight at the cemetery gates, and the clatter of armor from the lane. [[spawn_character_from_name('golden_guard',4)]]",
+    "narrator#5": "It scrambles from the hole with terrible, insectile speed and vanishes over the churchyard wall into darkness. Then, torchlight at the cemetery gates, and the clatter of armor from the lane.",
     "Centurion": "Halt! Stand where you are — all of you!",
     "narrator#6": "Four city guards pour through the churchyard gate, halberds leveled. They surround the open grave in which the three of you stand, caked in dirt.",
     "Centurion#2": "Graverobbers and a gods-damned necromancer. On your knees, the lot of you.",
     "Surgeon-Captain Federica#3": "(quietly, to you) I will not kneel. That is not negotiable. What you do next, that is your affair.",
-    "Verhoeven#2": "(setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am."
+    "Verhoeven#2": "(setting down his shovel with great care, as though placing a child in a crib) Outstanding, Ma'am.",
+    "actions": [
+     {
+      "type": "give_item",
+      "to": "surgeon_captain_federica",
+      "item": "severed_head",
+      "name": "Skull of a Scholar",
+      "description": "The head of a court astrologer of Regalus, executed for treason. Surgeon Captain Federica snapped it from his neck after questioning him.",
+      "once": true
+     },
+     {
+      "type": "spawn",
+      "template": "town_guard",
+      "count": 4,
+      "name": [
+       "Centurion"
+      ],
+      "near": "surgeon_captain_federica",
+      "distance": 96,
+      "tag": "night_patrol"
+     },
+     {
+      "type": "start_combat",
+      "attackers": "surgeon_captain_federica",
+      "targets": "tag:night_patrol"
+     }
+    ]
    },
    "Federica-intro-guard-fight": {
-    "narrator": "A night patrol comes running in response to your call. [[spawn_character_from_name('golden_guard',4)]]"
+    "narrator": "A night patrol comes running in response to your call.",
+    "actions": [
+     {
+      "type": "spawn",
+      "template": "town_guard",
+      "count": 4,
+      "at": "from_town_square",
+      "near": "surgeon_captain_federica",
+      "tag": "night_patrol"
+     },
+     {
+      "type": "start_combat",
+      "attackers": "surgeon_captain_federica",
+      "targets": [
+       "party",
+       "tag:night_patrol"
+      ]
+     }
+    ]
    },
    "Federica-intro-let-go": {
     "Surgeon Captain Federica": "**The scowl on her face suggests she thinks your cowardice genuine, and it disgusts her.  She does not pursue you, but picks up her shovel with renewed urgency.**"
    },
    "end-convo": {
-    "narrator": "You draw back silently.[[protagonist.add_trait('subtle')]]"
+    "narrator": "You draw back silently.",
+    "actions": [
+     {
+      "type": "add_trait",
+      "who": "protagonist",
+      "trait": "Subtle",
+      "once": true
+     }
+    ]
    }
   }
  },
