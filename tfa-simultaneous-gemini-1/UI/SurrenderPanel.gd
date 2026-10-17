@@ -165,6 +165,10 @@ func _do_rob(fraction: float) -> void:
 			if c.inventory.has_method("resync_worn_from_items"):
 				c.inventory.resync_worn_from_items()
 	GameLog.add_entry("Robbed: goods worth ~%d handed over. They let you live." % int(taken))
+	# Over the protagonist too: the game log starts closed.
+	var robbed_who = game.party_chars[0] if not game.party_chars.is_empty() else null
+	if robbed_who is Node2D and is_instance_valid(robbed_who) and robbed_who.is_inside_tree():
+		Globals.show_floating_text("Robbed: ~%d" % int(taken), robbed_who.global_position, robbed_who, Color(1.0, 0.6, 0.4), 0, Globals.NOTICE_FONT_SIZE)
 	# A short truce, or the robbery is pointless — hostile_by_default
 	# factions would re-acquire on the next AI tick. Standing untouched.
 	var truce_seconds: float = float(LawDatabase.surrender_cfg().get("truce_seconds", 90.0))

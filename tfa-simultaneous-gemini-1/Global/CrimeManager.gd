@@ -35,6 +35,9 @@ var _recent_reports: Dictionary = {}  # "statute|actor_iid|target_iid" -> absolu
 # stops the asking for the rest of the map visit.
 var _pending_cast_confirms: Dictionary = {}  # "map_id|ability_id" -> true
 var _confirmed_cast_maps: Dictionary = {}    # map_id -> true
+# The same for a menu-ordered attack on a non-hostile (attack_needs_confirmation).
+var _pending_attack_confirms: Dictionary = {}  # "map_id|victim_iid" -> true
+var _confirmed_attack_maps: Dictionary = {}    # map_id -> true
 
 func _ready() -> void:
 	# The `wanted` condition on the protagonist is a pure display derivative
@@ -114,8 +117,20 @@ func report(actor, verb: String, payload: Dictionary) -> void:
 	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
 		actor_name, str(verdict.get("display_name", "?")), int(verdict.get("severity", 0)),
 		str(verdict.get("law_faction", "?"))])
+	_party_float(effective, "Crime: " + str(verdict.get("display_name", "?")), CRIME_FLOAT_COLOR)
 	crime_committed.emit(effective, verdict, payload)
 	_fan_out_witnesses(effective, actor, verdict, payload)
+
+## The game log starts closed, so the crime lines above also float over the
+## party member they are about ("Crime: Theft", "Accused: Theft", "No alarm").
+## Parented to the character like "Unseen." below, so the two stack.
+const CRIME_FLOAT_COLOR := Color(1.0, 0.45, 0.35)
+func _party_float(who, text: String, color: Color) -> void:
+	if not (who is Node2D) or not is_instance_valid(who) or not who.is_inside_tree():
+		return
+	if not (who.has_method("is_party_member") and who.is_party_member()):
+		return
+	Globals.show_floating_text(text, who.global_position, who, color, 0, Globals.NOTICE_FONT_SIZE)
 
 # ---------------------------------------------------------------------------
 # Attribution and jurisdiction
@@ -216,6 +231,30 @@ func cast_needs_confirmation(actor, ability) -> Dictionary:
 	_pending_cast_confirms[key] = true
 	return {"verdict": verdict}
 
+## The same confirmation for an attack the player orders on someone who isn't
+## hostile (the right-click menu's "Attack"): {} = go ahead, else {verdict} —
+## refuse this once. Same severity threshold, choose-again-to-confirm on the
+## same victim, and a confirmation holds for the rest of the map visit.
+func attack_needs_confirmation(actor, victim) -> Dictionary:
+	if not is_instance_valid(victim):
+		return {}
+	var verdict: Dictionary = preview(actor, "attack", attack_payload(actor, victim))
+	if verdict.is_empty():
+		return {}
+	if int(verdict.get("severity", 0)) < LawDatabase.confirm_threshold():
+		return {}
+	var game = get_tree().current_scene
+	var map_id: String = str(game.current_map_id) if (game != null and "current_map_id" in game) else ""
+	if bool(_confirmed_attack_maps.get(map_id, false)):
+		return {}
+	var key: String = "%s|%d" % [map_id, victim.get_instance_id()]
+	if bool(_pending_attack_confirms.get(key, false)):
+		_pending_attack_confirms.erase(key)
+		_confirmed_attack_maps[map_id] = true
+		return {}
+	_pending_attack_confirms[key] = true
+	return {"verdict": verdict}
+
 # ---------------------------------------------------------------------------
 # Witness pipeline (Phase 5) — the centerpiece
 # ---------------------------------------------------------------------------
@@ -270,7 +309,61 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor) -> Arra
 		out.append({"witness": c, "sees_actor": sees_actor})
 	return out
 
-func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary) -> void:
+## A crime named by statute instead of detected from an act: dialogue's
+## report_crime ("the clerk saw you pocket the seal"). Same verdict, log line,
+## signal and outcry pipeline as report(), so counterplay (silencing a
+## witness before the fuse runs out) still works. The jurisdiction's code
+## decides, never the caller: {} when the statute is not law there, or the
+## actor is not someone the law applies to. `witnesses`: the characters who
+## saw it, each identifying the actor; empty means whoever has line of sight,
+## exactly as report() fans out.
+func accuse(actor, statute_id: String, witnesses: Array = [], law_faction: String = "") -> Dictionary:
+	var effective = attribute(actor)
+	if effective == null or not is_instance_valid(effective) or not ("faction_id" in effective):
+		return {}
+	if not str(effective.faction_id) in LawDatabase.applies_to():
+		return {}
+	if law_faction.is_empty():
+		law_faction = current_law_faction()
+	if law_faction.is_empty():
+		return {}
+	var flat: Dictionary = LawDatabase.flattened_code(LawDatabase.code_for_faction(law_faction))
+	if not flat.has(statute_id):
+		return {}
+	var verdict: Dictionary = {
+		"statute": statute_id,
+		"display_name": str(LawDatabase.statute_def(statute_id).get("display_name", statute_id.capitalize())),
+		"severity": int(flat[statute_id]),
+		"law_faction": law_faction,
+	}
+	var payload: Dictionary = {"law_faction": law_faction}
+	if effective is Node2D:
+		payload["crime_pos"] = effective.global_position
+	var actor_name: String = str(effective.Name) if ("Name" in effective) else "Someone"
+	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
+		actor_name, verdict["display_name"], verdict["severity"], law_faction])
+	_party_float(effective, "Crime: " + str(verdict["display_name"]), CRIME_FLOAT_COLOR)
+	crime_committed.emit(effective, verdict, payload)
+	# Same filter as witnesses_of: living, AI-driven, not the party.
+	var game = get_tree().current_scene
+	var party: Array = game.party_chars if (game != null and "party_chars" in game) else []
+	var named: Array = []
+	for w in witnesses:
+		if not (w is Node2D) or not is_instance_valid(w) or w == effective or w in party:
+			continue
+		if not w.has_method("is_alive") or not w.is_alive() or w.get_node_or_null("AI") == null:
+			continue
+		named.append({"witness": w, "sees_actor": true})
+	_fan_out_witnesses(effective, effective, verdict, payload, named)
+	return verdict
+
+## Pardon: square with the law with no fine, no time and nothing returned.
+## Clears the outlaw mark and manhunts; the ledger keeps the records, settled.
+func pardon(law_faction: String) -> void:
+	FactionDatabase.settle(law_faction, "pardon")
+	clear_manhunts(law_faction)
+
+func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary, named_witnesses: Array = []) -> void:
 	var crime_pos: Vector2 = payload.get("crime_pos", Vector2.INF)
 	if crime_pos == Vector2.INF:
 		if physical_actor is Node2D and is_instance_valid(physical_actor):
@@ -298,7 +391,8 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		})
 	var victim_covered: bool = false
 	var fuses: int = 0
-	for entry in witnesses_of(crime_pos, crime_elev, physical_actor):
+	var entries: Array = named_witnesses if not named_witnesses.is_empty() else witnesses_of(crime_pos, crime_elev, physical_actor)
+	for entry in entries:
 		var witness = entry["witness"]
 		var is_victim: bool = witness == victim
 		# D7: LOS to the actor means identified UNLESS disguised. The victim
@@ -352,6 +446,7 @@ func on_outcry_resolved(crime_id: int, fired: bool) -> void:
 	if bool(entry["escaped"]):
 		return
 	GameLog.add_entry("No one raised the alarm.")
+	_party_float(entry.get("actor"), "No alarm", Color(0.7, 0.7, 0.7))
 	_grant_thrill(entry.get("actor"), str(entry.get("thrill_key", "")))
 
 ## thrill_of_sin, correctly triggered: no static `criminal` ability trait
@@ -479,6 +574,8 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 		who = str(perp.Name)
 	GameLog.add_entry("The alarm is raised: %s — %s stands accused." % [
 		str(payload.get("display_name", "a crime")), who])
+	if identified:
+		_party_float(perp, "Accused: " + str(payload.get("display_name", "a crime")), CRIME_FLOAT_COLOR)
 	# Consequence (identified only — an anonymous alarm rouses the town but
 	# moves no standing, writes no ledger, sets no manhunt): standing drops
 	# by severity, the override flips (D8's binary — enforcement is one
@@ -548,6 +645,9 @@ func settle_with(law_faction: String, mode: String) -> void:
 	FactionDatabase.settle(law_faction, mode)
 	clear_manhunts(law_faction)
 	GameLog.add_entry("You are square with %s. Nobody has forgotten." % law_faction)
+	var law_name: String = str(FactionDatabase.get_faction_data(law_faction).get("name", law_faction)) \
+		if FactionDatabase.has_faction(law_faction) else law_faction
+	_party_float(protagonist, "Square with " + law_name, Color(0.55, 1.0, 0.55))
 
 ## A settled account calls off the hunt: every enforcer of this law faction
 ## drops its manhunt_target.

@@ -587,12 +587,6 @@ func _grant_equipment(character, equipment: Array) -> void:
 		item_data["source"] = "starting_equipment"
 		var quantity: int = entry.get("quantity", item_data.get("quantity", 1))
 
-		# Grant the item to inventory
-		for i in range(quantity):
-			var single = item_data.duplicate()
-			single["quantity"] = 1
-			inventory.add_item(single)
-
 		# Auto-equip items that have an equip_slot defined.
 		# Items.json fields are sometimes literal `null` (e.g. alcohol, gold) —
 		# coerce to "" so the typed assignment doesn't crash.
@@ -600,11 +594,26 @@ func _grant_equipment(character, equipment: Array) -> void:
 		var equip_slot: String = "" if equip_slot_raw == null else str(equip_slot_raw)
 		var item_name_raw = item_data.get("display_name", item_id)
 		var item_name: String = str(item_id) if item_name_raw == null else str(item_name_raw)
+		var hand_item: bool = equip_slot == "Main Hand" or equip_slot == "Off Hand"
+
+		# Grant the item to inventory. A hand item's WeaponShape IS the item, as
+		# for a picked-up weapon: it used to get an item dict here as well, a
+		# hidden copy that every window had to skip, the carry cap had to
+		# exempt, and every give, drop or trade had to clean up after.
+		if not hand_item:
+			for i in range(quantity):
+				var single = item_data.duplicate()
+				single["quantity"] = 1
+				inventory.add_item(single)
+
 		if not equip_slot.is_empty() and not item_name.is_empty():
-			if equip_slot == "Main Hand" or equip_slot == "Off Hand":
+			if hand_item:
 				var hand = "Main" if equip_slot == "Main Hand" else "Off"
 				if inventory.has_method("equip_weapon_from_data"):
 					inventory.equip_weapon_from_data(item_data, hand)
+					# A second dagger goes in the pack, ready to draw.
+					for i in range(1, quantity):
+						inventory.stow_weapon_from_data(item_data)
 				elif inventory.has_method("equip_ability_from_id"):
 					inventory.equip_ability_from_id(item_name, hand)
 			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:

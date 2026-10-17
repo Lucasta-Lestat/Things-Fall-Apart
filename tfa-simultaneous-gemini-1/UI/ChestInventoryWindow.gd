@@ -209,6 +209,9 @@ func _transfer_slot_to_selected(slot: PanelContainer) -> void:
 	var selected = _resolve_target_character()
 	if selected == null:
 		GameLog.add_entry("No one is free to take that.")
+		# Over the container too: the game log starts closed.
+		if chest_item is Node2D and chest_item.is_inside_tree():
+			Globals.show_floating_text("No one free", chest_item.global_position, chest_item, Color(1.0, 0.6, 0.4), 0, Globals.NOTICE_FONT_SIZE)
 		SfxManager.play_ui("trade_decline")
 		return
 	# A container must never receive from itself: with corpse looting the
@@ -395,8 +398,6 @@ func _drop_data(at_position: Vector2, data) -> void:
 				else:
 					src_inv.stowed_items.erase(weapon)
 					src_inv.emit_signal("weapon_unequipped", weapon)
-				# A starting weapon's hidden hand dict leaves with it.
-				src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 				weapon.queue_free()
 				chest_item.contents.append(weapon_data)
 		SfxManager.play_ui("chest_item_in")

@@ -362,7 +362,7 @@ func _hand_ghosts(c, item_id: String) -> int:
 # Cancel restores the party's pack from its snapshot. It used to rebuild the
 # hands from item dicts, freeing the AbilityShapes (stowed spells) and every
 # weapon node (inv-1). A weapon given away mid-trade comes back on Cancel, and
-# a starting weapon's hidden hand dict goes with it and comes back with it.
+# no hidden hand dict appears beside it (starting weapons no longer leave one).
 func _case_trade_cancel_keeps_shapes() -> void:
 	var npc = _npc()
 	var p0 = game.party_chars[0]
@@ -405,9 +405,11 @@ func _case_trade_cancel_keeps_shapes() -> void:
 	_check("shapes.given-weapon-leaves", mid == wp_before - 1, "%d -> %d" % [wp_before, mid])
 	_check("shapes.given-weapon-returns", _count_shapes(p0, WS) == wp_before, "%d -> %d" % [mid, _count_shapes(p0, WS)])
 	_check("shapes.given-weapon-abilities-kept", _count_shapes(p0, AS) == ab_before)
-	if ghosts_before > 0:
-		_check("shapes.given-weapon-ghost-leaves", ghosts_mid == ghosts_before - 1, "%d -> %d" % [ghosts_before, ghosts_mid])
-		_check("shapes.given-weapon-ghost-returns", _hand_ghosts(p0, given_id) == ghosts_before, "%d -> %d" % [ghosts_mid, _hand_ghosts(p0, given_id)])
+	# Round 3: a starting weapon is its WeaponShape alone, so no hidden hand
+	# dict exists to leave or come back (these two checks replace the old
+	# ghost-leaves / ghost-returns pair, which only ran while one existed).
+	_check("shapes.given-weapon-no-hand-dict", ghosts_before == 0 and ghosts_mid == 0, "%d / %d" % [ghosts_before, ghosts_mid])
+	_check("shapes.given-weapon-no-hand-dict-after-cancel", _hand_ghosts(p0, given_id) == 0, str(_hand_ghosts(p0, given_id)))
 
 # ---------------------------------------------------------------------------
 # Chest window (full pack, no recipient) and locked containers
@@ -582,6 +584,12 @@ func _case_context_menu_options() -> void:
 	_check("menu.flag-reset", not game.context_menu_open)
 	_drop_temp(mute)
 
+# The menu's Attack orders every selected member, not just the actor.
+func _clear_party_queues() -> void:
+	for c in game.party_chars:
+		if is_instance_valid(c) and c.action_queue:
+			c.action_queue.clear_queue()
+
 func _case_context_attack() -> void:
 	var p0 = game.party_chars[0]
 	var npc = _npc()
@@ -601,7 +609,7 @@ func _case_context_attack() -> void:
 	PauseManager.is_paused = false
 	var q: Array = p0.action_queue.queue
 	_check("attack.paused-queues", q.size() == 1 and q[0].data.get("target") == npc, str(q.size()))
-	p0.action_queue.clear_queue()
+	_clear_party_queues()
 
 	# No actor and nobody selected: the log says so.
 	menu.actor_character = null
@@ -635,6 +643,8 @@ func _case_context_attack() -> void:
 		_check("attack.frightened-refuses", pc.action_queue == null or pc.action_queue.queue.is_empty())
 		_check("attack.frightened-says-why", _last_log().begins_with("%s can't take orders:" % pc.Name), _last_log())
 		pc.condition_manager.remove_condition("frightened")
+		# The rest of the selection took the order (r3: all selected attack).
+		_clear_party_queues()
 	else:
 		_check("attack.frightened-fixture", false, "apply_condition(frightened) failed")
 	_drop_temp(pc)
@@ -701,7 +711,8 @@ func _case_services_panel() -> void:
 		game.known_services_per_region[region_id].erase(uid)
 	panel._repopulate()
 	await _await_frames(2)
-	_check("svc.visible", panel.visible)
+	# Shown only while it lists something (r3: hidden until a discovery).
+	_check("svc.visible-iff-listed", panel.visible == not panel._cards.is_empty(), "%s %d" % [panel.visible, panel._cards.size()])
 	_check("svc.unseen-not-listed", _card_for(panel, uid).is_empty())
 	panel._value_baseline["harness_other"] = 42.0
 	game.mark_service_seen(smith)
@@ -711,6 +722,7 @@ func _case_services_panel() -> void:
 		if card.get("entry", {}).get("npc_uid", "") == uid:
 			listed += 1
 	_check("svc.newly-seen-listed", listed == 1, str(listed))
+	_check("svc.visible", panel.visible)
 	_check("svc.other-baselines-kept", float(panel._value_baseline.get("harness_other", -1.0)) == 42.0)
 	var card: Dictionary = _card_for(panel, uid)
 	if card.is_empty():

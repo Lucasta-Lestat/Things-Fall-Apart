@@ -198,7 +198,7 @@ func _case_pick_up() -> void:
 	var helm2 = game.create_item("full_face_helmet", p.global_position + Vector2(10, 0))
 	await _await_frames(1)
 	var fillers: int = 0
-	# slots_used: the hidden hand-weapon dicts take no slot (equipment lane).
+	# slots_used: one slot per item dict; weapons are nodes and take none.
 	while p.inventory.slots_used() < p.inventory.max_slots:
 		p.inventory.items.append({"id": "gc_filler", "display_name": "Filler"})
 		fillers += 1

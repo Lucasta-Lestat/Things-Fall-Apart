@@ -105,6 +105,9 @@ var _roof_view_auto: bool = false
 const SELECTION_CIRCLE_COLOR = Color(1, 1, 1, 0.8)  # White (primary)
 const SELECTION_CIRCLE_COLOR_MULTI = Color(0.5, 0.7, 1.0, 0.5)  # Blue (multi-select)
 const SELECTION_CIRCLE_WIDTH = 1.0
+# Floating refusals ("Too far", "No water near"): the game log starts closed,
+# so a refused order says why over the character as well as in the log.
+const REFUSAL_COLOR := Color(1.0, 0.6, 0.4)
 
 # ---------------------------------------------------------------------------
 # Party state — persists across map transitions and save/load
@@ -316,9 +319,10 @@ func _ready() -> void:
 	# While paused: a faint line from each visible NPC to whoever it is after.
 	# World-space child of Game (not GameUI), so it survives map changes.
 	add_child(preload("res://UI/TargetIntentOverlay.gd").new())
-	# Character, structure and hazard readouts on the hover tooltip; wind on the HUD.
+	# Character, structure and hazard readouts on the hover tooltip; wind in
+	# the clock cluster, beside the date and the downtime (moon) button.
 	add_child(preload("res://UI/WorldHoverInfo.gd").new())
-	hud_status.add_widget(preload("res://UI/WindIndicator.gd").new())
+	$GameUI.add_child(preload("res://UI/WindIndicator.gd").new())
 
 	# Stealth mode readouts: the STEALTH badge on the status strip, and the
 	# world-space overlay (in-view eyes, noise rings).
@@ -1940,6 +1944,13 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 			options.append("Resume" if bool(target.get("hold_position")) else "Wait Here")
 			# A companion is never an attack target.
 			options.erase("Attack")
+		elif not "Attack" in options and not FactionDatabase.are_hostile("player", target.faction_id) \
+				and not (CrimeManager.attribute(target) in party_chars):
+			# The peaceful: left-click talks to them, so this is the deliberate
+			# way to start a fight (a right-click on a hostile swings instead of
+			# opening a menu). The menu names the crime and asks again when the
+			# law would (context_menu.gd). Not the party's own summons.
+			options.append("Attack")
 		# "Talk" only when they have something to say: active_dialogue_id is
 		# the talk cursor's and the left-click fast path's test too, so the
 		# menu never offers a conversation that opens nothing.
@@ -2004,6 +2015,8 @@ func pick_up_item(item: Item) -> bool:
 		return false
 	var character = _resolve_pickup_character()
 	if character == null:
+		# Over the item: the log is closed by default, so a refusal must float.
+		item.show_floating_text("No one free", REFUSAL_COLOR)
 		GameLog.add_entry("No one is free to pick that up.")
 		return false
 	# Reach gate: _resolve_pickup_character returns primary_selected with no
@@ -2012,7 +2025,7 @@ func pick_up_item(item: Item) -> bool:
 	# guardhouse, and every witness anchor is wrong. Walk-to-then-take is
 	# already expressible through the action queue.
 	if character.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
-		GameLog.add_entry("%s is too far away to reach that." % character.Name)
+		character.notify("Too far", REFUSAL_COLOR, "%s is too far away to reach that." % character.Name)
 		return false
 	if _refuse_during_trade(character, "pick up", "the " + (item.display_name if item.display_name != "" else str(item.id).replace("_", " "))):
 		return false
@@ -2109,7 +2122,7 @@ func show_chest_inventory(item: Item) -> void:
 	# Same reach gate as pick_up_item — this site previously had zero gates.
 	var opener = _resolve_pickup_character()
 	if opener != null and opener.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
-		GameLog.add_entry("%s is too far away to reach that." % opener.Name)
+		opener.notify("Too far", REFUSAL_COLOR, "%s is too far away to reach that." % opener.Name)
 		return
 	# Locked containers (an Items.json "key") open only for a party carrying the
 	# key; otherwise the chest floats "Locked" and the log says so. Corpses
@@ -2129,7 +2142,7 @@ func show_loot_window(corpse) -> void:
 		return
 	var opener = _resolve_pickup_character()
 	if opener != null and opener.global_position.distance_to(corpse.global_position) > CrimeManager.PICKUP_REACH:
-		GameLog.add_entry("%s is too far away to reach that." % opener.Name)
+		opener.notify("Too far", REFUSAL_COLOR, "%s is too far away to reach that." % opener.Name)
 		return
 	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
 	var w = ChestWindow.instantiate()
@@ -3264,6 +3277,7 @@ func _process(delta: float) -> void:
 	# On the world map, reveal city warps only when the banner unit is near.
 	if current_map_data.get("is_world_map", false):
 		_update_world_warp_reveal()
+		_tick_banner_party_conditions(delta)
 
 func _update_warp_hover_labels() -> void:
 	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
@@ -4659,7 +4673,10 @@ func toggle_world_map() -> void:
 	if current_map_data.get("is_world_map", false):
 		var nearest = _nearest_revealed_warp()
 		if nearest == null:
-			GameLog.add_entry("No settlement within reach.")
+			if player and is_instance_valid(player) and player.has_method("notify"):
+				player.notify("No settlement near", REFUSAL_COLOR, "No settlement within reach.")
+			else:
+				GameLog.add_entry("No settlement within reach.")
 			return
 		var target_map: String = String(nearest.get_meta("target_map", ""))
 		if target_map.is_empty():
@@ -4705,6 +4722,31 @@ func _update_world_warp_reveal() -> void:
 		# Toggling the collision_layer also gates left-click teleport probing.
 		area.collision_layer = CollisionLayers.WARPS if revealed else 0
 
+## Companions folded into the world-map banner have no body to tick their
+## conditions: expire them in their party_state snapshots on the in-world
+## clock, logging each as it runs out (see scripts/TravelConditionClock.gd).
+## Swept four times a second, not every frame: these last hours, and at the
+## world map's 7200x a quarter second is half an in-world hour.
+var _banner_conditions_wait: float = 0.0
+func _tick_banner_party_conditions(delta: float = 0.0) -> void:
+	_banner_conditions_wait -= delta
+	if _banner_conditions_wait > 0.0:
+		return
+	_banner_conditions_wait = 0.25
+	var with_body := {}
+	for idx in range(party_chars.size()):
+		var c = party_chars[idx]
+		if is_instance_valid(c):
+			with_body[int(c.get_meta("party_index", idx))] = true
+	# Over the banner too: the log is closed by default, and these companions
+	# have no body of their own to float over.
+	var banner = player if player and is_instance_valid(player) and player.has_method("notify") else null
+	for line in preload("res://scripts/TravelConditionClock.gd").expire_snapshots(party_state, with_body, TimeManager.absolute_time()):
+		if banner != null:
+			banner.notify(line.trim_suffix("."), Color(0.75, 0.85, 1.0), line)
+		else:
+			GameLog.add_entry(line)
+
 func set_city_controller(city_id: String, faction_id: String) -> void:
 	"""Quest hooks / scripted events call this to flip a city's territory color
 	on the world map. Silently no-ops on local maps (the overlay isn't loaded).
@@ -4722,7 +4764,7 @@ func gather_water_at_party() -> void:
 	var actor: ProceduralCharacter = primary_selected
 	var actor_tile: Vector2i = GridManager.world_to_map(actor.global_position)
 	if not _is_water_adjacent(actor_tile):
-		GameLog.add_entry("No water within reach.")
+		actor.notify("No water near", REFUSAL_COLOR, "No water within reach.")
 		return
 	if not actor.inventory:
 		return
@@ -4962,8 +5004,9 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 				character._on_condition_suppressed(inst)
 	if alive:
 		character._refresh_condition_display()
-		# _on_condition_applied's Invisible translucency.
-		if cm.has_condition("invisible"):
+		# _on_condition_applied's Invisible translucency (not while an attack
+		# has it suppressed).
+		if cm.has_active_condition("invisible"):
 			character.modulate.a = 0.35
 
 # ---------------------------------------------------------------------------
@@ -5352,6 +5395,13 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			if idx >= -1 and idx < character.inventory.equipped_weapons.size():
 				character.inventory.set_active_weapon(idx)
  
+	# A snapshot from before starting weapons stopped leaving a hidden item dict
+	# beside their WeaponShape: drop those copies, and stow any weapon an AI
+	# picked up as a dict (Inventory.migrate_hand_dicts). A corpse's weapon
+	# dicts are its loot, so the dead keep theirs.
+	if character.inventory and state.has("inventory_items") and character.current_health > 0:
+		character.inventory.migrate_hand_dicts()
+
 	# --- Conditions: restore saved instances (after inventory, which the
 	# grants_ability re-grant guard relies on) ---
 	if character.condition_manager and state.has("condition_state"):

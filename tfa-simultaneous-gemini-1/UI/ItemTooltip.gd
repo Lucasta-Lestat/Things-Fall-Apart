@@ -76,8 +76,9 @@ static func trade_value(entry: Dictionary) -> float:
 
 ## Casting rules for an ability slot (party panel): "Interruptible" when a
 ## windup can be broken by a hit, knockback or being incapacitated,
-## "Concentration" for a spell that holds its focus, and each equipment need
-## ("Needs a shield") before a cast fails on it.
+## "Concentration: spends N focus, then holds up to N more while it lasts" for
+## a Concentration spell, and each equipment need ("Needs a shield") before a
+## cast fails on it.
 static func ability_lines(entry: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	var aid := str(entry.get("ability_id", ""))
@@ -87,10 +88,15 @@ static func ability_lines(entry: Dictionary) -> PackedStringArray:
 	var data: Dictionary = AbilityDatabase.get_ability_data(aid)
 	if float(data.get("cast_time", 0.0)) > 0.0 and bool(data.get("interruptible", true)):
 		out.append("Interruptible")
-	# Holds its focus while what it installed lasts (lavender focus pips).
+	# Pays its focus (Arcane tier) like any cast, then holds up to as much
+	# again while what it installed lasts (lavender focus pips).
 	var ab_traits = data.get("traits", {})
 	if ab_traits is Dictionary and (ab_traits.has("Concentration") or ab_traits.has("concentration")):
-		out.append("Concentration")
+		var focus_cost: int = int(ab_traits.get("Arcane", 0))
+		if focus_cost > 0:
+			out.append("Concentration: spends %d focus, then holds up to %d more while it lasts" % [focus_cost, focus_cost])
+		else:
+			out.append("Concentration")
 	var reqs = data.get("requirements", {})
 	if reqs is Dictionary:
 		for t in reqs.get("traits", []):
@@ -327,6 +333,9 @@ static func effect_lines(entry: Dictionary) -> PackedStringArray:
 		"item":
 			if raw is Dictionary:
 				out.append_array(EquipmentEffects.worn_lines(raw))
+				# Food is the ration (the "Ration" trait): say so where it's carried.
+				if ItemDatabase.is_ration(raw):
+					out.append("Ration: Burn a Ration at camp offers the cheapest food carried")
 		"weapon":
 			out.append_array(EquipmentEffects.held_lines(raw))
 	return out

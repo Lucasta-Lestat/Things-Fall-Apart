@@ -502,8 +502,8 @@ func _refresh_inventory(data: Dictionary) -> void:
 		return
 
 	# Item slots used vs the hard cap that makes pick-ups and transfers fail.
-	# Weapons, abilities and the hidden hand-weapon dicts don't count
-	# (Inventory.slots_used, the count add_item checks).
+	# Weapons and abilities don't count (Inventory.slots_used, the count
+	# add_item checks).
 	var inv_label: Label = data.get("inv_label")
 	if inv_label:
 		var used: int = character.inventory.slots_used()
@@ -562,10 +562,10 @@ func _set_ability_costs(entry: Dictionary, character) -> void:
 func _build_inventory_entries(inventory) -> Array:
 	var entries: Array = []
 
-	# 1. Dictionary items. Skip ghost dict entries for hand-slot equipment — those
-	# are also represented by a WeaponShape/AbilityShape in main_hand/off_hand/stowed
-	# (TopDownCharacterDatabase calls add_item AND equip_weapon_from_data for starter
-	# weapons), and we don't want both rows.
+	# 1. Dictionary items. Skip hand-slot weapon dicts: a living character's
+	# weapons are WeaponShapes (listed below). Only a corpse's flattened loot
+	# (Inventory.flatten_for_corpse) holds them now, and that is looted from the
+	# corpse window; starting weapons no longer leave a hidden copy here.
 	for i in range(inventory.items.size()):
 		var item: Dictionary = inventory.items[i]
 		var equip_slot: String = str(item.get("equip_slot", ""))
@@ -1069,8 +1069,6 @@ func _transfer_weapon(source_char, target_char, weapon) -> void:
 	else:
 		src_inv.stowed_items.erase(weapon)
 		src_inv.emit_signal("weapon_unequipped", weapon)
-	# A starting weapon's hidden hand dict leaves with it.
-	src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 	weapon.queue_free()
 	target_char.inventory.stow_weapon_from_data(weapon_data)
 
@@ -1560,8 +1558,6 @@ func _drop_split(character, item_index: int, item_data: Dictionary, slider: HSli
 
 # Remove a WeaponShape node from wherever it lives in the inventory
 # (main hand, off hand, or stowed). Returns true if found and removed.
-# A starting weapon's hidden hand dict leaves with it (Drop, and the planned
-# or paused weapon throw).
 func _remove_weapon_from_inventory(inventory, weapon) -> bool:
 	if weapon == inventory.main_hand_item:
 		inventory.unequip_hand("Main")
@@ -1574,7 +1570,6 @@ func _remove_weapon_from_inventory(inventory, weapon) -> bool:
 		inventory.emit_signal("weapon_unequipped", weapon)
 	else:
 		return false
-	inventory.drop_hand_ghost(str(weapon.id))
 	return true
 
 func _throw_weapon(character, entry: Dictionary) -> void:
@@ -2046,7 +2041,7 @@ func _resource_max(character, resource_name: String) -> int:
 # damage and ally-witness hooks, soul binding), shown under the pip count.
 const RESOURCE_RULES := {
 	"adrenaline": "Recovers over time (Constitution). +1 when hit or when a nearby ally is hurt.",
-	"focus": "Recovers over time (Intelligence). -1 when hit; a hit that would dip into focus held by Concentration ends the spell instead.",
+	"focus": "Recovers over time (Intelligence). -1 when hit; while concentrating, a hit with no free focus left to take (only focus held by Concentration) ends the spell instead.",
 	"harmony": "Recovers over time (Will).",
 	"devotion": "Recovers over time (Will).",
 	"souls": "Gained by binding the souls of the dead; extras become Soul items.",
@@ -2222,6 +2217,8 @@ func _update_conditions(data: Dictionary, character) -> void:
 		var tip: String = instance.get_tooltip_text(game_time)
 		if children[i].tooltip_text != tip:
 			children[i].tooltip_text = tip
+		# Suppressed (the cloak's Invisible an attack broke): dimmed, as overhead.
+		children[i].modulate.a = 0.4 if instance.is_suppressed else 1.0
 	# The "+N" tag names the conditions it folds away.
 	if overflow > 0 and children.size() > cond_ids.size():
 		var hidden_names: PackedStringArray = []

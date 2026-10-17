@@ -1070,9 +1070,12 @@ func _on_game_unpaused_convert_path() -> void:
 	# gated), and every NPC's path stays permanently empty so the is_empty()
 	# early-out above still costs them nothing.
 
-	# Out cold, stunned, fleeing or compelled: the plan is dropped, not run.
+	# Out cold, fleeing or compelled: the plan is dropped, not run. Stunned,
+	# Frozen or Apathetic: it converts as usual but waits, paused, until the
+	# character can act (_update_plan_pause).
 	var plan_blocker := _get_plan_blocking_condition()
-	if plan_blocker != null:
+	if plan_blocker != null and _plan_blocker_drops(plan_blocker):
+		_plan_paused_by = ""
 		_abandon_plan(plan_blocker)
 		return
 
@@ -1106,6 +1109,12 @@ func _on_game_unpaused_convert_path() -> void:
 		action_queue.queue_action(a.type, step_data)
 	tactical_path.is_executing = true
 	path_drawer.queue_redraw()
+	if plan_blocker != null:
+		if _plan_paused_by == "":
+			_pause_plan(plan_blocker)
+		else:
+			# Re-planned while still paused: judge the new route from here.
+			_plan_route_blocked_before = _plan_route_blocked_segments()
 
 func _on_tactical_action_completed(action: ActionQueue.Action) -> void:
 	# Remove action nodes as they execute; path line trimming is handled
@@ -1197,7 +1206,8 @@ func abort_planning_input() -> void:
 ## only the path's own ("from_path") steps; direct paused orders stay queued.
 ## Also cleared by _begin_ice_slide / _begin_fall (_drop_plan_on_lost_control
 ## cancels the whole plan, the running MOVE included), so a slipping or
-## falling member's AI gets its movement back at once.
+## falling member's AI gets its movement back at once. A plan PAUSED by a
+## stun (_update_plan_pause) still counts: it resumes when the stun ends.
 func has_player_orders() -> bool:
 	if action_queue == null:
 		return false
@@ -1247,6 +1257,173 @@ func _abandon_plan(blocking: ConditionInstance) -> void:
 			cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
 		notify("Can't follow plan", Color(1.0, 0.6, 0.4), "%s abandons their plan: %s." % [Name, cond_name])
 
+## The plan's state while a condition stops this character acting: the
+## condition's name while the plan is paused, "" otherwise. Paused, the action
+## queue holds every step where it is (ActionQueue._process) and PathDrawer
+## dims the route and marks it paused; the player can still edit or clear it.
+var _plan_paused_by: String = ""
+## The legs of the route ahead that were already blocked when the plan paused
+## (_plan_route_blocked_segments): only a leg that was clear then and isn't
+## now counts as newly blocked.
+var _plan_route_blocked_before: Dictionary = {}
+
+## True while this character's plan waits out Stunned, Frozen or Apathetic.
+## A plan cleared during a planning pause stops counting at once (its flag
+## clears on the next unpaused frame), so no pause badge is left on nothing.
+func is_plan_paused() -> bool:
+	return _plan_paused_by != "" and is_alive() \
+		and (has_player_orders() or (tactical_path != null and not tactical_path.is_empty()))
+
+## The condition holding a paused plan ("Stunned"), or "" (PathDrawer's badge).
+func plan_pause_cause() -> String:
+	return _plan_paused_by if is_plan_paused() else ""
+
+## Whether `blocking` ends the plan instead of pausing it. Unconscious ends the
+## fight for them; the conditions that take the legs or the will (Panicked,
+## Frightened, the compulsions) exist to replace the plan (ai.gd
+## _break_player_orders tears an unselected member's plan down the same way).
+## The "incapacitate" conditions that only stop the body (Stunned, Frozen,
+## Apathetic) pause it.
+func _plan_blocker_drops(blocking: ConditionInstance) -> bool:
+	if blocking == null or blocking.condition == null:
+		return true
+	return blocking.condition.id == "unconscious" or not blocking.condition.traits.has("incapacitate")
+
+## Keeps the plan in step with whether this character can act. Runs every
+## unpaused frame while there are orders or a paused plan, and the moment an
+## incapacitating condition lands (_react_to_incapacitation): pauses the plan
+## while the character can't act, resumes it when they can, and drops it, with
+## the reason, when it can't go on.
+func _update_plan_pause() -> void:
+	if not has_player_orders():
+		# Cleared while paused (Esc, a manual move, a fall, death): nothing
+		# left to resume.
+		if _plan_paused_by != "":
+			_plan_paused_by = ""
+			if path_drawer != null:
+				path_drawer.queue_redraw()
+		return
+	var blocker := _get_plan_blocking_condition()
+	if blocker != null:
+		if _plan_blocker_drops(blocker):
+			_plan_paused_by = ""
+			_abandon_plan(blocker)
+		elif _plan_paused_by == "":
+			_pause_plan(blocker)
+		return
+	if _plan_paused_by != "":
+		_resume_plan()
+
+## Hold the plan where it is: the body stops (the running MOVE picks up from
+## wherever it stands when the plan resumes). Party members say so.
+func _pause_plan(blocking: ConditionInstance) -> void:
+	var cond_name := "Incapacitated"
+	if blocking != null and blocking.condition:
+		cond_name = blocking.condition.display_name if blocking.condition.display_name != "" else blocking.condition.id.capitalize()
+	_plan_paused_by = cond_name
+	_plan_route_blocked_before = _plan_route_blocked_segments()
+	_nav_waypoints.clear()
+	_nav_index = 0
+	is_moving = false
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	if is_party_member():
+		notify("Plan paused", Color.LIGHT_BLUE, "%s is %s: plan paused." % [Name, cond_name])
+
+## The character can act again: the plan carries on from where it stopped, or
+## is dropped with the reason when it can't (_plan_resume_problem).
+func _resume_plan() -> void:
+	_plan_paused_by = ""
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	var problem := _plan_resume_problem()
+	if problem != "":
+		_abandon_plan(null)
+		if is_party_member():
+			notify("Plan dropped", Color(1.0, 0.6, 0.4), "%s recovers, but %s: plan dropped." % [Name, problem])
+		return
+	if action_queue != null:
+		action_queue.resume_current()
+	if is_party_member():
+		notify("Plan resumes", Color.LIGHT_BLUE, "%s recovers: plan resumes." % Name)
+
+## Why a paused plan can't go on, or "" when it can: a planned attack's target,
+## or every character a planned spell picked, is dead or gone; or the route
+## ahead, walkable when the plan paused, is blocked now.
+func _plan_resume_problem() -> String:
+	if action_queue == null:
+		return ""
+	var steps: Array = []
+	if action_queue.current_action != null:
+		steps.append(action_queue.current_action)
+	steps.append_array(action_queue.get_queue())
+	for step in steps:
+		var lost := _plan_step_target_lost(step)
+		if lost != "":
+			return lost
+	for leg in _plan_route_blocked_segments():
+		if not _plan_route_blocked_before.has(leg):
+			return "the way is blocked"
+	return ""
+
+## "Bandit is dead" / "the target is gone" when every character `step` aims at
+## (an attack's target, a spell's picked targets) is dead or has left; else "".
+## A spell aimed at a spot, or following a designated character, still has
+## somewhere to land (AbilityManager falls back to the planned point).
+func _plan_step_target_lost(step) -> String:
+	var aimed: Array = []
+	if step.type == ActionQueue.ActionType.ATTACK_TARGET:
+		aimed = [step.data.get("target")]
+	elif step.type == ActionQueue.ActionType.USE_ABILITY:
+		aimed = step.data.get("targets", [])
+	if aimed.is_empty():
+		return ""
+	var reason := ""
+	for t in aimed:
+		var gone: bool = not is_instance_valid(t) or not t.is_inside_tree()
+		var dead: bool = not gone and t.has_method("is_alive") and not t.is_alive()
+		if not gone and not dead:
+			return ""
+		if reason == "":
+			reason = "%s is dead" % str(t.get("Name")) if dead else "the target is gone"
+	return reason
+
+## The legs of the route the plan still has to walk that aren't walkable for
+## this body (a locked door or a wall across them), keyed by their end points:
+## the same test the path pen applies while drawing (PathInputHandler.
+## _segment_standable), along the running MOVE from the leg it is on and every
+## later MOVE. Compared leg by leg against the same test when the plan paused
+## (_plan_route_blocked_before), so clutter one leg already brushed past never
+## reads as a new block, nor hides one on another leg. Roof routes count as
+## clear: the pen doesn't draw them.
+func _plan_route_blocked_segments() -> Dictionary:
+	var blocked := {}
+	if path_input_handler == null or action_queue == null or on_roof:
+		return blocked
+	var steps: Array = []
+	if action_queue.current_action != null:
+		steps.append(action_queue.current_action)
+	steps.append_array(action_queue.get_queue())
+	var points: Array = []
+	for step in steps:
+		if step.type != ActionQueue.ActionType.MOVE:
+			continue
+		var wps: Array = step.data.get("waypoints", [])
+		var from_i := 0
+		if step == action_queue.current_action:
+			from_i = maxi(0, int(step.data.get("waypoint_index", 0)) - 1)
+		for i in range(from_i, wps.size()):
+			points.append(wps[i])
+	for p in points:
+		if GridManager.has_roof(GridManager.world_to_map(p)):
+			return blocked
+	for i in range(points.size() - 1):
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
+		if not path_input_handler._segment_standable(a, b):
+			blocked[Vector4(a.x, a.y, b.x, b.y)] = true
+	return blocked
+
 # --- Throw targeting helpers ---
 
 func start_throw_targeting(item_index: int, item_data: Dictionary, source_node = null) -> void:
@@ -1290,9 +1467,6 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 			# unequip_hand signals for the hands; a stowed weapon needs it too,
 			# or its party-panel slot outlives the freed node.
 			inventory.emit_signal("weapon_unequipped", source_node)
-		# A starting weapon's hidden hand dict leaves with it.
-		if "id" in source_node:
-			inventory.drop_hand_ghost(str(source_node.id))
 		source_node.queue_free()
 		item = item_data
 	else:
@@ -1812,6 +1986,10 @@ func _refresh_condition_display() -> void:
 		tex_rect.set_meta("cond_id", cond_id)
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
+		# Suppressed (a worn cloak's Invisible an attack broke, Winter's Grip
+		# under fire): the icon stays, dimmed, until it comes back.
+		if instance.is_suppressed:
+			tex_rect.modulate.a = 0.4
 		# Stack count in the icon's bottom-right corner (Poisoned x7, Chilled x2).
 		if instance.stacks > 1:
 			var stack_label := Label.new()
@@ -1854,6 +2032,10 @@ func _react_to_incapacitation(instance: ConditionInstance) -> void:
 	interrupt_cast(cond_name, true)
 	if not active_concentrations.is_empty():
 		end_concentration("incapacitated", cond_name)
+	# Pause (or drop) the plan now, not next frame: a condition can land
+	# between our _process and the action queue's.
+	if has_player_orders():
+		_update_plan_pause()
 
 func _on_condition_removed(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -1885,6 +2067,25 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 		elif shown_gain <= 0 and is_party_member():
 			notify("Bide: nothing stored", Color.ORANGE,
 				"%s's Bide ends with nothing stored: no physical damage got through." % Name)
+	else:
+		_announce_condition_ran_out(instance)
+
+## Conditions that last an hour or more are travel and downtime ones (Force
+## March, Exhausted, Hungover, Blessed), authored in in-world hours.
+const LONG_CONDITION_SEC := 3600.0
+
+## A party member's condition running out on its own clock gets a float and a
+## log line when it is a long one, or anything at all on the world map, where
+## the 7200x clock ends conditions between glances. Combat-length conditions
+## on a local map stay quiet: they come and go every few seconds.
+func _announce_condition_ran_out(instance: ConditionInstance) -> void:
+	if instance == null or instance.condition == null or not is_party_member():
+		return
+	var lasted: float = instance.expires_at - instance.applied_at
+	if not on_world_map and lasted < LONG_CONDITION_SEC:
+		return
+	var cond_name: String = instance.get_display_name()
+	notify("%s ends" % cond_name, Color(0.75, 0.85, 1.0), "%s is no longer %s." % [Name, cond_name])
 
 func _on_condition_stacks_changed(_instance: ConditionInstance, _old_stacks: int, _new_stacks: int) -> void:
 	_refresh_condition_display()
@@ -2105,6 +2306,23 @@ func _apply_damage_type_condition(condition_id: String, limb = null, source: Nod
 		return
 	condition_manager.apply_condition(condition_id, source, 1, -2.0, limb)
 
+## The condition whose damage tick is being applied ("Burning"), named as the
+## cause when that damage cancels another condition. "" outside a tick.
+var _tick_condition_name: String = ""
+
+## canceled_by_trait for damage actually dealt (handle_damage_effect_based_on_type):
+## the damage type is the trait. The cause named is the tick's condition
+## ("Burning"), else the attacker's hit, else just the damage.
+func _cancel_conditions_by_damage(damage_type: String, attacker: Node) -> void:
+	if condition_manager == null or not is_alive():
+		return
+	var cause := "damage"
+	if _condition_tick_damage and _tick_condition_name != "":
+		cause = _tick_condition_name
+	elif is_instance_valid(attacker) and attacker is ProceduralCharacter:
+		cause = "%s's hit" % attacker.Name
+	condition_manager.cancel_by_trait(damage_type, cause, attacker)
+
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
 	if result.has("damage"):
 		var damage_amount = result["damage"]
@@ -2115,8 +2333,10 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var hit_limb: int = instance.target_limb if instance.target_limb != null else LimbType.TORSO
 		var damage_dict = {damage_type: damage_amount}
 		_condition_tick_damage = true
+		_tick_condition_name = instance.get_display_name()
 		take_damage(damage_dict, global_position, instance.source, hit_limb)
 		_condition_tick_damage = false
+		_tick_condition_name = ""
 
 	if result.has("heal"):
 		# Heals now go to the single HP pool. `target_limb` no longer affects
@@ -3810,15 +4030,14 @@ func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
 	_keep_alertness_indicator_upright()
-	# A drawn plan that's running when its character is knocked out, stunned,
-	# set fleeing or compelled is dropped at once, with a notice, before the
-	# action queue (a child, processed after us) can start its next step. Ahead
-	# of the forced movement below, so the drop's is_moving = false can't cancel
-	# the flee step that same frame starts.
-	if not PauseManager.is_paused and has_player_orders() and tactical_path != null and tactical_path.is_executing:
-		var plan_blocker := _get_plan_blocking_condition()
-		if plan_blocker != null:
-			_abandon_plan(plan_blocker)
+	# A plan whose character is stunned, frozen or apathetic is paused, and
+	# resumes when they can act again; knocked out, set fleeing or compelled,
+	# it is dropped. Either way at once, with a notice, before the action queue
+	# (a child, processed after us) can start its next step. Ahead of the
+	# forced movement below, so a drop's is_moving = false can't cancel the
+	# flee step that same frame starts.
+	if not PauseManager.is_paused and (has_player_orders() or _plan_paused_by != ""):
+		_update_plan_pause()
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)
@@ -6486,6 +6705,36 @@ func _equip_condition_held_elsewhere(cid: String) -> bool:
 			return true
 	return false
 
+## True when worn gear or a drawn weapon holds condition `cid` on us. A trait
+## that cancels such a condition only suppresses it for a while
+## (ConditionManager.cancel_by_traits); the item has it back after.
+func is_condition_equip_granted(cid: String) -> bool:
+	return _equip_condition_held_elsewhere(cid)
+
+## Display name of the worn item or drawn weapon holding condition `cid`, or
+## "" when none does ("Aldric's Invisible returns (Shadow Cloak).").
+func equip_source_name(cid: String) -> String:
+	var worn := {
+		EquipmentShape.EquipmentSlot.HEAD: head_equipment,
+		EquipmentShape.EquipmentSlot.TORSO: torso_equipment,
+		EquipmentShape.EquipmentSlot.BACK: back_equipment,
+		EquipmentShape.EquipmentSlot.LEGS: legs_equipment,
+		EquipmentShape.EquipmentSlot.FEET: feet_equipment,
+	}
+	for slot in _worn_slot_conditions:
+		if not cid in _worn_slot_conditions[slot]:
+			continue
+		var shape = worn.get(slot)
+		if shape != null and is_instance_valid(shape) and shape.has_meta("item_data") and shape.get_meta("item_data") is Dictionary:
+			return EquipmentEffects.item_name(shape.get_meta("item_data"))
+	for hand in _drawn_weapon_conditions:
+		if not cid in _drawn_weapon_conditions[hand]:
+			continue
+		var weapon = current_main_hand_item if hand == "Main" else current_off_hand_item
+		if weapon != null and is_instance_valid(weapon) and "display_name" in weapon and str(weapon.display_name) != "":
+			return str(weapon.display_name)
+	return ""
+
 ## A worn item's condition that ends while the item is still on (a purge by
 ## trait, or Illuminated evicting the cloak's Invisible) comes back once
 ## nothing blocks it: any condition leaving re-checks what is worn.
@@ -6817,12 +7066,47 @@ var visibility_mult: float = 1.0
 var _revealed_until: float = -1.0
 const REVEAL_SECONDS := 3.0
 
-## Attacking (Game.register_attack_start) or casting (use_ability) gives a
-## concealed character away for a few seconds. The binary "invisible"
-## condition is its own rule and is left alone.
-func reveal(seconds: float = REVEAL_SECONDS) -> void:
+## Attacking (Game.register_attack_start, a throw) or casting (use_ability)
+## gives a concealed character away for a few seconds. It breaks Invisible the
+## same way (dev: "Should attacking break it, as it reveals Shrouded? Yes"): a
+## worn Shadow Cloak's is suppressed for the same window and the cloak has it
+## back after; a timed one (a spell, a potion) simply ends. `cause` is
+## "attacking" or "casting", for the notice. `break_invisible` false spares
+## Invisible (use_ability: an instant cast that itself granted it).
+func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_invisible: bool = true) -> void:
 	if visibility_mult < 1.0:
 		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
+	if break_invisible:
+		_break_invisibility(seconds, cause)
+
+## reveal()'s half for the binary "invisible" condition. While the window runs
+## the AI can acquire us (it only skips an ACTIVE Invisible); a further attack
+## inside it stretches the window without another notice. Not on the world
+## map: no one there acquires targets, and a travel cast (Force March) would
+## only break the cloak's Invisible for a 3 s window the 7200x clock ends at
+## once, a "broken" / "returns" pair for nothing.
+func _break_invisibility(seconds: float, cause: String) -> void:
+	if condition_manager == null or not is_alive() or on_world_map:
+		return
+	var inst: ConditionInstance = condition_manager.get_condition("invisible")
+	if inst == null or not inst.is_active():
+		if inst != null:
+			condition_manager.suppress_for("invisible", seconds, cause)   # stretch an open window
+		return
+	var log_text := ""
+	if is_condition_equip_granted("invisible"):
+		if not condition_manager.suppress_for("invisible", seconds, cause):
+			return
+		var item := equip_source_name("invisible")
+		log_text = "%s's invisibility breaks: %s gives them away for %d s%s." % [
+			Name, cause, int(round(seconds)), ("; the %s restores it after" % item) if item != "" else ""]
+	else:
+		condition_manager.remove_condition("invisible")
+		log_text = "%s's invisibility breaks: %s ends it." % [Name, cause]
+	# Over anyone the party sees; the line in the log too (an invisible foe
+	# the party can see showing itself is worth a line).
+	if _announces_to_party():
+		notify("Invisibility broken", Color(1.0, 0.75, 0.3), log_text)
 
 ## True while this character is moving stealthily: stealth mode
 ## (Game.stealth_mode, the C key) makes every party member sneak, whether
@@ -7764,6 +8048,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 		# DoT ticks and AoE would float numbers through walls and fog.
 		if _announces_to_party():
 			Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
+		# canceled_by_trait: damage of a type actually dealt carries it as a
+		# trait (fire thaws Chilled and Frozen, cold puts out Burning), before
+		# the hit's own condition below lands.
+		_cancel_conditions_by_damage(damage_type, attacker)
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
@@ -7855,7 +8143,12 @@ func drop_held_weapon(hand: String = "Main") -> bool:
 		if weapon.stolen_from != "":
 			extras["stolen_from"] = weapon.stolen_from
 		game.create_item(wid, drop_pos, 1, extras)
-	GameLog.add_entry("%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name])
+	var disarm_line := "%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name]
+	# Floats too where the party can see it: the game log starts closed.
+	if _announces_to_party():
+		notify("Disarmed!", Color(1.0, 0.6, 0.4), disarm_line)
+	else:
+		GameLog.add_entry(disarm_line)
 	return true
 # INTERUPTION AND KNOCKBACK
 func apply_knockback(duration: float) -> void:
@@ -7995,10 +8288,14 @@ signal targeting_started(ability: Ability)
 signal targeting_cancelled(ability: Ability)
 
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
+	# An instant cast resolves inside use_ability below: one that grants
+	# Invisible itself (a self-invisibility spell) mustn't be broken by its own
+	# reveal. Only an Invisible the caster already had breaks.
+	var had_invisible: bool = condition_manager != null and condition_manager.has_condition("invisible")
 	var ok: bool = ability_manager.use_ability(ability, target_data)
 	# Casting gives a concealed caster away (reveal()).
 	if ok:
-		reveal()
+		reveal(REVEAL_SECONDS, "casting", had_invisible)
 	return ok
 
 
@@ -8100,6 +8397,11 @@ func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
 	# Drop the casting arm pose along with the cast.
 	if attack_animator and attack_animator.is_casting:
 		attack_animator.interrupt_attack()
+	# A planned cast cut off by a stun is tried again when the paused plan
+	# resumes (ActionQueue.resume_current). Unpaused, the queue just moves on.
+	if action_queue != null and action_queue.current_action != null \
+			and action_queue.current_action.type == ActionQueue.ActionType.USE_ABILITY:
+		action_queue.current_action.data["cast_interrupted"] = true
 	# Death cancels with an empty reason, silently.
 	if reason != "" and is_alive() and _announces_to_party():
 		var ability_name: String = ability.display_name if ability else "spell"
@@ -8622,6 +8924,11 @@ func _on_condition_suppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = true
+	# A suppressed Invisible (an attack broke the cloak's for a few seconds)
+	# shows the character solid again, and its icon dims.
+	if instance.condition.id == "invisible":
+		modulate.a = 1.0
+	_refresh_condition_display()
 
 func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var vfx = _active_condition_vfx.get(instance.condition.id)
@@ -8633,6 +8940,9 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
+	if instance.condition.id == "invisible" and is_alive():
+		modulate.a = 0.35
+	_refresh_condition_display()
 	_react_to_incapacitation(instance)
 ## Spawn a visual effect
 func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0, aoe_radius: float = 0.0) -> Node:
@@ -8921,10 +9231,13 @@ func _on_self_damaged(amount: int, from_tick: bool = false) -> void:
 			emit_signal("resource_changed", "focus", focus, max_focus)
 
 
-# A landed Concentration spell holds its focus cost for as long as what it
-# installed lasts: the conditions it applied (by instance) and the fields and
-# clouds it created. Nothing trackable installed (weather, surfaces, a missed
-# condition roll, summons) means nothing to hold. One spell at a time.
+# A Concentration spell pays its focus cost when it is cast (AbilityManager.
+# _pay_ability_costs), and once it lands it also holds up to that much again
+# of the focus left, for as long as what it installed lasts: the conditions it
+# applied (by instance) and the fields and clouds it created. The hold is best
+# effort (less focus left, less held). Nothing trackable installed (weather,
+# surfaces, a missed condition roll, summons) means nothing to hold. One spell
+# at a time.
 func begin_concentration(ability: Ability, results: Array) -> void:
 	if ability == null or not is_alive():
 		return
@@ -8943,15 +9256,20 @@ func begin_concentration(ability: Ability, results: Array) -> void:
 	# this catches one that landed in the meantime (a projectile in flight).
 	if not active_concentrations.is_empty():
 		end_concentration("replaced", entry["name"])
+	var spent: int = 0
 	var held: int = 0
 	if not npc_unlimited_resources:
-		held = mini(int(AbilityManager.school_costs_for(ability).get("focus", 0)), focus)
+		var cost: int = int(AbilityManager.school_costs_for(ability).get("focus", 0))
+		# What the cast already paid: innate abilities pay nothing.
+		if not (ability_manager and ability_manager._is_innate_ability(ability)):
+			spent = cost
+		held = mini(cost, focus)
 	entry["focus"] = held
 	active_concentrations[ability.id] = entry
 	concentration_locked_focus = held
 	emit_signal("resource_changed", "focus", focus, max_focus)
 	if is_party_member():
-		GameLog.add_entry("%s concentrates on %s (%d focus held)." % [Name, entry["name"], held])
+		GameLog.add_entry("%s concentrates on %s (%d focus spent, %d held)." % [Name, entry["name"], spent, held])
 
 
 # Gathers the conditions and objects a cast installed. Multi-step casts report
@@ -9078,11 +9396,14 @@ func _release_concentration_all() -> void:
 	end_concentration("")
 
 
-# A hit that would dip into held focus breaks the spell. Nothing held (an NPC
-# with npc_unlimited_resources concentrates for free) means a hit can't: only
-# incapacitation, death or a new Concentration spell ends theirs.
+# A hit that finds no free focus to take (it would dip into held focus) breaks
+# the spell. That includes a spell holding nothing because the cast spent the
+# last of the caster's focus: otherwise casting with exactly the cost would
+# make it unbreakable. An NPC with npc_unlimited_resources concentrates for
+# free, so a hit can't: only incapacitation, death or a new Concentration
+# spell ends theirs.
 func _break_concentration_under_pressure() -> void:
-	if concentration_locked_focus <= 0:
+	if npc_unlimited_resources:
 		return
 	end_concentration("broken")
 

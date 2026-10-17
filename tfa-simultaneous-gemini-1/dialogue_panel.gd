@@ -94,6 +94,14 @@ func _on_choices_available(choices: Array):
 		var choice = choices[i]
 		var button = CHOICE_BUTTON.instantiate()
 		button.text = choice["text"] + _format_reactions(choice.get("ally_reactions", []))
+		# An option whose "requires" aren't met stays visible, greyed out,
+		# saying what it needs ("[Needs 20 gold]").
+		if bool(choice.get("disabled", false)):
+			var reason: String = str(choice.get("locked_reason", ""))
+			button.disabled = true
+			if not reason.is_empty():
+				button.text += "   [%s]" % reason
+				button.tooltip_text = reason
 
 		# Connect button press to choice selection
 		button.pressed.connect(_on_choice_selected.bind(i))

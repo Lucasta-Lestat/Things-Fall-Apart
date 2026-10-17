@@ -97,8 +97,10 @@ static func container_slots(item_data: Dictionary) -> int:
 		return 0
 	return maxi(0, int(n))
 
-## True for inventory dicts that mirror a held WeaponShape (Main/Off Hand).
-## No window shows them, so they don't take a carry slot either.
+## True for hand-slot item dicts (Main/Off Hand): a weapon's data in a chest
+## or on a corpse, or, in a save from before round 3, the hidden copy a
+## starting weapon left beside its WeaponShape (Inventory.migrate_hand_dicts
+## drops those on load). A carried weapon is its WeaponShape, never a dict.
 static func is_hand_ghost(item) -> bool:
 	if not (item is Dictionary):
 		return false

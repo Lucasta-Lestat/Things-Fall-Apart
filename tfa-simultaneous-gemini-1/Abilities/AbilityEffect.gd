@@ -579,6 +579,10 @@ static func _resolve_apply_condition(
 	var condition_id = effect.get("condition_id", "")
 	var stacks = effect.get("stacks", 1)
 	var duration_override = effect.get("duration", -2.0)
+	# In-world hours, as conditions may give them (Condition.create_from_data):
+	# a world-map or camp ability's rider must outlast the 7200x overland clock.
+	if effect.has("duration_hours"):
+		duration_override = float(effect["duration_hours"]) * 3600.0
 	var target_limb = effect.get("target_limb", null)
 	var chance: float = float(effect.get("chance", 1.0))
 	# Effect-level save: rolls the same stack-delta as condition-level

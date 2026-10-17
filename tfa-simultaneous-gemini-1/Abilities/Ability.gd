@@ -204,8 +204,9 @@ func is_multi_step() -> bool:
 	return steps.size() > 0
 
 
-## Whether this is a Concentration spell (either casing of the trait): its
-## focus cost is held while what it put into the world lasts.
+## Whether this is a Concentration spell (either casing of the trait): it pays
+## its focus cost, then holds up to as much again while what it put into the
+## world lasts.
 func is_concentration() -> bool:
 	return traits.has("Concentration") or traits.has("concentration")
 

@@ -26,12 +26,12 @@ func _ready() -> void:
 	victim.inventory.add_stack({"id": "trinket", "display_name": "Test Trinket",
 		"num_stacks": 1, "is_stackable": true})
 	# Weapon-flatten fixtures (real Items.json weapon so WeaponShape loads):
-	# db-style = dict granted AND equipped from the same data; runtime-style =
-	# stowed node with NO dict. After death both must be lootable exactly once.
+	# db-style = a starting weapon granted the way templates grant it (round 3:
+	# its WeaponShape alone, no hidden item dict); runtime-style = a stowed
+	# node. After death both must be lootable exactly once.
 	var sword: Dictionary = ItemDatabase.get_item_data("longsword")
 	_report("fixture.longsword-exists", not sword.is_empty(), "")
-	victim.inventory.add_item(sword.duplicate())
-	victim.inventory.equip_weapon_from_data(sword.duplicate(), "Main")
+	TopDownCharacterDatabase._grant_equipment(victim, [{"id": "longsword", "slot": "main_hand"}])
 	victim.inventory.stow_weapon_from_data(sword.duplicate())
 	await get_tree().physics_frame
 
@@ -91,10 +91,10 @@ func _ready() -> void:
 	_report("corpse.no-further-damage", dealt == 0, "dealt=%d" % dealt)
 
 	# --- 3. loot container contract ---
-	# Weapon flatten: two sword NODES (equipped + stowed) existed at death but
-	# only ONE matching dict — the flatten must append exactly one more (the
-	# runtime-stowed sword) and clear the hands, so the loot window offers two
-	# swords and capture/restore can't re-arm the corpse.
+	# Weapon flatten: two sword NODES (equipped + stowed) existed at death and
+	# no sword dict — the flatten must append one dict per node and clear the
+	# hands, so the loot window offers two swords and capture/restore can't
+	# re-arm the corpse.
 	var swords := 0
 	for d in victim.contents:
 		if d is Dictionary and String(d.get("id", "")) == "longsword":

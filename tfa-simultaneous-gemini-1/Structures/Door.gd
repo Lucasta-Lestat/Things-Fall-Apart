@@ -86,6 +86,8 @@ func close_door() -> void:
 	if not is_open:
 		return
 	if _doorway_blocked_by_character():
+		# Floats on the door too: the game log starts closed.
+		show_floating_text("Blocked", Color.WHITE_SMOKE)
 		GameLog.add_entry("Something is blocking the doorway.")
 		return
 	is_open = false

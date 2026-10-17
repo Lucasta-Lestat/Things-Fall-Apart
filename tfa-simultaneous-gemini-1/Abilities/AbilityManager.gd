@@ -475,6 +475,17 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 	if exclude_caster:
 		targets.erase(character)
 
+	# canceled_by_trait: an ability landing on a character carries its traits
+	# (Fireball's fire thaws Chilled, Ice Storm's cold puts out Burning, Heal's
+	# healing stops Bleeding), before its own effects resolve.
+	if ability and not ability.traits.is_empty():
+		for t in targets:
+			if not is_instance_valid(t):
+				continue
+			var t_cm = AbilityEffect._get_condition_manager(t)
+			if t_cm and t_cm.has_method("cancel_by_traits"):
+				t_cm.cancel_by_traits(ability.traits, ability.display_name, character)
+
 	# A list that applies Burning (Fireball) or Chilled (Ice Storm) itself owns
 	# that condition: its fire/cold damage mustn't add a stack on top.
 	var explicit_conditions: Dictionary = AbilityEffect.explicit_condition_ids(effects)
@@ -601,7 +612,8 @@ func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
 			if character.has_method("_get_character_resource"):
 				var current = character._get_character_resource(resource_name)
 				# Casting a new Concentration spell ends the held one, so the
-				# focus it holds counts as available.
+				# focus it holds counts as available. Only the cost must be
+				# affordable: what the new spell holds is best effort.
 				if resource_name == "focus" and ability.is_concentration() and "concentration_locked_focus" in character:
 					current += character.concentration_locked_focus
 				if current < cost:
@@ -712,11 +724,10 @@ func _pay_ability_costs(ability: Ability) -> bool:
 		return true
 	var costs := school_costs_for(ability)
 	for resource_name in costs:
-		# A Concentration spell's focus is held, not spent: the character
-		# locks it when the spell lands (ProceduralCharacter.begin_concentration)
-		# and gets it back when the spell ends.
-		if resource_name == "focus" and ability.is_concentration():
-			continue
+		# A Concentration spell pays its focus like any other cast; once it
+		# lands it also holds up to as much again of what is left
+		# (ProceduralCharacter.begin_concentration). The paid part never
+		# comes back; the held part is free again when the spell ends.
 		var cost: int = int(costs[resource_name])
 		if character.has_method("_spend_character_resource"):
 			if not character._spend_character_resource(resource_name, cost):

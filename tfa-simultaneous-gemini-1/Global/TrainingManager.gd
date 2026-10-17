@@ -80,7 +80,10 @@ func accept_offer(character, offer: Dictionary, map_id: String) -> Dictionary:
 		return {}
 	# Nothing to teach someone who already knows it.
 	if knows_ability(character, ability_id):
-		if GameLog:
+		# Over them too: the game log starts closed.
+		if character.has_method("notify"):
+			character.notify("Already known", Color(1.0, 0.6, 0.4), "%s already knows that." % _display_name(character))
+		elif GameLog:
 			GameLog.add_entry("%s already knows that." % _display_name(character))
 		return {}
 
@@ -155,6 +158,10 @@ func _finish(character, uid: String, c: Dictionary) -> void:
 	if GameLog:
 		GameLog.add_entry("%s has learned %s." % [
 			str(c.get("learner_name", "Someone")), _ability_name(ability_id)])
+	# Over the learner too: the game log starts closed.
+	if character is Node2D and is_instance_valid(character) and character.is_inside_tree():
+		Globals.show_floating_text("Learned: " + _ability_name(ability_id), character.global_position,
+			character, Color(0.55, 1.0, 0.55), 0, Globals.NOTICE_FONT_SIZE)
 	emit_signal("training_completed", uid, ability_id)
 
 ## Force a commitment to completion without the learner being present — used

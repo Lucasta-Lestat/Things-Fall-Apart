@@ -217,7 +217,8 @@ func _case_tooltips() -> void:
 	var st: String = ItemTooltip.detail_text({"kind": "item", "display_name": "Apple", "raw": stolen})
 	_check("tooltip.stolen-from", st.contains("Stolen from " + str(FactionDatabase.get_faction_data(fid).get("name", fid))), st)
 	# Chest context stays the bare name.
-	_check("tooltip.chest-unchanged", ItemTooltip.detail_text({"kind": "item", "display_name": "Apple", "raw": stolen}, "chest") == "Apple")
+	# (Hook lines follow it in every window: an apple is food, so a ration.)
+	_check("tooltip.chest-unchanged", ItemTooltip.detail_text({"kind": "item", "display_name": "Apple", "raw": stolen}, "chest").split("\n")[0] == "Apple")
 	# Weapons show base damage.
 	var w = WeaponShape.new()
 	w.damage = {"slashing": 10}
@@ -515,8 +516,8 @@ func _case_transfers() -> void:
 	a.inventory.add_item(_item("iron_key"))
 	var key_entry := _entry_for(a.inventory, "iron_key")
 	var b_max: int = b.inventory.max_slots
-	# max_slots sets the base; worn packs add bonus_slots on top. Hidden
-	# hand-weapon dicts take no slot (slots_used).
+	# max_slots sets the base; worn packs add bonus_slots on top. Weapons
+	# take no slot (slots_used).
 	b.inventory.max_slots = b.inventory.slots_used() - b.inventory.bonus_slots
 	var bpos: Vector2 = psp.get_global_transform().affine_inverse() * _panel(b)["container"].get_global_rect().get_center()
 	var n0: int = GameLog.get_entries().size()

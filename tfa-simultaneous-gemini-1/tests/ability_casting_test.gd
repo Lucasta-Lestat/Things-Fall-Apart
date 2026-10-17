@@ -717,26 +717,27 @@ func _f7_cases() -> void:
 	_check("data.gravity_well-concentration", Ability.from_dict(AbilityDatabase.get_ability_data("gravity_well")).is_concentration())
 	_check("data.fireball-not-concentration", not Ability.from_dict(AbilityDatabase.get_ability_data("fireball")).is_concentration())
 	var ItemTooltip = preload("res://UI/ItemTooltip.gd")
-	_check("tooltip.concentration", ItemTooltip.ability_lines({"kind": "ability", "ability_id": "gravity_well"}).has("Concentration"))
+	_check("tooltip.concentration", ItemTooltip.ability_lines({"kind": "ability", "ability_id": "gravity_well"}).has("Concentration: spends 2 focus, then holds up to 2 more while it lasts"),
+		ItemTooltip.ability_lines({"kind": "ability", "ability_id": "gravity_well"}))
 
 	var enemy = _spawn("Dummy", Vector2(4200, 4200))
 
-	# conc.reserves: the focus is held, not spent (a party member, so the log
-	# lines reach the player)
+	# conc.reserves: the cost is spent, then as much again is held (a party
+	# member, so the log lines reach the player). 5 focus: 2 spent, 2 held.
 	var c = _party()
 	var arcane0: int = int(c.traits.get("Arcane", 0))
 	var focus0: int = c.focus
 	var saved: Dictionary = c.condition_manager.to_dict()
-	c.traits["Arcane"] = 3
-	c.focus = 3
+	c.traits["Arcane"] = 5
+	c.focus = 5
 	await _frames(1)
-	c.focus = 3
+	c.focus = 5
 	var field = _cast_conc(c, _conc_ability("test_conc"), enemy)
 	_check("conc.reserves", c.focus == 3 and c.concentration_locked_focus == 2 and c.spendable_focus == 1,
 		[c.focus, c.concentration_locked_focus, c.spendable_focus])
 	_check("conc.tracks-installs", field != null and not _gone(field) and _slowed_by(enemy) != null and c.get_concentration_names() == PackedStringArray(["Test Conc"]),
 		[field, _slowed_by(enemy), c.get_concentration_names()])
-	_check("conc.logged", _logged("%s concentrates on Test Conc (2 focus held)." % c.Name), log_lines.slice(-3))
+	_check("conc.logged", _logged("%s concentrates on Test Conc (2 focus spent, 2 held)." % c.Name), log_lines.slice(-3))
 	var plain := Ability.from_dict({"id": "test_plain", "display_name": "Test Plain", "traits": {"Arcane": 2}, "targeting": {"type": "point"}, "effects": []})
 	var usable: Dictionary = c.ability_manager._check_ability_usable(plain)
 	_check("conc.held-focus-not-spendable", not usable["success"] and "focus" in String(usable.get("reason", "")).to_lower(), usable)
@@ -763,26 +764,29 @@ func _f7_cases() -> void:
 	_check("conc.break-removes-condition", _slowed_by(enemy) == null)
 	_check("conc.break-logged", c._last_notify_text == "Concentration broken" and _logged("%s loses concentration: Test Conc ends." % c.Name), log_lines.slice(-3))
 
-	# conc.natural-end: when everything it installed is gone, the focus is free
-	c.focus = 3
+	# conc.natural-end: when everything it installed is gone, the held focus is
+	# free (the spent 2 stay spent)
+	c.focus = 5
 	var short_field = _cast_conc(c, _conc_ability("test_conc_short", 0.0, 0.2), enemy)
 	_check("conc.natural-start", c.concentration_locked_focus == 2 and short_field != null)
 	enemy.condition_manager.remove_condition("slowed")
 	await get_tree().create_timer(0.6).timeout
 	await _frames(3)
-	_check("conc.natural-end", c.concentration_locked_focus == 0 and c.active_concentrations.is_empty() and c.focus == 3,
+	# >= 3: focus regenerates during the wait.
+	_check("conc.natural-end", c.concentration_locked_focus == 0 and c.active_concentrations.is_empty() and c.focus >= 3,
 		[c.focus, c.concentration_locked_focus, c.active_concentrations])
 	_check("conc.natural-end-logged", _logged("%s's Test Conc Short ends; 2 focus is free again." % c.Name), log_lines.slice(-3))
 
 	# conc.replaced: a new Concentration spell lets the old one go; its held
-	# focus counts toward the new cost
-	c.focus = 3
+	# focus counts toward the new cost, which is paid again (5 -> 3 spent and
+	# 2 held -> 1 after the recast's 2, all of it held)
+	c.focus = 5
 	var first_field = _cast_conc(c, _conc_ability("test_conc_a"), enemy)
 	var second_ab := _conc_ability("test_conc_b")
 	_check("conc.replace-usable", c.ability_manager._check_ability_usable(second_ab)["success"])
 	var second_field = _cast_conc(c, second_ab, enemy)
 	_check("conc.replaced", _gone(first_field) and second_field != null and not _gone(second_field)
-		and c.active_concentrations.keys() == ["test_conc_b"] and c.concentration_locked_focus == 2 and c.focus == 3,
+		and c.active_concentrations.keys() == ["test_conc_b"] and c.concentration_locked_focus == 1 and c.focus == 1,
 		[c.active_concentrations.keys(), c.concentration_locked_focus, c.focus])
 	_check("conc.replaced-keeps-new-condition", _slowed_by(enemy) != null and _slowed_by(enemy) == c.active_concentrations["test_conc_b"]["conditions"][0]["instance"])
 	_check("conc.replaced-logged", _logged("%s lets Test Conc A go to concentrate on Test Conc B." % c.Name), log_lines.slice(-3))
@@ -810,22 +814,24 @@ func _f7_cases() -> void:
 	var fdrop = _sage("Drained", Vector2(4000, 4400))
 	await _frames(2)
 	var drop_field = _cast_conc(fdrop, _conc_ability("test_conc_f"), enemy)
-	fdrop.focus = 1
+	# 3 - 2 spent = 1, all held; any drop goes below the hold
+	fdrop.focus = 0
 	await _frames(3)
 	_check("conc.focus-drop-breaks", fdrop.active_concentrations.is_empty() and fdrop.concentration_locked_focus == 0 and _gone(drop_field))
 	_despawn(fdrop)
 
-	# conc.interrupted-windup-holds-nothing: nothing is held or spent until it lands
+	# conc.interrupted-windup-holds-nothing: the cost is paid when the windup
+	# starts (like any cast); nothing is held until it lands
 	var w = _sage("Slowpoke", Vector2(4000, 4500))
 	await _frames(2)
 	var wrec := _watch(w)
 	w.use_ability(_conc_ability("test_conc_w", 1.0), {"position": enemy.global_position, "targets": [enemy]})
 	w.take_damage({"force": 1}, w.global_position, enemy)
-	# Only the hit's -1: committing the windup spent no focus.
+	# 3 - 2 paid at commit - 1 for the hit.
 	var focus_after_hit: int = w.focus
 	await get_tree().create_timer(1.3).timeout
 	_check("conc.interrupted-windup-holds-nothing", wrec["interrupted"].size() == 1 and wrec["completed"] == 0
-		and w.concentration_locked_focus == 0 and focus_after_hit == 2 and w.active_concentrations.is_empty(),
+		and w.concentration_locked_focus == 0 and focus_after_hit == 0 and w.active_concentrations.is_empty(),
 		[wrec, focus_after_hit, w.concentration_locked_focus])
 	_despawn(w)
 

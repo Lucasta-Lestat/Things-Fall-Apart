@@ -5,8 +5,9 @@
 #
 #   game.hud_status.add_widget(my_badge)
 #
-# Unlike the clock and log it ignores the Tab HUD toggle, so a status the
-# player must always know (sneaking, wind) stays on screen. When a flush-left
+# Unlike the clock it ignores the Tab HUD toggle, so a status the player must
+# always know (sneaking) stays on screen. (The wind readout sits in the clock
+# cluster instead: UI/WindIndicator.gd.) When a flush-left
 # panel (Town Services from y=64, the quest log from y=80) is open it moves
 # beside the panel instead of covering its top, following the panel's slide.
 # =====================

@@ -11,8 +11,8 @@ extends Node2D
 #   * character-pick abilities can be assigned to a path node
 #   * an unassigned node / node targeting is dropped at unpause, before the
 #     path converts
-#   * a plan is abandoned, with a notice, when its character can't act; a
-#     corpse's queue is cancelled
+#   * a stun pauses a plan and recovering resumes it; out cold or compelled
+#     drops it, each with a notice; a corpse's queue is cancelled
 #   * a re-queued path cast that is already going doesn't announce
 #     "Already casting"
 #   * queued ability reticles are coloured by Ability.classify_intent, and
@@ -421,72 +421,96 @@ func _case_already_casting(a: ProceduralCharacter) -> void:
 	_reset(a)
 
 
-# --- R1-repair-pc-1: plan abandon
+# --- R1-repair-pc-1, round 3: a stun pauses the plan; out cold, fleeing or
+# compelled drops it
 func _case_plan_abandon(a: ProceduralCharacter, npc: ProceduralCharacter) -> void:
 	_reset(a)
 	var cm: ConditionManager = a.condition_manager
-	# Blocked at unpause: the plan is dropped, not converted
+	# Stunned at unpause: the plan converts but waits, paused
 	_draw_path(a, a.global_position + Vector2(0, 300))
 	cm.apply_condition("stunned", null, 1, 30.0)
 	var n0: int = GameLog.get_entries().size()
 	a._on_game_unpaused_convert_path()
-	_check("abandon.at-unpause", not a.has_player_orders() and a.tactical_path.is_empty())
-	_check("abandon.notice-logged", GameLog.get_entries().size() == n0 + 1 \
-		and _log_texts()[-1] == "Harness Planner abandons their plan: Stunned.", str(_log_texts()[-1]))
-	_check("abandon.notice-float", a._last_notify_text == "Can't follow plan")
-	cm.remove_condition("stunned")
-
-	# No blocker: converts as usual
-	_reset(a)
-	_draw_path(a, a.global_position + Vector2(0, 300))
-	a._on_game_unpaused_convert_path()
-	_check("abandon.no-blocker-converts", a.has_player_orders() and a.tactical_path.is_executing)
-
-	# Mid-plan: a stun lands while the plan runs (stunned rolls no save)
+	_check("pause.at-unpause", a.is_plan_paused() and a.has_player_orders() and a.tactical_path.is_executing,
+		"paused=%s orders=%s" % [a.is_plan_paused(), a.has_player_orders()])
+	_check("pause.notice-logged", GameLog.get_entries().size() == n0 + 1 \
+		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
+	_check("pause.notice-float", a._last_notify_text == "Plan paused")
+	# The queue holds while paused: nothing starts, the body stays put
+	var queued: int = a.action_queue.get_queue_size()
+	var start_pos: Vector2 = a.global_position
 	PauseManager.is_paused = false
+	for i in range(4):
+		await get_tree().process_frame
+	_check("pause.queue-holds", a.action_queue.current_action == null and a.action_queue.get_queue_size() == queued \
+		and a.global_position.distance_to(start_pos) < 1.0 and a.is_plan_paused(),
+		"current=%s queued=%d moved=%.1f" % [str(a.action_queue.current_action != null), a.action_queue.get_queue_size(), a.global_position.distance_to(start_pos)])
+	# Recovering resumes it
+	cm.remove_condition("stunned")
 	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("pause.resumes", not a.is_plan_paused() and a.has_player_orders() and a.action_queue.current_action != null \
+		and a.action_queue.current_action.type == AQ.MOVE)
+	_check("pause.resume-logged", _log_texts().has("Harness Planner recovers: plan resumes."), str(_log_texts().slice(-3)))
+	_check("pause.resume-float", a._last_notify_text == "Plan resumes", a._last_notify_text)
+
+	# Mid-plan: a stun lands while the plan runs (stunned rolls no save) and
+	# pauses it the same frame, holding the running MOVE
 	a._last_notify_text = ""
-	n0 = GameLog.get_entries().size()
 	cm.apply_condition("stunned", null, 1, 30.0)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	_check("abandon.mid-plan", not a.has_player_orders() and a.tactical_path.is_empty(),
+	_check("pause.mid-plan", a.is_plan_paused() and a.has_player_orders() and not a.tactical_path.is_empty() \
+		and a.action_queue.current_action != null and not a.is_moving,
 		"queue=%d current=%s path_empty=%s" % [a.action_queue.get_queue_size(),
 		str(a.action_queue.current_action != null), str(a.tactical_path.is_empty())])
-	# GameLog folds an identical line within 1.5 s into a repeat count, so read
-	# the last entry rather than counting entries.
-	_check("abandon.mid-plan-notice", a._last_notify_text == "Can't follow plan" \
-		and _log_texts()[-1] == "Harness Planner abandons their plan: Stunned.", str(_log_texts()[-1]))
-	PauseManager.is_paused = true
+	_check("pause.mid-plan-notice", a._last_notify_text == "Plan paused" \
+		and _log_texts()[-1] == "Harness Planner is Stunned: plan paused.", str(_log_texts()[-1]))
+	await get_tree().process_frame
 	cm.remove_condition("stunned")
+	await get_tree().process_frame
+	_check("pause.mid-plan-resumes", not a.is_plan_paused() and a.is_moving and a.has_player_orders())
+
+	# Out cold: dropped, with the reason
+	cm.apply_condition("unconscious", null, 1, 30.0)
+	await get_tree().process_frame
+	_check("drop.unconscious", not a.has_player_orders() and a.tactical_path.is_empty() and not a.is_plan_paused())
+	_check("drop.unconscious-notice", a._last_notify_text == "Can't follow plan" \
+		and _log_texts()[-1] == "Harness Planner abandons their plan: Unconscious.", str(_log_texts()[-1]))
+	cm.remove_condition("unconscious")
+	PauseManager.is_paused = true
 	a.is_moving = false
 
-	# Compulsions block too. Transfixed rolls a Will save when it lands, so
-	# retry until it sticks.
+	# Compulsions block too, and drop the plan. Transfixed rolls a Will save
+	# when it lands, so retry until it sticks.
 	for i in range(40):
 		if cm.has_active_condition("transfixed"):
 			break
 		cm.apply_condition("transfixed", null, 1, 30.0)
 	var compelled = a._get_plan_blocking_condition()
-	_check("abandon.compulsion-blocks", compelled != null and compelled.condition.id == "transfixed")
+	_check("abandon.compulsion-blocks", compelled != null and compelled.condition.id == "transfixed" \
+		and a._plan_blocker_drops(compelled))
 	cm.remove_condition("transfixed")
 
-	# Frozen counts through the "incapacitate" trait
+	# Frozen counts through the "incapacitate" trait, and pauses
 	cm.apply_condition("frozen", null, 1, 30.0)
 	var blocker = a._get_plan_blocking_condition()
-	_check("abandon.incapacitate-trait", blocker != null and blocker.condition.id == "frozen")
+	_check("abandon.incapacitate-trait", blocker != null and blocker.condition.id == "frozen" \
+		and not a._plan_blocker_drops(blocker))
 	cm.remove_condition("frozen")
 	_check("abandon.clear-when-able", a._get_plan_blocking_condition() == null)
 
-	# Not a party member: dropped silently
+	# Not a party member: paused silently
 	npc.tactical_path.clear()
 	_draw_path(npc, npc.global_position + Vector2(0, 200))
 	npc.condition_manager.apply_condition("stunned", null, 1, 30.0)
 	n0 = GameLog.get_entries().size()
 	npc._on_game_unpaused_convert_path()
-	_check("abandon.non-party-silent", npc.tactical_path.is_empty() and GameLog.get_entries().size() == n0)
+	_check("pause.non-party-silent", npc.is_plan_paused() and GameLog.get_entries().size() == n0)
 	npc.condition_manager.remove_condition("stunned")
+	npc.action_queue.cancel_all()
+	npc.tactical_path.clear()
+	npc._plan_paused_by = ""
 	_reset(a)
+	a._plan_paused_by = ""
 
 
 # --- review: queued reticles take dev's intent colour; the pulse runs while paused

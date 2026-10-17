@@ -4391,7 +4391,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 10
@@ -4415,7 +4416,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 5
@@ -4439,7 +4441,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 10
@@ -4463,7 +4466,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 2
+	  "Organic": 2,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 5
@@ -4487,7 +4491,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 20
@@ -4511,7 +4516,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 15
@@ -4535,7 +4541,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 10
@@ -4559,7 +4566,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 5
@@ -4583,7 +4591,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 5
@@ -4607,7 +4616,8 @@
 	"max_hp": 3.0,
 	"hp": 3.0,
 	"traits": {
-	  "Organic": 1
+	  "Organic": 1,
+	  "Ration": 1
 	},
 	"is_stackable": 1.0,
 	"max_stack_size": 15

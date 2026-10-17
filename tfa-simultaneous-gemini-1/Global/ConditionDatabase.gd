@@ -64,7 +64,9 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "fatigue": 2},
 		"stackable": true,
 		"max_tier": 5,
-		"duration": 60.0,
+		# Travel/downtime scale (Force March, Fatigued x3): in-world hours, so
+		# the 7200x world-map clock doesn't end it within a frame. A day.
+		"duration_hours": 24,
 		"icon": "res://UI/UI Icons/exhausted.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["restoration"],
@@ -81,7 +83,9 @@ func get_all_conditions() -> Array:
 		"description": "Pushing on without rest — much faster overland travel.",
 		"traits": {"buff": 1, "fatigue": 1, "overworld": 1},
 		"stackable": false,
-		"duration": 120.0,
+		# Overland only, so in-world hours (120 s ran out within a frame of the
+		# 7200x world-map clock). Half a day of marching on through the night.
+		"duration_hours": 12,
 		# The boot, not the exhausted icon: `force_march` applies BOTH this buff
 		# and `exhausted`, so sharing art made the two pips indistinguishable in
 		# the HUD — you could not tell the speed bonus from the fatigue it costs.
@@ -385,7 +389,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "invisible",
 		"display_name": "Invisible",
-		"description": "Unseen: enemies cannot pick this character as a target.",
+		"description": "Unseen: enemies cannot pick this character as a target. Attacking or casting breaks it: from worn gear it returns 3 seconds after, otherwise it ends.",
 		"traits": {"buff": 1, "concealment": 1, "magical": 1},
 		"stackable": false,
 		"duration": 30.0,
@@ -483,8 +487,9 @@ func get_all_conditions() -> Array:
 	# Shadow Cloak's Invisible is the binary "invisible" above. "visibility"
 	# multiplies how far away others can see the bearer
 	# (ProceduralCharacter.effective_visibility); attacking or casting resets
-	# it to full for a few seconds (ProceduralCharacter.reveal). The icons are
-	# borrowed from Invisible and Courageous until these get their own cond_*.
+	# it to full for a few seconds (ProceduralCharacter.reveal). Their cond_*
+	# icons come from tools/generate_condition_icons_gemini.py; "icon_fallback"
+	# is the art they borrowed before, shown until the editor imports the PNGs.
 	{
 		"id": "shrouded",
 		"display_name": "Shrouded",
@@ -493,7 +498,8 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": -1.0,
-		"icon": "res://UI/UI Icons/invisible.png",
+		"icon": "res://UI/UI Icons/cond_shrouded.png",
+		"icon_fallback": "res://UI/UI Icons/invisible.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
@@ -513,7 +519,8 @@ func get_all_conditions() -> Array:
 		"stackable": false,
 		"max_tier": 1,
 		"duration": -1.0,
-		"icon": "res://UI/UI Icons/cond_courageous.png",
+		"icon": "res://UI/UI Icons/cond_inspired.png",
+		"icon_fallback": "res://UI/UI Icons/cond_courageous.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
@@ -809,7 +816,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "bleeding",
 		"display_name": "Bleeding",
-		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another save fires every damage tick.",
+		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another CON save every 6 seconds can ease or worsen it.",
 		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
 		"stackable": true,
 		"max_tier": 5,
@@ -1428,7 +1435,8 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "affliction": 1, "mental": 1, "fatigue": 1},
 		"stackable": false,
 		"max_tier": 1,
-		"duration": 240.0,
+		# Drinking's "felt it the next day": through the next morning.
+		"duration_hours": 12,
 		"icon": "res://UI/UI Icons/cond_hungover.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["restoration"],
@@ -1488,7 +1496,7 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "mental": 1, "blessing": 1},
 		"stackable": false,
 		"max_tier": 1,
-		"duration": 86400.0,
+		"duration_hours": 24,
 		"icon": "res://UI/UI Icons/cond_blessed.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],

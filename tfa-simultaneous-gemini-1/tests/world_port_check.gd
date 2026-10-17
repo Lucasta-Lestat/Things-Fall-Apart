@@ -459,20 +459,20 @@ func _case_fluids() -> void:
 	var p := _spawn(Vector2i(10, 28), "player", true)
 	var lit := _apply(p, "burning")
 	p.global_position = GridManager.map_to_world(wt)
-	var logs := _log_count("is doused by the water and stops burning")
+	var logs := _log_count("Burning is put out (water)")
 	fm.update_fluid_conditions(0.05, [p])
 	_report("fluid.water-douses-burning", lit and not _cond(p, "burning"), "lit=%s" % str(lit))
-	_report("fluid.douse-logged-for-party", _log_count("is doused by the water and stops burning") == logs + 1)
-	_report("fluid.douse-floats-extinguished", _floats_with(self, "Extinguished") >= 1)
+	_report("fluid.douse-logged-for-party", _log_count("Burning is put out (water)") == logs + 1)
+	_report("fluid.douse-floats-extinguished", _floats_with(self, "Burning put out") >= 1)
 	# an NPC the party doesn't see is doused too, without a float or a log line
 	var q := _spawn(Vector2i(12, 28), "bandits")
 	var qlit := _apply(q, "burning")
 	q.global_position = GridManager.map_to_world(wt)
-	var floats := _floats_with(self, "Extinguished")
-	logs = _log_count("is doused by the water")
+	var floats := _floats_with(self, "Burning put out")
+	logs = _log_count("is put out (water)")
 	fm.update_fluid_conditions(0.05, [q])
 	_report("fluid.unseen-npc-doused-silently", qlit and not _cond(q, "burning") \
-		and _floats_with(self, "Extinguished") <= floats and _log_count("is doused by the water") == logs)
+		and _floats_with(self, "Burning put out") <= floats and _log_count("is put out (water)") == logs)
 	fm.remove_fluid_tile(wt)
 
 
