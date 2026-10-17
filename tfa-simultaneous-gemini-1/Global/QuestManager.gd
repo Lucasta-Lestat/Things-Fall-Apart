@@ -96,6 +96,40 @@ func start_quest(quest_id: String) -> void:
 	_reevaluate(quest_id)
 	print("[QuestManager] start_quest END id=", quest_id)
 
+# Quest moves made by dialogue (Global/DialogueActions.gd). Each goes through
+# _advance, so the log line and signals are the same as any transition's.
+# False (nothing changes) when the quest isn't active or the stage is unknown.
+
+func set_stage(quest_id: String, stage_id: String) -> bool:
+	if not active.has(quest_id) or QuestDatabase.get_stage(quest_id, stage_id).is_empty():
+		return false
+	if str(active[quest_id]) != stage_id:
+		_advance(quest_id, stage_id, {})
+	return true
+
+## Completes the quest and offers its rewards (quest_reward_offered), as a
+## turn-in does, but without asking for proof.
+func complete_quest(quest_id: String, character = null) -> bool:
+	if not active.has(quest_id):
+		return false
+	_advance(quest_id, COMPLETE_STAGE, {})
+	var offers = QuestDatabase.get_rewards(quest_id).get("offers", [])
+	if offers is Array and not offers.is_empty():
+		emit_signal("quest_reward_offered", quest_id, offers, character)
+	return true
+
+## `reason` is shown in the log and the quest log ("" = none).
+func fail_quest(quest_id: String, reason: String = "") -> bool:
+	if not active.has(quest_id):
+		return false
+	_advance(quest_id, FAIL_STAGE, {}, {"reason": reason} if not reason.is_empty() else {})
+	return true
+
+## Something outside the world events above wrote Globals.world_state (a
+## dialogue flag): re-check every active quest's transitions.
+func world_state_changed() -> void:
+	_reevaluate_all()
+
 func get_active_quests() -> Array:
 	return active.keys()
 

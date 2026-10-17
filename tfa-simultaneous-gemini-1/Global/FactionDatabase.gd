@@ -20,6 +20,14 @@ var _player_standing: Dictionary = {}    # faction_id -> int
 var _crime_ledger: Dictionary = {}       # faction_id -> {records: Array, days_served: float}
 var _hostile_override: Dictionary = {}   # faction_id -> true
 
+# --- Runtime factions and relation changes (dialogue actions) ---
+# A dialogue can turn characters against someone ("make_hostile" moves them
+# into a faction made at runtime) or change how two factions regard each other
+# ("set_relation"). Both are DATA that are_allies / are_enemies read, so
+# are_hostile stays the one oracle; both are saved with standing_to_dict.
+var _runtime_factions: Dictionary = {}    # faction_id -> data (also in _factions)
+var _relation_overrides: Dictionary = {}  # "a|b" (ids sorted) -> "ally" | "enemy" | "neutral"
+
 func _ready() -> void:
 	_load_database()
 	_validate_relations()
@@ -135,14 +143,73 @@ func adjust_faction_tier(faction_id: String, delta: int) -> void:
 # ---------------------------------------------------------------------------
 
 func are_allies(faction_a: String, faction_b: String) -> bool:
+	if not _relation_overrides.is_empty():
+		var o: String = _relation_override(faction_a, faction_b)
+		if o != "":
+			return o == "ally"
 	var data_a: Dictionary = _faction_or_empty(faction_a)
 	return faction_b in data_a.get("allies", [])
 
 # One-directional by design: reads only faction_a's list. For behaviour
 # (combat, menus, targeting) use are_hostile below, which is symmetric.
+# A set_relation override for the pair (always mutual) wins over the lists.
 func are_enemies(faction_a: String, faction_b: String) -> bool:
+	if not _relation_overrides.is_empty():
+		var o: String = _relation_override(faction_a, faction_b)
+		if o != "":
+			return o == "enemy"
 	var data_a: Dictionary = _faction_or_empty(faction_a)
 	return faction_b in data_a.get("enemies", [])
+
+# ---------------------------------------------------------------------------
+# Runtime relations and factions (dialogue actions)
+# ---------------------------------------------------------------------------
+
+func _relation_key(faction_a: String, faction_b: String) -> String:
+	return faction_a + "|" + faction_b if faction_a < faction_b else faction_b + "|" + faction_a
+
+func _relation_override(faction_a: String, faction_b: String) -> String:
+	return str(_relation_overrides.get(_relation_key(faction_a, faction_b), ""))
+
+## How two factions regard each other from now on, both ways: "enemy",
+## "ally" or "neutral" (neither). Overrides factions.json for that one pair.
+## False, and nothing changes, for an unknown faction or relation.
+func set_relation(faction_a: String, faction_b: String, relation: String) -> bool:
+	if faction_a == faction_b or not _factions.has(faction_a) or not _factions.has(faction_b):
+		return false
+	if not relation in ["enemy", "ally", "neutral"]:
+		return false
+	_relation_overrides[_relation_key(faction_a, faction_b)] = relation
+	return true
+
+func is_runtime_faction(faction_id: String) -> bool:
+	return _runtime_factions.has(faction_id)
+
+## A faction made during play, copied from `base_id`: it keeps the base's
+## friends and foes and counts the base itself as an ally, but holds no law
+## (no law_code / policed_by). True if it exists afterwards.
+func create_runtime_faction(faction_id: String, base_id: String, display_name: String = "") -> bool:
+	if faction_id.is_empty():
+		return false
+	if _factions.has(faction_id):
+		return true
+	var data: Dictionary = _factions.get(base_id, {}).duplicate(true)
+	data.erase("law_code")
+	data.erase("policed_by")
+	data["id"] = faction_id
+	if not display_name.is_empty():
+		data["name"] = display_name
+	elif not data.has("name"):
+		data["name"] = faction_id.capitalize()
+	var allies: Array = data.get("allies", []).duplicate()
+	if _factions.has(base_id) and not base_id in allies:
+		allies.append(base_id)
+	data["allies"] = allies
+	data["enemies"] = data.get("enemies", []).duplicate()
+	data["runtime_base"] = base_id
+	_factions[faction_id] = data
+	_runtime_factions[faction_id] = data
+	return true
 
 func get_relationship(faction_a: String, faction_b: String) -> String:
 	if faction_a == faction_b:
@@ -322,12 +389,20 @@ func standing_to_dict() -> Dictionary:
 		"player_standing": _player_standing.duplicate(true),
 		"crime_ledger": _crime_ledger.duplicate(true),
 		"hostile_override": _hostile_override.duplicate(true),
+		"runtime_factions": _runtime_factions.duplicate(true),
+		"relation_overrides": _relation_overrides.duplicate(true),
 	}
 
 func standing_from_dict(data: Dictionary) -> void:
 	_player_standing = data.get("player_standing", {}).duplicate(true)
 	_crime_ledger = data.get("crime_ledger", {}).duplicate(true)
 	_hostile_override = data.get("hostile_override", {}).duplicate(true)
+	for fid in _runtime_factions.keys():
+		_factions.erase(fid)
+	_runtime_factions = data.get("runtime_factions", {}).duplicate(true)
+	for fid in _runtime_factions.keys():
+		_factions[fid] = _runtime_factions[fid]
+	_relation_overrides = data.get("relation_overrides", {}).duplicate(true)
 	for fid in _player_standing.keys():
 		var v: int = int(_player_standing[fid])
 		player_standing_changed.emit(str(fid), v, v)

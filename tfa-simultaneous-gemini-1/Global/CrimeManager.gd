@@ -270,7 +270,60 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor) -> Arra
 		out.append({"witness": c, "sees_actor": sees_actor})
 	return out
 
-func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary) -> void:
+## A crime named by statute instead of detected from an act: dialogue's
+## report_crime ("the clerk saw you pocket the seal"). Same verdict, log line,
+## signal and outcry pipeline as report(), so counterplay (silencing a
+## witness before the fuse runs out) still works. The jurisdiction's code
+## decides, never the caller: {} when the statute is not law there, or the
+## actor is not someone the law applies to. `witnesses`: the characters who
+## saw it, each identifying the actor; empty means whoever has line of sight,
+## exactly as report() fans out.
+func accuse(actor, statute_id: String, witnesses: Array = [], law_faction: String = "") -> Dictionary:
+	var effective = attribute(actor)
+	if effective == null or not is_instance_valid(effective) or not ("faction_id" in effective):
+		return {}
+	if not str(effective.faction_id) in LawDatabase.applies_to():
+		return {}
+	if law_faction.is_empty():
+		law_faction = current_law_faction()
+	if law_faction.is_empty():
+		return {}
+	var flat: Dictionary = LawDatabase.flattened_code(LawDatabase.code_for_faction(law_faction))
+	if not flat.has(statute_id):
+		return {}
+	var verdict: Dictionary = {
+		"statute": statute_id,
+		"display_name": str(LawDatabase.statute_def(statute_id).get("display_name", statute_id.capitalize())),
+		"severity": int(flat[statute_id]),
+		"law_faction": law_faction,
+	}
+	var payload: Dictionary = {"law_faction": law_faction}
+	if effective is Node2D:
+		payload["crime_pos"] = effective.global_position
+	var actor_name: String = str(effective.Name) if ("Name" in effective) else "Someone"
+	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
+		actor_name, verdict["display_name"], verdict["severity"], law_faction])
+	crime_committed.emit(effective, verdict, payload)
+	# Same filter as witnesses_of: living, AI-driven, not the party.
+	var game = get_tree().current_scene
+	var party: Array = game.party_chars if (game != null and "party_chars" in game) else []
+	var named: Array = []
+	for w in witnesses:
+		if not (w is Node2D) or not is_instance_valid(w) or w == effective or w in party:
+			continue
+		if not w.has_method("is_alive") or not w.is_alive() or w.get_node_or_null("AI") == null:
+			continue
+		named.append({"witness": w, "sees_actor": true})
+	_fan_out_witnesses(effective, effective, verdict, payload, named)
+	return verdict
+
+## Pardon: square with the law with no fine, no time and nothing returned.
+## Clears the outlaw mark and manhunts; the ledger keeps the records, settled.
+func pardon(law_faction: String) -> void:
+	FactionDatabase.settle(law_faction, "pardon")
+	clear_manhunts(law_faction)
+
+func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary, named_witnesses: Array = []) -> void:
 	var crime_pos: Vector2 = payload.get("crime_pos", Vector2.INF)
 	if crime_pos == Vector2.INF:
 		if physical_actor is Node2D and is_instance_valid(physical_actor):
@@ -298,7 +351,8 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		})
 	var victim_covered: bool = false
 	var fuses: int = 0
-	for entry in witnesses_of(crime_pos, crime_elev, physical_actor):
+	var entries: Array = named_witnesses if not named_witnesses.is_empty() else witnesses_of(crime_pos, crime_elev, physical_actor)
+	for entry in entries:
 		var witness = entry["witness"]
 		var is_victim: bool = witness == victim
 		# D7: LOS to the actor means identified UNLESS disguised. The victim
