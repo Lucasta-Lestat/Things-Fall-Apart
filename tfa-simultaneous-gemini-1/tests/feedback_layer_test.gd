@@ -92,19 +92,28 @@ func _case_log_panel() -> void:
 	_check("log.label-shows-xN", last.text.contains("Feedback harness line.") and last.text.contains("(x3)"), last.text)
 	_check("log.labels-ignore-mouse", last.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 
+	# The log is closed until the player opens it; its button is HUD chrome
+	# and follows the Tab toggle, the log itself stays as the player left it.
+	var btn: Button = panel.toggle_button
+	_check("log.hidden-by-default", not panel.visible and not panel.is_open())
+	_check("log.button-under-GameUI", btn != null and btn.get_parent() == ui)
 	var psp = ui.get_node("PartySidePanel")
-	var was_visible: bool = panel.visible
+	var btn_was: bool = btn.visible
 	psp._toggle_panel()
-	_check("log.follows-tab", panel.visible == psp.panel_visible and panel.visible != was_visible)
+	_check("log.button-follows-tab", btn.visible == psp.panel_visible and btn.visible != btn_was)
+	_check("log.tab-leaves-log-alone", not panel.visible)
 	psp._toggle_panel()
-	_check("log.follows-tab-back", panel.visible == was_visible)
+	_check("log.button-follows-tab-back", btn.visible == btn_was)
 
 	var dlg: Control = ui.get_node("DialoguePanel")
 	var dlg_was: bool = dlg.visible
+	var stack: float = panel.BUTTON_SIZE.y + panel.BUTTON_GAP
 	dlg.visible = true
-	_check("log.lifts-above-dialogue", is_equal_approx(panel.offset_bottom, -210.0), str(panel.offset_bottom))
+	_check("log.lifts-above-dialogue", is_equal_approx(panel.offset_bottom, -210.0 - stack), str(panel.offset_bottom))
+	_check("log.button-lifts-above-dialogue", is_equal_approx(btn.offset_bottom, -210.0), str(btn.offset_bottom))
 	dlg.visible = false
-	_check("log.drops-back", is_equal_approx(panel.offset_bottom, -10.0), str(panel.offset_bottom))
+	_check("log.drops-back", is_equal_approx(panel.offset_bottom, -10.0 - stack), str(panel.offset_bottom))
+	_check("log.button-drops-back", is_equal_approx(btn.offset_bottom, -10.0), str(btn.offset_bottom))
 	dlg.visible = dlg_was
 	await get_tree().process_frame
 

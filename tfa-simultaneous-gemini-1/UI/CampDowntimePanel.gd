@@ -10,6 +10,7 @@ const SLIDE_DURATION := 0.3
 const DOWNTIME_CARDS_DIR := "res://UI/Assets/downtime_cards/"
 const DEFAULT_DOWNTIME_CARD := "res://UI/Assets/downtime_cards/default.png"
 const SERVICE_CARDS_DEFAULT := "res://UI/Assets/service_cards/default.png"
+const GoldFrame = preload("res://UI/GoldFrame.gd")
 
 var game_node: Node = null
 var party_panel: Node = null
@@ -37,12 +38,7 @@ func _ready() -> void:
 	offset_bottom = 0
 	grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.10, 0.12, 0.16, 0.92)
-	bg.set_corner_radius_all(4)
-	bg.set_border_width_all(1)
-	bg.border_color = Color(0.6, 0.45, 0.2, 1.0)
-	add_theme_stylebox_override("panel", bg)
+	add_theme_stylebox_override("panel", GoldFrame.panel_style())
 
 	var outer := VBoxContainer.new()
 	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
