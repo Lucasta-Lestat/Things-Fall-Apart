@@ -542,6 +542,10 @@ func _end_timed_suppression(condition_id: String) -> void:
 	var instance: ConditionInstance = conditions.get(condition_id)
 	if instance == null or not instance.is_suppressed:
 		return
+	# A tick earlier in the same frame may have killed the bearer: nothing
+	# "returns" on a corpse.
+	if _bearer_dead():
+		return
 	# A delayed-onset trigger waits its full interval again: Winter's Grip's
 	# frostbite comes 18 s after the cold returns, not the moment it does.
 	var now: float = _clock_now()
@@ -703,8 +707,12 @@ func _announce_cancel(instance: ConditionInstance, trait_name: String, cause_lab
 		log_text = "%s's %s %s (%s)." % [_bearer_name(), cond_name, phrase, detail]
 		if suppressed and character.has_method("equip_source_name"):
 			var item := str(character.equip_source_name(tmpl.id))
-			if item != "":
+			# Winter's Grip's condition shares the blade's name: "the Winter's
+			# Grip brings it back" would read as the condition restoring itself.
+			if item != "" and item != cond_name:
 				log_text = log_text.trim_suffix(".") + "; %s brings it back after." % item
+			elif item != "":
+				log_text = log_text.trim_suffix(".") + "; it comes back after."
 	# A lost buff or a suppressed item reads as bad news, an ended debuff as good.
 	var color: Color = WORSEN_COLOR if suppressed or tmpl.traits.has("buff") else RESIST_COLOR
 	if character.has_method("notify"):

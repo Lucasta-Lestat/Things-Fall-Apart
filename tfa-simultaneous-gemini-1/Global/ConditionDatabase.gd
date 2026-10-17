@@ -385,7 +385,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "invisible",
 		"display_name": "Invisible",
-		"description": "Unseen: enemies cannot pick this character as a target.",
+		"description": "Unseen: enemies cannot pick this character as a target. Attacking or casting breaks it: from worn gear it returns 3 seconds after, otherwise it ends.",
 		"traits": {"buff": 1, "concealment": 1, "magical": 1},
 		"stackable": false,
 		"duration": 30.0,

@@ -85,6 +85,11 @@ func _ready() -> void:
 	await _case_cloak_reveal()
 	await _case_timed_invisible()
 	await _case_ai_acquires_in_window()
+	# Review additions.
+	await _case_winters_grip_under_fire()
+	await _case_own_invisibility_cast()
+	_case_invisible_text()
+	await _case_window_round_trip()
 
 	print("HARNESS DONE failures=%d checks=%d" % [failures, checks])
 	get_tree().quit(1 if failures > 0 else 0)
@@ -500,3 +505,81 @@ func _engaged_within(guard: ProceduralCharacter, foe: ProceduralCharacter, secon
 		if ai != null and ai.current_target == foe:
 			return true
 	return false
+
+
+# ---------------------------------------------------------------------------
+# Review additions
+# ---------------------------------------------------------------------------
+
+## Winter's Grip (the drawn blade's own condition) under fire: suppressed, not
+## removed; Freezing Fingers ends; the log line doesn't name the blade as
+## restoring itself; sheathing still strips it.
+func _case_winters_grip_under_fire() -> void:
+	var foe := _new_char("Brigand", ORIGIN + Vector2(-200, 0), false, "bandits")
+	var p := _new_char("Aldric", ORIGIN, true)
+	p.inventory.equip_weapon_from_data(ItemDatabase.get_item_data("winters_grip"))
+	await get_tree().process_frame
+	var cm := _cm(p)
+	_check("wg.drawn", cm.has_active_condition("winters_grip"))
+	cm.apply_condition("winters_grip_bite", p, 1, -1.0)   # the 18 s frostbite, as if fired
+	var line := "Aldric's Winter's Grip is suppressed for 10 s (fire: Brigand's hit); it comes back after."
+	var logs := _log_count(line)
+	p.take_damage({"fire": 3}, p.global_position, foe)
+	_check("wg.fire-suppresses", cm.has_condition("winters_grip") and not cm.has_active_condition("winters_grip"))
+	_check("wg.fire-ends-freezing-fingers", not cm.has_condition("winters_grip_bite"))
+	_check("wg.suppress-logged", _log_count(line) == logs + 1, "log tail: %s" % str(GameLog.get_entries().slice(-3)))
+	_check("wg.burning-still-lands", cm.has_condition("burning"))
+	p.holster_weapon()
+	await get_tree().process_frame
+	_check("wg.sheathed-strips", not cm.has_condition("winters_grip"))
+	await _clear()
+
+
+## An instant cast that grants Invisible itself isn't broken by its own
+## reveal; casting again while invisible does break it, as for Shrouded.
+func _case_own_invisibility_cast() -> void:
+	var p := _new_char("Aldric", ORIGIN, true)
+	var cm := _cm(p)
+	var ab := Ability.from_dict({
+		"id": "r3_vanish", "display_name": "Test Vanish", "cast_time": 0.0,
+		"traits": {"spell": 1, "magical": 1},
+		"targeting": {"type": "self", "range": 0.0, "shape": "single"},
+		"effects": [{"type": "apply_condition", "condition_id": "invisible", "stacks": 1}],
+	})
+	var breaks := _log_count("invisibility breaks")
+	var ok: bool = p.use_ability(ab, {"position": p.global_position, "free": true})
+	_check("cast.instant-cast-ok", ok)
+	_check("cast.own-invisibility-kept", cm.has_active_condition("invisible"))
+	_check("cast.no-break-notice", _log_count("invisibility breaks") == breaks)
+	p.use_ability(ab, {"position": p.global_position, "free": true})
+	_check("cast.casting-while-invisible-breaks", not cm.has_condition("invisible"))
+	_check("cast.break-logged", _log_count("Aldric's invisibility breaks: casting ends it.") >= 1)
+	await _clear()
+
+
+## The rule the player plans around is on the condition's tooltip (and so on
+## the Shadow Cloak's "While worn" line).
+func _case_invisible_text() -> void:
+	var tmpl: Condition = ConditionManager.condition_registry.get("invisible")
+	_check("text.invisible-says-attacking-breaks-it", tmpl != null and tmpl.description.contains("Attacking or casting breaks it"),
+		tmpl.description if tmpl else "missing")
+
+
+## A suppression window survives a save/warp round trip (custom_data is
+## serialized), and the still-worn cloak brings Invisible back after it.
+func _case_window_round_trip() -> void:
+	var p := _new_char("Aldric", ORIGIN, true)
+	p.equip_equipment(ItemDatabase.get_item_data("shadow_cloak"))
+	var cm := _cm(p)
+	p.reveal()
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(cm.to_dict()))
+	cm.from_dict(saved)
+	await get_tree().process_frame
+	_check("save.window-restored", cm.has_condition("invisible") and not cm.has_active_condition("invisible") 		and cm.suppression_time_left("invisible") > 0.0, str(cm.suppression_time_left("invisible")))
+	var logs := _log_count("Aldric's Invisible returns (Shadow Cloak).")
+	TimeManager.game_time += p.REVEAL_SECONDS + 0.5
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("save.restored-after-window", cm.has_active_condition("invisible"))
+	_check("save.restore-logged", _log_count("Aldric's Invisible returns (Shadow Cloak).") == logs + 1)
+	await _clear()

@@ -6875,11 +6875,13 @@ const REVEAL_SECONDS := 3.0
 ## same way (dev: "Should attacking break it, as it reveals Shrouded? Yes"): a
 ## worn Shadow Cloak's is suppressed for the same window and the cloak has it
 ## back after; a timed one (a spell, a potion) simply ends. `cause` is
-## "attacking" or "casting", for the notice.
-func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking") -> void:
+## "attacking" or "casting", for the notice. `break_invisible` false spares
+## Invisible (use_ability: an instant cast that itself granted it).
+func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_invisible: bool = true) -> void:
 	if visibility_mult < 1.0:
 		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
-	_break_invisibility(seconds, cause)
+	if break_invisible:
+		_break_invisibility(seconds, cause)
 
 ## reveal()'s half for the binary "invisible" condition. While the window runs
 ## the AI can acquire us (it only skips an ACTIVE Invisible); a further attack
@@ -8082,10 +8084,14 @@ signal targeting_started(ability: Ability)
 signal targeting_cancelled(ability: Ability)
 
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
+	# An instant cast resolves inside use_ability below: one that grants
+	# Invisible itself (a self-invisibility spell) mustn't be broken by its own
+	# reveal. Only an Invisible the caster already had breaks.
+	var had_invisible: bool = condition_manager != null and condition_manager.has_condition("invisible")
 	var ok: bool = ability_manager.use_ability(ability, target_data)
 	# Casting gives a concealed caster away (reveal()).
 	if ok:
-		reveal(REVEAL_SECONDS, "casting")
+		reveal(REVEAL_SECONDS, "casting", had_invisible)
 	return ok
 
 
