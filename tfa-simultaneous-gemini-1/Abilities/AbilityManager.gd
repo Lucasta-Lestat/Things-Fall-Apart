@@ -612,7 +612,8 @@ func _check_ability_usable(ability: Ability, free: bool = false) -> Dictionary:
 			if character.has_method("_get_character_resource"):
 				var current = character._get_character_resource(resource_name)
 				# Casting a new Concentration spell ends the held one, so the
-				# focus it holds counts as available.
+				# focus it holds counts as available. Only the cost must be
+				# affordable: what the new spell holds is best effort.
 				if resource_name == "focus" and ability.is_concentration() and "concentration_locked_focus" in character:
 					current += character.concentration_locked_focus
 				if current < cost:
@@ -723,11 +724,10 @@ func _pay_ability_costs(ability: Ability) -> bool:
 		return true
 	var costs := school_costs_for(ability)
 	for resource_name in costs:
-		# A Concentration spell's focus is held, not spent: the character
-		# locks it when the spell lands (ProceduralCharacter.begin_concentration)
-		# and gets it back when the spell ends.
-		if resource_name == "focus" and ability.is_concentration():
-			continue
+		# A Concentration spell pays its focus like any other cast; once it
+		# lands it also holds up to as much again of what is left
+		# (ProceduralCharacter.begin_concentration). The paid part never
+		# comes back; the held part is free again when the spell ends.
 		var cost: int = int(costs[resource_name])
 		if character.has_method("_spend_character_resource"):
 			if not character._spend_character_resource(resource_name, cost):

@@ -89,6 +89,11 @@ func _process(_delta: float) -> void:
 	# Don't process actions while paused
 	if PauseManager.is_paused:
 		return
+	# A plan paused by Stunned / Frozen / Apathetic holds every step where it
+	# is (no new step starts, the running one doesn't advance) until the
+	# character can act again (ProceduralCharacter._update_plan_pause).
+	if character != null and character.is_plan_paused():
+		return
 	
 	# If no current action and queue has items, start next action
 	if current_action == null and queue.size() > 0:
@@ -334,6 +339,22 @@ func cancel_all() -> void:
 	cancel_current()
 	clear_queue()
 
+func resume_current() -> void:
+	"""The plan picks up again after a pause (ProceduralCharacter._resume_plan).
+	A MOVE re-steers from where the body stands now, rejoining its route ahead
+	(a shove may have moved it); a cast the pause interrupted is tried again.
+	Any other step carries on as it was."""
+	if current_action == null or character == null:
+		return
+	match current_action.type:
+		ActionType.MOVE:
+			current_action.data["resume_nearest"] = true
+			_execute_action(current_action)
+		ActionType.USE_ABILITY:
+			if current_action.data.get("cast_interrupted", false) and character.current_cast.is_empty():
+				current_action.data.erase("cast_interrupted")
+				_execute_action(current_action)
+
 func get_queue_size() -> int:
 	return queue.size()
 
@@ -386,8 +407,11 @@ func _execute_action(action: Action) -> void:
 			var waypoints = action.data.get("waypoints", [])
 			if action.data.get("resume_nearest", false) and waypoints.size() >= 2:
 				# After a planned dash: rejoin the route ahead of where the dash
-				# landed instead of walking back to the dash node first.
-				action.data["waypoint_index"] = _nearest_waypoint_ahead(waypoints, character.global_position)
+				# landed instead of walking back to the dash node first. Resumed
+				# after a pause, only the stretch not yet walked counts: a route
+				# that doubles back past itself mustn't be walked twice.
+				action.data["waypoint_index"] = _nearest_waypoint_ahead(waypoints, character.global_position,
+					maxi(0, int(action.data.get("waypoint_index", 0)) - 1))
 			var wp_index = action.data.get("waypoint_index", 0)
 			if waypoints.size() > 0 and wp_index < waypoints.size():
 				var wp = waypoints[wp_index]
@@ -664,11 +688,12 @@ func _complete_current_action() -> void:
 		emit_signal("action_completed", current_action)
 		current_action = null
 
-func _nearest_waypoint_ahead(waypoints: Array, pos: Vector2) -> int:
-	"""Index of the waypoint that ends the route segment closest to pos."""
-	var best_i := 0
+func _nearest_waypoint_ahead(waypoints: Array, pos: Vector2, from_i: int = 0) -> int:
+	"""Index of the waypoint that ends the route segment closest to pos,
+	among the segments from `from_i` on."""
+	var best_i := mini(from_i, waypoints.size() - 2)
 	var best_dist := INF
-	for i in range(waypoints.size() - 1):
+	for i in range(best_i, waypoints.size() - 1):
 		var a: Vector2 = waypoints[i]
 		var b: Vector2 = waypoints[i + 1]
 		var ab := b - a

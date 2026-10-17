@@ -126,7 +126,19 @@ const ARROW_LENGTH := 30.0
 const ARROW_WIDTH := 2.0
 const ARROWHEAD_SIZE := 8.0
 
+# --- Paused plan ------------------------------------------------------------
+# A plan held by a stun (ProceduralCharacter.is_plan_paused): the route and its
+# nodes dim, the chevrons stop drifting, and a pause badge ("II" and the word
+# Paused) sits on the route just ahead of the character, at full strength.
+const PAUSED_ALPHA := 0.4
+const PAUSE_BADGE_RADIUS := 9.0
+const PAUSE_BADGE_AHEAD := 30.0   # px along the route from the character
+# With no drawn route (only queued orders), beside the character instead.
+const PAUSE_BADGE_BODY_OFFSET := Vector2(22, -26)
+
 var _node_layer: _NodeMarkerLayer = null
+# Draws only the pause badge, so the node layer's dimming doesn't fade it.
+var _pause_layer: _NodeMarkerLayer = null
 var _flow_phase: float = 0.0
 # Separate from _flow_phase: a dash's chevrons run far faster than a walk's, and
 # sharing one accumulator would force them to the same cadence.
@@ -155,19 +167,73 @@ func _ready() -> void:
 	_node_layer.z_index = Z_MARKERS
 	add_child(_node_layer)
 
+	_pause_layer = _NodeMarkerLayer.new()
+	_pause_layer.name = "PauseBadge"
+	_pause_layer.drawer = self
+	_pause_layer.pause_badge_only = true
+	_pause_layer.top_level = true
+	_pause_layer.z_as_relative = false
+	_pause_layer.z_index = Z_MARKERS
+	add_child(_pause_layer)
+
 func _process(delta: float) -> void:
 	# Redraw when drawing in progress, executing, or when a visible path exists.
 	# _was_live carries one extra frame so the last cleared path actually erases.
-	var live := is_drawing_path or is_drawing_rotation \
+	var paused := is_plan_paused()
+	var live := is_drawing_path or is_drawing_rotation or paused \
 		or (tactical_path != null and (tactical_path.is_executing or not tactical_path.is_empty()))
-	if live:
+	# A paused plan's chevrons hold still: nothing is moving along it.
+	if live and not paused:
 		_flow_phase = fposmod(_flow_phase + FLOW_SPEED * delta, FLOW_SPACING)
 		_dash_phase = fposmod(_dash_phase + AimLine.FLOW_SPEED * delta, AimLine.FLOW_SPACING)
+	var alpha := PAUSED_ALPHA if paused else 1.0
+	if self_modulate.a != alpha:
+		self_modulate.a = alpha
+		if _node_layer:
+			_node_layer.self_modulate.a = alpha
 	if live or _was_live:
 		queue_redraw()
 		if _node_layer:
 			_node_layer.queue_redraw()
+		if _pause_layer:
+			_pause_layer.queue_redraw()
 	_was_live = live
+
+## True while the character's plan is paused by a stun (see PAUSED_ALPHA).
+func is_plan_paused() -> bool:
+	return character != null and is_instance_valid(character) and character.is_plan_paused()
+
+## Where the pause badge goes: on the route a little ahead of the character,
+## or beside them when no route is drawn (only queued orders are paused).
+func pause_badge_position() -> Vector2:
+	var route := _visible_route() if tactical_path != null else PackedVector2Array()
+	if route.size() < 2:
+		return character.global_position + PAUSE_BADGE_BODY_OFFSET
+	var travelled := 0.0
+	for i in range(route.size() - 1):
+		var seg_len: float = route[i].distance_to(route[i + 1])
+		if travelled + seg_len >= PAUSE_BADGE_AHEAD:
+			return route[i].lerp(route[i + 1], (PAUSE_BADGE_AHEAD - travelled) / maxf(seg_len, 0.001))
+		travelled += seg_len
+	return route[route.size() - 1]
+
+## The pause badge: a node-style disc with two bars, and "Paused" beside it.
+func _draw_pause_badge(canvas: CanvasItem) -> void:
+	var center := pause_badge_position()
+	canvas.draw_circle(center + Vector2(0, 1.0), PAUSE_BADGE_RADIUS + 0.8, NODE_SHADOW_COLOR)
+	canvas.draw_circle(center, PAUSE_BADGE_RADIUS, NODE_FILL_COLOR)
+	canvas.draw_arc(center, PAUSE_BADGE_RADIUS, 0, TAU, 24, NODE_OUTLINE_COLOR, BADGE_RING_WIDTH, true)
+	var bar := Vector2(2.2, 8.0)
+	canvas.draw_rect(Rect2(center + Vector2(-3.6, -bar.y * 0.5), bar), NODE_OUTLINE_COLOR)
+	canvas.draw_rect(Rect2(center + Vector2(1.4, -bar.y * 0.5), bar), NODE_OUTLINE_COLOR)
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var baseline := Vector2(center.x + PAUSE_BADGE_RADIUS + 4.0,
+		center.y + (font.get_ascent(BADGE_FONT_SIZE) - font.get_descent(BADGE_FONT_SIZE)) * 0.5)
+	# Dark outline first, so the word reads over pale stone and dark ground.
+	canvas.draw_string_outline(font, baseline, "Paused", HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, 3, PATH_SHADOW_COLOR)
+	canvas.draw_string(font, baseline, "Paused", HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_FONT_SIZE, NODE_OUTLINE_COLOR)
 
 func _draw() -> void:
 	if tactical_path == null:
@@ -558,8 +624,14 @@ func _draw_arrow(origin: Vector2, angle: float, color: Color) -> void:
 ## Marker layer: same content source as PathDrawer, drawn at a z above characters.
 class _NodeMarkerLayer extends Node2D:
 	var drawer: PathDrawer = null
+	# The pause badge's own layer (PathDrawer._pause_layer) draws only that.
+	var pause_badge_only: bool = false
 
 	func _draw() -> void:
+		if pause_badge_only:
+			if drawer != null and drawer.is_plan_paused():
+				drawer._draw_pause_badge(self)
+			return
 		if drawer == null or drawer.tactical_path == null:
 			return
 		for node in drawer._visible_nodes():
