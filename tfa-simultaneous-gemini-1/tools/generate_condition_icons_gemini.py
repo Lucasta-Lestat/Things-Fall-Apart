@@ -12,9 +12,10 @@ This script runs both passes for conditions that do not have art yet, but makes
 several candidates per condition (a few symbol ideas, a few samples of each) so
 one can be picked by eye, and snaps the disc to the exact colour the existing
 icons of that category use, measured from the set itself. Nothing is written
-into "UI/UI Icons" until a candidate is picked with --pick. Gemini does not
-take a seed, so a rerun gives new candidates, not the same pixels; the raw
-images in <out>/raw are the record.
+into "UI/UI Icons" until a candidate is picked with --pick. No seed is set (and
+Gemini's image output does not repeat reliably even with one), so a rerun gives
+new candidates, not the same pixels; the raw images in <out>/raw are the record,
+and --rework-only redoes the finishing pass from them without any API call.
 
 Shipped picks: cond_shrouded = shrouded_hood_shadow_1, cond_inspired =
 inspired_crown_rays_1 (gemini-3-pro-image, 14 requests for 14 candidates).
@@ -50,11 +51,15 @@ import urllib.request
 
 import numpy as np
 from PIL import Image, ImageDraw
+from scipy import ndimage
 
 # Run-as-script puts tools/ on sys.path[0]; the rework pass lives in the repo-level tools/.
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(HERE)), "tools"))
 
+# generate_ability_icons_ai reads the key at import; only generating needs it,
+# so --pick, --contact, --rework-only and --list run without one.
+os.environ.setdefault("GEMINI_API_KEY", "")
 from generate_ability_icons_ai import ICONS, MODELS, REFS  # noqa: E402
 from generate_condition_icons_ai import SPECS, build_prompt  # noqa: E402
 import rework_ui_icons  # noqa: E402
@@ -179,13 +184,31 @@ def set_disc_color(icons_dir, category):
     return tuple(int(round(v)) for v in np.median(np.array(samples), axis=0))
 
 
+def _drop_specks(glyph):
+    """The glyph mask minus paper-texture specks: Gemini's 1024px prints carry a
+    few stray dots on the disc, and rework sizes and centres the glyph by its
+    bounding box, so one dot near the rim shrinks the symbol and pulls it off
+    centre (crown_rays_1 came out at 65% instead of 72%, 8px high). Anything
+    under 0.02% of the frame (about 200px at 1024) is a speck, not art; the
+    smallest real part, a crown ray, is over ten times that."""
+    lbl, n = ndimage.label(glyph)
+    if n < 2:
+        return glyph
+    sizes = np.bincount(lbl.ravel())
+    keep = sizes >= glyph.size * 0.0002
+    keep[0] = False
+    return keep[lbl] if keep.any() else glyph
+
+
 def finish(raw_img, disc_rgb):
     """rework_ui_icons.rework, with the disc painted the set's colour instead of
-    whatever shade the model happened to print."""
+    whatever shade the model happened to print, and specks dropped from the glyph."""
     orig = rework_ui_icons.analyse
 
     def analyse_snapped(img):
         info = orig(img)
+        if info is not None:
+            info["glyph"] = _drop_specks(info["glyph"])
         if info is not None and disc_rgb is not None:
             info["disc_color"] = np.array(disc_rgb, dtype=np.uint8)
         return info
@@ -327,6 +350,8 @@ def main():
     missing = [r for r in ref_paths if not os.path.exists(r)]
     if missing and not args.rework_only:
         sys.exit(f"missing style reference(s): {missing}  (use --icons-dir)")
+    if not KEY and not args.rework_only:
+        sys.exit("GEMINI_API_KEY is not set (only generating needs it)")
 
     log_path = os.path.join(args.out, "calls.json")
     log = []

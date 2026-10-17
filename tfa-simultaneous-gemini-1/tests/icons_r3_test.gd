@@ -4,7 +4,7 @@ extends Node2D
 #   - data: both conditions point at their own cond_* art, with the icon they
 #     borrowed before (Invisible, Courageous) as "icon_fallback"
 #   - files: the PNGs are in the project and match the cond_* set: 256x256,
-#     transparent corners, a full-frame sage "buff" disc
+#     transparent corners, a full-frame sage "buff" disc, a centred glyph at 72%
 #   - lookup: Condition.create_from_data uses "icon_fallback" only while the
 #     new PNG is not loadable (not imported yet), never the placeholder
 #   - feedback: a character wearing either shows a real icon in its condition
@@ -134,6 +134,25 @@ func _run_files() -> void:
 			var dist := Vector3(c.r - SET_BUFF_DISC.r, c.g - SET_BUFF_DISC.g, c.b - SET_BUFF_DISC.b).length() * 255.0
 			worst = maxf(worst, dist if c.a > 0.98 else 999.0)
 		_check("file.%s-set-disc" % id, worst < 6.0, "worst rim distance %.1f" % worst)
+		# The glyph's box: 72% of the frame on its longest side and centred, as
+		# rework_ui_icons leaves every cond_* glyph (a stray speck in the raw
+		# print would shrink the symbol and pull it off centre).
+		var lo := Vector2i(256, 256)
+		var hi := Vector2i(-1, -1)
+		for y in 256:
+			for x in 256:
+				var px := img.get_pixel(x, y)
+				if px.a < 0.98 or Vector2(x - 127.5, y - 127.5).length() > 122.0:
+					continue
+				var off := Vector3(px.r - SET_BUFF_DISC.r, px.g - SET_BUFF_DISC.g, px.b - SET_BUFF_DISC.b).length() * 255.0
+				if off > 20.0:
+					lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
+					hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
+		var fill := float(maxi(hi.x - lo.x, hi.y - lo.y) + 1) / 256.0
+		var centre := Vector2(lo + hi) / 2.0
+		_check("file.%s-glyph-72pct" % id, absf(fill - 0.72) < 0.02, "longest side %.3f of the frame" % fill)
+		_check("file.%s-glyph-centred" % id, centre.distance_to(Vector2(127.5, 127.5)) < 4.0,
+			"glyph box centre %s" % centre)
 
 
 # ---------------------------------------------------------------------------
