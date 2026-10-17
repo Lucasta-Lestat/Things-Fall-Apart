@@ -582,6 +582,12 @@ func _case_context_menu_options() -> void:
 	_check("menu.flag-reset", not game.context_menu_open)
 	_drop_temp(mute)
 
+# The menu's Attack orders every selected member, not just the actor.
+func _clear_party_queues() -> void:
+	for c in game.party_chars:
+		if is_instance_valid(c) and c.action_queue:
+			c.action_queue.clear_queue()
+
 func _case_context_attack() -> void:
 	var p0 = game.party_chars[0]
 	var npc = _npc()
@@ -601,7 +607,7 @@ func _case_context_attack() -> void:
 	PauseManager.is_paused = false
 	var q: Array = p0.action_queue.queue
 	_check("attack.paused-queues", q.size() == 1 and q[0].data.get("target") == npc, str(q.size()))
-	p0.action_queue.clear_queue()
+	_clear_party_queues()
 
 	# No actor and nobody selected: the log says so.
 	menu.actor_character = null
@@ -635,6 +641,8 @@ func _case_context_attack() -> void:
 		_check("attack.frightened-refuses", pc.action_queue == null or pc.action_queue.queue.is_empty())
 		_check("attack.frightened-says-why", _last_log().begins_with("%s can't take orders:" % pc.Name), _last_log())
 		pc.condition_manager.remove_condition("frightened")
+		# The rest of the selection took the order (r3: all selected attack).
+		_clear_party_queues()
 	else:
 		_check("attack.frightened-fixture", false, "apply_condition(frightened) failed")
 	_drop_temp(pc)

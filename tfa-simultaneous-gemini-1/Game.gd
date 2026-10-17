@@ -1941,6 +1941,12 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 			options.append("Resume" if bool(target.get("hold_position")) else "Wait Here")
 			# A companion is never an attack target.
 			options.erase("Attack")
+		elif not "Attack" in options and not FactionDatabase.are_hostile("player", target.faction_id):
+			# The peaceful: left-click talks to them, so this is the deliberate
+			# way to start a fight (a right-click on a hostile swings instead of
+			# opening a menu). The menu names the crime and asks again when the
+			# law would (context_menu.gd).
+			options.append("Attack")
 		# "Talk" only when they have something to say: active_dialogue_id is
 		# the talk cursor's and the left-click fast path's test too, so the
 		# menu never offers a conversation that opens nothing.
