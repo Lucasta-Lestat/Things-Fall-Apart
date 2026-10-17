@@ -19,9 +19,17 @@ var current_choices: Array = []
 var _pending_dialogues: Array = []
 @onready var game = get_node_or_null("/root/Game")
 
+# The action/check vocabulary nodes and choices carry ("actions", "on_enter",
+# "requires", "show_if", array branches). See docs/dialogue_actions.md.
+const DialogueActionsScript = preload("res://Global/DialogueActions.gd")
+var actions_api = DialogueActionsScript.new(self)
+# Who the player opened this conversation with (the Talk target), or null.
+# Actions reach them as "partner".
+var current_partner: Node = null
+
 
 # Reserved keywords that aren't character names
-const RESERVED_KEYS = ["choices", "next", "branch", "prerequisites", "actions"]
+const RESERVED_KEYS = ["choices", "next", "branch", "prerequisites", "actions", "on_enter"]
 
 # Signals for UI to connect to
 signal dialogue_updated(speaker_name: String, portrait: Texture, text: String, has_next: bool)
@@ -30,6 +38,52 @@ signal dialogue_ended()
 
 func _ready():
 	load_dialogues()
+	# Other autoloads (QuestDatabase, conditions) finish loading after this
+	# one, and /root/Game arrives later still.
+	call_deferred("_validate_dialogue_actions")
+	call_deferred("_connect_game_signals")
+
+# Every action/check problem in Dialogues.json that can be seen without
+# playing, said once at startup rather than when a player reaches it.
+func _validate_dialogue_actions() -> void:
+	for problem in actions_api.validate_all(dialogues):
+		push_warning("Dialogues.json: " + str(problem))
+
+func _connect_game_signals() -> void:
+	var g = _get_game()
+	if g != null and g.has_signal("map_loaded") and not g.map_loaded.is_connected(_on_map_loaded):
+		g.map_loaded.connect(_on_map_loaded)
+
+# set_dialogue choices outlive the map, and someone who joined the party
+# isn't also standing where the map placed them.
+func _on_map_loaded(_map_id: String) -> void:
+	actions_api.on_map_loaded()
+
+## The character this conversation was opened with, while they still exist.
+func get_partner() -> Node:
+	if current_partner != null and is_instance_valid(current_partner):
+		return current_partner
+	return null
+
+# The Talk target named `npc_name`: the in-scene character with that Name
+# nearest the party leader (two guards may share a name).
+func _find_partner(npc_name: String) -> Node:
+	var g = _get_game()
+	if npc_name == "" or g == null or not ("characters_in_scene" in g):
+		return null
+	var anchor = g.get("player")
+	var best: Node = null
+	var best_d: float = INF
+	for c in g.characters_in_scene:
+		if not is_instance_valid(c) or str(c.get("Name")) != npc_name:
+			continue
+		var d: float = 0.0
+		if anchor != null and is_instance_valid(anchor) and c is Node2D:
+			d = c.global_position.distance_squared_to(anchor.global_position)
+		if d < best_d:
+			best_d = d
+			best = c
+	return best
 
 # Load all dialogues from JSON file
 func load_dialogues():
@@ -99,8 +153,10 @@ func start_dialogue(dialogue_id: String, npc_name: String = ""):
 		_log_nothing_to_say(npc_name)
 		return
 	var start_node: String = dialogue_id if nodes.has(dialogue_id) else str(nodes.keys()[0])
+	_connect_game_signals()
 	current_dialogue_id = dialogue_id
 	current_node_id = start_node
+	current_partner = _find_partner(npc_name)
 	show_node(start_node)
 
 func _log_nothing_to_say(npc_name: String) -> void:
@@ -134,6 +190,12 @@ func show_node(node_id: String):
 		if not evaluate_prerequisites(node["prerequisites"]):
 			push_warning("Prerequisites not met for node: " + node_id)
 			end_dialogue()
+			return
+
+	# "on_enter" actions fire as the node opens, before its first line.
+	if node.has("on_enter"):
+		actions_api.run_list(node["on_enter"], "on_enter")
+		if not is_active() or current_node_id != node_id:
 			return
 	
 	# Parse all dialogue lines from the node (excluding reserved keywords).
@@ -193,28 +255,18 @@ func advance_line():
 	
 	show_current_line(node)
 
-# Run a node's or a choice's side-effecting `actions` list. Each entry is the
-# same call-string syntax `branch` already accepts, e.g.
-#   "actions": ["QuestManager.start_quest('bandit_bounty')"]
-# resolved against /root/ autoloads by evaluate_function_call. Return values are
-# discarded — these are executed for effect, unlike branch calls which are
-# executed for their result.
+# Run a node's or a choice's side-effecting `actions` list. Entries are action
+# objects from Global/DialogueActions.gd, e.g.
+#   "actions": [{"type": "give_item", "item": "torch", "to": "protagonist"}]
+# (every type is in docs/dialogue_actions.md), or the older call-string syntax
+# `branch` accepts, e.g. "QuestManager.start_quest('bandit_bounty')", resolved
+# against /root/ autoloads by evaluate_function_call for effect.
 #
 # This is the hook the inline [[...]] markup scattered through Dialogues.json
 # always looked like it was using; that markup goes through substitute_variables
 # and is inert, so authors should use `actions` instead.
-func run_actions(actions) -> void:
-	if actions == null:
-		return
-	if actions is String:
-		actions = [actions]
-	if not (actions is Array):
-		return
-	for entry in actions:
-		var call_string := str(entry).strip_edges()
-		if call_string.is_empty():
-			continue
-		evaluate_function_call(call_string)
+func run_actions(actions, where: String = "actions") -> void:
+	actions_api.run_list(actions, where)
 
 # Handle node navigation (choices, branch, or next)
 func handle_node_navigation(node: Dictionary):
@@ -234,7 +286,25 @@ func handle_node_navigation(node: Dictionary):
 	# Check for choices
 	if node.has("choices"):
 		var processed_choices = []
-		for choice in node["choices"]:
+		var authored: Array = node["choices"] if node["choices"] is Array else []
+		var any_open := false
+		for ci in range(authored.size()):
+			var choice = authored[ci]
+			if not (choice is Dictionary):
+				continue
+			# "show_if": not offered at all when unmet. "requires": offered
+			# greyed out, saying what is missing.
+			if choice.has("show_if") and not actions_api.check_all(choice["show_if"]):
+				continue
+			var locked_reason := ""
+			if choice.has("requires") and not actions_api.check_all(choice["requires"]):
+				# (Only worked out when there is no locked_text: it re-runs the checks.)
+				locked_reason = str(choice["locked_text"]) if choice.has("locked_text") \
+					else actions_api.unmet_reason(choice["requires"])
+				if locked_reason.is_empty():
+					locked_reason = "Not available"
+			else:
+				any_open = true
 			var preferred: Array = choice.get("preferred_traits", [])
 			var disliked: Array = choice.get("disliked_traits", [])
 			var choice_data = {
@@ -247,12 +317,26 @@ func handle_node_navigation(node: Dictionary):
 				"ally_reactions": _compute_ally_reactions(preferred, disliked),
 				# Carried through so select_choice can fire it; the UI ignores it.
 				"actions": choice.get("actions", null),
+				"disabled": not locked_reason.is_empty(),
+				"locked_reason": locked_reason,
+				"slot": "choice %d" % (ci + 1),
 			}
 			processed_choices.append(choice_data)
 
-		current_choices = processed_choices
-		choices_available.emit(processed_choices)
-		return
+		if processed_choices.is_empty():
+			# Every option hidden by show_if: carry on as if there were none,
+			# rather than leaving an empty panel nothing can close.
+			push_warning("Dialogue %s/%s: every choice is hidden by show_if" % [current_dialogue_id, current_node_id])
+		else:
+			if not any_open:
+				# Nothing the player can pick: always leave a way out.
+				processed_choices.append({"text": "Leave.", "nextNode": "", "branch": null,
+					"preferred_traits": [], "disliked_traits": [], "favorability_weight": 1.0,
+					"ally_reactions": [], "actions": null, "disabled": false, "locked_reason": "",
+					"slot": "leave"})
+			current_choices = processed_choices
+			choices_available.emit(processed_choices)
+			return
 	
 	# Check for simple next navigation
 	if node.has("next"):
@@ -271,6 +355,15 @@ func evaluate_branch(branch_data) -> String:
 		for condition in branch_data.keys():
 			if evaluate_condition(condition):
 				return branch_data[condition]
+	elif branch_data is Array:
+		# [{"if": <check or list of checks>, "next": "node"}, ..., {"next": "fallback"}]
+		# The first entry whose checks all pass wins; no "if" always passes.
+		for entry in branch_data:
+			if not (entry is Dictionary) or not entry.has("next"):
+				push_warning("Dialogue %s/%s: branch entry needs a next node: %s" % [current_dialogue_id, current_node_id, str(entry)])
+				continue
+			if not entry.has("if") or actions_api.check_all(entry["if"]):
+				return str(entry["next"])
 	elif branch_data is String:
 		# It's a function call that returns a node name
 		return evaluate_function_call(branch_data)
@@ -435,13 +528,18 @@ func select_choice(choice_index: int):
 		return
 
 	var choice = current_choices[choice_index]
+	if bool(choice.get("disabled", false)):
+		# The panel greys these out; a pick that gets here anyway is told why.
+		if GameLog:
+			GameLog.add_entry("Can't choose that: %s." % str(choice.get("locked_reason", "not available")))
+		return
 	_apply_choice_favorability(choice)
 	# Consume the list so a late double-click can't re-apply the same delta.
 	current_choices = []
 
 	# Side effects fire after favorability and before navigation, so a choice's
 	# own branch can test what its actions just wrote.
-	run_actions(choice.get("actions", null))
+	run_actions(choice.get("actions", null), str(choice.get("slot", "choice")))
 
 	# Check if choice has a branch
 	if choice["branch"] != null:
@@ -715,7 +813,13 @@ func end_dialogue():
 	current_line_index = 0
 	current_node_lines = []
 	current_choices = []
+	current_partner = null
 	dialogue_ended.emit()
+	# A fight a conversation started opens paused, so the player can plan it.
+	if actions_api.pause_requested:
+		actions_api.pause_requested = false
+		if PauseManager and not PauseManager.is_paused:
+			PauseManager.pause()
 	# Flush queued dialogues triggered while this one was active.
 	if not _pending_dialogues.is_empty():
 		var next_id: String = _pending_dialogues.pop_front()

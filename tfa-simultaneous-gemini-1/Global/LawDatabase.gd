@@ -236,6 +236,12 @@ func flattened_code(code_id: String) -> Dictionary:
 	var flat: Dictionary = _flat.get(code_id, {})
 	return flat.duplicate()
 
+## A statute's definition ({display_name, verb, match, severity}), {} if
+## laws.json has no such statute. Read by CrimeManager.accuse.
+func statute_def(statute_id: String) -> Dictionary:
+	var def: Dictionary = _statutes.get(statute_id, {})
+	return def.duplicate(true)
+
 # ---------------------------------------------------------------------------
 # Code inheritance
 # ---------------------------------------------------------------------------
