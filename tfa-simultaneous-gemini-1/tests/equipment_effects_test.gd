@@ -412,8 +412,10 @@ func _run_pack_slots() -> void:
 		and inv.main_hand_item is WeaponShape and str(inv.main_hand_item.id) == "longsword",
 		"%d of %d" % [inv.slots_used(), inv.items.size()])
 	# A pre-fix save's hidden copy is dropped on load (the sword is held).
-	inv.items.append({"id": "longsword", "equip_slot": "Main Hand"})
-	_check("pack.old-ghost-dropped", inv.migrate_hand_dicts(true) == 1 and inv.items.is_empty(), str(inv.items))
+	inv.items.append({"id": "longsword", "equip_slot": "Main Hand", "source": "starting_equipment"})
+	var shapes_before: int = inv.get_all_equipped().size()
+	_check("pack.old-ghost-dropped", inv.migrate_hand_dicts() == 1 and inv.items.is_empty()
+		and inv.get_all_equipped().size() == shapes_before, str(inv.items))
 
 	var pack := _item("leather_backpack")
 	inv.add_item(pack)

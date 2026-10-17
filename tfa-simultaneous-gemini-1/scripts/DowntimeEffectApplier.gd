@@ -290,6 +290,18 @@ static func _apply_add_condition(character, value) -> Array:
 		cid = String(value)
 	if cid.is_empty():
 		return []
+	# A result's own length never cuts short what the character already has:
+	# Meditation's day of Focused must not turn the permanent Focused a stress
+	# breakdown gave into a 24-hour one (an explicit duration replaces the
+	# expiry of a non-stackable instance). Re-apply with the longer of the two.
+	if duration > 0.0:
+		var have = cm.get_condition(cid)
+		if have != null:
+			var now: float = TimeManager.absolute_time()
+			if have.expires_at < 0.0:
+				duration = -1.0
+			elif have.expires_at > now + duration:
+				duration = have.expires_at - now
 	var lines: Array = []
 	var inst = cm.apply_condition(cid, character, stacks, duration, null)
 	if inst != null:

@@ -82,6 +82,7 @@ func _ready() -> void:
 	_case_downtime_result_hours()
 	await _case_expiry_feedback()
 	_case_banner_snapshots()
+	await _case_portrait_tooltip_hours()
 	# B. rations
 	_case_ration_trait()
 	_case_burn_a_ration()
@@ -218,6 +219,28 @@ func _case_downtime_result_hours() -> void:
 	_check("downtime.virtue-focused-permanent", ConditionManager.condition_registry["focused"].duration < 0.0)
 	var hung: Array = DowntimeEffectApplier.apply(c, {"add_condition": "hungover"})
 	_check("downtime.hungover-line", hung == ["Gained: Hungover (12h 00m)"] or str(hung).contains("Resisted"), str(hung))
+	# Someone who already has the permanent Focused (a stress breakdown's
+	# virtue) keeps it for good when meditation's day of Focused lands on top.
+	c.condition_manager.remove_condition("focused")
+	c.condition_manager.apply_condition("focused", c, 1, -2.0)
+	DowntimeEffectApplier.apply(c, {"add_condition": focus["add_condition"]})
+	var virtue: ConditionInstance = c.condition_manager.get_condition("focused")
+	_check("downtime.virtue-not-shortened", virtue != null and virtue.expires_at < 0.0,
+		virtue.expires_at if virtue else "none")
+	# A longer timed one isn't cut back to 24 h either; a shorter one is topped up.
+	c.condition_manager.remove_condition("focused")
+	var now := TimeManager.absolute_time()
+	c.condition_manager.apply_condition("focused", c, 1, 48.0 * HOUR)
+	DowntimeEffectApplier.apply(c, {"add_condition": focus["add_condition"]})
+	var longer: ConditionInstance = c.condition_manager.get_condition("focused")
+	_check("downtime.longer-kept", longer != null and is_equal_approx(longer.expires_at, now + 48.0 * HOUR),
+		(longer.expires_at - now) / HOUR if longer else "none")
+	c.condition_manager.remove_condition("focused")
+	c.condition_manager.apply_condition("focused", c, 1, 2.0 * HOUR)
+	DowntimeEffectApplier.apply(c, {"add_condition": focus["add_condition"]})
+	var topped: ConditionInstance = c.condition_manager.get_condition("focused")
+	_check("downtime.shorter-topped-up", topped != null and is_equal_approx(topped.expires_at, TimeManager.absolute_time() + 24.0 * HOUR),
+		(topped.expires_at - TimeManager.absolute_time()) / HOUR if topped else "none")
 	_free(c)
 
 
@@ -295,6 +318,30 @@ func _case_banner_snapshots() -> void:
 	_check("banner.game-tick-logs", _log_since(n) == ["Bo is no longer Blessed."], str(_log_since(n)))
 	game.free()
 	_free(leader)
+
+
+## Downtime hides the party panel; the portrait row's hover is where a
+## hangover's hours show.
+func _case_portrait_tooltip_hours() -> void:
+	var cpp = load("res://UI/CenterPartyPortraits.gd").new()
+	add_child(cpp)
+	# Its deferred first rebuild (no Game here) empties the row: let it run.
+	await get_tree().process_frame
+	var c := _party(_new_char("Ada"))
+	_clear_conditions(c)
+	c.condition_manager.apply_condition("hungover", null, 1, -2.0)
+	var rect := TextureRect.new()
+	rect.custom_minimum_size = cpp.PORTRAIT_SIZE
+	cpp._row.add_child(rect)
+	cpp._portraits.append({"rect": rect, "character": c})
+	cpp.visible = true
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var pos: Vector2 = cpp.get_global_transform().affine_inverse() * rect.get_global_rect().get_center()
+	var tip: String = cpp._get_tooltip(pos)
+	_check("portraits.condition-hours", tip.contains("Hungover (12h 00m)"), tip)
+	cpp.queue_free()
+	_free(c)
 
 
 # ---------------------------------------------------------------------------
@@ -465,30 +512,50 @@ func _case_old_save_migration() -> void:
 	var sword: Dictionary = ItemDatabase.get_item_data(STARTER_WEAPON)
 	var dagger: Dictionary = ItemDatabase.get_item_data("dagger")
 	# A pre-fix snapshot: the held sword's hidden copy, plus the copy of a
-	# dagger given away long ago, beside a real apple.
+	# starting dagger given away long ago, beside a real apple. Both copies
+	# carry the "starting_equipment" source _grant_equipment stamped on them.
 	var ghost := sword.duplicate()
 	ghost["source"] = "starting_equipment"
-	snap["inventory_items"] = [ghost, dagger.duplicate(), _food("apple", 1)]
+	var gone := dagger.duplicate()
+	gone["source"] = "starting_equipment"
+	var held_weapons: Array = (snap.get("equipped_weapons", []) as Array).duplicate(true)
+	snap["inventory_items"] = [ghost, gone, _food("apple", 1)]
 	snap["faction_id"] = "player"
 	var b := _new_char("Veteran", STARTER_TEMPLATE)
 	game._deserialize_character(b, snap)
 	_check("migrate.party-ghosts-dropped", _hand_dicts(b) == 0 and b.inventory.items.size() == 1
 		and str(b.inventory.items[0].get("id")) == "apple", str(b.inventory.items))
 	_check("migrate.party-sword-still-carried", _weapons(b, STARTER_WEAPON) == 1, _weapons(b, STARTER_WEAPON))
-	var b_daggers := 0
-	for w in b.inventory.get_all_equipped():
-		if w is WeaponShape and str(w.id) == "dagger":
-			b_daggers += 1
-	_check("migrate.party-no-free-duplicate", b_daggers == 0, b_daggers)
-	# An NPC's unmatched hand dict was a weapon it picked up: stowed, not lost.
+	_check("migrate.party-no-free-duplicate", _weapons(b, "dagger") == 0, _weapons(b, "dagger"))
+	# The same snapshot on an NPC: its copies go too.
 	snap["faction_id"] = "bandits"
 	var npc := _new_char("Bandit", STARTER_TEMPLATE)
 	game._deserialize_character(npc, snap)
-	var npc_daggers := 0
-	for w in npc.inventory.stowed_items:
-		if w is WeaponShape and str(w.id) == "dagger":
-			npc_daggers += 1
-	_check("migrate.npc-pickup-stowed", npc_daggers == 1 and _hand_dicts(npc) == 0, "daggers %d dicts %d" % [npc_daggers, _hand_dicts(npc)])
+	_check("migrate.npc-ghosts-dropped", _hand_dicts(npc) == 0 and _weapons(npc, STARTER_WEAPON) == 1
+		and _weapons(npc, "dagger") == 0,
+		"swords %d daggers %d dicts %d" % [_weapons(npc, STARTER_WEAPON), _weapons(npc, "dagger"), _hand_dicts(npc)])
+	# An NPC disarmed before the fix: the sword went to the floor and its copy
+	# stayed in the pack. Loading must not hand the sword back (with the one on
+	# the floor, that would make two).
+	snap["equipped_weapons"] = []
+	snap["inventory_items"] = [ghost.duplicate()]
+	var disarmed := _new_char("Disarmed", STARTER_TEMPLATE)
+	game._deserialize_character(disarmed, snap)
+	_check("migrate.disarmed-npc-stays-disarmed", _weapons(disarmed, STARTER_WEAPON) == 0 and _hand_dicts(disarmed) == 0,
+		"swords %d dicts %d" % [_weapons(disarmed, STARTER_WEAPON), _hand_dicts(disarmed)])
+	# A weapon an AI picked up as a dict before pick-ups stowed weapons (no
+	# source): a real weapon, stowed rather than lost, on an NPC or a companion.
+	snap["equipped_weapons"] = held_weapons
+	snap["inventory_items"] = [dagger.duplicate()]
+	var looter := _new_char("Looter", STARTER_TEMPLATE)
+	game._deserialize_character(looter, snap)
+	_check("migrate.npc-pickup-stowed", _weapons(looter, "dagger") == 1 and _hand_dicts(looter) == 0,
+		"daggers %d dicts %d" % [_weapons(looter, "dagger"), _hand_dicts(looter)])
+	snap["faction_id"] = "player"
+	var companion := _new_char("Companion", STARTER_TEMPLATE)
+	game._deserialize_character(companion, snap)
+	_check("migrate.party-pickup-stowed", _weapons(companion, "dagger") == 1 and _hand_dicts(companion) == 0,
+		"daggers %d dicts %d" % [_weapons(companion, "dagger"), _hand_dicts(companion)])
 	# A corpse keeps its weapon dicts: they are its loot.
 	snap["current_health"] = 0
 	snap["equipped_weapons"] = []
@@ -500,6 +567,9 @@ func _case_old_save_migration() -> void:
 	_free(a)
 	_free(b)
 	_free(npc)
+	_free(disarmed)
+	_free(looter)
+	_free(companion)
 	_free(corpse)
 
 

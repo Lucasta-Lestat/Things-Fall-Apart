@@ -228,31 +228,25 @@ func get_all_items() -> Array:
 ## Old saves: starting weapons used to leave a hidden copy of their item dict
 ## ("equip_slot": "Main Hand"/"Off Hand") in `items` beside the WeaponShape
 ## (TopDownCharacterDatabase granted both). Run once after a save's items and
-## weapons are back, on a living character. A hand dict whose weapon is held
-## or stowed (same id, one dict per weapon) was that copy and is dropped. One
-## with no weapon is either the leftover copy of a starting weapon since given
-## away (drop_unmatched, a party member's: dropped, or it would come back as a
-## free duplicate) or a weapon an NPC picked up before pick-ups stowed weapons
-## (stowed as the WeaponShape it should have been, so it shows and can be
-## traded). Returns how many dicts left `items`. No signal: no window ever
-## listed them.
-func migrate_hand_dicts(drop_unmatched: bool) -> int:
-	var unclaimed := {}   # weapon id -> held/stowed weapons not yet matched
-	for node in get_all_equipped():
-		if is_instance_valid(node) and node is WeaponShape:
-			var wid := str(node.id)
-			unclaimed[wid] = int(unclaimed.get(wid, 0)) + 1
+## weapons are back, on a living character. That copy is marked
+## "source": "starting_equipment" (nothing else sets it; WeaponShape.to_data
+## and Item.to_inventory_data never carry it) and is always dropped: either
+## its weapon is still held or stowed, or the weapon left long ago (given,
+## sold, thrown, or knocked to the floor by a disarm, which never cleared the
+## copy), and keeping it would hand back a free duplicate. Any other hand dict
+## is a real weapon that went into `items` as a dict (an NPC's or companion's
+## AI pick-up before pick-ups stowed weapons): it is stowed as the WeaponShape
+## it should have been, so it shows, can be traded and isn't lost. Returns how
+## many dicts left `items`. No signal: no window ever listed them.
+func migrate_hand_dicts() -> int:
 	var moved := 0
 	for i in range(items.size() - 1, -1, -1):
 		var it = items[i]
 		if not EquipmentEffects.is_hand_ghost(it):
 			continue
-		var iid := str(it.get("id", ""))
 		items.remove_at(i)
 		moved += 1
-		if int(unclaimed.get(iid, 0)) > 0:
-			unclaimed[iid] = int(unclaimed[iid]) - 1
-		elif not drop_unmatched:
+		if str(it.get("source", "")) != "starting_equipment":
 			stow_weapon_from_data(it)
 	return moved
 
@@ -739,7 +733,7 @@ func load_from_dict(data: Dictionary) -> void:
 	# A save from before starting weapons stopped leaving a hidden item dict.
 	var alive: bool = possessor == null or not possessor.has_method("is_alive") or possessor.is_alive()
 	if alive:
-		migrate_hand_dicts(possessor != null and str(possessor.get("faction_id")) == "player")
+		migrate_hand_dicts()
 
 	# Re-equip worn armor: items keep their _equipped flag through save, but
 	# nothing rebuilt the EquipmentShape (no visuals, no DR, no boot-step

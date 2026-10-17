@@ -140,10 +140,12 @@ func _get_tooltip(at_position: Vector2) -> String:
 		lines.append("Stress %d/%d" % [int(c.stress), int(c.max_stress)])
 	var cm = c.get_node_or_null("ConditionManager")
 	if cm:
+		# The party panel is hidden in downtime, so this is where a hangover's
+		# or a blessing's hours show: "Hungover (9h 00m)", as in its tooltips.
 		var names: Array[String] = []
+		var now: float = TimeManager.absolute_time()
 		for cond_id in cm.conditions:
-			var cond_res = cm.conditions[cond_id].condition
-			names.append(cond_res.display_name if cond_res and cond_res.display_name else String(cond_id).replace("_", " "))
+			names.append(cm.conditions[cond_id].get_summary(now))
 		if not names.is_empty():
 			lines.append(", ".join(names))
 	return "\n".join(lines)
