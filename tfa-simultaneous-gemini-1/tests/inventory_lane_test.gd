@@ -362,7 +362,7 @@ func _hand_ghosts(c, item_id: String) -> int:
 # Cancel restores the party's pack from its snapshot. It used to rebuild the
 # hands from item dicts, freeing the AbilityShapes (stowed spells) and every
 # weapon node (inv-1). A weapon given away mid-trade comes back on Cancel, and
-# a starting weapon's hidden hand dict goes with it and comes back with it.
+# no hidden hand dict appears beside it (starting weapons no longer leave one).
 func _case_trade_cancel_keeps_shapes() -> void:
 	var npc = _npc()
 	var p0 = game.party_chars[0]
@@ -405,9 +405,11 @@ func _case_trade_cancel_keeps_shapes() -> void:
 	_check("shapes.given-weapon-leaves", mid == wp_before - 1, "%d -> %d" % [wp_before, mid])
 	_check("shapes.given-weapon-returns", _count_shapes(p0, WS) == wp_before, "%d -> %d" % [mid, _count_shapes(p0, WS)])
 	_check("shapes.given-weapon-abilities-kept", _count_shapes(p0, AS) == ab_before)
-	if ghosts_before > 0:
-		_check("shapes.given-weapon-ghost-leaves", ghosts_mid == ghosts_before - 1, "%d -> %d" % [ghosts_before, ghosts_mid])
-		_check("shapes.given-weapon-ghost-returns", _hand_ghosts(p0, given_id) == ghosts_before, "%d -> %d" % [ghosts_mid, _hand_ghosts(p0, given_id)])
+	# Round 3: a starting weapon is its WeaponShape alone, so no hidden hand
+	# dict exists to leave or come back (these two checks replace the old
+	# ghost-leaves / ghost-returns pair, which only ran while one existed).
+	_check("shapes.given-weapon-no-hand-dict", ghosts_before == 0 and ghosts_mid == 0, "%d / %d" % [ghosts_before, ghosts_mid])
+	_check("shapes.given-weapon-no-hand-dict-after-cancel", _hand_ghosts(p0, given_id) == 0, str(_hand_ghosts(p0, given_id)))
 
 # ---------------------------------------------------------------------------
 # Chest window (full pack, no recipient) and locked containers
