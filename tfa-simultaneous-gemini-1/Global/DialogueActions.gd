@@ -1875,7 +1875,8 @@ func _remove_items(pool: Array, item_id: String, count: int) -> Array:
 				left -= take
 			i -= 1
 		# Then weapons, as the trade window hands one over: out of the hand
-		# or the stowed list, with the starting weapon's hidden hand dict.
+		# or the stowed list. A weapon is its WeaponShape alone (starting
+		# weapons leave no hidden hand dict; old saves drop theirs on load).
 		for w in _weapons_of(inv, want):
 			if left <= 0:
 				break
@@ -1887,16 +1888,16 @@ func _remove_items(pool: Array, item_id: String, count: int) -> Array:
 			else:
 				inv.stowed_items.erase(w)
 				inv.emit_signal("weapon_unequipped", w)
-			inv.drop_hand_ghost(want)
 			w.queue_free()
 			out.append({"from": c, "count": 1, "data": wdata, "weapon": true})
 			left -= 1
 	return out
 
 
-## Hand-slot dicts mirror a weapon held or stowed as a WeaponShape; they are
-## not loose pack items, so take_item and has_item count the weapon node
-## (_weapons_of) instead, never the dict as well.
+## Hand-slot dicts are weapon data (a corpse's loot, or an old save's hidden
+## copy before Inventory.migrate_hand_dicts drops it); a carried weapon is
+## its WeaponShape, so take_item and has_item count the node (_weapons_of),
+## never a dict as well.
 func _is_hand_ghost(it: Dictionary) -> bool:
 	return EquipmentEffects.is_hand_ghost(it)
 
