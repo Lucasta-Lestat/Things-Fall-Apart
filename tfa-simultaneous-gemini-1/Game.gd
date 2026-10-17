@@ -3264,6 +3264,7 @@ func _process(delta: float) -> void:
 	# On the world map, reveal city warps only when the banner unit is near.
 	if current_map_data.get("is_world_map", false):
 		_update_world_warp_reveal()
+		_tick_banner_party_conditions()
 
 func _update_warp_hover_labels() -> void:
 	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
@@ -4704,6 +4705,18 @@ func _update_world_warp_reveal() -> void:
 		area.visible = revealed
 		# Toggling the collision_layer also gates left-click teleport probing.
 		area.collision_layer = CollisionLayers.WARPS if revealed else 0
+
+## Companions folded into the world-map banner have no body to tick their
+## conditions: expire them in their party_state snapshots on the in-world
+## clock, logging each as it runs out (see scripts/TravelConditionClock.gd).
+func _tick_banner_party_conditions() -> void:
+	var with_body := {}
+	for idx in range(party_chars.size()):
+		var c = party_chars[idx]
+		if is_instance_valid(c):
+			with_body[int(c.get_meta("party_index", idx))] = true
+	for line in preload("res://scripts/TravelConditionClock.gd").expire_snapshots(party_state, with_body, TimeManager.absolute_time()):
+		GameLog.add_entry(line)
 
 func set_city_controller(city_id: String, faction_id: String) -> void:
 	"""Quest hooks / scripted events call this to flip a city's territory color

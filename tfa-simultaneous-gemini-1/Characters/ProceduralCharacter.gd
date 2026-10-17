@@ -1885,6 +1885,25 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 		elif shown_gain <= 0 and is_party_member():
 			notify("Bide: nothing stored", Color.ORANGE,
 				"%s's Bide ends with nothing stored: no physical damage got through." % Name)
+	else:
+		_announce_condition_ran_out(instance)
+
+## Conditions that last an hour or more are travel and downtime ones (Force
+## March, Exhausted, Hungover, Blessed), authored in in-world hours.
+const LONG_CONDITION_SEC := 3600.0
+
+## A party member's condition running out on its own clock gets a float and a
+## log line when it is a long one, or anything at all on the world map, where
+## the 7200x clock ends conditions between glances. Combat-length conditions
+## on a local map stay quiet: they come and go every few seconds.
+func _announce_condition_ran_out(instance: ConditionInstance) -> void:
+	if instance == null or instance.condition == null or not is_party_member():
+		return
+	var lasted: float = instance.expires_at - instance.applied_at
+	if not on_world_map and lasted < LONG_CONDITION_SEC:
+		return
+	var cond_name: String = instance.get_display_name()
+	notify("%s ends" % cond_name, Color(0.75, 0.85, 1.0), "%s is no longer %s." % [Name, cond_name])
 
 func _on_condition_stacks_changed(_instance: ConditionInstance, _old_stacks: int, _new_stacks: int) -> void:
 	_refresh_condition_display()

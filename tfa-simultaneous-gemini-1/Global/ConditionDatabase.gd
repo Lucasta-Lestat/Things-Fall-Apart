@@ -64,7 +64,9 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "fatigue": 2},
 		"stackable": true,
 		"max_tier": 5,
-		"duration": 60.0,
+		# Travel/downtime scale (Force March, Fatigued x3): in-world hours, so
+		# the 7200x world-map clock doesn't end it within a frame. A day.
+		"duration_hours": 24,
 		"icon": "res://UI/UI Icons/exhausted.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["restoration"],
@@ -81,7 +83,9 @@ func get_all_conditions() -> Array:
 		"description": "Pushing on without rest — much faster overland travel.",
 		"traits": {"buff": 1, "fatigue": 1, "overworld": 1},
 		"stackable": false,
-		"duration": 120.0,
+		# Overland only, so in-world hours (120 s ran out within a frame of the
+		# 7200x world-map clock). Half a day of marching on through the night.
+		"duration_hours": 12,
 		# The boot, not the exhausted icon: `force_march` applies BOTH this buff
 		# and `exhausted`, so sharing art made the two pips indistinguishable in
 		# the HUD — you could not tell the speed bonus from the fatigue it costs.
@@ -1428,7 +1432,8 @@ func get_all_conditions() -> Array:
 		"traits": {"debuff": 1, "affliction": 1, "mental": 1, "fatigue": 1},
 		"stackable": false,
 		"max_tier": 1,
-		"duration": 240.0,
+		# Drinking's "felt it the next day": through the next morning.
+		"duration_hours": 12,
 		"icon": "res://UI/UI Icons/cond_hungover.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["restoration"],
@@ -1488,7 +1493,7 @@ func get_all_conditions() -> Array:
 		"traits": {"buff": 1, "mental": 1, "blessing": 1},
 		"stackable": false,
 		"max_tier": 1,
-		"duration": 86400.0,
+		"duration_hours": 24,
 		"icon": "res://UI/UI Icons/cond_blessed.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],

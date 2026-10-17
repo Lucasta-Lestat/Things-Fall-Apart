@@ -10,7 +10,11 @@
 ##   stress             : int. Added to the stress meter (negative relieves it).
 ##   remove_mental_affliction   : int (truthy). Removes non-buff conditions tagged "mental".
 ##   remove_physical_affliction : int (truthy). Removes non-buff conditions tagged "physical".
-##   add_condition      : String (condition id) OR Dict {"id": ..., "stacks": ...}.
+##   add_condition      : String (condition id) OR Dict {"id": ..., "stacks": ...,
+##                        "duration_hours": ...}. duration_hours overrides the
+##                        condition's own length for this result only (in-world
+##                        hours; Meditation's Focused lasts a day, while the
+##                        stress virtue of the same name is permanent).
 ##   remove_condition   : String (condition id).
 ##   grant_ability      : String (ability id).
 ##   learn_spell        : String. "random_spell" picks a not-yet-known spell-tagged ability.
@@ -269,19 +273,29 @@ static func _apply_add_condition(character, value) -> Array:
 		return []
 	var cid := ""
 	var stacks := 1
+	# -2.0 = the template's default duration. -1 is an explicit "permanent"
+	# override, which made every downtime condition (Hungover, Blessed, Pox)
+	# last forever. `wanted` is permanent by template, so it still is.
+	var duration := -2.0
 	if typeof(value) == TYPE_DICTIONARY:
 		cid = String(value.get("id", ""))
 		stacks = int(value.get("stacks", 1))
+		if value.has("duration_hours"):
+			duration = float(value["duration_hours"]) * 3600.0
 	else:
 		cid = String(value)
 	if cid.is_empty():
 		return []
-	# -2.0 = the template's default duration. -1 is an explicit "permanent"
-	# override, which made every downtime condition (Hungover, Blessed, Pox)
-	# last forever. `wanted` is permanent by template, so it still is.
 	var lines: Array = []
-	if cm.apply_condition(cid, character, stacks, -2.0, null) != null:
-		lines.append("Gained: " + _condition_name(cid))
+	var inst = cm.apply_condition(cid, character, stacks, duration, null)
+	if inst != null:
+		# How long it lasts, on the clock it expires on: "Gained: Hungover
+		# (12h 00m)". A third Fatigued comes back as the Exhausted it became.
+		var got: String = _condition_name(cid)
+		if inst.condition != null and inst.condition.id != cid:
+			got += ", now " + _condition_name(inst.condition.id)
+		var left: float = inst.get_remaining_duration(TimeManager.absolute_time())
+		lines.append("Gained: " + got + (" (%s)" % Globals.format_duration_short(left) if left > 0.0 else ""))
 	elif ConditionManager.condition_registry.has(cid):
 		# A known condition that didn't land was blocked by an immunity or the
 		# apply-time save.
