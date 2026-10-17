@@ -271,8 +271,8 @@ func _populate_grid() -> void:
 	for i in range(npc.inventory.items.size()):
 		var item: Dictionary = npc.inventory.items[i]
 		var equip_slot: String = str(item.get("equip_slot", ""))
-		# Skip ghost item dicts that mirror equipped weapons (TopDownCharacterDatabase
-		# adds both an item dict and a WeaponShape for starter weapons).
+		# Weapons are listed below as WeaponShapes. A hand-slot dict here could
+		# only be a pre-fix save's hidden copy of one (now dropped on load).
 		if equip_slot == "Main Hand" or equip_slot == "Off Hand":
 			continue
 		var raw_stacks = item.get("num_stacks", 1)
@@ -460,9 +460,6 @@ func _drop_data(at_position: Vector2, data) -> void:
 			else:
 				src_inv.stowed_items.erase(weapon)
 				src_inv.emit_signal("weapon_unequipped", weapon)
-			# A starting weapon's hidden hand dict leaves with it (a Cancel
-			# restores both from the snapshot).
-			src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 			weapon.queue_free()
 			npc.inventory.stow_weapon_from_data(weapon_data)
 	SfxManager.play_ui("coin_pickup")

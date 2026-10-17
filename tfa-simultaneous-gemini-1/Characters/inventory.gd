@@ -26,15 +26,12 @@ var max_slots: int:
 	set(value):
 		base_max_slots = value
 
-## Slots taken toward max_slots: every entry but the hidden hand-weapon dicts
-## that mirror a held WeaponShape (starting weapons get one each; no window
-## shows them, so they mustn't fill the bag either).
+## Slots taken toward max_slots: one per entry in `items`. Weapons and
+## abilities are nodes (hands, stowed_items) and take none. Starting weapons
+## no longer leave a hidden item dict beside their WeaponShape, and old saves
+## drop theirs on load (migrate_hand_dicts), so nothing needs exempting.
 func slots_used() -> int:
-	var n := 0
-	for it in items:
-		if not EquipmentEffects.is_hand_ghost(it):
-			n += 1
-	return n
+	return items.size()
 
 # Hand slots — each hand holds exactly one item (weapon or ability) or null
 var main_hand_item: Node2D = null
@@ -80,7 +77,7 @@ func add_item(item_data: Dictionary) -> bool:
 					emit_signal("item_added", item_data)
 					return true
 
-	if slots_used() >= max_slots and not EquipmentEffects.is_hand_ghost(item_data):
+	if slots_used() >= max_slots:
 		add_failed.emit(item_data, "Inventory full")
 		return false
 
@@ -91,7 +88,7 @@ func add_item(item_data: Dictionary) -> bool:
 ## True when add_item(item_data) would succeed: a same-id stack has room or a
 ## slot is free. Transfer code checks this before removing from the source, so
 ## a full receiver refuses the item instead of swallowing it. Mirrors add_item's
-## slot test (slots_used, hand ghosts always fit); keep the two in step.
+## slot test (slots_used); keep the two in step.
 func can_accept(item_data: Dictionary) -> bool:
 	if item_data.get("is_stackable", false):
 		var item_id = item_data.get("id", "")
@@ -99,7 +96,7 @@ func can_accept(item_data: Dictionary) -> bool:
 		for it in items:
 			if it.get("id", "") == item_id and int(it.get("num_stacks", 1)) < max_stack:
 				return true
-	return slots_used() < max_slots or EquipmentEffects.is_hand_ghost(item_data)
+	return slots_used() < max_slots
 
 # Like add_item, but transfers the full num_stacks count from item_data
 # rather than always adding 1. Use this when receiving an item dict that
@@ -146,7 +143,7 @@ func add_stack(item_data: Dictionary) -> bool:
 			emit_signal("item_added", item_data)
 			return true
 
-	if slots_used() >= max_slots and not EquipmentEffects.is_hand_ghost(item_data):
+	if slots_used() >= max_slots:
 		# Keep the caller's dict honest about what is still left to place —
 		# any stacks merged above are already in this inventory, and are
 		# announced like any other addition (panels redraw, quests count it).
@@ -228,24 +225,36 @@ func find_item_by_id(item_id: String) -> int:
 func get_all_items() -> Array:
 	return items
 
-## Starting weapons leave a hidden hand-slot dict in `items` beside their
-## WeaponShape (see slots_used). Call this with the shape's id whenever the
-## shape leaves this inventory (given, dropped, thrown, traded, put in a
-## chest) so the dict goes with it: flatten_for_corpse keeps unclaimed hand
-## dicts as loot, so an orphaned one brought a dropped starter sword back on
-## its owner's corpse. Erases one matching dict; false when there was none (a
-## picked-up weapon never had one). No signal: no window lists hand dicts.
-## Not for unequip_hand/unequip_weapon themselves: save restore and the trade
-## rollback clear weapons that their restored `items` still mirror.
-func drop_hand_ghost(item_id: String) -> bool:
-	if item_id == "":
-		return false
-	for i in range(items.size()):
+## Old saves: starting weapons used to leave a hidden copy of their item dict
+## ("equip_slot": "Main Hand"/"Off Hand") in `items` beside the WeaponShape
+## (TopDownCharacterDatabase granted both). Run once after a save's items and
+## weapons are back, on a living character. A hand dict whose weapon is held
+## or stowed (same id, one dict per weapon) was that copy and is dropped. One
+## with no weapon is either the leftover copy of a starting weapon since given
+## away (drop_unmatched, a party member's: dropped, or it would come back as a
+## free duplicate) or a weapon an NPC picked up before pick-ups stowed weapons
+## (stowed as the WeaponShape it should have been, so it shows and can be
+## traded). Returns how many dicts left `items`. No signal: no window ever
+## listed them.
+func migrate_hand_dicts(drop_unmatched: bool) -> int:
+	var unclaimed := {}   # weapon id -> held/stowed weapons not yet matched
+	for node in get_all_equipped():
+		if is_instance_valid(node) and node is WeaponShape:
+			var wid := str(node.id)
+			unclaimed[wid] = int(unclaimed.get(wid, 0)) + 1
+	var moved := 0
+	for i in range(items.size() - 1, -1, -1):
 		var it = items[i]
-		if EquipmentEffects.is_hand_ghost(it) and str(it.get("id", "")) == item_id:
-			items.remove_at(i)
-			return true
-	return false
+		if not EquipmentEffects.is_hand_ghost(it):
+			continue
+		var iid := str(it.get("id", ""))
+		items.remove_at(i)
+		moved += 1
+		if int(unclaimed.get(iid, 0)) > 0:
+			unclaimed[iid] = int(unclaimed[iid]) - 1
+		elif not drop_unmatched:
+			stow_weapon_from_data(it)
+	return moved
 
 func clear_inventory() -> void:
 	items.clear()
@@ -470,27 +479,14 @@ func get_all_equipped() -> Array:
 
 ## Corpse flatten: fold hand/stowed weapon NODES into the `items` dict-array so
 ## the loot window (which only reads dicts) can offer them, then free the nodes.
-## Db-spawned characters already carry their starting weapon's dict in `items`
-## (TopDownCharacterDatabase grants the item AND equips from the same data), so
-## dedupe by id: a node only appends its data when no unclaimed matching dict
-## exists — otherwise a looted sword would come out twice. Runtime-acquired
-## weapons (stow_weapon_from_data leaves no dict) always append. Ability shapes
-## are not goods — freed without serializing. Idempotent: a second call finds
+## Every weapon is its node alone (starting weapons no longer leave an item
+## dict beside it), so each node's data is appended once. Ability shapes are
+## not goods — freed without serializing. Idempotent: a second call finds
 ## empty hands and appends nothing.
 func flatten_for_corpse() -> void:
-	var claimed: Dictionary = {}   # id -> matching dicts already claimed by a node
 	for node in get_all_equipped():
 		if is_instance_valid(node) and node is WeaponShape and node.has_method("to_data"):
-			var data: Dictionary = node.to_data()
-			var id := String(data.get("id", ""))
-			var have := 0
-			for d in items:
-				if d is Dictionary and String(d.get("id", "")) == id:
-					have += 1
-			var used := int(claimed.get(id, 0))
-			if id == "" or used >= have:
-				items.append(data)
-			claimed[id] = used + 1
+			items.append(node.to_data())
 		if is_instance_valid(node):
 			node.queue_free()
 	main_hand_item = null
@@ -739,6 +735,11 @@ func load_from_dict(data: Dictionary) -> void:
 	if data.has("equipped_weapons"):
 		for weapon_data in data["equipped_weapons"]:
 			equip_weapon_from_data(weapon_data)
+
+	# A save from before starting weapons stopped leaving a hidden item dict.
+	var alive: bool = possessor == null or not possessor.has_method("is_alive") or possessor.is_alive()
+	if alive:
+		migrate_hand_dicts(possessor != null and str(possessor.get("faction_id")) == "player")
 
 	# Re-equip worn armor: items keep their _equipped flag through save, but
 	# nothing rebuilt the EquipmentShape (no visuals, no DR, no boot-step

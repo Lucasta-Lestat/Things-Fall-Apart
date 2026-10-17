@@ -5365,6 +5365,12 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			if idx >= -1 and idx < character.inventory.equipped_weapons.size():
 				character.inventory.set_active_weapon(idx)
  
+	# A snapshot from before starting weapons stopped leaving a hidden item dict
+	# beside their WeaponShape: drop those copies (Inventory.migrate_hand_dicts).
+	# A corpse's weapon dicts are its loot, so the dead keep theirs.
+	if character.inventory and state.has("inventory_items") and character.current_health > 0:
+		character.inventory.migrate_hand_dicts(str(state.get("faction_id", "")) == "player")
+
 	# --- Conditions: restore saved instances (after inventory, which the
 	# grants_ability re-grant guard relies on) ---
 	if character.condition_manager and state.has("condition_state"):

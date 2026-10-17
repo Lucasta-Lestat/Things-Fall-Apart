@@ -555,8 +555,9 @@ func _refresh_inventory(card_data: Dictionary) -> void:
 	var live_npc = card_data["live_npc"]
 	var items: Array = _get_service_inventory(entry, live_npc)
 
-	# 1) Plain items. Skip ghost dicts that mirror equipped weapons — those are
-	#    rendered separately below as WeaponShape entries.
+	# 1) Plain items. Weapons are rendered separately below (WeaponShapes, or
+	#    an away NPC's snapshot weapons). A hand-slot dict here is a pre-fix
+	#    snapshot's hidden copy of a starting weapon, so it is skipped.
 	for i in range(items.size()):
 		var item: Dictionary = items[i]
 		var equip_slot: String = str(item.get("equip_slot", ""))

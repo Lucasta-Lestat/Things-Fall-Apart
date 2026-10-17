@@ -1290,9 +1290,6 @@ func _execute_pending_throw(mouse_pos: Vector2) -> void:
 			# unequip_hand signals for the hands; a stowed weapon needs it too,
 			# or its party-panel slot outlives the freed node.
 			inventory.emit_signal("weapon_unequipped", source_node)
-		# A starting weapon's hidden hand dict leaves with it.
-		if "id" in source_node:
-			inventory.drop_hand_ghost(str(source_node.id))
 		source_node.queue_free()
 		item = item_data
 	else:

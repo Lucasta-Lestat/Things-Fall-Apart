@@ -221,7 +221,7 @@ static func _remove_currency(inv: Inventory, amount: int) -> Array:
 
 # Whether add_stack can place at least part of this item: a free slot, or a
 # matching stack with space. The slot count is slots_used() (Inventory's own
-# full check, which leaves out the hidden hand-weapon dicts).
+# full check).
 static func _has_room_for(inv: Inventory, item_data: Dictionary) -> bool:
 	if inv.slots_used() < inv.max_slots:
 		return true
