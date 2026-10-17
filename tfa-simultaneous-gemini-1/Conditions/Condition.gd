@@ -93,6 +93,10 @@ static func create_from_data(data: Dictionary) -> Condition:
 		condition.duration = float(data["duration_hours"]) * 3600.0
 	# A missing or bad path falls back to the placeholder so the icon slot is never blank.
 	var icon_path := str(data.get("icon", ""))
+	# A freshly added PNG is not loadable until the editor has imported it; an
+	# "icon_fallback" (the art the condition used before) stands in until then.
+	if not (icon_path != "" and ResourceLoader.exists(icon_path)) and data.has("icon_fallback"):
+		icon_path = str(data["icon_fallback"])
 	condition.icon = load(icon_path) if icon_path != "" and ResourceLoader.exists(icon_path) else load("res://Icons/dummy_icon.png")
 	if condition.icon == null:   # listed for import but not imported yet
 		condition.icon = load("res://Icons/dummy_icon.png")
