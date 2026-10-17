@@ -502,8 +502,8 @@ func _refresh_inventory(data: Dictionary) -> void:
 		return
 
 	# Item slots used vs the hard cap that makes pick-ups and transfers fail.
-	# Weapons, abilities and the hidden hand-weapon dicts don't count
-	# (Inventory.slots_used, the count add_item checks).
+	# Weapons and abilities don't count (Inventory.slots_used, the count
+	# add_item checks).
 	var inv_label: Label = data.get("inv_label")
 	if inv_label:
 		var used: int = character.inventory.slots_used()
@@ -562,10 +562,10 @@ func _set_ability_costs(entry: Dictionary, character) -> void:
 func _build_inventory_entries(inventory) -> Array:
 	var entries: Array = []
 
-	# 1. Dictionary items. Skip ghost dict entries for hand-slot equipment — those
-	# are also represented by a WeaponShape/AbilityShape in main_hand/off_hand/stowed
-	# (TopDownCharacterDatabase calls add_item AND equip_weapon_from_data for starter
-	# weapons), and we don't want both rows.
+	# 1. Dictionary items. Skip hand-slot weapon dicts: a living character's
+	# weapons are WeaponShapes (listed below). Only a corpse's flattened loot
+	# (Inventory.flatten_for_corpse) holds them now, and that is looted from the
+	# corpse window; starting weapons no longer leave a hidden copy here.
 	for i in range(inventory.items.size()):
 		var item: Dictionary = inventory.items[i]
 		var equip_slot: String = str(item.get("equip_slot", ""))
@@ -1069,8 +1069,6 @@ func _transfer_weapon(source_char, target_char, weapon) -> void:
 	else:
 		src_inv.stowed_items.erase(weapon)
 		src_inv.emit_signal("weapon_unequipped", weapon)
-	# A starting weapon's hidden hand dict leaves with it.
-	src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 	weapon.queue_free()
 	target_char.inventory.stow_weapon_from_data(weapon_data)
 
@@ -1560,8 +1558,6 @@ func _drop_split(character, item_index: int, item_data: Dictionary, slider: HSli
 
 # Remove a WeaponShape node from wherever it lives in the inventory
 # (main hand, off hand, or stowed). Returns true if found and removed.
-# A starting weapon's hidden hand dict leaves with it (Drop, and the planned
-# or paused weapon throw).
 func _remove_weapon_from_inventory(inventory, weapon) -> bool:
 	if weapon == inventory.main_hand_item:
 		inventory.unequip_hand("Main")
@@ -1574,7 +1570,6 @@ func _remove_weapon_from_inventory(inventory, weapon) -> bool:
 		inventory.emit_signal("weapon_unequipped", weapon)
 	else:
 		return false
-	inventory.drop_hand_ghost(str(weapon.id))
 	return true
 
 func _throw_weapon(character, entry: Dictionary) -> void:

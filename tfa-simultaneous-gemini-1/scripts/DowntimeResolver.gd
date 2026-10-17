@@ -366,6 +366,9 @@ func unavailable_reason(character, activity: Dictionary) -> String:
 		var souls: Array = character.captured_souls if "captured_souls" in character else []
 		if PatronDatabase.eligible_souls(patron_id, souls).is_empty():
 			return "Carries no souls their patron would accept."
+	# Food is the ration: Burn a Ration needs one food item in this pack.
+	if DowntimeEffectApplier.ration_delta_of(activity) < 0 and DowntimeEffectApplier.ration_count(character) <= 0:
+		return "No food to burn. Bread, cheese, fruit and other food count as rations; this character carries none."
 	return ""
 
 # Whether an earlier drop is still being resolved: its confirm or result

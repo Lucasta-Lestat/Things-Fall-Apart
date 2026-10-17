@@ -404,14 +404,18 @@ func _run_pack_slots() -> void:
 
 	var c := _new_char()
 	var inv = c.inventory
-	# Starting gear: a granted weapon leaves a hidden Main Hand dict behind.
+	# Starting gear: a granted weapon is its WeaponShape alone (round 3: it
+	# used to leave a hidden Main Hand dict behind as well).
 	inv.items.clear()
 	TopDownCharacterDatabase._grant_equipment(c, [{"id": "longsword", "slot": "main_hand"}])
-	_check("pack.starting-ghost-not-counted", inv.items.size() == 1 and inv.slots_used() == 0,
+	_check("pack.starting-weapon-no-dict", inv.items.is_empty() and inv.slots_used() == 0
+		and inv.main_hand_item is WeaponShape and str(inv.main_hand_item.id) == "longsword",
 		"%d of %d" % [inv.slots_used(), inv.items.size()])
-	inv.items.clear()
-	inv.items.append({"id": "longsword", "equip_slot": "Main Hand"})
-	_check("pack.ghost-not-counted", inv.slots_used() == 0, str(inv.slots_used()))
+	# A pre-fix save's hidden copy is dropped on load (the sword is held).
+	inv.items.append({"id": "longsword", "equip_slot": "Main Hand", "source": "starting_equipment"})
+	var shapes_before: int = inv.get_all_equipped().size()
+	_check("pack.old-ghost-dropped", inv.migrate_hand_dicts() == 1 and inv.items.is_empty()
+		and inv.get_all_equipped().size() == shapes_before, str(inv.items))
 
 	var pack := _item("leather_backpack")
 	inv.add_item(pack)
@@ -446,11 +450,14 @@ func _run_pack_slots() -> void:
 	_check("pack.panel-swap-refused", not cloak.get("_equipped", false) and c.worn_item_datas().has(pack))
 	inv.items.erase(cloak)
 
-	# Fill to the cap: add_item refuses, but a hand-weapon mirror still goes in.
+	# Fill to the cap: add_item refuses, but a weapon still stows (weapons
+	# are nodes and take no slot).
 	while inv.slots_used() < inv.max_slots:
 		inv.add_item(_stone(100 + inv.slots_used()))
 	_check("pack.full-refuses", not inv.add_item(_stone(999)))
-	_check("pack.full-takes-ghost", inv.add_item({"id": "dagger", "equip_slot": "Main Hand"}))
+	var used_full: int = inv.slots_used()
+	_check("pack.full-still-stows-weapon", inv.stow_weapon_from_data(_item("dagger")) != null
+		and inv.slots_used() == used_full, str(inv.slots_used()))
 
 	# Down to 20 carried: it comes off (a Drop counts the pack leaving too).
 	while inv.slots_used() > 21:

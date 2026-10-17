@@ -395,8 +395,6 @@ func _drop_data(at_position: Vector2, data) -> void:
 				else:
 					src_inv.stowed_items.erase(weapon)
 					src_inv.emit_signal("weapon_unequipped", weapon)
-				# A starting weapon's hidden hand dict leaves with it.
-				src_inv.drop_hand_ghost(str(weapon_data.get("id", "")))
 				weapon.queue_free()
 				chest_item.contents.append(weapon_data)
 		SfxManager.play_ui("chest_item_in")

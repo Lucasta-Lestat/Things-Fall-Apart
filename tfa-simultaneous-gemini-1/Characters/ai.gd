@@ -1960,7 +1960,12 @@ func pickup_item(item: Node):
 	var ns = data.get("num_stacks")
 	if not data.is_empty() and not (ns is int or ns is float):
 		data["num_stacks"] = wanted
-	if data.is_empty() or character.inventory == null or not character.inventory.add_stack(data):
+	# A weapon is stowed as its WeaponShape, as the party's Pick Up does: an
+	# item dict of it would hide in every window and fill a slot.
+	if not data.is_empty() and character.inventory != null \
+			and str(data.get("equip_slot", "")) in ["Main Hand", "Off Hand"]:
+		character.inventory.stow_weapon_from_data(data)
+	elif data.is_empty() or character.inventory == null or not character.inventory.add_stack(data):
 		# A stackable may have topped up an existing stack before running out
 		# of room; trim the floor pile to what's actually left.
 		if item is Item and item.is_stackable:

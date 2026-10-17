@@ -137,6 +137,25 @@ func random_currency_data(fallback_id: String = "gold") -> Dictionary:
 	var chosen: Dictionary = pool[randi() % pool.size()]
 	return chosen
 
+# ===== RATIONS =====
+
+func is_ration(data: Dictionary) -> bool:
+	"""Food counts as rations: any item tagged {"Ration": >=1} (bread, cheese,
+	apples, pies...). Burn a Ration burns one and Feasting hands one out
+	(DowntimeEffectApplier). A dict saved before the tag existed is judged by
+	its id's Items.json entry, so food already in a pack counts too."""
+	if _has_ration_trait(data):
+		return true
+	var known = items.get(str(data.get("id", "")))
+	return known is Dictionary and _has_ration_trait(known)
+
+func _has_ration_trait(data: Dictionary) -> bool:
+	var item_traits = data.get("traits", {})
+	if not (item_traits is Dictionary):
+		return false
+	var rv = item_traits.get("Ration", 0)
+	return rv != null and int(rv) >= 1
+
 # ===== WEAPON LOOKUPS =====
 
 func get_weapon_data(weapon_name: String) -> Dictionary:

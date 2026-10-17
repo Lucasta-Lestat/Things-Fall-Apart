@@ -3264,6 +3264,7 @@ func _process(delta: float) -> void:
 	# On the world map, reveal city warps only when the banner unit is near.
 	if current_map_data.get("is_world_map", false):
 		_update_world_warp_reveal()
+		_tick_banner_party_conditions(delta)
 
 func _update_warp_hover_labels() -> void:
 	# Game.gd extends Node, not Node2D, so get_global_mouse_position() isn't
@@ -4705,6 +4706,25 @@ func _update_world_warp_reveal() -> void:
 		# Toggling the collision_layer also gates left-click teleport probing.
 		area.collision_layer = CollisionLayers.WARPS if revealed else 0
 
+## Companions folded into the world-map banner have no body to tick their
+## conditions: expire them in their party_state snapshots on the in-world
+## clock, logging each as it runs out (see scripts/TravelConditionClock.gd).
+## Swept four times a second, not every frame: these last hours, and at the
+## world map's 7200x a quarter second is half an in-world hour.
+var _banner_conditions_wait: float = 0.0
+func _tick_banner_party_conditions(delta: float = 0.0) -> void:
+	_banner_conditions_wait -= delta
+	if _banner_conditions_wait > 0.0:
+		return
+	_banner_conditions_wait = 0.25
+	var with_body := {}
+	for idx in range(party_chars.size()):
+		var c = party_chars[idx]
+		if is_instance_valid(c):
+			with_body[int(c.get_meta("party_index", idx))] = true
+	for line in preload("res://scripts/TravelConditionClock.gd").expire_snapshots(party_state, with_body, TimeManager.absolute_time()):
+		GameLog.add_entry(line)
+
 func set_city_controller(city_id: String, faction_id: String) -> void:
 	"""Quest hooks / scripted events call this to flip a city's territory color
 	on the world map. Silently no-ops on local maps (the overlay isn't loaded).
@@ -5353,6 +5373,13 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 			if idx >= -1 and idx < character.inventory.equipped_weapons.size():
 				character.inventory.set_active_weapon(idx)
  
+	# A snapshot from before starting weapons stopped leaving a hidden item dict
+	# beside their WeaponShape: drop those copies, and stow any weapon an AI
+	# picked up as a dict (Inventory.migrate_hand_dicts). A corpse's weapon
+	# dicts are its loot, so the dead keep theirs.
+	if character.inventory and state.has("inventory_items") and character.current_health > 0:
+		character.inventory.migrate_hand_dicts()
+
 	# --- Conditions: restore saved instances (after inventory, which the
 	# grants_ability re-grant guard relies on) ---
 	if character.condition_manager and state.has("condition_state"):

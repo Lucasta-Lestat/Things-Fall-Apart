@@ -526,7 +526,10 @@
 	  "event_description": " entered a state of unusual stillness. The next day's tasks will sit lightly.",
 	  "effects": {
 	   "remove_mental_affliction": 1,
-	   "add_condition": "focused",
+	   "add_condition": {
+		"id": "focused",
+		"duration_hours": 24
+	   },
 	   "holy_tier_next_day": 1
 	  }
 	 },

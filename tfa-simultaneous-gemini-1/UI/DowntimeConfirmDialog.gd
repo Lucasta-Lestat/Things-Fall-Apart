@@ -41,12 +41,16 @@ func populate(character, activity: Dictionary, score: int, refused: bool, unavai
 		lines.append("Reluctant. (matches disliked traits %d). Forcing them will cost favour: %d → %d." % [score, fav, clampi(fav + score, -100, 100)])
 
 	var hours: int = int(activity.get("duration_hours", 0))
-	if not ability_check_stat.is_empty() or hours > 0:
+	# Burn a Ration and Feasting: this character's food, and what goes or comes.
+	var food: String = DowntimeEffectApplier.ration_note(character, activity)
+	if not ability_check_stat.is_empty() or hours > 0 or not food.is_empty():
 		lines.append("")
 	if not ability_check_stat.is_empty():
 		lines.append("Ability check: %s" % ability_check_stat)
 	if hours > 0:
 		lines.append("Takes %d hour%s." % [hours, "" if hours == 1 else "s"])
+	if not food.is_empty():
+		lines.append(food)
 
 	var desc: String = String(activity.get("description", ""))
 	if not desc.is_empty():
