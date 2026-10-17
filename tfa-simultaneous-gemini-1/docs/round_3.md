@@ -238,7 +238,7 @@ Most important first:
 ## In the editor
 
 1. The editor was open during the merge. If Godot asks about files changed on disk, choose **Reload**.
-2. On open it imports the two new icons and writes `.uid` files for the new scripts and tests. Those are 13 small files; commit them.
+2. The editor has already imported the two new icons and written `.uid` files for the new scripts and tests (13 small files). They are committed.
 3. Things to try:
    - Pause: the banner has no "planning".
    - Press L: the log opens in the gold frame. The badge counts while it's closed.
