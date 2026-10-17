@@ -38,6 +38,28 @@ const WORSEN_COLOR := Color(1.0, 0.45, 0.35)
 ## condition's own tick (Burning's fire, Poisoned's poison...).
 var firing_triggered_effect: bool = false
 
+## --- canceled_by_trait (cancel_by_traits is the one entry point) ---------
+## Anything carrying trait X ends the conditions whose canceled_by_trait lists
+## X: an ability landing (its traits), damage actually dealt (its type), a
+## condition arriving (its traits), the fluid underfoot, a consumable.
+## A condition a worn or drawn item grants (the Shadow Cloak's Invisible,
+## Winter's Grip) is suppressed for this long instead, then the still-worn
+## item restores it.
+const CANCEL_SUPPRESS_SECONDS := 10.0
+## ConditionInstance.custom_data keys of a windowed suppression
+## (suppress_for): the absolute time it ends, and what caused it. custom_data
+## is serialized, so a window survives a warp.
+const SUPPRESSED_UNTIL_KEY := "suppressed_until"
+const SUPPRESSED_CAUSE_KEY := "suppressed_cause"
+## Traits the bearer stands in right now (ward_by_traits: the fluid
+## underfoot), trait -> {"until_ms", "cause"}. While one holds, a condition it
+## cancels can't land at all: water would otherwise put out a Fire Spin's
+## Stuck in Fire a frame after every re-application, and each fresh instance
+## ticks at once. Refreshed every frame by its source, so a short real-time
+## hold.
+var _ambient_traits: Dictionary = {}
+const AMBIENT_TRAIT_MS := 250
+
 ## Registry of all known condition templates
 ## Should be populated from your data files
 static var condition_registry: Dictionary = {}  # condition_id -> Condition
@@ -82,15 +104,29 @@ func _process(delta: float) -> void:
 	var current_time: float = time_manager.absolute_time()
 	var expired_conditions: Array[String] = []
 	var saved_off_conditions: Array[String] = []
+	var suppression_over: Array[String] = []
 
-	# Check for expirations and process triggered effects
-	for condition_id in conditions:
-		var instance: ConditionInstance = conditions[condition_id]
+	# Check for expirations and process triggered effects. Over a snapshot of
+	# the ids: a tick can end other conditions (fire damage thaws Chilled), and
+	# erasing the entry being visited stops a live Dictionary loop early.
+	for condition_id in conditions.keys():
+		var instance: ConditionInstance = conditions.get(condition_id)
+		if instance == null:
+			continue
+		# A tick that killed the bearer ends the frame: corpses don't tick,
+		# roll saves or drop blood, here as at the top of _process.
+		if _bearer_dead():
+			break
 
 		# Check expiration
 		if instance.is_expired(current_time):
 			expired_conditions.append(condition_id)
 			continue
+
+		# A windowed suppression (suppress_for) that has run out.
+		if instance.is_suppressed and instance.custom_data.has(SUPPRESSED_UNTIL_KEY) \
+				and current_time >= float(instance.custom_data[SUPPRESSED_UNTIL_KEY]):
+			suppression_over.append(condition_id)
 
 		# Process triggered effects if active
 		if instance.is_active():
@@ -104,9 +140,14 @@ func _process(delta: float) -> void:
 
 	# Remove expired conditions
 	for condition_id in expired_conditions:
-		var instance = conditions[condition_id]
+		var instance = conditions.get(condition_id)
+		if instance == null:
+			continue
 		_remove_condition_internal(condition_id)
 		condition_expired.emit(instance)
+
+	for condition_id in suppression_over:
+		_end_timed_suppression(condition_id)
 
 	# Remove conditions fully saved off this frame
 	for condition_id in saved_off_conditions:
@@ -123,6 +164,9 @@ func _try_periodic_save(instance: ConditionInstance, current_time: float) -> boo
 	if not template or template.save_stat == "" or template.save_interval <= 0.0:
 		return false
 	if not character or not character.has_method("saving_throw"):
+		return false
+	# The same frame's tick may just have killed the bearer.
+	if _bearer_dead():
 		return false
 
 	var cond_id := template.id
@@ -166,6 +210,9 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 		return
 	
 	for i in range(condition.triggered_effects.size()):
+		# Bleeding's damage tick can kill; its blood puddle mustn't follow.
+		if _bearer_dead():
+			break
 		var effect = condition.triggered_effects[i]
 		var interval = effect.get("interval", 1.0)
 		var last_time = instance.last_trigger_times.get(i, -INF)
@@ -258,6 +305,12 @@ func apply_condition(
 		if source != null:
 			_announce_resist(condition_id, "Immune", "%s is immune to %s (%s)." % [_bearer_name(), _condition_name(template), _condition_name(immune_by.condition)], source)
 		return null
+	# Standing in something that cancels it (water and Burning): it can't land.
+	var ward: Dictionary = _ambient_ward_for(template)
+	if not ward.is_empty():
+		if source != null:
+			_announce_resist(condition_id, "Protected", "%s is protected from %s (%s)." % [_bearer_name(), _condition_name(template), _trait_detail(ward["trait"], ward["cause"])], source)
+		return null
 
 	# --- Saving throw (apply-time) ---
 	# If the condition has a save_stat, the bearer rolls once when it lands.
@@ -276,6 +329,12 @@ func apply_condition(
 		elif source != null and save_delta > 0 and template.stackable:
 			# Only stackables gain the extra stack; a non-stackable just lands as normal.
 			_announce_resist(condition_id, "Critical fail", "%s critically fails against %s%s." % [_bearer_name(), _condition_name(template), _save_detail(template.save_stat)], source, WORSEN_COLOR)
+
+	# canceled_by_trait: a condition arriving with trait X first ends what X
+	# cancels on the bearer (Chilled puts out Burning, Burning thaws Chilled,
+	# Courageous ends Frightened), then lands.
+	if not conditions.is_empty():
+		cancel_by_traits(template.traits, _condition_name(template), source, condition_id)
 
 	var current_time: float = time_manager.absolute_time() if time_manager else 0.0
 	var existing = conditions.get(condition_id)
@@ -438,10 +497,245 @@ func unsuppress_condition(condition_id: String) -> bool:
 	if not instance or not instance.is_suppressed:
 		return false
 	
+	# Lifting it by hand also ends a suppress_for window.
+	instance.custom_data.erase(SUPPRESSED_UNTIL_KEY)
+	instance.custom_data.erase(SUPPRESSED_CAUSE_KEY)
 	instance.unsuppress()
 	condition_unsuppressed.emit(instance)
 	stats_recalculated.emit()
 	return true
+
+
+## Suppress `condition_id` for `seconds` on the condition clock; _process
+## lifts it again when the window ends (_end_timed_suppression). Asked again
+## while the window runs, it stretches the window. Built on suppress_condition,
+## so the suppressed signal, the stats and the AI (has_active_condition) all
+## see it. `cause` is kept for the record. True when it newly suppressed it.
+func suppress_for(condition_id: String, seconds: float, cause: String = "") -> bool:
+	var instance: ConditionInstance = conditions.get(condition_id)
+	if instance == null or seconds <= 0.0:
+		return false
+	var until: float = _clock_now() + seconds
+	if instance.is_suppressed:
+		# Already down in a window: stretch it. A suppression without one
+		# (someone else's, open-ended) is left alone.
+		if instance.custom_data.has(SUPPRESSED_UNTIL_KEY):
+			instance.custom_data[SUPPRESSED_UNTIL_KEY] = maxf(float(instance.custom_data[SUPPRESSED_UNTIL_KEY]), until)
+		return false
+	instance.custom_data[SUPPRESSED_UNTIL_KEY] = until
+	instance.custom_data[SUPPRESSED_CAUSE_KEY] = cause
+	return suppress_condition(condition_id)
+
+
+## Seconds left on a suppress_for window (0 when there is none).
+func suppression_time_left(condition_id: String) -> float:
+	var instance: ConditionInstance = conditions.get(condition_id)
+	if instance == null or not instance.is_suppressed or not instance.custom_data.has(SUPPRESSED_UNTIL_KEY):
+		return 0.0
+	return maxf(0.0, float(instance.custom_data[SUPPRESSED_UNTIL_KEY]) - _clock_now())
+
+
+## A suppress_for window ran out: the condition is back, and the bearer's log
+## says so, naming the worn or drawn item that holds it ("Aldric's Invisible
+## returns (Shadow Cloak).").
+func _end_timed_suppression(condition_id: String) -> void:
+	var instance: ConditionInstance = conditions.get(condition_id)
+	if instance == null or not instance.is_suppressed:
+		return
+	# A tick earlier in the same frame may have killed the bearer: nothing
+	# "returns" on a corpse.
+	if _bearer_dead():
+		return
+	# A delayed-onset trigger waits its full interval again: Winter's Grip's
+	# frostbite comes 18 s after the cold returns, not the moment it does.
+	var now: float = _clock_now()
+	var tmpl: Condition = instance.condition
+	for i in range(tmpl.triggered_effects.size()):
+		if tmpl.triggered_effects[i] is Dictionary and tmpl.triggered_effects[i].get("delay_first", false):
+			instance.last_trigger_times[i] = now
+	unsuppress_condition(condition_id)
+	if not _bearer_noticeable():
+		return
+	var cond_name := _condition_name(tmpl)
+	var item: String = str(character.equip_source_name(condition_id)) if character.has_method("equip_source_name") else ""
+	var log_text := ""
+	if _player_involved(null):
+		log_text = "%s's %s returns%s." % [_bearer_name(), cond_name, (" (%s)" % item) if item != "" and item != cond_name else ""]
+	if character.has_method("notify"):
+		character.notify(cond_name + " returns", RESIST_COLOR, log_text)
+	elif log_text != "":
+		GameLog.add_entry(log_text)
+
+
+## canceled_by_trait, the one entry point. Every condition on the bearer whose
+## canceled_by_trait lists one of `traits_in` (trait names, or a traits
+## Dictionary whose zero tiers don't count; case doesn't matter) ends. One a
+## worn or drawn item grants is suppressed for CANCEL_SUPPRESS_SECONDS instead
+## (suppress_for), and the still-held item has it back after. Each is
+## announced on the bearer: "Burning put out" and "Aldric's Burning is put out
+## (water: Splash)." `cause_label` is what carried the trait (an ability, an
+## item, a condition, a fluid), `source` the character behind it, if any (it
+## decides the log line and the repeat window), and `exclude_id` is spared
+## (the condition being applied). Returns what it ended or suppressed:
+## [{condition_id, name, trait, suppressed}].
+func cancel_by_traits(traits_in, cause_label: String = "", source = null, exclude_id: String = "") -> Array:
+	var out: Array = []
+	if conditions.is_empty() or _bearer_dead():
+		return out
+	var carried: Array = _trait_names(traits_in)
+	if carried.is_empty():
+		return out
+	for cid in conditions.keys():
+		if cid == exclude_id:
+			continue
+		var instance: ConditionInstance = conditions.get(cid)
+		if instance == null or instance.condition == null:
+			continue
+		var hit: String = _canceling_trait(instance.condition, carried)
+		if hit == "":
+			continue
+		var suppressed := _is_equip_granted(cid)
+		if suppressed:
+			# Already held down: the window stretches, nothing new to say.
+			if not suppress_for(cid, CANCEL_SUPPRESS_SECONDS, cause_label):
+				continue
+		else:
+			remove_condition(cid)
+		out.append({"condition_id": cid, "name": _condition_name(instance.condition), "trait": hit, "suppressed": suppressed})
+		_announce_cancel(instance, hit, cause_label, source, suppressed)
+	return out
+
+
+## cancel_by_traits for a single trait (a damage type, "water").
+func cancel_by_trait(trait_name: String, cause_label: String = "", source = null) -> Array:
+	return cancel_by_traits([trait_name], cause_label, source)
+
+
+## The bearer stands in something carrying `traits_in` (the fluid underfoot,
+## refreshed every frame): cancel_by_traits now, and for AMBIENT_TRAIT_MS the
+## conditions those traits cancel can't land (apply_condition refuses them).
+func ward_by_traits(traits_in, cause_label: String = "") -> Array:
+	var until: int = Time.get_ticks_msec() + AMBIENT_TRAIT_MS
+	for t in _trait_names(traits_in):
+		_ambient_traits[t] = {"until_ms": until, "cause": cause_label if cause_label != "" else t}
+	return cancel_by_traits(traits_in, cause_label, null)
+
+
+## {trait, cause} of a ward_by_traits trait still underfoot that cancels
+## `template`, or {} when none does.
+func _ambient_ward_for(template: Condition) -> Dictionary:
+	if _ambient_traits.is_empty() or template.canceled_by_trait.is_empty():
+		return {}
+	var now: int = Time.get_ticks_msec()
+	for t in _ambient_traits.keys():
+		var w: Dictionary = _ambient_traits[t]
+		if now > int(w["until_ms"]):
+			_ambient_traits.erase(t)
+			continue
+		if _canceling_trait(template, [t]) != "":
+			return {"trait": t, "cause": str(w["cause"])}
+	return {}
+
+
+## Lower-case trait names from an Array, a single String or a traits
+## Dictionary (tier <= 0 skipped: a trait at tier 0 isn't carried).
+static func _trait_names(traits_in) -> Array:
+	var out: Array = []
+	var pairs: Array = []
+	if traits_in is Dictionary:
+		for k in traits_in:
+			var v = traits_in[k]
+			if (v is int or v is float) and float(v) <= 0.0:
+				continue
+			pairs.append(k)
+	elif traits_in is Array or traits_in is PackedStringArray:
+		pairs = Array(traits_in)
+	elif traits_in is String or traits_in is StringName:
+		pairs = [traits_in]
+	for k in pairs:
+		var key := str(k).strip_edges().to_lower()
+		if key != "" and not key in out:
+			out.append(key)
+	return out
+
+
+## The first of `template`'s canceled_by_trait entries in `carried`, or "".
+static func _canceling_trait(template: Condition, carried: Array) -> String:
+	for t in template.canceled_by_trait:
+		var key := str(t).to_lower()
+		if key in carried:
+			return key
+	return ""
+
+
+## True when a worn item or a drawn weapon holds `condition_id` on the bearer
+## (ProceduralCharacter.is_condition_equip_granted).
+func _is_equip_granted(condition_id: String) -> bool:
+	return character != null and is_instance_valid(character) \
+		and character.has_method("is_condition_equip_granted") and character.is_condition_equip_granted(condition_id)
+
+
+## Float and log one cancellation (cancel_by_traits). Over a bearer the party
+## can notice only; the log line when the party is involved. Repeats of the
+## same condition and trait wait out the resist notices' windows (a source
+## that isn't a character, such as a fluid, waits the longer one).
+func _announce_cancel(instance: ConditionInstance, trait_name: String, cause_label: String, source, suppressed: bool) -> void:
+	if not _bearer_noticeable():
+		return
+	var tmpl: Condition = instance.condition
+	var key := tmpl.id + ":cancel:" + trait_name
+	var now := Time.get_ticks_msec()
+	var window: int = NOTICE_REPEAT_MS if is_instance_valid(source) and source is ProceduralCharacter else AREA_NOTICE_REPEAT_MS
+	if _last_notice_ms.has(key) and now - int(_last_notice_ms[key]) < window:
+		return
+	_last_notice_ms[key] = now
+	var cond_name := _condition_name(tmpl)
+	var detail := _trait_detail(trait_name, cause_label)
+	var text := cond_name + " ended"
+	var phrase := "ends"
+	if suppressed:
+		text = cond_name + " suppressed"
+		phrase = "is suppressed for %d s" % int(round(CANCEL_SUPPRESS_SECONDS))
+	elif tmpl.traits.has("fire") and trait_name in ["water", "cold"]:
+		text = cond_name + " put out"
+		phrase = "is put out"
+	elif tmpl.traits.has("cold") and trait_name in ["fire", "heat"]:
+		text = cond_name + " thawed"
+		phrase = "thaws"
+	var log_text := ""
+	if _player_involved(source):
+		log_text = "%s's %s %s (%s)." % [_bearer_name(), cond_name, phrase, detail]
+		if suppressed and character.has_method("equip_source_name"):
+			var item := str(character.equip_source_name(tmpl.id))
+			# Winter's Grip's condition shares the blade's name: "the Winter's
+			# Grip brings it back" would read as the condition restoring itself.
+			if item != "" and item != cond_name:
+				log_text = log_text.trim_suffix(".") + "; %s brings it back after." % item
+			elif item != "":
+				log_text = log_text.trim_suffix(".") + "; it comes back after."
+	# A lost buff or a suppressed item reads as bad news, an ended debuff as good.
+	var color: Color = WORSEN_COLOR if suppressed or tmpl.traits.has("buff") else RESIST_COLOR
+	if character.has_method("notify"):
+		character.notify(text, color, log_text)
+	elif log_text != "":
+		GameLog.add_entry(log_text)
+
+
+## "water" or "fire: Fireball": the trait, and what carried it when that
+## says more than the trait itself (the Water fluid is just "water").
+static func _trait_detail(trait_name: String, cause_label: String) -> String:
+	if cause_label == "" or cause_label.to_lower() == trait_name:
+		return trait_name
+	return "%s: %s" % [trait_name, cause_label]
+
+
+func _clock_now() -> float:
+	return time_manager.absolute_time() if time_manager else 0.0
+
+
+## True when the bearer is a character that has died.
+func _bearer_dead() -> bool:
+	return character != null and is_instance_valid(character) and character.has_method("is_alive") and not character.is_alive()
 
 
 ## Return the active condition that makes the character immune to `template`,

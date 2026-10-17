@@ -4962,8 +4962,9 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 				character._on_condition_suppressed(inst)
 	if alive:
 		character._refresh_condition_display()
-		# _on_condition_applied's Invisible translucency.
-		if cm.has_condition("invisible"):
+		# _on_condition_applied's Invisible translucency (not while an attack
+		# has it suppressed).
+		if cm.has_active_condition("invisible"):
 			character.modulate.a = 0.35
 
 # ---------------------------------------------------------------------------

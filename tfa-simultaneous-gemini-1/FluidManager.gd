@@ -252,6 +252,17 @@ func _broadcast_ripples() -> void:
 
 # --- Condition Application (modeled after FogOverlay) ---
 
+## The traits a fluid carries for canceled_by_trait: its fluids.json "traits"
+## (a list, or a {trait: tier} map) when given, else its own name ("water").
+func fluid_traits(fluid_type: String) -> Array:
+	var def: Dictionary = _fluid_db.get(fluid_type, {})
+	var raw = def.get("traits", null)
+	if raw is Dictionary:
+		return raw.keys()
+	if raw is Array:
+		return raw
+	return [fluid_type] if fluid_type != "" else []
+
 func update_fluid_conditions(delta: float, characters: Array) -> void:
 	"""Check each character's position against fluid tiles and apply conditions.
 	Timers are per character (like SurfaceManager and CellFire): how long YOU
@@ -277,36 +288,26 @@ func update_fluid_conditions(delta: float, characters: Array) -> void:
 		if not cm:
 			continue
 
-		# Water puts out a burning character (Burning is canceled_by_trait
-		# "water"), the same way it douses the ground fire around them. Burning
-		# only: stuck_in_fire comes from the Fire Spin surface, which water
-		# doesn't douse and which would re-apply it every 0.5 s.
-		if fluid_type == FLUID_TYPE_WATER and cm.has_condition("burning"):
+		# canceled_by_trait: the fluid underfoot carries its traits (fluids.json
+		# "traits", else its own name). Water puts out Burning and Stuck in
+		# Fire and washes off Corroding, the same way it douses the ground fire
+		# around them, and while they stand in it those can't land at all
+		# (ConditionManager.ward_by_traits): a Fire Spin re-applies Stuck in
+		# Fire every 0.5 s, and each fresh instance would tick at once.
+		# ConditionManager announces it ("Burning put out"), over someone the
+		# party sees only.
+		var fl_traits: Array = fluid_traits(fluid_type)
+		if not fl_traits.is_empty() and cm.has_method("ward_by_traits"):
 			# Structured maps: the tile reports its deepest cell, so check the
 			# character's own cell -- a dry, burning cell at the puddle's edge
 			# re-applies Burning every second and would repeat the notice.
 			var wet := true
 			if cell_fluid != null and cell_fluid.active_sim():
 				var ccid := cell_fluid.graph.cell_at(character.global_position)
-				wet = ccid >= 0 and cell_fluid.type_at(ccid) == FLUID_TYPE_WATER \
+				wet = ccid >= 0 and cell_fluid.type_at(ccid) == fluid_type \
 					and cell_fluid.amount_at(ccid) > PUDDLE_HEIGHT
 			if wet:
-				cm.remove_condition("burning")
-				var log_text := ""
-				if character.has_method("is_party_member") and character.is_party_member():
-					log_text = "%s is doused by the water and stops burning." % character.Name
-				# The float only over someone the party sees (Game.is_seen_by_party:
-				# party always, NPCs by the LOS pass, not a hearing pulse): an
-				# unseen NPC's label would give its position away.
-				var game = get_tree().get_first_node_in_group("game")
-				if not game:
-					game = get_tree().current_scene
-				var seen: bool = game.is_seen_by_party(character) \
-					if game != null and game.has_method("is_seen_by_party") else character.visible
-				if seen and character.has_method("notify"):
-					character.notify("Extinguished", Color.LIGHT_BLUE, log_text)
-				elif not log_text.is_empty():
-					GameLog.add_entry(log_text)
+				cm.ward_by_traits(fl_traits, str(_fluid_db[fluid_type].get("display_name", fluid_type)))
 
 		var fluid_def = _fluid_db[fluid_type]
 		var condition_id = fluid_def.get("condition_id", "")

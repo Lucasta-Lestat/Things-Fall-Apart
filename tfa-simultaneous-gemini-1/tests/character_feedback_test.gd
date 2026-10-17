@@ -221,13 +221,15 @@ func _case_elemental() -> void:
 	a.current_health = a.max_health
 	a.take_damage({"fire": 2}, a.global_position)
 	_check("f4.fire-burns", a.condition_manager.has_condition("burning"))
+	# Kept for the tick case below: the cold hit now puts Burning out.
+	var inst = a.condition_manager.get_condition("burning")
 	a.take_damage({"poison": 2}, a.global_position)
 	_check("f4.poison-poisons", a.condition_manager.has_condition("poisoned"))
 	a.take_damage({"cold": 2}, a.global_position)
 	_check("f4.cold-chills", a.condition_manager.has_condition("chilled"))
+	_check("f4.cold-puts-out-burning", not a.condition_manager.has_condition("burning"))
 	_check("f4.legacy-dict-untouched", not a.conditions.has("burning"), a.conditions)
 	# A Burning tick doesn't re-light Burning.
-	var inst = a.condition_manager.get_condition("burning")
 	a.condition_manager.remove_condition("burning")
 	a._on_triggered_effect_fired(inst, {"type": "damage"}, {"damage": 2, "damage_type": "fire"})
 	_check("f4.tick-doesnt-feed-itself", not a.condition_manager.has_condition("burning"))

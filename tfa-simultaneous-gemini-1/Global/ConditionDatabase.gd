@@ -385,7 +385,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "invisible",
 		"display_name": "Invisible",
-		"description": "Unseen: enemies cannot pick this character as a target.",
+		"description": "Unseen: enemies cannot pick this character as a target. Attacking or casting breaks it: from worn gear it returns 3 seconds after, otherwise it ends.",
 		"traits": {"buff": 1, "concealment": 1, "magical": 1},
 		"stackable": false,
 		"duration": 30.0,
@@ -809,7 +809,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "bleeding",
 		"display_name": "Bleeding",
-		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another save fires every damage tick.",
+		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another CON save every 6 seconds can ease or worsen it.",
 		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
 		"stackable": true,
 		"max_tier": 5,

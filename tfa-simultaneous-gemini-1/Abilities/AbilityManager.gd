@@ -475,6 +475,17 @@ func _resolve_effects(ability: Ability, effects: Array, target_position: Vector2
 	if exclude_caster:
 		targets.erase(character)
 
+	# canceled_by_trait: an ability landing on a character carries its traits
+	# (Fireball's fire thaws Chilled, Ice Storm's cold puts out Burning, Heal's
+	# healing stops Bleeding), before its own effects resolve.
+	if ability and not ability.traits.is_empty():
+		for t in targets:
+			if not is_instance_valid(t):
+				continue
+			var t_cm = AbilityEffect._get_condition_manager(t)
+			if t_cm and t_cm.has_method("cancel_by_traits"):
+				t_cm.cancel_by_traits(ability.traits, ability.display_name, character)
+
 	# A list that applies Burning (Fireball) or Chilled (Ice Storm) itself owns
 	# that condition: its fire/cold damage mustn't add a stack on top.
 	var explicit_conditions: Dictionary = AbilityEffect.explicit_condition_ids(effects)
