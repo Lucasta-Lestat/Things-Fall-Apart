@@ -1812,6 +1812,10 @@ func _refresh_condition_display() -> void:
 		tex_rect.set_meta("cond_id", cond_id)
 		if icon_tex and icon_tex is Texture2D:
 			tex_rect.texture = icon_tex
+		# Suppressed (a worn cloak's Invisible an attack broke, Winter's Grip
+		# under fire): the icon stays, dimmed, until it comes back.
+		if instance.is_suppressed:
+			tex_rect.modulate.a = 0.4
 		# Stack count in the icon's bottom-right corner (Poisoned x7, Chilled x2).
 		if instance.stacks > 1:
 			var stack_label := Label.new()
@@ -2105,6 +2109,23 @@ func _apply_damage_type_condition(condition_id: String, limb = null, source: Nod
 		return
 	condition_manager.apply_condition(condition_id, source, 1, -2.0, limb)
 
+## The condition whose damage tick is being applied ("Burning"), named as the
+## cause when that damage cancels another condition. "" outside a tick.
+var _tick_condition_name: String = ""
+
+## canceled_by_trait for damage actually dealt (handle_damage_effect_based_on_type):
+## the damage type is the trait. The cause named is the tick's condition
+## ("Burning"), else the attacker's hit, else just the damage.
+func _cancel_conditions_by_damage(damage_type: String, attacker: Node) -> void:
+	if condition_manager == null or not is_alive():
+		return
+	var cause := "damage"
+	if _condition_tick_damage and _tick_condition_name != "":
+		cause = _tick_condition_name
+	elif is_instance_valid(attacker) and attacker is ProceduralCharacter:
+		cause = "%s's hit" % attacker.Name
+	condition_manager.cancel_by_trait(damage_type, cause, attacker)
+
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
 	if result.has("damage"):
 		var damage_amount = result["damage"]
@@ -2115,8 +2136,10 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var hit_limb: int = instance.target_limb if instance.target_limb != null else LimbType.TORSO
 		var damage_dict = {damage_type: damage_amount}
 		_condition_tick_damage = true
+		_tick_condition_name = instance.get_display_name()
 		take_damage(damage_dict, global_position, instance.source, hit_limb)
 		_condition_tick_damage = false
+		_tick_condition_name = ""
 
 	if result.has("heal"):
 		# Heals now go to the single HP pool. `target_limb` no longer affects
@@ -6486,6 +6509,36 @@ func _equip_condition_held_elsewhere(cid: String) -> bool:
 			return true
 	return false
 
+## True when worn gear or a drawn weapon holds condition `cid` on us. A trait
+## that cancels such a condition only suppresses it for a while
+## (ConditionManager.cancel_by_traits); the item has it back after.
+func is_condition_equip_granted(cid: String) -> bool:
+	return _equip_condition_held_elsewhere(cid)
+
+## Display name of the worn item or drawn weapon holding condition `cid`, or
+## "" when none does ("Aldric's Invisible returns (Shadow Cloak).").
+func equip_source_name(cid: String) -> String:
+	var worn := {
+		EquipmentShape.EquipmentSlot.HEAD: head_equipment,
+		EquipmentShape.EquipmentSlot.TORSO: torso_equipment,
+		EquipmentShape.EquipmentSlot.BACK: back_equipment,
+		EquipmentShape.EquipmentSlot.LEGS: legs_equipment,
+		EquipmentShape.EquipmentSlot.FEET: feet_equipment,
+	}
+	for slot in _worn_slot_conditions:
+		if not cid in _worn_slot_conditions[slot]:
+			continue
+		var shape = worn.get(slot)
+		if shape != null and is_instance_valid(shape) and shape.has_meta("item_data") and shape.get_meta("item_data") is Dictionary:
+			return EquipmentEffects.item_name(shape.get_meta("item_data"))
+	for hand in _drawn_weapon_conditions:
+		if not cid in _drawn_weapon_conditions[hand]:
+			continue
+		var weapon = current_main_hand_item if hand == "Main" else current_off_hand_item
+		if weapon != null and is_instance_valid(weapon) and "display_name" in weapon and str(weapon.display_name) != "":
+			return str(weapon.display_name)
+	return ""
+
 ## A worn item's condition that ends while the item is still on (a purge by
 ## trait, or Illuminated evicting the cloak's Invisible) comes back once
 ## nothing blocks it: any condition leaving re-checks what is worn.
@@ -6817,12 +6870,42 @@ var visibility_mult: float = 1.0
 var _revealed_until: float = -1.0
 const REVEAL_SECONDS := 3.0
 
-## Attacking (Game.register_attack_start) or casting (use_ability) gives a
-## concealed character away for a few seconds. The binary "invisible"
-## condition is its own rule and is left alone.
-func reveal(seconds: float = REVEAL_SECONDS) -> void:
+## Attacking (Game.register_attack_start, a throw) or casting (use_ability)
+## gives a concealed character away for a few seconds. It breaks Invisible the
+## same way (dev: "Should attacking break it, as it reveals Shrouded? Yes"): a
+## worn Shadow Cloak's is suppressed for the same window and the cloak has it
+## back after; a timed one (a spell, a potion) simply ends. `cause` is
+## "attacking" or "casting", for the notice.
+func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking") -> void:
 	if visibility_mult < 1.0:
 		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
+	_break_invisibility(seconds, cause)
+
+## reveal()'s half for the binary "invisible" condition. While the window runs
+## the AI can acquire us (it only skips an ACTIVE Invisible); a further attack
+## inside it stretches the window without another notice.
+func _break_invisibility(seconds: float, cause: String) -> void:
+	if condition_manager == null or not is_alive():
+		return
+	var inst: ConditionInstance = condition_manager.get_condition("invisible")
+	if inst == null or not inst.is_active():
+		if inst != null:
+			condition_manager.suppress_for("invisible", seconds, cause)   # stretch an open window
+		return
+	var log_text := ""
+	if is_condition_equip_granted("invisible"):
+		if not condition_manager.suppress_for("invisible", seconds, cause):
+			return
+		var item := equip_source_name("invisible")
+		log_text = "%s's invisibility breaks: %s gives them away for %d s%s." % [
+			Name, cause, int(round(seconds)), ("; the %s restores it after" % item) if item != "" else ""]
+	else:
+		condition_manager.remove_condition("invisible")
+		log_text = "%s's invisibility breaks: %s ends it." % [Name, cause]
+	# Over anyone the party sees; the line in the log too (an invisible foe
+	# the party can see showing itself is worth a line).
+	if _announces_to_party():
+		notify("Invisibility broken", Color(1.0, 0.75, 0.3), log_text)
 
 ## True while this character is moving stealthily: stealth mode
 ## (Game.stealth_mode, the C key) makes every party member sneak, whether
@@ -7764,6 +7847,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 		# DoT ticks and AoE would float numbers through walls and fog.
 		if _announces_to_party():
 			Globals.show_floating_text(str(damage), world_pos, get_parent(), Globals.damage_color(damage_type))
+		# canceled_by_trait: damage of a type actually dealt carries it as a
+		# trait (fire thaws Chilled and Frozen, cold puts out Burning), before
+		# the hit's own condition below lands.
+		_cancel_conditions_by_damage(damage_type, attacker)
 		#match statement for adding conditions, or knockback for force
 		match damage_type:
 			"slashing":
@@ -7998,7 +8085,7 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	var ok: bool = ability_manager.use_ability(ability, target_data)
 	# Casting gives a concealed caster away (reveal()).
 	if ok:
-		reveal()
+		reveal(REVEAL_SECONDS, "casting")
 	return ok
 
 
@@ -8622,6 +8709,11 @@ func _on_condition_suppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = true
+	# A suppressed Invisible (an attack broke the cloak's for a few seconds)
+	# shows the character solid again, and its icon dims.
+	if instance.condition.id == "invisible":
+		modulate.a = 1.0
+	_refresh_condition_display()
 
 func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var vfx = _active_condition_vfx.get(instance.condition.id)
@@ -8633,6 +8725,9 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	var sfx = _active_condition_sfx.get(instance.condition.id)
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
+	if instance.condition.id == "invisible" and is_alive():
+		modulate.a = 0.35
+	_refresh_condition_display()
 	_react_to_incapacitation(instance)
 ## Spawn a visual effect
 func _spawn_effect(scene_path: String, position: Vector2, size_scale: float = 1.0, duration: float = 1.0, aoe_radius: float = 0.0) -> Node:

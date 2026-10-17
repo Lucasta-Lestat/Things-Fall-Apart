@@ -505,6 +505,12 @@ static func apply_consumable(user, target, item_data: Dictionary) -> bool:
 		GameLog.add_entry("%s consumes the %s." % [user.Name, item_name])
 	else:
 		GameLog.add_entry("%s gives the %s to %s." % [user.Name, item_name, target.Name])
+	# canceled_by_trait: what the item is reaches whoever takes it (a Potion
+	# of Healing's Healing stops Bleeding). Announced by ConditionManager.
+	var item_traits = item_data.get("traits", {})
+	var target_cm = target.get_node_or_null("ConditionManager")
+	if target_cm and target_cm.has_method("cancel_by_traits") and (item_traits is Dictionary or item_traits is Array):
+		target_cm.cancel_by_traits(item_traits, item_name, user)
 	if satiety > 0 and "hunger" in target:
 		target.hunger = max(0, target.hunger - satiety)
 	if healing > 0 and target.has_method("heal"):

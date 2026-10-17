@@ -124,7 +124,11 @@ func get_summary(now: float = -1.0) -> String:
 	if now >= 0.0 and expires_at >= 0.0:
 		text += " (%s)" % Globals.format_duration_short(get_remaining_duration(now))
 	if is_suppressed:
-		text += " (suppressed)"
+		# A timed suppression (ConditionManager.suppress_for) says how long.
+		if now >= 0.0 and custom_data.has("suppressed_until"):
+			text += " (suppressed %s)" % Globals.format_duration_short(maxf(0.0, float(custom_data["suppressed_until"]) - now))
+		else:
+			text += " (suppressed)"
 	return text
 
 
