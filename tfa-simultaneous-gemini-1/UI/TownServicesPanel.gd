@@ -428,6 +428,12 @@ func _build_downtime_card(activity_id: String, activity: Dictionary) -> Control:
 		meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		container.add_child(meta_label)
 
+	# Feasting: the food it hands out and what each party member carries.
+	if DowntimeEffectApplier.ration_delta_of(activity) != 0:
+		var food_label = preload("res://UI/RationCountLabel.gd").new()
+		food_label.setup(activity)
+		container.add_child(food_label)
+
 	_cards.append({"activity_id": activity_id, "container": card_panel})
 	return card_panel
 

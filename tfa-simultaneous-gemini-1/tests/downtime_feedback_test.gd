@@ -449,21 +449,25 @@ func _case_silent_summary() -> void:
 
 # --- rations -----------------------------------------------------------------
 
+## Food is the ration (round 3: the "Ration" item trait; there is no ration item).
 func _case_rations() -> void:
 	var c := _spawn(Vector2(780, 200))
 	c.inventory.items.clear()
 	var none: Array = DowntimeEffectApplier.apply(c, {"ration_delta": -1})
-	_report("ration.none-to-offer", none == ["No ration to offer"], str(none))
-	c.inventory.items.append({"id": "ration", "display_name": "Ration", "num_stacks": 2, "is_stackable": true})
+	_report("ration.none-to-burn", none == ["No food to burn"], str(none))
+	var bread: Dictionary = ItemDatabase.get_item_data("bread_loaf")
+	bread["num_stacks"] = 2
+	c.inventory.items.append(bread)
 	var used: Array = DowntimeEffectApplier.apply(c, {"ration_delta": -1})
-	_report("ration.burned", used == ["-1 Ration"] and int(c.inventory.items[0]["num_stacks"]) == 1, str(used))
+	_report("ration.burned", used == ["-1 Bread Loaf"] and int(c.inventory.items[0]["num_stacks"]) == 1, str(used))
 	var gained: Array = DowntimeEffectApplier.apply(c, {"ration_delta": 1})
-	_report("ration.gained-merges", gained == ["+1 Ration"] and int(c.inventory.items[0]["num_stacks"]) == 2, str(gained))
+	_report("ration.gained-merges", gained == ["+1 Bread Loaf"] and int(c.inventory.items[0]["num_stacks"]) == 2, str(gained))
 	DowntimeEffectApplier.apply(c, {"ration_delta": -5})
-	_report("ration.empty-slot-dropped", c.inventory.find_item_by_id("ration") < 0, str(c.inventory.items))
-	# A full stolen stack: the feast's ration lands in a new slot, untagged.
-	c.inventory.items.append({"id": "ration", "display_name": "Ration", "num_stacks": 20, "max_stack_size": 20,
-		"is_stackable": true, "stolen_from": "town_guard", "stolen_value": 5})
+	_report("ration.empty-slot-dropped", c.inventory.find_item_by_id("bread_loaf") < 0, str(c.inventory.items))
+	# A full stolen stack: the feast's bread lands in a new slot, untagged.
+	var stolen: Dictionary = ItemDatabase.get_item_data("bread_loaf")
+	stolen.merge({"num_stacks": 10, "max_stack_size": 10, "stolen_from": "town_guard", "stolen_value": 5}, true)
+	c.inventory.items.append(stolen)
 	DowntimeEffectApplier.apply(c, {"ration_delta": 1})
 	var fresh: Dictionary = c.inventory.items[c.inventory.items.size() - 1]
 	_report("ration.gift-not-stolen", c.inventory.items.size() == 2 and int(fresh.get("num_stacks", 0)) == 1

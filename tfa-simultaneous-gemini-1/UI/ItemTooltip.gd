@@ -327,6 +327,9 @@ static func effect_lines(entry: Dictionary) -> PackedStringArray:
 		"item":
 			if raw is Dictionary:
 				out.append_array(EquipmentEffects.worn_lines(raw))
+				# Food is the ration (the "Ration" trait): say so where it's carried.
+				if ItemDatabase.is_ration(raw):
+					out.append("Ration: Burn a Ration at camp offers the cheapest food carried")
 		"weapon":
 			out.append_array(EquipmentEffects.held_lines(raw))
 	return out

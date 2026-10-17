@@ -27,8 +27,10 @@
 ##   holy_tier_next_day : int. Queues a Holy tier bonus that VowManager applies
 ##                        on the next date_changed rollover.
 ##   vow_set            : Dict {"vow_id": String, "active": bool}. Toggles a vow.
-##   ration_delta       : int. Adjusts the character's ration stack (used by the
-##                        burn-ration camp action).
+##   ration_delta       : int. Food is the ration (ItemDatabase.is_ration: the
+##                        "Ration" item trait). Negative burns that many food
+##                        items, cheapest first (Burn a Ration); positive hands
+##                        out FEAST_RATION_ID (Feasting's bread).
 ##
 ## Money is the only effect that scales with success_tier (per design comment in
 ## the original downtime.json draft).
@@ -42,6 +44,8 @@ const GOLD_ID := "gold"
 # Spell-tagged abilities Research must not teach: these don't work for the
 # party yet. Debug abilities (test_*) are filtered by prefix.
 const UNTEACHABLE_SPELLS := ["magnetic_pull", "vortex", "repulsion_wave"]
+## What the parish feast hands out (Feasting's ration_delta): "bread, broth".
+const FEAST_RATION_ID := "bread_loaf"
 
 static func apply(character, effects: Dictionary, success_tier: int = 1) -> Array:
 	var lines: Array = []
@@ -497,40 +501,155 @@ static func _apply_ration_delta(character, amount: int) -> Array:
 	var inv: Inventory = character.get_node_or_null("Inventory")
 	if inv == null:
 		return []
-	var idx: int = inv.find_item_by_id("ration")
-	if idx < 0:
-		# Try the plural / alternate id used by some content
-		idx = inv.find_item_by_id("rations")
 	if amount < 0:
-		if idx < 0:
-			return ["No ration to offer"]
-		var current: int = int(inv.items[idx].get("num_stacks", 1))
-		var ration_name := String(inv.items[idx].get("display_name", "Ration"))
-		if current <= 0:
-			inv.remove_item(idx)
-			return ["No ration to offer"]
-		var take: int = mini(current, -amount)
-		# remove_amount drops the slot at 0 and emits item_removed for the UI.
-		inv.remove_amount(idx, take)
-		return ["-%d %s" % [take, ration_name]]
-	# Gaining rations: merge into the carried stack, or mint one from the
-	# item database.
-	var data: Dictionary = {}
-	if idx >= 0:
-		data = inv.items[idx].duplicate(true)
-		# A gift, not loot: the carried stack's theft tags (law/crime) must
-		# not ride along onto a new slot when the stack is full.
-		data.erase("stolen_from")
-		data.erase("stolen_value")
-	else:
-		data = ItemDatabase.items.get("ration", ItemDatabase.items.get("rations", {})).duplicate(true)
+		# Food is the ration: burn the cheapest food carried, one unit at a
+		# time. remove_amount drops an emptied slot and emits item_removed.
+		var burned := {}   # display name -> units, in burn order
+		for i in range(-amount):
+			var idx: int = ration_to_burn(inv)
+			if idx < 0:
+				break
+			var food_name := String(inv.items[idx].get("display_name", "food"))
+			inv.remove_amount(idx, 1)
+			burned[food_name] = int(burned.get(food_name, 0)) + 1
+		if burned.is_empty():
+			return ["No food to burn"]
+		var lines: Array = []
+		for food_name in burned:
+			lines.append("-%d %s" % [burned[food_name], food_name])
+		return lines
+	# Gaining: the feast's bread, minted fresh from the item database (a gift,
+	# not loot, so no theft tags), merged into a carried stack where it fits.
+	var data: Dictionary = feast_ration_data()
 	if data.is_empty():
-		push_warning("DowntimeEffectApplier: no 'ration' item in ItemDatabase; ration_delta %+d dropped" % amount)
+		push_warning("DowntimeEffectApplier: no Ration item in ItemDatabase; ration_delta %+d dropped" % amount)
 		return []
 	data["num_stacks"] = amount
 	data["is_stackable"] = true
-	var gained_name := String(data.get("display_name", "Ration"))
+	var gained_name := String(data.get("display_name", "food"))
 	var placed: int = amount
 	if not inv.add_stack(data):
+		# Inventory's add_failed has already floated "Inventory full".
 		placed = amount - int(data.get("num_stacks", amount))
-	return ["+%d %s" % [placed, gained_name]] if placed > 0 else []
+	if placed <= 0:
+		return ["No room for the %s" % gained_name]
+	return ["+%d %s" % [placed, gained_name]]
+
+# ---------------------------------------------------------------------------
+# Rations: food is the ration (ItemDatabase.is_ration, the "Ration" trait)
+# ---------------------------------------------------------------------------
+
+## Units in an item dict's stack (Items.json non-stackables carry null).
+static func _stack_count(item: Dictionary) -> int:
+	var v = item.get("num_stacks", 1)
+	return int(v) if v != null else 1
+
+## Food a character carries, in units, over every Ration-trait stack.
+static func ration_count(character) -> int:
+	if character == null or not is_instance_valid(character):
+		return 0
+	var inv = character.get_node_or_null("Inventory")
+	if inv == null:
+		return 0
+	var n := 0
+	for it in inv.items:
+		if it is Dictionary and ItemDatabase.is_ration(it):
+			n += maxi(0, _stack_count(it))
+	return n
+
+## Index in inv.items of the food Burn a Ration takes: the cheapest per unit
+## (an apple before a roast fowl, so the offering never costs the best meal),
+## the earliest stack on a tie. -1 when no food is carried.
+static func ration_to_burn(inv) -> int:
+	var best := -1
+	var best_cost := INF
+	for i in range(inv.items.size()):
+		var it = inv.items[i]
+		if not (it is Dictionary) or not ItemDatabase.is_ration(it) or _stack_count(it) <= 0:
+			continue
+		var cost_v = it.get("cost", 0.0)
+		var cost: float = float(cost_v) if cost_v != null else 0.0
+		if cost < best_cost:
+			best_cost = cost
+			best = i
+	return best
+
+## The item Feasting hands out: FEAST_RATION_ID, or any Ration item if that
+## id is gone from Items.json. A fresh copy; {} when nothing is food.
+static func feast_ration_data() -> Dictionary:
+	var data = ItemDatabase.items.get(FEAST_RATION_ID)
+	if not (data is Dictionary) or not ItemDatabase.is_ration(data):
+		data = null
+		for key in ItemDatabase.items:
+			if ItemDatabase.items[key] is Dictionary and ItemDatabase.is_ration(ItemDatabase.items[key]):
+				data = ItemDatabase.items[key]
+				break
+	return (data as Dictionary).duplicate(true) if data is Dictionary else {}
+
+## How an activity moves food: Burn a Ration -1, Feasting +1, 0 for the rest.
+static func ration_delta_of(activity: Dictionary) -> int:
+	var defaults = activity.get("default_effects", {})
+	if not (defaults is Dictionary):
+		return 0
+	var d = defaults.get("ration_delta", 0)
+	return int(d) if d != null else 0
+
+## Card line for a food activity: what it does with food and what each party
+## member carries, e.g. "Burns 1 food, cheapest first. Food carried: Ada 3,
+## Bo none". "" for an activity that doesn't touch food.
+static func ration_card_line(activity: Dictionary, party: Array) -> String:
+	var delta := ration_delta_of(activity)
+	if delta == 0:
+		return ""
+	var parts: PackedStringArray = []
+	for c in party:
+		if c == null or not is_instance_valid(c):
+			continue
+		if c.has_method("is_alive") and not c.is_alive():
+			continue
+		var n := ration_count(c)
+		parts.append("%s %s" % [_short_name(c), str(n) if n > 0 else "none"])
+	var head := ("Burns %d food, cheapest first." % -delta) if delta < 0 else ("Gives %s." % _feast_gift_text(delta))
+	return head if parts.is_empty() else head + " Food carried: " + ", ".join(parts)
+
+## Confirm-dialog line for one character: the food they carry and what this
+## would burn or give, e.g. "Food carried: 3 (Apple x2, Bread Loaf). Burns one
+## Apple, the cheapest." "" for an activity that doesn't touch food.
+static func ration_note(character, activity: Dictionary) -> String:
+	var delta := ration_delta_of(activity)
+	if delta == 0 or character == null or not is_instance_valid(character):
+		return ""
+	var inv = character.get_node_or_null("Inventory")
+	var have := ration_count(character)
+	var carried := "Food carried: none"
+	if have > 0 and inv != null:
+		carried = "Food carried: %d (%s)" % [have, _food_listing(inv)]
+	if delta > 0:
+		return "%s. The parish gives %s." % [carried, _feast_gift_text(delta)]
+	if have <= 0 or inv == null:
+		return carried + "."
+	var idx := ration_to_burn(inv)
+	return "%s. Burns one %s, the cheapest." % [carried, String(inv.items[idx].get("display_name", "food"))]
+
+static func _feast_gift_text(amount: int) -> String:
+	var data := feast_ration_data()
+	return "%d %s" % [amount, String(data.get("display_name", "food"))] if not data.is_empty() else "%d food" % amount
+
+## "Apple x2, Bread Loaf": the food in a pack, by name, in pack order.
+static func _food_listing(inv) -> String:
+	var counts := {}
+	for it in inv.items:
+		if it is Dictionary and ItemDatabase.is_ration(it) and _stack_count(it) > 0:
+			var n := String(it.get("display_name", it.get("id", "food")))
+			counts[n] = int(counts.get(n, 0)) + _stack_count(it)
+	var parts: PackedStringArray = []
+	for n in counts:
+		parts.append(n if int(counts[n]) == 1 else "%s x%d" % [n, int(counts[n])])
+	return ", ".join(parts)
+
+static func _short_name(c) -> String:
+	if "Name" in c and String(c.Name) != "":
+		return String(c.Name)
+	if "display_name" in c:
+		return String(c.display_name)
+	return String(c.name)
