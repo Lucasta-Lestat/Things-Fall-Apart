@@ -82,7 +82,8 @@ static func from_dict(data: Dictionary, condition_registry: Dictionary) -> Condi
 	var instance = ConditionInstance.new(condition_template, null, limb_value)
 	instance.stacks = data.get("stacks", 1)
 	# Held to today's cap, as every application is: a save from before a cap
-	# came down (round 4: Poisoned 10 -> 4, Burning 4 -> 3, Corroding 5 -> 3)
+	# came down (round 4: Poisoned 10 -> 4, Corroding 5 -> 3; Burning's 4 -> 3
+	# was undone in round 5)
 	# would otherwise tick and read "x10" past what the description says.
 	if condition_template.stackable and condition_template.max_tier >= 1:
 		instance.stacks = mini(instance.stacks, condition_template.max_tier)
@@ -160,9 +161,12 @@ func is_revealed(now: float) -> bool:
 
 
 ## "3 fire every 1 s": the damage a DoT's next tick deals at the current
-## stacks (value x stacks, as ConditionManager._execute_triggered_effect,
-## before the bearer's armour) and how often. "" for a condition with no damage
-## tick. True damage (Bleeding) reads "damage".
+## stacks (value x stacks, as ConditionManager._execute_triggered_effect) and
+## how often. That is what lands: ticks ignore armour (round 5,
+## ProceduralCharacter.take_damage). Only an armour weakness (Legionnaire's
+## electric) adds to a tick, and condition DR (Shielded, Physically Resistant,
+## Stalwart, Rage) takes from a physical one (Suffocating). "" for a condition
+## with no damage tick. True damage (Bleeding) reads "damage".
 func get_dot_text() -> String:
 	if not condition:
 		return ""

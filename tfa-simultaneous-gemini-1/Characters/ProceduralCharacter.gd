@@ -133,14 +133,17 @@ var cooldowns: Dictionary:
 	set(_value):
 		pass
 
-var MODIFY_DURATION_BY_TRAIT: Dictionary = {
-	"fire": 1.2,
-	"ice": 1.5,
-	"spell": 1.0,
-	"aoe": 1.3,
-	"attack": 1.0,
-	"magical": 1.1,
-} #
+## This character's duration multipliers by trait: a condition landing on
+## them with its template duration lasts that times the entry for each of its
+## traits (ConditionManager.apply_condition), and the impact VFX of an ability
+## they cast lasts visual_duration times the entries for its traits
+## (_get_modified_visual_duration). Neutral, i.e. empty, unless the
+## character's data gives entries ("modify_duration_by_trait": {"fire": 1.5}
+## for a creature that burns longer; load_from_data). Round 5 dropped the old
+## defaults every character carried (fire 1.2, ice 1.5, aoe 1.3, magical 1.1),
+## which made Burning last 6 s instead of its authored 5. Only the data load
+## sets it, so saves don't carry it (Game._serialize_character).
+var MODIFY_DURATION_BY_TRAIT: Dictionary = {}
 
 ## Preloaded visual effect scenes
 var _effect_cache: Dictionary = {}
@@ -7389,6 +7392,9 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	there is no per-limb HP anymore. Defaults to TORSO for condition-driven
 	damage (bleeding, poison) and any code path that doesn't know a hit limb.
 
+	A condition's damage tick (_condition_tick_damage) ignores worn armour and
+	a raised shield (round 5); see _tick_armour.
+
 	`attacker` is optional but should be passed for any character-sourced damage
 	so the witness/wake-from-AT_EASE pipeline can attribute the attack."""
 	# The dead take no further damage. Lingering DoTs (bleed from the killing
@@ -7401,6 +7407,11 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		return 0
 	# 1. Per-limb armor DR (armor still protects specific hit locations)
 	var armor_dr = get_limb_armor(hit_limb)
+	# Damage over time ignores armour (round 5, "DoT should Ignore armor"):
+	# every condition tick, Burning's first included, comes through here with
+	# the tick flag set, so this one line covers them all.
+	if _condition_tick_damage:
+		armor_dr = _tick_armour(armor_dr)
 	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
 	var raw_total: float = 0.0
@@ -7548,6 +7559,19 @@ func get_limb_armor(limb_type: LimbType) -> Dictionary:
 	for k in shield.keys():
 		total[k] = int(total.get(k, 0)) + int(shield[k])
 	return total
+
+
+## The part of a limb's armour (get_limb_armor) a damage-over-time tick still
+## meets: only its weaknesses (negative entries, e.g. Legionnaire's Armour's
+## electric -1, so Shocked hurts more in metal). Its protection is skipped, so
+## a DoT deals what its summary says (ConditionInstance.get_dot_text) whatever
+## is worn. Condition DR and Rage are not armour and still apply in take_damage.
+func _tick_armour(armour: Dictionary) -> Dictionary:
+	var weak := {}
+	for k in armour.keys():
+		if armour[k] != null and float(armour[k]) < 0.0:
+			weak[k] = armour[k]
+	return weak
 
 
 # Shields live in the off hand as WeaponShapes, not EquipmentShapes, so
