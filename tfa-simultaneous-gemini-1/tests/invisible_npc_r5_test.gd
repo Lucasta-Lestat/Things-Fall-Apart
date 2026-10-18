@@ -33,6 +33,10 @@ var others: Array = []  # the rest of the party, facing away
 var face := 0.0
 var _spawned: Array = []
 
+## Stands in for a TacticalPath action node (PathDrawer reads action_data).
+class FakePlanNode:
+	var action_data: Dictionary = {}
+
 func _check(check_name: String, ok: bool, detail = "") -> void:
 	checks += 1
 	if ok:
@@ -408,6 +412,9 @@ func _case_plan() -> void:
 	var target = _spawn("Target", 220.0)
 	await _frames(3)
 	_check("plan.control-seen", game.is_seen_by_party(target))
+	var leash_node := FakePlanNode.new()
+	leash_node.action_data = {"target": target}
+	_check("plan.leash-control", p.path_drawer != null and p.path_drawer._node_designated_target(leash_node) == target)
 	PauseManager.pause()
 	p.action_queue.queue_attack_target(target, "Main")
 	target.condition_manager.apply_condition("invisible", null, 1, -1.0)
@@ -421,6 +428,7 @@ func _case_plan() -> void:
 	_check("plan.paused", p.is_plan_paused() and p.plan_pause_cause() == "Target lost", p.plan_pause_cause())
 	_check("plan.says-why", _log_count(lost_line) == lines + 1, _log_tail())
 	_check("plan.attack-held", p.action_queue.current_action == null and p.action_queue.get_queue_size() == 1)
+	_check("plan.no-leash-to-hidden", p.path_drawer._node_designated_target(leash_node) == null)
 	await _frames(5)
 	_check("plan.still-held", p.is_plan_paused() and p.action_queue.current_action == null)
 	# Located again (it lands a hit): the plan carries on.
