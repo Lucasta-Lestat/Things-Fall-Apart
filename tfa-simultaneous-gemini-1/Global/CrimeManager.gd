@@ -275,12 +275,40 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = 0.0) ->
 		return false
 	return from_char.can_see_point(target_pos, target_elev)
 
+## What hides `who` from `viewer`, by the AI's own perception rules (ai.gd
+## can_see_character, _update_target): an active Invisible, unless the viewer
+## has true_sight; concealment (a Dark Hood's Shrouded: effective_visibility
+## below 1) beyond the viewer's sight range times that visibility. The 3 s
+## reveal after attacking or casting shows them (Invisible is suppressed then,
+## and effective_visibility is 1). Walls and facing are has_visual_los's part.
+## "" when nothing hides them, else the condition's name ("Invisible",
+## "Shrouded") for the notice.
+func hidden_from(viewer, who) -> String:
+	if not (viewer is Node2D) or not is_instance_valid(viewer) or not (who is Node2D) or not is_instance_valid(who):
+		return ""
+	var viewer_traits = viewer.get("traits")
+	var true_sight: bool = viewer_traits is Dictionary and int(viewer_traits.get("true_sight", 0)) != 0
+	var cm = who.get_node_or_null("ConditionManager")
+	if not true_sight and cm != null and cm.has_active_condition("invisible"):
+		return "Invisible"
+	var vis: float = who.effective_visibility() if who.has_method("effective_visibility") else 1.0
+	if vis < 1.0 and viewer.has_method("get_sight_range_px") \
+			and viewer.global_position.distance_to(who.global_position) > viewer.get_sight_range_px() * vis:
+		var inst = who.concealment_condition() if who.has_method("concealment_condition") else null
+		return inst.condition.display_name if inst != null and inst.condition != null else "Shrouded"
+	return ""
+
 ## Everyone who saw the crime POSITION (they saw *something happen*), with a
 ## second LOS test against the ACTOR (identification). Two tests, not one —
 ## a single witness-to-actor test makes every ranged/AoE crime free: stand
 ## behind cover, creepy_beam a merchant, and "no witness exists".
 ## Skips: the actor, party members (player-controlled), the dead.
-func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor) -> Array:
+## Invisible and Shrouded (hidden_from) count as out of sight of the actor:
+## never identified. `by_hand`: the crime is the actor's own act with no
+## victim (a theft, looting, a cast), so a witness the actor is hidden from
+## saw nothing at all; each such witness's reason goes into `evaded`. Each
+## entry also carries "hidden": the reason, or "".
+func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand: bool = false, evaded: Array = []) -> Array:
 	var out: Array = []
 	var game = get_tree().current_scene
 	if game == null or not ("characters_in_scene" in game):
@@ -304,9 +332,18 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor) -> Arra
 		if not has_visual_los(c, crime_pos, crime_elev):
 			continue
 		var sees_actor: bool = false
+		var hidden: String = ""
 		if actor_pos != Vector2.INF:
+			hidden = hidden_from(c, physical_actor)
+			if by_hand and hidden != "":
+				evaded.append(hidden)
+				continue
 			sees_actor = has_visual_los(c, actor_pos, actor_elev)
-		out.append({"witness": c, "sees_actor": sees_actor})
+			if not sees_actor:
+				hidden = ""   # out of sight anyway: the condition changed nothing
+			elif hidden != "":
+				sees_actor = false
+		out.append({"witness": c, "sees_actor": sees_actor, "hidden": hidden})
 	return out
 
 ## A crime named by statute instead of detected from an act: dialogue's
@@ -391,7 +428,13 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		})
 	var victim_covered: bool = false
 	var fuses: int = 0
-	var entries: Array = named_witnesses if not named_witnesses.is_empty() else witnesses_of(crime_pos, crime_elev, physical_actor)
+	# Witnesses an Invisible or Shrouded actor slipped past (hidden_from): a
+	# victimless crime is the actor's own act, so they saw nothing at all.
+	var evaded: Array = []
+	var any_identified: bool = false
+	var unrecognised_by: String = ""   # why someone in plain view didn't make them out
+	var entries: Array = named_witnesses if not named_witnesses.is_empty() \
+		else witnesses_of(crime_pos, crime_elev, physical_actor, not (victim is Object and is_instance_valid(victim)), evaded)
 	for entry in entries:
 		var witness = entry["witness"]
 		var is_victim: bool = witness == victim
@@ -400,6 +443,9 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		var identified: bool = (bool(entry["sees_actor"]) and not disguised) or is_victim
 		if is_victim:
 			victim_covered = true
+		any_identified = any_identified or identified
+		if str(entry.get("hidden", "")) != "":
+			unrecognised_by = str(entry["hidden"])
 		_start_outcry(witness, crime_id, identified, is_victim, crime_pos, effective, verdict, cfg)
 		fuses += 1
 	# The victim is a witness even with no LOS at fan-out time (face-down,
@@ -410,13 +456,23 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 			and victim.get_node_or_null("AI") != null:
 		_start_outcry(victim, crime_id, true, true, crime_pos, effective, verdict, cfg)
 		fuses += 1
+		any_identified = true
+	# Hidden (Invisible, Shrouded): say that is why, on the float and the line.
+	var hider: String = str(physical_actor.Name) if (physical_actor is Node and is_instance_valid(physical_actor) and "Name" in physical_actor) else "Someone"
 	if fuses == 0:
 		# Legibility: absence-as-feedback is unteachable. This line is how
 		# the player learns the witness system exists at all.
+		var why: String = str(evaded[0]) if not evaded.is_empty() else ""
 		if physical_actor is Node2D and is_instance_valid(physical_actor):
-			Globals.show_floating_text("Unseen.", physical_actor.global_position, physical_actor, Color(0.7, 0.7, 0.7))
-		GameLog.add_entry("No one saw it.")
+			Globals.show_floating_text("Unseen." if why == "" else "Unseen (%s)." % why,
+				physical_actor.global_position, physical_actor, Color(0.7, 0.7, 0.7))
+		GameLog.add_entry("No one saw it." if why == "" else "No one saw it: %s was %s." % [hider, why])
 		return
+	if not any_identified and unrecognised_by != "":
+		# Seen happening, but the one doing it not made out: an anonymous
+		# alarm at worst (no standing lost, no outlaw mark).
+		_party_float(physical_actor, "Unrecognised (%s)" % unrecognised_by, Color(0.7, 0.7, 0.7))
+		GameLog.add_entry("Witnesses saw it, but not who did it: %s was %s." % [hider, unrecognised_by])
 	# Track open fuses for the thrill_of_sin grant and the all-clear line.
 	var target = payload.get("debounce_target")
 	var target_iid: int = target.get_instance_id() if (target is Object and is_instance_valid(target)) else 0
