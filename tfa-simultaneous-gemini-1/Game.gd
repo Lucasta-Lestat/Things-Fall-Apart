@@ -3331,7 +3331,9 @@ func note_invisible_contact(actor, target) -> void:
 		_mark_invisible_aware(npc, "hit")
 
 ## Of `actor` and `target`, the invisible NPC when the other is a party
-## member, else null.
+## member, else null. Invisible held back by an attack's reveal window counts:
+## a blow traded in that window still locates it for when the cloak has it
+## back (note_npc_invisibility keeps that awareness on "returns").
 func _invisible_counterpart(actor, target):
 	if actor == null or target == null or not is_instance_valid(actor) or not is_instance_valid(target) or actor == target:
 		return null
@@ -3340,7 +3342,11 @@ func _invisible_counterpart(actor, target):
 		npc = target
 	elif target in party_chars and not (actor in party_chars):
 		npc = actor
-	return npc if npc != null and _invisibility_active(npc) else null
+	# (A condition's source may be a fog or a field, not a character.)
+	if npc == null or not npc.has_method("is_alive") or not npc.is_alive():
+		return null
+	var cm = npc.get("condition_manager")
+	return npc if cm != null and is_instance_valid(cm) and cm.has_condition("invisible") else null
 
 ## A blow that landed between a party member and an invisible NPC
 ## (_on_character_damaged; damage-over-time ticks don't count): the party
@@ -3356,7 +3362,8 @@ func _note_invisible_hit(attacker, victim) -> void:
 		return
 	var unseen: bool = not bool(_npc_was_truly_seen.get(npc, false))
 	_mark_invisible_aware(npc, "hit")
-	if not unseen or current_map_data.get("is_world_map", false):
+	# In a reveal window it is simply an attacker the party doesn't see.
+	if not unseen or not _invisibility_active(npc) or current_map_data.get("is_world_map", false):
 		return
 	var named: bool = _npc_ever_seen.get(npc, false)
 	var who: String = ("%s (invisible)" % npc.Name) if named else "something invisible"
@@ -3365,6 +3372,24 @@ func _note_invisible_hit(attacker, victim) -> void:
 	elif _is_position_visible_to_party(npc.global_position, npc.get_elevation(), npc.effective_visibility()):
 		npc.notify(who if named else "Something invisible", INVISIBLE_NOTICE_COLOR,
 			"%s hits %s." % [attacker.Name, who])
+
+## An NPC that dies while Invisible hides it from the party (_on_character_died,
+## before ProceduralCharacter decides on "<NPC> has died."): a corpse doesn't
+## hide, so when the party could see that spot it counts as seen at once and
+## its death is announced, rather than a body appearing from nowhere.
+func _note_invisible_death(npc) -> void:
+	if npc == null or not is_instance_valid(npc) or npc in party_chars or bool(_npc_was_truly_seen.get(npc, false)):
+		return
+	var cm = npc.get("condition_manager")
+	if cm == null or not is_instance_valid(cm) or not cm.has_condition("invisible"):
+		return
+	_invisible_aware_until.erase(npc)
+	_invisible_aware_why.erase(npc)
+	if current_map_data.get("is_world_map", false) \
+			or not _is_position_visible_to_party(npc.global_position, npc.get_elevation(), 1.0):
+		return
+	_npc_was_truly_seen[npc] = true
+	_npc_ever_seen[npc] = true
 
 ## Heard by the party (trigger_hearing_pulse): an invisible NPC within
 ## INVISIBLE_HEARD_TILES of a living party member is located.
@@ -4048,6 +4073,8 @@ func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
 	print("%s has died!" % name)
+	# Before ProceduralCharacter decides on its "<Name> has died." line.
+	_note_invisible_death(character)
 	var ai_node = character.get_node_or_null("AI")
 	if ai_node:
 		ai_node.current_state = ai_node.AIState.DEAD

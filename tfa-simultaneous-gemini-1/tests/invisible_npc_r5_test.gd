@@ -19,6 +19,11 @@
 #   - Invisible ending: seen at once ("Invisibility broken"), "appears" when it
 #     wears off, "turns invisible." when a reveal window ends.
 #   - Party members unchanged; awareness not saved (a load starts clear).
+#   - Review: the aiming previews (a projectile's burst point, knockback
+#     arrows) don't stop at or mark a hidden one; one dying in plain view is
+#     announced ("<NPC> has died."); a blow traded while an attack's reveal
+#     window holds Invisible back still locates it after; Invisible a party
+#     member casts on an NPC reads "you saw it vanish", not "a hit".
 # Drives the real Game on town_square.
 # Run:  godot --headless --path . res://tests/invisible_npc_r5_test.tscn
 # Judge by PASS/FAIL lines and "HARNESS DONE failures=0".
@@ -103,6 +108,7 @@ func _ready() -> void:
 	await _case_summon()
 	await _case_plan()
 	await _case_invisible_ends()
+	await _case_review()
 	await _case_save_load()
 	_finish()
 
@@ -505,6 +511,111 @@ func _case_invisible_ends() -> void:
 	_check("ends.window-turns-invisible-logged", _log_count("Cloaked turns invisible.") == lines + 1, _log_tail())
 	_check("ends.window-located", game.is_seen_by_party(cloaked) and is_equal_approx(_alpha(cloaked), ProceduralCharacter.INVISIBLE_ALPHA))
 	await _despawn_all()
+
+func _case_review() -> void:
+	# A projectile AoE's preview: no burst on a hidden body in the line of fire.
+	var veil = _spawn("Veil", 150.0)
+	await _frames(3)
+	await _physics(2)
+	var t = p.targeting_system
+	var aim: Vector2 = _ahead(400.0)
+	var burst := {"display_name": "Test Fireball", "target_shape": "circle", "radius": 40.0, "range": 0.0,
+		"target_type": "point", "visuals": {"projectile": "res://vfx/fireball.tscn"},
+		"targeting": {"type": "point", "shape": "circle", "radius": 40.0}}
+	t.start_targeting("Main", burst, aim)
+	t.target_position = aim
+	t._update_active_indicator()
+	_check("review.preview-control-visible-body", t._projectile_impact != Vector2.INF, t._projectile_impact)
+	t.end_targeting()
+	await _invisible_unseen(veil)
+	_check("review.preview-control-hidden", not game.is_seen_by_party(veil))
+	t.start_targeting("Main", burst, aim)
+	t.target_position = aim
+	t._update_active_indicator()
+	_check("review.preview-burst-not-on-hidden", t._projectile_impact == Vector2.INF
+		and t.circle_indicator.global_position.distance_to(aim) < 0.5, [t._projectile_impact, t.circle_indicator.global_position])
+	# Located (a hit): it stops the preview as anyone seen does.
+	veil.take_damage({"bludgeoning": 1}, veil.global_position, p)
+	await _frames(2)
+	t.target_position = aim   # the frames in between aimed it at the (headless) mouse
+	t._update_active_indicator()
+	_check("review.preview-burst-on-located", game.is_seen_by_party(veil) and t._projectile_impact != Vector2.INF
+		and t._projectile_impact.distance_to(veil.global_position) < 60.0, t._projectile_impact)
+	t.end_targeting()
+	await _despawn_all()
+	# Knockback arrows: none on a hidden body inside the blast.
+	var brush = _spawn("Brush", 60.0)
+	await _invisible_unseen(brush)
+	var wave: Dictionary = AbilityDatabase.get_ability_data("repulsion_wave")
+	_check("review.knockback-ability", not wave.is_empty())
+	if not wave.is_empty():
+		t.start_targeting("Main", wave, p.global_position)
+		t.target_position = p.global_position
+		t._knockback_last_pos = Vector2.INF
+		t._update_knockback_preview()
+		_check("review.knockback-no-arrow-on-hidden", not _shoves_from(t, brush), t._knockback_layer.shoves)
+		brush.take_damage({"bludgeoning": 1}, brush.global_position, p)
+		await _frames(2)
+		t.target_position = p.global_position
+		t._knockback_last_pos = Vector2.INF
+		t._update_knockback_preview()
+		_check("review.knockback-arrow-on-located", _shoves_from(t, brush), t._knockback_layer.shoves)
+		t.end_targeting()
+	await _despawn_all()
+	# Dying in plain view while hidden: announced, the body seen at once.
+	var doomed = _spawn("Doomed", 250.0)
+	await _invisible_unseen(doomed)
+	var died := _log_count("Doomed has died.")
+	doomed.take_damage({"bludgeoning": 999}, doomed.global_position, p)
+	_check("review.death-announced", _log_count("Doomed has died.") == died + 1, _log_tail())
+	await _frames(2)
+	_check("review.corpse-seen-solid", game.is_seen_by_party(doomed) and doomed.visible and is_equal_approx(_alpha(doomed), 1.0), _alpha(doomed))
+	# Out of the party's view: still quiet.
+	var unwatched = _spawn("Unwatched", 250.0)
+	await _invisible_unseen(unwatched)
+	_turn(p, face + PI)
+	await _frames(2)
+	died = _log_count("Unwatched has died.")
+	unwatched.take_damage({"bludgeoning": 999}, unwatched.global_position, null)
+	_check("review.unseen-death-quiet", _log_count("Unwatched has died.") == died, _log_tail())
+	_turn(p, face)
+	await _despawn_all()
+	# A blow traded while an attack's reveal window holds Invisible back (the
+	# party looking away): no "something invisible" (it wasn't), but the party
+	# still knows where it is when the cloak has it back.
+	var cloak = _spawn("Cloak", 300.0)
+	await _invisible_unseen(cloak)
+	_turn(p, face + PI)
+	await _frames(2)
+	cloak.condition_manager.suppress_for("invisible", 3.0, "attacking")
+	var odd := _log_count("is hit by something invisible.")
+	p.take_damage({"bludgeoning": 1}, p.global_position, cloak)
+	_check("review.window-hit-not-called-invisible", _log_count("is hit by something invisible.") == odd, _log_tail())
+	_advance(3.5)
+	await _frames(3)
+	_check("review.window-over", cloak.condition_manager.has_active_condition("invisible"))
+	_turn(p, face)
+	await _frames(2)
+	_check("review.window-hit-locates", game.is_seen_by_party(cloak) and is_equal_approx(_alpha(cloak), ProceduralCharacter.INVISIBLE_ALPHA), _alpha(cloak))
+	var why: String = game.invisible_perception_text(cloak)
+	_check("review.window-hit-reason", why.begins_with("Invisible — located by a hit"), why)
+	await _despawn_all()
+	# Invisible a party member puts on an NPC in view: "saw it vanish".
+	var ward = _spawn("Ward", 300.0, "neutral")
+	await _frames(3)
+	await _physics(1)
+	ward.condition_manager.apply_condition("invisible", p, 1, -1.0)
+	await _frames(2)
+	why = game.invisible_perception_text(ward)
+	_check("review.cast-invisible-reason", why.begins_with("Invisible — you saw it vanish"), why)
+	await _despawn_all()
+
+## True when the knockback preview draws an arrow from `who`.
+func _shoves_from(t, who) -> bool:
+	for s in t._knockback_layer.shoves:
+		if (s.get("from", Vector2.INF) as Vector2).distance_to(who.global_position) < 1.0:
+			return true
+	return false
 
 func _case_save_load() -> void:
 	var npc = _spawn("Remembered", 300.0)

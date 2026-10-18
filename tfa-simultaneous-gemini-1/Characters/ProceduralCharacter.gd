@@ -2125,8 +2125,9 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 		modulate.a = INVISIBLE_ALPHA
 		_tell_game_invisibility("applied")
 	# A condition a party member put on an invisible NPC, or one put on a
-	# party member: it landed, so the party knows where that NPC is.
-	if instance != null and game != null and is_instance_valid(game) and game.has_method("note_invisible_contact"):
+	# party member: it landed, so the party knows where that NPC is. (Invisible
+	# itself is the branch above: seen vanishing, not "located by a hit".)
+	elif instance != null and game != null and is_instance_valid(game) and game.has_method("note_invisible_contact"):
 		game.note_invisible_contact(instance.source, self)
 	_react_to_incapacitation(instance)
 
