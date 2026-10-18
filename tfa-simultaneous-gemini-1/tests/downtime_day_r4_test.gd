@@ -391,7 +391,22 @@ func _case_scheduled_dialogue() -> void:
 		TimeManager.advance_days(1)
 	_report("schedule.every-3-days-across-month-end", fired == [true, false, false, true], str(fired))
 
+	# A map-scoped trigger (the documented {"map": id} scope) is checked
+	# without a script error, and fires only on its own map.
+	stub.started.clear()
+	var real_map: String = sched._current_map_id
+	var on_map := {"id": "r4_map_probe", "dialogue": "r4_probe", "when": {"hour": 22, "minute": 0},
+		"recurrence": "daily", "scope": {"map": "r4_probe_map"}}
+	sched._current_map_id = "r4_other_map"
+	sched._maybe_fire(on_map, 22, 0, sched._today_stamp(), sched._current_map_id)
+	var off_map_quiet: bool = stub.started.is_empty()
+	sched._current_map_id = "r4_probe_map"
+	sched._maybe_fire(on_map, 22, 0, sched._today_stamp(), sched._current_map_id)
+	_report("schedule.map-scope-checked", off_map_quiet and stub.started.size() == 1, str(stub.started.size()))
+	sched._current_map_id = real_map
+
 	sched._last_fired_day.erase(sched.GLOBAL_KEY + "::r4_daily_probe")
 	sched._last_fired_day.erase(sched.GLOBAL_KEY + "::r4_every3_probe")
+	sched._last_fired_day.erase("r4_probe_map::r4_map_probe")
 	sched._dialogue = real_dialogue
 	stub.queue_free()

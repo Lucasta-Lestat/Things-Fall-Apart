@@ -127,7 +127,9 @@ func _maybe_fire(trigger: Dictionary, hour: int, minute: int, day_stamp: int, fa
 		_last_fired_day[dedup_map + "::" + tid] = day_stamp
 
 func _scope_matches(scope) -> bool:
-	if scope == "global" or scope == null:
+	# Type test first, as for recurrence: a {"map": id} scope == "global"
+	# would be a Dictionary == String runtime error.
+	if scope == null or (scope is String and scope == "global"):
 		return true
 	if scope is Dictionary and scope.has("map"):
 		return _current_map_id == str(scope["map"])
