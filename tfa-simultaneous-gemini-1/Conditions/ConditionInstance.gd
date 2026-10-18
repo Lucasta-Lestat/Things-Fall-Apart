@@ -12,6 +12,13 @@ var stacks: int = 1
 ## Whether this condition is currently suppressed
 var is_suppressed: bool = false
 
+## Concealment lifted until this absolute time (TimeManager.absolute_time()):
+## ProceduralCharacter.reveal marks the bearer's Shrouded while an attack's
+## reveal window is open, so every display of it says "(revealed 2s)" and dims
+## it, as the overhead icon does. -1 = not revealed. Not saved: the window
+## isn't either, and a reloaded character starts concealed.
+var revealed_until: float = -1.0
+
 ## Time when this condition was applied (game_time from TimeManager)
 var applied_at: float = 0.0
 
@@ -122,7 +129,8 @@ func get_display_name() -> String:
 ## "Weakened x3 (12s) (suppressed)". Time left only for a timed instance and
 ## only when `now` (TimeManager.absolute_time(), the clock expires_at is on)
 ## is given. A damaging DoT also says what it deals now (get_dot_text):
-## "Burning x3: 3 fire every 1 s (5s left)".
+## "Burning x3: 3 fire every 1 s (5s left)". A Shrouded an attack has lifted
+## reads "Shrouded (revealed 2s)" (is_revealed).
 func get_summary(now: float = -1.0) -> String:
 	var text := get_display_name()
 	if stacks > 1:
@@ -139,7 +147,16 @@ func get_summary(now: float = -1.0) -> String:
 			text += " (suppressed %s)" % Globals.format_duration_short(maxf(0.0, float(custom_data["suppressed_until"]) - now))
 		else:
 			text += " (suppressed)"
+	elif is_revealed(now):
+		# A Shrouded bearer shown in full by their own attack or cast.
+		text += " (revealed %s)" % Globals.format_duration_short(revealed_until - now)
 	return text
+
+
+## True while an attack's reveal window has lifted this concealment
+## (revealed_until); false without a clock (`now` < 0).
+func is_revealed(now: float) -> bool:
+	return now >= 0.0 and now < revealed_until
 
 
 ## "3 fire every 1 s": the damage a DoT's next tick deals at the current

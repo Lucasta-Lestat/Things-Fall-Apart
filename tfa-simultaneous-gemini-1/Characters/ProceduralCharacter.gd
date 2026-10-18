@@ -7100,8 +7100,17 @@ func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_
 			var cloak_says_it: bool = break_invisible and condition_manager != null \
 				and condition_manager.has_active_condition("invisible") and is_condition_equip_granted("invisible")
 			_open_reveal_window(seconds, cause, cloak_says_it)
+		_mark_concealment_revealed()
 	if break_invisible:
 		_break_invisibility(seconds, cause)
+
+## The open window on the concealing condition itself (revealed_until), so the
+## party panel pip, the hover and the portraits say "Shrouded (revealed 2s)"
+## and dim it as the overhead icon is dimmed. Cleared when the window shuts.
+func _mark_concealment_revealed() -> void:
+	var inst: ConditionInstance = concealment_condition()
+	if inst != null:
+		inst.revealed_until = _revealed_until if _reveal_window_open else -1.0
 
 ## Shrouded's half of the reveal notice, as the Shadow Cloak's pair is
 ## Invisible's: when a reveal window opens on a hidden character, "Revealed"
@@ -7137,6 +7146,7 @@ func _tick_reveal_window() -> void:
 	if not _reveal_window_open or TimeManager.absolute_time() < _revealed_until:
 		return
 	_reveal_window_open = false
+	_mark_concealment_revealed()
 	var quiet: bool = _reveal_window_quiet
 	_reveal_window_quiet = false
 	_update_concealment_look()
