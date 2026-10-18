@@ -83,9 +83,10 @@ extends Resource
 ## fire -> Burning, poison -> Poisoned, cold -> Chilled, slashing/piercing ->
 ## Bleeding). A hit that deals `dealt` of that type after armour adds
 ## ceil(dealt / damage_per_stack) stacks, at least 1, at most max_tier: with
-## Burning's 6, a 1-point fire hit adds 1 stack and a 13-point one 3. Roughly
+## Burning's 5, a 1-point fire hit adds 1 stack and an 11-point one 3. Roughly
 ## what one stack deals over its duration, so the burn is about the size of the
-## hit that lit it. 0 = one stack per hit, whatever its size. Explicit
+## hit that lit it. All four are 5 since round 5 (the developer's "5 damage
+## each"). 0 = one stack per hit, whatever its size. Explicit
 ## applications (spells, surfaces, fogs, weather) keep their own stack counts.
 @export var damage_per_stack: float = 0.0
 
