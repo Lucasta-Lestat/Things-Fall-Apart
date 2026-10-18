@@ -340,6 +340,8 @@ func apply_condition(
 	var existing = conditions.get(condition_id)
 	
 	# --- Trait-based duration scaling handled internally ---
+	# The bearer's own MODIFY_DURATION_BY_TRAIT: empty (neutral) unless its
+	# character data gives entries (round 5 dropped the universal defaults).
 	var final_duration = duration_override
 	if duration_override <= -2.0 and template.duration > 0:
 		final_duration = template.duration
@@ -358,7 +360,10 @@ func apply_condition(
 				condition_stacks_changed.emit(existing, old_stacks, existing.stacks)
 				stats_recalculated.emit()
 				return _check_transform(existing)
-			return existing
+			# At the cap already: an instance that sits at its transform tier
+			# without having turned (a save from before Poisoned turned at 4,
+			# or the target was warded off then) turns now.
+			return _check_transform(existing)
 		else:
 			# Never shorten a PERMANENT instance (equip-granted, expires_at < 0)
 			# from a default-duration re-apply — a cloak's while-worn
@@ -437,9 +442,11 @@ func _refresh_stackable_expiry(existing: ConditionInstance, final_duration: floa
 
 
 ## When a stackable condition reaches its transforms_into tier (Chilled 3 ->
-## Frozen, Fatigued 3 -> Exhausted), replace it with that condition. Targets
-## that aren't registered (toxic_shock) are skipped. Returns the instance now
-## on the bearer.
+## Frozen, Fatigued 3 -> Exhausted, Poisoned 4 -> Toxic Shock), replace it
+## with that condition. Targets that aren't registered are skipped. Returns
+## the instance now on the bearer. The bearer's float names the new condition
+## ("Toxic Shock!"); the log says what turned and why ("Ada's Poisoned
+## reaches 4 stacks: Toxic Shock.").
 func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 	var tf: Dictionary = instance.condition.transforms_into
 	var into_id := str(tf.get("id", ""))
@@ -458,7 +465,9 @@ func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 		if character.has_method("notify"):
 			character.notify(_condition_name(out.condition) + "!", WORSEN_COLOR)
 		if _player_involved(src):
-			GameLog.add_entry("%s is now %s (%s reached %s)." % [_bearer_name(), _condition_name(out.condition), _condition_name(instance.condition), _stacks_text(instance.stacks)])
+			# "Ada's Chilled reaches 3 stacks: Frozen." Reads for a state
+			# (Frozen) and a noun (Toxic Shock) alike; "is now Toxic Shock" didn't.
+			GameLog.add_entry("%s's %s reaches %s: %s." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition)])
 	return out
 
 
