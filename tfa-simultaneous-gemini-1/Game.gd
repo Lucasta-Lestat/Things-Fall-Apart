@@ -153,7 +153,8 @@ signal downtime_mode_changed(active: bool)
 
 # Per-character downtime cooldown bookkeeping. Keyed by a stable character
 # uid (template_id, or display_name for protagonist) -> Array of dicts
-# {"result_id": String, "day_abs": int}. DowntimeDatabase reads/writes this.
+# {"result_id": String, "day": int}, day = TimeManager.today() when used.
+# DowntimeDatabase reads/writes this (and converts pre-fix "day_abs" entries).
 var downtime_recent_events: Dictionary = {}
 
 # Who has already spent today, character_uid -> activity_id. Cleared by
@@ -2494,6 +2495,9 @@ func apply_save_dict(d: Dictionary) -> void:
 		TimeManager.current_month = int(date[1])
 		TimeManager.current_year = int(date[2])
 		TimeManager.is_yearturn = int(date[1]) == 0
+	# Pre-fix saves dated downtime cooldowns on an old calendar index; convert
+	# them now that the saved date and day count are back.
+	downtime_recent_events = DowntimeDatabase.migrate_recent_events(downtime_recent_events)
 
 # --- World-item persistence (law/crime Phase 7) ---
 

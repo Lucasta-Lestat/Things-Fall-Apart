@@ -204,13 +204,11 @@ func _gather_result_candidates(activity: Dictionary, region_id: String) -> Array
 			out.append({"id": String(rid), "data": bucket[rid]})
 	return out
 
-func _current_day_abs() -> int:
-	# Coarse absolute-day index sufficient for a 7-day cooldown comparison.
-	# Yearturn (month=0) lasts 12 days; treat it as month 0 for ordering.
-	var y := int(TimeManager.current_year)
-	var m := int(TimeManager.current_month)
-	var d := int(TimeManager.current_day)
-	return y * 372 + m * 36 + d
+## Today as a whole-day count: TimeManager.today(), the days lived since the
+## game began. Cooldown entries are {"result_id", "day"} on this count, so 7
+## days is 7 days across New Year and a leap year's Yearturn alike.
+func _current_day() -> int:
+	return int(TimeManager.today())
 
 # Cooldowns are keyed per activity so results sharing an id across activities
 # (quiet_night, the_pox, close_call) don't block each other.
@@ -223,11 +221,11 @@ func is_on_cooldown(character_uid: String, result_id: String, activity_id: Strin
 		return false
 	var key := _cooldown_key(activity_id, result_id)
 	var bucket: Array = game.downtime_recent_events.get(character_uid, [])
-	var now := _current_day_abs()
+	var now := _current_day()
 	for entry in bucket:
-		if String(entry.get("result_id", "")) != key:
+		if String(entry.get("result_id", "")) != key or not entry.has("day"):
 			continue
-		if now - int(entry.get("day_abs", 0)) < COOLDOWN_DAYS:
+		if now - int(entry["day"]) < COOLDOWN_DAYS:
 			return true
 	return false
 
@@ -237,13 +235,84 @@ func mark_used(character_uid: String, result_id: String, activity_id: String = "
 		return
 	var bucket: Array = game.downtime_recent_events.get(character_uid, [])
 	# Prune any entries older than the cooldown window so the list stays small.
-	var now := _current_day_abs()
+	var now := _current_day()
 	var keep: Array = []
 	for entry in bucket:
-		if now - int(entry.get("day_abs", 0)) < COOLDOWN_DAYS:
+		if entry.has("day") and now - int(entry["day"]) < COOLDOWN_DAYS:
 			keep.append(entry)
-	keep.append({"result_id": _cooldown_key(activity_id, result_id), "day_abs": now})
+	keep.append({"result_id": _cooldown_key(activity_id, result_id), "day": now})
 	game.downtime_recent_events[character_uid] = keep
+
+# ---------------------------------------------------------------------------
+# Save migration: the old day index
+# ---------------------------------------------------------------------------
+# Before the day-count fix an entry was {"result_id", "day_abs"} with day_abs =
+# year*372 + month*36 + day. That is not a day count: it jumped 13 at New Year
+# (so anything used in a year's last 6 days came back on New Year's Day) and
+# put a leap year's Yearturn (month 0) below every other day of that year (so
+# every recent entry stayed blocked through all 12 Yearturn days).
+
+## Convert a loaded downtime_recent_events to the day count. Game.apply_save_dict
+## calls this after it has restored the saved date and day count. Entries
+## already on the day count ("day") pass through untouched, so a save made
+## after the fix round-trips unchanged. An old entry is decoded back to its
+## calendar date and its age taken through TimeManager.day_number. Entries
+## whose 7 days are already over are dropped (they block nothing); so are
+## entries that can't be read (no date has that index, or it is later than the
+## save's own date): at worst that outcome can come up again early.
+func migrate_recent_events(events: Dictionary) -> Dictionary:
+	var today_number: int = TimeManager.day_number(int(TimeManager.current_day),
+		int(TimeManager.current_month), int(TimeManager.current_year))
+	var now := _current_day()
+	var unreadable := 0
+	var out: Dictionary = {}
+	for uid in events.keys():
+		var bucket = events[uid]
+		if not (bucket is Array):
+			out[uid] = bucket
+			continue
+		var kept: Array = []
+		for entry in bucket:
+			if not (entry is Dictionary) or entry.has("day") or not entry.has("day_abs"):
+				kept.append(entry)
+				continue
+			var age := _old_index_age(entry["day_abs"], today_number)
+			if age < 0:
+				unreadable += 1
+			elif age < COOLDOWN_DAYS:
+				kept.append({"result_id": String(entry.get("result_id", "")), "day": now - age})
+		out[uid] = kept
+	if unreadable > 0:
+		push_warning("DowntimeDatabase: dropped %d downtime cooldown entr%s from this save that could not be dated; those outcomes are available again." % [unreadable, "y" if unreadable == 1 else "ies"])
+	return out
+
+## Days between the date an old index (year*372 + month*36 + day) stood for
+## and today_number (a TimeManager.day_number), or -1 when it can't be read.
+## The old index is ambiguous: Mistumnal 12-36 spilled into the next year's
+## range, where a leap year's Yearturn days also sit. Of the dates it can
+## stand for, the most recent one not after today is taken.
+func _old_index_age(raw, today_number: int) -> int:
+	if not (raw is int or raw is float):
+		return -1
+	var index := int(raw)
+	if index <= 0:
+		return -1
+	var year: int = index / 372
+	var r: int = index % 372
+	var dates: Array = []  # [day, month, year]
+	if r >= 37:
+		var month: int = (r - 1) / 36
+		dates.append([r - month * 36, month, year])
+	if r <= 24:
+		dates.append([r + 12, 10, year - 1])
+	if r >= 1 and r <= TimeManager.YEARTURN_LENGTH and TimeManager.is_leap_year(year):
+		dates.append([r, 0, year])
+	var best := -1
+	for dmy in dates:
+		var age: int = today_number - TimeManager.day_number(dmy[0], dmy[1], dmy[2])
+		if age >= 0 and (best < 0 or age < best):
+			best = age
+	return best
 
 static func character_uid(character) -> String:
 	if character == null:

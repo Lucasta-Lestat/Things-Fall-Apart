@@ -96,7 +96,10 @@ func _maybe_fire(trigger: Dictionary, hour: int, minute: int, day_stamp: int, fa
 		return
 
 	var recurrence = trigger.get("recurrence", "once")
-	if recurrence == "once":
+	# A {"every_days": N} recurrence is a Dictionary, and Dictionary == String
+	# is a runtime error in Godot 4, so test the type first.
+	var once: bool = recurrence is String and recurrence == "once"
+	if once:
 		if _trigger_state and _trigger_state.has_fired(dedup_map, tid):
 			return
 	else:
@@ -117,14 +120,16 @@ func _maybe_fire(trigger: Dictionary, hour: int, minute: int, day_stamp: int, fa
 
 	_dialogue.start_dialogue(str(trigger.get("dialogue", "")))
 
-	if recurrence == "once":
+	if once:
 		if _trigger_state:
 			_trigger_state.mark_fired(dedup_map, tid)
 	else:
 		_last_fired_day[dedup_map + "::" + tid] = day_stamp
 
 func _scope_matches(scope) -> bool:
-	if scope == "global" or scope == null:
+	# Type test first, as for recurrence: a {"map": id} scope == "global"
+	# would be a Dictionary == String runtime error.
+	if scope == null or (scope is String and scope == "global"):
 		return true
 	if scope is Dictionary and scope.has("map"):
 		return _current_map_id == str(scope["map"])
@@ -138,11 +143,11 @@ func _dedup_map_for(trigger: Dictionary, fallback_key: String) -> String:
 		return GLOBAL_KEY
 	return fallback_key
 
-# Pack the current in-game date into a single comparable integer so cadence
-# math is straightforward across month/year boundaries.
+# Today's calendar day number (TimeManager.day_number), so an every_days
+# cadence counts real days. The old packed Y*10000 + M*100 + D stamp jumped
+# ~65 at each month end and sorted a leap year's Yearturn (month 0) below the
+# rest of that year, which silenced daily triggers for all 12 Yearturn days.
 func _today_stamp() -> int:
 	if _time == null:
 		return 0
-	return int(_time.current_year) * 10000 \
-		+ int(_time.current_month) * 100 \
-		+ int(_time.current_day)
+	return int(_time.day_number(int(_time.current_day), int(_time.current_month), int(_time.current_year)))
