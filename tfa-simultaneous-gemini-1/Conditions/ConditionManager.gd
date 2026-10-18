@@ -426,7 +426,7 @@ func apply_condition(
 ## A stackable condition lasts until its LAST application wears off. An
 ## application landing on a timed instance, whether it adds stacks or finds it
 ## at max tier, moves the expiry to now + that application's duration when
-## that is later: Burning hit again 4 s in keeps burning 6 s from the new hit,
+## that is later: Burning hit again 4 s in keeps burning 5 s from the new hit,
 ## not from the first, and back-to-back Force Marches keep Exhausted 24 h from
 ## the last one. Every stack shares the one expiry. A permanent instance stays
 ## permanent; a permanent application (a worn item's, an explicit -1 or 0)

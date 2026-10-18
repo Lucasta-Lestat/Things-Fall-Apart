@@ -7393,7 +7393,7 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	damage (bleeding, poison) and any code path that doesn't know a hit limb.
 
 	A condition's damage tick (_condition_tick_damage) ignores worn armour and
-	a raised shield (round 5); see _tick_armour.
+	a raised shield, weaknesses included (round 5).
 
 	`attacker` is optional but should be passed for any character-sourced damage
 	so the witness/wake-from-AT_EASE pipeline can attribute the attack."""
@@ -7409,9 +7409,12 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	var armor_dr = get_limb_armor(hit_limb)
 	# Damage over time ignores armour (round 5, "DoT should Ignore armor"):
 	# every condition tick, Burning's first included, comes through here with
-	# the tick flag set, so this one line covers them all.
+	# the tick flag set, so this one line covers them all. Its weaknesses too
+	# (Legionnaire's electric -1), so a tick deals what its summary says
+	# (ConditionInstance.get_dot_text) whatever is worn. Condition DR and Rage
+	# below are not armour and still apply.
 	if _condition_tick_damage:
-		armor_dr = _tick_armour(armor_dr)
+		armor_dr = {}
 	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
 	var raw_total: float = 0.0
@@ -7559,19 +7562,6 @@ func get_limb_armor(limb_type: LimbType) -> Dictionary:
 	for k in shield.keys():
 		total[k] = int(total.get(k, 0)) + int(shield[k])
 	return total
-
-
-## The part of a limb's armour (get_limb_armor) a damage-over-time tick still
-## meets: only its weaknesses (negative entries, e.g. Legionnaire's Armour's
-## electric -1, so Shocked hurts more in metal). Its protection is skipped, so
-## a DoT deals what its summary says (ConditionInstance.get_dot_text) whatever
-## is worn. Condition DR and Rage are not armour and still apply in take_damage.
-func _tick_armour(armour: Dictionary) -> Dictionary:
-	var weak := {}
-	for k in armour.keys():
-		if armour[k] != null and float(armour[k]) < 0.0:
-			weak[k] = armour[k]
-	return weak
 
 
 # Shields live in the off hand as WeaponShapes, not EquipmentShapes, so

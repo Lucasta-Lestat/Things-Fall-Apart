@@ -6,10 +6,10 @@ extends Node2D
 #      dealt = that type's damage after armour). Worked examples, and the
 #      Bleeding and Chilled consequences printed.
 #   C. "DoT should Ignore armor": a condition's damage tick skips worn armour
-#      (ProceduralCharacter.take_damage / _tick_armour); an armoured and a bare
-#      bearer take the same ticks. Armour weaknesses, condition DR and
-#      immunities still apply. A hit's rider still counts the hit's damage
-#      after armour. Acid Rain printed for a bare and an armoured character.
+#      (ProceduralCharacter.take_damage), its weaknesses included; an armoured
+#      and a bare bearer take the same ticks. Condition DR and immunities
+#      still apply. A hit's rider still counts the hit's damage after armour.
+#      Acid Rain printed for a bare and an armoured character.
 #   D. "'fire conditions last x1.2' ... should not be true as a universal
 #      rule": MODIFY_DURATION_BY_TRAIT is empty by default, a character's data
 #      can still set it, and a saved legacy table is not restored.
@@ -423,6 +423,12 @@ func _case_ticks_ignore_armour() -> void:
 	var bare := await _dummy("Bare")
 	var plate := await _dummy("Plated")
 	_armour(plate, HEAVY)
+	# Armour that is weak to every DoT type (negative entries): no worse either.
+	var frail := await _dummy("Frail")
+	var weak_to_all := {}
+	for k in HEAVY:
+		weak_to_all[k] = -2
+	_armour(frail, weak_to_all)
 	var per := {"burning": 4, "poisoned": 3, "toxic_shock": 1, "bleeding": 5, "shocked": 3, "corroding": 3,
 		"stuck_in_fire": 1, "suffocating": 1, "winters_grip_bite": 1}
 	var each := func():
@@ -430,8 +436,10 @@ func _case_ticks_ignore_armour() -> void:
 			var secs := 12.5 if id == "winters_grip_bite" else 20.0
 			var a := _tick_run(bare, id, per[id], secs)
 			var b := _tick_run(plate, id, per[id], secs)
+			var w := _tick_run(frail, id, per[id], secs)
 			_check("armour.%s-same-ticks" % id, a["hp"] == b["hp"] and a["hp"] > 0, [a, b])
 			_check("armour.%s-hp-is-the-ticks" % id, b["hp"] == b["ticks_total"], b)
+			_check("armour.%s-weakness-adds-nothing" % id, w["hp"] == a["hp"] and w["hp"] == w["ticks_total"], [a, w])
 		return true
 	await _without_bleed_saves(each)
 	# The immediate first tick too: Burning x4 lands 4 at once through 5 fire armour.
@@ -463,13 +471,18 @@ func _case_ticks_ignore_armour() -> void:
 		return true
 	await _without_bleed_saves(cut)
 
-	# An armour weakness (a negative entry) still adds to a tick: Shocked in
-	# Legionnaire's Armour (electric -1) deals 2 a tick for 1 stack.
+	# An armour weakness (a negative entry) is armour too: it doesn't add to a
+	# tick. Shocked x1 in Legionnaire's Armour (electric -1) deals the 1 a tick
+	# its summary says, as bare; a hit still feels the weakness.
 	var tin := await _dummy("Legionnaire")
 	_armour(tin, {"slashing": 4, "bludgeoning": 3, "piercing": 3, "electric": -1})
 	var r := _tick_run(tin, "shocked", 1, 1.5)
-	_check("weakness.still-applies-to-ticks", r["hp"] == 4 and r["ticks_total"] == 2, r)
-	_check("weakness.helper-keeps-only-negatives", tin._tick_armour({"fire": 5, "electric": -1, "cold": 0}) == {"electric": -1})
+	_check("weakness.ignored-by-ticks", r["hp"] == 2 and r["ticks_total"] == 2, r)
+	var tin_shock := _cm(tin).apply_condition("shocked", null, 1)
+	_check("weakness.summary-is-what-lands", tin_shock != null and tin_shock.get_dot_text() == "1 electric every 1 s", tin_shock.get_dot_text() if tin_shock else "none")
+	_cm(tin).clear_all_conditions()
+	tin.current_health = tin.max_health
+	_check("weakness.hit-still-feels-it", tin.take_damage({"electric": 3}, tin.global_position) == 4)
 
 	# Condition DR (not armour) still takes from a physical tick: Stalwart's 1
 	# off Suffocating's 6. Not from fire (it only covers physical types).

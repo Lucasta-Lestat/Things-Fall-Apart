@@ -163,10 +163,10 @@ func is_revealed(now: float) -> bool:
 ## "3 fire every 1 s": the damage a DoT's next tick deals at the current
 ## stacks (value x stacks, as ConditionManager._execute_triggered_effect) and
 ## how often. That is what lands: ticks ignore armour (round 5,
-## ProceduralCharacter.take_damage). Only an armour weakness (Legionnaire's
-## electric) adds to a tick, and condition DR (Shielded, Physically Resistant,
-## Stalwart, Rage) takes from a physical one (Suffocating). "" for a condition
-## with no damage tick. True damage (Bleeding) reads "damage".
+## ProceduralCharacter.take_damage), weaknesses included. Only condition DR
+## (Shielded, Physically Resistant, Stalwart, Rage) takes from a physical one
+## (Suffocating). "" for a condition with no damage tick. True damage
+## (Bleeding) reads "damage".
 func get_dot_text() -> String:
 	if not condition:
 		return ""
