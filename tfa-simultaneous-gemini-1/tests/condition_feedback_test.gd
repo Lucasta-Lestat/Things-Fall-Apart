@@ -246,7 +246,8 @@ func _case_periodic_and_corpse() -> void:
 		pcm.last_save_times["bleeding"] = now - 100.0
 		# Stacks 3+ drop by 2 per sure pass: first an "eases", then "shakes off".
 		pcm._process(0.016)
-		_check("periodic.eases-logged", _logged_since(n0, "%s's Bleeding eases to tier" % p.Name), _last_log())
+		# Stacks, as the summaries count them ("Bleeding x2"): 3 or 4 landed, -2.
+		_check("periodic.eases-logged", _logged_since(n0, "%s's Bleeding eases to 1 stack (" % p.Name) 			or _logged_since(n0, "%s's Bleeding eases to 2 stacks (" % p.Name), _last_log())
 		pcm.last_save_times["bleeding"] = now - 100.0
 		pcm._process(0.016)
 		if pcm.has_condition("bleeding"):
@@ -302,9 +303,16 @@ func _case_transforms() -> void:
 	cm.apply_condition("fatigued", null, 3)
 	_check("transform.fatigued-to-exhausted", cm.has_condition("exhausted") and not cm.has_condition("fatigued"))
 	cm.clear_all_conditions()
-	# Poisoned -> toxic_shock isn't registered: poisoned stays.
+	# A transform into a condition that isn't registered (Poisoned's toxic_shock)
+	# is skipped and the condition stays. Poisoned now caps at 4, below its
+	# tier-10 transform, so a test condition that reaches its tier stands in.
+	ConditionManager.register_conditions([{"id": "cft_unreg_transform", "stackable": true, "max_tier": 2,
+		"duration": 30.0, "traits": {"debuff": 1}, "canceled_by_trait": [], "immunities": {},
+		"transforms_into": {"id": "no_such_condition", "required_tier": 2}}])
+	var unreg = cm.apply_condition("cft_unreg_transform", null, 2)
+	_check("transform.unregistered-target-skipped", unreg != null and unreg.stacks == 2 and cm.has_condition("cft_unreg_transform"))
 	cm.apply_condition("poisoned", null, 10)
-	_check("transform.unregistered-target-skipped", cm.has_condition("poisoned"))
+	_check("transform.poisoned-at-max-stays", cm.has_condition("poisoned") and cm.get_condition("poisoned").stacks == ConditionManager.condition_registry["poisoned"].max_tier)
 	cm.clear_all_conditions()
 
 	# The party is told.
@@ -316,7 +324,7 @@ func _case_transforms() -> void:
 	var n0: int = GameLog.get_entries().size()
 	pcm.apply_condition("chilled", n, 3)
 	_check("transform.party-floats", p._last_notify_text == "Frozen!", p._last_notify_text)
-	_check("transform.party-logged", _logged_since(n0, "%s is now Frozen (Chilled reached tier 3)." % p.Name), _last_log())
+	_check("transform.party-logged", _logged_since(n0, "%s is now Frozen (Chilled reached 3 stacks)." % p.Name), _last_log())
 	pcm.from_dict(saved)
 
 # ---------------------------------------------------------------------------
