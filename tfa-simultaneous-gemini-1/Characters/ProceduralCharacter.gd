@@ -2129,8 +2129,12 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 		_tell_game_invisibility("applied")
 	# A condition a party member put on an invisible NPC, or one put on a
 	# party member: it landed, so the party knows where that NPC is. (Invisible
-	# itself is the branch above: seen vanishing, not "located by a hit".)
-	elif instance != null and game != null and is_instance_valid(game) and game.has_method("note_invisible_contact"):
+	# itself is the branch above: seen vanishing, not "located by a hit".) Not
+	# a transform (Poisoned's 4th stack turning into Toxic Shock) or one a
+	# condition's own tick applies: both carry the first applier as their
+	# source, however long ago it dosed, so they are no new contact.
+	elif instance != null and game != null and is_instance_valid(game) and game.has_method("note_invisible_contact") \
+			and not condition_manager.transforming and not condition_manager.firing_triggered_effect:
 		game.note_invisible_contact(instance.source, self)
 	_react_to_incapacitation(instance)
 

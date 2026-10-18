@@ -38,6 +38,14 @@ const WORSEN_COLOR := Color(1.0, 0.45, 0.35)
 ## condition's own tick (Burning's fire, Poisoned's poison...).
 var firing_triggered_effect: bool = false
 
+## True only while _check_transform puts the new condition on (Poisoned's 4th
+## stack becoming Toxic Shock, Chilled's 3rd Frozen). It carries the old
+## instance's FIRST applier as its source, however long ago that was, so a
+## listener mustn't read it as a fresh application from that source
+## (ProceduralCharacter._on_condition_applied: no new contact with an
+## invisible NPC).
+var transforming: bool = false
+
 ## --- canceled_by_trait (cancel_by_traits is the one entry point) ---------
 ## Anything carrying trait X ends the conditions whose canceled_by_trait lists
 ## X: an ability landing (its traits), damage actually dealt (its type), a
@@ -460,7 +468,10 @@ func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 	# The original applier may have died since; a freed source can't be passed on.
 	var src: Node = instance.source if is_instance_valid(instance.source) else null
 	remove_condition(instance.condition.id)
+	var was_transforming := transforming
+	transforming = true
 	var out := apply_condition(into_id, src)
+	transforming = was_transforming
 	if out and _bearer_noticeable():
 		if character.has_method("notify"):
 			character.notify(_condition_name(out.condition) + "!", WORSEN_COLOR)
