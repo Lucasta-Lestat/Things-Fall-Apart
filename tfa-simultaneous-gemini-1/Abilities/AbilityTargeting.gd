@@ -760,6 +760,10 @@ func _handle_character_click(world_pos: Vector2) -> bool:
 			continue
 		if collider == caster:
 			continue
+		# An NPC the party can't see because it is Invisible can't be picked
+		# (and isn't refused either: that would give it away).
+		if caster != null and caster.has_method("_invisible_to_party") and caster._invisible_to_party(collider):
+			continue
 		# Toggle off if already selected
 		if collider in selected_targets:
 			var idx = selected_targets.find(collider)
