@@ -48,6 +48,11 @@ func _ready() -> void:
 
 	# --- claw hits bleed (slashing damage-type side effect), punches don't ---
 	var d1 := _spawn_race("human", Vector2(500, 200))
+	# Bleeding's CON save on landing is a d100 that can take the claw's one
+	# stack off, so this check used to be flaky. With CON 0 the save always
+	# fails (it can only add a stack), so the bleed always lands.
+	d1.constitution = -int(d1.constitution_modifier)
+	d1.current_health = d1.max_health
 	d1.take_damage({"slashing": 5}, d1.global_position, g)
 	await get_tree().process_frame
 	_check("claw.bleeds", d1.condition_manager.has_active_condition("bleeding"))

@@ -186,12 +186,22 @@ func _case_damage_path() -> void:
 	dealt = ch.take_damage({"fire": 7.6}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
 	_check("dr.unarmoured-type-no-float", dealt == 7 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, _floats(stub))
 	ch.condition_manager.clear_all_conditions()
-	# DoT ticks never float "-N blocked".
+	# DoT ticks ignore armour (round 5): the torso's bludgeoning 3 leaves a
+	# 5-point tick whole.
 	nb_before = _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size()
 	ch._condition_tick_damage = true
 	dealt = ch.take_damage({"bludgeoning": 5.0}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
 	ch._condition_tick_damage = false
-	_check("dr.tick-quiet", dealt == 2 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, _floats(stub))
+	_check("dr.tick-ignores-armour", dealt == 5, dealt)
+	# ...and never float "-N blocked": Stalwart's 1 condition DR (not armour)
+	# still takes 1 off a physical tick, quietly.
+	ch.condition_manager.apply_condition("stalwart", null, 1)
+	await get_tree().create_timer(0.35).timeout
+	ch._condition_tick_damage = true
+	dealt = ch.take_damage({"bludgeoning": 5.0}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
+	ch._condition_tick_damage = false
+	ch.condition_manager.remove_condition("stalwart")
+	_check("dr.tick-quiet", dealt == 4 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, [dealt, _floats(stub)])
 	# A sub-1 hit on an unarmoured type truncates to 0: nothing blocked it.
 	_reset_notify(ch)
 	var blocked_n: int = _floated(stub, "Blocked")

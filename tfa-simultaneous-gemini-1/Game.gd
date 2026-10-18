@@ -5121,7 +5121,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["bonus_damage"] = character.bonus_damage
 	state["bonus_damage_against_trait"] = character.bonus_damage_against_trait.duplicate()
 	state["restricted_actions_by_trait"] = character.restricted_actions_by_trait.duplicate()
-	state["MODIFY_DURATION_BY_TRAIT"] = character.MODIFY_DURATION_BY_TRAIT.duplicate()
+	# MODIFY_DURATION_BY_TRAIT isn't saved: only the template data sets it
+	# (load_from_data), and that runs again before every restore.
 	state["targeting_confusion"] = character.targeting_confusion
  
 	# --- Sensory ---
@@ -5316,8 +5317,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.bonus_damage_against_trait = state["bonus_damage_against_trait"]
 	if state.has("restricted_actions_by_trait"):
 		character.restricted_actions_by_trait = state["restricted_actions_by_trait"]
-	if state.has("MODIFY_DURATION_BY_TRAIT"):
-		character.MODIFY_DURATION_BY_TRAIT = state["MODIFY_DURATION_BY_TRAIT"]
+	# MODIFY_DURATION_BY_TRAIT is left as the template data set it: saves from
+	# before round 5 carry the old universal table (fire 1.2, ice 1.5, aoe 1.3,
+	# magical 1.1), which would bring back the 6 s Burning.
 	if state.has("targeting_confusion"):
 		character.targeting_confusion = state["targeting_confusion"]
  

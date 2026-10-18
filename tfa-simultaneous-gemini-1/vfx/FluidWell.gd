@@ -241,7 +241,7 @@ func _spawn_visual() -> void:
 		return
 	_visual = inst as Node2D
 	# Parented as a CHILD so the visual's lifetime is the well's lifetime exactly.
-	# Routing it through visuals.impact_effect instead would cap it at ~1.95s,
+	# Routing it through visuals.impact_effect instead would cap it at 1.5 s,
 	# because `visual_duration` is inert in Ability.from_dict and
 	# _schedule_effect_cleanup hard-frees on that timer -- it cannot reach 6s.
 	add_child(_visual)

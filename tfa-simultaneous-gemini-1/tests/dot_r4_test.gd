@@ -16,6 +16,10 @@ extends Node2D
 #      deals ("Burning x3: 3 fire every 1 s (6s left)"); descriptions match the
 #      data; rider stacks don't log; stack wording in the log.
 #   E. A per-source totals table (printed), from the shipped data.
+# Round 5 retuned the numbers (tests/dot_tune_r5_test covers the new rules):
+# damage_per_stack 5 for all four, Burning max 4, neutral duration multipliers
+# (Burning 5 s, Stuck in Fire 2 s), Poisoned turns into Toxic Shock at 4, and
+# ticks ignore armour. The checks below assert those numbers.
 # The condition clock (TimeManager.absolute_time) is driven by hand in exact
 # 1/16 s steps, and each ConditionManager._process is called directly.
 #   godot --headless --path . res://tests/dot_r4_test.tscn
@@ -261,10 +265,10 @@ func _register_test_conditions() -> void:
 
 func _case_stacks_for_damage() -> void:
 	var cases := {
-		"burning": {0.5: 0, 1: 1, 6: 1, 7: 2, 12: 2, 13: 3, 24: 3, 100: 3},
-		"poisoned": {1: 1, 2: 1, 5: 1, 6: 2, 10: 2, 11: 3, 18: 4, 50: 4},
-		"chilled": {1: 1, 3: 1, 4: 1, 12: 1, 13: 2, 15: 2, 24: 2, 25: 3, 99: 3},
-		"bleeding": {1: 1, 9: 1, 15: 1, 20: 1, 21: 2, 40: 2, 41: 3, 200: 5},
+		"burning": {0.5: 0, 1: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 100: 4},
+		"poisoned": {1: 1, 2: 1, 5: 1, 6: 2, 10: 2, 11: 3, 16: 4, 18: 4, 50: 4},
+		"chilled": {1: 1, 3: 1, 4: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 99: 3},
+		"bleeding": {1: 1, 5: 1, 6: 2, 10: 2, 15: 3, 20: 4, 21: 5, 200: 5},
 	}
 	for id in cases:
 		var t := _tmpl(id)
@@ -330,39 +334,43 @@ func _case_riders() -> void:
 		cm.clear_all_conditions()
 	else:
 		_check("rider.torso-limb-fixture", false, "no torso limb")
-	# Poison: a Stiletto's 2 is 1 stack; a Poison Vial's 18 fills it.
+	# Poison: a Stiletto's 2 is 1 stack; a Poison Vial's 18 brings 4, which
+	# turns it into Toxic Shock (round 5).
 	v.take_damage({"poison": 2}, v.global_position, atk)
 	_check("rider.stiletto-1-stack", _stacks(v, "poisoned") == 1, _stacks(v, "poisoned"))
 	cm.clear_all_conditions()
 	v.take_damage({"poison": 18}, v.global_position, atk)
-	_check("rider.poison-vial-4-stacks", _stacks(v, "poisoned") == 4, _stacks(v, "poisoned"))
+	_check("rider.poison-vial-toxic-shock", cm.has_condition("toxic_shock") and not cm.has_condition("poisoned"), cm.get_all_condition_ids())
 	cm.clear_all_conditions()
-	# Cold: a cold weapon's 4 is 1 stack, an Iciclet's 15 is 2, 25 freezes.
+	v.take_damage({"poison": 15}, v.global_position, atk)
+	_check("rider.poison-15-3-stacks", _stacks(v, "poisoned") == 3, _stacks(v, "poisoned"))
+	cm.clear_all_conditions()
+	# Cold: a cold weapon's 4 is 1 stack, 8 is 2, an Iciclet's 15 freezes.
 	v.take_damage({"cold": 4}, v.global_position, atk)
 	_check("rider.frost-axe-1-chill", _stacks(v, "chilled") == 1, _stacks(v, "chilled"))
 	cm.clear_all_conditions()
-	v.take_damage({"cold": 15}, v.global_position, atk)
-	_check("rider.iciclet-2-chill", _stacks(v, "chilled") == 2 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
+	v.take_damage({"cold": 8}, v.global_position, atk)
+	_check("rider.cold-8-2-chill", _stacks(v, "chilled") == 2 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	v.take_damage({"cold": 4}, v.global_position, atk)
-	_check("rider.iciclet-then-any-cold-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
+	_check("rider.two-then-any-cold-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
 	cm.clear_all_conditions()
-	v.take_damage({"cold": 25}, v.global_position, atk)
-	_check("rider.25-cold-freezes-in-one", cm.has_condition("frozen"))
+	v.take_damage({"cold": 15}, v.global_position, atk)
+	_check("rider.iciclet-freezes-in-one", cm.has_condition("frozen"))
 	cm.clear_all_conditions()
 	for i in 3:
 		v.take_damage({"cold": 3}, v.global_position, atk)
 	_check("rider.three-winters-grip-hits-freeze", cm.has_condition("frozen"))
 	cm.clear_all_conditions()
-	# Bleeding scales gently (20 per stack), before its CON save.
+	# Bleeding: 5 per stack (round 5), before its CON save.
 	var bleeds := func():
 		v.take_damage({"slashing": 15}, v.global_position, atk)
-		_check("rider.sword-cut-1-bleed", _stacks(v, "bleeding") == 1, _stacks(v, "bleeding"))
+		_check("rider.sword-cut-3-bleed", _stacks(v, "bleeding") == 3, _stacks(v, "bleeding"))
 		cm.clear_all_conditions()
-		v.take_damage({"piercing": 21}, v.global_position, atk)
-		_check("rider.heavy-21-2-bleed", _stacks(v, "bleeding") == 2, _stacks(v, "bleeding"))
+		v.take_damage({"piercing": 7}, v.global_position, atk)
+		_check("rider.light-7-2-bleed", _stacks(v, "bleeding") == 2, _stacks(v, "bleeding"))
 		cm.clear_all_conditions()
-		v.take_damage({"slashing": 41}, v.global_position, atk)
-		_check("rider.41-3-bleed", _stacks(v, "bleeding") == 3, _stacks(v, "bleeding"))
+		v.take_damage({"slashing": 21}, v.global_position, atk)
+		_check("rider.21-fills-5", _stacks(v, "bleeding") == 5, _stacks(v, "bleeding"))
 		cm.clear_all_conditions()
 		v.current_health = v.max_health
 		return true
@@ -384,21 +392,22 @@ func _case_refresh() -> void:
 	var v := await _dummy("Refresh")
 	var cm := _cm(v)
 	var t0 := _now()
-	var burn_dur: float = _tmpl("burning").duration * float(v.MODIFY_DURATION_BY_TRAIT.get("fire", 1.0))
-	_check("refresh.burning-lasts-6s", is_equal_approx(burn_dur, 6.0), burn_dur)
+	# Round 5: no duration multiplier, so Burning lasts its authored 5 s.
+	var burn_dur: float = _tmpl("burning").duration
+	_check("refresh.burning-lasts-5s", is_equal_approx(burn_dur, 5.0) and v.MODIFY_DURATION_BY_TRAIT.is_empty(), [burn_dur, v.MODIFY_DURATION_BY_TRAIT])
 	var inst := cm.apply_condition("burning", null, 1)
 	_check("refresh.first-expiry", inst != null and is_equal_approx(inst.expires_at, t0 + burn_dur), inst.expires_at - t0 if inst else -1)
 	_run(v, 4.0)
 	cm.apply_condition("burning", null, 1)
 	_check("refresh.added-stack-refreshes", inst.stacks == 2 and is_equal_approx(inst.expires_at, t0 + 4.0 + burn_dur),
 		"stacks %d, expires +%.2f" % [inst.stacks, inst.expires_at - t0])
-	_run(v, 4.0)   # t0 + 8: past the FIRST stack's old end (t0 + 6)
+	_run(v, 4.0)   # t0 + 8: past the FIRST stack's old end (t0 + 5)
 	_check("refresh.outlives-first-stack", cm.has_condition("burning") and cm.get_condition("burning") == inst)
 	cm.apply_condition("burning", null, 5)
-	_check("refresh.cap", inst.stacks == 3)
+	_check("refresh.cap", inst.stacks == 4 and inst.stacks == _tmpl("burning").max_tier, inst.stacks)
 	_run(v, 2.0)   # t0 + 10
 	cm.apply_condition("burning", null, 1)
-	_check("refresh.at-cap-refreshes-too", inst.stacks == 3 and is_equal_approx(inst.expires_at, t0 + 10.0 + burn_dur),
+	_check("refresh.at-cap-refreshes-too", inst.stacks == 4 and is_equal_approx(inst.expires_at, t0 + 10.0 + burn_dur),
 		"expires +%.2f" % (inst.expires_at - t0))
 	# A shorter application never shortens it.
 	cm.apply_condition("burning", null, 1, 1.0)
@@ -413,11 +422,11 @@ func _case_refresh() -> void:
 	cm._process(0.0)
 	_check("refresh.no-extra-tick", ticks[0] == 0, ticks[0])
 	cm.triggered_effect_fired.disconnect(count)
-	# It then ends 6 s after the LAST application.
+	# It then ends 5 s after the LAST application.
 	_run(v, burn_dur - STEP)
 	_check("refresh.still-on-just-before", cm.has_condition("burning"))
 	_run(v, STEP * 2)
-	_check("refresh.ends-6s-after-last", not cm.has_condition("burning"))
+	_check("refresh.ends-5s-after-last", not cm.has_condition("burning"))
 	cm.clear_all_conditions()
 
 	# Every stackable timed condition, not only DoTs: Weakened.
@@ -459,7 +468,8 @@ func _case_refresh() -> void:
 	var sif := cm.apply_condition("stuck_in_fire", null, 1)
 	_run(v, 1.0)
 	cm.apply_condition("stuck_in_fire", null, 1)
-	_check("refresh.non-stackable-rule-unchanged", is_equal_approx(sif.expires_at, t0 + 1.0 + 2.4), sif.expires_at - t0)
+	_check("refresh.non-stackable-rule-unchanged", is_equal_approx(sif.expires_at, t0 + 1.0 + _tmpl("stuck_in_fire").duration) \
+		and is_equal_approx(_tmpl("stuck_in_fire").duration, 2.0), sif.expires_at - t0)
 	cm.clear_all_conditions()
 	await _clear()
 
@@ -487,7 +497,7 @@ func _case_refresh_interactions() -> void:
 	cm.suppress_for("burning", 3.0, "test")
 	_run(v, 1.0)
 	cm.apply_condition("burning", null, 1)
-	_check("interact.suppressed-refreshed", burn.is_suppressed and burn.stacks == 2 and is_equal_approx(burn.expires_at, t0 + 1.0 + 6.0))
+	_check("interact.suppressed-refreshed", burn.is_suppressed and burn.stacks == 2 and is_equal_approx(burn.expires_at, t0 + 1.0 + 5.0))
 	cm.clear_all_conditions()
 	# Standing in water: Burning can't land, so nothing is refreshed either.
 	cm.apply_condition("burning", null, 1)
@@ -507,16 +517,16 @@ func _case_refresh_interactions() -> void:
 	_check("interact.save-load-keeps-expiry", cm.has_condition("poisoned") and is_equal_approx(cm.get_condition("poisoned").expires_at, want) \
 		and is_equal_approx(want, t0 + 3.0 + 10.0) and cm.get_condition("poisoned").stacks == 2)
 	cm.clear_all_conditions()
-	# A save from before the caps came down (Poisoned x10, Burning x4, as JSON
+	# A save from before the caps came down (Poisoned x10, Burning x9, as JSON
 	# numbers) loads at today's cap, so it ticks and reads what the text says.
 	var old_save := {"conditions": {
 		"poisoned": {"condition_id": "poisoned", "stacks": 10.0, "expires_at": _now() + 12.0},
-		"burning": {"condition_id": "burning", "stacks": 4.0, "expires_at": _now() + 12.0},
+		"burning": {"condition_id": "burning", "stacks": 9.0, "expires_at": _now() + 12.0},
 		"weakened": {"condition_id": "weakened", "stacks": 2.0, "expires_at": _now() + 12.0}}}
 	cm.from_dict(old_save)
 	var old_p := cm.get_condition("poisoned")
 	_check("interact.old-save-held-to-cap", old_p != null and old_p.stacks == 4 and old_p.get_dot_text() == "4 poison every 2 s" \
-		and cm.get_condition("burning") != null and cm.get_condition("burning").stacks == 3,
+		and cm.get_condition("burning") != null and cm.get_condition("burning").stacks == 4,
 		[old_p.stacks if old_p else -1, cm.get_condition("burning").stacks if cm.get_condition("burning") else -1])
 	_check("interact.old-save-under-cap-untouched", cm.get_condition("weakened") != null and cm.get_condition("weakened").stacks == 2)
 	cm.clear_all_conditions()
@@ -551,7 +561,9 @@ func _case_transform_with_refresh() -> void:
 # ---------------------------------------------------------------------------
 
 func _case_per_stack_and_max_tier() -> void:
-	var want_per_stack := {"burning": 6, "poisoned": 5, "bleeding": 4, "shocked": 2, "corroding": 4, "stuck_in_fire": 6, "suffocating": 12}
+	var want_per_stack := {"burning": 5, "poisoned": 5, "bleeding": 4, "shocked": 2, "corroding": 4, "stuck_in_fire": 4, "suffocating": 12}
+	# Round 5: Burning's max 4 is 4 a second; the rest stay 2-3.
+	var want_max_per_s := {"burning": [4.0, 4.0], "poisoned": [2.0, 3.0], "bleeding": [2.0, 3.0], "shocked": [2.0, 3.0], "corroding": [2.0, 3.0]}
 	print("--- one stack / one application, alone ---")
 	print("condition       per-tick  every  lasts   ticks  total  max-tier  max/s")
 	var one_each := func():
@@ -561,12 +573,12 @@ func _case_per_stack_and_max_tier() -> void:
 			var r := _simulate(v, [[0.0, _applier(v, id, 1)]], 0.0)
 			var eff: Dictionary = t.triggered_effects[0]
 			var per_s: float = float(eff["value"]) * float(t.max_tier if t.stackable else 1) / float(eff["interval"])
-			var lasts: float = t.duration * (1.2 if t.traits.has("fire") else 1.0)
+			var lasts: float = t.duration
 			print("%-15s %8d  %4.1fs  %5.1fs  %5d  %5d  %8d  %5.2f" % [id, int(eff["value"]), float(eff["interval"]), lasts, r["ticks"], r["total"], t.max_tier if t.stackable else 1, per_s])
 			_check("stack.%s-one-stack-%d" % [id, want_per_stack[id]], r["total"] == want_per_stack[id], r)
 			_check("stack.%s-small" % id, r["total"] <= 13, r["total"])
 			if t.stackable:
-				_check("stack.%s-max-tier-2-to-3-per-s" % id, per_s >= 2.0 and per_s <= 3.0, per_s)
+				_check("stack.%s-max-tier-per-s" % id, per_s >= want_max_per_s[id][0] and per_s <= want_max_per_s[id][1], per_s)
 			await _clear()
 		return true
 	await _without_bleed_saves(one_each)
@@ -574,10 +586,11 @@ func _case_per_stack_and_max_tier() -> void:
 	var d := await _dummy("Hp")
 	var hp0 := d.current_health
 	var r2 := _simulate(d, [[0.0, _applier(d, "burning", 3)]], 0.0)
-	_check("stack.hp-matches-ticks", hp0 - d.current_health == r2["total"] and r2["total"] == 18, [hp0 - d.current_health, r2])
+	_check("stack.hp-matches-ticks", hp0 - d.current_health == r2["total"] and r2["total"] == 15, [hp0 - d.current_health, r2])
 	await _clear()
 	# A 30-HP character held at max tier (re-applied every second) lasts about
-	# 10-15 s: time to douse, cure or flee.
+	# 9-15 s: time to douse, cure or flee. Burning at its new max 4 takes 7 s;
+	# Poisoned re-applied at 4 is Toxic Shock (2 a second), 14 s.
 	var thirty := func():
 		for id in ["burning", "poisoned", "bleeding", "corroding", "shocked"]:
 			var v := await _dummy("Thirty " + id)
@@ -597,7 +610,8 @@ func _case_per_stack_and_max_tier() -> void:
 					died_at = t
 					break
 			print("max %-10s kills a 30-HP character in %.1f s" % [id, died_at])
-			_check("maxtier.%s-30hp-lasts-9-to-15s" % id, died_at >= 9.0 and died_at <= 15.0, died_at)
+			var window: Array = [7.0, 7.0] if id == "burning" else [9.0, 15.0]
+			_check("maxtier.%s-30hp-lasts-%d-to-%ds" % [id, int(window[0]), int(window[1])], died_at >= window[0] and died_at <= window[1], died_at)
 			await _clear()
 		return true
 	await _without_bleed_saves(thirty)
@@ -619,7 +633,7 @@ func _case_spells() -> void:
 	caster.ability_manager._resolve_effects(_ability("fireball"), _ability("fireball").effects, v.global_position, [v])
 	var burn := cm.get_condition("burning")
 	_check("spell.fireball-2-burning", burn != null and burn.stacks == 2, burn.stacks if burn else -1)
-	_check("spell.fireball-burns-6s", burn != null and is_equal_approx(burn.expires_at, t0 + 6.0))
+	_check("spell.fireball-burns-5s", burn != null and is_equal_approx(burn.expires_at, t0 + 5.0))
 	_check("spell.fireball-24-hit-no-rider-on-top", v._suppressed_damage_conditions.is_empty() and burn != null and burn.stacks == 2)
 	cm.clear_all_conditions()
 	caster.ability_manager._resolve_effects(_ability("acid_splash"), _ability("acid_splash").effects, v.global_position, [v])
@@ -651,7 +665,7 @@ func _case_summary_text() -> void:
 	var cm := _cm(v)
 	var now := _now()
 	var burn := cm.apply_condition("burning", null, 3)
-	_check("text.burning-x3", burn.get_summary(now) == "Burning x3: 3 fire every 1 s (6s left)", burn.get_summary(now))
+	_check("text.burning-x3", burn.get_summary(now) == "Burning x3: 3 fire every 1 s (5s left)", burn.get_summary(now))
 	_check("text.dot-text", burn.get_dot_text() == "3 fire every 1 s", burn.get_dot_text())
 	_check("text.no-clock-no-time", burn.get_summary() == "Burning x3: 3 fire every 1 s", burn.get_summary())
 	var poi := cm.apply_condition("poisoned", null, 1)
@@ -665,9 +679,9 @@ func _case_summary_text() -> void:
 		cm.clear_all_conditions()
 		return true
 	await _without_bleed_saves(bleed_text)
-	# Stuck in Fire's 2.4 s rounds up.
+	# Stuck in Fire: its authored 2 s (2.4 before round 5's neutral durations).
 	var sif := cm.apply_condition("stuck_in_fire", null, 1)
-	_check("text.stuck-in-fire", sif.get_summary(now) == "Stuck in Fire: 2 fire every 1 s (3s left)", sif.get_summary(now))
+	_check("text.stuck-in-fire", sif.get_summary(now) == "Stuck in Fire: 2 fire every 1 s (2s left)", sif.get_summary(now))
 	cm.clear_all_conditions()
 	# Non-DoTs read as before.
 	var wk := cm.apply_condition("weakened", null, 2)
@@ -677,15 +691,15 @@ func _case_summary_text() -> void:
 	burn = cm.apply_condition("burning", null, 2)
 	_run(v, 1.0)
 	now = _now()
-	_check("text.counts-down", burn.get_summary(now) == "Burning x2: 2 fire every 1 s (5s left)", burn.get_summary(now))
+	_check("text.counts-down", burn.get_summary(now) == "Burning x2: 2 fire every 1 s (4s left)", burn.get_summary(now))
 	_check("text.tooltip-has-description", burn.get_tooltip_text(now) == burn.get_summary(now) + "\n" + _tmpl("burning").description)
 	burn.is_suppressed = true
-	_check("text.suppressed", burn.get_summary(now).ends_with("(5s left) (suppressed)"), burn.get_summary(now))
+	_check("text.suppressed", burn.get_summary(now).ends_with("(4s left) (suppressed)"), burn.get_summary(now))
 	burn.is_suppressed = false
 	# The overhead icon's world-hover text and the hover's condition lines.
 	var hover = HOVER.new()
 	var described: String = hover.describe_condition(burn, v)
-	_check("text.hover-describes-dot", described.contains("Burning x2: 2 fire every 1 s (5s left)") and described.contains("1 fire damage every second"), described)
+	_check("text.hover-describes-dot", described.contains("Burning x2: 2 fire every 1 s (4s left)") and described.contains("1 fire damage every second"), described)
 	var lines: PackedStringArray = hover.condition_lines(v)
 	_check("text.hover-lines", lines.size() == 1 and lines[0].contains("Burning x2: 2 fire every 1 s"), lines)
 	hover.free()
@@ -710,9 +724,12 @@ func _case_no_log_flood() -> void:
 	var p := await _dummy("Ada", true)
 	var foe := await _dummy("Foe")
 	var n0 := GameLog.get_entries().size()
+	# Three poison hits, so Poisoned stops at 3: a 4th would turn it into
+	# Toxic Shock, which does log (a transform, not a rider stack).
 	for i in 6:
 		p.take_damage({"fire": 4}, p.global_position, foe)
-		p.take_damage({"poison": 3}, p.global_position, foe)
+		if i < 3:
+			p.take_damage({"poison": 3}, p.global_position, foe)
 		_run(p, 0.5)
 	var added: Array = GameLog.get_entries().slice(n0)
 	var dot_lines := 0
@@ -721,14 +738,14 @@ func _case_no_log_flood() -> void:
 		if s.contains("Burning") or s.contains("Poisoned"):
 			dot_lines += 1
 	_check("log.rider-stacks-dont-log", dot_lines == 0, added)
-	_check("log.rider-stacks-landed", _stacks(p, "burning") == 3 and _stacks(p, "poisoned") == 4, [_stacks(p, "burning"), _stacks(p, "poisoned")])
+	_check("log.rider-stacks-landed", _stacks(p, "burning") == 4 and _stacks(p, "poisoned") == 3, [_stacks(p, "burning"), _stacks(p, "poisoned")])
 	# A save that worsens or eases logs once, in stacks (condition_feedback_test
 	# covers the dice); here the wording only.
 	var cm := _cm(p)
 	cm.clear_all_conditions()
 	var n1 := GameLog.get_entries().size()
 	cm.apply_condition("chilled", foe, 3)
-	_check("log.transform-says-stacks", _log_count("Ada is now Frozen (Chilled reached 3 stacks).") == 1, GameLog.get_entries().slice(n1))
+	_check("log.transform-says-stacks", _log_count("Ada's Chilled reaches 3 stacks: Frozen.") == 1, GameLog.get_entries().slice(n1))
 	cm.clear_all_conditions()
 	await _clear()
 
@@ -742,15 +759,19 @@ func _case_descriptions_match_data() -> void:
 		var dtype := str(eff["damage_type"])
 		var per := "deals %d %sdamage %s" % [int(eff["value"]), "" if dtype == "true" else dtype + " ", every]
 		_check("desc.%s-tick" % id, t.description.contains(per), [per, t.description])
-		_check("desc.%s-max" % id, t.description.contains("up to %d stacks" % t.max_tier), t.description)
-		var lasts := t.duration * (1.2 if t.traits.has("fire") else 1.0)
+		# Poisoned turns into Toxic Shock at its 4th stack rather than holding 4.
+		if id == "poisoned":
+			_check("desc.%s-max" % id, t.description.contains("At %d stacks it turns into Toxic Shock" % int(t.transforms_into.get("required_tier", 0))), t.description)
+		else:
+			_check("desc.%s-max" % id, t.description.contains("up to %d stacks" % t.max_tier), t.description)
+		var lasts := t.duration
 		_check("desc.%s-refresh" % id, t.description.contains("%d s after the last" % int(round(lasts))) or t.description.contains("lasts %d s after the last" % int(round(lasts))), t.description)
 		if t.damage_per_stack > 0.0:
 			_check("desc.%s-k" % id, t.description.contains("1 stack per %d" % int(t.damage_per_stack)), t.description)
 	var ch := _tmpl("chilled")
-	_check("desc.chilled", ch.description.contains("1 stack per 12 cold damage") and ch.description.contains("15 s after the last") and ch.description.contains("At 3 stacks, you freeze"), ch.description)
+	_check("desc.chilled", ch.description.contains("1 stack per 5 cold damage") and ch.description.contains("15 s after the last") and ch.description.contains("At 3 stacks, you freeze"), ch.description)
 	_check("desc.bleeding-save-interval", _tmpl("bleeding").description.contains("every %d seconds" % int(_tmpl("bleeding").save_interval)))
-	_check("desc.stuck-in-fire", _tmpl("stuck_in_fire").description.contains("2 fire damage every second") and _tmpl("stuck_in_fire").description.contains("2.4 s"))
+	_check("desc.stuck-in-fire", _tmpl("stuck_in_fire").description.contains("2 fire damage every second") and _tmpl("stuck_in_fire").description.contains("Lasts 2 s after"))
 
 
 # ---------------------------------------------------------------------------
@@ -785,7 +806,7 @@ func _case_source_table() -> void:
 			["Stiletto (2 poison)", "poison", 2.0], ["Poison Vial (18 poison)", "poison", 18.0]]:
 		v = await _dummy("Rider")
 		var r := _simulate(v, [[0.0, _hit(v, w[1], w[2])]], 0.0)
-		_row(w[0], "%s x%d" % [DOTS[0] if w[1] == "fire" else "poisoned", r["peak"]], r)
+		_row(w[0], "%s x%d" % [DOTS[0] if w[1] == "fire" else ("toxic_shock" if w[2] >= 16.0 else "poisoned"), r["peak"]], r)
 		await _clear()
 	var cuts := func():
 		for w in [["Longsword cut (15 slashing)", "slashing", 15.0], ["Heavy blow (30 slashing)", "slashing", 30.0]]:
@@ -795,7 +816,7 @@ func _case_source_table() -> void:
 			await _clear()
 		return true
 	await _without_bleed_saves(cuts)
-	_check("table.match-striker-6", _rows[0][2]["total"] == 6, _rows[0][2])
+	_check("table.match-striker-5", _rows[0][2]["total"] == 5, _rows[0][2])
 	_check("table.poison-vial-20", _rows[3][2]["total"] == 20, _rows[3][2])
 
 	# Spells.
@@ -804,7 +825,7 @@ func _case_source_table() -> void:
 	var fb := _ability("fireball")
 	var r_fb := _simulate(v, [[0.0, _caster(caster, v, fb)]], 0.0)
 	_row("Fireball (24 fire + 2 Burning)", "burning x2", r_fb)
-	_check("table.fireball-12", r_fb["total"] == 12, r_fb)
+	_check("table.fireball-10", r_fb["total"] == 10, r_fb)
 	await _clear()
 	v = await _dummy("Mark")
 	caster = await _dummy("Caster")
@@ -836,7 +857,7 @@ func _case_source_table() -> void:
 	v = await _dummy("Spun")
 	var r_spin := _simulate(v, _every(float(spin.get("apply_interval", 0.5)), float(spin.get("base_duration", 6.0)), _applier(v, "stuck_in_fire", 1), 0.0), 0.0)
 	_row("Fire Spin, the whole %d s (rooted)" % int(spin.get("base_duration", 6.0)), "stuck_in_fire", r_spin)
-	_check("table.fire-spin-about-18", r_spin["total"] >= 16 and r_spin["total"] <= 20, r_spin)
+	_check("table.fire-spin-about-16", r_spin["total"] >= 14 and r_spin["total"] <= 18, r_spin)
 	await _clear()
 	var elec: Dictionary = surfaces.get("electrified", {})
 	v = await _dummy("Wet")
