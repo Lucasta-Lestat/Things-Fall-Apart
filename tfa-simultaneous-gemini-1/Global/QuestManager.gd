@@ -614,7 +614,7 @@ func _write_world_state(key: String, value) -> void:
 	Globals.world_state[key] = value
 
 # ---------------------------------------------------------------------------
-# Date helpers (match EventScheduler._today_stamp packing)
+# Date helpers. Stamps pack a date as Y*10000 + M*100 + D (Yearturn is M = 0).
 # ---------------------------------------------------------------------------
 
 ## Quest news floats over the protagonist as well as going in the log: the
@@ -637,9 +637,11 @@ func _today_stamp() -> int:
 func _today_stamp_from(year: int, month: int, day: int) -> int:
 	return year * 10000 + month * 100 + day
 
-# Approximate day delta from packed stamps. Same month/year -> exact; across
-# months we approximate with 36 days per month (TimeManager.DAYS_PER_MONTH).
-# Quests that need true precision can use date_passed::<Y-M-D> instead.
+# Exact day delta between packed stamps, through TimeManager's calendar. The
+# old 36-days-a-month sum put a leap year's Yearturn (month 0) before the rest
+# of its year, so quest_days went negative for all 12 Yearturn days and lost
+# them afterwards (a 7-day deadline started in late Mistumnal ran 19 days).
+# The stamps themselves, saved in quest_start_day, are unchanged.
 func _days_between(start_stamp: int, end_stamp: int) -> int:
 	var sy := int(start_stamp / 10000)
 	var sm := int((start_stamp / 100) % 100)
@@ -647,5 +649,4 @@ func _days_between(start_stamp: int, end_stamp: int) -> int:
 	var ey := int(end_stamp / 10000)
 	var em := int((end_stamp / 100) % 100)
 	var ed := int(end_stamp % 100)
-	var days_per_month := 36
-	return (ey - sy) * (days_per_month * 10) + (em - sm) * days_per_month + (ed - sd)
+	return TimeManager.day_number(ed, em, ey) - TimeManager.day_number(sd, sm, sy)
