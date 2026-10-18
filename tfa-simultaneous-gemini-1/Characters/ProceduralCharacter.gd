@@ -133,14 +133,17 @@ var cooldowns: Dictionary:
 	set(_value):
 		pass
 
-var MODIFY_DURATION_BY_TRAIT: Dictionary = {
-	"fire": 1.2,
-	"ice": 1.5,
-	"spell": 1.0,
-	"aoe": 1.3,
-	"attack": 1.0,
-	"magical": 1.1,
-} #
+## This character's duration multipliers by trait: a condition landing on
+## them with its template duration lasts that times the entry for each of its
+## traits (ConditionManager.apply_condition), and the impact VFX of an ability
+## they cast lasts visual_duration times the entries for its traits
+## (_get_modified_visual_duration). Neutral, i.e. empty, unless the
+## character's data gives entries ("modify_duration_by_trait": {"fire": 1.5}
+## for a creature that burns longer; load_from_data). Round 5 dropped the old
+## defaults every character carried (fire 1.2, ice 1.5, aoe 1.3, magical 1.1),
+## which made Burning last 6 s instead of its authored 5. Only the data load
+## sets it, so saves don't carry it (Game._serialize_character).
+var MODIFY_DURATION_BY_TRAIT: Dictionary = {}
 
 ## Preloaded visual effect scenes
 var _effect_cache: Dictionary = {}
@@ -1308,11 +1311,107 @@ func _update_plan_pause() -> void:
 		if _plan_blocker_drops(blocker):
 			_plan_paused_by = ""
 			_abandon_plan(blocker)
-		elif _plan_paused_by == "":
+		elif _plan_paused_by == "" or _plan_paused_by == PLAN_TARGET_LOST:
 			_pause_plan(blocker)
 		return
-	if _plan_paused_by != "":
+	# The next step aims at an NPC the party can't see because it is
+	# Invisible: the plan waits for it, as it waits out a stun.
+	var hidden_target := _plan_next_target_hidden()
+	if hidden_target != "":
+		if _plan_paused_by != PLAN_TARGET_LOST:
+			_pause_plan_target_lost(hidden_target)
+		return
+	if _plan_paused_by == PLAN_TARGET_LOST:
+		_resume_plan_target_found()
+	elif _plan_paused_by != "":
 		_resume_plan()
+
+## The pause cause (badge "Paused: Target lost") while the plan's next step
+## aims at an NPC the party can't see because it is Invisible. The dev's
+## round 5 answer ("Invisible NPCs should be invisible, unless the party is
+## aware of their presence") means a plan can no longer follow such a target
+## by its true position; it waits, as round 3's stun pause does, and the
+## player can still edit or clear it.
+const PLAN_TARGET_LOST := "Target lost"
+## The character that pause waits for, for the resume line.
+var _plan_lost_target = null
+
+## The name of the NPC the plan's next step aims at (an attack on a designated
+## character, a spell following one, or a spell on picked characters when
+## every living one is hidden) when the party can't see it because it is
+## Invisible (Game.invisible_hidden_from_party); "" otherwise. Only the step
+## about to start counts, so the walk toward an invisible foe isn't held up
+## before it gets there. A target dead or gone isn't hidden: the resume check
+## drops the plan for that (_plan_step_target_lost).
+func _plan_next_target_hidden() -> String:
+	if action_queue == null or action_queue.current_action != null or action_queue.get_queue_size() == 0:
+		return ""
+	if game == null or not is_instance_valid(game) or not game.has_method("invisible_hidden_from_party"):
+		return ""
+	var step = action_queue.peek_next()
+	if step.type == ActionQueue.ActionType.ATTACK_TARGET:
+		return _hidden_plan_target_name(step.data.get("target"))
+	if step.type != ActionQueue.ActionType.USE_ABILITY:
+		return ""
+	var anchored := _hidden_plan_target_name(step.data.get("target_anchor"))
+	if anchored != "":
+		return anchored
+	var picked = step.data.get("targets")
+	if not (picked is Array) or picked.is_empty():
+		return ""
+	var first := ""
+	for t in picked:
+		var hidden := _hidden_plan_target_name(t)
+		if hidden == "":
+			if is_instance_valid(t) and t.has_method("is_alive") and t.is_alive():
+				return ""   # someone it can still land on
+			continue
+		if first == "":
+			first = hidden
+	return first
+
+func _hidden_plan_target_name(t) -> String:
+	if t == null or not is_instance_valid(t) or not game.invisible_hidden_from_party(t):
+		return ""
+	_plan_lost_target = t
+	return str(t.get("Name"))
+
+## Hold the plan before a step aimed at a target hidden by Invisible: the body
+## stops, the route dims with "Paused: Target lost", and a party member says
+## why: "Target lost: Bandit is invisible. Aldric's plan is paused."
+func _pause_plan_target_lost(target_name: String) -> void:
+	_plan_paused_by = PLAN_TARGET_LOST
+	_plan_route_blocked_before = _plan_route_blocked_segments()
+	_nav_waypoints.clear()
+	_nav_index = 0
+	is_moving = false
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	if is_party_member():
+		notify("Target lost", Color.LIGHT_BLUE, "Target lost: %s is invisible. %s's plan is paused." % [target_name, Name])
+
+## The step's target can be seen again (or was replaced): the plan carries on,
+## or is dropped with the reason when it can't (the target died meanwhile).
+func _resume_plan_target_found() -> void:
+	_plan_paused_by = ""
+	if path_drawer != null:
+		path_drawer.queue_redraw()
+	var lost = _plan_lost_target
+	_plan_lost_target = null
+	var problem := _plan_resume_problem()
+	if problem != "":
+		_abandon_plan(null)
+		if is_party_member():
+			notify("Plan dropped", Color(1.0, 0.6, 0.4), "%s's plan is dropped: %s." % [Name, problem])
+		return
+	if action_queue != null:
+		action_queue.resume_current()
+	if not is_party_member():
+		return
+	if is_instance_valid(lost) and game != null and is_instance_valid(game) and game.has_method("is_seen_by_party") and game.is_seen_by_party(lost):
+		notify("Plan resumes", Color.LIGHT_BLUE, "%s can see %s again: plan resumes." % [Name, str(lost.get("Name"))])
+	else:
+		notify("Plan resumes", Color.LIGHT_BLUE, "%s's plan resumes." % Name)
 
 ## Hold the plan where it is: the body stops (the running MOVE picks up from
 ## wherever it stands when the plan resumes). Party members say so.
@@ -2013,6 +2112,12 @@ func _refresh_condition_display() -> void:
 	if not _condition_display.visible and is_alive():
 		_condition_display.visible = true
 
+## How see-through an Invisible character is drawn: a party member always (the
+## player can still find their own invisible characters), an NPC while the
+## party is aware of it (Game._update_npc_los_visibility; unaware, it isn't
+## drawn at all). One value for both, so they look the same.
+const INVISIBLE_ALPHA := 0.35
+
 func _on_condition_applied(instance: ConditionInstance) -> void:
 	_spawn_condition_vfx(instance)
 	_start_condition_sfx(instance)
@@ -2020,8 +2125,27 @@ func _on_condition_applied(instance: ConditionInstance) -> void:
 	if instance and instance.condition and instance.condition.id == "invisible":
 		# Ghostly translucency: the player can still find their own invisible
 		# characters; AI target selection is what actually ignores them.
-		modulate.a = 0.35
+		modulate.a = INVISIBLE_ALPHA
+		_tell_game_invisibility("applied")
+	# A condition a party member put on an invisible NPC, or one put on a
+	# party member: it landed, so the party knows where that NPC is. (Invisible
+	# itself is the branch above: seen vanishing, not "located by a hit".) Not
+	# a transform (Poisoned's 4th stack turning into Toxic Shock) or one a
+	# condition's own tick applies: both carry the first applier as their
+	# source, however long ago it dosed, so they are no new contact.
+	elif instance != null and game != null and is_instance_valid(game) and game.has_method("note_invisible_contact") \
+			and not condition_manager.transforming and not condition_manager.firing_triggered_effect:
+		game.note_invisible_contact(instance.source, self)
 	_react_to_incapacitation(instance)
+
+## What the party sees of an invisible NPC is Game's call
+## (Game.note_npc_invisibility): "<NPC> turns invisible." when the party saw
+## it vanish, or seen again at once when it shows itself. `cause`: "applied",
+## "returns" (an attack's reveal window ended), "ended", "ran_out" or
+## "suppressed". Party members' own look is unchanged (INVISIBLE_ALPHA).
+func _tell_game_invisibility(cause: String) -> void:
+	if game != null and is_instance_valid(game) and game.has_method("note_npc_invisibility") and not is_party_member():
+		game.note_npc_invisibility(self, cause)
 
 ## Stunned / Frozen / Apathetic / Unconscious (the "incapacitate" trait)
 ## landing, or coming out of suppression, ends a windup, even one marked
@@ -2046,6 +2170,7 @@ func _on_condition_removed(instance: ConditionInstance) -> void:
 	_refresh_condition_display()
 	if instance and instance.condition and instance.condition.id == "invisible":
 		modulate.a = 1.0
+		_tell_game_invisibility("ended")
 
 func _on_condition_expired(instance: ConditionInstance) -> void:
 	_remove_condition_vfx(instance)
@@ -2053,6 +2178,7 @@ func _on_condition_expired(instance: ConditionInstance) -> void:
 	_refresh_condition_display()
 	if instance and instance.condition and instance.condition.id == "invisible":
 		modulate.a = 1.0
+		_tell_game_invisibility("ran_out")
 
 	if instance and instance.condition and instance.condition.id == "bide":
 		var absorbed = float(instance.custom_data.get("absorbed", 0.0))
@@ -4711,6 +4837,10 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 			first_door = collider
 		elif collider is Item and first_item == null:
 			first_item = collider
+		elif collider is ProceduralCharacter and collider != self and _invisible_to_party(collider):
+			# Hidden from the party by Invisible: not there for the menu, and
+			# it mustn't turn a right-click into an attack either.
+			continue
 		elif collider is ProceduralCharacter and collider != self:
 			# Corpses are loot targets regardless of former faction — a dead
 			# hostile must not trip the hostile-attack fallthrough below.
@@ -4822,6 +4952,11 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 		# deferred layer write lands.
 		if require_alive and collider.has_method("is_alive") and not collider.is_alive():
 			continue
+		# An NPC the party can't see because it is Invisible isn't there for
+		# the player's clicks either: no designation, talk or hover cursor that
+		# would give it away (Game.invisible_hidden_from_party).
+		if _invisible_to_party(collider):
+			continue
 		# View-layer filter: point queries hit INVISIBLE bodies, so without
 		# this a click lands on a character the render refuses to show — a
 		# designated ghost. Mirror what is actually drawn: ground view hides
@@ -4837,6 +4972,13 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 		if best == null or collider.z_index >= best.z_index:
 			best = collider
 	return best
+
+## True for an NPC the party can't see because it is Invisible
+## (Game.invisible_hidden_from_party). The player's pickers skip it: the
+## click probe above, the context menu and AbilityTargeting's character picks.
+func _invisible_to_party(other) -> bool:
+	return game != null and is_instance_valid(game) and game.has_method("invisible_hidden_from_party") \
+		and game.invisible_hidden_from_party(other)
 
 
 ## Probe for a loose, pick-up-able world Item (not a readable, not a container).
@@ -7389,6 +7531,9 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	there is no per-limb HP anymore. Defaults to TORSO for condition-driven
 	damage (bleeding, poison) and any code path that doesn't know a hit limb.
 
+	A condition's damage tick (_condition_tick_damage) ignores worn armour and
+	a raised shield, weaknesses included (round 5).
+
 	`attacker` is optional but should be passed for any character-sourced damage
 	so the witness/wake-from-AT_EASE pipeline can attribute the attack."""
 	# The dead take no further damage. Lingering DoTs (bleed from the killing
@@ -7401,6 +7546,14 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 		return 0
 	# 1. Per-limb armor DR (armor still protects specific hit locations)
 	var armor_dr = get_limb_armor(hit_limb)
+	# Damage over time ignores armour (round 5, "DoT should Ignore armor"):
+	# every condition tick, Burning's first included, comes through here with
+	# the tick flag set, so this one line covers them all. Its weaknesses too
+	# (Legionnaire's electric -1), so a tick deals what its summary says
+	# (ConditionInstance.get_dot_text) whatever is worn. Condition DR and Rage
+	# below are not armour and still apply.
+	if _condition_tick_damage:
+		armor_dr = {}
 	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
 	var raw_total: float = 0.0
@@ -9045,6 +9198,7 @@ func _on_condition_suppressed(instance: ConditionInstance) -> void:
 	# shows the character solid again, and its icon dims.
 	if instance.condition.id == "invisible":
 		modulate.a = 1.0
+		_tell_game_invisibility("suppressed")
 	_refresh_condition_display()
 
 func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
@@ -9058,7 +9212,8 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 	if sfx and is_instance_valid(sfx):
 		sfx.stream_paused = false
 	if instance.condition.id == "invisible" and is_alive():
-		modulate.a = 0.35
+		modulate.a = INVISIBLE_ALPHA
+		_tell_game_invisibility("returns")
 	_refresh_condition_display()
 	_react_to_incapacitation(instance)
 ## Spawn a visual effect

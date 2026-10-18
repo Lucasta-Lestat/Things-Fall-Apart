@@ -375,7 +375,7 @@ static func _resolve_spawn_fluid(
 ## node that keeps topping the region up, so the pool grows outward, holds, and
 ## heals where it has drained. The node owns its own visual too, because
 ## `visuals.impact_effect` is hard-freed on the (inert) visual_duration timer at
-## ~1.95s and so cannot cover a multi-second effect.
+## 1.5 s and so cannot cover a multi-second effect.
 static func _resolve_fluid_well(
 	effect: Dictionary,
 	caster: Node,

@@ -148,9 +148,10 @@ func _cm(c: ProceduralCharacter) -> ConditionManager:
 
 
 ## Big stack count so a landing save can't refuse it (deterministic harness).
-## Chilled takes one stack: three turn it into Frozen.
+## Chilled takes one stack: three turn it into Frozen. Poisoned takes three:
+## four turn it into Toxic Shock (round 5).
 func _apply(c: ProceduralCharacter, id: String, source: Node = null) -> bool:
-	_cm(c).apply_condition(id, source, 1 if id == "chilled" else 10)
+	_cm(c).apply_condition(id, source, 1 if id == "chilled" else (3 if id == "poisoned" else 10))
 	return _cm(c).has_condition(id)
 
 

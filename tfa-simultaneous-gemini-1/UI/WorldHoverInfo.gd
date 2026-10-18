@@ -138,6 +138,12 @@ func describe_character(c) -> String:
 			if fname != "":
 				stance_text += " (%s)" % fname
 		lines.append("%s · %s" % [_col(word, health_color(word)), _col(_esc(stance_text), stance_color(stance))])
+		# An invisible NPC the party sees anyway says why ("Invisible — you
+		# saw it vanish (4s)", "... seen by Djargo's true sight").
+		if game != null and game.has_method("invisible_perception_text"):
+			var inv_line: String = game.invisible_perception_text(c)
+			if inv_line != "":
+				lines.append(_col(_esc(inv_line), COLOR_MUTED))
 
 	var cond_lines := condition_lines(c)
 	lines.append_array(cond_lines)

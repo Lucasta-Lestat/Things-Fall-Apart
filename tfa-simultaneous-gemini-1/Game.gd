@@ -1021,6 +1021,11 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	_npc_was_truly_seen.clear()
 	_npc_pulse_remaining.clear()
 	_npc_radar_cooldown.clear()
+	# Awareness of invisible NPCs is transient: a new map (or a load) starts
+	# with none, so an invisible NPC in view stays hidden until a cue.
+	_invisible_aware_until.clear()
+	_invisible_aware_why.clear()
+	_invisible_lost_said.clear()
 
 	# Clean up previous map
 	_unload_current_map()
@@ -2845,6 +2850,9 @@ var _radar_ping_scene: PackedScene = null
 func trigger_hearing_pulse(npc) -> void:
 	if not is_instance_valid(npc):
 		return
+	# Heard close by, an invisible NPC gives away where it is for a while
+	# (drawn see-through while in view); farther off it only flashes, below.
+	_note_invisible_heard(npc)
 	if _npc_ever_seen.get(npc, false):
 		_npc_pulse_remaining[npc] = PULSE_DURATION
 	else:
@@ -2903,6 +2911,8 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		victim.set_meta("dot_harm_by_%d" % attacker.get_instance_id(), TimeManager.absolute_time())
 	if dot_tick:
 		return
+	# A blow traded with an invisible NPC gives away where it is.
+	_note_invisible_hit(attacker, victim)
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
 	# this loop only wakes bystanders (legal fights startle people too).
 	# Enumeration is shared with the crime pipeline: CrimeManager.witnesses_of
@@ -3090,6 +3100,9 @@ func _update_npc_los_visibility() -> void:
 
 		var was_truly_seen: bool = _npc_was_truly_seen.get(npc, false)
 		_npc_was_truly_seen[npc] = seen
+		# Just lost from view: if Invisible is why, it fades out (round 5).
+		if was_truly_seen and not seen:
+			_on_invisible_npc_lost(npc)
 
 		if seen:
 			# Direct line of sight overrides any pulse.
@@ -3115,7 +3128,9 @@ func _update_npc_los_visibility() -> void:
 				npc.modulate.a = 0.0
 			else:
 				npc.visible = true
-				npc.modulate.a = 1.0
+				# Seen though Invisible (the party is aware of it): see-through,
+				# exactly as an invisible party member is drawn.
+				npc.modulate.a = ProceduralCharacter.INVISIBLE_ALPHA if _invisibility_active(npc) else 1.0
 		elif _npc_pulse_remaining.has(npc):
 			var t_remaining: float = _npc_pulse_remaining[npc]
 			var t_norm: float = clamp(1.0 - (t_remaining / PULSE_DURATION), 0.0, 1.0)
@@ -3151,11 +3166,266 @@ func _is_position_visible_to_party(target_pos: Vector2, target_elev: float = 0.0
 
 
 ## The party-visibility rule for a character: some party member sees its
-## position at its elevation, with its visibility scaling their range.
+## position at its elevation, with its visibility scaling their range. An NPC
+## whose Invisible is active also needs the party to be aware of it
+## (_invisible_npc_perceived, below).
 func _is_character_visible_to_party(c) -> bool:
 	var elev: float = c.get_elevation() if c.has_method("get_elevation") else 0.0
 	var vis: float = c.effective_visibility() if c.has_method("effective_visibility") else 1.0
+	if _invisibility_active(c) and not (c in party_chars):
+		return _invisible_npc_perceived(c, elev, vis)
 	return _is_position_visible_to_party(c.global_position, elev, vis)
+
+
+# ===== Invisible NPCs: what the party perceives =====
+# Developer (round 5): "Invisible NPCs should be invisible, unless the party
+# is aware of their presence for some reason, in which case they should be
+# transparent like party members". An NPC whose Invisible is active (alive,
+# not suppressed by an attack's reveal window: ai.gd _hidden_by_invisibility's
+# test) counts as seen only when the usual rule above holds for some party
+# member AND the party is aware of it:
+#   - a party member with the true_sight trait has it in sight (while they do;
+#     the same trait ai.gd and CrimeManager.hidden_from honour);
+#   - a cue within INVISIBLE_AWARE_SECONDS of game time, each new one starting
+#     the count again: the party saw it turn invisible (seen the moment it
+#     vanished, a reveal window ending included), it and a party member hit
+#     each other (a blow, an AoE, a condition that landed), or a party member
+#     heard it within INVISIBLE_HEARD_TILES;
+#   - it is a party member's summon (summoned_by): the party knows where its
+#     own allies are.
+# Seen, it is drawn at ProceduralCharacter.INVISIBLE_ALPHA, as invisible party
+# members are, and hover, clicks and targeting reach it. Otherwise it is
+# exactly an NPC out of sight: not drawn (a hearing pulse still flashes it),
+# not seen by any readout (_npc_was_truly_seen: hover, icons, cones, service
+# discovery, hostiles_in_party_los and the threat arrows), not clickable
+# (invisible_hidden_from_party). Awareness is transient: not saved, cleared
+# with the map, and it runs on TimeManager's clock, which stops while paused.
+
+## Seconds of game time one cue keeps the party aware of an invisible NPC.
+const INVISIBLE_AWARE_SECONDS := 5.0
+## A noise an invisible NPC makes within this many tiles of a party member
+## gives it away (the reach at which an NPC notices someone outside its sight
+## cone, ai.gd CLOSE_QUARTERS_TILES); farther off it only flashes, as any
+## unseen NPC's noise does.
+const INVISIBLE_HEARD_TILES := 2.0
+const INVISIBLE_NOTICE_COLOR := Color(0.75, 0.85, 1.0)
+
+## NPC -> TimeManager.absolute_time() the last cue keeps it located until.
+var _invisible_aware_until: Dictionary = {}
+## NPC -> that cue, for the hover: "vanish", "hit" or "heard".
+var _invisible_aware_why: Dictionary = {}
+## NPC -> true once "You lose track of <NPC>" was logged for this spell of
+## Invisible (cleared whenever its Invisible comes on or goes off).
+var _invisible_lost_said: Dictionary = {}
+
+## True for a living character whose Invisible is active.
+func _invisibility_active(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	var cm = c.get("condition_manager")
+	if cm == null or not is_instance_valid(cm) or not cm.has_active_condition("invisible"):
+		return false
+	return c.has_method("is_alive") and c.is_alive()
+
+## The rule for an NPC hidden by Invisible: a true_sight party member has it
+## in sight, or the party is aware of it and the usual rule holds.
+func _invisible_npc_perceived(c, elev: float, vis: float) -> bool:
+	if _true_sighter_of(c, elev, vis) != null:
+		return true
+	return _party_aware_of_invisible(c) and _is_position_visible_to_party(c.global_position, elev, vis)
+
+## The party member whose true sight has `c` in view, or null.
+func _true_sighter_of(c, elev: float, vis: float):
+	for ally in party_chars:
+		if is_instance_valid(ally) and int(ally.traits.get("true_sight", 0)) != 0 \
+				and ally.can_see_point(c.global_position, elev, vis):
+			return ally
+	return null
+
+func _party_aware_of_invisible(c) -> bool:
+	if TimeManager.absolute_time() < float(_invisible_aware_until.get(c, -1.0)):
+		return true
+	return _party_summoner_of(c) != null
+
+## The party member who summoned `c` (CrimeManager.attribute walks the
+## summoned_by chain), or null.
+func _party_summoner_of(c):
+	if not c.has_meta("summoned_by"):
+		return null
+	var summoner = CrimeManager.attribute(c)
+	return summoner if summoner != c and summoner in party_chars else null
+
+func _mark_invisible_aware(npc, why: String) -> void:
+	_invisible_aware_until[npc] = TimeManager.absolute_time() + INVISIBLE_AWARE_SECONDS
+	_invisible_aware_why[npc] = why
+
+## True for an NPC the party can't see because it is Invisible. The player's
+## pickers skip it (ProceduralCharacter._find_character_at, the context menu,
+## AbilityTargeting's character picks) and a planned step aimed at it waits
+## (ProceduralCharacter._plan_next_target_hidden).
+func invisible_hidden_from_party(c) -> bool:
+	return c is ProceduralCharacter and not (c in party_chars) and _invisibility_active(c) and not is_seen_by_party(c)
+
+## The hover line for an NPC the party sees though it is Invisible, saying
+## why: "Invisible — seen by Djargo's true sight", "Invisible — you saw it
+## vanish (4s)", "Invisible — located by a hit (5s)", "Invisible — heard
+## close by (2s)", "Invisible — summoned by Djargo"; "" for anyone else.
+func invisible_perception_text(c) -> String:
+	if not _invisibility_active(c) or c in party_chars or not is_seen_by_party(c):
+		return ""
+	var sighter = _true_sighter_of(c, c.get_elevation(), c.effective_visibility())
+	if sighter != null:
+		return "Invisible — seen by %s's true sight" % sighter.Name
+	var summoner = _party_summoner_of(c)
+	if summoner != null:
+		return "Invisible — summoned by %s" % summoner.Name
+	var left: float = float(_invisible_aware_until.get(c, -1.0)) - TimeManager.absolute_time()
+	if left <= 0.0:
+		return "Invisible"
+	var why: String = str(_invisible_aware_why.get(c, ""))
+	var because: String = "you saw it vanish" if why == "vanish" else ("located by a hit" if why == "hit" else "heard close by")
+	return "Invisible — %s (%ds)" % [because, ceili(left)]
+
+## ProceduralCharacter's word that an NPC's Invisible came on ("applied", or
+## "returns" when an attack's reveal window ends) or went off ("ended",
+## "ran_out", "suppressed": an attack or a splash broke it). Coming on while
+## the party sees it: "<NPC> turns invisible.", and the party knows where it
+## went for INVISIBLE_AWARE_SECONDS (on "returns" the log line only:
+## ConditionManager floats "Invisible returns" over it). Going off in view, it
+## counts as seen at once, so the notices of that moment reach the player
+## (_break_invisibility's "Invisibility broken"); one that wore off unseen
+## floats "Appears" with "<NPC> appears: their invisibility wore off."
+func note_npc_invisibility(npc, cause: String) -> void:
+	if npc == null or not is_instance_valid(npc) or npc in party_chars or not npc.is_alive():
+		return
+	_invisible_lost_said.erase(npc)
+	if current_map_data.get("is_world_map", false) or party_chars.is_empty():
+		return
+	var was_seen: bool = bool(_npc_was_truly_seen.get(npc, false))
+	if cause == "applied" or cause == "returns":
+		if not was_seen or not _invisibility_active(npc):
+			return
+		_mark_invisible_aware(npc, "vanish")
+		var line: String = "%s turns invisible." % npc.Name
+		if cause == "returns":
+			GameLog.add_entry(line)
+		else:
+			npc.notify("Turns invisible", INVISIBLE_NOTICE_COLOR, line)
+		return
+	_invisible_aware_until.erase(npc)
+	_invisible_aware_why.erase(npc)
+	if was_seen or _invisibility_active(npc) or not _is_character_visible_to_party(npc):
+		return
+	_npc_was_truly_seen[npc] = true
+	_npc_ever_seen[npc] = true
+	mark_service_seen(npc)
+	if cause == "ran_out":
+		npc.notify("Appears", INVISIBLE_NOTICE_COLOR, "%s appears: their invisibility wore off." % npc.Name)
+
+## A party member and an NPC traded something that landed (a condition one put
+## on the other: ProceduralCharacter._on_condition_applied): an invisible NPC
+## on the other side is located for INVISIBLE_AWARE_SECONDS.
+func note_invisible_contact(actor, target) -> void:
+	var npc = _invisible_counterpart(actor, target)
+	if npc != null:
+		_mark_invisible_aware(npc, "hit")
+
+## Of `actor` and `target`, the invisible NPC when the other is a party
+## member, else null. Invisible held back by an attack's reveal window counts:
+## a blow traded in that window still locates it for when the cloak has it
+## back (note_npc_invisibility keeps that awareness on "returns").
+func _invisible_counterpart(actor, target):
+	if actor == null or target == null or not is_instance_valid(actor) or not is_instance_valid(target) or actor == target:
+		return null
+	var npc = null
+	if actor in party_chars and not (target in party_chars):
+		npc = target
+	elif target in party_chars and not (actor in party_chars):
+		npc = actor
+	# (A condition's source may be a fog or a field, not a character.)
+	if npc == null or not npc.has_method("is_alive") or not npc.is_alive():
+		return null
+	var cm = npc.get("condition_manager")
+	return npc if cm != null and is_instance_valid(cm) and cm.has_condition("invisible") else null
+
+## A blow that landed between a party member and an invisible NPC
+## (_on_character_damaged; damage-over-time ticks don't count): the party
+## knows where it is for INVISIBLE_AWARE_SECONDS. When the party couldn't see
+## it, the hit says what happened rather than leave numbers from nowhere (or
+## none): "Djargo is hit by something invisible." over the victim, or "Djargo
+## hits something invisible." over the spot, when that spot is in the party's
+## view. "something invisible" is the NPC's name with "(invisible)" once the
+## party has seen it on this map.
+func _note_invisible_hit(attacker, victim) -> void:
+	var npc = _invisible_counterpart(attacker, victim)
+	if npc == null:
+		return
+	var unseen: bool = not bool(_npc_was_truly_seen.get(npc, false))
+	_mark_invisible_aware(npc, "hit")
+	# In a reveal window it is simply an attacker the party doesn't see.
+	if not unseen or not _invisibility_active(npc) or current_map_data.get("is_world_map", false):
+		return
+	var named: bool = _npc_ever_seen.get(npc, false)
+	var who: String = ("%s (invisible)" % npc.Name) if named else "something invisible"
+	if npc == attacker:
+		victim.notify("Hit by " + who, INVISIBLE_NOTICE_COLOR, "%s is hit by %s." % [victim.Name, who])
+	elif _is_position_visible_to_party(npc.global_position, npc.get_elevation(), npc.effective_visibility()):
+		npc.notify(who if named else "Something invisible", INVISIBLE_NOTICE_COLOR,
+			"%s hits %s." % [attacker.Name, who])
+
+## An NPC that dies while Invisible hides it from the party (_on_character_died,
+## before ProceduralCharacter decides on "<NPC> has died."): a corpse doesn't
+## hide, so when the party could see that spot it counts as seen at once and
+## its death is announced, rather than a body appearing from nowhere.
+func _note_invisible_death(npc) -> void:
+	if npc == null or not is_instance_valid(npc) or npc in party_chars or bool(_npc_was_truly_seen.get(npc, false)):
+		return
+	var cm = npc.get("condition_manager")
+	if cm == null or not is_instance_valid(cm) or not cm.has_condition("invisible"):
+		return
+	_invisible_aware_until.erase(npc)
+	_invisible_aware_why.erase(npc)
+	if current_map_data.get("is_world_map", false) \
+			or not _is_position_visible_to_party(npc.global_position, npc.get_elevation(), 1.0):
+		return
+	_npc_was_truly_seen[npc] = true
+	_npc_ever_seen[npc] = true
+
+## Heard by the party (trigger_hearing_pulse): an invisible NPC within
+## INVISIBLE_HEARD_TILES of a living party member is located.
+func _note_invisible_heard(npc) -> void:
+	if npc in party_chars or not _invisibility_active(npc):
+		return
+	var reach: float = GridManager.TILE_SIZE * INVISIBLE_HEARD_TILES
+	for pc in party_chars:
+		if is_instance_valid(pc) and pc.is_alive() and pc.global_position.distance_to(npc.global_position) <= reach:
+			_mark_invisible_aware(npc, "heard")
+			return
+
+## An NPC the party saw just dropped out of view (_update_npc_los_visibility).
+## When Invisible is why (the usual rule still holds), it fades out from
+## INVISIBLE_ALPHA over the hearing pulse's decay instead of blinking off, and
+## a foe gets one "You lose track of <NPC> (invisible)." per spell of
+## Invisible: an enemy vanishing mid-fight needs a reason, the fade gives the
+## rest, and the later lapses of the same spell (a noise, a hit) stay quiet.
+## Walking out of sight is nothing new and stays quiet, as for anyone.
+func _on_invisible_npc_lost(npc) -> void:
+	if not _invisibility_active(npc):
+		return
+	if not _is_position_visible_to_party(npc.global_position, npc.get_elevation(), npc.effective_visibility()):
+		return
+	_npc_pulse_remaining[npc] = _invisible_fade_seconds()
+	if npc.is_hostile_to_party() and not _invisible_lost_said.has(npc) \
+			and not current_map_data.get("is_world_map", false):
+		_invisible_lost_said[npc] = true
+		GameLog.add_entry("You lose track of %s (invisible)." % npc.Name)
+
+## The hearing pulse's time left at which its curve draws INVISIBLE_ALPHA, so
+## a lapse fades from where the see-through body was (about 0.6 s).
+func _invisible_fade_seconds() -> float:
+	var ratio: float = clampf(ProceduralCharacter.INVISIBLE_ALPHA / PULSE_ALPHA, 0.0, 1.0)
+	var t_norm: float = PULSE_PLATEAU_FRAC + (1.0 - pow(ratio, 1.0 / 3.0)) * (1.0 - PULSE_PLATEAU_FRAC)
+	return PULSE_DURATION * (1.0 - t_norm)
 
 
 func _update_item_los_visibility() -> void:
@@ -3179,7 +3449,9 @@ func get_sight_multiplier_at(world_pos: Vector2) -> float:
 ## i.e. _is_character_visible_to_party: some living, sighted party member has
 ## it in range (weather, fog at either end, its visibility), inside their FOV
 ## cone, on a clear elevation-aware sight line; a hearing pulse doesn't count
-## as seen. That pass is frozen while paused (nothing can move), so the answer
+## as seen, and an NPC whose Invisible is active counts only while the party is
+## aware of it ("Invisible NPCs: what the party perceives", above). That pass
+## is frozen while paused (nothing can move), so the answer
 ## holds through planning. It is the LOS answer, not "drawn now": in ground
 ## view a seen roof-walker is still hidden (check c.visible for that). Anything
 ## that pass doesn't cover (items, structures, a character spawned this frame
@@ -3801,6 +4073,8 @@ func _on_weapon_disarmed(character: CharacterBody2D) -> void:
 func _on_character_died(character: ProceduralCharacter) -> void:
 	var name = "Player" if character == player else "Enemy"
 	print("%s has died!" % name)
+	# Before ProceduralCharacter decides on its "<Name> has died." line.
+	_note_invisible_death(character)
 	var ai_node = character.get_node_or_null("AI")
 	if ai_node:
 		ai_node.current_state = ai_node.AIState.DEAD
@@ -5012,7 +5286,7 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 		# _on_condition_applied's Invisible translucency (not while an attack
 		# has it suppressed).
 		if cm.has_active_condition("invisible"):
-			character.modulate.a = 0.35
+			character.modulate.a = ProceduralCharacter.INVISIBLE_ALPHA
 		# Shrouded's smoky tint (a Dark Hood worn across the warp or load).
 		character._update_concealment_look()
 
@@ -5121,7 +5395,8 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["bonus_damage"] = character.bonus_damage
 	state["bonus_damage_against_trait"] = character.bonus_damage_against_trait.duplicate()
 	state["restricted_actions_by_trait"] = character.restricted_actions_by_trait.duplicate()
-	state["MODIFY_DURATION_BY_TRAIT"] = character.MODIFY_DURATION_BY_TRAIT.duplicate()
+	# MODIFY_DURATION_BY_TRAIT isn't saved: only the template data sets it
+	# (load_from_data), and that runs again before every restore.
 	state["targeting_confusion"] = character.targeting_confusion
  
 	# --- Sensory ---
@@ -5316,8 +5591,9 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 		character.bonus_damage_against_trait = state["bonus_damage_against_trait"]
 	if state.has("restricted_actions_by_trait"):
 		character.restricted_actions_by_trait = state["restricted_actions_by_trait"]
-	if state.has("MODIFY_DURATION_BY_TRAIT"):
-		character.MODIFY_DURATION_BY_TRAIT = state["MODIFY_DURATION_BY_TRAIT"]
+	# MODIFY_DURATION_BY_TRAIT is left as the template data set it: saves from
+	# before round 5 carry the old universal table (fire 1.2, ice 1.5, aoe 1.3,
+	# magical 1.1), which would bring back the 6 s Burning.
 	if state.has("targeting_confusion"):
 		character.targeting_confusion = state["targeting_confusion"]
  
