@@ -127,6 +127,27 @@ func is_leap_year(year: int) -> bool:
 	if year % 2 == 0:   return true
 	return false
 
+# Leap years from year 1 through `year`, by the rule above.
+func leap_years_through(year: int) -> int:
+	if year <= 0:
+		return 0
+	return year / 2 - year / 12 + year / 48 - year / 576
+
+# Calendar day number of a date: days from Frostiem 1 of year 1, counting the
+# 12 Yearturn days every leap year actually has (month 0, after Mistumnal).
+# The difference between two dates' numbers is exactly the days advance_days
+# steps between them, so this is how a calendar date (a quest stamp, a
+# scheduled trigger's day, an old save entry) becomes a day count. today() is
+# the other count: days actually lived, which a debug date jump doesn't move.
+func day_number(day: int, month: int, year: int) -> int:
+	var prior: int = year - 1
+	var n: int = prior * COMMON_YEAR_DAYS + leap_years_through(prior) * YEARTURN_LENGTH
+	if month == 0:
+		n += MONTHS_PER_YEAR * DAYS_PER_MONTH
+	else:
+		n += (month - 1) * DAYS_PER_MONTH
+	return n + day - 1
+
 func set_time(hour: int, minute: int, second: int):
 	current_hour = hour
 	current_minute = minute
