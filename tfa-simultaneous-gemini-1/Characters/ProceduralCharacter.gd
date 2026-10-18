@@ -2294,17 +2294,24 @@ func begin_damage_condition_suppression(condition_ids: Dictionary) -> void:
 func end_damage_condition_suppression() -> void:
 	_suppressed_damage_conditions = {}
 
-## One stack of the condition a damaging hit of some type brings (Bleeding,
-## Burning, Poisoned, Chilled). Not from a condition's own damage tick (Burning
-## would feed itself), not on top of an ability applying it explicitly, and
-## not on a corpse. `source` (the attacker) makes the ticks the attacker's, as
-## an ability's Burning is, so a burn death still counts as their kill.
-func _apply_damage_type_condition(condition_id: String, limb = null, source: Node = null) -> void:
+## The condition a damaging hit of some type brings (Bleeding, Burning,
+## Poisoned, Chilled), with a stack per the condition's damage_per_stack points
+## of `dealt` (that type's damage after armour; at least 1 stack, at most its
+## max tier): a 1-point fire rider lights 1 small stack, a heavy fire hit
+## several. Not from a condition's own damage tick (Burning would feed itself),
+## not on top of an ability applying it explicitly, and not on a corpse.
+## `source` (the attacker) makes the ticks the attacker's, as an ability's
+## Burning is, so a burn death still counts as their kill.
+func _apply_damage_type_condition(condition_id: String, limb = null, source: Node = null, dealt: float = 1.0) -> void:
 	if _condition_tick_damage or _suppressed_damage_conditions.has(condition_id):
 		return
 	if condition_manager == null or not is_alive():
 		return
-	condition_manager.apply_condition(condition_id, source, 1, -2.0, limb)
+	var template: Condition = ConditionManager.condition_registry.get(condition_id)
+	var stacks: int = template.stacks_for_damage(dealt) if template != null else 1
+	if stacks <= 0:
+		return
+	condition_manager.apply_condition(condition_id, source, stacks, -2.0, limb)
 
 ## The condition whose damage tick is being applied ("Burning"), named as the
 ## cause when that damage cancels another condition. "" outside a tick.
@@ -8060,10 +8067,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# _on_triggered_effect_fired). Limbs are no longer severed by
 				# raw slash damage; severing only happens via a condition or
 				# ability effect (see _on_limb_severed callers).
-				_apply_damage_type_condition("bleeding", limb)
+				_apply_damage_type_condition("bleeding", limb, null, damage)
 				_spawn_bleed_burst(location, 2.0)
 			"piercing":
-				_apply_damage_type_condition("bleeding", limb)
+				_apply_damage_type_condition("bleeding", limb, null, damage)
 				_spawn_bleed_burst(location, 1.5)
 			"fire", "poison", "cold":
 				# Burning / Poisoned / Chilled through ConditionManager (they
@@ -8071,7 +8078,7 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# so no target limb. Carries the attacker (kill credit for a burn
 				# death). Bleeding above stays sourceless: with a source its CON
 				# save would announce on every slash.
-				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type], null, attacker)
+				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type], null, attacker, damage)
 
 			"electric", "lightning":
 				# Propagate the hit through any contiguous conductive surface
@@ -8169,7 +8176,7 @@ func get_state_name() -> String:
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
 	# Bleeding is driven by the ConditionManager's triggered_effects on the
-	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# "bleeding" condition: every 2 s it deals damage routed to the torso
 	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
 	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
 	# HP reaching 0.

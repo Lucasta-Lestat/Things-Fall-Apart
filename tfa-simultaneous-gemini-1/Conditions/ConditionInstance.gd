@@ -74,6 +74,11 @@ static func from_dict(data: Dictionary, condition_registry: Dictionary) -> Condi
 	
 	var instance = ConditionInstance.new(condition_template, null, limb_value)
 	instance.stacks = data.get("stacks", 1)
+	# Held to today's cap, as every application is: a save from before a cap
+	# came down (round 4: Poisoned 10 -> 4, Burning 4 -> 3, Corroding 5 -> 3)
+	# would otherwise tick and read "x10" past what the description says.
+	if condition_template.stackable and condition_template.max_tier >= 1:
+		instance.stacks = mini(instance.stacks, condition_template.max_tier)
 	instance.is_suppressed = data.get("is_suppressed", false)
 	instance.applied_at = data.get("applied_at", 0.0)
 	instance.expires_at = data.get("expires_at", -1.0)
@@ -114,15 +119,20 @@ func get_display_name() -> String:
 
 
 ## One-line label, the single wording for every condition display:
-## "Poisoned x3 (12s) (suppressed)". Time left only for a timed instance and
+## "Weakened x3 (12s) (suppressed)". Time left only for a timed instance and
 ## only when `now` (TimeManager.absolute_time(), the clock expires_at is on)
-## is given.
+## is given. A damaging DoT also says what it deals now (get_dot_text):
+## "Burning x3: 3 fire every 1 s (5s left)".
 func get_summary(now: float = -1.0) -> String:
 	var text := get_display_name()
 	if stacks > 1:
 		text += " x%d" % stacks
+	var dot := get_dot_text()
+	if dot != "":
+		text += ": " + dot
 	if now >= 0.0 and expires_at >= 0.0:
-		text += " (%s)" % Globals.format_duration_short(get_remaining_duration(now))
+		# "left" keeps the time apart from the tick interval just before it.
+		text += (" (%s left)" if dot != "" else " (%s)") % Globals.format_duration_short(get_remaining_duration(now))
 	if is_suppressed:
 		# A timed suppression (ConditionManager.suppress_for) says how long.
 		if now >= 0.0 and custom_data.has("suppressed_until"):
@@ -130,6 +140,24 @@ func get_summary(now: float = -1.0) -> String:
 		else:
 			text += " (suppressed)"
 	return text
+
+
+## "3 fire every 1 s": the damage a DoT's next tick deals at the current
+## stacks (value x stacks, as ConditionManager._execute_triggered_effect,
+## before the bearer's armour) and how often. "" for a condition with no damage
+## tick. True damage (Bleeding) reads "damage".
+func get_dot_text() -> String:
+	if not condition:
+		return ""
+	for effect in condition.triggered_effects:
+		if not (effect is Dictionary) or effect.get("type", "") != "damage":
+			continue
+		var per_tick: int = int(effect.get("value", 0)) * stacks
+		var dtype := str(effect.get("damage_type", "true"))
+		var interval := float(effect.get("interval", 1.0))
+		var every: String = str(int(round(interval))) if is_equal_approx(interval, round(interval)) else String.num(interval, 1)
+		return "%d %s every %s s" % [per_tick, "damage" if dtype == "true" else dtype, every]
+	return ""
 
 
 ## get_summary plus the description: conditions are explained nowhere else.

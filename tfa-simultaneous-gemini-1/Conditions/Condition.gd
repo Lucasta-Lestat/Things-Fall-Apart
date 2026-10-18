@@ -78,6 +78,27 @@ extends Resource
 ## new attack option). Empty string = no ability granted.
 @export var grants_ability: String = ""
 
+## Points of a hit's damage per stack the hit brings, for the conditions a
+## damage type adds on its own (ProceduralCharacter.handle_damage_effect_based_on_type:
+## fire -> Burning, poison -> Poisoned, cold -> Chilled, slashing/piercing ->
+## Bleeding). A hit that deals `dealt` of that type after armour adds
+## ceil(dealt / damage_per_stack) stacks, at least 1, at most max_tier: with
+## Burning's 6, a 1-point fire hit adds 1 stack and a 13-point one 3. Roughly
+## what one stack deals over its duration, so the burn is about the size of the
+## hit that lit it. 0 = one stack per hit, whatever its size. Explicit
+## applications (spells, surfaces, fogs, weather) keep their own stack counts.
+@export var damage_per_stack: float = 0.0
+
+## Stacks a hit dealing `dealt` damage brings (see damage_per_stack); 0 when it
+## dealt less than 1.
+func stacks_for_damage(dealt: float) -> int:
+	if dealt < 1.0:
+		return 0
+	var n: int = 1
+	if damage_per_stack > 0.0:
+		n = maxi(1, int(ceil(dealt / damage_per_stack)))
+	return mini(n, maxi(1, max_tier)) if stackable else 1
+
 # Helper function to create a condition instance from data
 static func create_from_data(data: Dictionary) -> Condition:
 	var condition = Condition.new()
@@ -116,5 +137,6 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.save_stat = data.get("save_stat", "")
 	condition.save_interval = data.get("save_interval", 0.0)
 	condition.grants_ability = data.get("grants_ability", "")
+	condition.damage_per_stack = float(data.get("damage_per_stack", 0.0))
 
 	return condition

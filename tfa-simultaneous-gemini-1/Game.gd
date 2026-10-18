@@ -1623,8 +1623,9 @@ func _tick_weather_conditions(delta: float) -> void:
 			continue
 		var existing = cm.conditions.get(cond)
 		if cap > 0 and existing != null and existing.stacks >= cap:
-			# At the cap: keep it from lapsing while they stay out (re-applying
-			# a stackable doesn't refresh its timer).
+			# At the weather's cap: keep it from lapsing while they stay out,
+			# as a re-application would (ConditionManager refreshes a
+			# stackable's expiry), without the extra stack one would add.
 			var dur: float = float(existing.condition.duration)
 			if dur > 0.0 and existing.expires_at > 0.0:
 				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)

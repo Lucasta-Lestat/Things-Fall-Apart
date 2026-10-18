@@ -60,7 +60,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "exhausted",
 		"display_name": "Exhausted",
-		"description": "Severely fatigued, reducing constitution. Stacks tier by tier from sustained exertion.",
+		"description": "Severely fatigued, reducing constitution. Builds up a stack at a time from sustained exertion.",
 		"traits": {"debuff": 1, "fatigue": 2},
 		"stackable": true,
 		"max_tier": 5,
@@ -100,11 +100,15 @@ func get_all_conditions() -> Array:
 	{
 		"id": "poisoned",
 		"display_name": "Poisoned",
-		"description": "Taking poison damage over time.",
+		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. A poison hit adds 1 stack per 5 poison damage it deals (at least 1), up to 4 stacks. It lasts until 10 s after the last dose.",
 		"traits": {"debuff": 1, "poison": 1, "persistent": 1},
 		"stackable": true,
-		"max_tier": 10,
-		"duration": 20.0,
+		# DoT scale (round 4): a stack is small and worth about the damage that
+		# brought it (damage_per_stack, Condition.gd); max tier deals 2 a second.
+		# 1 every 2 s for 10 s = 5 per stack (ticks at 0, 2, 4, 6, 8 s).
+		"max_tier": 4,
+		"damage_per_stack": 5,
+		"duration": 10.0,
 		"icon": "res://UI/UI Icons/poisoned.png",
 		"transforms_into": {"id": "toxic_shock", "required_tier": 10},
 		"canceled_by_trait": ["antidote", "purify"],
@@ -114,7 +118,7 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 5,
+				"value": 1,
 				"damage_type": "poison",
 				"interval": 2.0
 			}
@@ -124,11 +128,14 @@ func get_all_conditions() -> Array:
 	{
 		"id": "burning",
 		"display_name": "Burning",
-		"description": "Engulfed in flames, taking fire damage.",
+		"description": "Engulfed in flames. Each stack deals 1 fire damage every second. A fire hit adds 1 stack per 6 fire damage it deals (at least 1), up to 3 stacks. It burns until 6 s after the last fire that caught you. Water or cold puts it out.",
 		"traits": {"debuff": 1, "fire": 1, "dot": 1, "elemental": 1},
 		"stackable": true,
-		"max_tier": 4,
-		"duration": 15.0,
+		# 1 every 1 s for 5 s, x1.2 for "fire" (MODIFY_DURATION_BY_TRAIT) = 6 s:
+		# 6 per stack (ticks at 0..5 s). Max tier 3 a second.
+		"max_tier": 3,
+		"damage_per_stack": 6,
+		"duration": 5.0,
 		"icon": "res://UI/UI Icons/burning.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["cold", "water"],
@@ -137,9 +144,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 6,
+				"value": 1,
 				"damage_type": "fire",
-				"interval": 1.5
+				"interval": 1.0
 			}
 		],
 		"immunities": {}
@@ -147,11 +154,13 @@ func get_all_conditions() -> Array:
 	{
 		"id": "shocked",
 		"display_name": "Shocked",
-		"description": "Electricity arcs through your body.",
+		"description": "Electricity arcs through your body. Each stack deals 1 electric damage every second, up to 3 stacks. Standing on electrified ground adds stacks; it lasts 2 s after the last one.",
 		"traits": {"debuff": 1, "electric": 1, "dot": 1, "elemental": 1},
 		"stackable": true,
+		# Only electrified ground applies it (an electric hit electrifies the
+		# water underfoot rather than shocking directly). 2 per stack.
 		"max_tier": 3,
-		"duration": 1.5,
+		"duration": 2.0,
 		"icon": "res://UI/UI Icons/shocked.png",
 		"transforms_into": {},
 		"canceled_by_trait": [],
@@ -160,7 +169,7 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 3,
+				"value": 1,
 				"damage_type": "electric",
 				"interval": 1.0
 			}
@@ -188,10 +197,13 @@ func get_all_conditions() -> Array:
 	{
 		"id": "chilled",
 		"display_name": "Chilled",
-		"description": "Movement and attack speed reduced. At tier 3, you freeze.",
+		"description": "Movement and attack speed reduced. A cold hit adds 1 stack per 12 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 3 stacks, you freeze.",
 		"traits": {"debuff": 1, "cold": 1, "slow": 1, "elemental": 1},
 		"stackable": true,
 		"max_tier": 3,
+		# No damage: a cold weapon's 3-4 adds 1 stack, heavy cold (13-24) 2,
+		# and only 25+ freezes in one hit.
+		"damage_per_stack": 12,
 		"duration": 15.0,
 		"icon": "res://UI/UI Icons/chilled.png",
 		"transforms_into": {"id": "frozen", "required_tier": 3},
@@ -324,11 +336,12 @@ func get_all_conditions() -> Array:
 	{
 		"id": "corroding",
 		"display_name": "Corroding",
-		"description": "Acid eats away at flesh and armor.",
+		"description": "Acid eats away at flesh. Each stack deals 1 acid damage every second, up to 3 stacks. It lasts until 4 s after the last acid. Water washes it off.",
 		"traits": {"debuff": 1, "acid": 1, "dot": 1},
 		"stackable": true,
-		"max_tier": 5,
-		"duration": 5.0,
+		# 1 every 1 s for 4 s = 4 per stack; max tier 3 a second.
+		"max_tier": 3,
+		"duration": 4.0,
 		"icon": "res://UI/UI Icons/corroding.png",
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "water"],
@@ -338,9 +351,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 6,
+				"value": 1,
 				"damage_type": "acid",
-				"interval": 2.0
+				"interval": 1.0
 			}
 		],
 		"immunities": {}
@@ -816,11 +829,15 @@ func get_all_conditions() -> Array:
 	{
 		"id": "bleeding",
 		"display_name": "Bleeding",
-		"description": "An open wound is bleeding, causing blood loss over time. A CON save on application reduces the tier applied; another CON save every 6 seconds can ease or worsen it.",
+		"description": "An open wound. Each stack deals 1 damage every 2 s, whatever the armour. A slashing or piercing hit adds 1 stack per 20 damage it deals (at least 1), up to 5 stacks. A CON save when it lands reduces the stacks applied; another CON save every 6 seconds can ease or worsen it. It bleeds until 8 s after the last wound.",
 		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
 		"stackable": true,
+		# 1 true damage every 2 s for 8 s = 4 per stack; max tier 2.5 a second.
+		# Scales gently with the wound (20 per stack): an ordinary 10-20 cut
+		# bleeds 1 stack, a 21-40 blow 2, before the CON save.
 		"max_tier": 5,
-		"duration": 30.0,
+		"damage_per_stack": 20,
+		"duration": 8.0,
 		"save_stat": "con",
 		"save_interval": 6.0,
 		"icon": "res://UI/UI Icons/bleeding.png",
@@ -832,9 +849,9 @@ func get_all_conditions() -> Array:
 		"triggered_effects": [
 			{
 				"type": "damage",
-				"value": 2,
+				"value": 1,
 				"damage_type": "true",
-				"interval": 4.0
+				"interval": 2.0
 			},
 			{
 				"type": "custom",
@@ -966,10 +983,12 @@ func get_all_conditions() -> Array:
 	{
 		"id": "stuck_in_fire",
 		"display_name": "Stuck in Fire",
-		"description": "Mired in clinging flames. Cannot move and burns over time.",
+		"description": "Mired in clinging flames. Cannot move, and takes 2 fire damage every second. Lasts 2.4 s after the flames last catch you. Water or cold puts it out.",
 		"traits": {"debuff": 1, "fire": 1, "dot": 1, "elemental": 1, "immobilize": 1},
 		"stackable": false,
 		"max_tier": 1,
+		# 2.0 x1.2 (fire) = 2.4 s: 6 per catch (ticks at 0, 1, 2 s). Fire Spin
+		# re-catches every 0.5 s for 6 s, so a full spin is about 18.
 		"duration": 2.0,
 		"icon": "res://UI/UI Icons/burning.png",
 		"transforms_into": {},
@@ -980,7 +999,7 @@ func get_all_conditions() -> Array:
 			{"stat": "speed_modifier", "operation": "set", "value": -1.0}
 		],
 		"triggered_effects": [
-			{"type": "damage", "value": 5, "damage_type": "fire", "interval": 1.5}
+			{"type": "damage", "value": 2, "damage_type": "fire", "interval": 1.0}
 		],
 		"conditional_modifiers": [],
 		"immunities": {}
@@ -988,7 +1007,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "the_jaws_that_bite",
 		"display_name": "The Jaws That Bite",
-		"description": "Mutated maw. Your bite attacks (bound to Z) have a chance to cause bleeding; the tier of bleeding applied scales with the tier of this mutation.",
+		"description": "Mutated maw. Your bite attacks (bound to Z) have a chance to cause bleeding; the Bleeding stacks applied match this mutation's stacks.",
 		"traits": {"mutation": 1, "mutations": 1, "passive": 1, "racial": 1},
 		"stackable": true,
 		"max_tier": 5,
@@ -1025,7 +1044,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "grappled",
 		"display_name": "Grappled",
-		"description": "Held fast. Cannot move until you break free. STR save on application reduces tier; another save fires every 2s while held.",
+		"description": "Held fast. Cannot move until you break free. STR save on application reduces the stacks applied; another save fires every 2s while held.",
 		"traits": {"debuff": 1, "physical": 1, "cc": 1, "immobilize": 1},
 		"stackable": true,
 		"max_tier": 5,
