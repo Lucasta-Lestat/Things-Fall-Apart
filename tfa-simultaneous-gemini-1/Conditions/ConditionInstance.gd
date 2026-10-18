@@ -74,6 +74,11 @@ static func from_dict(data: Dictionary, condition_registry: Dictionary) -> Condi
 	
 	var instance = ConditionInstance.new(condition_template, null, limb_value)
 	instance.stacks = data.get("stacks", 1)
+	# Held to today's cap, as every application is: a save from before a cap
+	# came down (round 4: Poisoned 10 -> 4, Burning 4 -> 3, Corroding 5 -> 3)
+	# would otherwise tick and read "x10" past what the description says.
+	if condition_template.stackable and condition_template.max_tier >= 1:
+		instance.stacks = mini(instance.stacks, condition_template.max_tier)
 	instance.is_suppressed = data.get("is_suppressed", false)
 	instance.applied_at = data.get("applied_at", 0.0)
 	instance.expires_at = data.get("expires_at", -1.0)

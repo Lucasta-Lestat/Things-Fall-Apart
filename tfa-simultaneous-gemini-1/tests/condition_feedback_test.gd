@@ -247,7 +247,8 @@ func _case_periodic_and_corpse() -> void:
 		# Stacks 3+ drop by 2 per sure pass: first an "eases", then "shakes off".
 		pcm._process(0.016)
 		# Stacks, as the summaries count them ("Bleeding x2"): 3 or 4 landed, -2.
-		_check("periodic.eases-logged", _logged_since(n0, "%s's Bleeding eases to 1 stack (" % p.Name) 			or _logged_since(n0, "%s's Bleeding eases to 2 stacks (" % p.Name), _last_log())
+		_check("periodic.eases-logged", _logged_since(n0, "%s's Bleeding eases to 1 stack (" % p.Name)
+			or _logged_since(n0, "%s's Bleeding eases to 2 stacks (" % p.Name), _last_log())
 		pcm.last_save_times["bleeding"] = now - 100.0
 		pcm._process(0.016)
 		if pcm.has_condition("bleeding"):

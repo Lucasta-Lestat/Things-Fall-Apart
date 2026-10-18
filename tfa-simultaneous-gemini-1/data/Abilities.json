@@ -1691,7 +1691,7 @@
 		{
 			"id": "force_march",
 			"display_name": "Force March",
-			"description": "Push the party on without rest. Doubles overland travel speed for 12 hours; gain a tier of Exhausted (lasts a day) as the price.",
+			"description": "Push the party on without rest. Doubles overland travel speed for 12 hours; gain a stack of Exhausted (it lasts a day after the last march) as the price.",
 			"icon": "res://UI/UI Icons/ability_force_march.png",
 			"costs": {},
 			"cast_time": 0.0,

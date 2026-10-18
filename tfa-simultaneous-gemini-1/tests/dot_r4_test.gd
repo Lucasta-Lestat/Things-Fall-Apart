@@ -507,6 +507,19 @@ func _case_refresh_interactions() -> void:
 	_check("interact.save-load-keeps-expiry", cm.has_condition("poisoned") and is_equal_approx(cm.get_condition("poisoned").expires_at, want) \
 		and is_equal_approx(want, t0 + 3.0 + 10.0) and cm.get_condition("poisoned").stacks == 2)
 	cm.clear_all_conditions()
+	# A save from before the caps came down (Poisoned x10, Burning x4, as JSON
+	# numbers) loads at today's cap, so it ticks and reads what the text says.
+	var old_save := {"conditions": {
+		"poisoned": {"condition_id": "poisoned", "stacks": 10.0, "expires_at": _now() + 12.0},
+		"burning": {"condition_id": "burning", "stacks": 4.0, "expires_at": _now() + 12.0},
+		"weakened": {"condition_id": "weakened", "stacks": 2.0, "expires_at": _now() + 12.0}}}
+	cm.from_dict(old_save)
+	var old_p := cm.get_condition("poisoned")
+	_check("interact.old-save-held-to-cap", old_p != null and old_p.stacks == 4 and old_p.get_dot_text() == "4 poison every 2 s" \
+		and cm.get_condition("burning") != null and cm.get_condition("burning").stacks == 3,
+		[old_p.stacks if old_p else -1, cm.get_condition("burning").stacks if cm.get_condition("burning") else -1])
+	_check("interact.old-save-under-cap-untouched", cm.get_condition("weakened") != null and cm.get_condition("weakened").stacks == 2)
+	cm.clear_all_conditions()
 	await _clear()
 
 
