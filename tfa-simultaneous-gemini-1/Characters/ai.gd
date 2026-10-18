@@ -461,11 +461,11 @@ func _check_stealth_wake() -> void:
 		# Only sneaking looks suspicious (nobody sneaks on the world map).
 		if pc.has_method("is_sneaking") and not pc.is_sneaking():
 			continue
-		# Concealment (Shrouded) shortens how far away we notice them.
-		var pc_vis: float = pc.effective_visibility() if pc.has_method("effective_visibility") else 1.0
-		if pc_vis < 1.0 and character.global_position.distance_to(pc.global_position) > get_sight_range_pixels() * pc_vis:
-			continue
-		if is_in_line_of_sight(pc.global_position, pc.get_elevation()):
+		# Seen by the rules the stealth eye shows (has_in_view): the sight
+		# cone and walls, Shrouded only within sight x its visibility, an
+		# active Invisible not at all (true_sight aside). Noise still wakes us
+		# through on_sound_heard.
+		if has_in_view(pc):
 			wake_from_at_ease(WAKE_FROM_AT_EASE_VALUE, pc.global_position)
 			return  # is_at_ease is now false; caller's early-out blocks re-entry
 
@@ -757,6 +757,10 @@ func has_in_view(c) -> bool:
 	if cm and (cm.has_condition("blinded") or cm.has_condition("unconscious")):
 		return false
 	if c == current_target:
+		# A held target gone Invisible is dropped on our next tick
+		# (_update_target); it is out of view already.
+		if _hidden_by_invisibility(c):
+			return false
 		var dist: float = character.global_position.distance_to(c.global_position)
 		return dist <= maxf(detection_range * 1.5, _close_quarters_radius()) and _target_occluded_time <= 0.0
 	return can_see_character(c)
@@ -839,6 +843,17 @@ func _update_target(delta: float = 0.0) -> void:
 			_lose_target()
 			return
 
+		# Invisible again (a cloak's Invisible returning after the attack
+		# window, a potion drunk mid-fight): acquisition skips an active
+		# Invisible, and now so does holding. Lost like a target behind a wall
+		# (_demote_lost_target): the '?', "loses sight of" in the log, and a
+		# search of where they were last seen. Re-acquired only once they
+		# show themselves again (the next attack's reveal window), never by
+		# their sounds alone (on_sound_heard caps below HOSTILE).
+		if _hidden_by_invisibility(current_target):
+			_demote_lost_target("invisible")
+			return
+
 		# Hysteresis: lose target at 1.5x detection range (live: weather, fog,
 		# Blinded's zero), never inside close quarters: a foe at our elbow,
 		# whose blows already identified them (_on_self_damaged), stays held.
@@ -890,6 +905,10 @@ func _update_target(delta: float = 0.0) -> void:
 				continue
 			# Not the charmer: confusion doesn't override the infatuation.
 			if infatuation_source and other == infatuation_source:
+				continue
+			# Nor someone we can't see: an invisible pick would be dropped by
+			# the hold check next tick and re-picked, over and over.
+			if _hidden_by_invisibility(other):
 				continue
 			if not is_in_line_of_sight(other.global_position, other.get_elevation()):
 				continue
@@ -1116,23 +1135,41 @@ func _infatuation_source() -> Node:
 # the demotion would search with NO overhead tell. SOUND_CAP (85) sits under
 # the HOSTILE band (90) and far over both the SEARCHING promotion (60) and
 # give-up floor (36): routing is unchanged, only the glyph flips to `?`.
-func _demote_lost_target() -> void:
+func _demote_lost_target(reason: String = "") -> void:
 	_set_alertness_value(minf(alertness_value, ALERTNESS_SOUND_CAP))
 	var lost = current_target
 	_lose_target()
-	_announce_lost_sight(lost)
+	_announce_lost_sight(lost, reason)
 
 # '<NPC> loses sight of <Name>.' when an NPC the party can see gives up on a
 # party member it has no sight of any more (_demote_lost_target: out of range
 # or occluded). The party learns why the chase turned into a search; a hidden
-# NPC stays hidden.
-func _announce_lost_sight(lost) -> void:
-	if lost == null or not is_instance_valid(lost) or not lost.has_method("is_party_member") \
-			or not lost.is_party_member() or character.is_party_member():
+# NPC stays hidden. `reason` "invisible" (the target turned Invisible) adds
+# " (invisible)", and also tells the player when a companion's AI loses the
+# enemy it was fighting that way, since that one stops fighting for no visible
+# reason otherwise.
+func _announce_lost_sight(lost, reason: String = "") -> void:
+	if lost == null or not is_instance_valid(lost) or not lost.has_method("is_party_member"):
+		return
+	var why: String = " (%s)" % reason if reason != "" else ""
+	if reason != "" and character.is_party_member() and not lost.is_party_member():
+		GameLog.add_entry("%s loses sight of %s%s." % [character.Name, lost.Name, why])
+		return
+	if not lost.is_party_member() or character.is_party_member():
 		return
 	if game == null or not game.has_method("is_seen_by_party") or not game.is_seen_by_party(character):
 		return
-	GameLog.add_entry("%s loses sight of %s." % [character.Name, lost.Name])
+	GameLog.add_entry("%s loses sight of %s%s." % [character.Name, lost.Name, why])
+
+## Whether an active Invisible hides `other` from us: the condition is on and
+## not suppressed (an attack's reveal window suppresses a cloak's, a timed one
+## ends), and we lack true_sight. The rule target acquisition applies; holding
+## a target, has_in_view and the stealth wake share it through here.
+func _hidden_by_invisibility(other) -> bool:
+	if other == null or not is_instance_valid(other) or character.traits.get("true_sight", 0) != 0:
+		return false
+	var other_cm = other.get_node_or_null("ConditionManager")
+	return other_cm != null and other_cm.has_active_condition("invisible")
 
 func _lose_target() -> void:
 	# Investigate where they WERE, not the last unrelated bang. _acquire_target
