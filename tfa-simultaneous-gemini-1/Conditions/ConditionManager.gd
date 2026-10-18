@@ -188,7 +188,7 @@ func _try_periodic_save(instance: ConditionInstance, current_time: float) -> boo
 		instance.add_stacks(delta)
 		condition_stacks_changed.emit(instance, old_stacks, instance.stacks)
 		if log_it and instance.stacks > old_stacks:
-			GameLog.add_entry("%s's %s worsens to tier %d%s." % [_bearer_name(), cond_name, instance.stacks, _save_detail(template.save_stat)])
+			GameLog.add_entry("%s's %s worsens to %s%s." % [_bearer_name(), cond_name, _stacks_text(instance.stacks), _save_detail(template.save_stat)])
 	else:
 		# delta is negative; remove_stacks expects a positive amount.
 		instance.remove_stacks(-delta)
@@ -200,7 +200,7 @@ func _try_periodic_save(instance: ConditionInstance, current_time: float) -> boo
 				GameLog.add_entry("%s shakes off %s%s." % [_bearer_name(), cond_name, _save_detail(template.save_stat)])
 			return true
 		if log_it:
-			GameLog.add_entry("%s's %s eases to tier %d%s." % [_bearer_name(), cond_name, instance.stacks, _save_detail(template.save_stat)])
+			GameLog.add_entry("%s's %s eases to %s%s." % [_bearer_name(), cond_name, _stacks_text(instance.stacks), _save_detail(template.save_stat)])
 	return false
 
 
@@ -352,6 +352,8 @@ func apply_condition(
 		if template.stackable:
 			var old_stacks = existing.stacks
 			var added = existing.add_stacks(stacks)
+			# Before the transform below, which replaces the instance anyway.
+			_refresh_stackable_expiry(existing, final_duration, current_time)
 			if added > 0:
 				condition_stacks_changed.emit(existing, old_stacks, existing.stacks)
 				stats_recalculated.emit()
@@ -416,6 +418,24 @@ func apply_condition(
 	return _check_transform(instance)
 
 
+## A stackable condition lasts until its LAST application wears off. An
+## application landing on a timed instance, whether it adds stacks or finds it
+## at max tier, moves the expiry to now + that application's duration when
+## that is later: Burning hit again 4 s in keeps burning 6 s from the new hit,
+## not from the first, and back-to-back Force Marches keep Exhausted 24 h from
+## the last one. Every stack shares the one expiry. A permanent instance stays
+## permanent; a permanent application (a worn item's, an explicit -1 or 0)
+## makes it permanent, as the non-stackable branch does. `final_duration` is
+## apply_condition's: -2 or less means "the template's", which is permanent.
+func _refresh_stackable_expiry(existing: ConditionInstance, final_duration: float, now: float) -> void:
+	if existing.expires_at < 0.0 or final_duration <= -2.0:
+		return
+	if final_duration <= 0.0:
+		existing.expires_at = -1.0
+		return
+	existing.expires_at = maxf(existing.expires_at, now + final_duration)
+
+
 ## When a stackable condition reaches its transforms_into tier (Chilled 3 ->
 ## Frozen, Fatigued 3 -> Exhausted), replace it with that condition. Targets
 ## that aren't registered (toxic_shock) are skipped. Returns the instance now
@@ -438,7 +458,7 @@ func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 		if character.has_method("notify"):
 			character.notify(_condition_name(out.condition) + "!", WORSEN_COLOR)
 		if _player_involved(src):
-			GameLog.add_entry("%s is now %s (%s reached tier %d)." % [_bearer_name(), _condition_name(out.condition), _condition_name(instance.condition), instance.stacks])
+			GameLog.add_entry("%s is now %s (%s reached %s)." % [_bearer_name(), _condition_name(out.condition), _condition_name(instance.condition), _stacks_text(instance.stacks)])
 	return out
 
 
@@ -809,6 +829,12 @@ func _bearer_name() -> String:
 
 func _condition_name(template: Condition) -> String:
 	return template.display_name if template.display_name != "" else template.id.capitalize()
+
+
+## "3 stacks" / "1 stack". Stacks are the one counter (ConditionInstance.stacks,
+## capped by max_tier, "x3" in every summary); the log calls them stacks too.
+static func _stacks_text(n: int) -> String:
+	return "%d stack%s" % [n, "" if n == 1 else "s"]
 
 
 ## " (STR save: rolled 12 vs 55)" for the save the bearer just made. The roll
