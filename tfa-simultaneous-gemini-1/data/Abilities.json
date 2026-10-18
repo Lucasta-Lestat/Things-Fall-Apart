@@ -1616,7 +1616,7 @@
 		{
 			"id": "natural_bite",
 			"display_name": "Bite",
-			"description": "Sink your fangs into a foe. Mutated maw bearers also apply bleeding scaled by the tier of The Jaws That Bite.",
+			"description": "Sink your fangs into a foe. Mutated maw bearers also apply Bleeding: one stack per stack of The Jaws That Bite.",
 			"icon": "res://UI/UI Icons/ability_natural_bite.png",
 			"costs": {
 				"stamina": 5
