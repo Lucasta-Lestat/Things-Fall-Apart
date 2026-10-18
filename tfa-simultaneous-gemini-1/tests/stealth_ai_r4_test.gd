@@ -102,6 +102,7 @@ func _ready() -> void:
 	await _case_d_same_frame_rereveal()
 	await _case_d_npc_quiet()
 	await _case_d_with_cloak()
+	await _case_d_condition_effect_readable()
 	await _case_d_warp_and_world_map()
 	await _case_d_djargo_start()
 
@@ -634,6 +635,35 @@ func _case_d_with_cloak() -> void:
 	_check("d.both-cloak-returns", _log_sum("Vex's Invisible returns (Shadow Cloak).") == 1)
 	_check("d.both-no-shrouded-returns", _log_sum("Vex's Shrouded returns") == 0)
 	_check("d.both-back", _rgb_is(p.modulate, TINT) and is_equal_approx(p.modulate.a, 0.35), str(p.modulate))
+	# The cloak's Invisible already down (doused) when he swings: the cloak
+	# breaks nothing and says nothing, so Shrouded's own pair speaks.
+	cm.suppress_for("invisible", 30.0, "water")
+	await _wait_real_ms(1100)   # past notify's same-text repeat window
+	broke = _log_sum("Vex's invisibility breaks")
+	p.reveal()
+	_check("d.doused-cloak-silent", _log_sum("Vex's invisibility breaks") == broke)
+	_check("d.doused-cloak-shrouded-speaks", _log_sum("Vex is revealed for 3 s (attacking).") == 1,
+		"log tail: %s" % str(GameLog.get_entries().slice(-3)))
+	TimeManager.game_time += p.REVEAL_SECONDS + 0.5
+	await _frames(3)
+	_check("d.doused-cloak-shrouded-returns", _log_sum("Vex's Shrouded returns (Dark Hood).") == 1)
+	await _clear()
+
+
+## A condition shown by its effect instead of an icon (Burning's flames) keeps
+## its colours on a Shrouded body, as the icons do.
+func _case_d_condition_effect_readable() -> void:
+	var p := _spawn("player", ORIGIN, "Ember", false, true)
+	_cm(p).apply_condition("shrouded", null, 1, -1.0)
+	_cm(p).apply_condition("burning", null, 1)
+	var vfx = p._active_condition_vfx.get("burning")
+	_check("d.fx-spawned", vfx != null and is_instance_valid(vfx), "fire.tscn did not spawn")
+	if vfx != null and is_instance_valid(vfx):
+		_check("d.fx-tinted-back", _rgb_is(p.modulate, TINT) and _rgb_is(p.modulate * vfx.modulate, Color.WHITE),
+			"%s x %s" % [p.modulate, vfx.modulate])
+		p.reveal()
+		_check("d.fx-normal-while-revealed", _rgb_is(vfx.modulate, Color.WHITE) and _rgb_is(p.modulate, Color.WHITE),
+			str(vfx.modulate))
 	await _clear()
 
 

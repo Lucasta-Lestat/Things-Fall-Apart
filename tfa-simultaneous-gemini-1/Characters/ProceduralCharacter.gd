@@ -7088,8 +7088,10 @@ func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_
 		if was_hidden:
 			# A worn cloak's Invisible breaking on this same swing has its own
 			# pair ("Invisibility broken" / "Invisible returns"), which says it.
+			# Only while it is on: one already down (a splash of water) breaks
+			# silently (_break_invisibility), so Shrouded speaks for itself.
 			var cloak_says_it: bool = break_invisible and condition_manager != null \
-				and condition_manager.has_condition("invisible") and is_condition_equip_granted("invisible")
+				and condition_manager.has_active_condition("invisible") and is_condition_equip_granted("invisible")
 			_open_reveal_window(seconds, cause, cloak_says_it)
 	if break_invisible:
 		_break_invisibility(seconds, cause)
@@ -7161,17 +7163,20 @@ func concealment_condition() -> ConditionInstance:
 ## see-through 35%; revealed, it is drawn normally. RGB only: Invisible owns
 ## modulate.a, and Game._update_npc_los_visibility rewrites NPCs' alpha every
 ## frame, so the two stack (Invisible and Shrouded: see-through and smoky)
-## and an NPC the party sees wears it too. The icons and the ?/! above the
-## head are tinted back so they stay readable. Called on every stat
-## recalculation (a condition on, off, suppressed or restored) and when a
-## reveal window opens or closes.
+## and an NPC the party sees wears it too. The icons, the ?/! above the head
+## and the conditions' own effects (Burning's flames: a condition with one
+## shows no icon) are tinted back so they stay readable. Called on every stat
+## recalculation (a condition on, off, suppressed or restored, after its
+## effect spawns) and when a reveal window opens or closes.
 const CONCEALED_TINT := Color(0.5, 0.47, 0.62)
 
 func _update_concealment_look() -> void:
 	var tint: Color = CONCEALED_TINT if is_alive() and effective_visibility() < 1.0 else Color.WHITE
 	modulate = Color(tint.r, tint.g, tint.b, modulate.a)
-	for overlay in [_condition_display, _alertness_indicator]:
-		if overlay != null and is_instance_valid(overlay):
+	var overlays: Array = [_condition_display, _alertness_indicator]
+	overlays.append_array(_active_condition_vfx.values())
+	for overlay in overlays:
+		if is_instance_valid(overlay) and overlay is CanvasItem:
 			overlay.modulate = Color(1.0 / tint.r, 1.0 / tint.g, 1.0 / tint.b, overlay.modulate.a)
 
 ## reveal()'s half for the binary "invisible" condition. While the window runs
