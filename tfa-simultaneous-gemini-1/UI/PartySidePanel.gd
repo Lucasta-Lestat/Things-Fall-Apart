@@ -2217,8 +2217,9 @@ func _update_conditions(data: Dictionary, character) -> void:
 		var tip: String = instance.get_tooltip_text(game_time)
 		if children[i].tooltip_text != tip:
 			children[i].tooltip_text = tip
-		# Suppressed (the cloak's Invisible an attack broke): dimmed, as overhead.
-		children[i].modulate.a = 0.4 if instance.is_suppressed else 1.0
+		# Suppressed (the cloak's Invisible an attack broke), or a Shrouded
+		# lifted by the bearer's own attack: dimmed, as overhead.
+		children[i].modulate.a = 0.4 if instance.is_suppressed or instance.is_revealed(game_time) else 1.0
 	# The "+N" tag names the conditions it folds away.
 	if overflow > 0 and children.size() > cond_ids.size():
 		var hidden_names: PackedStringArray = []

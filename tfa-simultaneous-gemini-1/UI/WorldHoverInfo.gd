@@ -160,7 +160,7 @@ func condition_lines(c) -> PackedStringArray:
 			hidden += 1
 			continue
 		var line := _icon_bb(inst) + _esc(inst.get_summary(now))
-		if inst.is_suppressed:
+		if inst.is_suppressed or inst.is_revealed(now):
 			line = _col(line, COLOR_MUTED)
 		out.append(line)
 		shown += 1

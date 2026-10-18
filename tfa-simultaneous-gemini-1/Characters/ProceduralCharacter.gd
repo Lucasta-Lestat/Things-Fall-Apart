@@ -1990,6 +1990,9 @@ func _refresh_condition_display() -> void:
 		# under fire): the icon stays, dimmed, until it comes back.
 		if instance.is_suppressed:
 			tex_rect.modulate.a = 0.4
+		# Shrouded during an attack's reveal window: dimmed the same way.
+		elif _reveal_window_open and instance == concealment_condition():
+			tex_rect.modulate.a = 0.4
 		# Stack count in the icon's bottom-right corner (Poisoned x7, Chilled x2).
 		if instance.stacks > 1:
 			var stack_label := Label.new()
@@ -2245,6 +2248,7 @@ func _on_stats_recalculated() -> void:
 
 	# --- Concealment (Shrouded): multiplies observers' sight range to us ---
 	visibility_mult = condition_manager.calculate_effective_stat(1.0, "visibility")
+	_update_concealment_look()   # its smoky look follows it on and off
 	
 	# --- Bonus damage against trait (each trait is its own stat key) ---
 	for trait_key in bonus_damage_against_trait:
@@ -2294,17 +2298,24 @@ func begin_damage_condition_suppression(condition_ids: Dictionary) -> void:
 func end_damage_condition_suppression() -> void:
 	_suppressed_damage_conditions = {}
 
-## One stack of the condition a damaging hit of some type brings (Bleeding,
-## Burning, Poisoned, Chilled). Not from a condition's own damage tick (Burning
-## would feed itself), not on top of an ability applying it explicitly, and
-## not on a corpse. `source` (the attacker) makes the ticks the attacker's, as
-## an ability's Burning is, so a burn death still counts as their kill.
-func _apply_damage_type_condition(condition_id: String, limb = null, source: Node = null) -> void:
+## The condition a damaging hit of some type brings (Bleeding, Burning,
+## Poisoned, Chilled), with a stack per the condition's damage_per_stack points
+## of `dealt` (that type's damage after armour; at least 1 stack, at most its
+## max tier): a 1-point fire rider lights 1 small stack, a heavy fire hit
+## several. Not from a condition's own damage tick (Burning would feed itself),
+## not on top of an ability applying it explicitly, and not on a corpse.
+## `source` (the attacker) makes the ticks the attacker's, as an ability's
+## Burning is, so a burn death still counts as their kill.
+func _apply_damage_type_condition(condition_id: String, limb = null, source: Node = null, dealt: float = 1.0) -> void:
 	if _condition_tick_damage or _suppressed_damage_conditions.has(condition_id):
 		return
 	if condition_manager == null or not is_alive():
 		return
-	condition_manager.apply_condition(condition_id, source, 1, -2.0, limb)
+	var template: Condition = ConditionManager.condition_registry.get(condition_id)
+	var stacks: int = template.stacks_for_damage(dealt) if template != null else 1
+	if stacks <= 0:
+		return
+	condition_manager.apply_condition(condition_id, source, stacks, -2.0, limb)
 
 ## The condition whose damage tick is being applied ("Burning"), named as the
 ## cause when that damage cancels another condition. "" outside a tick.
@@ -4030,6 +4041,8 @@ func _process(delta: float) -> void:
 	_handle_input()
 	_update_hover_cursor()
 	_keep_alertness_indicator_upright()
+	if _reveal_window_open:
+		_tick_reveal_window()   # Shrouded back after an attack's reveal
 	# A plan whose character is stunned, frozen or apathetic is paused, and
 	# resumes when they can act again; knocked out, set fleeing or compelled,
 	# it is dropped. Either way at once, with a notice, before the action queue
@@ -7075,9 +7088,113 @@ const REVEAL_SECONDS := 3.0
 ## Invisible (use_ability: an instant cast that itself granted it).
 func reveal(seconds: float = REVEAL_SECONDS, cause: String = "attacking", break_invisible: bool = true) -> void:
 	if visibility_mult < 1.0:
+		# (A window that ran out this frame but hasn't said "returns" yet is
+		# still open: no second "Revealed" without the "returns" between.)
+		var was_hidden: bool = not _reveal_window_open and TimeManager.absolute_time() >= _revealed_until
 		_revealed_until = maxf(_revealed_until, TimeManager.absolute_time() + seconds)
+		if was_hidden:
+			# A worn cloak's Invisible breaking on this same swing has its own
+			# pair ("Invisibility broken" / "Invisible returns"), which says it.
+			# Only while it is on: one already down (a splash of water) breaks
+			# silently (_break_invisibility), so Shrouded speaks for itself.
+			var cloak_says_it: bool = break_invisible and condition_manager != null \
+				and condition_manager.has_active_condition("invisible") and is_condition_equip_granted("invisible")
+			_open_reveal_window(seconds, cause, cloak_says_it)
+		_mark_concealment_revealed()
 	if break_invisible:
 		_break_invisibility(seconds, cause)
+
+## The open window on the concealing condition itself (revealed_until), so the
+## party panel pip, the hover and the portraits say "Shrouded (revealed 2s)"
+## and dim it as the overhead icon is dimmed. Cleared when the window shuts.
+func _mark_concealment_revealed() -> void:
+	var inst: ConditionInstance = concealment_condition()
+	if inst != null:
+		inst.revealed_until = _revealed_until if _reveal_window_open else -1.0
+
+## Shrouded's half of the reveal notice, as the Shadow Cloak's pair is
+## Invisible's: when a reveal window opens on a hidden character, "Revealed"
+## floats over them and the log says "Djargo is revealed for 3 s
+## (attacking)."; swings inside the window stretch it silently;
+## _tick_reveal_window says "Shrouded returns" when it ends. The smoky look
+## comes off for the window (_update_concealment_look) and the condition icon
+## dims. The log line is party-only; an NPC the party sees gets the float, as
+## the cloak's return notice does; unseen NPCs say nothing. Not on the world
+## map (as _break_invisibility). `quiet`: the cloak's own notices cover it.
+var _reveal_window_open: bool = false
+var _reveal_window_quiet: bool = false
+const REVEALED_COLOR := Color(1.0, 0.75, 0.3)   # "Invisibility broken"'s
+
+func _open_reveal_window(seconds: float, cause: String, quiet: bool) -> void:
+	if not is_alive() or on_world_map:
+		return
+	_reveal_window_open = true
+	_reveal_window_quiet = quiet
+	_update_concealment_look()
+	_refresh_condition_display()
+	if quiet or not _announces_to_party():
+		return
+	var log_text: String = ""
+	if is_party_member():
+		log_text = "%s is revealed for %d s (%s)." % [Name, int(round(seconds)), cause]
+	notify("Revealed", REVEALED_COLOR, log_text)
+
+## Per frame while a reveal window is open: when it ends, the smoky look comes
+## back and "Shrouded returns" (log: "Djargo's Shrouded returns (Dark Hood).",
+## Invisible's return line). Nothing if the concealment came off meanwhile.
+func _tick_reveal_window() -> void:
+	if not _reveal_window_open or TimeManager.absolute_time() < _revealed_until:
+		return
+	_reveal_window_open = false
+	_mark_concealment_revealed()
+	var quiet: bool = _reveal_window_quiet
+	_reveal_window_quiet = false
+	_update_concealment_look()
+	_refresh_condition_display()
+	if quiet or not is_alive() or on_world_map or visibility_mult >= 1.0 or not _announces_to_party():
+		return
+	var inst: ConditionInstance = concealment_condition()
+	var cond_name: String = inst.condition.display_name if inst != null and inst.condition.display_name != "" else "Shrouded"
+	var log_text: String = ""
+	if is_party_member():
+		var item: String = equip_source_name(inst.condition.id) if inst != null else ""
+		log_text = "%s's %s returns%s." % [Name, cond_name, (" (%s)" % item) if item != "" and item != cond_name else ""]
+	notify(cond_name + " returns", ConditionManager.RESIST_COLOR, log_text)
+
+## The condition that conceals us (it lowers the "visibility" stat: a Dark
+## Hood's Shrouded), or null. For the notices' and the witnesses' wording.
+func concealment_condition() -> ConditionInstance:
+	if condition_manager == null:
+		return null
+	for inst in condition_manager.conditions.values():
+		if inst == null or inst.condition == null:
+			continue
+		for mod in inst.condition.stat_modifiers:
+			if mod is Dictionary and str(mod.get("stat", "")) == "visibility" and float(mod.get("value", 1.0)) < 1.0:
+				return inst
+	return null
+
+## Shrouded's look: while concealment is on (effective_visibility below 1:
+## outside a reveal window, alive) the body takes a dark, smoky violet-grey
+## tint, so "hard to see" reads at a glance and differs from Invisible's
+## see-through 35%; revealed, it is drawn normally. RGB only: Invisible owns
+## modulate.a, and Game._update_npc_los_visibility rewrites NPCs' alpha every
+## frame, so the two stack (Invisible and Shrouded: see-through and smoky)
+## and an NPC the party sees wears it too. The icons, the ?/! above the head
+## and the conditions' own effects (Burning's flames: a condition with one
+## shows no icon) are tinted back so they stay readable. Called on every stat
+## recalculation (a condition on, off, suppressed or restored, after its
+## effect spawns) and when a reveal window opens or closes.
+const CONCEALED_TINT := Color(0.5, 0.47, 0.62)
+
+func _update_concealment_look() -> void:
+	var tint: Color = CONCEALED_TINT if is_alive() and effective_visibility() < 1.0 else Color.WHITE
+	modulate = Color(tint.r, tint.g, tint.b, modulate.a)
+	var overlays: Array = [_condition_display, _alertness_indicator]
+	overlays.append_array(_active_condition_vfx.values())
+	for overlay in overlays:
+		if is_instance_valid(overlay) and overlay is CanvasItem:
+			overlay.modulate = Color(1.0 / tint.r, 1.0 / tint.g, 1.0 / tint.b, overlay.modulate.a)
 
 ## reveal()'s half for the binary "invisible" condition. While the window runs
 ## the AI can acquire us (it only skips an ACTIVE Invisible); a further attack
@@ -8060,10 +8177,10 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# _on_triggered_effect_fired). Limbs are no longer severed by
 				# raw slash damage; severing only happens via a condition or
 				# ability effect (see _on_limb_severed callers).
-				_apply_damage_type_condition("bleeding", limb)
+				_apply_damage_type_condition("bleeding", limb, null, damage)
 				_spawn_bleed_burst(location, 2.0)
 			"piercing":
-				_apply_damage_type_condition("bleeding", limb)
+				_apply_damage_type_condition("bleeding", limb, null, damage)
 				_spawn_bleed_burst(location, 1.5)
 			"fire", "poison", "cold":
 				# Burning / Poisoned / Chilled through ConditionManager (they
@@ -8071,7 +8188,7 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# so no target limb. Carries the attacker (kill credit for a burn
 				# death). Bleeding above stays sourceless: with a source its CON
 				# save would announce on every slash.
-				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type], null, attacker)
+				_apply_damage_type_condition(DAMAGE_TYPE_CONDITIONS[damage_type], null, attacker, damage)
 
 			"electric", "lightning":
 				# Propagate the hit through any contiguous conductive surface
@@ -8169,7 +8286,7 @@ func get_state_name() -> String:
 	
 func _on_time_updated(_hour: int, _minute: int, _second: int):
 	# Bleeding is driven by the ConditionManager's triggered_effects on the
-	# "bleeding" condition: every 6s it deals damage routed to the torso
+	# "bleeding" condition: every 2 s it deals damage routed to the torso
 	# (see _on_triggered_effect_fired), and every 2s it drops a blood fluid
 	# puddle (see _handle_bleed_puddle). Death from bleeding is just torso
 	# HP reaching 0.

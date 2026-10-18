@@ -153,7 +153,8 @@ signal downtime_mode_changed(active: bool)
 
 # Per-character downtime cooldown bookkeeping. Keyed by a stable character
 # uid (template_id, or display_name for protagonist) -> Array of dicts
-# {"result_id": String, "day_abs": int}. DowntimeDatabase reads/writes this.
+# {"result_id": String, "day": int}, day = TimeManager.today() when used.
+# DowntimeDatabase reads/writes this (and converts pre-fix "day_abs" entries).
 var downtime_recent_events: Dictionary = {}
 
 # Who has already spent today, character_uid -> activity_id. Cleared by
@@ -1623,8 +1624,9 @@ func _tick_weather_conditions(delta: float) -> void:
 			continue
 		var existing = cm.conditions.get(cond)
 		if cap > 0 and existing != null and existing.stacks >= cap:
-			# At the cap: keep it from lapsing while they stay out (re-applying
-			# a stackable doesn't refresh its timer).
+			# At the weather's cap: keep it from lapsing while they stay out,
+			# as a re-application would (ConditionManager refreshes a
+			# stackable's expiry), without the extra stack one would add.
 			var dur: float = float(existing.condition.duration)
 			if dur > 0.0 and existing.expires_at > 0.0:
 				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)
@@ -2493,6 +2495,9 @@ func apply_save_dict(d: Dictionary) -> void:
 		TimeManager.current_month = int(date[1])
 		TimeManager.current_year = int(date[2])
 		TimeManager.is_yearturn = int(date[1]) == 0
+	# Pre-fix saves dated downtime cooldowns on an old calendar index; convert
+	# them now that the saved date and day count are back.
+	downtime_recent_events = DowntimeDatabase.migrate_recent_events(downtime_recent_events)
 
 # --- World-item persistence (law/crime Phase 7) ---
 
@@ -5008,6 +5013,8 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 		# has it suppressed).
 		if cm.has_active_condition("invisible"):
 			character.modulate.a = 0.35
+		# Shrouded's smoky tint (a Dark Hood worn across the warp or load).
+		character._update_concealment_look()
 
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
