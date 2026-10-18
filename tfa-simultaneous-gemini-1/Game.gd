@@ -5008,6 +5008,8 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 		# has it suppressed).
 		if cm.has_active_condition("invisible"):
 			character.modulate.a = 0.35
+		# Shrouded's smoky tint (a Dark Hood worn across the warp or load).
+		character._update_concealment_look()
 
 # ---------------------------------------------------------------------------
 # Character state serialization (for party persistence)
