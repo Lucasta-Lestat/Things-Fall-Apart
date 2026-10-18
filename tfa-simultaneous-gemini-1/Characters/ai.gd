@@ -570,7 +570,7 @@ func process_ai(delta: float) -> void:
 
 	# Standing on damaging ground (burning cell, acid pool, electrified tile)
 	# overrides everything a conscious body can override: burning stacks 1/s
-	# toward 24 dmg per 1.5s, and no goal — investigation, attack, even panic —
+	# toward 3 fire a second, and no goal — investigation, attack, even panic —
 	# is worth finishing from inside a fire (a scout burned to death mid-scan
 	# in playtest because nothing ever told him to step out). Escape funnels
 	# through _move_toward, so a player-held ally still stands ground.
