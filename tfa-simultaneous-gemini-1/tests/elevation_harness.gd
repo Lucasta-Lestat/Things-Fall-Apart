@@ -31,6 +31,7 @@ func _ready() -> void:
 	await _scenario_elevation_los()
 	_scenario_melee_predicate()
 	_scenario_jump_fall()
+	await _scenario_high_terrain()
 	_scenario_battlements()   # LAST: loads the full real map into GridManager
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -45,6 +46,319 @@ class StubRoofGraph:
 		return 0.0
 	func roof_elev(cid: int) -> float:
 		return 2.0 if cid == 3 * 1000 + 3 else 0.0
+
+# Relative-roof lint stub: terrace ground 8 everywhere, a RELATIVE roof (2.0)
+# at (3,3) — the export bug the lint exists to catch.
+class StubHighRoofGraph:
+	extends RefCounted
+	func cell_at(p: Vector2) -> int:
+		var t := GridManager.world_to_map(p)
+		return t.y * 1000 + t.x
+	func ground_elev(_cid: int) -> float:
+		return 8.0
+	func roof_elev(cid: int) -> float:
+		return 2.0 if cid == 3 * 1000 + 3 else 0.0
+
+# 8. HIGH TERRAIN: ground many stories up (hillside terraces), relative layer
+# semantics, relief LOS, tile_elev, scatter, drop cap, sea safety.
+func _c(x: int, y: int) -> Vector2:
+	return GridManager.map_to_world(Vector2i(x, y))
+
+# 32x20 tiles: terrace 8.0 (x<=9), 8.4 (x 10..14), a 3.6-story cliff up to 12.0
+# (x>=15), and a graded 0.45/tile ramp up the cliff on rows 17..19.
+func _build_terraces() -> void:
+	GridManager.TILE_SIZE = 64
+	GridManager.initialize(32 * 64, 20 * 64)
+	for y in 20:
+		for x in 32:
+			var e: float = 8.0 if x <= 9 else (8.4 if x <= 14 else 12.0)
+			if y >= 17 and y <= 19 and x >= 15 and x <= 22:
+				e = 8.4 + 0.45 * float(x - 14)
+			GridManager.elevations[Vector2i(x, y)] = e
+	GridManager.refresh_terrain_stats()
+
+# Write a cells.json-shaped file for the tile_elev parse checks. 4x2 tiles,
+# two cells (elev 1.0 west, 3.0 east; roof 5.0 east).
+func _write_te_graph(path: String, te: Variant) -> void:
+	var d: Dictionary = {"n": 2, "export_scale": 1.0, "cx": [64.0, 192.0], "cy": [64.0, 64.0],
+		"r": [64.0, 64.0], "fuel": [0.0, 0.0], "elev": [1.0, 3.0], "roof": [0.0, 5.0],
+		"nb_off": [0, 1, 2], "nb": [1, 0]}
+	if te != null:
+		d["tile_elev"] = te
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(d))
+	f.close()
+
+func _scenario_high_terrain() -> void:
+	# --- tile_elev: per-tile terrain beats nearest-cell projection when sized right
+	var te_path := "user://elev_harness_te_cells.json"
+	GridManager.TILE_SIZE = 64
+	_write_te_graph(te_path, {"cols": 4, "rows": 2, "data": [0.5, 1.0, 1.5, 2.0, 0.6, 1.1, 1.6, 2.1]})
+	GridManager.initialize(4 * 64, 2 * 64)
+	var teg: CellGraph = CellGraph.from_structured(te_path)
+	GridManager.set_elevation_data(teg)
+	_check("hi.tile-elev-overrides-nearest-cell", GridManager.tile_elev_used
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(0, 0)), 0.5)
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(1, 0)), 1.0)
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(3, 1)), 2.1),
+		"used=%s (0,0)=%.2f (1,0)=%.2f (3,1)=%.2f" % [str(GridManager.tile_elev_used),
+			GridManager.terrain_elev(Vector2i(0, 0)), GridManager.terrain_elev(Vector2i(1, 0)),
+			GridManager.terrain_elev(Vector2i(3, 1))])
+	_check("hi.tile-elev-roof-stays-nearest-cell", is_equal_approx(GridManager.roof_at(Vector2i(3, 0)), 5.0)
+		and not GridManager.has_roof(Vector2i(0, 0)) and GridManager.roof_lint_bad == 0)
+	_check("hi.tile-elev-span-drives-relief", GridManager.relief_los
+		and is_equal_approx(GridManager.terrain_max - GridManager.terrain_min, 1.6))
+	# a grid of the wrong size is never indexed against these tiles
+	_write_te_graph(te_path, {"cols": 3, "rows": 2, "data": [0.5, 1.0, 1.5, 0.6, 1.1, 1.6]})
+	GridManager.initialize(4 * 64, 2 * 64)
+	teg = CellGraph.from_structured(te_path)
+	GridManager.set_elevation_data(teg)
+	_check("hi.tile-elev-size-mismatch-falls-back", not GridManager.tile_elev_used
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(0, 0)), 1.0)
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(3, 0)), 3.0),
+		"used=%s (0,0)=%.2f (3,0)=%.2f" % [str(GridManager.tile_elev_used),
+			GridManager.terrain_elev(Vector2i(0, 0)), GridManager.terrain_elev(Vector2i(3, 0))])
+	_write_te_graph(te_path, {"cols": 4, "rows": 2, "data": [0.5, 1.0]})
+	teg = CellGraph.from_structured(te_path)
+	_check("hi.tile-elev-malformed-discarded", teg != null and teg.tile_elev_dims() == Vector2i.ZERO)
+	_write_te_graph(te_path, null)
+	teg = CellGraph.from_structured(te_path)
+	GridManager.initialize(4 * 64, 2 * 64)
+	GridManager.set_elevation_data(teg)
+	_check("hi.no-tile-elev-is-legacy", not GridManager.tile_elev_used
+		and is_equal_approx(GridManager.terrain_elev(Vector2i(0, 0)), 1.0))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(te_path))
+
+	# --- terraces: relief detection + relative semantics
+	_build_terraces()
+	_check("hi.relief-los-on", GridManager.relief_los)
+	_check("hi.terrain-elev", is_equal_approx(GridManager.terrain_elev(Vector2i(5, 5)), 8.0))
+	_check("hi.on-terrain-hag-zero", is_zero_approx(GridManager.height_above_ground(Vector2i(5, 5), 8.0)))
+	_check("hi.step-0.4-walkable", GridManager.can_step(Vector2i(9, 5), Vector2i(10, 5)))
+	_check("hi.cliff-blocked", not GridManager.can_step(Vector2i(14, 5), Vector2i(15, 5)))
+	var p := GridManager.find_path(Vector2i(5, 5), Vector2i(25, 5))
+	var legal := not p.is_empty()
+	var via_ramp := false
+	var prev := Vector2i(5, 5)
+	for t in p:
+		legal = legal and GridManager.can_step(prev, t)
+		via_ramp = via_ramp or t.y >= 17
+		prev = t
+	_check("hi.astar-climbs-by-ramp", legal and via_ramp, "len=%d" % p.size())
+	# view layer + cone tier are RELATIVE to the local ground
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	var los := PointLight2D.new()
+	los.name = "LineOfSight"
+	ch.add_child(los)
+	ch.global_position = _c(25, 5)
+	ch._refresh_elevation()
+	_check("hi.terrace-walker-ground-layer", not GridManager.is_high_layer(ch)
+		and not ch.is_on_raised_surface() and is_equal_approx(ch.current_elevation, 12.0)
+		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_GROUND)
+	GridManager.register_deck(Vector2i(26, 5), 13.44)
+	ch.global_position = _c(26, 5)
+	ch._refresh_elevation()
+	_check("hi.deck-on-terrace-is-high", GridManager.is_high_layer(ch)
+		and is_equal_approx(ch.height_above_ground(), 1.44)
+		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_HIGH,
+		"hag=%.2f mask=%d" % [ch.height_above_ground(), los.shadow_item_cull_mask])
+	GridManager.unregister_deck(Vector2i(26, 5), 13.44)
+	ch._refresh_elevation()
+	_check("hi.off-deck-back-to-ground-tier", not GridManager.is_high_layer(ch)
+		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_GROUND)
+	# terrain LOS (pure)
+	_check("hi.los-same-terrace", GridManager.terrain_line_clear(_c(2, 5), _c(8, 5), 8.5, 8.5))
+	_check("hi.los-cliff-blocks-low-viewer", not GridManager.terrain_line_clear(_c(5, 5), _c(25, 5), 8.5, 12.5))
+	_check("hi.los-edge-sees-down", GridManager.terrain_line_clear(_c(15, 5), _c(12, 5), 12.5, 8.9))
+	_check("hi.los-far-back-misses-cliff-foot", not GridManager.terrain_line_clear(_c(25, 5), _c(14, 5), 12.5, 8.9))
+	_check("hi.los-ramp-climb-clear", GridManager.terrain_line_clear(_c(14, 18), _c(23, 18), 8.9, 12.5))
+	for x in range(11, 15):
+		for y in range(8, 11):
+			GridManager.roof_elevations[Vector2i(x, y)] = 10.4      # ABSOLUTE: 8.4 + 2
+	_check("hi.roof-slab-blocks-view-into-house", not GridManager.terrain_line_clear(_c(15, 9), _c(12, 9), 12.5, 8.9))
+	_check("hi.roof-slab-indoors-clear", GridManager.terrain_line_clear(_c(11, 9), _c(13, 9), 8.9, 8.9))
+	# jumper on absolute roofs; planned-drop cap
+	_check("hi.jumper-mounts-absolute-roof", not GridManager.find_path(Vector2i(9, 9), Vector2i(12, 9), 2.5, 2, false, true).is_empty())
+	# (roofs off first: a 1.6 hop onto the house then a 2.0 drop off its eave is
+	# a legitimate route down and would mask the cap)
+	GridManager.roof_elevations.clear()
+	for x in range(15, 23):
+		for y in range(17, 20):
+			GridManager.grid_costs[Vector2i(x, y)] = INF                  # close the ramp: only way down is the 3.6 cliff
+	_check("hi.no-planned-lethal-drop", GridManager.find_path(Vector2i(16, 5), Vector2i(12, 5), 2.5, 2).is_empty())
+	var drop_edges := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(15, 5, 0), 2.5, 2):
+		if (e["n"] as Vector3i).x < 15:
+			drop_edges += 1
+	_check("hi.cliff-brow-has-no-drop-edge", drop_edges == 0, "edges=%d" % drop_edges)
+	GridManager.roof_elevations[Vector2i(16, 5)] = 15.8                 # roof 3.8 above the 12.0 terrace
+	var roof_drops := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(16, 5, 1), 2.5, 2):
+		if (e["n"] as Vector3i).z == 0:
+			roof_drops += 1
+	_check("hi.roof-drop-capped", roof_drops == 0, "edges=%d" % roof_drops)
+	GridManager.roof_elevations[Vector2i(16, 5)] = 14.0                 # 2.0 above: still allowed
+	roof_drops = 0
+	for e in GridManager._get_jump_neighbors(Vector3i(16, 5, 1), 2.5, 2):
+		if (e["n"] as Vector3i).z == 0:
+			roof_drops += 1
+	_check("hi.roof-drop-within-cap-kept", roof_drops > 0)
+	_build_terraces()
+	# end-to-end sight_line_clear: NAN default = ground under the target
+	await get_tree().physics_frame
+	var space := get_world_2d().direct_space_state
+	_check("hi.default-target-elev-is-ground", GridManager.sight_line_clear(space, _c(2, 5), _c(8, 5), 8.0))
+	_check("hi.default-both-elevs-are-ground", GridManager.sight_line_clear(space, _c(2, 5), _c(8, 5)))
+	_check("hi.default-sees-nothing-through-cliff", not GridManager.sight_line_clear(space, _c(5, 5), _c(25, 5)))
+	# interpolated eye line vs a 1-story wall (top 9) on terrace 8, viewer at 10
+	var near_t := _make_blocker(Vector2(460, 100), 9.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("hi.wall-near-low-target-blocks", not GridManager.sight_line_clear(space, Vector2(100, 100), Vector2(500, 100), 10.0, 8.0))
+	near_t.queue_free()
+	var mid := _make_blocker(Vector2(300, 100), 9.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("hi.high-viewer-sees-over-midway-wall", GridManager.sight_line_clear(space, Vector2(100, 100), Vector2(500, 100), 10.0, 8.0))
+	mid.queue_free()
+	await get_tree().physics_frame
+	# MapLoader: relative HIGH bit + terrain-following wall
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	var w = ml._spawn_geo_structure({"kind": "wall", "a": [136, 224], "b": [384, 224], "half": 7.0, "id": "stone_wall"}, null, 64)
+	var occ: LightOccluder2D = w.get_node("Occluder")
+	_check("hi.terrace-wall-no-high-bit", (occ.occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) == 0
+		and is_equal_approx(float(w.get_meta("occlude_top")), 9.0) and not w.has_meta("occlude_rel_h"),
+		"mask=%d top=%.2f" % [occ.occluder_light_mask, float(w.get_meta("occlude_top"))])
+	var tr = ml._spawn_geo_structure({"kind": "tree", "pos": [160, 400], "r": 30.0, "id": "tree"}, null, 64)
+	_check("hi.terrace-tree-high-bit", (tr.get_node("Occluder").occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) != 0)
+	var tw = ml._spawn_geo_structure({"kind": "wall", "a": [1600, 400], "b": [1900, 400], "half": 7.0, "id": "stone_wall", "occlude_h": 2.5}, null, 64)
+	_check("hi.occlude-h-key", is_equal_approx(float(tw.get_meta("occlude_top")), 14.5)
+		and (tw.get_node("Occluder").occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) != 0,
+		"top=%.2f" % float(tw.get_meta("occlude_top")))
+	var pw = ml._spawn_geo_structure({"kind": "wall", "a": [1600, 600], "b": [1900, 600], "half": 4.0, "id": "stone_wall", "occlude_h": 0.35}, null, 64)
+	_check("hi.parapet-casts-no-cone-shadow", pw.get_node("Occluder").occluder_light_mask == 0
+		and is_equal_approx(float(pw.get_meta("occlude_top")), 12.35))
+	var sw = ml._spawn_geo_structure({"kind": "wall", "a": [960, 1184], "b": [1472, 1184], "half": 7.0, "id": "stone_wall"}, null, 64)   # up the ramp, row 18
+	_check("hi.sloped-wall-follows", sw.has_meta("occlude_rel_h") and is_equal_approx(float(sw.get_meta("occlude_half_px")), 7.0))
+	# pad-edge house wall (xcheck C12): pad 9.0 (x 3..6, rows 12..15) one story
+	# above the 8.0 street; the wall's CENTRE sits on the street tile, so a
+	# centre-based or viewer-face top (9.0) would let the street see inside.
+	for x in range(3, 7):
+		for y in range(12, 16):
+			GridManager.elevations[Vector2i(x, y)] = 9.0
+	var padw = ml._spawn_geo_structure({"kind": "wall", "a": [190, 768], "b": [190, 1024], "half": 7.0, "id": "stone_wall"}, null, 64)
+	_check("hi.pad-edge-wall-follows", padw.has_meta("occlude_rel_h")
+		and is_equal_approx(float(padw.get_meta("occlude_top")), 9.0))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("hi.sloped-wall-blocks-at-top-end", not GridManager.sight_line_clear(space, _c(22, 17), _c(22, 19), 12.0, 12.0))
+	_check("hi.pad-edge-wall-street-cannot-see-in", not GridManager.sight_line_clear(space, Vector2(32, 864), Vector2(224, 864), 8.0, 9.0))
+	# control: the top is pad + 1 = 10, not infinite — a viewer on a 12.0 deck
+	# across the street sees over it (eye line 10.1 at the wall)
+	_check("hi.pad-edge-wall-high-viewer-sees-over",
+		GridManager.sight_line_clear(space, Vector2(32, 864), Vector2(224, 864), 12.0, 9.0))
+	ml.queue_free()
+	await get_tree().physics_frame
+	for x in range(3, 7):
+		for y in range(12, 16):
+			GridManager.elevations[Vector2i(x, y)] = 8.0
+	# scatter never crosses the cliff
+	seed(12345)
+	var bad := 0
+	for i in 200:
+		var t := GridManager.world_to_map(GridManager.scatter_point(_c(14, 5), 160.0))
+		if t.x >= 15 or not GridManager.would_walk(t):
+			bad += 1
+	_check("hi.scatter-stays-on-terrace", bad == 0, "bad=%d" % bad)
+	# fall off the cliff: relative damage + landing on terrain
+	_check("hi.fall-damage-relative", ch.fall_damage_for(3.6) == 21, "dmg=%d" % ch.fall_damage_for(3.6))
+	ch.global_position = _c(15, 5)
+	ch.on_roof = false
+	ch._refresh_elevation()
+	_check("hi.knockback-off-cliff-falls", ch._forced_drop_check(Vector2(-64.0, 0.0)) and ch._fall_active)
+	for _i in 20:
+		if not ch._fall_active:
+			break
+		ch._update_fall_motion(1.0 / 30.0)
+	_check("hi.lands-on-lower-terrace", is_equal_approx(ch.current_elevation, 8.4) and is_zero_approx(ch.height_above_ground()),
+		"elev=%.2f hag=%.2f" % [ch.current_elevation, ch.height_above_ground()])
+
+	# --- sea safety: quay 0.33 (x<=4), sea surface floor at -1.0 seabed (x>=5)
+	GridManager.initialize(10 * 64, 6 * 64)
+	var wet = MAP_LOADER.FloorStub.new()
+	wet.floor_id = "shallow_water"
+	for y in 6:
+		for x in 10:
+			if x <= 4:
+				GridManager.elevations[Vector2i(x, y)] = 0.33
+			else:
+				GridManager.elevations[Vector2i(x, y)] = -1.0
+				GridManager.register_floor(Vector2i(x, y), wet)
+	# a gently shelving strip on row 4: -0.4 (not deep) then -0.6 (deep)
+	GridManager.elevations[Vector2i(5, 4)] = -0.4
+	GridManager.elevations[Vector2i(6, 4)] = -0.6
+	GridManager.refresh_terrain_stats()
+	_check("hi.sea-is-deep-water", GridManager.relief_los and GridManager.is_deep_water(Vector2i(6, 2))
+		and not GridManager.is_deep_water(Vector2i(3, 2)) and not GridManager.is_deep_water(Vector2i(5, 4)))
+	var sea_edges := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(4, 2, 0), 2.5, 2):
+		if (e["n"] as Vector3i).x >= 5:
+			sea_edges += 1
+	GridManager.roof_elevations[Vector2i(4, 1)] = 1.5
+	for e in GridManager._get_jump_neighbors(Vector3i(4, 1, 1), 2.5, 2):
+		if (e["n"] as Vector3i).x >= 5 and (e["n"] as Vector3i).z == 0:
+			sea_edges += 1
+	GridManager.roof_elevations.clear()
+	_check("hi.jumper-never-plans-into-sea", sea_edges == 0, "edges=%d" % sea_edges)
+	ch.global_position = _c(4, 2)
+	ch.on_roof = false
+	ch._refresh_elevation()
+	_check("hi.forced-drop-refuses-sea", not ch._forced_drop_check(Vector2(64.0, 0.0)) and not ch._fall_active
+		and not ch._forced_step_ok(ch.global_position, ch.global_position + Vector2(64.0, 0.0)))
+	_check("hi.forced-step-refuses-shelving-into-deep",
+		GridManager.can_traverse(_c(5, 4), _c(6, 4)) and not ch._forced_step_ok(_c(5, 4), _c(6, 4)))
+	# 1px from the quay edge, knocked seaward at full speed: one update spans
+	# the rim. Before the sea veto this began a 1.33-story fall onto the seabed.
+	ch.global_position = Vector2(4 * 64 + 63, 2 * 64 + 32)
+	ch.knockback_velocity = Vector2(800.0, 0.0)
+	ch.knockback_active = true
+	ch._update_knockback(1.0 / 30.0)
+	var kb_t := GridManager.world_to_map(ch.global_position)
+	_check("hi.knockback-stops-at-quay-edge", kb_t.x <= 4 and not ch._fall_active and not ch.knockback_active,
+		"tile=%s fall=%s" % [str(kb_t), str(ch._fall_active)])
+	ch.global_position = _c(3, 2)
+	var land: Vector2 = ch.predict_knockback_landing(Vector2(4000.0, 0.0), 0.25)
+	_check("hi.knockback-preview-stays-on-quay", GridManager.world_to_map(land).x <= 4, "land=%s" % str(land))
+	# flat-map control: a shipped-style ravine stream (-0.98, span < 1) is NOT deep
+	GridManager.initialize(6 * 64, 4 * 64)
+	GridManager.elevations[Vector2i(3, 1)] = -0.98
+	GridManager.register_floor(Vector2i(3, 1), wet)
+	GridManager.refresh_terrain_stats()
+	_check("flat.ravine-stream-not-deep", not GridManager.relief_los and not GridManager.is_deep_water(Vector2i(3, 1)))
+	# flat-map control (xcheck C11): a tree in a ravine keeps the ABSOLUTE HIGH
+	# rule (-0.98 + 2 = 1.02 < 2: no HIGH bit) exactly as before
+	var ml2: Node2D = MAP_LOADER.new()
+	add_child(ml2)
+	var rt = ml2._spawn_geo_structure({"kind": "tree", "pos": [224, 96], "r": 30.0, "id": "tree"}, null, 64)
+	_check("flat.ravine-tree-keeps-absolute-high-bit",
+		(rt.get_node("Occluder").occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) == 0)
+	ml2.queue_free()
+	ch.queue_free()
+
+	# relative-roof lint
+	GridManager.initialize(8 * 64, 8 * 64)
+	GridManager.set_elevation_data(StubHighRoofGraph.new())   # ground_elev 8.0 everywhere, roof_elev 2.0 at (3,3)
+	_check("hi.relative-roof-linted", GridManager.roof_lint_bad == 1, "bad=%d" % GridManager.roof_lint_bad)
+	# micro-bench (informational)
+	_build_terraces()
+	var t0 := Time.get_ticks_usec()
+	for i in 2000:
+		GridManager.terrain_line_clear(_c(1, 1 + i % 18), _c(30, 18 - i % 18), 8.5, 12.5)
+	print("INFO terrain-los: %.1f us/ray (~30-tile rays)" % (float(Time.get_ticks_usec() - t0) / 2000.0))
 
 # 6b. JUMP + FALL: roof channel, layered A*, jump/fall states
 func _scenario_jump_fall() -> void:
@@ -232,14 +546,17 @@ func _scenario_battlements() -> void:
 		var pos_a: Array = spawns[ts]["position"]
 		var t := GridManager.world_to_map(Vector2(float(pos_a[0]), float(pos_a[1])))
 		var e := GridManager.effective_elev(t)
+		# RELATIVE to the local terrain (identical on this flat map; a ladder
+		# on a hillside terrace sits at ground 8, not 0)
+		var hag: float = e - GridManager.terrain_elev(t)
 		if ts.ends_with("_top"):
 			top_t = t
-			_check("battlements." + ts, e >= 1.0 and GridManager.would_walk(t),
-				"elev=%.2f walkable=%s" % [e, str(GridManager.would_walk(t))])
+			_check("battlements." + ts, hag >= GridManager.HIGH_LAYER_STORIES and GridManager.would_walk(t),
+				"elev=%.2f hag=%.2f walkable=%s" % [e, hag, str(GridManager.would_walk(t))])
 		else:
 			base_t = t
-			_check("battlements." + ts, absf(e) < 0.55 and GridManager.would_walk(t),
-				"elev=%.2f walkable=%s" % [e, str(GridManager.would_walk(t))])
+			_check("battlements." + ts, absf(hag) < GridManager.MAX_STEP_STORIES and GridManager.would_walk(t),
+				"elev=%.2f hag=%.2f walkable=%s" % [e, hag, str(GridManager.would_walk(t))])
 	_check("battlements.ladder-warps-present", ladder_warps == 4, "found %d" % ladder_warps)
 	# the deck rim is a cliff: some deck tile must border low ground it cannot step to
 	var rim_blocked := false

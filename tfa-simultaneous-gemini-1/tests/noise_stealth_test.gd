@@ -129,7 +129,7 @@ func _stealth_mode_cases() -> void:
 			bad.append("%s: elevated masks %d/%d" % [n.Name, high.range_item_cull_mask, high.shadow_item_cull_mask])
 		if not is_equal_approx(high.texture_scale, red.texture_scale) or high.texture != red.texture:
 			bad.append("%s: elevated size %.3f vs %.3f" % [n.Name, high.texture_scale, red.texture_scale])
-		if high.enabled != (n.get_elevation() < 1.0 and red.enabled):
+		if high.enabled != (not n.is_on_raised_surface() and red.enabled):
 			bad.append("%s: elevated enabled=%s at elevation %.1f" % [n.Name, high.enabled, n.get_elevation()])
 		if high.color.is_equal_approx(Color(1.0, 0.75, 0.25)) or high.color.is_equal_approx(Color(1.0, 0.72, 0.2)):
 			bad.append("%s: elevated cone uses the Suspicious/outcry amber" % n.Name)
