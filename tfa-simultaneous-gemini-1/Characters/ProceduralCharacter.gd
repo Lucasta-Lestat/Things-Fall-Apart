@@ -631,6 +631,7 @@ func height_above_ground() -> float:
 # ground 8 is on the ground layer).
 func is_on_raised_surface() -> bool:
 	return on_roof or height_above_ground() >= GridManager.HIGH_LAYER_STORIES
+
 # Render-layer boost while on_roof: above the RoofLayer cover quads (z 120) so
 # roof-walkers draw ON the roof instead of vanishing under it in roof view.
 # Managed exclusively by _refresh_elevation. Must stay BELOW

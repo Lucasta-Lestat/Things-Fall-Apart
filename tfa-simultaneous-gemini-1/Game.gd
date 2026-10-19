@@ -53,6 +53,7 @@ var current_map_id: String = _start_map_id()  # TEMP: piazza review ("combat_tes
 static func _start_map_id() -> String:
 	var env_map: String = OS.get_environment("TFA_START_MAP").strip_edges()
 	return env_map if not env_map.is_empty() else "tg_town_square"
+
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
