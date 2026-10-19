@@ -20,6 +20,10 @@ extends Node
 
 const SWEEP_INTERVAL := 0.15        # seconds between sweeps (Game's accumulator)
 const RAY_BUDGET_PER_SWEEP := 500   # cap on sight_line_clear casts per sweep
+# Relief maps (GridManager.relief_los): every clear ray also walks the terrain
+# heightfield (~11 us for a 30-tile ray, elevation_harness INFO terrain-los),
+# so the per-sweep cap is lower there; the frontier just fills over more sweeps.
+const RAY_BUDGET_PER_SWEEP_RELIEF := 300
 const REVEAL_FADE_TIME := 0.35      # seconds for a newly seen tile to fade in
 # Ray endpoints pull back toward the viewer by this many tiles so a WALL tile
 # is revealed by seeing its near face — a ray to the wall's own center always
@@ -202,7 +206,7 @@ func sweep(party_chars: Array, space: PhysicsDirectSpaceState2D) -> void:
 	sweeps only pay for the frontier."""
 	if not active or _image == null or space == null:
 		return
-	var budget: int = RAY_BUDGET_PER_SWEEP
+	var budget: int = RAY_BUDGET_PER_SWEEP_RELIEF if GridManager.relief_los else RAY_BUDGET_PER_SWEEP
 	var ts: float = float(GridManager.TILE_SIZE)
 	var count: int = party_chars.size()
 	if count == 0:
