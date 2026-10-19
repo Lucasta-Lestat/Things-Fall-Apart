@@ -14,7 +14,9 @@ extends Node2D
 # shipped arrival point predates this check), the default tile must be
 # walkable, and every non-_top player spawn and every npc_spawns base must be
 # in the default spawn's walking component (doors count as passable, locked or
-# not: a locked room is a puzzle, not a soft-lock).
+# not: a locked room is a puzzle, not a soft-lock). A spawn standing ON an
+# obstacle tile counts as reachable when it can step onto a 4-neighbour in the
+# component (NPC: WARN line; player: the walkability check reports it).
 # Run:  godot --headless --path . res://tests/spawn_walk_check.tscn
 # Env:  TFA_MAPS = comma-separated map ids (default all tg_* structured maps)
 #       TFA_STRICT = 1 forces the strict reachability pass on every map
@@ -122,7 +124,9 @@ func _audit_reachability(mid: String, m: Dictionary, spawns: Dictionary) -> void
 			continue
 		var t := _spawn_tile(spawns[k])
 		checks += 1
-		if t != dt and not comp.has(t):
+		# (a player spawn ON an obstacle tile is already reported by the
+		# walkability check above; here it only has to be able to step off)
+		if t != dt and not comp.has(t) and not _steps_off_into(t, comp):
 			_fail("%s.strict %s tile=%s unreachable from default %s" % [mid, sk, str(t), str(dt)])
 	var npcs: Array = m.get("npc_spawns", [])
 	for i in npcs.size():
@@ -131,9 +135,30 @@ func _audit_reachability(mid: String, m: Dictionary, spawns: Dictionary) -> void
 			continue
 		var t := _spawn_tile(n)
 		checks += 1
-		if t != dt and not comp.has(t):
-			_fail("%s.strict npc_spawns[%d] %s tile=%s unreachable from default %s"
-				% [mid, i, String(n.get("template_id", "")), str(t), str(dt)])
+		if t == dt or comp.has(t):
+			continue
+		if _steps_off_into(t, comp):
+			# stall keepers, smiths, counter clerks stand inside their
+			# fixture's pathing halo: the walker starts on the INF tile and
+			# steps off (A* filters neighbours, never the start tile)
+			print("WARN %s.strict npc_spawns[%d] %s tile=%s on an obstacle tile (steps off into the default component)"
+				% [mid, i, String(n.get("template_id", "")), str(t)])
+			continue
+		_fail("%s.strict npc_spawns[%d] %s tile=%s unreachable from default %s"
+			% [mid, i, String(n.get("template_id", "")), str(t), str(dt)])
+
+
+# A spawn on a NON-passable tile (obstacle halo) that has a 4-neighbour in the
+# default component it can step onto: the body is not stuck there. A walkable
+# tile outside the component is a real pocket and never qualifies.
+func _steps_off_into(t: Vector2i, comp: Dictionary) -> bool:
+	if GridManager.grid_costs.get(t, INF) != INF or GridManager.door_pass.has(t) or GridManager.door_gaps.has(t):
+		return false
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var nb: Vector2i = t + d
+		if comp.has(nb) and GridManager.can_step(t, nb):
+			return true
+	return false
 
 
 # The walking component of from_t (GridManager.can_step + pathable), with every
