@@ -9,7 +9,11 @@ extends Node2D
 #      layer") and roof view stays off although the ground is 0.5..17 stories,
 #  (4) NPCs on the ground are not on the high layer (so ground view shows them),
 #  (5) every warp's target map + target_spawn exist, and the warp is reachable
-#      on foot from the arrival point (A* with the 0.55-story step gate).
+#      on foot from the arrival point (A* with the 0.55-story step gate),
+#  (6) sight cones use elevation bands: cliff occluders were built, every
+#      cone culls on GROUND + its viewer's single band bit (pink: the band
+#      above), no occluder carries bit 1, and the summit's band is not
+#      clamped (its own brow never shadows it).
 # Headless-safe. Run:
 #   godot --headless --path . res://tests/hillside_town_check.tscn
 # Prints PASS/FAIL lines, then "HILLSIDE DONE failures=N"; exit code = failures.
@@ -131,3 +135,37 @@ func _check_map(map_id: String) -> void:
 					break
 		_check("%s.warp-reachable.%s" % [map_id, String(wd.get("id", "?"))], reached,
 			"from %s to %s" % [start, goal])
+	# (6) elevation-band sight cones on real terraced data
+	var cliffs: Node2D = game.map_loader.cliff_occluders
+	_check("%s.cliff-occluders-built" % map_id, is_instance_valid(cliffs) and cliffs.get_child_count() > 0,
+		"%d runs" % (cliffs.get_child_count() if is_instance_valid(cliffs) else -1))
+	var top_band: int = GridManager.cone_band(GridManager.terrain_max)
+	_check("%s.summit-band-unclamped" % map_id, top_band < CollisionLayers.SIGHT_BAND_COUNT - 1
+		and (GridManager.band_mask_below(GridManager.terrain_max) & GridManager.cone_band_bit(top_band)) == 0,
+		"base %d, summit %.2f -> band %d" % [GridManager.cone_band_base, GridManager.terrain_max, top_band])
+	var g1 := 0
+	for s in game.map_loader.get_children():
+		for c in s.get_children():
+			if c is LightOccluder2D and ((c as LightOccluder2D).occluder_light_mask & CollisionLayers.SIGHT_MASK_GROUND) != 0:
+				g1 += 1
+	_check("%s.no-occluder-on-bit-1" % map_id, g1 == 0, "%d occluders carry bit 1" % g1)
+	game.set_stealth_mode(true)
+	await _await_frames(2)
+	var cones := 0
+	var cone_bad := ""
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c):
+			continue
+		for cone_name in ["LineOfSight", "NPCLineOfSight", "NPCLineOfSightHigh"]:
+			var l := c.get_node_or_null(cone_name) as PointLight2D
+			if l == null:
+				continue
+			cones += 1
+			var want: int = c.elevated_cone_mask() if cone_name == "NPCLineOfSightHigh" else c.sight_cone_mask()
+			var m: int = l.shadow_item_cull_mask
+			# GROUND (so light_mask-1 art receives the shadows) + one band bit
+			var b: int = m & ~CollisionLayers.SIGHT_MASK_GROUND
+			if m != want or (m & CollisionLayers.SIGHT_MASK_GROUND) == 0 or b < (1 << CollisionLayers.SIGHT_BAND_SHIFT) or (b & (b - 1)) != 0:
+				cone_bad += " %s/%s=%d(want %d)" % [c.name, cone_name, m, want]
+	game.set_stealth_mode(false)
+	_check("%s.cones-on-band-bits" % map_id, cones > 0 and cone_bad == "", "%d cones%s" % [cones, cone_bad])

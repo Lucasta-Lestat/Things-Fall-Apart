@@ -32,6 +32,7 @@ func _ready() -> void:
 	_scenario_melee_predicate()
 	_scenario_jump_fall()
 	await _scenario_high_terrain()
+	_scenario_cone_bands()
 	_scenario_battlements()   # LAST: loads the full real map into GridManager
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -157,18 +158,18 @@ func _scenario_high_terrain() -> void:
 	ch._refresh_elevation()
 	_check("hi.terrace-walker-ground-layer", not GridManager.is_high_layer(ch)
 		and not ch.is_on_raised_surface() and is_equal_approx(ch.current_elevation, 12.0)
-		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_GROUND)
+		and los.shadow_item_cull_mask == _cone(12.0))   # relief map: the cone culls on its elevation band
 	GridManager.register_deck(Vector2i(26, 5), 13.44)
 	ch.global_position = _c(26, 5)
 	ch._refresh_elevation()
 	_check("hi.deck-on-terrace-is-high", GridManager.is_high_layer(ch)
 		and is_equal_approx(ch.height_above_ground(), 1.44)
-		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_HIGH,
+		and los.shadow_item_cull_mask == _cone(13.44),
 		"hag=%.2f mask=%d" % [ch.height_above_ground(), los.shadow_item_cull_mask])
 	GridManager.unregister_deck(Vector2i(26, 5), 13.44)
 	ch._refresh_elevation()
 	_check("hi.off-deck-back-to-ground-tier", not GridManager.is_high_layer(ch)
-		and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_GROUND)
+		and los.shadow_item_cull_mask == _cone(12.0))
 	# terrain LOS (pure)
 	_check("hi.los-same-terrace", GridManager.terrain_line_clear(_c(2, 5), _c(8, 5), 8.5, 8.5))
 	_check("hi.los-cliff-blocks-low-viewer", not GridManager.terrain_line_clear(_c(5, 5), _c(25, 5), 8.5, 12.5))
@@ -230,7 +231,9 @@ func _scenario_high_terrain() -> void:
 	add_child(ml)
 	var w = ml._spawn_geo_structure({"kind": "wall", "a": [136, 224], "b": [384, 224], "half": 7.0, "id": "stone_wall"}, null, 64)
 	var occ: LightOccluder2D = w.get_node("Occluder")
-	_check("hi.terrace-wall-no-high-bit", (occ.occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) == 0
+	# relief map: no bit 1 (cones are GROUND | band); bit 2 is the structure bit for torches
+	_check("hi.terrace-wall-relief-light-bits", (occ.occluder_light_mask & CollisionLayers.SIGHT_MASK_GROUND) == 0
+		and (occ.occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) != 0
 		and is_equal_approx(float(w.get_meta("occlude_top")), 9.0) and not w.has_meta("occlude_rel_h"),
 		"mask=%d top=%.2f" % [occ.occluder_light_mask, float(w.get_meta("occlude_top"))])
 	var tr = ml._spawn_geo_structure({"kind": "tree", "pos": [160, 400], "r": 30.0, "id": "tree"}, null, 64)
@@ -382,6 +385,248 @@ func _scenario_high_terrain() -> void:
 	for i in 2000:
 		GridManager.terrain_line_clear(_c(1, 1 + i % 18), _c(30, 18 - i % 18), 8.5, 12.5)
 	print("INFO terrain-los: %.1f us/ray (~30-tile rays)" % (float(Time.get_ticks_usec() - t0) / 2000.0))
+
+# OR of the light masks of every occluder under `inst` whose polygon covers
+# world point p (structure occluders are in the instance's local frame).
+func _occ_mask_at(inst: Node2D, p: Vector2) -> int:
+	var m := 0
+	for c in inst.get_children():
+		var lo := c as LightOccluder2D
+		if lo != null and Geometry2D.is_point_in_polygon(p - inst.position, lo.occluder.polygon):
+			m |= lo.occluder_light_mask
+	return m
+
+# The cone band bit of a viewer standing at `elev`.
+func _bbit(elev: float) -> int:
+	return GridManager.cone_band_bit(GridManager.cone_band(elev))
+
+# The full shadow mask of a relief-map cone for a viewer standing at `elev`.
+func _cone(elev: float) -> int:
+	return CollisionLayers.SIGHT_MASK_GROUND | _bbit(elev)
+
+func _band_chunk_count(inst: Node2D) -> int:
+	var k := 0
+	for c in inst.get_children():
+		if c is LightOccluder2D and String(c.name).begins_with("OccluderBand"):
+			k += 1
+	return k
+
+# 9. SIGHT-CONE ELEVATION BANDS (v1.1): band math + top anchoring, occluder
+# band bits (walls, trees, decks, parapets, terrain-following walls), cliff
+# occluders, viewer cone masks — on the synthetic terraces — and a flat-map
+# control that must keep GROUND/HIGH exactly.
+func _scenario_cone_bands() -> void:
+	_build_terraces()   # 8.0 (x<=9) | 8.4 | 3.6-story cliff to 12.0 (x>=15) | ramp rows 17..19
+	_check("band.base-at-lowest-ground", GridManager.cone_band_base == 8, "base=%d" % GridManager.cone_band_base)
+	_check("band.of-viewers", GridManager.cone_band(8.0) == 0 and GridManager.cone_band(8.4) == 0
+		and GridManager.cone_band(8.6) == 1 and GridManager.cone_band(12.0) == 4 and GridManager.cone_band(13.44) == 5,
+		"8.0=%d 8.4=%d 8.6=%d 12=%d 13.44=%d" % [GridManager.cone_band(8.0), GridManager.cone_band(8.4),
+			GridManager.cone_band(8.6), GridManager.cone_band(12.0), GridManager.cone_band(13.44)])
+	_check("band.bits-are-2-to-19", GridManager.cone_band_bit(0) == 4 and GridManager.cone_band_bit(17) == 1 << 19
+		and GridManager.cone_band_bit(99) == 1 << 19 and GridManager.cone_band(-50.0) == 0)
+	# an occluder hides from a band iff its top is above the band's middle eye
+	_check("band.mask-below-strict", GridManager.band_mask_below(9.0) == 4 and GridManager.band_mask_below(8.5) == 0
+		and GridManager.band_mask_below(8.51) == 4 and GridManager.band_mask_below(12.0) == 0b1111 << 2
+		and GridManager.band_mask_below(99.0) == ((1 << 18) - 1) << 2,
+		"9.0=%d 8.5=%d 12=%d" % [GridManager.band_mask_below(9.0), GridManager.band_mask_below(8.5), GridManager.band_mask_below(12.0)])
+
+	# --- structure occluders: GROUND (+HIGH) kept, band bits added
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	var w = ml._spawn_geo_structure({"kind": "wall", "a": [136, 224], "b": [384, 224], "half": 7.0, "id": "stone_wall"}, null, 64)
+	var wm: int = w.get_node("Occluder").occluder_light_mask
+	_check("band.terrace-wall-structure-bit-not-ground", (wm & CollisionLayers.SIGHT_MASK_GROUND) == 0
+		and (wm & CollisionLayers.SIGHT_MASK_HIGH) != 0, "mask=%d" % wm)
+	_check("band.terrace-wall-shadows-own-terrace", (wm & _bbit(8.0)) != 0, "mask=%d" % wm)
+	_check("band.uphill-viewer-sees-over-lower-wall", (wm & _bbit(12.0)) == 0 and (wm & _bbit(8.6)) == 0,
+		"mask=%d" % wm)
+	var tr = ml._spawn_geo_structure({"kind": "tree", "pos": [160, 400], "r": 30.0, "id": "tree"}, null, 64)
+	var trm: int = tr.get_node("Occluder").occluder_light_mask
+	_check("band.tree-two-stories", (trm & _bbit(8.0)) != 0 and (trm & _bbit(9.0)) != 0
+		and (trm & _bbit(10.0)) == 0 and (trm & CollisionLayers.SIGHT_MASK_HIGH) != 0, "mask=%d" % trm)
+	var pw = ml._spawn_geo_structure({"kind": "wall", "a": [1600, 600], "b": [1900, 600], "half": 4.0, "id": "stone_wall", "occlude_h": 0.35}, null, 64)
+	_check("band.parapet-still-no-cone-shadow", pw.get_node("Occluder").occluder_light_mask == 0)
+	# deck walkway 1.44 above the 12.0 terrace (row 2, x 24..27)
+	var dk = ml._spawn_geo_structure({"kind": "wall", "a": [1536, 160], "b": [1792, 160], "half": 12.0, "id": "stone_wall", "walk_elev": 13.44}, null, 64)
+	var dkm: int = dk.get_node("Occluder").occluder_light_mask
+	_check("band.deck-shadows-ground-viewer", (dkm & _bbit(12.0)) != 0, "mask=%d" % dkm)
+	_check("band.deck-never-shadows-its-walker", (dkm & _bbit(13.44)) == 0, "mask=%d" % dkm)
+	var pink_ground: int = GridManager.cone_band_bit(GridManager.cone_band(12.0) + 1)
+	# worst case for the pink cone: the viewer's eye just under a band edge
+	# (ground 12.45, eye 12.95 -> band 4, middle 12.5), deck 1.44 above it
+	var dk2 = ml._spawn_geo_structure({"kind": "wall", "a": [1536, 224], "b": [1792, 224], "half": 12.0, "id": "stone_wall", "walk_elev": 13.89}, null, 64)
+	var dk2m: int = dk2.get_node("Occluder").occluder_light_mask
+	var pink_edge: int = GridManager.cone_band_bit(GridManager.cone_band(12.45) + 1)
+	_check("band.deck-never-shadows-pink-cone", (dkm & pink_ground) == 0 and (dk2m & pink_edge) == 0
+		and (dk2m & _bbit(12.45)) != 0, "mask=%d edge-deck=%d" % [dkm, dk2m])
+	# terrain-following wall up the ramp (row 18, ground 8.85 -> 12.0): its top
+	# follows the ground, so an uphill viewer (12.0) sees over its LOW end but
+	# not its HIGH end; the bands every stretch blocks sit on the main Occluder
+	var sw = ml._spawn_geo_structure({"kind": "wall", "a": [960, 1184], "b": [1472, 1184], "half": 7.0, "id": "stone_wall"}, null, 64)
+	var low_m: int = _occ_mask_at(sw, Vector2(968, 1184))
+	var high_m: int = _occ_mask_at(sw, Vector2(1464, 1184))
+	_check("band.sloped-wall-split-into-chunks", sw.has_meta("occlude_rel_h") and _band_chunk_count(sw) > 0,
+		"chunks=%d" % _band_chunk_count(sw))
+	_check("band.sloped-wall-low-end-seen-over", (low_m & _bbit(12.0)) == 0 and (low_m & _bbit(8.85)) != 0,
+		"low=%d" % low_m)
+	_check("band.sloped-wall-high-end-blocks-uphill", (high_m & _bbit(12.0)) != 0, "high=%d" % high_m)
+	var chunk_bad := 0
+	for c in sw.get_children():
+		if c is LightOccluder2D and String(c.name).begins_with("OccluderBand"):
+			var cm: int = (c as LightOccluder2D).occluder_light_mask
+			if (cm & (CollisionLayers.SIGHT_MASK_GROUND | CollisionLayers.SIGHT_MASK_HIGH)) != 0 or (cm & ~GridManager.band_mask_below(13.0)) != 0:
+				chunk_bad += 1
+	var swm: int = sw.get_node("Occluder").occluder_light_mask
+	_check("band.sloped-wall-chunks-band-only", (swm & CollisionLayers.SIGHT_MASK_HIGH) != 0
+		and (swm & CollisionLayers.SIGHT_MASK_GROUND) == 0 and chunk_bad == 0, "main=%d bad chunks=%d" % [swm, chunk_bad])
+	# pad-edge house wall: pad 9.0 one story above the 8.0 street, the wall's
+	# centre on the street tile. A centre-based top (9.0) would let the pad
+	# interior's cone through; the face-max top (10.0) shadows both sides.
+	for x in range(3, 7):
+		for y in range(12, 16):
+			GridManager.elevations[Vector2i(x, y)] = 9.0
+	var padw = ml._spawn_geo_structure({"kind": "wall", "a": [190, 768], "b": [190, 1024], "half": 7.0, "id": "stone_wall"}, null, 64)
+	var padm: int = _occ_mask_at(padw, Vector2(190, 896))
+	_check("band.pad-edge-wall-shadows-street-and-pad", (padm & _bbit(8.0)) != 0 and (padm & _bbit(9.0)) != 0
+		and (padm & _bbit(12.0)) == 0, "mask=%d" % padm)
+	for x in range(3, 7):
+		for y in range(12, 16):
+			GridManager.elevations[Vector2i(x, y)] = 8.0
+
+	# --- cliff occluders: a 14.0 pad (x 25..27, row 5) on the 12.0 terrace
+	# adds four edges; the 3.6 cliff and the ramp's brow merge into one run each
+	for x in range(25, 28):
+		GridManager.elevations[Vector2i(x, 5)] = 14.0
+	var cr: Node2D = ml._build_cliff_occluders()
+	var runs: Array = []
+	for c in cr.get_children():
+		var co := c as LightOccluder2D
+		runs.append([co.occluder.polygon[0], co.occluder.polygon[1], co.occluder_light_mask, co.occluder.closed, co.sdf_collision])
+	_check("cliff.run-count", runs.size() == 6, "runs=%d %s" % [runs.size(), str(runs)])
+	var m12: int = GridManager.band_mask_below(12.0)
+	var m14: int = GridManager.band_mask_below(14.0)
+	var want: Array = [
+		[Vector2(960, 0), Vector2(960, 1088), m12],      # the 3.6-story cliff, rows 0..16 merged
+		[Vector2(1600, 320), Vector2(1600, 384), m14],   # pad west face
+		[Vector2(1792, 320), Vector2(1792, 384), m14],   # pad east face
+		[Vector2(960, 1088), Vector2(1344, 1088), m12],  # ramp brow: x 15..20 (x 21's 0.45 step is walkable)
+		[Vector2(1600, 320), Vector2(1792, 320), m14],   # pad north face, 3 tiles merged
+		[Vector2(1600, 384), Vector2(1792, 384), m14],   # pad south face
+	]
+	var missing: Array = []
+	for wnt in want:
+		var hit := false
+		for r in runs:
+			hit = hit or (r[0] == wnt[0] and r[1] == wnt[1] and int(r[2]) == int(wnt[2]))
+		if not hit:
+			missing.append(wnt)
+	_check("cliff.runs-merged-on-tile-edges", missing.is_empty(), "missing %s" % str(missing))
+	var all_open := true
+	for r in runs:
+		all_open = all_open and not bool(r[3]) and not bool(r[4]) and (int(r[2]) & (CollisionLayers.SIGHT_MASK_GROUND | CollisionLayers.SIGHT_MASK_HIGH)) == 0
+	_check("cliff.open-band-only-no-sdf", all_open)
+	var g1 := 0
+	var torch_miss := 0
+	for st in [w, tr, dk, dk2, sw, padw]:
+		for c in (st as Node).get_children():
+			if c is LightOccluder2D:
+				var om: int = (c as LightOccluder2D).occluder_light_mask
+				if (om & CollisionLayers.SIGHT_MASK_GROUND) != 0:
+					g1 += 1
+				if String(c.name) == "Occluder" and (om & CollisionLayers.LIGHT_SHADOW_MASK) == 0:
+					torch_miss += 1
+	for r in runs:
+		if (int(r[2]) & (CollisionLayers.SIGHT_MASK_GROUND | CollisionLayers.LIGHT_SHADOW_MASK)) != 0:
+			g1 += 1
+	_check("band.no-relief-occluder-has-bit-1", g1 == 0, "%d occluders with bit 1" % g1)
+	_check("band.torches-still-shadowed-by-structures-not-cliffs", torch_miss == 0, "%d structures without a torch bit" % torch_miss)
+	_check("cliff.shadows-foot-not-brow", (m12 & _bbit(8.4)) != 0 and (m12 & _bbit(10.65)) != 0
+		and (m12 & _bbit(12.0)) == 0 and (m14 & _bbit(12.0)) != 0 and (m14 & _bbit(14.0)) == 0)
+	ml.queue_free()
+
+	# --- viewer cones: the band bit of the viewer's own eye
+	_build_terraces()
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	var los := PointLight2D.new()
+	los.name = "LineOfSight"
+	ch.add_child(los)
+	ch.global_position = _c(5, 5)
+	ch._refresh_elevation()
+	_check("cone.terrace-8-band-0", los.shadow_item_cull_mask == _cone(8.0) and ch.sight_cone_mask() == 1 | 4,
+		"mask=%d" % los.shadow_item_cull_mask)
+	ch.global_position = _c(25, 5)
+	ch._refresh_elevation()
+	_check("cone.terrace-12-band-4", los.shadow_item_cull_mask == _cone(12.0)
+		and ch.elevated_cone_mask() == CollisionLayers.SIGHT_MASK_GROUND | GridManager.cone_band_bit(5), "mask=%d" % los.shadow_item_cull_mask)
+	GridManager.register_deck(Vector2i(26, 5), 13.44)
+	ch.global_position = _c(26, 5)
+	ch._refresh_elevation()
+	_check("cone.deck-walker-band-5", ch.is_on_raised_surface() and los.shadow_item_cull_mask == _cone(13.44),
+		"mask=%d" % los.shadow_item_cull_mask)
+	GridManager.unregister_deck(Vector2i(26, 5), 13.44)
+
+	# --- top anchoring: sea floor -1 to a 17.5 summit with 20.67 roofs (the
+	# real tg_hillside_upper span). Bottom-anchored bands would clamp the
+	# summit into band 17 and its own brow would shadow it.
+	GridManager.initialize(4 * 64, 1 * 64)
+	GridManager.elevations[Vector2i(0, 0)] = -1.0
+	GridManager.elevations[Vector2i(1, 0)] = 8.0
+	GridManager.elevations[Vector2i(2, 0)] = 17.5
+	GridManager.elevations[Vector2i(3, 0)] = 17.5
+	GridManager.roof_elevations[Vector2i(3, 0)] = 20.67
+	GridManager.refresh_terrain_stats()
+	_check("band.tall-map-anchors-at-top", GridManager.cone_band_base == 4 and GridManager.cone_band(20.67) == 17,
+		"base=%d roof band=%d" % [GridManager.cone_band_base, GridManager.cone_band(20.67)])
+	_check("band.tall-map-summit-sees-off-its-brow", (GridManager.band_mask_below(17.5) & _bbit(17.5)) == 0
+		and (GridManager.band_mask_below(17.5) & _bbit(8.0)) != 0)
+
+	# --- flat control (shipped-map-like ravine at -0.98, span < 1): every mask
+	# is the legacy GROUND/HIGH value, no band bits, no chunks, no cliff run
+	GridManager.initialize(32 * 64, 20 * 64)
+	GridManager.elevations[Vector2i(3, 1)] = -0.98
+	GridManager.refresh_terrain_stats()
+	ch.global_position = _c(10, 10)
+	ch._refresh_elevation()
+	var flat_ground_ok: bool = not GridManager.relief_los and ch.sight_cone_mask() == CollisionLayers.SIGHT_MASK_GROUND \
+		and ch.elevated_cone_mask() == CollisionLayers.SIGHT_MASK_HIGH
+	GridManager.register_deck(Vector2i(11, 10), 1.44)
+	ch.global_position = _c(11, 10)
+	ch._refresh_elevation()
+	_check("flat.cone-masks-legacy", flat_ground_ok and los.shadow_item_cull_mask == CollisionLayers.SIGHT_MASK_HIGH
+		and ch.sight_cone_mask() == CollisionLayers.SIGHT_MASK_HIGH)
+	GridManager.unregister_deck(Vector2i(11, 10), 1.44)
+	ch.queue_free()
+	var ml3: Node2D = MAP_LOADER.new()
+	add_child(ml3)
+	var fw = ml3._spawn_geo_structure({"kind": "wall", "a": [136, 224], "b": [384, 224], "half": 7.0, "id": "stone_wall"}, null, 64)
+	var ftr = ml3._spawn_geo_structure({"kind": "tree", "pos": [160, 400], "r": 30.0, "id": "tree"}, null, 64)
+	var frt = ml3._spawn_geo_structure({"kind": "tree", "pos": [224, 96], "r": 30.0, "id": "tree"}, null, 64)
+	var fdk = ml3._spawn_geo_structure({"kind": "wall", "a": [1536, 160], "b": [1792, 160], "half": 12.0, "id": "stone_wall", "walk_elev": 1.44}, null, 64)
+	var fpp = ml3._spawn_geo_structure({"kind": "wall", "a": [1536, 160], "b": [1792, 160], "half": 4.0, "id": "stone_wall", "occlude_h": 0.35}, null, 64)
+	var fpt = ml3._spawn_geo_structure({"kind": "wall", "a": [1536, 172], "b": [1792, 172], "half": 3.0, "id": "stone_wall", "occlude_h": 1.0}, null, 64)
+	var fmasks: Array = [fw.get_node("Occluder").occluder_light_mask, ftr.get_node("Occluder").occluder_light_mask,
+		frt.get_node("Occluder").occluder_light_mask, fdk.get_node("Occluder").occluder_light_mask,
+		fpp.get_node("Occluder").occluder_light_mask, fpt.get_node("Occluder").occluder_light_mask]
+	_check("flat.occluder-masks-legacy", fmasks == [1, 3, 1, 1, 0, 3], "masks=%s" % str(fmasks))
+	# ordinary lights moved to GROUND|HIGH: on flat maps that casts exactly the
+	# occluders GROUND alone did (every HIGH occluder also carries GROUND)
+	var same := true
+	for fm in fmasks:
+		same = same and (((int(fm) & CollisionLayers.LIGHT_SHADOW_MASK) != 0) == ((int(fm) & CollisionLayers.SIGHT_MASK_GROUND) != 0))
+	_check("flat.light-shadow-mask-casts-as-ground", same)
+	var em: PointLight2D = load("res://Items/equipment_effects.gd").make_light(0.5, {})
+	_check("light.emitted-light-shadow-mask", em.shadow_item_cull_mask == CollisionLayers.LIGHT_SHADOW_MASK, "mask=%d" % em.shadow_item_cull_mask)
+	em.free()
+	var chunks := 0
+	for s in [fw, ftr, frt, fdk, fpp, fpt]:
+		chunks += _band_chunk_count(s)
+	_check("flat.no-band-chunks", chunks == 0)
+	ml3.generate_structured_map({"id": "flat_band_ctl", "images": {"map": "res://icon.svg"}, "floors": [], "structures": []})
+	_check("flat.no-cliff-occluders", ml3.cliff_occluders == null and ml3.get_node_or_null("CliffOccluders") == null)
+	ml3.queue_free()
 
 # 6b. JUMP + FALL: roof channel, layered A*, jump/fall states
 func _scenario_jump_fall() -> void:

@@ -632,6 +632,23 @@ func height_above_ground() -> float:
 func is_on_raised_surface() -> bool:
 	return on_roof or height_above_ground() >= GridManager.HIGH_LAYER_STORIES
 
+# shadow_item_cull_mask of this character's sight cones (LineOfSight /
+# NPCLineOfSight). Relief maps: GROUND (so the ground and art, light_mask 1,
+# receive the shadows at all) plus the elevation-band bit of our eye, so an
+# uphill viewer's cone is not shadowed by lower-terrace walls and cliffs
+# shadow cones from below. Flat maps: the GROUND/HIGH tiers exactly.
+func sight_cone_mask() -> int:
+	if GridManager.relief_los:
+		return CollisionLayers.SIGHT_MASK_GROUND | GridManager.cone_band_bit(GridManager.cone_band(current_elevation))
+	return CollisionLayers.SIGHT_MASK_HIGH if is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
+
+# Stealth mode's pink elevated-surface cone (NPCLineOfSightHigh): what a
+# viewer one story up would see — the band above ours on relief maps.
+func elevated_cone_mask() -> int:
+	if GridManager.relief_los:
+		return CollisionLayers.SIGHT_MASK_GROUND | GridManager.cone_band_bit(GridManager.cone_band(current_elevation) + 1)
+	return CollisionLayers.SIGHT_MASK_HIGH
+
 # Render-layer boost while on_roof: above the RoofLayer cover quads (z 120) so
 # roof-walkers draw ON the roof instead of vanishing under it in roof view.
 # Managed exclusively by _refresh_elevation. Must stay BELOW
@@ -705,7 +722,7 @@ func _refresh_elevation() -> void:
 		return
 	current_elevation = e
 	current_ground_elev = g
-	var mask := CollisionLayers.SIGHT_MASK_HIGH if is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
+	var mask: int = sight_cone_mask()
 	for n in ["LineOfSight", "NPCLineOfSight"]:
 		var l := get_node_or_null(n)
 		if l:

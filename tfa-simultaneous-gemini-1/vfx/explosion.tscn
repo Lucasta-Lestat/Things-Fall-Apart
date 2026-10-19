@@ -52,4 +52,5 @@ script = ExtResource("1_6yiqx")
 position = Vector2(135, 91)
 shadow_enabled = true
 shadow_filter = 1
+shadow_item_cull_mask = 3
 texture = SubResource("GradientTexture2D_otjre")

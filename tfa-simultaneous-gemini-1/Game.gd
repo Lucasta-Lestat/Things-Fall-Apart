@@ -2233,7 +2233,7 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	light.name = "LineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if character.is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
+	light.shadow_item_cull_mask = character.sight_cone_mask()
 	light.z_index = 102
 	character.add_child(light)
 	# Legibility: cones show STATE, not just geometry — tinted off the AI's
@@ -2270,7 +2270,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.name = "NPCLineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if npc.is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
+	light.shadow_item_cull_mask = npc.sight_cone_mask()
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
@@ -2779,7 +2779,9 @@ func sync_npc_elevated_cones() -> void:
 ## viewer is shadowed by every wall, so it drew battlements and decks as
 ## unseen even though GridManager.sight_line_clear lets the NPC see someone
 ## standing up there (the target's raised eye tops the wall). This cone is
-## shadowed only by tall occluders (SIGHT_MASK_HIGH) and lights only walkway
+## meant to be shadowed only by tall occluders (flat maps: SIGHT_MASK_HIGH,
+## which in practice casts nothing — see the renderer rule in CollisionLayers;
+## relief maps: GROUND | the band above the NPC's, see elevated_cone_mask) and lights only walkway
 ## art (CollisionLayers.ELEVATED_SURFACE_LIGHT, set by MapLoader on deck art),
 ## so a walkway glows pink where standing on it would be seen. (Not amber:
 ## amber is the Suspicious cone tint and the outcry fuse.)
@@ -2792,7 +2794,7 @@ func _add_npc_elevated_sight_light(npc: ProceduralCharacter) -> PointLight2D:
 	light.color = ELEVATED_CONE_COLOR
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH
+	light.shadow_item_cull_mask = npc.elevated_cone_mask()
 	light.range_item_cull_mask = CollisionLayers.ELEVATED_SURFACE_LIGHT
 	light.z_index = 102
 	npc.add_child(light)
@@ -2818,6 +2820,9 @@ func sync_npc_elevated_cone(npc) -> void:
 	high.rotation = main_light.rotation
 	if high.visible != main_light.visible:
 		high.visible = main_light.visible
+	var m: int = npc.elevated_cone_mask()
+	if high.shadow_item_cull_mask != m:
+		high.shadow_item_cull_mask = m
 	high.enabled = main_light.enabled and not npc.is_on_raised_surface()
 
 # ===== Hearing visibility pulse =====
