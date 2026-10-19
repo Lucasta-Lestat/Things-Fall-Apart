@@ -46,7 +46,13 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = "tg_town_square"  # TEMP: piazza review ("combat_test" = arena, "tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
+var current_map_id: String = _start_map_id()  # TEMP: piazza review ("combat_test" = arena, "tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
+
+# Dev convenience: TFA_START_MAP=<map id> boots straight into that map (playtests
+# of maps nothing links to yet). Unset or empty = the normal start map.
+static func _start_map_id() -> String:
+	var env_map: String = OS.get_environment("TFA_START_MAP").strip_edges()
+	return env_map if not env_map.is_empty() else "tg_town_square"
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []
 var context_menu_open: bool = false
