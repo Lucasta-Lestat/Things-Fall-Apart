@@ -131,7 +131,7 @@ static func blade_line_clear(space: PhysicsDirectSpaceState2D, attacker: Node2D,
 	var a_elev: float = 0.0
 	if attacker.has_method("get_elevation"):
 		a_elev = attacker.get_elevation()
-	var t_elev: float = 0.0
+	var t_elev: float = NAN   # non-character target: the ground/deck under it
 	if target.has_method("get_elevation"):
 		t_elev = target.get_elevation()
 	return GridManager.sight_line_clear(

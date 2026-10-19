@@ -177,9 +177,14 @@ func attack_payload(actor, victim) -> Dictionary:
 	var lethal: bool = true
 	if victim.has_method("is_alive"):
 		lethal = not victim.is_alive()
+	# Absolute stories. A non-character victim (door, structure) reads the
+	# ground/deck under it: sea level 0 is underground on a terrace, and the
+	# payload must never carry NAN into the witness fan-out.
 	var crime_elev: float = 0.0
 	if victim.has_method("get_elevation"):
 		crime_elev = float(victim.get_elevation())
+	elif victim is Node2D:
+		crime_elev = GridManager.effective_elev(GridManager.world_to_map(victim.global_position))
 	return {
 		"victim_faction": victim_faction,
 		# Self-defence carve-out: no charge for fighting someone already
@@ -265,7 +270,7 @@ func attack_needs_confirmation(actor, victim) -> Dictionary:
 ## The test itself is ProceduralCharacter.can_see_point, the one AI detection
 ## and party visibility share: live sight range (senses, Perceptive, weather,
 ## fog at either end), effective FOV, elevation-aware sight line.
-func has_visual_los(from_char, target_pos: Vector2, target_elev: float = 0.0) -> bool:
+func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) -> bool:
 	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
 		return false
 	var cm = from_char.get_node_or_null("ConditionManager")
@@ -407,7 +412,10 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 			crime_pos = physical_actor.global_position
 		else:
 			return
-	var crime_elev: float = float(payload.get("crime_elev", 0.0))
+	# take_payload carries no crime_elev: resolve the ground/deck at the scene
+	# eagerly (an absolute 0 would hide every theft on a terrace).
+	var crime_elev: float = float(payload["crime_elev"]) if payload.has("crime_elev") \
+		else GridManager.effective_elev(GridManager.world_to_map(crime_pos))
 	_crime_counter += 1
 	var crime_id: int = _crime_counter
 	var disguised: bool = is_disguised(physical_actor)

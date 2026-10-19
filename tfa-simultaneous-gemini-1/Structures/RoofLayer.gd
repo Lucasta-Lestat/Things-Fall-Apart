@@ -26,9 +26,15 @@ func _ready() -> void:
 func _draw() -> void:
 	var ts := float(GridManager.TILE_SIZE)
 	var half := Vector2(ts, ts) * 0.5
+	# Roofs are ABSOLUTE stories: on relief maps the slate/terracotta split is
+	# by height above the house's own ground (else every terrace roof is
+	# slate). Gated so flat maps tint exactly as before.
+	var relief: bool = GridManager.relief_los
 	for t in GridManager.roof_elevations:
 		var p: Vector2 = GridManager.map_to_world(t) - half
 		var h: float = float(GridManager.roof_elevations[t])
+		if relief:
+			h -= GridManager.terrain_elev(t)
 		# stable per-tile hash -> tone variation reads as shingling
 		var n: float = float(((int(t.x) * 73856093) ^ (int(t.y) * 19349663)) & 0xFFFF) / 65535.0
 		var base := TILE_SLATE if h >= 2.5 else TILE_TERRACOTTA

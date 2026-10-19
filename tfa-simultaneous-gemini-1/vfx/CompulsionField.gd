@@ -230,7 +230,7 @@ func audience() -> Array:
 		if reach == "sight":
 			if global_position.distance_squared_to(c.global_position) > reach_limit * reach_limit:
 				continue
-			if not CrimeManager.has_visual_los(c, global_position, 0.0):
+			if not CrimeManager.has_visual_los(c, global_position, NAN):
 				continue
 		elif global_position.distance_squared_to(c.global_position) > r2:
 			continue

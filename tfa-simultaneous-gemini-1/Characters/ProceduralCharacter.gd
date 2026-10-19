@@ -613,6 +613,24 @@ var current_elevation: float = 0.0
 # Roof layer: true while standing ON a roof (a stacked surface over the ground;
 # interiors below keep ground elevation). Only jumpers ever set this.
 var on_roof: bool = false
+# Bare terrain under the tile current_elevation was last read from (ABSOLUTE
+# stories). Cached by _refresh_elevation — which is suppressed while airborne —
+# so height_above_ground (and with it the view layer / cone tier) cannot
+# flicker mid-jump off a terrace. Tests that poke current_elevation directly
+# keep reading it against ground 0.
+var current_ground_elev: float = 0.0
+
+# Height of the surface we stand on above the local terrain (0 on bare ground,
+# deck height on a battlement, roof height on a roof).
+func height_above_ground() -> float:
+	return current_elevation - current_ground_elev
+
+# On a roof, or on a surface at least one story above the local ground. THE
+# predicate for the sight-cone tier and (via GridManager.is_high_layer) the
+# view layer — never an absolute elevation compare (a terrace walker at
+# ground 8 is on the ground layer).
+func is_on_raised_surface() -> bool:
+	return on_roof or height_above_ground() >= GridManager.HIGH_LAYER_STORIES
 # Render-layer boost while on_roof: above the RoofLayer cover quads (z 120) so
 # roof-walkers draw ON the roof instead of vanishing under it in roof view.
 # Managed exclusively by _refresh_elevation. Must stay BELOW
@@ -666,6 +684,7 @@ func _refresh_elevation() -> void:
 		e = GridManager.roof_at(t)
 	else:
 		e = GridManager.effective_elev(t)
+	var g: float = GridManager.terrain_elev(t)
 	# Roof-walkers render ABOVE the RoofLayer cover (z 120): boost the root z
 	# while on_roof and restore on dismount. This is the single chokepoint
 	# every mover path funnels through (jump land, fall, warp, per-frame), so
@@ -679,10 +698,13 @@ func _refresh_elevation() -> void:
 	elif not on_roof and _roof_z_boosted:
 		_roof_z_boosted = false
 		z_index = _pre_roof_z
-	if is_equal_approx(e, current_elevation):
+	# Both must match: a deck spanning a slope keeps e constant while the
+	# ground under it (and so the height above it) changes.
+	if is_equal_approx(e, current_elevation) and is_equal_approx(g, current_ground_elev):
 		return
 	current_elevation = e
-	var mask := CollisionLayers.SIGHT_MASK_HIGH if current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
+	current_ground_elev = g
+	var mask := CollisionLayers.SIGHT_MASK_HIGH if is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
 	for n in ["LineOfSight", "NPCLineOfSight"]:
 		var l := get_node_or_null(n)
 		if l:
@@ -5615,7 +5637,7 @@ func _update_ice_slide(delta: float) -> void:
 		_ice_slide_direction = Vector2.ZERO
 		_ice_slide_speed = 0.0
 		return
-	if not GridManager.can_traverse(global_position, global_position + ice_step):
+	if not _forced_step_ok(global_position, global_position + ice_step):
 		_end_ice_slide()
 		return
 	velocity = _ice_slide_direction * _ice_slide_speed
@@ -5684,7 +5706,7 @@ func _clip_to_traversable(from: Vector2, to: Vector2) -> Vector2:
 	while travelled < total:
 		var next_dist: float = minf(travelled + step, total)
 		var next := from + dir * next_dist
-		if not GridManager.can_traverse(last, next):
+		if not _forced_step_ok(last, next):
 			return last
 		last = next
 		travelled = next_dist
@@ -5701,7 +5723,7 @@ func _update_knockback(delta: float) -> void:
 			knockback_active = false
 			knockback_velocity = Vector2.ZERO
 			return
-		if not GridManager.can_traverse(global_position, global_position + kb_step):
+		if not _forced_step_ok(global_position, global_position + kb_step):
 			knockback_active = false
 			knockback_velocity = Vector2.ZERO
 			return
@@ -5743,7 +5765,7 @@ func _update_dash_motion(delta: float) -> void:
 	if _forced_drop_check(dash_step):
 		_end_dash_motion()   # fires on_complete; doesn't touch the fall state
 		return
-	if not GridManager.can_traverse(global_position, global_position + dash_step):
+	if not _forced_step_ok(global_position, global_position + dash_step):
 		_end_dash_motion()
 		return
 	velocity = _dash_motion_dir * _dash_motion_speed
@@ -5872,9 +5894,20 @@ func _end_fall() -> void:
 	emit_signal("character_reached_target")   # release any driving queue/nav
 
 
+# The forced-mover (ice/knockback/dash, knockback preview) step gate:
+# can_traverse, and never INTO deep water (no swimming: a body knocked off the
+# quay would be soft-locked on the seabed). Identical to can_traverse on maps
+# without sea (GridManager.is_deep_water is relief-map only).
+func _forced_step_ok(from_pos: Vector2, to_pos: Vector2) -> bool:
+	return GridManager.can_traverse(from_pos, to_pos) \
+		and not GridManager.segment_enters_deep_water(from_pos, to_pos)
+
+
 # Forced movers (ice/knockback/dash) carry a body OFF a down-ledge into a fall
 # instead of dead-stopping at the rim. Returns true when a fall began (the
 # caller must end its frame). UP-cliffs keep the existing can_traverse stop.
+# Deep water is never a fall destination: the check bails (false) and the
+# caller's _forced_step_ok dead-stops the body at the rim.
 func _forced_drop_check(step_vec: Vector2) -> bool:
 	# Segment-sample like can_traverse: a forced mover can span more than one
 	# tile per frame (knockback ~800px/s, frame hitches), so an endpoint-only
@@ -5896,6 +5929,9 @@ func _forced_drop_check(step_vec: Vector2) -> bool:
 		var t_roof: bool = on_roof and GridManager.has_roof(t)
 		# a wall stops the body before any rim — bail so the caller dead-stops
 		if not t_roof and GridManager.grid_costs.get(t, INF) == INF:
+			return false
+		# so does the sea (unless we are already in it)
+		if not t_roof and GridManager.is_deep_water(t) and not GridManager.is_deep_water(prev_t):
 			return false
 		var t_elev := GridManager.roof_at(t) if t_roof else GridManager.effective_elev(t)
 		if prev_elev - t_elev > GridManager.MAX_STEP_STORIES:
@@ -7036,7 +7072,7 @@ func _on_sight_mods_changed() -> void:
 ## end counts), inside the effective FOV cone, and an elevation-aware sight
 ## line clear of walls. range_mult scales the range (a held or hard-to-see
 ## target); within fov_free_radius px facing doesn't matter (close contact).
-func can_see_point(target_pos: Vector2, target_elev: float = 0.0, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
+func can_see_point(target_pos: Vector2, target_elev: float = NAN, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
 	if not is_alive() or _sight_disabled():
 		return false
 	var to_target: Vector2 = target_pos - global_position

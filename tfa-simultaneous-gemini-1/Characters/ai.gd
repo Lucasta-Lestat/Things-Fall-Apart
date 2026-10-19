@@ -684,10 +684,10 @@ func get_facing_vector() -> Vector2:
 # nothing, live sight range (weather, fog at either end), effective FOV, and
 # an elevation-aware sight line. Passing the target's elevation lets a street
 # guard acquire a character standing on a roof.
-func is_in_line_of_sight(target_position: Vector2, target_elev: float = 0.0) -> bool:
+func is_in_line_of_sight(target_position: Vector2, target_elev: float = NAN) -> bool:
 	return character.can_see_point(target_position, target_elev)
 
-func _has_clear_sight_line(target_position: Vector2, target_elev: float = 0.0) -> bool:
+func _has_clear_sight_line(target_position: Vector2, target_elev: float = NAN) -> bool:
 	var world := character.get_world_2d()
 	if not world:
 		return true

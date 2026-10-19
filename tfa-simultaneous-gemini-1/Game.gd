@@ -807,10 +807,17 @@ func _spawn_npcs(npc_list: Array) -> void:
 		if npc_def.has("dialogue"):
 			spawn_overrides["dialogue"] = npc_def["dialogue"]
 
+		# Group scatter stays on the base's own step-connected ground: an
+		# unchecked +-spread offset landed members on the terrace above or
+		# below a cliff, or inside walls. One flood per group.
+		var reach: Dictionary = {}
+		if spread > 0 and count > 1:
+			reach = GridManager.reachable_within(GridManager.world_to_map(base_pos),
+				int(ceil(spread / float(GridManager.TILE_SIZE))) * 2 + 1)
 		for i in range(count):
 			var pos = base_pos
 			if spread > 0 and i > 0:
-				pos += Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
+				pos = GridManager.scatter_point(base_pos, spread, reach)
 
 			# "from_faction" races re-roll every spawn, but a persisted NPC's
 			# snapshot restore stamps the OLD race's identity/dims/colors over
@@ -2219,7 +2226,7 @@ func _add_line_of_sight_light(character: ProceduralCharacter) -> void:
 	light.name = "LineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if character.current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if character.is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
 	light.z_index = 102
 	character.add_child(light)
 	# Legibility: cones show STATE, not just geometry — tinted off the AI's
@@ -2256,7 +2263,7 @@ func _add_npc_line_of_sight_light(npc: ProceduralCharacter) -> void:
 	light.name = "NPCLineOfSight"
 	light.rotation_degrees = -90
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if npc.current_elevation >= 1.0 else CollisionLayers.SIGHT_MASK_GROUND
+	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_HIGH if npc.is_on_raised_surface() else CollisionLayers.SIGHT_MASK_GROUND
 	# Illuminate layer 1 (normal scene objects) so the cone is actually visible
 	light.range_item_cull_mask = 1
 	light.z_index = 102
@@ -2804,7 +2811,7 @@ func sync_npc_elevated_cone(npc) -> void:
 	high.rotation = main_light.rotation
 	if high.visible != main_light.visible:
 		high.visible = main_light.visible
-	high.enabled = main_light.enabled and npc.get_elevation() < 1.0
+	high.enabled = main_light.enabled and not npc.is_on_raised_surface()
 
 # ===== Hearing visibility pulse =====
 # When a party member can HEAR an NPC (but doesn't see them), the NPC briefly
@@ -2952,7 +2959,7 @@ func _dot_tick_reportable(attacker, victim) -> bool:
 # Shared LOS check helper — delegates to the canonical witness-LOS wrapper on
 # CrimeManager (elevation-aware, blinded/unconscious-aware). Kept for the
 # internal call sites that predate it.
-func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2, target_elev: float = 0.0) -> bool:
+func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2, target_elev: float = NAN) -> bool:
 	return CrimeManager.has_visual_los(from_char, target_pos, target_elev)
 
 
@@ -2963,13 +2970,10 @@ func _has_visual_los(from_char: ProceduralCharacter, target_pos: Vector2, target
 # masks already use. Deck art is painted into the ground PNG, so decks need no
 # cover quads; only the LAYER of the viewer matters for what gets hidden.
 func _char_on_high_layer(c) -> bool:
-	if c == null or not is_instance_valid(c):
-		return false
-	if "on_roof" in c and c.on_roof:
-		return true
-	if c.has_method("get_elevation"):
-		return c.get_elevation() >= 1.0
-	return false
+	# RELATIVE to the local ground (GridManager.is_high_layer): on a hillside a
+	# terrace walker is on the ground layer; only roofs and decks a story or
+	# more above their own terrain are "up".
+	return GridManager.is_high_layer(c)
 
 
 func _set_roof_view(on: bool) -> void:
@@ -3129,14 +3133,14 @@ func _update_npc_los_visibility() -> void:
 			npc.visible = false
 			npc.modulate.a = 0.0
 
-func _sight_line_clear(from_pos: Vector2, to_pos: Vector2, viewer_elev: float = 0.0, target_elev: float = 0.0) -> bool:
+func _sight_line_clear(from_pos: Vector2, to_pos: Vector2, viewer_elev: float = NAN, target_elev: float = NAN) -> bool:
 	var viewport := get_viewport()
 	if not viewport or not viewport.world_2d:
 		return true
 	return GridManager.sight_line_clear(viewport.world_2d.direct_space_state, from_pos, to_pos, viewer_elev, target_elev)
 
 
-func _is_position_visible_to_party(target_pos: Vector2, target_elev: float = 0.0, range_mult: float = 1.0) -> bool:
+func _is_position_visible_to_party(target_pos: Vector2, target_elev: float = NAN, range_mult: float = 1.0) -> bool:
 	"""True if any living, sighted party member can see the position: in
 	sight range (weather and fog included), inside their FOV cone, and on a
 	clear LOS line (ProceduralCharacter.can_see_point, the same test AI
