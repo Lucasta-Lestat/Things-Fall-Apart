@@ -20,6 +20,15 @@ var _elev: PackedFloat32Array = PackedFloat32Array()   # signed ground elevation
 var _roof: PackedFloat32Array = PackedFloat32Array()   # roof surface height, stories (0 = unroofed); the jump layer
 var _nb_off: PackedInt32Array = PackedInt32Array()
 var _nb: PackedInt32Array = PackedInt32Array()
+# Optional per-TILE terrain (cells.json "tile_elev": {cols, rows, data}): ABSOLUTE
+# stories at each 64px tile centre, row-major. Terrain-editor exports write it
+# when the map has a heightfield; nearest-centroid projection of `elev` amplifies
+# graded steps (a 0.44-story street step reads 0.7+ when two cells straddle a
+# tile), so GridManager prefers this grid when its size matches the map.
+# Empty (cols 0) on every legacy export.
+var _tile_elev: PackedFloat32Array = PackedFloat32Array()
+var _te_cols: int = 0
+var _te_rows: int = 0
 var _square: bool = false
 var _cols: int = 0
 var _rows: int = 0
@@ -56,6 +65,18 @@ static func from_structured(path: String) -> CellGraph:
 	g._roof = _to_f32(data.get("roof", []))   # absent in legacy exports -> empty -> roof_elev 0
 	g._nb_off = _to_i32(data.get("nb_off", []))
 	g._nb = _to_i32(data.get("nb", []))
+	var te = data.get("tile_elev", null)
+	if typeof(te) == TYPE_DICTIONARY:
+		var tc: int = int(te.get("cols", 0))
+		var tr: int = int(te.get("rows", 0))
+		var td: PackedFloat32Array = _to_f32(te.get("data", []))
+		if tc > 0 and tr > 0 and td.size() == tc * tr:
+			g._tile_elev = td
+			g._te_cols = tc
+			g._te_rows = tr
+		else:
+			push_warning("CellGraph: malformed tile_elev in %s (cols=%d rows=%d data=%d); using nearest-cell elev"
+				% [path, tc, tr, td.size()])
 	g._build_buckets()
 	return g
 
@@ -146,6 +167,25 @@ func roof_elev(cid: int) -> float:
 	if _square:
 		return 0.0
 	return _roof[cid] if cid >= 0 and cid < _roof.size() else 0.0
+
+
+# Per-tile terrain grid (see _tile_elev). True only when the grid exists AND is
+# exactly cols x rows — the caller passes the map's tile dims, so a stale or
+# differently-sized export can never be indexed against the wrong tiles.
+func has_tile_elev(cols: int, rows: int) -> bool:
+	return _te_cols > 0 and _te_cols == cols and _te_rows == rows
+
+
+# The grid's own dims (Vector2i.ZERO when the export has none).
+func tile_elev_dims() -> Vector2i:
+	return Vector2i(_te_cols, _te_rows)
+
+
+# ABSOLUTE terrain stories at tile t. Out-of-grid tiles read 0.0.
+func tile_elev(t: Vector2i) -> float:
+	if t.x < 0 or t.y < 0 or t.x >= _te_cols or t.y >= _te_rows:
+		return 0.0
+	return _tile_elev[t.y * _te_cols + t.x]
 
 
 func cell_at(world_pos: Vector2) -> int:

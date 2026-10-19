@@ -48,6 +48,27 @@ const FALL_DMG_PER_STORY := 8.0        # bludgeoning per story past FALL_SAFE
                                        # (scaled with the 30 HP baseline: a
                                        # 3-story drop wounds, 5 stories kills)
 
+# --- Ground higher than one story (terraced / hillside maps) ---------------
+# Every elevation in GridManager is ABSOLUTE stories (sea level 0). "High layer"
+# and sight-cone tier are about HEIGHT ABOVE LOCAL GROUND, never a fixed
+# constant: a walker on a terrace at ground 8 is on the ground layer.
+const HIGH_LAYER_STORIES := 1.0          # raised surface (deck/roof) threshold, ABOVE TERRAIN
+const RELIEF_LOS_MIN_SPAN := 1.0         # terrain span (stories) that turns on the eye-line LOS model
+const TERRAIN_LOS_EPS := 0.1             # slack for nearest-cell projection noise on graded slopes
+const ROOF_SLAB_EPS := 0.05
+const MAX_PLANNED_DROP_STORIES := 3.0    # jump planner never plans a deliberate drop deeper than this
+const DEEP_WATER_ELEV := -0.5            # shallow_water floor at/below this ABSOLUTE elev = deep (seabed)
+var terrain_min: float = 0.0
+var terrain_max: float = 0.0
+# Relief LOS: interpolated eye line, terrain occlusion, roof slabs, and the
+# relative occluder HIGH bit / RoofLayer tint. Auto-detected (terrain span >=
+# RELIEF_LOS_MIN_SPAN) — never configured — so every shipped map (all span
+# < 1 story) keeps the legacy max(viewer, target) + eye rule exactly.
+var relief_los: bool = false             # reset in initialize(); set by refresh_terrain_stats()
+var roof_lint_bad: int = 0               # roofed tiles with roof < terrain + 0.9 (relative-roof export bug)
+var deck_lint_bad: int = 0               # deck tiles with walk_elev < terrain - 0.05 (MapLoader)
+var tile_elev_used: bool = false         # last set_elevation_data took terrain from cells.json tile_elev
+
 func initialize(map_width_px: int, map_height_px: int) -> void:
 	var cols = int(ceil(float(map_width_px) / TILE_SIZE))
 	var rows = int(ceil(float(map_height_px) / TILE_SIZE))
@@ -62,6 +83,12 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	_deck_refs.clear()
 	roof_elevations.clear()
 	hazard_costs.clear()
+	terrain_min = 0.0
+	terrain_max = 0.0
+	relief_los = false
+	roof_lint_bad = 0
+	deck_lint_bad = 0
+	tile_elev_used = false
 	for y in range(rows):
 		for x in range(cols):
 			var pos = Vector2i(x, y)
@@ -123,29 +150,130 @@ func unregister_floor(grid_pos: Vector2i) -> void:
 # --- Elevation (terrain + walkable decks) ---
 # graph: CellGraph or null. Projects per-cell elev onto tiles once per map load.
 # CellGraph coordinates are game-world px (see CellGraph.gd) — no export_scale math.
+#
+# Terrain source per tile: the graph's per-tile grid (cells.json "tile_elev")
+# when it exists and is exactly map_rect.size — otherwise the legacy nearest-
+# cell-centroid `elev`. Roofs always come from the nearest cell.
 func set_elevation_data(graph) -> void:
 	elevations.clear()
 	deck_elevations.clear()
 	_deck_refs.clear()
 	roof_elevations.clear()
+	roof_lint_bad = 0
+	deck_lint_bad = 0
+	tile_elev_used = false
 	if graph == null:
+		refresh_terrain_stats()
 		return
-	for y in range(map_rect.size.y):
-		for x in range(map_rect.size.x):
+	var cols: int = map_rect.size.x
+	var rows: int = map_rect.size.y
+	var use_te: bool = false
+	if graph.has_method("has_tile_elev"):
+		if graph.has_tile_elev(cols, rows):
+			use_te = true
+		elif graph.has_method("tile_elev_dims"):
+			var dims: Vector2i = graph.tile_elev_dims()
+			if dims != Vector2i.ZERO:
+				push_warning("cells tile_elev is %dx%d but the map is %dx%d tiles: using nearest-cell elev"
+					% [dims.x, dims.y, cols, rows])
+	tile_elev_used = use_te
+	var has_roof_ch: bool = graph.has_method("roof_elev")
+	for y in range(rows):
+		for x in range(cols):
 			var t := Vector2i(x, y)
 			var cid: int = graph.cell_at(map_to_world(t))
-			if cid < 0:
-				continue   # square-graph out-of-bounds / empty-bucket sentinel
-			var e: float = graph.ground_elev(cid)
+			var e: float = 0.0
+			if use_te:
+				e = graph.tile_elev(t)
+			elif cid >= 0:
+				e = graph.ground_elev(cid)
 			if absf(e) > 0.001:
 				elevations[t] = e
-			if graph.has_method("roof_elev"):
+			if cid < 0:
+				continue   # square-graph out-of-bounds / empty-bucket sentinel (roof only)
+			if has_roof_ch:
 				var rf: float = graph.roof_elev(cid)
 				if rf > 0.001:
 					roof_elevations[t] = rf
+					if rf < e + 0.9:
+						roof_lint_bad += 1
+	refresh_terrain_stats()
+	if roof_lint_bad > 0:
+		push_warning("cells roof below ground+0.9 on %d tiles: cells.json roof must be ABSOLUTE stories" % roof_lint_bad)
 
 func effective_elev(t: Vector2i) -> float:
 	return deck_elevations.get(t, elevations.get(t, 0.0))
+
+# Bare terrain under a tile — never decks or roofs. ABSOLUTE stories.
+func terrain_elev(t: Vector2i) -> float:
+	return float(elevations.get(t, 0.0))
+
+# How far `elev` (an absolute surface height) stands above the terrain at t.
+func height_above_ground(t: Vector2i, elev: float) -> float:
+	return elev - terrain_elev(t)
+
+# THE view-layer / sight-tier predicate: on a roof, or standing on a surface
+# at least HIGH_LAYER_STORIES above the local ground (a battlement deck). A
+# walker on a high terrace is on the ground layer.
+func is_high_layer(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	if "on_roof" in c and c.on_roof:
+		return true
+	if c.has_method("height_above_ground"):
+		var hag: float = c.height_above_ground()
+		return hag >= HIGH_LAYER_STORIES
+	if c.has_method("get_elevation") and c is Node2D:
+		var ce: float = c.get_elevation()
+		return height_above_ground(world_to_map(c.global_position), ce) >= HIGH_LAYER_STORIES
+	return false
+
+# Terrain span + the relief_los switch. Call after any bulk write to
+# `elevations` (set_elevation_data does; tests that hand-write terrain must).
+func refresh_terrain_stats() -> void:
+	var lo: float = INF
+	var hi: float = -INF
+	for v in elevations.values():
+		lo = minf(lo, float(v))
+		hi = maxf(hi, float(v))
+	if elevations.size() < map_rect.size.x * map_rect.size.y:   # sparse: absent tiles read 0
+		lo = minf(lo, 0.0)
+		hi = maxf(hi, 0.0)
+	terrain_min = lo if lo != INF else 0.0
+	terrain_max = hi if hi != -INF else 0.0
+	relief_los = terrain_max - terrain_min >= RELIEF_LOS_MIN_SPAN
+
+# Sea / deep water: a shallow_water floor whose surface sits at or below
+# DEEP_WATER_ELEV (absolute; sea surface is 0, seabed -1). There is no swimming:
+# the jump planner never drops into it and forced movers refuse to carry a body
+# into it (a knocked-off-the-quay body would be soft-locked on the seabed).
+# Relief maps only: a sea map always spans >= 1 story (land >= 0, seabed -1),
+# while the shipped flat maps' walkable ravine streams (tg_export -0.98,
+# tg_guild_hall -0.66) must keep their current knockback/jump behaviour.
+func is_deep_water(t: Vector2i) -> bool:
+	return relief_los and floors.get(t, "") == "shallow_water" \
+		and effective_elev(t) <= DEEP_WATER_ELEV + 0.0001
+
+# True if the straight segment enters a deep-water tile that its start tile is
+# not already in (sampled like can_traverse). Forced movers dead-stop on it.
+func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
+	if not relief_los:
+		return false
+	var start_t := world_to_map(from_pos)
+	if is_deep_water(start_t):
+		return false   # already in: let them move (out, ideally)
+	var dist := from_pos.distance_to(to_pos)
+	if dist < 0.001:
+		return false
+	var steps := int(ceil(dist / (TILE_SIZE * 0.45)))
+	var prev := start_t
+	for i in range(1, steps + 1):
+		var t := world_to_map(from_pos.lerp(to_pos, float(i) / float(steps)))
+		if t != prev:
+			if is_deep_water(t):
+				return true
+			prev = t
+	return false
 
 # --- roof layer (jump/rooftop traversal) ---
 func roof_at(t: Vector2i) -> float:
@@ -274,7 +402,23 @@ func can_traverse(from_pos: Vector2, to_pos: Vector2) -> bool:
 # True if nothing on the VISION_BLOCKERS layer with occlude_top above the viewer's
 # eye blocks the segment. Bodies WITHOUT the meta (legacy maps) always block —
 # preserves legacy behavior since legacy viewers are always elev 0.
-func sight_line_clear(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_pos: Vector2, viewer_elev: float = 0.0, target_elev: float = 0.0) -> bool:
+#
+# Elevations are ABSOLUTE stories. NAN (the default) means "the ground or deck
+# under that point" (effective_elev) — sea level 0 is underground on a terrace.
+#
+# Two models, chosen per map by relief_los (terrain span >= 1 story):
+#   - flat maps (every shipped map): the legacy rule below, unchanged — an
+#     occluder clears when max(viewer, target) + eye tops it.
+#   - relief maps: the eye LINE is interpolated between the two eyes at the
+#     occluder crossing, terrain-following walls re-base their top on the
+#     ground at the hit, and terrain_line_clear adds terrain and roof slabs.
+func sight_line_clear(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_pos: Vector2, viewer_elev: float = NAN, target_elev: float = NAN) -> bool:
+	if is_nan(viewer_elev):
+		viewer_elev = effective_elev(world_to_map(from_pos))
+	if is_nan(target_elev):
+		target_elev = effective_elev(world_to_map(to_pos))
+	if relief_los:
+		return _sight_line_clear_relief(space, from_pos, to_pos, viewer_elev, target_elev)
 	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
 	params.collide_with_areas = false
 	params.collide_with_bodies = true
@@ -304,6 +448,99 @@ func sight_line_clear(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_po
 			continue
 		return false
 	return false
+
+# Relief-map sight line (relief_los on). Physics first, so wall-blocked rays
+# never pay for the terrain walk.
+func _sight_line_clear_relief(space: PhysicsDirectSpaceState2D, from_pos: Vector2, to_pos: Vector2, viewer_elev: float, target_elev: float) -> bool:
+	var h0: float = viewer_elev + EYE_HEIGHT_STORIES
+	var h1: float = target_elev + EYE_HEIGHT_STORIES
+	var seg_len: float = from_pos.distance_to(to_pos)
+	var dir: Vector2 = (to_pos - from_pos) / seg_len if seg_len > 0.001 else Vector2.ZERO
+	var params := PhysicsRayQueryParameters2D.create(from_pos, to_pos, CollisionLayers.VISION_RAY_MASK)
+	params.collide_with_areas = false
+	params.collide_with_bodies = true
+	var excluded: Array[RID] = []
+	for i in range(64):
+		var hit := space.intersect_ray(params)
+		if hit.is_empty():
+			return terrain_line_clear(from_pos, to_pos, h0, h1)
+		var top := 1e9
+		var col: Object = hit.collider
+		var hp: Vector2 = hit.position
+		if col != null and col.has_meta("occlude_top"):
+			top = float(col.get_meta("occlude_top"))
+			if col.has_meta("occlude_rel_h"):
+				# wall spanning relief: its top follows the ground at the
+				# crossing — the HIGHER of its two faces, so a pad-edge house
+				# wall seen from the street below still reaches pad + height
+				var half_px: float = float(col.get_meta("occlude_half_px", 8.0))
+				var g_near: float = terrain_elev(world_to_map(hp - dir * 2.0))
+				var g_far: float = terrain_elev(world_to_map(hp + dir * (2.0 * half_px + 2.0)))
+				top = maxf(g_near, g_far) + float(col.get_meta("occlude_rel_h"))
+		var eye: float = maxf(h0, h1)
+		if seg_len > 0.001:
+			eye = lerpf(h0, h1, clampf(from_pos.distance_to(hp) / seg_len, 0.0, 1.0))
+		if eye >= top:
+			excluded.append(hit.rid)
+			params.exclude = excluded
+			continue
+		return false
+	return false
+
+## Tile-exact walk (Amanatides-Woo) over every tile the segment crosses.
+## Endpoint tiles never block. Terrain is a heightfield sampled at tile centres:
+## a tile blocks when its ground is above the eye line at the segment point
+## nearest its centre (+TERRAIN_LOS_EPS slack). A roof blocks only when the line
+## CROSSES its plane inside the tile (indoors-to-indoors and over-the-top both
+## pass). h0/h1 are absolute EYE heights at from/to.
+func terrain_line_clear(from_pos: Vector2, to_pos: Vector2, h0: float, h1: float) -> bool:
+	var t0 := world_to_map(from_pos)
+	var t1 := world_to_map(to_pos)
+	if t0 == t1:
+		return true
+	var d: Vector2 = to_pos - from_pos
+	var len2: float = d.length_squared()
+	if len2 < 1e-9:
+		return true
+	var ts := float(TILE_SIZE)
+	var sx: int = 1 if d.x > 0.0 else -1
+	var sy: int = 1 if d.y > 0.0 else -1
+	var tmx: float = INF
+	var tdx: float = INF
+	var tmy: float = INF
+	var tdy: float = INF
+	if absf(d.x) > 1e-6:
+		tmx = ((float(t0.x) + (1.0 if sx > 0 else 0.0)) * ts - from_pos.x) / d.x
+		tdx = ts / absf(d.x)
+	if absf(d.y) > 1e-6:
+		tmy = ((float(t0.y) + (1.0 if sy > 0 else 0.0)) * ts - from_pos.y) / d.y
+		tdy = ts / absf(d.y)
+	var cur := t0
+	var t_in := 0.0
+	for _g in range(2 * (absi(t1.x - t0.x) + absi(t1.y - t0.y)) + 4):
+		var t_out: float = minf(minf(tmx, tmy), 1.0)
+		if cur != t0 and cur != t1:
+			var tc: float = clampf((map_to_world(cur) - from_pos).dot(d) / len2, t_in, t_out)
+			var g: float = float(elevations.get(cur, 0.0))
+			if g > lerpf(h0, h1, tc) + TERRAIN_LOS_EPS:
+				return false
+			var r: float = float(roof_elevations.get(cur, 0.0))
+			if r > 0.0:
+				var ha: float = lerpf(h0, h1, t_in)
+				var hb: float = lerpf(h0, h1, t_out)
+				if minf(ha, hb) < r - ROOF_SLAB_EPS and maxf(ha, hb) > r + ROOF_SLAB_EPS:
+					return false
+		if cur == t1 or t_out >= 1.0:
+			return true
+		if tmx < tmy:
+			cur.x += sx
+			t_in = tmx
+			tmx += tdx
+		else:
+			cur.y += sy
+			t_in = tmy
+			tmy += tdy
+	return true
 
 func get_neighboring_coords(grid_pos) -> Array:
 	return [Vector2i(grid_pos.x + 1, grid_pos.y), Vector2i(grid_pos.x - 1, grid_pos.y), Vector2i(grid_pos.x, grid_pos.y + 1), Vector2i(grid_pos.x, grid_pos.y - 1)]
@@ -482,10 +719,13 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 						# grid_costs: a landing pays hazard weights like any
 						# walk edge, or the planner leaps INTO fire for ~9.
 						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + JUMP_COST * d})
-					elif rise < -MAX_STEP_STORIES:
+					elif rise < -MAX_STEP_STORIES and -rise <= MAX_PLANNED_DROP_STORIES \
+							and not is_deep_water(n):
 						# jump DOWN a ledge — the mirror of the roof drop-down.
 						# Without it, a deck/scarp a jumper hopped UP onto is a
-						# one-way trap (AI strands up top).
+						# one-way trap (AI strands up top). Capped: on a hillside
+						# a cliff brow is a 4-8 story (lethal) drop the planner
+						# must never choose; never into the sea (no swimming).
 						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + DROP_COST * (-rise)})
 	else:
 		var rhere := roof_at(t)
@@ -501,7 +741,9 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 					out.append({"n": Vector3i(n.x, n.y, 1), "cost": 1.0 + JUMP_COST * d})
 				# drop down to the ground/deck surface: needs a pathable tile
 				# step_cost so a burning street below costs its hazard weight
-				if grid_costs.get(n, INF) != INF and effective_elev(n) < rhere and not has_roof(n):
+				# (same planned-drop cap and sea veto as the ground ledge edge)
+				if grid_costs.get(n, INF) != INF and effective_elev(n) < rhere and not has_roof(n) \
+						and rhere - effective_elev(n) <= MAX_PLANNED_DROP_STORIES and not is_deep_water(n):
 					out.append({"n": Vector3i(n.x, n.y, 0),
 						"cost": step_cost(n) + DROP_COST * (rhere - effective_elev(n))})
 	return out
@@ -642,6 +884,22 @@ func reachable_within(from_t: Vector2i, max_steps: int, jump_height: float = 0.0
 					out[flat] = ldepth
 		lframe = lnext
 	return out
+
+# A random point within +-spread of base_pos that a group member can actually
+# stand on AND walk to from base_pos: same step-connected component (never the
+# terrace above or below across a cliff, never inside a wall), not a hazard.
+# Falls back to base_pos after `tries` misses. Pass a precomputed `reach`
+# (reachable_within from base_pos's tile) when scattering several members.
+func scatter_point(base_pos: Vector2, spread: float, reach: Dictionary = {}, tries: int = 8) -> Vector2:
+	var bt := world_to_map(base_pos)
+	if reach.is_empty():
+		reach = reachable_within(bt, int(ceil(spread / float(TILE_SIZE))) * 2 + 1)
+	for _i in tries:
+		var p: Vector2 = base_pos + Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
+		var t := world_to_map(p)
+		if t == bt or (reach.has(t) and would_walk(t) and not is_hazard_tile(t)):
+			return p
+	return base_pos
 
 func create_example_bolt(pos: Vector2i = Vector2i(1000, 1000)):
 	var lightning = LightningVFX.new()
