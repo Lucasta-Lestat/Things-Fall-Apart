@@ -261,6 +261,29 @@ func _scenario_high_terrain() -> void:
 	# across the street sees over it (eye line 10.1 at the wall)
 	_check("hi.pad-edge-wall-high-viewer-sees-over",
 		GridManager.sight_line_clear(space, Vector2(32, 864), Vector2(224, 864), 12.0, 9.0))
+	padw.free()
+	await get_tree().physics_frame
+	# tile_elev only places the pad edge to within half a tile (centre
+	# sampling): the same house wall 12 / 22 px inside the street-valued tile
+	# (x 170 / 180, tile step at 192) must still block both ways
+	for wx in [180.0, 170.0]:
+		var pw2 = ml._spawn_geo_structure({"kind": "wall", "a": [wx, 768], "b": [wx, 1024], "half": 7.0, "id": "stone_wall"}, null, 64)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		_check("hi.pad-edge-wall-x%d-follows" % int(wx), pw2.has_meta("occlude_rel_h"))
+		_check("hi.pad-edge-wall-x%d-street-cannot-see-in" % int(wx),
+			not GridManager.sight_line_clear(space, Vector2(32, 864), Vector2(224, 864), 8.0, 9.0))
+		_check("hi.pad-edge-wall-x%d-inside-cannot-see-street" % int(wx),
+			not GridManager.sight_line_clear(space, Vector2(224, 864), Vector2(32, 864), 9.0, 8.0))
+		_check("hi.pad-edge-wall-x%d-high-viewer-sees-over" % int(wx),
+			GridManager.sight_line_clear(space, Vector2(32, 864), Vector2(224, 864), 12.0, 9.0))
+		pw2.free()
+		await get_tree().physics_frame
+	# control: a street wall a tile clear of the pad (x 100, 92 px from the
+	# step) keeps the plain centre-based top
+	var stw = ml._spawn_geo_structure({"kind": "wall", "a": [100, 768], "b": [100, 1024], "half": 7.0, "id": "stone_wall"}, null, 64)
+	_check("hi.street-wall-off-pad-no-follow", not stw.has_meta("occlude_rel_h")
+		and is_equal_approx(float(stw.get_meta("occlude_top")), 9.0))
 	ml.queue_free()
 	await get_tree().physics_frame
 	for x in range(3, 7):

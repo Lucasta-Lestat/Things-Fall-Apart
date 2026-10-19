@@ -474,9 +474,7 @@ func _sight_line_clear_relief(space: PhysicsDirectSpaceState2D, from_pos: Vector
 				# crossing — the HIGHER of its two faces, so a pad-edge house
 				# wall seen from the street below still reaches pad + height
 				var half_px: float = float(col.get_meta("occlude_half_px", 8.0))
-				var g_near: float = terrain_elev(world_to_map(hp - dir * 2.0))
-				var g_far: float = terrain_elev(world_to_map(hp + dir * (2.0 * half_px + 2.0)))
-				top = maxf(g_near, g_far) + float(col.get_meta("occlude_rel_h"))
+				top = _wall_face_ground_max(hp, dir, half_px) + float(col.get_meta("occlude_rel_h"))
 		var eye: float = maxf(h0, h1)
 		if seg_len > 0.001:
 			eye = lerpf(h0, h1, clampf(from_pos.distance_to(hp) / seg_len, 0.0, 1.0))
@@ -486,6 +484,28 @@ func _sight_line_clear_relief(space: PhysicsDirectSpaceState2D, from_pos: Vector
 			continue
 		return false
 	return false
+
+# Highest terrain on either face of a terrain-following wall where a sight ray
+# crosses it (hp = the ray's hit on the near face, dir = unit ray direction,
+# half_px = the wall's half thickness). Each face is read at the surface AND
+# half a tile further out: tile_elev is sampled at tile centres, so a pad edge
+# is only placed to within half a tile and a house wall can stand that far
+# inside a street-valued tile while still bounding the raised pad. Reading only
+# the surface let a street viewer see into the pad interior whenever the wall
+# sat more than ~9 px from the tile step (xcheck C12 / risk 6). Off-map samples
+# are skipped. Mirrors MapLoader._wall_spans_relief's reach.
+func _wall_face_ground_max(hp: Vector2, dir: Vector2, half_px: float) -> float:
+	var reach: float = float(TILE_SIZE) * 0.5
+	var far0: Vector2 = hp + dir * (2.0 * half_px + 2.0)
+	var qs := PackedVector2Array([hp - dir * 2.0, hp - dir * (reach + 2.0), far0, far0 + dir * reach])
+	var g: float = -INF
+	for q in qs:
+		var t := world_to_map(q)
+		if map_rect.has_point(t):
+			g = maxf(g, terrain_elev(t))
+	if g == -INF:
+		g = terrain_elev(world_to_map(hp))
+	return g
 
 ## Tile-exact walk (Amanatides-Woo) over every tile the segment crosses.
 ## Endpoint tiles never block. Terrain is a heightfield sampled at tile centres:

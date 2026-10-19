@@ -466,21 +466,33 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 # faces) varies by more than one walkable step: a wall climbing a slope, or a
 # pad-edge wall with the street a story below. Not the `tight` tiles — a
 # retaining-line wall sitting exactly on a tile boundary has an empty set.
-# Any deck tile in the samples vetoes (battlement parapets keep the deck rule).
+# Any deck tile next to the wall vetoes (battlement parapets keep the deck rule).
+#
+# Each face is read twice: at the wall surface and half a tile further out.
+# tile_elev is sampled at tile CENTRES, so a pad edge is only known to lie
+# somewhere between two centres — a house wall can stand up to half a tile
+# inside a street-valued tile and still bound the raised pad. The narrow
+# sample alone (half + 2) only caught walls within ~9 px of the tile step.
+# Off-map samples are skipped (absent tiles there would read as ground 0).
 func _wall_spans_relief(a: Vector2, b: Vector2, half: float) -> bool:
 	var seg := b - a
 	var seg_len := seg.length()
 	if seg_len < 0.001:
 		return false
-	var off := (seg / seg_len).orthogonal() * (half + 2.0)
+	var perp := (seg / seg_len).orthogonal()
+	var off := perp * (half + 2.0)
+	var off_wide := perp * (half + float(GridManager.TILE_SIZE) * 0.5 + 2.0)
 	var n := maxi(1, int(ceil(seg_len / 32.0)))
 	var lo := INF
 	var hi := -INF
 	for i in range(n + 1):
 		var p := a + seg * (float(i) / float(n))
-		for q in [p - off, p + off]:
-			var t := GridManager.world_to_map(q)
-			if GridManager.deck_elevations.has(t):
+		var qs := PackedVector2Array([p - off, p + off, p - off_wide, p + off_wide])
+		for k in qs.size():
+			var t := GridManager.world_to_map(qs[k])
+			if not GridManager.map_rect.has_point(t):
+				continue
+			if k < 2 and GridManager.deck_elevations.has(t):
 				return false
 			var g := GridManager.terrain_elev(t)
 			lo = minf(lo, g)
