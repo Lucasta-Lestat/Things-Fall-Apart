@@ -203,6 +203,9 @@ func generate_structured_map(map_data: Dictionary) -> void:
 				game.structures_in_scene.append(inst)
 				if inst.has_signal("destroyed") and game.has_method("_on_structure_destroyed"):
 					inst.destroyed.connect(game._on_structure_destroyed)
+	if GridManager.deck_lint_bad > 0:
+		push_warning("structured map %s: %d deck tiles below terrain-0.05: structure walk_elev must be ABSOLUTE stories"
+			% [_current_map_id, GridManager.deck_lint_bad])
 
 	emit_signal("map_loaded")
 
@@ -220,6 +223,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	# pathing margin: a tile registers as an obstacle only if its CENTRE is
 	# within this reach of the actual geometry (about a body-width)
 	var path_margin := float(tile_size) * 0.35
+	var wall_a := Vector2.ZERO             # walls only: for the terrain-following test
+	var wall_b := Vector2.ZERO
+	var wall_half := 0.0
 
 	if kind == "wall":
 		var a := _arr_v2(s.get("a", [0, 0]))
@@ -228,6 +234,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var seg := b - a
 		if seg.length() < 2.0:
 			return null
+		wall_a = a
+		wall_b = b
+		wall_half = half
 		center = (a + b) * 0.5
 		var rect := RectangleShape2D.new()
 		rect.size = Vector2(seg.length(), half * 2.0)
@@ -321,11 +330,24 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var walk_elev = s.get("walk_elev")
 	var is_deck := walk_elev != null and (kind == "disc" or kind == "wall")
 	var occlude_top: float
+	# Occluding height in stories ABOVE LOCAL GROUND: optional "occlude_h"
+	# (exporter: walls[].occlude_h), else wall/door 1 story, tree/solid disc 2.
+	# Ignored on decks. Below eye height (0.5) the structure never blocks sight.
+	var occ_h: float = 2.0 if (kind == "tree" or kind == "disc") else 1.0
+	var has_occ_h: bool = s.get("occlude_h") != null
+	if has_occ_h:
+		occ_h = float(s.get("occlude_h"))
+	# Terrain-following wall (relief maps only): a long wall over a slope or a
+	# pad edge gets its top re-based on the ground at each sight-ray crossing
+	# (GridManager._sight_line_clear_relief) instead of one centre-based top.
+	var follow := false
 	if is_deck:
 		occlude_top = float(walk_elev)   # a viewer AT deck height sees past the deck floor itself
 	else:
 		var base_elev := GridManager.effective_elev(GridManager.world_to_map(center))
-		occlude_top = base_elev + (2.0 if (kind == "tree" or kind == "disc") else 1.0)  # wall/door 1 story, tree/solid disc 2
+		occlude_top = base_elev + occ_h
+		if kind == "wall" and GridManager.relief_los:
+			follow = _wall_spans_relief(wall_a, wall_b, wall_half)
 
 	var inst: Structure = structure_scene.instantiate()
 	if kind == "door":
@@ -361,11 +383,18 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
 		occ.occluder = opoly
 		occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_GROUND
-		if not is_deck and occlude_top >= 2.0:
+		# HIGH bit by height above the LOCAL ground on relief maps (a 1-story
+		# wall on a terrace at ground 8 is not tall); flat maps keep the
+		# absolute rule exactly (ground_ref 0).
+		var ground_ref: float = GridManager.terrain_elev(GridManager.world_to_map(center)) if GridManager.relief_los else 0.0
+		var occ_rel: float = occ_h if follow else occlude_top - ground_ref
+		if not is_deck and occ_rel >= 2.0:
 			# tall solids + parapets-on-decks occlude elevated sight cones too;
 			# deck occluders stay ground-mask only: they must never shadow the
 			# cone of a light standing on them
 			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
+		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
+			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
 		inst.add_child(occ)
 	if overlay_tex != null:
 		var art := Polygon2D.new()
@@ -410,6 +439,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		# before `locked` was assigned — a locked door must not read pushable)
 		door._sync_door_pass()
 	inst.set_meta("occlude_top", occlude_top)
+	if follow:
+		inst.set_meta("occlude_rel_h", occ_h)
+		inst.set_meta("occlude_half_px", wall_half)
 	if is_deck:
 		# No hard collision, no pathing obstacle: blocking ground characters is
 		# purely logical via GridManager.can_step. Body stays on VISION_BLOCKERS
@@ -420,10 +452,40 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		inst.deck_tiles = tight   # TIGHT footprint — the walkable top is the real geometry, not the pathing halo
 		for t in tight:
 			GridManager.register_deck(t, float(walk_elev))
+			# walk_elev is ABSOLUTE: a deck below its own terrain is an export
+			# bug (a relative game_elev leaked through)
+			if float(walk_elev) < GridManager.terrain_elev(t) - 0.05:
+				GridManager.deck_lint_bad += 1
 	else:
 		for t in occupied:
 			GridManager.register_obstacle(t)
 	return inst
+
+
+# True when the ground along a wall (sampled every 32px, just outside BOTH
+# faces) varies by more than one walkable step: a wall climbing a slope, or a
+# pad-edge wall with the street a story below. Not the `tight` tiles — a
+# retaining-line wall sitting exactly on a tile boundary has an empty set.
+# Any deck tile in the samples vetoes (battlement parapets keep the deck rule).
+func _wall_spans_relief(a: Vector2, b: Vector2, half: float) -> bool:
+	var seg := b - a
+	var seg_len := seg.length()
+	if seg_len < 0.001:
+		return false
+	var off := (seg / seg_len).orthogonal() * (half + 2.0)
+	var n := maxi(1, int(ceil(seg_len / 32.0)))
+	var lo := INF
+	var hi := -INF
+	for i in range(n + 1):
+		var p := a + seg * (float(i) / float(n))
+		for q in [p - off, p + off]:
+			var t := GridManager.world_to_map(q)
+			if GridManager.deck_elevations.has(t):
+				return false
+			var g := GridManager.terrain_elev(t)
+			lo = minf(lo, g)
+			hi = maxf(hi, g)
+	return hi - lo > GridManager.MAX_STEP_STORIES
 
 
 # Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).
