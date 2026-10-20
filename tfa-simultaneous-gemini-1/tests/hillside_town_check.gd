@@ -1,19 +1,25 @@
 extends Node2D
-# Real-game smoke for the Grass Lab hillside town (tg_hillside_*): boots
-# game.tscn, loads each map through Game.load_map and checks the high-ground
+# Real-game smoke for the Grass Lab hillside town (tg_hillside_*, incl. the
+# cavern and ossuary interiors): boots game.tscn, loads each map through
+# Game.load_map and checks the high-ground
 # contracts on REAL terraced data (the elevation harness only uses synthetic
 # terrain):
 #  (1) relief_los turns on (terrain spans many stories),
 #  (2) per-tile terrain comes from cells.json tile_elev, not nearest-cell,
 #  (3) the party stands ON the ground (height above ground ~0, not "high
-#      layer") and roof view stays off although the ground is 0.5..17 stories,
+#      layer") and roof view stays off although the ground is 0.5..17 stories
+#      (interiors: rock is terrain, rock_st above every floor),
 #  (4) NPCs on the ground are not on the high layer (so ground view shows them),
 #  (5) every warp's target map + target_spawn exist, and the warp is reachable
 #      on foot from the arrival point (A* with the 0.55-story step gate).
 # Headless-safe. Run:
 #   godot --headless --path . res://tests/hillside_town_check.tscn
 # Prints PASS/FAIL lines, then "HILLSIDE DONE failures=N"; exit code = failures.
-const MAPS := ["tg_hillside_upper", "tg_hillside_middle", "tg_hillside_lower", "tg_hillside_harbor"]
+# the four town bands, then the two interiors behind their hooks (cave mouth ->
+# cavern, crypt hole -> ossuary + catacombs): rock is terrain there, so the same
+# relief / tile_elev / on-ground / warp contracts apply unchanged
+const MAPS := ["tg_hillside_upper", "tg_hillside_middle", "tg_hillside_lower", "tg_hillside_harbor",
+	"tg_hillside_cavern", "tg_hillside_ossuary"]
 
 var game: Node = null
 # The start map's NPCs spawn inside add_child(game), before current_scene points
