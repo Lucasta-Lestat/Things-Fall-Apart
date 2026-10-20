@@ -249,7 +249,7 @@ func _case_parity() -> void:
 						print("  parity mismatch %s case %d rect %d [%d]: %s vs %s" % [c["meta_id"], n, i, j, String.num(float(g[j]), 17), String.num(float(w[j]), 17)])
 					bad += 1
 					break
-	_report("parity.cases-exact", bad == 0 and n >= 15, "%d cases, %d mismatches" % [n, bad])
+	_report("parity.cases", bad == 0 and n >= 15, "%d cases, %d mismatches" % [n, bad])
 
 
 # --- items --------------------------------------------------------------------

@@ -18,7 +18,8 @@ var _tex: Texture2D = null
 var _tiles: Array = []
 var _strips: Array = []     # [{tex, tiles, at, rot, tint}]
 var _sprites: Array = []    # [{tex, at, rot, k}]
-var _builtins: Array = []   # [{id, at, rot, scale, v}] (candles sorted last)
+var _under_n: int = 0       # _builtins[0 .. _under_n) draw under the sprites
+var _builtins: Array = []   # [{id, at, rot, scale, v, layer}] sorted by RunLayout.decor_layer
 
 
 static func texture_for(path: String) -> Texture2D:
@@ -60,7 +61,7 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 	_tiles = RunLayout.tiles(length, width, meta, int(run.get("caps", 3)), int(run.get("seed", 0)))
 	_strips.clear()
 	_sprites.clear()
-	var cands: Array = []
+	_builtins.clear()
 	var warned := false
 	var decor: Array = run.get("decor", [])
 	for dv in decor:
@@ -72,11 +73,8 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 		var at := Vector2(float(aa[0]), float(aa[1]))
 		var rot := float(d.get("rot", 0.0))
 		if RunLayout.BUILTIN_DECOR.has(did):
-			var b := {"id": did, "at": at, "rot": rot, "scale": float(d.get("scale", 1.0)), "v": int(d.get("v", 0))}
-			if did == "_candle":
-				cands.append(b)
-			else:
-				_builtins.append(b)
+			_builtins.append({"id": did, "at": at, "rot": rot, "scale": float(d.get("scale", 1.0)),
+				"v": int(d.get("v", 0)), "layer": RunLayout.decor_layer(did)})
 			continue
 		var idef: Dictionary = _item_def(did)
 		if idef.is_empty():
@@ -106,7 +104,12 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 			continue
 		var bw := float(idef.get("base_width", 16.0)) * float(d.get("scale", 1.0))
 		_sprites.append({"tex": tex, "at": at, "rot": rot, "k": bw / maxf(1.0, float(tex.get_width()))})
-	_builtins.append_array(cands)
+	# stable by layer: plates (0) < food sprites (1) < cups (2) < candles (3)
+	var by_layer: Array = [[], [], [], []]
+	for b in _builtins:
+		by_layer[int(b["layer"])].append(b)
+	_builtins = by_layer[0] + by_layer[2] + by_layer[3]
+	_under_n = (by_layer[0] as Array).size()
 	queue_redraw()
 
 
@@ -125,12 +128,16 @@ func _draw() -> void:
 		for t in s["tiles"]:
 			draw_texture_rect_region(s["tex"], t["dst"], t["src"], s["tint"], false, true)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
+	var wr := global_rotation
+	for bi in _under_n:
+		var b: Dictionary = _builtins[bi]
+		RunLayout.draw_builtin(self, String(b["id"]), b["at"], float(b["rot"]), float(b["scale"]), int(b["v"]), wr)
 	for s in _sprites:
 		var tex: Texture2D = s["tex"]
 		var k := float(s["k"])
 		draw_set_transform(s["at"], float(s["rot"]), Vector2(k, k))
 		draw_texture(tex, -tex.get_size() * 0.5)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
-	var wr := global_rotation
-	for b in _builtins:
+	for bi in range(_under_n, _builtins.size()):
+		var b: Dictionary = _builtins[bi]
 		RunLayout.draw_builtin(self, String(b["id"]), b["at"], float(b["rot"]), float(b["scale"]), int(b["v"]), wr)

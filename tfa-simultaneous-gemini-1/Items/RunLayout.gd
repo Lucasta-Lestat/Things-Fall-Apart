@@ -95,6 +95,19 @@ static func half_extents(length: float, width: float) -> Vector2:
 	return Vector2(length * 0.5, width * 0.5)
 
 
+# Decor draw layer: plates under food sprites, cups over them, candles last
+# (runner strips are drawn before all of these).
+static func decor_layer(id: String) -> int:
+	match id:
+		"_plate":
+			return 0
+		"_cup":
+			return 2
+		"_candle":
+			return 3
+	return 1
+
+
 # ---- built-in procedural decor -------------------------------------------
 # One painter for both repos (TG RunArt.draw_builtin is a copy): pewter /
 # trencher plates, ale cups, candles with a painted glow (no Light2D).
