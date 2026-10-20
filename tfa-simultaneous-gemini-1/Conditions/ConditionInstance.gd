@@ -61,7 +61,9 @@ func to_dict() -> Dictionary:
 		"is_suppressed": is_suppressed,
 		"applied_at": applied_at,
 		"expires_at": expires_at,
-		"custom_data": custom_data,
+		# A copy: a snapshot that shared the live Dictionary would keep
+		# changing after it was taken (Toxic Shock's tick count, Bide's tally).
+		"custom_data": custom_data.duplicate(true),
 		"last_trigger_times": last_trigger_times,
 		"instance_id": instance_id,
 		"target_limb": target_limb if target_limb != null else -1
@@ -90,7 +92,8 @@ static func from_dict(data: Dictionary, condition_registry: Dictionary) -> Condi
 	instance.is_suppressed = data.get("is_suppressed", false)
 	instance.applied_at = data.get("applied_at", 0.0)
 	instance.expires_at = data.get("expires_at", -1.0)
-	instance.custom_data = data.get("custom_data", {})
+	var saved_custom = data.get("custom_data", {})
+	instance.custom_data = saved_custom.duplicate(true) if saved_custom is Dictionary else {}
 	instance.last_trigger_times = data.get("last_trigger_times", {})
 	instance.instance_id = data.get("instance_id", "cond_loaded_%d" % randi())
 	
@@ -142,6 +145,10 @@ func get_summary(now: float = -1.0) -> String:
 	if now >= 0.0 and expires_at >= 0.0:
 		# "left" keeps the time apart from the tick interval just before it.
 		text += (" (%s left)" if dot != "" else " (%s)") % Globals.format_duration_short(get_remaining_duration(now))
+	# One that won't wear off says what ends it (Toxic Shock: "(cure: Heal or
+	# a Potion of Healing)").
+	if condition and condition.cure_hint != "":
+		text += " (cure: %s)" % condition.cure_hint
 	if is_suppressed:
 		# A timed suppression (ConditionManager.suppress_for) says how long.
 		if now >= 0.0 and custom_data.has("suppressed_until"):
@@ -166,19 +173,111 @@ func is_revealed(now: float) -> bool:
 ## ProceduralCharacter.take_damage), weaknesses included. Only condition DR
 ## (Shielded, Physically Resistant, Stalwart, Rage) takes from a physical one
 ## (Suffocating). "" for a condition with no damage tick. True damage
-## (Bleeding) reads "damage".
+## (Bleeding) reads "damage". An escalating tick (Toxic Shock) gives its next
+## value and says it grows: "8 poison every 2 s, doubling", then "32 poison
+## every 2 s, at its peak" once it can't grow any more.
 func get_dot_text() -> String:
 	if not condition:
 		return ""
-	for effect in condition.triggered_effects:
+	for i in range(condition.triggered_effects.size()):
+		var effect = condition.triggered_effects[i]
 		if not (effect is Dictionary) or effect.get("type", "") != "damage":
 			continue
 		var per_tick: int = int(effect.get("value", 0)) * stacks
+		if is_escalating(i):
+			per_tick = int(round(effect_value(i)))
 		var dtype := str(effect.get("damage_type", "true"))
 		var interval := float(effect.get("interval", 1.0))
 		var every: String = str(int(round(interval))) if is_equal_approx(interval, round(interval)) else String.num(interval, 1)
-		return "%d %s every %s s" % [per_tick, "damage" if dtype == "true" else dtype, every]
+		return "%d %s every %s s" % [per_tick, "damage" if dtype == "true" else dtype, every] + _escalation_text(i)
 	return ""
+
+
+## --- Escalating triggered effects (a triggered effect's "escalate") -------
+## Toxic Shock's tick doubles every time it fires, up to a cap. How many times
+## an effect has stepped up is kept in custom_data under this key (with the
+## effect's index), which to_dict saves, so a reload carries on from the same
+## tick instead of starting over.
+const ESCALATE_STEPS_KEY := "escalate_steps_%d"
+
+
+## The effect's "escalate" Dictionary ({multiplier, max_value, redose_steps}),
+## or {} when effect `index` doesn't escalate.
+func escalate_options(index: int) -> Dictionary:
+	if not condition or index < 0 or index >= condition.triggered_effects.size():
+		return {}
+	var effect = condition.triggered_effects[index]
+	if not (effect is Dictionary):
+		return {}
+	var esc = effect.get("escalate")
+	return esc if esc is Dictionary else {}
+
+
+## True when triggered effect `index` escalates.
+func is_escalating(index: int) -> bool:
+	return not escalate_options(index).is_empty()
+
+
+## Times effect `index` has stepped up so far (0 before its first tick).
+## JSON brings numbers back as floats, hence the int().
+func escalation_steps(index: int) -> int:
+	return maxi(0, int(custom_data.get(ESCALATE_STEPS_KEY % index, 0)))
+
+
+## What triggered effect `index` is worth on its next firing: value x stacks,
+## and for an escalating one also x multiplier^steps, at most max_value (so a
+## bearer held at 1 HP by Deny Ending, or a big-HP one, sees 32, not 2^40).
+func effect_value(index: int) -> float:
+	if not condition or index < 0 or index >= condition.triggered_effects.size():
+		return 0.0
+	var effect = condition.triggered_effects[index]
+	if not (effect is Dictionary):
+		return 0.0
+	var v: float = float(effect.get("value", 0)) * stacks
+	var esc := escalate_options(index)
+	if esc.is_empty():
+		return v
+	v *= pow(float(esc.get("multiplier", 1.0)), escalation_steps(index))
+	if esc.has("max_value"):
+		v = minf(v, float(esc["max_value"]))
+	return v
+
+
+## True once escalating effect `index` sits at its max_value.
+func escalation_at_peak(index: int) -> bool:
+	var esc := escalate_options(index)
+	return esc.has("max_value") and effect_value(index) >= float(esc["max_value"])
+
+
+## Move escalating effect `index` up `n` steps (after each tick, and by its
+## redose_steps on a re-application). Never down, and not past the step that
+## reaches max_value, so the count stays small. True when it went up.
+func step_escalation(index: int, n: int = 1) -> bool:
+	if not is_escalating(index) or n <= 0:
+		return false
+	var stepped := false
+	for _k in range(n):
+		if escalation_at_peak(index):
+			break
+		custom_data[ESCALATE_STEPS_KEY % index] = escalation_steps(index) + 1
+		stepped = true
+	return stepped
+
+
+## ", doubling" while escalating effect `index` still grows, ", at its peak"
+## once it has reached max_value, "" for an effect that doesn't escalate.
+func _escalation_text(index: int) -> String:
+	var esc := escalate_options(index)
+	if esc.is_empty():
+		return ""
+	if escalation_at_peak(index):
+		return ", at its peak"
+	var m := float(esc.get("multiplier", 1.0))
+	if is_equal_approx(m, 2.0):
+		return ", doubling"
+	if is_equal_approx(m, 3.0):
+		return ", tripling"
+	return ", x%s a tick" % String.num(m, 2)
 
 
 ## get_summary plus the description: conditions are explained nowhere else.

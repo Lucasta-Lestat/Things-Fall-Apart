@@ -39,7 +39,7 @@ const WORSEN_COLOR := Color(1.0, 0.45, 0.35)
 var firing_triggered_effect: bool = false
 
 ## True only while _check_transform puts the new condition on (Poisoned's 4th
-## stack becoming Toxic Shock, Chilled's 3rd Frozen). It carries the old
+## stack becoming Toxic Shock, Chilled's 4th Frozen). It carries the old
 ## instance's FIRST applier as its source, however long ago that was, so a
 ## listener mustn't read it as a fresh application from that source
 ## (ProceduralCharacter._on_condition_applied: no new contact with an
@@ -227,7 +227,11 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 		
 		if current_time - last_time >= interval:
 			instance.last_trigger_times[i] = current_time
-			var result = _execute_triggered_effect(instance, effect)
+			var result = _execute_triggered_effect(instance, effect, i)
+			# An escalating tick (Toxic Shock) is worth more next time. Stepped
+			# before the tick lands, so the hover and the warning below already
+			# read the next one.
+			instance.step_escalation(i)
 			# Listeners (the bearer's damage tick) can tell a condition's own
 			# tick from a fresh hit: ticks don't interrupt casts or count as
 			# a sighting of whoever applied the condition.
@@ -235,12 +239,59 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 			triggered_effect_fired.emit(instance, effect, result)
 			firing_triggered_effect = false
 
+	# Every frame, not only on a tick: a hit between ticks can bring the
+	# bearer within reach of the next one.
+	_warn_lethal_escalation(instance)
 
-func _execute_triggered_effect(instance: ConditionInstance, effect: Dictionary) -> Dictionary:
+
+## custom_data key: this instance has already warned that its next tick kills.
+const LETHAL_WARNED_KEY := "lethal_warned"
+
+## A party member whose escalating DoT (Toxic Shock) will kill them with its
+## next tick hears it once, as a float and a log line, the first time it comes
+## to that: "Ada will die from Toxic Shock unless cured (next tick 16 poison,
+## 9 HP left). Cure: Heal or a Potion of Healing." Once per instance (kept in
+## custom_data, so a reload doesn't repeat it), never per tick. Not while Deny
+## Ending holds them at 1 HP. NPCs get none: the party can't act on it.
+func _warn_lethal_escalation(instance: ConditionInstance) -> void:
+	var tmpl: Condition = instance.condition
+	for i in range(tmpl.triggered_effects.size()):
+		var effect = tmpl.triggered_effects[i]
+		if not (effect is Dictionary) or effect.get("type", "") != "damage" or not instance.is_escalating(i):
+			continue
+		if instance.custom_data.get(LETHAL_WARNED_KEY, false) or _bearer_dead():
+			return
+		if character == null or not character.has_method("is_party_member") or not character.is_party_member():
+			return
+		var hp = character.get("current_health")
+		if not (hp is int or hp is float):
+			return
+		var next_tick: int = int(round(instance.effect_value(i)))
+		if next_tick < int(hp) or has_active_condition("deny_ending"):
+			continue
+		instance.custom_data[LETHAL_WARNED_KEY] = true
+		var cond_name := _condition_name(tmpl)
+		var dtype := str(effect.get("damage_type", "true"))
+		var log_text := "%s will die from %s unless cured (next tick %d %s, %d HP left)." % [
+			_bearer_name(), cond_name, next_tick, "damage" if dtype == "true" else dtype, int(hp)]
+		if tmpl.cure_hint != "":
+			log_text += " Cure: %s." % tmpl.cure_hint
+		if character.has_method("notify"):
+			character.notify("%s: cure now!" % cond_name, WORSEN_COLOR, log_text)
+		else:
+			GameLog.add_entry(log_text)
+		return
+
+
+func _execute_triggered_effect(instance: ConditionInstance, effect: Dictionary, effect_index: int = -1) -> Dictionary:
 	var result: Dictionary = {"success": true}
 	var effect_type = effect.get("type", "")
 	var base_value = effect.get("value", 0) * instance.stacks
-	
+	# An escalating effect (Toxic Shock) is worth what its step says, capped
+	# (ConditionInstance.effect_value).
+	if effect_index >= 0 and instance.is_escalating(effect_index):
+		base_value = int(round(instance.effect_value(effect_index)))
+
 	match effect_type:
 		"damage":
 			result["damage"] = base_value
@@ -373,6 +424,11 @@ func apply_condition(
 			# or the target was warded off then) turns now.
 			return _check_transform(existing)
 		else:
+			# A re-dose of an escalating condition (Poisoned reaching 4 again
+			# under Toxic Shock) moves it on by its redose_steps, never back.
+			for i in range(template.triggered_effects.size()):
+				if existing.is_escalating(i):
+					existing.step_escalation(i, int(existing.escalate_options(i).get("redose_steps", 0)))
 			# Never shorten a PERMANENT instance (equip-granted, expires_at < 0)
 			# from a default-duration re-apply — a cloak's while-worn
 			# invisibility must not become 30s because something re-applied the
@@ -449,12 +505,16 @@ func _refresh_stackable_expiry(existing: ConditionInstance, final_duration: floa
 	existing.expires_at = maxf(existing.expires_at, now + final_duration)
 
 
-## When a stackable condition reaches its transforms_into tier (Chilled 3 ->
+## When a stackable condition reaches its transforms_into tier (Chilled 4 ->
 ## Frozen, Fatigued 3 -> Exhausted, Poisoned 4 -> Toxic Shock), replace it
 ## with that condition. Targets that aren't registered are skipped. Returns
 ## the instance now on the bearer. The bearer's float names the new condition
 ## ("Toxic Shock!"); the log says what turned and why ("Ada's Poisoned
-## reaches 4 stacks: Toxic Shock.").
+## reaches 4 stacks: Toxic Shock."), and a party member is told the cure of
+## one that won't wear off (cure_hint). When the new condition is already on
+## and escalates (Toxic Shock), the re-dose steps it on (apply_condition) and
+## the notice says so: "Toxic Shock worsens" and "Ada's Poisoned reaches 4
+## stacks: Toxic Shock worsens (16 poison every 2 s, doubling)."
 func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 	var tf: Dictionary = instance.condition.transforms_into
 	var into_id := str(tf.get("id", ""))
@@ -467,18 +527,30 @@ func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 
 	# The original applier may have died since; a freed source can't be passed on.
 	var src: Node = instance.source if is_instance_valid(instance.source) else null
+	var prior: ConditionInstance = conditions.get(into_id)
+	var prior_dot: String = prior.get_dot_text() if prior else ""
 	remove_condition(instance.condition.id)
 	var was_transforming := transforming
 	transforming = true
 	var out := apply_condition(into_id, src)
 	transforming = was_transforming
 	if out and _bearer_noticeable():
+		var worse: bool = prior != null and out == prior and out.get_dot_text() != prior_dot
 		if character.has_method("notify"):
-			character.notify(_condition_name(out.condition) + "!", WORSEN_COLOR)
+			character.notify(_condition_name(out.condition) + (" worsens" if worse else "!"), WORSEN_COLOR)
 		if _player_involved(src):
-			# "Ada's Chilled reaches 3 stacks: Frozen." Reads for a state
-			# (Frozen) and a noun (Toxic Shock) alike; "is now Toxic Shock" didn't.
-			GameLog.add_entry("%s's %s reaches %s: %s." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition)])
+			if worse:
+				GameLog.add_entry("%s's %s reaches %s: %s worsens (%s)." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition), out.get_dot_text()])
+			else:
+				# "Ada's Chilled reaches 4 stacks: Frozen." Reads for a state
+				# (Frozen) and a noun (Toxic Shock) alike; "is now Toxic Shock" didn't.
+				GameLog.add_entry("%s's %s reaches %s: %s." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition)])
+			if prior == null and out.condition.cure_hint != "" and character.has_method("is_party_member") and character.is_party_member():
+				# "Cure Ada's Toxic Shock with Heal or a Potion of Healing; until
+				# then it deals 1 poison every 2 s, doubling."
+				var hint := "Cure %s's %s with %s" % [_bearer_name(), _condition_name(out.condition), out.condition.cure_hint]
+				var dot := out.get_dot_text()
+				GameLog.add_entry(hint + ("; until then it deals %s." % dot if dot != "" else "."))
 	return out
 
 
