@@ -578,11 +578,15 @@ func _case_ai() -> void:
 	_report("ai.precondition-holds-target-behind", xai.current_target == behind)
 	_seen[x] = true
 	var lash := _log_count("lashes out at")
+	var lash_unseen := _log_count("%s lashes out at someone unseen in confusion!" % x.Name)
 	var confused := _apply(x, "confused")
 	xai._update_target(0.1)
 	_report("ai.confusion-rerolls-mid-fight", confused and xai.current_target == ahead,
 		"target %s" % (xai.current_target.Name if xai.current_target else "none"))
 	_report("ai.confusion-logged", _log_count("lashes out at") == lash + 1)
+	# Round 6: the one it picked isn't seen by the party, so it isn't named.
+	_report("ai.confusion-unseen-pick-unnamed", _log_count("%s lashes out at someone unseen in confusion!" % x.Name) == lash_unseen + 1 \
+		and _log_count("lashes out at %s" % ahead.Name) == 0)
 	xai._update_target(0.1)
 	var last: Dictionary = GameLog.get_entries()[-1]
 	_report("ai.confusion-logged-once", _log_count("lashes out at") == lash + 1 \

@@ -2584,7 +2584,9 @@ var _tick_condition_name: String = ""
 
 ## canceled_by_trait for damage actually dealt (handle_damage_effect_based_on_type):
 ## the damage type is the trait. The cause named is the tick's condition
-## ("Burning"), else the attacker's hit, else just the damage.
+## ("Burning"), else the attacker's hit, else just the damage. An attacker the
+## party can't see isn't named (as interrupt_cast's "took a hit"): "a hit from
+## someone unseen".
 func _cancel_conditions_by_damage(damage_type: String, attacker: Node) -> void:
 	if condition_manager == null or not is_alive():
 		return
@@ -2592,7 +2594,7 @@ func _cancel_conditions_by_damage(damage_type: String, attacker: Node) -> void:
 	if _condition_tick_damage and _tick_condition_name != "":
 		cause = _tick_condition_name
 	elif is_instance_valid(attacker) and attacker is ProceduralCharacter:
-		cause = "%s's hit" % attacker.Name
+		cause = "%s's hit" % attacker.Name if attacker._announces_to_party() else "a hit from someone unseen"
 	condition_manager.cancel_by_trait(damage_type, cause, attacker)
 
 func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary, result: Dictionary) -> void:
@@ -2668,9 +2670,14 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 				var their_cm = c.get_node_or_null("ConditionManager")
 				if their_cm and not their_cm.has_condition("sickened"):
 					# Only log a spread that landed (apply_condition returns
-					# null on immunity or a passed save).
-					if their_cm.apply_condition("sickened", self, 1):
-						GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+					# null on immunity or a passed save), and only name who the
+					# party can see: an unseen carrier is left out, an unseen
+					# catcher says nothing.
+					if their_cm.apply_condition("sickened", self, 1) and c._announces_to_party():
+						if _announces_to_party():
+							GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
+						else:
+							GameLog.add_entry("Sickness spreads to " + c.Name)
 
 
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
@@ -2731,7 +2738,9 @@ func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
 
 	if game.fluid_manager:
 		game.fluid_manager.register_fluid(my_tile, fluid_type, amount)
-		GameLog.add_entry(Name + " vomits " + fluid_type + "!")
+		# Unseen, the puddle is the only tell (as a hidden bleeder's blood).
+		if _announces_to_party():
+			GameLog.add_entry(Name + " vomits " + fluid_type + "!")
 
 
 func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> void:
@@ -2758,7 +2767,13 @@ func _handle_spawn_animal(_instance: ConditionInstance, data: Dictionary) -> voi
 				animal.visible = false
 				if game.has_method("_add_npc_line_of_sight_light"):
 					game._add_npc_line_of_sight_light(animal)
-			GameLog.add_entry("A " + template_id.replace("_", " ") + " appears near " + Name + "!")
+			# Named after the bearer only when the party sees the bearer; an
+			# animal appearing in view is still news, one out of view isn't.
+			var beast: String = "A " + template_id.replace("_", " ")
+			if animal and _announces_to_party():
+				GameLog.add_entry(beast + " appears near " + Name + "!")
+			elif animal and animal._announces_to_party():
+				GameLog.add_entry(beast + " appears!")
 			return
 		attempts -= 1
 
@@ -2777,7 +2792,9 @@ func _confess(effect: Dictionary, targets: Array, ability, target_position: Vect
 				target_cm.apply_condition("infatuated", self, 1)
 			# Caster becomes infatuated with target
 			condition_manager.apply_condition("infatuated", target, 1)
-			GameLog.add_entry(Name + " and " + target.Name + " confess their feelings!")
+			# Both named, so both must be in the party's sight.
+			if _announces_to_party() and target._announces_to_party():
+				GameLog.add_entry(Name + " and " + target.Name + " confess their feelings!")
 			return {"success": true}
 	# The cost is already spent, so say why nothing happened (Hitch and Fatal
 	# Attraction log their misses too).
@@ -2789,7 +2806,8 @@ func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector
 	"""Hitch: the two chosen characters become infatuated with each other."""
 	var pair = _validate_pair_targets(targets)
 	if pair.is_empty():
-		GameLog.add_entry("Not enough targets for Hitch!")
+		if _announces_to_party():
+			GameLog.add_entry("Not enough targets for Hitch!")
 		return {"success": false}
 	var target_a = pair[0]
 	var target_b = pair[1]
@@ -2799,14 +2817,16 @@ func _hitch(effect: Dictionary, targets: Array, ability, target_position: Vector
 		cm_a.apply_condition("infatuated", target_b, 1)
 	if cm_b:
 		cm_b.apply_condition("infatuated", target_a, 1)
-	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " become smitten with each other!")
+	if target_a._announces_to_party() and target_b._announces_to_party():
+		GameLog.add_entry(target_a.Name + " and " + target_b.Name + " become smitten with each other!")
 	return {"success": true}
 
 func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_position: Vector2) -> Dictionary:
 	"""Fatal Attraction: the two chosen characters become infatuated and their fates are linked."""
 	var pair = _validate_pair_targets(targets)
 	if pair.is_empty():
-		GameLog.add_entry("Not enough targets for Fatal Attraction!")
+		if _announces_to_party():
+			GameLog.add_entry("Not enough targets for Fatal Attraction!")
 		return {"success": false}
 	var target_a = pair[0]
 	var target_b = pair[1]
@@ -2818,7 +2838,8 @@ func _fatal_attraction(effect: Dictionary, targets: Array, ability, target_posit
 	if cm_b:
 		cm_b.apply_condition("infatuated", target_a, 1)
 		cm_b.apply_condition("fatal_attraction", target_a, 1)
-	GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
+	if target_a._announces_to_party() and target_b._announces_to_party():
+		GameLog.add_entry(target_a.Name + " and " + target_b.Name + " are bound by Fatal Attraction!")
 	return {"success": true}
 
 func _validate_pair_targets(targets: Array) -> Array:
@@ -6569,9 +6590,13 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 				if angle < PI / 2:  # Source is in the forward arc
 					# Logged once per Infatuated; an attack the player ordered
 					# still gets the floating notice each time (AI retries stay quiet).
-					if not inf_instance.custom_data.get("refusal_logged", false):
+					# Only where the party sees the one refusing, and the charmer
+					# is named only when seen too (round 6: no unseen NPC named).
+					if not inf_instance.custom_data.get("refusal_logged", false) and _announces_to_party():
 						inf_instance.custom_data["refusal_logged"] = true
-						GameLog.add_entry("%s can't bring themselves to attack %s." % [Name, inf_instance.source.Name])
+						var charmer = inf_instance.source
+						var charmer_name: String = charmer.Name if (not charmer.has_method("_announces_to_party") or charmer._announces_to_party()) else "someone unseen"
+						GameLog.add_entry("%s can't bring themselves to attack %s." % [Name, charmer_name])
 					_announce_attack_refusal("Infatuated", "")
 					return
 	if Ability == "Main":
@@ -8019,7 +8044,9 @@ func _on_character_died() -> void:
 		var fa_instance = condition_manager.conditions.get("fatal_attraction")
 		if fa_instance and is_instance_valid(fa_instance.source) and fa_instance.source.is_alive():
 			var partner = fa_instance.source
-			GameLog.add_entry(partner.Name + " dies from the severed bond of Fatal Attraction!")
+			# Named only where the party can see the partner.
+			if partner._announces_to_party():
+				GameLog.add_entry(partner.Name + " dies from the severed bond of Fatal Attraction!")
 			# Remove their fatal_attraction first to prevent infinite recursion
 			var partner_cm = partner.get_node_or_null("ConditionManager")
 			if partner_cm:
@@ -8560,11 +8587,10 @@ func drop_held_weapon(hand: String = "Main") -> bool:
 			extras["stolen_from"] = weapon.stolen_from
 		game.create_item(wid, drop_pos, 1, extras)
 	var disarm_line := "%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name]
-	# Floats too where the party can see it: the game log starts closed.
+	# Floats too where the party can see it: the game log starts closed. One
+	# the party can't see isn't named: the dropped weapon is the only tell.
 	if _announces_to_party():
 		notify("Disarmed!", Color(1.0, 0.6, 0.4), disarm_line)
-	else:
-		GameLog.add_entry(disarm_line)
 	return true
 # INTERUPTION AND KNOCKBACK
 func apply_knockback(duration: float) -> void:
