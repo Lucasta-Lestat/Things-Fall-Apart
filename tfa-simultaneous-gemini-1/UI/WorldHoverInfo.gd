@@ -5,8 +5,8 @@
 #
 #   characters (priority 30, paused or not): name and title, a health word
 #     (exact HP for the party), stance toward the party, active conditions.
-#     Only characters the party can see (Game.is_seen_by_party, and drawn:
-#     ground view hides roof-walkers), so hidden NPCs aren't revealed.
+#     Only characters the party can see (Game.hidden_from_party: seen, and
+#     drawn in this view layer), so hidden NPCs aren't revealed.
 #     Over an overhead condition icon: that condition.
 #   structures (priority 20, paused or not): name, door status, damage state
 #     and HP. Structures are drawn regardless of fog, so no sight gate; the
@@ -106,11 +106,19 @@ func pick_character(world_pos: Vector2):
 		var d: float = world_pos.distance_to(c.global_position)
 		if d > best_d:
 			continue
-		if game.has_method("is_seen_by_party") and not game.is_seen_by_party(c):
+		if _hidden_from_party(c):
 			continue
 		best = c
 		best_d = d
 	return best
+
+## Not for the hover: a character the player can't see right now, by the
+## same rule as the click probe and the other pickers (Game.hidden_from_party:
+## not perceived, or not drawn in this view layer).
+func _hidden_from_party(c) -> bool:
+	if game.has_method("hidden_from_party"):
+		return game.hidden_from_party(c)
+	return game.has_method("is_seen_by_party") and not game.is_seen_by_party(c)
 
 func describe_character(c) -> String:
 	var lines: PackedStringArray = []
@@ -193,7 +201,7 @@ func condition_icon_text(world_pos: Vector2) -> String:
 		var display = c.get_node_or_null("ConditionDisplay")
 		if display == null or not display.visible:
 			continue
-		if game.has_method("is_seen_by_party") and not game.is_seen_by_party(c):
+		if _hidden_from_party(c):
 			continue
 		for icon in display.get_children():
 			if not (icon is Control) or icon.is_queued_for_deletion() or not icon.has_meta("cond_id"):
