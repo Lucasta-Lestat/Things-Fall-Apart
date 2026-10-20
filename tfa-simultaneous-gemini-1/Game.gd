@@ -1021,6 +1021,8 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	_npc_was_truly_seen.clear()
 	_npc_pulse_remaining.clear()
 	_npc_radar_cooldown.clear()
+	_npc_last_seen_time.clear()
+	_npc_last_seen_pos.clear()
 	# Awareness of invisible NPCs is transient: a new map (or a load) starts
 	# with none, so an invisible NPC in view stays hidden until a cue.
 	_invisible_aware_until.clear()
@@ -2835,6 +2837,11 @@ var _npc_ever_seen: Dictionary = {}
 # them. Stops a walking unseen enemy from spawning a ping every footstep.
 var _npc_radar_cooldown: Dictionary = {}
 const RADAR_PING_COOLDOWN: float = 0.9
+# NPC -> TimeManager.absolute_time() and global_position at the last LOS pass
+# that saw it (party_last_saw_at / party_last_seen_position): a plan aimed at
+# an NPC the party has lost aims there, never at where it really is.
+var _npc_last_seen_time: Dictionary = {}
+var _npc_last_seen_pos: Dictionary = {}
 
 
 # Preloaded scene for the first-contact radar ping. Loaded lazily on first
@@ -3105,6 +3112,8 @@ func _update_npc_los_visibility() -> void:
 			_on_invisible_npc_lost(npc)
 
 		if seen:
+			_npc_last_seen_time[npc] = TimeManager.absolute_time()
+			_npc_last_seen_pos[npc] = npc.global_position
 			# Direct line of sight overrides any pulse.
 			var was_pulsing: bool = _npc_pulse_remaining.has(npc)
 			_npc_pulse_remaining.erase(npc)
@@ -3503,6 +3512,25 @@ func _hidden_by_view_layer(c) -> bool:
 	if _char_on_high_layer(c):
 		return not roof_view
 	return roof_view and GridManager.has_roof(GridManager.world_to_map(c.global_position))
+
+## TimeManager.absolute_time() of the last LOS pass that saw `c` (this
+## frame's while it is seen; now for a party member), or -INF if the party
+## never has on this map. Frozen while paused, as the pass is.
+func party_last_saw_at(c) -> float:
+	if c == null or not is_instance_valid(c):
+		return -INF
+	if c in party_chars:
+		return TimeManager.absolute_time()
+	return float(_npc_last_seen_time.get(c, -INF))
+
+## Where the party last saw `c` (its live position while seen), or
+## Vector2.INF if it never has on this map.
+func party_last_seen_position(c) -> Vector2:
+	if c == null or not is_instance_valid(c):
+		return Vector2.INF
+	if c in party_chars:
+		return c.global_position
+	return _npc_last_seen_pos.get(c, Vector2.INF)
 
 func _process(delta: float) -> void:
 	# Update clash cooldowns. Combat collisions are now driven by the

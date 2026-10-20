@@ -1314,8 +1314,9 @@ func _update_plan_pause() -> void:
 		elif _plan_paused_by == "" or _plan_paused_by == PLAN_TARGET_LOST:
 			_pause_plan(blocker)
 		return
-	# The next step aims at an NPC the party can't see because it is
-	# Invisible: the plan waits for it, as it waits out a stun.
+	# The next step aims at an NPC the party has lost from sight (round 6:
+	# out of sight for any reason, Invisible included): the plan waits for it,
+	# as it waits out a stun.
 	var hidden_target := _plan_next_target_hidden()
 	if hidden_target != "":
 		if _plan_paused_by != PLAN_TARGET_LOST:
@@ -1327,26 +1328,70 @@ func _update_plan_pause() -> void:
 		_resume_plan()
 
 ## The pause cause (badge "Paused: Target lost") while the plan's next step
-## aims at an NPC the party can't see because it is Invisible. The dev's
-## round 5 answer ("Invisible NPCs should be invisible, unless the party is
-## aware of their presence") means a plan can no longer follow such a target
-## by its true position; it waits, as round 3's stun pause does, and the
-## player can still edit or clear it.
+## aims at an NPC the party has lost from sight. The dev's round 5 answer
+## ("Invisible NPCs should be invisible, unless the party is aware of their
+## presence") stopped plans following an unseen invisible target by its true
+## position; asked in round 5 whether a target that simply walks out of sight
+## should pause the plan too, the dev answered "Yes". It waits, as round 3's
+## stun pause does, and the player can still edit or clear it.
 const PLAN_TARGET_LOST := "Target lost"
 ## The character that pause waits for, for the resume line.
 var _plan_lost_target = null
+## Seconds of game time a plan's target may be out of the party's sight before
+## the step aimed at it pauses. A foe passing behind a pillar mustn't pause the
+## plan and log a pause and a resume for a blink: within this the step goes
+## ahead, aimed where the party last saw it (plan_last_seen), which is where a
+## blinking target still nearly is. Game time, so a planning pause doesn't use
+## it up.
+const PLAN_TARGET_LOST_GRACE := 0.5
+
+# Plans and targets the party can't see (round 6). A plan step aimed at a
+# character follows it while the party perceives it (Game.is_seen_by_party).
+# Once the party doesn't, the step never homes on where it really is (that
+# would show the player where it went): it aims at the spot the party last
+# saw it (plan_last_seen; a step under way switches there,
+# _plan_track_lost_target), and the next step aimed at it pauses before it
+# starts once it has been unseen for PLAN_TARGET_LOST_GRACE
+# (_plan_next_target_hidden). Seen again, the plan follows it again.
+
+## True while the party doesn't perceive `t`, a character a plan step of ours
+## aims at: out of sight, range or the cone, in the dark or fog, Invisible
+## with no cue. Party members are always perceived.
+func plan_target_unseen(t) -> bool:
+	if t == null or not is_instance_valid(t) or not (t is ProceduralCharacter):
+		return false
+	if game == null or not is_instance_valid(game) or not game.has_method("is_seen_by_party"):
+		return false
+	return not game.is_seen_by_party(t)
+
+## Where a plan step aims at `t`: its live position while the party perceives
+## it, else the spot the party last saw it at (Game.party_last_seen_position),
+## or `fallback` (the step's own last aim) when the sight pass never saw it.
+func plan_last_seen(t, fallback: Vector2) -> Vector2:
+	if not plan_target_unseen(t):
+		return t.global_position
+	var seen_at: Vector2 = game.party_last_seen_position(t) if game.has_method("party_last_seen_position") else Vector2.INF
+	return seen_at if seen_at.is_finite() else fallback
+
+## True once a living `t` has been out of the party's sight for longer than
+## PLAN_TARGET_LOST_GRACE: a step aimed at it pauses before it starts.
+func _plan_target_lost(t) -> bool:
+	if not plan_target_unseen(t) or not t.is_alive():
+		return false
+	var saw_at: float = game.party_last_saw_at(t) if game.has_method("party_last_saw_at") else -INF
+	return TimeManager.absolute_time() - saw_at > PLAN_TARGET_LOST_GRACE
 
 ## The name of the NPC the plan's next step aims at (an attack on a designated
 ## character, a spell following one, or a spell on picked characters when
-## every living one is hidden) when the party can't see it because it is
-## Invisible (Game.invisible_hidden_from_party); "" otherwise. Only the step
-## about to start counts, so the walk toward an invisible foe isn't held up
-## before it gets there. A target dead or gone isn't hidden: the resume check
-## drops the plan for that (_plan_step_target_lost).
+## every living one is lost) when the party has lost it from sight
+## (_plan_target_lost); "" otherwise. Only the step about to start counts, so
+## the walk toward a foe out of sight isn't held up before it gets there. A
+## target dead or gone isn't lost: the resume check drops the plan for that
+## (_plan_step_target_lost).
 func _plan_next_target_hidden() -> String:
 	if action_queue == null or action_queue.current_action != null or action_queue.get_queue_size() == 0:
 		return ""
-	if game == null or not is_instance_valid(game) or not game.has_method("invisible_hidden_from_party"):
+	if game == null or not is_instance_valid(game) or not game.has_method("is_seen_by_party"):
 		return ""
 	var step = action_queue.peek_next()
 	if step.type == ActionQueue.ActionType.ATTACK_TARGET:
@@ -1360,6 +1405,7 @@ func _plan_next_target_hidden() -> String:
 	if not (picked is Array) or picked.is_empty():
 		return ""
 	var first := ""
+	var first_t = null
 	for t in picked:
 		var hidden := _hidden_plan_target_name(t)
 		if hidden == "":
@@ -1368,17 +1414,22 @@ func _plan_next_target_hidden() -> String:
 			continue
 		if first == "":
 			first = hidden
+			first_t = t
+	if first_t != null:
+		_plan_lost_target = first_t   # the one the pause names
 	return first
 
 func _hidden_plan_target_name(t) -> String:
-	if t == null or not is_instance_valid(t) or not game.invisible_hidden_from_party(t):
+	if t == null or not is_instance_valid(t) or not _plan_target_lost(t):
 		return ""
 	_plan_lost_target = t
 	return str(t.get("Name"))
 
-## Hold the plan before a step aimed at a target hidden by Invisible: the body
-## stops, the route dims with "Paused: Target lost", and a party member says
-## why: "Target lost: Bandit is invisible. Aldric's plan is paused."
+## Hold the plan before a step aimed at a target the party has lost from
+## sight: the body stops, the route dims with "Paused: Target lost", and a
+## party member says why, once per pause: "Target lost: Bandit is out of
+## sight. Aldric's plan is paused." ("is invisible" when Invisible is why:
+## Game.invisible_hidden_from_party).
 func _pause_plan_target_lost(target_name: String) -> void:
 	_plan_paused_by = PLAN_TARGET_LOST
 	_plan_route_blocked_before = _plan_route_blocked_segments()
@@ -1388,7 +1439,11 @@ func _pause_plan_target_lost(target_name: String) -> void:
 	if path_drawer != null:
 		path_drawer.queue_redraw()
 	if is_party_member():
-		notify("Target lost", Color.LIGHT_BLUE, "Target lost: %s is invisible. %s's plan is paused." % [target_name, Name])
+		var why := "is out of sight"
+		if is_instance_valid(_plan_lost_target) and game != null and is_instance_valid(game) \
+				and game.has_method("invisible_hidden_from_party") and game.invisible_hidden_from_party(_plan_lost_target):
+			why = "is invisible"
+		notify("Target lost", Color.LIGHT_BLUE, "Target lost: %s %s. %s's plan is paused." % [target_name, why, Name])
 
 ## The step's target can be seen again (or was replaced): the plan carries on,
 ## or is dropped with the reason when it can't (the target died meanwhile).
@@ -1412,6 +1467,86 @@ func _resume_plan_target_found() -> void:
 		notify("Plan resumes", Color.LIGHT_BLUE, "%s can see %s again: plan resumes." % [Name, str(lost.get("Name"))])
 	else:
 		notify("Plan resumes", Color.LIGHT_BLUE, "%s's plan resumes." % Name)
+
+## A plan step under way stops homing on a target the party no longer
+## perceives (plan_target_unseen): it aims at the spot the party last saw it
+## and finishes there, and follows the target again if it is seen before the
+## step lands. Quiet: the next step aimed at it pauses, with the reason, if it
+## stays unseen.
+##   - An attack on a designated character: the swing's aim (the rig arm, a
+##     ranged shot's last correction) leaves the body for that spot.
+##   - A spell following a designated character (its anchor), in its windup or
+##     between the steps of a sequence (a leap at it): it goes off at that
+##     spot, and a single-target spell bound to that character alone lands
+##     there instead (_plan_cast_bound_to_only), as one aimed at bare ground.
+## Runs every unpaused frame there are orders, after _update_plan_pause, and
+## before the action queue and the AbilityManager (our children, processed
+## after us) act on this frame.
+func _plan_track_lost_target() -> void:
+	if action_queue == null or action_queue.current_action == null:
+		return
+	var step = action_queue.current_action
+	if step.type == ActionQueue.ActionType.ATTACK_TARGET:
+		var t = step.data.get("target")
+		if t == null or not is_instance_valid(t) or attack_animator == null or not attack_animator.is_attacking:
+			return
+		if plan_target_unseen(t):
+			if is_instance_valid(attack_aim_node) and attack_aim_node == t:
+				var fallback: Vector2 = attack_aim_point if attack_aim_point is Vector2 else global_position
+				set_attack_aim(plan_last_seen(t, fallback), null)
+				step.data["aim_lost"] = true
+		elif step.data.get("aim_lost", false):
+			set_attack_aim(t.global_position, t)
+			step.data.erase("aim_lost")
+		return
+	if step.type != ActionQueue.ActionType.USE_ABILITY or ability_manager == null:
+		return
+	var anchor = step.data.get("target_anchor")
+	var cast: Dictionary = ability_manager.current_cast
+	if anchor == null or not is_instance_valid(anchor) or cast.is_empty():
+		return
+	if plan_target_unseen(anchor):
+		if is_instance_valid(cast.get("anchor")) and cast.get("anchor") == anchor:
+			cast["target_position"] = plan_last_seen(anchor, cast.get("target_position", global_position))
+			cast["anchor"] = null
+			if _plan_cast_bound_to_only(cast.get("ability"), cast.get("explicit_targets", []), anchor):
+				cast["explicit_targets"] = []
+			step.data["anchor_lost"] = true
+	elif step.data.get("anchor_lost", false):
+		cast["anchor"] = anchor
+		cast["explicit_targets"] = step.data.get("targets", [])
+		step.data.erase("anchor_lost")
+
+## The target data a planned cast starts with (action_queue USE_ABILITY): an
+## anchor the party has stopped perceiving (only ever within
+## PLAN_TARGET_LOST_GRACE: longer, and the plan paused before this step) is
+## swapped for the spot it was last seen at, as _plan_track_lost_target does
+## for a cast already under way. "anchor_lost" says it was.
+func plan_cast_target_data(ability, position: Vector2, targets: Array, anchor) -> Dictionary:
+	var data := {"position": position, "targets": targets, "anchor": anchor}
+	if anchor == null or not is_instance_valid(anchor) or not plan_target_unseen(anchor):
+		return data
+	data["position"] = plan_last_seen(anchor, position)
+	data["anchor"] = null
+	data["anchor_lost"] = true
+	if _plan_cast_bound_to_only(ability, targets, anchor):
+		data["targets"] = []
+	return data
+
+## True when a planned cast's effects are bound to `anchor` alone by a
+## single-target designation (AbilityTargeting: "targets" = [designated]),
+## not by a pick of characters (shape "characters": the picks stay bound).
+func _plan_cast_bound_to_only(ability, explicit, anchor) -> bool:
+	if not (explicit is Array) or explicit.size() != 1 or not is_instance_valid(explicit[0]) or explicit[0] != anchor:
+		return false
+	var shape := "none"
+	if ability is Ability:
+		shape = String(ability.targeting.get("shape", "none"))
+	elif ability is Dictionary:
+		var targeting = ability.get("targeting", {})
+		if targeting is Dictionary:
+			shape = String(targeting.get("shape", "none"))
+	return shape != "characters"
 
 ## Hold the plan where it is: the body stops (the running MOVE picks up from
 ## wherever it stands when the plan resumes). Party members say so.
@@ -4177,6 +4312,7 @@ func _process(delta: float) -> void:
 	# flee step that same frame starts.
 	if not PauseManager.is_paused and (has_player_orders() or _plan_paused_by != ""):
 		_update_plan_pause()
+		_plan_track_lost_target()   # a step under way stops homing on a lost target
 	# Condition-driven forced movement (applies to all characters, not just AI)
 	if not PauseManager.is_paused and is_player_controlled:
 		_process_condition_movement_overrides(delta)

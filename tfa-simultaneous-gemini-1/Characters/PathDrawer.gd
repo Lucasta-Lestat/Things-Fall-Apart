@@ -423,9 +423,17 @@ func _draw_node_ground(node) -> void:
 		# a spot, draw to where that character is right now. Redrawn every frame,
 		# so it visibly tracks them as they move — the point of designating.
 		var designated = _node_designated_target(node)
+		var lost_spot: Vector2 = _node_lost_target_spot(node) if designated == null else Vector2.INF
 		if designated != null:
 			draw_dashed_line(pos, designated.global_position, DESIGNATION_COLOR, 1.5, 6.0, true)
 			draw_arc(designated.global_position, NODE_RADIUS * 0.9, 0, TAU, 24, DESIGNATION_COLOR, 1.5, true)
+		elif lost_spot.is_finite():
+			# A designated character the party can't see: the leash goes to the
+			# spot it was last seen at, where the step will aim
+			# (ProceduralCharacter.plan_last_seen), with the small spot ring,
+			# never to where it really is.
+			draw_dashed_line(pos, lost_spot, DESIGNATION_COLOR, 1.5, 6.0, true)
+			draw_arc(lost_spot, ATTACK_AIM_RING_RADIUS, 0, TAU, 16, DESIGNATION_COLOR, 1.5, true)
 		elif node.action_type == ActionQueue.ActionType.ATTACK and node.action_data.has("target_position"):
 			# Fixed-point attack (planned over bare ground): the same dashed leash
 			# to the spot the swing aims at, ending in a small ring rather than
@@ -608,11 +616,29 @@ func _node_designated_target(node) -> Node2D:
 	if designated == null or not is_instance_valid(designated):
 		return null
 	# One the party can't see (out of sight, Invisible, not drawn in this view)
-	# gets no leash: tracking it would draw where it is.
+	# gets no leash to its body: tracking it would draw where it is. The step
+	# aims where it was last seen, and the plan pauses for it if it stays
+	# unseen ("Paused: Target lost"); _node_lost_target_spot draws that spot.
 	if character != null and is_instance_valid(character) and character.has_method("_hidden_from_party") \
 			and character._hidden_from_party(designated):
 		return null
 	return designated as Node2D
+
+## Where the party last saw the character a planned action names, when the
+## player can't see it now (_node_designated_target gives null for it), or
+## Vector2.INF: no such character, or the party never saw it here.
+func _node_lost_target_spot(node) -> Vector2:
+	var designated = node.action_data.get("target", null)
+	if designated == null:
+		designated = node.action_data.get("target_anchor", null)
+	if designated == null or not is_instance_valid(designated) or character == null or not is_instance_valid(character):
+		return Vector2.INF
+	if not character.has_method("_hidden_from_party") or not character._hidden_from_party(designated):
+		return Vector2.INF
+	var game_node = character.get("game")
+	if game_node == null or not is_instance_valid(game_node) or not game_node.has_method("party_last_seen_position"):
+		return Vector2.INF
+	return game_node.party_last_seen_position(designated)
 
 func _get_linear_progress(pos: Vector2) -> float:
 	# Returns how far along the path (in pixels) the given position is

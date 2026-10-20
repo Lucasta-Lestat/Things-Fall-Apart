@@ -447,9 +447,20 @@ func _execute_action(action: Action) -> void:
 				# The position rides along as a last-known fallback, so a target
 				# that dies or is freed mid-swing leaves the attack pointed where
 				# it was rather than at nothing.
-				character.target_rotation = (target.global_position - character.global_position).angle() + PI / 2
+				# A target the party has just lost from sight (the plan pauses
+				# before this step once it has been unseen for
+				# ProceduralCharacter.PLAN_TARGET_LOST_GRACE) is swung at where
+				# it was last seen, never where it really is; the character
+				# follows it again if it is seen mid-swing (_plan_track_lost_target).
+				var aim_pos: Vector2 = target.global_position
+				var aim_node: Node2D = target
+				if character.plan_target_unseen(target):
+					aim_pos = character.plan_last_seen(target, character.global_position + Vector2.UP.rotated(character.rotation) * 60.0)
+					aim_node = null
+					action.data["aim_lost"] = true
+				character.target_rotation = (aim_pos - character.global_position).angle() + PI / 2
 				character.current_hand = hand
-				character.attack(hand, target.global_position, target)
+				character.attack(hand, aim_pos, aim_node)
 		
 		ActionType.CYCLE_WEAPON:
 			var direction = action.data.get("direction", 1)
@@ -480,11 +491,13 @@ func _execute_action(action: Action) -> void:
 			var ability = AbilityDatabase.get_ability_data(ability_id)
 			var ability_obj = Ability.from_dict(ability)
 			if ability:
-				character.use_ability(ability_obj, {
-					"position": target_pos,
-					"targets": queued_targets,
-					"anchor": queued_anchor,
-				})
+				# A designated character the party has just lost from sight is
+				# cast at where it was last seen, never where it really is
+				# (ProceduralCharacter.plan_cast_target_data).
+				var cast_data: Dictionary = character.plan_cast_target_data(ability_obj, target_pos, queued_targets, queued_anchor)
+				if cast_data.get("anchor_lost", false):
+					action.data["anchor_lost"] = true
+				character.use_ability(ability_obj, cast_data)
 
 ## `user` consumes `item_data`, or gives it to `target` to drink. Shared by the
 ## queued USE_ITEM and the party panel's Consume so both behave the same.
