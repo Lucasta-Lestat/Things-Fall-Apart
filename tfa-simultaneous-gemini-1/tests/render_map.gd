@@ -207,6 +207,33 @@ func _ready() -> void:
 		print("fire smoke-test: ", lit, " cells lit, ", charred, " charred")
 		for _i in 40:
 			await RenderingServer.frame_post_draw
+	# Optional destroy test: TFA_DESTROY="x,y;x,y" destroys, through the real
+	# damage path, the structure whose centre (wall midpoint, tower/tree pos) is
+	# nearest each point within 48 px -- proves art_polys slices / art_under
+	# reveal sensibly when a curtain piece, a tower or a tree goes
+	var destroy_s := OS.get_environment("TFA_DESTROY")
+	if destroy_s != "":
+		for tok in destroy_s.split(";", false):
+			var xy := tok.split(",")
+			if xy.size() != 2:
+				continue
+			var p := Vector2(float(xy[0]), float(xy[1]))
+			var best: Structure = null
+			var best_d := 48.0
+			for s in structures_in_scene:
+				if is_instance_valid(s) and s is Structure:
+					var d := (s as Structure).global_position.distance_to(p)
+					if d < best_d:
+						best_d = d
+						best = s as Structure
+			if best == null:
+				print("destroy: nothing within 48 px of ", p)
+				continue
+			print("destroy: %s at %s (%.1f px), art_under=%s" % [best.name, best.global_position,
+				best_d, best.get_node_or_null("Art/ArtUnder") != null])
+			best.take_damage({"bludgeoning": 100000})
+		for _i in 10:
+			await RenderingServer.frame_post_draw
 	for _i in 4:
 		await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
