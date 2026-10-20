@@ -131,6 +131,10 @@ func _pos_of(c, caster, origin: Vector2) -> Vector2:
 func _counts(c, game) -> bool:
 	if not is_instance_valid(c) or (c.has_method("is_alive") and not c.is_alive()):
 		return false
+	# No ring on someone the player can't see (Game.hidden_from_party, the
+	# pickers' rule: out of sight, or not drawn in this view layer).
+	if game.has_method("hidden_from_party"):
+		return not game.hidden_from_party(c)
 	return not game.has_method("is_seen_by_party") or game.is_seen_by_party(c)
 
 ## The characters the current reticle would hit, with the shape rules of

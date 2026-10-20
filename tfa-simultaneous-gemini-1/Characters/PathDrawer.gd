@@ -607,10 +607,10 @@ func _node_designated_target(node) -> Node2D:
 		designated = node.action_data.get("target_anchor", null)
 	if designated == null or not is_instance_valid(designated):
 		return null
-	# One the party can't see because it is Invisible gets no leash: tracking
-	# it would draw where it is. The plan waits for it ("Paused: Target lost").
-	if character != null and is_instance_valid(character) and character.has_method("_invisible_to_party") \
-			and character._invisible_to_party(designated):
+	# One the party can't see (out of sight, Invisible, not drawn in this view)
+	# gets no leash: tracking it would draw where it is.
+	if character != null and is_instance_valid(character) and character.has_method("_hidden_from_party") \
+			and character._hidden_from_party(designated):
 		return null
 	return designated as Node2D
 

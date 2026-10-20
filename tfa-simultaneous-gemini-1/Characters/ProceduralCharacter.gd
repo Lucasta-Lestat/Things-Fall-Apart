@@ -4837,9 +4837,10 @@ func _find_context_menu_target_at(world_pos: Vector2) -> Node:
 			first_door = collider
 		elif collider is Item and first_item == null:
 			first_item = collider
-		elif collider is ProceduralCharacter and collider != self and _invisible_to_party(collider):
-			# Hidden from the party by Invisible: not there for the menu, and
-			# it mustn't turn a right-click into an attack either.
+		elif collider is ProceduralCharacter and collider != self and _hidden_from_party(collider):
+			# Not seen by the party (out of sight, Invisible, not drawn in this
+			# view; a corpse out of sight too): not there for the menu, and it
+			# mustn't turn a right-click into an attack either.
 			continue
 		elif collider is ProceduralCharacter and collider != self:
 			# Corpses are loot targets regardless of former faction — a dead
@@ -4952,10 +4953,11 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 		# deferred layer write lands.
 		if require_alive and collider.has_method("is_alive") and not collider.is_alive():
 			continue
-		# An NPC the party can't see because it is Invisible isn't there for
-		# the player's clicks either: no designation, talk or hover cursor that
-		# would give it away (Game.invisible_hidden_from_party).
-		if _invisible_to_party(collider):
+		# An NPC the party can't see (out of sight, range or the cone, in the
+		# dark or fog, Invisible with no cue) isn't there for the player's
+		# clicks either: no designation, talk or hover cursor that would give
+		# it away (Game.hidden_from_party).
+		if _hidden_from_party(collider):
 			continue
 		# View-layer filter: point queries hit INVISIBLE bodies, so without
 		# this a click lands on a character the render refuses to show — a
@@ -4973,12 +4975,20 @@ func _find_character_at(world_pos: Vector2, require_alive: bool = true) -> Proce
 			best = collider
 	return best
 
-## True for an NPC the party can't see because it is Invisible
-## (Game.invisible_hidden_from_party). The player's pickers skip it: the
-## click probe above, the context menu and AbilityTargeting's character picks.
+## True for a non-party character the player can't see right now
+## (Game.hidden_from_party): the party doesn't perceive it, or the view layer
+## doesn't draw it. The player's pickers and previews skip it: the click probe
+## above, the context menu, AbilityTargeting's character picks, highlights and
+## previews, the plan leash (PathDrawer). Only a party member's picks are the
+## player's (only the party is ever selected), so a stand-in caster that isn't
+## one (a harness's) picks as before.
+func _hidden_from_party(other) -> bool:
+	return is_party_member() and game.has_method("hidden_from_party") and game.hidden_from_party(other)
+
+## Round 5's name, from when only Invisible hid an NPC from the pickers; the
+## rule now covers every NPC out of sight (_hidden_from_party).
 func _invisible_to_party(other) -> bool:
-	return game != null and is_instance_valid(game) and game.has_method("invisible_hidden_from_party") \
-		and game.invisible_hidden_from_party(other)
+	return _hidden_from_party(other)
 
 
 ## Probe for a loose, pick-up-able world Item (not a readable, not a container).
