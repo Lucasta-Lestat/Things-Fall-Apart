@@ -100,7 +100,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "poisoned",
 		"display_name": "Poisoned",
-		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. Armour doesn't reduce it. A poison hit adds 1 stack per 5 poison damage it deals (at least 1). At 4 stacks it turns into Toxic Shock. It lasts until 10 s after the last dose.",
+		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. Armour doesn't reduce it. A poison hit adds 1 stack per 5 poison damage it deals (at least 1). At 4 stacks it turns into Toxic Shock, which kills unless cured. It lasts until 10 s after the last dose.",
 		"traits": {"debuff": 1, "poison": 1, "persistent": 1},
 		"stackable": true,
 		# DoT scale (round 4): a stack is small and worth about the damage that
@@ -129,28 +129,38 @@ func get_all_conditions() -> Array:
 		],
 		"immunities": {}
 	},
-	# Poisoned's 4th stack (its transforms_into). Worse than the 3 stacks it
-	# replaces: 2 a second, not 1.5, and it slows. Not stackable: Poisoned
-	# reaching 4 again restarts its 10 s, and poison meanwhile builds Poisoned
-	# anew beside it. Cured as Poisoned is (Heal removes "poison" conditions).
+	# Poisoned's 4th stack (its transforms_into). Round 6, the developer's
+	# "like toxic in pokemon, where the tick of poison damage starts doubling
+	# over time, quickly resulting in death": no duration, and a tick that
+	# doubles every time it lands (the triggered effect's "escalate",
+	# ConditionInstance.effect_value). Ticks at 0, 2, 4, 6, 8 s deal 1, 2, 4,
+	# 8, 16: a 30-HP character from full dies on the 5th (8 s in, 31 dealt),
+	# after four ticks in which it can be cured. Then 32 a tick at most
+	# (max_value), so a bearer Deny Ending holds at 1 HP, or a big one, sees 32
+	# rather than runaway numbers (100 HP dies on the 8th tick, 14 s in).
+	# Poisoned reaching 4 again while it lasts is a re-dose: one doubling at
+	# once (redose_steps), never a restart. Round 5's 30% slow is gone: the
+	# model is the damage. Not stackable; poison meanwhile builds Poisoned
+	# beside it. Cured as Poisoned is: Heal and a Potion of Healing remove
+	# "poison" conditions (antidote/purify too, should anything carry them).
 	{
 		"id": "toxic_shock",
 		"display_name": "Toxic Shock",
-		"description": "The poison overwhelms the body: 4 poison damage every 2 s, and you move 30% slower. Armour doesn't reduce it. Poisoned turns into this at 4 stacks. It lasts 10 s, restarting whenever Poisoned reaches 4 again. Heal cures it, as it cures Poisoned.",
+		"description": "The poison overwhelms the body: 1 poison damage every 2 s, doubling with every tick (1, 2, 4, 8, 16, then 32 a tick), so it kills unless cured. Armour doesn't reduce it. It never wears off. Poisoned turns into this at 4 stacks; Poisoned reaching 4 again while it lasts doubles it once more at once. Cure: Heal, or a Potion of Healing.",
 		"traits": {"debuff": 1, "poison": 1, "dot": 1, "persistent": 1},
 		"stackable": false,
 		"max_tier": 1,
-		"duration": 10.0,
+		"duration": -1,
 		"icon": "res://UI/UI Icons/poisoned.png",
+		"cure_hint": "Heal or a Potion of Healing",
 		"transforms_into": {},
 		"canceled_by_trait": ["antidote", "purify"],
 		"custom_vfx": "res://vfx/poison_bubbles.tscn",
 		"custom_sfx": "res://sfx/poison_tick.mp3",
-		"stat_modifiers": [
-			{"stat": "speed_modifier", "operation": "add", "value": -0.3}
-		],
+		"stat_modifiers": [],
 		"triggered_effects": [
-			{"type": "damage", "value": 4, "damage_type": "poison", "interval": 2.0}
+			{"type": "damage", "value": 1, "damage_type": "poison", "interval": 2.0,
+				"escalate": {"multiplier": 2.0, "max_value": 32, "redose_steps": 1}}
 		],
 		"immunities": {}
 	},
@@ -228,18 +238,21 @@ func get_all_conditions() -> Array:
 	{
 		"id": "chilled",
 		"display_name": "Chilled",
-		"description": "Movement and attack speed reduced. A cold hit adds 1 stack per 5 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 3 stacks, you freeze.",
+		"description": "Movement and attack speed reduced: each stack cuts Dexterity by 15% (x1 85%, x2 72%, x3 61%). A cold hit adds 1 stack per 5 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 4 stacks, you freeze.",
 		"traits": {"debuff": 1, "cold": 1, "slow": 1, "elemental": 1},
 		"stackable": true,
-		"max_tier": 3,
-		# No damage: a cold weapon's 3-5 adds 1 stack, 6-10 cold 2, and 11+
-		# (an Iciclet's 15) freezes in one hit. 5 for every damage-type
-		# condition (round 5, "5 damage each"); kept per condition so one can
-		# be retuned alone.
+		# Freezes at 4 (round 6, the developer's "a max tier of four"; it was
+		# 3, so any 11+ cold hit froze at once). No damage: a cold weapon's 3-5
+		# adds 1 stack, 6-10 cold 2, 11-15 (an Iciclet's 15) 3, and only 16+
+		# freezes in one hit. The 4th stack turns it into Frozen, so it holds
+		# at most 3 (Dexterity x0.61). 5 for every damage-type condition
+		# (round 5, "5 damage each"); kept per condition so one can be retuned
+		# alone.
+		"max_tier": 4,
 		"damage_per_stack": 5,
 		"duration": 15.0,
 		"icon": "res://UI/UI Icons/chilled.png",
-		"transforms_into": {"id": "frozen", "required_tier": 3},
+		"transforms_into": {"id": "frozen", "required_tier": 4},
 		"canceled_by_trait": ["fire", "heat"],
 		"custom_vfx": "res://vfx/frost_mist.tscn",
 		"custom_sfx": "res://sfx/ice_crack.mp3",

@@ -39,6 +39,11 @@ extends Resource
 
 ## Triggered effects (damage over time, healing, etc.)
 ## Format: Array of dictionaries with keys: type, value, interval, conditions
+## Optional "escalate": {"multiplier", "max_value", "redose_steps"} makes each
+## tick worth `multiplier` times the last, at most `max_value` a tick, and a
+## re-application while it is on brings `redose_steps` of that at once (Toxic
+## Shock doubles: 1, 2, 4 ...). The step count lives in the instance's
+## custom_data, so it is saved (ConditionInstance.effect_value).
 @export var triggered_effects: Array = []
 
 ## Conditional modifiers that affect actions/combat
@@ -90,6 +95,12 @@ extends Resource
 ## applications (spells, surfaces, fogs, weather) keep their own stack counts.
 @export var damage_per_stack: float = 0.0
 
+## What cures it, in the player's words ("Heal or a Potion of Healing"), for a
+## condition that won't wear off on its own (Toxic Shock). Shown in its
+## summary ("(cure: ...)", ConditionInstance.get_summary) and in the warnings
+## ConditionManager gives a party member who has it. "" = no hint.
+@export var cure_hint: String = ""
+
 ## Stacks a hit dealing `dealt` damage brings (see damage_per_stack); 0 when it
 ## dealt less than 1.
 func stacks_for_damage(dealt: float) -> int:
@@ -139,5 +150,6 @@ static func create_from_data(data: Dictionary) -> Condition:
 	condition.save_interval = data.get("save_interval", 0.0)
 	condition.grants_ability = data.get("grants_ability", "")
 	condition.damage_per_stack = float(data.get("damage_per_stack", 0.0))
+	condition.cure_hint = str(data.get("cure_hint", ""))
 
 	return condition

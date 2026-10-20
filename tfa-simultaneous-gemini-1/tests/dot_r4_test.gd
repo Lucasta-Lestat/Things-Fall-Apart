@@ -19,7 +19,9 @@ extends Node2D
 # Round 5 retuned the numbers (tests/dot_tune_r5_test covers the new rules):
 # damage_per_stack 5 for all four, Burning max 4, neutral duration multipliers
 # (Burning 5 s, Stuck in Fire 2 s), Poisoned turns into Toxic Shock at 4, and
-# ticks ignore armour. The checks below assert those numbers.
+# ticks ignore armour. Round 6 (tests/status_conds_r6_test): Chilled caps and
+# freezes at 4, and Toxic Shock's tick doubles until it is cured or kills.
+# The checks below assert those numbers.
 # The condition clock (TimeManager.absolute_time) is driven by hand in exact
 # 1/16 s steps, and each ConditionManager._process is called directly.
 #   godot --headless --path . res://tests/dot_r4_test.tscn
@@ -186,7 +188,7 @@ func _without_bleed_saves(f: Callable):
 ## damaging condition is left. {total, ticks, peak (stacks), lasted (s)}.
 func _simulate(c: ProceduralCharacter, schedule: Array, min_seconds: float) -> Dictionary:
 	var cm := _cm(c)
-	var out := {"total": 0, "ticks": 0, "peak": 0, "lasted": 0.0}
+	var out := {"total": 0, "ticks": 0, "peak": 0, "lasted": 0.0, "died": false}
 	var on_tick := func(_inst, _eff, res):
 		if res.has("damage"):
 			out["total"] += int(res["damage"])
@@ -201,6 +203,12 @@ func _simulate(c: ProceduralCharacter, schedule: Array, min_seconds: float) -> D
 		while not pending.is_empty() and float(pending[0][0]) <= t + 0.0001:
 			(pending.pop_front()[1] as Callable).call()
 		cm._process(STEP)
+		# Killed by it: a corpse's conditions don't tick. Toxic Shock, which
+		# never wears off (round 6), ends this way unless cured.
+		if not c.is_alive():
+			out["died"] = true
+			out["lasted"] = t
+			break
 		var any := false
 		for inst in cm.conditions.values():
 			if inst.get_dot_text() != "":
@@ -267,7 +275,7 @@ func _case_stacks_for_damage() -> void:
 	var cases := {
 		"burning": {0.5: 0, 1: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 100: 4},
 		"poisoned": {1: 1, 2: 1, 5: 1, 6: 2, 10: 2, 11: 3, 16: 4, 18: 4, 50: 4},
-		"chilled": {1: 1, 3: 1, 4: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 99: 3},
+		"chilled": {1: 1, 3: 1, 4: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 99: 4},
 		"bleeding": {1: 1, 5: 1, 6: 2, 10: 2, 15: 3, 20: 4, 21: 5, 200: 5},
 	}
 	for id in cases:
@@ -345,21 +353,29 @@ func _case_riders() -> void:
 	v.take_damage({"poison": 15}, v.global_position, atk)
 	_check("rider.poison-15-3-stacks", _stacks(v, "poisoned") == 3, _stacks(v, "poisoned"))
 	cm.clear_all_conditions()
-	# Cold: a cold weapon's 4 is 1 stack, 8 is 2, an Iciclet's 15 freezes.
+	# Cold: a cold weapon's 4 is 1 stack, 8 is 2, an Iciclet's 15 is 3, and
+	# 16 freezes (round 6: Chilled freezes at 4).
 	v.take_damage({"cold": 4}, v.global_position, atk)
 	_check("rider.frost-axe-1-chill", _stacks(v, "chilled") == 1, _stacks(v, "chilled"))
 	cm.clear_all_conditions()
 	v.take_damage({"cold": 8}, v.global_position, atk)
 	_check("rider.cold-8-2-chill", _stacks(v, "chilled") == 2 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	v.take_damage({"cold": 4}, v.global_position, atk)
-	_check("rider.two-then-any-cold-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
+	_check("rider.two-then-a-cold-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
+	v.take_damage({"cold": 4}, v.global_position, atk)
+	_check("rider.three-then-any-cold-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
 	cm.clear_all_conditions()
 	v.take_damage({"cold": 15}, v.global_position, atk)
-	_check("rider.iciclet-freezes-in-one", cm.has_condition("frozen"))
+	_check("rider.iciclet-15-chills-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
+	cm.clear_all_conditions()
+	v.take_damage({"cold": 16}, v.global_position, atk)
+	_check("rider.cold-16-freezes-in-one", cm.has_condition("frozen") and not cm.has_condition("chilled"))
 	cm.clear_all_conditions()
 	for i in 3:
 		v.take_damage({"cold": 3}, v.global_position, atk)
-	_check("rider.three-winters-grip-hits-freeze", cm.has_condition("frozen"))
+	_check("rider.three-winters-grip-hits-chill-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
+	v.take_damage({"cold": 3}, v.global_position, atk)
+	_check("rider.four-winters-grip-hits-freeze", cm.has_condition("frozen"))
 	cm.clear_all_conditions()
 	# Bleeding: 5 per stack (round 5), before its CON save.
 	var bleeds := func():
@@ -536,22 +552,28 @@ func _case_refresh_interactions() -> void:
 func _case_transform_with_refresh() -> void:
 	var v := await _dummy("Shiver")
 	var cm := _cm(v)
-	# Three cold hits 10 s apart: before, Chilled ended 15 s after the first
-	# and the third hit started over; now each hit keeps it, and it freezes.
+	# Four cold hits 10 s apart: before, Chilled ended 15 s after the first
+	# and the third hit started over; now each hit keeps it, and it freezes
+	# (at 4 since round 6).
 	v.take_damage({"cold": 3}, v.global_position)
 	_run(v, 10.0)
 	v.take_damage({"cold": 3}, v.global_position)
 	_run(v, 10.0)
 	_check("transform.chill-outlives-first-hit", _stacks(v, "chilled") == 2, _stacks(v, "chilled"))
 	v.take_damage({"cold": 3}, v.global_position)
-	_check("transform.third-hit-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
+	_run(v, 10.0)
+	_check("transform.third-hit-chills-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
+	v.take_damage({"cold": 3}, v.global_position)
+	_check("transform.fourth-hit-freezes", cm.has_condition("frozen") and not cm.has_condition("chilled"))
 	cm.clear_all_conditions()
 	# Freezing Rain's cap (2) still never freezes (Game._tick_weather_conditions
-	# stops adding at its cap); a direct third stack does.
+	# stops adding at its cap); direct third and fourth stacks do.
 	cm.apply_condition("chilled", null, 2)
 	_check("transform.two-stays-chilled", cm.has_condition("chilled") and not cm.has_condition("frozen"))
 	cm.apply_condition("chilled", null, 1)
-	_check("transform.at-3-frozen", cm.has_condition("frozen"))
+	_check("transform.three-stays-chilled", cm.has_condition("chilled") and not cm.has_condition("frozen"))
+	cm.apply_condition("chilled", null, 1)
+	_check("transform.at-4-frozen", cm.has_condition("frozen"))
 	cm.clear_all_conditions()
 	await _clear()
 
@@ -589,14 +611,17 @@ func _case_per_stack_and_max_tier() -> void:
 	_check("stack.hp-matches-ticks", hp0 - d.current_health == r2["total"] and r2["total"] == 15, [hp0 - d.current_health, r2])
 	await _clear()
 	# A 30-HP character held at max tier (re-applied every second) lasts about
-	# 9-15 s: time to douse, cure or flee. Burning at its new max 4 takes 7 s;
-	# Poisoned re-applied at 4 is Toxic Shock (2 a second), 14 s.
+	# 9-15 s: time to douse, cure or flee. Burning at its new max 4 takes 7 s.
+	# Poisoned at 4 is Toxic Shock, which since round 6 doubles every tick
+	# until cured ("quickly resulting in death"): dosed once, it kills a
+	# 30-HP character on its 5th tick, 8 s in (re-dosing every second would
+	# only be faster, and no source doses 4 a second).
 	var thirty := func():
 		for id in ["burning", "poisoned", "bleeding", "corroding", "shocked"]:
 			var v := await _dummy("Thirty " + id)
 			v.current_health = 30
 			var mt: int = _tmpl(id).max_tier
-			var sched := _every(1.0, 60.0, _applier(v, id, mt), 0.0)
+			var sched: Array = _every(1.0, 60.0, _applier(v, id, mt), 0.0) if id != "poisoned" else [[0.0, _applier(v, id, mt)]]
 			var died_at := -1.0
 			var start := _clock
 			var cm := _cm(v)
@@ -610,7 +635,7 @@ func _case_per_stack_and_max_tier() -> void:
 					died_at = t
 					break
 			print("max %-10s kills a 30-HP character in %.1f s" % [id, died_at])
-			var window: Array = [7.0, 7.0] if id == "burning" else [9.0, 15.0]
+			var window: Array = [7.0, 7.0] if id == "burning" else ([8.0, 8.0] if id == "poisoned" else [9.0, 15.0])
 			_check("maxtier.%s-30hp-lasts-%d-to-%ds" % [id, int(window[0]), int(window[1])], died_at >= window[0] and died_at <= window[1], died_at)
 			await _clear()
 		return true
@@ -744,8 +769,8 @@ func _case_no_log_flood() -> void:
 	var cm := _cm(p)
 	cm.clear_all_conditions()
 	var n1 := GameLog.get_entries().size()
-	cm.apply_condition("chilled", foe, 3)
-	_check("log.transform-says-stacks", _log_count("Ada's Chilled reaches 3 stacks: Frozen.") == 1, GameLog.get_entries().slice(n1))
+	cm.apply_condition("chilled", foe, 4)
+	_check("log.transform-says-stacks", _log_count("Ada's Chilled reaches 4 stacks: Frozen.") == 1, GameLog.get_entries().slice(n1))
 	cm.clear_all_conditions()
 	await _clear()
 
@@ -769,7 +794,7 @@ func _case_descriptions_match_data() -> void:
 		if t.damage_per_stack > 0.0:
 			_check("desc.%s-k" % id, t.description.contains("1 stack per %d" % int(t.damage_per_stack)), t.description)
 	var ch := _tmpl("chilled")
-	_check("desc.chilled", ch.description.contains("1 stack per 5 cold damage") and ch.description.contains("15 s after the last") and ch.description.contains("At 3 stacks, you freeze"), ch.description)
+	_check("desc.chilled", ch.description.contains("1 stack per 5 cold damage") and ch.description.contains("15 s after the last") and ch.description.contains("At 4 stacks, you freeze"), ch.description)
 	_check("desc.bleeding-save-interval", _tmpl("bleeding").description.contains("every %d seconds" % int(_tmpl("bleeding").save_interval)))
 	_check("desc.stuck-in-fire", _tmpl("stuck_in_fire").description.contains("2 fire damage every second") and _tmpl("stuck_in_fire").description.contains("Lasts 2 s after"))
 
@@ -817,7 +842,9 @@ func _case_source_table() -> void:
 		return true
 	await _without_bleed_saves(cuts)
 	_check("table.match-striker-5", _rows[0][2]["total"] == 5, _rows[0][2])
-	_check("table.poison-vial-20", _rows[3][2]["total"] == 20, _rows[3][2])
+	# Round 6: a Poison Vial's 18 is Toxic Shock at once, which doubles until
+	# cured: on this 220-HP dummy it ends only with the bearer's death.
+	_check("table.poison-vial-toxic-shock-lethal", _rows[3][2]["died"] and _rows[3][2]["total"] >= 220, _rows[3][2])
 
 	# Spells.
 	v = await _dummy("Mark")
