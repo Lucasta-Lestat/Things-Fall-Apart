@@ -1004,9 +1004,14 @@ func _do_start_combat(a: Dictionary) -> bool:
 	_alert(fighters, defenders)
 	_alert(defenders, fighters)
 	_drop_stale_targets()
+	# Only fighters the party can see are named (round 6: an unseen hostile is
+	# not given away); with none in sight, "Someone unseen".
 	var names: Array = []
 	for c in fighters:
-		names.append(_name(c))
+		if _seen(c):
+			names.append(_name(c))
+	if names.is_empty():
+		names.append("Someone unseen")
 	var at_party: bool = "player" in toward
 	var others: Array = []
 	for f in toward:
