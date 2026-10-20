@@ -11,9 +11,11 @@
 #   - An unseen attacker's hit on a party member makes it known at once; so
 #     does a party member's hit on it, a condition either way, and a noise
 #     close by; a far noise doesn't, unless the party already knew of it. A
-#     damage-over-time tick is no new contact.
-#   - The SurrenderPanel picks its counterparty from known threats only, and
-#     a robbery's truce still covers the unseen members of that faction.
+#     damage-over-time tick is no new contact, nor is the party's spell
+#     weather landing on everyone under the sky.
+#   - The SurrenderPanel picks its counterparty from known threats only (with
+#     none, it says so in the log and over the leader), and a robbery's truce
+#     still covers the unseen members of that faction.
 #   - Naming leaks: a damage cancellation names an attacker only when the
 #     party sees it ("a hit from someone unseen"); sickness spreading,
 #     vomiting, an animal appearing, a disarm and a dialogue's "Combat!" line
@@ -98,6 +100,7 @@ func _ready() -> void:
 	await _case_custom_effects()
 	await _case_disarm()
 	await _case_dialogue_combat()
+	await _case_spell_weather()
 	_finish()
 
 func _finish() -> void:
@@ -429,6 +432,11 @@ func _case_surrender_panel() -> void:
 	var nobody := _log_count("No one to surrender to: no hostile you know of is near.")
 	_check("panel.unknown-only-does-not-open", not panel.try_open())
 	_check("panel.unknown-only-explained", _log_count("No one to surrender to: no hostile you know of is near.") == nobody + 1, _log_tail())
+	var floated := false
+	for ch in p.get_children():
+		if ch is Label and str(ch.text) == "No one to surrender to" and not ch.is_queued_for_deletion():
+			floated = true
+	_check("panel.unknown-only-floated", floated, "the game log starts closed: the notice floats over the leader too")
 	_check("panel.unknown-only-not-refused-by-it", _log_count("Surrender refused") == refused,
 		"the hidden undead isn't asked")
 	panel.queue_free()
@@ -603,4 +611,28 @@ func _case_dialogue_combat() -> void:
 	_check("combat.seen-named-unseen-left-out", _log_count("Combat! Thug attacks you.") == n + 1 \
 		and _log_count("Ambusher") == 0, _log_tail())
 	api.pause_requested = false
+	await _despawn_all()
+
+## Review: the party's spell weather (Acid Rain) lands on everyone under the
+## sky; that is no blow traded with an NPC it can't see. A hit still is.
+func _case_spell_weather() -> void:
+	var soaked = _spawn("Soaked Lurker", _behind(250.0))
+	await _frames(3)
+	await _physics(2)
+	_check("weather.control-unseen", not game.is_seen_by_party(soaked) and not _known(soaked) 		and game.is_exposed_to_sky(soaked))
+	game.force_weather("acid_rain", 60.0, p)
+	game._weather_condition_timers.clear()
+	game._tick_weather_conditions(3.5)
+	var inst = soaked.condition_manager.get_condition("corroding")
+	_check("weather.rain-landed-as-party-casters", inst != null and inst.source == p)
+	_check("weather.party-rain-no-known-threat", not _known(soaked) and not game._weather_landing)
+	await _poll()
+	_check("weather.party-rain-no-button-or-music", not _button() and not _music())
+	soaked.take_damage({"bludgeoning": 1}, soaked.global_position, p)
+	_check("weather.party-hit-still-known", _known(soaked))
+	# The spell weather passes.
+	game._forced_weather_left = 0.001
+	game._tick_forced_weather(1.0)
+	for pc in game.party_chars:
+		pc.condition_manager.remove_condition("corroding")
 	await _despawn_all()

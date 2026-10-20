@@ -1639,7 +1639,11 @@ func _tick_weather_conditions(delta: float) -> void:
 			if dur > 0.0 and existing.expires_at > 0.0:
 				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)
 			continue
+		# Spell weather landing on everyone under the sky is no blow traded: it
+		# doesn't make an NPC the party can't see a known threat (round 6).
+		_weather_landing = true
 		cm.apply_condition(cond, source, 1)
+		_weather_landing = false
 
 ## Counts down timed spell weather and restores the previous precipitation.
 func _tick_forced_weather(delta: float) -> void:
@@ -2397,6 +2401,9 @@ const THREAT_HEARD_TILES := 2.0
 
 ## Character -> TimeManager.absolute_time() the last cue keeps it known until.
 var _threat_known_until: Dictionary = {}
+## True while _tick_weather_conditions applies spell weather's condition:
+## that landing is no contact (_note_threat_contact).
+var _weather_landing: bool = false
 
 ## The hostiles near the party that it knows about: what the Surrender button,
 ## the SurrenderPanel's counterparty and the combat music go by.
@@ -2417,14 +2424,17 @@ func is_threat_known(c) -> bool:
 	return TimeManager.absolute_time() < float(_threat_known_until.get(c, -1.0))
 
 func _mark_threat_known(c) -> void:
-	if not (c is ProceduralCharacter) or not is_instance_valid(c) or c in party_chars:
+	if c == null or not is_instance_valid(c) or not (c is ProceduralCharacter) or c in party_chars:
 		return
 	_threat_known_until[c] = TimeManager.absolute_time() + THREAT_MEMORY_SECONDS
 
 ## A blow (_on_character_damaged; damage-over-time ticks don't count) or a
-## condition (note_invisible_contact) landed between a party member and a
-## character outside the party: the party knows that one is there.
+## condition (note_invisible_contact; not spell weather's, which lands on
+## everyone under the sky) landed between a party member and a character
+## outside the party: the party knows that one is there.
 func _note_threat_contact(actor, target) -> void:
+	if _weather_landing:
+		return
 	if actor == null or target == null or not is_instance_valid(actor) or not is_instance_valid(target) or actor == target:
 		return
 	if actor in party_chars and not (target in party_chars):
@@ -2435,7 +2445,7 @@ func _note_threat_contact(actor, target) -> void:
 ## Heard by the party (trigger_hearing_pulse): close by, or one it already
 ## knows of (it can hear it moving about), stays known.
 func _note_threat_heard(c) -> void:
-	if not (c is ProceduralCharacter) or c in party_chars:
+	if c == null or not is_instance_valid(c) or not (c is ProceduralCharacter) or c in party_chars:
 		return
 	if is_threat_known(c):
 		_mark_threat_known(c)

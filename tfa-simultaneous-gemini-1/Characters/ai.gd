@@ -921,8 +921,9 @@ func _update_target(delta: float = 0.0) -> void:
 			_acquire_target(picked)
 			_confused_pick_done = true
 			# Once per bout of confusion (apathy can null the target every frame).
+			# Whom it picked is named only if the party sees them too (round 6).
 			if first_pick and _party_can_see(character):
-				GameLog.add_entry("%s lashes out at %s in confusion!" % [character.Name, picked.Name])
+				GameLog.add_entry("%s lashes out at %s in confusion!" % [character.Name, picked.Name if _party_can_see(picked) else "someone unseen"])
 		return
 
 	# Search for new target (must be in LOS)

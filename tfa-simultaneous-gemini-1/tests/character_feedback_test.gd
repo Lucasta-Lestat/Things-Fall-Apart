@@ -590,6 +590,7 @@ func _case_attack_refusals() -> void:
 	pm.inventory.unequip_hand("Main")
 	# Infatuated: one log line however many refused swings.
 	var crush := _spawn(pm.global_position + Vector2(0, -50))
+	stub.seen[crush] = true   # a charmer the party sees is named (round 6)
 	pm.rotation = 0.0
 	pm.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
 	_reset_notify(pm)
@@ -598,6 +599,25 @@ func _case_attack_refusals() -> void:
 	pm.attack("Main")
 	_check("refuse.infatuated-logged-once", _logged("can't bring themselves to attack %s" % crush.Name) == 1)
 	pm.condition_manager.clear_all_conditions()
+	# Round 6: a charmer the party can't see isn't named...
+	stub.seen[crush] = false
+	pm.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
+	_reset_notify(pm)
+	pm.attack("Main")
+	_check("refuse.infatuated-unseen-charmer-unnamed", _logged("%s can't bring themselves to attack someone unseen." % pm.Name) == 1 \
+		and _logged("can't bring themselves to attack %s" % crush.Name) == 1, log_lines.slice(-2))
+	pm.condition_manager.clear_all_conditions()
+	# ...and an NPC the party can't see refusing logs nothing.
+	var smitten := _spawn(crush.global_position + Vector2(40, 60))
+	smitten.rotation = 0.0
+	smitten.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
+	var refusals := _logged("can't bring themselves to attack")
+	var smitten_lines := _logged(smitten.Name)
+	smitten.attack("Main")
+	_check("refuse.infatuated-unseen-npc-quiet", _logged("can't bring themselves to attack") == refusals \
+		and _logged(smitten.Name) == smitten_lines, log_lines.slice(-2))
+	_check("refuse.infatuated-unseen-npc-refused", not smitten.attack_animator.is_attacking)
+	smitten.condition_manager.clear_all_conditions()
 	pm.is_player_controlled = false
 	# Dash cooldown says so.
 	pm.dash_cooldown_timer = 1.0

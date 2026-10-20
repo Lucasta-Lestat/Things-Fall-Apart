@@ -26,8 +26,13 @@ func try_open(faction_override: String = "") -> bool:
 	_faction = faction_override if not faction_override.is_empty() else _pick_counterparty()
 	if _faction.is_empty():
 		# The last known one went out of mind between the button's poll and
-		# the click: say so rather than do nothing.
+		# the click: say so rather than do nothing (floated too, as the
+		# refusal below: the game log starts closed).
 		if faction_override.is_empty():
+			if game != null and ("party_chars" in game) and not game.party_chars.is_empty() \
+					and is_instance_valid(game.party_chars[0]):
+				var who = game.party_chars[0]
+				Globals.show_floating_text("No one to surrender to", who.global_position, who, Color.WHITE_SMOKE)
 			GameLog.add_entry("No one to surrender to: no hostile you know of is near.")
 		return false
 	_profile = LawDatabase.surrender_profile(_faction)

@@ -6444,9 +6444,13 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 				if angle < PI / 2:  # Source is in the forward arc
 					# Logged once per Infatuated; an attack the player ordered
 					# still gets the floating notice each time (AI retries stay quiet).
-					if not inf_instance.custom_data.get("refusal_logged", false):
+					# Only where the party sees the one refusing, and the charmer
+					# is named only when seen too (round 6: no unseen NPC named).
+					if not inf_instance.custom_data.get("refusal_logged", false) and _announces_to_party():
 						inf_instance.custom_data["refusal_logged"] = true
-						GameLog.add_entry("%s can't bring themselves to attack %s." % [Name, inf_instance.source.Name])
+						var charmer = inf_instance.source
+						var charmer_name: String = charmer.Name if (not charmer.has_method("_announces_to_party") or charmer._announces_to_party()) else "someone unseen"
+						GameLog.add_entry("%s can't bring themselves to attack %s." % [Name, charmer_name])
 					_announce_attack_refusal("Infatuated", "")
 					return
 	if Ability == "Main":
