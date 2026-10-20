@@ -18,8 +18,8 @@ const BUILTIN_DECOR := {"_plate": 16.0, "_cup": 6.0, "_candle": 5.0}
 
 
 # Same integer hash in TG RunArt (variant picks, decor jitter seeds).
-static func hash_i(seed: int, i: int) -> int:
-	return ((seed * 73856093) ^ (i * 19349663)) & 0x7fffffff
+static func hash_i(rseed: int, i: int) -> int:
+	return ((rseed * 73856093) ^ (i * 19349663)) & 0x7fffffff
 
 
 # A spawn def / capture record -> the run dict Item.gd consumes ({} = no run).
@@ -44,7 +44,7 @@ static func run_from_spawn(def: Dictionary) -> Dictionary:
 # (x in [-L/2, L/2], y in [-W/2, W/2]; the transparent atlas pad grows the
 # rects by pad*k so the opaque art keeps its exact size and the outer edges
 # stay antialiased at any rotation).
-static func tiles(length: float, width: float, meta: Dictionary, caps: int = 3, seed: int = 0) -> Array:
+static func tiles(length: float, width: float, meta: Dictionary, caps: int = 3, rseed: int = 0) -> Array:
 	var out: Array = []
 	var aw: float = float(meta.get("w", 0.0))
 	var ah: float = float(meta.get("h", 0.0))
@@ -78,7 +78,7 @@ static func tiles(length: float, width: float, meta: Dictionary, caps: int = 3, 
 		var n: int = maxi(1, roundi(span / maxf(mw, 0.001)))
 		var tw: float = span / float(n)
 		for i in n:
-			var mv: Array = mids[hash_i(seed, i) % mids.size()]
+			var mv: Array = mids[hash_i(rseed, i) % mids.size()]
 			out.append({"dst": Rect2(x0 + tw * float(i), y0, tw, hh),
 				"src": Rect2(float(mv[0]), 0.0, float(mv[1]) - float(mv[0]), ah)})
 	else:
