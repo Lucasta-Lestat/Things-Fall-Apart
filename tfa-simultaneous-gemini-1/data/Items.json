@@ -4777,6 +4777,7 @@
 	"base_width": 48.0,
 	"base_height": 16.0,
 	"sprite_path": "res://Items/bench.png",
+	"run": {"atlas": "res://Items/bench_run.png", "w": 443, "h": 136, "pad": 4, "cap": 85, "mid": [[97, 346]], "mid_mode": "stretch", "across": 20.5, "shadow": 0.0},
 	"weight": 18.0,
 	"cost": 5.0,
 	"interact_options": [
@@ -5678,6 +5679,7 @@
 	"base_width": 88.0,
 	"base_height": 40.0,
 	"sprite_path": "res://Items/long_table.png",
+	"run": {"atlas": "res://Items/long_table_run.png", "w": 607, "h": 264, "pad": 4, "cap": 16, "mid": [[28, 579]], "mid_mode": "stretch", "across": 40.1, "shadow": 0.0},
 	"weight": 60.0,
 	"cost": 25.0,
 	"interact_options": [
@@ -5762,6 +5764,7 @@
 	"base_width": 110.0,
 	"base_height": 440.0,
 	"sprite_path": "res://Items/red_carpet.png",
+	"run": {"atlas": "res://Items/red_carpet_run.png", "w": 218, "h": 110, "pad": 4, "cap": 13, "mid": [[25, 193]], "mid_mode": "tile", "across": 26.5, "shadow": 0.0},
 	"weight": 8.0,
 	"cost": 30.0,
 	"interact_options": [

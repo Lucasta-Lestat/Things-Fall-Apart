@@ -57,6 +57,7 @@ func _ready() -> void:
 	await _await_frames(5)
 
 	await _case_item_persistence()
+	await _case_shape_persistence()
 	await _case_guard_death_persistence()
 	await _case_wilderness_bucket()
 	_case_save_round_trip()
@@ -103,6 +104,55 @@ func _case_item_persistence() -> void:
 		if is_instance_valid(it) and str(it.id) == "treasure_chest":
 			count_after += 1
 	_check("item.taken-item-stays-gone", count_after == 1, "count=%d" % count_after)
+
+# Revisit keeps every authored item's SHAPE (rotation, scale, scale_x/y, z)
+# and a RUN's length/width/caps/seed/decor -- _capture_item_state once kept
+# x/y only, so benches, stalls and banquet tables respawned at rotation 0,
+# scale 1 (natural-tables lane). Damage survives too.
+func _find_at(item_id: String, p: Vector2):
+	for it in game.items_in_scene:
+		if is_instance_valid(it) and str(it.id) == item_id and it.global_position.distance_to(p) < 0.5:
+			return it
+	return null
+
+func _case_shape_persistence() -> void:
+	game._spawn_items([
+		{"id": "bench", "position": [1460.0, 1490.0], "rotation": 1.2, "scale": 1.3, "scale_x": 0.8, "z": 1.0},
+		{"id": "long_table", "position": [1620.0, 1610.0], "rotation": 0.5, "scale": 1.0,
+			"length": 300.0, "width": 50.0, "caps": 1.0, "seed": 9.0,
+			"decor": [{"id": "_plate", "at": [10.0, -12.0], "rot": 0.3}]},
+	])
+	await _await_frames(1)
+	var bench = _find_at("bench", Vector2(1460, 1490))
+	var table = _find_at("long_table", Vector2(1620, 1610))
+	_check("shape.spawned", bench != null and table != null)
+	if bench == null or table == null:
+		return
+	_check("shape.run-built", table.fixed and table.get_node_or_null("RunRenderer") != null)
+	_check("shape.spawn-rotation-and-scale", absf(bench.rotation - 1.2) < 1e-4 and bench.scale.distance_to(Vector2(1.04, 1.3)) < 1e-4,
+		"rot %f scale %s (AnimatableBody2D: one transform write)" % [bench.rotation, str(bench.scale)])
+	var full_hp: int = int(table.max_health)
+	table.current_health = full_hp - 7
+	game.load_map("perrow_tavern")
+	await _await_frames(4)
+	game.load_map("town_square")
+	await _await_frames(5)
+	var b2 = _find_at("bench", Vector2(1460, 1490))
+	var t2 = _find_at("long_table", Vector2(1620, 1610))
+	_check("shape.restored", b2 != null and t2 != null)
+	if b2 == null or t2 == null:
+		return
+	_check("shape.plain-rotation-kept", absf(b2.rotation - 1.2) < 1e-4, "rot %f" % b2.rotation)
+	_check("shape.plain-scale-kept", b2.scale.distance_to(Vector2(1.04, 1.3)) < 1e-4, str(b2.scale))
+	_check("shape.plain-z-kept", int(b2.z_index) == 2, "z %d" % b2.z_index)
+	_check("shape.run-rotation-kept", absf(t2.rotation - 0.5) < 1e-4, "rot %f" % t2.rotation)
+	_check("shape.run-length-kept", t2.fixed and absf(float(t2.run.get("length", 0.0)) - 300.0) < 1e-4
+		and absf(float(t2.run.get("width", 0.0)) - 50.0) < 1e-4 and int(t2.run.get("caps", 3)) == 1
+		and int(t2.run.get("seed", 0)) == 9 and (t2.run.get("decor", []) as Array).size() == 1, str(t2.run))
+	_check("shape.run-renderer-rebuilt", t2.get_node_or_null("RunRenderer") != null)
+	_check("shape.damage-kept", int(t2.current_health) == full_hp - 7 and int(t2.max_health) == full_hp,
+		"%d/%d" % [t2.current_health, t2.max_health])
+	_check("shape.run-not-pickable", game._world_item_options(t2).is_empty())
 
 func _case_guard_death_persistence() -> void:
 	var guards: Array = _guards()

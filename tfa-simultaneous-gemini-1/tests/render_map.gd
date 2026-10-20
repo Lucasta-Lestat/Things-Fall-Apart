@@ -56,6 +56,9 @@ func _ready() -> void:
 			var isy := isc * float(idf.get("scale_y", 1.0))
 			if isx != 1.0 or isy != 1.0:
 				inst.scale = Vector2(isx, isy)
+			# RUN furniture: the same spawn->run dict Game._spawn_items builds
+			if idf.has("length"):
+				inst.run = RunLayout.run_from_spawn(idf)
 			add_child(inst)
 			# z AFTER add_child: Item._ready pins z_index = 1 on enter
 			var zb := int(idf.get("z", 0))

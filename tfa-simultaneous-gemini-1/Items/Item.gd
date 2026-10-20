@@ -78,6 +78,16 @@ var stolen_from: String = ""     # stamped on take; drives confiscation and fenc
 var origin: Dictionary = {}
 var origin_display_name: String = ""
 
+# --- RUN furniture (Items/RunLayout.gd) ---
+# A spawn carrying "length" is a RUN: one continuous strip (a banquet table, a
+# bar counter, a pew) drawn by a RunRenderer child at any length, instead of N
+# butt-joined sprites. Set by Game.create_item (extras.run) before _ready.
+# Runs are FIXED furniture: no Pick Up, no NPC theft, no hover (collision
+# layer 0 -- also invisible to projectiles/force fields; AoE still finds the
+# centre through items_in_scene). Durability scales with the length.
+var run: Dictionary = {}
+var fixed: bool = false
+
 @onready var floating_text_label: RichTextLabel = $FloatingTextLabel
 @onready var sprite: Sprite2D = $Sprite
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -257,6 +267,8 @@ func _apply_item_data():
 	sprite.texture = load(sprite_path)
 	if sprite.texture:
 		scale_sprite(size)
+	if not run.is_empty():
+		_apply_run(data, w)
 
 	# Default loot_value to this item's cost if no per-spawn override was provided.
 	if loot_value < 0.0:
@@ -268,6 +280,30 @@ func _apply_item_data():
 		var has_explicit_contents := contents is Array and not (contents as Array).is_empty()
 		if not has_explicit_contents:
 			contents = _generate_chest_contents(controlling_faction, loot_value)
+
+# The RUN branch of _apply_item_data: hide the plain sprite, draw the strip
+# through a RunRenderer, become fixed furniture, scale hp with the length.
+# A missing/unloadable "run" block falls back to stretching the sprite along
+# x (with a warning) so a stale import never leaves a hole in the room.
+func _apply_run(data: Dictionary, base_w: float) -> void:
+	var length: float = float(run.get("length", 0.0))
+	fixed = true
+	collision_layer = 0
+	var hp_k: float = maxf(1.0, length / maxf(base_w, 1.0))
+	max_health = int(round(float(max_health) * hp_k))
+	current_health = max_health
+	var mv: Variant = data.get("run")
+	var meta: Dictionary = mv if mv is Dictionary else {}
+	if meta.is_empty() or RunRenderer.texture_for(String(meta.get("atlas", ""))) == null:
+		push_warning("Item %s: run spawn without a loadable Items.json run atlas; stretching the sprite" % str(id))
+		if sprite.texture:
+			sprite.scale.x *= length / maxf(base_w, 1.0)
+		return
+	sprite.visible = false
+	var rr := RunRenderer.new()
+	rr.name = "RunRenderer"
+	rr.setup(meta, run)
+	add_child(rr)
 
 func _apply_readable_data(data: Dictionary) -> void:
 	# Minimal world setup for a readable. Title/body live in ReadableDatabase;

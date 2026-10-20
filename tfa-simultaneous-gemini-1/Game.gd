@@ -1869,30 +1869,55 @@ func _spawn_items(item_list: Array) -> void:
 			extras["owner_faction"] = owner_f
 		if item_def.has("owner_uid"):
 			extras["owner_uid"] = str(item_def["owner_uid"])
+		# RUN furniture (Items/RunLayout.gd): "length" makes one continuous strip
+		if item_def.has("length"):
+			extras["run"] = RunLayout.run_from_spawn(item_def)
 
 		for j in range(count):
 			var inst := create_item(item_id, pos, 1, extras)
-			# authored placements (editor exports): rotation is radians (the
-			# editor's draw transform + all 555 shipped spawns stay under 2*PI),
-			# scale a uniform multiplier over the item's base footprint. Both
-			# were being exported and silently dropped — every authored long
-			# table lay sideways and scaled set pieces (carpets) shrank.
 			if inst != null:
-				inst.rotation = float(item_def.get("rotation", 0.0))
-				var sc := float(item_def.get("scale", 1.0))
-				# scale_x/scale_y stretch the item along its OWN axes on top of
-				# the uniform scale (node scale is applied before rotation, so
-				# the stretch follows the art); negative values mirror the art.
-				var sx := sc * float(item_def.get("scale_x", 1.0))
-				var sy := sc * float(item_def.get("scale_y", 1.0))
-				if sx != 1.0 or sy != 1.0:
-					inst.scale = Vector2(sx, sy)
-				# surface stacking: z lifts the piece above base items (a pot on
-				# a stove) while staying under characters (z=5). Set AFTER
-				# create_item — Item._ready already ran and pinned z_index = 1.
-				var zb := int(item_def.get("z", 0))
-				if zb != 0:
-					inst.z_index = 1 + zb
+				_apply_spawn_shape(inst, item_def)
+
+# Spawn-def keys that shape a placed item: kept on the instance (meta
+# "spawn_shape", raw values) so a revisit restores rotation/scale/z/run exactly
+# -- _capture_item_state used to keep x/y only, and every authored table,
+# bench and stall came back at rotation 0, scale 1.
+const SPAWN_SHAPE_KEYS := ["rotation", "scale", "scale_x", "scale_y", "z",
+	"length", "width", "caps", "seed", "decor"]
+
+func _apply_spawn_shape(inst: Item, item_def: Dictionary) -> void:
+	# authored placements (editor exports): rotation is radians (the
+	# editor's draw transform + all 555 shipped spawns stay under 2*PI),
+	# scale a uniform multiplier over the item's base footprint. Both
+	# were being exported and silently dropped — every authored long
+	# table lay sideways and scaled set pieces (carpets) shrank.
+	var rot := float(item_def.get("rotation", 0.0))
+	var sc := float(item_def.get("scale", 1.0))
+	# scale_x/scale_y stretch the item along its OWN axes on top of
+	# the uniform scale (node scale is applied before rotation, so
+	# the stretch follows the art); negative values mirror the art.
+	var sx := sc * float(item_def.get("scale_x", 1.0))
+	var sy := sc * float(item_def.get("scale_y", 1.0))
+	# ONE transform write: Item is an AnimatableBody2D (sync_to_physics), so
+	# every rotation/scale setter ships the node transform to the physics body
+	# and snaps the node back until the next physics frame -- setting rotation
+	# and then scale shipped a rotation-0 transform last, and every scaled AND
+	# rotated spawn (stretched table pieces, carpets, stairs) lay unrotated.
+	if rot != 0.0 or sx != 1.0 or sy != 1.0:
+		inst.transform = Transform2D(rot, Vector2(sx, sy), 0.0, inst.position)
+	# surface stacking: z lifts the piece above base items (a pot on
+	# a stove) while staying under characters (z=5). Set AFTER
+	# create_item — Item._ready already ran and pinned z_index = 1.
+	var zb := int(item_def.get("z", 0))
+	if zb != 0:
+		inst.z_index = 1 + zb
+	var shape: Dictionary = {}
+	for k in SPAWN_SHAPE_KEYS:
+		if item_def.has(k):
+			var v: Variant = item_def[k]
+			shape[k] = (v as Array).duplicate(true) if v is Array else v
+	if not shape.is_empty():
+		inst.set_meta("spawn_shape", shape)
 
 func _spawn_fluids(fluid_list: Array) -> void:
 	if not fluid_manager:
@@ -2004,6 +2029,10 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 func _world_item_options(item: Item) -> Array:
 	if item.item_type == "readable":
 		return item.options.duplicate() if item.options else ["Read"]
+	# RUN furniture (a banquet table, a counter, a pew) is fixed: no Pick Up,
+	# so NPC AI (ai._is_takeable_item) never carries it off either.
+	if item.fixed:
+		return []
 	var is_container: bool = item.num_slots > 0 or (item.options.size() > 0 and str(item.options[0]) == "Open")
 	if is_container:
 		# A treasure chest's "Inspect" and a world backpack's inventory-only
@@ -2318,6 +2347,9 @@ func create_item(item_id: String, world_position: Vector2, stack_count: int = 1,
 		item_instance.origin = (extras["origin"] as Dictionary).duplicate(true)
 	if extras.has("origin_display_name"):
 		item_instance.origin_display_name = String(extras["origin_display_name"])
+	# RUN furniture: Item._apply_item_data builds the strip from this
+	if extras.has("run") and extras["run"] is Dictionary and not (extras["run"] as Dictionary).is_empty():
+		item_instance.run = (extras["run"] as Dictionary).duplicate(true)
 
 	add_child(item_instance)
 	items_in_scene.append(item_instance)
@@ -2541,6 +2573,12 @@ func _capture_item_state() -> void:
 			record["origin_display_name"] = str(it.origin_display_name)
 		if it.contents is Array:
 			record["contents"] = (it.contents as Array).duplicate(true)
+		# spawn shape (rotation/scale/z + a run's length/width/caps/seed/decor)
+		# and damage survive the unload too
+		if it.has_meta("spawn_shape"):
+			record["shape"] = (it.get_meta("spawn_shape") as Dictionary).duplicate(true)
+		if int(it.current_health) < int(it.max_health):
+			record["current_health"] = int(it.current_health)
 		records.append(record)
 	item_state_per_map[current_map_id] = records
 
@@ -2566,10 +2604,19 @@ func _restore_item_state() -> void:
 			extras["origin"] = (record["origin"] as Dictionary).duplicate(true)
 		if record.has("origin_display_name"):
 			extras["origin_display_name"] = str(record["origin_display_name"])
+		var shape: Dictionary = {}
+		if record.get("shape") is Dictionary:
+			shape = record["shape"]
+		if shape.has("length"):
+			extras["run"] = RunLayout.run_from_spawn(shape)
 		var item = create_item(str(record.get("id", "")),
 			Vector2(float(record.get("x", 0.0)), float(record.get("y", 0.0))), 1, extras)
 		if item == null:
 			continue
+		if not shape.is_empty():
+			_apply_spawn_shape(item, shape)
+		if record.has("current_health"):
+			item.current_health = mini(int(record["current_health"]), int(item.max_health))
 		# THE ORDERING TRAP: _apply_item_data (inside create_item's add_child)
 		# auto-fills a faction chest whose contents are empty. Restore must
 		# run AFTER create_item returns and must OVERWRITE contents, never
@@ -3174,7 +3221,15 @@ func _update_item_los_visibility() -> void:
 	for item in items_in_scene:
 		if not is_instance_valid(item):
 			continue
-		item.visible = _is_position_visible_to_party(item.global_position)
+		var vis: bool = _is_position_visible_to_party(item.global_position)
+		# a RUN (a 14 m banquet table) shows whole when its centre OR either end
+		# is seen -- one strip, never piecewise pop-in along the hall
+		if not vis and item is Item and (item as Item).fixed and not (item as Item).run.is_empty():
+			var hl: float = float((item as Item).run.get("length", 0.0)) * 0.5
+			var xf: Transform2D = (item as Item).global_transform
+			vis = _is_position_visible_to_party(xf * Vector2(-hl, 0.0)) \
+				or _is_position_visible_to_party(xf * Vector2(hl, 0.0))
+		item.visible = vis
 
 
 ## Environmental multiplier on sight range at a world position: the map's
