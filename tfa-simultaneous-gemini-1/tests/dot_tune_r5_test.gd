@@ -18,6 +18,11 @@ extends Node2D
 #   F. Every DoT description says armour doesn't reduce it, and the numbers
 #      in the descriptions and summaries are the new ones.
 #   G. The new numbers per condition and per source (printed).
+# Round 6 (tests/status_conds_r6_test covers the new rules) changed two of
+# these: Chilled caps and freezes at 4, so 11-15 cold is Chilled x3 and only
+# 16+ freezes at once; Toxic Shock has no duration and its tick doubles (1, 2,
+# 4 ... 32) until cured, a re-dose moving it on rather than restarting it,
+# and no longer slows. The checks below assert the round-6 numbers.
 # The condition clock (TimeManager.absolute_time) is driven by hand in exact
 # 1/16 s steps, and each ConditionManager._process is called directly.
 #   godot --headless --path . res://tests/dot_tune_r5_test.tscn
@@ -215,10 +220,11 @@ func _without_bleed_saves(f: Callable):
 ## (HP actually lost), ticks, peak (stacks), lasted (s)}. `schedule` is
 ## [[seconds, Callable], ...], each fired on the first step at or past its
 ## time, before that step's conditions tick. The run lasts at least
-## `min_seconds`, then until no damaging condition is left.
+## `min_seconds`, then until no damaging condition is left, or until the
+## bearer dies ("died"; a corpse doesn't tick, and Toxic Shock never wears off).
 func _simulate(c: ProceduralCharacter, schedule: Array, min_seconds: float) -> Dictionary:
 	var cm := _cm(c)
-	var out := {"total": 0, "hp": 0, "ticks": 0, "peak": 0, "lasted": 0.0, "seen": []}
+	var out := {"total": 0, "hp": 0, "ticks": 0, "peak": 0, "lasted": 0.0, "seen": [], "died": false}
 	var on_tick := func(_inst, _eff, res):
 		if res.has("damage"):
 			out["total"] += int(res["damage"])
@@ -243,6 +249,9 @@ func _simulate(c: ProceduralCharacter, schedule: Array, min_seconds: float) -> D
 					(out["seen"] as Array).append(inst.condition.id)
 		if any:
 			out["lasted"] = t
+		if not c.is_alive():
+			out["died"] = true
+			break
 		if (t >= min_seconds and not any and pending.is_empty()) or t > 300.0:
 			break
 		i += 1
@@ -349,7 +358,7 @@ func _case_k_five() -> void:
 	var cases := {
 		"burning": {1: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 40: 4},
 		"poisoned": {2: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 18: 4},
-		"chilled": {3: 1, 4: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3},
+		"chilled": {3: 1, 4: 1, 5: 1, 6: 2, 10: 2, 11: 3, 15: 3, 16: 4, 40: 4},
 		"bleeding": {5: 1, 6: 2, 10: 2, 12: 3, 15: 3, 16: 4, 20: 4, 21: 5, 30: 5},
 	}
 	for id in cases:
@@ -371,7 +380,7 @@ func _case_k_five() -> void:
 		v.current_health = v.max_health
 		return true
 	await _without_bleed_saves(cuts)
-	# Cold: 1 stack per 5, three freeze.
+	# Cold: 1 stack per 5, four freeze (round 6; three in round 5).
 	v.take_damage({"cold": 8}, v.global_position)
 	_check("hit.cold-8-chills-2", _stacks(v, "chilled") == 2 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	cm.clear_all_conditions()
@@ -379,18 +388,21 @@ func _case_k_five() -> void:
 	_check("hit.cold-10-still-2", _stacks(v, "chilled") == 2 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	cm.clear_all_conditions()
 	v.take_damage({"cold": 11}, v.global_position)
-	_check("hit.cold-11-freezes-in-one", cm.has_condition("frozen") and not cm.has_condition("chilled"))
+	_check("hit.cold-11-chills-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	cm.clear_all_conditions()
 	v.take_damage({"cold": 15}, v.global_position)
-	_check("hit.iciclet-15-freezes-in-one", cm.has_condition("frozen"))
+	_check("hit.iciclet-15-chills-3", _stacks(v, "chilled") == 3 and not cm.has_condition("frozen"), _stacks(v, "chilled"))
 	cm.clear_all_conditions()
-	# Frost Axe 4 cold and Winter's Grip 3: a stack a hit, three hits.
+	v.take_damage({"cold": 16}, v.global_position)
+	_check("hit.cold-16-freezes-in-one", cm.has_condition("frozen") and not cm.has_condition("chilled"))
+	cm.clear_all_conditions()
+	# Frost Axe 4 cold and Winter's Grip 3: a stack a hit, four hits.
 	for w in [["frost-axe", 4.0], ["winters-grip", 3.0]]:
 		var hits := 0
 		while not cm.has_condition("frozen") and hits < 10:
 			v.take_damage({"cold": w[1]}, v.global_position)
 			hits += 1
-		_check("hit.%s-freezes-in-3" % w[0], hits == 3, hits)
+		_check("hit.%s-freezes-in-4" % w[0], hits == 4, hits)
 		cm.clear_all_conditions()
 	# A Frost Axe at STR 100 (6 cold) brings 2 stacks: two hits.
 	var hits2 := 0
@@ -407,11 +419,12 @@ func _case_k_five() -> void:
 		var before: int = mini(5, maxi(1, int(ceil(cut / 20.0))))
 		var after: int = _tmpl("bleeding").stacks_for_damage(float(cut))
 		print("%-10d %d -> %-9d %d -> %d" % [cut, before, after, before * 4, after * 4])
-	print("--- Chilled from one cold hit (K 12 -> 5; Frozen at 3) ---")
-	for src in [["Winter's Grip (3 cold)", 3], ["Frost Axe (4 cold)", 4], ["Frost Axe at STR 100 (6)", 6], ["Iciclet (15 cold, thrown)", 15], ["Iciclet at STR 30 (12)", 12]]:
+	print("--- Chilled from one cold hit (K 12 -> 5; Frozen at 4 since round 6) ---")
+	var freeze_at: int = int(_tmpl("chilled").transforms_into.get("required_tier", 4))
+	for src in [["Winter's Grip (3 cold)", 3], ["Frost Axe (4 cold)", 4], ["Frost Axe at STR 100 (6)", 6], ["Iciclet (15 cold, thrown)", 15], ["Iciclet at STR 57+ (16)", 16], ["Iciclet at STR 30 (12)", 12]]:
 		var before_c: int = mini(3, maxi(1, int(ceil(src[1] / 12.0))))
 		var after_c: int = _tmpl("chilled").stacks_for_damage(float(src[1]))
-		print("%-28s %d -> %d%s" % [src[0], before_c, after_c, "  FREEZES" if after_c >= 3 else ""])
+		print("%-28s %d -> %d%s" % [src[0], before_c, after_c, "  FREEZES" if after_c >= freeze_at else ""])
 	await _clear()
 
 
@@ -615,16 +628,22 @@ func _case_toxic_shock() -> void:
 	_check("toxic.logged-once", _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock.") == n0 + 1, GameLog.get_entries().slice(-3))
 	var now := _now()
 	var shock := cm.get_condition("toxic_shock")
-	_check("toxic.summary", shock.get_summary(now) == "Toxic Shock: 4 poison every 2 s (10s left)", shock.get_summary(now))
-	_check("toxic.slows", p.move_speed < speed0 * 0.75 and p.move_speed > speed0 * 0.65, "%s -> %s" % [speed0, p.move_speed])
-	# More poison builds Poisoned beside it; reaching 4 again restarts the 10 s.
+	# Round 6: no time left to show; the tick, that it doubles, and the cure.
+	_check("toxic.summary", shock.get_summary(now) == "Toxic Shock: 1 poison every 2 s, doubling (cure: Heal or a Potion of Healing)", shock.get_summary(now))
+	# Round 6 dropped round 5's 30% slow: the developer's model is the damage.
+	_check("toxic.no-slow", is_equal_approx(p.move_speed, speed0), "%s -> %s" % [speed0, p.move_speed])
+	# More poison builds Poisoned beside it; reaching 4 again moves Toxic
+	# Shock on one doubling (round 6; round 5 restarted a 10 s timer).
 	_run(p, 6.0)
 	cm.apply_condition("poisoned", foe, 2)
 	_check("toxic.poison-builds-beside", _stacks(p, "poisoned") == 2 and cm.has_condition("toxic_shock"))
+	var steps0 := shock.escalation_steps(0)
+	var w0 := _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock worsens")
 	cm.apply_condition("poisoned", foe, 2)
-	_check("toxic.again-restarts-10s", cm.get_condition("toxic_shock") == shock and is_equal_approx(shock.get_remaining_duration(_now()), 10.0) \
-		and not cm.has_condition("poisoned"), shock.get_remaining_duration(_now()))
-	_check("toxic.again-logged", _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock.") == n0 + 2)
+	_check("toxic.again-steps-on", cm.get_condition("toxic_shock") == shock and steps0 == 3 and shock.escalation_steps(0) == 4 \
+		and shock.expires_at < 0.0 and not cm.has_condition("poisoned"), [steps0, shock.escalation_steps(0), shock.expires_at])
+	_check("toxic.again-logged", _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock worsens") == w0 + 1 \
+		and _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock.") == n0 + 1, GameLog.get_entries().slice(-3))
 	# Heal cures both, as it cured Poisoned.
 	cm.apply_condition("poisoned", foe, 1)
 	foe.ability_manager._resolve_effects(_ability("heal"), _ability("heal").effects, p.global_position, [p])
@@ -632,11 +651,19 @@ func _case_toxic_shock() -> void:
 	_check("toxic.speed-back", is_equal_approx(p.move_speed, speed0), p.move_speed)
 	cm.clear_all_conditions()
 
-	# 20 over its 10 s (ticks at 0, 2, 4, 6, 8), through armour.
+	# Round 6: ticks at 0, 2, 4, 6, 8 s deal 1, 2, 4, 8, 16, through armour.
 	_armour(p, HEAVY)
 	p.current_health = p.max_health
-	var r := _simulate(p, [[0.0, _applier(p, "poisoned", 4)]], 0.0)
-	_check("toxic.twenty-through-armour", r["total"] == 20 and r["hp"] == 20, r)
+	var hp_a := p.current_health
+	var got: Array = []
+	var on_tick := func(inst, _eff, res):
+		if res.has("damage") and inst.condition.id == "toxic_shock":
+			got.append(int(res["damage"]))
+	cm.triggered_effect_fired.connect(on_tick)
+	cm.apply_condition("poisoned", null, 4)
+	_run(p, 9.0)
+	cm.triggered_effect_fired.disconnect(on_tick)
+	_check("toxic.doubles-through-armour", got == [1, 2, 4, 8, 16] and hp_a - p.current_health == 31, [got, hp_a - p.current_health])
 	cm.clear_all_conditions()
 
 	# One poison hit of 16+ goes straight to Toxic Shock; 15 is Poisoned x3.
@@ -663,10 +690,10 @@ func _case_toxic_shock() -> void:
 	cm.apply_condition("poisoned", foe, 1)
 	_check("toxic.old-save-x4-turns-on-next-dose", cm.has_condition("toxic_shock") and not cm.has_condition("poisoned"))
 	cm.clear_all_conditions()
-	# Frozen's transform line in the same form.
-	var f0 := _log_count("Ada's Chilled reaches 3 stacks: Frozen.")
-	cm.apply_condition("chilled", foe, 3)
-	_check("toxic.frozen-line-same-form", _log_count("Ada's Chilled reaches 3 stacks: Frozen.") == f0 + 1)
+	# Frozen's transform line in the same form (at 4 stacks since round 6).
+	var f0 := _log_count("Ada's Chilled reaches 4 stacks: Frozen.")
+	cm.apply_condition("chilled", foe, 4)
+	_check("toxic.frozen-line-same-form", _log_count("Ada's Chilled reaches 4 stacks: Frozen.") == f0 + 1)
 	cm.clear_all_conditions()
 	await _clear()
 
@@ -686,7 +713,9 @@ func _case_text() -> void:
 	_check("text.burning-4-and-5s", b.contains("up to 4 stacks") and b.contains("5 s after the last"), b)
 	_check("text.poisoned-names-shock", _tmpl("poisoned").description.contains("At 4 stacks it turns into Toxic Shock"), _tmpl("poisoned").description)
 	_check("text.stuck-in-fire-2s", _tmpl("stuck_in_fire").description.contains("Lasts 2 s after"), _tmpl("stuck_in_fire").description)
-	_check("text.toxic-shock-numbers", _tmpl("toxic_shock").description.contains("4 poison damage every 2 s") and _tmpl("toxic_shock").description.contains("30% slower"), _tmpl("toxic_shock").description)
+	# Round 6: a doubling tick from 1 to 32, no slow.
+	var tsd := _tmpl("toxic_shock").description
+	_check("text.toxic-shock-numbers", tsd.contains("1 poison damage every 2 s") and tsd.contains("doubling") and tsd.contains("then 32 a tick") and not tsd.contains("slower"), tsd)
 	# Each description's tick matches its data.
 	for id in DOTS:
 		var t := _tmpl(id)
@@ -701,11 +730,12 @@ func _case_text() -> void:
 # G. The new numbers
 # ---------------------------------------------------------------------------
 
-## Seconds a 30-HP character lasts with `stacks` of `id` re-applied every second.
-func _kill_time(id: String, stacks: int) -> float:
+## Seconds a 30-HP character lasts with `stacks` of `id` re-applied every
+## second (`once`: applied once only, for Toxic Shock, which never wears off).
+func _kill_time(id: String, stacks: int, once := false) -> float:
 	var v := await _dummy("Thirty " + id)
 	v.current_health = 30
-	var sched := _every(1.0, 60.0, _applier(v, id, stacks), 0.0)
+	var sched: Array = [[0.0, _applier(v, id, stacks)]] if once else _every(1.0, 60.0, _applier(v, id, stacks), 0.0)
 	var start := _clock
 	var cm := _cm(v)
 	var died_at := -1.0
@@ -728,7 +758,9 @@ func _case_new_numbers() -> void:
 	# [id, its most stacks, stacks re-applied each second for the kill time].
 	# Poisoned can't be held at 3: any more turns it into Toxic Shock, so its
 	# kill time is a dose a second (a poison fog), Toxic Shock and all.
-	var rows := [["burning", 4, 4], ["poisoned", 3, 1], ["toxic_shock", 1, 1], ["bleeding", 5, 5], ["corroding", 3, 3], ["shocked", 3, 3], ["stuck_in_fire", 1, 1]]
+	# Toxic Shock itself (round 6) has no per-stack total: it never wears off
+	# and doubles until cured, so it gets its own line below.
+	var rows := [["burning", 4, 4], ["poisoned", 3, 1], ["bleeding", 5, 5], ["corroding", 3, 3], ["shocked", 3, 3], ["stuck_in_fire", 1, 1]]
 	var kill := {}
 	var per_stack := {}
 	var all := func():
@@ -747,7 +779,9 @@ func _case_new_numbers() -> void:
 	await _without_bleed_saves(all)
 	_check("num.burning-5-per-stack", per_stack.get("burning", 0) == 5, per_stack)
 	_check("num.poisoned-5-per-stack", per_stack.get("poisoned", 0) == 5, per_stack)
-	_check("num.toxic-shock-20", per_stack.get("toxic_shock", 0) == 20, per_stack)
+	kill["toxic_shock"] = await _kill_time("toxic_shock", 1, true)
+	print("%-18s %9s %9s %9s %13.1fs" % ["toxic_shock", "1,2,4..", "32", "16.00", kill["toxic_shock"]])
+	_check("num.toxic-shock-kills-30hp-in-8s", is_equal_approx(kill["toxic_shock"], 8.0), kill)
 	_check("num.stuck-in-fire-4-a-catch", per_stack.get("stuck_in_fire", 0) == 4, per_stack)
 	_check("num.burning-max-kills-30hp-in-7s", is_equal_approx(kill.get("burning", -1.0), 7.0), kill)
 	_check("num.every-max-kill-takes-time", kill.values().all(func(x): return x >= 6.0), kill)
@@ -791,16 +825,21 @@ func _case_new_numbers() -> void:
 		print("%-40s %-22s %6d %6d %7.1fs" % [row[0], " + ".join(PackedStringArray(r["seen"])), r["total"], r["peak"], float(r["lasted"])])
 	_check("src.match-striker-5", by_name["Match Striker (1 fire)"]["total"] == 5, by_name["Match Striker (1 fire)"])
 	_check("src.flaming-sword-5", by_name["Flaming Sword (5 fire)"]["total"] == 5, by_name["Flaming Sword (5 fire)"])
-	_check("src.poison-vial-shock-20", by_name["Poison Vial (18 poison)"]["total"] == 20 and by_name["Poison Vial (18 poison)"]["seen"] == ["toxic_shock"], by_name["Poison Vial (18 poison)"])
+	# Round 6: Toxic Shock doubles until cured, so uncured it is lethal.
+	_check("src.poison-vial-shock-lethal", by_name["Poison Vial (18 poison)"]["died"] and by_name["Poison Vial (18 poison)"]["seen"] == ["toxic_shock"], by_name["Poison Vial (18 poison)"])
 	_check("src.cloud-kill-turns", (by_name["Cloud Kill, the whole 15 s"]["seen"] as Array).has("toxic_shock"), by_name["Cloud Kill, the whole 15 s"])
 	_check("src.sword-cut-12", by_name["Sword cut (15 slashing), no CON save"]["total"] == 12, by_name["Sword cut (15 slashing), no CON save"])
 	_check("src.greatsword-20", by_name["Greatsword (30 slashing), no CON save"]["total"] == 20, by_name["Greatsword (30 slashing), no CON save"])
 	_check("src.fireball-10", by_name["Fireball (24 fire + 2 Burning)"]["total"] == 10, by_name["Fireball (24 fire + 2 Burning)"])
 	_check("src.fire-spin-about-16", by_name["Fire Spin, the whole 6 s (rooted)"]["total"] == 16, by_name["Fire Spin, the whole 6 s (rooted)"])
-	# Iciclet: no damage over time; one hit freezes (Frozen 5 s).
+	# Iciclet: no damage over time; one hit is Chilled x3 (round 6: Frozen at
+	# 4), and the next cold freezes (Frozen 5 s).
 	v = await _dummy("Iced")
 	v.take_damage({"cold": 15}, v.global_position)
+	var iced := _stacks(v, "chilled")
+	v.take_damage({"cold": 1}, v.global_position)
 	var frozen := _cm(v).get_condition("frozen")
-	print("Iciclet (15 cold): Frozen in one hit for %.0f s (was Chilled x2)" % (frozen.get_remaining_duration(_now()) if frozen else -1.0))
-	_check("src.iciclet-freezes", frozen != null and is_equal_approx(frozen.get_remaining_duration(_now()), 5.0))
+	print("Iciclet (15 cold): Chilled x%d (Frozen in one hit in round 5); the next cold freezes for %.0f s" % [iced, frozen.get_remaining_duration(_now()) if frozen else -1.0])
+	_check("src.iciclet-chills-3", iced == 3)
+	_check("src.iciclet-then-cold-freezes", frozen != null and is_equal_approx(frozen.get_remaining_duration(_now()), 5.0))
 	await _clear()

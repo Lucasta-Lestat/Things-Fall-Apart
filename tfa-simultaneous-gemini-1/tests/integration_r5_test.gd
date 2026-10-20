@@ -12,11 +12,12 @@
 #     it, ignores its armour, and its fire, light and overhead icons stay
 #     hidden with it; located, they show and the hover reads both the reason
 #     and the tick ("4 fire every 1 s").
-#   - A party member's 15-cold hit on one it can't see freezes it in one hit:
+#   - A party member's 16-cold hit on one it can't see freezes it in one hit
+#     (16 since round 6: Chilled freezes at 4, so 15 is Chilled x3):
 #     "hits something invisible." is logged, the transform line isn't (it
 #     wasn't seen), and once located the hover shows Frozen.
-#   - Toxic Shock survives a ConditionManager save round trip; the duration
-#     table isn't saved.
+#   - Toxic Shock survives a ConditionManager save round trip, its doubling
+#     tick where it was (round 6); the duration table isn't saved.
 # Drives the real Game on town_square.
 # Run:  godot --headless --path . res://tests/integration_r5_test.tscn
 # Judge by PASS/FAIL lines and "HARNESS DONE failures=0".
@@ -176,7 +177,7 @@ func _case_transform_no_contact() -> void:
 	await _frames(3)
 	# Seen and not yet invisible: the party member's doses carry no cue.
 	dosed.condition_manager.apply_condition("poisoned", p, 3)
-	dosed.condition_manager.apply_condition("chilled", p, 2)
+	dosed.condition_manager.apply_condition("chilled", p, 3)
 	await _invisible_unseen(dosed)
 	_check("xform.control-hidden", not game.is_seen_by_party(dosed))
 	_check("xform.control-poisoned-from-party", dosed.condition_manager.get_condition("poisoned") != null
@@ -189,7 +190,7 @@ func _case_transform_no_contact() -> void:
 	await _frames(3)
 	_check("xform.toxic-shock-no-locate", not game.is_seen_by_party(dosed), game.invisible_perception_text(dosed))
 	_check("xform.hidden-no-transform-line", _log_count("Dosed's Poisoned reaches") == lines, _log_tail())
-	# Chilled's 3rd stack from freezing rain (no source): Frozen, still hidden.
+	# Chilled's 4th stack from a sourceless dose: Frozen, still hidden.
 	dosed.condition_manager.apply_condition("chilled", null, 1)
 	_check("xform.frozen", dosed.condition_manager.has_condition("frozen"))
 	await _frames(3)
@@ -276,14 +277,15 @@ func _case_dot_from_hidden() -> void:
 	p.current_health = p.max_health
 	await _despawn_all()
 
-## 15 cold from a party member on one it can't see: frozen in one hit.
+## 16 cold from a party member on one it can't see (an Iciclet thrown at STR
+## 57+): frozen in one hit.
 func _case_freeze_unseen() -> void:
 	var iced = _spawn("Iced", 280.0)
 	await _invisible_unseen(iced)
 	_check("freeze.control-hidden", not game.is_seen_by_party(iced))
 	var hits := _log_count("%s hits something invisible." % p.Name)
 	var xform := _log_count("Iced's Chilled reaches")
-	iced.take_damage({"cold": 15}, iced.global_position, p)
+	iced.take_damage({"cold": 16}, iced.global_position, p)
 	_check("freeze.frozen-one-hit", iced.condition_manager.has_condition("frozen"))
 	_check("freeze.hit-line", _log_count("%s hits something invisible." % p.Name) == hits + 1, _log_tail())
 	_check("freeze.no-transform-line-unseen", _log_count("Iced's Chilled reaches") == xform, _log_tail())
@@ -297,11 +299,13 @@ func _case_save() -> void:
 	var held = _spawn("Held", 260.0)
 	await _frames(3)
 	held.condition_manager.apply_condition("toxic_shock", null)
+	# Three doublings in (round 6): the next tick is 8, and stays 8 after.
+	held.condition_manager.get_condition("toxic_shock").step_escalation(0, 3)
 	var d: Dictionary = held.condition_manager.to_dict()
 	held.condition_manager.clear_all_conditions()
 	held.condition_manager.from_dict(d)
 	var ts = held.condition_manager.get_condition("toxic_shock")
-	_check("save.toxic-shock-round-trip", ts != null and ts.get_dot_text() == "4 poison every 2 s", ts.get_dot_text() if ts else "none")
+	_check("save.toxic-shock-round-trip", ts != null and ts.get_dot_text() == "8 poison every 2 s, doubling", ts.get_dot_text() if ts else "none")
 	var state: Dictionary = game._serialize_character(held)
 	_check("save.no-duration-table", not state.has("MODIFY_DURATION_BY_TRAIT"))
 	await _despawn_all()

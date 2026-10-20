@@ -300,8 +300,9 @@ func _ready() -> void:
 	if not TimeManager.date_changed.is_connected(_on_date_changed_for_returns):
 		TimeManager.date_changed.connect(_on_date_changed_for_returns)
 
-	# Law/crime Phase 7: the Surrender button (visible whenever a hostile is
-	# near — a missing button is confusion, a visible one is information).
+	# Law/crime Phase 7: the Surrender button (visible whenever a hostile the
+	# party knows about is near — a missing button is confusion, a visible one
+	# is information; known_threats_near_party).
 	_setup_surrender_button()
 	_setup_threat_indicators()
 
@@ -1021,11 +1022,15 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	_npc_was_truly_seen.clear()
 	_npc_pulse_remaining.clear()
 	_npc_radar_cooldown.clear()
+	_npc_last_seen_time.clear()
+	_npc_last_seen_pos.clear()
 	# Awareness of invisible NPCs is transient: a new map (or a load) starts
 	# with none, so an invisible NPC in view stays hidden until a cue.
 	_invisible_aware_until.clear()
 	_invisible_aware_why.clear()
 	_invisible_lost_said.clear()
+	# So is the memory of threats (combat music, Surrender).
+	_threat_known_until.clear()
 
 	# Clean up previous map
 	_unload_current_map()
@@ -1636,7 +1641,11 @@ func _tick_weather_conditions(delta: float) -> void:
 			if dur > 0.0 and existing.expires_at > 0.0:
 				existing.expires_at = maxf(existing.expires_at, TimeManager.absolute_time() + dur)
 			continue
+		# Spell weather landing on everyone under the sky is no blow traded: it
+		# doesn't make an NPC the party can't see a known threat (round 6).
+		_weather_landing = true
 		cm.apply_condition(cond, source, 1)
+		_weather_landing = false
 
 ## Counts down timed spell weather and restores the previous precipitation.
 func _tick_forced_weather(delta: float) -> void:
@@ -2340,6 +2349,9 @@ func _setup_surrender_button() -> void:
 	_surrender_button.offset_right = 70.0
 	_surrender_button.offset_top = -110.0
 	_surrender_button.offset_bottom = -70.0
+	# The rule it shows by (known_threats_near_party), for the player to plan on.
+	_surrender_button.tooltip_text = ("Give yourselves up to the hostiles you know are near.\n"
+		+ "Shown while one is in view, or was seen, heard close by or traded blows with in the last %d s.") % int(THREAT_MEMORY_SECONDS)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	$GameUI.add_child(_surrender_button)
 
@@ -2365,6 +2377,86 @@ func hostile_characters_near_party(radius: float = SURRENDER_RADIUS) -> Array:
 		if near_and_hostile:
 			out.append(c)
 	return out
+
+# --- Known threats: combat music and Surrender ---
+# Developer (round 6): "No combat music or surrender option until the party is
+# aware of the threat". hostile_characters_near_party (above) checks no
+# perception at all; a known threat is one of those hostiles that the party is
+# aware of:
+#   - it sees it now (is_seen_by_party: line of sight, and for an Invisible NPC
+#     round 5's awareness);
+#   - it saw it within the last THREAT_MEMORY_SECONDS (a foe stepping behind a
+#     pillar mid-fight is still there);
+#   - within THREAT_MEMORY_SECONDS it and a party member traded a blow or a
+#     condition that landed, either way (an unseen archer's hit makes it known
+#     at once), or a party member heard it within THREAT_HEARD_TILES, or heard
+#     one it already knew of.
+# Each cue restarts the count. A hidden enemy nearby, however hostile, starts
+# no music and offers no Surrender. Memory runs on TimeManager's clock (stopped
+# while paused), isn't saved and clears with the map.
+
+## Seconds of game time the party remembers a threat it stopped perceiving.
+const THREAT_MEMORY_SECONDS := 10.0
+## A noise within this many tiles of a party member makes its maker known (as
+## INVISIBLE_HEARD_TILES does for an invisible NPC).
+const THREAT_HEARD_TILES := 2.0
+
+## Character -> TimeManager.absolute_time() the last cue keeps it known until.
+var _threat_known_until: Dictionary = {}
+## True while _tick_weather_conditions applies spell weather's condition:
+## that landing is no contact (_note_threat_contact).
+var _weather_landing: bool = false
+
+## The hostiles near the party that it knows about: what the Surrender button,
+## the SurrenderPanel's counterparty and the combat music go by.
+func known_threats_near_party(radius: float = SURRENDER_RADIUS) -> Array:
+	var out: Array = []
+	for c in hostile_characters_near_party(radius):
+		if is_threat_known(c):
+			out.append(c)
+	return out
+
+## Whether the party is aware of `c`: seen now, or a cue within
+## THREAT_MEMORY_SECONDS (above). Says nothing about hostility.
+func is_threat_known(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	if is_seen_by_party(c):
+		return true
+	return TimeManager.absolute_time() < float(_threat_known_until.get(c, -1.0))
+
+func _mark_threat_known(c) -> void:
+	if c == null or not is_instance_valid(c) or not (c is ProceduralCharacter) or c in party_chars:
+		return
+	_threat_known_until[c] = TimeManager.absolute_time() + THREAT_MEMORY_SECONDS
+
+## A blow (_on_character_damaged; damage-over-time ticks don't count) or a
+## condition (note_invisible_contact; not spell weather's, which lands on
+## everyone under the sky) landed between a party member and a character
+## outside the party: the party knows that one is there.
+func _note_threat_contact(actor, target) -> void:
+	if _weather_landing:
+		return
+	if actor == null or target == null or not is_instance_valid(actor) or not is_instance_valid(target) or actor == target:
+		return
+	if actor in party_chars and not (target in party_chars):
+		_mark_threat_known(target)
+	elif target in party_chars and not (actor in party_chars):
+		_mark_threat_known(actor)
+
+## Heard by the party (trigger_hearing_pulse): close by, or one it already
+## knows of (it can hear it moving about), stays known.
+func _note_threat_heard(c) -> void:
+	if c == null or not is_instance_valid(c) or not (c is ProceduralCharacter) or c in party_chars:
+		return
+	if is_threat_known(c):
+		_mark_threat_known(c)
+		return
+	var reach: float = GridManager.TILE_SIZE * THREAT_HEARD_TILES
+	for pc in party_chars:
+		if is_instance_valid(pc) and pc.is_alive() and pc.global_position.distance_to(c.global_position) <= reach:
+			_mark_threat_known(c)
+			return
 
 ## Every living, conscious hostile that a party member has in sight RIGHT
 ## NOW — the same LOS answer _update_npc_los_visibility renders sprites from,
@@ -2405,8 +2497,9 @@ func _update_surrender_button(hostiles: Array = []) -> void:
 		return
 	_surrender_button.visible = not hostiles.is_empty()
 
-## Seconds with no hostile in range before combat music releases back to the
-## map's ambient track. Without this, music flickers every time an enemy
+## Seconds with no known threat in range (known_threats_near_party) before
+## combat music releases back to the map's ambient track; it starts only for
+## one. Without this, music flickers every time an enemy
 ## paces across the radius edge or the last one dies mid-swing.
 const COMBAT_MUSIC_RELEASE: float = 6.0
 
@@ -2835,6 +2928,11 @@ var _npc_ever_seen: Dictionary = {}
 # them. Stops a walking unseen enemy from spawning a ping every footstep.
 var _npc_radar_cooldown: Dictionary = {}
 const RADAR_PING_COOLDOWN: float = 0.9
+# NPC -> TimeManager.absolute_time() and global_position at the last LOS pass
+# that saw it (party_last_saw_at / party_last_seen_position): a plan aimed at
+# an NPC the party has lost aims there, never at where it really is.
+var _npc_last_seen_time: Dictionary = {}
+var _npc_last_seen_pos: Dictionary = {}
 
 
 # Preloaded scene for the first-contact radar ping. Loaded lazily on first
@@ -2853,6 +2951,8 @@ func trigger_hearing_pulse(npc) -> void:
 	# Heard close by, an invisible NPC gives away where it is for a while
 	# (drawn see-through while in view); farther off it only flashes, below.
 	_note_invisible_heard(npc)
+	# Heard close by (or still being tracked), it is a threat the party knows of.
+	_note_threat_heard(npc)
 	if _npc_ever_seen.get(npc, false):
 		_npc_pulse_remaining[npc] = PULSE_DURATION
 	else:
@@ -2913,6 +3013,8 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		return
 	# A blow traded with an invisible NPC gives away where it is.
 	_note_invisible_hit(attacker, victim)
+	# Any blow traded with the party makes the other side a known threat.
+	_note_threat_contact(attacker, victim)
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
 	# this loop only wakes bystanders (legal fights startle people too).
 	# Enumeration is shared with the crime pipeline: CrimeManager.witnesses_of
@@ -3101,10 +3203,14 @@ func _update_npc_los_visibility() -> void:
 		var was_truly_seen: bool = _npc_was_truly_seen.get(npc, false)
 		_npc_was_truly_seen[npc] = seen
 		# Just lost from view: if Invisible is why, it fades out (round 5).
+		# The party remembers it for a while (known threats, round 6).
 		if was_truly_seen and not seen:
+			_mark_threat_known(npc)
 			_on_invisible_npc_lost(npc)
 
 		if seen:
+			_npc_last_seen_time[npc] = TimeManager.absolute_time()
+			_npc_last_seen_pos[npc] = npc.global_position
 			# Direct line of sight overrides any pulse.
 			var was_pulsing: bool = _npc_pulse_remaining.has(npc)
 			_npc_pulse_remaining.erase(npc)
@@ -3198,8 +3304,9 @@ func _is_character_visible_to_party(c) -> bool:
 # exactly an NPC out of sight: not drawn (a hearing pulse still flashes it),
 # not seen by any readout (_npc_was_truly_seen: hover, icons, cones, service
 # discovery, hostiles_in_party_los and the threat arrows), not clickable
-# (invisible_hidden_from_party). Awareness is transient: not saved, cleared
-# with the map, and it runs on TimeManager's clock, which stops while paused.
+# (hidden_from_party, as any NPC out of sight). Awareness is transient: not
+# saved, cleared with the map, and it runs on TimeManager's clock, which stops
+# while paused.
 
 ## Seconds of game time one cue keeps the party aware of an invisible NPC.
 const INVISIBLE_AWARE_SECONDS := 5.0
@@ -3259,12 +3366,13 @@ func _mark_invisible_aware(npc, why: String) -> void:
 	_invisible_aware_until[npc] = TimeManager.absolute_time() + INVISIBLE_AWARE_SECONDS
 	_invisible_aware_why[npc] = why
 
-## True for an NPC the party can't see because it is Invisible. The player's
-## pickers skip it (ProceduralCharacter._find_character_at, the context menu,
-## AbilityTargeting's character picks) and a planned step aimed at it waits
-## (ProceduralCharacter._plan_next_target_hidden).
+## True for an NPC the party doesn't perceive while its Invisible is active
+## (hidden_from_party, Invisible included). Round 6 widened the pickers' and
+## plans' rule to every NPC the party can't see (hidden_from_party); this
+## narrower answer gives a lost plan target its reason: "is invisible" rather
+## than "is out of sight".
 func invisible_hidden_from_party(c) -> bool:
-	return c is ProceduralCharacter and not (c in party_chars) and _invisibility_active(c) and not is_seen_by_party(c)
+	return hidden_from_party(c) and _invisibility_active(c) and not is_seen_by_party(c)
 
 ## The hover line for an NPC the party sees though it is Invisible, saying
 ## why: "Invisible — seen by Djargo's true sight", "Invisible — you saw it
@@ -3326,6 +3434,8 @@ func note_npc_invisibility(npc, cause: String) -> void:
 ## on the other: ProceduralCharacter._on_condition_applied): an invisible NPC
 ## on the other side is located for INVISIBLE_AWARE_SECONDS.
 func note_invisible_contact(actor, target) -> void:
+	# Any NPC on the other side is a threat the party knows of (round 6).
+	_note_threat_contact(actor, target)
 	var npc = _invisible_counterpart(actor, target)
 	if npc != null:
 		_mark_invisible_aware(npc, "hit")
@@ -3470,6 +3580,57 @@ func is_seen_by_party(c) -> bool:
 		return _is_character_visible_to_party(c)
 	return _is_position_visible_to_party(c.global_position)
 
+# ===== What the player can point at =====
+# Developer (round 6), asked whether ordinary out-of-sight NPCs (behind a
+# wall, in the dark) should be filtered like invisible ones: "Yes filtered for
+# everyone". The player's hands only find what the party sees right now:
+# hidden_from_party is the one test behind the click probe
+# (ProceduralCharacter._find_character_at: designation, attack clicks, talk,
+# the hover cursor), the right-click menu (its Attack and Search Body
+# included), AbilityTargeting's character picks, multi-pick highlights, the
+# aiming previews (a projectile's burst point, knockback arrows, the electric
+# flood's rings), the plan leash and the world hover. Party members are never
+# hidden. The LOS pass is frozen while paused, so an NPC seen when the game
+# paused stays within reach for the whole planning pause.
+
+## True for a character that isn't a party member and that the player can't
+## see right now: the party doesn't perceive it (is_seen_by_party: out of
+## sight, range or the cone, in the dark or fog, Invisible with no cue; a
+## hearing pulse's flash isn't sight), or it does but the view layer doesn't
+## draw it (_hidden_by_view_layer). Corpses follow the same rule.
+func hidden_from_party(c) -> bool:
+	if c == null or not is_instance_valid(c) or not (c is ProceduralCharacter) or c in party_chars:
+		return false
+	return not is_seen_by_party(c) or _hidden_by_view_layer(c)
+
+## Perceived but not drawn in the current view layer, the rule
+## ProceduralCharacter._find_character_at applies to everyone: ground view
+## leaves roof-walkers out (_update_npc_los_visibility hides them), and roof
+## view covers characters indoors with the opaque roof quads.
+func _hidden_by_view_layer(c) -> bool:
+	if _char_on_high_layer(c):
+		return not roof_view
+	return roof_view and GridManager.has_roof(GridManager.world_to_map(c.global_position))
+
+## TimeManager.absolute_time() of the last LOS pass that saw `c` (this
+## frame's while it is seen; now for a party member), or -INF if the party
+## never has on this map. Frozen while paused, as the pass is.
+func party_last_saw_at(c) -> float:
+	if c == null or not is_instance_valid(c):
+		return -INF
+	if c in party_chars:
+		return TimeManager.absolute_time()
+	return float(_npc_last_seen_time.get(c, -INF))
+
+## Where the party last saw `c` (its live position while seen), or
+## Vector2.INF if it never has on this map.
+func party_last_seen_position(c) -> Vector2:
+	if c == null or not is_instance_valid(c):
+		return Vector2.INF
+	if c in party_chars:
+		return c.global_position
+	return _npc_last_seen_pos.get(c, Vector2.INF)
+
 func _process(delta: float) -> void:
 	# Update clash cooldowns. Combat collisions are now driven by the
 	# Area2D weapon hitbox on each WeaponShape (data/weapon_shape.gd) —
@@ -3515,11 +3676,11 @@ func _process(delta: float) -> void:
 			if fog_vp and fog_vp.world_2d:
 				ExplorationManager.sweep(party_chars, fog_vp.world_2d.direct_space_state)
 		# Surrender button visibility and combat music, polled at 2 Hz off the
-		# same hostility sweep.
+		# same sweep: hostiles near the party that it knows about (round 6).
 		_surrender_poll_accum += delta
 		if _surrender_poll_accum >= 0.5:
 			_surrender_poll_accum = 0.0
-			var hostiles: Array = hostile_characters_near_party()
+			var hostiles: Array = known_threats_near_party()
 			_update_surrender_button(hostiles)
 			_update_combat_music(hostiles)
 	# Keep drawn cones equal to real sight, paused too (the party plans while

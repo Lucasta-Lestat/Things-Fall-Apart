@@ -5,7 +5,8 @@ extends Node2D
 #      condition arriving (its traits), the fluid underfoot (and its ward), a
 #      consumable; equip-granted conditions are suppressed for a window, not
 #      removed; every cancellation floats over the bearer and logs the
-#      condition, the trait and the cause; hidden NPCs stay quiet.
+#      condition, the trait and the cause; hidden NPCs stay quiet, and an
+#      attacker the party can't see isn't named (round 6).
 #   B. DoT bugs: a tick that kills ends the frame's ticks and saves (no blood
 #      or saves on a corpse); a tick that ends its own condition doesn't skip
 #      the rest of the frame's conditions; Bleeding's text matches its data.
@@ -148,7 +149,7 @@ func _cm(c: ProceduralCharacter) -> ConditionManager:
 
 
 ## Big stack count so a landing save can't refuse it (deterministic harness).
-## Chilled takes one stack: three turn it into Frozen. Poisoned takes three:
+## Chilled takes one stack: four turn it into Frozen (round 6). Poisoned takes three:
 ## four turn it into Toxic Shock (round 5).
 func _apply(c: ProceduralCharacter, id: String, source: Node = null) -> bool:
 	_cm(c).apply_condition(id, source, 1 if id == "chilled" else (3 if id == "poisoned" else 10))
@@ -236,6 +237,7 @@ func _case_ability_traits() -> void:
 func _case_damage_types() -> void:
 	var foe := _new_char("Brigand", ORIGIN + Vector2(-200, 0), false, "bandits")
 	var p := _new_char("Aldric", ORIGIN, true)
+	_seen[foe] = true   # an attacker the party sees is named (round 6)
 	_check("damage.setup-chilled", _apply(p, "chilled"))
 	var logs := _log_count("Aldric's Chilled thaws (fire: Brigand's hit).")
 	p.take_damage({"fire": 3}, p.global_position, foe)
@@ -251,6 +253,25 @@ func _case_damage_types() -> void:
 	_check("damage.setup-burning", _apply(p, "burning"))
 	p.take_damage({"cold": 0}, p.global_position, foe)
 	_check("damage.zero-damage-cancels-nothing", _cm(p).has_condition("burning"))
+	# Round 6: an attacker the party can't see isn't named; the same two
+	# cancellations read "a hit from someone unseen" (a fresh bearer, so the
+	# notices' repeat window doesn't swallow them).
+	_seen[foe] = false
+	var q := _new_char("Cade", ORIGIN + Vector2(0, 120), true)
+	var brigand_lines := _log_count("Brigand")
+	_check("damage.unseen-setup-chilled", _apply(q, "chilled"))
+	logs = _log_count("Cade's Chilled thaws (fire: a hit from someone unseen).")
+	q.take_damage({"fire": 3}, q.global_position, foe)
+	_check("damage.unseen-fire-thaws-chilled", not _cm(q).has_condition("chilled"))
+	_check("damage.unseen-fire-logged-neutral", _log_count("Cade's Chilled thaws (fire: a hit from someone unseen).") == logs + 1,
+		"log tail: %s" % str(GameLog.get_entries().slice(-3)))
+	logs = _log_count("Cade's Burning is put out (cold: a hit from someone unseen).")
+	q.take_damage({"cold": 3}, q.global_position, foe)
+	_check("damage.unseen-cold-puts-out-burning", not _cm(q).has_condition("burning"))
+	_check("damage.unseen-cold-logged-neutral", _log_count("Cade's Burning is put out (cold: a hit from someone unseen).") == logs + 1,
+		"log tail: %s" % str(GameLog.get_entries().slice(-3)))
+	_check("damage.unseen-attacker-never-named", _log_count("Brigand") == brigand_lines,
+		"log tail: %s" % str(GameLog.get_entries().slice(-3)))
 	await _clear()
 
 
@@ -518,6 +539,7 @@ func _engaged_within(guard: ProceduralCharacter, foe: ProceduralCharacter, secon
 func _case_winters_grip_under_fire() -> void:
 	var foe := _new_char("Brigand", ORIGIN + Vector2(-200, 0), false, "bandits")
 	var p := _new_char("Aldric", ORIGIN, true)
+	_seen[foe] = true   # named: the party sees the attacker (round 6)
 	p.inventory.equip_weapon_from_data(ItemDatabase.get_item_data("winters_grip"))
 	await get_tree().process_frame
 	var cm := _cm(p)

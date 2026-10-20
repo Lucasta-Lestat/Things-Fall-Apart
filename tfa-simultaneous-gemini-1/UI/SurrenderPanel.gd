@@ -19,10 +19,21 @@ var _panel: PanelContainer = null
 
 ## Pick the counterparty and open (or refuse). faction_override exists for
 ## tests and scripted moments; normally the faction is derived from nearby
-## hostiles — largest outstanding ledger wins, nearest breaks the tie.
+## hostiles the party knows about (Game.known_threats_near_party: a hidden
+## one is never named or surrendered to) — largest outstanding ledger wins,
+## nearest breaks the tie.
 func try_open(faction_override: String = "") -> bool:
 	_faction = faction_override if not faction_override.is_empty() else _pick_counterparty()
 	if _faction.is_empty():
+		# The last known one went out of mind between the button's poll and
+		# the click: say so rather than do nothing (floated too, as the
+		# refusal below: the game log starts closed).
+		if faction_override.is_empty():
+			if game != null and ("party_chars" in game) and not game.party_chars.is_empty() \
+					and is_instance_valid(game.party_chars[0]):
+				var who = game.party_chars[0]
+				Globals.show_floating_text("No one to surrender to", who.global_position, who, Color.WHITE_SMOKE)
+			GameLog.add_entry("No one to surrender to: no hostile you know of is near.")
 		return false
 	_profile = LawDatabase.surrender_profile(_faction)
 	var line: String = str(_profile.get("line", "..."))
@@ -40,7 +51,7 @@ func try_open(faction_override: String = "") -> bool:
 func _pick_counterparty() -> String:
 	if game == null:
 		return ""
-	var hostiles: Array = game.hostile_characters_near_party()
+	var hostiles: Array = game.known_threats_near_party()
 	if hostiles.is_empty():
 		return ""
 	var best_faction: String = ""
