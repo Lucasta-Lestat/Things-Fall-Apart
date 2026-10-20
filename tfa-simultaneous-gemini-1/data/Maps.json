@@ -58534,12 +58534,12 @@
 					"id": "to_tg_hillside_middle__central_steps",
 					"label": "Up the central steps",
 					"position": [
-						3826.0,
-						225.0
+						3826,
+						225
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_middle",
 					"target_spawn": "from_tg_hillside_lower__central_steps"
@@ -58548,12 +58548,12 @@
 					"id": "to_tg_hillside_middle__western_wynd",
 					"label": "Up the western wynd",
 					"position": [
-						1038.0,
-						237.0
+						1038,
+						237
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_middle",
 					"target_spawn": "from_tg_hillside_lower__western_wynd"
@@ -58562,12 +58562,12 @@
 					"id": "to_tg_hillside_middle__delivery_road",
 					"label": "Up the delivery road",
 					"position": [
-						6078.0,
-						225.0
+						6078,
+						225
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_middle",
 					"target_spawn": "from_tg_hillside_lower__delivery_road"
@@ -58576,12 +58576,12 @@
 					"id": "to_tg_hillside_harbor__harbor_stair",
 					"label": "Down the harbor stair",
 					"position": [
-						3776.0,
-						2432.0
+						3776,
+						2432
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_harbor",
 					"target_spawn": "from_tg_hillside_lower__harbor_stair"
@@ -58590,15 +58590,29 @@
 					"id": "to_tg_hillside_harbor__fresh_fish_steps",
 					"label": "Down the fresh fish steps",
 					"position": [
-						5630.0,
-						2432.0
+						5630,
+						2432
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_harbor",
 					"target_spawn": "from_tg_hillside_lower__fresh_fish_steps"
+				},
+				{
+					"id": "to_tg_hillside_ossuary__crypt_hole",
+					"label": "Down to the ossuary",
+					"position": [
+						4809,
+						966
+					],
+					"size": [
+						128,
+						128
+					],
+					"target_map": "tg_hillside_ossuary",
+					"target_spawn": "from_tg_hillside_lower__crypt_hole"
 				}
 			],
 			"weather_group": "Scarlatti",
@@ -78932,12 +78946,1673 @@
 					],
 					"target_map": "tg_hillside_lower",
 					"target_spawn": "from_tg_hillside_middle__delivery_road"
+				},
+				{
+					"id": "to_tg_hillside_cavern__cave_mouth",
+					"label": "Into the great cavern",
+					"position": [
+						3776.0,
+						2159.0
+					],
+					"size": [
+						128.0,
+						128.0
+					],
+					"target_map": "tg_hillside_cavern",
+					"target_spawn": "from_tg_hillside_middle__cave_mouth"
 				}
 			],
 			"weather_group": "Scarlatti",
 			"world_size": [
 				7872.0,
 				3648.0
+			]
+		},
+		{
+			"cell_graph": "res://Maps/tg_hillside_cavern_cells.json",
+			"description": "The great limestone cavern under the guild plateau: a collapse garden beneath three skylights, the worn processional trail and the rock pier at the mouth.",
+			"editor_export": true,
+			"floors": [
+				"ddddddddddddddddddddddd",
+				"ddddddddddddddddddddddd",
+				"ddddddddddddddddddddddd",
+				"dddddddddddssdddddddddd",
+				"dddddddddddssdddddddddd",
+				"ddddddddddddsdddddddddd",
+				"ddddddddddddsdddddddddd",
+				"ddddddddddddsdddddddddd",
+				"ddddddddddddsdddddddddd",
+				"ddddddddddddsdddddddddd",
+				"ddddddddddddssddddddddd",
+				"ddddddddddddssddddddddd",
+				"ddddddddddddssddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"dddddddddddddsddddddddd",
+				"ddddddddddddddddddddddd",
+				"ddddddddddddddddddddddd",
+				"ddddddddddddddddddddddd",
+				"ddddddddddddddddddddddd"
+			],
+			"fluid_spawns": [],
+			"format": "structured",
+			"id": "tg_hillside_cavern",
+			"images": {
+				"map": "res://Maps/tg_hillside_cavern.png",
+				"structures": "res://Maps/tg_hillside_cavern_structures.png"
+			},
+			"indoors": true,
+			"item_spawns": [
+				{
+					"id": "shrub",
+					"position": [
+						474.0,
+						772.0
+					],
+					"rotation": 0.0,
+					"scale": 2.2
+				},
+				{
+					"id": "shrub",
+					"position": [
+						405.0,
+						828.0
+					],
+					"rotation": 0.0,
+					"scale": 2.4
+				},
+				{
+					"id": "shrub",
+					"position": [
+						427.0,
+						653.0
+					],
+					"rotation": 0.0,
+					"scale": 1.9
+				},
+				{
+					"id": "shrub",
+					"position": [
+						535.0,
+						879.0
+					],
+					"rotation": 0.0,
+					"scale": 1.8
+				},
+				{
+					"id": "shrub",
+					"position": [
+						431.0,
+						734.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						503.0,
+						687.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						478.0,
+						836.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						384.0,
+						798.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						542.0,
+						811.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						439.0,
+						627.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shrub",
+					"position": [
+						900.0,
+						508.0
+					],
+					"rotation": 0.0,
+					"scale": 0.9
+				},
+				{
+					"id": "shrub",
+					"position": [
+						960.0,
+						448.0
+					],
+					"rotation": 0.0,
+					"scale": 0.9
+				},
+				{
+					"id": "shrub",
+					"position": [
+						525.0,
+						341.0
+					],
+					"rotation": 0.0,
+					"scale": 0.8
+				},
+				{
+					"id": "shrub",
+					"position": [
+						516.0,
+						265.0
+					],
+					"rotation": 0.0,
+					"scale": 0.8
+				},
+				{
+					"id": "boulder",
+					"position": [
+						329.0,
+						491.0
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "boulder",
+					"position": [
+						358.0,
+						977.0
+					],
+					"rotation": 0.0,
+					"scale": 1.1
+				},
+				{
+					"id": "boulder",
+					"position": [
+						1079.0,
+						363.0
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "boulder",
+					"position": [
+						1071.0,
+						811.0
+					],
+					"rotation": 0.0,
+					"scale": 1.3
+				},
+				{
+					"id": "boulder",
+					"position": [
+						427.0,
+						256.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				}
+			],
+			"music_track": "",
+			"name": "The Great Cavern",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						768.0,
+						896.0
+					]
+				},
+				"from_tg_hillside_middle": {
+					"facing": 90.0,
+					"position": [
+						704.0,
+						1088.0
+					]
+				},
+				"from_tg_hillside_middle__cave_mouth": {
+					"facing": 90.0,
+					"position": [
+						704.0,
+						1088.0
+					]
+				}
+			},
+			"region": "perrow",
+			"settlement": true,
+			"structures": [],
+			"tile_size": 64.0,
+			"warp_points": [
+				{
+					"id": "to_tg_hillside_middle__cave_mouth",
+					"label": "Out to the cave mouth",
+					"position": [
+						704.0,
+						1376.0
+					],
+					"size": [
+						128.0,
+						128.0
+					],
+					"target_map": "tg_hillside_middle",
+					"target_spawn": "from_tg_hillside_cavern"
+				}
+			],
+			"weather_group": "",
+			"world_size": [
+				1472.0,
+				1664.0
+			]
+		},
+		{
+			"cell_graph": "res://Maps/tg_hillside_ossuary_cells.json",
+			"description": "The vaulted ossuary under the dockside church and abattoir, its effluent channel and river hall, and the 31-room catacomb expansion three metres below.",
+			"editor_export": true,
+			"floors": [
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddddddsdddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssddddddddddddddddddddddddddddddsssddddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddddsssssdddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssddddddddddddddddddddddddddddssssssdddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddddddddddddddddddddddddddssssssssddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssddddddddddddddddddddddddddddsssdsssddddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssddddssssdddddddddddddddddddsssdddsssdddddddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddssssssddddddddddddddssssssdddddssssssdddddddddddddddddddddddddddddddddddddddd",
+				"dddddssssdddsssssssssdddddddddddsssssddssdddsssssdddddddddddddddddddddddddddddddddddddddd",
+				"ddddddssddddssssssssssddddddddddssssdddsssdddssssdddddddddddddddddddddddddddddddddddddddd",
+				"ddddssssssddssssssddssssssssssssssssddsssssddssssdddddddddddddddddddddddddddddddddddddddd",
+				"ddddssssssddssssssddssssssssssssssssdssssssddssssdddddddddddddddddddddddddddddddddddddddd",
+				"ddddssssssddddssddddssddddddddsssddddsssssssdddsssddddddddddssddddddddddddddddddddddddddd",
+				"ddddddssddddddddddddssddddddddsssdddsssssssssdddsssddddddddssssdddddddddddddddddddddddddd",
+				"ddddddssddddddddddddssdddddddddsssdddsssssssdddsssdddddssssssssssssdddddddddddddddddddddd",
+				"ddddddssddddddddddssssssddddddddssssddsssssddssssddddddssssssssssssdddddddddddddddddddddd",
+				"ddddsssssssssssdddssssssddddddddssssddssssdddssssdddddddssssssssssddddddddddddddddddddddd",
+				"ddddssssssssssssssssssssddddddddsssssddsssddsssssddddddddssssssssdddddddddddddddddddddddd",
+				"ddddssssssssssssssssssssddddddddssssssdssddssssssddddddddssssssssdddddddddddddddddddddddd",
+				"ddddsssssssssssdddssssssddddddddsssssssssdsssssssdddddddssssssssssddddddddddddddddddddddd",
+				"ddddddddddddddddddssssssdddddddddddddsssssssdddddddddddssssssssssssdddddddddddddddddddddd",
+				"ddddddddddddddddddssssssddddddddddddddsssssddddddddssddssssssssssssdddddddddddddddddddddd",
+				"ddddddddddddddddddsssssssssssddddddddddsssddddddddssssssssdssssdddddddddddddddddddddddddd",
+				"ddddddddddddddddddssssssssssssdsssdddddsssdddddddssssssssdddssddddddddddddddddddddddddddd",
+				"ddddddddddddddddddssssssdddddsssssddddssssddddddssssssssddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddssssssddddddssssddddsssssdddddssssssssddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddssssssddddddddsdddddsssssdddddssssssssddddddddddddddddddddddddddddddddd",
+				"ddddsssssdddddddddddssddddddddddddddddssssdddddsssssssssddddddddddddddddddddddddddddddddd",
+				"dddsssssssddddddddddssdddddddddddddddddssssssssssdsssssdddddddddddddddddddddddddddddddddd",
+				"dddsssssssddddddssssssssssdddddddddddddsssssssssddddddddddddddddddddddddddddddddddddddddd",
+				"ddssssssssddddddssssssssssdddddddddddddssssssssssssssssssssdddddddddddddddddddddddddddddd",
+				"ddssssssssddddddssssssssssdddddddddddddssssssssssssssssssssddddssdddddddddddddddddddddddd",
+				"dddsssssssddddddssssssssssdddddddddddddsssdddddddddddddddssddsssssddddddddddddddddddddddd",
+				"ddddsssssdddddddssssssssssdddddddddddddsssdddddddddddddddssdsssssssdddddddddddddddddddddd",
+				"dddddssdddddddddssssssssssdddddddddddddsssdddddddddddddddsssssssssssddddddddddddddddddddd",
+				"ddddsssssdsssdddsssssssssssssssdddddddssssdddddddddddddddsssssssssssssddddddddddddddddddd",
+				"ddddssssssssssssssssssssssssssssdddddsssssdddddddddddddddssdsssssssdssddddddddddddddddddd",
+				"ddddssssssssssssssssssssssssssssdddddsssssddssssssssssssdssdsssssssdssdddddddwddddddddddd",
+				"dddddssdddddddddssssssssssdddssddddddsssssddssssssssssssdssddsssssddssdsssdsswssssssddddd",
+				"dddddssdddddddddssssssssssdddsssddddddsssssssssssssssssssssddddddssdssdsssssssssssssddddd",
+				"ddddsssssdddddddssssssssssddddssssddddsssssssssssssssssssssddddddssdssssssssssssssssddddd",
+				"dddsssssssddddddssssssssssdddssssssssssssssdssssssssssssdssddddsssssssssssdsswssssssddddd",
+				"ddssssssssdddddddssssssssddddssssssssssssssdssssssssssssdssddddsssssssssssssswssssssddddd",
+				"ddssssssssddddddddssssssdddddssssssssssssssddddddddddddddssddddsssssdddsssssswssssssddddd",
+				"dddsssssssddddddddddssdddddddssssssssssssssddddddddddddddsssssssssssdddsssssssssssssddddd",
+				"dddsssssssdddddddddddddddddddssssssssssssssddddddddddddddsssssssssdddddsssssswssssssddddd",
+				"ddddsssssddddddddddddddddddddsssssssssssssssssssssssssssssssssdddddddddsssdsswssssssddddd",
+				"ddddddddddddddddddddddddddddssssssssssssssssssssssssssssssssssssssssssssssssswssssssddddd",
+				"ddddddssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssddddd",
+				"ddsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssddddddddddsssdsswssssssddddd",
+				"ddsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssdddddddddddddsddwdddsddddddd",
+				"ddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwddddd",
+				"ddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwddddd",
+				"ddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwddddd",
+				"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddsssssssssssssddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+				"ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+			],
+			"fluid_spawns": [],
+			"format": "structured",
+			"id": "tg_hillside_ossuary",
+			"images": {
+				"map": "res://Maps/tg_hillside_ossuary.png",
+				"structures": "res://Maps/tg_hillside_ossuary_structures.png"
+			},
+			"indoors": true,
+			"item_spawns": [
+				{
+					"id": "rope_coil",
+					"position": [
+						1941.0,
+						3554.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						2517.0,
+						3554.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						2112.0,
+						3409.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "crate",
+					"position": [
+						2159.0,
+						3409.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2581.0,
+						3409.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						2283.0,
+						3537.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						2342.0,
+						3537.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "long_table",
+					"position": [
+						2240.0,
+						3102.0
+					],
+					"rotation": 0.0,
+					"scale": 1.2
+				},
+				{
+					"id": "desk",
+					"position": [
+						1984.0,
+						3008.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						1984.0,
+						3055.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						2475.0,
+						3230.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						2475.0,
+						3281.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1933.0,
+						3281.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2547.0,
+						2991.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1967.0,
+						2692.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						1344.0,
+						3008.0
+					],
+					"rotation": 0.0,
+					"scale": 1.3
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1173.0,
+						3051.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1515.0,
+						3051.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						1088.0,
+						2923.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						1600.0,
+						2923.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bench",
+					"position": [
+						1195.0,
+						2411.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bench",
+					"position": [
+						1195.0,
+						2539.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bench",
+					"position": [
+						1195.0,
+						2667.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bench",
+					"position": [
+						1493.0,
+						2411.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bench",
+					"position": [
+						1493.0,
+						2539.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bench",
+					"position": [
+						1493.0,
+						2667.0
+					],
+					"rotation": 0.0,
+					"scale": 1.4
+				},
+				{
+					"id": "bones",
+					"position": [
+						1067.0,
+						2283.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						1621.0,
+						2283.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						772.0,
+						2692.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						405.0,
+						2240.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						320.0,
+						2325.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						491.0,
+						2325.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						405.0,
+						2377.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						329.0,
+						2667.0
+					],
+					"rotation": 1.571,
+					"scale": 1.4
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						482.0,
+						2667.0
+					],
+					"rotation": 1.571,
+					"scale": 1.4
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						405.0,
+						3093.0
+					],
+					"rotation": 0.0,
+					"scale": 1.6
+				},
+				{
+					"id": "brazier",
+					"position": [
+						277.0,
+						3093.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						533.0,
+						3093.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1225.0,
+						1387.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1463.0,
+						1387.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1225.0,
+						1643.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1463.0,
+						1643.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1225.0,
+						1899.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						1463.0,
+						1899.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						1207.0,
+						1515.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						1481.0,
+						1771.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						363.0,
+						1361.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						491.0,
+						1361.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						619.0,
+						1361.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						747.0,
+						1361.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "treasure_chest",
+					"position": [
+						875.0,
+						1361.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						619.0,
+						1540.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						474.0,
+						1071.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						448.0,
+						235.0
+					],
+					"rotation": 1.571,
+					"scale": 1.3
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						448.0,
+						405.0
+					],
+					"rotation": 1.571,
+					"scale": 1.3
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						448.0,
+						576.0
+					],
+					"rotation": 1.571,
+					"scale": 1.3
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						448.0,
+						747.0
+					],
+					"rotation": 1.571,
+					"scale": 1.3
+				},
+				{
+					"id": "coffin",
+					"position": [
+						337.0,
+						320.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						559.0,
+						661.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "well",
+					"position": [
+						2069.0,
+						1899.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "rope_coil",
+					"position": [
+						960.0,
+						917.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						832.0,
+						917.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bedroll",
+					"position": [
+						2445.0,
+						2667.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stool",
+					"position": [
+						2539.0,
+						2731.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "desk",
+					"position": [
+						2547.0,
+						2658.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2453.0,
+						2773.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						2581.0,
+						1984.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2505.0,
+						2069.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2658.0,
+						2069.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2607.0,
+						1711.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "shelf",
+					"position": [
+						2061.0,
+						1429.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "shelf",
+					"position": [
+						2249.0,
+						1429.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "weapon_rack",
+					"position": [
+						2155.0,
+						1323.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2069.0,
+						811.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2112.0,
+						811.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "barrel",
+					"position": [
+						2155.0,
+						811.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "trough",
+					"position": [
+						2155.0,
+						981.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						2581.0,
+						448.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2496.0,
+						555.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2667.0,
+						555.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2581.0,
+						363.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						3008.0,
+						875.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2923.0,
+						960.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3093.0,
+						960.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						3008.0,
+						1011.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2944.0,
+						1344.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3072.0,
+						1344.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						3008.0,
+						1493.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						2944.0,
+						1523.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						2581.0,
+						1173.0
+					],
+					"rotation": 0.0,
+					"scale": 1.3
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2581.0,
+						960.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2581.0,
+						1387.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2453.0,
+						1173.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						2709.0,
+						1173.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2517.0,
+						1067.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						2645.0,
+						1280.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						2965.0,
+						2816.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						3179.0,
+						2816.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "prep_table",
+					"position": [
+						3392.0,
+						2816.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "trough",
+					"position": [
+						2965.0,
+						2978.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "trough",
+					"position": [
+						3392.0,
+						2978.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "cauldron",
+					"position": [
+						3179.0,
+						2978.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						3844.0,
+						3375.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "sarcophagus",
+					"position": [
+						4203.0,
+						3093.0
+					],
+					"rotation": 0.0,
+					"scale": 1.5
+				},
+				{
+					"id": "anvil",
+					"position": [
+						4309.0,
+						3157.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						4075.0,
+						3008.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						4075.0,
+						2581.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						4228.0,
+						2581.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						4151.0,
+						2714.0
+					],
+					"rotation": 1.047,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						3998.0,
+						2714.0
+					],
+					"rotation": 2.094,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						3921.0,
+						2581.0
+					],
+					"rotation": 3.142,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						3998.0,
+						2448.0
+					],
+					"rotation": 4.189,
+					"scale": 1.0
+				},
+				{
+					"id": "coffin",
+					"position": [
+						4151.0,
+						2448.0
+					],
+					"rotation": 5.236,
+					"scale": 1.0
+				},
+				{
+					"id": "well",
+					"position": [
+						3349.0,
+						1941.0
+					],
+					"rotation": 0.0,
+					"scale": 1.6
+				},
+				{
+					"id": "boulder",
+					"position": [
+						3221.0,
+						2027.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "boulder",
+					"position": [
+						3486.0,
+						1877.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "altar",
+					"position": [
+						3904.0,
+						1472.0
+					],
+					"rotation": 0.0,
+					"scale": 1.3
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3904.0,
+						1152.0
+					],
+					"rotation": -1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						4181.0,
+						1312.0
+					],
+					"rotation": -0.524,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						4181.0,
+						1632.0
+					],
+					"rotation": 0.524,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3904.0,
+						1792.0
+					],
+					"rotation": 1.571,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3627.0,
+						1632.0
+					],
+					"rotation": 2.618,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						3627.0,
+						1312.0
+					],
+					"rotation": 3.665,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						4591.0,
+						2795.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						4591.0,
+						3136.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						5350.0,
+						2880.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						5350.0,
+						3136.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "skull_pile",
+					"position": [
+						5350.0,
+						3392.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						4646.0,
+						3307.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						5295.0,
+						3051.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "bones",
+					"position": [
+						5099.0,
+						2769.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						4595.0,
+						2923.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "brazier",
+					"position": [
+						5346.0,
+						3349.0
+					],
+					"rotation": 0.0,
+					"scale": 1.0
+				},
+				{
+					"id": "stone_stairs",
+					"position": [
+						4425.0,
+						2924.0
+					],
+					"rotation": 0.0,
+					"scale": 0.933,
+					"scale_y": 0.914
+				},
+				{
+					"id": "stone_stairs",
+					"position": [
+						4425.0,
+						2760.0
+					],
+					"rotation": 0.0,
+					"scale": 0.933,
+					"scale_y": 0.914
+				},
+				{
+					"id": "stone_stairs",
+					"position": [
+						4107.0,
+						3392.0
+					],
+					"rotation": 1.571,
+					"scale": 1.423,
+					"scale_y": 1.015
+				},
+				{
+					"id": "stone_stairs",
+					"position": [
+						4384.0,
+						3392.0
+					],
+					"rotation": 1.571,
+					"scale": 1.423,
+					"scale_y": 1.015
+				}
+			],
+			"music_track": "",
+			"name": "Catacombs of the Holy Butchers",
+			"npc_spawns": [],
+			"party_spawns": {
+				"default": {
+					"formation": "cluster",
+					"offset_radius": 40.0
+				}
+			},
+			"player_spawns": {
+				"default": {
+					"facing": 90.0,
+					"position": [
+						4672.0,
+						3051.0
+					]
+				},
+				"from_tg_hillside_lower": {
+					"facing": 90.0,
+					"position": [
+						4425.0,
+						2656.0
+					]
+				},
+				"from_tg_hillside_lower__crypt_hole": {
+					"facing": 90.0,
+					"position": [
+						4425.0,
+						2656.0
+					]
+				}
+			},
+			"region": "perrow",
+			"settlement": true,
+			"structures": [],
+			"tile_size": 64.0,
+			"warp_points": [
+				{
+					"id": "to_tg_hillside_lower__crypt_hole",
+					"label": "Up to the sanctuary court",
+					"position": [
+						4425.0,
+						2592.0
+					],
+					"size": [
+						128.0,
+						128.0
+					],
+					"target_map": "tg_hillside_lower",
+					"target_spawn": "from_tg_hillside_ossuary"
+				}
+			],
+			"weather_group": "",
+			"world_size": [
+				5696.0,
+				4160.0
 			]
 		}
 	]
