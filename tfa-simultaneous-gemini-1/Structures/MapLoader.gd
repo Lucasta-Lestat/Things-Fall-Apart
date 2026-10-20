@@ -442,6 +442,41 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			# ordinary bit-1 lights
 			art.light_mask = 1 | CollisionLayers.ELEVATED_SURFACE_LIGHT
 		inst.add_child(art)
+		# "art_under" (curtain pieces next to a tower): the piece's wall as it
+		# runs on UNDER the tower, from the exporter's small atlas
+		# ({image, parts: [{off, polys}]}, atlas px = map px + off). A child of
+		# Art (hidden / freed with the piece); the tower spawns later, so its
+		# art covers this while it stands, and a destroyed tower reveals wall
+		# ends that match the piece's collision instead of bare ground.
+		var under: Variant = s.get("art_under")
+		if has_art_polys and under is Dictionary:
+			var upath := String((under as Dictionary).get("image", ""))
+			if upath != "" and ResourceLoader.exists(upath):
+				var ua := Polygon2D.new()
+				ua.name = "ArtUnder"
+				ua.texture = load(upath)
+				var upts := PackedVector2Array()
+				var uuv := PackedVector2Array()
+				var ugroups: Array = []
+				for part in (under as Dictionary).get("parts", []):
+					var off_a: Array = (part as Dictionary).get("off", [0, 0])
+					var off := Vector2(float(off_a[0]), float(off_a[1]))
+					for up in (part as Dictionary).get("polys", []):
+						var uidx := PackedInt32Array()
+						for uv_v in up:
+							var upv := Vector2(float(uv_v[0]), float(uv_v[1]))
+							uidx.append(upts.size())
+							upts.append(upv - center)
+							uuv.append(upv + off)
+						if uidx.size() >= 3:
+							ugroups.append(uidx)
+				if not ugroups.is_empty():
+					ua.polygon = upts
+					ua.uv = uuv
+					ua.polygons = ugroups
+					ua.material = pm
+					ua.show_behind_parent = true
+					art.add_child(ua)
 	# per-instance health: the editor scales wall hp by run length
 	if s.has("hp"):
 		inst.max_health = int(s["hp"])

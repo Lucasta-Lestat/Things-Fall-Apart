@@ -32,6 +32,7 @@ func _ready() -> void:
 	_case_legacy_wall(ml, tex)
 	_case_empty(ml, tex)
 	_case_tower(ml, tex)
+	_case_art_under(ml, tex)
 	print("ART_POLYS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -136,3 +137,63 @@ func _case_tower(ml: Node2D, tex: Texture2D) -> void:
 	_check("tower.art", art != null and art.polygons.size() == 2 and art.polygon.size() == 28)
 	var occ := inst.get_node_or_null("Occluder") as LightOccluder2D
 	_check("tower.occluder-high", occ != null and (occ.occluder_light_mask & CollisionLayers.SIGHT_MASK_HIGH) != 0)
+
+
+# A piece next to a tower carries "art_under": its wall under the tower's
+# disc from a separate atlas (atlas px = map px + off). ArtUnder is a child of
+# Art (premult, behind it), the tower spawned after it draws over it, and the
+# piece's own Art is untouched. Missing atlas image -> no ArtUnder, no error.
+func _case_art_under(ml: Node2D, tex: Texture2D) -> void:
+	const ATLAS := "res://Structures/Wall Stone.png"   # any imported PNG stands in for the atlas
+	var body := [[300, 880], [380, 880], [380, 950], [300, 950]]
+	var u0 := [[380, 880], [410, 880], [410, 950], [380, 950]]
+	var u1 := [[410, 900], [420, 900], [420, 930]]
+	var s := {"kind": "wall", "a": [300, 915], "b": [440, 915], "half": 35.2, "id": "stone_wall",
+		"hp": 160, "occlude_h": 1.6, "art_polys": [body],
+		"art_under": {"image": ATLAS, "parts": [{"off": [-370, -870], "polys": [u0]}, {"off": [-300, -890], "polys": [u1]}]}}
+	var inst = ml._spawn_geo_structure(s, tex, 64)
+	_check("under.spawned", inst != null)
+	if inst == null:
+		return
+	var art := inst.get_node_or_null("Art") as Polygon2D
+	_check("under.art", art != null and art.polygons.size() == 1 and art.polygon.size() == 4)
+	if art == null:
+		return
+	var ua := art.get_node_or_null("ArtUnder") as Polygon2D
+	_check("under.node", ua != null)
+	if ua == null:
+		return
+	_check("under.texture", ua.texture != null and ua.texture.resource_path == ATLAS,
+		str(ua.texture.resource_path if ua.texture else ""))
+	_check("under.groups", ua.polygons.size() == 2 and ua.polygon.size() == 7 and ua.uv.size() == 7,
+		"%d/%d/%d" % [ua.polygons.size(), ua.polygon.size(), ua.uv.size()])
+	var center: Vector2 = inst.position
+	var ok := true
+	var srcs: Array = u0 + u1
+	for i in srcs.size():
+		var src := Vector2(float(srcs[i][0]), float(srcs[i][1]))
+		var off := Vector2(-370, -870) if i < 4 else Vector2(-300, -890)
+		if (ua.polygon[i] + center).distance_to(src) > 1e-4 or ua.uv[i].distance_to(src + off) > 1e-4:
+			ok = false
+	_check("under.uv-is-map-px-plus-off", ok)
+	var upm := ua.material as CanvasItemMaterial
+	_check("under.premult", upm != null and upm.blend_mode == CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA)
+	_check("under.behind-art", ua.show_behind_parent)
+	# the tower spawned after the piece is a LATER sibling (same z): its art covers ArtUnder
+	var disc := []
+	for i2 in 16:
+		var a := TAU * float(i2) / 16.0
+		disc.append([440.0 + cos(a) * 70.0, 915.0 + sin(a) * 70.0])
+	var tw = ml._spawn_geo_structure({"kind": "disc", "pos": [440, 915], "r": 66.8, "id": "stone_wall", "hp": 160,
+		"occlude_h": 2.2, "art_polys": [disc]}, tex, 64)
+	_check("under.tower-after-piece", tw != null and tw.get_index() > inst.get_index() and tw.z_index == inst.z_index)
+	# damage tint and the piece's own visual are unchanged
+	_check("under.visual-is-art", inst._visual() == art)
+	# a missing atlas (map not re-imported yet) builds no ArtUnder and no error
+	var s2 := s.duplicate(true)
+	s2["a"] = [300, 715]
+	s2["b"] = [440, 715]
+	(s2["art_under"] as Dictionary)["image"] = "res://Maps/__no_such_curtain_under.png"
+	var inst2 = ml._spawn_geo_structure(s2, tex, 64)
+	var art2 := inst2.get_node_or_null("Art") as Polygon2D if inst2 else null
+	_check("under.missing-atlas", art2 != null and art2.get_node_or_null("ArtUnder") == null)
