@@ -102,6 +102,18 @@ CANDIDATES = {
         "crown_gold": idea("buff", "a royal crown with three tall points, each point tipped with a small round "
                            "ball, sitting on a thick plain band", "rich golden yellow"),
     },
+    # Toxic Shock (round 6): Poisoned's 4th stack, poison damage that doubles
+    # every tick and kills unless cured. It borrowed poisoned.png (a green skull
+    # and crossbones); in the set it is a sickness of the body, so the disease
+    # disc that Pox and Scarred use, with a lethal or a doubling glyph.
+    "toxic_shock": {
+        "skull_bones": idea("disease", "a skull and crossbones: a simple rounded skull seen from the front with "
+                            "two dark round eye sockets, above two thick crossed bones", "dark olive brown"),
+        "drop_skull": idea("disease", "one fat liquid droplet with a rounded bottom and a pointed top, with a "
+                           "simple small skull shape cut out of its middle", "dark olive brown"),
+        "drops_rising": idea("disease", "three fat liquid droplets in a rising diagonal stair from bottom left to "
+                             "top right, each droplet twice the size of the one before", "dark olive brown"),
+    },
 }
 
 # Existing icons shown beside the new ones on the contact sheet.
