@@ -238,18 +238,21 @@ func get_all_conditions() -> Array:
 	{
 		"id": "chilled",
 		"display_name": "Chilled",
-		"description": "Movement and attack speed reduced. A cold hit adds 1 stack per 5 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 3 stacks, you freeze.",
+		"description": "Movement and attack speed reduced: each stack cuts Dexterity by 15% (x1 85%, x2 72%, x3 61%). A cold hit adds 1 stack per 5 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 4 stacks, you freeze.",
 		"traits": {"debuff": 1, "cold": 1, "slow": 1, "elemental": 1},
 		"stackable": true,
-		"max_tier": 3,
-		# No damage: a cold weapon's 3-5 adds 1 stack, 6-10 cold 2, and 11+
-		# (an Iciclet's 15) freezes in one hit. 5 for every damage-type
-		# condition (round 5, "5 damage each"); kept per condition so one can
-		# be retuned alone.
+		# Freezes at 4 (round 6, the developer's "a max tier of four"; it was
+		# 3, so any 11+ cold hit froze at once). No damage: a cold weapon's 3-5
+		# adds 1 stack, 6-10 cold 2, 11-15 (an Iciclet's 15) 3, and only 16+
+		# freezes in one hit. The 4th stack turns it into Frozen, so it holds
+		# at most 3 (Dexterity x0.61). 5 for every damage-type condition
+		# (round 5, "5 damage each"); kept per condition so one can be retuned
+		# alone.
+		"max_tier": 4,
 		"damage_per_stack": 5,
 		"duration": 15.0,
 		"icon": "res://UI/UI Icons/chilled.png",
-		"transforms_into": {"id": "frozen", "required_tier": 3},
+		"transforms_into": {"id": "frozen", "required_tier": 4},
 		"canceled_by_trait": ["fire", "heat"],
 		"custom_vfx": "res://vfx/frost_mist.tscn",
 		"custom_sfx": "res://sfx/ice_crack.mp3",
