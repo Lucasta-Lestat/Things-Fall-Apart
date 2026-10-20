@@ -1,7 +1,7 @@
 # res://tests/condition_feedback_test.gd
 # Headless assertion harness for condition and condition-rider feedback:
 # trait-keyed immunities, apply-time and periodic save notices (and their
-# silence for hidden NPCs and corpses), transforms_into (Chilled 3 -> Frozen,
+# silence for hidden NPCs and corpses), transforms_into (Chilled 4 -> Frozen,
 # which roots), missed chance riders and effect-level saves, Chasten's
 # cleanse report, force fields (outline, Magnetic Pull's traits), and a
 # throw giving its thrower away.
@@ -292,13 +292,16 @@ func _case_transforms() -> void:
 	var speed0: float = n.move_speed
 	cm.apply_condition("chilled", null, 2)
 	_check("transform.below-tier-stays", cm.has_condition("chilled") and not cm.has_condition("frozen"))
+	# Chilled freezes at 4 since round 6 (3 before): x3 is still Chilled.
+	cm.apply_condition("chilled", null, 1)
+	_check("transform.three-stays-chilled", cm.has_condition("chilled") and not cm.has_condition("frozen"))
 	var out = cm.apply_condition("chilled", null, 1)
 	_check("transform.chilled-to-frozen", cm.has_condition("frozen") and not cm.has_condition("chilled") \
 		and out != null and out.condition.id == "frozen")
 	_check("frozen.roots", speed0 > 0.0 and is_equal_approx(n.move_speed, 0.0), "%s -> %s" % [speed0, n.move_speed])
 	cm.clear_all_conditions()
 	_check("frozen.thaws", n.move_speed > 0.0)
-	var fresh = cm.apply_condition("chilled", null, 3)
+	var fresh = cm.apply_condition("chilled", null, 4)
 	_check("transform.fresh-instance", fresh != null and fresh.condition.id == "frozen")
 	cm.clear_all_conditions()
 	cm.apply_condition("fatigued", null, 3)
@@ -331,9 +334,9 @@ func _case_transforms() -> void:
 	pcm.clear_all_conditions()
 	_reset_notices(p)
 	var n0: int = GameLog.get_entries().size()
-	pcm.apply_condition("chilled", n, 3)
+	pcm.apply_condition("chilled", n, 4)
 	_check("transform.party-floats", p._last_notify_text == "Frozen!", p._last_notify_text)
-	_check("transform.party-logged", _logged_since(n0, "%s's Chilled reaches 3 stacks: Frozen." % p.Name), _last_log())
+	_check("transform.party-logged", _logged_since(n0, "%s's Chilled reaches 4 stacks: Frozen." % p.Name), _last_log())
 	pcm.from_dict(saved)
 
 # ---------------------------------------------------------------------------
