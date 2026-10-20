@@ -100,7 +100,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "poisoned",
 		"display_name": "Poisoned",
-		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. Armour doesn't reduce it. A poison hit adds 1 stack per 5 poison damage it deals (at least 1). At 4 stacks it turns into Toxic Shock. It lasts until 10 s after the last dose.",
+		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. Armour doesn't reduce it. A poison hit adds 1 stack per 5 poison damage it deals (at least 1). At 4 stacks it turns into Toxic Shock, which kills unless cured. It lasts until 10 s after the last dose.",
 		"traits": {"debuff": 1, "poison": 1, "persistent": 1},
 		"stackable": true,
 		# DoT scale (round 4): a stack is small and worth about the damage that

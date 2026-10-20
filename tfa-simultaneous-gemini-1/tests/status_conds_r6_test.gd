@@ -277,6 +277,9 @@ func _case_toxic_data() -> void:
 	_check("text.armour", d.contains("Armour doesn't reduce it"), d)
 	_check("text.never-wears-off", d.contains("never wears off"), d)
 	_check("text.no-slow-claim", not d.contains("slower"), d)
+	# Poisoned's own hover warns what its 4th stack means.
+	var pd := _tmpl("poisoned").description
+	_check("text.poisoned-warns-lethal", pd.contains("At 4 stacks it turns into Toxic Shock, which kills unless cured."), pd)
 
 
 # ---------------------------------------------------------------------------
@@ -381,8 +384,11 @@ func _case_save_load() -> void:
 	_shock(p)
 	_ticks(p, 3)
 	_check("save.setup-next-8", _next(p) == 8, _next(p))
+	# Half a second after the 3rd tick: the 4th is due 1.5 s after a load.
+	_run(p, 0.5)
 	var snap: Dictionary = cm.to_dict()
 	var parsed = JSON.parse_string(JSON.stringify(snap))
+	var saved_at := _clock
 	_ticks(p, 2)
 	_check("save.live-moved-on", _next(p) == 32, _next(p))
 	_check("save.snapshot-not-shared", int(snap["conditions"]["toxic_shock"]["custom_data"].get("escalate_steps_0", -1)) == 3,
@@ -395,13 +401,20 @@ func _case_save_load() -> void:
 	_check("save.json-summary", back != null and back.get_summary(_now()).begins_with("Toxic Shock: 8 poison every 2 s, doubling"), back.get_summary(_now()) if back else "none")
 	_check("save.json-still-permanent", back != null and back.expires_at < 0.0)
 	var got: Array = []
+	var got_at: Array = []
 	var on_tick := func(inst, _eff, res):
 		if res.has("damage") and inst.condition.id == "toxic_shock":
 			got.append(int(res["damage"]))
+			got_at.append(_clock)
 	cm.triggered_effect_fired.connect(on_tick)
+	# Back on the clock the save was taken at: the next tick keeps its time
+	# (JSON's string keys used to make every tick fire at once on load).
+	_set_clock(saved_at)
 	_ticks(p, 2)
 	cm.triggered_effect_fired.disconnect(on_tick)
 	_check("save.next-ticks-8-16-not-1", got == [8, 16], got)
+	_check("save.json-keeps-tick-time", got_at.size() == 2 and is_equal_approx(got_at[0] - saved_at, 1.5) and is_equal_approx(got_at[1] - got_at[0], 2.0),
+		got_at.map(func(t): return t - saved_at))
 	# The in-memory snapshot too (Game's map transitions).
 	cm.from_dict(snap)
 	_check("save.memory-keeps-step", _next(p) == 8, _next(p))
@@ -458,6 +471,16 @@ func _case_redose() -> void:
 	# At its peak a re-dose changes nothing, and never lowers it.
 	cm.apply_condition("toxic_shock", foe)
 	_check("redose.at-peak-stays-32", _next(p) == 32 and inst.escalation_steps(0) == 5, [_next(p), inst.escalation_steps(0)])
+	# Poisoned reaching 4 at the peak (or with redose_steps 0) changes
+	# nothing, and the notice says so rather than reading as a new onset.
+	p._last_notify_text = ""
+	var on0 := _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock.")
+	var peak_line := "Ada's Poisoned reaches 4 stacks; Toxic Shock is already on (32 poison every 2 s, at its peak)."
+	var k0 := _log_count(peak_line)
+	cm.apply_condition("poisoned", foe, 4)
+	_check("redose.at-peak-same-instance", cm.get_condition("toxic_shock") == inst and _next(p) == 32 and not cm.has_condition("poisoned"))
+	_check("redose.at-peak-floats-already-on", p._last_notify_text == "Toxic Shock (already on)", p._last_notify_text)
+	_check("redose.at-peak-logged", _log_count(peak_line) == k0 + 1 and _log_count("Ada's Poisoned reaches 4 stacks: Toxic Shock.") == on0, _log_tail())
 	# Any order of ticks and doses: the next tick never gets smaller.
 	cm.clear_all_conditions()
 	seed(6)

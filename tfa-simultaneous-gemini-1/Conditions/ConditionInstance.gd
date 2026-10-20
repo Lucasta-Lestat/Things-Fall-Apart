@@ -94,7 +94,19 @@ static func from_dict(data: Dictionary, condition_registry: Dictionary) -> Condi
 	instance.expires_at = data.get("expires_at", -1.0)
 	var saved_custom = data.get("custom_data", {})
 	instance.custom_data = saved_custom.duplicate(true) if saved_custom is Dictionary else {}
-	instance.last_trigger_times = data.get("last_trigger_times", {})
+	# Keyed by effect index. JSON brings the keys back as strings ("0"), which
+	# _process_triggered_effects' int lookup missed, so every tick fired at
+	# once on load (a Toxic Shock tick up to 2 s early); back to ints then.
+	# An in-memory snapshot (int keys) is taken as it is, as before.
+	var saved_ticks = data.get("last_trigger_times", {})
+	if saved_ticks is Dictionary and saved_ticks.keys().any(func(k): return k is String):
+		var by_index := {}
+		for k in saved_ticks:
+			var t = saved_ticks[k]
+			if str(k).is_valid_int() and (t is float or t is int):
+				by_index[int(str(k))] = float(t)
+		saved_ticks = by_index
+	instance.last_trigger_times = saved_ticks if saved_ticks is Dictionary else {}
 	instance.instance_id = data.get("instance_id", "cond_loaded_%d" % randi())
 	
 	return instance

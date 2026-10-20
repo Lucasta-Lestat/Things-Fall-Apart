@@ -217,11 +217,14 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 	if not condition:
 		return
 	
+	var escalates := false
 	for i in range(condition.triggered_effects.size()):
 		# Bleeding's damage tick can kill; its blood puddle mustn't follow.
 		if _bearer_dead():
 			break
 		var effect = condition.triggered_effects[i]
+		if effect.has("escalate"):
+			escalates = true
 		var interval = effect.get("interval", 1.0)
 		var last_time = instance.last_trigger_times.get(i, -INF)
 		
@@ -240,8 +243,10 @@ func _process_triggered_effects(instance: ConditionInstance, current_time: float
 			firing_triggered_effect = false
 
 	# Every frame, not only on a tick: a hit between ticks can bring the
-	# bearer within reach of the next one.
-	_warn_lethal_escalation(instance)
+	# bearer within reach of the next one. Only for an escalating condition
+	# (Toxic Shock); every other one skips it.
+	if escalates:
+		_warn_lethal_escalation(instance)
 
 
 ## custom_data key: this instance has already warned that its next tick kills.
@@ -514,7 +519,8 @@ func _refresh_stackable_expiry(existing: ConditionInstance, final_duration: floa
 ## one that won't wear off (cure_hint). When the new condition is already on
 ## and escalates (Toxic Shock), the re-dose steps it on (apply_condition) and
 ## the notice says so: "Toxic Shock worsens" and "Ada's Poisoned reaches 4
-## stacks: Toxic Shock worsens (16 poison every 2 s, doubling)."
+## stacks: Toxic Shock worsens (16 poison every 2 s, doubling)"; at its peak
+## it says it is "already on".
 func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 	var tf: Dictionary = instance.condition.transforms_into
 	var into_id := str(tf.get("id", ""))
@@ -535,12 +541,19 @@ func _check_transform(instance: ConditionInstance) -> ConditionInstance:
 	var out := apply_condition(into_id, src)
 	transforming = was_transforming
 	if out and _bearer_noticeable():
-		var worse: bool = prior != null and out == prior and out.get_dot_text() != prior_dot
+		# A DoT already on: the re-dose either moved it on (worse) or, at its
+		# peak (or with redose_steps 0), changed nothing, which mustn't read
+		# as a fresh onset: "Ada's Poisoned reaches 4 stacks; Toxic Shock is
+		# already on (32 poison every 2 s, at its peak)."
+		var again: bool = prior != null and out == prior and prior_dot != ""
+		var worse: bool = again and out.get_dot_text() != prior_dot
 		if character.has_method("notify"):
-			character.notify(_condition_name(out.condition) + (" worsens" if worse else "!"), WORSEN_COLOR)
+			character.notify(_condition_name(out.condition) + (" worsens" if worse else (" (already on)" if again else "!")), WORSEN_COLOR)
 		if _player_involved(src):
 			if worse:
 				GameLog.add_entry("%s's %s reaches %s: %s worsens (%s)." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition), out.get_dot_text()])
+			elif again:
+				GameLog.add_entry("%s's %s reaches %s; %s is already on (%s)." % [_bearer_name(), _condition_name(instance.condition), _stacks_text(instance.stacks), _condition_name(out.condition), out.get_dot_text()])
 			else:
 				# "Ada's Chilled reaches 4 stacks: Frozen." Reads for a state
 				# (Frozen) and a noun (Toxic Shock) alike; "is now Toxic Shock" didn't.
