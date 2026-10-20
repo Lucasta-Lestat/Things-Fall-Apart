@@ -119,6 +119,8 @@ func _ready() -> void:
 	await _case_plan_blink_aims_last_seen()
 	await _case_plan_swing_under_way()
 	await _case_plan_cast_under_way()
+	await _case_plan_cast_step_start()
+	await _case_plan_picks_step_start()
 	await _case_plan_no_flicker()
 	await _case_ai_attack_unchanged()
 	_restore()
@@ -654,6 +656,101 @@ func _case_plan_cast_under_way() -> void:
 			_check("cast.follows-again-when-seen", cast.get("anchor") == penitent and cast.get("explicit_targets", []) == [penitent], [cast.get("anchor"), cast.get("explicit_targets")])
 	p.npc_unlimited_resources = had_unlimited
 	p.ability_manager.cancel_cast("", true)
+	await _despawn_all()
+
+## A planned spell on a designated character, at the moment its step comes up
+## (review): lost for longer than the grace, the plan pauses before the cast
+## starts, with the reason, and casts at it once it is seen again; lost within
+## the grace (a blink), it is cast at the last-seen spot with no pause, and a
+## single-target binding to it is dropped (it lands on whoever is there).
+func _case_plan_cast_step_start() -> void:
+	if not wall_spot.is_finite():
+		return
+	var heretic = _spawn("Heretic", _ahead(150.0))
+	await _settle()
+	var had_unlimited = p.get("npc_unlimited_resources")
+	p.npc_unlimited_resources = true
+	PauseManager.pause()
+	p.action_queue.queue_ability("chasten", heretic.global_position, [heretic], heretic)
+	heretic.global_position = wall_spot
+	_advance(1.0)
+	var lost_line := "Target lost: Heretic is out of sight. %s's plan is paused." % p.Name
+	var lines := _log_count(lost_line)
+	_resume_game()
+	await _frames(3)
+	_check("castplan.paused-before-the-cast", p.is_plan_paused() and p.plan_pause_cause() == "Target lost"
+		and p.ability_manager.current_cast.is_empty() and p.action_queue.current_action == null, p.plan_pause_cause())
+	_check("castplan.says-why", _log_count(lost_line) == lines + 1, _log_tail())
+	var resume_line := "%s can see Heretic again: plan resumes." % p.Name
+	lines = _log_count(resume_line)
+	heretic.global_position = _ahead(170.0)
+	await _until_under_way()
+	var cast: Dictionary = p.ability_manager.current_cast
+	_check("castplan.resumes-on-the-target", not p.is_plan_paused() and not cast.is_empty()
+		and cast.get("anchor") == heretic and cast.get("explicit_targets", []) == [heretic], cast.keys())
+	_check("castplan.resume-logged", _log_count(resume_line) == lines + 1, _log_tail())
+	p.ability_manager.cancel_cast("", true)
+	p.action_queue.cancel_all()
+	await _settle()
+	# A blink: out of sight just as the step comes up.
+	var seen_at: Vector2 = game.party_last_seen_position(heretic)
+	_check("castblink.sanity-seen", game.is_seen_by_party(heretic) and seen_at.distance_to(heretic.global_position) < 1.0)
+	PauseManager.pause()
+	p.action_queue.queue_ability("chasten", heretic.global_position, [heretic], heretic)
+	heretic.global_position = wall_spot
+	var lost := _log_count("Target lost: Heretic")
+	_resume_game()
+	await _until_under_way()
+	cast = p.ability_manager.current_cast
+	var step = p.action_queue.current_action
+	_check("castblink.no-pause", not p.is_plan_paused() and _log_count("Target lost: Heretic") == lost, _log_tail())
+	_check("castblink.started-without-the-anchor", not cast.is_empty() and cast.get("anchor") == null
+		and step != null and step.data.get("anchor_lost", false), cast.get("anchor"))
+	_check("castblink.at-last-seen", (cast.get("target_position", Vector2.INF) as Vector2).distance_to(seen_at) < 1.0,
+		[cast.get("target_position"), seen_at, wall_spot])
+	_check("castblink.binding-dropped", (cast.get("explicit_targets", [null]) as Array).is_empty(), cast.get("explicit_targets"))
+	p.npc_unlimited_resources = had_unlimited
+	p.ability_manager.cancel_cast("", true)
+	await _despawn_all()
+
+## A planned spell on picked characters (review): it waits only while every
+## living pick is lost; one still in sight lets the step go ahead.
+func _case_plan_picks_step_start() -> void:
+	if not wall_spot.is_finite():
+		return
+	var first = _spawn("Pickone", _ahead(150.0))
+	var second = _spawn("Picktwo", _ahead(200.0))
+	await _settle()
+	_check("picks.control-seen", game.is_seen_by_party(first) and game.is_seen_by_party(second))
+	var had_unlimited = p.get("npc_unlimited_resources")
+	p.npc_unlimited_resources = true
+	# One pick lost, the other in sight: no pause.
+	PauseManager.pause()
+	p.action_queue.queue_ability("hitch", first.global_position, [first, second], null)
+	second.global_position = wall_spot
+	_advance(1.0)
+	var lost := _log_count("Target lost: Pick")
+	_resume_game()
+	await _frames(3)
+	_check("picks.one-in-sight-goes-ahead", not p.is_plan_paused() and _log_count("Target lost: Pick") == lost
+		and (p.action_queue.current_action != null or p.action_queue.get_queue_size() == 0), [p.plan_pause_cause(), _log_tail()])
+	p.ability_manager.cancel_cast("", true)
+	p.action_queue.cancel_all()
+	second.global_position = _ahead(200.0)
+	await _settle()
+	# Both lost: it waits, naming the first.
+	PauseManager.pause()
+	p.action_queue.queue_ability("hitch", first.global_position, [first, second], null)
+	first.global_position = wall_spot
+	second.global_position = wall_spot + Vector2.UP.rotated(wall_dir) * 30.0
+	_advance(1.0)
+	var lost_line := "Target lost: Pickone is out of sight. %s's plan is paused." % p.Name
+	var lines := _log_count(lost_line)
+	_resume_game()
+	await _frames(3)
+	_check("picks.all-lost-waits", p.is_plan_paused() and p.plan_pause_cause() == "Target lost", p.plan_pause_cause())
+	_check("picks.names-the-first", _log_count(lost_line) == lines + 1, _log_tail())
+	p.npc_unlimited_resources = had_unlimited
 	await _despawn_all()
 
 func _case_plan_no_flicker() -> void:
