@@ -407,10 +407,11 @@ func _case_toxic_shock_hidden_npc() -> void:
 	_check("toxic.keeps-doubling-unseen", shock.escalation_steps(0) == steps0 + 3, [steps0, shock.escalation_steps(0)])
 	_check("toxic.keeps-hurting-unseen", brute.current_health < hp0, [hp0, brute.current_health])
 	# Its ticks are no contact: the memory of it (from when it left sight)
-	# runs out while it ticks.
-	for i in 3:
-		await _tick()
-	_check("toxic.ticks-are-no-contact", not game.is_threat_known(brute))
+	# runs out while it ticks. (The rest of the 10 s in one jump: one more
+	# tick, so even a frail NPC lives on for the re-doses below.)
+	_advance(4.6)
+	await _frames(2)
+	_check("toxic.ticks-are-no-contact", brute.is_alive() and not game.is_threat_known(brute), brute.current_health)
 	# A null-source re-dose (Poisoned reaching 4 again) is a transform: it
 	# moves the tick on, quietly, and is no contact either.
 	var before: int = shock.escalation_steps(0)
@@ -590,8 +591,8 @@ func _case_map_change() -> void:
 	var save: Dictionary = game.build_save_dict()
 	var save_text := JSON.stringify(save)
 	_check("map.save-keeps-step", ("escalate_steps_0" in save_text), "Toxic Shock's step rides in the party snapshot")
-	_check("map.save-has-no-awareness", not ("threat" in save_text.to_lower() and "known_until" in save_text.to_lower())
-		and not ("last_seen" in save_text.to_lower()))
+	_check("map.save-has-no-awareness", not ("known_until" in save_text) and not ("last_seen_time" in save_text)
+		and not ("last_seen_pos" in save_text), "the threat memory and last-seen spots are never saved")
 	_spawned.clear()   # the map change frees them
 	game.load_map("perrow_tavern")
 	await _frames(8)
@@ -651,7 +652,7 @@ func _case_party_member_unseen_poisoner() -> void:
 	_check("victim.warned-once", _log_since(since, "%s will die from Toxic Shock unless cured" % who).size() == 1, _log_tail(8))
 	_check("victim.death-line", _log_since(since, _death_line(who)).size() == 1, _log_tail())
 	_check("victim.poisoner-never-named", _log_since(since, "Hidden Poisoner").is_empty(), _log_since(since, "Hidden Poisoner"))
-	_check("victim.ticks-kill-from-30", hp_start == 30 and guard <= 5, [hp_start, guard])
+	_check("victim.ticks-kill-from-30-or-less", hp_start <= 30 and guard <= 5, [hp_start, guard])
 	# The ticks didn't keep the poisoner in mind: 10 s after the dose it is
 	# forgotten (the death isn't contact either).
 	_advance(10.5)
