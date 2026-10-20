@@ -300,8 +300,9 @@ func _ready() -> void:
 	if not TimeManager.date_changed.is_connected(_on_date_changed_for_returns):
 		TimeManager.date_changed.connect(_on_date_changed_for_returns)
 
-	# Law/crime Phase 7: the Surrender button (visible whenever a hostile is
-	# near — a missing button is confusion, a visible one is information).
+	# Law/crime Phase 7: the Surrender button (visible whenever a hostile the
+	# party knows about is near — a missing button is confusion, a visible one
+	# is information; known_threats_near_party).
 	_setup_surrender_button()
 	_setup_threat_indicators()
 
@@ -1026,6 +1027,8 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	_invisible_aware_until.clear()
 	_invisible_aware_why.clear()
 	_invisible_lost_said.clear()
+	# So is the memory of threats (combat music, Surrender).
+	_threat_known_until.clear()
 
 	# Clean up previous map
 	_unload_current_map()
@@ -2340,6 +2343,9 @@ func _setup_surrender_button() -> void:
 	_surrender_button.offset_right = 70.0
 	_surrender_button.offset_top = -110.0
 	_surrender_button.offset_bottom = -70.0
+	# The rule it shows by (known_threats_near_party), for the player to plan on.
+	_surrender_button.tooltip_text = ("Give yourselves up to the hostiles you know are near.\n"
+		+ "Shown while one is in view, or was seen, heard close by or traded blows with in the last %d s.") % int(THREAT_MEMORY_SECONDS)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
 	$GameUI.add_child(_surrender_button)
 
@@ -2365,6 +2371,80 @@ func hostile_characters_near_party(radius: float = SURRENDER_RADIUS) -> Array:
 		if near_and_hostile:
 			out.append(c)
 	return out
+
+# --- Known threats: combat music and Surrender ---
+# Developer (round 6): "No combat music or surrender option until the party is
+# aware of the threat". hostile_characters_near_party (above) checks no
+# perception at all; a known threat is one of those hostiles that the party is
+# aware of:
+#   - it sees it now (is_seen_by_party: line of sight, and for an Invisible NPC
+#     round 5's awareness);
+#   - it saw it within the last THREAT_MEMORY_SECONDS (a foe stepping behind a
+#     pillar mid-fight is still there);
+#   - within THREAT_MEMORY_SECONDS it and a party member traded a blow or a
+#     condition that landed, either way (an unseen archer's hit makes it known
+#     at once), or a party member heard it within THREAT_HEARD_TILES, or heard
+#     one it already knew of.
+# Each cue restarts the count. A hidden enemy nearby, however hostile, starts
+# no music and offers no Surrender. Memory runs on TimeManager's clock (stopped
+# while paused), isn't saved and clears with the map.
+
+## Seconds of game time the party remembers a threat it stopped perceiving.
+const THREAT_MEMORY_SECONDS := 10.0
+## A noise within this many tiles of a party member makes its maker known (as
+## INVISIBLE_HEARD_TILES does for an invisible NPC).
+const THREAT_HEARD_TILES := 2.0
+
+## Character -> TimeManager.absolute_time() the last cue keeps it known until.
+var _threat_known_until: Dictionary = {}
+
+## The hostiles near the party that it knows about: what the Surrender button,
+## the SurrenderPanel's counterparty and the combat music go by.
+func known_threats_near_party(radius: float = SURRENDER_RADIUS) -> Array:
+	var out: Array = []
+	for c in hostile_characters_near_party(radius):
+		if is_threat_known(c):
+			out.append(c)
+	return out
+
+## Whether the party is aware of `c`: seen now, or a cue within
+## THREAT_MEMORY_SECONDS (above). Says nothing about hostility.
+func is_threat_known(c) -> bool:
+	if c == null or not is_instance_valid(c):
+		return false
+	if is_seen_by_party(c):
+		return true
+	return TimeManager.absolute_time() < float(_threat_known_until.get(c, -1.0))
+
+func _mark_threat_known(c) -> void:
+	if not (c is ProceduralCharacter) or not is_instance_valid(c) or c in party_chars:
+		return
+	_threat_known_until[c] = TimeManager.absolute_time() + THREAT_MEMORY_SECONDS
+
+## A blow (_on_character_damaged; damage-over-time ticks don't count) or a
+## condition (note_invisible_contact) landed between a party member and a
+## character outside the party: the party knows that one is there.
+func _note_threat_contact(actor, target) -> void:
+	if actor == null or target == null or not is_instance_valid(actor) or not is_instance_valid(target) or actor == target:
+		return
+	if actor in party_chars and not (target in party_chars):
+		_mark_threat_known(target)
+	elif target in party_chars and not (actor in party_chars):
+		_mark_threat_known(actor)
+
+## Heard by the party (trigger_hearing_pulse): close by, or one it already
+## knows of (it can hear it moving about), stays known.
+func _note_threat_heard(c) -> void:
+	if not (c is ProceduralCharacter) or c in party_chars:
+		return
+	if is_threat_known(c):
+		_mark_threat_known(c)
+		return
+	var reach: float = GridManager.TILE_SIZE * THREAT_HEARD_TILES
+	for pc in party_chars:
+		if is_instance_valid(pc) and pc.is_alive() and pc.global_position.distance_to(c.global_position) <= reach:
+			_mark_threat_known(c)
+			return
 
 ## Every living, conscious hostile that a party member has in sight RIGHT
 ## NOW — the same LOS answer _update_npc_los_visibility renders sprites from,
@@ -2405,8 +2485,9 @@ func _update_surrender_button(hostiles: Array = []) -> void:
 		return
 	_surrender_button.visible = not hostiles.is_empty()
 
-## Seconds with no hostile in range before combat music releases back to the
-## map's ambient track. Without this, music flickers every time an enemy
+## Seconds with no known threat in range (known_threats_near_party) before
+## combat music releases back to the map's ambient track; it starts only for
+## one. Without this, music flickers every time an enemy
 ## paces across the radius edge or the last one dies mid-swing.
 const COMBAT_MUSIC_RELEASE: float = 6.0
 
@@ -2853,6 +2934,8 @@ func trigger_hearing_pulse(npc) -> void:
 	# Heard close by, an invisible NPC gives away where it is for a while
 	# (drawn see-through while in view); farther off it only flashes, below.
 	_note_invisible_heard(npc)
+	# Heard close by (or still being tracked), it is a threat the party knows of.
+	_note_threat_heard(npc)
 	if _npc_ever_seen.get(npc, false):
 		_npc_pulse_remaining[npc] = PULSE_DURATION
 	else:
@@ -2913,6 +2996,8 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		return
 	# A blow traded with an invisible NPC gives away where it is.
 	_note_invisible_hit(attacker, victim)
+	# Any blow traded with the party makes the other side a known threat.
+	_note_threat_contact(attacker, victim)
 	# The victim's own AI wake-up is handled in ai.gd via the same signal —
 	# this loop only wakes bystanders (legal fights startle people too).
 	# Enumeration is shared with the crime pipeline: CrimeManager.witnesses_of
@@ -3101,7 +3186,9 @@ func _update_npc_los_visibility() -> void:
 		var was_truly_seen: bool = _npc_was_truly_seen.get(npc, false)
 		_npc_was_truly_seen[npc] = seen
 		# Just lost from view: if Invisible is why, it fades out (round 5).
+		# The party remembers it for a while (known threats, round 6).
 		if was_truly_seen and not seen:
+			_mark_threat_known(npc)
 			_on_invisible_npc_lost(npc)
 
 		if seen:
@@ -3326,6 +3413,8 @@ func note_npc_invisibility(npc, cause: String) -> void:
 ## on the other: ProceduralCharacter._on_condition_applied): an invisible NPC
 ## on the other side is located for INVISIBLE_AWARE_SECONDS.
 func note_invisible_contact(actor, target) -> void:
+	# Any NPC on the other side is a threat the party knows of (round 6).
+	_note_threat_contact(actor, target)
 	var npc = _invisible_counterpart(actor, target)
 	if npc != null:
 		_mark_invisible_aware(npc, "hit")
@@ -3515,11 +3604,11 @@ func _process(delta: float) -> void:
 			if fog_vp and fog_vp.world_2d:
 				ExplorationManager.sweep(party_chars, fog_vp.world_2d.direct_space_state)
 		# Surrender button visibility and combat music, polled at 2 Hz off the
-		# same hostility sweep.
+		# same sweep: hostiles near the party that it knows about (round 6).
 		_surrender_poll_accum += delta
 		if _surrender_poll_accum >= 0.5:
 			_surrender_poll_accum = 0.0
-			var hostiles: Array = hostile_characters_near_party()
+			var hostiles: Array = known_threats_near_party()
 			_update_surrender_button(hostiles)
 			_update_combat_music(hostiles)
 	# Keep drawn cones equal to real sight, paused too (the party plans while
