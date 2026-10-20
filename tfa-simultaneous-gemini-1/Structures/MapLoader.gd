@@ -396,14 +396,39 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
 		inst.add_child(occ)
+	# "art_polys" (exporter, curtain walls + their towers): the instance's art is
+	# an EXACT partition of the overlay -- body, plinth, cast shadow, foot AO --
+	# instead of the +-(half+12) rectangle that clipped the shadow / towers and
+	# streaked past the map edge. One Polygon2D named "Art" (damage tint /
+	# hide / Door casts keep working) carrying every piece via `polygons`; an
+	# empty list (a piece wholly off-map) builds no Art.
+	var art_polys: Variant = s.get("art_polys")
+	var has_art_polys: bool = art_polys is Array
+	if has_art_polys and (art_polys as Array).is_empty():
+		overlay_tex = null
 	if overlay_tex != null:
 		var art := Polygon2D.new()
 		art.name = "Art"
 		art.texture = overlay_tex
-		art.polygon = poly_local
 		var uvs := PackedVector2Array()
-		for p in poly_local:
-			uvs.append(p + center)   # overlay covers the whole map 1:1 in pixels
+		if has_art_polys:
+			var all_pts := PackedVector2Array()
+			var groups: Array = []
+			for ap in art_polys:
+				var idx := PackedInt32Array()
+				for v in ap:
+					var pv := Vector2(float(v[0]), float(v[1]))
+					idx.append(all_pts.size())
+					all_pts.append(pv - center)
+					uvs.append(pv)   # overlay covers the whole map 1:1 in pixels
+				if idx.size() >= 3:
+					groups.append(idx)
+			art.polygon = all_pts
+			art.polygons = groups
+		else:
+			art.polygon = poly_local
+			for p in poly_local:
+				uvs.append(p + center)   # overlay covers the whole map 1:1 in pixels
 		art.uv = uvs
 		# the overlay was rendered onto a transparent viewport, so its edge
 		# pixels carry PREMULTIPLIED alpha -- straight-alpha blending would draw
