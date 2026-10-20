@@ -16,6 +16,9 @@ extends RefCounted
 # Built-in procedural decor (drawn, never items): base diameter px at scale 1.
 const BUILTIN_DECOR := {"_plate": 16.0, "_cup": 6.0, "_candle": 5.0}
 
+# hash_i salt of the seed-driven strip mirror (tiles / mirror_bits).
+const MIRROR_SALT := 1753
+
 
 # Same integer hash in TG RunArt (variant picks, decor jitter seeds).
 static func hash_i(rseed: int, i: int) -> int:
@@ -67,13 +70,29 @@ static func tiles(length: float, width: float, meta: Dictionary, caps: int = 3, 
 		cl *= f
 		cr *= f
 	var pk: float = pad * k * f
+	var tile_mode: bool = String(meta.get("mid_mode", "stretch")) == "tile"
+	# seed-driven MIRROR (stretch mode, meta "mirror" = allowed axes "x" / "y" /
+	# "xy"): every pew / table of one id otherwise shows the SAME grain and knots
+	# (a clone tell). The WHOLE strip flips -- an x flip also swaps the cap art
+	# end for end -- so each cap still meets the middle column it was cut from
+	# (no seam). A negative src size draws that axis mirrored IN PLACE (Godot's
+	# canvas rule: src position stays the min corner, the same texels are drawn
+	# reversed into the same dst rect).
+	var fx: bool = false
+	var fy: bool = false
+	var mir: String = String(meta.get("mirror", ""))
+	if mir != "" and not tile_mode:
+		var fl: int = mirror_bits(rseed)
+		fx = (fl & 1) != 0 and mir.contains("x")
+		fy = (fl & 2) != 0 and mir.contains("y")
+	var sh: float = -ah if fy else ah
 	if cl > 0.0:
 		out.append({"dst": Rect2(-half_l - pk, y0, cl + pk, hh),
-			"src": Rect2(0.0, 0.0, pad + cap, ah)})
+			"src": Rect2(aw - pad - cap, 0.0, -(pad + cap), sh) if fx else Rect2(0.0, 0.0, pad + cap, sh)})
 	var x0: float = -half_l + cl
 	var span: float = length - cl - cr
 	var m0: Array = mids[0]
-	if String(meta.get("mid_mode", "stretch")) == "tile":
+	if tile_mode:
 		var mw: float = (float(m0[1]) - float(m0[0])) * k
 		var n: int = maxi(1, roundi(span / maxf(mw, 0.001)))
 		var tw: float = span / float(n)
@@ -82,12 +101,20 @@ static func tiles(length: float, width: float, meta: Dictionary, caps: int = 3, 
 			out.append({"dst": Rect2(x0 + tw * float(i), y0, tw, hh),
 				"src": Rect2(float(mv[0]), 0.0, float(mv[1]) - float(mv[0]), ah)})
 	else:
+		var mw0: float = float(m0[1]) - float(m0[0])
 		out.append({"dst": Rect2(x0, y0, span, hh),
-			"src": Rect2(float(m0[0]), 0.0, float(m0[1]) - float(m0[0]), ah)})
+			"src": Rect2(float(m0[0]), 0.0, -mw0 if fx else mw0, sh)})
 	if cr > 0.0:
 		out.append({"dst": Rect2(half_l - cr, y0, cr + pk, hh),
-			"src": Rect2(aw - pad - cap, 0.0, pad + cap, ah)})
+			"src": Rect2(0.0, 0.0, -(pad + cap), sh) if fx else Rect2(aw - pad - cap, 0.0, pad + cap, sh)})
 	return out
+
+
+# The strip's mirror bits for a seed: 1 = flip x, 2 = flip y (masked by the
+# meta's "mirror" axes in tiles). Mid bits of the shared hash: low bits of a
+# product follow the seed's low bits too closely.
+static func mirror_bits(rseed: int) -> int:
+	return (hash_i(rseed, MIRROR_SALT) >> 8) & 3
 
 
 # Opaque footprint half-extents (no pad): the strip's real size.
@@ -132,13 +159,24 @@ static func draw_builtin(ci: CanvasItem, id: String, at: Vector2, rot: float, sc
 			ci.draw_arc(at, r * 0.58, 0.0, TAU, 24, base.darkened(0.12), maxf(0.35, r * 0.06), true)
 			_disc(ci, at + gl * r * 0.48, r * 0.16, Color(1.0, 1.0, 0.95, 0.35))
 		"_cup":
-			var rim: Color = Color(0.47, 0.47, 0.44) if v % 2 == 0 else Color(0.42, 0.29, 0.17)
+			# a tankard seen from above: pewter (v even) or an iron-hooped wooden
+			# cup (v odd). Neutral metal / wood only, a thick lit rim around dark
+			# ale and a stubby lug handle -- a small saturated disc on a thin
+			# stem read as a berry at game zoom.
+			var wood: bool = v % 2 == 1
+			var body: Color = Color(0.60, 0.44, 0.27) if wood else Color(0.66, 0.67, 0.66)
+			var edge: Color = Color(0.20, 0.18, 0.17) if wood else body.darkened(0.55)
 			var hdir := Vector2.from_angle(rot)
-			ci.draw_line(at + hdir * r * 0.7, at + hdir * r * 1.45, rim.darkened(0.2), maxf(0.6, r * 0.42), true)
-			_disc(ci, at + sh * r * 0.22, r, Color(0.0, 0.0, 0.0, 0.2))
-			_disc(ci, at, r, rim)
-			_disc(ci, at, r * 0.70, Color(0.30, 0.18, 0.07) if v % 2 == 0 else Color(0.36, 0.08, 0.10))
-			_disc(ci, at + gl * r * 0.38, r * 0.22, Color(1.0, 0.95, 0.85, 0.30))
+			_disc(ci, at + sh * r * 0.28, r * 1.02, Color(0.0, 0.0, 0.0, 0.24))
+			ci.draw_line(at + hdir * r * 0.55, at + hdir * r * 1.55, edge, maxf(0.9, r * 0.70), true)
+			ci.draw_line(at + hdir * r * 0.55, at + hdir * r * 1.45, body.darkened(0.12), maxf(0.6, r * 0.42), true)
+			_disc(ci, at, r, edge)
+			_disc(ci, at, r * 0.86, body)
+			_disc(ci, at, r * 0.58, Color(0.27, 0.17, 0.07))
+			_disc(ci, at + gl * r * 0.10, r * 0.42, Color(0.36, 0.23, 0.10))
+			var ga: float = gl.angle()
+			ci.draw_arc(at, r * 0.72, ga - 1.15, ga + 1.15, 12, body.lightened(0.55), maxf(0.4, r * 0.20), true)
+			_disc(ci, at + gl * r * 0.30, r * 0.14, Color(1.0, 0.96, 0.86, 0.40))
 		"_candle":
 			# painted glow first (soft warm pool on the board), then holder/wax/flame
 			for gi in 6:

@@ -33,16 +33,20 @@ import numpy as np
 PAD = 4      # transparent border, atlas px (all four sides)
 GUT = 8      # extruded gutter between parts, atlas px
 
+# mirror (stretch mode): the axes RunLayout.tiles may flip the WHOLE strip along,
+# picked per run seed, so a row of pews / tables is not one cloned grain. Only
+# axes the art's lighting tolerates: the table's top-edge highlight stays on top
+# (x only); the bench art is lit near-symmetrically (x and y).
 # cap: "auto" = columns until the end band's luminance reaches the middle median
 # (long_table: the dark rounded border + its highlight); an int = SOURCE px of the
 # (rotated) art. out_h: opaque atlas height (None = keep the source's).
 SPECS = {
     "long_table": {"src": "Items/long_table.png", "rotate": 0, "out_h": 256, "cap": "auto",
-                   "mode": "stretch", "across_m": 0.94, "shadow": 0.0},
+                   "mode": "stretch", "across_m": 0.94, "shadow": 0.0, "mirror": "x"},
     # portrait art: rotate so the bench's LENGTH runs along x. The cap keeps the
     # end grain + the leg bracket (source rows 0..125 of 640).
     "bench": {"src": "Items/bench.png", "rotate": 90, "out_h": 128, "cap": 128,
-              "mode": "stretch", "across_m": 0.48, "shadow": 0.0},
+              "mode": "stretch", "across_m": 0.48, "shadow": 0.0, "mirror": "xy"},
     # woven runner: the diamond lattice repeats every ~21 source px along the
     # length; the tile is a whole number of periods with cross-faded ends.
     "red_carpet": {"src": "Items/red_carpet.png", "rotate": 90, "out_h": None, "cap": 13,
@@ -207,6 +211,8 @@ def build(root, iid, spec):
     meta = {"atlas": "res://" + rel, "w": W, "h": H, "pad": PAD, "cap": cap,
             "mid": mid_ranges, "mid_mode": spec["mode"],
             "across": round(spec["across_m"] * PX_PER_M, 1), "shadow": spec["shadow"]}
+    if spec.get("mirror"):
+        meta["mirror"] = spec["mirror"]
     return meta
 
 

@@ -3,7 +3,9 @@ extends Node2D
 # branch, Game._world_item_options / ai._is_takeable_item):
 #   1. RunLayout math: the opaque strip spans exactly [-L/2, L/2] x [-W/2, W/2]
 #      (tiles abut, sum to the length), caps on/off/L-T bitmask, short-run cap
-#      squeeze, tile mode fills the span with whole tiles, determinism.
+#      squeeze, tile mode fills the span with whole tiles, determinism, and the
+#      seed-driven whole-strip MIRROR (meta "mirror": dst rects unchanged, the
+#      caps swap ends, every allowed variant reachable, tile mode never flips).
 #   2. Parity: tests/run_parity_fixture.json (shared byte-for-byte with Terrain
 #      Generation's tests/run_parity_fixture.json, checked there by PrimsCheck
 #      test_prim_runs against scripts/RunArt.gd) is reproduced exactly.
@@ -87,6 +89,7 @@ func _ready() -> void:
 		get_tree().quit(0)
 		return
 	_case_layout()
+	_case_mirror()
 	_case_parity()
 	await _case_items()
 	print("ITEM RUN CHECK DONE: %d checks, %d FAIL" % [_checks, _fails])
@@ -125,8 +128,11 @@ func _case_layout() -> void:
 	var t0: Array = RunLayout.tiles(L, W, lt, 0, 7)
 	var e0: Rect2 = t0[0]["dst"]
 	_report("layout.caps0-butt", t0.size() == 1 and absf(e0.position.x + L * 0.5) < 1e-3 and absf(e0.end.x - L * 0.5) < 1e-3)
-	var t1: Array = RunLayout.tiles(L, W, lt, 1, 7)
-	var t2: Array = RunLayout.tiles(L, W, lt, 2, 7)
+	# (src-side cap asserts on a copy without "mirror": the seed may flip the strip)
+	var lt_plain: Dictionary = lt.duplicate(true)
+	lt_plain.erase("mirror")
+	var t1: Array = RunLayout.tiles(L, W, lt_plain, 1, 7)
+	var t2: Array = RunLayout.tiles(L, W, lt_plain, 2, 7)
 	_report("layout.caps1-start-only", t1.size() == 2 and (t1[0]["src"] as Rect2).position.x == 0.0
 		and absf((t1[1]["dst"] as Rect2).end.x - L * 0.5) < 1e-3)
 	_report("layout.caps2-end-only", t2.size() == 2 and absf((t2[0]["dst"] as Rect2).position.x + L * 0.5) < 1e-3
@@ -160,6 +166,76 @@ func _case_layout() -> void:
 	_report("layout.no-length-no-run", RunLayout.run_from_spawn({"id": "long_table"}).is_empty())
 
 
+# --- mirror -------------------------------------------------------------------
+
+# The smallest seed >= 1000 whose mirror bits are v (fixture + test seeds).
+func _seed_for_bits(v: int) -> int:
+	var s: int = 1000
+	while RunLayout.mirror_bits(s) != v:
+		s += 1
+	return s
+
+
+func _case_mirror() -> void:
+	var lt := _meta("long_table")
+	var bn := _meta("bench")
+	var rc := _meta("red_carpet")
+	if lt.is_empty() or bn.is_empty() or rc.is_empty():
+		return
+	_report("mirror.meta-axes", String(bn.get("mirror", "")) == "xy" and String(lt.get("mirror", "")) == "x"
+		and not rc.has("mirror"), "bench %s, long_table %s" % [str(bn.get("mirror")), str(lt.get("mirror"))])
+	# every allowed variant is reachable; seeds spread over all four bit pairs
+	var seen := {}
+	for s in 256:
+		seen[RunLayout.mirror_bits(s * 7919 + 13)] = true
+	_report("mirror.all-variants", seen.size() == 4, "%d of 4 bit pairs over 256 seeds" % seen.size())
+	var bn_plain: Dictionary = bn.duplicate(true)
+	bn_plain.erase("mirror")
+	var aw: float = float(bn["w"])
+	var ah: float = float(bn["h"])
+	var pc: float = float(bn["pad"]) + float(bn["cap"])
+	var m0: Array = (bn["mid"] as Array)[0]
+	var mw: float = float(m0[1]) - float(m0[0])
+	var bad := 0
+	for v in 4:
+		var sd: int = _seed_for_bits(v)
+		var tf: Array = RunLayout.tiles(68.3, 19.2, bn, 3, sd)
+		var tp: Array = RunLayout.tiles(68.3, 19.2, bn_plain, 3, sd)
+		if tf.size() != 3 or tp.size() != 3:
+			bad += 1
+			continue
+		var fx: bool = (v & 1) != 0
+		var fy: bool = (v & 2) != 0
+		var sh: float = -ah if fy else ah
+		var want: Array = [
+			Rect2(aw - pc, 0.0, -pc, sh) if fx else Rect2(0.0, 0.0, pc, sh),
+			Rect2(float(m0[0]), 0.0, -mw if fx else mw, sh),
+			Rect2(0.0, 0.0, -pc, sh) if fx else Rect2(aw - pc, 0.0, pc, sh)]
+		for i in 3:
+			if (tf[i]["dst"] as Rect2) != (tp[i]["dst"] as Rect2) or (tf[i]["src"] as Rect2) != (want[i] as Rect2):
+				bad += 1
+	_report("mirror.bench-variants", bad == 0, "%d tile mismatches (dst unchanged; x swaps + flips the caps, y flips every src)" % bad)
+	# long_table: x only (its top-edge highlight stays on top)
+	var lt_y := 0
+	var lt_x := 0
+	for s in 64:
+		for tv in RunLayout.tiles(601.6, 83.2, lt, 3, s * 131 + 5):
+			var sr: Rect2 = tv["src"]
+			if sr.size.y < 0.0:
+				lt_y += 1
+			if sr.size.x < 0.0:
+				lt_x += 1
+	_report("mirror.table-x-only", lt_y == 0 and lt_x > 0, "%d y-flipped / %d x-flipped tiles over 64 seeds" % [lt_y, lt_x])
+	# tile mode (the runner) never flips: its cross-faded tiles are directional
+	var rc_neg := 0
+	for s in 64:
+		for tv in RunLayout.tiles(560.0, 26.0, rc, 3, s * 131 + 5):
+			var sr2: Rect2 = tv["src"]
+			if sr2.size.x < 0.0 or sr2.size.y < 0.0:
+				rc_neg += 1
+	_report("mirror.tile-mode-never", rc_neg == 0, "%d flipped runner tiles" % rc_neg)
+
+
 # --- parity fixture ---------------------------------------------------------
 
 func _fixture_cases() -> Array:
@@ -174,6 +250,12 @@ func _fixture_cases() -> Array:
 		["red_carpet", 567.5, 26.5, 3, 1234], ["red_carpet", 33.0, 26.5, 3, 9], ["red_carpet", 280.0, 32.0, 1, 0],
 		["synth3", 700.0, 30.0, 3, 1], ["synth3", 700.0, 30.0, 3, 2], ["synth3", 1000.0, 22.0, 2, 1999999999],
 	]
+	# the seed-driven mirror: one bench case per variant (none / x / y / xy),
+	# a flipped long_table and a flipped short squeezed bench with one cap
+	for v in 4:
+		shapes.append(["bench", 68.3, 19.2, 3, _seed_for_bits(v)])
+	shapes.append(["long_table", 425.3, 42.7, 3, _seed_for_bits(1)])
+	shapes.append(["bench", 6.0, 20.5, 1, _seed_for_bits(3)])
 	for s in shapes:
 		var m: Dictionary = metas[s[0]]
 		var rects: Array = []

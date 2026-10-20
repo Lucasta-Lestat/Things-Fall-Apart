@@ -4777,7 +4777,7 @@
 	"base_width": 48.0,
 	"base_height": 16.0,
 	"sprite_path": "res://Items/bench.png",
-	"run": {"atlas": "res://Items/bench_run.png", "w": 443, "h": 136, "pad": 4, "cap": 85, "mid": [[97, 346]], "mid_mode": "stretch", "across": 20.5, "shadow": 0.0},
+	"run": {"atlas": "res://Items/bench_run.png", "w": 443, "h": 136, "pad": 4, "cap": 85, "mid": [[97, 346]], "mid_mode": "stretch", "across": 20.5, "shadow": 0.0, "mirror": "xy"},
 	"weight": 18.0,
 	"cost": 5.0,
 	"interact_options": [
@@ -5679,7 +5679,7 @@
 	"base_width": 88.0,
 	"base_height": 40.0,
 	"sprite_path": "res://Items/long_table.png",
-	"run": {"atlas": "res://Items/long_table_run.png", "w": 607, "h": 264, "pad": 4, "cap": 16, "mid": [[28, 579]], "mid_mode": "stretch", "across": 40.1, "shadow": 0.0},
+	"run": {"atlas": "res://Items/long_table_run.png", "w": 607, "h": 264, "pad": 4, "cap": 16, "mid": [[28, 579]], "mid_mode": "stretch", "across": 40.1, "shadow": 0.0, "mirror": "x"},
 	"weight": 60.0,
 	"cost": 25.0,
 	"interact_options": [
