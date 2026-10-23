@@ -65920,7 +65920,7 @@
 				"ggggggggggggggggggsggggsssssssssgggggggggggsssssssssssggggsgggggggssgggggsgggggsgggggggsggggggggggggggggggggggggggggg",
 				"gggggggggggggggggggsssssssgggggggggggggggggggggggggssssssssggggggggggggggsgggggsgggggggsggggggggggggggggggggggggggggg",
 				"gggggggggggggggggsssssggggggggggggggggggggggggggggggggggssssssssssssggggsssssssssssssssgggggggsssgggggggggggggggggggg",
-				"gggggggggggggggggssgggggggggggggggggggggggggggggggggggggggggggsssssssssssssssgggggssssssssssggssssggggggggggggggggggg",
+				"gggggggggggggggggssgggggggggggggggggggggggggggggggggggggggggggsssssssssssssssgggggsssssssssgggssssggggggggggggggggggg",
 				"gggggggggggggggggsgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggssssssgsssgggggggggggggggggggg",
 				"gggggggggggggggggsgggggggggggggggggggggggggggggggggggssssssssssssssssgggggggggggggggggggggggsssgggggggggggggggggggggg",
 				"gggggggggggssssgssgggggggggggggggggggggggggggggggggggssssssssssssssssggggggggggggggggggggggggsssggggggggggggggggggggg",
@@ -83341,10 +83341,10 @@
 				"gggggggggssssssgggggggggggggggggggggggggssggggggggggggggggggggggggggggggggggssggggggggggsgggggggggggggggggggggggggggggwwwww",
 				"gggggggggssssgssggggggggggggggggggggggggssgggggggggggggggggggggggggggggggggggssggggggggsssgggggggggggggggggggggggggggggwwww",
 				"ggggggggggsssgssgggggggggggggggggggggggssggggggggggggggggggggggggggggggggggggssgggggggsssssggggggggggggggggggggggggggggwwww",
-				"ggggggggggggggsggggggggggggssssgggpppggssggggggggggggggggggggggggggggggggggggssgggggggssgssggggggggggggggggggggggggggggwwww",
-				"ggggggggggggggsggggggggggggssssssspppggssggggggggggggggggggggggggggggggggggggssggggggsssssssgggggggggggggggggggggggggggwwww",
-				"gggggggggggggssggggggggggggssssssspppggssggggggggggggggggggggggggggggggggggggssggggggsssssssggggggggggggggggggggggggggggwww",
-				"gggggggggggggssggggggggppppssssssspppggssggggggggggggggggggggggggggggggggggggssgpggggsssgssgggggggggggggggggggggggggggggwww",
+				"ggggggggggggggsggggggggggggssssgggpppggssggggggggggggggggggggggggggggggggggggssggggggsssgssggggggggggggggggggggggggggggwwww",
+				"ggggggggggggggsggggggggggggssssssspppggssggggggggggggggggggggggggggggggggggggssggggggssssssggggggggggggggggggggggggggggwwww",
+				"gggggggggggggssggggggggggggssssssspppggssggggggggggggggggggggggggggggggggggggssggggggsssssggggggggggggggggggggggggggggggwww",
+				"gggggggggggggssggggggggppppssssssspppggssggggggggggggggggggggggggggggggggggggssgpggggssgggggggggggggggggggggggggggggggggwww",
 				"gggggggggppggssggggggggppppsssssssppggggsggggggggggggggggggggggggggggggggggggssgppppgssgggggggggggggggggggggggggggggggggwww",
 				"ggggggggpppggsggggggpppppppsssspppppggggsggggggggggggggggggggggggggggggggggggssgppppgssgggggggggggggggggggggggggggggggggwww",
 				"ggggggggppppgsggggggpppppppsssssppppggggsggggggggggggggggggggggggggggggggggggsggpppggssgggggggggggggggggggggggggggggggggwww",
@@ -83364,8 +83364,8 @@
 				"gggggggppppgssggggggggssssssggssgggggggggssgggggggggggggggggggggggggggggggggssggppppggsssssssggggsssssssssssssgggggggggggww",
 				"gggggggppppsssggggggggggggggggssgggggggggssgggggggggggggggggggggggggggggggggssggppppggssgssssggggsssssssssssssgggggggggggww",
 				"gggggggppppggsggggggggggggggssssssgggggggssgggggggggggggggggggggggggggggggggssggggggggssgggggggggsssssssssssssgggggggggggww",
-				"gggggggggggggsssssssssssssssssssssggggggggssggggggggggggggggggggggggggggggggssggggggggssgggggggggsssssssssssssgggggggggggww",
-				"ggggggggggggggssssssssssssssssssssssggggggssggggggggggggggssgggggggggggggggssgggggggggssssssssssssssssssssssssssssssssgggww",
+				"gggggggggggggssssssssssssssssssssssssssgggssggggggggggggggggggggggggggggggggssggggggggssgggggggggsssssssssssssgggggggggggww",
+				"gggggggggggggssssssssssssssssssssssssssgggssggggggggggggggssgggggggggggggggssgggggggggssssssssssssssssssssssssssssssssgggww",
 				"ggggggggggggggggggggggggsssssssssssssssssssssssssgggssssssssssssssgggggggggssgggggggssssssssssssssssssssssssssssssssssggwww",
 				"gggggggggggggggggggggsssssgggsssssssssssssssssssssssssssssssssssssgggggggggssggssssssssssggggssggsssssssssssssggggggggggwww",
 				"ggggggggggggggggggsssssggggggggggggggggggggggggggssssssssssssssssssssssssssssssssssggggggggggssggsssssssppssssggggggggggwww",
@@ -96636,16 +96636,6 @@
 						1869.0
 					],
 					"r": 57.8
-				},
-				{
-					"hp": 80.0,
-					"id": "tree",
-					"kind": "tree",
-					"pos": [
-						2381.0,
-						2492.0
-					],
-					"r": 65.8
 				},
 				{
 					"hp": 80.0,
