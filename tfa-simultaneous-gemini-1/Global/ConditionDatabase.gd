@@ -100,17 +100,21 @@ func get_all_conditions() -> Array:
 	{
 		"id": "poisoned",
 		"display_name": "Poisoned",
-		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. A poison hit adds 1 stack per 5 poison damage it deals (at least 1), up to 4 stacks. It lasts until 10 s after the last dose.",
+		"description": "Poison in the blood. Each stack deals 1 poison damage every 2 s. Armour doesn't reduce it. A poison hit adds 1 stack per 5 poison damage it deals (at least 1). At 4 stacks it turns into Toxic Shock, which kills unless cured. It lasts until 10 s after the last dose.",
 		"traits": {"debuff": 1, "poison": 1, "persistent": 1},
 		"stackable": true,
 		# DoT scale (round 4): a stack is small and worth about the damage that
-		# brought it (damage_per_stack, Condition.gd); max tier deals 2 a second.
+		# brought it (damage_per_stack, Condition.gd).
 		# 1 every 2 s for 10 s = 5 per stack (ticks at 0, 2, 4, 6, 8 s).
+		# The 4th stack turns it into Toxic Shock (below), so it holds at most
+		# 3 (1.5 a second); a 16+ poison hit goes straight to Toxic Shock.
 		"max_tier": 4,
+		# 5 for every damage-type condition (round 5, "5 damage each"); kept
+		# per condition so one can be retuned alone.
 		"damage_per_stack": 5,
 		"duration": 10.0,
 		"icon": "res://UI/UI Icons/poisoned.png",
-		"transforms_into": {"id": "toxic_shock", "required_tier": 10},
+		"transforms_into": {"id": "toxic_shock", "required_tier": 4},
 		"canceled_by_trait": ["antidote", "purify"],
 		"custom_vfx": "res://vfx/poison_bubbles.tscn",
 		"custom_sfx": "res://sfx/poison_tick.mp3",
@@ -125,16 +129,53 @@ func get_all_conditions() -> Array:
 		],
 		"immunities": {}
 	},
+	# Poisoned's 4th stack (its transforms_into). Round 6, the developer's
+	# "like toxic in pokemon, where the tick of poison damage starts doubling
+	# over time, quickly resulting in death": no duration, and a tick that
+	# doubles every time it lands (the triggered effect's "escalate",
+	# ConditionInstance.effect_value). Ticks at 0, 2, 4, 6, 8 s deal 1, 2, 4,
+	# 8, 16: a 30-HP character from full dies on the 5th (8 s in, 31 dealt),
+	# after four ticks in which it can be cured. Then 32 a tick at most
+	# (max_value), so a bearer Deny Ending holds at 1 HP, or a big one, sees 32
+	# rather than runaway numbers (100 HP dies on the 8th tick, 14 s in).
+	# Poisoned reaching 4 again while it lasts is a re-dose: one doubling at
+	# once (redose_steps), never a restart. Round 5's 30% slow is gone: the
+	# model is the damage. Not stackable; poison meanwhile builds Poisoned
+	# beside it. Cured as Poisoned is: Heal and a Potion of Healing remove
+	# "poison" conditions (antidote/purify too, should anything carry them).
+	{
+		"id": "toxic_shock",
+		"display_name": "Toxic Shock",
+		"description": "The poison overwhelms the body: 1 poison damage every 2 s, doubling with every tick (1, 2, 4, 8, 16, then 32 a tick), so it kills unless cured. Armour doesn't reduce it. It never wears off. Poisoned turns into this at 4 stacks; Poisoned reaching 4 again while it lasts doubles it once more at once. Cure: Heal, or a Potion of Healing.",
+		"traits": {"debuff": 1, "poison": 1, "dot": 1, "persistent": 1},
+		"stackable": false,
+		"max_tier": 1,
+		"duration": -1,
+		"icon": "res://UI/UI Icons/poisoned.png",
+		"cure_hint": "Heal or a Potion of Healing",
+		"transforms_into": {},
+		"canceled_by_trait": ["antidote", "purify"],
+		"custom_vfx": "res://vfx/poison_bubbles.tscn",
+		"custom_sfx": "res://sfx/poison_tick.mp3",
+		"stat_modifiers": [],
+		"triggered_effects": [
+			{"type": "damage", "value": 1, "damage_type": "poison", "interval": 2.0,
+				"escalate": {"multiplier": 2.0, "max_value": 32, "redose_steps": 1}}
+		],
+		"immunities": {}
+	},
 	{
 		"id": "burning",
 		"display_name": "Burning",
-		"description": "Engulfed in flames. Each stack deals 1 fire damage every second. A fire hit adds 1 stack per 6 fire damage it deals (at least 1), up to 3 stacks. It burns until 6 s after the last fire that caught you. Water or cold puts it out.",
+		"description": "Engulfed in flames. Each stack deals 1 fire damage every second. Armour doesn't reduce it. A fire hit adds 1 stack per 5 fire damage it deals (at least 1), up to 4 stacks. It burns until 5 s after the last fire that caught you. Water or cold puts it out.",
 		"traits": {"debuff": 1, "fire": 1, "dot": 1, "elemental": 1},
 		"stackable": true,
-		# 1 every 1 s for 5 s, x1.2 for "fire" (MODIFY_DURATION_BY_TRAIT) = 6 s:
-		# 6 per stack (ticks at 0..5 s). Max tier 3 a second.
-		"max_tier": 3,
-		"damage_per_stack": 6,
+		# 1 every 1 s for 5 s = 5 per stack (ticks at 0..4 s). Max 4 stacks,
+		# 4 a second (round 5: max 3 -> 4).
+		"max_tier": 4,
+		# 5 for every damage-type condition (round 5, "5 damage each"); kept
+		# per condition so one can be retuned alone.
+		"damage_per_stack": 5,
 		"duration": 5.0,
 		"icon": "res://UI/UI Icons/burning.png",
 		"transforms_into": {},
@@ -154,7 +195,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "shocked",
 		"display_name": "Shocked",
-		"description": "Electricity arcs through your body. Each stack deals 1 electric damage every second, up to 3 stacks. Standing on electrified ground adds stacks; it lasts 2 s after the last one.",
+		"description": "Electricity arcs through your body. Each stack deals 1 electric damage every second, up to 3 stacks. Armour doesn't reduce it. Standing on electrified ground adds stacks; it lasts 2 s after the last one.",
 		"traits": {"debuff": 1, "electric": 1, "dot": 1, "elemental": 1},
 		"stackable": true,
 		# Only electrified ground applies it (an electric hit electrifies the
@@ -197,16 +238,21 @@ func get_all_conditions() -> Array:
 	{
 		"id": "chilled",
 		"display_name": "Chilled",
-		"description": "Movement and attack speed reduced. A cold hit adds 1 stack per 12 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 3 stacks, you freeze.",
+		"description": "Movement and attack speed reduced: each stack cuts Dexterity by 15% (x1 85%, x2 72%, x3 61%). A cold hit adds 1 stack per 5 cold damage it deals (at least 1). It lasts until 15 s after the last cold. At 4 stacks, you freeze.",
 		"traits": {"debuff": 1, "cold": 1, "slow": 1, "elemental": 1},
 		"stackable": true,
-		"max_tier": 3,
-		# No damage: a cold weapon's 3-4 adds 1 stack, heavy cold (13-24) 2,
-		# and only 25+ freezes in one hit.
-		"damage_per_stack": 12,
+		# Freezes at 4 (round 6, the developer's "a max tier of four"; it was
+		# 3, so any 11+ cold hit froze at once). No damage: a cold weapon's 3-5
+		# adds 1 stack, 6-10 cold 2, 11-15 (an Iciclet's 15) 3, and only 16+
+		# freezes in one hit. The 4th stack turns it into Frozen, so it holds
+		# at most 3 (Dexterity x0.61). 5 for every damage-type condition
+		# (round 5, "5 damage each"); kept per condition so one can be retuned
+		# alone.
+		"max_tier": 4,
+		"damage_per_stack": 5,
 		"duration": 15.0,
 		"icon": "res://UI/UI Icons/chilled.png",
-		"transforms_into": {"id": "frozen", "required_tier": 3},
+		"transforms_into": {"id": "frozen", "required_tier": 4},
 		"canceled_by_trait": ["fire", "heat"],
 		"custom_vfx": "res://vfx/frost_mist.tscn",
 		"custom_sfx": "res://sfx/ice_crack.mp3",
@@ -336,7 +382,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "corroding",
 		"display_name": "Corroding",
-		"description": "Acid eats away at flesh. Each stack deals 1 acid damage every second, up to 3 stacks. It lasts until 4 s after the last acid. Water washes it off.",
+		"description": "Acid eats away at flesh. Each stack deals 1 acid damage every second, up to 3 stacks. Armour doesn't reduce it. It lasts until 4 s after the last acid. Water washes it off.",
 		"traits": {"debuff": 1, "acid": 1, "dot": 1},
 		"stackable": true,
 		# 1 every 1 s for 4 s = 4 per stack; max tier 3 a second.
@@ -361,7 +407,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "suffocating",
 		"display_name": "Suffocating",
-		"description": "Choking, taking damage from lack of air.",
+		"description": "Choking for lack of air: slowed (DEX x0.9) and 6 bludgeoning damage every 2 s. Armour doesn't reduce it. It lasts 4 s after the last breath of smoke; wind clears it.",
 		"traits": {"debuff": 1, "cc": 1},
 		"stackable": false,
 		"duration": 4.0,
@@ -478,7 +524,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "winters_grip_bite",
 		"display_name": "Freezing Fingers",
-		"description": "Fingers freezing to the hilt: cold damage until the blade is sheathed.",
+		"description": "Fingers freezing to the hilt: 1 cold damage every 6 s until the blade is sheathed. Armour doesn't reduce it.",
 		"traits": {"debuff": 1, "item": 1, "cold": 1, "dot": 1},
 		"stackable": false,
 		"duration": -1,
@@ -829,14 +875,16 @@ func get_all_conditions() -> Array:
 	{
 		"id": "bleeding",
 		"display_name": "Bleeding",
-		"description": "An open wound. Each stack deals 1 damage every 2 s, whatever the armour. A slashing or piercing hit adds 1 stack per 20 damage it deals (at least 1), up to 5 stacks. A CON save when it lands reduces the stacks applied; another CON save every 6 seconds can ease or worsen it. It bleeds until 8 s after the last wound.",
+		"description": "An open wound. Each stack deals 1 damage every 2 s. Armour doesn't reduce it. A slashing or piercing hit adds 1 stack per 5 damage it deals (at least 1), up to 5 stacks. A CON save when it lands reduces the stacks applied; another CON save every 6 seconds can ease or worsen it. It bleeds until 8 s after the last wound.",
 		"traits": {"debuff": 1, "physical": 1, "dot": 1, "persistent": 1},
 		"stackable": true,
 		# 1 true damage every 2 s for 8 s = 4 per stack; max tier 2.5 a second.
-		# Scales gently with the wound (20 per stack): an ordinary 10-20 cut
-		# bleeds 1 stack, a 21-40 blow 2, before the CON save.
+		# 5 per stack (round 5, "5 damage each" for every damage-type
+		# condition; kept per condition so it can be retuned alone): an
+		# ordinary 10-20 cut bleeds 2-4 stacks and 21+ fills it, before the
+		# CON save.
 		"max_tier": 5,
-		"damage_per_stack": 20,
+		"damage_per_stack": 5,
 		"duration": 8.0,
 		"save_stat": "con",
 		"save_interval": 6.0,
@@ -983,12 +1031,12 @@ func get_all_conditions() -> Array:
 	{
 		"id": "stuck_in_fire",
 		"display_name": "Stuck in Fire",
-		"description": "Mired in clinging flames. Cannot move, and takes 2 fire damage every second. Lasts 2.4 s after the flames last catch you. Water or cold puts it out.",
+		"description": "Mired in clinging flames. Cannot move, and takes 2 fire damage every second. Armour doesn't reduce it. Lasts 2 s after the flames last catch you. Water or cold puts it out.",
 		"traits": {"debuff": 1, "fire": 1, "dot": 1, "elemental": 1, "immobilize": 1},
 		"stackable": false,
 		"max_tier": 1,
-		# 2.0 x1.2 (fire) = 2.4 s: 6 per catch (ticks at 0, 1, 2 s). Fire Spin
-		# re-catches every 0.5 s for 6 s, so a full spin is about 18.
+		# 2 s: 4 per catch (ticks at 0 and 1 s). Fire Spin re-catches every
+		# 0.5 s for 6 s, so a full spin is about 16.
 		"duration": 2.0,
 		"icon": "res://UI/UI Icons/burning.png",
 		"transforms_into": {},

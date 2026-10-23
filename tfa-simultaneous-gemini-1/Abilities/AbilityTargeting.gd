@@ -346,8 +346,18 @@ func _find_projectile_impact() -> Vector2:
 	query.motion = motion
 	query.collision_mask = CollisionLayers.PROJECTILE_HIT_MASK
 	var caster = get_parent()
+	var excluded: Array[RID] = []
 	if caster is CollisionObject2D:
-		query.exclude = [caster.get_rid()]
+		excluded.append(caster.get_rid())
+	# An NPC the party can't see (out of sight, Invisible, not drawn in this
+	# view) doesn't stop the preview: a burst drawn on its body would give it
+	# away (the real projectile still hits it).
+	var game_node = caster.get("game") if caster != null and caster.has_method("_hidden_from_party") else null
+	if game_node != null and is_instance_valid(game_node):
+		for c in game_node.characters_in_scene:
+			if is_instance_valid(c) and c is CollisionObject2D and caster._hidden_from_party(c):
+				excluded.append(c.get_rid())
+	query.exclude = excluded
 	var fractions: PackedFloat32Array = space.cast_motion(query)
 	if fractions.size() < 2 or fractions[1] >= 1.0:
 		return Vector2.INF
@@ -723,6 +733,9 @@ func _update_character_targeting_visuals() -> void:
 			target_highlights.remove_at(i)
 			continue
 		hl.global_position = tgt.global_position
+		# A pick the party has since lost from sight isn't marked where it is.
+		var picker = get_parent()
+		hl.visible = not (picker != null and picker.has_method("_hidden_from_party") and picker._hidden_from_party(tgt))
 
 	# Drop any selected targets that became invalid
 	for j in range(selected_targets.size() - 1, -1, -1):
@@ -759,6 +772,11 @@ func _handle_character_click(world_pos: Vector2) -> bool:
 		if not (collider is ProceduralCharacter):
 			continue
 		if collider == caster:
+			continue
+		# An NPC the party can't see (out of sight, Invisible, not drawn in
+		# this view) can't be picked (and isn't refused either: that would
+		# give it away).
+		if caster != null and caster.has_method("_hidden_from_party") and caster._hidden_from_party(collider):
 			continue
 		# Toggle off if already selected
 		if collider in selected_targets:
@@ -914,6 +932,10 @@ func _update_knockback_preview() -> void:
 		if not is_instance_valid(t) or not (t is Node2D):
 			continue
 		if spares_caster and t == caster:
+			continue
+		# No arrow on an NPC the party can't see (out of sight, Invisible, not
+		# drawn in this view): it would give it away (the blast still shoves it).
+		if caster.has_method("_hidden_from_party") and caster._hidden_from_party(t):
 			continue
 		# Only bodies that integrate an external force can be predicted.
 		# _resolve_knockback gates on apply_external_force the same way, so

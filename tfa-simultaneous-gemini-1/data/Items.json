@@ -3074,7 +3074,7 @@
 	"id": "iciclet",
 	"display_name": "Iciclet",
 	"type": "item",
-	"description": "A magically preserved shard of true ice that freezes whatever it shatters against.",
+	"description": "A magically preserved shard of true ice that chills whatever it shatters against to the bone; any more cold freezes it solid.",
 	"base_width": 8.0,
 	"base_height": 40.0,
 	"sprite_path": "res://Items/iciclet.png",

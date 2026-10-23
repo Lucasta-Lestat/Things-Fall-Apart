@@ -1,7 +1,7 @@
 # res://tests/condition_feedback_test.gd
 # Headless assertion harness for condition and condition-rider feedback:
 # trait-keyed immunities, apply-time and periodic save notices (and their
-# silence for hidden NPCs and corpses), transforms_into (Chilled 3 -> Frozen,
+# silence for hidden NPCs and corpses), transforms_into (Chilled 4 -> Frozen,
 # which roots), missed chance riders and effect-level saves, Chasten's
 # cleanse report, force fields (outline, Magnetic Pull's traits), and a
 # throw giving its thrower away.
@@ -292,28 +292,39 @@ func _case_transforms() -> void:
 	var speed0: float = n.move_speed
 	cm.apply_condition("chilled", null, 2)
 	_check("transform.below-tier-stays", cm.has_condition("chilled") and not cm.has_condition("frozen"))
+	# Chilled freezes at 4 since round 6 (3 before): x3 is still Chilled.
+	cm.apply_condition("chilled", null, 1)
+	_check("transform.three-stays-chilled", cm.has_condition("chilled") and not cm.has_condition("frozen"))
 	var out = cm.apply_condition("chilled", null, 1)
 	_check("transform.chilled-to-frozen", cm.has_condition("frozen") and not cm.has_condition("chilled") \
 		and out != null and out.condition.id == "frozen")
 	_check("frozen.roots", speed0 > 0.0 and is_equal_approx(n.move_speed, 0.0), "%s -> %s" % [speed0, n.move_speed])
 	cm.clear_all_conditions()
 	_check("frozen.thaws", n.move_speed > 0.0)
-	var fresh = cm.apply_condition("chilled", null, 3)
+	var fresh = cm.apply_condition("chilled", null, 4)
 	_check("transform.fresh-instance", fresh != null and fresh.condition.id == "frozen")
 	cm.clear_all_conditions()
 	cm.apply_condition("fatigued", null, 3)
 	_check("transform.fatigued-to-exhausted", cm.has_condition("exhausted") and not cm.has_condition("fatigued"))
 	cm.clear_all_conditions()
-	# A transform into a condition that isn't registered (Poisoned's toxic_shock)
-	# is skipped and the condition stays. Poisoned now caps at 4, below its
-	# tier-10 transform, so a test condition that reaches its tier stands in.
+	# A transform into a condition that isn't registered is skipped and the
+	# condition stays (a test condition: every shipped target is registered).
 	ConditionManager.register_conditions([{"id": "cft_unreg_transform", "stackable": true, "max_tier": 2,
 		"duration": 30.0, "traits": {"debuff": 1}, "canceled_by_trait": [], "immunities": {},
 		"transforms_into": {"id": "no_such_condition", "required_tier": 2}}])
 	var unreg = cm.apply_condition("cft_unreg_transform", null, 2)
 	_check("transform.unregistered-target-skipped", unreg != null and unreg.stacks == 2 and cm.has_condition("cft_unreg_transform"))
+	# Every shipped transforms_into names a registered condition at a tier its
+	# condition can reach (round 4 found Poisoned's toxic_shock at tier 10, past
+	# its cap of 4, and never defined; round 5 defines it and turns at 4).
+	for cid in ConditionManager.condition_registry:
+		var tf: Dictionary = ConditionManager.condition_registry[cid].transforms_into
+		if tf.is_empty() or cid.begins_with("cft_"):
+			continue
+		_check("transform.%s-target-registered" % cid, ConditionManager.condition_registry.has(str(tf.get("id", ""))), tf)
+		_check("transform.%s-tier-reachable" % cid, int(tf.get("required_tier", 999)) <= ConditionManager.condition_registry[cid].max_tier, tf)
 	cm.apply_condition("poisoned", null, 10)
-	_check("transform.poisoned-at-max-stays", cm.has_condition("poisoned") and cm.get_condition("poisoned").stacks == ConditionManager.condition_registry["poisoned"].max_tier)
+	_check("transform.poisoned-to-toxic-shock", cm.has_condition("toxic_shock") and not cm.has_condition("poisoned"), cm.get_all_condition_ids())
 	cm.clear_all_conditions()
 
 	# The party is told.
@@ -323,9 +334,9 @@ func _case_transforms() -> void:
 	pcm.clear_all_conditions()
 	_reset_notices(p)
 	var n0: int = GameLog.get_entries().size()
-	pcm.apply_condition("chilled", n, 3)
+	pcm.apply_condition("chilled", n, 4)
 	_check("transform.party-floats", p._last_notify_text == "Frozen!", p._last_notify_text)
-	_check("transform.party-logged", _logged_since(n0, "%s is now Frozen (Chilled reached 3 stacks)." % p.Name), _last_log())
+	_check("transform.party-logged", _logged_since(n0, "%s's Chilled reaches 4 stacks: Frozen." % p.Name), _last_log())
 	pcm.from_dict(saved)
 
 # ---------------------------------------------------------------------------

@@ -174,7 +174,7 @@ func _case_burn_doesnt_hand_back_the_cloaked() -> void:
 	foe.reveal()
 	_check("1.acquired-in-window", await _engaged_within(guard, foe, 3.0))
 	# His fire swing lit the guard: Burning at the cap, its ticks his.
-	var burn: ConditionInstance = _cm(guard).apply_condition("burning", foe, 3)
+	var burn: ConditionInstance = _cm(guard).apply_condition("burning", foe, 4)
 	_check("1.burn-is-his", burn != null and burn.source == foe)
 	var line := "Warden loses sight of Djargo (invisible)."
 	var lines := _log_sum(line)
@@ -186,7 +186,7 @@ func _case_burn_doesnt_hand_back_the_cloaked() -> void:
 	var hp0: float = guard.current_health
 	var reacquired := false
 	var shown := false
-	for i in range(8):   # past the burn's 6 s
+	for i in range(8):   # past the burn's 5 s
 		TimeManager.game_time += 1.0
 		await _frames(2)
 		if ai.current_target == foe:
@@ -221,7 +221,7 @@ func _case_shrouded_revealed_in_every_display() -> void:
 	_check("2.summary-says-revealed", sh.get_summary(now) == "Shrouded (revealed 3s)", sh.get_summary(now))
 	_check("2.tooltip-says-revealed", sh.get_tooltip_text(now).begins_with("Shrouded (revealed 3s)\n"), sh.get_tooltip_text(now))
 	_check("2.no-clock-no-time", sh.get_summary() == "Shrouded", sh.get_summary())
-	_check("2.dot-wording-untouched", burn.get_summary(now) == "Burning x2: 2 fire every 1 s (6s left)", burn.get_summary(now))
+	_check("2.dot-wording-untouched", burn.get_summary(now) == "Burning x2: 2 fire every 1 s (5s left)", burn.get_summary(now))
 	var hover = HOVER.new()
 	var muted := "[color=#%s]" % HOVER.COLOR_MUTED.to_html(false)
 	var lines: PackedStringArray = hover.condition_lines(p)

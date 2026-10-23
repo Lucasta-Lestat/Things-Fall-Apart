@@ -570,7 +570,7 @@ func process_ai(delta: float) -> void:
 
 	# Standing on damaging ground (burning cell, acid pool, electrified tile)
 	# overrides everything a conscious body can override: burning stacks 1/s
-	# toward 3 fire a second, and no goal — investigation, attack, even panic —
+	# toward 4 fire a second, and no goal — investigation, attack, even panic —
 	# is worth finishing from inside a fire (a scout burned to death mid-scan
 	# in playtest because nothing ever told him to step out). Escape funnels
 	# through _move_toward, so a player-held ally still stands ground.
@@ -921,8 +921,9 @@ func _update_target(delta: float = 0.0) -> void:
 			_acquire_target(picked)
 			_confused_pick_done = true
 			# Once per bout of confusion (apathy can null the target every frame).
+			# Whom it picked is named only if the party sees them too (round 6).
 			if first_pick and _party_can_see(character):
-				GameLog.add_entry("%s lashes out at %s in confusion!" % [character.Name, picked.Name])
+				GameLog.add_entry("%s lashes out at %s in confusion!" % [character.Name, picked.Name if _party_can_see(picked) else "someone unseen"])
 		return
 
 	# Search for new target (must be in LOS)

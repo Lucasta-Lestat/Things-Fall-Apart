@@ -186,12 +186,22 @@ func _case_damage_path() -> void:
 	dealt = ch.take_damage({"fire": 7.6}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
 	_check("dr.unarmoured-type-no-float", dealt == 7 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, _floats(stub))
 	ch.condition_manager.clear_all_conditions()
-	# DoT ticks never float "-N blocked".
+	# DoT ticks ignore armour (round 5): the torso's bludgeoning 3 leaves a
+	# 5-point tick whole.
 	nb_before = _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size()
 	ch._condition_tick_damage = true
 	dealt = ch.take_damage({"bludgeoning": 5.0}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
 	ch._condition_tick_damage = false
-	_check("dr.tick-quiet", dealt == 2 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, _floats(stub))
+	_check("dr.tick-ignores-armour", dealt == 5, dealt)
+	# ...and never float "-N blocked": Stalwart's 1 condition DR (not armour)
+	# still takes 1 off a physical tick, quietly.
+	ch.condition_manager.apply_condition("stalwart", null, 1)
+	await get_tree().create_timer(0.35).timeout
+	ch._condition_tick_damage = true
+	dealt = ch.take_damage({"bludgeoning": 5.0}, Vector2.ZERO, null, ProceduralCharacter.LimbType.TORSO)
+	ch._condition_tick_damage = false
+	ch.condition_manager.remove_condition("stalwart")
+	_check("dr.tick-quiet", dealt == 4 and _floats(stub).filter(func(t): return String(t).ends_with(" blocked")).size() == nb_before, [dealt, _floats(stub)])
 	# A sub-1 hit on an unarmoured type truncates to 0: nothing blocked it.
 	_reset_notify(ch)
 	var blocked_n: int = _floated(stub, "Blocked")
@@ -580,6 +590,7 @@ func _case_attack_refusals() -> void:
 	pm.inventory.unequip_hand("Main")
 	# Infatuated: one log line however many refused swings.
 	var crush := _spawn(pm.global_position + Vector2(0, -50))
+	stub.seen[crush] = true   # a charmer the party sees is named (round 6)
 	pm.rotation = 0.0
 	pm.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
 	_reset_notify(pm)
@@ -588,6 +599,25 @@ func _case_attack_refusals() -> void:
 	pm.attack("Main")
 	_check("refuse.infatuated-logged-once", _logged("can't bring themselves to attack %s" % crush.Name) == 1)
 	pm.condition_manager.clear_all_conditions()
+	# Round 6: a charmer the party can't see isn't named...
+	stub.seen[crush] = false
+	pm.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
+	_reset_notify(pm)
+	pm.attack("Main")
+	_check("refuse.infatuated-unseen-charmer-unnamed", _logged("%s can't bring themselves to attack someone unseen." % pm.Name) == 1 \
+		and _logged("can't bring themselves to attack %s" % crush.Name) == 1, log_lines.slice(-2))
+	pm.condition_manager.clear_all_conditions()
+	# ...and an NPC the party can't see refusing logs nothing.
+	var smitten := _spawn(crush.global_position + Vector2(40, 60))
+	smitten.rotation = 0.0
+	smitten.condition_manager.apply_condition("infatuated", crush, 1, 30.0)
+	var refusals := _logged("can't bring themselves to attack")
+	var smitten_lines := _logged(smitten.Name)
+	smitten.attack("Main")
+	_check("refuse.infatuated-unseen-npc-quiet", _logged("can't bring themselves to attack") == refusals \
+		and _logged(smitten.Name) == smitten_lines, log_lines.slice(-2))
+	_check("refuse.infatuated-unseen-npc-refused", not smitten.attack_animator.is_attacking)
+	smitten.condition_manager.clear_all_conditions()
 	pm.is_player_controlled = false
 	# Dash cooldown says so.
 	pm.dash_cooldown_timer = 1.0
