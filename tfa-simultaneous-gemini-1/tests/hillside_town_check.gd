@@ -49,10 +49,57 @@ func _ready() -> void:
 	get_tree().root.add_child(game)
 	get_tree().current_scene = game
 	await _await_frames(5)
+	_check_new_perrow()
 	for map_id in MAPS:
 		await _check_map(String(map_id))
 	print("HILLSIDE DONE failures=%d (%d checks)" % [_fails, _checks])
 	get_tree().quit(_fails)
+
+
+# The hillside town IS Perrow: a new game launches into it (unless TFA_START_MAP
+# overrides), the world map's "Perrow" marker lands in it, the region lists it,
+# and the auto-started tutorial can advance on the launch map.
+func _check_new_perrow() -> void:
+	var consts: Dictionary = (game.get_script() as Script).get_script_constant_map()
+	var start_id: String = String(consts.get("START_MAP_ID", ""))
+	_check("perrow.start-map-is-hillside", start_id.begins_with("tg_hillside_"), start_id)
+	if OS.get_environment("TFA_START_MAP").strip_edges().is_empty():
+		_check("perrow.booted-into-start-map", String(game.current_map_id) == start_id,
+			"current=%s" % game.current_map_id)
+	var world: Dictionary = MapDatabase.get_map_data("scarlatti_world")
+	var marker_target := ""
+	for w in world.get("warp_points", []):
+		var wd: Dictionary = w
+		if String(wd.get("id", "")) == "to_perrow":
+			marker_target = String(wd.get("target_map", ""))
+	_check("perrow.world-marker-lands-in-town", marker_target == start_id, "to_perrow -> %s" % marker_target)
+	var members: Array = RegionDatabase.get_member_maps("perrow")
+	var missing: Array = []
+	for map_id in MAPS:
+		if not members.has(map_id) or RegionDatabase.get_region_for_map(String(map_id)) != "perrow":
+			missing.append(map_id)
+	_check("perrow.region-lists-hillside", missing.is_empty(), "missing %s" % [missing])
+	var tutorial_ok := false
+	var f := FileAccess.open("res://data/Quests.json", FileAccess.READ)
+	if f != null:
+		var parsed: Variant = JSON.parse_string(f.get_as_text())
+		f.close()
+		var quests: Array = []
+		if parsed is Dictionary:
+			quests = (parsed as Dictionary).get("quests", [])
+		for q in quests:
+			var qd: Dictionary = q
+			if String(qd.get("id", "")) != "tutorial_quest":
+				continue
+			for st in qd.get("stages", []):
+				var sd: Dictionary = st
+				if String(sd.get("id", "")) != "find_guard":
+					continue
+				for t in sd.get("transitions", []):
+					var cond: Dictionary = (t as Dictionary).get("conditions", {})
+					if String(cond.get("char_at::protagonist", "")) == start_id:
+						tutorial_ok = true
+	_check("perrow.tutorial-advances-on-start-map", tutorial_ok, "tutorial_quest find_guard")
 
 
 func _tile_elev_table(cell_graph_path: String) -> Dictionary:

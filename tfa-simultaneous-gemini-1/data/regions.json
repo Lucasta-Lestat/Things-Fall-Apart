@@ -22,7 +22,13 @@
 				"perrow_river_stronghold",
 				"perrow_forest_pass",
 				"perrow_goblin_fortress",
-				"lighthouse"
+				"lighthouse",
+				"tg_hillside_upper",
+				"tg_hillside_middle",
+				"tg_hillside_lower",
+				"tg_hillside_harbor",
+				"tg_hillside_cavern",
+				"tg_hillside_ossuary"
 			]
 		},
 		{

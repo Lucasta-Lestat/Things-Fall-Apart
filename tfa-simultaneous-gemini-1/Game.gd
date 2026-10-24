@@ -46,13 +46,18 @@ var item_scene: PackedScene = preload("res://Structures/Objects/Item.tscn")
 var items_in_scene: Array = []
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 var structures_in_scene: Array = []
-var current_map_id: String = _start_map_id()  # TEMP: piazza review ("combat_test" = arena, "tg_castle_keep" = castle level, "tg_castle_demo"/"tg_export" = towns, "cemetery" = built-in)
+var current_map_id: String = _start_map_id()  # launch map: Perrow's Market Quarter (the hillside town)
 
-# Dev convenience: TFA_START_MAP=<map id> boots straight into that map (playtests
-# of maps nothing links to yet). Unset or empty = the normal start map.
+# Launch map. Perrow is the hillside town (tg_hillside_*); a new game opens on the
+# Market Quarter's fountain piazza. Dev convenience: TFA_START_MAP=<map id> boots
+# straight into any other map ("tg_town_square" = the old piazza, "combat_test" =
+# arena, "tg_castle_keep" = castle level, "cemetery" = built-in). Unset or empty =
+# the normal start map.
+const START_MAP_ID: String = "tg_hillside_lower"
+
 static func _start_map_id() -> String:
 	var env_map: String = OS.get_environment("TFA_START_MAP").strip_edges()
-	return env_map if not env_map.is_empty() else "tg_town_square"
+	return env_map if not env_map.is_empty() else START_MAP_ID
 
 var current_map_data: Dictionary = {}
 var warp_zones: Array = []

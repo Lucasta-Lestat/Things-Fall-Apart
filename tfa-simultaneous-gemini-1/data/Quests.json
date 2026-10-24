@@ -48,7 +48,8 @@
           "name": "Find the Town Guard",
           "description": "Travel to the town square to meet the guard.",
           "transitions": [
-            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "retrieve_sword" }
+            { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "retrieve_sword" },
+            { "conditions": { "char_at::protagonist": "tg_hillside_lower" }, "next_stage": "retrieve_sword" }
           ]
         },
         {
@@ -66,6 +67,7 @@
           "description": "Bring the longsword back to the guard within 7 days.",
           "transitions": [
             { "conditions": { "char_at::protagonist": "town_square" }, "next_stage": "__complete__" },
+            { "conditions": { "char_at::protagonist": "tg_hillside_lower" }, "next_stage": "__complete__" },
             { "conditions": { "quest_days::tutorial_quest": ">=7" }, "next_stage": "__fail__", "reason": "The longsword wasn't delivered within 7 days." }
           ]
         }

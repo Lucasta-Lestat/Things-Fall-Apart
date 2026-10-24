@@ -1303,7 +1303,7 @@
 						96.0,
 						96.0
 					],
-					"target_map": "cemetery",
+					"target_map": "tg_hillside_lower",
 					"target_spawn": "default",
 					"world_warp": true
 				},
