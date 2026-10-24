@@ -12,13 +12,17 @@ func _process(_dt: float) -> void:
 	var ap := get_node_or_null(anim_path) as AnimationPlayer
 	# assigned_animation (not current_animation) so the string also shows while the
 	# clip is paused/held at full draw, and hides once another clip takes over.
-	var on: bool = ap != null and ap.assigned_animation == "bow_draw"
-	visible = on
-	if not on:
-		return
 	var a := get_node_or_null(tip_a_path) as Node2D
 	var b := get_node_or_null(tip_b_path) as Node2D
 	var n := get_node_or_null(nock_path) as Node2D
+	# the string belongs to the rig's OWN bow sprite (the tips are its children):
+	# when a game draws its own held weapon instead, that sprite is hidden and a
+	# string between its invisible tips would float in mid-air
+	var on: bool = ap != null and ap.assigned_animation == "bow_draw" \
+		and a != null and (a.get_parent() as CanvasItem).is_visible_in_tree()
+	visible = on
+	if not on:
+		return
 	if a and b and n:
 		points = PackedVector2Array([to_local(a.global_position),
 			to_local(n.global_position), to_local(b.global_position)])
