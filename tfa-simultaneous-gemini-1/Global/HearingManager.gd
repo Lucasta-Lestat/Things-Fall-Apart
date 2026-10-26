@@ -212,8 +212,21 @@ func emit(world_pos: Vector2, loudness: float, source = null,
 # the "indoor crime is quiet crime" contrast the alarm system depends on).
 const MAX_OCCLUDERS: int = 3
 
+# Terrain (relief maps only): when the bare heightfield rises above the eye
+# line between the two points — a cliff face, a terrace brow, a cave's rock
+# mass (the interiors export no walls at all) — the sound counts as this many
+# more walls, inside the same MAX_OCCLUDERS cap. One term however much rock
+# lies between: a scream through cavern rock is two walls quieter, never
+# silenced outright. Before this, sound and physics-ray aim passed straight
+# through terrain that sight and fog already treated as solid.
+const TERRAIN_OCCLUDERS: int = 2
+
 # Compute loudness at the listener, applying sound-zone suppression and wall
 # occlusion damping. Sounds carry through walls but are noticeably quieter.
+# Budget: at most MAX_OCCLUDERS physics rays, then ONE terrain walk per
+# sound/listener pair, which stops at the first blocking tile and is skipped
+# on flat maps or once the walls alone reach the cap. emit() only calls this
+# for listeners inside the unattenuated reach.
 func _loudness_at(from_pos: Vector2, to_pos: Vector2, loudness: float) -> float:
 	# Suppression zones are applied before the wall check: a sound already
 	# smothered at its source has nothing left for a wall to occlude.
@@ -237,15 +250,32 @@ func _loudness_at(from_pos: Vector2, to_pos: Vector2, loudness: float) -> float:
 	params.collide_with_bodies = true
 	# Per-occluder damping, mirroring GridManager.sight_line_clear's
 	# exclude-list walk (GridManager.gd:199-208), capped at MAX_OCCLUDERS.
+	var occluders: int = 0
 	for i in range(MAX_OCCLUDERS):
 		var hit: Dictionary = space.intersect_ray(params)
 		if hit.is_empty():
 			break
 		loudness *= WALL_OCCLUSION_FACTOR
+		occluders += 1
 		var exclude: Array = params.exclude.duplicate()
 		exclude.append(hit["rid"])
 		params.exclude = exclude
+	if occluders < MAX_OCCLUDERS and _terrain_blocks(from_pos, to_pos):
+		for _k in range(mini(TERRAIN_OCCLUDERS, MAX_OCCLUDERS - occluders)):
+			loudness *= WALL_OCCLUSION_FACTOR
 	return loudness
+
+
+# True when the terrain between two points rises above the eye line joining
+# them (relief maps only; flat maps never walk). Eye heights stand on the
+# ground or deck under each point, the same model as GridManager's relief LOS
+# minus its roof slabs (a roof's walls already damp the sound above).
+func _terrain_blocks(from_pos: Vector2, to_pos: Vector2) -> bool:
+	if not GridManager.relief_los:
+		return false
+	var h0: float = GridManager.effective_elev(GridManager.world_to_map(from_pos)) + GridManager.EYE_HEIGHT_STORIES
+	var h1: float = GridManager.effective_elev(GridManager.world_to_map(to_pos)) + GridManager.EYE_HEIGHT_STORIES
+	return GridManager.terrain_line_hit(from_pos, to_pos, h0, h1, false) >= 0.0
 
 
 func _get_game():

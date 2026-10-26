@@ -33,6 +33,7 @@ func _ready() -> void:
 	_scenario_jump_fall()
 	await _scenario_high_terrain()
 	_scenario_cone_bands()
+	await _scenario_solid_rock()
 	_scenario_battlements()   # LAST: loads the full real map into GridManager
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -627,6 +628,190 @@ func _scenario_cone_bands() -> void:
 	ml3.generate_structured_map({"id": "flat_band_ctl", "images": {"map": "res://icon.svg"}, "floors": [], "structures": []})
 	_check("flat.no-cliff-occluders", ml3.cliff_occluders == null and ml3.get_node_or_null("CliffOccluders") == null)
 	ml3.queue_free()
+
+# 10. SOLID ROCK (L16) + TERRAIN THAT BLOCKS AIM AND SOUND (G3), on a cave
+# whose rock is terrain. 16x8 tiles: gallery A floor 9.0 (x <= 6), rock 12.5
+# (x 7..9), gallery B floor 9.0 (x >= 10). Row 1 is a graded causeway out of
+# gallery A (0.5/tile, entered at x 2..3) climbing ONTO the rock top: 11.4 at
+# x 7 is still floor, 11.9 / 12.4 at x 8 / 9 are rock under solid_rock_elev
+# 11.5, so only the solid-rock rule keeps feet off the rock there.
+func _build_cave() -> void:
+	GridManager.TILE_SIZE = 64
+	GridManager.initialize(16 * 64, 8 * 64)
+	for y in 8:
+		for x in 16:
+			GridManager.elevations[Vector2i(x, y)] = 12.5 if x >= 7 and x <= 9 else 9.0
+	var ramp: Array = [9.0, 9.5, 10.0, 10.5, 11.0, 11.4, 11.9, 12.4]   # x 2..9
+	for i in ramp.size():
+		GridManager.elevations[Vector2i(2 + i, 1)] = float(ramp[i])
+	GridManager.refresh_terrain_stats()
+
+# Layer-0 jump edges out of from_t that land on a column in xs.
+func _jump_landings(from_t: Vector2i, jump_h: float, xs: Array) -> int:
+	var n := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(from_t.x, from_t.y, 0), jump_h, 2):
+		var nb: Vector3i = e["n"]
+		if nb.z == 0 and nb.x in xs:
+			n += 1
+	return n
+
+func _scenario_solid_rock() -> void:
+	# earlier scenarios' bodies (queue_free'd) must be gone before the rays
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var world := get_world_2d()
+	_build_cave()
+	var rock_xs := [7, 8, 9]
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	ch.jump_height = 4.0          # more lift than any race has today (2.5): the hole L16 names
+	ch.jump_range = 2
+	ch.global_position = _c(6, 4)
+	ch._refresh_elevation()
+
+	# --- no key: today's rule exactly (the rock is only a 3.5-story step)
+	_check("rock.off-by-default", GridManager.solid_rock_elev == INF and GridManager.relief_los
+		and not GridManager.is_solid_rock(Vector2i(8, 4)) and GridManager.would_walk(Vector2i(8, 4)))
+	_check("rock.off-causeway-reaches-rock-top", not GridManager.find_path(Vector2i(2, 1), Vector2i(9, 1)).is_empty())
+	_check("rock.off-jumper-can-land-on-rock", _jump_landings(Vector2i(6, 4), 4.0, rock_xs) > 0
+		and ch.can_jump_to(Vector2i(6, 4), Vector2i(7, 4)))
+	_check("rock.off-spawn-unmoved", GridManager.off_solid_rock(_c(8, 4)) == _c(8, 4))
+
+	# --- key set (an entry's solid_rock_elev, as MapLoader applies it)
+	GridManager.solid_rock_elev = 11.5
+	_check("rock.tiles", GridManager.is_solid_rock(Vector2i(8, 4)) and GridManager.is_solid_rock(Vector2i(8, 1))
+		and not GridManager.is_solid_rock(Vector2i(7, 1)) and not GridManager.is_solid_rock(Vector2i(5, 4)))
+	_check("rock.walk-step-refused", not GridManager.can_step(Vector2i(7, 1), Vector2i(8, 1))
+		and GridManager.can_step(Vector2i(6, 1), Vector2i(7, 1)))
+	_check("rock.causeway-floor-still-walkable", not GridManager.find_path(Vector2i(2, 1), Vector2i(7, 1)).is_empty())
+	_check("rock.astar-never-onto-rock", GridManager.find_path(Vector2i(2, 1), Vector2i(9, 1)).is_empty()
+		and GridManager.find_path(Vector2i(2, 1), Vector2i(8, 1), 4.0, 2).is_empty())
+	var reach := GridManager.reachable_within(Vector2i(7, 1), 6)
+	var reach_rock := 0
+	for t in reach:
+		if GridManager.is_solid_rock(t):
+			reach_rock += 1
+	_check("rock.reach-excludes-rock", reach_rock == 0 and not reach.is_empty(), "rock tiles=%d" % reach_rock)
+	_check("rock.would-walk-refused", not GridManager.would_walk(Vector2i(8, 4)) and GridManager.would_walk(Vector2i(5, 4)))
+	_check("rock.click-snaps-to-floor", GridManager.nearest_walkable(Vector2i(7, 4)) == Vector2i(6, 4)
+		and GridManager.world_to_map(GridManager.clamp_off_walls(_c(7, 4))) == Vector2i(6, 4))
+	# the per-frame movement gate (1px short of the causeway's first rock tile)
+	ch.global_position = Vector2(8 * 64 - 1.0, 1 * 64 + 32.0)
+	ch._refresh_elevation()
+	ch.target_position = _c(9, 1)
+	ch.is_moving = true
+	for i in 40:
+		ch._update_movement(1.0 / 60.0)
+	_check("rock.mover-stops-at-rock", GridManager.world_to_map(ch.global_position).x <= 7,
+		"ended at %s" % str(GridManager.world_to_map(ch.global_position)))
+	ch.is_moving = false
+	# jump landings: the planner's edge and the character's own gate
+	ch.global_position = _c(6, 4)
+	ch._refresh_elevation()
+	_check("rock.jumper-plans-no-landing", _jump_landings(Vector2i(6, 4), 4.0, rock_xs) == 0)
+	_check("rock.can-jump-to-refused", not ch.can_jump_to(Vector2i(6, 4), Vector2i(7, 4)))
+	_check("rock.forced-drop-bails-at-rock", not ch._forced_drop_check(Vector2(64.0, 0.0)) and not ch._fall_active)
+	# spawns (Game._spawn_character funnels every spawn through off_solid_rock)
+	_check("rock.spawn-moves-to-floor", GridManager.off_solid_rock(_c(7, 4)) == _c(6, 4),
+		"got %s" % str(GridManager.off_solid_rock(_c(7, 4))))
+	var on_floor: Vector2 = _c(5, 4) + Vector2(5, -3)
+	_check("rock.spawn-on-floor-unmoved", GridManager.off_solid_rock(on_floor) == on_floor)
+	_check("rock.spawn-refused-without-ground", not GridManager.off_solid_rock(_c(8, 4), 1).is_finite())
+	var placed: Vector2 = DialogueManager.actions_api._placement(_c(8, 4), 0, 1, 0.0, {})
+	_check("rock.dialogue-placement-off-rock", not GridManager.is_solid_rock(GridManager.world_to_map(placed))
+		and GridManager.would_walk(GridManager.world_to_map(placed)), "placed=%s" % str(placed))
+	# teleports (the AbilityEffect "teleport" effect)
+	var before: Vector2 = ch.global_position
+	var tp: Dictionary = AbilityEffect._resolve_teleport({"to": "position"}, self, [ch], _c(8, 4))
+	_check("rock.teleport-refused", ch.global_position == before and not bool(tp["success"])
+		and (tp["targets_refused"] as Array).has(ch), "pos=%s" % str(ch.global_position))
+	tp = AbilityEffect._resolve_teleport({"to": "position"}, self, [ch], _c(4, 4))
+	_check("rock.teleport-to-floor-ok", ch.global_position == _c(4, 4) and bool(tp["success"]))
+	ch.global_position = _c(6, 4)
+	ch._refresh_elevation()
+
+	# --- aim (any relief map; independent of the rock key): the ribbon stops at
+	# the first tile whose terrain rises above the eye line, before any physics
+	var aim := AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES)
+	var aim_end: Vector2 = aim["endpoint"]
+	_check("aim.rock-stops-ribbon", bool(aim["blocked"]) and GridManager.world_to_map(aim_end) == Vector2i(6, 4)
+		and aim_end.x > 7 * 64 - 2.0, "end=%s" % str(aim_end))
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), 0)
+	_check("aim.mask-zero-skips-terrain", not bool(aim["blocked"]) and aim["endpoint"] == _c(13, 4))
+	aim = AimLine.compute_aim(world, _c(1, 4), _c(5, 4), CollisionLayers.STRUCTURES)
+	_check("aim.open-gallery-clear", not bool(aim["blocked"]) and aim["endpoint"] == _c(5, 4))
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES, 200.0)
+	_check("aim.range-clamp-short-of-rock", not bool(aim["blocked"])
+		and is_equal_approx((aim["endpoint"] as Vector2).x, _c(2, 4).x + 200.0))
+	var bite_end: Vector2 = AimLine.compute_endpoint(world, _c(6, 4), _c(10, 4), CollisionLayers.STRUCTURES)
+	_check("aim.bite-endpoint-stops-too", GridManager.world_to_map(bite_end) == Vector2i(6, 4), "end=%s" % str(bite_end))
+
+	# --- the terrain walk itself: where it stops
+	var hit_t: float = GridManager.terrain_line_hit(_c(2, 4), _c(13, 4), 9.5, 9.5, false)
+	var want_t: float = (7.0 * 64.0 - _c(2, 4).x) / (_c(13, 4).x - _c(2, 4).x)
+	_check("terrain-hit.enters-blocking-tile", is_equal_approx(hit_t, want_t), "t=%.4f want %.4f" % [hit_t, want_t])
+	_check("terrain-hit.clear-is-negative", GridManager.terrain_line_hit(_c(1, 4), _c(5, 4), 9.5, 9.5, false) < 0.0)
+
+	# --- hearing: a scream across the rock counts as TERRAIN_OCCLUDERS walls,
+	# inside the MAX_OCCLUDERS cap; the open gallery is untouched
+	var wf: float = HearingManager.WALL_OCCLUSION_FACTOR
+	var through: float = HearingManager._loudness_at(_c(5, 4), _c(11, 4), 1.0)
+	_check("hear.rock-two-walls-quieter", is_equal_approx(through, wf * wf), "got %.4f" % through)
+	_check("hear.open-gallery-full", is_equal_approx(HearingManager._loudness_at(_c(1, 4), _c(5, 4), 1.0), 1.0))
+	_check("hear.terrain-term-constants", HearingManager.TERRAIN_OCCLUDERS == 2 and HearingManager.MAX_OCCLUDERS == 3)
+	var wa := _make_blocker(Vector2(400, 288), -1.0)
+	var wb := _make_blocker(Vector2(690, 288), -1.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var capped: float = HearingManager._loudness_at(_c(5, 4), _c(11, 4), 1.0)
+	_check("hear.walls-plus-rock-capped", is_equal_approx(capped, wf * wf * wf), "got %.5f" % capped)
+	wa.queue_free()
+	wb.queue_free()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	# --- MapLoader applies the entry key; a map without it leaves the rule off
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	GridManager.solid_rock_elev = INF
+	ml.generate_structured_map({"id": "rock_ctl", "images": {"map": "res://icon.svg"}, "floors": [], "structures": [],
+		"solid_rock_elev": 11.5})
+	_check("rock.maploader-reads-entry", is_equal_approx(GridManager.solid_rock_elev, 11.5))
+	_build_cave()   # initialize() resets the key
+	ml.generate_structured_map({"id": "rock_ctl_off", "images": {"map": "res://icon.svg"}, "floors": [], "structures": []})
+	_check("rock.maploader-absent-key-off", GridManager.solid_rock_elev == INF)
+	ml.queue_free()
+
+	# --- key cleared: the legacy rule again, exactly
+	_check("rock.cleared-is-legacy", GridManager.can_step(Vector2i(7, 1), Vector2i(8, 1))
+		and not GridManager.find_path(Vector2i(2, 1), Vector2i(9, 1)).is_empty()
+		and GridManager.off_solid_rock(_c(8, 4)) == _c(8, 4) and GridManager.would_walk(Vector2i(8, 4))
+		and GridManager.nearest_walkable(Vector2i(7, 4)) == Vector2i(7, 4))
+
+	# --- flat control: no relief, no terrain term (every shipped flat map)
+	GridManager.initialize(16 * 64, 8 * 64)
+	GridManager.refresh_terrain_stats()
+	_check("flat.no-terrain-hearing-term", not GridManager.relief_los
+		and is_equal_approx(HearingManager._loudness_at(_c(5, 4), _c(11, 4), 1.0), 1.0))
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES)
+	_check("flat.aim-untouched", not bool(aim["blocked"]) and aim["endpoint"] == _c(13, 4))
+
+	# --- terraces: the aim stops at the cliff face, as sight does
+	_build_terraces()
+	aim = AimLine.compute_aim(world, _c(5, 5), _c(25, 5), CollisionLayers.STRUCTURES)
+	_check("aim.cliff-stops-at-face", bool(aim["blocked"])
+		and GridManager.world_to_map(aim["endpoint"] as Vector2) == Vector2i(14, 5),
+		"end=%s" % str(aim["endpoint"]))
+	for x in range(11, 15):
+		for y in range(8, 11):
+			GridManager.roof_elevations[Vector2i(x, y)] = 10.4
+	_check("terrain-hit.roofs-off-ignores-slab",
+		GridManager.terrain_line_hit(_c(15, 9), _c(12, 9), 12.5, 8.9) >= 0.0
+		and GridManager.terrain_line_hit(_c(15, 9), _c(12, 9), 12.5, 8.9, false) < 0.0)
+	GridManager.roof_elevations.clear()
+	ch.queue_free()
 
 # 6b. JUMP + FALL: roof channel, layered A*, jump/fall states
 func _scenario_jump_fall() -> void:

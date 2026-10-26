@@ -6143,8 +6143,10 @@ func can_jump_to(from_t: Vector2i, to_t: Vector2i) -> bool:
 	if (dt.x != 0 and dt.y != 0) or maxi(absi(dt.x), absi(dt.y)) > jump_range or dt == Vector2i.ZERO:
 		return false
 	# roof landings float above ground obstacles (real roofs sit over INF wall
-	# tiles); only GROUND landings need a pathable tile
-	if not GridManager.has_roof(to_t) and GridManager.grid_costs.get(to_t, INF) == INF:
+	# tiles); only GROUND landings need a pathable tile, and never solid rock
+	# (the planner's ground jump edge carries the same veto)
+	if not GridManager.has_roof(to_t) and (GridManager.grid_costs.get(to_t, INF) == INF
+			or GridManager.is_solid_rock(to_t)):
 		return false
 	var target_surface := GridManager.roof_at(to_t) if GridManager.has_roof(to_t) else GridManager.effective_elev(to_t)
 	return target_surface - current_elevation <= jump_height
@@ -6254,8 +6256,9 @@ func _forced_drop_check(step_vec: Vector2) -> bool:
 		if t == prev_t:
 			continue
 		var t_roof: bool = on_roof and GridManager.has_roof(t)
-		# a wall stops the body before any rim — bail so the caller dead-stops
-		if not t_roof and GridManager.grid_costs.get(t, INF) == INF:
+		# a wall (or solid rock) stops the body before any rim — bail so the
+		# caller dead-stops
+		if not t_roof and (GridManager.grid_costs.get(t, INF) == INF or GridManager.is_solid_rock(t)):
 			return false
 		# so does the sea (unless we are already in it)
 		if not t_roof and GridManager.is_deep_water(t) and not GridManager.is_deep_water(prev_t):

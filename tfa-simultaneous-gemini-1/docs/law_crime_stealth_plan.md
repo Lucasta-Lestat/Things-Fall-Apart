@@ -1110,6 +1110,13 @@ shares `witnesses_of`. `tests/crime_witness_test.gd`: 33/33 PASS. Notes:
 5. Harness lessons: `AI_enabled` defaults false, so fuses tick only via direct `_tick_outcry`
    calls — fully deterministic, no wall-clock waits; and an un-awaited async case function
    interleaves its cleanup with the next case (the cover-case ghost failure).
+6. **Terrain occludes sound (2026-10-26, TG roadmap P1-D / G3).** On relief maps `_loudness_at`
+   adds `TERRAIN_OCCLUDERS = 2` walls when the bare heightfield rises above the eye line between
+   source and listener (a cliff, a terrace brow, cave rock), inside the same `MAX_OCCLUDERS = 3`
+   cap: one terrain walk per sound/listener pair, skipped on flat maps or once the walls alone
+   reach the cap. The API and the alarm path are unchanged (no bypass); a cavern scream across the
+   rock mass reaches nobody in the next gallery (`crime_witness_test`
+   `_case_cavern_scream_through_rock`). Flat maps are untouched.
 
 > **REVISIT (user flag, 2026-07-22): rooftop crimes visible from the street.** The `target_elev`
 > fix means a ground witness can see (and report) a crime committed on a roof whenever the

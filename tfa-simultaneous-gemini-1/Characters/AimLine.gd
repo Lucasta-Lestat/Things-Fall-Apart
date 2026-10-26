@@ -15,6 +15,9 @@ extends Node2D
 ## `max_range` clamps the length to that distance even if the cursor is further;
 ## pass 0.0 for no clamp. When both are non-zero, max_range is applied first and
 ## the raycast scans the clamped segment.
+## On relief maps a non-zero `truncate_mask` also stops the ribbon at the first
+## tile whose terrain rises above the eye line (a cliff, a terrace brow, cave
+## rock), the same terrain test sight and hearing use, before the physics ray.
 ##
 ## `compute_aim` and `draw_ribbon` are exposed as statics so consumers that don't
 ## own an AimLine instance — PathDrawer previewing an already-queued dash — get
@@ -46,6 +49,9 @@ const RETICLE_WIDTH := 1.8
 # hue instead — the endpoint is no longer where you asked to go, and that is
 # worth saying loudly.
 const BLOCKED_COLOR := Color(0.97, 0.42, 0.28)
+# A terrain stop lands this far short of the blocking tile's edge, so the
+# endpoint stays on the last clear tile (world_to_map floors onto the boundary).
+const TERRAIN_STOP_BACKOFF := 1.0
 
 var default_color: Color = Color(1, 1, 1, 0.5)
 ## Retained so existing callers that poke it keep parsing; the ribbon uses
@@ -102,8 +108,9 @@ func hide_aim() -> void:
 
 
 ## Where the aim actually ends, and whether something stopped it short.
-## `blocked` means a body on `truncate_mask` interrupted the segment — NOT that
-## the cursor was merely out of range, which is an ordinary clamp.
+## `blocked` means a body on `truncate_mask` (or, on relief maps, the terrain)
+## interrupted the segment — NOT that the cursor was merely out of range, which
+## is an ordinary clamp.
 static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0) -> Dictionary:
 	var endpoint := to
 	# Clamp first so the raycast only scans the segment the ribbon actually covers.
@@ -113,6 +120,17 @@ static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mas
 		if distance > max_range:
 			endpoint = from + to_target / distance * max_range
 	var blocked := false
+	# Terrain first (relief maps): one tile walk over the clamped segment, eye
+	# to eye on the ground under each end, roofs left to the physics ray (their
+	# walls carry bodies). The physics ray then scans only what is left of it.
+	if truncate_mask != 0 and GridManager.relief_los:
+		var h0: float = GridManager.effective_elev(GridManager.world_to_map(from)) + GridManager.EYE_HEIGHT_STORIES
+		var h1: float = GridManager.effective_elev(GridManager.world_to_map(endpoint)) + GridManager.EYE_HEIGHT_STORIES
+		var cut: float = GridManager.terrain_line_hit(from, endpoint, h0, h1, false)
+		if cut >= 0.0:
+			var seg := endpoint - from
+			endpoint = from + seg * cut - seg.normalized() * TERRAIN_STOP_BACKOFF
+			blocked = true
 	if truncate_mask != 0 and world:
 		var space := world.direct_space_state
 		if space:

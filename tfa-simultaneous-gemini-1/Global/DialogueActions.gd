@@ -908,7 +908,11 @@ func _do_teleport(a: Dictionary) -> bool:
 	var used: Dictionary = _occupied_tiles(found)
 	for i in range(found.size()):
 		var c = found[i]
-		c.global_position = _placement(pos, i, found.size(), 40.0 if found.size() > 1 else 0.0, used)
+		var dest: Vector2 = _placement(pos, i, found.size(), 40.0 if found.size() > 1 else 0.0, used)
+		if GridManager.is_solid_rock(GridManager.world_to_map(dest)):
+			_warn("teleport: %s stays put: %s is solid rock with no floor nearby" % [_name(c), str(dest)])
+			continue
+		c.global_position = dest
 		c.is_moving = false
 		c.target_position = c.global_position
 		var ai = c.get_node_or_null("AI")
@@ -1725,8 +1729,10 @@ func _occupied_tiles(moving: Array) -> Dictionary:
 	return out
 
 
+# Solid rock (Maps.json solid_rock_elev) is never open ground: a spawn or
+# teleport aimed at it lands on the nearest floor instead.
 func _walkable(t: Vector2i) -> bool:
-	return GridManager.grid_costs.get(t, INF) != INF
+	return GridManager.grid_costs.get(t, INF) != INF and not GridManager.is_solid_rock(t)
 
 
 ## Centre of the walkable tile nearest `pos` (within 4 tiles) not in `used`;

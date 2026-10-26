@@ -72,6 +72,11 @@ const CONE_BAND_DECK_ALLOW := 1.5        # a battlement deck on the highest terr
 var roof_lint_bad: int = 0               # roofed tiles with roof < terrain + 0.9 (relative-roof export bug)
 var deck_lint_bad: int = 0               # deck tiles with walk_elev < terrain - 0.05 (MapLoader)
 var tile_elev_used: bool = false         # last set_elevation_data took terrain from cells.json tile_elev
+# Solid rock: Maps.json entry "solid_rock_elev" (ABSOLUTE stories), written by
+# TG's converter for the interiors whose rock is terrain (tg_hillside_cavern /
+# _ossuary). INF = no key = off. Reset in initialize(); set by
+# MapLoader.generate_structured_map from the entry. See is_solid_rock.
+var solid_rock_elev: float = INF
 
 func initialize(map_width_px: int, map_height_px: int) -> void:
 	var cols = int(ceil(float(map_width_px) / TILE_SIZE))
@@ -94,6 +99,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	roof_lint_bad = 0
 	deck_lint_bad = 0
 	tile_elev_used = false
+	solid_rock_elev = INF
 	for y in range(rows):
 		for x in range(cols):
 			var pos = Vector2i(x, y)
@@ -111,7 +117,7 @@ func map_to_world(map_pos: Vector2i) -> Vector2:
 
 # --- Dynamic Obstacle Management ---
 func would_walk(grid_pos) -> bool:
-	return grid_costs.get(grid_pos, INF) <= 10
+	return grid_costs.get(grid_pos, INF) <= 10 and not (solid_rock_elev < INF and is_solid_rock(grid_pos))
 
 func register_obstacle(grid_pos: Vector2i) -> void:
 	_obstacle_refs[grid_pos] = int(_obstacle_refs.get(grid_pos, 0)) + 1
@@ -331,8 +337,50 @@ func can_step_roof(from_t: Vector2i, to_t: Vector2i) -> bool:
 # INVARIANT: anything that mutates global_position directly without move_and_slide
 # bypasses elevation. All five current movers + the separation nudge are gated;
 # future teleports/tweens must either check can_step or be intentional (warps are).
+# Never onto solid rock, whatever the step height (is_solid_rock).
 func can_step(from_t: Vector2i, to_t: Vector2i) -> bool:
+	if solid_rock_elev < INF and is_solid_rock(to_t):
+		return false
 	return absf(effective_elev(to_t) - effective_elev(from_t)) <= MAX_STEP_STORIES
+
+# --- Solid rock (interiors whose rock is terrain) ---------------------------
+# A cave or catacomb has no walls: its rock is a terrain mass >= 3 stories above
+# every floor, so the step gate alone kept bodies off it, and any jump, spawn or
+# teleport could still stand one on top. With the entry key set, a tile whose
+# BARE TERRAIN (tile_elev; decks and roofs never change it) is at or above
+# solid_rock_elev is rock, not ground. It is never stepped onto (can_step),
+# never a jump landing (_get_jump_neighbors, ProceduralCharacter.can_jump_to),
+# never a spawn (off_solid_rock, Game._spawn_character) or teleport destination
+# (AbilityEffect._resolve_teleport, DialogueActions._walkable), never would_walk,
+# and never a path goal (find_path early-outs; nearest_walkable steps off it).
+# Off (INF, no key): each check is one float compare and nothing changes.
+func is_solid_rock(t: Vector2i) -> bool:
+	return solid_rock_elev < INF and float(elevations.get(t, 0.0)) >= solid_rock_elev
+
+# Where a spawn may put a body: `p` itself unless its tile is solid rock, else
+# the centre of the nearest would_walk tile within max_r rings (nearest centre
+# wins), else Vector2.INF and the caller refuses the spawn.
+func off_solid_rock(p: Vector2, max_r: int = 6) -> Vector2:
+	var t := world_to_map(p)
+	if not is_solid_rock(t):
+		return p
+	for r in range(1, max_r + 1):
+		var best := Vector2i.MAX
+		var best_d := INF
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue   # ring shell only
+				var c := t + Vector2i(dx, dy)
+				if not would_walk(c):
+					continue
+				var d := map_to_world(c).distance_squared_to(p)
+				if d < best_d:
+					best_d = d
+					best = c
+		if best != Vector2i.MAX:
+			return map_to_world(best)
+	return Vector2.INF
 
 # Tiles under CLOSED-but-UNLOCKED doors (Door._sync_door_pass): the obstacle
 # grid says INF (the leaf physically blocks), but A* may route through at a
@@ -555,14 +603,22 @@ func _wall_face_ground_max(hp: Vector2, dir: Vector2, half_px: float) -> float:
 ## CROSSES its plane inside the tile (indoors-to-indoors and over-the-top both
 ## pass). h0/h1 are absolute EYE heights at from/to.
 func terrain_line_clear(from_pos: Vector2, to_pos: Vector2, h0: float, h1: float) -> bool:
+	return terrain_line_hit(from_pos, to_pos, h0, h1) < 0.0
+
+## terrain_line_clear's walk, saying WHERE it stops: the segment fraction (0..1)
+## at which the line ENTERS the first blocking tile, or -1.0 when nothing
+## blocks. It stops at that tile, so a blocked line costs only the tiles before
+## it. roofs = false walks the bare heightfield alone: hearing and aim (a roof
+## is a structure, and its walls already carry physics bodies).
+func terrain_line_hit(from_pos: Vector2, to_pos: Vector2, h0: float, h1: float, roofs: bool = true) -> float:
 	var t0 := world_to_map(from_pos)
 	var t1 := world_to_map(to_pos)
 	if t0 == t1:
-		return true
+		return -1.0
 	var d: Vector2 = to_pos - from_pos
 	var len2: float = d.length_squared()
 	if len2 < 1e-9:
-		return true
+		return -1.0
 	var ts := float(TILE_SIZE)
 	var sx: int = 1 if d.x > 0.0 else -1
 	var sy: int = 1 if d.y > 0.0 else -1
@@ -584,15 +640,15 @@ func terrain_line_clear(from_pos: Vector2, to_pos: Vector2, h0: float, h1: float
 			var tc: float = clampf((map_to_world(cur) - from_pos).dot(d) / len2, t_in, t_out)
 			var g: float = float(elevations.get(cur, 0.0))
 			if g > lerpf(h0, h1, tc) + TERRAIN_LOS_EPS:
-				return false
-			var r: float = float(roof_elevations.get(cur, 0.0))
+				return t_in
+			var r: float = float(roof_elevations.get(cur, 0.0)) if roofs else 0.0
 			if r > 0.0:
 				var ha: float = lerpf(h0, h1, t_in)
 				var hb: float = lerpf(h0, h1, t_out)
 				if minf(ha, hb) < r - ROOF_SLAB_EPS and maxf(ha, hb) > r + ROOF_SLAB_EPS:
-					return false
+					return t_in
 		if cur == t1 or t_out >= 1.0:
-			return true
+			return -1.0
 		if tmx < tmy:
 			cur.x += sx
 			t_in = tmx
@@ -601,7 +657,7 @@ func terrain_line_clear(from_pos: Vector2, to_pos: Vector2, h0: float, h1: float
 			cur.y += sy
 			t_in = tmy
 			tmy += tdy
-	return true
+	return -1.0
 
 func get_neighboring_coords(grid_pos) -> Array:
 	return [Vector2i(grid_pos.x + 1, grid_pos.y), Vector2i(grid_pos.x - 1, grid_pos.y), Vector2i(grid_pos.x, grid_pos.y + 1), Vector2i(grid_pos.x, grid_pos.y - 1)]
@@ -666,8 +722,10 @@ func _find_path_walk(start_pos: Vector2i, end_pos: Vector2i) -> Array[Vector2i]:
 	# and only then return []. On structured maps that is the single most
 	# expensive thing pathfinding does, and callers ask for it constantly (a goal
 	# under a structure, a cursor dragged across a building, an AI probing a
-	# sealed room). Answer it in O(1) instead.
-	if grid_costs.get(end_pos, INF) == INF and not door_pass.has(end_pos):
+	# sealed room). Answer it in O(1) instead. Solid rock likewise: no edge may
+	# ever enter it, so a rock goal is only ever a component drain.
+	if (grid_costs.get(end_pos, INF) == INF and not door_pass.has(end_pos)) \
+			or (solid_rock_elev < INF and is_solid_rock(end_pos)):
 		return []
 	var open_heap: Array = []
 	var came_from: Dictionary = {}
@@ -708,7 +766,7 @@ func _find_path_jump(start_pos: Vector2i, end_pos: Vector2i, jump_height: float,
 	# roof-only tile (no pathable ground, e.g. a target on a roof over a wall)
 	# on layer 1; reach everything else on layer 0. goal_on_roof forces layer 1
 	# for an explicit roof pursuit over a walkable interior.
-	var goal_ground: bool = grid_costs.get(end_pos, INF) != INF
+	var goal_ground: bool = grid_costs.get(end_pos, INF) != INF and not is_solid_rock(end_pos)
 	# Same early-out as the walking search, widened by the two ways a jumper can
 	# legitimately finish on a tile the ground grid calls INF: a roof over it, or
 	# a closed-unlocked door it will shove open. Without one of those three the
@@ -772,8 +830,9 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 					out.append({"n": Vector3i(n.x, n.y, 1), "cost": 1.0 + JUMP_COST * d})
 				# ground-to-ground jumps (raised terrain / decks). Landings need
 				# a pathable, UNROOFED tile (a roofed pathable tile is an interior
-				# reached by walking/mounting, never by hopping a wall).
-				if grid_costs.get(n, INF) != INF and not has_roof(n):
+				# reached by walking/mounting, never by hopping a wall), and
+				# never solid rock (a leap onto a cave's rock mass).
+				if grid_costs.get(n, INF) != INF and not has_roof(n) and not is_solid_rock(n):
 					var rise := effective_elev(n) - here
 					if rise > MAX_STEP_STORIES and rise <= jump_height:
 						# jump UP a step too tall to walk. step_cost, not raw
@@ -802,9 +861,11 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 					out.append({"n": Vector3i(n.x, n.y, 1), "cost": 1.0 + JUMP_COST * d})
 				# drop down to the ground/deck surface: needs a pathable tile
 				# step_cost so a burning street below costs its hazard weight
-				# (same planned-drop cap and sea veto as the ground ledge edge)
+				# (same planned-drop cap, sea veto and solid-rock veto as the
+				# ground ledge edge)
 				if grid_costs.get(n, INF) != INF and effective_elev(n) < rhere and not has_roof(n) \
-						and rhere - effective_elev(n) <= MAX_PLANNED_DROP_STORIES and not is_deep_water(n):
+						and rhere - effective_elev(n) <= MAX_PLANNED_DROP_STORIES and not is_deep_water(n) \
+						and not is_solid_rock(n):
 					out.append({"n": Vector3i(n.x, n.y, 0),
 						"cost": step_cost(n) + DROP_COST * (rhere - effective_elev(n))})
 	return out
@@ -849,7 +910,7 @@ func _reconstruct_path(came_from: Dictionary, current: Vector2i) -> Array[Vector
 # Door tiles are exempt: their gap centres legitimately sit near tile edges.
 func clamp_off_walls(p: Vector2, inset: float = 9.0) -> Vector2:
 	var t := world_to_map(p)
-	if grid_costs.get(t, INF) == INF and not door_pass.has(t):
+	if (grid_costs.get(t, INF) == INF and not door_pass.has(t)) or is_solid_rock(t):
 		t = nearest_walkable(t)
 		p = map_to_world(t)
 	if door_pass.has(t) or door_gaps.has(t):
@@ -873,9 +934,10 @@ func clamp_off_walls(p: Vector2, inset: float = 9.0) -> Vector2:
 # Nearest finite-cost tile to `t` within max_r rings (t itself first). Lets a
 # click that lands ON a wall resolve to the floor beside it instead of an
 # empty path (the empty-path fallbacks used to fabricate a straight line
-# through the wall — the "party member grinds into the wall" bug).
+# through the wall — the "party member grinds into the wall" bug). Solid rock
+# counts as wall here: a click on a cave's rock resolves to the floor beside it.
 func nearest_walkable(t: Vector2i, max_r: int = 3) -> Vector2i:
-	if grid_costs.get(t, INF) != INF:
+	if grid_costs.get(t, INF) != INF and not is_solid_rock(t):
 		return t
 	for r in range(1, max_r + 1):
 		var best := t
@@ -885,7 +947,7 @@ func nearest_walkable(t: Vector2i, max_r: int = 3) -> Vector2i:
 				if maxi(absi(dx), absi(dy)) != r:
 					continue
 				var n := t + Vector2i(dx, dy)
-				if grid_costs.get(n, INF) == INF:
+				if grid_costs.get(n, INF) == INF or is_solid_rock(n):
 					continue
 				var d := Vector2(dx, dy).length_squared()
 				if d < best_d:
