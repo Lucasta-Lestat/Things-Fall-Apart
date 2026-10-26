@@ -5,3 +5,6 @@
 # Python bytecode caches
 __pycache__/
 *.pyc
+
+# Terrain Generation exporter backup, rewritten on every export (tgmap splices Maps.json instead)
+data/Maps.json.prev
