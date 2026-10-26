@@ -46,6 +46,26 @@ const VISION_RAY_MASK := VISION_BLOCKERS
 # These are NOT physics layers. Tier by viewer elevation: >= 1 story = HIGH.
 const SIGHT_MASK_GROUND := 1   # existing bit: occluded by everything
 const SIGHT_MASK_HIGH := 2     # elevated viewers: occluded only by occluders carrying bit 2 (occlude_top >= 2.0)
+# RENDERER RULE: a CanvasItem only RECEIVES a light's shadows when
+# (item.light_mask & light.shadow_item_cull_mask) != 0. Everything lit by the
+# cones (ground, structure art, characters) has light_mask 1, so every cone's
+# shadow mask must include bit 1 — a cone culling on bit 2 alone casts no
+# shadow on anything (the legacy HIGH tier and pink cone never have).
+#
+# Relief maps only (GridManager.relief_los): sight cones use ELEVATION BANDS
+# instead of GROUND/HIGH. Band b (0..17) is bit SIGHT_BAND_SHIFT + b, i.e.
+# light-mask bits 2..19 (values 4 .. 1 << 19); a cone's mask is GROUND | its
+# band bit. So no relief occluder may carry bit 1 (it would shadow every
+# cone): structures carry SIGHT_MASK_HIGH as their "structure" bit for
+# ordinary lights plus their band bits; cliffs carry band bits only. The band
+# math lives in GridManager (cone_band / band_mask_below).
+const SIGHT_BAND_SHIFT := 2
+const SIGHT_BAND_COUNT := 18
+# Shadow mask for ordinary (non-cone) lights — torches, explosions: every
+# structure occluder carries bit 1 (flat maps) or bit 2 (relief maps); cliffs
+# carry neither. On flat maps an occluder with bit 2 always has bit 1 too, so
+# this casts exactly what SIGHT_MASK_GROUND alone did there.
+const LIGHT_SHADOW_MASK := SIGHT_MASK_GROUND | SIGHT_MASK_HIGH
 
 # CanvasItem.light_mask bit carried by elevated-surface art (deck / battlement
 # walkways). Only stealth mode's NPCLineOfSightHigh cone lights it

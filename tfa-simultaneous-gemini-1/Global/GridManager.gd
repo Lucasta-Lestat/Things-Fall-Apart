@@ -65,6 +65,10 @@ var terrain_max: float = 0.0
 # RELIEF_LOS_MIN_SPAN) — never configured — so every shipped map (all span
 # < 1 story) keeps the legacy max(viewer, target) + eye rule exactly.
 var relief_los: bool = false             # reset in initialize(); set by refresh_terrain_stats()
+# Sight-cone elevation bands (relief maps only): band b covers EYE heights
+# [cone_band_base + b, cone_band_base + b + 1). Set by refresh_terrain_stats.
+var cone_band_base: int = 0
+const CONE_BAND_DECK_ALLOW := 1.5        # a battlement deck on the highest terrace must not clamp
 var roof_lint_bad: int = 0               # roofed tiles with roof < terrain + 0.9 (relative-roof export bug)
 var deck_lint_bad: int = 0               # deck tiles with walk_elev < terrain - 0.05 (MapLoader)
 var tile_elev_used: bool = false         # last set_elevation_data took terrain from cells.json tile_elev
@@ -86,6 +90,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	terrain_min = 0.0
 	terrain_max = 0.0
 	relief_los = false
+	cone_band_base = 0
 	roof_lint_bad = 0
 	deck_lint_bad = 0
 	tile_elev_used = false
@@ -242,6 +247,42 @@ func refresh_terrain_stats() -> void:
 	terrain_min = lo if lo != INF else 0.0
 	terrain_max = hi if hi != -INF else 0.0
 	relief_los = terrain_max - terrain_min >= RELIEF_LOS_MIN_SPAN
+	# Band 0 sits at the lowest ground, unless the highest surface someone can
+	# stand on (top terrace + a deck, or the highest roof) would then clamp
+	# above band 17. Then the bands anchor at the TOP instead: a viewer
+	# clamped into band 0 reads as standing higher (cone over-reports, the
+	# safe direction), but one clamped into band 17 would read lower and be
+	# shadowed by the very cliff they stand on (tg_hillside_upper/middle span
+	# 18+ stories from the sea floor to the summit roofs).
+	var top: float = terrain_max + CONE_BAND_DECK_ALLOW
+	for r in roof_elevations.values():
+		top = maxf(top, float(r))
+	cone_band_base = floori(terrain_min)
+	var top_band: int = floori(top + EYE_HEIGHT_STORIES) - cone_band_base
+	if top_band > CollisionLayers.SIGHT_BAND_COUNT - 1:
+		cone_band_base += top_band - (CollisionLayers.SIGHT_BAND_COUNT - 1)
+
+# --- Sight-cone elevation bands (v1.1; relief maps only) --------------------
+# A 2D light's shadow depends only on the light, the occluder and their mask
+# bits, so cones can't interpolate an eye line. Instead each viewer's cone
+# culls on ONE band bit picked by its own eye height, and every occluder
+# carries the bits of the bands it hides things from. Like the GROUND/HIGH
+# tiers this only looks at the viewer (no target height, no interpolation).
+# Flat maps never use bands: Game / ProceduralCharacter keep GROUND/HIGH.
+
+# Band of a viewer whose standing surface is at `elev` (ABSOLUTE stories).
+func cone_band(elev: float) -> int:
+	return clampi(floori(elev + EYE_HEIGHT_STORIES - float(cone_band_base)), 0, CollisionLayers.SIGHT_BAND_COUNT - 1)
+
+func cone_band_bit(band: int) -> int:
+	return 1 << (CollisionLayers.SIGHT_BAND_SHIFT + clampi(band, 0, CollisionLayers.SIGHT_BAND_COUNT - 1))
+
+# Bits of every band whose representative eye (the middle of the band,
+# cone_band_base + b + 0.5) is below `top_abs`: an occluder that tall hides
+# what lies behind it from those viewers.
+func band_mask_below(top_abs: float) -> int:
+	var n: int = clampi(ceili(top_abs - float(cone_band_base) - 0.5), 0, CollisionLayers.SIGHT_BAND_COUNT)
+	return ((1 << n) - 1) << CollisionLayers.SIGHT_BAND_SHIFT
 
 # Sea / deep water: a shallow_water floor whose surface sits at or below
 # DEEP_WATER_ELEV (absolute; sea surface is 0, seabed -1). There is no swimming:

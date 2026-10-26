@@ -6,6 +6,10 @@ signal map_loaded
 # the structured map's ground Sprite2D (null on legacy maps) -- FluidManager binds
 # the organic water shader to it
 var structured_ground: Sprite2D = null
+# relief maps: the parent of the cliff light occluders (null elsewhere). Held
+# by reference: a reload's new node can't take the name while the previous
+# map's (queue_freed this frame) still holds it.
+var cliff_occluders: Node2D = null
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -125,6 +129,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# 1. ground: the finished editor render as one sprite (kept as structured_ground
 	# so FluidManager/CellFluidFX can bind the organic water shader to it)
 	structured_ground = null
+	cliff_occluders = null
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -206,6 +211,10 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	if GridManager.deck_lint_bad > 0:
 		push_warning("structured map %s: %d deck tiles below terrain-0.05: structure walk_elev must be ABSOLUTE stories"
 			% [_current_map_id, GridManager.deck_lint_bad])
+
+	# 4. cliff shadows for the sight cones (relief maps only)
+	if GridManager.relief_los:
+		cliff_occluders = _build_cliff_occluders()
 
 	emit_signal("map_loaded")
 
@@ -383,18 +392,30 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
 		occ.occluder = opoly
 		occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_GROUND
-		# HIGH bit by height above the LOCAL ground on relief maps (a 1-story
-		# wall on a terrace at ground 8 is not tall); flat maps keep the
-		# absolute rule exactly (ground_ref 0).
-		var ground_ref: float = GridManager.terrain_elev(GridManager.world_to_map(center)) if GridManager.relief_los else 0.0
-		var occ_rel: float = occ_h if follow else occlude_top - ground_ref
-		if not is_deck and occ_rel >= 2.0:
+		if not is_deck and occlude_top >= 2.0:
 			# tall solids + parapets-on-decks occlude elevated sight cones too;
 			# deck occluders stay ground-mask only: they must never shadow the
 			# cone of a light standing on them
 			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
 		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
+		elif GridManager.relief_los:
+			# relief maps: cones there are GROUND | their elevation band, so the
+			# structure must NOT carry bit 1 (it would shadow every cone). It
+			# carries bit 2 for torches and other lights (LIGHT_SHADOW_MASK)
+			# plus the bands it hides things from.
+			var bands: int
+			if is_deck:
+				# half a story under the walkway: the deck mass still shadows
+				# viewers below it, but never the pink (band + 1) cone of a
+				# ground viewer, which has to light the walkway art, nor the
+				# cone of a light standing on it
+				bands = GridManager.band_mask_below(float(walk_elev) - GridManager.EYE_HEIGHT_STORIES)
+			elif follow:
+				bands = _add_follow_wall_band_chunks(inst, wall_a, wall_b, wall_half, occ_h)
+			else:
+				bands = GridManager.band_mask_below(occlude_top)
+			occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_HIGH | bands
 		inst.add_child(occ)
 	# "art_polys" (exporter, curtain walls + their towers): the instance's art is
 	# an EXACT partition of the overlay -- body, plinth, cast shadow, foot AO --
@@ -558,6 +579,114 @@ func _wall_spans_relief(a: Vector2, b: Vector2, half: float) -> bool:
 			lo = minf(lo, g)
 			hi = maxf(hi, g)
 	return hi - lo > GridManager.MAX_STEP_STORIES
+
+
+# Cone band bits for a terrain-following wall (relief maps). Its sight-line
+# top changes along its length (the higher face's ground + occ_h at each
+# crossing, GridManager._wall_face_ground_max), so a single mask either lets
+# street cones through a pad-edge house wall or shadows uphill viewers over
+# its low end. Sampled every 32 px like _wall_spans_relief: the bits every
+# sample shares are returned for the main Occluder; each run of samples that
+# blocks MORE bands gets its own band-only occluder over that stretch.
+func _add_follow_wall_band_chunks(inst: Node2D, a: Vector2, b: Vector2, half: float, occ_h: float) -> int:
+	var seg := b - a
+	var seg_len := seg.length()
+	var dirn := seg / seg_len
+	var perp := dirn.orthogonal()
+	var n := maxi(1, int(ceil(seg_len / 32.0)))
+	var masks: Array[int] = []
+	var common := -1
+	for i in range(n + 1):
+		var p := a + seg * (float(i) / float(n))
+		# a perpendicular ray hitting the -perp face at p
+		var top: float = GridManager._wall_face_ground_max(p - perp * half, perp, half) + occ_h
+		var m: int = GridManager.band_mask_below(top)
+		masks.append(m)
+		common &= m
+	var step := seg_len / float(n)
+	var local_a := a - inst.position
+	var i0 := 0
+	for i in range(1, n + 2):
+		if i <= n and masks[i] == masks[i0]:
+			continue
+		var extra: int = masks[i0] & ~common
+		if extra != 0:
+			# samples i0..i-1 cover [s_i0 - step/2, s_(i-1) + step/2] along the wall
+			var s0: float = maxf(0.0, (float(i0) - 0.5) * step)
+			var s1: float = minf(seg_len, (float(i - 1) + 0.5) * step)
+			var occ := LightOccluder2D.new()
+			occ.name = "OccluderBand%d" % i0
+			var opoly := OccluderPolygon2D.new()
+			opoly.polygon = PackedVector2Array([
+				local_a + dirn * s0 - perp * half, local_a + dirn * s1 - perp * half,
+				local_a + dirn * s1 + perp * half, local_a + dirn * s0 + perp * half])
+			opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+			occ.occluder = opoly
+			occ.occluder_light_mask = extra
+			inst.add_child(occ)
+		i0 = i
+	return common
+
+
+# Relief maps: cliffs shadow sight cones. Open polyline occluders along every
+# tile edge where the terrain jumps more than a walkable step, masked with the
+# bands below the HIGH side (a viewer on the brow looks down unshadowed; one
+# at the foot cannot see onto the terrace). No bit 1, so torches and other
+# lights ignore them; sdf_collision off so particles don't collide with them.
+# Collinear neighbouring edges with the same mask merge into one run. Built
+# once per load: terrain never changes at runtime.
+func _build_cliff_occluders() -> Node2D:
+	var root := Node2D.new()
+	root.name = "CliffOccluders"
+	add_child(root)
+	var ts := float(GridManager.TILE_SIZE)
+	var cols: int = GridManager.map_rect.size.x
+	var rows: int = GridManager.map_rect.size.y
+	# vertical edges: tile (x-1, y) | (x, y), on the line x * ts
+	for x in range(1, cols):
+		var run_mask := 0
+		var run0 := 0
+		for y in range(rows + 1):
+			var m: int = _cliff_mask(Vector2i(x - 1, y), Vector2i(x, y)) if y < rows else 0
+			if m == run_mask:
+				continue
+			if run_mask != 0:
+				_add_cliff_run(root, Vector2(x * ts, run0 * ts), Vector2(x * ts, y * ts), run_mask)
+			run_mask = m
+			run0 = y
+	# horizontal edges: tile (x, y-1) over (x, y), on the line y * ts
+	for y in range(1, rows):
+		var run_mask := 0
+		var run0 := 0
+		for x in range(cols + 1):
+			var m: int = _cliff_mask(Vector2i(x, y - 1), Vector2i(x, y)) if x < cols else 0
+			if m == run_mask:
+				continue
+			if run_mask != 0:
+				_add_cliff_run(root, Vector2(run0 * ts, y * ts), Vector2(x * ts, y * ts), run_mask)
+			run_mask = m
+			run0 = x
+	return root
+
+
+func _cliff_mask(t0: Vector2i, t1: Vector2i) -> int:
+	var g0: float = GridManager.terrain_elev(t0)
+	var g1: float = GridManager.terrain_elev(t1)
+	if absf(g1 - g0) <= GridManager.MAX_STEP_STORIES:
+		return 0
+	return GridManager.band_mask_below(maxf(g0, g1))
+
+
+func _add_cliff_run(root: Node2D, p0: Vector2, p1: Vector2, mask: int) -> void:
+	var occ := LightOccluder2D.new()
+	var opoly := OccluderPolygon2D.new()
+	opoly.closed = false
+	opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	opoly.polygon = PackedVector2Array([p0, p1])
+	occ.occluder = opoly
+	occ.occluder_light_mask = mask
+	occ.sdf_collision = false
+	root.add_child(occ)
 
 
 # Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).

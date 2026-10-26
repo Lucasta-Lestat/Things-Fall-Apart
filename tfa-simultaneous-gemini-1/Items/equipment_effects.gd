@@ -142,7 +142,8 @@ static func light_radius_px(level: float) -> float:
 	return LIGHT_MIN_RADIUS_PX + LIGHT_RADIUS_PER_LEVEL_PX * clampf(level, 0.0, 1.0)
 
 ## A shadowed PointLight2D named "EmittedLight" for a light level of 0..1.
-## Walls already carry occluders on SIGHT_MASK_GROUND, so it stops at them.
+## Every structure occluder carries a LIGHT_SHADOW_MASK bit (bit 1 on flat
+## maps, bit 2 on relief maps), so it stops at walls; cliffs don't shadow it.
 static func make_light(level: float, traits) -> PointLight2D:
 	level = clampf(level, 0.0, 1.0)
 	var light := PointLight2D.new()
@@ -152,7 +153,7 @@ static func make_light(level: float, traits) -> PointLight2D:
 	light.energy = LIGHT_MIN_ENERGY + LIGHT_ENERGY_PER_LEVEL * level
 	light.color = light_color(traits)
 	light.shadow_enabled = true
-	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_GROUND
+	light.shadow_item_cull_mask = CollisionLayers.LIGHT_SHADOW_MASK
 	return light
 
 static func _light_texture() -> Texture2D:
