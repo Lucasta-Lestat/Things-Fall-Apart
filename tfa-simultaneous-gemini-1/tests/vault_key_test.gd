@@ -5,7 +5,8 @@
 # Search Body / Open Door, the TradeWindow + PartySidePanel transfer path, the
 # corpse loot window.
 #   upper  - the Bank Steward (merchant) carries hillside_bank_treasury_key: BUY
-#            it (300 gold through Trade) and open the bank vault door.
+#            it (300 gold through Trade) and open the bank vault door. A* finds
+#            no way into the treasury while it is locked, and one once it opens.
 #   middle - the bank's context:shell copy opens with the bought key; the Gate
 #            Sergeant (town_guard) carries hillside_gate_strongroom_key: kill him,
 #            Search Body, take the key, open the strongroom.
@@ -47,6 +48,11 @@ const CARRIER_ROWS := {
 # neutral merchant) is murder. The roadmap assumed the sergeant's death "a crime";
 # this pins what the law says. Flip it if his row gets a protected "faction".
 const GATE_SERGEANT_KILL_IS_CRIME := false
+# A tile centre inside the bank treasury on tg_hillside_upper (tile (80, 31)). The
+# hall/treasury partition beside the vault door sits on a tile boundary (half
+# 7 px, obstacle reach 29.4 < 32 px): only MapLoader's seam tiles keep A* from
+# planning a way in around the locked door.
+const TREASURY_PX := Vector2(5152, 2016)
 
 var failures := 0
 var game = null
@@ -279,6 +285,10 @@ func _case_buy_bank_key() -> void:
 	_check("buy.vault-locked", vault.locked)
 	_choose(vault, buyer, "Open Door")
 	_check("buy.vault-refuses-without-key", vault.locked and not vault.is_open)
+	var hall: Vector2i = GridManager.world_to_map(steward.global_position)
+	var treasury: Vector2i = GridManager.world_to_map(TREASURY_PX)
+	_check("buy.treasury-sealed-to-astar", GridManager.find_path(hall, treasury).is_empty(),
+		"A* plans %s -> %s around the locked vault door (through the partition)" % [hall, treasury])
 	var opts: Array = _menu_options(steward, buyer)
 	_check("buy.trade-offered", "Trade" in opts, str(opts))
 	var gold: Dictionary = ItemDatabase.get_item_data("gold")
@@ -321,6 +331,8 @@ func _case_buy_bank_key() -> void:
 	_choose(vault, buyer, "Open Door")
 	_check("buy.vault-opens-with-bought-key", not vault.locked and vault.is_open,
 		"locked=%s open=%s" % [vault.locked, vault.is_open])
+	_check("buy.treasury-pathable-once-open", not GridManager.find_path(hall, treasury).is_empty(),
+		"no A* path %s -> %s through the open vault door" % [hall, treasury])
 
 # middle: the bank's shell copy opens with the bought key; kill the Gate Sergeant,
 # Search Body, take the strongroom key, open the strongroom.

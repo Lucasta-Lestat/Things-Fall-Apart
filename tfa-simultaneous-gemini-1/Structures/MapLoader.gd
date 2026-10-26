@@ -40,6 +40,15 @@ var _current_map_id: String = ""
 # at a DOOR GAP that overgrow displays the overlay's baked closed-leaf pixels —
 # a phantom "second door" that stays shut under the real swinging one.
 var _door_ends: PackedVector2Array = PackedVector2Array()
+# The ends of the door gaps no 4-neighbour tile step crosses (no tile column or
+# row lands inside the gap), collected with _door_ends: a thin wall's seam
+# crossing within half a tile of one stays open (_seam_tiles), so such a door
+# never seals for A*.
+var _seam_ends: PackedVector2Array = PackedVector2Array()
+# _seam_tiles: a wall end this close to a seam end abuts that door gap, and two
+# tile centres this close to equally near the wall block the first (up / left)
+const DOOR_END_PX := 6.0
+const SEAM_TIE_PX := 0.01
 
 # Map mask colors to structure IDs
 var color_to_structure: Dictionary = {
@@ -200,12 +209,16 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# JSON array order.
 	var all_structs: Array = map_data.get("structures", [])
 	_door_ends = PackedVector2Array()
+	_seam_ends = PackedVector2Array()
 	for s in all_structs:
 		if typeof(s) == TYPE_DICTIONARY and String(s.get("kind", "")) == "door":
 			var dh := _arr_v2(s.get("hinge", [0, 0]))
 			var dl := Vector2.RIGHT.rotated(deg_to_rad(float(s.get("deg", 0.0)))) * float(s.get("width", 30.0))
 			_door_ends.append(dh)
 			_door_ends.append(dh + dl)
+			if not _has_lane(dh, dh + dl, tile_size):
+				_seam_ends.append(dh)
+				_seam_ends.append(dh + dl)
 	for pass_decks in [true, false]:
 		for s in all_structs:
 			if typeof(s) != TYPE_DICTIONARY:
@@ -286,6 +299,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			-seg * 0.5 - perp * half, seg * 0.5 - perp * half,
 			seg * 0.5 + perp * half, -seg * 0.5 + perp * half])
 		occupied = _tiles_near_segment(a, b, half + path_margin, tile_size)
+		# a thin wall on a tile boundary clears both centres: its seam tiles
+		occupied.append_array(_seam_tiles(a, b, half + path_margin, occupied, tile_size))
 		tight = _tiles_near_segment(a, b, half, tile_size)
 	elif kind == "tree":
 		center = _arr_v2(s.get("pos", [0, 0]))
@@ -717,6 +732,100 @@ func _tiles_near_segment(a: Vector2, b: Vector2, reach: float, tile_size: int) -
 			if c.distance_to(q) <= reach and GridManager.map_rect.has_point(Vector2i(tx, ty)):
 				out.append(Vector2i(tx, ty))
 	return out
+
+
+# A wall whose obstacle reach is under half a tile can lie between two tile
+# centres (on a tile boundary) and block neither, so A* would step straight
+# through what physics blocks: the Perrow bank's hall/treasury partition (half
+# 7 px, reach 29.4 < 32) let a path walk around the locked treasury door. For
+# each 4-neighbour step across the seg with neither tile in `occ` (its reach
+# tiles), block the tile whose centre is nearer the seg (the first, up / left,
+# within SEAM_TIE_PX). A crossing within half a tile of a seg end at a lane-less
+# door gap (_seam_ends) stays open: the body slides into the gap, and that door
+# would otherwise seal. Mirrored by TG tools/grasslab/tg_model.py
+# TileModel.seam_tiles in the same order (rows, columns, the right step first).
+func _seam_tiles(a: Vector2, b: Vector2, reach: float, occ: Array[Vector2i], tile_size: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var ts := float(tile_size)
+	if reach >= 0.5 * ts:
+		return out   # one tile of every crossing step is already within reach
+	var open_ends := PackedVector2Array()
+	for p in PackedVector2Array([a, b]):
+		for e in _seam_ends:
+			if p.distance_to(e) < DOOR_END_PX:
+				open_ends.append(p)
+				break
+	var taken := {}
+	for t in occ:
+		taken[t] = true
+	for ty in range(int(floor(minf(a.y, b.y) / ts)) - 1, int(floor(maxf(a.y, b.y) / ts)) + 1):
+		for tx in range(int(floor(minf(a.x, b.x) / ts)) - 1, int(floor(maxf(a.x, b.x) / ts)) + 1):
+			var t := Vector2i(tx, ty)
+			if not GridManager.map_rect.has_point(t):
+				continue
+			var ct := Vector2((tx + 0.5) * ts, (ty + 0.5) * ts)
+			for k in 2:
+				var n: Vector2i = t + (Vector2i(1, 0) if k == 0 else Vector2i(0, 1))
+				if taken.has(t) or taken.has(n) or not GridManager.map_rect.has_point(n):
+					continue
+				var cn := Vector2((n.x + 0.5) * ts, (n.y + 0.5) * ts)
+				var x := _seg_cross(ct, cn, a, b)
+				if not x.is_finite():
+					continue
+				var beside_gap := false
+				for p in open_ends:
+					if x.distance_to(p) <= 0.5 * ts:
+						beside_gap = true
+				if beside_gap:
+					continue
+				var pick: Vector2i = n if _dist_point_seg(cn, a, b) < _dist_point_seg(ct, a, b) - SEAM_TIE_PX else t
+				taken[pick] = true
+				out.append(pick)
+	return out
+
+
+# True when some 4-neighbour step of on-map tiles properly crosses a-b.
+func _has_lane(a: Vector2, b: Vector2, tile_size: int) -> bool:
+	var ts := float(tile_size)
+	for ty in range(int(floor(minf(a.y, b.y) / ts)) - 1, int(floor(maxf(a.y, b.y) / ts)) + 1):
+		for tx in range(int(floor(minf(a.x, b.x) / ts)) - 1, int(floor(maxf(a.x, b.x) / ts)) + 1):
+			if not GridManager.map_rect.has_point(Vector2i(tx, ty)):
+				continue
+			var ct := Vector2((tx + 0.5) * ts, (ty + 0.5) * ts)
+			for k in 2:
+				var d: Vector2i = Vector2i(1, 0) if k == 0 else Vector2i(0, 1)
+				if GridManager.map_rect.has_point(Vector2i(tx, ty) + d) \
+						and _seg_cross(ct, ct + Vector2(d) * ts, a, b).is_finite():
+					return true
+	return false
+
+
+# Where segment p-q properly crosses segment a-b (touching at an end is no
+# crossing), else Vector2.INF. TG tg_model.seg_cross, term for term.
+static func _seg_cross(p: Vector2, q: Vector2, a: Vector2, b: Vector2) -> Vector2:
+	var rx: float = q.x - p.x
+	var ry: float = q.y - p.y
+	var sx: float = b.x - a.x
+	var sy: float = b.y - a.y
+	var den: float = rx * sy - ry * sx
+	if absf(den) < 1e-6:
+		return Vector2.INF
+	var wx: float = a.x - p.x
+	var wy: float = a.y - p.y
+	var t: float = (wx * sy - wy * sx) / den
+	var u: float = (wx * ry - wy * rx) / den
+	if t <= 0.0 or t >= 1.0 or u <= 0.0 or u >= 1.0:
+		return Vector2.INF
+	return Vector2(p.x + rx * t, p.y + ry * t)
+
+
+static func _dist_point_seg(c: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	var q := a
+	if l2 > 0.0001:
+		q = a + ab * clampf((c - a).dot(ab) / l2, 0.0, 1.0)
+	return c.distance_to(q)
 
 
 func _arr_v2(v) -> Vector2:
