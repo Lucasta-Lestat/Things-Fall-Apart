@@ -675,12 +675,29 @@ func _build_npc_uid(template_id: String, unique_name: String) -> String:
 func _is_service_npc(character) -> bool:
 	return is_instance_valid(character) and "titles" in character and character.titles.size() > 0
 
+## A spawn row that carries extra_items (a Perrow vault key) is stamped
+## persist_unique by _spawn_npcs: it persists while ALIVE too, so a key sold
+## through Trade or looted off the body stays gone on the next visit.
+func _is_persist_unique(c) -> bool:
+	return is_instance_valid(c) and bool(c.get_meta("persist_unique", false))
+
+## Which uid form an NPC persists under. Service NPCs keep the legacy
+## template/unique_name form (the services panel matches it). A named key
+## carrier uses it too: stable whatever the spawn order, where the ordinal
+## shifts when a conditional spawn above it flips. Everyone else (dead
+## guards, dead bystanders, unnamed carriers) keeps the per-template ordinal.
+func _uses_named_uid(c) -> bool:
+	if _is_service_npc(c):
+		return true
+	return _is_persist_unique(c) and not str(c.get_meta("unique_name", "")).is_empty()
+
 ## Phase 7: death must persist or the witness pipeline is theatre — a
 ## murdered guard used to be queue_free'd with state unrecorded and respawn
 ## pristine on revisit. Service NPCs persist as before; anyone DEAD persists
-## too (corpses stay corpses, and their corpse_crime meta stays with them).
+## too (corpses stay corpses, and their corpse_crime meta stays with them);
+## key carriers persist alive or dead.
 func _should_persist_npc(c) -> bool:
-	if _is_service_npc(c):
+	if _is_service_npc(c) or _is_persist_unique(c):
 		return true
 	return is_instance_valid(c) and "current_health" in c and c.current_health <= 0
 
@@ -709,10 +726,11 @@ func _save_service_npc_states() -> void:
 			template_id = str(c.display_name).to_lower().replace(" ", "_")
 		var unique_name: String = str(c.get_meta("unique_name", ""))
 		var uid: String
-		if _is_service_npc(c):
+		if _uses_named_uid(c):
 			# Service NPCs keep the legacy uid form — known_services_per_region
 			# and RegionDatabase._build_npc_uid must keep matching, or the
-			# town services panel loses every discovered service.
+			# town services panel loses every discovered service. Named key
+			# carriers share the form (_uses_named_uid).
 			uid = _build_npc_uid(template_id, unique_name)
 		else:
 			# Non-service persistence (dead guards, dead bystanders): ordinal
@@ -722,24 +740,28 @@ func _save_service_npc_states() -> void:
 			uid = "%s#%d" % [template_id, int(c.get_meta("spawn_ordinal", 0))]
 		npc_state_per_region[bucket_key][uid] = _serialize_character(c)
 
-func _peek_npc_snapshot(template_id: String, unique_name: String) -> Dictionary:
+func _peek_npc_snapshot(template_id: String, unique_name: String, persist_unique: bool = false) -> Dictionary:
 	## Pre-spawn lookup of the persisted snapshot the upcoming spawn would be
 	## restored from. Mirrors _maybe_restore_npc_state's two uid forms; the
 	## ordinal probe reads the counter value the spawn is about to be stamped
-	## with (_spawn_ordinals only advances on successful spawns).
+	## with (_spawn_ordinals only advances on successful spawns). A named key
+	## carrier reads only its named form, never another spawn's ordinal.
 	var bucket: Dictionary = npc_state_per_region.get(_npc_bucket_key(), {})
 	if bucket.is_empty():
 		return {}
 	var service_uid: String = _build_npc_uid(template_id, unique_name)
 	if bucket.has(service_uid):
 		return bucket[service_uid]
+	if persist_unique and not unique_name.is_empty():
+		return {}
 	var ordinal_uid: String = "%s#%d" % [template_id, int(_spawn_ordinals.get(template_id, 0))]
 	return bucket.get(ordinal_uid, {})
 
 func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> void:
 	## On NPC spawn, if we have a cached snapshot from a previous visit, replay it.
 	## Also tags the live node with template_id + unique_name for save-on-unload.
-	## (spawn_ordinal meta is stamped by _spawn_npcs BEFORE this runs.)
+	## (spawn_ordinal and persist_unique meta are stamped by _spawn_npcs
+	## BEFORE this runs.)
 	if not is_instance_valid(npc):
 		return
 	npc.set_meta("template_id", template_id)
@@ -747,7 +769,7 @@ func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> 
 	var bucket: Dictionary = npc_state_per_region.get(_npc_bucket_key(), {})
 	if bucket.is_empty():
 		return
-	if _is_service_npc(npc):
+	if _uses_named_uid(npc):
 		var uid: String = _build_npc_uid(template_id, unique_name)
 		if bucket.has(uid):
 			_deserialize_character(npc, bucket[uid])
@@ -809,7 +831,8 @@ func _spawn_npcs(npc_list: Array) -> void:
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = npc_def.get("count", 1)
 		var spread: float = npc_def.get("spread_radius", 0)
-		# Per-spawn overrides for unique NPCs, faction, titles, and dialogue.
+		# Per-spawn overrides for unique NPCs, faction, titles, dialogue and
+		# carried items.
 		var spawn_overrides: Dictionary = {}
 		if npc_def.has("unique_name"):
 			spawn_overrides["unique_name"] = npc_def["unique_name"]
@@ -819,6 +842,14 @@ func _spawn_npcs(npc_list: Array) -> void:
 			spawn_overrides["faction"] = npc_def["faction"]
 		if npc_def.has("dialogue"):
 			spawn_overrides["dialogue"] = npc_def["dialogue"]
+		# extra_items (Items.json ids; TopDownCharacterDatabase merges them into
+		# the Inventory): the Perrow vault keys ride on their carriers this way.
+		# A row that carries any is persist_unique — kept alive or dead across
+		# warps, so a key sold or looted stays gone.
+		var carried: Variant = npc_def.get("extra_items", [])
+		var persist_unique: bool = carried is Array and not (carried as Array).is_empty()
+		if persist_unique:
+			spawn_overrides["extra_items"] = carried
 
 		# Group scatter stays on the base's own step-connected ground: an
 		# unchecked +-spread offset landed members on the terrace above or
@@ -838,7 +869,7 @@ func _spawn_npcs(npc_list: Array) -> void:
 			# and force its race/gender so build_character rebuilds the same
 			# body the snapshot was taken from.
 			var per_spawn_overrides: Dictionary = spawn_overrides
-			var snap: Dictionary = _peek_npc_snapshot(template_id, str(spawn_overrides.get("unique_name", "")))
+			var snap: Dictionary = _peek_npc_snapshot(template_id, str(spawn_overrides.get("unique_name", "")), persist_unique)
 			if not str(snap.get("race_id", "")).is_empty():
 				per_spawn_overrides = spawn_overrides.duplicate()
 				per_spawn_overrides["race"] = str(snap["race_id"])
@@ -858,6 +889,10 @@ func _spawn_npcs(npc_list: Array) -> void:
 				var ordinal: int = int(_spawn_ordinals.get(template_id, 0))
 				_spawn_ordinals[template_id] = ordinal + 1
 				npc.set_meta("spawn_ordinal", ordinal)
+				# Key carriers persist under template/unique_name (_uses_named_uid);
+				# their rows sit LAST in npc_spawns, so the ordinals above stay put.
+				if persist_unique:
+					npc.set_meta("persist_unique", true)
 				# Restore persisted live_state for service NPCs whose region we've
 				# visited before (lets trades stick across map transitions).
 				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
