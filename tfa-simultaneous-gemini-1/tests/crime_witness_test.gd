@@ -99,6 +99,7 @@ func _ready() -> void:
 	await _case_ranged_behind_cover()
 	await _case_lone_guard_is_the_law()
 	await _case_victim_is_a_witness()
+	await _case_cavern_scream_through_rock()
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -291,3 +292,60 @@ func _case_victim_is_a_witness() -> void:
 	MapDatabase._maps.erase("__witness_commonlaw")
 	current_map_id = "town_square"
 	await _clear_scene()
+
+func _tile(x: int, y: int) -> Vector2:
+	return GridManager.map_to_world(Vector2i(x, y))
+
+func _case_cavern_scream_through_rock() -> void:
+	# G3: an interior whose rock is terrain (tg_hillside_cavern / _ossuary export
+	# no walls at all). The scream carries down its own gallery, but across the
+	# rock mass it counts as two walls more (HearingManager.TERRAIN_OCCLUDERS),
+	# so the next gallery's guard and constable hear nothing. Same alarm path as
+	# _case_alarm_propagation: _loudness_at is the law system's hook.
+	# 16x8 tiles: gallery A floor 9.0 (x <= 6), rock 12.5 (x 7..8), gallery B
+	# floor 9.0 (x >= 9). A relief map (span 3.5), so terrain LOS is on too.
+	GridManager.TILE_SIZE = 64
+	GridManager.initialize(16 * 64, 8 * 64)
+	for y in 8:
+		for x in 16:
+			GridManager.elevations[Vector2i(x, y)] = 12.5 if x == 7 or x == 8 else 9.0
+	GridManager.refresh_terrain_stats()
+	var actor := _spawn("player", _tile(5, 1), "CaveThief")
+	party_chars = [actor]
+	var witness := _spawn("neutral", _tile(5, 4), "CaveWitness")                    # faces up, sees the theft
+	var guard_open := _spawn("neutral", _tile(1, 4), "GalleryGuard", false)          # 256 px, open floor
+	var guard_rock := _spawn("neutral", _tile(9, 4), "FarGalleryGuard", false)       # 256 px, across the rock
+	var enforcer_open := _spawn("liziti", _tile(3, 6), "GalleryConstable", false)
+	var enforcer_rock := _spawn("liziti", _tile(9, 6), "FarGalleryConstable", false)
+	var w_target := _spawn("neutral", _tile(14, 7), "t7", false)
+	for pc in [actor, witness, guard_open, guard_rock, enforcer_open, enforcer_rock, w_target]:
+		pc._refresh_elevation()   # stand ON the 9.0 floor (eye 9.5), not at sea level
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var scream: float = float(LawDatabase.witness_cfg().get("scream_loudness", 1.35))
+	var wf: float = HearingManager.WALL_OCCLUSION_FACTOR
+	_check("cavern.relief-on", GridManager.relief_los)
+	_check("cavern.scream-path-attenuated",
+		is_equal_approx(HearingManager._loudness_at(witness.global_position, guard_rock.global_position, scream), scream * wf * wf)
+		and is_equal_approx(HearingManager._loudness_at(witness.global_position, guard_open.global_position, scream), scream))
+	var before: int = reported.size()
+	CrimeManager.report(actor, "take", {"owner_faction": "liziti", "crime_pos": actor.global_position, "debounce_target": w_target})
+	_check("cavern.witness-fuse-lit", not _pending(witness).is_empty() and _pending(guard_open).is_empty()
+		and _pending(guard_rock).is_empty(), "only the witness saw it")
+	_fire_fuse(witness)
+	var a_open: float = _alertness(guard_open)
+	var a_rock: float = _alertness(guard_rock)
+	_check("cavern.open-gallery-guard-searching", a_open >= 70.0 and a_open <= 78.0, "%f" % a_open)
+	_check("cavern.guard-across-rock-hears-nothing", a_rock < 25.0 and a_rock < a_open, "%f" % a_rock)
+	_check("cavern.only-open-constable-reports", reported.size() == before + 1
+		and reported.back()["enforcer"] == enforcer_open, "reported=%d" % (reported.size() - before))
+	# control: the same two points with the rock levelled carry the scream whole
+	for y in 8:
+		for x in [7, 8]:
+			GridManager.elevations[Vector2i(x, y)] = 9.0
+	GridManager.refresh_terrain_stats()
+	_check("cavern.flat-control-unattenuated", not GridManager.relief_los
+		and is_equal_approx(HearingManager._loudness_at(witness.global_position, guard_rock.global_position, scream), scream))
+	await _clear_scene()
+	GridManager.initialize(0, 0)   # back to this harness's unloaded grid
+	GridManager.refresh_terrain_stats()

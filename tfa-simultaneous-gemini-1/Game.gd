@@ -938,6 +938,17 @@ func _spawn_character(template_id: String, pos: Vector2, overrides: Dictionary =
 	if not spawn_conditions.is_empty() and not check_spawn_conditions(spawn_conditions):
 		return null
 
+	# Solid rock (Maps.json solid_rock_elev) never takes a body: a spawn on it
+	# moves to the nearest ground, or is refused when there is none nearby.
+	# Every spawn funnels through here (party, NPC rows, summons, dialogue).
+	var ground_pos: Vector2 = GridManager.off_solid_rock(pos)
+	if ground_pos != pos:
+		if not ground_pos.is_finite():
+			push_warning("spawn %s at %s refused: solid rock, no ground within reach" % [template_id, str(pos)])
+			return null
+		push_warning("spawn %s at %s is on solid rock: moved to %s" % [template_id, str(pos), str(ground_pos)])
+		pos = ground_pos
+
 	var character = CharacterScene.instantiate()
 
 	# Position first (before body creation reads it)

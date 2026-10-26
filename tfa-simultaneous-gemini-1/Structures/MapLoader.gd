@@ -177,6 +177,16 @@ func generate_structured_map(map_data: Dictionary) -> void:
 				stub.walkability = maxf(0.05, float(fdata.walkability))
 			GridManager.register_floor(Vector2i(tx, ty), stub)
 
+	# 2b. solid rock: an interior whose rock is terrain (TG writes the entry key
+	# for tg_hillside_cavern / _ossuary) — terrain at or above it rejects
+	# walking, jump landings, spawns and teleports (GridManager.is_solid_rock).
+	# No key: GridManager.initialize() left it INF, today's behaviour.
+	var rock_elev = map_data.get("solid_rock_elev", null)
+	if rock_elev is float or rock_elev is int:
+		GridManager.solid_rock_elev = float(rock_elev)
+	elif rock_elev != null:
+		push_warning("map %s: solid_rock_elev must be a number (stories), got %s" % [_current_map_id, str(rock_elev)])
+
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
 	var op := String(images.get("structures", ""))

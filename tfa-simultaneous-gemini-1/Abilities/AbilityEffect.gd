@@ -1349,6 +1349,7 @@ static func _resolve_teleport(
 		"success": true,
 		"effect_type": "teleport",
 		"targets_affected": [],
+		"targets_refused": [],
 	}
 	
 	var teleport_to = effect.get("to", "position")  # "position", "caster", "swap"
@@ -1361,6 +1362,16 @@ static func _resolve_teleport(
 			continue
 		
 		var old_position = target.global_position
+		
+		# Solid rock (Maps.json solid_rock_elev) is never a destination: the
+		# target stays put. A swap also lands the caster where the target stood.
+		var dest: Vector2 = target_position
+		if teleport_to == "caster" or teleport_to == "swap":
+			dest = caster.global_position
+		if GridManager.is_solid_rock(GridManager.world_to_map(dest)) or (teleport_to == "swap"
+				and GridManager.is_solid_rock(GridManager.world_to_map(old_position))):
+			result["targets_refused"].append(target)
+			continue
 		
 		match teleport_to:
 			"position":
@@ -1377,6 +1388,8 @@ static func _resolve_teleport(
 			"to": target.global_position
 		})
 	
+	if result["targets_affected"].is_empty() and not result["targets_refused"].is_empty():
+		result["success"] = false
 	return result
 
 
