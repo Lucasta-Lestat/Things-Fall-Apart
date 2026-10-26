@@ -9,23 +9,42 @@ extends Node2D
 # *_top = surface - terrain >= GridManager.HIGH_LAYER_STORIES.
 # Every map also fails on the absolute-height lints (cells roof below
 # terrain + 0.9, deck walk_elev below terrain).
-# Strict mode (relief maps automatically, or TFA_STRICT=1): every other player
-# spawn must stand on a walkable tile (WARN only on the legacy flat maps — one
-# shipped arrival point predates this check), the default tile must be
-# walkable, and every non-_top player spawn and every npc_spawns base must be
-# in the default spawn's walking component (doors count as passable, locked or
-# not: a locked room is a puzzle, not a soft-lock). A spawn standing ON an
-# obstacle tile counts as reachable when it can step onto a 4-neighbour in the
-# component (NPC: WARN line; player: the walkability check reports it).
+# STRICT is the default (TG P1-C): every other player spawn must stand on a
+# walkable tile, the default tile must be walkable, and every non-_top player
+# spawn and every npc_spawns base must be in the default spawn's walking
+# component (doors count as passable, locked or not: a locked room is a
+# puzzle, not a soft-lock). A spawn standing ON an obstacle tile counts as
+# reachable when it can step onto a 4-neighbour in the component (NPC: WARN
+# line; player: the walkability check reports it).
+# Known failures of shipped maps are excused by ALLOWLIST (check key -> the
+# reason and the package that removes it) and print ALLOW instead of FAIL; an
+# allowlisted check that now passes FAILs as STALE, so the list only shrinks.
+# TG's verification engine (tools/grasslab/verify_export.py, ARRIVAL/NPC
+# rules) replays the same checks and keeps the same entries in its
+# tools/verify_allowlist.json.
 # Run:  godot --headless --path . res://tests/spawn_walk_check.tscn
 # Env:  TFA_MAPS = comma-separated map ids (default all tg_* structured maps)
-#       TFA_STRICT = 1 forces the strict reachability pass on every map
+#       TFA_STRICT = 0 restores the old lenient pass (flat maps WARN on an
+#       unwalkable arrival and skip reachability; relief maps stay strict)
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
+# check key ("<map>.<spawn key>" walkability, "<map>.strict.<spawn key>"
+# reachability) -> why it is excused, and until when
+const ALLOWLIST := {
+	"tg_town_square.from_venonan_chapel": "the arrival tile (2,16) sits in a wall halo (WARN since TFA 5ce48a26); hand-authored legacy layout, fixed by the P2-L legacy train",
+	"tg_town_square.strict.from_courthouse": "the courthouse arrival and its warp sit in a walled 24-tile NW pocket cut off from the piazza; hand-authored legacy layout, P2-L legacy train",
+	"tg_castle_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P2-L legacy train",
+	"tg_castle_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P2-L legacy train",
+	"tg_villa_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P2-L legacy train",
+	"tg_villa_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P2-L legacy train",
+}
 var structures_in_scene: Array = []
 var party_chars: Array = []
 var unlocked_locks: Dictionary = {}
 var fails := 0
 var checks := 0
+var allowed := 0
+var _allow_seen: Dictionary = {}   # allowlist key -> true once its check FAILED (and was excused)
+var _allow_ran: Dictionary = {}    # allowlist key -> true once its check ran at all
 
 
 func _ready() -> void:
@@ -41,13 +60,33 @@ func _ready() -> void:
 		if want == "" and not (mid.begins_with("tg_") and e.has("cell_graph")):
 			continue
 		_audit_map(e)
-	print("spawn_walk_check: %d checks, %d FAIL" % [checks, fails])
+	# an excused check that passed: the excuse is stale (remove it from ALLOWLIST)
+	for k in _allow_ran:
+		if not _allow_seen.has(k):
+			_fail("%s STALE allowlist entry: the check passes now -- remove it (%s)" % [String(k), String(ALLOWLIST[k])])
+	print("spawn_walk_check: %d checks, %d FAIL, %d allowed" % [checks, fails, allowed])
 	get_tree().quit(1 if fails > 0 else 0)
 
 
 func _fail(msg: String) -> void:
 	fails += 1
 	print("FAIL " + msg)
+
+
+# A failed check `key` (see ALLOWLIST): excused -> ALLOW line, else FAIL.
+func _check_fail(key: String, msg: String) -> void:
+	if ALLOWLIST.has(key):
+		_allow_seen[key] = true
+		allowed += 1
+		print("ALLOW %s (%s)" % [msg, String(ALLOWLIST[key])])
+		return
+	_fail(msg)
+
+
+# Every check that has an allowlist key goes through here first, pass or fail.
+func _ran(key: String) -> void:
+	if ALLOWLIST.has(key):
+		_allow_ran[key] = true
 
 
 func _spawn_tile(entry) -> Vector2i:
@@ -71,20 +110,23 @@ func _audit_map(m: Dictionary) -> void:
 		_fail("%s.lints roof_bad=%d deck_bad=%d (cells roof / walk_elev must be ABSOLUTE stories)"
 			% [mid, GridManager.roof_lint_bad, GridManager.deck_lint_bad])
 	var spawns: Dictionary = m.get("player_spawns", {})
-	var strict: bool = GridManager.relief_los or OS.get_environment("TFA_STRICT") == "1"
+	var strict: bool = GridManager.relief_los or OS.get_environment("TFA_STRICT") != "0"
 	for k in spawns:
 		var sk := String(k)
 		var is_base := sk.ends_with("_base")
 		var is_top := sk.ends_with("_top")
 		var t := _spawn_tile(spawns[k])
+		var ckey := "%s.%s" % [mid, sk]
 		if not (is_base or is_top):
 			# any other arrival point must at least stand on walkable ground
 			checks += 1
+			if strict:
+				_ran(ckey)
 			if not GridManager.would_walk(t):
 				if strict:
-					_fail("%s.%s tile=%s not walkable" % [mid, sk, str(t)])
+					_check_fail(ckey, "%s.%s tile=%s not walkable" % [mid, sk, str(t)])
 				else:
-					print("WARN %s.%s tile=%s not walkable (FAIL under TFA_STRICT=1 / relief maps)" % [mid, sk, str(t)])
+					print("WARN %s.%s tile=%s not walkable (FAIL in strict mode, the default)" % [mid, sk, str(t)])
 			continue
 		var e := GridManager.effective_elev(t)
 		var ground: float = GridManager.terrain_elev(t)
@@ -92,8 +134,9 @@ func _audit_map(m: Dictionary) -> void:
 		var ok: bool = GridManager.would_walk(t) and \
 			((absf(hag) < GridManager.MAX_STEP_STORIES) if is_base else (hag >= GridManager.HIGH_LAYER_STORIES))
 		checks += 1
+		_ran(ckey)
 		if not ok:
-			_fail("%s.%s tile=%s elev=%.2f ground=%.2f hag=%.2f walkable=%s"
+			_check_fail(ckey, "%s.%s tile=%s elev=%.2f ground=%.2f hag=%.2f walkable=%s"
 				% [mid, sk, str(t), e, ground, hag, str(GridManager.would_walk(t))])
 	if strict:
 		_audit_reachability(mid, m, spawns)
@@ -123,18 +166,22 @@ func _audit_reachability(mid: String, m: Dictionary, spawns: Dictionary) -> void
 		if sk == "default" or sk.ends_with("_top"):
 			continue
 		var t := _spawn_tile(spawns[k])
+		var ckey := "%s.strict.%s" % [mid, sk]
 		checks += 1
+		_ran(ckey)
 		# (a player spawn ON an obstacle tile is already reported by the
 		# walkability check above; here it only has to be able to step off)
 		if t != dt and not comp.has(t) and not _steps_off_into(t, comp):
-			_fail("%s.strict %s tile=%s unreachable from default %s" % [mid, sk, str(t), str(dt)])
+			_check_fail(ckey, "%s.strict %s tile=%s unreachable from default %s" % [mid, sk, str(t), str(dt)])
 	var npcs: Array = m.get("npc_spawns", [])
 	for i in npcs.size():
 		var n = npcs[i]
 		if typeof(n) != TYPE_DICTIONARY:
 			continue
 		var t := _spawn_tile(n)
+		var ckey := "%s.strict.npc_spawns[%d]" % [mid, i]
 		checks += 1
+		_ran(ckey)
 		if t == dt or comp.has(t):
 			continue
 		if _steps_off_into(t, comp):
@@ -144,7 +191,7 @@ func _audit_reachability(mid: String, m: Dictionary, spawns: Dictionary) -> void
 			print("WARN %s.strict npc_spawns[%d] %s tile=%s on an obstacle tile (steps off into the default component)"
 				% [mid, i, String(n.get("template_id", "")), str(t)])
 			continue
-		_fail("%s.strict npc_spawns[%d] %s tile=%s unreachable from default %s"
+		_check_fail(ckey, "%s.strict npc_spawns[%d] %s tile=%s unreachable from default %s"
 			% [mid, i, String(n.get("template_id", "")), str(t), str(dt)])
 
 
