@@ -732,20 +732,26 @@ func _scenario_solid_rock() -> void:
 	ch.global_position = _c(6, 4)
 	ch._refresh_elevation()
 
-	# --- aim (any relief map; independent of the rock key): the ribbon stops at
-	# the first tile whose terrain rises above the eye line, before any physics
-	var aim := AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES)
+	# --- aim (any relief map; independent of the rock key): with stop_at_terrain
+	# (the bite) the ribbon stops at the first tile whose terrain rises above the
+	# eye line, before any physics; without it (throw, dash: their actions fly or
+	# run on past terrain) the preview runs to the cursor as the action does
+	var aim := AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES, 0.0, true)
 	var aim_end: Vector2 = aim["endpoint"]
 	_check("aim.rock-stops-ribbon", bool(aim["blocked"]) and GridManager.world_to_map(aim_end) == Vector2i(6, 4)
 		and aim_end.x > 7 * 64 - 2.0, "end=%s" % str(aim_end))
-	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), 0)
-	_check("aim.mask-zero-skips-terrain", not bool(aim["blocked"]) and aim["endpoint"] == _c(13, 4))
-	aim = AimLine.compute_aim(world, _c(1, 4), _c(5, 4), CollisionLayers.STRUCTURES)
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES)
+	_check("aim.throw-dash-preview-ignores-terrain", not bool(aim["blocked"]) and aim["endpoint"] == _c(13, 4),
+		"end=%s" % str(aim["endpoint"]))
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), 0, 0.0, true)
+	_check("aim.terrain-stop-needs-no-mask", bool(aim["blocked"])
+		and GridManager.world_to_map(aim["endpoint"] as Vector2) == Vector2i(6, 4))
+	aim = AimLine.compute_aim(world, _c(1, 4), _c(5, 4), CollisionLayers.STRUCTURES, 0.0, true)
 	_check("aim.open-gallery-clear", not bool(aim["blocked"]) and aim["endpoint"] == _c(5, 4))
-	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES, 200.0)
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES, 200.0, true)
 	_check("aim.range-clamp-short-of-rock", not bool(aim["blocked"])
 		and is_equal_approx((aim["endpoint"] as Vector2).x, _c(2, 4).x + 200.0))
-	var bite_end: Vector2 = AimLine.compute_endpoint(world, _c(6, 4), _c(10, 4), CollisionLayers.STRUCTURES)
+	var bite_end: Vector2 = AimLine.compute_endpoint(world, _c(6, 4), _c(10, 4), CollisionLayers.STRUCTURES, 0.0, true)
 	_check("aim.bite-endpoint-stops-too", GridManager.world_to_map(bite_end) == Vector2i(6, 4), "end=%s" % str(bite_end))
 
 	# --- the terrain walk itself: where it stops
@@ -795,14 +801,18 @@ func _scenario_solid_rock() -> void:
 	GridManager.refresh_terrain_stats()
 	_check("flat.no-terrain-hearing-term", not GridManager.relief_los
 		and is_equal_approx(HearingManager._loudness_at(_c(5, 4), _c(11, 4), 1.0), 1.0))
-	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES)
+	aim = AimLine.compute_aim(world, _c(2, 4), _c(13, 4), CollisionLayers.STRUCTURES, 0.0, true)
 	_check("flat.aim-untouched", not bool(aim["blocked"]) and aim["endpoint"] == _c(13, 4))
 
-	# --- terraces: the aim stops at the cliff face, as sight does
+	# --- terraces: the bite's aim stops at the cliff face, as sight does; a
+	# throw or dash preview (no terrain stop) runs on to the cursor
 	_build_terraces()
-	aim = AimLine.compute_aim(world, _c(5, 5), _c(25, 5), CollisionLayers.STRUCTURES)
+	aim = AimLine.compute_aim(world, _c(5, 5), _c(25, 5), CollisionLayers.STRUCTURES, 0.0, true)
 	_check("aim.cliff-stops-at-face", bool(aim["blocked"])
 		and GridManager.world_to_map(aim["endpoint"] as Vector2) == Vector2i(14, 5),
+		"end=%s" % str(aim["endpoint"]))
+	aim = AimLine.compute_aim(world, _c(5, 5), _c(25, 5), CollisionLayers.STRUCTURES)
+	_check("aim.throw-dash-preview-runs-past-cliff", not bool(aim["blocked"]) and aim["endpoint"] == _c(25, 5),
 		"end=%s" % str(aim["endpoint"]))
 	for x in range(11, 15):
 		for y in range(8, 11):

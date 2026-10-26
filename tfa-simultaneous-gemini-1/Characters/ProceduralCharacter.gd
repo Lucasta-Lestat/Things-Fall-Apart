@@ -1816,11 +1816,13 @@ func start_bite_targeting() -> void:
 	_ensure_aim_line()
 	# Reddish tint to distinguish from yellow dash and other reticles.
 	_aim_line.default_color = Color(0.95, 0.2, 0.2, 0.6)
-	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, _get_bite_range())
+	# The bite lands where the ribbon ends, terrain stop included (throw and dash
+	# leave it off: their actions don't stop at terrain).
+	_aim_line.show_aim(global_position, global_position, CollisionLayers.STRUCTURES, _get_bite_range(), true)
 
 func _update_bite_reticle(mouse_pos: Vector2) -> void:
 	if _aim_line:
-		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range())
+		_aim_line.update_aim(global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range(), true)
 
 func _execute_pending_bite(mouse_pos: Vector2) -> void:
 	pending_bite = false
@@ -1830,8 +1832,9 @@ func _execute_pending_bite(mouse_pos: Vector2) -> void:
 		return
 	var ability := Ability.from_dict(data)
 	# Land the bite where the preview line ends (clamped to its range and
-	# stopped by walls), not wherever the cursor happens to be.
-	var hit_pos := AimLine.compute_endpoint(get_world_2d(), global_position, mouse_pos, CollisionLayers.STRUCTURES, _get_bite_range())
+	# stopped by walls and terrain), not wherever the cursor happens to be.
+	var hit_pos := AimLine.compute_endpoint(get_world_2d(), global_position, mouse_pos, CollisionLayers.STRUCTURES,
+		_get_bite_range(), true)
 	use_ability(ability, {"position": hit_pos})
 
 func _cancel_pending_bite() -> void:

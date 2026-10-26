@@ -15,9 +15,13 @@ extends Node2D
 ## `max_range` clamps the length to that distance even if the cursor is further;
 ## pass 0.0 for no clamp. When both are non-zero, max_range is applied first and
 ## the raycast scans the clamped segment.
-## On relief maps a non-zero `truncate_mask` also stops the ribbon at the first
-## tile whose terrain rises above the eye line (a cliff, a terrace brow, cave
-## rock), the same terrain test sight and hearing use, before the physics ray.
+## `stop_at_terrain` (off by default) also stops the ribbon, on relief maps, at
+## the first tile whose terrain rises above the eye line (a cliff, a terrace
+## brow, cave rock), the same terrain test sight and hearing use, before the
+## physics ray. Only a caller whose ACTION honours that stop passes it: the bite,
+## which lands at this endpoint. Thrown projectiles fly over terrain and a dash
+## runs on move_and_slide + can_step, so their previews leave it off; a ribbon
+## that stops where the action doesn't is worse than none.
 ##
 ## `compute_aim` and `draw_ribbon` are exposed as statics so consumers that don't
 ## own an AimLine instance — PathDrawer previewing an already-queued dash — get
@@ -83,16 +87,18 @@ func _draw() -> void:
 	draw_ribbon(self, _from, _to, default_color, _phase, _blocked)
 
 
-func show_aim(from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0) -> void:
+func show_aim(from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0,
+		stop_at_terrain: bool = false) -> void:
 	visible = true
-	update_aim(from, to, truncate_mask, max_range)
+	update_aim(from, to, truncate_mask, max_range, stop_at_terrain)
 
 
-func update_aim(from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0) -> void:
+func update_aim(from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0,
+		stop_at_terrain: bool = false) -> void:
 	if not visible:
 		return
 	var world: World2D = get_world_2d() if is_inside_tree() else null
-	var aim := compute_aim(world, from, to, truncate_mask, max_range)
+	var aim := compute_aim(world, from, to, truncate_mask, max_range, stop_at_terrain)
 	_from = from
 	_to = aim["endpoint"]
 	_blocked = aim["blocked"]
@@ -108,10 +114,11 @@ func hide_aim() -> void:
 
 
 ## Where the aim actually ends, and whether something stopped it short.
-## `blocked` means a body on `truncate_mask` (or, on relief maps, the terrain)
-## interrupted the segment — NOT that the cursor was merely out of range, which
-## is an ordinary clamp.
-static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0) -> Dictionary:
+## `blocked` means a body on `truncate_mask` (or, with `stop_at_terrain` on a
+## relief map, the terrain) interrupted the segment — NOT that the cursor was
+## merely out of range, which is an ordinary clamp.
+static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0,
+		stop_at_terrain: bool = false) -> Dictionary:
 	var endpoint := to
 	# Clamp first so the raycast only scans the segment the ribbon actually covers.
 	if max_range > 0.0:
@@ -120,10 +127,11 @@ static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mas
 		if distance > max_range:
 			endpoint = from + to_target / distance * max_range
 	var blocked := false
-	# Terrain first (relief maps): one tile walk over the clamped segment, eye
-	# to eye on the ground under each end, roofs left to the physics ray (their
-	# walls carry bodies). The physics ray then scans only what is left of it.
-	if truncate_mask != 0 and GridManager.relief_los:
+	# Terrain first (relief maps, callers that opt in): one tile walk over the
+	# clamped segment, eye to eye on the ground under each end, roofs left to the
+	# physics ray (their walls carry bodies). The physics ray then scans only
+	# what is left of it.
+	if stop_at_terrain and GridManager.relief_los:
 		var h0: float = GridManager.effective_elev(GridManager.world_to_map(from)) + GridManager.EYE_HEIGHT_STORIES
 		var h1: float = GridManager.effective_elev(GridManager.world_to_map(endpoint)) + GridManager.EYE_HEIGHT_STORIES
 		var cut: float = GridManager.terrain_line_hit(from, endpoint, h0, h1, false)
@@ -147,8 +155,9 @@ static func compute_aim(world: World2D, from: Vector2, to: Vector2, truncate_mas
 
 
 ## Back-compat thin wrapper — endpoint only.
-static func compute_endpoint(world: World2D, from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0) -> Vector2:
-	var aim := compute_aim(world, from, to, truncate_mask, max_range)
+static func compute_endpoint(world: World2D, from: Vector2, to: Vector2, truncate_mask: int = 0, max_range: float = 0.0,
+		stop_at_terrain: bool = false) -> Vector2:
+	var aim := compute_aim(world, from, to, truncate_mask, max_range, stop_at_terrain)
 	var endpoint: Vector2 = aim["endpoint"]
 	return endpoint
 
