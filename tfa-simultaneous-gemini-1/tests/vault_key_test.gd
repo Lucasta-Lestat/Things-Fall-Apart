@@ -73,7 +73,9 @@ func _on_crime(actor, verdict: Dictionary, payload: Dictionary) -> void:
 func _crimes_against(victim) -> Array:
 	var out: Array = []
 	for c in crimes:
-		if (c["payload"] as Dictionary).get("victim") == victim:
+		# victims of earlier maps are freed by the warps since
+		var v = (c["payload"] as Dictionary).get("victim")
+		if is_instance_valid(v) and v == victim:
 			out.append(c)
 	return out
 
@@ -148,7 +150,8 @@ func _menu_for(target):
 	var kids: Array = game.get_node("GameUI").get_children()
 	for i in range(kids.size() - 1, -1, -1):
 		var m = kids[i]
-		if not m.is_queued_for_deletion() and "target_character" in m and m.target_character == target:
+		if not m.is_queued_for_deletion() and "target_character" in m \
+				and is_instance_valid(m.target_character) and m.target_character == target:
 			return m
 	return null
 
