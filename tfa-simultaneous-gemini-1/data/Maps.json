@@ -53717,72 +53717,42 @@
 				{
 					"id": "weapon_rack",
 					"position": [
-						2420.0,
+						2428.0,
 						154.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0,
-					"scale_x": 0.958
+					"scale_x": 1.219
 				},
 				{
 					"id": "weapon_rack",
 					"position": [
-						2474.0,
+						2496.0,
 						154.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0,
-					"scale_x": 0.958
+					"scale_x": 1.219
 				},
 				{
 					"id": "weapon_rack",
 					"position": [
-						2528.0,
+						2667.0,
 						154.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0,
-					"scale_x": 0.958
+					"scale_x": 1.219
 				},
 				{
 					"id": "weapon_rack",
 					"position": [
-						2581.0,
+						2735.0,
 						154.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0,
-					"scale_x": 0.958
-				},
-				{
-					"id": "weapon_rack",
-					"position": [
-						2635.0,
-						154.0
-					],
-					"rotation": 0.0,
-					"scale": 1.0,
-					"scale_x": 0.958
-				},
-				{
-					"id": "weapon_rack",
-					"position": [
-						2688.0,
-						154.0
-					],
-					"rotation": 0.0,
-					"scale": 1.0,
-					"scale_x": 0.958
-				},
-				{
-					"id": "weapon_rack",
-					"position": [
-						2742.0,
-						154.0
-					],
-					"rotation": 0.0,
-					"scale": 1.0,
-					"scale_x": 0.958
+					"scale_x": 1.219
 				},
 				{
 					"id": "crate",
@@ -69240,6 +69210,19 @@
 					],
 					"spread_radius": 60.0,
 					"template_id": "town_guard"
+				},
+				{
+					"count": 1.0,
+					"extra_items": [
+						"hillside_bank_treasury_key"
+					],
+					"position": [
+						5280.0,
+						2208.0
+					],
+					"spread_radius": 60.0,
+					"template_id": "merchant",
+					"unique_name": "Bank Steward"
 				}
 			],
 			"party_spawns": {
@@ -86004,6 +85987,19 @@
 					],
 					"spread_radius": 60.0,
 					"template_id": "half_elf_wanderer"
+				},
+				{
+					"count": 1.0,
+					"extra_items": [
+						"hillside_gate_strongroom_key"
+					],
+					"position": [
+						6624.0,
+						2912.0
+					],
+					"spread_radius": 60.0,
+					"template_id": "town_guard",
+					"unique_name": "Gate Sergeant"
 				}
 			],
 			"party_spawns": {
@@ -99832,6 +99828,7 @@
 			},
 			"region": "perrow",
 			"settlement": true,
+			"solid_rock_elev": 11.5,
 			"structures": [],
 			"tile_size": 64.0,
 			"warp_points": [
@@ -101140,47 +101137,48 @@
 			"party_spawns": {
 				"default": {
 					"formation": "cluster",
-					"offset_radius": 40.0
+					"offset_radius": 40
 				}
 			},
 			"player_spawns": {
 				"default": {
-					"facing": 90.0,
+					"facing": 90,
 					"position": [
-						4672.0,
-						3051.0
+						4672,
+						3051
 					]
 				},
 				"from_tg_hillside_lower": {
-					"facing": 90.0,
+					"facing": 90,
 					"position": [
-						4425.0,
-						2656.0
+						4425,
+						2656
 					]
 				},
 				"from_tg_hillside_lower__crypt_hole": {
-					"facing": 90.0,
+					"facing": 90,
 					"position": [
-						4425.0,
-						2656.0
+						4425,
+						2656
 					]
 				}
 			},
 			"region": "perrow",
 			"settlement": true,
+			"solid_rock_elev": 7.0,
 			"structures": [],
-			"tile_size": 64.0,
+			"tile_size": 64,
 			"warp_points": [
 				{
 					"id": "to_tg_hillside_lower__crypt_hole",
 					"label": "Up to the sanctuary court",
 					"position": [
-						4425.0,
-						2592.0
+						4425,
+						2592
 					],
 					"size": [
-						128.0,
-						128.0
+						128,
+						128
 					],
 					"target_map": "tg_hillside_lower",
 					"target_spawn": "from_tg_hillside_ossuary"
@@ -101188,8 +101186,8 @@
 			],
 			"weather_group": "",
 			"world_size": [
-				5696.0,
-				4160.0
+				5696,
+				4160
 			]
 		}
 	]
