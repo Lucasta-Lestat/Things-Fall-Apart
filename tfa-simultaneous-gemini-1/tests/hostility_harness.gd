@@ -27,10 +27,12 @@ var stealth_mode: bool = false
 var failures := 0
 
 # Every unordered pair the old fallthrough made hostile that the oracle now
-# leaves peaceful. Regenerate deliberately (and re-review the diff) if
+# leaves peaceful. The devil pairs (2026-10-27): Perrow's bank staff are at
+# peace with every faction that isn't hostile_by_default. Regenerate deliberately (and re-review the diff) if
 # factions.json relations change — this list IS the Phase 1 content decision.
 const EXPECTED_PACIFIED: Array = [
 	["adventurers_guild", "alamoneans"],
+	["adventurers_guild", "devil"],
 	["adventurers_guild", "dragatini"],
 	["adventurers_guild", "golden_guard"],
 	["adventurers_guild", "liziti"],
@@ -38,6 +40,7 @@ const EXPECTED_PACIFIED: Array = [
 	["adventurers_guild", "player"],
 	["adventurers_guild", "tortellini"],
 	["adventurers_guild", "waldau"],
+	["alamoneans", "devil"],
 	["alamoneans", "dragatini"],
 	["alamoneans", "golden_guard"],
 	["alamoneans", "liziti"],
@@ -47,6 +50,13 @@ const EXPECTED_PACIFIED: Array = [
 	["alamoneans", "waldau"],
 	["bandits", "pirates"],
 	["cultists", "patriciate"],
+	["devil", "dragatini"],
+	["devil", "golden_guard"],
+	["devil", "liziti"],
+	["devil", "patriciate"],
+	["devil", "player"],
+	["devil", "tortellini"],
+	["devil", "waldau"],
 	["dragatini", "golden_guard"],
 	["dragatini", "liziti"],
 	["dragatini", "patriciate"],
@@ -95,7 +105,7 @@ func _old_hostile(a: String, b: String) -> bool:
 
 func _case_database_loaded() -> void:
 	var ids: Array = FactionDatabase.get_all_faction_ids()
-	_check("data.faction-count", ids.size() == 19, "got %d" % ids.size())
+	_check("data.faction-count", ids.size() == 20, "got %d" % ids.size())
 	_check("data.has-player", FactionDatabase.has_faction("player"))
 	_check("data.has-neutral", FactionDatabase.has_faction("neutral"))
 

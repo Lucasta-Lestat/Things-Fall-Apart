@@ -37,15 +37,16 @@ const PRICE := 300
 # npc_spawns, as MapExporter writes them). Injected only when Maps.json lacks them.
 const CARRIER_ROWS := {
 	UPPER: {"template_id": "merchant", "position": [5280, 2208], "count": 1, "spread_radius": 60,
-		"unique_name": STEWARD, "extra_items": [BANK_KEY]},
+		"unique_name": STEWARD, "faction": "devil", "extra_items": [BANK_KEY]},
 	MIDDLE: {"template_id": "town_guard", "position": [6624, 2912], "count": 1, "spread_radius": 60,
 		"unique_name": SERGEANT, "extra_items": [GATE_KEY]},
 }
 # Perrow is under mob rule ON PURPOSE (docs/law_crime_stealth_plan.md): its law
 # faction is liziti, liziti counts golden_guard an enemy, and liziti custom only
 # protects factions it is not hostile to. So killing the Gate Sergeant (a
-# town_guard: golden_guard) is NO crime in Perrow, where killing the steward (a
-# neutral merchant) is murder. The roadmap assumed the sergeant's death "a crime";
+# town_guard: golden_guard) is NO crime in Perrow, where killing the steward is
+# murder: the bank staff are the Devil faction, hostile to neither liziti nor the
+# Golden Guard, so liziti custom protects them. The roadmap assumed the sergeant's death "a crime";
 # this pins what the law says. Flip it if his row gets a protected "faction".
 const GATE_SERGEANT_KILL_IS_CRIME := false
 # A tile centre inside the bank treasury on tg_hillside_upper (tile (80, 31)). The
@@ -229,7 +230,8 @@ func _ensure_carrier_rows() -> void:
 		_check("rows.%s-carrier-row-is-last" % map_id, at == rows.size() - 1,
 			"row %d of %d: the per-template ordinals above it would move" % [at, rows.size()])
 		_check("rows.%s-carrier-row-matches" % map_id, str(row.get("template_id", "")) == str(want["template_id"])
-			and row.get("extra_items", []) == want["extra_items"], str(row))
+			and row.get("extra_items", []) == want["extra_items"]
+			and str(row.get("faction", "")) == str(want.get("faction", "")), str(row))
 
 # ---------------------------------------------------------------------------
 # Run
@@ -271,6 +273,10 @@ func _case_buy_bank_key() -> void:
 	var buyer = game.party_chars[0]
 	steward_ordinal = int(steward.get_meta("spawn_ordinal", -1))
 	_check("buy.steward-is-merchant", str(steward.get_meta("template_id", "")) == "merchant")
+	# Bank staff are the Devil faction: at peace with both sides of Perrow's feud
+	_check("buy.steward-is-devil", str(steward.faction_id) == "devil", str(steward.faction_id))
+	for other in ["liziti", "golden_guard", "player"]:
+		_check("buy.devil-not-hostile-to-%s" % other, not FactionDatabase.are_hostile("devil", other))
 	_check("buy.steward-persist-unique", bool(steward.get_meta("persist_unique", false)))
 	_check("buy.steward-not-a-service-npc", not game._is_service_npc(steward),
 		"a title would move him to the service uid path and Town Services")

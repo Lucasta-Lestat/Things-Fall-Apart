@@ -707,6 +707,32 @@
 			"default_backgrounds": [
 				"academic"
 			]
+		},
+		{
+			"id": "devil",
+			"female_chance": 0.4,
+			"name": "Devil",
+			"color": "#8B1E2D",
+			"tier": 2,
+			"icon": "res://icons/devil.png",
+			"flag": "res://icons/devil_flag.png",
+			"default_alertness": "at_ease",
+			"allies": [],
+			"enemies": [],
+			"equipment_traits": {
+				"required": {},
+				"forbidden": {}
+			},
+			"race_weights": {
+				"mephistkin": 70,
+				"human": 20,
+				"half_elf": 10
+			},
+			"default_backgrounds": [
+				"perfected_paralegal",
+				"judge_for_hire",
+				"aristocratic_envoy"
+			]
 		}
 	]
 }
