@@ -69212,15 +69212,16 @@
 					"template_id": "town_guard"
 				},
 				{
-					"count": 1.0,
+					"count": 1,
 					"extra_items": [
 						"hillside_bank_treasury_key"
 					],
+					"faction": "devil",
 					"position": [
-						5280.0,
-						2208.0
+						5280,
+						2208
 					],
-					"spread_radius": 60.0,
+					"spread_radius": 60,
 					"template_id": "merchant",
 					"unique_name": "Bank Steward"
 				}
