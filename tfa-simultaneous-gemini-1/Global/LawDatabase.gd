@@ -359,7 +359,7 @@ func _validate() -> void:
 			var map_data: Dictionary = MapDatabase.get_map_data(map_id)
 			for spawn in map_data.get("npc_spawns", []):
 				var template: Dictionary = TopDownCharacterDatabase.get_template(str(spawn.get("template_id", "")))
-				if str(template.get("faction", "")) in enforcers:
+				if str(spawn.get("faction", template.get("faction", ""))) in enforcers:
 					found = true
 					break
 			if found:

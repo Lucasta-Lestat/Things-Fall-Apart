@@ -93,7 +93,7 @@ func get_service_npcs_in_region(region_id: String) -> Array:
 				"position": Vector2(pos_arr[0], pos_arr[1]),
 				"icon": str(template.get("icon", "")),
 				"dialogue": str(template.get("dialogue", "")),
-				"faction": str(template.get("faction", "neutral")),
+				"faction": str(spawn.get("faction", template.get("faction", "neutral"))),
 			}
 			entries.append(entry)
 	return entries

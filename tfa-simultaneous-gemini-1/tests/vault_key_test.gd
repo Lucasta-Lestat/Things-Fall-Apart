@@ -501,6 +501,24 @@ func _case_back_on_upper() -> void:
 		_check("back.vault-stays-open", not (d as Door).locked, (d as Door).lock_key)
 	_check("back.party-keeps-both-keys", _party_count(BANK_KEY) == 1 and _party_count(GATE_KEY) == 1,
 		"bank %d gate %d" % [_party_count(BANK_KEY), _party_count(GATE_KEY)])
+	# A save from before the bank staff joined the Devil faction holds the
+	# merchant template's default faction: the row's faction must win on restore.
+	game.load_map(MIDDLE, UPPER)
+	await _await_frames(4)
+	var saved: Dictionary = game.npc_state_per_region.get(game._npc_bucket_key(), {})
+	var steward_uid := ""
+	for uid in saved:
+		if str(uid).ends_with(STEWARD):
+			steward_uid = str(uid)
+	_check("migrate.steward-snapshot-saved", not steward_uid.is_empty(), str(saved.keys()))
+	if not steward_uid.is_empty():
+		(saved[steward_uid] as Dictionary)["faction_id"] = "neutral"
+	game.load_map(UPPER, MIDDLE)
+	await _await_frames(6)
+	_unpause()
+	var migrated = _carrier(STEWARD)
+	_check("migrate.old-neutral-snapshot-becomes-devil", migrated != null and str(migrated.faction_id) == "devil",
+		str(migrated.faction_id) if migrated != null else "no steward")
 
 # Killing a protected carrier is murder under Perrow's law, and a dead carrier
 # stays dead (persist_unique covers the dead too).

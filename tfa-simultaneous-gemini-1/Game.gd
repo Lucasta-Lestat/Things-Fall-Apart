@@ -896,6 +896,15 @@ func _spawn_npcs(npc_list: Array) -> void:
 				# Restore persisted live_state for service NPCs whose region we've
 				# visited before (lets trades stick across map transitions).
 				_maybe_restore_npc_state(npc, template_id, spawn_overrides.get("unique_name", ""))
+				# A row's faction override (Perrow's Devil bank staff) beats a
+				# snapshot taken before the row named it: such a snapshot still
+				# holds the template's default faction. A runtime switch to any
+				# other faction persists as before.
+				if spawn_overrides.has("faction"):
+					var row_faction: String = str(spawn_overrides["faction"])
+					var template_faction: String = str(TopDownCharacterDatabase.get_template(template_id).get("faction", "neutral"))
+					if npc.faction_id == template_faction and row_faction != template_faction:
+						npc.set_faction(row_faction)
 				# NPCs hidden by default; made visible when inside party LOS
 				npc.visible = false
 				# Give NPCs their own LOS cone (hidden until stealth mode)
