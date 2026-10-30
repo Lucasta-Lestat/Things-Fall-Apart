@@ -38,6 +38,9 @@ const EquipmentEffects = preload("res://Items/equipment_effects.gd")
 ## Light rows spawned per map at most (TG caps its export lower; this guards
 ## hand-edited rows). Beyond it the rest are dropped with one warning.
 const MAP_LIGHTS_MAX := 32
+## A map light shows once a tile this close to it is explored (see
+## update_map_light_visibility).
+const MAP_LIGHT_REVEAL_TILES := 1
 
 # Map id of the structured map being loaded; keys Door.lock_key so session
 # unlocks survive the full teardown/reload every warp performs.
@@ -294,6 +297,31 @@ func _spawn_map_lights(rows: Array) -> Node2D:
 		root.add_child(light)
 		n += 1
 	return root
+
+
+## Map lights stay dark under the unexplored fog (ExplorationManager): a light
+## shows once any tile within MAP_LIGHT_REVEAL_TILES of it is explored, and
+## always on a map without that fog. Not the item rule (Game.
+## _update_item_los_visibility, lit only while the party sees the item): TG
+## puts every light inside its forge / hearth / glow block's wall body, so a
+## sight line to it always ends on that block. Game calls this with the item
+## sweep and after a load.
+func update_map_light_visibility() -> void:
+	if map_lights == null or not is_instance_valid(map_lights):
+		return
+	var fog: bool = ExplorationManager.active
+	for c in map_lights.get_children():
+		var light := c as Node2D
+		if light != null:
+			light.visible = not fog or _near_explored(GridManager.world_to_map(light.global_position))
+
+
+func _near_explored(tile: Vector2i) -> bool:
+	for dy in range(-MAP_LIGHT_REVEAL_TILES, MAP_LIGHT_REVEAL_TILES + 1):
+		for dx in range(-MAP_LIGHT_REVEAL_TILES, MAP_LIGHT_REVEAL_TILES + 1):
+			if ExplorationManager.is_explored(tile + Vector2i(dx, dy)):
+				return true
+	return false
 
 
 func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int) -> Structure:

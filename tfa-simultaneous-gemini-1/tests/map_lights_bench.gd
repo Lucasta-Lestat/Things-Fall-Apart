@@ -29,8 +29,8 @@ extends Node
 #   2026-10-30 D3D12 machine the off-screen window's frames stayed pinned near
 #   10 ms whatever the load, so frame ms only shows hitches.
 # The game boots on TFA_BOOT_MAP (default combat_test) and then loads TFA_MAP
-# like a warp: a boot straight into TFA_MAP wipes its authored items (the
-# first load_map captures the launch map's empty item state, then restores it).
+# like a warp. (That once also dodged a boot bug: a boot straight into a map
+# wiped its authored items; fixed, guarded by tests/boot_items_check.)
 # Env: TFA_MAP (default tg_hillside_lower); TFA_ROWS = a Maps.json whose row
 #   for TFA_MAP replaces the shipped one (e.g. a TG contract-2 export; JSON
 #   only, its images are the shipped PNGs); TFA_SECS; TFA_CAM_ZOOM (default 1;
@@ -66,10 +66,8 @@ func _ready() -> void:
 		var lights: Array = row.get("lights", [])
 		print("map_lights_bench: row %s from %s (export_contract %s, %d lights)" % [map_id, rows_path,
 			str(row.get("export_contract", 1)), lights.size()])
-	# Boot on another map, then load TFA_MAP like a warp: booting straight into
-	# it captures that map's (still empty) item state on the first load_map
-	# (current_map_id starts as the launch map) and _restore_item_state then
-	# drops every authored item spawn.
+	# Boot on another map, then load TFA_MAP like a warp (the census has always
+	# measured a warped-in map; see the header).
 	var boot := OS.get_environment("TFA_BOOT_MAP").strip_edges()
 	if boot == "":
 		boot = "combat_test" if map_id != "combat_test" else "cemetery"

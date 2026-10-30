@@ -7,6 +7,8 @@ extends Node2D
 #      flag (absent = shadowed with LIGHT_SHADOW_MASK); malformed rows are
 #      skipped and MAP_LIGHTS_MAX caps the count;
 #   2. a row without "lights" (contract 1) spawns no map lights at all;
+#   2b. map lights stay dark under the unexplored fog until a tile next to
+#      them is explored (MapLoader.update_map_light_visibility);
 #   3. the placed fire props (brazier, campfire, torch) emit light through
 #      Items.json emits_light in the explicit warm light_color, not a trait.
 # Synthetic map through the real generate_structured_map; this node stands in
@@ -56,6 +58,7 @@ func _ready() -> void:
 	_case_contract2_row()
 	_case_contract1_row()
 	_case_cap()
+	_case_fog_visibility()
 	await _case_fire_props()
 	print("MAP LIGHTS DONE: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -135,6 +138,38 @@ func _case_cap() -> void:
 	var root: Node2D = ml.get("map_lights")
 	var n: int = root.get_child_count() if root != null else -1
 	_report("cap.map-lights-max", n == MAP_LOADER.MAP_LIGHTS_MAX, "%d of %d rows" % [n, rows.size()])
+	ml.queue_free()
+
+
+# Map lights follow the unexplored fog (ExplorationManager), not the item LOS
+# rule: dark until a tile within MAP_LIGHT_REVEAL_TILES (1) is explored, and
+# always lit on a map without that fog.
+func _case_fog_visibility() -> void:
+	var ml := _loader()
+	ml.generate_structured_map(_row({"export_contract": 2, "lights": [
+		{"position": [96, 96], "level": 0.5, "source": "hearth"},      # tile (1, 1)
+		{"position": [800, 800], "level": 0.5, "source": "forge"}]}))   # tile (12, 12)
+	var root: Node2D = ml.get("map_lights")
+	var n: int = root.get_child_count() if root != null else -1
+	_report("fog.two-lights", n == 2, "%d lights" % n)
+	if n != 2:
+		ml.queue_free()
+		return
+	var a: Node2D = root.get_child(0)
+	var b: Node2D = root.get_child(1)
+	ExplorationManager.begin_map("map_lights_fog_test", true)
+	ml.update_map_light_visibility()
+	_report("fog.unexplored-dark", not a.visible and not b.visible, "%s %s" % [a.visible, b.visible])
+	ExplorationManager.seed_explored(Vector2i(3, 3))   # two tiles from (1, 1)
+	ml.update_map_light_visibility()
+	_report("fog.two-tiles-off-still-dark", not a.visible)
+	ExplorationManager.seed_explored(Vector2i(2, 2))   # a neighbour of (1, 1)
+	ml.update_map_light_visibility()
+	_report("fog.explored-neighbour-lit", a.visible and not b.visible, "%s %s" % [a.visible, b.visible])
+	ExplorationManager.begin_map("map_lights_fog_off", false)
+	ml.update_map_light_visibility()
+	_report("fog.no-fog-map-lit", a.visible and b.visible, "%s %s" % [a.visible, b.visible])
+	ExplorationManager.clear_map("map_lights_fog_test")
 	ml.queue_free()
 
 

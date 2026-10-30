@@ -1238,6 +1238,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	for pc in party_chars:
 		if is_instance_valid(pc):
 			ExplorationManager.seed_explored(GridManager.world_to_map(pc.global_position), 2)
+	# Map lights (a contract-2 row's forges and hearths) follow that fog, so
+	# a light in unexplored rooms is dark from the first frame.
+	map_loader.update_map_light_visibility()
 
 	# 6. Spawn NPCs
 	_spawn_npcs(current_map_data.get("npc_spawns", []))
@@ -1887,6 +1890,7 @@ func _relocate_party(spawn_key: String) -> void:
 	# planning shows who is (and isn't) in view on the new level.
 	_update_npc_los_visibility()
 	_update_item_los_visibility()
+	map_loader.update_map_light_visibility()
 	var focus = primary_selected if is_instance_valid(primary_selected) else player
 	if player_camera and focus and is_instance_valid(focus):
 		player_camera.manual_pan_active = false
@@ -3802,6 +3806,8 @@ func _process(delta: float) -> void:
 			var fog_vp := get_viewport()
 			if fog_vp and fog_vp.world_2d:
 				ExplorationManager.sweep(party_chars, fog_vp.world_2d.direct_space_state)
+			# map lights come on as the fog around them lifts
+			map_loader.update_map_light_visibility()
 		# Surrender button visibility and combat music, polled at 2 Hz off the
 		# same sweep: hostiles near the party that it knows about (round 6).
 		_surrender_poll_accum += delta
