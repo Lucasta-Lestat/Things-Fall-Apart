@@ -5,8 +5,10 @@ extends Node2D
 ## computes edge masks, and runs the flow sim), and drives reactive ripples via
 ## FluidManager.add_ripple. Verifies Tasks 4/5/6 wired together, not just the
 ## shader. Run:  godot --path <proj> res://vfx/FluidIntegrationTest.tscn -- --shot
+## The --shot PNGs go to TFA_SHOT_DIR (default user://shots: tests/shot_dir.gd).
 
 const TILE := 64
+const ShotDir := preload("res://tests/shot_dir.gd")
 var _fm  # FluidManager
 var _ripple_t := 0.0
 var _ripple_i := 0
@@ -88,12 +90,13 @@ func _setup_camera(center: Vector2, zoom: float) -> void:
 
 func _run_capture() -> void:
 	await get_tree().create_timer(1.4).timeout
-	_save("res://_preview_integration_1.png")
+	_save("_preview_integration_1.png")
 	await get_tree().create_timer(1.0).timeout
-	_save("res://_preview_integration_2.png")
+	_save("_preview_integration_2.png")
 	get_tree().quit()
 
-func _save(path: String) -> void:
+func _save(file_name: String) -> void:
+	var path := ShotDir.dir() + "/" + file_name
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(path)
 	print("SAVED ", path)

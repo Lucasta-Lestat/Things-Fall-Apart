@@ -3,9 +3,11 @@ extends Node2D
 ## Builds a floor, a still pond, a flowing river, partial puddles, and one tile
 ## per fluid type, drives some reactive ripples, and saves screenshots so the
 ## look can be reviewed. Run:  godot --path <proj> res://vfx/WaterShowcase.tscn
-## Set capture=true (default) to auto-screenshot and quit.
+## Set capture=true (default) to auto-screenshot and quit. The PNGs go to
+## TFA_SHOT_DIR (default user://shots: tests/shot_dir.gd).
 
 const TILE := 64
+const ShotDir := preload("res://tests/shot_dir.gd")
 const WATER_SHADER := "res://vfx/shaders/water_flow.gdshader"
 const OIL_SHADER := "res://vfx/shaders/oil_sheen.gdshader"
 
@@ -218,14 +220,15 @@ func _cfg_blood() -> Dictionary:
 # ---------------------------------------------------------------- capture
 func _run_capture() -> void:
 	await get_tree().create_timer(1.6).timeout
-	_save("res://_preview_water_1.png")
+	_save("_preview_water_1.png")
 	await get_tree().create_timer(1.1).timeout
-	_save("res://_preview_water_2.png")
+	_save("_preview_water_2.png")
 	await get_tree().create_timer(1.1).timeout
-	_save("res://_preview_water_3.png")
+	_save("_preview_water_3.png")
 	get_tree().quit()
 
-func _save(path: String) -> void:
+func _save(file_name: String) -> void:
+	var path := ShotDir.dir() + "/" + file_name
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(path)

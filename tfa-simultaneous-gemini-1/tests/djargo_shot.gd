@@ -2,8 +2,9 @@ extends Node2D
 # One-off QA: spawn Djargo the way Game does and verify his authored gear
 # renders on the rig (template equipment -> auto-equip -> fitted layers).
 # Run WINDOWED:  godot --path . res://tests/djargo_shot.tscn
+# Saves __djargo_qa.png under TFA_SHOT_DIR (default user://shots: tests/shot_dir.gd).
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
-const OUT := "C:/dev/Things-Fall-Apart-Local/tfa-simultaneous-gemini-1/__djargo_qa.png"
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 
 func _visible_wearables(c) -> Array:
@@ -38,6 +39,7 @@ func _ready() -> void:
 	for i in 12:
 		await get_tree().process_frame
 	print("djargo wearables: ", _visible_wearables(c))
-	get_viewport().get_texture().get_image().save_png(OUT)
-	print("shot saved: ", OUT)
+	var out := ShotDir.dir() + "/__djargo_qa.png"
+	get_viewport().get_texture().get_image().save_png(out)
+	print("shot saved: ", out)
 	get_tree().quit()

@@ -14,11 +14,13 @@ extends Node
 #      again (the check tells the two apart).
 # WINDOWED only: the headless renderer is a dummy and reads black pixels.
 #   godot --path . --resolution 64x64 --position -20000,-20000 res://tests/map_lights_shot.tscn
-# Env TFA_SHOT_DIR: also save the shots there (outside the project).
+# Env TFA_SHOT_DIR: also save the shots there (outside the project; one inside
+# it goes to user://shots instead: tests/shot_dir.gd).
 # Judge by the PASS/FAIL lines and "MAP LIGHTS SHOT DONE: N checks, M FAIL".
 
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+const ShotDir := preload("res://tests/shot_dir.gd")
 const SIZE := Vector2i(800, 600)
 const DARK := 0.15            # CanvasModulate grey: an unlit ground pixel reads ~38
 const LIT_MIN := 30           # a lit pixel reads at least this much above unlit
@@ -37,6 +39,7 @@ var ml: Node2D
 var _fails := 0
 var _checks := 0
 var _base := 0
+var _shot_dir := ""   # "" = do not save the shots
 
 
 func _report(check_name: String, ok: bool, detail: String = "") -> void:
@@ -53,6 +56,7 @@ func _ready() -> void:
 	w.size = Vector2i(64, 64)
 	w.position = Vector2i(-20000, -20000)
 	TimeManager.pause_time()
+	_shot_dir = ShotDir.dir("TFA_SHOT_DIR", true)
 	GridManager.TILE_SIZE = 64
 	GridManager.initialize(1024, 1024)
 	sv = SubViewport.new()
@@ -101,9 +105,8 @@ func _shot(tag: String) -> Image:
 	for _i in 12:
 		await RenderingServer.frame_post_draw
 	var img := sv.get_texture().get_image()
-	var dir := OS.get_environment("TFA_SHOT_DIR").strip_edges()
-	if dir != "":
-		img.save_png("%s/map_lights_shot_%s.png" % [dir, tag])
+	if _shot_dir != "":
+		img.save_png("%s/map_lights_shot_%s.png" % [_shot_dir, tag])
 	return img
 
 

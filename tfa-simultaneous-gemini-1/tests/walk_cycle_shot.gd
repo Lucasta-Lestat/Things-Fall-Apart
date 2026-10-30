@@ -5,8 +5,9 @@ extends Node2D
 # human female), facing south then north, ~16 frames across one walk loop.
 # Prints per-frame arm-bone scale telemetry to correlate visual balloons with
 # bone state. Run WINDOWED:  godot --path . res://tests/walk_cycle_shot.tscn
+# Sheets go to TFA_SHOT_DIR (default user://shots: tests/shot_dir.gd).
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
-const OUT := "C:/dev/Things-Fall-Apart-Local/tfa-simultaneous-gemini-1/__walk_qa_%s.png"
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 var chars: Array = []
 
@@ -92,5 +93,6 @@ func _shoot(tag: String) -> void:
 		img.convert(Image.FORMAT_RGB8)
 		sheet.blit_rect(img, Rect2i(0, 0, fw, fh),
 			Vector2i((f % cols) * fw, (f / cols) * fh))
-	sheet.save_png(OUT % tag)
-	print("QA: saved ", OUT % tag)
+	var out := "%s/__walk_qa_%s.png" % [ShotDir.dir(), tag]
+	sheet.save_png(out)
+	print("QA: saved ", out)

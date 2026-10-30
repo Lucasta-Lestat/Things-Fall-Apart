@@ -6,8 +6,8 @@
 #   <godot_console_exe> --path . res://tests/reward_screen_preview.tscn
 #
 # It renders each shot with the real engine — real Cinzel, real theme, real
-# container layout, real GuillocheRect _draw — writes PNGs next to the project,
-# and quits. Beats playing to a turn-in every time you nudge a margin.
+# container layout, real GuillocheRect _draw — writes PNGs under TFA_SHOT_DIR
+# (default user://shots, never the project: tests/shot_dir.gd), and quits. Beats playing to a turn-in every time you nudge a margin.
 #
 # Shots written:
 #   _preview_reward_3.png    the shipped three-offer bounty screen
@@ -15,11 +15,10 @@
 #   _preview_reward_4.png    four offers (the squeeze case)
 #   _preview_trophy.png      the severed head at its real in-world pixel width
 #
-# These are throwaway: delete the _preview*.png AND their .import siblings when
-# you are done looking, or Godot imports them as game assets.
 extends Node2D
 
-const OUT_DIR := "res://"
+const ShotDir := preload("res://tests/shot_dir.gd")
+var _out_dir := ""
 const SHOTS: Array = [
 	{"file": "_preview_reward_3.png", "offers": [
 		{"type": "money", "amount": 180},
@@ -50,7 +49,7 @@ func _ready() -> void:
 
 	await _shoot_trophy()
 
-	print("[preview] done — open the _preview_*.png files in the project root")
+	print("[preview] done — open the _preview_*.png files in %s" % _out_dir)
 	get_tree().quit(0)
 
 
@@ -104,7 +103,9 @@ func _shoot_trophy() -> void:
 
 func _capture(file_name: String) -> void:
 	var img: Image = get_viewport().get_texture().get_image()
-	var path: String = OUT_DIR + file_name
+	if _out_dir == "":
+		_out_dir = ShotDir.dir()
+	var path: String = _out_dir + "/" + file_name
 	var err: int = img.save_png(path)
 	print("[preview] %s -> %s" % [file_name, "ok" if err == OK else "ERR %d" % err])
 

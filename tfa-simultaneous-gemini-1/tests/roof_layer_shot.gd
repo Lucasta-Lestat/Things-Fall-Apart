@@ -2,9 +2,10 @@ extends Node2D
 # Visual QA for the DF-style RoofLayer cover: renders tg_guild_hall's ground
 # art (roofless, interiors painted in) with the RoofLayer quads on top, and
 # saves one screenshot per view slice to the path given by TFA_SHOT_DIR (env),
-# defaulting beside the project. WINDOWED only — the headless renderer is a
-# dummy and saves black PNGs.
+# defaulting to user://shots (never the project: tests/shot_dir.gd). WINDOWED
+# only — the headless renderer is a dummy and saves black PNGs.
 # Run: godot --path . res://tests/roof_layer_shot.tscn
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 func _ready() -> void:
 	GridManager.TILE_SIZE = 64
@@ -48,9 +49,7 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 
-	var out_dir := OS.get_environment("TFA_SHOT_DIR")
-	if out_dir == "":
-		out_dir = "."
+	var out_dir := ShotDir.dir()
 	roofs.visible = true
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw

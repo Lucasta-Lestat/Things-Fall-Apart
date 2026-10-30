@@ -10,10 +10,12 @@ extends Node2D
 # Env: TFA_MAP (default tg_castle_keep), TFA_SECS (default 40), TFA_FX=0 to
 #      disable the CellFireFX redraw, TFA_CHARS (default 12 idle characters),
 #      TFA_SHOT=<png path> + TFA_SHOT_T=<sim second> to screenshot the first
-#      patch (windowed only), TFA_CAM_ZOOM (default 0.5). The fire RNG is
+#      patch (windowed only; a path inside the project goes to user://shots:
+#      tests/shot_dir.gd), TFA_CAM_ZOOM (default 0.5). The fire RNG is
 #      seeded, so two runs light and burn the same cells.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 var structures_in_scene: Array = []
 var characters_in_scene: Array = []
@@ -231,7 +233,8 @@ func _process(_real_delta: float) -> void:
 		get_tree().quit(0)
 
 
-func _take_shot(path: String) -> void:
+func _take_shot(want: String) -> void:
+	var path := ShotDir.file(want, "fire_perf_bench.png")
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(path)
 	print("bench shot saved: " + path)

@@ -1,9 +1,10 @@
 extends Node2D
 # Visual QA shot for the wearable-strip fix: three equipped characters, one
-# frame, saved to __wearable_qa.png at the project root. Run WINDOWED:
+# frame, saved to __wearable_qa.png under TFA_SHOT_DIR (default user://shots:
+# tests/shot_dir.gd). Run WINDOWED:
 #   godot --path . res://tests/wearable_qa_shot.tscn
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
-const OUT := "C:/dev/Things-Fall-Apart-Local/tfa-simultaneous-gemini-1/__wearable_qa.png"
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 
 func _spawn(rid: String, gender: String, pos: Vector2, items: Array) -> void:
@@ -35,6 +36,7 @@ func _ready() -> void:
 		["purple_hood", "peasant's_stained_shirt", "leather_boots"])
 	for i in 12:
 		await get_tree().process_frame
-	get_viewport().get_texture().get_image().save_png(OUT)
-	print("shot saved: ", OUT)
+	var out := ShotDir.dir() + "/__wearable_qa.png"
+	get_viewport().get_texture().get_image().save_png(out)
+	print("shot saved: ", out)
 	get_tree().quit()

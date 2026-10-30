@@ -4,7 +4,8 @@ extends Node
 # normal-size window pops up) while the shots keep their full size. Same env as
 # cone_band_shot (TFA_MAP, TFA_SHOT_DIR, TFA_VIEWERS, TFA_MASKS), plus
 # TFA_SHOT_SIZE="WxH" (default 1400x1000). WINDOWED only: the headless renderer
-# is a dummy and saves black PNGs. Point TFA_SHOT_DIR outside the project.
+# is a dummy and saves black PNGs. TFA_SHOT_DIR outside the project (unset or
+# inside it, the shots go to user://shots: tests/shot_dir.gd).
 # Run: godot --path . --resolution 64x64 --position -20000,-20000 res://tests/cone_band_shot_sv.tscn
 
 const DEFAULT_SIZE := Vector2i(1400, 1000)

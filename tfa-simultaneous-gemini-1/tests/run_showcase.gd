@@ -11,6 +11,7 @@ extends Node2D
 # shots.json: [{"map": "tg_hillside_middle", "x": 1897, "y": 1568, "zoom": 1.5,
 #               "out": "C:/.../guildhall.png"}, ...]   (x/y = export px)
 const ITEM_SCENE := preload("res://Structures/Objects/Item.tscn")
+const ShotDir := preload("res://tests/shot_dir.gd")
 
 var _items_root: Node2D = null
 var _backdrop: Sprite2D = null
@@ -67,8 +68,9 @@ func _ready() -> void:
 		for _i in 6:
 			await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
-		img.save_png(String(shot["out"]))
-		print("run_showcase shot ok: ", shot["out"])
+		var out := ShotDir.file(String(shot["out"]), "run_showcase.png")
+		img.save_png(out)
+		print("run_showcase shot ok: ", out)
 	get_tree().quit()
 
 

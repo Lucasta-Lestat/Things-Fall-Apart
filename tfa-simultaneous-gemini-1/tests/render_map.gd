@@ -2,7 +2,10 @@ extends Node2D
 # Throwaway render harness: loads tg_export through MapLoader like the game and
 # screenshots. Camera via env TFA_CAM_X/Y/ZOOM (defaults: whole-map fit).
 # Run WITHOUT --headless (needs a GPU): godot --path . res://tests/render_map.tscn
+# The shot goes to TFA_SHOT (a png path outside the project; default
+# user://shots/render_map.png: tests/shot_dir.gd).
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
+const ShotDir := preload("res://tests/shot_dir.gd")
 var structures_in_scene: Array = []
 var party_chars: Array = []
 var unlocked_locks: Dictionary = {}
@@ -237,6 +240,6 @@ func _ready() -> void:
 	for _i in 4:
 		await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
-	img.save_png(OS.get_environment("TFA_SHOT"))
+	img.save_png(ShotDir.file(OS.get_environment("TFA_SHOT"), "render_map.png"))
 	print("render_map shot ok")
 	get_tree().quit()

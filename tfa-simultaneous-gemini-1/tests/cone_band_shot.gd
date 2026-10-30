@@ -7,13 +7,15 @@ extends Node2D
 # dummy and saves black PNGs.
 #   viewer "low":  at the foot of a long cliff, facing it (cliff shadow)
 #   viewer "high": on a terrace above lower-terrace walls, facing down
-# Env: TFA_MAP (default tg_hillside_middle), TFA_SHOT_DIR (default "."),
+# Env: TFA_MAP (default tg_hillside_middle), TFA_SHOT_DIR (default user://shots;
+# never the project: tests/shot_dir.gd),
 # TFA_VIEWERS="x,y,deg;x,y,deg" (world px, degrees) to override the picks,
 # TFA_MASKS="1,2" to render raw cone shadow masks instead of v1 / v1.1.
 # Run it through its SubViewport mode (the window stays 64x64 and off-screen):
 #   godot --path . --resolution 64x64 --position -20000,-20000 res://tests/cone_band_shot_sv.tscn
 # Run directly (res://tests/cone_band_shot.tscn), the shots are the window's size.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
+const ShotDir := preload("res://tests/shot_dir.gd")
 const CONE_RADIUS := 900.0
 var structures_in_scene: Array = []
 var party_chars: Array = []
@@ -83,9 +85,7 @@ func _ready() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var z := minf(vp.x, vp.y) / (CONE_RADIUS * 2.3)
 	cam.zoom = Vector2(z, z)
-	var out_dir := OS.get_environment("TFA_SHOT_DIR")
-	if out_dir == "":
-		out_dir = "."
+	var out_dir := ShotDir.dir()
 	for v in viewers:
 		var label: String = v[0]
 		var pos: Vector2 = v[1]
