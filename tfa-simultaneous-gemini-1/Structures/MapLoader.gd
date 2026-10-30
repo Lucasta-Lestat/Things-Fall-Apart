@@ -310,6 +310,14 @@ func _spawn_map_lights(rows: Array) -> Node2D:
 ## its block, every other occluder still shadows it, and a light outside the
 ## block casts the shadow it always did (a ray from outside enters a polygon
 ## through a front-facing edge). Unshadowed lights ignore occluders anyway.
+## The block opens on EVERY side, so a hearth built into an exterior wall line
+## would light the street behind it too. None ships (census 2026-10-30, the 31
+## opened blocks of the 34 shipped light rows): every hearth / glow block backs
+## onto another wall or stands inside its roofed room, and the braziers and
+## forges whose block touches an unroofed tile light the outdoors they stand
+## in; lit shots of the riskiest five showed no leak. Should one appear, open
+## only its room-side faces (an open polyline occluder on the others) or
+## shorten its range.
 func _open_light_blocks(lights: Array) -> void:
 	var lit: Array[Vector2] = []
 	for lv in lights:
