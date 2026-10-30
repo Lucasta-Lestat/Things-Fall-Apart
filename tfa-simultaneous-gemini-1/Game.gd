@@ -2751,6 +2751,9 @@ func _capture_item_state() -> void:
 ## save drops an empty record whose map's authored row has items, so the map
 ## spawns its authored items again. (A v1 player who really cleared such a map
 ## gets its authored items back once; no v1 record can tell the two apart.)
+## TFA has no disk save yet, so today a v1 dict comes only from a test or an
+## older in-memory round trip. A disk loader must write and keep "version":
+## a dict without it reads as v1 here.
 ## Known limitation, not migrated: a record captured before a map's row moved
 ## to TG export contract 2 still holds that map's old items (its pre-contract
 ## clutter, decor and owners), because _restore_item_state replaces the
@@ -2762,6 +2765,8 @@ func _migrate_item_state(states: Dictionary, version: int) -> Dictionary:
 		var rec: Variant = states[map_id]
 		if not (rec is Array) or not (rec as Array).is_empty():
 			continue
+		if not MapDatabase.get_all_map_ids().has(str(map_id)):
+			continue   # a map since removed: keep the record, no lookup error
 		if not (MapDatabase.get_map_data(str(map_id)).get("item_spawns", []) as Array).is_empty():
 			states.erase(map_id)
 			print("[save] v%d save: dropped the empty item record of %s (authored items spawn again)" % [version, map_id])
