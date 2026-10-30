@@ -2,10 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://cs0hmbovsf3ps"
+path="res://.godot/imported/pewter_plate.png-fca47ef864c29c84870734cf27270e5c.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://Items/pewter_plate.png"
+dest_files=["res://.godot/imported/pewter_plate.png-fca47ef864c29c84870734cf27270e5c.ctex"]
 
 [params]
 

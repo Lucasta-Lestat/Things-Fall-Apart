@@ -2,10 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://e3wgytd3hvey"
+path="res://.godot/imported/pewter_tankard.png-4da7c5c7d6d89cf32356865cd51cc09a.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://Items/pewter_tankard.png"
+dest_files=["res://.godot/imported/pewter_tankard.png-4da7c5c7d6d89cf32356865cd51cc09a.ctex"]
 
 [params]
 

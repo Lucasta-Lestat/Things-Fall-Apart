@@ -2,10 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://ljf4cn18l86h"
+path="res://.godot/imported/earthenware_plate.png-b1528d754ea7a8d11184629015fd844a.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://Items/earthenware_plate.png"
+dest_files=["res://.godot/imported/earthenware_plate.png-b1528d754ea7a8d11184629015fd844a.ctex"]
 
 [params]
 

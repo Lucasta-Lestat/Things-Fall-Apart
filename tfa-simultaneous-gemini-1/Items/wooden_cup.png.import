@@ -2,10 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://bevpp6x0buoq"
+path="res://.godot/imported/wooden_cup.png-f7ea2af173899abe7ee8bcb34d280008.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://Items/wooden_cup.png"
+dest_files=["res://.godot/imported/wooden_cup.png-f7ea2af173899abe7ee8bcb34d280008.ctex"]
 
 [params]
 

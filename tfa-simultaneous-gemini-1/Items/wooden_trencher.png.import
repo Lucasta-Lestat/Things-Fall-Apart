@@ -2,10 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://di1n7tqdncuf8"
+path="res://.godot/imported/wooden_trencher.png-a9d0c356d90d6c0f4dcc8a2ca3fa649a.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://Items/wooden_trencher.png"
+dest_files=["res://.godot/imported/wooden_trencher.png-a9d0c356d90d6c0f4dcc8a2ca3fa649a.ctex"]
 
 [params]
 
