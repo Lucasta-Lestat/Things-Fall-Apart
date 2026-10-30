@@ -85392,22 +85392,6 @@
 			],
 			"lights": [
 				{
-					"level": 0.6,
-					"position": [
-						2581.0,
-						2982.0
-					],
-					"source": "glow"
-				},
-				{
-					"level": 0.44,
-					"position": [
-						1410.0,
-						3571.0
-					],
-					"source": "glow"
-				},
-				{
 					"level": 0.5,
 					"position": [
 						1852.0,
