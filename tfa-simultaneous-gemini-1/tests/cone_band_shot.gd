@@ -10,7 +10,9 @@ extends Node2D
 # Env: TFA_MAP (default tg_hillside_middle), TFA_SHOT_DIR (default "."),
 # TFA_VIEWERS="x,y,deg;x,y,deg" (world px, degrees) to override the picks,
 # TFA_MASKS="1,2" to render raw cone shadow masks instead of v1 / v1.1.
-# Run: godot --path . res://tests/cone_band_shot.tscn
+# Run it through its SubViewport mode (the window stays 64x64 and off-screen):
+#   godot --path . --resolution 64x64 --position -20000,-20000 res://tests/cone_band_shot_sv.tscn
+# Run directly (res://tests/cone_band_shot.tscn), the shots are the window's size.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const CONE_RADIUS := 900.0
 var structures_in_scene: Array = []
