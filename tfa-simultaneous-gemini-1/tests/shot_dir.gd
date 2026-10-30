@@ -34,7 +34,8 @@ static func file(path: String, default_name: String) -> String:
 	var fname := default_name
 	var out_dir := ""
 	if want != "":
-		fname = want.get_file()
+		if want.get_file() != "":
+			fname = want.get_file()
 		var base := want.get_base_dir()
 		out_dir = _outside_project(base if base != "" else ".", "shot path")
 	if out_dir == "":
@@ -46,16 +47,31 @@ static func file(path: String, default_name: String) -> String:
 
 
 # want as an absolute directory outside the project, else "" (with a warning
-# when want was set but refused).
+# when want was set but refused). Any Godot project counts, not only this one:
+# another checkout or worktree of TFA would import the images just the same.
 static func _outside_project(want: String, what: String) -> String:
 	if want == "":
 		return ""
-	var full := ProjectSettings.globalize_path(want).replace("\\", "/").trim_suffix("/")
+	var full := ProjectSettings.globalize_path(want).replace("\\", "/").simplify_path().trim_suffix("/")
 	var project := ProjectSettings.globalize_path("res://").replace("\\", "/").trim_suffix("/")
 	var low := full.to_lower()
 	var proj_low := project.to_lower()
-	if not full.is_absolute_path() or low == proj_low or low.begins_with(proj_low + "/"):
-		push_warning("%s (%s) is inside the project or relative: shots go to %s instead" % [
+	if not full.is_absolute_path() or low == proj_low or low.begins_with(proj_low + "/") \
+			or _in_godot_project(full):
+		push_warning("%s (%s) is inside a Godot project or relative: shots go to %s instead" % [
 			what, want, ProjectSettings.globalize_path(DEFAULT_DIR)])
 		return ""
 	return full
+
+
+# True when dir or one of its ancestors holds a project.godot.
+static func _in_godot_project(dir: String) -> bool:
+	var d := dir
+	while d != "":
+		if FileAccess.file_exists(d.trim_suffix("/") + "/project.godot"):
+			return true
+		var parent := d.get_base_dir()
+		if parent == d:
+			break
+		d = parent
+	return false
