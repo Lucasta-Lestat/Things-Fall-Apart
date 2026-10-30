@@ -9,6 +9,10 @@ extends Node2D
 #   2. a row without "lights" (contract 1) spawns no map lights at all;
 #   2b. map lights stay dark under the unexplored fog until a tile next to
 #      them is explored (MapLoader.update_map_light_visibility);
+#   2c. a shadowed light inside a structure's occluder (TG's block-centre
+#      forge / hearth / glow) opens that occluder from inside (its cull mode
+#      leaves CULL_DISABLED; tests/map_lights_shot.tscn checks the pixels);
+#      other occluders and an unshadowed light's block stay as they were;
 #   3. the placed fire props (brazier, campfire, torch) emit light through
 #      Items.json emits_light in the explicit warm light_color, not a trait.
 # Synthetic map through the real generate_structured_map; this node stands in
@@ -59,6 +63,7 @@ func _ready() -> void:
 	_case_contract1_row()
 	_case_cap()
 	_case_fog_visibility()
+	_case_light_in_block()
 	await _case_fire_props()
 	print("MAP LIGHTS DONE: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -170,6 +175,32 @@ func _case_fog_visibility() -> void:
 	ml.update_map_light_visibility()
 	_report("fog.no-fog-map-lit", a.visible and b.visible, "%s %s" % [a.visible, b.visible])
 	ExplorationManager.clear_map("map_lights_fog_test")
+	ml.queue_free()
+
+
+func _case_light_in_block() -> void:
+	var ml := _loader()
+	ml.generate_structured_map(_row({"export_contract": 2,
+		"structures": [{"kind": "wall", "a": [361, 300], "b": [438, 300], "half": 32},   # the hearth's block
+			{"kind": "wall", "a": [300, 400], "b": [500, 400], "half": 8},              # no light inside
+			{"kind": "wall", "a": [600, 300], "b": [680, 300], "half": 32}],            # unshadowed light inside
+		"lights": [{"position": [399.5, 300], "level": 0.5, "source": "hearth"},
+			{"position": [640, 300], "level": 0.2, "shadow": false, "source": "glow"}]}))
+	var modes: Array = []
+	for s in ml.get_children():
+		var occ := (s as Node).get_node_or_null("Occluder") as LightOccluder2D
+		if occ != null:
+			modes.append(occ.occluder.cull_mode)
+	_report("block.three-occluders", modes.size() == 3, str(modes))
+	if modes.size() == 3:
+		_report("block.light-inside-opens-it", modes[0] == OccluderPolygon2D.CULL_COUNTER_CLOCKWISE, str(modes[0]))
+		_report("block.other-occluder-untouched", modes[1] == OccluderPolygon2D.CULL_DISABLED, str(modes[1]))
+		_report("block.unshadowed-light-leaves-it", modes[2] == OccluderPolygon2D.CULL_DISABLED, str(modes[2]))
+	var sq := PackedVector2Array([Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)])   # clockwise on screen
+	sq.reverse()
+	_report("block.winding-picks-the-mode", MAP_LOADER._inside_open_cull(sq) == OccluderPolygon2D.CULL_COUNTER_CLOCKWISE
+		and MAP_LOADER._inside_open_cull(PackedVector2Array([Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]))
+		== OccluderPolygon2D.CULL_CLOCKWISE)
 	ml.queue_free()
 
 

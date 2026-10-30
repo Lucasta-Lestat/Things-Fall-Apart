@@ -265,7 +265,8 @@ func generate_structured_map(map_data: Dictionary) -> void:
 ## P2-C): position [x, y] px, level 0..1 (the emits_light scale of
 ## EquipmentEffects.make_light), optional color [r, g, b] (absent = the fire
 ## colour), optional shadow (absent = true: the LIGHT_SHADOW_MASK shadows every
-## item light casts). "source" is informational and never changes the look.
+## item light casts; the structure a light stands inside does not shadow it,
+## _open_light_blocks). "source" is informational and never changes the look.
 func _spawn_map_lights(rows: Array) -> Node2D:
 	var root := Node2D.new()
 	root.name = "MapLights"
@@ -296,7 +297,50 @@ func _spawn_map_lights(rows: Array) -> Node2D:
 			light.set_meta("source", str(src))
 		root.add_child(light)
 		n += 1
+	_open_light_blocks(root.get_children())
 	return root
+
+
+## TG puts a forge / hearth / glow light at its block's centre (and a brazier
+## on its tower or wall walk), so the light sits INSIDE that structure's
+## occluder. A 2D light's shadow map keeps the nearest occluder edge in each
+## direction, and around a CULL_DISABLED polygon those are the block's own
+## edges: the light lit nothing but its block. That occluder now culls the
+## edges a light inside it faces (_inside_open_cull): the light shines out of
+## its block, every other occluder still shadows it, and a light outside the
+## block casts the shadow it always did (a ray from outside enters a polygon
+## through a front-facing edge). Unshadowed lights ignore occluders anyway.
+func _open_light_blocks(lights: Array) -> void:
+	var lit: Array[Vector2] = []
+	for lv in lights:
+		var light := lv as PointLight2D
+		if light != null and light.shadow_enabled:
+			lit.append(light.global_position)
+	if lit.is_empty():
+		return
+	for sv in get_children():
+		var occ := (sv as Node).get_node_or_null("Occluder") as LightOccluder2D
+		if occ == null or occ.occluder == null \
+				or (occ.occluder_light_mask & CollisionLayers.LIGHT_SHADOW_MASK) == 0:
+			continue
+		var poly: PackedVector2Array = occ.occluder.polygon
+		for p in lit:
+			if Geometry2D.is_point_in_polygon(occ.to_local(p), poly):
+				occ.occluder.cull_mode = _inside_open_cull(poly)
+				break
+
+
+## The cull mode that hides a polygon's edges from a light inside it: the one
+## named after the polygon's on-screen winding (y down). Measured on a wall-seg
+## rectangle (tests/map_lights_shot.tscn): its shoelace sum is negative, and
+## CULL_COUNTER_CLOCKWISE lets the light out while CULL_CLOCKWISE keeps it in.
+static func _inside_open_cull(poly: PackedVector2Array) -> int:
+	var area2 := 0.0
+	for i in poly.size():
+		var a := poly[i]
+		var b := poly[(i + 1) % poly.size()]
+		area2 += a.x * b.y - b.x * a.y
+	return OccluderPolygon2D.CULL_COUNTER_CLOCKWISE if area2 < 0.0 else OccluderPolygon2D.CULL_CLOCKWISE
 
 
 ## Map lights stay dark under the unexplored fog (ExplorationManager): a light
