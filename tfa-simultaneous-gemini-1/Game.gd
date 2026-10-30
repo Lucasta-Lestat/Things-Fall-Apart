@@ -1330,8 +1330,11 @@ func _process_on_load_dialogue_triggers(map_data: Dictionary) -> void:
 			trigger_state.mark_fired(current_map_id, tid)
 
 func _unload_current_map() -> void:
+	# The first load_map unloads before any map exists (current_map_id already
+	# names the launch map, current_map_data is still empty): capture nothing.
+	var map_loaded: bool = not current_map_data.is_empty()
 	# Snapshot any service-NPC live state so trades stick across map transitions.
-	if not _skip_unload_capture:
+	if not _skip_unload_capture and map_loaded:
 		_save_service_npc_states()
 
 	# Snapshot world-item state, then actually clear the item nodes. Items
@@ -2695,7 +2698,11 @@ func apply_save_dict(d: Dictionary) -> void:
 # --- World-item persistence (law/crime Phase 7) ---
 
 func _capture_item_state() -> void:
-	if current_map_id.is_empty():
+	# No map loaded: nothing to capture. current_map_id alone is not enough --
+	# it starts as the launch map (_start_map_id) before the first load, and an
+	# empty record here made _restore_item_state free every item that load had
+	# just spawned (tests/boot_items_check).
+	if current_map_id.is_empty() or current_map_data.is_empty():
 		return
 	var records: Array = []
 	for it in items_in_scene:
