@@ -16,8 +16,13 @@
 #     bypasses the settlement fallback: taking it is no crime;
 #   * a map that is no settlement: a row without keys stays unowned;
 #   * the npc override list is the old hard-coded one (rows without the keys
-#     spawn as before).
-# Real ProceduralCharacter.tscn instances with AI off: fuses never tick here.
+#     spawn as before);
+#   * end to end on the SHIPPED row (Perrow train 2, export contract 2): the
+#     real game.tscn loads tg_hillside_upper through Game._spawn_items, every
+#     Devil-owned bank row comes up as a devil-owned item, the rest fall back to
+#     liziti, and the party taking a bank item is Theft under liziti law.
+# Real ProceduralCharacter.tscn instances with AI off: fuses never tick here
+# (until the last case, which boots the real game and steps out of its way).
 # Run:  godot --headless --path . res://tests/item_owner_theft_test.tscn
 # Judge by PASS/FAIL lines, not exit code alone (startup noise is normal).
 extends Node2D
@@ -85,6 +90,10 @@ func _clear_scene() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 
+func _await_frames(n: int) -> void:
+	for _i in range(n):
+		await get_tree().physics_frame
+
 func _pending(pc: ProceduralCharacter) -> Dictionary:
 	var ai_node = pc.get_node_or_null("AI")
 	return ai_node.pending_outcry if ai_node != null else {}
@@ -101,6 +110,7 @@ func _ready() -> void:
 	await _case_unprotected_owner()
 	await _case_not_a_settlement()
 	_case_npc_overrides()
+	await _case_real_bank_row()
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -211,3 +221,46 @@ func _case_npc_overrides() -> void:
 	_check("npc.override-keys", ov.keys() == ["unique_name", "titles", "faction", "dialogue"], str(ov.keys()))
 	_check("npc.titles-stay-an-array", ov["titles"] is Array)
 	_check("npc.no-keys-no-overrides", SpawnRowSchema.npc_overrides({"template_id": "merchant"}).is_empty())
+
+## The shipped tg_hillside_upper row through the REAL load path: game.tscn
+## (vault_key_test's boot), Game.load_map -> _spawn_items ->
+## SpawnRowSchema.item_owner_faction. This harness stops being the stand-in
+## Game first: CrimeManager reads current_scene, Door/floor code the "game" group.
+func _case_real_bank_row() -> void:
+	remove_from_group("game")
+	var game_scene: PackedScene = load("res://game.tscn")
+	var game = game_scene.instantiate()
+	game.current_map_id = ""   # _ready's load_map("") early-returns; we load below
+	get_tree().root.add_child(game)
+	get_tree().current_scene = game
+	await _await_frames(2)
+	game.load_map(PERROW_MAP)
+	await _await_frames(6)
+	var md: Dictionary = game.current_map_data
+	_check("real.row-is-contract-2", int(md.get("export_contract", 1)) >= 2, str(md.get("export_contract", 1)))
+	var want: int = 0
+	for row in md.get("item_spawns", []):
+		if row is Dictionary and str((row as Dictionary).get("owner_faction", "")) == "devil":
+			want += int((row as Dictionary).get("count", 1))
+	var devil: Array = []
+	var settled: int = 0
+	for it in game.items_in_scene:
+		if not is_instance_valid(it):
+			continue
+		if str(it.owner_faction) == "devil":
+			devil.append(it)
+		elif str(it.owner_faction) == "liziti":
+			settled += 1
+	print("INFO %s: %d Devil-owned bank rows, %d live devil items, %d liziti" % [
+		PERROW_MAP, want, devil.size(), settled])
+	_check("real.bank-rows-ship", want > 0, "no item row carries owner_faction devil")
+	_check("real.bank-items-load-devil-owned", devil.size() == want, "%d rows, %d live" % [want, devil.size()])
+	_check("real.other-items-settlement-owned", settled > 0)
+	if devil.is_empty() or game.party_chars.is_empty():
+		_check("real.party-present", not game.party_chars.is_empty())
+		return
+	var before: int = crimes.size()
+	CrimeManager.report(game.party_chars[0], "take", CrimeManager.take_payload(devil[0]))
+	var v: Dictionary = _last_verdict()
+	_check("real.take-bank-item-is-theft", crimes.size() == before + 1
+		and str(v.get("statute", "")) == "theft" and str(v.get("law_faction", "")) == "liziti", str(v))
