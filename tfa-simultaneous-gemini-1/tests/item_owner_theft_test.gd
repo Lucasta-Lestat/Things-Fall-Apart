@@ -12,6 +12,9 @@
 #     jurisdiction), exactly as before the schema;
 #   * an owner_uid row is owned by that character's faction (the Bank Steward:
 #     devil) over the settlement fallback; an absent owner falls back;
+#   * owner_uid only names the map's own spawns (SpawnRowSchema.faction_of_uid):
+#     a party member or a summon carrying the same template / name never
+#     matches, and "template#N" needs the spawn_ordinal meta (no default 0);
 #   * a per-item owner the law does not protect (golden_guard, liziti's enemy)
 #     bypasses the settlement fallback: taking it is no crime;
 #   * a map that is no settlement: a row without keys stays unowned;
@@ -66,7 +69,8 @@ func _spawn_row(item_def: Dictionary, map_id: String) -> Item:
 	var map_data: Dictionary = MapDatabase.get_map_data(map_id)
 	var item: Item = ITEM_SCENE.instantiate() as Item
 	item.id = str(item_def.get("id", ""))
-	var owner_f: String = SpawnRowSchema.item_owner_faction(item_def, map_data, map_id, characters_in_scene)
+	var owner_f: String = SpawnRowSchema.item_owner_faction(item_def, map_data, map_id, characters_in_scene,
+		party_chars)
 	if not owner_f.is_empty():
 		item.owner_faction = owner_f
 	if item_def.has("owner_uid"):
@@ -107,6 +111,7 @@ func _ready() -> void:
 	await _case_devil_bank_item()
 	await _case_unowned_falls_back()
 	await _case_owner_uid()
+	await _case_uid_only_map_spawns()
 	await _case_unprotected_owner()
 	await _case_not_a_settlement()
 	_case_npc_overrides()
@@ -190,6 +195,67 @@ func _case_owner_uid() -> void:
 	var absent := _spawn_row({"id": "apple", "position": [0, -300], "owner_uid": "merchant/Nobody"}, PERROW_MAP)
 	_check("uid.absent-owner-falls-back", absent.owner_faction == "liziti", absent.owner_faction)
 	_check("uid.absent-owner-uid-kept", absent.owner_uid == "merchant/Nobody")
+	await _clear_scene()
+
+## faction_of_uid matches only the map's own spawns. Every impostor below is
+## listed BEFORE the real spawn it shadows, so a first-hit match on it shows.
+func _case_uid_only_map_spawns() -> void:
+	current_map_id = PERROW_MAP
+	# a recruited party member keeps the steward's spawn meta (join_party)
+	var recruit := _spawn("player", Vector2(0, -300), "Bank Steward")
+	recruit.set_meta("template_id", "merchant")
+	recruit.set_meta("unique_name", "Bank Steward")
+	recruit.set_meta("spawn_ordinal", 0)
+	recruit.set_meta("party_index", 1)
+	# the same, known only through the party list (no party_index meta)
+	var listed := _spawn("player", Vector2(40, -300), "Bank Steward")
+	listed.set_meta("template_id", "merchant")
+	listed.set_meta("unique_name", "Bank Steward")
+	party_chars = [listed]
+	# a summon whose template matches a spawn's ordinal uid
+	var imp := _spawn("golden_guard", Vector2(80, -300), "Rat Swarm")
+	imp.set_meta("template_id", "town_guard")
+	imp.set_meta("unique_name", "")
+	imp.set_meta("spawn_ordinal", 0)
+	imp.set_meta("summoned_by", recruit)
+	# a character that never got a spawn ordinal (rival, test, hand-placed)
+	var stray := _spawn("golden_guard", Vector2(120, -300), "Stray Guard")
+	stray.set_meta("template_id", "town_guard")
+	stray.set_meta("unique_name", "")
+	# the map's real spawns
+	var steward := _spawn("devil", Vector2(400, 400), "Bank Steward", false)
+	steward.set_meta("template_id", "merchant")
+	steward.set_meta("unique_name", "Bank Steward")
+	steward.set_meta("spawn_ordinal", 0)
+	var guard := _spawn("liziti", Vector2(-400, 400), "Watchman", false)
+	guard.set_meta("template_id", "town_guard")
+	guard.set_meta("unique_name", "")
+	guard.set_meta("spawn_ordinal", 0)
+	_check("uidspawn.named-skips-party", SpawnRowSchema.faction_of_uid("merchant/Bank Steward",
+		characters_in_scene, party_chars) == "devil",
+		SpawnRowSchema.faction_of_uid("merchant/Bank Steward", characters_in_scene, party_chars))
+	_check("uidspawn.ordinal-skips-summon-and-unstamped", SpawnRowSchema.faction_of_uid("town_guard#0",
+		characters_in_scene, party_chars) == "liziti",
+		SpawnRowSchema.faction_of_uid("town_guard#0", characters_in_scene, party_chars))
+	_check("uidspawn.merchant-ordinal-skips-recruit", SpawnRowSchema.faction_of_uid("merchant#0",
+		characters_in_scene, party_chars) == "devil",
+		SpawnRowSchema.faction_of_uid("merchant#0", characters_in_scene, party_chars))
+	# with the real spawns gone, nothing else may stand in for them
+	characters_in_scene.erase(steward)
+	characters_in_scene.erase(guard)
+	_check("uidspawn.party-member-never-owns", SpawnRowSchema.faction_of_uid("merchant/Bank Steward",
+		characters_in_scene, party_chars) == "")
+	_check("uidspawn.summon-never-owns", SpawnRowSchema.faction_of_uid("town_guard#0",
+		[imp], []) == "")
+	_check("uidspawn.no-ordinal-meta-no-ordinal-match", SpawnRowSchema.faction_of_uid("town_guard#0",
+		[stray], []) == "")
+	_check("uidspawn.bare-template-still-names-it", SpawnRowSchema.faction_of_uid("town_guard",
+		[stray], []) == "golden_guard")
+	var ledger := _spawn_row({"id": "loose_papers", "position": [0, -300],
+		"owner_uid": "merchant/Bank Steward"}, PERROW_MAP)
+	_check("uidspawn.row-falls-back-not-to-the-party", ledger.owner_faction == "liziti", ledger.owner_faction)
+	steward.queue_free()
+	guard.queue_free()
 	await _clear_scene()
 
 func _case_unprotected_owner() -> void:

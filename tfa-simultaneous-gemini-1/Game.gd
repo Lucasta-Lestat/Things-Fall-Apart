@@ -1934,7 +1934,7 @@ func _spawn_items(item_list: Array) -> void:
 		# else its owner_uid's faction (NPCs spawned above), else the map's
 		# default_item_owner, else the settlement jurisdiction, else unowned.
 		var owner_f: String = SpawnRowSchema.item_owner_faction(item_def, current_map_data,
-			current_map_id, characters_in_scene)
+			current_map_id, characters_in_scene, party_chars)
 		if not owner_f.is_empty():
 			extras["owner_faction"] = owner_f
 		if item_def.has("owner_uid"):

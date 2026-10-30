@@ -35,17 +35,18 @@ static func npc_overrides(npc_def: Dictionary) -> Dictionary:
 ## Who owns a placed item. First hit wins:
 ##   1. the row's owner_faction;
 ##   2. the row's owner_uid -> that character's faction, when the character is
-##      on the map (alive or a corpse): a per-item owner beats the map defaults;
+##      one of the map's spawns (alive or a corpse; never a party member or a
+##      summon: faction_of_uid): a per-item owner beats the map defaults;
 ##   3. the map's default_item_owner;
 ##   4. the map's jurisdiction when the map declares "settlement": true;
 ##   5. "" = unowned.
 ## Deliberately NO "everything on a lawful map is owned" global: that
 ## criminalises picking up a stray apple with no authoring signal.
 static func item_owner_faction(item_def: Dictionary, map_data: Dictionary, map_id: String,
-		characters: Array) -> String:
+		characters: Array, party: Array = []) -> String:
 	var owner_f: String = str(item_def.get("owner_faction", ""))
 	if owner_f.is_empty() and item_def.has("owner_uid"):
-		owner_f = faction_of_uid(str(item_def["owner_uid"]), characters)
+		owner_f = faction_of_uid(str(item_def["owner_uid"]), characters, party)
 	if owner_f.is_empty():
 		owner_f = str(map_data.get("default_item_owner", ""))
 	if owner_f.is_empty() and bool(map_data.get("settlement", false)):
@@ -56,19 +57,26 @@ static func item_owner_faction(item_def: Dictionary, map_data: Dictionary, map_i
 ## The faction of the spawned character whose persistence uid is uid: the
 ## named form "template_id/unique_name" (or a bare template_id) or the
 ## ordinal form "template_id#N" (Game._build_npc_uid / _save_service_npc_states).
+## Only a map's own spawns own things: party members (party_index meta, or in
+## party) and summons (summoned_by meta) never match, and the ordinal form
+## needs the spawn_ordinal meta Game._spawn_npcs stamps (no default 0 that
+## would hand "template#0" to any character of that template).
 ## "" when no such character is on the map.
-static func faction_of_uid(uid: String, characters: Array) -> String:
+static func faction_of_uid(uid: String, characters: Array, party: Array = []) -> String:
 	if uid.is_empty():
 		return ""
 	for c in characters:
 		if not is_instance_valid(c) or not ("faction_id" in c):
+			continue
+		if c in party or c.has_meta("party_index") or c.has_meta("summoned_by"):
 			continue
 		var tid: String = str(c.get_meta("template_id", ""))
 		if tid.is_empty():
 			continue
 		var uname: String = str(c.get_meta("unique_name", ""))
 		var named: String = tid if uname.is_empty() else tid + "/" + uname
-		var ordinal: String = "%s#%d" % [tid, int(c.get_meta("spawn_ordinal", 0))]
-		if uid == named or uid == ordinal:
+		if uid == named:
+			return str(c.faction_id)
+		if c.has_meta("spawn_ordinal") and uid == "%s#%d" % [tid, int(c.get_meta("spawn_ordinal"))]:
 			return str(c.faction_id)
 	return ""
