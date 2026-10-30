@@ -2631,12 +2631,16 @@ func _on_surrender_pressed() -> void:
 # F11 debug hotkey), so it cannot rot the way the orphans did. Disk save is
 # then FileAccess + JSON.stringify around a tested function.
 # v1->v2 rule: additive only; every read via .get(key, default).
+# Version 2: written after the boot capture fix (_capture_item_state); a v1
+# save's item records go through _migrate_item_state on load.
+const SAVE_VERSION := 2
+
 func build_save_dict() -> Dictionary:
 	save_party_state()
 	_save_service_npc_states()
 	_capture_item_state()
 	return {
-		"version": 1,
+		"version": SAVE_VERSION,
 		"party_state": party_state.duplicate(true),
 		"npc_state_per_region": npc_state_per_region.duplicate(true),
 		"item_state_per_map": item_state_per_map.duplicate(true),
@@ -2674,7 +2678,8 @@ func load_save(d: Dictionary) -> void:
 func apply_save_dict(d: Dictionary) -> void:
 	party_state = d.get("party_state", party_state).duplicate(true)
 	npc_state_per_region = d.get("npc_state_per_region", {}).duplicate(true)
-	item_state_per_map = d.get("item_state_per_map", {}).duplicate(true)
+	item_state_per_map = _migrate_item_state(d.get("item_state_per_map", {}).duplicate(true),
+		int(d.get("version", 1)))
 	FactionDatabase.standing_from_dict(d.get("factions", {}))
 	QuestManager.load_save_data(d.get("quests", {}))
 	TrainingManager.load_save_data(d.get("training", {}))
@@ -2739,6 +2744,26 @@ func _capture_item_state() -> void:
 			record["current_health"] = int(it.current_health)
 		records.append(record)
 	item_state_per_map[current_map_id] = records
+
+## A save written before version 2 can hold an EMPTY record for the launch
+## map: the boot capture bug recorded [] before any map had loaded, and
+## _restore_item_state then kept that map bare on every visit. On load, a v1
+## save drops an empty record whose map's authored row has items, so the map
+## spawns its authored items again. (A v1 player who really cleared such a map
+## gets its authored items back once; no v1 record can tell the two apart.)
+## Known limitation, not migrated: a record captured before a map's row moved
+## to TG export contract 2 still holds that map's old items (its pre-contract
+## clutter, decor and owners), because _restore_item_state replaces the
+## authored spawns wholesale and a record carries no contract to compare.
+func _migrate_item_state(states: Dictionary, version: int) -> Dictionary:
+	if version >= SAVE_VERSION:
+		return states
+	for map_id in states.keys():
+		var rec: Variant = states[map_id]
+		if rec is Array and (rec as Array).is_empty() 				and not (MapDatabase.get_map_data(str(map_id)).get("item_spawns", []) as Array).is_empty():
+			states.erase(map_id)
+			print("[save] v%d save: dropped the empty item record of %s (authored items spawn again)" % [version, map_id])
+	return states
 
 func _restore_item_state() -> void:
 	if not item_state_per_map.has(current_map_id):

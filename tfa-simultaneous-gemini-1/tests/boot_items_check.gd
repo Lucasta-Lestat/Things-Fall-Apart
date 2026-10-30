@@ -7,6 +7,9 @@
 # load had just spawned: a new game opened on a bare Perrow, and the empty
 # record stuck on every revisit. Unlike the other game.tscn harnesses this one
 # does NOT clear current_map_id: _ready boots the real launch path.
+# A save written before the fix (version 1) can still hold that [] record:
+# Game._migrate_item_state drops it on load, so the launch map's authored
+# items come back; a version-2 save's records load as written.
 # Run:  godot --headless --path . res://tests/boot_items_check.tscn
 # Judge by PASS/FAIL lines and the DONE line (startup noise is normal).
 extends Node2D
@@ -99,7 +102,34 @@ func _ready() -> void:
 	var back_ids: Array = _item_ids()
 	_check("warp.items-survive", not back_ids.is_empty() and back_ids == boot_ids,
 		"%d live items after the round trip, %d after boot" % [back_ids.size(), boot_ids.size()])
+	await _case_v1_save(start, boot_ids)
 	_finish()
+
+## A version-1 save made on the bug (an empty launch-map record) loads with the
+## launch map's authored items; the same record in a version-2 save is kept.
+func _case_v1_save(start: String, boot_ids: Array) -> void:
+	var some: Array = [{"id": "apple", "x": 0.0, "y": 0.0}]
+	var mig: Dictionary = game._migrate_item_state({start: [], "tg_export": some.duplicate(true),
+		"no_such_map": []}, 1)
+	_check("save.v1-empty-record-dropped", not mig.has(start), str(mig.keys()))
+	_check("save.v1-other-records-kept", mig.has("tg_export") and (mig["tg_export"] as Array).size() == 1
+		and mig.has("no_such_map"), str(mig.keys()))
+	var kept: Dictionary = game._migrate_item_state({start: []}, int(game.SAVE_VERSION))
+	_check("save.v2-empty-record-kept", kept.has(start))
+	var d: Dictionary = game.build_save_dict()
+	_check("save.writes-current-version", int(d.get("version", 0)) == int(game.SAVE_VERSION), str(d.get("version")))
+	d["version"] = 1
+	d["item_state_per_map"] = {start: []}
+	game.load_save(d)
+	await _await_frames(6)
+	var v1_ids: Array = _item_ids()
+	_check("save.v1-launch-map-not-bare", not v1_ids.is_empty() and v1_ids == boot_ids,
+		"%d live items after a v1 load, %d after boot" % [v1_ids.size(), boot_ids.size()])
+	d["version"] = int(game.SAVE_VERSION)
+	d["item_state_per_map"] = {start: []}
+	game.load_save(d)
+	await _await_frames(6)
+	_check("save.v2-record-loads-as-written", _item_ids().is_empty(), "%d live items" % _item_ids().size())
 
 func _finish() -> void:
 	print("BOOT ITEMS DONE failures=%d" % failures)
