@@ -422,9 +422,12 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	# (exporter: walls[].occlude_h), else wall/door 1 story, tree/solid disc 2.
 	# Ignored on decks. Below eye height (0.5) the structure never blocks sight.
 	# TG export contract 2 (P2-A) writes it on building walls (the building's
-	# stories), curtain pieces (walk_h + merlon_h) and "hedge" tree rows (0.45:
-	# see-over, still an obstacle). A tree row's "stories" (the crown top) is NOT
-	# read here: the trunk keeps its 2 stories until P3-F's crown band.
+	# stories), door rows (the occlude_h of the walls either side of the gap: a
+	# CLOSED leaf blocks as high as its walls; an open Door hides its occluder
+	# and leaves the vision layer), curtain pieces (walk_h + merlon_h) and
+	# "hedge" tree rows (0.45: see-over, still an obstacle). A tree row's
+	# "stories" (the crown top) is NOT read here: the trunk keeps its 2 stories
+	# until P3-F's crown band.
 	var occ_h: float = 2.0 if (kind == "tree" or kind == "disc") else 1.0
 	var has_occ_h: bool = s.get("occlude_h") != null
 	if has_occ_h:

@@ -2,7 +2,8 @@
 # Headless assertion harness for TG export contract 2's sight heights (P2-A,
 # TG docs/export_contract.md): building walls that occlude by their stories,
 # see-over "hedge" rows that still block walking, curtain pieces at their drawn
-# height, and tree rows carrying "stories". The rows are INJECTED through
+# height, tree rows carrying "stories", and door rows whose CLOSED leaf occludes
+# as high as its walls (open, it blocks nothing). The rows are INJECTED through
 # MapLoader._spawn_geo_structure exactly as an export would write them, so this
 # runs before Perrow train 2 re-exports anything; every contract-2 row has a
 # contract-1 twin that must keep today's behaviour.
@@ -35,7 +36,9 @@ func _check(check_name: String, cond: bool, detail: String = "") -> void:
 func _ready() -> void:
 	_scenario_hedge_def()
 	await _scenario_flat()
+	await _scenario_flat_doors()
 	await _scenario_relief()
+	await _scenario_relief_doors()
 	print("SIGHT HEIGHTS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -71,6 +74,21 @@ func _vwall_row(x: float, y0: float, y1: float, extra: Dictionary = {}) -> Dicti
 func _hedge_row(x: float, y: float) -> Dictionary:
 	return {"kind": "tree", "pos": [x, y], "r": 24.0, "id": "hedge", "hp": 40,
 		"occlude_h": 0.45, "stories": 0.5}
+
+
+# A door row as MapExporter writes it, its 128 px leaf centred on (x, y):
+# deg 0 runs along x (a horizontal wall's gap), deg 90 along y. Contract 2 adds
+# the walls' "occlude_h" (P2-A, F2); contract-1 rows carry no key.
+func _door_row(x: float, y: float, deg: float, extra: Dictionary = {}) -> Dictionary:
+	var hinge := Vector2(x, y) - Vector2.RIGHT.rotated(deg_to_rad(deg)) * 64.0
+	var r := {"kind": "door", "hinge": [hinge.x, hinge.y], "deg": deg, "width": 128.0, "half": 12.0,
+		"id": "door_wood", "hp": 50.0}
+	r.merge(extra, true)
+	return r
+
+
+func _occ_visible(inst: Node) -> bool:
+	return (inst.get_node("Occluder") as CanvasItem).visible
 
 
 # 1. The structure definition the hedge id resolves to.
@@ -172,6 +190,59 @@ func _scenario_flat() -> void:
 	await _settle()
 
 
+# 2b. FLAT MAP doors (F2): the same columns as 2, the leaf across y = 672. A
+# closed contract-2 leaf occludes as high as its walls; open, it blocks
+# nothing; closed again, the height is back.
+func _scenario_flat_doors() -> void:
+	GridManager.TILE_SIZE = 64
+	GridManager.initialize(48 * 64, 20 * 64)
+	GridManager.refresh_terrain_stats()
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	var cols := {"c1_door": 224.0, "c2_door1": 544.0, "c2_door2": 864.0, "c2_door3": 1184.0}
+	var st: Dictionary = {}
+	st["c1_door"] = ml._spawn_geo_structure(_door_row(cols["c1_door"], 672.0, 0.0), null, 64)
+	st["c2_door1"] = ml._spawn_geo_structure(_door_row(cols["c2_door1"], 672.0, 0.0, {"occlude_h": 1.0}), null, 64)
+	st["c2_door2"] = ml._spawn_geo_structure(_door_row(cols["c2_door2"], 672.0, 0.0, {"occlude_h": 2.0}), null, 64)
+	st["c2_door3"] = ml._spawn_geo_structure(_door_row(cols["c2_door3"], 672.0, 0.0, {"occlude_h": 3.0}), null, 64)
+	await _settle()
+	var space := get_world_2d().direct_space_state
+	var los := func(key: String, viewer_elev: float) -> bool:
+		var x: float = cols[key]
+		return GridManager.sight_line_clear(space, Vector2(x, 352.0), Vector2(x, 992.0), viewer_elev, 0.0)
+	var ground := CollisionLayers.SIGHT_MASK_GROUND
+	var high := CollisionLayers.SIGHT_MASK_HIGH
+
+	var d1: Structure = st["c1_door"]
+	_check("door.flat-c1-default", d1 is Door and is_equal_approx(_top(d1), 1.0) and _mask(d1) == ground,
+		"top=%.2f mask=%d" % [_top(d1), _mask(d1)])
+	_check("door.flat-c2-1story-equals-c1", is_equal_approx(_top(st["c2_door1"]), _top(d1))
+		and _mask(st["c2_door1"]) == _mask(d1))
+	_check("door.flat-c2-2story-high-bit", is_equal_approx(_top(st["c2_door2"]), 2.0)
+		and _mask(st["c2_door2"]) == (ground | high), "top=%.2f mask=%d" % [_top(st["c2_door2"]), _mask(st["c2_door2"])])
+	_check("door.flat-ground-viewer-blocked-by-closed", not los.call("c1_door", 0.0) and not los.call("c2_door2", 0.0))
+	_check("door.flat-deck-viewer-sees-over-c1-door", los.call("c1_door", 1.44) and los.call("c2_door1", 1.44))
+	_check("door.flat-deck-viewer-blocked-by-2story-door", not los.call("c2_door2", 1.44))
+	_check("door.flat-roof-viewer-sees-over-2story-door", los.call("c2_door2", 2.0))
+	_check("door.flat-roof-viewer-blocked-by-3story-door", not los.call("c2_door3", 2.0))
+
+	# open: no LOS body and no cone shadow, whatever the height
+	var d2: Door = st["c2_door2"]
+	d2.open_door()
+	await _settle()
+	_check("door.flat-open-clears-ground-and-deck", d2.is_open and los.call("c2_door2", 0.0)
+		and los.call("c2_door2", 1.44))
+	_check("door.flat-open-hides-occluder", not _occ_visible(d2))
+	d2.close_door()
+	await _settle()
+	_check("door.flat-closed-again-blocks-deck", not d2.is_open and not los.call("c2_door2", 1.44)
+		and los.call("c2_door2", 2.0))
+	_check("door.flat-closed-again-occluder", _occ_visible(d2) and _mask(d2) == (ground | high)
+		and is_equal_approx(_top(d2), 2.0), "mask=%d top=%.2f" % [_mask(d2), _top(d2)])
+	ml.queue_free()
+	await _settle()
+
+
 # Synthetic terraces (the elevation harness's): 8.0 (x <= 9), 8.4 (x 10..14),
 # a 3.6-story cliff up to 12.0 (x >= 15).
 func _build_terraces() -> void:
@@ -257,5 +328,48 @@ func _scenario_relief() -> void:
 	_check("relief.follow-wall-keeps-occlude-h", pw.has_meta("occlude_rel_h")
 		and is_equal_approx(float(pw.get_meta("occlude_rel_h")), 2.0))
 	pw.free()
+	ml.queue_free()
+	await _settle()
+
+
+# 4. RELIEF MAP doors (F2): a deg-90 leaf across x = 520 on the 8.0 terrace
+# (tile 8), centred on the street/hill line y = 352, as the walls in 3.
+func _scenario_relief_doors() -> void:
+	_build_terraces()
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	var space := get_world_2d().direct_space_state
+	var target := Vector2(160.0, 352.0)
+	var hill := Vector2(1056.0, 352.0)
+	var street := Vector2(800.0, 352.0)
+	var high := CollisionLayers.SIGHT_MASK_HIGH
+
+	# --- contract 1 (no key): today's 1-story leaf
+	var d1: Structure = ml._spawn_geo_structure(_door_row(520.0, 352.0, 90.0), null, 64)
+	await _settle()
+	_check("door.relief-c1-top", is_equal_approx(_top(d1), 9.0)
+		and _mask(d1) == (high | GridManager.band_mask_below(9.0)), "top=%.2f mask=%d" % [_top(d1), _mask(d1)])
+	_check("door.relief-street-blocked-by-c1-door", not GridManager.sight_line_clear(space, street, target, 8.4, 8.0))
+	_check("door.relief-hill-sees-over-c1-door", GridManager.sight_line_clear(space, hill, target, 12.0, 8.0))
+	d1.free()
+	await _settle()
+
+	# --- a 3-story building's door: closed, the hill loses the line; open, not
+	var d3: Door = ml._spawn_geo_structure(_door_row(520.0, 352.0, 90.0, {"occlude_h": 3.0}), null, 64)
+	await _settle()
+	_check("door.relief-3story-top", is_equal_approx(_top(d3), 11.0)
+		and _mask(d3) == (high | GridManager.band_mask_below(11.0)), "top=%.2f mask=%d" % [_top(d3), _mask(d3)])
+	_check("door.relief-3story-shadows-2-up-cone", (_mask(d3) & _bbit(10.0)) != 0 and (_mask(d3) & _bbit(12.0)) == 0,
+		"mask=%d" % _mask(d3))
+	_check("door.relief-hill-blocked-by-closed-3story-door", not GridManager.sight_line_clear(space, hill, target, 12.0, 8.0))
+	d3.open_door()
+	await _settle()
+	_check("door.relief-open-door-clears-hill", GridManager.sight_line_clear(space, hill, target, 12.0, 8.0)
+		and not _occ_visible(d3))
+	d3.close_door()
+	await _settle()
+	_check("door.relief-closed-again-blocks-hill", not GridManager.sight_line_clear(space, hill, target, 12.0, 8.0)
+		and _occ_visible(d3))
+	d3.free()
 	ml.queue_free()
 	await _settle()
