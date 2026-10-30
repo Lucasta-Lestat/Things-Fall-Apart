@@ -829,19 +829,12 @@ func _spawn_npcs(npc_list: Array) -> void:
 		var template_id: String = npc_def.get("template_id", "")
 		var pos_arr = npc_def.get("position", [0, 0])
 		var base_pos = Vector2(pos_arr[0], pos_arr[1])
-		var count: int = npc_def.get("count", 1)
-		var spread: float = npc_def.get("spread_radius", 0)
-		# Per-spawn overrides for unique NPCs, faction, titles, dialogue and
-		# carried items.
-		var spawn_overrides: Dictionary = {}
-		if npc_def.has("unique_name"):
-			spawn_overrides["unique_name"] = npc_def["unique_name"]
-		if npc_def.has("titles"):
-			spawn_overrides["titles"] = npc_def["titles"]
-		if npc_def.has("faction"):
-			spawn_overrides["faction"] = npc_def["faction"]
-		if npc_def.has("dialogue"):
-			spawn_overrides["dialogue"] = npc_def["dialogue"]
+		var count: int = int(npc_def.get("count", 1))
+		var spread: float = float(npc_def.get("spread_radius", 0))
+		# Per-spawn overrides for unique NPCs, faction, titles and dialogue:
+		# the one field list the TG exporter writes (SpawnRowSchema, the
+		# export contract's row schema), copied only when the row has them.
+		var spawn_overrides: Dictionary = SpawnRowSchema.npc_overrides(npc_def)
 		# extra_items (Items.json ids; TopDownCharacterDatabase merges them into
 		# the Inventory): the Perrow vault keys ride on their carriers this way.
 		# A row that carries any is persist_unique — kept alive or dead across
@@ -1919,26 +1912,22 @@ func _spawn_items(item_list: Array) -> void:
 		var item_id: String = item_def.get("id", "")
 		var pos_arr = item_def.get("position", [0, 0])
 		var pos = Vector2(pos_arr[0], pos_arr[1])
-		var count: int = item_def.get("count", 1)
+		var count: int = int(item_def.get("count", 1))
 
-		# Per-spawn extras (only applied when present): controlling_faction triggers
-		# faction-filtered auto-loot for chests, value overrides the loot target.
+		# Per-spawn extras (only applied when present; SpawnRowSchema.ITEM_KEYS):
+		# controlling_faction triggers faction-filtered auto-loot for chests,
+		# value overrides the loot target.
 		var extras: Dictionary = {}
 		if item_def.has("controlling_faction"):
-			extras["controlling_faction"] = item_def["controlling_faction"]
+			extras["controlling_faction"] = str(item_def["controlling_faction"])
 		if item_def.has("value"):
 			extras["value"] = float(item_def["value"])
 
-		# Ownership resolution chain, first hit wins: per-spawn owner_faction,
-		# map-level default_item_owner, the map's jurisdiction when the map
-		# declares "settlement": true, else unowned. Deliberately NO
-		# "everything on a lawful map is owned" global — that criminalises
-		# picking up a stray apple with no authoring signal.
-		var owner_f: String = str(item_def.get("owner_faction", ""))
-		if owner_f.is_empty():
-			owner_f = str(current_map_data.get("default_item_owner", ""))
-		if owner_f.is_empty() and bool(current_map_data.get("settlement", false)):
-			owner_f = LawDatabase.jurisdiction_for_map(current_map_id)
+		# Ownership (SpawnRowSchema.item_owner_faction): the row's owner_faction,
+		# else its owner_uid's faction (NPCs spawned above), else the map's
+		# default_item_owner, else the settlement jurisdiction, else unowned.
+		var owner_f: String = SpawnRowSchema.item_owner_faction(item_def, current_map_data,
+			current_map_id, characters_in_scene)
 		if not owner_f.is_empty():
 			extras["owner_faction"] = owner_f
 		if item_def.has("owner_uid"):
