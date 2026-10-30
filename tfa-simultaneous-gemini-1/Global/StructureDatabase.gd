@@ -49,12 +49,20 @@ func _setup_structure_data():
 	var tree = StructureData.new(&"tree", "Tree", 80, {&"wood": 40}, Vector2(75,75), true)
 	structure_data[&"tree"] = tree
 
+	# Trimmed garden/skylight hedge shrub (TG export contract 2: "tree" rows with
+	# id "hedge" and occlude_h 0.45). Blocks movement like a tree; its occlude_h
+	# is below EYE_HEIGHT_STORIES, so MapLoader gives it no cone shadow and eyes
+	# see over it. Rows carry their own hp (TG: half a tree).
+	var hedge = StructureData.new(&"hedge", "Hedge", 40, {&"wood": 10}, Vector2(48,48), true)
+	structure_data[&"hedge"] = hedge
+
 	var wood_door = StructureData.new(&"door_wood", "Door Wood", 50, {&"wood": 10}, Vector2(64,128), true)
 	structure_data[&"door_wood"] = wood_door
 	
 	wood_wall.label = "Wooden wall"
 	stone_wall.label = "Stone wall"
 	tree.label = "Tree"
+	hedge.label = "Hedge"
 	wood_door.label = "Wooden door"
 	
 
