@@ -32780,7 +32780,7 @@
 					"id": "torch",
 					"position": [
 						2696.0,
-						1372.0
+						1350.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -32789,7 +32789,7 @@
 					"id": "torch",
 					"position": [
 						2896.0,
-						1372.0
+						1350.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -40819,7 +40819,7 @@
 					"id": "barrel",
 					"position": [
 						2324.0,
-						1662.0
+						1646.0
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -45952,7 +45952,7 @@
 					"id": "stall_table",
 					"position": [
 						1564.0,
-						1684.0
+						1620
 					],
 					"rotation": 0.0,
 					"scale": 1.0
@@ -45961,7 +45961,7 @@
 					"id": "hammer",
 					"position": [
 						1540.0,
-						1680.0
+						1616
 					],
 					"rotation": 0.436,
 					"scale": 0.8,
@@ -45971,7 +45971,7 @@
 					"id": "metal",
 					"position": [
 						1588.0,
-						1688.0
+						1624
 					],
 					"rotation": 0.0,
 					"scale": 0.8,
@@ -45981,7 +45981,7 @@
 					"id": "rope_coil",
 					"position": [
 						1564.0,
-						1696.0
+						1632
 					],
 					"rotation": 0.0,
 					"scale": 0.7,
