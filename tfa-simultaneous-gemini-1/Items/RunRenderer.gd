@@ -1,14 +1,25 @@
 # res://Items/RunRenderer.gd
 # Draws a RUN item (Items/RunLayout.gd): the 3-slice strip at its spawn length
 # and width, then its drawn-only decor in the same local frame -- cloth runners
-# (strip decor through that id's own run atlas), food sprites (Items.json art at
-# base_width * scale px, the Item.scale_sprite rule) and the built-in
-# procedural _plate / _cup / _candle. Decor is paint, never items: no loot, no
-# theft, no extra LOS rays. Child of the Item; the Item's sprite is hidden.
+# (strip decor through that id's own run atlas), item sprites (Items.json art at
+# base_width * scale px, the Item.scale_sprite rule: food, and under export
+# contract 2 the plate / cup / candle items) and the built-in procedural
+# _plate / _cup / _candle (contract 1). Sprites and built-ins share one draw
+# order: RunLayout.decor_layer, then list order. Decor is paint, never items:
+# no loot, no theft, no extra LOS rays. Decor whose item emits_light (the
+# candle) gets a small unshadowed light, capped per run (RunLayout.lit_decor)
+# and per map (DECOR_LIGHTS_MAP_MAX). Child of the Item; the Item's sprite is
+# hidden.
 class_name RunRenderer
 extends Node2D
 
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+## Decor lights across every run on the map; past it a candle is drawn unlit.
+const DECOR_LIGHTS_MAP_MAX := 24
+
 static var _tex_cache: Dictionary = {}   # res path -> Texture2D (null = missing art)
+static var _decor_lights: Array = []     # a WeakRef per decor light made (pruned when counted)
+static var _warned_light_cap := false
 
 var meta: Dictionary = {}
 var run: Dictionary = {}
@@ -17,9 +28,10 @@ var width: float = 0.0
 var _tex: Texture2D = null
 var _tiles: Array = []
 var _strips: Array = []     # [{tex, tiles, at, rot, tint}]
-var _sprites: Array = []    # [{tex, at, rot, k}]
-var _under_n: int = 0       # _builtins[0 .. _under_n) draw under the sprites
-var _builtins: Array = []   # [{id, at, rot, scale, v, layer}] sorted by RunLayout.decor_layer
+var _sprites: Array = []    # [{tex, at, rot, k, layer}]
+var _builtins: Array = []   # [{id, at, rot, scale, v, layer}]
+var _draw_list: Array = []  # _sprites + _builtins by layer, then decor order
+var _lights: Array = []     # this run's decor PointLight2Ds
 
 
 static func texture_for(path: String) -> Texture2D:
@@ -62,6 +74,12 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 	_strips.clear()
 	_sprites.clear()
 	_builtins.clear()
+	_draw_list.clear()
+	for l in _lights:
+		if is_instance_valid(l):
+			(l as Node).queue_free()
+	_lights.clear()
+	var by_layer: Array = [[], [], [], []]
 	var warned := false
 	var decor: Array = run.get("decor", [])
 	for dv in decor:
@@ -73,8 +91,10 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 		var at := Vector2(float(aa[0]), float(aa[1]))
 		var rot := float(d.get("rot", 0.0))
 		if RunLayout.BUILTIN_DECOR.has(did):
-			_builtins.append({"id": did, "at": at, "rot": rot, "scale": float(d.get("scale", 1.0)),
-				"v": int(d.get("v", 0)), "layer": RunLayout.decor_layer(did)})
+			var b := {"id": did, "at": at, "rot": rot, "scale": float(d.get("scale", 1.0)),
+				"v": int(d.get("v", 0)), "layer": RunLayout.decor_layer(did)}
+			_builtins.append(b)
+			by_layer[int(b["layer"])].append(b)
 			continue
 		var idef: Dictionary = _item_def(did)
 		if idef.is_empty():
@@ -103,14 +123,76 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 		if tex == null:
 			continue
 		var bw := float(idef.get("base_width", 16.0)) * float(d.get("scale", 1.0))
-		_sprites.append({"tex": tex, "at": at, "rot": rot, "k": bw / maxf(1.0, float(tex.get_width()))})
+		var sp := {"tex": tex, "at": at, "rot": rot, "k": bw / maxf(1.0, float(tex.get_width())),
+			"layer": RunLayout.decor_layer(did, idef)}
+		_sprites.append(sp)
+		by_layer[int(sp["layer"])].append(sp)
 	# stable by layer: plates (0) < food sprites (1) < cups (2) < candles (3)
-	var by_layer: Array = [[], [], [], []]
-	for b in _builtins:
-		by_layer[int(b["layer"])].append(b)
-	_builtins = by_layer[0] + by_layer[2] + by_layer[3]
-	_under_n = (by_layer[0] as Array).size()
+	_draw_list = by_layer[0] + by_layer[1] + by_layer[2] + by_layer[3]
+	_add_decor_lights(decor)
 	queue_redraw()
+
+
+# Candles that light: RunLayout.lit_decor picks at most RUN_LIGHTS_MAX of the
+# decor whose item emits_light, and DECOR_LIGHTS_MAP_MAX bounds them across the
+# map. Small and unshadowed (a candle lights a tile or two; shadow passes are
+# the cost). Children of this renderer, so they turn with the run.
+func _add_decor_lights(decor: Array) -> void:
+	var levels: Dictionary = {}
+	for dv in decor:
+		if not (dv is Dictionary):
+			continue
+		var did := String((dv as Dictionary).get("id", ""))
+		if did == "" or levels.has(did) or RunLayout.BUILTIN_DECOR.has(did):
+			continue
+		levels[did] = EquipmentEffects.light_level(_item_def(did))
+	var lit: Array = RunLayout.lit_decor(decor, levels)
+	if lit.is_empty():
+		return
+	var live := _live_decor_lights()
+	for i in lit:
+		if live >= DECOR_LIGHTS_MAP_MAX:
+			if not _warned_light_cap:
+				_warned_light_cap = true
+				push_warning("RunRenderer: more than %d decor lights on the map; the rest stay unlit" % DECOR_LIGHTS_MAP_MAX)
+			return
+		var d: Dictionary = decor[i]
+		var did := String(d.get("id", ""))
+		var idef: Dictionary = _item_def(did)
+		var aa: Array = d.get("at", [0.0, 0.0])
+		var l: PointLight2D = EquipmentEffects.make_light(float(levels[did]), idef.get("traits", {}),
+			idef.get("light_color"))
+		l.name = "DecorLight%d" % _lights.size()
+		l.shadow_enabled = false
+		l.position = Vector2(float(aa[0]), float(aa[1]))
+		add_child(l)
+		_lights.append(l)
+		_decor_lights.append(weakref(l))
+		live += 1
+
+
+# Decor lights alive on the map: freed ones drop out of the registry, and one
+# whose run is being torn down (an ancestor queued for deletion: the warp
+# sweep) no longer counts.
+static func _live_decor_lights() -> int:
+	var keep: Array = []
+	var n := 0
+	for w in _decor_lights:
+		var o: Variant = (w as WeakRef).get_ref()
+		if o == null:
+			continue
+		keep.append(w)
+		var node: Node = o
+		var dying := false
+		while node != null:
+			if node.is_queued_for_deletion():
+				dying = true
+				break
+			node = node.get_parent()
+		if not dying:
+			n += 1
+	_decor_lights = keep
+	return n
 
 
 func _draw() -> void:
@@ -129,15 +211,13 @@ func _draw() -> void:
 			draw_texture_rect_region(s["tex"], t["dst"], t["src"], s["tint"], false, true)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	var wr := global_rotation
-	for bi in _under_n:
-		var b: Dictionary = _builtins[bi]
-		RunLayout.draw_builtin(self, String(b["id"]), b["at"], float(b["rot"]), float(b["scale"]), int(b["v"]), wr)
-	for s in _sprites:
-		var tex: Texture2D = s["tex"]
-		var k := float(s["k"])
-		draw_set_transform(s["at"], float(s["rot"]), Vector2(k, k))
-		draw_texture(tex, -tex.get_size() * 0.5)
-	draw_set_transform_matrix(Transform2D.IDENTITY)
-	for bi in range(_under_n, _builtins.size()):
-		var b: Dictionary = _builtins[bi]
-		RunLayout.draw_builtin(self, String(b["id"]), b["at"], float(b["rot"]), float(b["scale"]), int(b["v"]), wr)
+	for e in _draw_list:
+		var dd: Dictionary = e
+		if dd.has("tex"):
+			var tex: Texture2D = dd["tex"]
+			var k := float(dd["k"])
+			draw_set_transform(dd["at"], float(dd["rot"]), Vector2(k, k))
+			draw_texture(tex, -tex.get_size() * 0.5)
+			draw_set_transform_matrix(Transform2D.IDENTITY)
+		else:
+			RunLayout.draw_builtin(self, String(dd["id"]), dd["at"], float(dd["rot"]), float(dd["scale"]), int(dd["v"]), wr)

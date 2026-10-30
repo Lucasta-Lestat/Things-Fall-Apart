@@ -12,6 +12,12 @@ extends Node2D
 #   3. Item: a run spawn hides the sprite, draws through RunRenderer, is FIXED
 #      (collision layer 0, no options, not AI-takeable), hp scales with length;
 #      a run on an id without a "run" block falls back to a stretched sprite.
+#   4. Decor items (P2-D, export contract 2): the plate / cup / candle Items.json
+#      ids draw from their sprites at the built-ins' size and layer order; a
+#      candle lights (small, unshadowed, its light_color), at most
+#      RunLayout.RUN_LIGHTS_MAX per run spread along it (RunLayout.lit_decor,
+#      pinned by the fixture's "lit" cases) and RunRenderer.DECOR_LIGHTS_MAP_MAX
+#      per map; built-in _candle decor (contract 1) stays unlit paint.
 # Synthetic map; this node stands in for Game (group "game", current scene).
 # Run headless:  godot --headless --path . res://tests/item_run_check.tscn
 # Rewrite the fixture (ONLY after an intended RunLayout change, then copy it to
@@ -19,6 +25,7 @@ extends Node2D
 const CHAR_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
 const ITEM_SCENE := preload("res://Structures/Objects/Item.tscn")
 const FIXTURE := "res://tests/run_parity_fixture.json"
+const EquipmentEffectsScript = preload("res://Items/equipment_effects.gd")
 
 # --- Game stand-in state (read by the scripts under test) ---
 var characters_in_scene: Array = []
@@ -92,6 +99,7 @@ func _ready() -> void:
 	_case_mirror()
 	_case_parity()
 	await _case_items()
+	await _case_decor_items()
 	print("ITEM RUN CHECK DONE: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -267,6 +275,32 @@ func _fixture_cases() -> Array:
 	return out
 
 
+# RunLayout.lit_decor cases (decor px, id -> emits_light, cap) and decor_layer
+# cases ([id, item def]); the fixture stores their answers for TG's RunArt.
+func _lit_fixture_cases() -> Array:
+	var lv := {"candle": 0.15, "lamp": 0.4, "bread_loaf": 0.0}
+	var row: Array = []
+	for x in [120.0, -240.0, 0.0, 360.0, -120.0, 240.0, -360.0]:
+		row.append({"id": "candle", "at": [x, 2.0]})
+	return [
+		{"decor": [{"id": "_candle", "at": [0.0, 0.0]}, {"id": "candle", "at": [10.0, 0.0]},
+			{"id": "bread_loaf", "at": [20.0, 0.0]}, {"id": "candle", "at": [0.0, 0.0], "length": 50.0, "width": 9.0}],
+			"levels": lv, "cap": 3},
+		{"decor": row, "levels": lv, "cap": 3},
+		{"decor": row, "levels": lv, "cap": 1},
+		{"decor": row, "levels": lv, "cap": 2},
+		{"decor": row, "levels": lv, "cap": 0},
+		{"decor": [{"id": "candle", "at": [5.0, 0.0]}, {"id": "lamp", "at": [5.0, 3.0]},
+			{"id": "candle", "at": [-5.0, 0.0]}, {"id": "candle"}, "junk"], "levels": lv, "cap": 2},
+	]
+
+
+func _layer_fixture_cases() -> Array:
+	return [["_plate", {}], ["_cup", {}], ["_candle", {}], ["bread_loaf", {}],
+		["pewter_plate", {"decor_layer": 0.0}], ["pewter_tankard", {"decor_layer": 2.0}],
+		["candle", {"decor_layer": 3.0}], ["odd", {"decor_layer": 9.0}], ["odd2", {"decor_layer": "x"}]]
+
+
 func _write_fixture() -> void:
 	var metas := {"long_table": _meta("long_table"), "bench": _meta("bench"), "red_carpet": _meta("red_carpet")}
 	var hashes: Array = []
@@ -278,8 +312,16 @@ func _write_fixture() -> void:
 	var synth := {"atlas": "", "w": 400, "h": 72, "pad": 4, "cap": 20,
 		"mid": [[36, 116], [124, 204], [212, 292]], "mid_mode": "tile", "across": 30.0, "shadow": 0.0}
 	metas["synth3"] = synth
-	var doc := {"_contract": "RunLayout.tiles(length, width, metas[meta_id], caps, seed) -> rects [dst x,y,w,h, src x,y,w,h]; written by TFA tests/item_run_check.gd (RUN_FIXTURE_WRITE=1), byte-identical copy in Terrain Generation tests/",
-		"metas": metas, "hash": hashes, "cases": cases}
+	var lit: Array = []
+	for c in _lit_fixture_cases():
+		var lc: Dictionary = (c as Dictionary).duplicate(true)
+		lc["want"] = RunLayout.lit_decor(lc["decor"], lc["levels"], int(lc["cap"]))
+		lit.append(lc)
+	var layers: Array = []
+	for lcv in _layer_fixture_cases():
+		layers.append([lcv[0], lcv[1], RunLayout.decor_layer(String(lcv[0]), lcv[1])])
+	var doc := {"_contract": "RunLayout.tiles(length, width, metas[meta_id], caps, seed) -> rects [dst x,y,w,h, src x,y,w,h]; lit: RunLayout.lit_decor(decor, levels, cap) -> want; layers: [id, item def, RunLayout.decor_layer]; written by TFA tests/item_run_check.gd (RUN_FIXTURE_WRITE=1), byte-identical copy in Terrain Generation tests/",
+		"metas": metas, "hash": hashes, "cases": cases, "lit": lit, "layers": layers}
 	var f := FileAccess.open(FIXTURE, FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "  ", true, true) + "\n")
 	f.close()
@@ -332,6 +374,28 @@ func _case_parity() -> void:
 					bad += 1
 					break
 	_report("parity.cases", bad == 0 and n >= 15, "%d cases, %d mismatches" % [n, bad])
+	# P2-D: the lit-decor picks and the decor layers
+	var lbad := 0
+	var ln := 0
+	for lcv in (doc as Dictionary).get("lit", []):
+		var lc: Dictionary = lcv
+		ln += 1
+		var got_l: Array = RunLayout.lit_decor(lc["decor"], lc["levels"], int(lc["cap"]))
+		var want_l: Array = []
+		for w in lc["want"]:
+			want_l.append(int(w))
+		if str(got_l) != str(want_l):
+			lbad += 1
+			print("  lit mismatch case %d: %s vs %s" % [ln, str(got_l), str(want_l)])
+	_report("parity.lit", lbad == 0 and ln >= 6, "%d cases, %d mismatches" % [ln, lbad])
+	var ybad := 0
+	var yn := 0
+	for yv in (doc as Dictionary).get("layers", []):
+		var y: Array = yv
+		yn += 1
+		if RunLayout.decor_layer(String(y[0]), y[1]) != int(y[2]):
+			ybad += 1
+	_report("parity.layers", ybad == 0 and yn >= 9, "%d cases, %d mismatches" % [yn, ybad])
 
 
 # --- items --------------------------------------------------------------------
@@ -366,6 +430,8 @@ func _case_items() -> void:
 		_report("item.decor-prepared", (rr.get("_builtins") as Array).size() == 2 and (rr.get("_strips") as Array).size() == 1
 			and (rr.get("_sprites") as Array).size() == 1, "unknown decor ids skipped with one warning")
 		_report("item.renderer-mipmaps", (rr as CanvasItem).texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS)
+		_report("item.builtin-candle-unlit", (rr.get("_lights") as Array).is_empty()
+			and rr.get_node_or_null("DecorLight0") == null, "contract-1 _candle stays painted")
 	_report("item.fixed", table.fixed and table.collision_layer == 0, "layer %d" % table.collision_layer)
 	var expect_hp: int = int(round(40.0 * 601.6 / 88.0))
 	_report("item.hp-scales-with-length", table.max_health == expect_hp and table.current_health == expect_hp,
@@ -389,3 +455,77 @@ func _case_items() -> void:
 	var lai = looter.get_node("AI")
 	_report("ai.run-not-takeable", not lai._is_takeable_item(table))
 	_report("ai.plain-still-takeable", lai._is_takeable_item(plain))
+
+
+# --- decor items (P2-D) -------------------------------------------------------
+
+const DECOR_ITEM_IDS := ["pewter_plate", "wooden_trencher", "earthenware_plate", "pewter_tankard", "wooden_cup", "candle"]
+const CANDLE_COLOUR := Color(1.0, 0.72, 0.42)
+
+
+func _case_decor_items() -> void:
+	var data_ok := true
+	for id in DECOR_ITEM_IDS:
+		var d: Dictionary = ItemDatabase.items.get(id, {})
+		if d.is_empty() or RunRenderer.texture_for(String(d.get("sprite_path", ""))) == null:
+			data_ok = false
+	_report("decor.items-and-art", data_ok, "the 6 decor ids have Items.json rows and imported sprites")
+	var cd: Dictionary = ItemDatabase.items.get("candle", {})
+	_report("decor.candle-data", is_equal_approx(EquipmentEffectsScript.light_level(cd), 0.15)
+		and int(cd.get("decor_layer", -1)) == 3, str(cd.get("emits_light")))
+	# a contract-2 table: plate under the bread, tankard over it, five candles
+	var decor: Array = [{"id": "pewter_tankard", "at": [-80.0, 10.0], "rot": 1.0},
+		{"id": "bread_loaf", "at": [-100.0, 20.0], "scale": 0.3},
+		{"id": "pewter_plate", "at": [-100.0, 20.0], "rot": 0.2, "scale": 0.907}]
+	for x in [-200.0, -100.0, 0.0, 100.0, 200.0]:
+		decor.append({"id": "candle", "at": [x, 0.0]})
+	var table := _run_item("long_table", RunLayout.run_from_spawn({"length": 601.6, "width": 83.2, "seed": 9,
+		"decor": decor}), Vector2(1200, 400))
+	await get_tree().process_frame
+	var rr: Node = table.get_node_or_null("RunRenderer")
+	_report("decor.renderer", rr != null)
+	if rr == null:
+		return
+	var dl: Array = rr.get("_draw_list")
+	var order: Array = []
+	for e in dl:
+		order.append(int((e as Dictionary)["layer"]))
+	_report("decor.all-sprites", (rr.get("_sprites") as Array).size() == 8 and (rr.get("_builtins") as Array).is_empty(),
+		"%d sprites" % (rr.get("_sprites") as Array).size())
+	_report("decor.layer-order", str(order) == str([0, 1, 2, 3, 3, 3, 3, 3]), str(order))
+	var plate: Dictionary = dl[0] if dl.size() > 0 else {}
+	var ptex: Texture2D = plate.get("tex")
+	_report("decor.plate-size", ptex != null and is_equal_approx(float(plate["k"]) * float(ptex.get_width()), 20.0 * 0.907),
+		"sprite width = base_width x scale")
+	var lights: Array = rr.get("_lights")
+	_report("decor.run-light-cap", lights.size() == RunLayout.RUN_LIGHTS_MAX, "%d lights for 5 candles" % lights.size())
+	var xs: Array = []
+	var look_ok := true
+	for l in lights:
+		var pl: PointLight2D = l
+		xs.append(pl.position.x)
+		if pl.shadow_enabled or not pl.color.is_equal_approx(CANDLE_COLOUR) \
+				or not is_equal_approx(pl.energy, 0.35 + 0.65 * 0.15) or pl.get_parent() != rr:
+			look_ok = false
+	_report("decor.lights-spread", str(xs) == str([-200.0, 0.0, 200.0]), str(xs))
+	_report("decor.lights-small-unshadowed-warm", look_ok)
+	# map cap: more candle runs than DECOR_LIGHTS_MAP_MAX allows
+	var before: int = RunRenderer._live_decor_lights()
+	var extra: Array = []
+	var n_runs: int = 10
+	for k in n_runs:
+		var three: Array = []
+		for x in [-100.0, 0.0, 100.0]:
+			three.append({"id": "candle", "at": [x, 0.0]})
+		extra.append(_run_item("long_table", RunLayout.run_from_spawn({"length": 300.0, "width": 60.0, "seed": k,
+			"decor": three}), Vector2(300 + 120 * k, 1500)))
+	await get_tree().process_frame
+	var after: int = RunRenderer._live_decor_lights()
+	var want: int = mini(before + 3 * n_runs, RunRenderer.DECOR_LIGHTS_MAP_MAX)
+	_report("decor.map-light-cap", after == want, "%d live (before %d, cap %d)" % [after, before, RunRenderer.DECOR_LIGHTS_MAP_MAX])
+	for it in extra:
+		(it as Node).queue_free()
+	_report("decor.cap-frees-on-teardown", RunRenderer._live_decor_lights() == before,
+		"a run queued for deletion stops counting")
+	await get_tree().process_frame
+	_report("decor.registry-pruned", RunRenderer._live_decor_lights() == before)

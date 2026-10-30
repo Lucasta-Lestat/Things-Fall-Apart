@@ -1,5 +1,5 @@
 {
-  "_contract": "RunLayout.tiles(length, width, metas[meta_id], caps, seed) -> rects [dst x,y,w,h, src x,y,w,h]; written by TFA tests/item_run_check.gd (RUN_FIXTURE_WRITE=1), byte-identical copy in Terrain Generation tests/",
+  "_contract": "RunLayout.tiles(length, width, metas[meta_id], caps, seed) -> rects [dst x,y,w,h, src x,y,w,h]; lit: RunLayout.lit_decor(decor, levels, cap) -> want; layers: [id, item def, RunLayout.decor_layer]; written by TFA tests/item_run_check.gd (RUN_FIXTURE_WRITE=1), byte-identical copy in Terrain Generation tests/",
   "cases": [
     {
       "caps": 3,
@@ -1702,6 +1702,404 @@
       17,
       1744978220
     ]
+  ],
+  "layers": [
+    [
+      "_plate",
+      {
+
+      },
+      0
+    ],
+    [
+      "_cup",
+      {
+
+      },
+      2
+    ],
+    [
+      "_candle",
+      {
+
+      },
+      3
+    ],
+    [
+      "bread_loaf",
+      {
+
+      },
+      1
+    ],
+    [
+      "pewter_plate",
+      {
+        "decor_layer": 0.0
+      },
+      0
+    ],
+    [
+      "pewter_tankard",
+      {
+        "decor_layer": 2.0
+      },
+      2
+    ],
+    [
+      "candle",
+      {
+        "decor_layer": 3.0
+      },
+      3
+    ],
+    [
+      "odd",
+      {
+        "decor_layer": 9.0
+      },
+      3
+    ],
+    [
+      "odd2",
+      {
+        "decor_layer": "x"
+      },
+      1
+    ]
+  ],
+  "lit": [
+    {
+      "cap": 3,
+      "decor": [
+        {
+          "at": [
+            0.0,
+            0.0
+          ],
+          "id": "_candle"
+        },
+        {
+          "at": [
+            10.0,
+            0.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            20.0,
+            0.0
+          ],
+          "id": "bread_loaf"
+        },
+        {
+          "at": [
+            0.0,
+            0.0
+          ],
+          "id": "candle",
+          "length": 50.0,
+          "width": 9.0
+        }
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": [
+        1
+      ]
+    },
+    {
+      "cap": 3,
+      "decor": [
+        {
+          "at": [
+            120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            0.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            360.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -360.0,
+            2.0
+          ],
+          "id": "candle"
+        }
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": [
+        2,
+        3,
+        6
+      ]
+    },
+    {
+      "cap": 1,
+      "decor": [
+        {
+          "at": [
+            120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            0.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            360.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -360.0,
+            2.0
+          ],
+          "id": "candle"
+        }
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": [
+        2
+      ]
+    },
+    {
+      "cap": 2,
+      "decor": [
+        {
+          "at": [
+            120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            0.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            360.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -360.0,
+            2.0
+          ],
+          "id": "candle"
+        }
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": [
+        3,
+        6
+      ]
+    },
+    {
+      "cap": 0,
+      "decor": [
+        {
+          "at": [
+            120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            0.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            360.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -120.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            240.0,
+            2.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            -360.0,
+            2.0
+          ],
+          "id": "candle"
+        }
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": []
+    },
+    {
+      "cap": 2,
+      "decor": [
+        {
+          "at": [
+            5.0,
+            0.0
+          ],
+          "id": "candle"
+        },
+        {
+          "at": [
+            5.0,
+            3.0
+          ],
+          "id": "lamp"
+        },
+        {
+          "at": [
+            -5.0,
+            0.0
+          ],
+          "id": "candle"
+        },
+        {
+          "id": "candle"
+        },
+        "junk"
+      ],
+      "levels": {
+        "bread_loaf": 0.0,
+        "candle": 0.15,
+        "lamp": 0.4
+      },
+      "want": [
+        1,
+        2
+      ]
+    }
   ],
   "metas": {
     "bench": {
