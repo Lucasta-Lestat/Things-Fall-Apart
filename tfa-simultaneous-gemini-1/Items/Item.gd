@@ -252,11 +252,13 @@ func _apply_item_data():
 	traits = data.get("traits", {})
 	options = data.get("interact_options", data.get("options", []))
 
-	# A dropped glowing item (Flaming Sword, Golden Crown) keeps glowing; the
-	# light hides with the item when the party can't see it.
+	# A dropped glowing item (Flaming Sword, Golden Crown) keeps glowing, and so
+	# does a placed fire prop (brazier, campfire, torch: an explicit warm
+	# light_color, not a Fire trait); the light hides with the item when the
+	# party can't see it.
 	var glow := EquipmentEffects.light_level(data)
 	if glow > 0.0 and get_node_or_null("EmittedLight") == null:
-		add_child(EquipmentEffects.make_light(glow, traits))
+		add_child(EquipmentEffects.make_light(glow, traits, data.get("light_color")))
 
 	# Size (equipment has base_width/base_height, others may not)
 	var w = float(data.get("base_width", 16.0))

@@ -4873,6 +4873,12 @@
 	"traits": {
 	  "Wood": 2
 	},
+	"emits_light": 0.6,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
@@ -4894,6 +4900,12 @@
 	"traits": {
 	  "Metal": 2
 	},
+	"emits_light": 0.5,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
@@ -4936,6 +4948,12 @@
 	"traits": {
 	  "Wood": 1
 	},
+	"emits_light": 0.35,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
