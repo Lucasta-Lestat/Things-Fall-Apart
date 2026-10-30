@@ -10,6 +10,9 @@
 # Spawn contract (Maps.json item_spawns): "length" px (its presence = a run),
 # "width" px (default meta.across), "caps" bitmask (1 = start/-x, 2 = end/+x;
 # default 3; 0/1/2 butt-join L/T arrangements), "seed" int, "decor" list.
+# Decor ids: a leading "_" is a built-in painter (draw_builtin; export
+# contract 1), anything else an Items.json id drawn from its sprite (contract
+# 2 writes the built-ins as items: pewter_plate, wooden_cup, candle...).
 class_name RunLayout
 extends RefCounted
 
@@ -18,6 +21,10 @@ const BUILTIN_DECOR := {"_plate": 16.0, "_cup": 6.0, "_candle": 5.0}
 
 # hash_i salt of the seed-driven strip mirror (tiles / mirror_bits).
 const MIRROR_SALT := 1753
+
+# Decor that lights (an Items.json emits_light: the candle) gets at most this
+# many lights per run (lit_decor); the rest are drawn unlit.
+const RUN_LIGHTS_MAX := 3
 
 
 # Same integer hash in TG RunArt (variant picks, decor jitter seeds).
@@ -123,8 +130,9 @@ static func half_extents(length: float, width: float) -> Vector2:
 
 
 # Decor draw layer: plates under food sprites, cups over them, candles last
-# (runner strips are drawn before all of these).
-static func decor_layer(id: String) -> int:
+# (runner strips are drawn before all of these). An item id takes its
+# Items.json "decor_layer" (0..3: the plate / cup / candle items), else 1.
+static func decor_layer(id: String, idef: Dictionary = {}) -> int:
 	match id:
 		"_plate":
 			return 0
@@ -132,12 +140,53 @@ static func decor_layer(id: String) -> int:
 			return 2
 		"_candle":
 			return 3
+	var lv: Variant = idef.get("decor_layer")
+	if lv is float or lv is int:
+		return clampi(int(lv), 0, 3)
 	return 1
+
+
+# The decor entries that get a light: every non-strip entry whose id has a
+# level > 0 in levels (id -> Items.json emits_light), at most cap of them. Over
+# the cap the lit ones spread along the strip: sorted by at.x (ties: list
+# order), the picks are the evenly spaced ranks round(j * (n - 1) / (cap - 1)).
+# Returns decor indices in list order. Pure; TG RunArt.lit_decor mirrors it and
+# tests/run_parity_fixture.json pins both.
+static func lit_decor(decor: Array, levels: Dictionary, cap: int = RUN_LIGHTS_MAX) -> Array:
+	var cand: Array = []
+	for i in decor.size():
+		var dv: Variant = decor[i]
+		if not (dv is Dictionary) or (dv as Dictionary).has("length"):
+			continue
+		var lv: Variant = levels.get(String((dv as Dictionary).get("id", "")), 0.0)
+		if (lv is float or lv is int) and float(lv) > 0.0:
+			cand.append(i)
+	if cap <= 0:
+		return []
+	if cand.size() <= cap:
+		return cand
+	var xs: Dictionary = {}
+	for i in cand:
+		var av: Variant = (decor[i] as Dictionary).get("at", [0.0, 0.0])
+		xs[i] = float((av as Array)[0]) if av is Array and not (av as Array).is_empty() else 0.0
+	cand.sort_custom(func(a: int, b: int) -> bool:
+		return float(xs[a]) < float(xs[b]) or (float(xs[a]) == float(xs[b]) and a < b))
+	var n: int = cand.size()
+	var pick: Array = []
+	if cap == 1:
+		pick.append(cand[(n - 1) >> 1])
+	else:
+		for j in cap:
+			pick.append(cand[roundi(float(j) * float(n - 1) / float(cap - 1))])
+	pick.sort()
+	return pick
 
 
 # ---- built-in procedural decor -------------------------------------------
 # One painter for both repos (TG RunArt.draw_builtin is a copy): pewter /
-# trencher plates, ale cups, candles with a painted glow (no Light2D).
+# trencher plates, ale cups, candles with a painted glow (no Light2D). Contract-2
+# rows name the sprite items instead (tools/make_decor_sprites.py repaints
+# these designs); only the candle item lights (RunRenderer).
 # world_rot = the run's on-screen rotation: the drop shadow and the glint stay
 # world-fixed (light from the upper left, like the art) whatever the table's angle.
 static func draw_builtin(ci: CanvasItem, id: String, at: Vector2, rot: float, scale: float, v: int, world_rot: float = 0.0) -> void:

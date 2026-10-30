@@ -10,6 +10,10 @@ var structured_ground: Sprite2D = null
 # by reference: a reload's new node can't take the name while the previous
 # map's (queue_freed this frame) still holds it.
 var cliff_occluders: Node2D = null
+# the parent of the map's authored lights (a contract-2 row's "lights":
+# forges, hearths, glow blocks); null when the row has none. Held by
+# reference for the same reason as cliff_occluders.
+var map_lights: Node2D = null
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -30,6 +34,10 @@ var cliff_occluders: Node2D = null
 
 var structure_scene: PackedScene = preload("res://Structures/Structure.tscn")
 const DOOR_SCRIPT := preload("res://Structures/Door.gd")
+const EquipmentEffects = preload("res://Items/equipment_effects.gd")
+## Light rows spawned per map at most (TG caps its export lower; this guards
+## hand-edited rows). Beyond it the rest are dropped with one warning.
+const MAP_LIGHTS_MAX := 32
 
 # Map id of the structured map being loaded; keys Door.lock_key so session
 # unlocks survive the full teardown/reload every warp performs.
@@ -139,6 +147,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# so FluidManager/CellFluidFX can bind the organic water shader to it)
 	structured_ground = null
 	cliff_occluders = null
+	map_lights = null
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -239,7 +248,52 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	if GridManager.relief_los:
 		cliff_occluders = _build_cliff_occluders()
 
+	# 5. authored light sources (export contract 2: forges, hearths, glow
+	# blocks). No key: no map lights, today's behaviour. The ground PNG stays
+	# unlit; these light it at runtime.
+	var lv: Variant = map_data.get("lights")
+	if lv is Array and not (lv as Array).is_empty():
+		map_lights = _spawn_map_lights(lv)
+
 	emit_signal("map_loaded")
+
+
+## One PointLight2D per Maps.json "lights" row (docs/export_contract.md,
+## P2-C): position [x, y] px, level 0..1 (the emits_light scale of
+## EquipmentEffects.make_light), optional color [r, g, b] (absent = the fire
+## colour), optional shadow (absent = true: the LIGHT_SHADOW_MASK shadows every
+## item light casts). "source" is informational and never changes the look.
+func _spawn_map_lights(rows: Array) -> Node2D:
+	var root := Node2D.new()
+	root.name = "MapLights"
+	add_child(root)
+	var n := 0
+	for rv in rows:
+		if not (rv is Dictionary):
+			continue
+		var row: Dictionary = rv
+		var pv: Variant = row.get("position")
+		var lev: Variant = row.get("level")
+		if not (pv is Array) or (pv as Array).size() < 2 or not (lev is float or lev is int):
+			push_warning("map %s: light row without position/level skipped: %s" % [_current_map_id, str(row)])
+			continue
+		if n >= MAP_LIGHTS_MAX:
+			push_warning("map %s: %d light rows > %d; the rest are dropped" % [_current_map_id, rows.size(), MAP_LIGHTS_MAX])
+			break
+		var col: Variant = row.get("color")
+		if EquipmentEffects.explicit_light_color(col) == null:
+			col = EquipmentEffects.LIGHT_TRAIT_COLORS["fire"]
+		var light: PointLight2D = EquipmentEffects.make_light(float(lev), {}, col)
+		light.name = "MapLight%d" % n
+		light.position = _arr_v2(pv)
+		var sh: Variant = row.get("shadow", true)
+		light.shadow_enabled = not (sh is bool) or bool(sh)
+		var src: Variant = row.get("source")
+		if src != null:
+			light.set_meta("source", str(src))
+		root.add_child(light)
+		n += 1
+	return root
 
 
 func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int) -> Structure:

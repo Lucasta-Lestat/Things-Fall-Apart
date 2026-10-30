@@ -4873,6 +4873,12 @@
 	"traits": {
 	  "Wood": 2
 	},
+	"emits_light": 0.6,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
@@ -4894,6 +4900,12 @@
 	"traits": {
 	  "Metal": 2
 	},
+	"emits_light": 0.5,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
@@ -4936,6 +4948,12 @@
 	"traits": {
 	  "Wood": 1
 	},
+	"emits_light": 0.35,
+	"light_color": [
+	  1.0,
+	  0.6,
+	  0.25
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   },
@@ -6289,6 +6307,144 @@
 	"traits": {
 	 "Organic": 1
 	},
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "pewter_plate",
+	"display_name": "Pewter Plate",
+	"type": "item",
+	"description": "A dented pewter plate.",
+	"base_width": 20.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/pewter_plate.png",
+	"weight": 0.6,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Metal": 1
+	},
+	"decor_layer": 0,
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "wooden_trencher",
+	"display_name": "Wooden Trencher",
+	"type": "item",
+	"description": "A turned wooden trencher, scored by knives.",
+	"base_width": 20.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/wooden_trencher.png",
+	"weight": 0.3,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"decor_layer": 0,
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "earthenware_plate",
+	"display_name": "Earthenware Plate",
+	"type": "item",
+	"description": "A glazed earthenware plate with a slip-trailed rim.",
+	"base_width": 20.0,
+	"base_height": 20.0,
+	"sprite_path": "res://Items/earthenware_plate.png",
+	"weight": 0.5,
+	"cost": 2.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Earth": 1
+	},
+	"decor_layer": 0,
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "pewter_tankard",
+	"display_name": "Pewter Tankard",
+	"type": "item",
+	"description": "A pewter tankard of dark ale.",
+	"base_width": 11.4,
+	"base_height": 11.4,
+	"sprite_path": "res://Items/pewter_tankard.png",
+	"weight": 0.5,
+	"cost": 3.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Metal": 1
+	},
+	"decor_layer": 2,
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "wooden_cup",
+	"display_name": "Wooden Cup",
+	"type": "item",
+	"description": "An iron-hooped wooden cup of ale.",
+	"base_width": 11.4,
+	"base_height": 11.4,
+	"sprite_path": "res://Items/wooden_cup.png",
+	"weight": 0.3,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Wood": 1
+	},
+	"decor_layer": 2,
+	"is_stackable": 0.0,
+	"max_stack_size": null
+  },
+  {
+	"id": "candle",
+	"display_name": "Candle",
+	"type": "item",
+	"description": "A tallow candle in a brass dish.",
+	"base_width": 7.0,
+	"base_height": 7.0,
+	"sprite_path": "res://Items/candle.png",
+	"weight": 0.2,
+	"cost": 1.0,
+	"interact_options": [
+	  "Drop"
+	],
+	"max_hp": 5.0,
+	"hp": 5.0,
+	"traits": {
+	  "Organic": 1
+	},
+	"decor_layer": 3,
+	"emits_light": 0.15,
+	"light_color": [
+	  1.0,
+	  0.72,
+	  0.42
+	],
 	"is_stackable": 0.0,
 	"max_stack_size": null
   }

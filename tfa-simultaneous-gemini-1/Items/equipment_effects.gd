@@ -5,6 +5,8 @@
 #                            or drawn (a weapon); ProceduralCharacter applies them
 #   num_slots                extra carry slots from a worn pack
 #   emits_light              a light radius level (0..1) while worn or held
+#   light_color              optional [r, g, b] (0..1) for that light; absent =
+#                            the colour of the item's traits (light_color())
 # Static helpers only and no class_name (the class cache is static), so load
 #   const EquipmentEffects = preload("res://Items/equipment_effects.gd")
 # Callers pass characters and weapons untyped (duck typing): naming
@@ -138,20 +140,40 @@ static func light_color(traits) -> Color:
 			best = LIGHT_TRAIT_COLORS[key]
 	return best
 
+## An explicit light colour as a Color: an Items.json "light_color" or a
+## Maps.json lights[].color ([r, g, b] numbers 0..1; a 4th is ignored), or a
+## Color. null when absent or malformed, so the caller falls back.
+static func explicit_light_color(v) -> Variant:
+	if v is Color:
+		return v
+	if not (v is Array) or (v as Array).size() < 3:
+		return null
+	var a: Array = v
+	for i in 3:
+		if not (a[i] is float or a[i] is int):
+			return null
+	return Color(clampf(float(a[0]), 0.0, 1.0), clampf(float(a[1]), 0.0, 1.0), clampf(float(a[2]), 0.0, 1.0))
+
 static func light_radius_px(level: float) -> float:
 	return LIGHT_MIN_RADIUS_PX + LIGHT_RADIUS_PER_LEVEL_PX * clampf(level, 0.0, 1.0)
 
 ## A shadowed PointLight2D named "EmittedLight" for a light level of 0..1.
 ## Every structure occluder carries a LIGHT_SHADOW_MASK bit (bit 1 on flat
 ## maps, bit 2 on relief maps), so it stops at walls; cliffs don't shadow it.
-static func make_light(level: float, traits) -> PointLight2D:
+## color: an explicit colour (explicit_light_color: an Items.json
+## "light_color"); null or malformed = the traits' colour.
+static func make_light(level: float, traits, color = null) -> PointLight2D:
 	level = clampf(level, 0.0, 1.0)
 	var light := PointLight2D.new()
 	light.name = "EmittedLight"
 	light.texture = _light_texture()
 	light.texture_scale = 2.0 * light_radius_px(level) / float(LIGHT_TEX_SIZE)
 	light.energy = LIGHT_MIN_ENERGY + LIGHT_ENERGY_PER_LEVEL * level
-	light.color = light_color(traits)
+	var explicit: Variant = explicit_light_color(color)
+	if explicit is Color:
+		light.color = explicit
+	else:
+		light.color = light_color(traits)
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = CollisionLayers.LIGHT_SHADOW_MASK
 	return light

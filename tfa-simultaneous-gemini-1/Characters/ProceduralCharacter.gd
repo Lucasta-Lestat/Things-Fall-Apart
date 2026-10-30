@@ -7264,7 +7264,8 @@ func _refresh_worn_light() -> void:
 			best_data = d
 	if best <= 0.0:
 		return
-	var light: PointLight2D = EquipmentEffects.make_light(best, best_data.get("traits", {}))
+	var light: PointLight2D = EquipmentEffects.make_light(best, best_data.get("traits", {}),
+		best_data.get("light_color"))
 	light.name = "WornLight"
 	torso_slot.add_child(light)
 
