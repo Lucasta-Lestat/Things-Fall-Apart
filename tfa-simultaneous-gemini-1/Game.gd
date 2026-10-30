@@ -2760,7 +2760,9 @@ func _migrate_item_state(states: Dictionary, version: int) -> Dictionary:
 		return states
 	for map_id in states.keys():
 		var rec: Variant = states[map_id]
-		if rec is Array and (rec as Array).is_empty() 				and not (MapDatabase.get_map_data(str(map_id)).get("item_spawns", []) as Array).is_empty():
+		if not (rec is Array) or not (rec as Array).is_empty():
+			continue
+		if not (MapDatabase.get_map_data(str(map_id)).get("item_spawns", []) as Array).is_empty():
 			states.erase(map_id)
 			print("[save] v%d save: dropped the empty item record of %s (authored items spawn again)" % [version, map_id])
 	return states
