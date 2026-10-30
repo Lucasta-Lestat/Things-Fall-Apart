@@ -14,7 +14,7 @@ extends Node2D
 #      a run on an id without a "run" block falls back to a stretched sprite.
 #   4. Decor items (P2-D, export contract 2): the plate / cup / candle Items.json
 #      ids draw from their sprites at the built-ins' size and layer order; a
-#      candle lights (small, unshadowed, its light_color), at most
+#      candle lights (small, shadowed by walls, its light_color), at most
 #      RunLayout.RUN_LIGHTS_MAX per run spread along it (RunLayout.lit_decor,
 #      pinned by the fixture's "lit" cases) and RunRenderer.DECOR_LIGHTS_MAP_MAX
 #      per map; built-in _candle decor (contract 1) stays unlit paint.
@@ -504,11 +504,12 @@ func _case_decor_items() -> void:
 	for l in lights:
 		var pl: PointLight2D = l
 		xs.append(pl.position.x)
-		if pl.shadow_enabled or not pl.color.is_equal_approx(CANDLE_COLOUR) \
+		if not pl.shadow_enabled or pl.shadow_item_cull_mask != CollisionLayers.LIGHT_SHADOW_MASK \
+				or not pl.color.is_equal_approx(CANDLE_COLOUR) \
 				or not is_equal_approx(pl.energy, 0.35 + 0.65 * 0.15) or pl.get_parent() != rr:
 			look_ok = false
 	_report("decor.lights-spread", str(xs) == str([-200.0, 0.0, 200.0]), str(xs))
-	_report("decor.lights-small-unshadowed-warm", look_ok)
+	_report("decor.lights-small-shadowed-warm", look_ok)
 	# map cap: more candle runs than DECOR_LIGHTS_MAP_MAX allows
 	var before: int = RunRenderer._live_decor_lights()
 	var extra: Array = []

@@ -7,7 +7,7 @@
 # _plate / _cup / _candle (contract 1). Sprites and built-ins share one draw
 # order: RunLayout.decor_layer, then list order. Decor is paint, never items:
 # no loot, no theft, no extra LOS rays. Decor whose item emits_light (the
-# candle) gets a small unshadowed light, capped per run (RunLayout.lit_decor)
+# candle) gets a small shadowed light, capped per run (RunLayout.lit_decor)
 # and per map (DECOR_LIGHTS_MAP_MAX). Child of the Item; the Item's sprite is
 # hidden.
 class_name RunRenderer
@@ -15,6 +15,7 @@ extends Node2D
 
 const EquipmentEffects = preload("res://Items/equipment_effects.gd")
 ## Decor lights across every run on the map; past it a candle is drawn unlit.
+## It also bounds their shadow passes (each candle casts one).
 const DECOR_LIGHTS_MAP_MAX := 24
 
 static var _tex_cache: Dictionary = {}   # res path -> Texture2D (null = missing art)
@@ -135,8 +136,11 @@ func setup(p_meta: Dictionary, p_run: Dictionary) -> void:
 
 # Candles that light: RunLayout.lit_decor picks at most RUN_LIGHTS_MAX of the
 # decor whose item emits_light, and DECOR_LIGHTS_MAP_MAX bounds them across the
-# map. Small and unshadowed (a candle lights a tile or two; shadow passes are
-# the cost). Children of this renderer, so they turn with the run.
+# map. Shadowed like every item light (make_light: LIGHT_SHADOW_MASK): a
+# candle's ~93 px pool (level 0.15) reaches a tile and a half, so a table
+# against a wall used to light the room behind it, floor the party cannot
+# see. A candle never stands inside a wall (its table would), so its own
+# shadow never traps it. Children of this renderer, so they turn with the run.
 func _add_decor_lights(decor: Array) -> void:
 	var levels: Dictionary = {}
 	for dv in decor:
@@ -163,7 +167,6 @@ func _add_decor_lights(decor: Array) -> void:
 		var l: PointLight2D = EquipmentEffects.make_light(float(levels[did]), idef.get("traits", {}),
 			idef.get("light_color"))
 		l.name = "DecorLight%d" % _lights.size()
-		l.shadow_enabled = false
 		l.position = Vector2(float(aa[0]), float(aa[1]))
 		add_child(l)
 		_lights.append(l)
