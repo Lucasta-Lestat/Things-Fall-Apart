@@ -99,12 +99,13 @@ func _audit_map(m: Dictionary) -> void:
 	GridManager.TILE_SIZE = int(m.get("tile_size", 64))
 	var ws: Array = m.get("world_size", [2048, 2048])
 	GridManager.initialize(int(ws[0]), int(ws[1]))
-	# initialize() keeps the door tiles, and the previous audit's Doors are only
-	# queue_free'd (a Door unregisters its tiles when bashed, not when freed): an
-	# earlier map's doorways would read as passable here (combat_test's opened
-	# tg_town_square's walled NW pocket when both were audited, P2-L)
-	GridManager.door_pass.clear()
-	GridManager.door_gaps.clear()
+	# initialize() drops the door tiles like a warp does, although the previous
+	# audit's Doors are only queue_free'd: a leak would open an earlier map's
+	# doorways here (combat_test's opened tg_town_square's walled NW pocket, P2-L)
+	checks += 1
+	if not GridManager.door_pass.is_empty() or not GridManager.door_gaps.is_empty():
+		_fail("%s.door-tiles-reset %d door_pass / %d door_gaps tiles survived initialize()"
+			% [mid, GridManager.door_pass.size(), GridManager.door_gaps.size()])
 	var graph: CellGraph = CellGraph.from_structured(String(m.get("cell_graph", "")))
 	GridManager.set_elevation_data(graph)
 	var ml: Node2D = MAP_LOADER.new()

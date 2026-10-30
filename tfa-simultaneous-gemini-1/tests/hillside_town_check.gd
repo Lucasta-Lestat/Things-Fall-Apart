@@ -9,6 +9,8 @@ extends Node2D
 #  (3) the party stands ON the ground (height above ground ~0, not "high
 #      layer") and roof view stays off although the ground is 0.5..17 stories
 #      (interiors: rock is terrain, rock_st above every floor),
+#  (3b) every door_pass / door_gaps tile belongs to a Door of this map: the
+#      warp from a map with doors to the door-less interiors leaves none,
 #  (4) NPCs on the ground are not on the high layer (so ground view shows them),
 #  (5) every warp's target map + target_spawn exist, and the warp is reachable
 #      on foot from the arrival point (A* with the 0.55-story step gate),
@@ -155,6 +157,25 @@ func _check_map(map_id: String) -> void:
 	_check("%s.party-on-ground" % map_id, party_ok and not game.party_chars.is_empty(),
 		"elev %.2f stories%s" % [leader_elev, party_detail])
 	_check("%s.roof-view-off" % map_id, not bool(game.roof_view))
+	# (3b) door tiles are this map's: the warp from the previous map (doors on
+	# every town band) left none of its doorways passable (GridManager.initialize)
+	var live_doors := {}
+	var n_doors := 0
+	for s in game.map_loader.get_children():
+		if s is Door and not s.is_queued_for_deletion():
+			n_doors += 1
+			for t in (s as Door).occupied_tiles:
+				live_doors[t] = true
+	var stale_doors := 0
+	for t in GridManager.door_pass:
+		if not live_doors.has(t):
+			stale_doors += 1
+	for t in GridManager.door_gaps:
+		if not live_doors.has(t):
+			stale_doors += 1
+	_check("%s.door-tiles-this-map" % map_id, stale_doors == 0 and (n_doors > 0 or GridManager.door_gaps.is_empty()),
+		"%d doors, %d door_pass + %d door_gaps tiles, %d not this map's" % [n_doors, GridManager.door_pass.size(),
+		GridManager.door_gaps.size(), stale_doors])
 	# (4) ground NPCs are on the ground layer
 	var npc_high := 0
 	var npc_n := 0

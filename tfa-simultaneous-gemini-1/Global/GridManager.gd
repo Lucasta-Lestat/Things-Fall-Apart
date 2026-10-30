@@ -100,6 +100,11 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	deck_lint_bad = 0
 	tile_elev_used = false
 	solid_rock_elev = INF
+	# Door tiles are per map: the previous map's Doors are only queue_free'd
+	# (a Door releases its tiles when bashed, never when freed), so without
+	# this their doorways stayed passable to A* through the next map's walls
+	door_pass.clear()
+	door_gaps.clear()
 	for y in range(rows):
 		for x in range(cols):
 			var pos = Vector2i(x, y)
