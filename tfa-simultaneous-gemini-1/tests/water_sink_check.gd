@@ -21,8 +21,12 @@ extends Node2D
 #     an upper body down to a lower one keeps its ground and a pit beside it
 #     its pond; a trap beside the upper body is raised only to the rim it
 #     spills over, so the cell behind it still drains; a hollow beside a
-#     perched pool (a pit in 'visual' too) keeps its pond; and the clamp is
-#     one flood, not a walk per cell (a 48 x 48 yard below the waterline);
+#     perched pool (a pit in 'visual' too, its spill the same) keeps its pond;
+#     a shore cell a little below the seabed (a shallow pit in 'visual' the
+#     sinks deepen) goes to the waterline; the clamp is one flood, not a walk
+#     per cell (a 48 x 48 yard below the waterline); and it floods only the
+#     ground joined to a body below its head (a perched pool high above a
+#     town adds nothing);
 #   - FluidWell (Oil Well) skips sinks so its budget fills the land.
 # The map: 10 x 6 tiles of 64 px, one cell per tile. Columns 0-4 are a quay at
 # 0.5 stories, 5-9 the sea (seabed -1.0, surface 0.0, body 1) except column 9,
@@ -374,6 +378,35 @@ func _ready() -> void:
 	_check("two.perched-hollow-keeps-pond", absf(e_s - e_v) <= 0.05,
 		"0.5 water on E for 10 s: sink %.4f, visual %.4f" % [e_s, e_v])
 
+	# A shore cell a little below the seabed it opens onto: S (surface 0.0, bed
+	# -1.0); A at -1.02 and B at -1.10 are pits in 'visual' too, but shallow
+	# ones (0.032 and 0.16 deep before they spill onto the seabed). The sinks
+	# make each a basin 1.6 deep and more. Its spill rises with the sinks, so
+	# the trap is the sinks' doing: both go to the waterline and shed.
+	#   H  H  H  H
+	#   H  A  S  S
+	#   H  H  S  S
+	#   H  B  S  S
+	#   H  H  H  H
+	ts = {"A": Vector2i(1, 1), "B": Vector2i(1, 3)}
+	var dip_ground := {ts["A"]: -1.02, ts["B"]: -1.1}
+	var dip_water := {}
+	for y in range(1, 4):
+		for x in range(2, 4):
+			dip_ground[Vector2i(x, y)] = -1.0
+			dip_water[Vector2i(x, y)] = [0.0, 1]
+	g = _load_layout(4, 5, dip_ground, dip_water)
+	ml.set("water_sim", "sink")
+	fm.setup_cell_graph(g)
+	cf = fm.cell_fluid
+	_check("two.shore-dip-raised", cf.waterline_count == 2 and _ground_is(cf, g, ts["A"], 0.0) and _ground_is(cf, g, ts["B"], 0.0),
+		"%d raised; A %.3f B %.3f stories" % [cf.waterline_count, _gh(cf, g, ts["A"]), _gh(cf, g, ts["B"])])
+	for k in ["A", "B"]:
+		var dip_v: float = _shed_run(ml, fm, g, "visual", ts[k], "water", 0.5)
+		var dip_s: float = _shed_run(ml, fm, g, "sink", ts[k], "water", 0.5)
+		_check("two.shore-dip-%s-sheds" % k, dip_s <= maxf(dip_v + 0.05, pud_w + 0.1),
+			"0.5 water on %s for 10 s: sink %.4f, visual %.4f" % [k, dip_s, dip_v])
+
 	# --- the clamp's cost: one flood, not a walk per cell -----------------------
 	# A 48 x 48 yard below the waterline (-0.5) behind one gap in a quay of high
 	# ground, beside a sea column (surface 0.0, bed -1.0): the yard and the gap
@@ -400,6 +433,39 @@ func _ready() -> void:
 		clamp_ms = minf(clamp_ms, float(Time.get_ticks_usec() - s0 - vis_us) / 1000.0)
 	_check("cost.clamp-is-one-flood", fm.cell_fluid.waterline_count == 48 * 48 + 1 and clamp_ms < 250.0,
 		"%d raised; sinks + clamp %.1f ms (best of 3)" % [fm.cell_fluid.waterline_count, clamp_ms])
+
+	# --- the clamp floods only ground joined to a body below its head -----------
+	# A perched pool on a hill (surface 3.0, bed 2.5, rimmed at 3.5) lifts the
+	# highest sink head far above a 64 x 60 town at 0.5, which drains to the sea
+	# (surface 0.0, bed -1.0) at its own ground. Only the shore column at -0.5
+	# lies below a body's head and joins it there: the clamp raises and floods
+	# those 60 cells, not the town under the pool's head (a flood capped at
+	# the highest head settled all 3900 cells, twice, building their edges).
+	var town := {}
+	var town_sea := {}
+	for y in 60:
+		for x in 64:
+			town[Vector2i(x, y)] = 0.5
+		town[Vector2i(64, y)] = -0.5
+		town[Vector2i(65, y)] = -1.0
+		town_sea[Vector2i(65, y)] = [0.0, 1]
+	var g_flat := _load_layout(66, 60, town, town_sea)
+	var flat_ms: float = _clamp_ms(ml, fm, g_flat)
+	var flat_raised: int = fm.cell_fluid.waterline_count
+	for y in range(1, 4):
+		for x in range(1, 4):
+			town[Vector2i(x, y)] = 3.5
+	town[Vector2i(2, 2)] = 2.5
+	town_sea[Vector2i(2, 2)] = [3.0, 2]
+	var g_pool := _load_layout(66, 60, town, town_sea)
+	var pool_ms: float = _clamp_ms(ml, fm, g_pool)
+	cf = fm.cell_fluid
+	var flooded: int = int(cf.get("clamp_cells")) if "clamp_cells" in cf else -1
+	_check("cost.clamp-floods-the-shore-only", cf.sink_count == 61 and cf.waterline_count == 60 and flat_raised == 60
+		and flooded == 60 and _ground_is(cf, g_pool, Vector2i(64, 30), 0.0) and _ground_is(cf, g_pool, Vector2i(30, 30), 0.5),
+		"%d sinks, %d raised (%d without the pool), %d cells flooded" % [cf.sink_count, cf.waterline_count, flat_raised, flooded])
+	_check("cost.perched-pool-costs-nothing", pool_ms < flat_ms + 15.0,
+		"sinks + clamp %.1f ms with the pool, %.1f ms without (best of 3)" % [pool_ms, flat_ms])
 	ml.set("water_sim", "sink")
 
 	ml.free()
@@ -455,6 +521,22 @@ func _load_layout(cols: int, rows: int, ground: Dictionary, water: Dictionary) -
 		for x in cols:
 			GridManager.floors[Vector2i(x, y)] = "shallow_water" if water.has(Vector2i(x, y)) else "floor_stone"
 	return g
+
+
+# What the sinks and the clamp add to a map load: 'sink' setup minus 'visual'
+# setup, best of 3 (the machine is shared). Leaves the 'sink' sim in place.
+func _clamp_ms(ml: Node2D, fm: FluidManager, g: CellGraph) -> float:
+	var best := INF
+	for _k in 3:
+		ml.set("water_sim", "visual")
+		var v0 := Time.get_ticks_usec()
+		fm.setup_cell_graph(g)
+		var vis_us: int = Time.get_ticks_usec() - v0
+		ml.set("water_sim", "sink")
+		var s0 := Time.get_ticks_usec()
+		fm.setup_cell_graph(g)
+		best = minf(best, float(Time.get_ticks_usec() - s0 - vis_us) / 1000.0)
+	return best
 
 
 # A tile's cell ground head, in stories / against `stories`.

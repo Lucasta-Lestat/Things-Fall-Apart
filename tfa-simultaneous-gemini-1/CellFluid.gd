@@ -57,6 +57,7 @@ var sources: Array = []          # {cid, ti, rate} continuous emitters (authored
 var sink: PackedByteArray = PackedByteArray()          # cid -> 1 = sink; EMPTY on maps without
 var sink_count := 0
 var waterline_count := 0                               # shore/deck cells setup_sinks raised to their spill level
+var clamp_cells := 0                                   # non-sink cells the clamp's floods covered (its region)
 var drained: PackedFloat64Array = PackedFloat64Array() # per ftype byte: mass the sinks deleted
 # Mass ledger (tests/fluid_sink_bench closes it): poured = what is in the cells
 # + drained + evaporated + lost. Bookkeeping only: the sim never reads it.
@@ -87,6 +88,7 @@ func setup(p_graph: CellGraph, p_fm: Node, fluid_db: Dictionary, order: Array) -
 	sink = PackedByteArray()
 	sink_count = 0
 	waterline_count = 0
+	clamp_cells = 0
 	drained = PackedFloat64Array(); drained.resize(_order.size() + 1)
 	mass_poured = 0.0; mass_evaporated = 0.0; mass_lost = 0.0
 	_ti_water = _ti_of("water")
@@ -120,13 +122,14 @@ func active_sim() -> bool:
 # follows the walls at load. Doors start closed (Door.gd), so they are walls
 # then: a door or a breach opened later re-derives the edges, not the clamp,
 # and a below-waterline floor behind it can then trap beside the raised shore.
-# One O(cell_count) pass per map load, plus the clamp's two floods over the
-# ground below the highest sink head. Returns the sink count.
+# One O(cell_count) pass per map load, plus the clamp's walk and two floods
+# over the ground joined to a body below its head. Returns the sink count.
 func setup_sinks() -> int:
 	var n := graph.cell_count if graph != null else 0
 	sink = PackedByteArray(); sink.resize(n)
 	sink_count = 0
 	waterline_count = 0
+	clamp_cells = 0
 	for cid in n:
 		var t := GridManager.world_to_map(graph.centroid(cid))
 		if GridManager.deck_elevations.has(t):
@@ -146,7 +149,7 @@ func setup_sinks() -> int:
 		sink = PackedByteArray()   # the hot-path guard reads sink_count first
 		return 0
 	waterline_count = _clamp_waterline()
-	# The clamp's floods built the shore's edges; start cold like 'visual'
+	# The clamp's walk built the shore's edges; start cold like 'visual'
 	# (edges are rebuilt from the walls on demand, so nothing changes).
 	_edge_cache.clear()
 	return sink_count
@@ -158,56 +161,120 @@ func setup_sinks() -> int:
 # of the highest ground head on the way, the cell's own and the sink's head
 # included (_spill_levels: one priority flood out from the sinks). A cell
 # whose spill is above its own ground fills before it drains. It is a trap
-# the sinks made when, with every sink at its seabed as 'visual' runs it
-# (the same flood: open water is just low ground there), it drains at its
-# own ground; it is raised to its spill, the lowest ground that sheds. A
+# the sinks made when the sinks raise its spill: it is above the spill the
+# cell has with every sink at its seabed, as 'visual' runs it (the same
+# flood: open water is just low ground there). Its way out in 'visual' then
+# runs below a body's surface into that body, so it is that body's own shore
+# (a cell straddling the quay edge, or one a little below the seabed it
+# opens onto), whatever puddle 'visual' leaves on it. It is raised to its
+# spill, the lowest ground that sheds. A
 # cell that drains at its own ground (a slope down to a lower body) keeps
-# it, and a pit in 'visual' too (an inland pond behind a ridge, a hollow
-# beside a perched pool) keeps its pond. Filling a hollow up to its spill
-# moves no cell's spill, so every raised cell then has a level-or-downhill
-# path to a sink and every cell that drained at its own ground still does.
-# A trap the sinks made lies below the head of the sink it drained into in
-# 'visual', so only ground at or below the highest sink head is flooded (on
-# a one-body map, the shore below its waterline). Ground heads only: the
-# cells' fluid is untouched. Returns the raised-cell count.
+# it, and a pit whose spill the sinks don't move (an inland pond behind a
+# ridge, a hollow beside a perched pool) keeps its pond. Filling a hollow up
+# to its spill moves no cell's spill, so every raised cell then has a level-
+# or-downhill path to a sink and every cell that drained at its own ground
+# still does. Such a trap joins its body through ground below that body's
+# head, so the floods run over that ground only (_submerged_levels): on a
+# one-body map, the shore below its waterline, however high a perched pool
+# lifts the highest head. Ground heads only: the cells' fluid is untouched.
+# Returns the raised-cell count.
 func _clamp_waterline() -> int:
-	var n := sink.size()
-	var top := -INF   # the highest sink head
-	for cid in n:
-		if sink[cid] == 1:
-			top = maxf(top, _ground[cid])
-	var spill := _spill_levels(top + HEAD_EPS, false)
-	var spill_visual := _spill_levels(top + HEAD_EPS, true)
+	var sub: Array = _submerged_levels()
+	var level: PackedFloat32Array = sub[0]
+	var region: PackedInt32Array = sub[1]
+	clamp_cells = region.size()
+	if region.is_empty():
+		return 0
+	# the floods start from the sinks the region flows into
+	var seeds := PackedInt32Array()
+	var seeded := PackedByteArray()
+	seeded.resize(sink.size())
+	for cid in region:
+		var nbs: Array = _nb_cache[cid]
+		for j in nbs.size():
+			var nb: int = nbs[j]
+			if sink[nb] == 1 and seeded[nb] == 0 and _opens_to(cid, nb):
+				seeded[nb] = 1
+				seeds.append(nb)
+	var spill := _spill_levels(seeds, level, false)
+	var spill_visual := _spill_levels(seeds, level, true)
 	var raised := 0
-	for cid in n:
-		if sink[cid] == 1 or spill[cid] == INF:
-			continue
-		var g := _ground_head(cid)
-		if spill[cid] > g + HEAD_EPS and spill_visual[cid] <= g + HEAD_EPS:
-			_ground[cid] = spill[cid]
+	for cid in region:
+		var s := spill[cid]
+		# A spill above the cell's level runs out of the region over higher
+		# ground: not a trap the sinks made (and not the full spill, either).
+		if s <= level[cid] + HEAD_EPS and s > spill_visual[cid] + HEAD_EPS:
+			_ground[cid] = s
 			raised += 1
 	return raised
 
 
-# Every cell's spill level (_clamp_waterline), INF where no open path at or
-# below `cap` reaches a sink. A priority flood out from the sinks in rising
-# order, upstream across open edges (fluid on nb can flow into c): a sink
-# starts at its head, or with `seabed` at its own ground; a cell's spill is
-# the higher of its ground and the spill of the neighbour it flows into, the
-# lowest such. Each cell is settled once: O(k log k) in the k cells flooded.
-# Read before the clamp writes any raised head, so every non-sink cell is at
-# its own ground.
-func _spill_levels(cap: float, seabed: bool) -> PackedFloat32Array:
+# The clamp's region (_clamp_waterline): every non-sink cell joined to a body
+# through open edges (either way) and ground no higher than the body's head,
+# with the highest such head as its level (-INF elsewhere: the sinks too). A
+# breadth-first walk out from each body's sinks, the highest head first: a
+# cell is taken by the first walk to reach it, the highest, and a lower walk
+# finds nothing beyond it the higher one did not, so each cell is visited
+# once. A trap the sinks made (_clamp_waterline) is in it: its way out in
+# 'visual' runs to the body through ground below that body's head. So is
+# every way out of a cell no higher than the cell's level, from the cell on
+# (each step from a region cell is walked at its level or higher): the floods
+# restricted to the region give the full spill, the 'visual' one too, of
+# every cell whose spill is at or below its level, and every trap the sinks
+# made is such a cell. Returns [level, the region's cids].
+func _submerged_levels() -> Array:
 	var n := sink.size()
+	var by_head := {}   # sink head -> its sinks (an Array: appended in place)
+	for cid in n:
+		if sink[cid] == 1:
+			var h: float = _ground[cid]
+			if not by_head.has(h):
+				by_head[h] = []
+			(by_head[h] as Array).append(cid)
+	var heads: Array = by_head.keys()
+	heads.sort()
+	var level := PackedFloat32Array()
+	level.resize(n)
+	level.fill(-INF)
+	var region := PackedInt32Array()
+	for hi in range(heads.size() - 1, -1, -1):
+		var h: float = heads[hi]
+		var queue: Array = by_head[h]   # its sinks, then the cells it takes
+		var qi := 0
+		while qi < queue.size():
+			var c: int = queue[qi]
+			qi += 1
+			var nbs: Array = _nb_cache[c]
+			for j in nbs.size():
+				var nb: int = nbs[j]
+				if sink[nb] == 1 or level[nb] != -INF or _ground_head(nb) > h + HEAD_EPS:
+					continue
+				# into a sink only (a sink's outflow means nothing); else either way
+				if not (_opens_to(nb, c) or (sink[c] == 0 and _opens_to(c, nb))):
+					continue
+				level[nb] = h
+				region.append(nb)
+				queue.append(nb)
+	return [level, region]
+
+
+# The region's spill levels (_clamp_waterline), INF outside it or where no
+# open path through it reaches a sink. A priority flood out from `seeds` in
+# rising order, upstream across open edges (fluid on nb can flow into c): a
+# sink starts at its head, or with `seabed` at its own ground; a cell's spill
+# is the higher of its ground and the spill of the neighbour it flows into,
+# the lowest such. Each cell is settled once: O(k log k) in the k region
+# cells. Read before the clamp writes any raised head, so every non-sink cell
+# is at its own ground.
+func _spill_levels(seeds: PackedInt32Array, level: PackedFloat32Array, seabed: bool) -> PackedFloat32Array:
 	var spill := PackedFloat32Array()
-	spill.resize(n)
+	spill.resize(sink.size())
 	spill.fill(INF)
 	_heap_key = PackedFloat32Array()
 	_heap_cid = PackedInt32Array()
-	for cid in n:
-		if sink[cid] == 1:
-			spill[cid] = graph.ground_elev(cid) * HEAD_PER_STORY if seabed else _ground[cid]
-			_heap_push(spill[cid], cid)
+	for cid in seeds:
+		spill[cid] = graph.ground_elev(cid) * HEAD_PER_STORY if seabed else _ground[cid]
+		_heap_push(spill[cid], cid)
 	while not _heap_cid.is_empty():
 		var lv: float = _heap_key[0]
 		var c := _heap_pop()
@@ -216,12 +283,9 @@ func _spill_levels(cap: float, seabed: bool) -> PackedFloat32Array:
 		var nbs: Array = _nb_cache[c]
 		for j in nbs.size():
 			var nb: int = nbs[j]
-			if sink[nb] == 1:
-				continue
-			var g := _ground_head(nb)
-			if g > cap:
-				continue
-			var s := maxf(g, lv)
+			if level[nb] == -INF:
+				continue   # a sink, or outside the region
+			var s := maxf(_ground_head(nb), lv)
 			if s >= spill[nb] or not _opens_to(nb, c):
 				continue
 			spill[nb] = s

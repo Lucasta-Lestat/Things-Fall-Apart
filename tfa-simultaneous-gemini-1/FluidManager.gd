@@ -131,7 +131,7 @@ func setup_cell_graph(graph: CellGraph) -> void:
 	var ml = game.map_loader if (game != null and "map_loader" in game and game.map_loader != null) else null
 	if ml != null and "water_sim" in ml and String(ml.water_sim) == "sink":
 		var ns: int = cell_fluid.setup_sinks()
-		print("FluidManager: sea drain on, %d sink cells, %d shore cells at the waterline"
+		print("FluidManager: sea drain on, %d sink cells, %d shore cells raised to their spill level"
 			% [ns, cell_fluid.waterline_count])
 	# organic water renderer: bind the editor's blob-field water shader to the
 	# structured map's ground sprite (no per-tile Fluid.tscn sprites then)

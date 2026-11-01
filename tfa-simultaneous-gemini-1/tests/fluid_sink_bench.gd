@@ -35,9 +35,12 @@ extends Node2D
 # run (+TRAP_TOL) AND deeper than its puddle floor + TRAP_FLOOR (skipped
 # without a visual run). Over-raise: no cell the waterline clamp raised may
 # have drained at its own ground already (original grounds, sinks at their
-# heads: a slope it flattened), nor be a pit in 'visual' too (every cell at
-# its original ground: a pond it filled); the raised cells with no open water
-# under their footprint are counted for information. Drain kept: every raised
+# heads: a slope it flattened), nor fail to drain just below its raised head
+# in 'visual' (every cell at its original ground: a pond the sinks did not
+# deepen, which it filled), nor drain just below its raised head already
+# (original grounds, sinks at their heads: raised over its rim); the raised
+# cells with no open water under their footprint are counted for
+# information. Drain kept: every raised
 # cell drains at its raised head (the clamp's heads), and no other non-sink
 # cell that drained at its own ground before the clamp (original grounds,
 # sinks at their heads) has lost that drain to a raised cell. Then one VERDICT line
@@ -492,6 +495,7 @@ func _run(sc: Dictionary, mode: String, vis_ref: Dictionary = {}) -> Dictionary:
 		r["over_raised"] = int(orz["count"])
 		r["over_drained"] = int(orz["drained"])
 		r["over_pit"] = int(orz["pit"])
+		r["over_rim"] = int(orz["rim"])
 		r["over_dry"] = int(orz["dry"])
 		r["over_worst"] = orz["worst"]
 		# setup_sinks is deterministic, so every sink run of a map leaves the same
@@ -670,19 +674,24 @@ func _drains_at(cf, is_snk: PackedByteArray, start: int, level: float, heads: in
 # Over-raise check (sink runs): the cells the waterline clamp raised (a
 # non-sink cell whose ground head is above its own ground), and of those the
 # ones it had no business raising: one that drained at its own ground already
-# (original grounds, sinks at their heads: a slope it flattened), or one that
-# is a pit in 'visual' too (no level-or-downhill path to open water with every
-# cell at its original ground: a pond it filled, not a trap the sinks made).
+# (original grounds, sinks at their heads: a slope it flattened); one whose
+# pond the sinks did not deepen (with every cell at its original ground,
+# 'visual', no level-or-downhill path to open water just below its raised
+# head either: a pond it filled, not a trap the sinks made; a shore cell a
+# little below the seabed is a shallow pit in 'visual' that the sinks
+# deepen, and is raised); or one raised over its rim (original grounds,
+# sinks at their heads: it drained just below its raised head already).
 # `dry` counts the raised cells with no open water under their footprint (no
 # tile within the cell's radius of its centroid is open water or a deck over
 # shallow water), for information only: a seabed-level cell a hop behind the
 # straddling shore cell is a trap the sinks made with dry tiles under it
 # (tg_hillside_harbor cid 1875, tile (28, 10)).
-# Returns {raised, count, drained, pit, dry, worst}.
+# Returns {raised, count, drained, pit, rim, dry, worst}.
 func _over_raised(cf, is_snk: PackedByteArray) -> Dictionary:
 	var raised := 0
 	var drained := 0
 	var pit := 0
+	var rim := 0
 	var dry := 0
 	var bad := 0
 	var worst := "none"
@@ -690,24 +699,28 @@ func _over_raised(cf, is_snk: PackedByteArray) -> Dictionary:
 		if is_snk[cid] == 1:
 			continue
 		var g0: float = _graph.ground_elev(cid) * CellFluid.HEAD_PER_STORY
-		if float(cf._ground_head(cid)) <= g0 + HEAD_TOL:
+		var h: float = cf._ground_head(cid)
+		if h <= g0 + HEAD_TOL:
 			continue
 		raised += 1
 		var d: bool = _drains_at(cf, is_snk, cid, g0 + HEAD_TOL, HEADS_ORIG)
-		var p: bool = not _drains_at(cf, is_snk, cid, g0 + HEAD_TOL, HEADS_VISUAL)
+		var p: bool = not _drains_at(cf, is_snk, cid, h - HEAD_TOL, HEADS_VISUAL)
+		var o: bool = _drains_at(cf, is_snk, cid, h - HEAD_TOL, HEADS_ORIG)
 		if d:
 			drained += 1
 		if p:
 			pit += 1
+		if o:
+			rim += 1
 		if not _wet_footprint(cid):
 			dry += 1
-		if d or p:
+		if d or p or o:
 			bad += 1
 			if worst == "none":
 				worst = "cid %d tile %s ground %.2f -> %.2f stories (%s)" % [cid,
 					str(GridManager.world_to_map(_graph.centroid(cid))), g0 / CellFluid.HEAD_PER_STORY,
-					float(cf._ground_head(cid)) / CellFluid.HEAD_PER_STORY, "drained already" if d else "a pit in visual"]
-	return {"raised": raised, "count": bad, "drained": drained, "pit": pit, "dry": dry, "worst": worst}
+					h / CellFluid.HEAD_PER_STORY, "drained already" if d else ("a pond the sinks did not deepen" if p else "over its rim")]
+	return {"raised": raised, "count": bad, "drained": drained, "pit": pit, "rim": rim, "dry": dry, "worst": worst}
 
 
 # Drain-kept check (sink runs), independent of how the clamp finds its traps:
@@ -899,10 +912,10 @@ func _print_result(mid: String, sc: Dictionary, mode: String, r: Dictionary) -> 
 			var dyn: String = "deeper_than_visual=skipped (no visual run)"
 			if bool(r.get("traps_run", false)):
 				dyn = "deeper_than_visual=%d (closest: %s)" % [int(r["traps"]), String(r.get("trap_worst", "n/a"))]
-			print("  TRAPS %s %s %s waterline_cells=%d shore_cells=%d below_sink_head=%d | %s | raised=%d over_raised=%d (drained already %d, a pit in visual %d; first: %s; info: %d raised with no water under them) | drain_kept: stuck=%d cut=%d of %d (first: %s)" % [
+			print("  TRAPS %s %s %s waterline_cells=%d shore_cells=%d below_sink_head=%d | %s | raised=%d over_raised=%d (drained already %d, a pond the sinks did not deepen %d, over its rim %d; first: %s; info: %d raised with no water under them) | drain_kept: stuck=%d cut=%d of %d (first: %s)" % [
 				mid, sc["id"], mode, int(r["waterline"]), int(r["shore_cells"]), int(r["shore_traps"]), dyn,
 				int(r["raised"]), int(r["over_raised"]), int(r.get("over_drained", 0)), int(r.get("over_pit", 0)),
-				String(r.get("over_worst", "none")), int(r.get("over_dry", 0)),
+				int(r.get("over_rim", 0)), String(r.get("over_worst", "none")), int(r.get("over_dry", 0)),
 				int(r.get("kept_stuck", 0)), int(r.get("kept_cut", 0)), int(r.get("kept_checked", 0)), String(r.get("kept_worst", "none"))])
 	else:
 		print("  MASS %s %s %s in_cells=%.4f well_deposited=%.4f (no ledger in this tree)" % [
