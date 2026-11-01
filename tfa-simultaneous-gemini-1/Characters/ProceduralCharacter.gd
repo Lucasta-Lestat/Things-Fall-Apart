@@ -7507,11 +7507,12 @@ func _canopy_revealed() -> bool:
 ##   - under a live crown, CANOPY_VISIBILITY unless they are within
 ##     CANOPY_NEAR_TILES (plus their body radius) of us or under the same
 ##     crown cluster, or an attack or cast gave us away (reveal());
-##   - canopy_hides_from(observer): 0.0, whatever reveal() says (the crown is
-##     still in the way): they look down on our crown (from a roof or a deck
-##     a story or more above us, or from relief terrain a story or more up
-##     with the eye line going in through the leaves), or the sight line runs
-##     through a crown between us at crown height.
+##   - canopy_hides_from(observer): 0.0. They look down on our crown (from a
+##     roof or a deck a story or more above us, or from relief terrain a
+##     story or more up with the eye line going in through the leaves), or
+##     the sight line runs through a crown between us at crown height. In a
+##     reveal() window only the crown between still hides us: an attacker
+##     under a crown shows from above for those 3 s.
 ## Party members never hide from each other this way, and a corpse not at
 ## all. A range multiplier like effective_visibility: 0.0 = seen at no range.
 func visibility_to(observer) -> float:
@@ -7539,10 +7540,10 @@ func visibility_to(observer) -> float:
 ## CanopyMap.blocks_view from where they stand -- looking down on our crown
 ## from a roof or a deck a story or more above us, or from relief terrain a
 ## story or more up through the leaves -- or a crown between us at crown
-## height. Never between party members, never for a corpse; reveal()
-## doesn't lift it. visibility_to's 0.0, and the AI's hold rule (ai.gd: a
-## held target that ducks under a crown an archer on a roof looks down on is
-## occluded).
+## height. Never between party members, never for a corpse. In a reveal()
+## window only the crown between counts. visibility_to's 0.0, and the AI's
+## hold rule (ai.gd: a held target that ducks under a crown an archer on a
+## roof looks down on is occluded).
 func canopy_hides_from(observer) -> bool:
 	if not (observer is Node2D) or not is_instance_valid(observer) or observer == self:
 		return false
@@ -7551,8 +7552,11 @@ func canopy_hides_from(observer) -> bool:
 	return _canopy_blocks(observer, observer.global_position, _canopy_observer_elev(observer))
 
 # CanopyMap's full block from `observer` (its raised surface known, not
-# guessed).
+# guessed). While an attack or a cast gives us away (reveal()), our own crown
+# no longer hides us from above; a crown between us still cuts the line.
 func _canopy_blocks(observer, o_pos: Vector2, o_elev: float) -> bool:
+	if _canopy_revealed():
+		return GridManager.canopy.line_blocked(o_pos, global_position, o_elev, current_elevation)
 	var raised: int = 1 if GridManager.is_high_layer(observer) else 0
 	return GridManager.canopy.blocks_view(o_pos, o_elev, global_position, current_elevation, raised)
 

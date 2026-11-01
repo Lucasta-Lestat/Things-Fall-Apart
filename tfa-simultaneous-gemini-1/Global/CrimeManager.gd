@@ -289,8 +289,9 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) ->
 ## from relief terrain a story or more up through the leaves, or through a
 ## crown at crown height).
 ## The 3 s reveal after attacking or casting shows them (Invisible is
-## suppressed then, and the factors are lifted; a crown seen from above still
-## hides). Walls and facing are has_visual_los's part. "" when nothing hides
+## suppressed then, the factors are lifted, and their own crown no longer hides
+## them from above; a crown between still does). Walls and facing are
+## has_visual_los's part. "" when nothing hides
 ## them, else the reason for the notice: the condition's name ("Invisible",
 ## "Shrouded") when it alone hides them, else "Canopy" (CANOPY_REASON).
 func hidden_from(viewer, who) -> String:

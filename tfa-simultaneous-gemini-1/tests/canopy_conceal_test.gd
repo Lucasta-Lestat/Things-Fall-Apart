@@ -14,7 +14,8 @@
 #   - a viewer at the target's own level on a slope is a ground observer
 #     (the factor, near exemption and all), however far above the trunk's
 #     ground both stand;
-#   - attacking (reveal()) lifts the factor for 3 s;
+#   - attacking (reveal()) lifts the factor for 3 s, and the block from
+#     above (a crown between still blocks);
 #   - party members always see each other;
 #   - a felled or burnt-down tree stops hiding at once;
 #   - near (2 tiles) or under the same crown cluster: seen normally; hedges
@@ -378,9 +379,13 @@ func _part_a_flat() -> void:
 	_check("a.deck-viewer-hidden", not ai.can_see_character(x) and not _acquires(guard, x)
 		and is_equal_approx(x.visibility_to(guard), 0.0), x.visibility_to(guard))
 	_check("a.deck-viewer-witness-canopy", CrimeManager.hidden_from(guard, x) == "Canopy")
+	# attacking shows it for 3 s from above too (only a crown between still
+	# cuts the line then)
 	x.reveal()
-	_check("a.deck-viewer-reveal-still-hidden", not ai.can_see_character(x))
+	_check("a.deck-viewer-reveal-seen", ai.can_see_character(x) and is_equal_approx(x.visibility_to(guard), 1.0)
+		and not x.canopy_hides_from(guard) and CrimeManager.hidden_from(guard, x) == "", x.visibility_to(guard))
 	TimeManager.game_time += 3.1
+	_check("a.deck-viewer-reveal-ends", not ai.can_see_character(x) and x.canopy_hides_from(guard))
 	GridManager.unregister_deck(deck_t, 1.5)
 	var near_t := GridManager.world_to_map(T1 + UNDER + Vector2(0, 100))
 	GridManager.register_deck(near_t, 1.5)
