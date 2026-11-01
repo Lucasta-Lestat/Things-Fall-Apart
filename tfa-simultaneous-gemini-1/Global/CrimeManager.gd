@@ -285,7 +285,8 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) ->
 ## has true_sight; concealment beyond the viewer's sight range times
 ## who.visibility_to(viewer): a Dark Hood's Shrouded, or a tree crown (P3-F:
 ## x0.5 from the ground beyond 2 tiles and outside their crown cluster; not at
-## all from above its trunk clearance, or through a crown at crown height).
+## all looking down on it from a roof, a deck or a cliff top a story or more
+## above them, or through a crown at crown height).
 ## The 3 s reveal after attacking or casting shows them (Invisible is
 ## suppressed then, and the factors are lifted; a crown seen from above still
 ## hides). Walls and facing are has_visual_los's part. "" when nothing hides
@@ -330,7 +331,11 @@ static func hidden_phrase(why: String) -> String:
 ## second LOS test against the ACTOR (identification). Two tests, not one —
 ## a single witness-to-actor test makes every ranged/AoE crime free: stand
 ## behind cover, creepy_beam a merchant, and "no witness exists".
-## Skips: the actor, party members (player-controlled), the dead.
+## Skips: the actor, party members (player-controlled), the dead. A tree
+## crown that cuts the witness's view of the crime position outright (P3-F:
+## GridManager.canopy.blocks_view, looking down on a crown over it from a
+## roof, a deck or a cliff top, or a crown between at crown height) hides it
+## like a wall: they saw nothing happen (`by_hand`: "Canopy" into `evaded`).
 ## Invisible and Shrouded (hidden_from) count as out of sight of the actor:
 ## never identified. `by_hand`: the crime is the actor's own act with no
 ## victim (a theft, looting, a cast), so a witness the actor is hidden from
@@ -358,6 +363,12 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand
 		if c.get_node_or_null("AI") == null:
 			continue
 		if not has_visual_los(c, crime_pos, crime_elev):
+			continue
+		var c_pos: Vector2 = c.global_position
+		var c_elev: float = c.get_elevation() if c.has_method("get_elevation") else NAN
+		if GridManager.canopy.blocks_view(c_pos, c_elev, crime_pos, crime_elev):
+			if by_hand:
+				evaded.append(CANOPY_REASON)   # the act was the actor's, under the crown
 			continue
 		var sees_actor: bool = false
 		var hidden: String = ""

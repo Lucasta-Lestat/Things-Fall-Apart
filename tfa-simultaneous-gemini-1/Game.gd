@@ -3440,15 +3440,18 @@ func _is_character_visible_to_party(c) -> bool:
 ## scaled by c.visibility_to(them), so a tree crown (P3-F) is judged from where
 ## each one stands (near, same crown cluster, looking down from a roof). An NPC
 ## under a crown the party can't make out is then hidden like any unseen NPC
-## (_update_npc_los_visibility).
+## (_update_npc_los_visibility). can_see_point's cheap half (sight_may_reach:
+## range and FOV) goes first, so visibility_to's crown-band walk only runs for
+## a member who could see that far that way at all.
 func _party_sees_character(c, elev: float) -> bool:
 	if not c.has_method("visibility_to"):
 		var vis: float = c.effective_visibility() if c.has_method("effective_visibility") else 1.0
 		return _is_position_visible_to_party(c.global_position, elev, vis)
+	var pos: Vector2 = c.global_position
 	for ally in party_chars:
-		if not is_instance_valid(ally):
+		if not is_instance_valid(ally) or not ally.sight_may_reach(pos):
 			continue
-		if ally.can_see_point(c.global_position, elev, c.visibility_to(ally)):
+		if ally.can_see_point(pos, elev, c.visibility_to(ally)):
 			return true
 	return false
 
@@ -3515,6 +3518,7 @@ func _invisible_npc_perceived(c, elev: float) -> bool:
 func _true_sighter_of(c, elev: float):
 	for ally in party_chars:
 		if is_instance_valid(ally) and int(ally.traits.get("true_sight", 0)) != 0 \
+				and ally.sight_may_reach(c.global_position) \
 				and ally.can_see_point(c.global_position, elev, c.visibility_to(ally)):
 			return ally
 	return null

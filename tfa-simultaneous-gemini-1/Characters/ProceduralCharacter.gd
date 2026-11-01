@@ -7411,6 +7411,21 @@ func _on_sight_mods_changed() -> void:
 ## line clear of walls. range_mult scales the range (a held or hard-to-see
 ## target); within fov_free_radius px facing doesn't matter (close contact).
 func can_see_point(target_pos: Vector2, target_elev: float = NAN, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
+	if not sight_may_reach(target_pos, range_mult, fov_free_radius):
+		return false
+	if global_position.distance_to(target_pos) > get_sight_range_px_to(target_pos) * range_mult:
+		return false
+	var world: World2D = get_world_2d() if is_inside_tree() else null
+	if world == null:
+		return true
+	return GridManager.sight_line_clear(world.direct_space_state, global_position, target_pos, get_elevation(), target_elev)
+
+## can_see_point's cheap half: alive and sighted, the point within the bare
+## stat range (times range_mult) and inside the FOV cone (facing doesn't
+## matter within fov_free_radius px). No weather, fog or ray. For callers
+## with a costlier factor to work out before the full test
+## (Game._party_sees_character's visibility_to): false = can_see_point false.
+func sight_may_reach(target_pos: Vector2, range_mult: float = 1.0, fov_free_radius: float = 0.0) -> bool:
 	if not is_alive() or _sight_disabled():
 		return false
 	var to_target: Vector2 = target_pos - global_position
@@ -7426,12 +7441,7 @@ func can_see_point(target_pos: Vector2, target_elev: float = NAN, range_mult: fl
 		var facing: Vector2 = Vector2.UP.rotated(rotation)
 		if absf(rad_to_deg(facing.angle_to(to_target))) > half_fov:
 			return false
-	if dist > get_sight_range_px_to(target_pos) * range_mult:
-		return false
-	var world: World2D = get_world_2d() if is_inside_tree() else null
-	if world == null:
-		return true
-	return GridManager.sight_line_clear(world.direct_space_state, global_position, target_pos, get_elevation(), target_elev)
+	return true
 
 ## The bare sight-stat range in px, before weather and fog (which only ever
 ## shorten it): every sight range of ours is within it. can_see_point's and
@@ -7462,9 +7472,10 @@ func concealment_visibility() -> float:
 
 # --- Tree crowns hide (P3-F, decision 7) ------------------------------------
 # GridManager.canopy holds the crowns (disc minus trunk, cluster, alive). Under
-# a live one we are hard to see from the ground, and not seen at all from
-# above the trunk clearance; a crown between two eyes at crown height blocks
-# the line. A corpse is never hidden by it.
+# a live one we are hard to see from the ground, and not seen at all by a
+# viewer looking down on it (a roof, a deck, a cliff top a story or more above
+# us); a crown between two eyes at crown height blocks the line. A corpse is
+# never hidden by it.
 
 ## Visibility under a live crown: a ground observer beyond CANOPY_NEAR_TILES
 ## sees us only within this much of their sight range.
@@ -7493,38 +7504,60 @@ func _canopy_revealed() -> bool:
 ##   - under a live crown, CANOPY_VISIBILITY unless they are within
 ##     CANOPY_NEAR_TILES of us or under the same crown cluster, or an attack
 ##     or cast gave us away (reveal());
-##   - an eye above that crown's trunk clearance (a roof, a deck, a cliff top)
-##     can't see under it at all: 0.0, whatever reveal() says (the crown is
-##     still in the way); the same cluster still sees us;
-##   - a live crown between us that the sight line runs through at crown
-##     height (the crown sight band, CanopyMap.line_blocked): 0.0.
+##   - canopy_hides_from(observer): 0.0, whatever reveal() says (the crown is
+##     still in the way): they look down on our crown from a roof, a deck or
+##     a cliff top a story or more above us, or the sight line runs through a
+##     crown between us at crown height.
 ## Party members never hide from each other this way, and a corpse not at
 ## all. A range multiplier like effective_visibility: 0.0 = seen at no range.
 func visibility_to(observer) -> float:
 	if not (observer is Node2D) or not is_instance_valid(observer) or observer == self:
 		return effective_visibility()
 	var vis: float = concealment_visibility()
-	if on_world_map or not is_alive():
-		return vis
-	if observer.has_method("is_party_member") and observer.is_party_member() and is_party_member():
+	if not _canopy_applies_to(observer):
 		return vis
 	var o_pos: Vector2 = observer.global_position
 	var dist: float = o_pos.distance_to(global_position)
 	if observer.has_method("sight_range_bound_px") and dist > observer.sight_range_bound_px():
 		return vis   # beyond their eyes whatever the canopy does: skip its tests
-	var o_elev: float = GridManager.effective_elev(GridManager.world_to_map(o_pos))
-	if observer.has_method("get_elevation"):
-		o_elev = observer.get_elevation()
-	var crown: int = canopy_crown()
-	if crown >= 0 and GridManager.canopy.cluster_at(o_pos, o_elev) != GridManager.canopy.cluster_of(crown):
-		if GridManager.canopy.above_clearance(crown, o_elev):
-			return 0.0
-		if not _canopy_revealed() and dist > GridManager.TILE_SIZE * CANOPY_NEAR_TILES:
-			vis = minf(vis, CANOPY_VISIBILITY)
-	# Last: the band test walks the tiles along the line.
-	if GridManager.canopy.line_blocked(o_pos, global_position, o_elev, current_elevation):
+	var o_elev: float = _canopy_observer_elev(observer)
+	# The full block first: it ends in the band test's tile walk along the line.
+	if GridManager.canopy.blocks_view(o_pos, o_elev, global_position, current_elevation):
 		return 0.0
+	if not _canopy_revealed() and dist > GridManager.TILE_SIZE * CANOPY_NEAR_TILES:
+		var crown: int = canopy_crown()
+		if crown >= 0 and GridManager.canopy.cluster_at(o_pos, o_elev) != GridManager.canopy.cluster_of(crown):
+			vis = minf(vis, CANOPY_VISIBILITY)
 	return vis
+
+## True when a tree crown cuts `observer`'s view of us outright (P3-F,
+## decision 7: crowns fully block sight from roofs, decks and cliffs):
+## CanopyMap.blocks_view from where they stand, looking down on our crown
+## from a story or more above us, or a crown between us at crown height.
+## Never between party members, never for a corpse; reveal() doesn't lift it.
+## visibility_to's 0.0, and the AI's hold rule (ai.gd: a held target that
+## ducks under a crown an archer on a roof looks down on is occluded).
+func canopy_hides_from(observer) -> bool:
+	if not (observer is Node2D) or not is_instance_valid(observer) or observer == self:
+		return false
+	if not _canopy_applies_to(observer):
+		return false
+	var o_pos: Vector2 = observer.global_position
+	return GridManager.canopy.blocks_view(o_pos, _canopy_observer_elev(observer), global_position, current_elevation)
+
+# The canopy judges us at all: alive, off the world map, and not a party
+# member seen by a party member (the party always sees the party).
+func _canopy_applies_to(observer) -> bool:
+	if on_world_map or not is_alive():
+		return false
+	return not (observer.has_method("is_party_member") and observer.is_party_member() and is_party_member())
+
+func _canopy_observer_elev(observer) -> float:
+	if observer.has_method("get_elevation"):
+		var e: float = observer.get_elevation()
+		return e
+	var o_pos: Vector2 = observer.global_position
+	return GridManager.effective_elev(GridManager.world_to_map(o_pos))
 
 ## Concealment from conditions (the "visibility" stat, 1.0 = normal; a Dark
 ## Hood's Shrouded halves it), cached by _on_stats_recalculated.

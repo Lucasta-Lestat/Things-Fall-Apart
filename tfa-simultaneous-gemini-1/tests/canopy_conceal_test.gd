@@ -4,8 +4,13 @@
 #   - a ground AI beyond 2 tiles detects a crowned target only within
 #     0.5 x its sight range (can_see_character, has_in_view, _update_target,
 #     CrimeManager.hidden_from's "Canopy");
-#   - a viewer on a deck, a roof or a cliff top cannot see a crowned target at
-#     any range, and a crown blocks the line for an eye inside its band;
+#   - a viewer on a deck, a roof or a cliff top (a story or more above the
+#     target) cannot see a crowned target at any range, nor hold one that
+#     ducks under a crown, nor see a crime happen under one; a crown blocks
+#     the line for an eye inside its band;
+#   - a viewer at the target's own level on a slope is a ground observer
+#     (the factor, near exemption and all), however far above the trunk's
+#     ground both stand;
 #   - attacking (reveal()) lifts the factor for 3 s;
 #   - party members always see each other;
 #   - a felled or burnt-down tree stops hiding at once;
@@ -13,13 +18,19 @@
 #     and dead snags hide nothing; corpses are unaffected.
 #   A. synthetic: tree rows through MapLoader._spawn_geo_structure exactly as
 #      an export writes them, real ProceduralCharacter.tscn instances on a
-#      stub Game surface (as stealth_ai_r4_test), flat then relief terrain.
-#   B. the model built from real tree maps' rows (tg_castle_keep's garden,
-#      Perrow's tg_hillside_middle): hedges and snags left out, clusters,
-#      bounded buckets, and the O(1) lookup's cost.
+#      stub Game surface (as stealth_ai_r4_test), flat then relief terrain
+#      (a cliff, and a crown overhanging a terrace step).
+#   B. the model built from real tree maps' rows on their real terrain
+#      (tg_castle_keep's garden, Perrow's tg_hillside_middle with its cells
+#      tile_elev): hedges and snags left out, crown grounds, clusters, bounded
+#      buckets, the O(1) lookup's cost, and on relief a survey of every crown:
+#      no same-level viewer within 2 tiles is blocked.
 #   C. the real Game on tg_castle_keep: an NPC under a real crown is hidden
 #      from the party through the existing path (npc.visible false), shown
-#      by an attack's reveal and by felling the tree.
+#      by an attack's reveal and by felling the tree. Then the real Game on
+#      tg_hillside_middle: a same-level pair on a slope sees normally, an
+#      uphill viewer under a story up gets the factor, a viewer a story or
+#      more up is blocked until the tree falls.
 # Run:  godot --headless --path . res://tests/canopy_conceal_test.tscn
 # Judge by the PASS/FAIL lines and "CANOPY CONCEAL DONE failures=0".
 extends Node2D
@@ -82,8 +93,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await _part_a_flat()
 	await _part_a_relief()
-	await _part_b_real_rows("tg_castle_keep")
-	await _part_b_real_rows("tg_hillside_middle")
+	await _part_b_real_rows("tg_castle_keep", false)
+	await _part_b_real_rows("tg_hillside_middle", true)
 	await _part_c_real_game()
 	print("CANOPY CONCEAL DONE failures=%d checks=%d" % [failures, checks])
 	get_tree().quit(1 if failures > 0 else 0)
@@ -183,6 +194,16 @@ func _log_sum(fragment: String) -> int:
 
 func _on_crown_changed(i: int) -> void:
 	_killed.append(i)
+
+
+## The witnesses CrimeManager.witnesses_of finds for a crime at `crime_pos`
+## (its surface's elevation) by `actor`, a victim's crime (not by hand).
+func _witnesses(crime_pos: Vector2, actor) -> Array:
+	var out: Array = []
+	var elev: float = GridManager.effective_elev(GridManager.world_to_map(crime_pos))
+	for e in CrimeManager.witnesses_of(crime_pos, elev, actor, false):
+		out.append((e as Dictionary)["witness"])
+	return out
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +388,59 @@ func _part_a_flat() -> void:
 	guard.on_roof = false
 	GridManager.roof_elevations.erase(roof_t)
 	_place(guard, guard.global_position, Vector2.UP)
+	# a low deck (0.6 stories: the eye clears the trunk, but it stands under a
+	# story above the target) doesn't look down on the crown: a ground viewer
+	var low_t := GridManager.world_to_map(T1 + UNDER + Vector2(0, sight_px * 0.4))
+	GridManager.register_deck(low_t, 0.6)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.4), Vector2.UP)
+	_check("a.low-deck-not-looking-down", cm.above_clearance(t1_i, guard.get_elevation())
+		and not cm.looks_down_on(t1_i, guard.get_elevation(), x.get_elevation()), guard.get_elevation())
+	_check("a.low-deck-viewer-half", is_equal_approx(x.visibility_to(guard), 0.5) and not x.canopy_hides_from(guard)
+		and ai.can_see_character(x), x.visibility_to(guard))
+	GridManager.unregister_deck(low_t, 0.6)
+	_place(guard, guard.global_position, Vector2.UP)
+
+	# --- the hold: a held target under a crown its holder looks down on (a
+	# deck) is occluded like one behind a wall, and demoted after
+	# TARGET_OCCLUSION_GIVE_UP; a ground holder at 0.6x keeps it (the factor
+	# is acquisition's, as Shrouded's is)
+	var hold_t := GridManager.world_to_map(T1 + UNDER + Vector2(0, sight_px * 0.4))
+	GridManager.register_deck(hold_t, 1.5)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.4), Vector2.UP)
+	ai._acquire_target(x)
+	ai._update_target(1.0)
+	_check("a.hold-deck-occluded", ai.current_target == x and not ai.is_target_in_sight() and x.canopy_hides_from(guard),
+		"target %s occluded %.1f" % [str(ai.current_target), ai._target_occluded_time])
+	for k in 5:
+		ai._update_target(1.0)
+	_check("a.hold-deck-demoted", ai.current_target == null, str(ai.current_target))
+	# the crime position: from the deck nobody saw it happen under the crown
+	_check("a.crime-pos-deck-unseen", not (guard in _witnesses(T1 + UNDER, y)))
+	GridManager.unregister_deck(hold_t, 1.5)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.4), Vector2.UP)
+	_check("a.crime-pos-ground-seen", guard in _witnesses(T1 + UNDER, y))
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.6), Vector2.UP)
+	ai._acquire_target(x)
+	for k in 7:
+		ai._update_target(1.0)
+	_check("a.hold-ground-keeps", ai.current_target == x and ai.is_target_in_sight(), str(ai.current_target))
+	ai._lose_target()
+	var open_wdeck := GridManager.world_to_map(OPEN + Vector2(0, sight_px * 0.4))
+	GridManager.register_deck(open_wdeck, 1.5)
+	_place(guard, OPEN + Vector2(0, sight_px * 0.4), Vector2.UP)
+	_check("a.crime-pos-deck-open-seen", guard in _witnesses(OPEN, y))
+	GridManager.unregister_deck(open_wdeck, 1.5)
+	# a theft under the crown seen from a deck: nobody saw it, under the trees
+	GridManager.register_deck(hold_t, 1.5)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.4), Vector2.UP)
+	var mark2 := _spawn("neutral", Vector2(6000, 5600), "Purse2")
+	mark2.rotation = PI
+	var deck_lines := _log_sum("No one saw it: Ximena was under the trees.")
+	CrimeManager.report(x, "take", {"owner_faction": "liziti", "crime_pos": x.global_position, "debounce_target": mark2})
+	_check("a.theft-deck-unseen-canopy", ai.pending_outcry.is_empty()
+		and _log_sum("No one saw it: Ximena was under the trees.") == deck_lines + 1, str(GameLog.get_entries().slice(-2)))
+	GridManager.unregister_deck(hold_t, 1.5)
+	_place(guard, guard.global_position, Vector2.UP)
 
 	# --- the crown band: a crown between two eyes at crown height blocks
 	# the line (a target under no crown, the line 45 px off the trunk)
@@ -427,13 +501,18 @@ func _part_a_flat() -> void:
 	_place(x, T1 + UNDER, Vector2.UP)
 	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.6), Vector2.UP)
 	var objs: float = Performance.get_monitor(Performance.OBJECT_COUNT)
+	var mem0: float = Performance.get_monitor(Performance.MEMORY_STATIC)
 	var t0: int = Time.get_ticks_usec()
 	var acc := 0.0
 	for k in 10000:
 		acc += x.visibility_to(guard)
 	var us: float = float(Time.get_ticks_usec() - t0) / 10000.0
-	_check("a.visibility-to-no-objects", is_equal_approx(Performance.get_monitor(Performance.OBJECT_COUNT), objs),
-		Performance.get_monitor(Performance.OBJECT_COUNT) - objs)
+	# Objects and the static heap only show what is LEFT after the loop (no
+	# leak, no growth); that nothing is allocated per call is the code's own
+	# (packed arrays and values only, read from the model).
+	var mem_grew: float = Performance.get_monitor(Performance.MEMORY_STATIC) - mem0
+	_check("a.visibility-to-no-objects-or-growth", is_equal_approx(Performance.get_monitor(Performance.OBJECT_COUNT), objs)
+		and mem_grew < 16384.0, "objects %+.0f, static heap %+.0f B" % [Performance.get_monitor(Performance.OBJECT_COUNT) - objs, mem_grew])
 	print("INFO visibility_to %.2f us/call (sum %.0f)" % [us, acc])
 	_check("a.visibility-to-cheap", us < 200.0, us)
 	await _clear_chars()
@@ -444,6 +523,9 @@ func _part_a_flat() -> void:
 # A2. Synthetic, relief: a viewer on a cliff top
 # ---------------------------------------------------------------------------
 
+const SLOPE_TREE := Vector2(2010, 1000)   # its trunk tile (31, 15) at ground 0
+const SLOPE_Q := Vector2(2055, 1000)      # its overhang, on the 0.6 terrace (tile 32)
+
 func _part_a_relief() -> void:
 	GridManager.TILE_SIZE = 64
 	GridManager.initialize(4096, 4096)
@@ -451,12 +533,18 @@ func _part_a_relief() -> void:
 	for ty in range(30, 64):
 		for tx in range(64):
 			GridManager.elevations[Vector2i(tx, ty)] = 3.0
+	# a hillside step under a crown: from tile column 32 the ground is 0.6 up
+	# (rows 10-20), from column 36 a story higher again (1.7)
+	for ty in range(10, 21):
+		for tx in range(32, 64):
+			GridManager.elevations[Vector2i(tx, ty)] = 0.6 if tx < 36 else 1.7
 	GridManager.refresh_terrain_stats()
 	_check("a2.relief-on", GridManager.relief_los)
 	_ml = MAP_LOADER.new()
 	add_child(_ml)
 	var tree_pos := Vector2(1000, 1300)
 	_spawn_tree(_tree_row(tree_pos, 60.0, 1.3))
+	_spawn_tree(_tree_row(SLOPE_TREE, 60.0, 1.3))
 	GridManager.canopy.finish()
 	await _settle()
 	var x := _spawn("player", tree_pos + UNDER, "Ximena")
@@ -477,6 +565,26 @@ func _part_a_relief() -> void:
 	var low := _spawn("bandits", x.global_position + Vector2(300, 0), "Walker")
 	_face(low, x.global_position)
 	_check("a2.ground-viewer-half-range", _ai(low).can_see_character(x) and is_equal_approx(x.visibility_to(low), 0.5))
+
+	# --- a crown overhanging a terrace step: the target on the overhang and a
+	# viewer level with it both stand 0.6 above the trunk's ground (their eyes
+	# over its flat 1-story clearance), yet neither looks down on the other
+	var cm = GridManager.canopy
+	var si: int = cm.crown_at(SLOPE_Q, 0.6)
+	_place(x, SLOPE_Q, Vector2.UP)
+	_check("a2.slope-target-under", si >= 0 and x.canopy_crown() == si and is_equal_approx(x.get_elevation(), 0.6)
+		and is_equal_approx(float(cm.crown(si)["ground"]), 0.0), "%d %.2f" % [si, x.get_elevation()])
+	_place(low, SLOPE_Q + Vector2(100, 0), Vector2.LEFT)
+	_check("a2.slope-near-same-level-seen", cm.above_clearance(si, low.get_elevation())
+		and is_equal_approx(x.visibility_to(low), 1.0) and not x.canopy_hides_from(low) and _ai(low).can_see_character(x)
+		and CrimeManager.hidden_from(low, x) == "", "vis %.2f elev %.2f" % [x.visibility_to(low), low.get_elevation()])
+	_place(low, SLOPE_Q + Vector2(200, 0), Vector2.LEFT)
+	_check("a2.slope-far-same-level-half", is_equal_approx(x.visibility_to(low), 0.5) and not x.canopy_hides_from(low),
+		x.visibility_to(low))
+	_place(low, SLOPE_Q + Vector2(300, 0), Vector2.LEFT)
+	_check("a2.slope-story-up-blocked", is_equal_approx(low.get_elevation(), 1.7) and is_equal_approx(x.visibility_to(low), 0.0)
+		and x.canopy_hides_from(low) and not _ai(low).can_see_character(x) and CrimeManager.hidden_from(low, x) == "Canopy",
+		"vis %.2f elev %.2f" % [x.visibility_to(low), low.get_elevation()])
 	await _clear_chars()
 	await _clear_trees()
 
@@ -485,7 +593,7 @@ func _part_a_relief() -> void:
 # B. The model from real maps' tree rows
 # ---------------------------------------------------------------------------
 
-func _part_b_real_rows(map_id: String) -> void:
+func _part_b_real_rows(map_id: String, expect_relief: bool) -> void:
 	var data: Dictionary = MapDatabase.get_map_data(map_id)
 	_check("b.%s-has-data" % map_id, not data.is_empty())
 	if data.is_empty():
@@ -493,7 +601,13 @@ func _part_b_real_rows(map_id: String) -> void:
 	var ws: Array = data.get("world_size", [2048, 2048])
 	GridManager.TILE_SIZE = int(data.get("tile_size", 64))
 	GridManager.initialize(int(ws[0]), int(ws[1]))
-	GridManager.refresh_terrain_stats()
+	# the map's real terrain, as Game.load_map sets it before the structures
+	var cg_path: String = String(data.get("cell_graph", ""))
+	var graph: CellGraph = CellGraph.from_structured(cg_path) if cg_path != "" else null
+	GridManager.set_elevation_data(graph)
+	_check("b.%s-terrain" % map_id, graph != null and GridManager.relief_los == expect_relief
+		and (GridManager.tile_elev_used or not expect_relief),
+		"relief %s tile_elev %s" % [GridManager.relief_los, GridManager.tile_elev_used])
 	_ml = MAP_LOADER.new()
 	add_child(_ml)
 	var want := 0
@@ -520,6 +634,17 @@ func _part_b_real_rows(map_id: String) -> void:
 		if is_instance_valid(t) and (t as Structure).structure_id == &"hedge" and cm.crown_of(t) >= 0:
 			hedge_crowns += 1
 	_check("b.%s-no-hedge-crowns" % map_id, hedge_crowns == 0, hedge_crowns)
+	# each crown stands on the terrain under its trunk (no decks here)
+	var ground_bad := []
+	var ground_max := -INF
+	for i in cm.crown_count():
+		var grec: Dictionary = cm.crown(i)
+		var want_g: float = GridManager.terrain_elev(GridManager.world_to_map(grec["pos"]))
+		ground_max = maxf(ground_max, float(grec["ground"]))
+		if not is_equal_approx(float(grec["ground"]), want_g):
+			ground_bad.append("%d: %.3f vs %.3f" % [i, float(grec["ground"]), want_g])
+	_check("b.%s-crown-ground-is-terrain" % map_id, ground_bad.is_empty() and (ground_max > 1.0 or not expect_relief),
+		"max %.2f %s" % [ground_max, str(ground_bad.slice(0, 4))])
 	var clusters: Dictionary = {}
 	var bad := []
 	var max_bucket := 0
@@ -562,7 +687,71 @@ func _part_b_real_rows(map_id: String) -> void:
 	print("INFO %s: %d crowns, %d clusters, %d hedges, %d snags, max bucket %d, build %.1f ms, crown_at %.3f us x %d (%.1f%% covered)"
 		% [map_id, cm.crown_count(), clusters.size(), hedges, snags, max_bucket, build_ms, per_us, n, 100.0 * covered / maxf(1.0, n)])
 	_check("b.%s-lookup-cheap" % map_id, per_us < 20.0, per_us)
+	if expect_relief:
+		_relief_survey(map_id, cm)
 	await _clear_trees()
+
+
+## Every crown of a relief map: targets on its overhang (8 bearings at mid
+## radius, on the terrain), viewers around each on open ground (16 bearings,
+## 1 to 10 tiles out). Within 2 tiles at the target's level (+-0.25 stories)
+## none is blocked: the slope case the flat trunk clearance alone got wrong
+## (the old rule, above_clearance by itself, is counted for the INFO line).
+## Further out: how much of the ring looks down on the crown, new rule vs old.
+func _relief_survey(map_id: String, cm) -> void:
+	var near_px: float = float(GridManager.TILE_SIZE) * ProceduralCharacter.CANOPY_NEAR_TILES
+	var near_pairs := 0
+	var near_blocked := 0
+	var near_old := 0
+	var old_crowns: Dictionary = {}
+	var ring := 0
+	var ring_new := 0
+	var ring_old := 0
+	var bad := []
+	for i in cm.crown_count():
+		var rec: Dictionary = cm.crown(i)
+		var p: Vector2 = rec["pos"]
+		var mid: float = (float(rec["r"]) + float(rec["trunk_r"])) * 0.5
+		for a in 8:
+			var q: Vector2 = p + Vector2.RIGHT.rotated(TAU * a / 8.0) * mid
+			var qt := GridManager.world_to_map(q)
+			if not GridManager.map_rect.has_point(qt):
+				continue
+			var f: float = GridManager.effective_elev(qt)
+			if cm.crown_at(q, f) != i:
+				continue
+			for b in 16:
+				var u: Vector2 = Vector2.RIGHT.rotated(TAU * b / 16.0)
+				for d in [64.0, 96.0, 128.0, 192.0, 256.0, 384.0, 512.0, 640.0]:
+					var v: Vector2 = q + u * float(d)
+					var vt := GridManager.world_to_map(v)
+					if not GridManager.map_rect.has_point(vt):
+						continue
+					var e: float = GridManager.effective_elev(vt)
+					if cm.crown_at(v, e) >= 0:
+						continue
+					var old: bool = cm.above_clearance(i, e)
+					if float(d) <= near_px:
+						if absf(e - f) > 0.25:
+							continue
+						near_pairs += 1
+						if old:
+							near_old += 1
+							old_crowns[i] = true
+						if cm.blocks_view(v, e, q, f):
+							near_blocked += 1
+							if bad.size() < 6:
+								bad.append("crown %d q %s v %s (%.2f/%.2f)" % [i, str(q), str(v), f, e])
+					else:
+						ring += 1
+						if old:
+							ring_old += 1
+						if cm.looks_down_on(i, e, f):
+							ring_new += 1
+	_check("b.%s-relief-near-same-level-seen" % map_id, near_pairs > 0 and near_blocked == 0,
+		"pairs %d blocked %d %s" % [near_pairs, near_blocked, str(bad)])
+	print("INFO %s relief survey: %d same-level pairs within 2 tiles, 0 allowed blocked, %d blocked by the old rule (%d crowns); 2-10 tile ring %d spots, %.1f%% look down (old rule %.1f%%)"
+		% [map_id, near_pairs, near_old, old_crowns.size(), ring, 100.0 * ring_new / maxf(1.0, ring), 100.0 * ring_old / maxf(1.0, ring)])
 
 
 # ---------------------------------------------------------------------------
@@ -660,6 +849,173 @@ func _part_c_real_game() -> void:
 		_check("c.felled-npc-seen", not bool(cm.crown(ci)["alive"]) and npc.visible and game.is_seen_by_party(npc))
 	for pc in saved_sight:
 		pc.sight = saved_sight[pc]
+	await _part_c_relief(game)
+
+
+# ---------------------------------------------------------------------------
+# C2. The real Game on Perrow's relief (tg_hillside_middle)
+# ---------------------------------------------------------------------------
+
+func _part_c_relief(game) -> void:
+	game.load_map("tg_hillside_middle")
+	for i in 10:
+		await get_tree().process_frame
+	if PauseManager.is_paused:
+		PauseManager.unpause()
+	TimeManager.pause_time()
+	_check("c2.loaded-relief", game.party_chars.size() > 0 and String(game.current_map_id) == "tg_hillside_middle"
+		and GridManager.relief_los)
+	if game.party_chars.is_empty():
+		return
+	for c in game.characters_in_scene:
+		if is_instance_valid(c):
+			c.AI_enabled = false
+	var cm = GridManager.canopy
+	var leader: ProceduralCharacter = game.party_chars[0]
+	for pc in game.party_chars:
+		if pc != leader:
+			pc.sight = 0.0   # only the leader looks
+	leader.sight = 0.4
+	var found: Dictionary = _find_relief_setups(leader)
+	print("INFO relief setups: %s" % str(found))
+	_check("c2.found-near-same-level", found.has("near"))
+	_check("c2.found-uphill-under-a-story", found.has("uphill"))
+	_check("c2.found-story-up", found.has("up"))
+	var lurker = game._spawn_character("default_human", leader.global_position + Vector2(40, 0), {"faction": "bandits"})
+	var watcher = game._spawn_character("default_human", leader.global_position + Vector2(-40, 0), {"faction": "bandits"})
+	_check("c2.npcs-spawned", lurker != null and watcher != null)
+	if lurker == null or watcher == null:
+		return
+	lurker.AI_enabled = false
+	lurker.Name = "Lurker"
+	watcher.AI_enabled = false
+	watcher.Name = "Watcher"
+	var wai = _ai(watcher)
+	if found.has("near"):
+		# A same-level pair a tile or two apart on the slope under a crown
+		# that stands lower: both eyes are over its flat trunk clearance (the
+		# old rule's 'elevated'), yet they see each other normally.
+		var s: Dictionary = found["near"]
+		var q: Vector2 = s["q"]
+		var v: Vector2 = s["v"]
+		_place(lurker, q, Vector2.UP)
+		_place(watcher, v + Vector2(2000, 2000), Vector2.UP)   # out of the way
+		_place(leader, v, q - v)
+		for i in 4:
+			await get_tree().process_frame
+		_check("c2.near-same-level-seen", lurker.canopy_crown() == int(s["crown"]) and cm.above_clearance(int(s["crown"]), leader.get_elevation())
+			and is_equal_approx(lurker.visibility_to(leader), 1.0) and lurker.visible and game.is_seen_by_party(lurker),
+			"vis %.2f visible %s elev %.2f/%.2f" % [lurker.visibility_to(leader), lurker.visible, lurker.get_elevation(), leader.get_elevation()])
+		# the other way round: a guard level with the party member under the crown
+		_place(lurker, v + Vector2(2000, -2000), Vector2.UP)
+		_place(leader, q, Vector2.UP)
+		_place(watcher, v, q - v)
+		_check("c2.near-same-level-guard-sees", wai.can_see_character(leader) and CrimeManager.hidden_from(watcher, leader) == "",
+			"vis %.2f" % leader.visibility_to(watcher))
+	if found.has("uphill"):
+		# uphill but under a story above the target, beyond 2 tiles: the
+		# factor, not the block
+		var s: Dictionary = found["uphill"]
+		var q: Vector2 = s["q"]
+		var v: Vector2 = s["v"]
+		_place(lurker, q, Vector2.UP)
+		_place(watcher, v + Vector2(2000, 2000), Vector2.UP)
+		_place(leader, v, q - v)
+		_check("c2.uphill-under-a-story-half", is_equal_approx(lurker.visibility_to(leader), 0.5) and not lurker.canopy_hides_from(leader),
+			"vis %.2f elev %.2f/%.2f" % [lurker.visibility_to(leader), lurker.get_elevation(), leader.get_elevation()])
+	if found.has("up"):
+		# a story or more up: blocked, from the party's eyes and a guard's,
+		# until the tree falls
+		var s: Dictionary = found["up"]
+		var q: Vector2 = s["q"]
+		var v: Vector2 = s["v"]
+		var ci: int = int(s["crown"])
+		_place(lurker, q, Vector2.UP)
+		_place(watcher, v + Vector2(2000, 2000), Vector2.UP)
+		_place(leader, v, q - v)
+		for i in 4:
+			await get_tree().process_frame
+		_check("c2.story-up-npc-hidden", lurker.canopy_crown() == ci and is_equal_approx(lurker.visibility_to(leader), 0.0)
+			and not lurker.visible and not game.is_seen_by_party(lurker),
+			"vis %.2f visible %s elev %.2f/%.2f" % [lurker.visibility_to(leader), lurker.visible, lurker.get_elevation(), leader.get_elevation()])
+		_place(lurker, v + Vector2(2000, -2000), Vector2.UP)
+		_place(leader, q, Vector2.UP)
+		_place(watcher, v, q - v)
+		_check("c2.story-up-guard-blind", leader.canopy_crown() == ci and not wai.can_see_character(leader)
+			and CrimeManager.hidden_from(watcher, leader) == "Canopy", "vis %.2f" % leader.visibility_to(watcher))
+		cm.kill_crown(ci)
+		_check("c2.story-up-guard-sees-once-felled", wai.can_see_character(leader) and CrimeManager.hidden_from(watcher, leader) == "")
+		_place(watcher, v + Vector2(2000, 2000), Vector2.UP)
+		_place(lurker, q, Vector2.UP)
+		_place(leader, v, q - v)
+		for i in 4:
+			await get_tree().process_frame
+		_check("c2.story-up-npc-seen-once-felled", lurker.visible and game.is_seen_by_party(lurker))
+
+
+## On the loaded relief map, for the leader's sight: a live crown with a spot
+## q under it an NPC can stand on, and open ground v for a viewer with a clear
+## sight line to q (walls, terrain and every other crown):
+##   near    64-120 px off, within 0.25 stories of q, its eye over the crown's
+##           trunk clearance (what the old rule called elevated);
+##   uphill  beyond 2 tiles, 0.3-0.9 stories above q, eye over the clearance;
+##   up      beyond 2 tiles, at least a story above q.
+## Each within 0.8 of the leader's sight range from there. Missing keys: none.
+func _find_relief_setups(leader: ProceduralCharacter) -> Dictionary:
+	var cm = GridManager.canopy
+	var space := leader.get_world_2d().direct_space_state
+	var near_px: float = float(GridManager.TILE_SIZE) * ProceduralCharacter.CANOPY_NEAR_TILES
+	var out: Dictionary = {}
+	for i in cm.crown_count():
+		var rec: Dictionary = cm.crown(i)
+		if not bool(rec["alive"]):
+			continue
+		var p: Vector2 = rec["pos"]
+		var r: float = rec["r"]
+		var tr: float = rec["trunk_r"]
+		for a in 8:
+			var q: Vector2 = p + Vector2.RIGHT.rotated(TAU * a / 8.0) * (tr + (r - tr) * 0.6)
+			var qt := GridManager.world_to_map(q)
+			if not GridManager.map_rect.has_point(qt) or not GridManager.would_walk(qt) or GridManager.is_solid_rock(qt) \
+					or GridManager.has_roof(qt):
+				continue
+			var q_elev: float = GridManager.effective_elev(qt)
+			if cm.crown_at(q, q_elev) != i:
+				continue
+			for b in 16:
+				var u: Vector2 = Vector2.RIGHT.rotated(TAU * b / 16.0)
+				for d in [64.0, 96.0, 120.0, 192.0, 256.0, 320.0, 384.0, 448.0]:
+					var v: Vector2 = q + u * float(d)
+					var vt := GridManager.world_to_map(v)
+					if not GridManager.map_rect.has_point(vt) or not GridManager.would_walk(vt) \
+							or GridManager.is_solid_rock(vt) or GridManager.has_roof(vt):
+						continue
+					var v_elev: float = GridManager.effective_elev(vt)
+					if cm.crown_at(v, v_elev) >= 0:
+						continue
+					var rise: float = v_elev - q_elev
+					var key: String = ""
+					if float(d) <= near_px:
+						if absf(rise) <= 0.25 and cm.above_clearance(i, v_elev):
+							key = "near"
+					elif rise >= GridManager.HIGH_LAYER_STORIES:
+						key = "up"
+					elif rise >= 0.3 and rise <= 0.9 and cm.above_clearance(i, v_elev):
+						key = "uphill"
+					if key == "" or out.has(key):
+						continue
+					var save_pos: Vector2 = leader.global_position
+					leader.global_position = v
+					var rng: float = leader.get_sight_range_px_to(q)
+					leader.global_position = save_pos
+					if float(d) > rng * 0.8:
+						continue
+					if not GridManager.sight_line_clear(space, v, q, v_elev, q_elev) or cm.line_blocked(v, q, v_elev, q_elev):
+						continue
+					out[key] = {"crown": i, "q": q, "v": v, "rise": snappedf(rise, 0.01)}
+			if out.size() == 3:
+				return out
+	return out
 
 
 ## On the loaded map: a live crown, a spot q under it the NPC can stand on,

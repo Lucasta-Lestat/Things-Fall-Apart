@@ -1,7 +1,9 @@
 # res://Global/CanopyMap.gd
 # Tree crowns as a gameplay layer (P3-F, decision 7: crowns HIDE characters).
-# Owned by GridManager (GridManager.canopy, a fresh one per map in
-# GridManager.initialize). MapLoader._spawn_geo_structure registers every
+# Owned by GridManager (GridManager.canopy: one instance for the session,
+# emptied per map by clear() in GridManager.initialize, so a crown_changed
+# listener connects once and a cached reference stays live across warps).
+# MapLoader._spawn_geo_structure registers every
 # concealing "tree" row as it spawns the trunk, from the same row: pos, r, the
 # crown top "stories" and the optional contract-3 "crown_base". Hedges (id
 # "hedge", occlude_h 0.45: see-over) and crowns whose top is not above their
@@ -21,10 +23,18 @@
 #                       P3-B's CanopyLayer and P4-D's cover read it, so the
 #                       rules and the visuals agree
 #   above_clearance(i, viewer_elev)  an eye above the crown's trunk clearance
+#   looks_down_on(i, viewer_elev, target_feet)  a roof, deck or cliff top
+#                       looking down on crown i over a target
 #   line_blocked(...)   the crown sight band (a sight line through a crown),
 #                       a tile walk along the line
+#   blocks_view(...)    THE full block: looks_down_on the target's crown, or
+#                       line_blocked (visibility_to, the AI's hold rule, the
+#                       crime position's witnesses)
 # A burnt or felled tree (its Structure's destroyed signal) stops hiding at
 # once: alive goes false, the clusters are rebuilt, crown_changed fires.
+# The sight cones don't draw any of this (no crown occluder, no band bit: the
+# 1-story bands can't hold a 1.0-1.3 story crown band), so a cone still lights
+# ground a crown hides; cone shading under crowns is left to P3-B.
 extends RefCounted
 
 ## A crown died (burnt down, felled): its index. CanopyLayer drops its art.
@@ -61,6 +71,29 @@ var _pairs: PackedInt32Array = PackedInt32Array()
 var _min_base_abs: float = INF
 var _max_top_abs: float = -INF
 var _dirty: bool = false
+
+
+## Empties the model for the next map (GridManager.initialize). The same
+## instance carries on, so crown_changed's listeners stay connected; a
+## crown index from the previous map means nothing after this.
+func clear() -> void:
+	_pos = PackedVector2Array()
+	_r = PackedFloat32Array()
+	_trunk_r = PackedFloat32Array()
+	_ground = PackedFloat32Array()
+	_base = PackedFloat32Array()
+	_top = PackedFloat32Array()
+	_alive = PackedByteArray()
+	_cluster = PackedInt32Array()
+	_by_structure.clear()
+	_cols = 0
+	_rows = 0
+	_tile_start = PackedInt32Array()
+	_tile_items = PackedInt32Array()
+	_pairs = PackedInt32Array()
+	_min_base_abs = INF
+	_max_top_abs = -INF
+	_dirty = false
 
 
 ## Registers one concealing crown. `ground` is the ABSOLUTE terrain height at
@@ -270,17 +303,51 @@ func canopy_cover(t: Vector2i) -> int:
 	return cluster_at(GridManager.map_to_world(t))
 
 ## True when an eye standing at `viewer_elev` (ABSOLUTE stories) is above
-## crown i's trunk clearance: a roof, a deck or a cliff top looks down on the
-## crown, and what stands under it is hidden from there.
+## crown i's trunk clearance (its ground + base). Alone this is NOT "looking
+## down on" the crown: on a slope the flat clearance sits below the eyes of
+## anyone on the crown's uphill overhang, the target's own included
+## (looks_down_on adds the height over the target).
 func above_clearance(i: int, viewer_elev: float) -> bool:
 	return viewer_elev + GridManager.EYE_HEIGHT_STORIES > _ground[i] + _base[i]
+
+## True when an eye at `viewer_elev` looks DOWN on crown i over a target
+## whose feet are at `target_feet` (both ABSOLUTE stories): the eye is above
+## the crown's trunk clearance AND the viewer stands at least
+## GridManager.HIGH_LAYER_STORIES above the target (a roof, a deck, a cliff
+## top: decision 7's "crowns fully block sight from roofs, decks and
+## cliffs"). A viewer at the target's own level, uphill overhang or not, sees
+## along beneath the crown and is a ground observer (the 0.5 factor).
+func looks_down_on(i: int, viewer_elev: float, target_feet: float) -> bool:
+	return above_clearance(i, viewer_elev) and viewer_elev - target_feet >= GridManager.HIGH_LAYER_STORIES
+
+## THE full block, positional: true when a live crown cuts the view from an
+## eye at (viewer_pos, viewer_elev) to a point at (target_pos, target_elev).
+## Either the point is under a crown the viewer looks down on (looks_down_on;
+## a viewer under the same crown cluster is beneath it too and is spared), or
+## the line runs through a crown between them at crown height (line_blocked).
+## The rest of the canopy (the 0.5 factor, its 2-tile and same-cluster
+## exemptions, reveal(), party and corpse exemptions) is the character's:
+## ProceduralCharacter.visibility_to / canopy_hides_from. CrimeManager's
+## crime-position test asks this directly. Elevations are ABSOLUTE stories;
+## NAN = the ground or deck under that point.
+func blocks_view(viewer_pos: Vector2, viewer_elev: float, target_pos: Vector2, target_elev: float) -> bool:
+	if _pos.is_empty():
+		return false
+	if is_nan(viewer_elev):
+		viewer_elev = GridManager.effective_elev(GridManager.world_to_map(viewer_pos))
+	if is_nan(target_elev):
+		target_elev = GridManager.effective_elev(GridManager.world_to_map(target_pos))
+	var i: int = crown_at(target_pos, target_elev)
+	if i >= 0 and looks_down_on(i, viewer_elev, target_elev) and cluster_at(viewer_pos, viewer_elev) != _cluster[i]:
+		return true
+	return line_blocked(viewer_pos, target_pos, viewer_elev, target_elev)
 
 ## The crown sight band: true when the sight line from_pos -> to_pos runs
 ## through a live crown between them at a height inside the crown (trunk
 ## clearance up to the top). The eye model is sight_line_clear's: flat maps
 ## take max(viewer, target) + eye for the whole line, relief maps interpolate
 ## it along the chord. Ground-to-ground lines pass under every crown. Crowns
-## over either end are not "between" (crown_at and above_clearance judge the
+## over either end are not "between" (blocks_view's looks_down_on judges the
 ## target's; a viewer under a crown sees out from under it). Elevations are
 ## ABSOLUTE stories; NAN = the ground or deck under that point.
 func line_blocked(from_pos: Vector2, to_pos: Vector2, viewer_elev: float = NAN, target_elev: float = NAN) -> bool:
