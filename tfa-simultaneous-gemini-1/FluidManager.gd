@@ -124,10 +124,17 @@ func setup_cell_graph(graph: CellGraph) -> void:
 	cell_fluid = CELL_FLUID_SCENE.new()
 	add_child(cell_fluid)
 	cell_fluid.setup(graph, self, _fluid_db, _cell_type_order)
+	var game = get_parent()
+	# P3-A sea drain: MapLoader resolved the map's water_sim (entry key, or the
+	# tfa/fluids/sea_sink override); "sink" turns its open water into drains.
+	# "visual" (the default) leaves the sim exactly as it was before sinks.
+	var ml = game.map_loader if (game != null and "map_loader" in game and game.map_loader != null) else null
+	if ml != null and "water_sim" in ml and String(ml.water_sim) == "sink":
+		var ns: int = cell_fluid.setup_sinks()
+		print("FluidManager: sea drain on, %d sink cells" % ns)
 	# organic water renderer: bind the editor's blob-field water shader to the
 	# structured map's ground sprite (no per-tile Fluid.tscn sprites then)
-	var game = get_parent()
-	var gs = game.map_loader.structured_ground if (game != null and "map_loader" in game and game.map_loader != null) else null
+	var gs = ml.structured_ground if ml != null else null
 	if gs != null:
 		cell_fluid_fx = CELL_FLUID_FX_SCENE.new()
 		add_child(cell_fluid_fx)
