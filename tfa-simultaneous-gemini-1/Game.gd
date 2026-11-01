@@ -3427,15 +3427,33 @@ func _is_position_visible_to_party(target_pos: Vector2, target_elev: float = NAN
 
 
 ## The party-visibility rule for a character: some party member sees its
-## position at its elevation, with its visibility scaling their range. An NPC
-## whose Invisible is active also needs the party to be aware of it
-## (_invisible_npc_perceived, below).
+## position at its elevation, with its visibility to that member scaling their
+## range (_party_sees_character). An NPC whose Invisible is active also needs
+## the party to be aware of it (_invisible_npc_perceived, below).
 func _is_character_visible_to_party(c) -> bool:
 	var elev: float = c.get_elevation() if c.has_method("get_elevation") else 0.0
-	var vis: float = c.effective_visibility() if c.has_method("effective_visibility") else 1.0
 	if _invisibility_active(c) and not (c in party_chars):
-		return _invisible_npc_perceived(c, elev, vis)
-	return _is_position_visible_to_party(c.global_position, elev, vis)
+		return _invisible_npc_perceived(c, elev)
+	return _party_sees_character(c, elev)
+
+## _is_position_visible_to_party for a character: each party member's range
+## scaled by c.visibility_to(them), so a tree crown (P3-F) is judged from where
+## each one stands (near, same crown cluster, looking down from a roof). An NPC
+## under a crown the party can't make out is then hidden like any unseen NPC
+## (_update_npc_los_visibility). can_see_point's cheap half (sight_may_reach:
+## range and FOV) goes first, so visibility_to's crown-band walk only runs for
+## a member who could see that far that way at all.
+func _party_sees_character(c, elev: float) -> bool:
+	if not c.has_method("visibility_to"):
+		var vis: float = c.effective_visibility() if c.has_method("effective_visibility") else 1.0
+		return _is_position_visible_to_party(c.global_position, elev, vis)
+	var pos: Vector2 = c.global_position
+	for ally in party_chars:
+		if not is_instance_valid(ally) or not ally.sight_may_reach(pos):
+			continue
+		if ally.can_see_point(pos, elev, c.visibility_to(ally)):
+			return true
+	return false
 
 
 # ===== Invisible NPCs: what the party perceives =====
@@ -3491,16 +3509,17 @@ func _invisibility_active(c) -> bool:
 
 ## The rule for an NPC hidden by Invisible: a true_sight party member has it
 ## in sight, or the party is aware of it and the usual rule holds.
-func _invisible_npc_perceived(c, elev: float, vis: float) -> bool:
-	if _true_sighter_of(c, elev, vis) != null:
+func _invisible_npc_perceived(c, elev: float) -> bool:
+	if _true_sighter_of(c, elev) != null:
 		return true
-	return _party_aware_of_invisible(c) and _is_position_visible_to_party(c.global_position, elev, vis)
+	return _party_aware_of_invisible(c) and _party_sees_character(c, elev)
 
 ## The party member whose true sight has `c` in view, or null.
-func _true_sighter_of(c, elev: float, vis: float):
+func _true_sighter_of(c, elev: float):
 	for ally in party_chars:
 		if is_instance_valid(ally) and int(ally.traits.get("true_sight", 0)) != 0 \
-				and ally.can_see_point(c.global_position, elev, vis):
+				and ally.sight_may_reach(c.global_position) \
+				and ally.can_see_point(c.global_position, elev, c.visibility_to(ally)):
 			return ally
 	return null
 
@@ -3536,7 +3555,7 @@ func invisible_hidden_from_party(c) -> bool:
 func invisible_perception_text(c) -> String:
 	if not _invisibility_active(c) or c in party_chars or not is_seen_by_party(c):
 		return ""
-	var sighter = _true_sighter_of(c, c.get_elevation(), c.effective_visibility())
+	var sighter = _true_sighter_of(c, c.get_elevation())
 	if sighter != null:
 		return "Invisible — seen by %s's true sight" % sighter.Name
 	var summoner = _party_summoner_of(c)
@@ -3634,7 +3653,7 @@ func _note_invisible_hit(attacker, victim) -> void:
 	var who: String = ("%s (invisible)" % npc.Name) if named else "something invisible"
 	if npc == attacker:
 		victim.notify("Hit by " + who, INVISIBLE_NOTICE_COLOR, "%s is hit by %s." % [victim.Name, who])
-	elif _is_position_visible_to_party(npc.global_position, npc.get_elevation(), npc.effective_visibility()):
+	elif _party_sees_character(npc, npc.get_elevation()):
 		npc.notify(who if named else "Something invisible", INVISIBLE_NOTICE_COLOR,
 			"%s hits %s." % [attacker.Name, who])
 
@@ -3677,7 +3696,7 @@ func _note_invisible_heard(npc) -> void:
 func _on_invisible_npc_lost(npc) -> void:
 	if not _invisibility_active(npc):
 		return
-	if not _is_position_visible_to_party(npc.global_position, npc.get_elevation(), npc.effective_visibility()):
+	if not _party_sees_character(npc, npc.get_elevation()):
 		return
 	_npc_pulse_remaining[npc] = _invisible_fade_seconds()
 	if npc.is_hostile_to_party() and not _invisible_lost_said.has(npc) \

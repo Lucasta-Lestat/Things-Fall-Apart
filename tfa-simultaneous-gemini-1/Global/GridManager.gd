@@ -85,6 +85,17 @@ var _water_body: PackedInt32Array = PackedInt32Array()
 # _ossuary). INF = no key = off. Reset in initialize(); set by
 # MapLoader.generate_structured_map from the entry. See is_solid_rock.
 var solid_rock_elev: float = INF
+# Tree crowns (P3-F: crowns HIDE characters): the crown discs minus their
+# trunks, cluster ids and alive flags, built from the map's tree rows as
+# MapLoader._spawn_geo_structure spawns them. One instance, emptied per map
+# (initialize: canopy.clear()), so crown_changed listeners connect once.
+# Queries: canopy.crown_at (a point under a live crown), canopy.cluster_at,
+# canopy.canopy_cover (per tile), canopy.crown (the per-tree record P3-B's
+# CanopyLayer reads), canopy.blocks_view (the full block: looking down on a
+# crown, the crown sight band). The rules that read it are
+# ProceduralCharacter.effective_visibility / visibility_to / canopy_hides_from.
+const CanopyMap := preload("res://Global/CanopyMap.gd")
+var canopy: CanopyMap = CanopyMap.new()
 
 func initialize(map_width_px: int, map_height_px: int) -> void:
 	var cols = int(ceil(float(map_width_px) / TILE_SIZE))
@@ -109,6 +120,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	tile_elev_used = false
 	_clear_water_layer()
 	solid_rock_elev = INF
+	canopy.clear()
 	# Door tiles are per map: the previous map's Doors are only queue_free'd
 	# (a Door releases its tiles when bashed, never when freed), so without
 	# this their doorways stayed passable to A* through the next map's walls
