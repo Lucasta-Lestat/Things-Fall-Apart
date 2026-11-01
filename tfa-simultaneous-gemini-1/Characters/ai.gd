@@ -774,11 +774,13 @@ func has_in_view(c) -> bool:
 # stealth 'in view' eye asks has_in_view() above, which answers both cases.
 
 ## Whether this AI would acquire `other` by sight now (faction aside): alive,
-## inside detection range (a Shrouded one only within range x its
-## effective_visibility()), not invisible to us, and either in the sight cone or
-## in close quarters with a clear wall ray unless `other` is sneaking. Blinded
-## or unconscious, nothing. For our current target use is_target_in_sight().
-## The one copy of the acquisition rule for readouts: has_in_view uses it.
+## inside detection range (a Shrouded one, or one under a tree crown, only
+## within range x its visibility_to(us); from above a crown's trunk clearance,
+## or through a crown at crown height, not at all), not invisible to us, and
+## either in the sight cone or in close quarters with a clear wall ray unless
+## `other` is sneaking. Blinded or unconscious, nothing. For our current target
+## use is_target_in_sight(). The one copy of the acquisition rule for
+## readouts: has_in_view uses it.
 func can_see_character(other) -> bool:
 	if other == null or not is_instance_valid(other) or other == character:
 		return false
@@ -794,8 +796,9 @@ func can_see_character(other) -> bool:
 	var dist: float = character.global_position.distance_to(other.global_position)
 	if dist >= detection_range:
 		return false
-	# Concealment (a Dark Hood's Shrouded), as _update_target applies it.
-	var vis: float = other.effective_visibility() if other.has_method("effective_visibility") else 1.0
+	# Concealment (a Dark Hood's Shrouded, a tree crown), as _update_target
+	# applies it.
+	var vis: float = other.visibility_to(character)
 	if vis < 1.0 and dist > get_sight_range_pixels() * vis:
 		return false
 	if dist <= _close_quarters_radius() and not _is_sneaking(other):
@@ -964,9 +967,10 @@ func _update_target(delta: float = 0.0) -> void:
 				continue
 
 		var dist: float = character.global_position.distance_to(other.global_position)
-		# Concealment (a Dark Hood's Shrouded): seen only within our sight range
-		# scaled by the target's effective_visibility().
-		var other_vis: float = other.effective_visibility()
+		# Concealment (a Dark Hood's Shrouded, a tree crown): seen only within
+		# our sight range scaled by the target's visibility to us (0 under a
+		# crown we look down on from above its trunk clearance).
+		var other_vis: float = other.visibility_to(character)
 		if other_vis < 1.0 and dist > get_sight_range_pixels() * other_vis:
 			continue
 		# CLOSE QUARTERS — the cone does not apply. is_in_line_of_sight gates on

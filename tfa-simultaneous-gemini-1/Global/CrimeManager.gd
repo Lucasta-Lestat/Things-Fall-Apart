@@ -282,12 +282,15 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) ->
 
 ## What hides `who` from `viewer`, by the AI's own perception rules (ai.gd
 ## can_see_character, _update_target): an active Invisible, unless the viewer
-## has true_sight; concealment (a Dark Hood's Shrouded: effective_visibility
-## below 1) beyond the viewer's sight range times that visibility. The 3 s
-## reveal after attacking or casting shows them (Invisible is suppressed then,
-## and effective_visibility is 1). Walls and facing are has_visual_los's part.
-## "" when nothing hides them, else the condition's name ("Invisible",
-## "Shrouded") for the notice.
+## has true_sight; concealment beyond the viewer's sight range times
+## who.visibility_to(viewer): a Dark Hood's Shrouded, or a tree crown (P3-F:
+## x0.5 from the ground beyond 2 tiles and outside their crown cluster; not at
+## all from above its trunk clearance, or through a crown at crown height).
+## The 3 s reveal after attacking or casting shows them (Invisible is
+## suppressed then, and the factors are lifted; a crown seen from above still
+## hides). Walls and facing are has_visual_los's part. "" when nothing hides
+## them, else the reason for the notice: the condition's name ("Invisible",
+## "Shrouded") when it alone hides them, else "Canopy" (CANOPY_REASON).
 func hidden_from(viewer, who) -> String:
 	if not (viewer is Node2D) or not is_instance_valid(viewer) or not (who is Node2D) or not is_instance_valid(who):
 		return ""
@@ -296,12 +299,32 @@ func hidden_from(viewer, who) -> String:
 	var cm = who.get_node_or_null("ConditionManager")
 	if not true_sight and cm != null and cm.has_active_condition("invisible"):
 		return "Invisible"
-	var vis: float = who.effective_visibility() if who.has_method("effective_visibility") else 1.0
-	if vis < 1.0 and viewer.has_method("get_sight_range_px") \
-			and viewer.global_position.distance_to(who.global_position) > viewer.get_sight_range_px() * vis:
+	var vis: float = 1.0
+	if who.has_method("visibility_to"):
+		vis = who.visibility_to(viewer)
+	elif who.has_method("effective_visibility"):
+		vis = who.effective_visibility()
+	if vis >= 1.0 or not viewer.has_method("get_sight_range_px"):
+		return ""
+	var dist: float = viewer.global_position.distance_to(who.global_position)
+	var sight_px: float = viewer.get_sight_range_px()
+	if dist <= sight_px * vis:
+		return ""
+	# Worn concealment that hides them by itself is named; what's left is
+	# the tree crown's doing.
+	var worn: float = who.concealment_visibility() if who.has_method("concealment_visibility") else vis
+	if worn < 1.0 and dist > sight_px * worn:
 		var inst = who.concealment_condition() if who.has_method("concealment_condition") else null
 		return inst.condition.display_name if inst != null and inst.condition != null else "Shrouded"
-	return ""
+	return CANOPY_REASON
+
+## hidden_from's reason when a tree crown hid them (P3-F).
+const CANOPY_REASON := "Canopy"
+
+## A hidden_from reason for the "<actor> was ..." lines: a condition's name
+## as it is ("was Shrouded"), the canopy as where they were.
+static func hidden_phrase(why: String) -> String:
+	return "under the trees" if why == CANOPY_REASON else why
 
 ## Everyone who saw the crime POSITION (they saw *something happen*), with a
 ## second LOS test against the ACTOR (identification). Two tests, not one —
@@ -474,13 +497,13 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		if physical_actor is Node2D and is_instance_valid(physical_actor):
 			Globals.show_floating_text("Unseen." if why == "" else "Unseen (%s)." % why,
 				physical_actor.global_position, physical_actor, Color(0.7, 0.7, 0.7))
-		GameLog.add_entry("No one saw it." if why == "" else "No one saw it: %s was %s." % [hider, why])
+		GameLog.add_entry("No one saw it." if why == "" else "No one saw it: %s was %s." % [hider, hidden_phrase(why)])
 		return
 	if not any_identified and unrecognised_by != "":
 		# Seen happening, but the one doing it not made out: an anonymous
 		# alarm at worst (no standing lost, no outlaw mark).
 		_party_float(physical_actor, "Unrecognised (%s)" % unrecognised_by, Color(0.7, 0.7, 0.7))
-		GameLog.add_entry("Witnesses saw it, but not who did it: %s was %s." % [hider, unrecognised_by])
+		GameLog.add_entry("Witnesses saw it, but not who did it: %s was %s." % [hider, hidden_phrase(unrecognised_by)])
 	# Track open fuses for the thrill_of_sin grant and the all-clear line.
 	var target = payload.get("debounce_target")
 	var target_iid: int = target.get_instance_id() if (target is Object and is_instance_valid(target)) else 0

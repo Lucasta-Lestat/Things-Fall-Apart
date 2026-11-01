@@ -246,6 +246,9 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	if GridManager.deck_lint_bad > 0:
 		push_warning("structured map %s: %d deck tiles below terrain-0.05: structure walk_elev must be ABSOLUTE stories"
 			% [_current_map_id, GridManager.deck_lint_bad])
+	# the tree crowns the loop registered (P3-F): buckets and clusters now,
+	# not on the first sight check
+	GridManager.canopy.finish()
 
 	# 4. cliff shadows for the sight cones (relief maps only)
 	if GridManager.relief_los:
@@ -394,6 +397,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var wall_a := Vector2.ZERO             # walls only: for the terrain-following test
 	var wall_b := Vector2.ZERO
 	var wall_half := 0.0
+	var trunk_r := 0.0                     # trees only: the collider, which the crown is minus
 
 	if kind == "wall":
 		var a := _arr_v2(s.get("a", [0, 0]))
@@ -443,6 +447,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var r := float(s.get("r", 30.0))
 		var circ := CircleShape2D.new()
 		circ.radius = maxf(6.0, r * 0.45)   # trunk-scale: canopy overhang stays walkable
+		trunk_r = circ.radius
 		shape = circ
 		var rr := r + 4.0
 		poly_local = PackedVector2Array([
@@ -508,8 +513,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	# CLOSED leaf blocks as high as its walls; an open Door hides its occluder
 	# and leaves the vision layer), curtain pieces (walk_h + merlon_h) and
 	# "hedge" tree rows (0.45: see-over, still an obstacle). A tree row's
-	# "stories" (the crown top) is NOT read here: the trunk keeps its 2 stories
-	# until P3-F's crown band.
+	# "stories" (the crown top) is NOT read here: the trunk keeps its 2 stories,
+	# and the crown above it is GridManager.canopy's (P3-F, _register_crown).
 	var occ_h: float = 2.0 if (kind == "tree" or kind == "disc") else 1.0
 	var has_occ_h: bool = s.get("occlude_h") != null
 	if has_occ_h:
@@ -708,7 +713,34 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	else:
 		for t in occupied:
 			GridManager.register_obstacle(t)
+	if kind == "tree":
+		_register_crown(s, inst, center, trunk_r)
 	return inst
+
+
+## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
+## The same row as the trunk: the disc r minus this trunk's collider, from the
+## trunk clearance ("crown_base", contract 3; absent: 1 story) up to the crown
+## top ("stories"; absent, contract 1: the trunk's 2 stories), stories above the
+## ground the trunk's occlude_top stands on. Hedges (id "hedge", or any
+## see-over occlude_h below eye height) and a crown whose top is not above its
+## clearance (a dead snag, 0.72 stories) hide nothing. Felled or burnt down,
+## the Structure's destroyed signal kills the crown at once.
+func _register_crown(s: Dictionary, inst: Structure, center: Vector2, trunk_r: float) -> void:
+	if String(s.get("id", "tree")) == "hedge":
+		return
+	var oh: Variant = s.get("occlude_h")
+	if (oh is float or oh is int) and float(oh) < GridManager.EYE_HEIGHT_STORIES:
+		return
+	var top_v: Variant = s.get("stories")
+	var top: float = float(top_v) if (top_v is float or top_v is int) else GridManager.CanopyMap.CROWN_TOP_DEFAULT
+	var base_v: Variant = s.get("crown_base")
+	var base: float = float(base_v) if (base_v is float or base_v is int) else GridManager.CanopyMap.CROWN_BASE_DEFAULT
+	if top <= base:
+		return
+	var ground: float = GridManager.effective_elev(GridManager.world_to_map(center))
+	GridManager.canopy.add_crown(center, float(s.get("r", 30.0)), trunk_r, ground, base, top, inst)
+	inst.destroyed.connect(GridManager.canopy.on_tree_destroyed)
 
 
 # True when the ground along a wall (sampled every 32px, just outside BOTH
