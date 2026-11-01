@@ -17,6 +17,12 @@ extends Node2D
 #     into the sea instead of trapping; an inland pit keeps its pond; a deck
 #     over water is never a sink, keeps what lands on it, and sheds like it
 #     does in 'visual';
+#   - the clamp between two bodies (small layouts of their own): a slope from
+#     an upper body down to a lower one keeps its ground and a pit beside it
+#     its pond; a trap beside the upper body is raised only to the rim it
+#     spills over, so the cell behind it still drains; a hollow beside a
+#     perched pool (a pit in 'visual' too) keeps its pond; and the clamp is
+#     one flood, not a walk per cell (a 48 x 48 yard below the waterline);
 #   - FluidWell (Oil Well) skips sinks so its budget fills the land.
 # The map: 10 x 6 tiles of 64 px, one cell per tile. Columns 0-4 are a quay at
 # 0.5 stories, 5-9 the sea (seabed -1.0, surface 0.0, body 1) except column 9,
@@ -34,6 +40,7 @@ const STRADDLE := Vector2i(4, 3)     # next to the sea
 const STRADDLE2 := Vector2i(3, 3)    # behind it, below sea level
 const PIT := Vector2i(1, 3)          # inland, below sea level, ringed by the quay
 const CELLS_PATH := "user://water_sink_check_cells.json"
+const LAYOUT_PATH := "user://water_sink_check_layout.json"
 
 var map_loader: Node2D = null   # FluidManager.setup_cell_graph reads water_sim here
 var fails := 0
@@ -299,9 +306,164 @@ func _ready() -> void:
 	_check("well.budget-on-land", is_equal_approx(well._budget, float(well._cells.size()) * FluidWell.CELL_TARGET_DEPTH * FluidWell.BUDGET_SLACK), "")
 	well.queue_free()
 
+	# --- two bodies: the clamp raises only the traps the sinks make ------------
+	# One cell per tile; H is high ground (2.0 stories) round each layout.
+	# A creek S1 (surface 0.5, bed 0.0) above the top of a slope X 0.2 > Y 0.0 >
+	# Z -0.5 down to the sea S2 (surface -0.6); P (-0.2), a pit below Y, opens
+	# onto Y only.
+	#   H  S1 H  H  H
+	#   H  X  Y  Z  S2
+	#   H  H  P  H  H
+	var ts := {"X": Vector2i(1, 1), "Y": Vector2i(2, 1), "Z": Vector2i(3, 1), "P": Vector2i(2, 2)}
+	g = _load_layout(5, 3, {Vector2i(1, 0): 0.0, ts["X"]: 0.2, ts["Y"]: 0.0, ts["Z"]: -0.5, Vector2i(4, 1): -1.0, ts["P"]: -0.2},
+		{Vector2i(1, 0): [0.5, 1], Vector2i(4, 1): [-0.6, 2]})
+	ml.set("water_sim", "sink")
+	fm.setup_cell_graph(g)
+	cf = fm.cell_fluid
+	_check("two.slope-keeps-its-ground", cf.sink_count == 2 and _ground_is(cf, g, ts["X"], 0.2)
+		and _ground_is(cf, g, ts["Y"], 0.0) and _ground_is(cf, g, ts["Z"], -0.5),
+		"X %.3f Y %.3f Z %.3f stories (it drains to the lower body as it lies)" % [
+			_gh(cf, g, ts["X"]), _gh(cf, g, ts["Y"]), _gh(cf, g, ts["Z"])])
+	_check("two.pit-beside-slope-kept", _ground_is(cf, g, ts["P"], -0.2) and cf.waterline_count == 0,
+		"P %.3f stories, %d raised" % [_gh(cf, g, ts["P"]), cf.waterline_count])
+	var pit_v: float = _shed_run(ml, fm, g, "visual", ts["P"], "water", 0.3)
+	var pit_s: float = _shed_run(ml, fm, g, "sink", ts["P"], "water", 0.3)
+	_check("two.pit-beside-slope-keeps-pond", pit_s >= 0.3 - 40.0 * CellFluid.EVAP_PER_SEC * CellFluid.SIM_INTERVAL - 1e-6
+		and absf(pit_s - pit_v) <= 1e-4, "0.3 water for 10 s: sink %.4f, visual %.4f" % [pit_s, pit_v])
+
+	# A trap whose way out runs through another body: S1 (surface 0.0, bed
+	# -1.0) above E only; A -0.2 | E -0.5 | F -0.25 run to S2 (surface -0.3).
+	# E holds what lands on it up to F, not up to S1's head: raised to F's
+	# -0.25, A behind it still drains through it (raised to 0.0, it would cut A
+	# off: A a pit at -0.2 between high ground and E).
+	#   H  H  S1 H  H
+	#   H  A  E  F  S2
+	#   H  H  H  H  H
+	ts = {"A": Vector2i(1, 1), "E": Vector2i(2, 1), "F": Vector2i(3, 1)}
+	g = _load_layout(5, 3, {Vector2i(2, 0): -1.0, ts["A"]: -0.2, ts["E"]: -0.5, ts["F"]: -0.25, Vector2i(4, 1): -1.0},
+		{Vector2i(2, 0): [0.0, 1], Vector2i(4, 1): [-0.3, 2]})
+	ml.set("water_sim", "sink")
+	fm.setup_cell_graph(g)
+	cf = fm.cell_fluid
+	_check("two.trap-raised-to-its-rim", cf.waterline_count == 1 and _ground_is(cf, g, ts["E"], -0.25)
+		and _ground_is(cf, g, ts["A"], -0.2) and _ground_is(cf, g, ts["F"], -0.25),
+		"%d raised; A %.3f E %.3f F %.3f stories" % [cf.waterline_count, _gh(cf, g, ts["A"]), _gh(cf, g, ts["E"]), _gh(cf, g, ts["F"])])
+	var a_v: float = _shed_run(ml, fm, g, "visual", ts["A"], "water", 0.5)
+	var a_s: float = _shed_run(ml, fm, g, "sink", ts["A"], "water", 0.5)
+	var pud_w: float = fm.cell_fluid._puddle_of(fm.cell_fluid._ti_of("water"))
+	# the bench's trap test: deeper than visual + TRAP_TOL and than the film + TRAP_FLOOR
+	_check("two.behind-the-trap-drains", a_s <= maxf(a_v + 0.05, pud_w + 0.1),
+		"0.5 water on A for 10 s: sink %.4f, visual %.4f" % [a_s, a_v])
+
+	# A hollow beside a perched pool: S1 (surface 1.0, bed 0.5) above E (0.1),
+	# whose rim F (0.28) runs to S2 (surface 0.2, bed -0.5). The pool's bed is
+	# above E: E is a pit in 'visual' too, and keeps its pond.
+	#   H  S1 H  H
+	#   H  E  F  S2
+	#   H  H  H  H
+	ts = {"E": Vector2i(1, 1), "F": Vector2i(2, 1)}
+	g = _load_layout(4, 3, {Vector2i(1, 0): 0.5, ts["E"]: 0.1, ts["F"]: 0.28, Vector2i(3, 1): -0.5},
+		{Vector2i(1, 0): [1.0, 1], Vector2i(3, 1): [0.2, 2]})
+	ml.set("water_sim", "sink")
+	fm.setup_cell_graph(g)
+	cf = fm.cell_fluid
+	_check("two.perched-hollow-kept", cf.waterline_count == 0 and _ground_is(cf, g, ts["E"], 0.1) and _ground_is(cf, g, ts["F"], 0.28),
+		"%d raised; E %.3f F %.3f stories" % [cf.waterline_count, _gh(cf, g, ts["E"]), _gh(cf, g, ts["F"])])
+	var e_v: float = _shed_run(ml, fm, g, "visual", ts["E"], "water", 0.5)
+	var e_s: float = _shed_run(ml, fm, g, "sink", ts["E"], "water", 0.5)
+	_check("two.perched-hollow-keeps-pond", absf(e_s - e_v) <= 0.05,
+		"0.5 water on E for 10 s: sink %.4f, visual %.4f" % [e_s, e_v])
+
+	# --- the clamp's cost: one flood, not a walk per cell -----------------------
+	# A 48 x 48 yard below the waterline (-0.5) behind one gap in a quay of high
+	# ground, beside a sea column (surface 0.0, bed -1.0): the yard and the gap
+	# are 2305 traps. A walk per judged cell took seconds here.
+	var yard := {}
+	var sea := {}
+	for y in 48:
+		yard[Vector2i(49, y)] = -1.0
+		sea[Vector2i(49, y)] = [0.0, 1]
+		yard[Vector2i(48, y)] = 2.0
+		for x in 48:
+			yard[Vector2i(x, y)] = -0.5
+	yard[Vector2i(48, 24)] = -0.5   # the gap
+	g = _load_layout(50, 48, yard, sea)
+	var clamp_ms := INF
+	for _k in 3:   # best of 3: the machine is shared
+		ml.set("water_sim", "visual")
+		var v0 := Time.get_ticks_usec()
+		fm.setup_cell_graph(g)
+		var vis_us: int = Time.get_ticks_usec() - v0
+		ml.set("water_sim", "sink")
+		var s0 := Time.get_ticks_usec()
+		fm.setup_cell_graph(g)
+		clamp_ms = minf(clamp_ms, float(Time.get_ticks_usec() - s0 - vis_us) / 1000.0)
+	_check("cost.clamp-is-one-flood", fm.cell_fluid.waterline_count == 48 * 48 + 1 and clamp_ms < 250.0,
+		"%d raised; sinks + clamp %.1f ms (best of 3)" % [fm.cell_fluid.waterline_count, clamp_ms])
+	ml.set("water_sim", "sink")
+
 	ml.free()
 	print("water_sink_check: %d checks, %d failures" % [checks, fails])
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+# A small map of its own for the two-body cases: `cols` x `rows` tiles of T
+# px, one cell per tile (4 neighbours), every tile at 2.0 stories unless
+# `ground` says otherwise, open water where `water` holds [surface, body]
+# (the contract-3 layer). Loaded as _load does.
+func _load_layout(cols: int, rows: int, ground: Dictionary, water: Dictionary) -> CellGraph:
+	var cx: Array = []
+	var cy: Array = []
+	var r: Array = []
+	var fuel: Array = []
+	var elev: Array = []
+	var roof: Array = []
+	var nb_off: Array = []
+	var nb: Array = []
+	var tw: Array = []
+	var tb: Array = []
+	for y in rows:
+		for x in cols:
+			var t := Vector2i(x, y)
+			cx.append((x + 0.5) * T)
+			cy.append((y + 0.5) * T)
+			r.append(32.0)
+			fuel.append(0.0)
+			elev.append(float(ground.get(t, 2.0)))
+			roof.append(0.0)
+			tw.append(float((water[t] as Array)[0]) if water.has(t) else 0.0)
+			tb.append(int((water[t] as Array)[1]) if water.has(t) else 0)
+			nb_off.append(nb.size())
+			for d in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var n: Vector2i = t + d
+				if n.x >= 0 and n.y >= 0 and n.x < cols and n.y < rows:
+					nb.append(n.y * cols + n.x)
+	nb_off.append(nb.size())
+	var data := {"n": cols * rows, "export_scale": 2.0, "cx": cx, "cy": cy, "r": r, "fuel": fuel,
+		"elev": elev, "roof": roof, "nb_off": nb_off, "nb": nb,
+		"tile_elev": {"cols": cols, "rows": rows, "data": elev},
+		"tile_water": {"cols": cols, "rows": rows, "data": tw},
+		"tile_body": {"cols": cols, "rows": rows, "data": tb}}
+	var f := FileAccess.open(LAYOUT_PATH, FileAccess.WRITE)
+	f.store_string(JSON.stringify(data))
+	f.close()
+	GridManager.TILE_SIZE = T
+	GridManager.initialize(cols * T, rows * T)
+	var g: CellGraph = CellGraph.from_structured(LAYOUT_PATH)
+	GridManager.set_elevation_data(g)
+	for y in rows:
+		for x in cols:
+			GridManager.floors[Vector2i(x, y)] = "shallow_water" if water.has(Vector2i(x, y)) else "floor_stone"
+	return g
+
+
+# A tile's cell ground head, in stories / against `stories`.
+func _gh(cf: CellFluid, g: CellGraph, t: Vector2i) -> float:
+	return cf._ground_head(g.cell_at(GridManager.map_to_world(t))) / CellFluid.HEAD_PER_STORY
+
+
+func _ground_is(cf: CellFluid, g: CellGraph, t: Vector2i, stories: float) -> bool:
+	return is_equal_approx(_gh(cf, g, t), stories)
 
 
 # A fresh sim in `mode`, `depth` of `type_str` deposited on one tile, 10 s of
