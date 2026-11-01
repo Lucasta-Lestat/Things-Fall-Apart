@@ -186,6 +186,12 @@ func _build_cells() -> void:
 		# -- the same guard CellFluid.pour applies.
 		if bool(GridManager.walls.get(GridManager.world_to_map(c), false)):
 			continue
+		# A sea-drain sink (P3-A) reads dry forever, so it would take the full
+		# deficit every tick and burn the budget the slick on land needs. What
+		# a well gushes onto open water is gone anyway; flow carries the land
+		# part's overspill into the sea.
+		if _cf.is_sink(cid):
+			continue
 		scratch.append([d, cid, c.x, c.y])
 
 	scratch.sort_custom(func(a, b): return float(a[0]) < float(b[0]))

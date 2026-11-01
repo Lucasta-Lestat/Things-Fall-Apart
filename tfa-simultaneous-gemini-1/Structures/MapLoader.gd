@@ -14,6 +14,12 @@ var cliff_occluders: Node2D = null
 # forges, hearths, glow blocks); null when the row has none. Held by
 # reference for the same reason as cliff_occluders.
 var map_lights: Node2D = null
+# P3-A living water, resolved per map load (resolve_water_sim): "sink" = the
+# open-water cells drain fluid (CellFluid sink cells), "visual" = today's
+# painted sea that fluids pool on. FluidManager reads it when it builds the
+# cell sim, after this loader has run.
+const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
+var water_sim: String = "visual"
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -208,6 +214,11 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	elif rock_elev != null:
 		push_warning("map %s: solid_rock_elev must be a number (stories), got %s" % [_current_map_id, str(rock_elev)])
 
+	# 2c. living water (P3-A): the entry's water_sim, or the project-setting
+	# override. The open-water layer itself (cells.json tile_water/tile_body)
+	# came in with the cell graph (GridManager.set_elevation_data).
+	water_sim = resolve_water_sim(map_data)
+
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
 	var op := String(images.get("structures", ""))
@@ -259,6 +270,28 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		map_lights = _spawn_map_lights(lv)
 
 	emit_signal("map_loaded")
+
+
+# "sink" or "visual" for a map row. The project setting tfa/fluids/sea_sink
+# ("auto" | "sink" | "visual", absent = "auto") overrides every map for A/B
+# runs; "auto" takes the entry's water_sim, whose absence means "visual"
+# (today's behaviour: no shipped row sets it before train 3). Anything else
+# warns and reads "visual".
+static func resolve_water_sim(map_data: Dictionary) -> String:
+	var ov: String = str(ProjectSettings.get_setting(WATER_SIM_SETTING, "auto"))
+	if ov == "sink" or ov == "visual":
+		return ov
+	if ov != "auto":
+		push_warning("%s must be auto, sink or visual, got '%s': using the map's water_sim" % [WATER_SIM_SETTING, ov])
+	var v: Variant = map_data.get("water_sim", null)
+	if v == null:
+		return "visual"
+	var s: String = str(v)
+	if s == "sink" or s == "visual":
+		return s
+	push_warning("map %s: water_sim must be sink or visual, got %s: using visual"
+		% [String(map_data.get("id", "")), JSON.stringify(v)])
+	return "visual"
 
 
 ## One PointLight2D per Maps.json "lights" row (docs/export_contract.md,
@@ -986,6 +1019,7 @@ func _blank_tex() -> ImageTexture:
 	return _blank
 
 func generate_map():
+	water_sim = "visual"   # legacy/world maps run the flat tile sim: no sinks
 	if world_map_mode:
 		_generate_world_map()
 		return

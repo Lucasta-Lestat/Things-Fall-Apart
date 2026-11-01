@@ -72,6 +72,14 @@ const CONE_BAND_DECK_ALLOW := 1.5        # a battlement deck on the highest terr
 var roof_lint_bad: int = 0               # roofed tiles with roof < terrain + 0.9 (relative-roof export bug)
 var deck_lint_bad: int = 0               # deck tiles with walk_elev < terrain - 0.05 (MapLoader)
 var tile_elev_used: bool = false         # last set_elevation_data took terrain from cells.json tile_elev
+# Open water (P3-A): the per-tile water surface the sea drain and the visual
+# water read. cells.json "tile_water"/"tile_body" (export contract 3) when the
+# map ships them, else the deep-water rule with the sea surface at
+# SEA_SURFACE_ELEV. See water_surface_at.
+const SEA_SURFACE_ELEV := 0.0            # the fallback's body surface: sea level (seabed -1)
+var water_layer_used: bool = false       # last set_elevation_data took open water from cells.json
+var _water_surf: PackedFloat32Array = PackedFloat32Array()   # row-major, map_rect.size
+var _water_body: PackedInt32Array = PackedInt32Array()
 # Solid rock: Maps.json entry "solid_rock_elev" (ABSOLUTE stories), written by
 # TG's converter for the interiors whose rock is terrain (tg_hillside_cavern /
 # _ossuary). INF = no key = off. Reset in initialize(); set by
@@ -99,6 +107,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	roof_lint_bad = 0
 	deck_lint_bad = 0
 	tile_elev_used = false
+	_clear_water_layer()
 	solid_rock_elev = INF
 	# Door tiles are per map: the previous map's Doors are only queue_free'd
 	# (a Door releases its tiles when bashed, never when freed), so without
@@ -178,6 +187,7 @@ func set_elevation_data(graph) -> void:
 	roof_lint_bad = 0
 	deck_lint_bad = 0
 	tile_elev_used = false
+	_clear_water_layer()
 	if graph == null:
 		refresh_terrain_stats()
 		return
@@ -193,6 +203,17 @@ func set_elevation_data(graph) -> void:
 				push_warning("cells tile_elev is %dx%d but the map is %dx%d tiles: using nearest-cell elev"
 					% [dims.x, dims.y, cols, rows])
 	tile_elev_used = use_te
+	# open water (contract 3): kept only when the pair is exactly the map's tiles
+	if graph.has_method("has_tile_water"):
+		if graph.has_tile_water(cols, rows):
+			_water_surf = graph.tile_water_data()
+			_water_body = graph.tile_body_data()
+			water_layer_used = true
+		else:
+			var wdims: Vector2i = graph.tile_water_dims()
+			if wdims != Vector2i.ZERO:
+				push_warning("cells tile_water is %dx%d but the map is %dx%d tiles: using the deep-water rule"
+					% [wdims.x, wdims.y, cols, rows])
 	var has_roof_ch: bool = graph.has_method("roof_elev")
 	for y in range(rows):
 		for x in range(cols):
@@ -326,6 +347,43 @@ func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
 				return true
 			prev = t
 	return false
+
+# --- open water (P3-A) ---
+# The open-water surface at tile t in ABSOLUTE stories, NAN where there is no
+# open water. The map's cells.json "tile_water" when it ships one (export
+# contract 3: sea, rivers, channels, creeks, pools, each at its own surface,
+# also under a deck or bridge), else the deep-water rule above with the body
+# surface at sea level (SEA_SURFACE_ELEV). It never changes is_deep_water's
+# verdicts; P3-D builds its relative deep-water rule on it.
+func water_surface_at(t: Vector2i) -> float:
+	if water_layer_used:
+		var i: int = _water_index(t)
+		if i < 0 or _water_body[i] <= 0:
+			return NAN
+		return _water_surf[i]
+	return SEA_SURFACE_ELEV if is_deep_water(t) else NAN
+
+# The water body id at tile t (0 = no open water). The fallback knows no
+# bodies: every deep-water tile is body 1.
+func water_body_at(t: Vector2i) -> int:
+	if water_layer_used:
+		var i: int = _water_index(t)
+		return _water_body[i] if i >= 0 else 0
+	return 1 if is_deep_water(t) else 0
+
+# True when the open water comes from the map's cells.json, not the fallback.
+func has_water_layer() -> bool:
+	return water_layer_used
+
+func _water_index(t: Vector2i) -> int:
+	if t.x < 0 or t.y < 0 or t.x >= map_rect.size.x or t.y >= map_rect.size.y:
+		return -1
+	return t.y * map_rect.size.x + t.x
+
+func _clear_water_layer() -> void:
+	water_layer_used = false
+	_water_surf = PackedFloat32Array()
+	_water_body = PackedInt32Array()
 
 # --- roof layer (jump/rooftop traversal) ---
 func roof_at(t: Vector2i) -> float:
