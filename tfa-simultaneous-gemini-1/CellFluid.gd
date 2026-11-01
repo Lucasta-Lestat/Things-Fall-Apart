@@ -25,9 +25,9 @@
 # SINK. A sink holds a FIXED head at its body's surface, is never in `active`
 # (so it never flows, evaporates or meets fire), and whatever flows, deposits,
 # pours or springs into it is deleted at once and counted in `drained`. Shore
-# and deck cells below a sink's head are raised to the waterline so they shed
-# into it instead of trapping. Only wet cells are iterated, so the cost scales
-# with the spill, not the sea.
+# and deck cells below a sink's head that could not drain otherwise are raised
+# to the waterline so they shed into it instead of trapping. Only wet cells are
+# iterated, so the cost scales with the spill, not the sea.
 class_name CellFluid
 extends Node2D
 
@@ -40,6 +40,7 @@ const FLOW_RATE_PER_SEC := 0.9  # matches editor cfg.fluid_flow_rate (tile 0.05 
 const HEAD_PER_STORY := 1.6     # stories -> depth units (matches editor cfg.fluid_head_per_story)
 const SIM_INTERVAL := 0.25
 const VISUAL_FLOW_MIN := 0.03
+const HEAD_EPS := 1e-4          # ground-head ties (the waterline clamp's drain test)
 
 var graph: CellGraph
 var fm: Node                     # FluidManager (fluid db + fire bridge live there)
@@ -67,6 +68,8 @@ var _ti_water := 1                                      # ftype byte of water (w
 var _ground: PackedFloat32Array = PackedFloat32Array()  # cached ground head (NAN = not derived)
 var _edge_cache: Dictionary = {}                        # cid -> PackedByteArray per neighbour (1 = open)
 var _nb_cache: Array = []                               # cid -> neighbour Array (avoid per-tick alloc)
+var _seen_mark: PackedInt32Array = PackedInt32Array()   # the clamp's drain walks: cid -> walk number
+var _seen_gen := 0
 
 
 func setup(p_graph: CellGraph, p_fm: Node, fluid_db: Dictionary, order: Array) -> void:
@@ -99,9 +102,11 @@ func active_sim() -> bool:
 
 # Tag the sea drain's sinks (FluidManager calls it right after setup on a map
 # whose water_sim is "sink"). A cell is a sink when its centroid tile is open
-# water, except under a walkable deck: what lands on a pier or bridge is never
-# deleted into the sea. The sink's fixed head is its body surface, held in its
-# cached ground head: its amount stays 0, so _head() reads exactly that.
+# water, except under a walkable deck: a deck is never a sink, so a deposit on
+# a pier or bridge is not deleted on landing (above its puddle film it sheds
+# into the sea like the shore, below). The sink's fixed head is its body
+# surface, held in its cached ground head: its amount stays 0, so _head()
+# reads exactly that.
 # Then the waterline clamp (_clamp_waterline): tagging by centroid tile leaves
 # shore cells whose own ground is the seabed while their centroid tile reads
 # land (a cell straddling the quay edge), and deck cells over water. Beside a
@@ -111,8 +116,9 @@ func active_sim() -> bool:
 # the seabed in 'visual'.
 # Known limits, left to P3-D / P4-B: a deck over water gets the waterline, not
 # a head of its own; a destroyed deck is not re-tagged as a sink; and the clamp
-# follows the walls at load (a breach opened later re-derives the edges, not
-# the clamp).
+# follows the walls at load. Doors start closed (Door.gd), so they are walls
+# then: a door or a breach opened later re-derives the edges, not the clamp,
+# and a below-waterline floor behind it can then trap beside the raised shore.
 # One O(cell_count) pass per map load, plus the shore. Returns the sink count.
 func setup_sinks() -> int:
 	var n := graph.cell_count if graph != null else 0
@@ -138,21 +144,33 @@ func setup_sinks() -> int:
 		sink = PackedByteArray()   # the hot-path guard reads sink_count first
 		return 0
 	waterline_count = _clamp_waterline()
+	# The clamp's walks built the shore's edges; start cold like 'visual'
+	# (edges are rebuilt from the walls on demand, so nothing changes).
+	_edge_cache.clear()
 	return sink_count
 
 
-# The waterline clamp (setup_sinks). A flood out from the sinks: a non-sink
-# cell whose ground head is below the head of a sink -- or of a cell already
-# raised -- it can flow into is raised to that head, the lowest one that
-# reaches it. Only ground below the level is raised, so an inland pit behind a
-# ridge keeps its pond. Every raised cell then has a level-or-downhill path to
-# a sink, and no cell left alone sits below a neighbour it drains into. Ground
+# The waterline clamp (setup_sinks): raises only the traps the sinks make. A
+# flood out from the sinks: a non-sink cell whose ground head is below the
+# head of a sink -- or of a cell already raised -- it can flow into, and that
+# cannot drain at its own ground (_drains_at: no level-or-downhill path to a
+# sink no higher than it), is raised to that head, the lowest one that
+# reaches it. The flood passes through raised cells only. A cell that already
+# drains at its own ground (a slope down to a lower body) keeps it, and so
+# does everything behind it: a slope stays a slope, and an inland pit behind
+# it keeps its pond. Every raised cell then has a level-or-downhill path to a
+# sink, and no cell left alone sits below a neighbour it drains into. Ground
 # heads only: the cells' fluid is untouched. Returns the raised-cell count.
 func _clamp_waterline() -> int:
 	var n := sink.size()
 	var level := PackedFloat32Array()
 	level.resize(n)
 	level.fill(INF)
+	var judged := PackedByteArray()   # 0 = not yet, 1 = a trap (raise it), 2 = drains at its own ground
+	judged.resize(n)
+	_seen_mark = PackedInt32Array()
+	_seen_mark.resize(n)
+	_seen_gen = 0
 	var queue := PackedInt32Array()
 	for cid in n:
 		if sink[cid] == 1:
@@ -170,14 +188,46 @@ func _clamp_waterline() -> int:
 				continue
 			if not _opens_to(nb, c):
 				continue
+			if judged[nb] == 0:   # its own ground never changes during the flood
+				judged[nb] = 2 if _drains_at(nb, _ground_head(nb) + HEAD_EPS) else 1
+			if judged[nb] == 2:
+				continue
 			level[nb] = lv   # a lower level reaching it later re-queues it
 			queue.append(nb)
+	_seen_mark = PackedInt32Array()
 	var raised := 0
 	for cid in n:
 		if sink[cid] == 0 and level[cid] != INF:
 			_ground[cid] = level[cid]
 			raised += 1
 	return raised
+
+
+# True when fluid standing at ground head `lvl` on `start` reaches a sink whose
+# head is no higher, through open edges and cells whose ground head is no
+# higher: it drains at that level. Read before the clamp writes any raised
+# head, so every non-sink cell is at its own ground (the bench's _drains_at).
+func _drains_at(start: int, lvl: float) -> bool:
+	_seen_gen += 1
+	_seen_mark[start] = _seen_gen
+	var queue := PackedInt32Array([start])
+	var qi := 0
+	while qi < queue.size():
+		var c := queue[qi]
+		qi += 1
+		var nbs: Array = _nb_cache[c]
+		var opens := _edges(c)
+		for j in nbs.size():
+			var nb: int = nbs[j]
+			if _seen_mark[nb] == _seen_gen or (j < opens.size() and opens[j] == 0):
+				continue
+			_seen_mark[nb] = _seen_gen
+			if _ground_head(nb) > lvl:
+				continue
+			if sink[nb] == 1:
+				return true
+			queue.append(nb)
+	return false
 
 
 # True when fluid on cell a can flow into its neighbour b (the edge test

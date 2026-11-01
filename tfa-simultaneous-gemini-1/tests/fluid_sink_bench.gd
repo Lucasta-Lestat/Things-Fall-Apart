@@ -28,17 +28,22 @@ extends Node2D
 # CellFluid flow-tick p50/p95/max (the frames whose tick ran _flow_tick), the
 # fluid frame (deposits + well + FluidManager.update_fluid_tick, replicated 1:1)
 # mean/p95, peak active cells, the mass ledger and the end-state hash. Sink runs
-# also print two trap checks. Structural: no shore cell (a non-sink cell that
+# also print three trap checks. Structural: no shore cell (a non-sink cell that
 # can flow into a sink) may sit below its lowest sink's head without a
 # level-or-downhill path to a sink, or it fills before it drains. Dynamic: no
 # non-sink cell may end a sink run deeper than in the same scenario's visual
-# run (+TRAP_TOL) AND deeper than its puddle floor + TRAP_FLOOR. Then one
-# VERDICT line per map: ship 'sink' when every sink run keeps the flow tick p95
-# <= 2 ms and the frame delta vs 'visual' <= 1 ms (mean and p95), each judged on
-# the MEDIAN of TFA_SINK_REPEAT repeats (the best is printed beside it), the
-# mass closes, no sink ever holds or sheds fluid, no deck cell over water is a
-# sink or a trap, both trap checks find nothing, and every shore spill reached
-# a sink. Otherwise 'visual'.
+# run (+TRAP_TOL) AND deeper than its puddle floor + TRAP_FLOOR (skipped
+# without a visual run). Over-raise: no cell the waterline clamp raised may
+# have drained at its own ground already (original grounds, sinks at their
+# heads: a slope it flattened), nor be a pit in 'visual' too (every cell at
+# its original ground: a pond it filled); the raised cells with no open water
+# under their footprint are counted for information. Then one VERDICT line
+# per map: ship 'sink' when every sink run keeps the flow tick p95 <= 2 ms and
+# the frame delta vs 'visual' <= 1 ms (mean and p95), each judged on the MEDIAN of
+# TFA_SINK_REPEAT repeats (the best is printed beside it), the mass closes, no
+# sink ever holds or sheds fluid, no deck cell over water is a sink or a trap
+# ('n/a' on a map without one), the three trap checks find nothing, and every
+# shore spill reached a sink. Otherwise 'visual'.
 # Headless:  godot --headless --path . res://tests/fluid_sink_bench.tscn
 # Env: TFA_SINK_MAPS (comma list, default tg_hillside_harbor,tg_hillside_ossuary),
 #      TFA_SINK_MODES (default visual,sink), TFA_SINK_ONLY=<scenario id>,
@@ -65,6 +70,10 @@ const MASS_ABS_TOL := 1e-3
 const HEAD_TOL := 1e-4             # ground-head comparisons (depth units)
 const TRAP_TOL := 0.05             # sink run deeper than visual by more than this ...
 const TRAP_FLOOR := 0.1            # ... and deeper than its puddle floor + this = a trap
+const WATCHDOG_SECS := 120.0       # per repeat x map x mode (one takes ~2 s here: 37 s for the default 20)
+const HEADS_NOW := 0               # _drains_at's ground heads: as the clamp left them
+const HEADS_ORIG := 1              # ... every non-sink cell at its original ground
+const HEADS_VISUAL := 2            # ... every cell at its original ground, sinks too
 
 var structures_in_scene: Array = []
 var characters_in_scene: Array = []
@@ -87,7 +96,6 @@ func load_map(_a = null, _b = "", _c = "") -> void:
 
 func _ready() -> void:
 	add_to_group("game")
-	await get_tree().process_frame
 	var f := FileAccess.open("res://data/Maps.json", FileAccess.READ)
 	var raw: Dictionary = JSON.parse_string(f.get_as_text())
 	f.close()
@@ -99,6 +107,14 @@ func _ready() -> void:
 	var modes: PackedStringArray = (modes_env if modes_env != "" else "visual,sink").split(",", false)
 	if OS.get_environment("TFA_SINK_REPEAT") != "":
 		_repeats = maxi(1, int(OS.get_environment("TFA_SINK_REPEAT")))
+	# A SCRIPT ERROR aborts the coroutine; don't hang waiting for quit(). The
+	# runs never yield mid-scenario, so the limit is checked between runs:
+	# WATCHDOG_SECS per repeat per map per mode, beyond any sane run.
+	var limit: float = WATCHDOG_SECS * float(_repeats * maxi(1, want.split(",", false).size()) * maxi(1, modes.size()))
+	get_tree().create_timer(limit, true).timeout.connect(func():
+		print("BENCH ERROR: watchdog after %.0f s (coroutine aborted?)" % limit)
+		get_tree().quit(99))
+	await get_tree().process_frame
 	var probe := CellFluid.new()
 	var sink_api: bool = probe.has_method("is_sink")
 	probe.free()
@@ -424,7 +440,8 @@ func _run(sc: Dictionary, mode: String, vis_ref: Dictionary = {}) -> Dictionary:
 		well_deposited = well._deposited
 		well.queue_free()
 	# the trap checks run after the timed loop: they warm CellFluid's edge
-	# cache, which would flatter the sink run's timing
+	# cache, which would flatter the sink run's timing (setup_sinks hands it
+	# over cold, as 'visual' starts)
 	r["amounts"] = cf.amount.duplicate()
 	var is_snk := PackedByteArray()
 	is_snk.resize(_graph.cell_count)
@@ -433,6 +450,9 @@ func _run(sc: Dictionary, mode: String, vis_ref: Dictionary = {}) -> Dictionary:
 	r["shore_cells"] = 0
 	r["shore_traps"] = 0
 	r["traps"] = 0
+	r["traps_run"] = false
+	r["raised"] = 0
+	r["over_raised"] = 0
 	r["waterline"] = -1
 	if api and mode == "sink":
 		r["waterline"] = int(cf.get("waterline_count")) if "waterline_count" in cf else -1
@@ -441,9 +461,17 @@ func _run(sc: Dictionary, mode: String, vis_ref: Dictionary = {}) -> Dictionary:
 		r["shore_traps"] = st.y
 		if vis_ref.has("amounts"):
 			var tr: Dictionary = _deeper_than_visual(cf, is_snk, vis_ref["amounts"])
+			r["traps_run"] = true
 			r["traps"] = int(tr["count"])
 			r["trap_worst"] = tr["worst"]
 			r["trap_cells"] = tr["cells"]
+		var orz: Dictionary = _over_raised(cf, is_snk)
+		r["raised"] = int(orz["raised"])
+		r["over_raised"] = int(orz["count"])
+		r["over_drained"] = int(orz["drained"])
+		r["over_pit"] = int(orz["pit"])
+		r["over_dry"] = int(orz["dry"])
+		r["over_worst"] = orz["worst"]
 	# a deck over water is never a sink, and never a trap
 	var trapped: Dictionary = r.get("trap_cells", {})
 	for cid in decks:
@@ -575,7 +603,11 @@ func _shore_traps(cf, is_snk: PackedByteArray) -> Vector2i:
 
 # True when fluid standing at `level` on `start` reaches a sink whose head is
 # no higher, through open edges and cells whose ground head is no higher.
-func _drains_at(cf, is_snk: PackedByteArray, start: int, level: float) -> bool:
+# heads: HEADS_NOW (the clamp's raised heads, sinks at theirs), HEADS_ORIG
+# (every non-sink cell at its ORIGINAL ground, CellGraph.ground_elev; sinks at
+# their heads) or HEADS_VISUAL (every cell at its original ground, the sinks'
+# seabed too: a sink is just open water to reach, as 'visual' runs it).
+func _drains_at(cf, is_snk: PackedByteArray, start: int, level: float, heads: int = HEADS_NOW) -> bool:
 	var seen := {start: true}
 	var queue := PackedInt32Array([start])
 	var qi := 0
@@ -590,11 +622,77 @@ func _drains_at(cf, is_snk: PackedByteArray, start: int, level: float) -> bool:
 				continue
 			seen[nb] = true
 			var h: float = cf._ground_head(nb)
+			if heads == HEADS_VISUAL or (heads == HEADS_ORIG and is_snk[nb] == 0):
+				h = _graph.ground_elev(nb) * CellFluid.HEAD_PER_STORY
 			if h > level:
 				continue
 			if is_snk[nb] == 1:
 				return true
 			queue.append(nb)
+	return false
+
+
+# Over-raise check (sink runs): the cells the waterline clamp raised (a
+# non-sink cell whose ground head is above its own ground), and of those the
+# ones it had no business raising: one that drained at its own ground already
+# (original grounds, sinks at their heads: a slope it flattened), or one that
+# is a pit in 'visual' too (no level-or-downhill path to open water with every
+# cell at its original ground: a pond it filled, not a trap the sinks made).
+# `dry` counts the raised cells with no open water under their footprint (no
+# tile within the cell's radius of its centroid is open water or a deck over
+# shallow water), for information only: a seabed-level cell a hop behind the
+# straddling shore cell is a trap the sinks made with dry tiles under it
+# (tg_hillside_harbor cid 1875, tile (28, 10)).
+# Returns {raised, count, drained, pit, dry, worst}.
+func _over_raised(cf, is_snk: PackedByteArray) -> Dictionary:
+	var raised := 0
+	var drained := 0
+	var pit := 0
+	var dry := 0
+	var bad := 0
+	var worst := "none"
+	for cid in _graph.cell_count:
+		if is_snk[cid] == 1:
+			continue
+		var g0: float = _graph.ground_elev(cid) * CellFluid.HEAD_PER_STORY
+		if float(cf._ground_head(cid)) <= g0 + HEAD_TOL:
+			continue
+		raised += 1
+		var d: bool = _drains_at(cf, is_snk, cid, g0 + HEAD_TOL, HEADS_ORIG)
+		var p: bool = not _drains_at(cf, is_snk, cid, g0 + HEAD_TOL, HEADS_VISUAL)
+		if d:
+			drained += 1
+		if p:
+			pit += 1
+		if not _wet_footprint(cid):
+			dry += 1
+		if d or p:
+			bad += 1
+			if worst == "none":
+				worst = "cid %d tile %s ground %.2f -> %.2f stories (%s)" % [cid,
+					str(GridManager.world_to_map(_graph.centroid(cid))), g0 / CellFluid.HEAD_PER_STORY,
+					float(cf._ground_head(cid)) / CellFluid.HEAD_PER_STORY, "drained already" if d else "a pit in visual"]
+	return {"raised": raised, "count": bad, "drained": drained, "pit": pit, "dry": dry, "worst": worst}
+
+
+# Some tile the cell's disc (CellGraph.radius around its centroid) touches is
+# open water (GridManager.water_surface_at, under a deck too) or a deck over
+# shallow water.
+func _wet_footprint(cid: int) -> bool:
+	var c: Vector2 = _graph.centroid(cid)
+	var rad: float = _graph.radius(cid)
+	var ts: float = float(GridManager.TILE_SIZE)
+	for ty in range(floori((c.y - rad) / ts), floori((c.y + rad) / ts) + 1):
+		for tx in range(floori((c.x - rad) / ts), floori((c.x + rad) / ts) + 1):
+			var qx: float = clampf(c.x, float(tx) * ts, float(tx + 1) * ts)
+			var qy: float = clampf(c.y, float(ty) * ts, float(ty + 1) * ts)
+			if (qx - c.x) * (qx - c.x) + (qy - c.y) * (qy - c.y) > rad * rad:
+				continue
+			var t := Vector2i(tx, ty)
+			if not is_nan(float(GridManager.call("water_surface_at", t))):
+				return true
+			if GridManager.deck_elevations.has(t) and GridManager.floors.get(t, "") == "shallow_water":
+				return true
 	return false
 
 
@@ -713,12 +811,18 @@ func _print_result(mid: String, sc: Dictionary, mode: String, r: Dictionary) -> 
 			float(led.get("drained", 0.0)), sc["fluid"], float(r["drained_type"]),
 			float(led.get("evaporated", 0.0)), float(led.get("lost", 0.0)),
 			_sci(float(r["mass_residual"])), "CLOSES" if bool(r["mass_ok"]) else "OPEN"])
-		print("  SINKS %s %s %s violations=%d deck_violations=%d" % [
-			mid, sc["id"], mode, int(r["sink_violations"]), int(r["deck_violations"])])
+		print("  SINKS %s %s %s violations=%d %s" % [
+			mid, sc["id"], mode, int(r["sink_violations"]),
+			"deck check: n/a (0 deck cells)" if int(r["decks"]) == 0
+				else "deck_violations=%d of %d deck cells" % [int(r["deck_violations"]), int(r["decks"])]])
 		if mode == "sink":
-			print("  TRAPS %s %s %s waterline_cells=%d shore_cells=%d below_sink_head=%d | deeper_than_visual=%d (closest: %s)" % [
-				mid, sc["id"], mode, int(r["waterline"]), int(r["shore_cells"]), int(r["shore_traps"]),
-				int(r["traps"]), String(r.get("trap_worst", "n/a"))])
+			var dyn: String = "deeper_than_visual=skipped (no visual run)"
+			if bool(r.get("traps_run", false)):
+				dyn = "deeper_than_visual=%d (closest: %s)" % [int(r["traps"]), String(r.get("trap_worst", "n/a"))]
+			print("  TRAPS %s %s %s waterline_cells=%d shore_cells=%d below_sink_head=%d | %s | raised=%d over_raised=%d (drained already %d, a pit in visual %d; first: %s; info: %d raised with no water under them)" % [
+				mid, sc["id"], mode, int(r["waterline"]), int(r["shore_cells"]), int(r["shore_traps"]), dyn,
+				int(r["raised"]), int(r["over_raised"]), int(r.get("over_drained", 0)), int(r.get("over_pit", 0)),
+				String(r.get("over_worst", "none")), int(r.get("over_dry", 0))])
 	else:
 		print("  MASS %s %s %s in_cells=%.4f well_deposited=%.4f (no ledger in this tree)" % [
 			mid, sc["id"], mode, float(r["in_cells"]), float(r["well_deposited"])])
@@ -738,6 +842,7 @@ func _verdict(mid: String, results: Dictionary, sink_api: bool) -> void:
 	var worst_dp95 := -INF
 	var worst_dmean_best := -INF
 	var worst_dp95_best := -INF
+	var deck_cells := 0
 	for sid in snk:
 		var r: Dictionary = snk[sid]
 		if not bool(r.get("ok", false)):
@@ -770,13 +875,21 @@ func _verdict(mid: String, results: Dictionary, sink_api: bool) -> void:
 			why.append("%s: %d shore cells sit below their sink's head" % [sid, int(r["shore_traps"])])
 		if int(r.get("traps", 0)) > 0:
 			why.append("%s: %d cells end deeper than in visual (%s)" % [sid, int(r["traps"]), String(r.get("trap_worst", ""))])
+		if int(r.get("over_raised", 0)) > 0:
+			why.append("%s: the clamp raised %d cells it should not have (%s)" % [sid, int(r["over_raised"]), String(r.get("over_worst", ""))])
+		deck_cells = maxi(deck_cells, int(r.get("decks", 0)))
 		if int(r["sinks"]) == 0:
 			why.append("%s: no sink cells" % sid)
 		if _shore(sid) and float(r.get("drained_type", 0.0)) <= 0.0:
 			why.append("%s: the shore spill never reached a sink" % sid)
 	var ship := "sink" if why.is_empty() else "visual"
-	print("VERDICT %s: ship '%s' (median of %d: worst tick p95 %.3f ms, worst frame delta mean %+.3f / p95 %+.3f ms; best: %.3f ms, %+.3f / %+.3f ms)%s" % [
-		mid, ship, _repeats, worst_tick, worst_dmean, worst_dp95, worst_tick_best, worst_dmean_best, worst_dp95_best,
+	var deltas: String = "n/a (no visual run)"
+	if worst_dmean != -INF:
+		deltas = "mean %+.3f / p95 %+.3f ms; best: %.3f ms, %+.3f / %+.3f ms" % [worst_dmean, worst_dp95,
+			worst_tick_best, worst_dmean_best, worst_dp95_best]
+	print("VERDICT %s: ship '%s' (median of %d: worst tick p95 %.3f ms, worst frame delta %s; %s)%s" % [
+		mid, ship, _repeats, worst_tick, deltas,
+		"deck check: n/a (0 deck cells)" if deck_cells == 0 else "deck check: %d deck cells" % deck_cells,
 		"" if why.is_empty() else " -- " + "; ".join(why)])
 
 
