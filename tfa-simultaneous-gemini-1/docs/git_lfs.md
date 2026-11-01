@@ -35,7 +35,7 @@ git-lfs ships with Git for Windows; this machine has git-lfs 3.3.0. Check it wit
 
 1. Once per user and machine, run `git lfs install`. It writes the `filter.lfs.*` config into the global git config. This machine already has it.
 2. Clone as usual. With the filter configured, `git clone` downloads the art of the commit it checks out.
-3. Inside the new clone, run `git lfs install --local`. It writes the filter into the clone's `.git/config` and installs its hooks: `post-checkout`, `post-commit`, `post-merge` and `pre-push`. This repo's were installed that way on 2026-11-01. Without the `pre-push` hook, a push sends the commits but not their LFS objects.
+3. Inside the new clone, run `git lfs install --local`. It writes the filter into the clone's `.git/config` and installs its hooks: `post-checkout`, `post-commit`, `post-merge` and `pre-push`. This repo's were installed that way on 2026-11-01. Without the `pre-push` hook, git doesn't upload the LFS objects, and GitHub refuses a push whose commits point at objects it doesn't have (`GH008`, unknown Git LFS objects) until `git lfs push origin <branch>` uploads them.
 4. A clone made without the filter, or with `GIT_LFS_SKIP_SMUDGE=1`, holds pointer files. Run `git lfs pull` in it.
 5. `git lfs env` shows where the objects go (`LocalMediaDir`) and the remote (`Endpoint`).
 
@@ -53,7 +53,7 @@ Nothing to do. Worktrees share the main checkout's `.git`: its config, its hooks
 
 The first time git looks at a changed LFS file (`git add`, `git diff`, `git status`), the clean filter hashes it and stores a copy in `.git/lfs/objects`, whether or not it is ever committed. Every export attempt that rewrites the map PNGs in a worktree adds their full size (about 440 MB when every map is re-exported), and an abandoned train leaves it behind.
 
-`git lfs prune` deletes the objects that nothing it keeps references. It keeps the objects of every worktree's checkout, stashes, recent branches and commits, and every commit that has not been pushed. It does not read the reflog, so an object that only an orphaned commit references (an amended commit, a deleted branch) is deleted. Look first:
+`git lfs prune` deletes the objects that nothing it keeps references. It keeps the objects of every worktree's checkout, stashes, recent branches and commits, and every commit that has not been pushed. It does not read the reflog, so an object that only an orphaned commit references (an amended commit, a deleted branch) is deleted. **It does not keep the index either**: it deletes the object of a staged LFS file that isn't committed yet (checked with git-lfs 3.3.0 on a throwaway repo, 2026-11-01). Every worktree shares the one store, so a prune run from any worktree while another one has art staged deletes that art's objects; the next commit then points at objects that exist nowhere, and its push fails. **Never prune while any worktree has art staged or a train in progress.** If it happened, run `git add --renormalize -- <files>` in that worktree while its working-tree PNGs are still intact: the clean filter stores them again. Look first:
 
 ```sh
 git lfs prune --dry-run --verbose
@@ -108,6 +108,7 @@ A branch cut before `8889d695` holds raw blobs for these paths. That matters whe
 
 - A file the branch **adds** merges with no conflict and lands as a raw blob. Git LFS may print `Encountered 1 file that should have been a pointer, but wasn't` during the merge. `git status` may or may not list the file, so neither one is a check.
 - A file the branch **changes** conflicts with the pointer. Take the branch's PNG in the working tree, then `git add` it; the clean filter turns it into a pointer.
+- A file the branch **deletes** (a retired map, say) conflicts too, modify/delete: the renormalize counts as a change on this side. Resolve it with `git rm <path>`.
 
 After merging any branch cut before `8889d695`, from `tfa-simultaneous-gemini-1/`:
 
@@ -115,14 +116,14 @@ After merging any branch cut before `8889d695`, from `tfa-simultaneous-gemini-1/
 2. If it lists files, run `git add --renormalize -- 'Maps/tg_*.png' 'Maps/combat_test*.png'` and commit. (Each pattern must match a tracked file, or `git add` stops and adds nothing. Both match in this repo.)
 3. Run `git lfs fsck --pointers` again. It must print `Git LFS fsck OK`.
 
-Checked on a throwaway repo on 2026-11-01. Branches that don't touch these paths merge as usual.
+Checked on a throwaway repo on 2026-11-01. Branches that don't add, change or delete a file on these paths merge as usual.
 
 ## Hosting quota (read before the first push)
 
 GitHub meters Git LFS **storage** and **bandwidth** per account. **Every pushed version of every LFS file is kept**: deleting a branch or a commit doesn't free the storage, and removing pushed LFS objects is not an ordinary git operation on GitHub.
 
 - The first push of `8889d695` uploads the whole set: about 435-500 MB (439 MB today).
-- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs and adds about 350-450 MB of new versions. A legacy art round adds its own share.
+- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: about 215 MB of new versions today (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images (P3-T's water and canopy art). A legacy art round adds its own share.
 - Every fresh clone, and every `git lfs pull` of new art, counts against the bandwidth.
 
 Before pushing, check the account's current LFS allowance (GitHub Settings, Billing, Git LFS data). Then budget data packs, or a lower train cadence.
