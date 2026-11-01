@@ -284,8 +284,9 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) ->
 ## can_see_character, _update_target): an active Invisible, unless the viewer
 ## has true_sight; concealment beyond the viewer's sight range times
 ## who.visibility_to(viewer): a Dark Hood's Shrouded, or a tree crown (P3-F:
-## x0.5 from the ground beyond 2 tiles and outside their crown cluster; not at
-## all looking down on it from a roof or a deck a story or more above them, or
+## x0.5 from the ground beyond 2 tiles plus the viewer's body radius (the AI's
+## close quarters) and outside their crown cluster; not at all looking down on
+## it from a roof or a deck a story or more above them, or
 ## from relief terrain a story or more up through the leaves, or through a
 ## crown at crown height).
 ## The 3 s reveal after attacking or casting shows them (Invisible is
@@ -342,7 +343,10 @@ static func _under_a_crown(who) -> bool:
 ## roof or a deck, or from relief terrain through the leaves, or a crown
 ## between at crown height) hides it like a wall: they saw nothing happen
 ## (`by_hand`: "Canopy" into `evaded`; the log line blames the trees, not the
-## actor, when the actor stood in the open).
+## actor, when the actor stood in the open). A crime at the actor's own spot (a
+## cast: _fan_out_witnesses puts it at their feet) is the actor in the act, so
+## the crown hides it exactly when it hides them (canopy_hides_from): in a
+## reveal() window their own crown no longer hides it from above.
 ## Invisible and Shrouded (hidden_from) count as out of sight of the actor:
 ## never identified. `by_hand`: the crime is the actor's own act with no
 ## victim (a theft, looting, a cast), so a witness the actor is hidden from
@@ -360,6 +364,8 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand
 		actor_pos = physical_actor.global_position
 		if physical_actor.has_method("get_elevation"):
 			actor_elev = float(physical_actor.get_elevation())
+	var at_actor: bool = actor_pos != Vector2.INF and crime_pos.distance_squared_to(actor_pos) < 1.0 \
+		and physical_actor.has_method("canopy_hides_from")
 	for c in game.characters_in_scene:
 		if not is_instance_valid(c) or c == physical_actor:
 			continue
@@ -371,9 +377,14 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand
 			continue
 		if not has_visual_los(c, crime_pos, crime_elev):
 			continue
-		var c_pos: Vector2 = c.global_position
-		var c_elev: float = c.get_elevation() if c.has_method("get_elevation") else NAN
-		if GridManager.canopy.blocks_view(c_pos, c_elev, crime_pos, crime_elev, 1 if GridManager.is_high_layer(c) else 0):
+		var crown_cut: bool = false
+		if at_actor:
+			crown_cut = physical_actor.canopy_hides_from(c)
+		else:
+			var c_pos: Vector2 = c.global_position
+			var c_elev: float = c.get_elevation() if c.has_method("get_elevation") else NAN
+			crown_cut = GridManager.canopy.blocks_view(c_pos, c_elev, crime_pos, crime_elev, 1 if GridManager.is_high_layer(c) else 0)
+		if crown_cut:
 			if by_hand:
 				evaded.append(CANOPY_REASON)   # the act was the actor's, under the crown
 			continue

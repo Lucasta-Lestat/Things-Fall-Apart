@@ -29,7 +29,7 @@
 #                       the leaves, not under them
 #   line_blocked(...)   the crown sight band (a sight line through a crown),
 #                       a tile walk along the line
-#   blocks_view(...)    THE full block: the target's own crown seen from above
+#   blocks_view(...)    THE full block: a crown over the target seen from above
 #                       (a roof or a deck a story up: looks_down_on; a viewer
 #                       on relief terrain: that and eye_line_in_crown), or
 #                       line_blocked (visibility_to, the AI's hold rule, the
@@ -287,15 +287,19 @@ func crown_at(p: Vector2, feet: float = NAN) -> int:
 	var k: int = ty * _cols + tx
 	for a in range(_tile_start[k], _tile_start[k + 1]):
 		var i: int = _tile_items[a]
-		if _alive[i] == 0:
-			continue
-		var d2: float = p.distance_squared_to(_pos[i])
-		if d2 > _r[i] * _r[i] or d2 <= _trunk_r[i] * _trunk_r[i]:
-			continue
-		if not is_nan(feet) and feet >= _ground[i] + _top[i]:
-			continue
-		return i
+		if _covers(i, p, feet):
+			return i
 	return -1
+
+# Crown i hides point `p`: alive, inside its disc, outside its trunk, and
+# (`feet` given) not standing above its top.
+func _covers(i: int, p: Vector2, feet: float) -> bool:
+	if _alive[i] == 0:
+		return false
+	var d2: float = p.distance_squared_to(_pos[i])
+	if d2 > _r[i] * _r[i] or d2 <= _trunk_r[i] * _trunk_r[i]:
+		return false
+	return is_nan(feet) or feet < _ground[i] + _top[i]
 
 ## The cluster over point `p` (crown_at's), or -1.
 func cluster_at(p: Vector2, feet: float = NAN) -> int:
@@ -364,30 +368,51 @@ func eye_line_in_crown(i: int, from_pos: Vector2, viewer_elev: float, to_pos: Ve
 ## enough, as on a flat map; a viewer on relief terrain is a ground observer
 ## unless its eye line also goes in through the leaves (eye_line_in_crown): a
 ## steep look over a cliff edge is blocked, a gentle slope a story up whose
-## line runs in under the crown is not.
+## line runs in under the crown is not. Every live crown over the point is
+## asked, not crown_at's lowest index alone: where a grove's discs overlap,
+## the line can run in under one crown and through another's leaves, and
+## line_blocked skips every crown over an end.
 ## viewer_raised: 1 = on a raised surface (on a roof, or a deck
 ## HIGH_LAYER_STORIES or more above its terrain: GridManager.is_high_layer),
 ## 0 = on terrain or a low deck, -1 = judge it from viewer_elev against the
 ## terrain under viewer_pos.
-## The rest of the canopy (the 0.5 factor, its 2-tile and same-cluster
-## exemptions, reveal(), party and corpse exemptions) is the character's:
+## The rest of the canopy (the 0.5 factor, its exemptions within 2 tiles plus
+## the observer's body radius and under the same cluster, reveal(), party and
+## corpse exemptions) is the character's:
 ## ProceduralCharacter.visibility_to / canopy_hides_from. CrimeManager's
 ## crime-position test asks this directly. Elevations are ABSOLUTE stories;
 ## NAN = the ground or deck under that point.
 func blocks_view(viewer_pos: Vector2, viewer_elev: float, target_pos: Vector2, target_elev: float, viewer_raised: int = -1) -> bool:
 	if _pos.is_empty():
 		return false
+	_ensure()
 	if is_nan(viewer_elev):
 		viewer_elev = GridManager.effective_elev(GridManager.world_to_map(viewer_pos))
 	if is_nan(target_elev):
 		target_elev = GridManager.effective_elev(GridManager.world_to_map(target_pos))
-	var i: int = crown_at(target_pos, target_elev)
-	if i >= 0 and looks_down_on(i, viewer_elev, target_elev) and cluster_at(viewer_pos, viewer_elev) != _cluster[i]:
-		var raised: bool = viewer_raised == 1
-		if viewer_raised < 0:
-			raised = GridManager.height_above_ground(GridManager.world_to_map(viewer_pos), viewer_elev) >= GridManager.HIGH_LAYER_STORIES
-		if raised or not GridManager.relief_los or eye_line_in_crown(i, viewer_pos, viewer_elev, target_pos, target_elev):
-			return true
+	var ts: float = float(GridManager.TILE_SIZE)
+	var tx: int = floori(target_pos.x / ts)
+	var ty: int = floori(target_pos.y / ts)
+	if tx >= 0 and ty >= 0 and tx < _cols and ty < _rows:
+		var k: int = ty * _cols + tx
+		var judged: bool = false   # the viewer's cluster and surface, read once
+		for a in range(_tile_start[k], _tile_start[k + 1]):
+			var i: int = _tile_items[a]
+			if not _covers(i, target_pos, target_elev) or not looks_down_on(i, viewer_elev, target_elev):
+				continue
+			if not judged:
+				judged = true
+				# The crowns over one point overlap there: one cluster. A viewer
+				# under it is beneath them all.
+				if cluster_at(viewer_pos, viewer_elev) == _cluster[i]:
+					break
+				var raised: bool = viewer_raised == 1
+				if viewer_raised < 0:
+					raised = GridManager.height_above_ground(GridManager.world_to_map(viewer_pos), viewer_elev) >= GridManager.HIGH_LAYER_STORIES
+				if raised or not GridManager.relief_los:
+					return true
+			if eye_line_in_crown(i, viewer_pos, viewer_elev, target_pos, target_elev):
+				return true
 	return line_blocked(viewer_pos, target_pos, viewer_elev, target_elev)
 
 ## The crown sight band: true when the sight line from_pos -> to_pos runs

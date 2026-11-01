@@ -15,7 +15,8 @@
 #     (the factor, near exemption and all), however far above the trunk's
 #     ground both stand;
 #   - attacking (reveal()) lifts the factor for 3 s, and the block from
-#     above (a crown between still blocks);
+#     above (a crown between still blocks); a cast at the caster's feet is
+#     seen happening from above in that window, as she is;
 #   - party members always see each other;
 #   - a felled or burnt-down tree stops hiding at once;
 #   - near (2 tiles) or under the same crown cluster: seen normally; hedges
@@ -24,7 +25,9 @@
 #      an export writes them, real ProceduralCharacter.tscn instances on a
 #      stub Game surface (as stealth_ai_r4_test), flat then relief terrain
 #      (a cliff far from a crown and one right over a crown at its foot, and
-#      a crown overhanging a terrace step).
+#      a crown overhanging a terrace step), then a grove on relief: two
+#      overlapping crowns over the target, one whose leaves the cliff's eye
+#      line goes in through, registered in both orders.
 #   B. the model built from real tree maps' rows on their real terrain
 #      (tg_castle_keep's garden, Perrow's tg_hillside_middle with its cells
 #      tile_elev): hedges and snags left out, crown grounds, clusters, bounded
@@ -102,6 +105,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await _part_a_flat()
 	await _part_a_relief()
+	await _part_a_grove()
 	await _part_b_real_rows("tg_castle_keep", false)
 	await _part_b_real_rows("tg_hillside_middle", true)
 	await _part_c_real_game()
@@ -457,6 +461,35 @@ func _part_a_flat() -> void:
 	CrimeManager.report(x, "take", {"owner_faction": "liziti", "crime_pos": x.global_position, "debounce_target": mark2})
 	_check("a.theft-deck-unseen-canopy", ai.pending_outcry.is_empty()
 		and _log_sum("No one saw it: Ximena was under the trees.") == deck_lines + 1, str(GameLog.get_entries().slice(-2)))
+	# a cast there (no crime_pos: the crime is at her feet). Casting shows her
+	# from above for 3 s, and the act with her: the deck sees it happen.
+	x.reveal(ProceduralCharacter.REVEAL_SECONDS, "casting", false)
+	var cast_evaded: Array = []
+	var cast_seen := false
+	for e in CrimeManager.witnesses_of(x.global_position, x.get_elevation(), x, true, cast_evaded):
+		cast_seen = cast_seen or ((e as Dictionary)["witness"] == guard and bool((e as Dictionary)["sees_actor"]))
+	var unseen_lines := _log_sum("No one saw it")
+	var alert0: float = ai.alertness_value
+	var at_ease0: bool = ai.is_at_ease
+	CrimeManager.report(x, "cast", {"law_faction": "patriciate", "traits": {"necrotic": 1}})
+	_check("a.cast-deck-reveal-witnessed", not x.canopy_hides_from(guard) and cast_seen and cast_evaded.is_empty()
+		and not ai.pending_outcry.is_empty() and _log_sum("No one saw it") == unseen_lines,
+		"evaded %s outcry %s log %s" % [str(cast_evaded), str(ai.pending_outcry), str(GameLog.get_entries().slice(-2))])
+	for c in characters_in_scene:   # drop the lit fuses (Yusuf on the ground may have one too)
+		var cai = c.get_node_or_null("AI")
+		if cai != null:
+			cai.pending_outcry = {}
+			cai._outcry_timer = -1.0
+	ai.is_at_ease = at_ease0
+	ai._set_alertness_value(alert0)
+	TimeManager.game_time += 3.1
+	# out of the window the crown hides the act from the deck again, as it hides her
+	cast_evaded = []
+	var deck_sees_after := false
+	for e in CrimeManager.witnesses_of(x.global_position, x.get_elevation(), x, true, cast_evaded):
+		deck_sees_after = deck_sees_after or (e as Dictionary)["witness"] == guard
+	_check("a.cast-deck-after-reveal-unseen", not deck_sees_after and x.canopy_hides_from(guard) and "Canopy" in cast_evaded,
+		str(cast_evaded))
 	GridManager.unregister_deck(hold_t, 1.5)
 	_place(guard, guard.global_position, Vector2.UP)
 
@@ -642,6 +675,49 @@ func _part_a_relief() -> void:
 		"crown %d vis %.2f elev %.2f/%.2f" % [x.canopy_crown(), x.visibility_to(low), x.get_elevation(), low.get_elevation()])
 	await _clear_chars()
 	await _clear_trees()
+
+
+# ---------------------------------------------------------------------------
+# A2b. Synthetic, relief: a grove under a cliff
+# ---------------------------------------------------------------------------
+
+const GROVE_A := Vector2(1000, 1500)     # r 60, trunk 27, ground 0, base 1, top 2
+const GROVE_B := Vector2(1000, 1580)     # overlaps A: one cluster
+const GROVE_Q := Vector2(1000, 1540)     # in the overlap, outside both trunks
+const GROVE_VIEW := Vector2(1000, 1952)  # the cliff top (row 30 on, 3 stories)
+
+## Two overlapping crowns over the target; the cliff viewer's eye line runs in
+## under A (about 0.65 stories where it enters A's disc) and through B's
+## leaves (about 1.23). Whichever crown was registered first, B hides it.
+func _part_a_grove() -> void:
+	for b_first in [false, true]:
+		GridManager.TILE_SIZE = 64
+		GridManager.initialize(4096, 4096)
+		for ty in range(30, 64):
+			for tx in range(64):
+				GridManager.elevations[Vector2i(tx, ty)] = 3.0
+		GridManager.refresh_terrain_stats()
+		var cm = GridManager.canopy
+		var order: Array = [GROVE_B, GROVE_A] if b_first else [GROVE_A, GROVE_B]
+		for p in order:
+			cm.add_crown(p, 60.0, 27.0, 0.0, 1.0, 2.0)
+		cm.finish()
+		var ia: int = order.find(GROVE_A)
+		var ib: int = order.find(GROVE_B)
+		var tag: String = "b-first" if b_first else "a-first"
+		_check("a2g.%s-setup" % tag, GridManager.relief_los and cm.cluster_of(ia) == cm.cluster_of(ib)
+			and cm.crown_at(GROVE_Q, 0.0) == mini(ia, ib)
+			and not cm.eye_line_in_crown(ia, GROVE_VIEW, 3.0, GROVE_Q, 0.0) and cm.eye_line_in_crown(ib, GROVE_VIEW, 3.0, GROVE_Q, 0.0)
+			and not cm.line_blocked(GROVE_VIEW, GROVE_Q, 3.0, 0.0))
+		_check("a2g.%s-blocks-view" % tag, cm.blocks_view(GROVE_VIEW, 3.0, GROVE_Q, 0.0, 0))
+		var x := _spawn("player", GROVE_Q, "Ximena")
+		var guard := _spawn("bandits", GROVE_VIEW, "Lookout")
+		_face(guard, GROVE_Q)
+		await _settle()
+		_check("a2g.%s-hidden" % tag, is_equal_approx(guard.get_elevation(), 3.0) and not GridManager.is_high_layer(guard)
+			and x.canopy_hides_from(guard) and is_equal_approx(x.visibility_to(guard), 0.0) and not _ai(guard).can_see_character(x),
+			"elev %.2f vis %.2f" % [guard.get_elevation(), x.visibility_to(guard)])
+		await _clear_chars()
 
 
 # ---------------------------------------------------------------------------
