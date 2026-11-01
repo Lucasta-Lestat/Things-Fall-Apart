@@ -14,6 +14,12 @@ var cliff_occluders: Node2D = null
 # forges, hearths, glow blocks); null when the row has none. Held by
 # reference for the same reason as cliff_occluders.
 var map_lights: Node2D = null
+# P3-A living water, resolved per map load (resolve_water_sim): "sink" = the
+# open-water cells drain fluid (CellFluid sink cells), "visual" = today's
+# painted sea that fluids pool on. FluidManager reads it when it builds the
+# cell sim, after this loader has run.
+const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
+var water_sim: String = "visual"
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -208,6 +214,11 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	elif rock_elev != null:
 		push_warning("map %s: solid_rock_elev must be a number (stories), got %s" % [_current_map_id, str(rock_elev)])
 
+	# 2c. living water (P3-A): the entry's water_sim, or the project-setting
+	# override. The open-water layer itself (cells.json tile_water/tile_body)
+	# came in with the cell graph (GridManager.set_elevation_data).
+	water_sim = resolve_water_sim(map_data)
+
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
 	var op := String(images.get("structures", ""))
@@ -246,6 +257,9 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	if GridManager.deck_lint_bad > 0:
 		push_warning("structured map %s: %d deck tiles below terrain-0.05: structure walk_elev must be ABSOLUTE stories"
 			% [_current_map_id, GridManager.deck_lint_bad])
+	# the tree crowns the loop registered (P3-F): buckets and clusters now,
+	# not on the first sight check
+	GridManager.canopy.finish()
 
 	# 4. cliff shadows for the sight cones (relief maps only)
 	if GridManager.relief_los:
@@ -259,6 +273,28 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		map_lights = _spawn_map_lights(lv)
 
 	emit_signal("map_loaded")
+
+
+# "sink" or "visual" for a map row. The project setting tfa/fluids/sea_sink
+# ("auto" | "sink" | "visual", absent = "auto") overrides every map for A/B
+# runs; "auto" takes the entry's water_sim, whose absence means "visual"
+# (today's behaviour: no shipped row sets it before train 3). Anything else
+# warns and reads "visual".
+static func resolve_water_sim(map_data: Dictionary) -> String:
+	var ov: String = str(ProjectSettings.get_setting(WATER_SIM_SETTING, "auto"))
+	if ov == "sink" or ov == "visual":
+		return ov
+	if ov != "auto":
+		push_warning("%s must be auto, sink or visual, got '%s': using the map's water_sim" % [WATER_SIM_SETTING, ov])
+	var v: Variant = map_data.get("water_sim", null)
+	if v == null:
+		return "visual"
+	var s: String = str(v)
+	if s == "sink" or s == "visual":
+		return s
+	push_warning("map %s: water_sim must be sink or visual, got %s: using visual"
+		% [String(map_data.get("id", "")), JSON.stringify(v)])
+	return "visual"
 
 
 ## One PointLight2D per Maps.json "lights" row (docs/export_contract.md,
@@ -394,6 +430,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var wall_a := Vector2.ZERO             # walls only: for the terrain-following test
 	var wall_b := Vector2.ZERO
 	var wall_half := 0.0
+	var trunk_r := 0.0                     # trees only: the collider, which the crown is minus
 
 	if kind == "wall":
 		var a := _arr_v2(s.get("a", [0, 0]))
@@ -443,6 +480,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		var r := float(s.get("r", 30.0))
 		var circ := CircleShape2D.new()
 		circ.radius = maxf(6.0, r * 0.45)   # trunk-scale: canopy overhang stays walkable
+		trunk_r = circ.radius
 		shape = circ
 		var rr := r + 4.0
 		poly_local = PackedVector2Array([
@@ -508,8 +546,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	# CLOSED leaf blocks as high as its walls; an open Door hides its occluder
 	# and leaves the vision layer), curtain pieces (walk_h + merlon_h) and
 	# "hedge" tree rows (0.45: see-over, still an obstacle). A tree row's
-	# "stories" (the crown top) is NOT read here: the trunk keeps its 2 stories
-	# until P3-F's crown band.
+	# "stories" (the crown top) is NOT read here: the trunk keeps its 2 stories,
+	# and the crown above it is GridManager.canopy's (P3-F, _register_crown).
 	var occ_h: float = 2.0 if (kind == "tree" or kind == "disc") else 1.0
 	var has_occ_h: bool = s.get("occlude_h") != null
 	if has_occ_h:
@@ -708,7 +746,34 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	else:
 		for t in occupied:
 			GridManager.register_obstacle(t)
+	if kind == "tree":
+		_register_crown(s, inst, center, trunk_r)
 	return inst
+
+
+## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
+## The same row as the trunk: the disc r minus this trunk's collider, from the
+## trunk clearance ("crown_base", contract 3; absent: 1 story) up to the crown
+## top ("stories"; absent, contract 1: the trunk's 2 stories), stories above the
+## ground the trunk's occlude_top stands on. Hedges (id "hedge", or any
+## see-over occlude_h below eye height) and a crown whose top is not above its
+## clearance (a dead snag, 0.72 stories) hide nothing. Felled or burnt down,
+## the Structure's destroyed signal kills the crown at once.
+func _register_crown(s: Dictionary, inst: Structure, center: Vector2, trunk_r: float) -> void:
+	if String(s.get("id", "tree")) == "hedge":
+		return
+	var oh: Variant = s.get("occlude_h")
+	if (oh is float or oh is int) and float(oh) < GridManager.EYE_HEIGHT_STORIES:
+		return
+	var top_v: Variant = s.get("stories")
+	var top: float = float(top_v) if (top_v is float or top_v is int) else GridManager.CanopyMap.CROWN_TOP_DEFAULT
+	var base_v: Variant = s.get("crown_base")
+	var base: float = float(base_v) if (base_v is float or base_v is int) else GridManager.CanopyMap.CROWN_BASE_DEFAULT
+	if top <= base:
+		return
+	var ground: float = GridManager.effective_elev(GridManager.world_to_map(center))
+	GridManager.canopy.add_crown(center, float(s.get("r", 30.0)), trunk_r, ground, base, top, inst)
+	inst.destroyed.connect(GridManager.canopy.on_tree_destroyed)
 
 
 # True when the ground along a wall (sampled every 32px, just outside BOTH
@@ -986,6 +1051,7 @@ func _blank_tex() -> ImageTexture:
 	return _blank
 
 func generate_map():
+	water_sim = "visual"   # legacy/world maps run the flat tile sim: no sinks
 	if world_map_mode:
 		_generate_world_map()
 		return

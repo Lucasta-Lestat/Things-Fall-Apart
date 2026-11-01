@@ -43,6 +43,10 @@ signal cast_started(ability: Ability, target_position: Vector2)
 signal cast_completed(ability: Ability, results: Array)
 signal cast_interrupted(ability: Ability, reason: String)
 signal cast_failed(ability: Ability, reason: String)
+## The cast is going ahead: every gate passed and the costs paid, just before
+## an instant cast resolves (and with it, its crime is reported) or a timed
+## one starts its windup. ProceduralCharacter.use_ability's reveal hangs here.
+signal cast_committed(ability: Ability)
 signal step_started(ability: Ability, step_index: int, step_data: Dictionary)
 signal step_completed(ability: Ability, step_index: int, results: Array)
 
@@ -221,6 +225,7 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 	if range_notice_log != "":
 		character.notify("Out of range", Color(1.0, 0.6, 0.4), range_notice_log)
 
+	cast_committed.emit(ability)
 	if ability.cast_time <= 0:
 		# No windup, so _start_casting never runs: the cast sound plays here,
 		# with the effect, or an instant ability's sound_cast is never heard.

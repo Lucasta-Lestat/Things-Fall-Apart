@@ -29,6 +29,16 @@ var _nb: PackedInt32Array = PackedInt32Array()
 var _tile_elev: PackedFloat32Array = PackedFloat32Array()
 var _te_cols: int = 0
 var _te_rows: int = 0
+# Optional per-TILE open water (cells.json "tile_water" + "tile_body", export
+# contract 3, P3-A): the water surface in ABSOLUTE stories and the water body
+# id (0 = no open water; tile_water is 0 there), the same {cols, rows, data}
+# shape and row-major order as tile_elev. The pair travels together: a
+# malformed or mismatched pair is dropped whole. Empty on contract-1/2 exports,
+# where GridManager falls back to its deep-water rule.
+var _tile_water: PackedFloat32Array = PackedFloat32Array()
+var _tile_body: PackedInt32Array = PackedInt32Array()
+var _tw_cols: int = 0
+var _tw_rows: int = 0
 var _square: bool = false
 var _cols: int = 0
 var _rows: int = 0
@@ -77,6 +87,24 @@ static func from_structured(path: String) -> CellGraph:
 		else:
 			push_warning("CellGraph: malformed tile_elev in %s (cols=%d rows=%d data=%d); using nearest-cell elev"
 				% [path, tc, tr, td.size()])
+	var tw = data.get("tile_water", null)
+	var tb = data.get("tile_body", null)
+	if typeof(tw) == TYPE_DICTIONARY and typeof(tb) == TYPE_DICTIONARY:
+		var wc: int = int(tw.get("cols", 0))
+		var wr: int = int(tw.get("rows", 0))
+		var wd: PackedFloat32Array = _to_f32(tw.get("data", []))
+		var bd: PackedInt32Array = _to_i32(tb.get("data", []))
+		if wc > 0 and wr > 0 and int(tb.get("cols", 0)) == wc and int(tb.get("rows", 0)) == wr \
+				and wd.size() == wc * wr and bd.size() == wc * wr:
+			g._tile_water = wd
+			g._tile_body = bd
+			g._tw_cols = wc
+			g._tw_rows = wr
+		else:
+			push_warning("CellGraph: malformed tile_water/tile_body in %s (cols=%d rows=%d data=%d/%d); using the deep-water rule"
+				% [path, wc, wr, wd.size(), bd.size()])
+	elif typeof(tw) == TYPE_DICTIONARY or typeof(tb) == TYPE_DICTIONARY:
+		push_warning("CellGraph: %s has only one of tile_water/tile_body; using the deep-water rule" % path)
 	g._build_buckets()
 	return g
 
@@ -186,6 +214,26 @@ func tile_elev(t: Vector2i) -> float:
 	if t.x < 0 or t.y < 0 or t.x >= _te_cols or t.y >= _te_rows:
 		return 0.0
 	return _tile_elev[t.y * _te_cols + t.x]
+
+
+# The open-water pair (see _tile_water). True only when it exists AND is exactly
+# cols x rows, like has_tile_elev.
+func has_tile_water(cols: int, rows: int) -> bool:
+	return _tw_cols > 0 and _tw_cols == cols and _tw_rows == rows
+
+
+func tile_water_dims() -> Vector2i:
+	return Vector2i(_tw_cols, _tw_rows)
+
+
+# The pair's row-major data (packed arrays copy on write, so GridManager keeps
+# them for the map without a deep copy).
+func tile_water_data() -> PackedFloat32Array:
+	return _tile_water
+
+
+func tile_body_data() -> PackedInt32Array:
+	return _tile_body
 
 
 func cell_at(world_pos: Vector2) -> int:
