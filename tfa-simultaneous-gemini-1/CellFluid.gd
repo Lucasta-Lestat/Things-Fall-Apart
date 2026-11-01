@@ -24,8 +24,10 @@
 # cell whose centroid tile is open water (GridManager.water_surface_at) as a
 # SINK. A sink holds a FIXED head at its body's surface, is never in `active`
 # (so it never flows, evaporates or meets fire), and whatever flows, deposits,
-# pours or springs into it is deleted at once and counted in `drained`. Only
-# wet cells are iterated, so the cost scales with the spill, not the sea.
+# pours or springs into it is deleted at once and counted in `drained`. Shore
+# and deck cells below a sink's head are raised to the waterline so they shed
+# into it instead of trapping. Only wet cells are iterated, so the cost scales
+# with the spill, not the sea.
 class_name CellFluid
 extends Node2D
 
@@ -52,6 +54,7 @@ var flow_speed: Dictionary = {}  # cid -> outflow fraction 0..1
 var sources: Array = []          # {cid, ti, rate} continuous emitters (authored springs)
 var sink: PackedByteArray = PackedByteArray()          # cid -> 1 = sink; EMPTY on maps without
 var sink_count := 0
+var waterline_count := 0                               # shore/deck cells setup_sinks raised to the waterline
 var drained: PackedFloat64Array = PackedFloat64Array() # per ftype byte: mass the sinks deleted
 # Mass ledger (tests/fluid_sink_bench closes it): poured = what is in the cells
 # + drained + evaporated + lost. Bookkeeping only: the sim never reads it.
@@ -79,6 +82,7 @@ func setup(p_graph: CellGraph, p_fm: Node, fluid_db: Dictionary, order: Array) -
 	_edge_cache.clear()
 	sink = PackedByteArray()
 	sink_count = 0
+	waterline_count = 0
 	drained = PackedFloat64Array(); drained.resize(_order.size() + 1)
 	mass_poured = 0.0; mass_evaporated = 0.0; mass_lost = 0.0
 	_ti_water = _ti_of("water")
@@ -95,14 +99,26 @@ func active_sim() -> bool:
 
 # Tag the sea drain's sinks (FluidManager calls it right after setup on a map
 # whose water_sim is "sink"). A cell is a sink when its centroid tile is open
-# water, except under a walkable deck: a pier or bridge keeps its own surface
-# and never drains (P3-D). The sink's fixed head is its body surface, held in
-# its cached ground head: its amount stays 0, so _head() reads exactly that.
-# One O(cell_count) pass per map load. Returns the sink count.
+# water, except under a walkable deck: what lands on a pier or bridge is never
+# deleted into the sea. The sink's fixed head is its body surface, held in its
+# cached ground head: its amount stays 0, so _head() reads exactly that.
+# Then the waterline clamp (_clamp_waterline): tagging by centroid tile leaves
+# shore cells whose own ground is the seabed while their centroid tile reads
+# land (a cell straddling the quay edge), and deck cells over water. Beside a
+# sink held at the surface each would be a basin ~1.6 deep that has to fill
+# before it drains (and oil never evaporates). Raised to the waterline, they
+# shed what stands above their puddle floor into the sea, as they shed onto
+# the seabed in 'visual'.
+# Known limits, left to P3-D / P4-B: a deck over water gets the waterline, not
+# a head of its own; a destroyed deck is not re-tagged as a sink; and the clamp
+# follows the walls at load (a breach opened later re-derives the edges, not
+# the clamp).
+# One O(cell_count) pass per map load, plus the shore. Returns the sink count.
 func setup_sinks() -> int:
 	var n := graph.cell_count if graph != null else 0
 	sink = PackedByteArray(); sink.resize(n)
 	sink_count = 0
+	waterline_count = 0
 	for cid in n:
 		var t := GridManager.world_to_map(graph.centroid(cid))
 		if GridManager.deck_elevations.has(t):
@@ -120,8 +136,59 @@ func setup_sinks() -> int:
 			active.erase(cid)
 	if sink_count == 0:
 		sink = PackedByteArray()   # the hot-path guard reads sink_count first
-	_edge_cache.clear()
+		return 0
+	waterline_count = _clamp_waterline()
 	return sink_count
+
+
+# The waterline clamp (setup_sinks). A flood out from the sinks: a non-sink
+# cell whose ground head is below the head of a sink -- or of a cell already
+# raised -- it can flow into is raised to that head, the lowest one that
+# reaches it. Only ground below the level is raised, so an inland pit behind a
+# ridge keeps its pond. Every raised cell then has a level-or-downhill path to
+# a sink, and no cell left alone sits below a neighbour it drains into. Ground
+# heads only: the cells' fluid is untouched. Returns the raised-cell count.
+func _clamp_waterline() -> int:
+	var n := sink.size()
+	var level := PackedFloat32Array()
+	level.resize(n)
+	level.fill(INF)
+	var queue := PackedInt32Array()
+	for cid in n:
+		if sink[cid] == 1:
+			level[cid] = _ground[cid]
+			queue.append(cid)
+	var qi := 0
+	while qi < queue.size():
+		var c := queue[qi]
+		qi += 1
+		var lv := level[c]
+		var nbs: Array = _nb_cache[c]
+		for j in nbs.size():
+			var nb: int = nbs[j]
+			if sink[nb] == 1 or lv >= level[nb] or _ground_head(nb) >= lv:
+				continue
+			if not _opens_to(nb, c):
+				continue
+			level[nb] = lv   # a lower level reaching it later re-queues it
+			queue.append(nb)
+	var raised := 0
+	for cid in n:
+		if sink[cid] == 0 and level[cid] != INF:
+			_ground[cid] = level[cid]
+			raised += 1
+	return raised
+
+
+# True when fluid on cell a can flow into its neighbour b (the edge test
+# _flow_tick applies to a's outflow).
+func _opens_to(a: int, b: int) -> bool:
+	var nbs: Array = _nb_cache[a]
+	var k := nbs.find(b)
+	if k < 0:
+		return false
+	var opens := _edges(a)
+	return k >= opens.size() or opens[k] == 1
 
 
 func is_sink(cid: int) -> bool:

@@ -11,18 +11,28 @@ extends Node2D
 #   - CellFluid sinks: tagged from the layer (each body at its own surface),
 #     never under a deck; inflow, deposit, polite deposit, pour and a source
 #     onto a sink drain at once; nothing ever stands in or leaves a sink; every
-#     fluid type drains; the mass ledger closes; a deck over water keeps its
-#     level; 'visual' builds no sinks;
+#     fluid type drains; the mass ledger closes; 'visual' builds no sinks;
+#   - the waterline clamp: shore cells whose own ground is the seabed while
+#     their centroid tile is land, and the deck, sit at the waterline and shed
+#     into the sea instead of trapping; an inland pit keeps its pond; a deck
+#     over water is never a sink, keeps what lands on it, and sheds like it
+#     does in 'visual';
 #   - FluidWell (Oil Well) skips sinks so its budget fills the land.
 # The map: 10 x 6 tiles of 64 px, one cell per tile. Columns 0-4 are a quay at
 # 0.5 stories, 5-9 the sea (seabed -1.0, surface 0.0, body 1) except column 9,
-# a separate body at surface 0.3 (body 2). Tile (7, 2) carries a deck.
+# a separate body at surface 0.3 (body 2). Tile (7, 2) carries a deck (its
+# cell's ground is the seabed, as in an export). Quay tiles (4, 3) and (3, 3)
+# are straddle cells: land tiles whose cells sit on the seabed (-1.0) and
+# below sea level (-0.5). Quay tile (1, 3) is an inland pit at -0.5.
 # Headless:  godot --headless --path . res://tests/water_sink_check.tscn
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const COLS := 10
 const ROWS := 6
 const T := 64
 const DECK := Vector2i(7, 2)
+const STRADDLE := Vector2i(4, 3)     # next to the sea
+const STRADDLE2 := Vector2i(3, 3)    # behind it, below sea level
+const PIT := Vector2i(1, 3)          # inland, below sea level, ringed by the quay
 const CELLS_PATH := "user://water_sink_check_cells.json"
 
 var map_loader: Node2D = null   # FluidManager.setup_cell_graph reads water_sim here
@@ -61,9 +71,15 @@ func _write_cells(layer: String) -> void:
 			r.append(32.0)
 			fuel.append(0.0)
 			var e: float = -1.0 if _sea(x) else 0.5
+			te.append(e)
+			# a cell's own ground can differ from its centroid tile's terrain
+			var t := Vector2i(x, y)
+			if t == STRADDLE:
+				e = -1.0
+			elif t == STRADDLE2 or t == PIT:
+				e = -0.5
 			elev.append(e)
 			roof.append(0.0)
-			te.append(e)
 			tw.append(0.3 if x == 9 else 0.0)
 			tb.append(2 if x == 9 else (1 if _sea(x) else 0))
 			nb_off.append(nb.size())
@@ -184,9 +200,27 @@ func _ready() -> void:
 	var c6 := g.cell_at(GridManager.map_to_world(Vector2i(6, 1)))
 	_check("sink.sea-head", is_equal_approx(cf._head(c6), 0.0), "head %.3f (surface, not the seabed)" % cf._head(c6))
 
-	# a deck cell holding water, out in the sea
+	# the waterline clamp: what straddles the shore sits at the sea surface
+	var cs := g.cell_at(GridManager.map_to_world(STRADDLE))
+	var cs2 := g.cell_at(GridManager.map_to_world(STRADDLE2))
+	var cpit := g.cell_at(GridManager.map_to_world(PIT))
+	_check("clamp.straddle-at-waterline", not cf.is_sink(cs) and is_equal_approx(cf._ground_head(cs), 0.0),
+		"ground head %.3f (cell ground %.2f, centroid tile land)" % [cf._ground_head(cs), g.ground_elev(cs)])
+	_check("clamp.behind-straddle", is_equal_approx(cf._ground_head(cs2), 0.0),
+		"ground head %.3f (reached through the straddle cell)" % cf._ground_head(cs2))
+	_check("clamp.deck-at-waterline", is_equal_approx(cf._ground_head(deck_cid), 0.0),
+		"ground head %.3f, not the seabed 1.6 below its sinks" % cf._ground_head(deck_cid))
+	_check("clamp.inland-pit-kept", is_equal_approx(cf._ground_head(cpit), -0.5 * CellFluid.HEAD_PER_STORY),
+		"ground head %.3f" % cf._ground_head(cpit))
+	_check("clamp.quay-untouched", is_equal_approx(cf._ground_head(g.cell_at(GridManager.map_to_world(Vector2i(2, 2)))),
+		0.5 * CellFluid.HEAD_PER_STORY), "")
+	_check("clamp.count", cf.waterline_count == 3, "%d cells raised (the deck and two straddle cells)" % cf.waterline_count)
+
+	# a deck cell holding water, out in the sea: never deleted outright
+	var dd0: float = cf.drained_total()
 	cf.deposit(GridManager.map_to_world(DECK), "water", 0.3)
-	var deck0: float = cf.amount_at(deck_cid)
+	_check("deck.keeps-a-deposit", is_equal_approx(cf.amount_at(deck_cid), 0.3) and cf.drained_total() == dd0, "")
+	cf.deposit(GridManager.map_to_world(PIT), "water", 0.3)
 	# a quay spill next to the sea, a direct deposit, a polite one, a pour across
 	# the shore and a spring on the water
 	var quay := GridManager.map_to_world(Vector2i(4, 4))
@@ -217,9 +251,13 @@ func _ready() -> void:
 	_check("sink.oil-drains", cf.drained_mass("oil") > 0.0, "oil drained %.3f" % cf.drained_mass("oil"))
 	_check("sink.source-drains", cf.drained_mass("water") > 2.0 and cf.sources.size() == 1, "a 0.2/s spring on the sea for 10 s")
 	var deck1: float = cf.amount_at(deck_cid)
-	# 40 flow ticks of water evaporation (0.002/s) is all it may lose
-	_check("sink.deck-keeps-level", deck1 <= deck0 and deck0 - deck1 <= 40.0 * CellFluid.EVAP_PER_SEC * CellFluid.SIM_INTERVAL + 1e-6,
-		"deck %.4f -> %.4f (evaporation only)" % [deck0, deck1])
+	var shed_floor: float = cf._puddle_of(cf._ti_of("water")) + CellFluid.EPSILON + 1e-3
+	_check("deck.sheds-to-its-floor", deck1 <= shed_floor,
+		"deck 0.3000 -> %.4f (sheds into the sea down to its puddle film, then dries)" % deck1)
+	# 40 flow ticks of water evaporation (0.002/s) is all the pit may lose
+	var pit1: float = cf.amount_at(cpit)
+	_check("clamp.inland-pit-keeps-pond", pit1 >= 0.3 - 40.0 * CellFluid.EVAP_PER_SEC * CellFluid.SIM_INTERVAL - 1e-6,
+		"pit 0.3000 -> %.4f" % pit1)
 	var led: Dictionary = cf.mass_ledger()
 	var in_cells := 0.0
 	for i in cf.amount.size():
@@ -227,6 +265,19 @@ func _ready() -> void:
 	var res: float = float(led["poured"]) - in_cells - float(led["drained"]) - float(led["evaporated"]) - float(led["lost"])
 	_check("sink.mass-closes", absf(res) < 1e-4, "poured %.4f cells %.4f drained %.4f evaporated %.4f lost %.4f residual %.6f"
 		% [float(led["poured"]), in_cells, float(led["drained"]), float(led["evaporated"]), float(led["lost"]), res])
+
+	# --- a straddle cell and the deck shed as they do in 'visual' ---------------
+	# (visual: they sit level with the seabed and spread onto it)
+	for spot in [[STRADDLE, "oil", 0.6], [DECK, "water", 0.3]]:
+		var tile: Vector2i = spot[0]
+		var ftype_s: String = spot[1]
+		var depth: float = spot[2]
+		var v_end: float = _shed_run(ml, fm, g, "visual", tile, ftype_s, depth)
+		var s_end: float = _shed_run(ml, fm, g, "sink", tile, ftype_s, depth)
+		var pud: float = fm.cell_fluid._puddle_of(fm.cell_fluid._ti_of(ftype_s))
+		_check("shed.%s-%s" % [str(tile), ftype_s], s_end <= maxf(v_end, pud + CellFluid.EPSILON) + 1e-3,
+			"%.2f %s for 10 s: sink %.4f, visual %.4f (puddle floor %.2f)" % [depth, ftype_s, s_end, v_end, pud])
+	ml.set("water_sim", "sink")
 
 	# --- Oil Well on the shore: the budget fills the land, not the sea ----------
 	fm.setup_cell_graph(g)
@@ -251,3 +302,15 @@ func _ready() -> void:
 	ml.free()
 	print("water_sink_check: %d checks, %d failures" % [checks, fails])
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+# A fresh sim in `mode`, `depth` of `type_str` deposited on one tile, 10 s of
+# ticks: the depth left on that tile's cell.
+func _shed_run(ml: Node2D, fm: FluidManager, g: CellGraph, mode: String, tile: Vector2i, type_str: String, depth: float) -> float:
+	ml.set("water_sim", mode)
+	fm.setup_cell_graph(g)
+	var cf: CellFluid = fm.cell_fluid
+	cf.deposit(GridManager.map_to_world(tile), type_str, depth)
+	for i in 600:
+		cf.tick(1.0 / 60.0)
+	return cf.amount_at(g.cell_at(GridManager.map_to_world(tile)))
