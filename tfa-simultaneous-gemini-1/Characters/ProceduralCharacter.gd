@@ -988,6 +988,7 @@ func _ready() -> void:
 	ability_manager.cast_completed.connect(_on_ability_cast_completed)
 	ability_manager.cast_interrupted.connect(_on_ability_cast_interrupted)
 	ability_manager.cast_failed.connect(_on_ability_cast_failed)
+	ability_manager.cast_committed.connect(_on_ability_cast_committed)
 	ability_manager.step_started.connect(_on_ability_step_started)
 	ability_manager.step_completed.connect(_on_ability_step_completed)
 
@@ -8934,15 +8935,36 @@ signal targeting_started(ability: Ability)
 signal targeting_cancelled(ability: Ability)
 
 func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
-	# An instant cast resolves inside use_ability below: one that grants
-	# Invisible itself (a self-invisibility spell) mustn't be broken by its own
-	# reveal. Only an Invisible the caster already had breaks.
+	# Casting gives a concealed caster away (reveal()), from the moment the
+	# cast is committed (_on_ability_cast_committed): an instant cast resolves
+	# inside the call below, and its crime is reported there, so the window
+	# has to be open by then. One that grants Invisible itself (a
+	# self-invisibility spell) mustn't be broken by its own reveal: only an
+	# Invisible the caster already had breaks.
 	var had_invisible: bool = condition_manager != null and condition_manager.has_condition("invisible")
+	_cast_had_invisible = had_invisible
+	_cast_reveals = true
 	var ok: bool = ability_manager.use_ability(ability, target_data)
-	# Casting gives a concealed caster away (reveal()).
+	_cast_reveals = false
+	# Again once it has resolved: an instant cast that granted Invisible to a
+	# caster who already had it breaks it too (casting while invisible does).
 	if ok:
 		reveal(REVEAL_SECONDS, "casting", had_invisible)
 	return ok
+
+## Set across our own use_ability's call into the AbilityManager: the cast
+## the AbilityManager commits then is ours, and reveals us. An item's cast
+## (ActionQueue, PartySidePanel: straight to the AbilityManager) does not.
+var _cast_reveals: bool = false
+var _cast_had_invisible: bool = false
+
+## AbilityManager.cast_committed: past every gate, costs paid, before an
+## instant cast resolves or a timed one winds up. use_ability's reveal.
+func _on_ability_cast_committed(_ability: Ability) -> void:
+	if not _cast_reveals:
+		return
+	_cast_reveals = false
+	reveal(REVEAL_SECONDS, "casting", _cast_had_invisible)
 
 
 ## AbilityManager signal handlers

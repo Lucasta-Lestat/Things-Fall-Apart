@@ -346,7 +346,9 @@ static func _under_a_crown(who) -> bool:
 ## actor, when the actor stood in the open). A crime at the actor's own spot (a
 ## cast: _fan_out_witnesses puts it at their feet) is the actor in the act, so
 ## the crown hides it exactly when it hides them (canopy_hides_from): in a
-## reveal() window their own crown no longer hides it from above.
+## reveal() window their own crown no longer hides it from above. A cast's
+## window opens when the cast is committed (ProceduralCharacter.use_ability),
+## so it is open when an instant cast's crime is reported, inside that call.
 ## Invisible and Shrouded (hidden_from) count as out of sight of the actor:
 ## never identified. `by_hand`: the crime is the actor's own act with no
 ## victim (a theft, looting, a cast), so a witness the actor is hidden from

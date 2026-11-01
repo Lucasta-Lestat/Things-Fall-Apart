@@ -16,7 +16,9 @@
 #     ground both stand;
 #   - attacking (reveal()) lifts the factor for 3 s, and the block from
 #     above (a crown between still blocks); a cast at the caster's feet is
-#     seen happening from above in that window, as she is;
+#     seen happening from above in that window, as she is, an instant cast
+#     through use_ability too (its crime is reported inside the call: the
+#     window opens when the cast is committed), Shrouded or not;
 #   - party members always see each other;
 #   - a felled or burnt-down tree stops hiding at once;
 #   - near (2 tiles) or under the same crown cluster: seen normally; hedges
@@ -207,6 +209,30 @@ func _log_sum(fragment: String) -> int:
 
 func _on_crown_changed(i: int) -> void:
 	_killed.append(i)
+
+
+## Cast `ab`, an instant cast, through `x`'s own use_ability with `guard`
+## watching: whether the crime hook (filling `at_report`) saw her revealed and
+## what hid her from `guard` then, whether `guard` lit a fuse, and how many
+## "No one saw it" lines it logged. Then the window shuts and the debounce
+## clears.
+func _instant_cast(x: ProceduralCharacter, guard: ProceduralCharacter, ab: Ability, at_report: Array) -> Dictionary:
+	for c in characters_in_scene:
+		var cai = c.get_node_or_null("AI")
+		if cai != null:
+			cai.pending_outcry = {}
+			cai._outcry_timer = -1.0
+	at_report.clear()
+	var unseen0: int = _log_sum("No one saw it")
+	var ok: bool = x.use_ability(ab, {"position": x.global_position + Vector2(100, 0)})
+	var one: bool = at_report.size() == 1
+	var out := {"ok": ok, "reports": at_report.size(),
+		"revealed_at_report": one and bool(at_report[0]["revealed"]),
+		"hidden_at_report": String(at_report[0]["hidden"]) if one else "?",
+		"outcry": not _ai(guard).pending_outcry.is_empty(),
+		"unseen": _log_sum("No one saw it") - unseen0}
+	TimeManager.game_time += 3.1
+	return out
 
 
 ## The witnesses CrimeManager.witnesses_of finds for a crime at `crime_pos`
@@ -490,7 +516,65 @@ func _part_a_flat() -> void:
 		deck_sees_after = deck_sees_after or (e as Dictionary)["witness"] == guard
 	_check("a.cast-deck-after-reveal-unseen", not deck_sees_after and x.canopy_hides_from(guard) and "Canopy" in cast_evaded,
 		str(cast_evaded))
+	# The same for real: an instant cast (no windup) through her own
+	# use_ability, a crime under Waldau's law. Its crime is reported inside
+	# that call, so the window opens when the cast is committed
+	# (AbilityManager.cast_committed), before it resolves: the deck sees it
+	# happen. So does a ground guard at 0.6x, and a guard at 0.6x sees a
+	# Shrouded caster's in the open. ("No one saw it" in each while the reveal
+	# came after the call.) An item's cast, straight to the AbilityManager,
+	# still shows nothing.
+	var law_map := "__canopy_waldau"
+	MapDatabase._maps[law_map] = {"id": law_map, "controlling_faction": "waldau"}
+	var map0: String = current_map_id
+	current_map_id = law_map
+	x.npc_unlimited_resources = true
+	var charm := Ability.from_dict({"id": "canopy_instant_charm", "display_name": "Test Instant Charm", "cast_time": 0.0,
+		"traits": {"charm": 1}, "targeting": {"type": "point", "range": 300.0, "shape": "circle", "radius": 10.0}, "effects": []})
+	var at_report: Array = []
+	var hook := func(_eff, _verdict, _payload): at_report.append({"revealed": x._canopy_revealed(),
+		"hidden": CrimeManager.hidden_from(guard, x)})
+	CrimeManager.crime_committed.connect(hook)
+	alert0 = ai.alertness_value
+	at_ease0 = ai.is_at_ease
+	var verdict_ok: bool = str(CrimeManager.preview(x, "cast", CrimeManager.cast_payload(charm)).get("statute", "")) == "mind_magic"
+	_check("a.instant-cast-setup", verdict_ok and x.canopy_hides_from(guard) and not x._canopy_revealed(), "")
+	var ic: Dictionary = _instant_cast(x, guard, charm, at_report)
+	_check("a.instant-cast-deck-witnessed", bool(ic["ok"]) and bool(ic["revealed_at_report"]) and ic["hidden_at_report"] == ""
+		and bool(ic["outcry"]) and int(ic["unseen"]) == 0, ic)
 	GridManager.unregister_deck(hold_t, 1.5)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.6), Vector2.UP)
+	ic = _instant_cast(x, guard, charm, at_report)
+	_check("a.instant-cast-ground-witnessed", bool(ic["ok"]) and bool(ic["revealed_at_report"]) and ic["hidden_at_report"] == ""
+		and bool(ic["outcry"]) and int(ic["unseen"]) == 0, ic)
+	var shroud_spot := Vector2(3000, 3000)
+	_place(x, shroud_spot, Vector2.UP)
+	_place(guard, shroud_spot + Vector2(0, sight_px * 0.6), Vector2.UP)
+	x.visibility_mult = 0.5
+	_check("a.instant-cast-shrouded-setup", x.canopy_crown() == -1 and CrimeManager.hidden_from(guard, x) == "Shrouded",
+		CrimeManager.hidden_from(guard, x))
+	ic = _instant_cast(x, guard, charm, at_report)
+	_check("a.instant-cast-shrouded-witnessed", bool(ic["ok"]) and ic["hidden_at_report"] == ""
+		and bool(ic["outcry"]) and int(ic["unseen"]) == 0, ic)
+	x.visibility_mult = 1.0
+	_place(x, T1 + UNDER, Vector2.UP)
+	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.6), Vector2.UP)
+	at_report.clear()
+	var item_ok: bool = x.ability_manager.use_ability(charm, {"position": x.global_position + Vector2(100, 0), "free": true})
+	_check("a.instant-cast-item-unrevealed", item_ok and at_report.size() == 1 and not bool(at_report[0]["revealed"])
+		and not x._canopy_revealed(), at_report)
+	TimeManager.game_time += 3.1
+	CrimeManager.crime_committed.disconnect(hook)
+	for c in characters_in_scene:
+		var cai = c.get_node_or_null("AI")
+		if cai != null:
+			cai.pending_outcry = {}
+			cai._outcry_timer = -1.0
+	ai.is_at_ease = at_ease0
+	ai._set_alertness_value(alert0)
+	x.npc_unlimited_resources = false
+	current_map_id = map0
+	MapDatabase._maps.erase(law_map)
 	_place(guard, guard.global_position, Vector2.UP)
 
 	# --- the crown band: a crown between two eyes at crown height blocks
