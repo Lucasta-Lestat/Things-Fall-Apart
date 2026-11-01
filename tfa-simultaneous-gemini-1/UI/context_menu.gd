@@ -7,6 +7,11 @@ var actor_character = null
 var vbox: VBoxContainer = VBoxContainer.new()
 @onready var game = get_node("/root/Game")
 
+# Every option is sfx_silent: most play their own sound (a window opening, a
+# door, a pickup, Attack's click or refusal), and some only when they work (a
+# door refuses silently while paused, a pickup can be out of reach). So the
+# menu clicks itself, only when the option made no sound (_click_if_silent).
+
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -41,6 +46,7 @@ func setup(character, options: Array, actor = null):
 		button.pressed.connect(_on_option_selected.bind(option))
 		if option == "Attack":
 			_label_attack(button, character)
+		button.set_meta("sfx_silent", true)
 		vbox.add_child(button)
 
 # The Attack entry says when attacking is a crime here, "Attack (Assault)",
@@ -89,6 +95,7 @@ func _law_name(verdict: Dictionary) -> String:
 	return law_faction if law_faction != "" else "this place"
 
 func _on_option_selected(option: String):
+	var sounds_before: int = SfxManager.sounds_started
 	# Warp Area2Ds carry their destination in metadata; don't try to interact
 	# with them like a character.
 	if target_character is Area2D and target_character.has_meta("target_map"):
@@ -98,6 +105,7 @@ func _on_option_selected(option: String):
 			# stairs land at their linked arrival marker
 			game.load_map(target_map, game.current_map_id,
 				target_character.get_meta("target_spawn", ""))
+		_click_if_silent(sounds_before)
 		queue_free()
 		game.call_deferred("set", "context_menu_open", false)
 		return
@@ -136,10 +144,16 @@ func _on_option_selected(option: String):
 		_:
 			if target_character.has_method("interact"):
 				target_character.interact(option)
+	_click_if_silent(sounds_before)
 	# Close the menu — defer the flag reset so it stays true for the rest of
 	# this frame, preventing _process-based input polls from acting on the click.
 	queue_free()
 	game.call_deferred("set", "context_menu_open", false)
+
+# The button click, unless the option already made a sound of its own.
+func _click_if_silent(sounds_before: int) -> void:
+	if SfxManager.sounds_started == sounds_before:
+		SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -6.0)
 
 # "Attack" only on a living character outside the party: not on items, doors,
 # warps, corpses or a companion (Game.show_context_menu leaves it off those).
@@ -157,12 +171,14 @@ func _is_attackable(target) -> bool:
 # (CrimeManager.attack_needs_confirmation).
 func _order_attack(target) -> void:
 	if not _is_attackable(target):
+		SfxManager.play_ui("trade_decline")
 		return
 	var attackers: Array = _attacking_party_members()
 	if attackers.is_empty():
 		# Over the target too: the game log starts closed.
 		target.notify("Select someone first", Color(1.0, 0.6, 0.4),
 			"No party member is selected to attack %s: select one first." % target.Name)
+		SfxManager.play_ui("trade_decline")
 		return
 	# Same rule as a click on the world (ProceduralCharacter._handle_input):
 	# someone who can't take orders doesn't take this one either.
@@ -171,6 +187,7 @@ func _order_attack(target) -> void:
 		if not _refuses_orders(actor):
 			able.append(actor)
 	if able.is_empty():
+		SfxManager.play_ui("trade_decline")
 		return
 	var law_confirm: Dictionary = CrimeManager.attack_needs_confirmation(able[0], target)
 	if not law_confirm.is_empty():
@@ -179,7 +196,10 @@ func _order_attack(target) -> void:
 		able[0].notify("Illegal here: " + crime, Color(1.0, 0.6, 0.4),
 			"Attacking %s here is %s — a crime under the law of %s (severity %d). Choose Attack on them again if you mean to break the law." % [
 				target.Name, crime, _law_name(verdict), int(verdict.get("severity", 0))])
+		SfxManager.play_ui("trade_decline")
 		return
+	# The Attack button is sfx_silent: the order clicks only once it is given.
+	SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -6.0)
 	for actor in able:
 		if PauseManager.is_paused:
 			if actor.action_queue:

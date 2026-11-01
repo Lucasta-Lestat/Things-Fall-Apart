@@ -228,6 +228,22 @@ func _load_music_from_folder(path: String) -> void:
 			
 			if clean_name.ends_with(".wav") or clean_name.ends_with(".ogg") or clean_name.ends_with(".mp3"):
 				var key = clean_name.get_basename()
-				tracks[key] = load(path.path_join(clean_name))
-				
+				tracks[key] = _looped(load(path.path_join(clean_name)))
+
 		file_name = dir.get_next()
+
+# Every track is a bed (map ambient or combat) and nothing here restarts a
+# finished one, so a track imported with loop=false would play once and leave
+# the map silent until the next warp or fight. Loop a copy rather than trust
+# each file's import settings.
+func _looped(stream: AudioStream) -> AudioStream:
+	if stream == null:
+		return null
+	var copy := stream.duplicate() as AudioStream
+	if copy is AudioStreamMP3:
+		(copy as AudioStreamMP3).loop = true
+	elif copy is AudioStreamOggVorbis:
+		(copy as AudioStreamOggVorbis).loop = true
+	elif copy is AudioStreamWAV:
+		(copy as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	return copy

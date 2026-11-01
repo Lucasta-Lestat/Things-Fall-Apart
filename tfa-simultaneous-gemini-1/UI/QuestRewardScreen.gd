@@ -218,7 +218,10 @@ func _build_card(offer: Dictionary) -> Control:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(spacer)
 
-	box.add_child(_small_button("TAKE", _on_take.bind(offer), true))
+	var take := _small_button("TAKE", _on_take.bind(offer), true)
+	# Taking plays the reward's own sound (_on_take), not the click.
+	take.set_meta("sfx_silent", true)
+	box.add_child(take)
 	return card
 
 ## The icon on its disc. A PanelContainer with a full corner radius IS a circle
@@ -384,6 +387,15 @@ func _on_take(offer: Dictionary) -> void:
 	if _resolved:
 		return
 	_resolved = true
+	match str(offer.get("type", "")):
+		"money":
+			# Shares DowntimeEffectApplier._apply_money's throttle id, which
+			# pays this out in the same frame: one clink.
+			SfxManager.play_ui_throttled("coin_pickup", 0.15, "coin_pickup")
+		"item":
+			SfxManager.play_ui("chest_item_in")
+		_:
+			SfxManager.play_ui("charm_chime", Vector2(0.95, 1.05), -4.0)
 	chosen.emit(offer)
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -395,6 +407,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if not _resolved:
 			_resolved = true
+			SfxManager.play_ui("trade_decline")
 			dismissed.emit()
 
 # ---------------------------------------------------------------------------

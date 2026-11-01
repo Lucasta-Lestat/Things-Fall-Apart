@@ -175,6 +175,7 @@ Quest moves write the usual quest lines in the log: `Quest started:`, `<Quest>: 
 |---|---|---|
 | `log` | **text** | Writes a line to the game log. `[[protagonist.name]]` and `**bold**` work as in dialogue lines. |
 | `start_dialogue` | **dialogue** | Plays that conversation when this one ends. |
+| `play_sfx` | **key** | Plays a sound from sfx/ (bare key or variant group, e.g. "door_unlock"), non-positional on the UI bus. Optional `volume_db` (default 0). Unknown keys are warned at startup and skipped. |
 | `call` | **call** | The older call syntax, e.g. `"QuestManager.start_quest('x')"`. Prefer a typed action: a `call` runs whatever method it names, so it is only as safe as that method, and nothing checks it at startup. |
 
 ---

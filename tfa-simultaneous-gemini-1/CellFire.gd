@@ -104,11 +104,14 @@ func ignite_area(center_world: Vector2, radius: float) -> int:
 	return n
 
 
-func ignite_at(world_pos: Vector2) -> bool:
+# `audible` is false when fire damage spreads the fire into a structure or floor
+# (Structure/Floor.take_damage): like _spread, that's the fire growing, not a
+# new ignition, and it ticks every damage_interval for as long as it burns.
+func ignite_at(world_pos: Vector2, audible: bool = true) -> bool:
 	if not active():
 		return false
 	var cid := graph.cell_at(world_pos)
-	return _try_ignite(cid) if cid >= 0 else false
+	return _try_ignite(cid, audible) if cid >= 0 else false
 
 
 # Water arriving puts the cell's fire out (SurfaceManager.try_extinguish bridges
@@ -127,6 +130,8 @@ func douse(cid: int) -> void:
 			vfx.queue_free()
 		burning.erase(cid)
 		burn_rev += 1
+		# A water front puts out a row of cells per fluid step: one hiss.
+		SfxManager.play_throttled("fire_douse", 0.25, "fire_douse", graph.centroid(cid), Vector2(0.9, 1.1), -6.0)
 
 
 # --- tick --------------------------------------------------------------------
@@ -170,20 +175,25 @@ func clear_all() -> void:
 
 # --- internals ---------------------------------------------------------------
 
-func _try_ignite(cid: int) -> bool:
+func _try_ignite(cid: int, audible: bool = true) -> bool:
 	if cid < 0 or burning.has(cid) or burnt[cid] == 1:
 		return false
 	if _fuel(cid) <= 0.0:
 		return false
-	_light(cid)
+	_light(cid, audible)
 	return true
 
 
-func _light(cid: int) -> void:
+func _light(cid: int, audible: bool = true) -> void:
 	var dur := float(_fire_def.get("base_duration", 10.0)) * _rng.randf_range(0.7, 1.3)
 	var seed := _rng.randf()
 	burning[cid] = {"t": dur, "t0": dur, "seed": seed, "char": 0.0, "vfx": _spawn_vfx(cid)}
 	burn_rev += 1
+	# A fireball lights dozens of cells at once: one whoosh. Spread is silent
+	# (it ticks every couple of seconds for as long as there is fuel); the
+	# ongoing crackle is CellFireFX's per-cluster loop.
+	if audible:
+		SfxManager.play_throttled("fire_ignite", 0.25, "fire_ignite", graph.centroid(cid), Vector2(0.9, 1.1), -8.0)
 
 
 func _spawn_vfx(cid: int) -> Node:
@@ -231,7 +241,7 @@ func _spread(game: Node) -> void:
 			if _rng.randf() < chance * fuel * wk:
 				to_ignite.append(nb)
 	for cid in to_ignite:
-		_try_ignite(cid)
+		_try_ignite(cid, false)
 
 
 # Fire damages every structure whose fire-footprint covers a burning cell's

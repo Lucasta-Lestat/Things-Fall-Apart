@@ -34,6 +34,7 @@ var _snapshot_npc_value: float = 0.0
 
 var _committed: bool = false
 var _handled: bool = false  # set to true on either Accept or Cancel; suppresses _exit_tree rollback
+var _opened: bool = false  # trade_open played; _exit_tree owes exactly one trade_close
 
 func _ready() -> void:
 	# One trade at a time: Cancel puts every party inventory back from this
@@ -42,6 +43,7 @@ func _ready() -> void:
 	for other in get_tree().get_nodes_in_group("trade_window"):
 		if not other.is_queued_for_deletion():
 			GameLog.add_entry("Finish the current trade first.")
+			SfxManager.play_ui("trade_decline")
 			_handled = true  # nothing to roll back
 			visible = false
 			queue_free()
@@ -125,12 +127,15 @@ func _ready() -> void:
 	_accept_button.text = "Accept Trade"
 	_accept_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_accept_button.pressed.connect(_on_accept_pressed)
+	# Accept and Cancel play trade_accept / trade_decline instead of the click.
+	_accept_button.set_meta("sfx_silent", true)
 	btn_row.add_child(_accept_button)
 
 	_cancel_button = Button.new()
 	_cancel_button.text = "Cancel"
 	_cancel_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_cancel_button.pressed.connect(_on_cancel_pressed)
+	_cancel_button.set_meta("sfx_silent", true)
 	btn_row.add_child(_cancel_button)
 
 	# Snapshot inventories for rollback + value baseline.
@@ -153,6 +158,7 @@ func _ready() -> void:
 				member.inventory.weapon_unequipped.connect(_on_inventory_changed_node)
 
 	SfxManager.play_ui("trade_open")
+	_opened = true
 	_populate_grid()
 	_recompute_balance()
 
@@ -546,4 +552,8 @@ func _exit_tree() -> void:
 	# treat it as a cancel: rollback to keep state consistent.
 	if not _handled:
 		_rollback_all()
+	# Every close of a trade that opened (accept, cancel or forced) ends on
+	# trade_close exactly once. A duplicate refused in _ready never opened.
+	if _opened:
+		_opened = false
 		SfxManager.play_ui("trade_close")

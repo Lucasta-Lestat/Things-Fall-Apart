@@ -62,6 +62,10 @@ func _ready() -> void:
 	close_btn.custom_minimum_size = Vector2(28, 28)
 	close_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	close_btn.pressed.connect(_on_close_pressed)
+	# A chest's lid shutting replaces the generic click; a body has no lid,
+	# so its X keeps the click.
+	if not _is_body():
+		close_btn.set_meta("sfx_silent", true)
 	header.add_child(close_btn)
 
 	# Spacer. HSeparator is STOP by default, so it forwards drops too.
@@ -83,8 +87,16 @@ func _ready() -> void:
 		# Auto-close if the chest is destroyed/freed while the window is open.
 		chest_item.tree_exiting.connect(_on_chest_destroyed)
 
-	SfxManager.play_ui("chest_open")
+	# "Search Body" opens this same window on a corpse: rummage through
+	# clothing, not a wooden lid creaking open.
+	if _is_body():
+		SfxManager.play_ui("armor_rustle", Vector2(0.9, 1.1), -4.0)
+	else:
+		SfxManager.play_ui("chest_open")
 	_populate_grid()
+
+func _is_body() -> bool:
+	return is_instance_valid(chest_item) and chest_item is ProceduralCharacter
 
 func _populate_grid() -> void:
 	if not is_instance_valid(_grid):
@@ -444,7 +456,8 @@ func _find_slot_at(pos: Vector2) -> PanelContainer:
 # ---------------------------------------------------------------------------
 
 func _on_close_pressed() -> void:
-	SfxManager.play_ui("chest_close")
+	if not _is_body():
+		SfxManager.play_ui("chest_close")
 	queue_free()
 
 func _on_chest_destroyed() -> void:

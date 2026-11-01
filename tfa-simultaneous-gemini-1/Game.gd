@@ -463,6 +463,7 @@ func show_quest_rewards(quest_id: String, offers: Array, character) -> void:
 		if is_instance_valid(screen):
 			screen.queue_free())
 	add_child(screen)
+	SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -6.0)
 
 ## Hand over one chosen reward. Items and coin go through DowntimeEffectApplier,
 ## which already knows how to pay out in currency items and how to put a thing in
@@ -629,6 +630,9 @@ func _resolve_returns(arrived_map: String) -> void:
 	if changed:
 		# Respawn so the returned member actually has a body on this map.
 		_spawn_returned_members(arrived_map)
+		# Not during a disk load: the save already knew where they were.
+		if not _skip_unload_capture:
+			SfxManager.play_ui("party_join", Vector2(0.95, 1.05), -4.0)
 
 ## Spawn party rows that are present but have no body, without disturbing the
 ## ones already standing. Reuses the normal spawn path by re-running it for the
@@ -1078,6 +1082,9 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 
 	# Save party state before cleaning up (preserves HP, inventory, etc.)
 	if not party_chars.is_empty() and not _skip_party_save:
+		# One transition sound for a warp taken from a live map. The boot load
+		# (no party yet), a save load and the colosseum set-up are not journeys.
+		SfxManager.play_ui("door_open", Vector2(0.9, 1.0), -6.0)
 		save_party_state()
 		# Runs while the party is still assembled and current_map_id still names
 		# the map being left: anyone mid-training here decides whether to follow.
@@ -1098,6 +1105,10 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	_invisible_lost_said.clear()
 	# So is the memory of threats (combat music, Surrender).
 	_threat_known_until.clear()
+
+	# Fires, wells and springs on the old map would keep playing at stale
+	# coordinates on the new one.
+	SfxManager.stop_all_loops()
 
 	# Clean up previous map
 	_unload_current_map()
@@ -1436,6 +1447,9 @@ func setup_map_music(map_data: Dictionary) -> void:
 	# MusicManager.DEFAULT_AMBIENT_TRACK — a map wanting real silence sets
 	# `music_track` to MusicManager.SILENCE_KEY.
 	MusicManager.set_ambient_track(track)
+	# The ambience bed under the music (town crowd, cave drips), from
+	# data/map_ambience.json. Unchanged across a warp it plays on.
+	SfxManager.set_ambience(SfxManager.ambience_for_map(str(map_data.get("id", ""))))
 
 func setup_map_weather(map_data: Dictionary) -> void:
 	_forced_precip = ""
@@ -1896,6 +1910,8 @@ func _relocate_party(spawn_key: String) -> void:
 		player_camera.manual_pan_active = false
 		player_camera.global_position = focus.global_position
 		player_camera.reset_smoothing()
+	# Stairs and ladders: one quiet step, not the door a full warp plays.
+	SfxManager.play_ui("footstep_stone_boots", Vector2(0.85, 0.95), -8.0)
 	print("[GameScene] Moved party within %s (spawn: %s)" % [current_map_id, spawn_key])
 
 ## A warp whose destination can't load: say so instead of silently staying put
@@ -2020,7 +2036,11 @@ func _spawn_fluids(fluid_list: Array) -> void:
 		# sim owns sources there; the one-shot deposit above still primes it.
 		var rate: float = float(fluid_def.get("rate", 0.0))
 		if rate > 0.0 and fluid_manager.cell_fluid != null:
-			fluid_manager.cell_fluid.add_source(GridManager.map_to_world(center_tile), fluid_type, rate)
+			var source_pos: Vector2 = GridManager.map_to_world(center_tile)
+			fluid_manager.cell_fluid.add_source(source_pos, fluid_type, rate)
+			# The spring can be heard welling up nearby. The sim is rebuilt per
+			# map, so the loop goes with it.
+			SfxManager.start_loop("amb_spring_loop", source_pos, -6.0, "Ambience", null, fluid_manager.cell_fluid, 900.0)
 
 # ---------------------------------------------------------------------------
 # Context menu
@@ -2092,6 +2112,7 @@ func show_context_menu(target, position: Vector2, actor = null) -> void:
 
 	context_menu.setup(target, options, actor)
 	$GameUI.add_child(context_menu)
+	SfxManager.play_ui("ui-navigation", Vector2(0.95, 1.05), -8.0)
 
 ## World-item context menu options. Readables keep Read/Take; containers keep
 ## the options something handles ("Open", Item.INTERACT_OPTIONS); every other
@@ -2238,6 +2259,8 @@ func show_chest_inventory(item: Item) -> void:
 	var opener = _resolve_pickup_character()
 	if opener != null and opener.global_position.distance_to(item.global_position) > CrimeManager.PICKUP_REACH:
 		opener.notify("Too far", REFUSAL_COLOR, "%s is too far away to reach that." % opener.Name)
+		# The menu's Open is sfx_silent (the window plays chest_open).
+		SfxManager.play_ui("trade_decline")
 		return
 	# Locked containers (an Items.json "key") open only for a party carrying the
 	# key; otherwise the chest floats "Locked" and the log says so. Corpses
@@ -2258,6 +2281,8 @@ func show_loot_window(corpse) -> void:
 	var opener = _resolve_pickup_character()
 	if opener != null and opener.global_position.distance_to(corpse.global_position) > CrimeManager.PICKUP_REACH:
 		opener.notify("Too far", REFUSAL_COLOR, "%s is too far away to reach that." % opener.Name)
+		# Search Body is sfx_silent (the window plays armor_rustle).
+		SfxManager.play_ui("trade_decline")
 		return
 	var ChestWindow = preload("res://UI/ChestInventoryWindow.tscn")
 	var w = ChestWindow.instantiate()
@@ -2455,6 +2480,8 @@ func _setup_surrender_button() -> void:
 	_surrender_button.tooltip_text = ("Give yourselves up to the hostiles you know are near.\n"
 		+ "Shown while one is in view, or was seen, heard close by or traded blows with in the last %d s.") % int(THREAT_MEMORY_SECONDS)
 	_surrender_button.pressed.connect(_on_surrender_pressed)
+	# SurrenderPanel.try_open plays its own sound on every outcome.
+	_surrender_button.set_meta("sfx_silent", true)
 	$GameUI.add_child(_surrender_button)
 
 ## Every living non-party character currently hostile to the party and
@@ -2995,6 +3022,7 @@ func set_stealth_mode(active: bool) -> void:
 				roundi(ProceduralCharacter.SNEAK_NOISE_MULT * 100.0), roundi(ProceduralCharacter.SNEAK_SPEED_MULT * 100.0)])
 	else:
 		GameLog.add_entry("Stealth mode [b]off[/b].")
+	SfxManager.play_ui("stealth_on" if active else "stealth_off", Vector2(0.95, 1.05), -6.0)
 	stealth_mode_changed.emit(active)
 
 ## Give every NPC that has a sight cone its elevated-surface cone (made on
@@ -4026,8 +4054,21 @@ func _apply_item_on_hit_effects(attacker, target, source, damage_dealt: int, hit
 	if damage_dealt < int(data.get("min_damage", 0)):
 		return
 	var ability = Ability.from_dict(data)
+	# Only a proc that landed is heard: the Pensword's 35% blind or a resisted
+	# heartbreak shouldn't splat or chime on every hit. An effect that doesn't
+	# report per-target results counts as landed.
+	var landed: bool = false
 	for effect in ability.effects:
-		AbilityEffect.resolve_effect(effect, attacker, [target], ability, hit_position)
+		var result: Dictionary = AbilityEffect.resolve_effect(effect, attacker, [target], ability, hit_position)
+		if result.has("targets_affected"):
+			if not (result["targets_affected"] as Array).is_empty():
+				landed = true
+		elif bool(result.get("success", false)):
+			landed = true
+	# resolve_effect skips the cast, and with it the proc's authored sound and
+	# impact VFX (the Heartbreaker's charm chime).
+	if landed and is_instance_valid(attacker) and attacker.has_method("play_ability_feedback"):
+		attacker.play_ability_feedback(ability, hit_position)
 	if attacker is CharacterBody2D and target is CharacterBody2D:
 		emit_signal("damage_dealt", attacker, target,
 			{"source": source, "damage": damage_dealt, "position": hit_position})
@@ -4157,10 +4198,15 @@ func _input(event: InputEvent) -> void:
 			if index >= 0 and index < party.size():
 				var character = party[index]
 				if character and is_instance_valid(character):
+					var was_selected: Array = selected_characters.duplicate()
+					var was_primary = primary_selected
 					if event.ctrl_pressed:
 						toggle_character_selection(character)
 					else:
 						select_character_by_index(index)
+					# Re-pressing the selected member's key changes nothing: no click.
+					if selected_characters != was_selected or primary_selected != was_primary:
+						SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -10.0)
 			
 func _create_selection_indicator(size: int) -> void:
 	"""Create selection indicators — now managed per-character via selection methods"""
@@ -4375,6 +4421,8 @@ func _toggle_wait_selected() -> void:
 		if ch.hold_position != hold:
 			ch.hold_position = hold
 			GameLog.add_entry(str(ch.Name) + (" holds position." if hold else " moves out."))
+	# Someone always changes here: a mixed selection holds, an all-holding one moves out.
+	SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -10.0)
 
 # ===== COMBAT CALLBACKS =====
 
@@ -4596,6 +4644,13 @@ func process_weapon_hit(
 	# take_damage applies limb-specific armor DR (via hit_limb) then subtracts
 	# from the character's single HP pool. Returns total damage dealt.
 	var final_damage = target.take_damage(attack_damage, local_hit, attacker, limb_type)
+	# The impact sound is read now: the grapple and on-hit procs below can hit
+	# the target again and overwrite what this swing's armour absorbed.
+	# Punches and kicks thud; claws and bites (slashing/piercing) tear; a blow
+	# mostly stopped by armour clangs (a fist on plate thuds) or meets a shield.
+	var punch: bool = is_unarmed and str(attacker.unarmed_strike_damage_type) == "bludgeoning"
+	var hit_key: String = target.hit_sound_key("stun_impact" if punch else "sword-on-flesh",
+		"armor-impact" if is_unarmed else "clash")
 	var limb = target.get_limb(limb_type)
 	var armor_dr = target.get_limb_armor(limb_type) if limb else {}
 
@@ -4641,14 +4696,14 @@ func process_weapon_hit(
 
 	if penetration_result.state == PenetrationState.BOUNCED:
 		result["blocked"] = attack_damage
-		# A fist on plate thuds; only steel on steel clangs.
-		SfxManager.play("armor-impact" if is_unarmed else "clash", attacker.position)
+		# A fist on plate thuds; only steel on steel clangs. A shield that
+		# turned the blow sounds like the shield.
+		var bounce_key: String = "armor-impact" if is_unarmed else "clash"
+		SfxManager.play("shield_brace" if hit_key == "shield_brace" else bounce_key, attacker.position)
 		HearingManager.emit(attacker.position, 0.9, attacker)
 		emit_signal("weapon_bounced", attacker, target, limb_type)
 	else:
-		# Punches and kicks thud; claws and bites (slashing/piercing) tear.
-		var punch: bool = is_unarmed and str(attacker.unarmed_strike_damage_type) == "bludgeoning"
-		SfxManager.play("stun_impact" if punch else "sword-on-flesh", target.position)
+		SfxManager.play(hit_key, target.position)
 		HearingManager.emit(target.position, 0.7, attacker)
 
 	if DebugManager.enabled and collision_visualizer and collision_visualizer.has_method("record_hit"):
@@ -4704,6 +4759,8 @@ func _calculate_penetration(damage: float, velocity: float, weapon: WeaponShape)
 
 
 		# Visual feedback could be added here (screen shake, etc)
+# Unwired since the per-frame player-vs-enemy blade check was removed (5759447d);
+# melee now resolves at the hit frame (resolve_melee_swing), which has no clash step.
 func process_weapon_clash(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter,
@@ -4765,7 +4822,9 @@ func process_weapon_clash(
 		result["outcome"] = "knocked_away"
 		result["winner"] = winner
 		result["loser"] = loser
-		loser.knock_weapon_away()
+		# AttackAnimator has no knockback-recovery state, so a hard stagger
+		# (interrupting the swing) is what knocking the blade aside amounts to.
+		loser.apply_stagger(0.4)
 		emit_signal("weapon_knocked_away", loser)
 	else:
 		# Massive difference - disarm
@@ -4952,6 +5011,7 @@ func register_hit(attacker: Node2D, target: Node2D) -> void:
 	active_hits[attacker_id][target_id] = true
 # ===== COLLISION DETECTION HELPERS =====
 
+# Unwired, like process_weapon_clash (its only caller was the removed per-frame check).
 func check_weapon_weapon_collision(
 	char1: ProceduralCharacter,
 	char2: ProceduralCharacter
@@ -5053,20 +5113,28 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 func _on_weapon_projectile_expired(final_pos: Vector2, shooter) -> void:
 	# The shot reached max_range (700 px pistol / 900 px bow) without hitting
 	# anything; mark where it fell so a party shot doesn't just vanish.
-	_splash_if_fluid(final_pos, 1.0)
+	if not _splash_if_fluid(final_pos, 1.0):
+		SfxManager.play("arrow-wall-impact", final_pos, Vector2(0.9, 1.1), -10.0)
 	if is_instance_valid(shooter) and shooter in party_chars:
 		Globals.show_floating_text("Max range", final_pos, self, Color(0.8, 0.8, 0.8), 0, Globals.NOTICE_FONT_SIZE)
 
 
-func _splash_if_fluid(world_pos: Vector2, strength: float = 1.1) -> void:
-	"""Spawn a splash ripple if a fluid tile exists at this world position."""
+## Spawn a splash ripple if a fluid tile exists at this world position, with
+## a low splash when `audible` (a landing: the caller's own clatter would be
+## wrong in water). Returns whether it splashed.
+func _splash_if_fluid(world_pos: Vector2, strength: float = 1.1, audible: bool = true) -> bool:
 	if fluid_manager and fluid_manager.get_fluid_type_at(GridManager.world_to_map(world_pos)) != "":
 		fluid_manager.add_ripple(world_pos, strength)
+		if audible:
+			SfxManager.play("footstep_shallow_water_bare", world_pos, Vector2(0.75, 0.85), -4.0)
+		return true
+	return false
 
 func _on_weapon_projectile_hit(collision: KinematicCollision2D, shooter: ProceduralCharacter, weapon: WeaponShape) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
-	_splash_if_fluid(hit_pos, 1.1)
+	# The hit's own impact sound speaks for it: ripple only.
+	_splash_if_fluid(hit_pos, 1.1, false)
 	if collider is ProceduralCharacter:
 		# Corpses move to the CORPSES layer on death (deferred), so live
 		# collisions imply a living target — this guard covers the one-frame
@@ -5092,19 +5160,23 @@ func _process_projectile_hit_character(
 	_apply_attacker_damage_mods(attack_damage, shooter, target, false)
 	_apply_weapon_trait_mult(attack_damage, weapon, target)
 	var dealt: int = target.take_damage(attack_damage, local_hit, shooter, limb_type)
+	# Read before the on-hit proc, which can damage the target again. A shot
+	# mostly stopped by armour or a shield sounds like that, not like flesh.
+	var is_pistol: bool = weapon.weapon_type == WeaponShape.WeaponType.PISTOL
+	var hit_key: String = target.hit_sound_key("sword-on-flesh" if is_pistol else "arrow-body-impact", "armor-impact")
 	# dealt > 0 mirrors the melee BOUNCED gate: fully-absorbed hits don't proc
 	if dealt > 0:
 		_apply_item_on_hit_effects(shooter, target, weapon, dealt, hit_position)
 
-	# A shot fully stopped by armour sounds like armour, not flesh.
+	# A shot fully stopped by armour sounds like armour (or the shield), not flesh.
 	if dealt <= 0:
-		SfxManager.play("armor-impact", hit_position)
-		HearingManager.emit(hit_position, 1.5 if weapon.weapon_type == WeaponShape.WeaponType.PISTOL else 0.4, shooter)
-	elif weapon.weapon_type == WeaponShape.WeaponType.PISTOL:
-		SfxManager.play("sword-on-flesh", hit_position)
+		SfxManager.play("shield_brace" if hit_key == "shield_brace" else "armor-impact", hit_position)
+		HearingManager.emit(hit_position, 1.5 if is_pistol else 0.4, shooter)
+	elif is_pistol:
+		SfxManager.play(hit_key, hit_position)
 		HearingManager.emit(hit_position, 1.5, shooter)  # gunshot — very loud
 	else:
-		SfxManager.play("arrow-body-impact", hit_position)
+		SfxManager.play(hit_key, hit_position)
 		HearingManager.emit(hit_position, 0.4, shooter)
 
 func _process_projectile_hit_object(
@@ -5133,6 +5205,8 @@ func _add_thrown_projectile(proj_data: Dictionary) -> void:
 	var thrower = proj_data.get("shooter")
 	if is_instance_valid(thrower) and thrower.has_method("reveal"):
 		thrower.reveal()
+	var release_pos: Vector2 = thrower.global_position if is_instance_valid(thrower) and thrower is Node2D else proj_data["position"]
+	SfxManager.play("throw_whoosh", release_pos, Vector2(0.9, 1.1), -3.0)
 	var item_data: Dictionary = proj_data.get("item_data", {})
 	var item_id: String = item_data.get("id", "")
 	var thrown_damage: Dictionary = proj_data.get("damage", {"bludgeoning": 2})
@@ -5202,7 +5276,8 @@ func _thrown_item_extras(item: Dictionary) -> Dictionary:
 func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String, thrown_damage: Dictionary, shooter, extras: Dictionary = {}) -> void:
 	var collider := collision.get_collider()
 	var hit_pos: Vector2 = collision.get_position()
-	_splash_if_fluid(hit_pos, 1.1)
+	# A body hit has its own impact sound; only an item falling into water splashes aloud.
+	var splashed: bool = _splash_if_fluid(hit_pos, 1.1, not (collider is ProceduralCharacter))
 	if collider is ProceduralCharacter:
 		if collider.is_alive():
 			var local_hit: Vector2 = collider.to_local(hit_pos)
@@ -5215,12 +5290,14 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 			var thrown_data: Dictionary = ItemDatabase.get_item_data(item_id) if not item_id.is_empty() else {}
 			_apply_weapon_trait_mult(thrown_final, thrown_data if not thrown_data.is_empty() else null, collider)
 			var dealt: int = collider.take_damage(thrown_final, local_hit, shooter, limb_type)
+			# Read before the on-hit proc, which can damage the target again.
+			var hit_key: String = collider.hit_sound_key("arrow-body-impact", "armor-impact")
 			# dealt > 0 mirrors the melee BOUNCED gate
 			if dealt > 0 and not thrown_data.is_empty():
 				_apply_item_on_hit_effects(shooter, collider, thrown_data, dealt, hit_pos)
-			# A thrown hit on a body was silent: flesh or armour by what got
-			# through, and audible to the AI like an arrow strike.
-			SfxManager.play("arrow-body-impact" if dealt > 0 else "armor-impact", hit_pos)
+			# A thrown hit on a body was silent: flesh, armour or shield by what
+			# stopped it, and audible to the AI like an arrow strike.
+			SfxManager.play(hit_key if dealt > 0 or hit_key == "shield_brace" else "armor-impact", hit_pos)
 			HearingManager.emit(hit_pos, 0.4, shooter if is_instance_valid(shooter) else null)
 		# Item drops at the hit point regardless of target liveness.
 		if not item_id.is_empty():
@@ -5230,14 +5307,33 @@ func _on_thrown_projectile_hit(collision: KinematicCollision2D, item_id: String,
 			collider.take_damage(thrown_damage.duplicate(), 0)
 		if not item_id.is_empty():
 			create_item(item_id, hit_pos, 1, extras)
-		SfxManager.play("sword-fall", hit_pos)
+		if not splashed:
+			SfxManager.play(_thrown_landing_sound(item_id), hit_pos)
 
 
 func _on_thrown_projectile_expired(final_position: Vector2, item_id: String, extras: Dictionary = {}) -> void:
-	_splash_if_fluid(final_position, 1.0)
+	var splashed: bool = _splash_if_fluid(final_position, 1.0)
 	if not item_id.is_empty():
 		create_item(item_id, final_position, 1, extras)
-	SfxManager.play("sword-fall", final_position)
+	if not splashed:
+		SfxManager.play(_thrown_landing_sound(item_id), final_position)
+
+
+## What a thrown item sounds like landing: blades, bows and metal gear clatter;
+## anything else (food, cloth, wood, stone, bottles) lands with a soft thud.
+## Bottled consumables don't shatter: the thrown item is recreated intact where
+## it lands, so glass_break waits for a mechanic that actually breaks the bottle
+## (consume it and resolve its use_ability at the impact point).
+func _thrown_landing_sound(item_id: String) -> String:
+	if item_id.is_empty():
+		return "item_drop_soft"
+	if ItemDatabase.weapons.has(Globals.name_to_id(item_id)) or ItemDatabase.weapons.has(item_id):
+		return "sword-fall"
+	var data: Dictionary = _lookup_any_item(item_id)
+	var traits = data.get("traits", {})
+	if traits is Dictionary and traits.has("Metal"):
+		return "sword-fall"
+	return "item_drop_soft"
 
 # ===== SELECTION CIRCLE DRAWER =====
 
@@ -5597,6 +5693,10 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 	var cm = character.condition_manager
 	var now: float = TimeManager.absolute_time()
 	var alive: bool = character.current_health > 0
+	# Restored conditions restart their loops but don't sting again.
+	# _deserialize_character already holds this; restore what it was.
+	var had_sfx_suppressed: bool = character.suppress_condition_sfx
+	character.suppress_condition_sfx = true
 	for inst in cm.conditions.values():
 		if inst == null or inst.condition == null:
 			continue
@@ -5607,6 +5707,7 @@ func _restore_condition_presentation(character: ProceduralCharacter) -> void:
 			character._start_condition_sfx(inst)
 			if inst.is_suppressed:
 				character._on_condition_suppressed(inst)
+	character.suppress_condition_sfx = had_sfx_suppressed
 	if alive:
 		character._refresh_condition_display()
 		# _on_condition_applied's Invisible translucency (not while an attack
@@ -5800,7 +5901,13 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	## Called AFTER build_character / load_from_data so the template is already applied.
 	if state.is_empty():
 		return
- 
+	# Worn gear, drawn weapons and the saved conditions below all re-apply
+	# conditions the character already had: no apply sound for any of them.
+	var had_sfx_suppressed: bool = false
+	if "suppress_condition_sfx" in character:
+		had_sfx_suppressed = character.suppress_condition_sfx
+		character.suppress_condition_sfx = true
+
 	# --- Identity ---
 	# A blank Name is from a snapshot taken before build_character set it;
 	# keep the template's (display) name rather than restoring the blank.
@@ -6039,3 +6146,6 @@ func _deserialize_character(character: ProceduralCharacter, state: Dictionary) -
 	# one-shot death events don't re-fire on every map transition.
 	if character.current_health <= 0 and character.has_method("restore_dead_state"):
 		character.restore_dead_state()
+
+	if "suppress_condition_sfx" in character:
+		character.suppress_condition_sfx = had_sfx_suppressed

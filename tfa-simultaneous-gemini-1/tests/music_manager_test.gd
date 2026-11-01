@@ -62,10 +62,13 @@ func _case_default_ambient_fallback() -> void:
 	_check("blank music_track resolves to the default",
 		MusicManager._resolve_ambient_key("") == MusicManager.DEFAULT_AMBIENT_TRACK)
 
-	# The four maps that shipped pointing at tracks nobody added.
-	for broken in ["cemetery_ambient", "town_theme", "tavern_theme"]:
-		_check("broken key '%s' resolves to the default" % broken,
-			MusicManager._resolve_ambient_key(broken) == MusicManager.DEFAULT_AMBIENT_TRACK)
+	_check("broken key resolves to the default",
+		MusicManager._resolve_ambient_key("no_such_track") == MusicManager.DEFAULT_AMBIENT_TRACK)
+
+	# The maps that shipped pointing at tracks nobody added now have them.
+	for key in ["cemetery_ambient", "town_theme", "tavern_theme"]:
+		_check("map track '%s' is installed" % key,
+			MusicManager._resolve_ambient_key(key) == key)
 
 	_check("SILENCE_KEY resolves to silence",
 		MusicManager._resolve_ambient_key(MusicManager.SILENCE_KEY) == "")

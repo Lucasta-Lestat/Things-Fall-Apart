@@ -79,6 +79,7 @@ const ACTIONS := {
 	# conversation
 	"log": ["text"],
 	"start_dialogue": ["dialogue"],
+	"play_sfx": ["key"],
 	"call": ["call"],
 }
 
@@ -607,6 +608,7 @@ func _do_give_item(a: Dictionary) -> bool:
 	if targets.is_empty():
 		return false
 	var any_ok: bool = false
+	var heard: bool = false
 	for ch in targets:
 		var inv = ch.get_node_or_null("Inventory")
 		if inv == null:
@@ -645,9 +647,14 @@ func _do_give_item(a: Dictionary) -> bool:
 		var label: String = shown_name if given == 1 else "%s (x%d)" % [shown_name, given]
 		if _is_party(ch):
 			ch.notify("+" + label, GAIN_COLOR, "%s receives %s." % [_name(ch), label])
+			heard = true
 		elif _seen(ch):
 			# A float over them too: the game log starts closed.
 			ch.notify("+" + label, GAIN_COLOR, "%s takes %s." % [_name(ch), label])
+			heard = true
+	# One sound per hand-over, however many received it.
+	if heard:
+		SfxManager.play_ui("chest_item_out")
 	return any_ok
 
 
@@ -673,6 +680,7 @@ func _do_take_item(a: Dictionary) -> bool:
 			return false
 	var removed: Array = _remove_items(pool, item_id, count)
 	var taken_from: Dictionary = {}
+	var heard: bool = false
 	for r in removed:
 		var who = r["from"]
 		taken_from[who] = int(taken_from.get(who, 0)) + int(r["count"])
@@ -691,8 +699,12 @@ func _do_take_item(a: Dictionary) -> bool:
 		# An NPC's loss floats too (when seen): the game log starts closed.
 		if _is_party(who) or _seen(who):
 			who.notify("-" + label, LOSS_COLOR, line)
+			heard = true
 	if receiver != null and _is_party(receiver):
 		receiver.notify("+" + item_name, GAIN_COLOR)
+		heard = true
+	if heard:
+		SfxManager.play_ui("chest_item_in")
 	return true
 
 
@@ -716,6 +728,8 @@ func _do_give_gold(a: Dictionary) -> bool:
 		placed = amount - int(data.get("num_stacks", amount))
 	if placed <= 0:
 		return false
+	if _is_party(ch) or _seen(ch):
+		SfxManager.play_ui("coin_pickup")
 	if _is_party(ch):
 		ch.notify("+%d gold" % placed, GAIN_COLOR, "%s receives %d gold." % [_name(ch), placed])
 	elif _seen(ch):
@@ -739,6 +753,7 @@ func _do_take_gold(a: Dictionary) -> bool:
 	var receiver = _first(a["to"]) if a.has("to") else null
 	var removed: Array = _remove_items(pool, "gold", amount)
 	var paid: Dictionary = {}
+	var heard: bool = false
 	for r in removed:
 		paid[r["from"]] = int(paid.get(r["from"], 0)) + int(r["count"])
 	if receiver != null:
@@ -754,6 +769,10 @@ func _do_take_gold(a: Dictionary) -> bool:
 			else "%s pays %d gold." % [_name(who), n]
 		if _is_party(who) or _seen(who):
 			who.notify("-%d gold" % n, LOSS_COLOR, line)
+			heard = true
+	# Coins going out: the pickup clink, pitched down.
+	if heard:
+		SfxManager.play_ui("coin_pickup", Vector2(0.72, 0.78))
 	return true
 
 
@@ -1077,6 +1096,7 @@ func _do_join_party(a: Dictionary) -> bool:
 		joined.append(c)
 		c.notify("Joined the party", GAIN_COLOR, "%s joins the party." % _name(c))
 	if not joined.is_empty():
+		SfxManager.play_ui("party_join", Vector2.ONE, -4.0)
 		_refresh_party_panel()
 		_drop_stale_targets()
 	return not joined.is_empty()
@@ -1125,6 +1145,7 @@ func _do_leave_party(a: Dictionary) -> bool:
 		left.append(c)
 		c.notify("Left the party", LOSS_COLOR, "%s leaves the party." % _name(c))
 	if not left.is_empty():
+		SfxManager.play_ui("party_leave", Vector2.ONE, -4.0)
 		_refresh_party_panel()
 		_drop_stale_targets()
 	return not left.is_empty()
@@ -1361,6 +1382,7 @@ func _do_pardon(a: Dictionary) -> bool:
 			p.notify("Pardoned", GAIN_COLOR, line)
 		else:
 			GameLog.add_entry(line)
+		SfxManager.play_ui("holy_cleanse", Vector2.ONE, -6.0)
 	_drop_stale_targets()
 	return true
 
@@ -1381,6 +1403,17 @@ func _do_start_dialogue(a: Dictionary) -> bool:
 		return false
 	# Queued: it starts when this conversation ends.
 	manager.start_dialogue(did)
+	return true
+
+
+## A sound the line describes ("*Click!* The lock springs open."). Not
+## positional: the conversation is the player's, wherever it happens.
+func _do_play_sfx(a: Dictionary) -> bool:
+	var key: String = str(a["key"])
+	if not SfxManager.has_sound(key):
+		_warn("play_sfx: no sound '%s' (skipped)" % key)
+		return false
+	SfxManager.play_ui(key, Vector2(0.95, 1.05), float(a.get("volume_db", 0.0)))
 	return true
 
 
@@ -2059,6 +2092,8 @@ func _validate_actions(list, at: String, nodes: Dictionary, dialogues: Dictionar
 			problems.append("%s #%d report_crime: no statute '%s'" % [at, i + 1, str(a.get("statute", ""))])
 		if type == "set_relation" and not str(a.get("relation", "")) in RELATIONS:
 			problems.append("%s #%d set_relation: relation must be one of %s" % [at, i + 1, str(RELATIONS)])
+		if type == "play_sfx" and a.has("key") and not SfxManager.has_sound(str(a["key"])):
+			problems.append("%s #%d play_sfx: no sound '%s'" % [at, i + 1, str(a["key"])])
 
 
 func _validate_checks(checks, at: String, problems: Array, for_option: bool) -> void:

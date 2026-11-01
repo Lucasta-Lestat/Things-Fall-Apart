@@ -34,6 +34,7 @@ func try_open(faction_override: String = "") -> bool:
 				var who = game.party_chars[0]
 				Globals.show_floating_text("No one to surrender to", who.global_position, who, Color.WHITE_SMOKE)
 			GameLog.add_entry("No one to surrender to: no hostile you know of is near.")
+			SfxManager.play_ui("trade_decline")
 		return false
 	_profile = LawDatabase.surrender_profile(_faction)
 	var line: String = str(_profile.get("line", "..."))
@@ -44,7 +45,11 @@ func try_open(faction_override: String = "") -> bool:
 			if is_instance_valid(protagonist):
 				Globals.show_floating_text(line, protagonist.global_position, protagonist, Color.WHITE_SMOKE)
 		GameLog.add_entry("Surrender refused: %s" % line)
+		SfxManager.play_ui("trade_decline")
 		return false
+	# The party is the one yielding here (there is no enemy-yields path):
+	# a low sting as their terms come up.
+	SfxManager.play_ui("crime_sting", Vector2(0.95, 1.05), -6.0)
 	_build_panel(line)
 	return true
 
@@ -88,7 +93,9 @@ func _build_panel(line: String) -> void:
 	if "rob" in options:
 		var fraction: float = float(_profile.get("rob_fraction", 0.5))
 		_add_label(vbox, "They want roughly %d%% of everything you carry." % int(fraction * 100.0), 14)
-		_add_button(vbox, "Hand over your goods", func(): _do_rob(fraction))
+		var rob_button := _add_button(vbox, "Hand over your goods", func(): _do_rob(fraction))
+		# The coin handover (_do_rob) is its sound.
+		rob_button.set_meta("sfx_silent", true)
 		_add_button(vbox, "Refuse", func(): queue_free())
 		return
 
@@ -107,7 +114,11 @@ func _build_panel(line: String) -> void:
 	var days: int = FactionDatabase.jail_days_owed(_faction)
 	_add_label(vbox, "Stolen goods will be returned in either case.", 13)
 	if "pay_fine" in options:
-		_add_button(vbox, "Pay the fine (%d gold)" % fine, func(): _do_settle("pay_fine"))
+		var pay_button := _add_button(vbox, "Pay the fine (%d gold)" % fine, func(): _do_settle("pay_fine"))
+		# Paying is the coin handover's sound (CrimeManager.settle_with); a
+		# zero fine hands nothing over, so that one still clicks.
+		if fine > 0:
+			pay_button.set_meta("sfx_silent", true)
 	if "serve_time" in options:
 		_add_button(vbox, "Serve your sentence (%d days)" % days, func(): _do_settle("serve_time"))
 	_add_button(vbox, "Withdraw", func(): queue_free())
@@ -119,11 +130,12 @@ func _add_label(parent: Node, text: String, size: int) -> void:
 	label.add_theme_font_size_override("font_size", size)
 	parent.add_child(label)
 
-func _add_button(parent: Node, text: String, on_pressed: Callable) -> void:
+func _add_button(parent: Node, text: String, on_pressed: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.pressed.connect(on_pressed)
 	parent.add_child(button)
+	return button
 
 func _do_settle(mode: String) -> void:
 	CrimeManager.settle_with(_faction, mode)
@@ -176,6 +188,8 @@ func _do_rob(fraction: float) -> void:
 			if c.inventory.has_method("resync_worn_from_items"):
 				c.inventory.resync_worn_from_items()
 	GameLog.add_entry("Robbed: goods worth ~%d handed over. They let you live." % int(taken))
+	# Coin changing hands, pitched down: it's leaving.
+	SfxManager.play_ui("coin_pickup", Vector2(0.72, 0.78))
 	# Over the protagonist too: the game log starts closed.
 	var robbed_who = game.party_chars[0] if not game.party_chars.is_empty() else null
 	if robbed_who is Node2D and is_instance_valid(robbed_who) and robbed_who.is_inside_tree():

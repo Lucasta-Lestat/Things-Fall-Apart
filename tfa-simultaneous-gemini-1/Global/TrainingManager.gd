@@ -162,6 +162,8 @@ func _finish(character, uid: String, c: Dictionary) -> void:
 	if character is Node2D and is_instance_valid(character) and character.is_inside_tree():
 		Globals.show_floating_text("Learned: " + _ability_name(ability_id), character.global_position,
 			character, Color(0.55, 1.0, 0.55), 0, Globals.NOTICE_FONT_SIZE)
+	# Learners are the party. Several can finish on one Next Day: one chime.
+	SfxManager.play_ui_throttled("ability_learned", 0.5, "ability_learned", Vector2.ONE, -4.0)
 	emit_signal("training_completed", uid, ability_id)
 
 ## Force a commitment to completion without the learner being present — used

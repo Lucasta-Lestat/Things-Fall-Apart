@@ -542,6 +542,7 @@ static func apply_consumable(user, target, item_data: Dictionary) -> bool:
 		GameLog.add_entry("%s consumes the %s." % [user.Name, item_name])
 	else:
 		GameLog.add_entry("%s gives the %s to %s." % [user.Name, item_name, target.Name])
+	SfxManager.play(_consume_sound_key(item_data), target.global_position, Vector2(0.92, 1.08), -6.0)
 	# canceled_by_trait: what the item is reaches whoever takes it (a Potion
 	# of Healing's Healing stops Bleeding). Announced by ConditionManager.
 	var item_traits = item_data.get("traits", {})
@@ -559,7 +560,22 @@ static func apply_consumable(user, target, item_data: Dictionary) -> bool:
 			cm.apply_condition(condition_id, user)
 	if not uncast_ability.is_empty():
 		_resolve_non_heal_effects(target, uncast_ability, item_name)
+		# Never cast, so its glow would otherwise go unshown: give it on the
+		# drinker. Not its sound_cast: the drink and heal()'s chime already
+		# voice the potion, and a spell-cast sound for no cast is one too many.
+		if target.has_method("_spawn_ability_visuals"):
+			target._spawn_ability_visuals(Ability.from_dict(uncast_ability), target.global_position)
 	return true
+
+## "eat" for food (the Ration trait), "drink" for everything else that is
+## consumed: potions, vials, flasks, the waterskin and the bottle.
+static func _consume_sound_key(item_data: Dictionary) -> String:
+	var traits = item_data.get("traits", {})
+	if traits is Dictionary and (traits as Dictionary).has("Ration"):
+		return "eat"
+	if traits is Array and (traits as Array).has("Ration"):
+		return "eat"
+	return "drink"
 
 ## True when the ability has a "heal" effect, which a flat-healing item's own
 ## healing replaces (judged by effects, not by id).

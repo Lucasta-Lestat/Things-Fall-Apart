@@ -46,6 +46,15 @@ var _failed_at: Dictionary = {}
 var _fail_reasons: Dictionary = {}
 # Inventories already wired so we don't double-connect on re-registration.
 var _wired_inventories: Array = []
+# Quest stingers. _advance chains stages and a completion can start the next
+# quest within one call, so a burst queues its weightiest sting and plays it
+# once, at the end of the frame. While _quiet (boot auto-starts, a save's
+# re-evaluation, the boot map's arrival) nothing is queued.
+const STING_RANK := {"quest_advance": 1, "quest_start": 2, "quest_complete": 3, "quest_fail": 4}
+const STING_DB := {"quest_advance": -8.0, "quest_start": -6.0, "quest_complete": -4.0, "quest_fail": -6.0}
+var _pending_sting: String = ""
+var _quiet: bool = false
+var _boot_map_seen: bool = false
 
 func _ready() -> void:
 	# Connect global signals. Game is in the scene tree, so defer until it's ready.
@@ -61,13 +70,20 @@ func _connect_game_signals() -> void:
 	var game := get_node_or_null("/root/Game")
 	if game and game.has_signal("map_loaded") and not game.map_loaded.is_connected(_on_map_loaded):
 		game.map_loaded.connect(_on_map_loaded)
+	# Without character creation the boot map loads inside Game._ready, before
+	# this deferred hookup, so every map_loaded heard from here is an arrival.
+	if game and "party_chars" in game and not game.party_chars.is_empty():
+		_boot_map_seen = true
 
 func _start_auto_start_quests() -> void:
 	if QuestDatabase == null:
 		return
+	var was_quiet: bool = _quiet
+	_quiet = true
 	for id in QuestDatabase.get_auto_start_ids():
 		if not active.has(id) and not (id in completed) and not (id in failed):
 			start_quest(id)
+	_quiet = was_quiet
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -91,6 +107,7 @@ func start_quest(quest_id: String) -> void:
 	if GameLog:
 		GameLog.add_entry("Quest started: %s [color=gray](press J for the quest log)[/color]" % str(q.get("display_name", quest_id)))
 	_quest_float("New quest: " + str(q.get("display_name", quest_id)), QUEST_FLOAT_COLOR)
+	_queue_sting("quest_start")
 	print("[QuestManager] start_quest about to emit quest_updated id=", quest_id)
 	emit_signal("quest_updated", quest_id)
 	print("[QuestManager] start_quest about to reevaluate id=", quest_id)
@@ -366,7 +383,10 @@ func load_save_data(data: Dictionary) -> void:
 	_quest_start_day = data.get("quest_start_day", {}).duplicate() if data.has("quest_start_day") else {}
 	_failed_at = data.get("failed_at", {}).duplicate() if data.has("failed_at") else {}
 	_fail_reasons = data.get("fail_reasons", {}).duplicate() if data.has("fail_reasons") else {}
+	var was_quiet: bool = _quiet
+	_quiet = true
 	_reevaluate_all()
+	_quiet = was_quiet
 
 # ---------------------------------------------------------------------------
 # Per-character registration (called from Game._spawn_character).
@@ -430,7 +450,12 @@ func _on_map_loaded(map_id: String) -> void:
 				var tid: String = str(slot.get("template_id", ""))
 				if not tid.is_empty():
 					_write_world_state("char_at::" + tid, str(map_id))
+	# The first map is the game booting: what it moves along isn't news.
+	var was_quiet: bool = _quiet
+	_quiet = was_quiet or not _boot_map_seen
+	_boot_map_seen = true
 	_reevaluate_all()
+	_quiet = was_quiet
 
 func _on_faction_tier_changed(faction_id: String, _old_tier: int, new_tier: int) -> void:
 	_write_world_state("faction_tier::" + faction_id, int(new_tier))
@@ -485,6 +510,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 		if GameLog:
 			GameLog.add_entry("Quest complete: " + display_name)
 		_quest_float("Quest complete: " + display_name, QUEST_FLOAT_COLOR)
+		_queue_sting("quest_complete")
 		emit_signal("quest_stage_changed", quest_id, old_stage, COMPLETE_STAGE)
 		emit_signal("quest_completed", quest_id)
 		emit_signal("quest_updated", quest_id)
@@ -502,6 +528,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 			else:
 				GameLog.add_entry("Quest failed: %s — %s" % [display_name, reason])
 		_quest_float("Quest failed: " + display_name, Color(1.0, 0.5, 0.4))
+		_queue_sting("quest_fail")
 		emit_signal("quest_stage_changed", quest_id, old_stage, FAIL_STAGE)
 		emit_signal("quest_failed", quest_id)
 		emit_signal("quest_updated", quest_id)
@@ -514,6 +541,7 @@ func _advance(quest_id: String, next_stage: String, visited: Dictionary, transit
 		var stage_name := str(st.get("name", next_stage)) if not st.is_empty() else next_stage
 		GameLog.add_entry("%s: %s" % [display_name, stage_name])
 	_quest_float("Quest updated: " + display_name, QUEST_FLOAT_COLOR)
+	_queue_sting("quest_advance")
 	emit_signal("quest_stage_changed", quest_id, old_stage, next_stage)
 	emit_signal("quest_updated", quest_id)
 
@@ -628,6 +656,21 @@ func _quest_float(text: String, color: Color) -> void:
 	if not (p is Node2D) or not is_instance_valid(p) or not p.is_inside_tree():
 		return
 	Globals.show_floating_text(text, p.global_position, p, color, 0, Globals.NOTICE_FONT_SIZE)
+
+func _queue_sting(key: String) -> void:
+	if _quiet:
+		return
+	if _pending_sting.is_empty():
+		call_deferred("_play_pending_sting")
+	elif int(STING_RANK[_pending_sting]) >= int(STING_RANK[key]):
+		return
+	_pending_sting = key
+
+func _play_pending_sting() -> void:
+	var key: String = _pending_sting
+	_pending_sting = ""
+	if not key.is_empty():
+		SfxManager.play_ui_throttled("quest_sting", 0.1, key, Vector2.ONE, float(STING_DB[key]))
 
 func _today_stamp() -> int:
 	if TimeManager == null:

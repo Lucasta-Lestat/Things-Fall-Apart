@@ -75,6 +75,8 @@ func _ready() -> void:
 	_next_day_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_day_button.add_theme_font_size_override("font_size", 12)
 	_next_day_button.pressed.connect(_on_next_day_pressed)
+	# The dawn bell (_on_next_day_pressed) is this button's sound.
+	_next_day_button.set_meta("sfx_silent", true)
 	outer.add_child(_next_day_button)
 
 	_day_label = Label.new()
@@ -101,6 +103,9 @@ func _on_day_advanced(_day: int) -> void:
 
 func _on_next_day_pressed() -> void:
 	if game_node and game_node.has_method("advance_downtime_day"):
+		# Shares TimeManager.ring_church_bell's throttle id: on a feast day
+		# in town the new date rings one too, in this same frame.
+		SfxManager.play_ui_throttled("church_bell", 2.0, "church_bell", Vector2(0.97, 1.03), -6.0)
 		game_node.advance_downtime_day()
 
 ## Footer line: the date, plus anyone mid-training and how much they owe. This

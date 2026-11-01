@@ -51,6 +51,15 @@ const YEARTURN_NAME: String = "Yearturn"
 signal time_updated(hour, minute, second)
 signal date_changed(day, month, year)
 
+# Church bells ring the hours of prayer in town (an amb_town_loop map).
+const BELL_HOURS := [6, 12, 18]
+const BELL_KEY := "church_bell"
+const BELL_TOWN_AMBIENCE := "amb_town_loop"
+# game_time as _process last left it. Anything else that writes the clock (a
+# load, set_time, a downtime skip) leaves it different, and that jump lands
+# silently: only the clock ticking over an hour rings.
+var _clock_written: float = -1.0
+
 func _ready():
 	set_time(6, 0, 0)
 	set_date(1, 9, 1945)  # Witherumnal 1, 1945
@@ -60,6 +69,7 @@ func _process(delta):
 	if is_paused:
 		return
 
+	var ticking: bool = game_time == _clock_written
 	# Advance game time
 	game_time += delta * time_scale
 
@@ -74,15 +84,38 @@ func _process(delta):
 
 	# Check if time components changed
 	if new_second != current_second or new_minute != current_minute or new_hour != current_hour:
+		# The hour landed on rings, never the ones a big step skipped past.
+		var rings: bool = ticking and new_hour != current_hour and new_hour in BELL_HOURS
 		current_second = new_second
 		current_minute = new_minute
 		current_hour = new_hour
 		emit_signal("time_updated", current_hour, current_minute, current_second)
+		if rings:
+			ring_church_bell(-8.0)
 
 	# Handle day changes
 	if total_days > 0:
 		advance_days(total_days)
 		game_time = game_time - (total_days * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE)
+	_clock_written = game_time
+
+## One church bell, heard only in town. Played at the listener (the camera's
+## centre), so it carries across the whole map like a real steeple's.
+## SaintCalendar rings one for a feast day too.
+func ring_church_bell(volume_db: float) -> void:
+	if SfxManager.current_ambience() != BELL_TOWN_AMBIENCE:
+		return
+	var pos := Vector2.ZERO
+	var viewport := get_viewport()
+	var cam: Camera2D = viewport.get_camera_2d() if viewport != null else null
+	if cam != null:
+		pos = cam.get_screen_center_position()
+	else:
+		var game = get_tree().root.get_node_or_null("Game")
+		var party: Array = game.get("party_chars") if game != null and "party_chars" in game else []
+		if not party.is_empty() and is_instance_valid(party[0]):
+			pos = party[0].global_position
+	SfxManager.play_throttled(BELL_KEY, 2.0, BELL_KEY, pos, Vector2.ONE, volume_db, "Ambience")
 
 # Seconds since game start on a clock that never wraps. This is the ONLY
 # value safe to store in a condition's expires_at or any other future

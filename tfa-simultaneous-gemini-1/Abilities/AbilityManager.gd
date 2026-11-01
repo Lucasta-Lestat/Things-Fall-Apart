@@ -222,6 +222,13 @@ func use_ability(ability: Ability, target_data: Dictionary = {}) -> bool:
 		character.notify("Out of range", Color(1.0, 0.6, 0.4), range_notice_log)
 
 	if ability.cast_time <= 0:
+		# No windup, so _start_casting never runs: the cast sound plays here,
+		# with the effect, or an instant ability's sound_cast is never heard.
+		# Untracked: there is no windup to interrupt, and a tracked sound would
+		# be cut by the next windup or an unrelated concentration break.
+		var instant_sfx: String = str(ability.visuals.get("sound_cast", ""))
+		if instant_sfx != "" and character != null and character.has_method("_play_sfx_at"):
+			character._play_sfx_at(instant_sfx, character.global_position)
 		_execute_ability(ability, target_position, explicit_targets, target_anchor)
 		return true
 
@@ -252,14 +259,24 @@ func _start_casting(ability: Ability, target_position: Vector2, explicit_targets
 	if cast_effect_path != "" and character.has_method("_spawn_effect"):
 		character._spawn_effect(cast_effect_path, character.global_position, 1.0)
 
-	var sound_cast_path = ability.visuals.get("sound_cast", "")
-	if sound_cast_path != "" and character.has_method("_play_sfx_at"):
-		character._play_sfx_at(sound_cast_path, character.global_position)
+	_play_cast_sound(ability)
 
 	cast_started.emit(ability, target_position)
 
 	# Don't end targeting here — the preview should persist until the ability
 	# actually lands (cast_completed). Cleanup happens in _on_ability_cast_completed.
+
+
+## The ability's sound_cast, through the character so an interrupted cast can
+## cut it off (ProceduralCharacter._stop_cast_sound).
+func _play_cast_sound(ability: Ability) -> void:
+	var path: String = str(ability.visuals.get("sound_cast", ""))
+	if path == "" or character == null:
+		return
+	if character.has_method("_play_cast_sound"):
+		character._play_cast_sound(path)
+	elif character.has_method("_play_sfx_at"):
+		character._play_sfx_at(path, character.global_position)
 
 
 ## Process ongoing casting
@@ -410,9 +427,14 @@ func _resolve_step_and_advance(ability: Ability, step: Dictionary, target_pos: V
 			var size_scale = radius / 25.0 if radius > 0 else 1.0
 			character._spawn_effect(impact_path, target_pos, size_scale)
 
-		var sfx_path = step_visuals.get("sound_impact", "")
-		if sfx_path != "" and character.has_method("_play_sfx_at"):
-			character._play_sfx_at(sfx_path, target_pos)
+	# Steps never read the top-level visuals, so an ability-level sound_impact
+	# authored on a multi-step ability would be dead data. It stands in for
+	# the first step's when that step has none of its own.
+	var sfx_path: String = str(step_visuals.get("sound_impact", ""))
+	if sfx_path == "" and _current_step_index == 0:
+		sfx_path = str(ability.visuals.get("sound_impact", ""))
+	if sfx_path != "" and character.has_method("_play_sfx_at"):
+		character._play_sfx_at(sfx_path, target_pos)
 
 	current_cast["step_results"].append(results)
 	step_completed.emit(ability, _current_step_index, results)

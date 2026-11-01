@@ -11,8 +11,27 @@ var _rain_node: CanvasLayer = null
 var _snow_node: CanvasLayer = null
 var _wind_node: CanvasLayer = null
 
+# Two precipitation players so a change crossfades (rain easing into snow)
+# instead of hard-cutting; _weather_audio is whichever one is current.
 var _weather_audio: AudioStreamPlayer = null
+var _weather_audio_b: AudioStreamPlayer = null
 var _wind_audio: AudioStreamPlayer = null
+var _precip_db: float = 0.0     # authored level of the current precipitation
+var _wind_db: float = 0.0
+var _precip_on: bool = false
+var _wind_on: bool = false
+var _fades: Dictionary = {}     # AudioStreamPlayer -> Tween
+
+const WEATHER_BUS := "Ambience"
+const CROSSFADE_SECS := 1.5
+const SILENT_DB := -60.0
+# Under a roof the weather is muffled, not gone. Polled off the primary
+# selection's tile (GridManager.has_roof, a dictionary lookup).
+const INDOOR_DUCK_DB := -10.0
+const DUCK_POLL_SECS := 0.5
+const DUCK_FADE_SECS := 0.6
+var _duck_db: float = 0.0
+var _duck_poll: float = 0.0
 
 # Maps a precipitation type to the looped audio stream + playback volume.
 # heavy_rain / heavy_snow reuse the gentler stream at higher volume.
@@ -31,12 +50,55 @@ var _audio_cache: Dictionary = {}
 
 func _ready() -> void:
 	WeatherManager.weather_changed.connect(_on_weather_changed)
-	_weather_audio = AudioStreamPlayer.new()
-	_weather_audio.bus = "SFX"
-	add_child(_weather_audio)
-	_wind_audio = AudioStreamPlayer.new()
-	_wind_audio.bus = "SFX"
-	add_child(_wind_audio)
+	_weather_audio = _make_player()
+	_weather_audio_b = _make_player()
+	_wind_audio = _make_player()
+
+func _make_player() -> AudioStreamPlayer:
+	var p := AudioStreamPlayer.new()
+	p.bus = WEATHER_BUS
+	p.volume_db = SILENT_DB
+	add_child(p)
+	return p
+
+func _process(delta: float) -> void:
+	_duck_poll -= delta
+	if _duck_poll > 0.0:
+		return
+	_duck_poll = DUCK_POLL_SECS
+	var want: float = INDOOR_DUCK_DB if _party_under_roof() else 0.0
+	if want == _duck_db:
+		return
+	_duck_db = want
+	# (never re-raise a loop that is fading out to stop)
+	if _precip_on and _weather_audio.playing:
+		_fade(_weather_audio, _precip_db + _duck_db, DUCK_FADE_SECS, false)
+	if _wind_on and _wind_audio.playing:
+		_fade(_wind_audio, _wind_db + _duck_db, DUCK_FADE_SECS, false)
+
+# The primary selection stands on a roofed tile (and not on top of the roof).
+func _party_under_roof() -> bool:
+	var game := get_parent()
+	if game == null or not ("primary_selected" in game):
+		return false
+	var pc = game.primary_selected
+	if pc == null or not is_instance_valid(pc) or not (pc is Node2D):
+		return false
+	if "on_roof" in pc and bool(pc.on_roof):
+		return false
+	return GridManager.has_roof(GridManager.world_to_map((pc as Node2D).global_position))
+
+# Tweens `player` to `to_db`; a fade already running on it is replaced, so a
+# quick rain -> clear -> rain can't leave two tweens fighting over one player.
+func _fade(player: AudioStreamPlayer, to_db: float, secs: float, stop_after: bool) -> void:
+	var old: Tween = _fades.get(player)
+	if old != null and old.is_valid():
+		old.kill()
+	var tw := create_tween()
+	tw.tween_property(player, "volume_db", to_db, secs)
+	if stop_after:
+		tw.tween_callback(player.stop)
+	_fades[player] = tw
 
 func setup_for_map(weather_group: String) -> void:
 	_current_group = weather_group
@@ -88,35 +150,40 @@ func _apply_weather(weather: Dictionary) -> void:
 
 
 func _apply_weather_audio(precip: String, wind_speed: float) -> void:
-	# Precipitation loop
+	# Precipitation loop: the same stream just eases to its new level (rain ->
+	# heavy_rain); a different one starts on the idle player and crossfades.
+	var stream: AudioStream = null
 	if PRECIP_LOOPS.has(precip):
 		var entry: Dictionary = PRECIP_LOOPS[precip]
-		var stream := _get_looped_stream(entry["path"])
-		if stream:
-			if _weather_audio.stream != stream:
-				_weather_audio.stop()
-				_weather_audio.stream = stream
-				_weather_audio.volume_db = entry["volume_db"]
-				_weather_audio.play()
-			else:
-				_weather_audio.volume_db = entry["volume_db"]
-				if not _weather_audio.playing:
-					_weather_audio.play()
+		stream = _get_looped_stream(entry["path"])
+		_precip_db = float(entry["volume_db"])
+	_precip_on = stream != null
+	if stream != null and _weather_audio.playing and _weather_audio.stream == stream:
+		_fade(_weather_audio, _precip_db + _duck_db, CROSSFADE_SECS, false)
 	else:
-		_weather_audio.stop()
+		if _weather_audio.playing:
+			_fade(_weather_audio, SILENT_DB, CROSSFADE_SECS, true)
+		if stream != null:
+			var incoming := _weather_audio_b
+			_weather_audio_b = _weather_audio
+			_weather_audio = incoming
+			_weather_audio.stream = stream
+			_weather_audio.volume_db = SILENT_DB
+			_weather_audio.play()
+			_fade(_weather_audio, _precip_db + _duck_db, CROSSFADE_SECS, false)
 
 	# Wind loop, scaled by speed
-	if wind_speed > 20.0:
-		var wind_stream := _get_looped_stream(WIND_LOOP_PATH)
-		if wind_stream:
-			if _wind_audio.stream != wind_stream:
-				_wind_audio.stop()
-				_wind_audio.stream = wind_stream
-			if not _wind_audio.playing:
-				_wind_audio.play()
-			_wind_audio.volume_db = lerp(-18.0, -4.0, clamp((wind_speed - 20.0) / 80.0, 0.0, 1.0))
-	else:
-		_wind_audio.stop()
+	var wind_stream: AudioStream = _get_looped_stream(WIND_LOOP_PATH) if wind_speed > 20.0 else null
+	_wind_on = wind_stream != null
+	if wind_stream != null:
+		_wind_db = lerpf(-18.0, -4.0, clampf((wind_speed - 20.0) / 80.0, 0.0, 1.0))
+		if _wind_audio.stream != wind_stream or not _wind_audio.playing:
+			_wind_audio.stream = wind_stream
+			_wind_audio.volume_db = SILENT_DB
+			_wind_audio.play()
+		_fade(_wind_audio, _wind_db + _duck_db, CROSSFADE_SECS, false)
+	elif _wind_audio.playing:
+		_fade(_wind_audio, SILENT_DB, CROSSFADE_SECS, true)
 
 
 func _get_looped_stream(path: String) -> AudioStream:
@@ -197,8 +264,14 @@ func _clear_wind() -> void:
 func clear_all() -> void:
 	_clear_precipitation()
 	_clear_wind()
-	if _weather_audio:
-		_weather_audio.stop()
-	if _wind_audio:
-		_wind_audio.stop()
+	# A warp is a cut anyway: stop dead rather than fade into the next map.
+	for tw in _fades.values():
+		if tw != null and (tw as Tween).is_valid():
+			(tw as Tween).kill()
+	_fades.clear()
+	for p in [_weather_audio, _weather_audio_b, _wind_audio]:
+		if p:
+			(p as AudioStreamPlayer).stop()
+	_precip_on = false
+	_wind_on = false
 	_current_group = ""

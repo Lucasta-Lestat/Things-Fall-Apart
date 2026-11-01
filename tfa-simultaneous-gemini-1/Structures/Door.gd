@@ -26,6 +26,10 @@ var _swing_tween: Tween = null
 
 const SWING_RAD := 1.92    # ~110 degrees
 const SWING_SECS := 0.22
+# NPCs push through town doors constantly, so the creak sits under the
+# footsteps; the AI hears a door about as far as a loud footstep.
+const DOOR_SFX_DB := -8.0
+const DOOR_LOUDNESS := 0.4
 
 func _ready() -> void:
 	super()
@@ -55,34 +59,41 @@ func interact(option: String) -> void:
 				if not res.ok:
 					show_floating_text("Locked", Color.WHITE_SMOKE)
 					GameLog.add_entry("The door is locked.")
+					SfxManager.play("door_locked", global_position, Vector2(0.95, 1.05), -6.0)
 					return
 				locked = false
 				GameLog.add_entry("%s unlocks the door with the %s." % [res.holder_name, res.key_name])
+				SfxManager.play("door_unlock", global_position, Vector2(0.95, 1.05), -6.0)
 				if game != null and ("unlocked_locks" in game) and lock_key != "":
 					game.unlocked_locks[lock_key] = true
 			open_door()
 		"Close Door":
 			close_door()
 
-func open_door(swing_sign: float = 1.0) -> void:
+## `opener` is who made the noise (null = the party via the context menu):
+## HearingManager skips a listener's own sounds and filters NPC-made ones
+## by faction, so a townsperson shoving a door doesn't alert the guards.
+func open_door(swing_sign: float = 1.0, opener: Node = null) -> void:
 	if is_open:
 		return
 	is_open = true
 	_swing_sign = swing_sign
 	_apply_open_state()
+	SfxManager.play("door_open", global_position, Vector2(0.92, 1.08), DOOR_SFX_DB)
+	HearingManager.emit(global_position, DOOR_LOUDNESS, opener)
 
 # Walked into by a character: an unlocked door simply gives way, swinging AWAY
 # from the pusher. Locked doors stay shut (the collision stops the body as
 # before). Called from ProceduralCharacter's slide-collision scan, so NPCs push
 # through unlocked doors exactly like the party does.
-func push_open(from_world: Vector2) -> void:
+func push_open(from_world: Vector2, pusher: Node = null) -> void:
 	if is_open or locked or PauseManager.is_paused:
 		return
 	var side := signf(leaf.cross(from_world - global_position))
-	open_door(-side if side != 0.0 else 1.0)   # rotate away from the pusher
+	open_door(-side if side != 0.0 else 1.0, pusher)   # rotate away from the pusher
 	GameLog.add_entry("The door swings open.")
 
-func close_door() -> void:
+func close_door(closer: Node = null) -> void:
 	if not is_open:
 		return
 	if _doorway_blocked_by_character():
@@ -92,6 +103,8 @@ func close_door() -> void:
 		return
 	is_open = false
 	_apply_open_state()
+	SfxManager.play("door_close", global_position, Vector2(0.92, 1.08), DOOR_SFX_DB)
+	HearingManager.emit(global_position, DOOR_LOUDNESS, closer)
 
 # Single source of truth for the four coupled systems (physics, A* grid,
 # vision-cone occluder, fire/fluid caches).

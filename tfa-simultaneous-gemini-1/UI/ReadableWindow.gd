@@ -70,6 +70,9 @@ func _ready() -> void:
 	close_btn.custom_minimum_size = Vector2(28, 28)
 	close_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	close_btn.pressed.connect(_on_close_pressed)
+	# This window's buttons play their own sounds (_on_*_pressed), not the
+	# global click.
+	close_btn.set_meta("sfx_silent", true)
 	header.add_child(close_btn)
 
 	vbox.add_child(HSeparator.new())
@@ -102,6 +105,7 @@ func _ready() -> void:
 		prev_btn.text = "‹ Prev"
 		prev_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		prev_btn.pressed.connect(_on_prev_pressed)
+		prev_btn.set_meta("sfx_silent", true)
 		footer.add_child(prev_btn)
 
 		_page_indicator = Label.new()
@@ -114,6 +118,7 @@ func _ready() -> void:
 		next_btn.text = "Next ›"
 		next_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		next_btn.pressed.connect(_on_next_pressed)
+		next_btn.set_meta("sfx_silent", true)
 		footer.add_child(next_btn)
 
 	_render_page()
@@ -122,8 +127,13 @@ func _ready() -> void:
 	if ReadableManager != null:
 		ReadableManager.mark_read(readable_id)
 
+	# A book thumps open; a note, letter or scroll unfolds.
 	if SfxManager != null and SfxManager.has_method("play_ui"):
-		SfxManager.play_ui("ui-navigation")
+		var k: String = kind.to_lower()
+		if k == "book" or k == "tome":
+			SfxManager.play_ui("dialogue_open", Vector2(0.95, 1.05), -4.0)
+		else:
+			SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -4.0)
 
 func _make_kind_stylebox(kind: String) -> StyleBox:
 	var k: String = kind.to_lower()
@@ -161,14 +171,14 @@ func _on_prev_pressed() -> void:
 		_page_index -= 1
 		_render_page()
 		if SfxManager != null and SfxManager.has_method("play_ui"):
-			SfxManager.play_ui("ui-navigation")
+			SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -8.0)
 
 func _on_next_pressed() -> void:
 	if _page_index < _pages.size() - 1:
 		_page_index += 1
 		_render_page()
 		if SfxManager != null and SfxManager.has_method("play_ui"):
-			SfxManager.play_ui("ui-navigation")
+			SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -8.0)
 
 func _on_close_pressed() -> void:
 	if SfxManager != null and SfxManager.has_method("play_ui"):

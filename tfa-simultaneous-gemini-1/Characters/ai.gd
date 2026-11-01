@@ -71,6 +71,11 @@ var current_alertness: Alertness = Alertness.UNAWARE
 var is_at_ease: bool = false
 var last_heard_position: Vector2 = Vector2.ZERO
 var time_since_last_stimulus: float = 999.0
+# Who made the last sound this AI heard, and on which frame. The character's
+# "?" bark reads them to tell a sneaking party member's footstep (which a
+# neutral guard can hear) from some other noise.
+var last_heard_source: Node = null
+var last_heard_frame: int = -1
 var ally_share_timer: float = 0.0
 var _search_look_timer: float = 0.0
 var _search_repath_cd: float = 0.0   # throttle repaths to an unreachable noise
@@ -2037,6 +2042,7 @@ func eat_food(item: Node):
 		CrimeManager.report(character, "take", CrimeManager.take_payload(item))
 		if _party_can_see(character):
 			GameLog.add_entry("%s eats the %s." % [character.Name, item.display_name])
+		SfxManager.play("eat", character.global_position, Vector2(0.9, 1.1), -6.0)
 		_remove_world_item(item)
 
 # Remove a world item we've taken. Not _destroy_item(): that fires `destroyed`,
@@ -2191,6 +2197,10 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 		channel: String = "ambient", payload: Dictionary = {}) -> void:
 	if current_state == AIState.DEAD:
 		return
+	# Set before anything below can change alertness: the bark it triggers
+	# reads these in the same call.
+	last_heard_source = _source if is_instance_valid(_source) and _source is Node else null
+	last_heard_frame = Engine.get_process_frames()
 
 	# Alarm channel: a scream for the guard. Handled BEFORE the AT_EASE
 	# filter — a civilian hearing a murder scream is not filing it away as

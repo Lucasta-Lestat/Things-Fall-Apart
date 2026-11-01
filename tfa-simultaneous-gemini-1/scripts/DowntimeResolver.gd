@@ -221,6 +221,7 @@ func _on_confirmed() -> void:
 		var domain := {"advantages": advantages, "disadvantages": disadvantages}
 		success_tier = int(character.ability_check(ability_check_stat, domain))
 		_pending["check_line"] = _check_line(character, ability_check_stat, success_tier)
+		SfxManager.play_ui("dice_roll", Vector2(0.95, 1.05), -6.0)
 
 	# A critical failure is tier -1, below every result's min_success_tier, so
 	# pick from the ordinary-failure pool. Money still uses the raw tier.
@@ -286,6 +287,7 @@ func _show_fallback_dialogue(character, event_text: String) -> void:
 	var dlg := AcceptDialog.new()
 	dlg.dialog_text = msg
 	dlg.title = "Downtime"
+	SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -6.0)
 	# Either signal fires once per close (close button vs OK) — guard via _pending.
 	dlg.confirmed.connect(_finish_resolution)
 	dlg.canceled.connect(_finish_resolution)

@@ -1,0 +1,30 @@
+{
+	"_comment": "Ambience bed per map id (SfxManager.set_ambience). One of the sfx/amb_*_loop keys; maps not listed have none. Kept out of Maps.json because the Terrain Generation exporter rebuilds the tg_* rows from scratch and its splice refuses keys it doesn't export.",
+	"maps": {
+		"argentiara_deep_shaft": "amb_cave_loop",
+		"argentiara_mine": "amb_cave_loop",
+		"argentiara_square": "amb_town_loop",
+		"bortelinian_catacombs": "amb_cave_loop",
+		"cemetery": "amb_cemetery_loop",
+		"dock_tavern": "amb_tavern_loop",
+		"don_manor": "amb_countryside_loop",
+		"perrow_tavern": "amb_tavern_loop",
+		"river_elf_village": "amb_countryside_loop",
+		"sacred_grove": "amb_countryside_loop",
+		"southrons_mill": "amb_countryside_loop",
+		"tg_castle_demo": "amb_countryside_loop",
+		"tg_castle_keep": "amb_countryside_loop",
+		"tg_cemetery": "amb_cemetery_loop",
+		"tg_export": "amb_countryside_loop",
+		"tg_hillside_cavern": "amb_cave_loop",
+		"tg_hillside_harbor": "amb_town_loop",
+		"tg_hillside_lower": "amb_town_loop",
+		"tg_hillside_middle": "amb_town_loop",
+		"tg_hillside_ossuary": "amb_cave_loop",
+		"tg_hillside_upper": "amb_town_loop",
+		"tg_town_square": "amb_town_loop",
+		"tg_villa_demo": "amb_countryside_loop",
+		"town_square": "amb_town_loop",
+		"venonan_chapel": "amb_countryside_loop"
+	}
+}

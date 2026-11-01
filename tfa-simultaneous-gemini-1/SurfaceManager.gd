@@ -432,8 +432,9 @@ func place_surface_in_area(surface_id: String, center_world: Vector2, radius: fl
 		Globals.show_floating_text("No effect", center_world, self, Color.GRAY, 0, Globals.NOTICE_FONT_SIZE)
 	return placed
 
-func try_ignite(tile_pos: Vector2i) -> void:
-	"""Attempt to ignite a single tile. Checks fluids first (flood-fill), then floors."""
+func try_ignite(tile_pos: Vector2i, audible: bool = true) -> void:
+	"""Attempt to ignite a single tile. Checks fluids first (flood-fill), then floors.
+	`audible` false = fire spreading by fire damage (no ignite whoosh; cell fire only)."""
 	# ice thaw stays on the tile grid even under cell fire (ice is tile-based)
 	if surface_grid.has(tile_pos) and surface_grid[tile_pos]["surface_id"] == "ice":
 		thaw_ice_at(tile_pos)
@@ -443,7 +444,7 @@ func try_ignite(tile_pos: Vector2i) -> void:
 		# heavy fuel and water a firebreak there (CellFire._fuel reads the cell
 		# fluid sim, or the tile FluidManager on legacy maps), so a slick burns
 		# by spreading cell to cell rather than by flood-ignition.
-		cell_fire.ignite_at(GridManager.map_to_world(tile_pos))
+		cell_fire.ignite_at(GridManager.map_to_world(tile_pos), audible)
 		return
 	if surface_grid.has(tile_pos):
 		return  # Already has a surface

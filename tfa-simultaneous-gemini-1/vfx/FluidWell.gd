@@ -81,11 +81,19 @@ var _dists: PackedFloat32Array = PackedFloat32Array()
 var _deposited: float = 0.0
 var _budget: float = 0.0
 var _visual: Node2D = null
+var _gush_loop: int = 0
+var _gush_paused: bool = false
 
 
 func _ready() -> void:
 	# Emit on the first unpaused frame rather than EMIT_INTERVAL seconds in.
 	_emit_accum = EMIT_INTERVAL
+
+
+func _exit_tree() -> void:
+	if _gush_loop != 0:
+		SfxManager.stop_loop(_gush_loop, 0.5)
+		_gush_loop = 0
 
 
 func _process(delta: float) -> void:
@@ -96,6 +104,10 @@ func _process(delta: float) -> void:
 	# seconds while the tactical planner has the world stopped -- and the fluid
 	# sim it feeds is inside that same block, so it would be depositing into a
 	# simulation that is not flowing.
+	# SfxManager loops play through the pause, so the gush is held with the well.
+	if PauseManager.is_paused != _gush_paused:
+		_gush_paused = PauseManager.is_paused
+		SfxManager.set_loop_paused(_gush_loop, _gush_paused)
 	if PauseManager.is_paused:
 		return
 
@@ -122,6 +134,8 @@ func _build() -> void:
 	_built = true
 
 	_spawn_visual()
+	# Positioned by now (see above). Stops in _exit_tree when the gush ends.
+	_gush_loop = SfxManager.start_loop("oil_gush_loop", global_position, -6.0, "SFX", null, self)
 
 	var scene_root: Node = get_tree().current_scene
 	if scene_root != null:

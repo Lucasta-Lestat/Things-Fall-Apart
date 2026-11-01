@@ -56,6 +56,13 @@ func _update_indicator() -> void:
 		_indicator.text = BANNER_TALKING if talking else BANNER_PLANNING
 
 func _input(event: InputEvent) -> void:
+	# A space typed in a text field (the carta's name, the combat-test filter)
+	# must not toggle the pause: Node._input runs BEFORE Control gui_input, so
+	# the focused LineEdit can't consume it first (same guard as Game._input).
+	if event is InputEventKey:
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit:
+			return
 	if event.is_action_pressed("pause"):
 		toggle_pause()
 
@@ -65,7 +72,9 @@ func toggle_pause() -> void:
 	else:
 		pause()
 
-func pause() -> void:
+## `play_sound` is false when the pause rides on something with its own sound
+## (a conversation closing into the fight it started).
+func pause(play_sound: bool = true) -> void:
 	if is_paused:
 		return
 	print("game paused")
@@ -76,6 +85,8 @@ func pause() -> void:
 	if TimeManager:
 		TimeManager.pause_time()
 	_update_indicator()
+	if play_sound:
+		SfxManager.play_ui("ui_pause", Vector2.ONE, -6.0)
 	
 	emit_signal("game_paused")
 
@@ -89,5 +100,6 @@ func unpause() -> void:
 	if TimeManager:
 		TimeManager.resume_time()
 	_update_indicator()
+	SfxManager.play_ui("ui_unpause", Vector2.ONE, -6.0)
 	
 	emit_signal("game_unpaused")

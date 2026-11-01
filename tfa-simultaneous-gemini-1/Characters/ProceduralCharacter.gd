@@ -57,6 +57,9 @@ func rate_choice(preferred: Array, disliked: Array) -> int:
 		score -= int(traits.get(t, 0))
 	return score
 
+## Smallest favour change (after clamping) that plays the approve/disapprove cue.
+const FAVOUR_SFX_MIN_DELTA := 2
+
 func apply_favorability_delta(delta: int, reason: String = "") -> void:
 	if delta == 0:
 		return
@@ -69,6 +72,13 @@ func apply_favorability_delta(delta: int, reason: String = "") -> void:
 	if applied == 0 or is_protagonist:
 		return
 	GameLog.add_entry("%s %s (%+d favour, now %d)." % [Name, "approves" if applied > 0 else "disapproves", applied, favorability])
+	# Companions only, and not for a ±1 nudge. One dialogue choice moves every
+	# companion's favour at once, so the throttle makes that a single cue.
+	if is_party_member() and absi(applied) >= FAVOUR_SFX_MIN_DELTA:
+		if applied > 0:
+			SfxManager.play_ui_throttled("favour_up", 0.5, "charm_chime", Vector2(0.97, 1.03), -8.0)
+		else:
+			SfxManager.play_ui_throttled("favour_down", 0.5, "favor_down", Vector2(0.97, 1.03), -6.0)
 	if is_inside_tree() and get_parent():
 		# While paused only PROCESS_MODE_ALWAYS nodes tween (see notify()).
 		var host: Node = self if PauseManager.is_paused else get_parent()
@@ -147,9 +157,20 @@ var MODIFY_DURATION_BY_TRAIT: Dictionary = {}
 
 ## Preloaded visual effect scenes
 var _effect_cache: Dictionary = {}
-var _audio_cache: Dictionary = {}   # path -> AudioStream
 var _active_condition_vfx: Dictionary = {}  # condition_id -> Node (VFX instance attached to character)
-var _active_condition_sfx: Dictionary = {}  # condition_id -> AudioStreamPlayer2D
+var _active_condition_sfx: Dictionary = {}  # condition_id -> int SfxManager handle (loop or one-shot)
+## While true, conditions applied to this character play no sound. Game sets it
+## around the save / map-restore re-apply, which would otherwise sting every
+## restored condition on load.
+var suppress_condition_sfx: bool = false
+## The windup sound of the cast in progress (SfxManager handle), so an
+## interrupted cast can cut it off instead of booming on after the fizzle.
+var _cast_sfx_handle: int = 0
+# What the last take_damage did, for hit_sound_key(): raw damage, how much of it
+# armour / DR soaked up, and whether an off-hand shield did at least half of that.
+var _last_hit_raw: float = 0.0
+var _last_hit_absorbed: float = 0.0
+var _last_hit_by_shield: bool = false
 
 #Shaking
 # --- NEW: Shake & Push Variables ---
@@ -2169,7 +2190,7 @@ func _on_outcry_state_changed(active: bool, frac: float) -> void:
 	_alertness_flash_tween.tween_property(_alertness_indicator, "modulate:a", 1.0, period)
 	_keep_alertness_indicator_upright()
 
-func _on_alertness_changed(_old: int, new_alertness: int) -> void:
+func _on_alertness_changed(old_alertness: int, new_alertness: int) -> void:
 	if not _alertness_indicator:
 		return
 	# Party members don't use the AI alertness UI — only AI-driven NPCs get
@@ -2193,6 +2214,20 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 	if _alertness_flash_tween and _alertness_flash_tween.is_valid():
 		_alertness_flash_tween.kill()
 		_alertness_flash_tween = null
+
+	# A bark only on the way INTO "!" or "?". A new target while already
+	# HOSTILE and the outcry fuse handing the glyph back both replay (n, n),
+	# and stay quiet.
+	if old_alertness != new_alertness and new_alertness in [4, 3] and is_alive() \
+			and _alert_concerns_party():
+		var alert_key: String = "alert_spotted" if new_alertness == 4 else "alert_search"
+		# Per NPC, and once per group: a gunshot or an AoE tips a whole camp
+		# over in one call, and that is one bark, not one each.
+		var own_id: String = "%s_%d" % [alert_key, get_instance_id()]
+		if not SfxManager.is_throttled(own_id) \
+				and SfxManager.throttle_ok("alert_any_" + alert_key, ALERT_GROUP_SFX_COOLDOWN):
+			SfxManager.play_throttled(own_id, ALERT_SFX_COOLDOWN,
+				alert_key, global_position, Vector2(0.95, 1.05), -4.0)
 
 	# AI.Alertness enum order: AT_EASE=0, UNAWARE=1, SUSPICIOUS=2, SEARCHING=3, HOSTILE=4.
 	match new_alertness:
@@ -2227,6 +2262,33 @@ func _on_alertness_changed(_old: int, new_alertness: int) -> void:
 			_alertness_indicator.visible = false
 			_alertness_indicator.modulate.a = 1.0
 	_keep_alertness_indicator_upright()
+
+## Seconds between one NPC's "!" (or "?") barks.
+const ALERT_SFX_COOLDOWN := 3.0
+## Seconds between any two barks of the same kind, whoever makes them.
+const ALERT_GROUP_SFX_COOLDOWN := 0.4
+
+## Whether this NPC's "!" / "?" is about the party: its faction is hostile to
+## the party's, its AI is after a party member anyway (a guard on a manhunt,
+## say), or the sound that just raised it was a party member's (a neutral
+## guard hearing a sneaker: the "?" is the stealth warning).
+func _alert_concerns_party() -> bool:
+	if is_hostile_to_party():
+		return true
+	var ai_node: Node = get_node_or_null("AI")
+	if ai_node == null:
+		return false
+	for field in ["current_target", "manhunt_target"]:
+		var who: Variant = ai_node.get(field)
+		if is_instance_valid(who) and who is ProceduralCharacter and who.is_party_member():
+			return true
+	# Only a sound heard this frame: an older one didn't cause this change.
+	var heard_frame: Variant = ai_node.get("last_heard_frame")
+	if heard_frame is int and heard_frame == Engine.get_process_frames():
+		var heard: Variant = ai_node.get("last_heard_source")
+		if is_instance_valid(heard) and heard is ProceduralCharacter and heard.is_party_member():
+			return true
+	return false
 
 ## Counter-rotates the alertness glyph so a '?' never reads upside down, and
 ## keeps it screen-above the head whatever way the character faces. Runs
@@ -2394,8 +2456,40 @@ func _announce_condition_ran_out(instance: ConditionInstance) -> void:
 	var cond_name: String = instance.get_display_name()
 	notify("%s ends" % cond_name, Color(0.75, 0.85, 1.0), "%s is no longer %s." % [Name, cond_name])
 
-func _on_condition_stacks_changed(_instance: ConditionInstance, _old_stacks: int, _new_stacks: int) -> void:
+func _on_condition_stacks_changed(instance: ConditionInstance, old_stacks: int, new_stacks: int) -> void:
 	_refresh_condition_display()
+	# A wound deepening (a second cut, a failed save) is quieter than the
+	# condition's own apply sting, which only plays once.
+	if new_stacks > old_stacks and not suppress_condition_sfx and is_alive():
+		_play_dot_sound(instance, -10.0)
+
+## Damage-over-time sounds, by the damage a condition ticks. Bleeding ticks
+## "true" damage, so it is matched by id instead.
+const DOT_SFX_BY_DAMAGE_TYPE := {"poison": "poison_tick", "fire": "burning_flesh", "cold": "ice_crack"}
+## Shared by the stack and tick sounds: Burning stacking up while it ticks
+## (standing in a fire) would otherwise play from both.
+const DOT_SFX_COOLDOWN := 1.5
+
+func _dot_sound_key(instance: ConditionInstance) -> String:
+	if instance == null or instance.condition == null:
+		return ""
+	if instance.condition.id == "bleeding":
+		return "bleed_drip"
+	for effect in instance.condition.triggered_effects:
+		if effect is Dictionary and str(effect.get("type", "")) == "damage":
+			var key: String = str(DOT_SFX_BY_DAMAGE_TYPE.get(str(effect.get("damage_type", "")), ""))
+			if key != "":
+				return key
+	return ""
+
+## One DoT sound on this character, at most every DOT_SFX_COOLDOWN s per
+## sound (a new stack or a tick alike), so stacked conditions don't drum.
+func _play_dot_sound(instance: ConditionInstance, volume_db: float) -> void:
+	var key: String = _dot_sound_key(instance)
+	if key == "":
+		return
+	SfxManager.play_throttled("dot_%s_%d" % [key, get_instance_id()], DOT_SFX_COOLDOWN,
+		key, global_position, Vector2(0.92, 1.08), volume_db)
 
 
 func _change_weather(effect: Dictionary, _targets: Array, _ability, _target_position: Vector2) -> Dictionary:
@@ -2585,6 +2679,9 @@ func _on_stats_recalculated() -> void:
 ## own tick would otherwise re-electrify the tile, which re-applies Shocked,
 ## for as long as the character stands there.
 var _condition_tick_damage: bool = false
+## The heal-side twin: set while a condition's heal tick (Regenerating) runs,
+## so heal() doesn't chime over the condition's own loop.
+var _condition_tick_heal: bool = false
 
 ## Damage types that bring their own condition with every damaging hit
 ## (slashing and piercing bleed; see handle_damage_effect_based_on_type).
@@ -2651,15 +2748,20 @@ func _on_triggered_effect_fired(instance: ConditionInstance, effect: Dictionary,
 		var damage_dict = {damage_type: damage_amount}
 		_condition_tick_damage = true
 		_tick_condition_name = instance.get_display_name()
-		take_damage(damage_dict, global_position, instance.source, hit_limb)
+		var tick_dealt: int = take_damage(damage_dict, global_position, instance.source, hit_limb)
 		_condition_tick_damage = false
 		_tick_condition_name = ""
+		# A quiet tick by what is hurting; a lethal one has the death sound.
+		if tick_dealt > 0 and is_alive():
+			_play_dot_sound(instance, -12.0)
 
 	if result.has("heal"):
 		# Heals now go to the single HP pool. `target_limb` no longer affects
 		# the amount healed (no per-limb HP to top off).
 		var heal_amount = int(result["heal"])
+		_condition_tick_heal = true
 		heal(heal_amount)
+		_condition_tick_heal = false
 
 	if result.has("stress"):
 		gain_stress(int(result["stress"]))
@@ -2716,7 +2818,12 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 					# null on immunity or a passed save), and only name who the
 					# party can see: an unseen carrier is left out, an unseen
 					# catcher says nothing.
-					if their_cm.apply_condition("sickened", self, 1) and c._announces_to_party():
+					var caught = their_cm.apply_condition("sickened", self, 1)
+					if caught:
+						# The carrier's cough is what passes it on.
+						SfxManager.play_throttled("cough_%d" % get_instance_id(), 3.0, "disease_cough",
+							global_position, Vector2(0.92, 1.08), -6.0)
+					if caught and c._announces_to_party():
 						if _announces_to_party():
 							GameLog.add_entry(Name + "'s sickness spreads to " + c.Name)
 						else:
@@ -2781,6 +2888,9 @@ func _handle_vomit(_instance: ConditionInstance, data: Dictionary) -> void:
 
 	if game.fluid_manager:
 		game.fluid_manager.register_fluid(my_tile, fluid_type, amount)
+		if is_alive():
+			SfxManager.play_throttled("retch_%d" % get_instance_id(), 2.0, "nausea_retch",
+				global_position, Vector2(0.92, 1.08), -6.0)
 		# Unseen, the puddle is the only tell (as a hidden bleeder's blood).
 		if _announces_to_party():
 			GameLog.add_entry(Name + " vomits " + fluid_type + "!")
@@ -5683,7 +5793,9 @@ func _update_movement(delta: float) -> void:
 			for ci in get_slide_collision_count():
 				var pusher_col := get_slide_collision(ci).get_collider()
 				if pusher_col is Door:
-					(pusher_col as Door).push_open(global_position)
+					# The pusher is the door's noise source, so HearingManager
+					# can skip it and faction-filter a townsperson's shove.
+					(pusher_col as Door).push_open(global_position, self)
 			# Roof support check: a roof-walker carried off the footprint
 			# (deflection / channel granularity at the true edge) falls.
 			if on_roof:
@@ -5853,9 +5965,13 @@ func footstep_noise() -> Dictionary:
 	var floor_id := ""
 	if "floors" in GridManager:
 		floor_id = String(GridManager.floors.get(tile, ""))
+	# On a roof the tile underneath is the room (or street) below, not what
+	# the feet touch: every roof treads like timber.
+	if on_roof:
+		floor_id = "floor_wood"
 	# Standing in a fluid (e.g. water) overrides the underlying floor for
 	# footstep purposes.
-	if "fluids" in GridManager:
+	elif "fluids" in GridManager:
 		var fluid_id := String(GridManager.fluids.get(tile, ""))
 		if fluid_id != "":
 			floor_id = "shallow_water"
@@ -5889,7 +6005,7 @@ func footstep_noise() -> Dictionary:
 	var sneak_mult: float = SNEAK_NOISE_MULT if is_sneaking() else 1.0
 	return {
 		"floor_id": floor_id,
-		"floor_name": str(floor_data.get("name", "ground")) if not floor_data.is_empty() else "ground",
+		"floor_name": "Roof" if on_roof else (str(floor_data.get("name", "ground")) if not floor_data.is_empty() else "ground"),
 		"floor_base": base_sound,
 		"wading": floor_id == "shallow_water",
 		"boots": wears_boots,
@@ -5939,6 +6055,8 @@ func _begin_ice_slide(direction: Vector2) -> void:
 		_ice_slide_direction = Vector2(0, sign(direction.y))
 	_ice_slide_speed = move_speed * 1.3  # Slightly faster on ice
 	is_ice_sliding = true
+	SfxManager.play_throttled("ice_slip_%d" % get_instance_id(), 1.0, "ice_crack",
+		global_position, Vector2(0.95, 1.1), -10.0)
 	# Cancel existing pathfinding — player has lost control
 	_nav_waypoints.clear()
 	_nav_index = 0
@@ -5994,6 +6112,8 @@ func _end_ice_slide() -> void:
 ## characters off the map at thousands of pixels per frame. Tuned for
 ## visible-but-bounded knockback distance under knockback_friction=150.
 const MAX_KNOCKBACK_SPEED: float = 800.0
+## Knockback slower than this stops at a wall without the slam sound.
+const WALL_SLAM_SFX_MIN_SPEED: float = 150.0
 
 func apply_external_force(force: Vector2, duration: float = 0.1) -> void:
 	"""Canonical entry point for non-melee force application (force fields,
@@ -6054,6 +6174,11 @@ func _update_knockback(delta: float) -> void:
 			knockback_velocity = Vector2.ZERO
 			return
 		if not _forced_step_ok(global_position, global_position + kb_step):
+			# Slammed into the wall. A force field pinning someone there
+			# re-stops them every frame at a crawl, below the threshold.
+			if knockback_velocity.length() >= WALL_SLAM_SFX_MIN_SPEED:
+				SfxManager.play_throttled("wall_slam_%d" % get_instance_id(), 0.6, "armor-impact",
+					global_position, Vector2(0.85, 1.0), -4.0)
 			knockback_active = false
 			knockback_velocity = Vector2.ZERO
 			return
@@ -6190,6 +6315,7 @@ func _end_jump() -> void:
 	var takeoff := _jump_takeoff_elev
 	on_roof = _jump_target_on_roof
 	_refresh_elevation()
+	_play_landing()
 	# a controlled big drop still lands hard
 	_apply_fall_damage(takeoff - _jump_target_surface)
 
@@ -6222,8 +6348,16 @@ func _end_fall() -> void:
 	_fall_active = false
 	on_roof = false
 	_refresh_elevation()
+	_play_landing()
 	_apply_fall_damage(_fall_from_elev - _fall_to_elev)
 	emit_signal("character_reached_target")   # release any driving queue/nav
+
+
+## A jump or fall touching down: a thud the AI hears too (a little over a
+## footstep's 0.3), so a rooftop runner is not silent where they land.
+func _play_landing() -> void:
+	SfxManager.play("land_thud", global_position, Vector2(0.9, 1.1), -6.0)
+	HearingManager.emit(global_position, 0.4, self)
 
 
 # The forced-mover (ice/knockback/dash, knockback preview) step gate:
@@ -6293,6 +6427,9 @@ func _apply_fall_damage(drop: float) -> void:
 	var dmg := fall_damage_for(drop)
 	if dmg > 0:
 		var dealt := take_damage({"bludgeoning": dmg}, global_position, null, LimbType.LEFT_LEG)
+		# Over the landing thud: this one hurt.
+		if dealt > 0:
+			SfxManager.play("stun_impact", global_position, Vector2(0.9, 1.0), -4.0)
 		# Name the source next to the bare damage number. NPCs the party
 		# doesn't see stay quiet.
 		if dealt > 0 and _announces_to_party():
@@ -6672,8 +6809,7 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 			damage_type = current_main_hand_item.primary_damage_type
 		else:
 			damage_type = unarmed_strike_damage_type
-		if damage_type == "slashing":
-			SfxManager.play("slash", position)
+		_play_swing_sound(current_main_hand_item, str(damage_type))
 		# Swing makes noise even on miss — broadcast for AI hearing. Weapon
 		# DISCHARGES carry: a gunshot is a map-wide event, not a knife swish
 		# (1.9 > LOUD_SOUND_THRESHOLD 1.2, so it also wakes AT_EASE listeners;
@@ -6703,14 +6839,24 @@ func attack(Ability:String= "Main", aim_point = null, aim_node: Node2D = null) -
 			damage_type = current_off_hand_item.primary_damage_type
 		else:
 			damage_type = unarmed_strike_damage_type
-		if damage_type == "slashing":
-			SfxManager.play("slash", position)
+		_play_swing_sound(current_off_hand_item, str(damage_type))
 		HearingManager.emit(global_position, 0.5, self)
 		set_attack_aim(aim_point, aim_node)
 		attack_animator.start_attack(damage_type, Vector2.UP, "Off", current_off_hand_item)
 		_rig_play_attack(damage_type, "Off")
 		if damage_type in ["ranged_arrow", "ranged_bullet"]:
 			_fire_ranged_async(current_off_hand_item)
+
+## The whoosh of a melee swing, by what is swung: a blade "slash", a club or
+## hammer a heavy whoosh, a dagger or spear a thrust; an empty hand (fists,
+## claws, bites) a light one. Ranged weapons sound on release instead.
+const SWING_SFX_BY_DAMAGE_TYPE := {"slashing": "slash", "bludgeoning": "swing_heavy", "piercing": "swing_thrust"}
+
+func _play_swing_sound(item, damage_type: String) -> void:
+	if not SWING_SFX_BY_DAMAGE_TYPE.has(damage_type):
+		return
+	var key: String = str(SWING_SFX_BY_DAMAGE_TYPE[damage_type]) if item is WeaponShape else "swing_light"
+	SfxManager.play(key, global_position)
 
 func _fire_ranged_async(weapon: WeaponShape) -> void:
 	"""Wait for the release frame, then play SFX and ask Game.gd to spawn a projectile."""
@@ -6735,6 +6881,10 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 		SfxManager.play("gun", global_position)
 	else:
 		SfxManager.play("bow_release", global_position)
+	# A pistol or crossbow is reloaded after every shot (on the game clock, so
+	# not through a pause); a bow just nocks the next arrow.
+	if weapon.primary_damage_type == "ranged_bullet" or weapon.id.contains("crossbow"):
+		get_tree().create_timer(RELOAD_SFX_DELAY, false).timeout.connect(_play_reload_sound)
 	# Ask Game.gd to spawn and manage the projectile
 	var game = get_tree().current_scene
 	if game and game.has_method("spawn_projectile"):
@@ -6749,6 +6899,14 @@ func _fire_ranged_async(weapon: WeaponShape) -> void:
 			if to_aim.length() > 1.0 and absf(fire_direction.angle_to(to_aim.normalized())) < 0.35:
 				fire_direction = to_aim.normalized()
 		game.spawn_projectile(self, fire_direction, weapon)
+
+const RELOAD_SFX_DELAY := 0.35
+
+## Fired by a timer after the shot; a shooter freed meanwhile takes the
+## connection with it, and a dead one doesn't reload.
+func _play_reload_sound() -> void:
+	if is_inside_tree() and is_alive():
+		SfxManager.play("reload", global_position, Vector2(0.95, 1.05), -6.0)
 
 func _find_ammo_in_inventory(ammo_id: String) -> int:
 	"""Find the first inventory item matching the given ammo id. Returns index or -1."""
@@ -6770,6 +6928,10 @@ func _has_ammo_for(item) -> bool:
 	return false
 
 func _announce_out_of_ammo(weapon: WeaponShape) -> void:
+	# Heard from anyone (an NPC archer out of arrows clicks too); throttled
+	# because the AI retries the attack.
+	SfxManager.play_throttled("dry_fire_%d" % get_instance_id(), 1.5, "dry_fire_click",
+		global_position, Vector2(0.95, 1.05), -6.0)
 	var ammo_name: String = weapon.ammo_type.replace("_", " ") + "s"
 	_announce_attack_refusal("Out of %s" % ammo_name,
 		"%s can't fire the %s: no %s left." % [Name, weapon.display_name, ammo_name])
@@ -7017,10 +7179,21 @@ func equip_equipment(equipment_data: Dictionary) -> EquipmentShape:
 		equipment.set_meta("item_data", equipment_data)
 		_rig_show_wearable(slot, equipment_data, equipment)
 		_apply_worn_conditions(slot, equipment_data)
+		_play_armor_rustle()
 	_refresh_limb_armor()
 	_refresh_worn_gear_effects()
 
 	return equipment
+
+## Armour going on or coming off, for a party member changing gear in play
+## only: a spawn dresses the body before it joins party_chars, and the save /
+## warp re-dress runs under suppress_condition_sfx. Throttled so a swap (the
+## old piece off, the new one on) is one rustle.
+func _play_armor_rustle() -> void:
+	if suppress_condition_sfx or not is_alive() or not is_inside_tree() or not is_party_member():
+		return
+	SfxManager.play_throttled("armor_rustle_%d" % get_instance_id(), 0.4, "armor_rustle",
+		global_position, Vector2(0.95, 1.05), -8.0)
 
 
 # ---- while-worn armor conditions (crown's Inspired, cloak's Invisible...) ----
@@ -7165,32 +7338,41 @@ func _recheck_worn_conditions() -> void:
 
 func unequip_slot(slot: EquipmentShape.EquipmentSlot) -> void:
 	"""Remove equipment from a slot"""
+	# Only a piece that was on makes a sound (a re-dress empties every slot).
+	var took_off: bool = false
 	match slot:
 		EquipmentShape.EquipmentSlot.HEAD:
 			if head_equipment:
 				head_slot.remove_child(head_equipment)
 				head_equipment.queue_free()
 				head_equipment = null
+				took_off = true
 		EquipmentShape.EquipmentSlot.TORSO:
 			if torso_equipment:
 				torso_slot.remove_child(torso_equipment)
 				torso_equipment.queue_free()
 				torso_equipment = null
+				took_off = true
 		EquipmentShape.EquipmentSlot.BACK:
 			if back_equipment:
 				back_slot.remove_child(back_equipment)
 				back_equipment.queue_free()
 				back_equipment = null
+				took_off = true
 		EquipmentShape.EquipmentSlot.LEGS:
 			if legs_equipment:
 				legs_slot.remove_child(legs_equipment)
 				legs_equipment.queue_free()
 				legs_equipment = null
+				took_off = true
 		EquipmentShape.EquipmentSlot.FEET:
 			if feet_equipment:
 				feet_slot.remove_child(feet_equipment)
 				feet_equipment.queue_free()
 				feet_equipment = null
+				took_off = true
+	if took_off:
+		_play_armor_rustle()
 	_rig_hide_wearable(slot)
 	_remove_worn_conditions(slot)
 	_refresh_limb_armor()
@@ -7676,6 +7858,12 @@ func heal(amount: int) -> int:
 	var healed: int = current_health - before
 	if healed > 0:
 		health_changed.emit(current_health, max_health, self)
+		# Not for a condition's heal tick: Regenerating's regen_loop already
+		# voices the heal over time, and a chime every tick would ring over it.
+		# Throttled for bursts (Drain on several targets, stacked potions).
+		if is_inside_tree() and not _condition_tick_heal:
+			SfxManager.play_throttled("heal_%d" % get_instance_id(), 2.0, "heal_chime",
+				global_position, Vector2(0.95, 1.05), -8.0)
 		# The one place heal numbers are shown (potions, Drain, Regenerating,
 		# downtime all come through here). NPCs the party doesn't see stay quiet.
 		if is_inside_tree() and get_parent() and _announces_to_party():
@@ -7768,6 +7956,11 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 
 	`attacker` is optional but should be passed for any character-sourced damage
 	so the witness/wake-from-AT_EASE pipeline can attribute the attack."""
+	# hit_sound_key() reads these right after the call; a hit on a corpse
+	# must not report the previous hit's armour.
+	_last_hit_raw = 0.0
+	_last_hit_absorbed = 0.0
+	_last_hit_by_shield = false
 	# The dead take no further damage. Lingering DoTs (bleed from the killing
 	# attack) kept ticking through the child ConditionManager and spawned
 	# floating numbers over tombstones for ~30s after death; stray AoEs and
@@ -7784,8 +7977,13 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	# (Legionnaire's electric -1), so a tick deals what its summary says
 	# (ConditionInstance.get_dot_text) whatever is worn. Condition DR and Rage
 	# below are not armour and still apply.
+	# The off-hand shield's part of armor_dr (get_limb_armor adds it on top of
+	# worn armour), so the hit sound can tell a shield block from plate.
+	var shield_dr: Dictionary = _off_hand_shield_dr(hit_limb)
 	if _condition_tick_damage:
 		armor_dr = {}
+		shield_dr = {}
+	var shield_absorbed: float = 0.0
 	var total_damage: int = 0
 	var physical_damage_taken: float = 0.0
 	var raw_total: float = 0.0
@@ -7828,13 +8026,25 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 			char_dr_used = min(character_dr_remaining, after_armor)
 			character_dr_remaining -= char_dr_used
 		if raw_val > 0:
-			absorbed_total += maxf(0.0, float(raw_val) - float(after_armor)) + char_dr_used
+			var armor_absorbed: float = maxf(0.0, float(raw_val) - float(after_armor))
+			absorbed_total += armor_absorbed + char_dr_used
+			# DR is one flat sum, so the shield takes its proportional share
+			# of what the armour stopped.
+			var type_dr: float = float(dr_val)
+			var type_shield_dr: float = float(shield_dr.get(damage_type, 0))
+			if type_dr > 0.0 and type_shield_dr > 0.0:
+				shield_absorbed += armor_absorbed * minf(1.0, type_shield_dr / type_dr)
 		var dealt: int = int(after_armor - char_dr_used)
 		if dealt > 0:
 			handle_damage_effect_based_on_type(dealt, damage_type, hit_limb, location, condition_source)
 		total_damage += dealt
 		if damage_type in ["slashing", "bludgeoning", "piercing"]:
 			physical_damage_taken += dealt
+	_last_hit_raw = raw_total
+	_last_hit_absorbed = absorbed_total
+	# At least half: plate under an iron shield splits a blow evenly, and the
+	# shield is what the weapon meets first.
+	_last_hit_by_shield = shield_absorbed > 0.0 and shield_absorbed * 2.0 >= absorbed_total
 
 	# A real hit that condition DR or Rage soaked up entirely (armour alone
 	# can't: the chip floor) gets no damage number, so say so; otherwise it
@@ -7898,12 +8108,57 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 	# entirely don't; a lethal hit goes through the death path.
 	var dot_tick: bool = _condition_tick_damage
 	if total_damage > 0 and is_alive() and not dot_tick:
+		_play_pain_sound()
 		# Named only when the party can see the attacker; a hidden archer stays hidden.
 		var hit_by: String = "took a hit"
 		if is_instance_valid(attacker) and attacker is ProceduralCharacter and attacker != self and attacker._announces_to_party():
 			hit_by = "hit by %s" % attacker.Name
 		interrupt_cast(hit_by)
 	return total_damage
+
+
+## The impact sound for the hit take_damage just resolved on this character:
+## when armour / DR stopped at least half the raw damage, "shield_brace" if an
+## off-hand shield did at least half of that stopping, else `armor_key`;
+## otherwise `flesh_key`. Call it right after take_damage. The chip floor means armour
+## almost never stops a hit outright, so "did it get through" can't decide this.
+func hit_sound_key(flesh_key: String, armor_key: String = "armor-impact") -> String:
+	if _last_hit_raw <= 0.0 or _last_hit_absorbed < _last_hit_raw * 0.5:
+		return flesh_key
+	return "shield_brace" if _last_hit_by_shield else armor_key
+
+
+## A grunt for a hit that hurt but didn't kill (a lethal one screams in
+## _on_character_died; a DoT tick has its own quiet sound). A voice for
+## humanoids, a yelp for beasts, the same yelp pitched down for monsters;
+## undead, plants and the rest take it in silence. At most one per
+## PAIN_SFX_COOLDOWN s per character, so a flurry of hits is one grunt.
+const PAIN_SFX_COOLDOWN := 0.9
+
+## The pain_beast pool is three recordings of particular animals (1 dog snarl,
+## 2 rat scream, 3 bear growl) and beast_death two yelps (1 a wild dog's cry,
+## 2 a heavier squeal-grunt), so a random pick let a rat growl like a bear.
+## By race_id; "" = no grunt (there's no horse recording). Races not listed
+## keep the whole pool.
+const BEAST_PAIN_SFX := {"wolf": "pain_beast_1", "rat": "pain_beast_2",
+	"bear": "pain_beast_3", "troll": "pain_beast_3", "horse": ""}
+const BEAST_DEATH_SFX := {"wolf": "beast_death_1", "rat": "rat_squeak_3",
+	"bear": "beast_death_2", "horse": "beast_death_2"}
+
+func _play_pain_sound() -> void:
+	var key: String = ""
+	var pitch := Vector2(0.92, 1.08)
+	if creature_type.begins_with("Humanoid"):
+		key = "pain_female" if gender == "female" else "pain_male"
+	elif creature_type.begins_with("Beast"):
+		key = str(BEAST_PAIN_SFX.get(race_id, "pain_beast"))
+	elif creature_type.begins_with("Monstrosity") or creature_type.begins_with("Aberration"):
+		key = str(BEAST_PAIN_SFX.get(race_id, "pain_beast"))
+		pitch = Vector2(0.7, 0.8)
+	if key == "":
+		return
+	SfxManager.play_throttled("pain_%d" % get_instance_id(), PAIN_SFX_COOLDOWN, key,
+		global_position, pitch, -8.0)
 
 
 func damage_limb(limb_type: LimbType, damage: Dictionary, location: Vector2, attacker = null) -> int:
@@ -8056,6 +8311,7 @@ func dash(target_pos: Vector2) -> void:
 	if distance > max_distance:
 		clamped_target = global_position + to_target / distance * max_distance
 	dash_cooldown_timer = dash_cooldown
+	SfxManager.play("haste_wind", global_position, Vector2(0.95, 1.1), -8.0)
 	dash_to(clamped_target, dash_speed)
 
 # ===== EVENTS =====
@@ -8079,7 +8335,8 @@ func _on_character_died() -> void:
 	# Death releases any active Concentration spells (they end with the caster).
 	if not active_concentrations.is_empty():
 		_release_concentration_all()
-	if creature_type == "Humanoid":
+	# begins_with: dhampir, high elves and aedelfs are "Humanoid, <subtype>".
+	if creature_type.begins_with("Humanoid"):
 		if gender == "female":
 			SfxManager.play("woman-death-scream", global_position)
 		else:
@@ -8089,6 +8346,12 @@ func _on_character_died() -> void:
 		# bypasses the ambient same-faction gate and carries across a plaza —
 		# allies out of sight of a kill now come looking.
 		HearingManager.emit(global_position, 1.5, self, "alarm", {})
+	elif creature_type.begins_with("Beast"):
+		SfxManager.play(str(BEAST_DEATH_SFX.get(race_id, "beast_death")), global_position)
+	elif creature_type.contains("Undead"):
+		SfxManager.play("undead_death", global_position)
+	else:
+		SfxManager.play("monster_death", global_position)
 	$AI.die()
 	character_died.emit()
 	# The one death line in the log (Game.gd only prints). Deaths of NPCs the
@@ -8383,6 +8646,7 @@ func _on_limb_severed(limb_type: ProceduralCharacter.LimbType) -> void:
 	condition_manager.apply_condition("bleeding", null, int(sever_blood_multiplier), -2.0, limb_type)
 	var limb_pos = _get_limb_center_position(limb_type)
 	_spawn_bleed_burst(limb_pos, sever_blood_multiplier)
+	SfxManager.play("gore", global_position, Vector2(0.9, 1.1), -4.0)
 
 	# Hide the limb visual and drop equipment
 	_handle_limb_severing(limb_type)
@@ -8596,12 +8860,6 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 # ===== PUBLIC API =====
 		# Visual feedback could be added here (screen shake, etc)
 
-func _knock_weapon_away() -> void:
-	"""Knock the weapon to the side (still held but out of position)"""
-	if self.attack_animator:
-		self.attack_animator.interrupt_attack()
-		self.attack_animator.apply_knockback(0.4)  # Recovery time
-		
 func apply_stagger(intensity: float) -> void:
 	"""Apply stagger effect to character (interrupts attack, brief pause)"""
 	if self.attack_animator:
@@ -8647,19 +8905,14 @@ func drop_held_weapon(hand: String = "Main") -> bool:
 		if weapon.stolen_from != "":
 			extras["stolen_from"] = weapon.stolen_from
 		game.create_item(wid, drop_pos, 1, extras)
+		SfxManager.play("sword-fall", drop_pos, Vector2(0.9, 1.1), -4.0)
 	var disarm_line := "%s is disarmed — their %s clatters to the ground!" % [Name, weapon.display_name]
 	# Floats too where the party can see it: the game log starts closed. One
 	# the party can't see isn't named: the dropped weapon is the only tell.
 	if _announces_to_party():
 		notify("Disarmed!", Color(1.0, 0.6, 0.4), disarm_line)
 	return true
-# INTERUPTION AND KNOCKBACK
-func apply_knockback(duration: float) -> void:
-	"""Apply a knockback recovery period (can't attack)"""
-	attack_animator.interrupt_attack()
-	attack_animator.knockback_timer = duration
-	attack_animator.is_knocked_back = true
-	
+
 func set_target(target: ProceduralCharacter) -> void:
 	if target and $AI._is_enemy(target):
 		$AI._acquire_target(target)
@@ -8889,10 +9142,19 @@ func _on_ability_cast_completed(ability: Ability, results: Array) -> void:
 	# doesn't concentrate; an interrupted windup never gets here).
 	if ability and ability.is_concentration() and not ability.get_meta("free_cast", false):
 		begin_concentration(ability, results)
+	else:
+		# A finished cast's sound rings out: only a held spell's may still be
+		# cut (end_concentration), never by some later, unrelated break.
+		_cast_sfx_handle = 0
 	_rig_ik_release("cast")
 	cast_completed.emit(ability, results)
 
 func _on_ability_cast_interrupted(ability: Ability, reason: String) -> void:
+	# The windup sound goes with the cast. Death (empty reason) cuts it
+	# silently; anything else fizzles where everyone nearby can hear it.
+	_stop_cast_sound()
+	if reason != "" and is_alive():
+		_play_fizzle()
 	if targeting_system:
 		_clear_orphan_queued_indicators()
 		targeting_system.end_targeting()
@@ -8954,6 +9216,11 @@ func _announce_cast_failure(ability: Ability, reason: String) -> void:
 		# line; the float only flags which character was stopped.
 		notify("Illegal here", Color(1.0, 0.75, 0.3))
 		return
+	# A refusal never started a windup, so there is no cast sound of its own
+	# to stop (the one playing, if any, is a cast still going or just done).
+	# "Already casting" keeps that cast going: no fizzle over it.
+	if reason != "Already casting":
+		_play_fizzle()
 	notify(readable, Color(1.0, 0.6, 0.4), "%s can't use %s: %s." % [Name, ability_name, readable])
 
 func _on_ability_step_started(_ability: Ability, _step_index: int, _step_data: Dictionary) -> void:
@@ -9124,12 +9391,35 @@ func _find_targets_in_area(ability: Ability, center: Vector2) -> Array:
 	return targets
 
 
-## Spawn visual effects for ability
+## Spawn visual effects for ability. The impact sound plays with or without an
+## impact effect (a summon squeak has nothing to draw).
 func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 	var impact_path = ability.visuals.get("impact_effect", "")
-	if impact_path == "":
-		return
+	if impact_path != "":
+		_spawn_ability_impact_effect(ability, impact_path, target_position)
 
+	# Play ability SFX. A condition this ability just applied may already have
+	# stung with the very same sound this frame (Beguile's charm_chime, Acid
+	# Splash's acid_splash): one is enough. A cast that lands no condition
+	# still gets its impact.
+	var sfx_path: String = String(ability.visuals.get("sound_impact", ""))
+	if sfx_path != "" and not SfxManager.is_throttled("cond_" + sfx_path.get_file().get_basename()):
+		_play_sfx_at(sfx_path, target_position)
+
+
+## An ability's sounds and impact effect without casting it: sound_cast at the
+## caster, impact effect and sound_impact at `target_position`. For item procs
+## and consumables, which resolve the ability's effects directly.
+func play_ability_feedback(ability: Ability, target_position: Vector2) -> void:
+	if ability == null:
+		return
+	var cast_sfx: String = String(ability.visuals.get("sound_cast", ""))
+	if cast_sfx != "":
+		_play_sfx_at(cast_sfx, global_position)
+	_spawn_ability_visuals(ability, target_position)
+
+
+func _spawn_ability_impact_effect(ability: Ability, impact_path: String, target_position: Vector2) -> void:
 	var shape = ability.targeting.get("shape", "none")
 	if shape == "line":
 		_spawn_line_effect(ability, target_position)
@@ -9159,11 +9449,6 @@ func _spawn_ability_visuals(ability: Ability, target_position: Vector2) -> void:
 			size_scale = radius / 25.0
 		var duration = _get_modified_visual_duration(ability)
 		_spawn_effect(impact_path, target_position, size_scale, duration, radius)
-
-	# Play ability SFX
-	var sfx_path = ability.visuals.get("sound_impact", "")
-	if sfx_path != "":
-		_play_sfx_at(sfx_path, target_position)
 
 
 ## Spawn a line effect (e.g., lightning bolt) from caster to target
@@ -9207,65 +9492,37 @@ func _spawn_line_effect(ability: Ability, target_position: Vector2) -> void:
 # ABILITY SFX
 # ============================================================
 
-## Play a one-shot sound effect at a world position
-func _play_sfx_at(path: String, position: Vector2, volume_db: float = 0.0, pitch_scale: float = 1.0) -> AudioStreamPlayer2D:
-	var stream = _load_audio(path)
-	if not stream:
-		return null
-	
-	var player = AudioStreamPlayer2D.new()
-	player.stream = stream
-	player.global_position = position
-	player.volume_db = volume_db
-	player.pitch_scale = pitch_scale
-	player.max_distance = 2000.0
-	
-	var scene_root = get_tree().current_scene
-	scene_root.add_child(player)
-	player.play()
-	
-	# Auto-cleanup when done
-	player.finished.connect(func():
-		if is_instance_valid(player):
-			player.queue_free()
-	, CONNECT_ONE_SHOT)
-	
-	return player
+## Play a one-shot sound effect at a world position. Goes through SfxManager
+## like every other world sound, so Silence zones damp spells too. `path` may
+## be a res:// path (ability data) or a bare SfxManager key. Returns the
+## SfxManager handle (0 when nothing played).
+func _play_sfx_at(path: String, position: Vector2, volume_db: float = 0.0, pitch_scale: float = 1.0) -> int:
+	return SfxManager.play(path, position, Vector2(pitch_scale, pitch_scale), volume_db)
 
 
-## Play a one-shot sound attached to this character
-func _play_sfx_on_self(path: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> AudioStreamPlayer2D:
-	var stream = _load_audio(path)
-	if not stream:
-		return null
-	
-	var player = AudioStreamPlayer2D.new()
-	player.stream = stream
-	player.volume_db = volume_db
-	player.pitch_scale = pitch_scale
-	player.max_distance = 2000.0
-	add_child(player)
-	player.play()
-	
-	player.finished.connect(func():
-		if is_instance_valid(player):
-			player.queue_free()
-	, CONNECT_ONE_SHOT)
-	
-	return player
+## Play a one-shot sound where this character stands.
+func _play_sfx_on_self(path: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> int:
+	return _play_sfx_at(path, global_position, volume_db, pitch_scale)
 
 
-func _load_audio(path: String) -> AudioStream:
-	if path in _audio_cache:
-		return _audio_cache[path]
-	
-	if not ResourceLoader.exists(path):
-		push_warning("Audio not found: %s" % path)
-		return null
-	
-	var stream = load(path) as AudioStream
-	_audio_cache[path] = stream
-	return stream
+## A cast's windup sound. Kept by handle so _stop_cast_sound() can cut it when
+## the cast is interrupted; a new cast replaces the last one's.
+func _play_cast_sound(path: String) -> void:
+	_stop_cast_sound()
+	_cast_sfx_handle = _play_sfx_on_self(path)
+
+
+func _stop_cast_sound() -> void:
+	if _cast_sfx_handle != 0:
+		SfxManager.stop(_cast_sfx_handle)
+		_cast_sfx_handle = 0
+
+
+## A cast that came to nothing: interrupted, refused, or a held spell broken.
+## An interrupt by an incapacitating condition also breaks concentration in
+## the same moment, so one fizzle covers both.
+func _play_fizzle() -> void:
+	SfxManager.play_throttled("fizzle_%d" % get_instance_id(), 0.3, "fizzle", global_position, Vector2(0.95, 1.05), -6.0)
 
 
 # ============================================================
@@ -9361,53 +9618,57 @@ func _get_limb_vfx_offset(limb_type) -> Vector2:
 
 
 # ============================================================
-# CONDITION SFX — looping ambient sound while condition is active
+# CONDITION SFX — an apply sting, or a quiet loop while the condition lasts
 # ============================================================
 
+## Condition sounds that loop for as long as the condition is on (any key
+## ending in "_loop" also does). Every other custom_sfx is a one-shot sting on
+## apply: the sfx imports don't loop, so a "loop" played the old way sounded
+## once anyway. (Not heavy_breathing: Exhausted lasts 24 in-game hours, which
+## is 24 real hours on a local map.)
+const CONDITION_SFX_LOOPS := ["shield_hum"]
+const CONDITION_STING_DB := -4.0
+const CONDITION_LOOP_DB := -8.0
+const CONDITION_LOOP_MAX_DISTANCE := 1500.0
+## One sting per sound per this long: a failed fear save across a crowd, or
+## an AoE condition, lands on every target in the same frame.
+const CONDITION_STING_COOLDOWN := 0.12
+
 func _start_condition_sfx(instance: ConditionInstance) -> void:
-	var sfx_path = instance.condition.custom_sfx
+	var sfx_path: String = instance.condition.custom_sfx
 	if sfx_path == "" or sfx_path == "no sfx scene":
 		return
-	
+	# A corpse's conditions stay but make no sound (see _enter_corpse_state).
+	if not is_alive():
+		return
+	# One sound per condition while it is on: no retrigger.
 	if instance.condition.id in _active_condition_sfx:
 		return
-	
-	var stream = _load_audio(sfx_path)
-	if not stream:
+
+	var key: String = sfx_path.get_file().get_basename()
+	var is_loop: bool = key.ends_with("_loop") or key in CONDITION_SFX_LOOPS
+	# The save / map-restore re-apply skips the sting, but a loop still has to
+	# start: that re-apply is the only thing that restarts it after a warp.
+	if suppress_condition_sfx and not is_loop:
 		return
-	
-	var player = AudioStreamPlayer2D.new()
-	player.stream = stream
-	player.volume_db = -5.0
-	player.max_distance = 1500.0
-	
-	# Loop if the stream supports it — otherwise it plays once as an apply sound
-	# AudioStreamWAV and AudioStreamOggVorbis have loop properties;
-	# we just let it play and check if it finishes
-	add_child(player)
-	player.play()
-	
-	_active_condition_sfx[instance.condition.id] = player
-	
-	# If it's a non-looping sound, clean up when done but keep the dict entry
-	# so we don't re-trigger. The entry gets erased in _stop_condition_sfx.
-	player.finished.connect(func():
-		# Sound ended naturally — don't free yet, _stop_condition_sfx handles that
-		pass
-	, CONNECT_ONE_SHOT)
+	var handle: int
+	if is_loop:
+		# Follows the bearer and stops on its own if the bearer is freed.
+		handle = SfxManager.start_loop(sfx_path, global_position, CONDITION_LOOP_DB, "SFX", self, null, CONDITION_LOOP_MAX_DISTANCE)
+	else:
+		handle = SfxManager.play_throttled("cond_" + key, CONDITION_STING_COOLDOWN, sfx_path, global_position, Vector2(0.95, 1.05), CONDITION_STING_DB)
+	# Kept even when nothing played (0), so a later re-apply stays quiet too.
+	_active_condition_sfx[instance.condition.id] = handle
 
 
+## Ends a condition's loop. A sting is left to ring out: the condition did land.
 func _stop_condition_sfx(instance: ConditionInstance) -> void:
 	var cond_id = instance.condition.id
 	if cond_id not in _active_condition_sfx:
 		return
-	
-	var player = _active_condition_sfx[cond_id]
+	var handle: int = int(_active_condition_sfx[cond_id])
 	_active_condition_sfx.erase(cond_id)
-	
-	if is_instance_valid(player):
-		player.stop()
-		player.queue_free()
+	SfxManager.stop_loop(handle)
 
 
 # ============================================================
@@ -9423,10 +9684,10 @@ func _on_condition_suppressed(instance: ConditionInstance) -> void:
 		vfx.visible = false
 		if vfx is GPUParticles2D or vfx is CPUParticles2D:
 			vfx.emitting = false
-	
-	var sfx = _active_condition_sfx.get(instance.condition.id)
-	if sfx and is_instance_valid(sfx):
-		sfx.stream_paused = true
+
+	# Only loops have anything to pause (a sting's handle is no loop's: no-op).
+	if instance.condition.id in _active_condition_sfx:
+		SfxManager.set_loop_paused(int(_active_condition_sfx[instance.condition.id]), true)
 	# A suppressed Invisible (an attack broke the cloak's for a few seconds)
 	# shows the character solid again, and its icon dims.
 	if instance.condition.id == "invisible":
@@ -9440,10 +9701,9 @@ func _on_condition_unsuppressed(instance: ConditionInstance) -> void:
 		vfx.visible = true
 		if vfx is GPUParticles2D or vfx is CPUParticles2D:
 			vfx.emitting = true
-	
-	var sfx = _active_condition_sfx.get(instance.condition.id)
-	if sfx and is_instance_valid(sfx):
-		sfx.stream_paused = false
+
+	if instance.condition.id in _active_condition_sfx:
+		SfxManager.set_loop_paused(int(_active_condition_sfx[instance.condition.id]), false)
 	if instance.condition.id == "invisible" and is_alive():
 		modulate.a = INVISIBLE_ALPHA
 		_tell_game_invisibility("returns")
@@ -9686,6 +9946,7 @@ func _resolve_stress_breakdown(auto: bool) -> void:
 		condition_manager.remove_condition("courageous")
 		stress = 0
 		emit_signal("resource_changed", "stress", stress, max_stress)
+		_play_character_sting("holy_cast", -8.0)
 		if is_party_member():
 			notify("Courage holds", Color.GOLD,
 				"%s's courage holds (%s): Courageous is spent and their stress is shaken off." % [Name, cause])
@@ -9704,7 +9965,11 @@ func _apply_stress_response(cid: String, virtue: bool, cause: String) -> void:
 	if not is_instance_valid(condition_manager) or not is_alive():
 		return
 	var inst = condition_manager.apply_condition(cid, self, 1, -2.0, null)
-	if inst == null or not is_party_member():
+	if inst == null:
+		return
+	# One resolve or dread sting covers every virtue and affliction.
+	_play_character_sting("stress_virtue" if virtue else "stress_affliction", -4.0)
+	if not is_party_member():
 		return
 	var cond_name: String = inst.condition.display_name if inst.condition and inst.condition.display_name != "" else cid.replace("_", " ").capitalize()
 	if virtue:
@@ -9712,6 +9977,14 @@ func _apply_stress_response(cid: String, virtue: bool, cause: String) -> void:
 	else:
 		notify(cond_name, Color(0.63, 0.44, 1.0),
 			"[color=#a070ff]%s breaks under the strain (%s): %s.[/color]" % [Name, cause, cond_name])
+
+## A sting about this character: on the UI bus for a party member (their
+## moment, wherever the camera is), else positional, where they stand.
+func _play_character_sting(key: String, volume_db: float) -> void:
+	if is_party_member():
+		SfxManager.play_ui(key, Vector2(0.97, 1.03), volume_db)
+	elif is_inside_tree():
+		SfxManager.play(key, global_position, Vector2(0.97, 1.03), volume_db)
 
 
 # Damage-side hooks: increment adrenaline, decrement focus, break concentration
@@ -9850,6 +10123,13 @@ func end_concentration(reason: String = "", cause: String = "") -> void:
 	active_concentrations.clear()
 	concentration_locked_focus = 0
 	emit_signal("resource_changed", "focus", focus, max_focus)
+	# A broken spell fizzles for anyone in earshot, party or not. A windup in
+	# progress is a different spell and keeps its sound; otherwise any cast
+	# sound still ringing is this spell's, and it ends with it.
+	if reason == "broken" or reason == "incapacitated":
+		if ability_manager == null or not ability_manager.is_casting():
+			_stop_cast_sound()
+		_play_fizzle()
 	if reason == "" or not _announces_to_party():
 		return
 	match reason:

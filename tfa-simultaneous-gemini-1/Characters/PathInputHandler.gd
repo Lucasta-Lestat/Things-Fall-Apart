@@ -68,6 +68,15 @@ func _try_load(path: String) -> Texture2D:
 		return load(path)
 	return null
 
+# Planning feedback. Everything here happens inside the tactical pause, so it
+# is UI-bus (non-positional) and quieter than a real button click: a planned
+# step, a cancelled one.
+func _plan_click() -> void:
+	SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -10.0)
+
+func _plan_cancel() -> void:
+	SfxManager.play_ui("trade_decline", Vector2(0.95, 1.05), -8.0)
+
 func _resolve_ability_icon(ability_data: Dictionary) -> Texture2D:
 	# Prefer the ability's own icon (a Texture2D or a res:// path in the data);
 	# fall back to the generic targeting icon so a node is never left blank.
@@ -272,6 +281,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		if Input.is_action_just_pressed("ui_cancel"):
 			character.targeting_system.cancel_targeting()
 			_targeting_for_node = false
+			_plan_cancel()
 			return true
 
 		# Character-pick abilities (e.g. Hitch, Fatal Attraction): each click with
@@ -290,6 +300,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 			if Input.is_action_just_pressed(other_button):
 				ts.cancel_targeting()
 				_targeting_for_node = false
+				_plan_cancel()
 				return true
 			return false
 
@@ -308,6 +319,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		pending_action_node = null
 		state = PathInputState.IDLE
 		path_drawer.queue_redraw()
+		_plan_cancel()
 		return true
 
 	# A fresh left press (NOT the click that created the node) re-arms drag
@@ -339,7 +351,10 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 	# node (the character walks to the node, then casts/fires there).
 	if Input.is_action_just_released("left_click"):
 		if _awaiting_node_press_release:
+			# The node-creating click stayed a click (not a drag-to-redraw,
+			# which removes the node): the node is placed.
 			_awaiting_node_press_release = false
+			_plan_click()
 			return true
 		if _use_press_armed:
 			# A click whose press the handler saw over the world: use the
@@ -393,6 +408,7 @@ func _handle_placing_action(mouse_pos: Vector2) -> bool:
 		pending_action_node = null
 		state = PathInputState.IDLE
 		path_drawer.queue_redraw()
+		_plan_click()
 		return true
 
 	return false  # Don't consume - allow ability/item inputs to reach other handlers
@@ -421,6 +437,7 @@ func _handle_drawing_rotation(mouse_pos: Vector2) -> bool:
 	else:
 		# Queue rotation directly to the action queue (not on path)
 		character.action_queue.queue_face(mouse_pos)
+	_plan_click()
 
 	return true
 
@@ -441,8 +458,11 @@ func assign_ability_to_pending_node(ability_id: String, target_pos: Vector2, ico
 	pending_action_node = null
 	state = PathInputState.IDLE
 	path_drawer.queue_redraw()
+	_plan_click()
 	return true
 
+# No click of its own: its one caller (PartySidePanel's item menu) clicks
+# after the pick already.
 func assign_item_to_pending_node(action_type: int, action_data: Dictionary, icon: Texture2D = null) -> bool:
 	if state != PathInputState.PLACING_ACTION or pending_action_node == null:
 		return false
@@ -494,6 +514,7 @@ func _initiate_action_for_node(item: Node2D, hand: String, mouse_pos: Vector2) -
 	pending_action_node = null
 	state = PathInputState.IDLE
 	path_drawer.queue_redraw()
+	_plan_click()
 
 func _assign_attack_to_pending_node(mouse_pos: Vector2, hand: String = "Main") -> void:
 	"""Plan a weapon/unarmed attack on the pending node. A character under the
@@ -563,6 +584,7 @@ func _confirm_targeting_for_node(mouse_pos: Vector2) -> void:
 	pending_action_node = null
 	state = PathInputState.IDLE
 	path_drawer.queue_redraw()
+	_plan_click()
 
 func is_placing_action() -> bool:
 	return state == PathInputState.PLACING_ACTION

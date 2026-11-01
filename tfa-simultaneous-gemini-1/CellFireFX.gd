@@ -29,6 +29,11 @@ const SMOKE_KINDS := 4       # 2 puffs x (body disc, highlight disc)
 const STRIDE := 16           # MultiMesh floats/instance: 8 xform + 4 color + 4 custom
 const MIN_CAP := 64          # blocks (cells) allocated up front
 const MAX_LIGHTS := 16
+# Crackle loops ride the cluster lights, but only the biggest few: a burning
+# town is dozens of clusters, and past a handful more loops are just louder
+# mush (and a voice each).
+const MAX_CRACKLES := 6
+const CRACKLE_DB := -6.0
 
 var sim: Node                # CellFire
 var graph: CellGraph
@@ -53,6 +58,7 @@ var _light_timer := 0.0      # recluster cooldown: during a big fire's decay
                              # burnouts) and light positions barely move --
                              # cap the O(burning) flood-fill at ~3 Hz
 var _light_tex: GradientTexture2D
+var _crackles: Array[int] = []   # SfxManager loop handles, largest cluster first
 
 
 func _ready() -> void:
@@ -81,6 +87,10 @@ func _ready() -> void:
 	_light_tex.fill = GradientTexture2D.FILL_RADIAL
 	_light_tex.fill_from = Vector2(0.5, 0.5)
 	_light_tex.fill_to = Vector2(1.0, 0.5)
+
+
+func _exit_tree() -> void:
+	_stop_crackles(0)
 
 
 func _make_multimesh() -> MultiMesh:
@@ -265,9 +275,13 @@ func _refresh_lights() -> void:
 			for mc in members:
 				ext = maxf(ext, center.distance_to(graph.centroid(mc)) + graph.radius(mc))
 			clusters.append({"pos": center, "ext": ext})
-	if clusters.size() > MAX_LIGHTS:
+	# largest first: the light cap and the (smaller) crackle cap both keep
+	# the biggest clusters
+	if clusters.size() > MAX_CRACKLES:
 		clusters.sort_custom(func(a, b): return float(a["ext"]) > float(b["ext"]))
+	if clusters.size() > MAX_LIGHTS:
 		clusters.resize(MAX_LIGHTS)
+	_refresh_crackles(clusters)
 	while _lights.size() < clusters.size():
 		var l := PointLight2D.new()
 		l.texture = _light_tex
@@ -287,6 +301,30 @@ func _refresh_lights() -> void:
 		var dia := maxf(120.0, float(cl["ext"]) * 2.6)
 		l.texture_scale = dia / float(_light_tex.width)
 		l.energy = 0.9
+
+
+# One crackle loop per cluster for the MAX_CRACKLES largest (clusters arrive
+# sorted largest-first whenever there are more than that). Slots are reused:
+# a loop slides to its cluster's new centre rather than restarting.
+func _refresh_crackles(clusters: Array) -> void:
+	var want := mini(clusters.size(), MAX_CRACKLES)
+	_stop_crackles(want)
+	for i in want:
+		var pos: Vector2 = to_global(clusters[i]["pos"])
+		if i < _crackles.size() and SfxManager.is_loop_active(_crackles[i]):
+			SfxManager.set_loop_position(_crackles[i], pos)
+			continue
+		var h: int = SfxManager.start_loop("fire_crackle_loop", pos, CRACKLE_DB, "Ambience")
+		if i < _crackles.size():
+			_crackles[i] = h
+		else:
+			_crackles.append(h)
+
+
+# Stops crackle slots from `keep` on (0 = all).
+func _stop_crackles(keep: int) -> void:
+	while _crackles.size() > keep:
+		SfxManager.stop_loop(_crackles.pop_back(), 0.6)
 
 
 func _flicker_lights() -> void:

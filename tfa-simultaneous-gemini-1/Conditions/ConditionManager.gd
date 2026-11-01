@@ -204,6 +204,8 @@ func _try_periodic_save(instance: ConditionInstance, current_time: float) -> boo
 		if instance.stacks <= 0:
 			if shown and character.has_method("notify"):
 				character.notify("Shook off " + cond_name, RESIST_COLOR)
+			if shown:
+				_play_bearer_sfx("resist", 0.5, "shield_brace", Vector2(0.95, 1.1), -12.0)
 			if log_it:
 				GameLog.add_entry("%s shakes off %s%s." % [_bearer_name(), cond_name, _save_detail(template.save_stat)])
 			return true
@@ -818,15 +820,22 @@ func _announce_cancel(instance: ConditionInstance, trait_name: String, cause_lab
 	var detail := _trait_detail(trait_name, cause_label)
 	var text := cond_name + " ended"
 	var phrase := "ends"
+	var cure_key := "holy_cleanse"
 	if suppressed:
 		text = cond_name + " suppressed"
 		phrase = "is suppressed for %d s" % int(round(CANCEL_SUPPRESS_SECONDS))
 	elif tmpl.traits.has("fire") and trait_name in ["water", "cold"]:
 		text = cond_name + " put out"
 		phrase = "is put out"
+		cure_key = "fire_douse"
 	elif tmpl.traits.has("cold") and trait_name in ["fire", "heat"]:
 		text = cond_name + " thawed"
 		phrase = "thaws"
+		cure_key = "ice_crack"
+	# An ended debuff is a cure. A suppressed item condition comes back and a
+	# lost buff is bad news, so neither of those chimes.
+	if not suppressed and not tmpl.traits.has("buff"):
+		_play_bearer_sfx("cure", 0.3, cure_key, Vector2(0.95, 1.05), -8.0)
 	var log_text := ""
 	if _player_involved(source):
 		log_text = "%s's %s %s (%s)." % [_bearer_name(), cond_name, phrase, detail]
@@ -899,6 +908,23 @@ func _announce_resist(condition_id: String, text: String, log_text: String, sour
 		character.notify(text, color)
 	if log_text != "" and _player_involved(source):
 		GameLog.add_entry(log_text)
+	# Warded off (Immune, Protected, Resisted); not a partial resist, which
+	# still lands, nor a critical fail.
+	if text != "" and color == RESIST_COLOR:
+		_play_bearer_sfx("resist", 0.5, "shield_brace", Vector2(0.95, 1.1), -12.0)
+
+
+## A one-shot at the bearer. Positional: the bearer may be an NPC across the
+## map. Throttled per bearer and `throttle_tag`, as fogs and fields re-apply on
+## their own clocks. Quiet while a load or warp re-applies the bearer's
+## conditions (suppress_condition_sfx).
+func _play_bearer_sfx(throttle_tag: String, cooldown: float, key: String, pitch_range: Vector2, volume_db: float) -> void:
+	if not is_instance_valid(character) or not (character is Node2D):
+		return
+	if "suppress_condition_sfx" in character and character.suppress_condition_sfx:
+		return
+	SfxManager.play_throttled("cond_%s_%d" % [throttle_tag, character.get_instance_id()], cooldown,
+		key, (character as Node2D).global_position, pitch_range, volume_db)
 
 
 ## True when the bearer or `source` is in the player's party. Untyped because a

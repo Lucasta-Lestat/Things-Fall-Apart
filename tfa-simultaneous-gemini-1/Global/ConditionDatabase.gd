@@ -206,7 +206,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "res://vfx/lightning.tscn",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/electric_jolt.mp3",
 		"triggered_effects": [
 			{
 				"type": "damage",
@@ -373,7 +373,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["speed", "haste"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/debuff_generic.mp3",
 		"stat_modifiers": [
 			{"stat": "speed_modifier", "operation": "add", "value": -0.4}
 		],
@@ -392,7 +392,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "water"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/acid_splash.mp3",
 		"stat_modifiers": [],
 		"triggered_effects": [
 			{
@@ -415,7 +415,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["wind", "purify"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/gasp.mp3",
 		"stat_modifiers": [
 			{"stat": "dexterity", "operation": "multiply", "value": 0.9}
 		],
@@ -440,7 +440,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "res://vfx/infatuated_hearts.tscn",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/charm_chime.mp3",
 		"stat_modifiers": [],
 		"triggered_effects": [],
 		"immunities": {}
@@ -456,7 +456,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["revealing"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/hush.mp3",
 		"stat_modifiers": [],
 		"triggered_effects": [],
 		"immunities": {}
@@ -625,7 +625,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["clarity", "purify"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/mental_confuse.mp3",
 		"stat_modifiers": [
 			{"stat": "targeting_confusion", "operation": "add", "value": 50}
 		],
@@ -678,7 +678,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["courage", "purify"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/fear_shriek.mp3",
 		"stat_modifiers": [
 			{"stat": "dexterity", "operation": "multiply", "value": 0.8}
 		],
@@ -697,7 +697,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["courage", "purify"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/fear_shriek.mp3",
 		"stat_modifiers": [
 			{"stat": "speed_modifier", "operation": "add", "value": 0.3}
 		],
@@ -716,7 +716,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "antidote"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/disease_cough.mp3",
 		"stat_modifiers": [
 			{"stat": "strength", "operation": "add", "value": -15},
 			{"stat": "constitution", "operation": "add", "value": -10}
@@ -742,7 +742,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["purify", "antidote"],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/nausea_retch.mp3",
 		"stat_modifiers": [
 			{"stat": "speed_modifier", "operation": "add", "value": -0.4}
 		],
@@ -807,7 +807,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/debuff_generic.mp3",
 		"stat_modifiers": [
 			{"stat": "sight", "operation": "set", "value": 0}
 		],
@@ -826,7 +826,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "res://vfx/unconscious.tscn",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/body_fall.mp3",
 		"stat_modifiers": [
 			{"stat": "move_speed", "operation": "set", "value": 0},
 			{"stat": "sight", "operation": "set", "value": 0}
@@ -892,7 +892,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": ["bandage", "healing"],
 		"custom_vfx": "res://vfx/bleeding.tscn",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/bleed.mp3",
 		"stat_modifiers": [],
 		"triggered_effects": [
 			{
@@ -1103,7 +1103,7 @@ func get_all_conditions() -> Array:
 		"transforms_into": {},
 		"canceled_by_trait": [],
 		"custom_vfx": "",
-		"custom_sfx": "",
+		"custom_sfx": "res://sfx/stun_impact.mp3",
 		"stat_modifiers": [
 			{"stat": "speed_modifier", "operation": "set", "value": -1.0}
 		],

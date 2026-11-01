@@ -994,7 +994,10 @@ func _show_warp_menu(card_data: Dictionary) -> void:
 	menu.popup(Rect2i(Vector2i(get_global_mouse_position()), Vector2i.ZERO))
 
 func _on_warp_menu_selected(id: int, card_data: Dictionary) -> void:
-	SfxManager.play_ui("ui-click")
+	# PopupMenu items aren't BaseButtons, so no global click: play it here.
+	# Trade opens with its own sound (TradeWindow), so it skips the click.
+	if id != 1:
+		SfxManager.play_ui("ui-click")
 	var entry: Dictionary = card_data["entry"]
 	match id:
 		0:

@@ -116,6 +116,8 @@ func _on_date_changed(_day: int, _month: int, _year: int) -> void:
 		for s in today:
 			names.append(String(s.get("name", "")))
 		GameLog.add_entry("Feast of %s today. Observers (%s) gain +1 max Devotion; the parish lays a feast table in town." % [" and ".join(names), ", ".join(observer_traits)])
+		# The parish rings the feast in (in town only; see TimeManager).
+		TimeManager.ring_church_bell(-4.0)
 	_refresh_party_bonuses()
 
 

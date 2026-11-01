@@ -26,6 +26,9 @@ var actions_api = DialogueActionsScript.new(self)
 # Who the player opened this conversation with (the Talk target), or null.
 # Actions reach them as "partner".
 var current_partner: Node = null
+# Whether this conversation has played its open sound (_play_open_sound); the
+# close sound only follows one that did.
+var _open_sound_played: bool = false
 
 
 # Reserved keywords that aren't character names
@@ -246,7 +249,17 @@ func show_current_line(node: Dictionary):
 	var has_next = current_line_index < current_node_lines.size() - 1
 	
 	# Emit signal for UI to display
+	_play_open_sound()
 	dialogue_updated.emit(speaker_name, portrait, processed_text, has_next)
+
+# The open sound waits for the panel's first line or choice: a conversation
+# whose start node fails its prerequisites ends without ever being shown, and
+# shouldn't rustle open and shut in the same frame.
+func _play_open_sound() -> void:
+	if _open_sound_played:
+		return
+	_open_sound_played = true
+	SfxManager.play_ui("dialogue_open", Vector2(0.95, 1.05), -6.0)
 
 # Advance to the next line in the current node
 func advance_line():
@@ -340,6 +353,7 @@ func handle_node_navigation(node: Dictionary):
 					"ally_reactions": [], "actions": null, "disabled": false, "locked_reason": "",
 					"slot": "leave"})
 			current_choices = processed_choices
+			_play_open_sound()
 			choices_available.emit(processed_choices)
 			return
 	
@@ -453,6 +467,12 @@ func _log_ability_check(character: Object, args: Array, result) -> void:
 	var article: String = "an" if stat_name.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a"
 	var line: String = "%s %s %s %s check%s." % [who, "passes" if passed else "fails", article, stat_name, detail]
 	GameLog.add_entry(line)
+	# The dice land, then the verdict. The timer runs while paused, as
+	# conversations usually are; one roll per branch, so throttle a burst.
+	if SfxManager.throttle_ok("dialogue_check", 0.1):
+		SfxManager.play_ui("dice_roll", Vector2(0.95, 1.05), -6.0)
+		var verdict_key: String = "check_success" if passed else "check_fail"
+		get_tree().create_timer(0.6, true).timeout.connect(func(): SfxManager.play_ui(verdict_key, Vector2.ONE, -6.0))
 	# The game log starts closed, so the roll also floats over whoever made it
 	# (every roll: not notify, which drops a repeat within a second).
 	if character is Node2D and (character as Node2D).is_inside_tree():
@@ -826,12 +846,16 @@ func end_dialogue():
 	current_node_lines = []
 	current_choices = []
 	current_partner = null
+	if _open_sound_played:
+		_open_sound_played = false
+		SfxManager.play_ui("dialogue_close", Vector2(0.95, 1.05), -6.0)
 	dialogue_ended.emit()
 	# A fight a conversation started opens paused, so the player can plan it.
+	# Quietly: the close sound above is already playing.
 	if actions_api.pause_requested:
 		actions_api.pause_requested = false
 		if PauseManager and not PauseManager.is_paused:
-			PauseManager.pause()
+			PauseManager.pause(false)
 	# Flush queued dialogues triggered while this one was active.
 	if not _pending_dialogues.is_empty():
 		var next_id: String = _pending_dialogues.pop_front()

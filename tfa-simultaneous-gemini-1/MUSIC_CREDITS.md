@@ -7,7 +7,8 @@ store page. Every track below is Creative Commons Attribution or an equivalent
 credit-required grant, so shipping the audio without these credits makes the
 build non-compliant. This is a licence condition, not a courtesy.
 
-Licences verified 2026-07-30. The build is assumed **commercial**, so every
+Licences verified 2026-07-30; the Town / interiors tracks were added and
+verified 2026-11-01. The build is assumed **commercial**, so every
 track here permits commercial use; NonCommercial (NC) and ShareAlike (SA)
 material is deliberately excluded.
 
@@ -31,6 +32,14 @@ material is deliberately excluded.
 | Surreal Forest | `ambient-surreal-forest.mp3` | Meydän | CC BY 3.0 |
 | The Long Dark | `ambient-the-long-dark.mp3` | Scott Buckley | CC BY 4.0 |
 
+## Town / interiors
+
+| Track | File | Composer | Licence |
+|---|---|---|---|
+| Village Consort | `town_theme.mp3` | Kevin MacLeod | CC BY 4.0 |
+| Master of the Feast | `tavern_theme.mp3` | Kevin MacLeod | CC BY 4.0 |
+| Ossuary 1 - A Beginning | `cemetery_ambient.mp3` | Kevin MacLeod | CC BY 4.0 |
+
 ---
 
 ## Attribution block
@@ -52,7 +61,8 @@ by Scott Buckley (https://www.scottbuckley.com.au)
 Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 https://creativecommons.org/licenses/by/4.0/
 
-"Celtic Impulse" by Kevin MacLeod (https://incompetech.com)
+"Celtic Impulse", "Master of the Feast", "Ossuary 1 - A Beginning" and "Village Consort"
+by Kevin MacLeod (https://incompetech.com)
 Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 https://creativecommons.org/licenses/by/4.0/
 
@@ -93,9 +103,24 @@ explicitly as a permitted use. Direct downloads from
 <https://www.scottbuckley.com.au/library/>. Paid attribution-free licences
 (AU$40–300/track) exist if you ever need to drop the credit.
 
-### Kevin MacLeod — Celtic Impulse
+### Kevin MacLeod — Celtic Impulse, Village Consort, Master of the Feast, Ossuary 1 - A Beginning
 CC BY 4.0. Commercial and game use permitted with attribution. Downloaded from
 <https://incompetech.com/music/royalty-free/>.
+
+The three Town / interiors tracks were verified 2026-11-01 on each track's own
+incompetech page, whose attribution code reads *"Licensed under Creative
+Commons: By Attribution 4.0 License"*; incompetech's FAQ lists video games
+among the credited uses. Each was downloaded direct from the artist's site and
+renamed to the key its maps use. Two edits, both permitted by CC BY: Village
+Consort is lowered 5.7 dB (from -9.3 to -15 LUFS, level with the other ambient
+tracks), and the ~5 s of trailing silence on Master of the Feast and Ossuary 1
+is trimmed so they loop without a gap.
+
+| Track | ISRC | Track page | Used by |
+|---|---|---|---|
+| Village Consort | USUAN1700007 | <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700007> | `town_theme` — the 7 town maps |
+| Master of the Feast | USUAN1400019 | <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400019> | `tavern_theme` — the 2 tavern interiors |
+| Ossuary 1 - A Beginning | USUAN1500043 | <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500043> | `cemetery_ambient` — the cemetery |
 
 ### Meydän — Surreal Forest
 CC BY 3.0, from the album *Hávor*. Every Meydän album on the Free Music Archive

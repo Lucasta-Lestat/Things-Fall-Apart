@@ -63,6 +63,8 @@ func _resolve_draft() -> Dictionary:
 		return _carta.draft_from_character(subject)
 	if not initial_draft.is_empty():
 		return initial_draft
+	# The card opens on a fresh roll of the dice.
+	SfxManager.play_ui("dice_roll", Vector2(0.95, 1.05), -4.0)
 	return CharacterCreationDatabase.roll_draft()
 
 ## Centre the card, shrinking it to fit rather than letting it run off a small

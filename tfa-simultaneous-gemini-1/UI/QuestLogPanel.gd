@@ -320,15 +320,19 @@ func _build_tabs_row() -> Control:
 	quests_btn.text = "Quests"
 	quests_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	quests_btn.pressed.connect(_on_tab_selected.bind("quests"))
+	# The tabs rustle (_on_tab_selected) instead of clicking.
+	quests_btn.set_meta("sfx_silent", true)
 	tabs.add_child(quests_btn)
 	var library_btn := Button.new()
 	library_btn.text = "Notes"
 	library_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	library_btn.pressed.connect(_on_tab_selected.bind("notes"))
+	library_btn.set_meta("sfx_silent", true)
 	tabs.add_child(library_btn)
 	return tabs
 
 func _on_tab_selected(tab: String) -> void:
+	SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -6.0)
 	_active_tab = tab
 	_refresh()
 
@@ -386,6 +390,8 @@ func _build_library_row(readable_id: String) -> Control:
 		font_col = Color(0.353, 0.259, 0.145)
 	btn.add_theme_color_override("font_color", font_col)
 	btn.pressed.connect(_on_library_entry_pressed.bind(readable_id))
+	# Opening the ReadableWindow makes the sound.
+	btn.set_meta("sfx_silent", true)
 
 	# Flat so it sits on the parchment like the quest rows.
 	var normal_box := StyleBoxFlat.new()

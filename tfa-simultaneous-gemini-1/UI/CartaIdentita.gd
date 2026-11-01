@@ -287,8 +287,9 @@ func _build_fields_column() -> Control:
 	name_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_row.add_child(name_control)
 	if mode == Mode.CREATE:
-		name_row.add_child(_small_button(
-				CharacterCreationDatabase.button_label("roll_name"), _on_roll_name))
+		# Buttons that play their own sound in the handler, not the click.
+		name_row.add_child(_silent(_small_button(
+				CharacterCreationDatabase.button_label("roll_name"), _on_roll_name)))
 	col.add_child(_field(CharacterCreationDatabase.field_label("name"), name_row))
 
 	# SESSO + ETÀ / STATURA / PESO on one line. The three measurements are
@@ -306,6 +307,7 @@ func _build_fields_column() -> Control:
 			var btn := _small_button(String(entry.get("abbrev", "?")),
 					func() -> void: _on_gender_picked(gid))
 			btn.toggle_mode = true
+			btn.set_meta("sfx_silent", true)
 			btn.custom_minimum_size.x = 40
 			btn.tooltip_text = String(entry.get("label", gid))
 			_gender_buttons[gid] = btn
@@ -424,8 +426,8 @@ func _build_actions() -> Control:
 	row.add_theme_constant_override("separation", 16)
 
 	if mode == Mode.CREATE:
-		row.add_child(_small_button(
-				CharacterCreationDatabase.button_label("confirm"), _on_confirm, true))
+		row.add_child(_silent(_small_button(
+				CharacterCreationDatabase.button_label("confirm"), _on_confirm, true)))
 	else:
 		row.add_child(_small_button(
 				CharacterCreationDatabase.button_label("close"), _on_close))
@@ -541,6 +543,7 @@ func _on_name_changed(new_text: String) -> void:
 		_number_label.text = CharacterCreationDatabase.document_number(new_text)
 
 func _on_roll_name() -> void:
+	SfxManager.play_ui("dice_roll", Vector2(0.95, 1.05), -4.0)
 	draft["name"] = CharacterCreationDatabase.random_name(String(draft.get("gender", "male")))
 	_sync_identity()
 
@@ -548,8 +551,11 @@ func _on_roll_name() -> void:
 ## the gendered dice in races.json, so they cannot survive the change.
 func _on_gender_picked(gender_id: String) -> void:
 	if String(draft.get("gender", "")) == gender_id:
+		SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -6.0)
 		_sync_identity()   # re-press the button the player just un-toggled
 		return
+	# The card is re-filled with new measurements.
+	SfxManager.play_ui("paper_rustle", Vector2(0.95, 1.05), -6.0)
 	draft["gender"] = gender_id
 	draft["body_metrics"] = RaceDatabase.roll_body_metrics(
 			CharacterCreationDatabase.PLAYER_RACE, gender_id)
@@ -584,11 +590,15 @@ func _step_portrait(delta: int) -> void:
 
 func _on_confirm() -> void:
 	if String(draft.get("name", "")).strip_edges().is_empty():
+		# No name yet: the confirm rolls one instead of stamping.
+		SfxManager.play_ui("dice_roll", Vector2(0.95, 1.05), -4.0)
 		draft["name"] = CharacterCreationDatabase.random_name(
 				String(draft.get("gender", "male")))
 		_sync_identity()
 		return
 	draft["name"] = String(draft["name"]).strip_edges()
+	# The carta is stamped and issued.
+	SfxManager.play_ui("stamp", Vector2(0.95, 1.05), -4.0)
 	confirmed.emit(draft.duplicate(true))
 
 func _on_close() -> void:
@@ -708,6 +718,11 @@ func _small_button(text: String, handler: Callable, emphatic: bool = false) -> B
 	btn.add_theme_color_override("font_hover_color", TYPED)
 	btn.add_theme_color_override("font_pressed_color", TYPED)
 	btn.pressed.connect(handler)
+	return btn
+
+## Opts a button out of the global click; its handler plays its own sound.
+func _silent(btn: Button) -> Button:
+	btn.set_meta("sfx_silent", true)
 	return btn
 
 func _option_button() -> OptionButton:

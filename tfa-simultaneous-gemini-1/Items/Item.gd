@@ -95,6 +95,10 @@ var fixed: bool = false
 
 var _grid_pos: Vector2i = Vector2i.ZERO
 var _cursor_active: bool = false
+# Fire props (campfire 0.6, brazier 0.5, torch 0.35) crackle; candles (0.15)
+# have an explicit light_color too but no audible flame.
+const CRACKLE_MIN_GLOW := 0.3
+var _crackle_loop: int = 0
 
 const PICKUP_CURSOR_TEXTURE := preload("res://UI/pickup-cursor.png")
 # First-interact options that should swap the cursor to the pickup cursor while hovered.
@@ -157,6 +161,12 @@ func _exit_tree() -> void:
 	if _cursor_active:
 		CursorManager.reset()
 		_cursor_active = false
+	_stop_crackle()
+
+func _stop_crackle() -> void:
+	if _crackle_loop != 0:
+		SfxManager.stop_loop(_crackle_loop)
+		_crackle_loop = 0
 
 # Texture for the hover cursor while the player's mouse is over this item.
 # Driven per-frame by ProceduralCharacter._update_hover_cursor (the mouse_entered
@@ -259,6 +269,11 @@ func _apply_item_data():
 	var glow := EquipmentEffects.light_level(data)
 	if glow > 0.0 and get_node_or_null("EmittedLight") == null:
 		add_child(EquipmentEffects.make_light(glow, traits, data.get("light_color")))
+		# A fire prop crackles while it burns (nothing puts one out yet, so
+		# that's its whole life; the loop dies with the node). A candle's
+		# flame is too small to hear, and a glowing sword isn't a fire.
+		if data.get("light_color") != null and glow >= CRACKLE_MIN_GLOW and _crackle_loop == 0:
+			_crackle_loop = SfxManager.start_loop("fire_crackle_loop", global_position, -10.0, "Ambience", null, self, 900.0)
 
 	# Size (equipment has base_width/base_height, others may not)
 	var w = float(data.get("base_width", 16.0))
@@ -371,6 +386,7 @@ func _read_from_world() -> void:
 func _take_from_world() -> void:
 	if ReadableManager != null:
 		ReadableManager.collect(str(id))
+	SfxManager.play("paper_rustle", global_position, Vector2(0.95, 1.05), -6.0)
 	_destroy_item()
 
 # Container lock gate, same feedback as Door: a container with a "key" opens
@@ -385,8 +401,10 @@ func try_unlock_for_party(party: Array) -> bool:
 	if not res.ok:
 		show_floating_text("Locked", Color.WHITE_SMOKE)
 		GameLog.add_entry("The %s is locked." % display_name)
+		SfxManager.play("door_locked", global_position, Vector2(1.0, 1.15), -6.0)
 		return false
 	GameLog.add_entry("%s unlocks the %s with the %s." % [res.holder_name, display_name, res.key_name])
+	SfxManager.play("door_unlock", global_position, Vector2(1.0, 1.15), -6.0)
 	key = null
 	return true
 
@@ -530,7 +548,21 @@ func take_damage(amount: Dictionary, success_level: int = 0):
 	emit_signal("health_changed", current_health, max_health, self)
 
 	if current_health <= 0:
+		# Here, not in _destroy_item: that also runs when a book is read or a
+		# stack is used up, which break nothing.
+		SfxManager.play_throttled("item_break", 0.1, _break_sound_key(), global_position, Vector2(0.9, 1.1), -6.0)
+		HearingManager.emit(global_position, 0.7, null)
 		_destroy_item()
+
+# Smashed furniture by what it's made of (Items.json traits / resources).
+func _break_sound_key() -> String:
+	if resources.has("glass"):
+		return "glass_break"
+	if traits.has("Stone") or traits.has("Earth"):
+		return "structure_break_stone"
+	if traits.has("Metal") and not traits.has("Wood"):
+		return "weapon-break"
+	return "crate_break"
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level: int = 0):
 	var formatted_text = "[b]" + text + "[/b]" if success_level else text

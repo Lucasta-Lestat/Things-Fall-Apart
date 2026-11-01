@@ -180,6 +180,9 @@ static func _apply_money(character, value, success_tier: int) -> Array:
 		placed = scaled - int(entry.get("num_stacks", scaled))
 	var lines: Array = []
 	if placed > 0:
+		# Downtime, quest rewards and soul bargains all pay through here; a
+		# Next Day that pays several companions clinks once.
+		SfxManager.play_ui_throttled("coin_pickup", 0.15, "coin_pickup")
 		var line := "+%d %s" % [placed, cur_name]
 		if tier_mult > 1:
 			line += " (x%d for the check)" % tier_mult
@@ -348,6 +351,8 @@ static func _apply_grant_ability(character, ability_id: String) -> Array:
 	if not inv.add_ability_by_id(ability_id):
 		return []
 	var ab: Dictionary = AbilityDatabase.get_ability_data(ability_id)
+	# Shares TrainingManager's throttle: one chime however many learn at once.
+	SfxManager.play_ui_throttled("ability_learned", 0.5, "ability_learned", Vector2.ONE, -4.0)
 	return ["Learned: " + String(ab.get("display_name", ability_id.replace("_", " ")))]
 
 static func _apply_learn_spell(character, spell_id: String) -> Array:

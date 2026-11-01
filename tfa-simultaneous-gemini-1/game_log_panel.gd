@@ -121,6 +121,8 @@ func _build_toggle_button() -> void:
 	toggle_button.offset_right = -RIGHT_MARGIN
 	toggle_button.offset_left = -RIGHT_MARGIN - BUTTON_SIZE.x
 	toggle_button.toggled.connect(_on_button_toggled)
+	# set_open's ui-navigation is its sound.
+	toggle_button.set_meta("sfx_silent", true)
 
 	# Unread count, on the button's top-right corner; hidden at zero.
 	unread_badge = Label.new()

@@ -129,14 +129,16 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 	if any_blocked and not any_dealt:
 		show_floating_text("Blocked", Color(0.75, 0.75, 0.75), success_level)
 
-	# Fire damage on flammable structures triggers ignition on occupied tiles
+	# Fire damage on flammable structures triggers ignition on occupied tiles.
+	# Silent: this is how a burning fire spreads into walls/trees (CellFire._damage
+	# hits them every second), and a spell's fire damage has its own sound.
 	if took_fire_damage and flammable:
 		var game = get_tree().get_first_node_in_group("game")
 		if not game:
 			game = get_tree().current_scene
 		if game and "surface_manager" in game and game.surface_manager:
 			for tile_pos in occupied_tiles:
-				game.surface_manager.try_ignite(tile_pos)
+				game.surface_manager.try_ignite(tile_pos, false)
 
 	var tween = create_tween()
 	var vis: CanvasItem = _visual()
@@ -153,8 +155,12 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		_refresh_tint()
 		if current_health > 0 and state_after > state_before and state_after >= DamageState.CRACKING:
 			_show_damage_state_notice(damage_state_word(state_after))
+			# A quiet splinter under the notice; throttled because a fire
+			# spreading along a wall cracks many segments in one tick.
+			SfxManager.play_throttled("structure_crack", 0.2, "crate_break", global_position, Vector2(0.8, 0.95), -12.0)
 
 	if current_health <= 0:
+		_play_break_sound()
 		_destroy_structure()
 
 func show_floating_text(text: String, color: Color = Color.WHITE, success_level = 0):
@@ -180,6 +186,15 @@ func show_floating_text(text: String, color: Color = Color.WHITE, success_level 
 	tween.tween_property(floating_text_label, "modulate:a", 0.0, 0.9)
 	tween.chain().tween_callback(func(): floating_text_label.visible = false)
 	
+# Collapse: flammable structures (wood walls, doors, trees, hedges) splinter,
+# the rest (stone) crumble. Loud enough to carry a room or two: the AI hears a
+# wall come down about as well as a melee hit. Throttled — a fire eating along
+# a wall drops several segments in the same tick.
+func _play_break_sound() -> void:
+	var key := "structure_break_wood" if flammable else "structure_break_stone"
+	SfxManager.play_throttled("structure_break", 0.12, key, global_position, Vector2(0.9, 1.05), -4.0)
+	HearingManager.emit(global_position, 1.0, null)
+
 func _destroy_structure():
 	# Unregister all occupied tiles from the grid. Decks never registered
 	# obstacles — unregistering them anyway would corrupt refcounts shared

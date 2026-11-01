@@ -118,6 +118,7 @@ func report(actor, verb: String, payload: Dictionary) -> void:
 		actor_name, str(verdict.get("display_name", "?")), int(verdict.get("severity", 0)),
 		str(verdict.get("law_faction", "?"))])
 	_party_float(effective, "Crime: " + str(verdict.get("display_name", "?")), CRIME_FLOAT_COLOR)
+	_party_sting(effective)
 	crime_committed.emit(effective, verdict, payload)
 	_fan_out_witnesses(effective, actor, verdict, payload)
 
@@ -131,6 +132,16 @@ func _party_float(who, text: String, color: Color) -> void:
 	if not (who.has_method("is_party_member") and who.is_party_member()):
 		return
 	Globals.show_floating_text(text, who.global_position, who, color, 0, Globals.NOTICE_FONT_SIZE)
+
+## The crime sting is the party's own: an NPC's theft across town is heard as
+## its witness's scream, not a cue in the player's ear. An AoE that breaks the
+## law against several victims at once stings once.
+func _party_sting(who) -> void:
+	if not is_instance_valid(who):
+		return
+	if not (who.has_method("is_party_member") and who.is_party_member()):
+		return
+	SfxManager.play_ui_throttled("crime_sting", 1.0, "crime_sting", Vector2.ONE, -6.0)
 
 # ---------------------------------------------------------------------------
 # Attribution and jurisdiction
@@ -385,6 +396,7 @@ func accuse(actor, statute_id: String, witnesses: Array = [], law_faction: Strin
 	GameLog.add_entry("%s commits %s (severity %d) — a crime under the law of %s." % [
 		actor_name, verdict["display_name"], verdict["severity"], law_faction])
 	_party_float(effective, "Crime: " + str(verdict["display_name"]), CRIME_FLOAT_COLOR)
+	_party_sting(effective)
 	crime_committed.emit(effective, verdict, payload)
 	# Same filter as witnesses_of: living, AI-driven, not the party.
 	var game = get_tree().current_scene
@@ -638,6 +650,12 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 		who = str(perp.Name)
 	GameLog.add_entry("The alarm is raised: %s — %s stands accused." % [
 		str(payload.get("display_name", "a crime")), who])
+	# The enforcer who took the report rings it out, where they stand. Once per
+	# crime (the record gate above), named or not.
+	var bell_pos: Vector2 = payload.get("crime_pos", Vector2.ZERO)
+	if is_instance_valid(enforcer) and enforcer is Node2D:
+		bell_pos = enforcer.global_position
+	SfxManager.play("alarm_bell", bell_pos, Vector2(0.97, 1.03), -4.0)
 	if identified:
 		_party_float(perp, "Accused: " + str(payload.get("display_name", "a crime")), CRIME_FLOAT_COLOR)
 	# Consequence (identified only — an anonymous alarm rouses the town but
@@ -651,6 +669,9 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 			FactionDatabase.adjust_player_standing(law_faction, -int(payload.get("severity", 0)))
 			FactionDatabase.mark_outlaw(law_faction)
 			FactionDatabase.record_crime(law_faction, payload, {"crime_id": crime_id})
+			# Outlawed. The bell may be far off-screen (and out of earshot),
+			# so the party hears that it was named.
+			_party_sting(perp)
 	crime_reported.emit(enforcer, payload)
 
 ## Settlement — the mechanism Phase 7's surrender UI drives. Return goods is
@@ -701,6 +722,7 @@ func settle_with(law_faction: String, mode: String) -> void:
 			if fine > 0 and protagonist != null:
 				DowntimeEffectApplier._apply_money(protagonist, -fine, 1)
 				GameLog.add_entry("Fine paid: %d gold to %s." % [fine, law_faction])
+				SfxManager.play_ui("coin_pickup", Vector2(0.72, 0.78))
 		"serve_time":
 			var days: int = FactionDatabase.jail_days_owed(law_faction)
 			if days > 0:

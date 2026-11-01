@@ -42,6 +42,10 @@ func _input(event):
 			# Advance dialogue
 			if dialogue_manager:
 				dialogue_manager.advance_line()
+				# A soft tick per line. The last line closes the panel, and
+				# the close has its own sound (DialogueManager.end_dialogue).
+				if visible:
+					SfxManager.play_ui("ui-navigation", Vector2(0.95, 1.05), -8.0)
 			get_viewport().set_input_as_handled()
 		elif event.is_action_pressed("pause"):
 			# Choices are up: SPACE does nothing (Enter still reaches a focused
@@ -128,7 +132,7 @@ func _format_reactions(reactions: Array) -> String:
 	return "   [" + ", ".join(parts) + "]"
 
 func _on_choice_selected(choice_index: int):
-	SfxManager.play_ui("ui-click")
+	# Choice buttons are Buttons: the global button hook clicks for them.
 	# Tell dialogue manager which choice was selected
 	if dialogue_manager:
 		dialogue_manager.select_choice(choice_index)

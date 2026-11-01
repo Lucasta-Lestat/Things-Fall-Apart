@@ -28,6 +28,12 @@ const EYE_OFFSET := Vector2(0, -44)   # above the head, clear of the body
 const EYE_HALF_W := 9.0
 const EYE_HALF_H := 5.0
 const EYE_COLOR := Color(1.0, 0.4, 0.3, 0.95)
+## A member newly in an onlooker's view gets a quiet cue (the eye alone is
+## easy to miss with the camera elsewhere), at most this often...
+const EYE_CUE_COOLDOWN := 1.5
+## ...and none this long after a toggle (it has its own sound) or a map load
+## (arriving is not being spotted; sight settles over the first sweeps).
+const EYE_CUE_QUIET_SEC := 1.5
 
 const RING_LIFE_SEC := 0.7
 const RING_GROW_FRAC := 0.45      # reaches full size this far into its life, then fades
@@ -44,6 +50,7 @@ const RING_TIER_COLORS := {
 var _game: Node = null
 var _in_view: Array = []   # party members an onlooker has in view
 var _eye_left: float = 0.0
+var _eye_cue_quiet_left: float = 0.0
 var _sync_left: float = 0.0
 var _rings: Array = []           # {pos, r, r_wall, age, col}, oldest first
 var _last_ring_at: Dictionary = {}   # source -> ticks (s) of its last ring
@@ -73,6 +80,7 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	if not _stealth_on():
 		return
+	_eye_cue_quiet_left -= delta
 	_eye_left -= delta
 	if _eye_left <= 0.0:
 		_eye_left = EYE_REFRESH_SEC
@@ -87,6 +95,7 @@ func _process(delta: float) -> void:
 
 func _on_stealth_mode_changed(active: bool) -> void:
 	_eye_left = 0.0
+	_eye_cue_quiet_left = EYE_CUE_QUIET_SEC
 	_sync_left = CONE_SYNC_SEC   # set_stealth_mode has just synced the cones
 	if not active:
 		_in_view.clear()
@@ -98,6 +107,7 @@ func _on_map_loaded(_map_id: String) -> void:
 	_rings.clear()
 	_last_ring_at.clear()
 	_eye_left = 0.0
+	_eye_cue_quiet_left = EYE_CUE_QUIET_SEC
 	_sync_left = 0.0   # the new map's NPCs need their elevated-surface cones
 	queue_redraw()
 
@@ -107,7 +117,9 @@ func _on_map_loaded(_map_id: String) -> void:
 
 func _refresh_in_view() -> void:
 	var had_any := not _in_view.is_empty()
+	var before: Array = _in_view.duplicate()
 	_in_view.clear()
+	var newly_seen := false
 	for pc in _game.party_chars:
 		if not is_instance_valid(pc) or not pc.is_alive() or pc.on_world_map:
 			continue
@@ -117,6 +129,10 @@ func _refresh_in_view() -> void:
 			continue
 		if is_in_view_of_onlooker(pc):
 			_in_view.append(pc)
+			if not pc in before:
+				newly_seen = true
+	if newly_seen and _eye_cue_quiet_left <= 0.0:
+		SfxManager.play_ui_throttled("stealth_in_view", EYE_CUE_COOLDOWN, "alert_search", Vector2(0.97, 1.03), -14.0)
 	if had_any or not _in_view.is_empty():
 		queue_redraw()
 

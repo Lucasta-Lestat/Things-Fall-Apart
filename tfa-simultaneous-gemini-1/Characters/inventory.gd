@@ -324,6 +324,11 @@ func equip_item(item: Node2D, hand: String = "Main", explicit: bool = false) -> 
 
 	emit_signal("weapon_equipped", item)
 	emit_signal("active_weapon_changed", item, hand)
+	# explicit = the inventory menu's "Equip to Main/Off", the only explicit
+	# weapon equip: spawn loadouts and save restores pass false and stay quiet.
+	# Cycling plays its own draw in cycle_weapon_for_hand.
+	if explicit and item is WeaponShape and is_instance_valid(possessor):
+		SfxManager.play("draw-steel", possessor.global_position)
 	return true
 
 ## Stow an item from a hand. Weapons go back to stowed_items. Ability copies are
@@ -344,10 +349,16 @@ func _stow_item(item: Node2D, hand: String) -> void:
 	emit_signal("weapon_unequipped", item)
 
 ## Public: move whatever is in the given hand back to stowed (or discard if ability copy).
+## Only the inventory menu's Stow calls this (the swaps inside equip_item and
+## the restore paths use _stow_item), so it is where the sheathe sounds.
 func stow_hand(hand: String) -> void:
 	var item = _get_hand_item(hand)
 	if item != null:
 		_stow_item(item, hand)
+		if item is WeaponShape and is_instance_valid(possessor):
+			# "Stow Both" sheathes two blades at once: one sound.
+			SfxManager.play_throttled("sheathe_%d" % possessor.get_instance_id(), 0.15,
+				"sheathe", possessor.global_position)
 
 ## Spawn a fresh AbilityShape clone of the given canonical ability. Used so the same
 ## ability can be wielded in both hands while a single canonical instance lives in stowed.

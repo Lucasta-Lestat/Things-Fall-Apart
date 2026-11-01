@@ -109,14 +109,14 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 	if any_blocked and not any_dealt:
 		show_floating_text("Blocked", Color(0.75, 0.75, 0.75), success_level)
 
-	# Fire damage on flammable floors triggers ignition
+	# Fire damage on flammable floors triggers ignition (silently, see Structure)
 	if took_fire_damage and flammable:
 		var grid_pos = GridManager.world_to_map(global_position)
 		var game = get_tree().get_first_node_in_group("game")
 		if not game:
 			game = get_tree().current_scene
 		if game and "surface_manager" in game and game.surface_manager:
-			game.surface_manager.try_ignite(grid_pos)
+			game.surface_manager.try_ignite(grid_pos, false)
 
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color.RED, 0.1)

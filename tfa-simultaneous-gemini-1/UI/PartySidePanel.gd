@@ -485,6 +485,9 @@ func _on_header_gui_input(event: InputEvent, index: int) -> void:
 						game_node.toggle_character_selection(character)
 					elif game_node.has_method("select_character_by_index"):
 						game_node.select_character_by_index(index)
+					# The header is a plain container, not a button, so the
+					# global button click doesn't cover it.
+					SfxManager.play_ui("ui-click", Vector2(0.95, 1.05), -10.0)
 			get_viewport().set_input_as_handled()
 
 # ---------------------------------------------------------------------------
@@ -981,10 +984,10 @@ func _transfer_one_item(source_char, target_char, index: int) -> void:
 		var why: String = source_char.worn_capacity_problem(src_item, {}, 1)
 		if why != "":
 			source_char.notify("Too full to remove", Color(1.0, 0.75, 0.3), why)
-			SfxManager.play_ui("trade_decline")
+			_play_decline()
 			return
 	if not target_char.inventory.add_item(one):
-		SfxManager.play_ui("trade_decline")
+		_play_decline()
 		return
 	if worn:
 		_unequip_item(source_char, index, src_item, 1)
@@ -1008,10 +1011,13 @@ func _inventory_can_take(inv, item: Dictionary) -> bool:
 			need -= max(0, max_stack - (int(cur) if cur != null else 1))
 	return need <= 0
 
+func _play_decline() -> void:
+	SfxManager.play_ui("trade_decline")
+
 # A drop the target can't hold: decline sound, and the inventory's add_failed,
 # which gives party members the usual "Inventory full" notice and log line.
 func _refuse_full(target_char, item: Dictionary) -> void:
-	SfxManager.play_ui("trade_decline")
+	_play_decline()
 	target_char.inventory.add_failed.emit(item, "Inventory full")
 
 # An open TradeWindow puts every party inventory back from its snapshot on
@@ -1022,7 +1028,7 @@ func _refuse_full(target_char, item: Dictionary) -> void:
 func _refuse_during_trade(character, entry: Dictionary, verb: String = "take") -> bool:
 	for w in get_tree().get_nodes_in_group("trade_window"):
 		if not w.is_queued_for_deletion():
-			SfxManager.play_ui("trade_decline")
+			_play_decline()
 			character.notify("Finish the trade first", Color(1.0, 0.6, 0.4),
 				"%s can't %s the %s while a trade is open: accept or cancel it first." % [character.Name, verb, entry.get("display_name", "item")])
 			return true
@@ -1031,7 +1037,7 @@ func _refuse_during_trade(character, entry: Dictionary, verb: String = "take") -
 # A service NPC won't hand over goods until the player has traded them at
 # least as much value (TownServicesPanel.can_accept_value_loss). Say so.
 func _refuse_service_take(target_char, source_window, uid: String, entry: Dictionary, item_cost: float) -> void:
-	SfxManager.play_ui("trade_decline")
+	_play_decline()
 	var raw = entry.get("raw")
 	var item_name := _item_name(raw) if raw is Dictionary else str(entry.get("display_name", "item"))
 	var log_text := "%s can't take the %s (%d gold) for nothing: drop goods of equal value on their card first." \
@@ -1201,7 +1207,15 @@ func _show_item_context_menu(slot: PanelContainer) -> void:
 	))
 
 func _on_item_menu_selected(id: int, character, entry: Dictionary, options: Array) -> void:
-	SfxManager.play_ui("ui-click")
+	# PopupMenu items aren't BaseButtons, so the pick clicks here, after the
+	# option ran, and only if it made no sound of its own: a refusal plays its
+	# decline, a drop its thud, Equip/Stow the steel or the rustle.
+	var sounds_before: int = SfxManager.sounds_started
+	_apply_item_menu_option(id, character, entry, options)
+	if SfxManager.sounds_started == sounds_before:
+		SfxManager.play_ui("ui-click")
+
+func _apply_item_menu_option(id: int, character, entry: Dictionary, options: Array) -> void:
 	var option_name = options[id] if id < options.size() else ""
 	var kind: String = entry.get("kind", "")
 
@@ -1466,8 +1480,7 @@ func _drop_item(character, item_index: int, item_data: Dictionary) -> void:
 	# a stolen item clean (create_item would rebuild it from canonical data).
 	game_node.create_item(item.get("id", ""), character.global_position, 1, _drop_extras(item))
 
-	if item.has("primary_damage_type"):
-		SfxManager.play("sword-fall", character.global_position)
+	_play_drop_sound(character, item)
 
 # Drop a chosen quantity from a stacked inventory item. Spawns a single world
 # item carrying the dropped stack count.
@@ -1490,8 +1503,17 @@ func _drop_item_amount(character, item_index: int, item_data: Dictionary, amount
 		world_item.stack_count = amount
 		if world_item.has_method("_update_stack_label"):
 			world_item._update_stack_label()
-	if item.has("primary_damage_type"):
+	_play_drop_sound(character, item)
+
+# Steel clangs; anything else (food, cloth, potions, coin) lands softly.
+# Weapons by ItemDatabase membership, as Game._thrown_landing_sound: potions,
+# clothes and armour carry a damage dict (and primary_damage_type) too.
+func _play_drop_sound(character, item: Dictionary) -> void:
+	var item_id: String = str(item.get("id", ""))
+	if item_id != "" and (ItemDatabase.weapons.has(item_id) or ItemDatabase.weapons.has(Globals.name_to_id(item_id))):
 		SfxManager.play("sword-fall", character.global_position)
+	else:
+		SfxManager.play("item_drop_soft", character.global_position, Vector2(0.9, 1.1), -4.0)
 
 # Compact slider popup to drop part of a stack. "Drop" commits the slider value.
 func _show_split_popup(character, item_index: int, item_data: Dictionary) -> void:
@@ -1534,6 +1556,8 @@ func _show_split_popup(character, item_index: int, item_data: Dictionary) -> voi
 	drop_btn.text = "Drop"
 	drop_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	drop_btn.pressed.connect(_drop_split.bind(character, item_index, item_data, slider, popup))
+	# The drop itself makes the sound.
+	drop_btn.set_meta("sfx_silent", true)
 	buttons.add_child(drop_btn)
 
 	var cancel_btn := Button.new()
@@ -1650,7 +1674,7 @@ func _equip_item(character, item_index: int, item_data: Dictionary) -> void:
 		var why: String = character.worn_capacity_problem(current, item_data, 0)
 		if why != "":
 			character.notify("Too full to swap", Color(1.0, 0.75, 0.3), why)
-			SfxManager.play_ui("trade_decline")
+			_play_decline()
 			return
 	_unequip_current_in_slot(character, slot_enum)
 
@@ -1687,7 +1711,7 @@ func _unequip_item(character, item_index: int, item_data: Dictionary, leaving: i
 		var why: String = character.worn_capacity_problem(item_data, {}, leaving)
 		if why != "":
 			character.notify("Too full to remove", Color(1.0, 0.75, 0.3), why)
-			SfxManager.play_ui("trade_decline")
+			_play_decline()
 			return false
 
 	var slot_enum: int = _EQUIP_SLOT_MAP[equip_slot]

@@ -28,6 +28,14 @@ const SIZE_MIN: float = 14.0
 const SIZE_MAX: float = 22.0
 const ALPHA_MIN: float = 0.6
 
+## A hostile out of the party's sight for this long is new again when it
+## reappears off-screen. Long enough that one ducking behind a pillar mid-fight
+## doesn't re-ping.
+const FORGET_AFTER: float = 6.0
+## No pings this soon after a map loads: whatever is in view on arrival was
+## not "spotted", the party just walked in on it.
+const MAP_LOAD_GRACE: float = 1.5
+
 const COLOR_FILL := Color(0.88, 0.12, 0.10)
 const COLOR_OUTLINE := Color(0.06, 0.0, 0.0, 0.9)
 const COLOR_BADGE_TEXT := Color(1.0, 0.95, 0.9)
@@ -39,6 +47,10 @@ var _refresh_accum: float = REFRESH_INTERVAL
 var _time: float = 0.0
 ## [{pos: Vector2, dir: Vector2, urgency: float, engaged: bool, count: int}]
 var _arrows: Array = []
+## instance id -> _time the hostile was last in party sight. Decides which
+## off-screen arrows are new threats that earn a ping.
+var _last_seen: Dictionary = {}
+var _quiet_until: float = MAP_LOAD_GRACE
 
 
 func _ready() -> void:
@@ -47,6 +59,12 @@ func _ready() -> void:
 	# The camera pans and zooms during tactical pause — that is exactly when
 	# the player is surveying, so the arrows must keep tracking.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if game != null and is_instance_valid(game) and game.has_signal("map_loaded"):
+		game.connect("map_loaded", _on_map_loaded)
+
+
+func _on_map_loaded(_map_id: String) -> void:
+	_quiet_until = _time + MAP_LOAD_GRACE
 
 
 func _process(delta: float) -> void:
@@ -57,6 +75,7 @@ func _process(delta: float) -> void:
 		_hostiles = []
 		if game != null and is_instance_valid(game) and game.has_method("hostiles_in_party_los"):
 			_hostiles = game.hostiles_in_party_los()
+		_ping_new_threats()
 	var had_arrows: bool = not _arrows.is_empty()
 	_rebuild_arrows()
 	if had_arrows or not _arrows.is_empty():
@@ -118,6 +137,32 @@ func _rebuild_arrows() -> void:
 				break
 		if not merged:
 			_arrows.append(a)
+
+
+## A quiet radar ping when a hostile the party hasn't had in sight lately
+## shows up off-screen: the arrow alone is easy to miss while zoomed in on a
+## fight. One the player already saw on screen and then panned away from
+## isn't new.
+func _ping_new_threats() -> void:
+	var fresh_off_screen: bool = false
+	var quiet: bool = _time < _quiet_until
+	var vp := get_viewport()
+	var xf: Transform2D = vp.get_canvas_transform() if vp != null else Transform2D.IDENTITY
+	var on_screen: Rect2 = get_viewport_rect().grow(-ONSCREEN_MARGIN)
+	for npc in _hostiles:
+		if not is_instance_valid(npc):
+			continue
+		var id: int = npc.get_instance_id()
+		var seen_at: float = float(_last_seen.get(id, -INF))
+		var fresh: bool = _time - seen_at > FORGET_AFTER
+		if fresh and not quiet and not on_screen.has_point(xf * npc.global_position):
+			fresh_off_screen = true
+		_last_seen[id] = _time
+	for key in _last_seen.keys():
+		if _time - float(_last_seen[key]) > FORGET_AFTER:
+			_last_seen.erase(key)
+	if fresh_off_screen:
+		SfxManager.play_ui_throttled("threat", 2.0, "radar_ping", Vector2(0.97, 1.03), -14.0)
 
 
 ## 1.0 within NEAR_DIST of any living party member, 0.0 at FAR_DIST or beyond.

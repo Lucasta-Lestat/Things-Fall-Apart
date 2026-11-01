@@ -172,6 +172,7 @@ static func _resolve_summon(
 						spawned.set_meta("summoned_by", caster)
 						# Render this combatant as a boid swarm if its template opts in.
 						_attach_swarm_visual(spawned)
+						_play_summon_arrival(spawned, pos)
 			"item":
 				if game.has_method("create_item"):
 					spawned = game.create_item(summon_id, pos, stack_count)
@@ -209,6 +210,21 @@ static func _attach_swarm_visual(actor: Node) -> void:
 	var controller := SwarmVisualController.new()
 	scene_root.add_child(controller)
 	controller.setup(actor, preset)
+	# The skitter follows the unit and lives exactly as long as the swarm: the
+	# controller frees itself on death (the corpse stays) or despawn. Without
+	# GPU compute it bows out in setup and the plain body shows, unvoiced.
+	if actor is Node2D and not controller.is_queued_for_deletion():
+		SfxManager.start_loop("swarm_skitter_loop", (actor as Node2D).global_position, -8.0, "SFX", actor as Node2D, controller)
+
+
+## A summon announcing itself where it appears. Only rats have a voice for it
+## so far; other summons arrive on the ability's own impact sound.
+static func _play_summon_arrival(actor: Node, pos: Vector2) -> void:
+	if not is_instance_valid(actor) or not ("template_id" in actor):
+		return
+	var template: Dictionary = TopDownCharacterDatabase.get_template(actor.template_id)
+	if String(template.get("race", "")) == "rat":
+		SfxManager.play("rat_squeak", pos, Vector2(0.9, 1.15), -4.0)
 
 
 ## Walk up the scene tree from a node to find the main game scene

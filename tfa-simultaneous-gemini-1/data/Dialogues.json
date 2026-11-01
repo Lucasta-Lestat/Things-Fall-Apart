@@ -332,6 +332,12 @@
     }
    },
    "lockpick_success": {
+    "on_enter": [
+     {
+      "type": "play_sfx",
+      "key": "door_unlock"
+     }
+    ],
     "narrator": "*Click!* The lock springs open.",
     "protagonist": "Got it!",
     "rogue": "Impressive work. You've got talent.",
