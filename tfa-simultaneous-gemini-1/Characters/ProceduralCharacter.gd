@@ -7473,15 +7473,18 @@ func concealment_visibility() -> float:
 # --- Tree crowns hide (P3-F, decision 7) ------------------------------------
 # GridManager.canopy holds the crowns (disc minus trunk, cluster, alive). Under
 # a live one we are hard to see from the ground, and not seen at all by a
-# viewer looking down on it (a roof, a deck, a cliff top a story or more above
-# us); a crown between two eyes at crown height blocks the line. A corpse is
-# never hidden by it.
+# viewer looking down on it: from a roof or a deck a story or more above us,
+# or from relief terrain a story or more up when the eye line goes in through
+# the leaves (a cliff edge over the tree; not a gentle slope whose line runs
+# in under the crown). A crown between two eyes at crown height blocks the
+# line. A corpse is never hidden by it.
 
 ## Visibility under a live crown: a ground observer beyond CANOPY_NEAR_TILES
 ## sees us only within this much of their sight range.
 const CANOPY_VISIBILITY := 0.5
-## Within this many tiles (GridManager.TILE_SIZE, the AI's close-quarters
-## tile) the canopy's factor doesn't apply.
+## Within this many tiles (GridManager.TILE_SIZE) plus the observer's body
+## radius -- the AI's close quarters (ai.gd _close_quarters_radius) -- the
+## canopy's factor doesn't apply.
 const CANOPY_NEAR_TILES := 2.0
 ## TimeManager.absolute_time() until which the canopy's factor is lifted: any
 ## attack or cast (reveal()), concealed by a condition or not.
@@ -7502,12 +7505,13 @@ func _canopy_revealed() -> bool:
 ## CrimeManager.hidden_from, Game's party visibility). Worn concealment as
 ## always; the canopy judged from where they stand:
 ##   - under a live crown, CANOPY_VISIBILITY unless they are within
-##     CANOPY_NEAR_TILES of us or under the same crown cluster, or an attack
-##     or cast gave us away (reveal());
+##     CANOPY_NEAR_TILES (plus their body radius) of us or under the same
+##     crown cluster, or an attack or cast gave us away (reveal());
 ##   - canopy_hides_from(observer): 0.0, whatever reveal() says (the crown is
-##     still in the way): they look down on our crown from a roof, a deck or
-##     a cliff top a story or more above us, or the sight line runs through a
-##     crown between us at crown height.
+##     still in the way): they look down on our crown (from a roof or a deck
+##     a story or more above us, or from relief terrain a story or more up
+##     with the eye line going in through the leaves), or the sight line runs
+##     through a crown between us at crown height.
 ## Party members never hide from each other this way, and a corpse not at
 ## all. A range multiplier like effective_visibility: 0.0 = seen at no range.
 func visibility_to(observer) -> float:
@@ -7522,9 +7526,9 @@ func visibility_to(observer) -> float:
 		return vis   # beyond their eyes whatever the canopy does: skip its tests
 	var o_elev: float = _canopy_observer_elev(observer)
 	# The full block first: it ends in the band test's tile walk along the line.
-	if GridManager.canopy.blocks_view(o_pos, o_elev, global_position, current_elevation):
+	if _canopy_blocks(observer, o_pos, o_elev):
 		return 0.0
-	if not _canopy_revealed() and dist > GridManager.TILE_SIZE * CANOPY_NEAR_TILES:
+	if not _canopy_revealed() and dist > _canopy_near_px(observer):
 		var crown: int = canopy_crown()
 		if crown >= 0 and GridManager.canopy.cluster_at(o_pos, o_elev) != GridManager.canopy.cluster_of(crown):
 			vis = minf(vis, CANOPY_VISIBILITY)
@@ -7532,18 +7536,35 @@ func visibility_to(observer) -> float:
 
 ## True when a tree crown cuts `observer`'s view of us outright (P3-F,
 ## decision 7: crowns fully block sight from roofs, decks and cliffs):
-## CanopyMap.blocks_view from where they stand, looking down on our crown
-## from a story or more above us, or a crown between us at crown height.
-## Never between party members, never for a corpse; reveal() doesn't lift it.
-## visibility_to's 0.0, and the AI's hold rule (ai.gd: a held target that
-## ducks under a crown an archer on a roof looks down on is occluded).
+## CanopyMap.blocks_view from where they stand -- looking down on our crown
+## from a roof or a deck a story or more above us, or from relief terrain a
+## story or more up through the leaves -- or a crown between us at crown
+## height. Never between party members, never for a corpse; reveal()
+## doesn't lift it. visibility_to's 0.0, and the AI's hold rule (ai.gd: a
+## held target that ducks under a crown an archer on a roof looks down on is
+## occluded).
 func canopy_hides_from(observer) -> bool:
 	if not (observer is Node2D) or not is_instance_valid(observer) or observer == self:
 		return false
 	if not _canopy_applies_to(observer):
 		return false
-	var o_pos: Vector2 = observer.global_position
-	return GridManager.canopy.blocks_view(o_pos, _canopy_observer_elev(observer), global_position, current_elevation)
+	return _canopy_blocks(observer, observer.global_position, _canopy_observer_elev(observer))
+
+# CanopyMap's full block from `observer` (its raised surface known, not
+# guessed).
+func _canopy_blocks(observer, o_pos: Vector2, o_elev: float) -> bool:
+	var raised: int = 1 if GridManager.is_high_layer(observer) else 0
+	return GridManager.canopy.blocks_view(o_pos, o_elev, global_position, current_elevation, raised)
+
+# The near exemption's reach from `observer`: CANOPY_NEAR_TILES tiles plus its
+# body radius, the AI's close quarters (so a foe the AI treats as at its elbow
+# is not also hidden by the factor).
+func _canopy_near_px(observer) -> float:
+	var near: float = GridManager.TILE_SIZE * CANOPY_NEAR_TILES
+	if observer.has_method("_body_circle_radius"):
+		var br: float = observer._body_circle_radius()
+		near += br
+	return near
 
 # The canopy judges us at all: alive, off the world map, and not a party
 # member seen by a party member (the party always sees the party).

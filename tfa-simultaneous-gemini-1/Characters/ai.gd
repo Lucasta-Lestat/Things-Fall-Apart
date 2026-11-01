@@ -250,7 +250,8 @@ func _try_cast_ability(delta: float) -> bool:
 			var dist := character.global_position.distance_to(current_target.global_position)
 			if dist <= maxf(rng_px, 90.0) \
 					and not _would_self_blast(data, current_target.global_position, current_target) \
-					and is_in_line_of_sight(current_target.global_position, _target_elevation()):
+					and is_in_line_of_sight(current_target.global_position, _target_elevation()) \
+					and not current_target.canopy_hides_from(character):
 				if _cast(data, current_target.global_position, current_target):
 					return true
 	_cast_timer = 1.2   # nothing castable right now — re-check soon
@@ -797,12 +798,17 @@ func can_see_character(other) -> bool:
 	var dist: float = character.global_position.distance_to(other.global_position)
 	if dist >= detection_range:
 		return false
+	var close: bool = dist <= _close_quarters_radius() and not _is_sneaking(other)
+	# can_see_point's cheap half (range, FOV) before visibility_to's crown-band
+	# walk: false there is false below.
+	if not close and not character.sight_may_reach(other.global_position):
+		return false
 	# Concealment (a Dark Hood's Shrouded, a tree crown), as _update_target
 	# applies it.
 	var vis: float = other.visibility_to(character)
 	if vis < 1.0 and dist > get_sight_range_pixels() * vis:
 		return false
-	if dist <= _close_quarters_radius() and not _is_sneaking(other):
+	if close:
 		return _has_clear_sight_line(other.global_position, other.get_elevation())
 	return is_in_line_of_sight(other.global_position, other.get_elevation())
 
@@ -878,9 +884,10 @@ func _update_target(delta: float = 0.0) -> void:
 		# a kiting archer faces away from a perfectly visible enemy, and being
 		# struck by the target also re-anchors it (_on_self_damaged). A tree
 		# crown that cuts our view outright occludes like a wall (P3-F: the
-		# target ducked under a crown we look down on from a roof, a deck or a
-		# cliff top, or one stands between us at crown height); the canopy's
-		# 0.5 factor is acquisition's, as Shrouded's is.
+		# target ducked under a crown we look down on from a roof or a deck,
+		# or from relief terrain through the leaves, or one stands between us
+		# at crown height); the canopy's 0.5 factor is acquisition's, as
+		# Shrouded's is.
 		if dist <= _close_quarters_radius() \
 				or (_has_clear_sight_line(current_target.global_position, current_target.get_elevation())
 					and not current_target.canopy_hides_from(character)):
@@ -920,6 +927,9 @@ func _update_target(delta: float = 0.0) -> void:
 			if _hidden_by_invisibility(other):
 				continue
 			if not is_in_line_of_sight(other.global_position, other.get_elevation()):
+				continue
+			# Nor one a crown hides outright (the hold check occludes it too).
+			if other.canopy_hides_from(character):
 				continue
 			var dist = character.global_position.distance_to(other.global_position)
 			if dist < detection_range:
@@ -973,9 +983,16 @@ func _update_target(delta: float = 0.0) -> void:
 				continue
 
 		var dist: float = character.global_position.distance_to(other.global_position)
+		var close: bool = dist <= _close_quarters_radius() and not _is_sneaking(other)
+		# can_see_point's cheap half (range, FOV) first: visibility_to walks
+		# the crown band, and a foe it rejects fails is_in_line_of_sight below
+		# anyway.
+		if not close and not character.sight_may_reach(other.global_position):
+			continue
 		# Concealment (a Dark Hood's Shrouded, a tree crown): seen only within
 		# our sight range scaled by the target's visibility to us (0 under a
-		# crown we look down on from a roof, a deck or a cliff top).
+		# crown we look down on from a roof or a deck, or through the leaves
+		# from relief terrain).
 		var other_vis: float = other.visibility_to(character)
 		if other_vis < 1.0 and dist > get_sight_range_pixels() * other_vis:
 			continue
@@ -990,7 +1007,7 @@ func _update_target(delta: float = 0.0) -> void:
 		# enemies" report: an enemy at your elbow is not a vision problem.
 		# The wall ray still runs, so cover, doors and elevation are untouched;
 		# only the arc is skipped.
-		if dist <= _close_quarters_radius() and not _is_sneaking(other):
+		if close:
 			if not _has_clear_sight_line(other.global_position, other.get_elevation()):
 				continue
 		elif not is_in_line_of_sight(other.global_position, other.get_elevation()):
@@ -1281,7 +1298,9 @@ func _process_approach(delta: float) -> void:
 			return
 		# Ranged needs an actual firing line — a 5-tile shot into a wall face
 		# just decorates the masonry. Close along the path until one opens.
-		if is_ranged_fighter and not is_in_line_of_sight(current_target.global_position, _target_elevation()):
+		# A target a crown hides outright (P3-F) is no firing line either.
+		if is_ranged_fighter and (not is_in_line_of_sight(current_target.global_position, _target_elevation())
+				or current_target.canopy_hides_from(character)):
 			_combat_move(current_target.global_position, delta)
 			return
 		# Melee likewise: the hit test vetoes blade lines through walls

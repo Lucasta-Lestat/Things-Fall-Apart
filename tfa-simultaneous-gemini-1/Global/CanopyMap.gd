@@ -23,11 +23,15 @@
 #                       P3-B's CanopyLayer and P4-D's cover read it, so the
 #                       rules and the visuals agree
 #   above_clearance(i, viewer_elev)  an eye above the crown's trunk clearance
-#   looks_down_on(i, viewer_elev, target_feet)  a roof, deck or cliff top
-#                       looking down on crown i over a target
+#   looks_down_on(i, viewer_elev, target_feet)  a viewer a story or more above
+#                       a target under crown i, its eye over the clearance
+#   eye_line_in_crown(i, ...)  the eye line goes into crown i's disc through
+#                       the leaves, not under them
 #   line_blocked(...)   the crown sight band (a sight line through a crown),
 #                       a tile walk along the line
-#   blocks_view(...)    THE full block: looks_down_on the target's crown, or
+#   blocks_view(...)    THE full block: the target's own crown seen from above
+#                       (a roof or a deck a story up: looks_down_on; a viewer
+#                       on relief terrain: that and eye_line_in_crown), or
 #                       line_blocked (visibility_to, the AI's hold rule, the
 #                       crime position's witnesses)
 # A burnt or felled tree (its Structure's destroyed signal) stops hiding at
@@ -313,24 +317,64 @@ func above_clearance(i: int, viewer_elev: float) -> bool:
 ## True when an eye at `viewer_elev` looks DOWN on crown i over a target
 ## whose feet are at `target_feet` (both ABSOLUTE stories): the eye is above
 ## the crown's trunk clearance AND the viewer stands at least
-## GridManager.HIGH_LAYER_STORIES above the target (a roof, a deck, a cliff
-## top: decision 7's "crowns fully block sight from roofs, decks and
-## cliffs"). A viewer at the target's own level, uphill overhang or not, sees
-## along beneath the crown and is a ground observer (the 0.5 factor).
+## GridManager.HIGH_LAYER_STORIES above the target. A viewer at the target's
+## own level, uphill overhang or not, sees along beneath the crown and is a
+## ground observer (the 0.5 factor). From a roof or a deck this alone is
+## decision 7's "crowns fully block sight from roofs and decks"; a viewer on
+## relief terrain (a slope, a cliff top) is blocked only when its eye line
+## also goes in through the leaves (eye_line_in_crown, blocks_view).
 func looks_down_on(i: int, viewer_elev: float, target_feet: float) -> bool:
 	return above_clearance(i, viewer_elev) and viewer_elev - target_feet >= GridManager.HIGH_LAYER_STORIES
+
+## True when the eye line from an eye at (from_pos, viewer_elev) to the eye
+## of a target at (to_pos, target_elev) -- sight_line_clear's relief model,
+## the eye height interpolated along the chord -- goes into crown i's disc at
+## or above its trunk clearance and meets its band on the way to the target:
+## it enters through the leaves, not under them. A viewer inside the disc
+## (over the crown's top, on a cliff above it) looks straight down: entry is
+## its own eye. Elevations are ABSOLUTE stories.
+func eye_line_in_crown(i: int, from_pos: Vector2, viewer_elev: float, to_pos: Vector2, target_elev: float) -> bool:
+	if i < 0 or i >= _pos.size():
+		return false
+	var h0: float = viewer_elev + GridManager.EYE_HEIGHT_STORIES
+	var h1: float = target_elev + GridManager.EYE_HEIGHT_STORIES
+	var c: Vector2 = _pos[i]
+	var r2: float = _r[i] * _r[i]
+	var t_in: float = 0.0
+	if from_pos.distance_squared_to(c) > r2:
+		var d: Vector2 = to_pos - from_pos
+		var len2: float = d.length_squared()
+		if len2 < 1e-6:
+			return false
+		var f: Vector2 = from_pos - c
+		var b: float = f.dot(d)
+		var disc: float = b * b - len2 * (f.length_squared() - r2)
+		if disc <= 0.0:
+			return false   # the line misses the disc (the target is not under it)
+		t_in = clampf((-b - sqrt(disc)) / len2, 0.0, 1.0)
+	var entry: float = lerpf(h0, h1, t_in)
+	return entry >= _ground[i] + _base[i] and minf(entry, h1) <= _ground[i] + _top[i]
 
 ## THE full block, positional: true when a live crown cuts the view from an
 ## eye at (viewer_pos, viewer_elev) to a point at (target_pos, target_elev).
 ## Either the point is under a crown the viewer looks down on (looks_down_on;
 ## a viewer under the same crown cluster is beneath it too and is spared), or
 ## the line runs through a crown between them at crown height (line_blocked).
+## Looking down: from a raised surface (`viewer_raised`, below) that is
+## enough, as on a flat map; a viewer on relief terrain is a ground observer
+## unless its eye line also goes in through the leaves (eye_line_in_crown): a
+## steep look over a cliff edge is blocked, a gentle slope a story up whose
+## line runs in under the crown is not.
+## viewer_raised: 1 = on a raised surface (on a roof, or a deck
+## HIGH_LAYER_STORIES or more above its terrain: GridManager.is_high_layer),
+## 0 = on terrain or a low deck, -1 = judge it from viewer_elev against the
+## terrain under viewer_pos.
 ## The rest of the canopy (the 0.5 factor, its 2-tile and same-cluster
 ## exemptions, reveal(), party and corpse exemptions) is the character's:
 ## ProceduralCharacter.visibility_to / canopy_hides_from. CrimeManager's
 ## crime-position test asks this directly. Elevations are ABSOLUTE stories;
 ## NAN = the ground or deck under that point.
-func blocks_view(viewer_pos: Vector2, viewer_elev: float, target_pos: Vector2, target_elev: float) -> bool:
+func blocks_view(viewer_pos: Vector2, viewer_elev: float, target_pos: Vector2, target_elev: float, viewer_raised: int = -1) -> bool:
 	if _pos.is_empty():
 		return false
 	if is_nan(viewer_elev):
@@ -339,7 +383,11 @@ func blocks_view(viewer_pos: Vector2, viewer_elev: float, target_pos: Vector2, t
 		target_elev = GridManager.effective_elev(GridManager.world_to_map(target_pos))
 	var i: int = crown_at(target_pos, target_elev)
 	if i >= 0 and looks_down_on(i, viewer_elev, target_elev) and cluster_at(viewer_pos, viewer_elev) != _cluster[i]:
-		return true
+		var raised: bool = viewer_raised == 1
+		if viewer_raised < 0:
+			raised = GridManager.height_above_ground(GridManager.world_to_map(viewer_pos), viewer_elev) >= GridManager.HIGH_LAYER_STORIES
+		if raised or not GridManager.relief_los or eye_line_in_crown(i, viewer_pos, viewer_elev, target_pos, target_elev):
+			return true
 	return line_blocked(viewer_pos, target_pos, viewer_elev, target_elev)
 
 ## The crown sight band: true when the sight line from_pos -> to_pos runs
