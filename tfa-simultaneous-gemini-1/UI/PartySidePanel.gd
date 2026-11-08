@@ -79,7 +79,9 @@ func _ready() -> void:
 	game_node = get_node_or_null("/root/Game")
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
-	# Compute slide positions (panel anchored to right edge)
+	# Compute slide positions (panel anchored to right edge): offset_left at
+	# each end of the slide; offset_right is always PANEL_WIDTH further on
+	# (_toggle_panel).
 	_shown_x = -PANEL_WIDTH
 	_hidden_x = 0.0
 
@@ -1784,9 +1786,24 @@ func _toggle_panel() -> void:
 
 	panel_visible = not panel_visible
 	var target_x: float = _shown_x if panel_visible else _hidden_x
+	if panel_visible:
+		visible = true
 
-	_tween = create_tween()
+	# Slide BOTH edges, so the strip keeps its PANEL_WIDTH and moves off past
+	# the screen edge. Sliding offset_left alone squeezed the panel to zero
+	# width, which hid it only while its minimum width was 0: with the scroll's
+	# horizontal mode DISABLED (see _ready) the minimum is the rows' ~244 px,
+	# and a right-anchored panel that grows to the left (grow_horizontal BEGIN
+	# in game.tscn) just stayed on screen while the rest of the HUD hid.
+	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "offset_left", target_x, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween.tween_property(self, "offset_right", target_x + PANEL_WIDTH, SLIDE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# Off screen, really hide: a row wider than PANEL_WIDTH (_warn_if_too_wide)
+	# would otherwise grow the parked panel back over the edge, and a hidden
+	# panel takes no clicks or drops. A Tab mid-slide kills the tween, and this
+	# with it.
+	if not panel_visible:
+		_tween.chain().tween_callback(_on_hide_slide_finished)
 
 	SfxManager.play_ui("ui-navigation")
 
@@ -1795,6 +1812,10 @@ func _toggle_panel() -> void:
 	# player pressed Tab and start animating its own slide as well.
 	if not _in_downtime_hide:
 		emit_signal("panel_visibility_changed", panel_visible)
+
+func _on_hide_slide_finished() -> void:
+	if not panel_visible:
+		visible = false
 
 # ---------------------------------------------------------------------------
 # Per-frame updates (MP bars etc.)
