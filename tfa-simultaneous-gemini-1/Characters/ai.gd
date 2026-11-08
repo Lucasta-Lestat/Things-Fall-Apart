@@ -654,8 +654,11 @@ func process_ai(delta: float) -> void:
 		AIState.SEARCHING:
 			_process_searching(delta)
 
-	# Goal system runs when idle with no combat target
-	if current_state == AIState.IDLE and current_target == null:
+	# Goal system runs when idle with no combat target. A companion runs no
+	# civilian goals (execute_current_goal): it keeps up with the party.
+	if current_state == AIState.IDLE and current_target == null and character.is_party_member():
+		_process_follow(delta)
+	elif current_state == AIState.IDLE and current_target == null:
 		goal_reassess_timer += delta
 		if goal_reassess_timer >= GOAL_REASSESS_INTERVAL:
 			goal_reassess_timer = 0.0
@@ -1862,6 +1865,85 @@ func _check_path_progress() -> void:
 				navigate_to(GridManager.map_to_world(dest_tile))
 				return
 		_advance_path()
+
+
+# ===== COMPANION FOLLOW =====
+# An unselected companion with nothing to fight keeps up with the party: once
+# the selected character (Game.primary_selected) is more than
+# FOLLOW_START_TILES away it walks to a slot FOLLOW_SLOT_TILES from them, on
+# its own side, spread by party index so two don't share one, and stands there
+# until they move off again. Until 874c1404 an idle companion ran the civilian
+# goal loop (random wander, picking up loot); that rightly stopped, and nothing
+# took its place, so companions stood where they spawned. A Wait Here
+# (hold_position) companion stays put, a drawn plan has the legs
+# (_movement_locked), and a fight, a search or a hazard comes first (only IDLE
+# with no target gets here). A* at most every FOLLOW_REPATH_INTERVAL, and not
+# for FOLLOW_UNREACHABLE_BACKOFF after the leader can't be reached.
+
+const FOLLOW_START_TILES: float = 3.0
+const FOLLOW_SLOT_TILES: float = 1.5
+const FOLLOW_REPATH_INTERVAL: float = 0.5
+const FOLLOW_UNREACHABLE_BACKOFF: float = 2.0
+var _follow_cd: float = 0.0
+# Where the leader stood when the current follow path was planned.
+var _follow_planned_for := Vector2.INF
+
+## The party member this companion follows: the selected character, alive,
+## on this map and not on the world map; null when there is none (or it is us).
+func follow_leader():
+	if game == null or not is_instance_valid(game) or not ("primary_selected" in game) \
+			or not ("party_chars" in game):
+		return null
+	var leader = game.primary_selected
+	if leader == null or not is_instance_valid(leader) or leader == character \
+			or not (leader in game.party_chars):
+		return null
+	if not leader.is_alive() or leader.on_world_map:
+		return null
+	return leader
+
+func _process_follow(delta: float) -> void:
+	_follow_cd -= delta
+	if character.is_player_controlled or character.on_world_map or _movement_locked() \
+			or ("hold_position" in character and character.hold_position):
+		_follow_planned_for = Vector2.INF
+		return
+	var leader = follow_leader()
+	if leader == null:
+		return
+	var tile: float = GridManager.TILE_SIZE
+	var dist: float = character.global_position.distance_to(leader.global_position)
+	var following: bool = not nav_path.is_empty()
+	if not following:
+		_follow_planned_for = Vector2.INF
+		if dist <= FOLLOW_START_TILES * tile:
+			return
+	if _follow_cd > 0.0:
+		return
+	_follow_cd = FOLLOW_REPATH_INTERVAL
+	# Under way to a slot by where the leader still is: let the path run.
+	if following and _follow_planned_for.is_finite() \
+			and _follow_planned_for.distance_to(leader.global_position) <= tile:
+		return
+	var slot: Vector2 = _follow_slot(leader)
+	navigate_to(slot)
+	if nav_path.is_empty():
+		_follow_planned_for = Vector2.INF
+		if character.global_position.distance_to(slot) > tile:
+			_follow_cd = FOLLOW_UNREACHABLE_BACKOFF
+		return
+	_follow_planned_for = leader.global_position
+
+## FOLLOW_SLOT_TILES from the leader on our side of them, turned by party index
+## (-0.6, +0.6, 0 rad...) so companions arriving together don't share one, on
+## walkable, safe ground.
+func _follow_slot(leader) -> Vector2:
+	var away: Vector2 = character.global_position - leader.global_position
+	var dir: Vector2 = away.normalized() if away.length() > 1.0 else Vector2.DOWN
+	var idx: int = game.party_chars.find(character)
+	var spread: float = float(((idx + 1) % 3) - 1) * 0.6
+	var p: Vector2 = leader.global_position + dir.rotated(spread) * FOLLOW_SLOT_TILES * GridManager.TILE_SIZE
+	return _reachable_slot(p)
 
 
 # ===== GOAL REASSESSMENT =====
