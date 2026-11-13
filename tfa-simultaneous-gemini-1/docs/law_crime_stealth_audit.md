@@ -1,5 +1,50 @@
 ﻿# State of Implementation: Law, Crime, Stealth, and AI
 
+> **OUT OF DATE (flagged 2026-11-13).** This is the *pre-implementation*
+> snapshot from July 2026, written before Phases 1-7 of
+> `docs/law_crime_stealth_plan.md` were built. Most of its "does not exist"
+> findings are no longer true: there is a hostility oracle
+> (`FactionDatabase.are_hostile`), laws/jurisdiction (`LawDatabase`), a
+> witness/outcry pipeline (`CrimeManager`), ownership, standing, manhunts and
+> surrender. The AI now uses abilities (ai.gd) and doors make sound
+> (Door.gd). Read the plan's "As built" sections for the current design; treat
+> everything below as history until this audit is redone.
+
+## Known open issues (2026-11-13 re-audit)
+
+Found while fixing "shooting merchants gets no reaction" (branch
+`claude/map-bugs-ai-issues-75a82e`, which added per-NPC grudges, civilian
+panic, the hue-and-cry relay and the enforcer manhunt spread). Not yet fixed:
+
+- **Your own summons can report you.** `CrimeManager.witnesses_of` has no
+  faction filter: it skips party members but not other `player`-faction
+  characters (Rat Pack's rat swarm, any summon), nor witnesses hostile to the
+  actor (bandits). A summon standing by while you commit a crime starts an
+  outcry fuse against you.
+- **`wanted` is wrong in three ways.** Its text says "Guards in this region are
+  hostile on sight", which is false in Perrow: the outlaw mark lands on the law
+  faction (liziti), not the golden_guard who actually patrol. It is always
+  applied to `party_chars[0]`, even when a companion committed the crime. And
+  it is global, not per-region.
+- **Surrender settles with the wrong faction.** `SurrenderPanel` picks the
+  hostile NPC's own faction (golden_guard), but the ledger and outlaw flag are
+  keyed by the law faction (liziti): "Charges: none", a 0-gold fine, manhunts
+  cleared, while the liziti outlaw flag and `wanted` stay forever.
+- **Killing guards is legal in Perrow.** `LawDatabase._protected_by` derives
+  protection from hostility, and liziti and golden_guard are enemies.
+- **Confirmation prompts never reset.** `_confirmed_*_maps` in CrimeManager are
+  never cleared ("for the rest of the map visit" is not what happens), and the
+  attack confirmation can never warn about murder (the preview always sees a
+  living victim).
+- **Dead pieces:** `guard_alarm_alert` (laws.json) is never read; `silenced` is
+  never applied by a shipped ability; `crime_committed` / `crime_reported` have
+  only test subscribers; `AIState.RETREAT` / `PATROL` are never entered.
+- **Plan inconsistency:** the plan's C3 callout says Perrow is policed by liziti
+  only; the data and the Phase 3 section have `["liziti", "golden_guard"]`.
+
+---
+
+
 ## Bottom line
 
 There is **no law system, no crime concept, no ownership model, no reputation axis, no witness system, and no stealth mechanic** in this codebase. What exists is (a) a genuine, well-tuned *detection* pipeline â€” noise â†’ hearing â†’ a 0-100 alertness meter with LOS confirmation â€” that a crime system could be built on almost unchanged; (b) exactly one legality function, `RegionDatabase.is_service_legal()`, which checks whether an NPC's *profession title* is banned by the region's controlling faction, and which gates only shop-card visibility; and (c) a large amount of authored-but-dead crime vocabulary (`wanted`, `pardon`, `criminal`, `legal_title`, `thrill_of_sin`, `Stealth`, `Lockpicking`, `walking_noise`).

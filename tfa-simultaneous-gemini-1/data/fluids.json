@@ -126,6 +126,8 @@
 			"specular_intensity": 0.45,
 			"emissive": 0.0,
 			"viscosity": 2.4,
+			"puddle": 0.2,
+			"evaporation": 0.0006,
 			"refraction_strength": 0.004,
 			"conductive": true,
 			"flammable": false,

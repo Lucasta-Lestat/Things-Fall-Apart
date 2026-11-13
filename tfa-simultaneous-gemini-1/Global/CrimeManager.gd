@@ -63,7 +63,7 @@ func _on_player_standing_changed(_faction_id: String, _old_value: int, _new_valu
 
 # Witness pipeline (Phase 5)
 var _crime_counter: int = 0
-var _recorded_crimes: Dictionary = {}  # crime_id -> true (one report per crime)
+var _recorded_crimes: Dictionary = {}  # crime_id -> 1 anonymous / 2 identified report taken
 
 # Consequence + thrill tracking (Phase 6)
 # _open_crimes: crime_id -> {actor, fuses, resolved, escaped, thrill_key}.
@@ -502,6 +502,7 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		})
 	var victim_covered: bool = false
 	var fuses: int = 0
+	var seen_silent: int = 0
 	# Witnesses an Invisible or Shrouded actor slipped past (hidden_from): a
 	# victimless crime is the actor's own act, so they saw nothing at all.
 	var evaded: Array = []
@@ -520,19 +521,26 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 		any_identified = any_identified or identified
 		if str(entry.get("hidden", "")) != "":
 			unrecognised_by = str(entry["hidden"])
-		_start_outcry(witness, crime_id, identified, is_victim, crime_pos, effective, verdict, cfg)
-		fuses += 1
+		if _start_outcry(witness, crime_id, identified, is_victim, crime_pos, effective, verdict, cfg):
+			fuses += 1
+		else:
+			# seen, but they can't or won't cry out (dead, busy on another
+			# crime): not "unseen", so the no-witness line below stays honest
+			seen_silent += 1
 	# The victim is a witness even with no LOS at fan-out time (face-down,
 	# blinded, hit from behind) — the one person guaranteed to know about an
 	# assault must be able to report it.
 	if not victim_covered and victim is Object and is_instance_valid(victim) \
 			and victim != physical_actor and victim.has_method("is_alive") and victim.is_alive() \
 			and victim.get_node_or_null("AI") != null:
-		_start_outcry(victim, crime_id, true, true, crime_pos, effective, verdict, cfg)
-		fuses += 1
-		any_identified = true
+		if _start_outcry(victim, crime_id, true, true, crime_pos, effective, verdict, cfg):
+			fuses += 1
+			any_identified = true
 	# Hidden (Invisible, Shrouded): say that is why, on the float and the line.
 	var hider: String = str(physical_actor.Name) if (physical_actor is Node and is_instance_valid(physical_actor) and "Name" in physical_actor) else "Someone"
+	if fuses == 0 and seen_silent > 0:
+		GameLog.add_entry("Seen, but no one cries out.")
+		return
 	if fuses == 0:
 		# Legibility: absence-as-feedback is unteachable. This line is how
 		# the player learns the witness system exists at all.
@@ -579,6 +587,10 @@ func on_outcry_resolved(crime_id: int, fired: bool) -> void:
 		return
 	_open_crimes.erase(crime_id)
 	if bool(entry["escaped"]):
+		# Screamed, but did any enforcer take the report? An alarm into the
+		# void used to look exactly like one the watch acted on.
+		if int(_recorded_crimes.get(crime_id, 0)) == 0:
+			GameLog.add_entry("The alarm went up, but no guard heard it.")
 		return
 	GameLog.add_entry("No one raised the alarm.")
 	_party_float(entry.get("actor"), "No alarm", Color(0.7, 0.7, 0.7))
@@ -611,8 +623,12 @@ func _grant_thrill(actor, thrill_key: String) -> void:
 		if "criminal" in required:
 			cm.apply_condition(str(cond_id), null, 1, -1.0)
 
+## True when the witness's fuse is now burning for THIS crime (begin_outcry
+## refuses a dead / panicked-out / already-busy witness, or keeps an earlier
+## crime's fuse): only those count toward _open_crimes' fuses, or the crime
+## never closes and "No one raised the alarm" never comes.
 func _start_outcry(witness, crime_id: int, identified: bool, is_victim: bool,
-		crime_pos: Vector2, effective: Node, verdict: Dictionary, cfg: Dictionary) -> void:
+		crime_pos: Vector2, effective: Node, verdict: Dictionary, cfg: Dictionary) -> bool:
 	var law_faction: String = str(verdict.get("law_faction", ""))
 	var payload: Dictionary = {
 		"crime_id": crime_id,
@@ -629,7 +645,8 @@ func _start_outcry(witness, crime_id: int, identified: bool, is_victim: bool,
 	}
 	var ai_node = witness.get_node_or_null("AI")
 	if ai_node != null and ai_node.has_method("begin_outcry"):
-		ai_node.begin_outcry(payload)
+		return bool(ai_node.begin_outcry(payload))
+	return false
 
 ## Outcry payload for an enforcer who just found a crime-stamped corpse:
 ## always unidentified (the body does not name its killer), delay computed
@@ -675,7 +692,14 @@ func fire_outcry(witness, payload: Dictionary) -> void:
 	if not (witness is Node2D) or not is_instance_valid(witness):
 		return
 	var pos: Vector2 = witness.global_position
-	SfxManager.play("witness_scream", pos, Vector2(0.9, 1.15))
+	var law_f: String = str(payload.get("law_faction", ""))
+	var is_enforcer: bool = law_f != "" and ("faction_id" in witness) \
+		and LawDatabase.enforces(str(witness.faction_id), law_f)
+	# A civilian shrieks; the watch doesn't -- its alarm is the bell
+	# (on_alarm_heard). The shriek (the same sample fear plays) from a guard
+	# finding a body minutes later read as a death scream long after the death.
+	if not is_enforcer:
+		SfxManager.play("witness_scream", pos, Vector2(0.9, 1.15))
 	var loudness: float = float(LawDatabase.witness_cfg().get("scream_loudness", 1.35))
 	HearingManager.emit(pos, loudness, witness, "alarm", payload)
 	# The sole witness may BE the law: HearingManager skips the emitter, so a
@@ -692,16 +716,43 @@ func fire_outcry(witness, payload: Dictionary) -> void:
 		if witness_ai != null and bool(payload.get("identified", false)) \
 				and perp is ProceduralCharacter and is_instance_valid(perp):
 			witness_ai.manhunt_target = perp
-	on_outcry_resolved(int(payload.get("crime_id", -1)), true)
+	if not bool(payload.get("relay", false)):
+		on_outcry_resolved(int(payload.get("crime_id", -1)), true)
+
+
+## Hue and cry: a civilian who hears a crime's alarm takes it up once, so a
+## scream crosses town to a guard post out of one voice's reach (810 px in the
+## open, far less over Perrow's relief). Bounded: RELAY_HOPS voices deep, one
+## relay per listener per crime, and a relay's fuse is not one of the crime's
+## witness fuses (no effect on "No one raised the alarm"). The identification
+## travels with it -- they shout the name they heard.
+const RELAY_HOPS := 2
+
+func relay_payload(payload: Dictionary, relayer) -> Dictionary:
+	var hops: int = int(payload.get("hops", 0))
+	if hops >= RELAY_HOPS or int(payload.get("crime_id", -1)) < 0:
+		return {}
+	var cfg: Dictionary = LawDatabase.witness_cfg()
+	var out: Dictionary = payload.duplicate()
+	out["relay"] = true
+	out["hops"] = hops + 1
+	out["delay"] = _outcry_delay(relayer, false, payload.get("crime_pos", Vector2.ZERO),
+		str(payload.get("law_faction", "")), cfg)
+	return out
 
 ## An enforcer has the report. One record per crime_id no matter how many
 ## enforcers hear the scream (C3: callers already gate on
 ## LawDatabase.enforces, so a bandit overhearing a robbery reports nothing).
 func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 	var crime_id: int = int(payload.get("crime_id", -1))
-	if crime_id >= 0 and bool(_recorded_crimes.get(crime_id, false)):
+	# One report per crime and per level of knowledge: an anonymous report
+	# (a corpse found, a witness who didn't see the face) used to close the
+	# crime for good, so an identified alarm arriving after it was dropped
+	# and the culprit was never named. A named report now upgrades it.
+	var level: int = 2 if bool(payload.get("identified", false)) else 1
+	if crime_id >= 0 and int(_recorded_crimes.get(crime_id, 0)) >= level:
 		return
-	_recorded_crimes[crime_id] = true
+	_recorded_crimes[crime_id] = level
 	var who: String = "person or persons unknown"
 	var perp = payload.get("perp")
 	var identified: bool = bool(payload.get("identified", false))
@@ -731,6 +782,12 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 			# Outlawed. The bell may be far off-screen (and out of earshot),
 			# so the party hears that it was named.
 			_party_sting(perp)
+			# The bell is the town's: every enforcer of this law on the map
+			# now hunts the named culprit, not just the one who took the
+			# report. The outlaw mark above lands on the LAW faction, which
+			# may field nobody here (Perrow's liziti), so without this an
+			# identified murder left the guards in the square indifferent.
+			_spread_manhunt(law_faction, perp)
 	crime_reported.emit(enforcer, payload)
 
 ## Settlement — the mechanism Phase 7's surrender UI drives. Return goods is
@@ -794,6 +851,21 @@ func settle_with(law_faction: String, mode: String) -> void:
 		if FactionDatabase.has_faction(law_faction) else law_faction
 	_party_float(protagonist, "Square with " + law_name, Color(0.55, 1.0, 0.55))
 
+func _spread_manhunt(law_faction: String, perp) -> void:
+	if not (perp is ProceduralCharacter) or not is_instance_valid(perp):
+		return
+	var game = get_tree().current_scene
+	if game == null or not ("characters_in_scene" in game):
+		return
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c) or not ("faction_id" in c) or not c.is_alive():
+			continue
+		if not LawDatabase.enforces(str(c.faction_id), law_faction):
+			continue
+		var ai_node = c.get_node_or_null("AI")
+		if ai_node != null and ("manhunt_target" in ai_node) and ai_node.manhunt_target == null:
+			ai_node.manhunt_target = perp
+
 ## A settled account calls off the hunt: every enforcer of this law faction
 ## drops its manhunt_target.
 func clear_manhunts(law_faction: String) -> void:
@@ -836,7 +908,7 @@ func is_disguised(actor) -> bool:
 	return head_covered and total >= 3
 
 func outcry_cancel_conditions() -> Array:
-	return LawDatabase.witness_cfg().get("cancel_on_conditions", ["unconscious", "silenced", "panicked"])
+	return LawDatabase.witness_cfg().get("cancel_on_conditions", ["unconscious", "silenced"])
 
 func _has_condition(who, cond_id: String) -> bool:
 	var cm = who.get_node_or_null("ConditionManager") if who is Node else null

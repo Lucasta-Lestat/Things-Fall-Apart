@@ -751,6 +751,114 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	return inst
 
 
+## A fixed set piece authored as an item_spawn (TG exports fountains, statues
+## and wells as items) whose Items.json entry carries a "structure" block:
+##   "structure": {"shape": "disc"|"rect", "radius": 0.42, "occlude_h": 0.45}
+## radius is a fraction of the drawn width (disc) / the rect is the drawn
+## footprint scaled by "footprint" (default 0.9). It spawns as a Structure, not
+## an Item: it blocks walking and pathing like a tree trunk, takes damage like
+## masonry, can't be picked up, and is never LOS-hidden (structures stay drawn
+## where they were seen; items vanish out of sight). occlude_h below eye height
+## (the default) = see-over: no cone shadow, no sight block.
+## Called by Game._spawn_items; the instance is a child of this loader, so the
+## unload sweep frees it with the map, and item-state restore never touches it.
+func spawn_prop_structure(item_id: String, data: Dictionary, pos: Vector2,
+		rot: float, scale_v: Vector2) -> Structure:
+	var spec: Dictionary = data.get("structure", {}) if data.get("structure") is Dictionary else {}
+	var spath := str(data.get("sprite_path", ""))
+	var tex: Texture2D = load(spath) as Texture2D if spath != "" and ResourceLoader.exists(spath) else null
+	var base_w: float = float(data.get("base_width", 64.0)) if data.get("base_width") != null else 64.0
+	# Item.scale_sprite's rule: base_width is the drawn PIXEL width, height
+	# follows the art's aspect; the spawn's scale / scale_x / scale_y stretch it
+	var k: float = 1.0
+	if tex != null and tex.get_width() > 0:
+		k = base_w / float(tex.get_width())
+	var draw_w: float = base_w * absf(scale_v.x)
+	var draw_h: float = (float(tex.get_height()) * k if tex != null else base_w) * absf(scale_v.y)
+	var tile_size: int = GridManager.TILE_SIZE
+	var path_margin := float(tile_size) * 0.35
+	var shape: Shape2D
+	var occ_poly := PackedVector2Array()
+	var occupied: Array[Vector2i] = []
+	var tight: Array[Vector2i] = []
+	if String(spec.get("shape", "disc")) == "rect":
+		var fp: float = float(spec.get("footprint", 0.9))
+		var half := Vector2(draw_w, draw_h) * 0.5 * fp
+		var rect := RectangleShape2D.new()
+		rect.size = half * 2.0
+		shape = rect
+		for c in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(half.x, half.y), Vector2(-half.x, half.y)]:
+			occ_poly.append((c as Vector2).rotated(rot))
+		var ax := Vector2.RIGHT.rotated(rot) * maxf(0.0, half.x - half.y)
+		var thick := minf(half.x, half.y)
+		if half.y > half.x:
+			ax = Vector2.DOWN.rotated(rot) * (half.y - half.x)
+		occupied = _tiles_near_segment(pos - ax, pos + ax, thick + path_margin, tile_size)
+		tight = _tiles_near_segment(pos - ax, pos + ax, thick, tile_size)
+	else:
+		var r: float = maxf(6.0, float(spec.get("radius", 0.42)) * draw_w)
+		var circ := CircleShape2D.new()
+		circ.radius = r
+		shape = circ
+		for i in 16:
+			occ_poly.append(Vector2.RIGHT.rotated(TAU * float(i) / 16.0) * r)
+		occupied = _tiles_near_segment(pos, pos, r + path_margin, tile_size)
+		tight = _tiles_near_segment(pos, pos, r, tile_size)
+	var occ_h: float = float(spec.get("occlude_h", 0.45))
+	var occlude_top: float = GridManager.effective_elev(GridManager.world_to_map(pos)) + occ_h
+
+	var hp_v: Variant = data.get("max_hp", data.get("hp"))
+	var hp: int = int(hp_v) if (hp_v is float or hp_v is int) else 200
+	var traits_v: Variant = data.get("traits")
+	var flammable: bool = traits_v is Dictionary and (traits_v as Dictionary).has("Wood")
+	StructureDatabase.register_prop(StringName(item_id), str(data.get("display_name", item_id)), hp, flammable)
+	var inst: Structure = structure_scene.instantiate()
+	inst.structure_id = StringName(item_id)
+	inst.skip_grid_snap = true
+	inst.use_custom_texture = true
+	inst.custom_texture = _blank_tex()   # the Sprite stays hidden; Art draws instead
+	inst.custom_size = Vector2(8, 8)
+	inst.position = pos
+	# above the structures overlay (-3) and floors, under items (1) and
+	# characters (5): someone standing at the rim draws over the basin
+	inst.z_index = -2
+	inst.occupied_tiles = occupied
+	inst.fire_blocking_tiles = tight
+	add_child(inst)
+	var cs: CollisionShape2D = inst.get_node("CollisionShape2D")
+	cs.shape = shape
+	cs.rotation = rot
+	inst.get_node("Sprite").visible = false
+	if tex != null:
+		# named "Art" so Structure._visual() (damage tint, hit flash, collapse
+		# hide) drives it like any structured-map structure's art
+		var art := Sprite2D.new()
+		art.name = "Art"
+		art.texture = tex
+		art.scale = Vector2(k * scale_v.x, k * scale_v.y)   # negative = mirrored art
+		art.rotation = rot
+		inst.add_child(art)
+	if occ_h >= GridManager.EYE_HEIGHT_STORIES:
+		var occ := LightOccluder2D.new()
+		occ.name = "Occluder"
+		var opoly := OccluderPolygon2D.new()
+		opoly.polygon = occ_poly
+		opoly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+		occ.occluder = opoly
+		if GridManager.relief_los:
+			occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_HIGH | GridManager.band_mask_below(occlude_top)
+		else:
+			occ.occluder_light_mask = CollisionLayers.SIGHT_MASK_GROUND
+		inst.add_child(occ)
+	inst.max_health = hp
+	inst.current_health = hp
+	inst.set_meta("occlude_top", occlude_top)
+	inst.set_meta("prop_item_id", item_id)
+	for t in occupied:
+		GridManager.register_obstacle(t)
+	return inst
+
+
 ## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
 ## The same row as the trunk: the disc r minus this trunk's collider, from the
 ## trunk clearance ("crown_base", contract 3; absent: 1 story) up to the crown

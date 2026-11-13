@@ -688,7 +688,7 @@ func get_all_conditions() -> Array:
 	{
 		"id": "panicked",
 		"display_name": "Panicked",
-		"description": "Overcome with terror, running in random directions.",
+		"description": "Overcome with terror, fleeing blindly away from whatever caused it. A panicked witness still screams.",
 			"save_stat": "will",
 		"traits": {"debuff": 1, "fear": 2, "mental": 1, "cc": 1},
 		"stackable": false,
@@ -905,7 +905,7 @@ func get_all_conditions() -> Array:
 				"type": "custom",
 				"custom_type": "bleed_puddle",
 				"interval": 2.0,
-				"custom_data": {"amount": 0.05}
+				"custom_data": {"amount": 0.3, "per_stack": 0.04}
 			}
 		],
 		"immunities": {}

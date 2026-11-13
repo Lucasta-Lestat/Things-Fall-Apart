@@ -1366,6 +1366,7 @@ func _unload_current_map() -> void:
 			GridManager.unregister_object(GridManager.world_to_map(it.global_position), it)
 			it.queue_free()
 	items_in_scene.clear()
+	_reset_item_memory()
 
 	# Drop map-scoped scheduled dialogue triggers so they don't fire on the
 	# next map. Global triggers are unaffected.
@@ -1939,6 +1940,21 @@ func _spawn_items(item_list: Array) -> void:
 		var pos_arr = item_def.get("position", [0, 0])
 		var pos = Vector2(pos_arr[0], pos_arr[1])
 		var count: int = int(item_def.get("count", 1))
+
+		# Set pieces (fountains, statues, wells) that TG exports as items but
+		# Items.json marks with a "structure" block: a solid, always-drawn
+		# Structure instead of a walk-over, pick-up-able, LOS-hidden Item.
+		var idata: Dictionary = ItemDatabase.items.get(item_id, {})
+		if idata.get("structure") is Dictionary:
+			var sc := float(item_def.get("scale", 1.0))
+			var sv := Vector2(sc * float(item_def.get("scale_x", 1.0)), sc * float(item_def.get("scale_y", 1.0)))
+			var prop: Structure = map_loader.spawn_prop_structure(item_id, idata, pos,
+				float(item_def.get("rotation", 0.0)), sv)
+			if prop != null:
+				structures_in_scene.append(prop)
+				if prop.has_signal("destroyed"):
+					prop.destroyed.connect(_on_structure_destroyed)
+			continue
 
 		# Per-spawn extras (only applied when present; SpawnRowSchema.ITEM_KEYS):
 		# controlling_faction triggers faction-filtered auto-loot for chests,
@@ -3221,6 +3237,8 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		# immediately, but the source identity still has to be confirmed via
 		# LOS for HOSTILE (handled by existing target acquisition).
 		ai_node.wake_from_at_ease(65.0, location)
+		if bool(entry.get("sees_actor", false)):
+			_witness_grudge(ai_node, witness, attacker, victim)
 	# Party under fire (either side of the blow): call it out to the whole
 	# party. This is the ONLY player-side fan-out that fires when the SELECTED
 	# character opens a fight — their AI is dormant (AI_enabled false), so the
@@ -3231,6 +3249,33 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		alert_party(victim.global_position)
 	elif victim in party_chars and attacker != null and is_instance_valid(attacker):
 		alert_party(attacker.global_position)
+
+
+## A bystander who SAW `attacker` hurt `victim` takes it personally when the
+## victim is one of their own (same faction -- every civilian is "neutral" --
+## or an ally) or when they keep the peace here (an enforcer of this map's
+## law, whether or not the law calls it a crime). A civilian panics; anyone
+## else turns on the attacker (ai.gd take_grudge). Not for a fair fight: a
+## victim whose faction is hostile to the attacker's earns no sympathy, and a
+## witness hostile to the victim cheers.
+func _witness_grudge(ai_node, witness, attacker, victim) -> void:
+	if not (attacker is ProceduralCharacter) or not is_instance_valid(attacker) or attacker == witness:
+		return
+	if not ai_node.has_method("take_grudge") or not (victim is ProceduralCharacter):
+		return
+	var vf: String = str(victim.faction_id)
+	var af: String = str(attacker.faction_id)
+	if FactionDatabase.are_hostile(vf, af):
+		return
+	if ai_node.has_method("_is_enemy") and ai_node._is_enemy(victim):
+		return
+	var wf: String = str(witness.faction_id)
+	var stands_with: bool = wf == vf or FactionDatabase.are_allies(wf, vf)
+	if not stands_with:
+		var law: String = LawDatabase.jurisdiction_for_map(current_map_id)
+		stands_with = law != "" and LawDatabase.enforces(wf, law)
+	if stands_with:
+		ai_node.take_grudge(attacker, false)
 
 
 ## Seconds without harm from the same attacker after which their next damage
@@ -3743,11 +3788,29 @@ func _invisible_fade_seconds() -> float:
 	return PULSE_DURATION * (1.0 - t_norm)
 
 
+## Item memory: an item the party has seen stays drawn at its LAST KNOWN
+## place once it is out of sight -- it no longer blinks out the moment nobody
+## looks at it -- but that place is only a memory. Unseen and unmoved, the item
+## itself stays drawn (it is exactly where remembered). Unseen and moved,
+## taken or destroyed, the real item hides and a GHOST (a copy of its sprite
+## frozen at the last-seen transform) stands in until the party looks at that
+## spot again and finds it empty. The two look identical, so what the screen
+## shows of anything out of sight is what the party believes, never a leak.
+## Never-seen items stay hidden. Memory is per map visit (_item_mem is keyed by
+## instance id; ghosts live under map_loader and die with the map).
+var _item_mem: Dictionary = {}     # item instance id -> last-seen global Transform2D
+var _item_ghosts: Dictionary = {}  # item instance id -> ghost Node2D
+var _item_ghost_root: Node2D = null
+const ITEM_MEMORY_MOVE_EPS := 2.0  # px: physics jitter below this is "unmoved"
+
 func _update_item_los_visibility() -> void:
-	"""Items follow the same visibility rule as NPCs."""
+	"""Items follow the same visibility rule as NPCs, plus last-known memory."""
+	var live_ids: Dictionary = {}
 	for item in items_in_scene:
 		if not is_instance_valid(item):
 			continue
+		var iid: int = item.get_instance_id()
+		live_ids[iid] = true
 		var vis: bool = _is_position_visible_to_party(item.global_position)
 		# a RUN (a 14 m banquet table) shows whole when its centre OR either end
 		# is seen -- one strip, never piecewise pop-in along the hall
@@ -3756,7 +3819,98 @@ func _update_item_los_visibility() -> void:
 			var xf: Transform2D = (item as Item).global_transform
 			vis = _is_position_visible_to_party(xf * Vector2(-hl, 0.0)) \
 				or _is_position_visible_to_party(xf * Vector2(hl, 0.0))
-		item.visible = vis
+		if vis:
+			item.visible = true
+			_item_mem[iid] = item.global_transform
+			if not _item_looks.has(iid) and item is Item:
+				_item_looks[iid] = _capture_item_look(item as Item)
+			_drop_item_ghost(iid)
+			continue
+		if not _item_mem.has(iid):
+			item.visible = false   # never seen: the party doesn't know it exists
+			continue
+		var seen_xf: Transform2D = _item_mem[iid]
+		if seen_xf.origin.distance_to(item.global_position) <= ITEM_MEMORY_MOVE_EPS:
+			item.visible = true    # unseen but exactly where remembered
+			continue
+		# moved while unseen: the real one hides, the memory stays put
+		item.visible = false
+		if not _item_ghosts.has(iid):
+			_spawn_item_ghost(iid, item, seen_xf)
+	# Remembered items that left the scene (taken, used up, smashed) unseen
+	# leave their ghost behind too.
+	for iid in _item_mem.keys():
+		if not live_ids.has(iid):
+			var last_xf: Transform2D = _item_mem[iid]
+			if not _item_ghosts.has(iid) and not _is_position_visible_to_party(last_xf.origin):
+				_spawn_item_ghost(iid, null, last_xf)
+			_item_mem.erase(iid)
+			_item_looks.erase(iid)
+	# A ghost lasts until the party sees its spot again (and finds it empty --
+	# a real item standing there was handled above and cleared its ghost).
+	for iid in _item_ghosts.keys():
+		var g: Node2D = _item_ghosts[iid]
+		if not is_instance_valid(g):
+			_item_ghosts.erase(iid)
+		elif _is_position_visible_to_party(g.global_position):
+			_drop_item_ghost(iid)
+
+
+func _drop_item_ghost(iid: int) -> void:
+	var g: Variant = _item_ghosts.get(iid)
+	if g != null and is_instance_valid(g):
+		(g as Node).queue_free()
+	_item_ghosts.erase(iid)
+
+
+## A copy of the item's sprite at the transform it was last seen at. `item`
+## may be null (already freed): the look captured when it was first seen
+## (_item_looks) draws it then.
+func _spawn_item_ghost(iid: int, item: Variant, xf: Transform2D) -> void:
+	var look: Dictionary = _item_looks.get(iid, {})
+	if item != null and is_instance_valid(item) and item is Item:
+		var now_look: Dictionary = _capture_item_look(item as Item)
+		if not now_look.is_empty():
+			look = now_look
+	if look.is_empty() or look.get("texture") == null:
+		return
+	if _item_ghost_root == null or not is_instance_valid(_item_ghost_root):
+		_item_ghost_root = Node2D.new()
+		_item_ghost_root.name = "ItemMemoryGhosts"
+		map_loader.add_child(_item_ghost_root)
+	var g := Node2D.new()
+	g.global_transform = xf
+	g.z_index = int(look.get("z", 1))
+	var spr := Sprite2D.new()
+	spr.texture = look["texture"]
+	spr.scale = look.get("scale", Vector2.ONE)
+	spr.offset = look.get("offset", Vector2.ZERO)
+	spr.position = look.get("position", Vector2.ZERO)
+	spr.rotation = float(look.get("rotation", 0.0))
+	g.add_child(spr)
+	_item_ghost_root.add_child(g)
+	g.global_transform = xf
+	_item_ghosts[iid] = g
+
+
+## What an item looks like, kept per instance so a ghost can still be drawn
+## after the item itself was freed out of sight.
+var _item_looks: Dictionary = {}   # item instance id -> look dict
+
+func _capture_item_look(it: Item) -> Dictionary:
+	var spr: Sprite2D = it.get_node_or_null("Sprite") as Sprite2D
+	if spr == null or spr.texture == null or not spr.visible:
+		return {}
+	return {"texture": spr.texture, "scale": spr.scale, "offset": spr.offset,
+		"position": spr.position, "rotation": spr.rotation, "z": it.z_index}
+
+func _reset_item_memory() -> void:
+	_item_mem.clear()
+	_item_looks.clear()
+	for iid in _item_ghosts.keys():
+		_drop_item_ghost(iid)
+	_item_ghosts.clear()
+	_item_ghost_root = null
 
 
 ## Environmental multiplier on sight range at a world position: the map's

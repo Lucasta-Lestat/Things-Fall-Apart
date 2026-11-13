@@ -66,6 +66,16 @@ func _setup_structure_data():
 	wood_door.label = "Wooden door"
 	
 
+## A set-piece item spawned as a Structure (MapLoader.spawn_prop_structure:
+## Items.json entries with a "structure" block). Its art comes from the item's
+## sprite, so the texture path StructureData builds is never loaded.
+func register_prop(prop_id: StringName, label: String, hp: int, flammable: bool) -> void:
+	if structure_data.has(prop_id):
+		return
+	var d := StructureData.new(prop_id, String(prop_id), hp, {}, Vector2(64, 64), flammable)
+	d.label = label
+	structure_data[prop_id] = d
+
 func get_structure_data(structure_id: StringName) -> StructureData:
 	if structure_data.has(structure_id):
 		return structure_data[structure_id]

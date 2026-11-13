@@ -2832,18 +2832,42 @@ func _handle_spread_sickness(instance: ConditionInstance, data: Dictionary) -> v
 
 
 func _handle_bleed_puddle(instance: ConditionInstance, data: Dictionary) -> void:
-	# Each tick of the bleeding condition drops a small amount of blood fluid
-	# on the victim's current tile. Amount scales with bleed stacks (tier).
-	# Damage is handled by the bleeding condition's separate "damage"
-	# triggered_effect (routed to the torso in _on_triggered_effect_fired).
-	var base_amount: float = data.get("amount", 0.05)
+	# Each tick of the bleeding condition drips blood where the victim stands:
+	# a base drop plus more per stack. Damage is the condition's separate
+	# "damage" triggered_effect (routed to the torso in
+	# _on_triggered_effect_fired).
+	# Sized for the CELL fluid sim (every structured map): the old 0.05 per
+	# stack spread out of its cell below the render floor at once, so bleeding
+	# left no trail at all. fluid_manager.drip deposits one cell, deep enough
+	# (~CellFluidFX.FULL) to read as a drop; blood's thick "puddle" floor
+	# (fluids.json) keeps it from creeping off into an invisible film.
+	if not is_alive():
+		return
+	var base_amount: float = float(data.get("amount", 0.3))
+	var per_stack: float = float(data.get("per_stack", 0.04))
 	var stacks: int = instance.stacks if instance else 1
-	var amount: float = base_amount * float(max(1, stacks))
+	var amount: float = base_amount + per_stack * float(maxi(1, stacks))
+	# a little scatter around the feet, so a standing bleeder pools and a
+	# walking one leaves a trail of drops rather than one stacked cell
+	var at: Vector2 = global_position + Vector2(randf_range(-8.0, 8.0), randf_range(-4.0, 10.0))
+	var g = get_tree().current_scene
+	if g and "fluid_manager" in g and g.fluid_manager:
+		g.fluid_manager.drip(at, "blood", amount)
 
-	var my_tile = GridManager.world_to_map(global_position)
-	var game = get_tree().current_scene
-	if game and "fluid_manager" in game and game.fluid_manager:
-		game.fluid_manager.register_fluid(my_tile, "blood", amount)
+
+## A cutting or piercing hit flicks a little blood onto the ground under the
+## wound -- the hit's own spatter, separate from the bleed it opens. Scales
+## gently with the damage; a scratch leaves nothing.
+func _spatter_blood(world_pos: Vector2, damage: int) -> void:
+	if damage < 4:
+		return
+	var g = get_tree().current_scene
+	if g == null or not ("fluid_manager" in g) or g.fluid_manager == null:
+		return
+	var dir := (world_pos - global_position)
+	dir = dir.normalized() if dir.length() > 0.5 else Vector2.RIGHT.rotated(randf() * TAU)
+	var at: Vector2 = global_position + dir * randf_range(10.0, 26.0)
+	g.fluid_manager.drip(at, "blood", clampf(0.22 + 0.01 * float(damage), 0.25, 0.45))
 
 
 func _handle_ink_puddle(_instance: ConditionInstance, data: Dictionary) -> void:
@@ -8981,10 +9005,15 @@ func handle_damage_effect_based_on_type(damage: int, damage_type: String, limb: 
 				# raw slash damage; severing only happens via a condition or
 				# ability effect (see _on_limb_severed callers).
 				_apply_damage_type_condition("bleeding", limb, null, damage)
-				_spawn_bleed_burst(location, 2.0)
+				# world_pos -> local: _spawn_bleed_burst positions in local
+				# space, and a caller's GLOBAL location threw the spatter
+				# hundreds of px off the body
+				_spawn_bleed_burst(to_local(world_pos), 2.0)
+				_spatter_blood(world_pos, damage)
 			"piercing":
 				_apply_damage_type_condition("bleeding", limb, null, damage)
-				_spawn_bleed_burst(location, 1.5)
+				_spawn_bleed_burst(to_local(world_pos), 1.5)
+				_spatter_blood(world_pos, damage)
 			"fire", "poison", "cold":
 				# Burning / Poisoned / Chilled through ConditionManager (they
 				# used to land in the dead legacy `conditions` dict). Whole-body,
