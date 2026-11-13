@@ -190,12 +190,12 @@
     "leg_width": 2,
     "leg_spacing": 5,
     "rig_scene": {
-     "female": "res://RigCharacters/human_female/CharacterMesh.tscn",
-     "male": "res://RigCharacters/human/CharacterMesh.tscn"
+     "female": "res://RigCharacters/halfling_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/halfling_male/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "female": 0.0781,
-     "male": 0.0425
+     "female": 0.1012,
+     "male": 0.0931
     }
    },
    "body_sprites": {
@@ -302,10 +302,12 @@
     "leg_width": 2,
     "leg_spacing": 5,
     "rig_scene": {
-     "female": "res://RigCharacters/gnome_female/CharacterMesh.tscn"
+     "female": "res://RigCharacters/gnome_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/gnome_male/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "female": 0.0857
+     "female": 0.0857,
+     "male": 0.0898
     }
    },
    "appearance": {
@@ -387,10 +389,12 @@
     "leg_width": 3,
     "leg_spacing": 7,
     "rig_scene": {
-     "male": "res://RigCharacters/half_elf_male/CharacterMesh.tscn"
+     "male": "res://RigCharacters/half_elf_male/CharacterMesh.tscn",
+     "female": "res://RigCharacters/half_elf_female/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "male": 0.1396
+     "male": 0.1396,
+     "female": 0.1386
     }
    },
    "body_sprites": {
@@ -904,10 +908,12 @@
     "leg_width": 2,
     "leg_spacing": 5,
     "rig_scene": {
-     "female": "res://RigCharacters/kobold_female/CharacterMesh.tscn"
+     "female": "res://RigCharacters/kobold_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/kobold_male/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "female": 0.1141
+     "female": 0.1141,
+     "male": 0.1101
     }
    },
    "body_sprites": {
@@ -1422,10 +1428,12 @@
     "leg_width": 3,
     "leg_spacing": 7,
     "rig_scene": {
-     "male": "res://RigCharacters/draconian_male/CharacterMesh.tscn"
+     "male": "res://RigCharacters/draconian_male/CharacterMesh.tscn",
+     "female": "res://RigCharacters/draconian_female/CharacterMesh.tscn"
     },
     "rig_scale": {
-     "male": 0.1405
+     "male": 0.1405,
+     "female": 0.1414
     }
    },
    "body_sprites": {
