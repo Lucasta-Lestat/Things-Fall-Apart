@@ -188,7 +188,15 @@
     "shoulder_y_offset": 8,
     "leg_length": 6,
     "leg_width": 2,
-    "leg_spacing": 5
+    "leg_spacing": 5,
+    "rig_scene": {
+     "female": "res://RigCharacters/human_female/CharacterMesh.tscn",
+     "male": "res://RigCharacters/human/CharacterMesh.tscn"
+    },
+    "rig_scale": {
+     "female": 0.0781,
+     "male": 0.0425
+    }
    },
    "body_sprites": {
     "male": {

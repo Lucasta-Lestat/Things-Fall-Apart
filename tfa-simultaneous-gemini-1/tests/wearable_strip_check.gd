@@ -54,7 +54,8 @@ func _ready() -> void:
 
 	# --- naked spawn must wear NOTHING, across races and genders ---
 	for probe in [["human", "male"], ["human", "female"], ["orc", "male"],
-			["high_elf", "female"], ["half_orc", "female"]]:
+			["high_elf", "female"], ["half_orc", "female"],
+			["halfling", "male"], ["halfling", "female"]]:
 		var c := _spawn_race(probe[0], probe[1], Vector2(300, 300))
 		await get_tree().process_frame
 		if c.character_rig == null:

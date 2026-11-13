@@ -4130,6 +4130,12 @@ func _setup_body_part_sprites() -> void:
 		return
 	if body_sprite_data == null or body_sprite_data.is_empty():
 		return  # rig-only race whose scene failed to load: keep procedural body
+	# Everything below is an OLDER body system (no fitted garments, flat armor
+	# icons). Legitimate only for a race with no rig art yet — say so, because
+	# in a crowd it reads as a random art glitch (the launch map's "tan
+	# gentleman" was a halfling on Male Human part sprites, 2026-11-12).
+	if body_type == BodyType.BIPEDAL and race_id != "":
+		push_warning("[ProceduralCharacter] race '%s' has no usable rig_scene — LEGACY body-part sprites (%s)" % [race_id, Name])
 	var head_path: String = body_sprite_data.get("head", "")
 	if head_path != "" and SkeletalBodyRig.has_manifest(head_path):
 		_setup_skeletal_rig(head_path)
@@ -4231,10 +4237,11 @@ func _setup_character_rig() -> bool:
 	and we feed it only set_moving()/play_action(). Returns false to fall back to
 	the legacy paths if the scene can't be loaded."""
 	if not ResourceLoader.exists(rig_scene_path):
-		push_warning("[ProceduralCharacter] rig_scene not found: " + rig_scene_path)
+		push_error("[ProceduralCharacter] rig_scene not found: " + rig_scene_path)
 		return false
 	var scn: PackedScene = load(rig_scene_path)
 	if scn == null:
+		push_error("[ProceduralCharacter] rig_scene failed to load: " + rig_scene_path)
 		return false
 	# Tear down any prior overlay of any kind.
 	if body_part_sprites:
@@ -7085,9 +7092,10 @@ func _rig_hide_wearable(slot: int) -> void:
 	_rig_worn.erase(slot)
 
 func _rig_apply_wearables() -> void:
-	# After a rig (re)build: strip EVERY baked wearable first — garment meshes
-	# ship visible in the exported scene, so an untouched rig would spawn
-	# wearing the whole wardrobe stacked — then re-show only what's equipped.
+	# After a rig (re)build: strip EVERY baked wearable first, then re-show only
+	# what's equipped (a rig that kept a stale layer would stack the wardrobe).
+	# The base mesh under the garments is bare skin: a character with no torso
+	# item is naked, which is why TopDownCharacterDatabase._ensure_clothed exists.
 	_rig_worn.clear()
 	if character_rig == null:
 		return

@@ -108,6 +108,7 @@
 		},
 		{
 			"id": "golden_guard",
+			"default_clothing": ["legionnaires_armor"],
 			"female_chance": 0.15,
 			"name": "Golden Guard",
 			"color": "#FFD700",
@@ -154,6 +155,7 @@
 		},
 		{
 			"id": "liziti",
+			"default_clothing": ["leather_armor", "padded_vest"],
 			"female_chance": 0.3,
 			"name": "Liziti",
 			"color": "#FFD800",
@@ -196,6 +198,7 @@
 		},
 		{
 			"id": "patriciate",
+			"default_clothing": ["noble's_blouse"],
 			"female_chance": 0.3,
 			"name": "Patriciate",
 			"color": "#9C27B0",
@@ -247,6 +250,7 @@
 		},
 		{
 			"id": "bandits",
+			"default_clothing": ["leather_armor", "padded_vest"],
 			"female_chance": 0.2,
 			"name": "Bandit Clan",
 			"color": "#795548",
@@ -412,6 +416,7 @@
 		},
 		{
 			"id": "cultists",
+			"default_clothing": ["dark_robes"],
 			"female_chance": 0.5,
 			"name": "Dark Cult",
 			"color": "#4A148C",
@@ -453,6 +458,7 @@
 		},
 		{
 			"id": "dragatini",
+			"default_clothing": ["legionnaires_armor"],
 			"female_chance": 0.25,
 			"name": "Dragatini",
 			"color": "#B71C1C",
@@ -524,6 +530,7 @@
 		},
 		{
 			"id": "pirates",
+			"default_clothing": ["leather_armor", "padded_vest"],
 			"female_chance": 0.2,
 			"name": "Freebooters",
 			"color": "#37474F",
