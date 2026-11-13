@@ -185,11 +185,21 @@ signal outcry_state_changed(active: bool, frac: float)
 # time. Do not "fix" the fuse to keep ticking under pause.
 var pending_outcry: Dictionary = {}   # {crime_id, perp, crime_pos, identified, law_faction, delay, ...}
 var _outcry_timer: float = -1.0
+var _relayed_crimes: Dictionary = {}   # crime_id -> true: this voice took up the cry once
 var _outcry_total: float = 0.0
 # Set by Phase 6 when an identified crime is recorded: the perp this AI
 # remembers past alertness decay. Declared here so Phase 5 payloads have a
 # landing site.
 var manhunt_target: ProceduralCharacter = null
+# Grudges: who this NPC has personally seen do violence to it or to someone it
+# stands with, outside the faction oracle (a townsman you shoot is still
+# "neutral" to the player's faction, so are_hostile alone never let him answer
+# back). instance_id -> {"who": ProceduralCharacter, "until": absolute time}.
+# Same shape and scope as manhunt_target: per-AI, unserialised, dies with the
+# map. Read in _is_enemy; written by take_grudge (our own wounds in
+# _on_self_damaged, a witnessed attack via Game._on_character_damaged).
+var grudges: Dictionary = {}
+const GRUDGE_SEC := 300.0
 # Compulsion parameters, in the same shape and for the same reason as
 # manhunt_target: personal, per-AI, unserialised, dies with the map. The
 # CONDITION is only the clock and the saving throw; this is the "about whom".
@@ -521,11 +531,96 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 		_acquire_target(foe)
 		return
 
-	# Not an enemy (friendly fire, a condition tick, falling damage): wake, but
-	# nothing to fight.
-	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location)
+	# Not (yet) an enemy. A blow from someone outside our own side is a grudge:
+	# a civilian panics, anyone else answers it (take_grudge). Friendly fire
+	# and falling damage just wake us.
+	if foe != null and is_instance_valid(foe) and foe.is_alive() and take_grudge(foe, true):
+		return
+	# Wake toward the ATTACKER when there is one: `location` is the impact
+	# point on our own body (see the comment at the top), so searching there
+	# meant spinning on the spot for 2.5 s and standing down.
+	var lead: Vector2 = location
+	if attacker != null and is_instance_valid(attacker) and "global_position" in attacker:
+		lead = attacker.global_position
+	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, lead)
 	if attacker and (current_target == null or attacker == current_target):
-		last_known_target_pos = attacker.global_position if "global_position" in attacker else location
+		last_known_target_pos = lead
+
+
+## A civilian: the catch-all "neutral" faction (merchants, monger, cooks...)
+## that has no fighters of its own. Struck or witnessing violence, a civilian
+## PANICS (the Panicked condition, Will save) instead of fighting; one who
+## keeps their nerve fights back with what they carry. A template can opt a
+## neutral NPC into fighting with "combat": {"retaliates": true} (spawn sets
+## the "retaliates" meta).
+func is_noncombatant() -> bool:
+	return character.faction_id == "neutral" and not bool(character.get_meta("retaliates", false))
+
+
+func _holds_grudge(other: ProceduralCharacter) -> bool:
+	var g: Variant = grudges.get(other.get_instance_id())
+	if g == null:
+		return false
+	var who: Variant = (g as Dictionary).get("who")
+	if who == null or not is_instance_valid(who) or TimeManager.absolute_time() >= float((g as Dictionary).get("until", 0.0)):
+		grudges.erase(other.get_instance_id())
+		return false
+	return true
+
+
+## `foe` hurt us (struck = true) or someone we stand with in front of us
+## (struck = false). Returns false when it is no grudge at all: our own side
+## (friendly fire), or a foe the faction oracle already makes an enemy (the
+## normal combat path owns those). Otherwise remembers them for GRUDGE_SEC,
+## then a civilian panics away from them and anyone else turns on them.
+func take_grudge(foe: ProceduralCharacter, struck: bool) -> bool:
+	if foe == null or not is_instance_valid(foe) or foe == character or not foe.is_alive():
+		return false
+	if current_state == AIState.DEAD or not character.is_alive():
+		return false
+	var mine: String = str(character.faction_id)
+	var theirs: String = str(foe.faction_id)
+	if (mine == theirs and mine != "neutral") or FactionDatabase.are_allies(mine, theirs):
+		return false
+	# Charmed: the charmer's blows don't make an enemy of them.
+	if foe == _infatuation_source():
+		return false
+	var already_enemy: bool = FactionDatabase.are_hostile(mine, theirs)
+	grudges[foe.get_instance_id()] = {"who": foe, "until": TimeManager.absolute_time() + GRUDGE_SEC}
+	if already_enemy:
+		return false
+	wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
+	if is_noncombatant() and _panic_from(foe):
+		return true
+	# A bystander already fighting someone else keeps that fight; the grudge
+	# makes the foe a target the moment it is free. Our own wound is positive
+	# identification (like the enemy branch of _on_self_damaged).
+	if current_target == null or (struck and not is_instance_valid(current_target)):
+		var foe_cm = foe.get_node_or_null("ConditionManager")
+		if struck or character.traits.get("true_sight", 0) != 0 				or foe_cm == null or not foe_cm.has_active_condition("invisible"):
+			_acquire_target(foe)
+	return true
+
+
+## Panicked, fleeing `foe` (Will save: a civilian who keeps their nerve
+## returns false and fights). Already panicking: true, no re-roll.
+## One Will save per PANIC_ROLL_GAP: a civilian who kept their nerve fights
+## for a while before the fear can take them again (and the resist line isn't
+## logged every target scan).
+const PANIC_ROLL_GAP := 6.0
+var _panic_rolled_at: float = -1.0e12
+
+func _panic_from(foe: ProceduralCharacter) -> bool:
+	var cm = character.get_node_or_null("ConditionManager")
+	if cm == null:
+		return false
+	if cm.has_active_condition("panicked"):
+		return true
+	var now: float = TimeManager.absolute_time()
+	if now - _panic_rolled_at < PANIC_ROLL_GAP:
+		return false
+	_panic_rolled_at = now
+	return cm.apply_condition("panicked", foe, 1) != null
 
 
 # True while our character's damage comes from one of its own conditions'
@@ -1098,6 +1193,8 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 	# hostility_harness's 361-pair oracle sweep is unaffected.
 	if compel_victim != null and is_instance_valid(compel_victim) and other == compel_victim:
 		return true
+	if not grudges.is_empty() and _holds_grudge(other):
+		return true
 	# Post-robbery truce: they took your purse and let you live (Phase 7).
 	if truce_until > 0.0 and other.faction_id == "player" \
 			and TimeManager.absolute_time() < truce_until:
@@ -1114,6 +1211,10 @@ func is_target_in_sight() -> bool:
 	return _target_occluded_time <= 0.0
 
 func _acquire_target(target: ProceduralCharacter) -> void:
+	# A civilian who sights the one they have a grudge against panics again
+	# (Will save, at most every PANIC_ROLL_GAP) rather than closing in.
+	if not grudges.is_empty() and is_noncombatant() and _holds_grudge(target) and _panic_from(target):
+		return
 	var tid: int = target.get_instance_id()
 	var announce: bool = tid != _announced_target_id or _time_without_target >= TARGET_REANNOUNCE_GAP
 	_announced_target_id = tid
@@ -1395,10 +1496,17 @@ func _process_panicked(delta: float) -> void:
 
 	panic_direction_timer -= delta
 	if panic_direction_timer <= 0 or (not character.is_moving and nav_path.is_empty()):
-		# Pick a new random direction
+		# Pick a new random direction -- AWAY from whoever caused the panic
+		# when we know who (within +-80 deg of straight away), else anywhere
 		panic_direction_timer = randf_range(1.0, 2.0)
 		var my_tile = GridManager.world_to_map(character.global_position)
 		var angle = randf() * TAU
+		var _pcm = character.get_node_or_null("ConditionManager")
+		var _pinst = _pcm.conditions.get("panicked") if _pcm else null
+		if _pinst != null and _pinst.source is Node2D and is_instance_valid(_pinst.source) 				and _pinst.source != character:
+			var away: Vector2 = character.global_position - (_pinst.source as Node2D).global_position
+			if away.length() > 1.0:
+				angle = away.angle() + randf_range(-1.4, 1.4)
 		var dist_tiles = randi_range(3, 5)
 		var offset = Vector2(cos(angle), sin(angle)) * dist_tiles
 		var target_tile = my_tile + Vector2i(int(offset.x), int(offset.y))
@@ -2320,8 +2428,21 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 	# so walls degrade the town's response exactly like any other sound.
 	if channel == "alarm":
 		wake_from_at_ease(minf(loudness * ALERTNESS_SOUND_GAIN, ALERTNESS_SOUND_CAP), world_pos)
-		# Enforcers act on the report; bystanders just startle.
+		# Enforcers act on the report; bystanders startle and take up the cry
+		# once (CrimeManager.relay_payload: hue and cry toward the watch).
 		var law_faction: String = str(payload.get("law_faction", ""))
+		if law_faction != "" and not LawDatabase.enforces(character.faction_id, law_faction):
+			var cid: int = int(payload.get("crime_id", -1))
+			# Only a cry heard CLEARLY is taken up: one muffled by a wall (or
+			# two) startles but isn't passed on, so walls still degrade the
+			# town's response; and the relayer is no more roused than it was.
+			var heard: float = minf(loudness * ALERTNESS_SOUND_GAIN, ALERTNESS_SOUND_CAP)
+			if cid >= 0 and not _relayed_crimes.has(cid) and heard >= ALERTNESS_SEARCHING_THRESHOLD:
+				_relayed_crimes[cid] = true
+				var relay: Dictionary = CrimeManager.relay_payload(payload, character)
+				if not relay.is_empty():
+					relay["witness_alert"] = minf(float(relay.get("witness_alert", heard)), heard)
+					begin_outcry(relay)
 		if law_faction != "" and LawDatabase.enforces(character.faction_id, law_faction):
 			CrimeManager.on_alarm_heard(character, payload)
 			# Knowledge outlives arousal: alertness decays at 4/sec and this
@@ -2365,17 +2486,20 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 ## Called by CrimeManager's witness fan-out. The payload carries everything
 ## the eventual alarm needs (crime_id, identified, law_faction, delay, ...);
 ## this node only owns the fuse.
-func begin_outcry(payload: Dictionary) -> void:
+## Returns true when a fuse is now burning for THIS payload's crime (the
+## caller counts fuses per crime). A sighting of another crime never replaces
+## a burning fuse (that orphaned the first crime's bookkeeping); an
+## identified sighting still upgrades an anonymous fuse for the same crime.
+func begin_outcry(payload: Dictionary) -> bool:
 	if current_state == AIState.DEAD or not character.is_alive():
-		return
+		return false
 	if not _can_still_cry_out():
-		return
+		return false
 	if _outcry_timer > 0.0:
-		# One fuse at a time. An identified sighting upgrades a pending
-		# unidentified one; otherwise the first crime keeps the fuse.
-		if bool(payload.get("identified", false)) and not bool(pending_outcry.get("identified", false)):
+		var same: bool = int(payload.get("crime_id", -1)) == int(pending_outcry.get("crime_id", -2))
+		if same and bool(payload.get("identified", false)) and not bool(pending_outcry.get("identified", false)):
 			pending_outcry = payload
-		return
+		return false
 	pending_outcry = payload
 	_outcry_total = maxf(float(payload.get("delay", 2.2)), 0.05)
 	_outcry_timer = _outcry_total
@@ -2384,6 +2508,7 @@ func begin_outcry(payload: Dictionary) -> void:
 	wake_from_at_ease(float(payload.get("witness_alert", 70.0)),
 		payload.get("crime_pos", character.global_position))
 	outcry_state_changed.emit(true, 0.0)
+	return true
 
 ## Guard the FIRE, not the tick site: nothing sets AI_enabled = false on
 ## death and the DEAD match arm sits after the timer block, so without this
@@ -2400,7 +2525,8 @@ func _tick_outcry(delta: float) -> void:
 	if not _can_still_cry_out():
 		# Silenced in the window — the crime tracker hears about it (this is
 		# how "no one raised the alarm" and the thrill grant resolve).
-		CrimeManager.on_outcry_resolved(int(pending_outcry.get("crime_id", -1)), false)
+		if not bool(pending_outcry.get("relay", false)):
+			CrimeManager.on_outcry_resolved(int(pending_outcry.get("crime_id", -1)), false)
 		pending_outcry = {}
 		outcry_state_changed.emit(false, 0.0)
 		return

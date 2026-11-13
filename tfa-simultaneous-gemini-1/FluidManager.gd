@@ -402,6 +402,19 @@ func register_fluid(tile_pos: Vector2i, fluid_type: String, amount: float, gentl
 	if type_changed:
 		_request_edge_mask_update()
 
+## A single drop of fluid at an exact world point (bleeding, hit spatter):
+## one cell on cell maps (polite: a drop of blood never erases an oil slick
+## or a pond), the covering tile on legacy maps. Callers size it to read on
+## its own (~CellFluidFX.FULL), since a drop below the type's puddle floor
+## never shows.
+func drip(world_pos: Vector2, fluid_type: String, amount: float) -> void:
+	if amount <= 0.0:
+		return
+	if cell_fluid != null and cell_fluid.active_sim():
+		cell_fluid.deposit(world_pos, fluid_type, amount, false)
+		return
+	register_fluid(GridManager.world_to_map(world_pos), fluid_type, amount, true)
+
 # Weather puddle. On cell maps a single-cell deposit spreads to the pool floor
 # and renders invisible (the oil-vanish bug all over again) -- pour a small
 # polite blot instead, so the settled body stays above the visible depth and an

@@ -51,7 +51,7 @@
 		"witness_alert": 70.0,
 		"unidentified_alert": 45.0,
 		"guard_alarm_alert": 74.0,
-		"cancel_on_conditions": ["unconscious", "silenced", "panicked"]
+		"cancel_on_conditions": ["unconscious", "silenced"]
 	},
 
 	"standing": {

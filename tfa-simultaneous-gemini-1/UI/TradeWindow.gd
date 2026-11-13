@@ -24,6 +24,7 @@ var _grid: GridContainer
 var _balance_label: Label
 var _accept_button: Button
 var _cancel_button: Button
+var _balance_button: Button
 
 # Snapshots taken at open. Used both for rollback on cancel and as the
 # baseline for the value-flow calculation.
@@ -122,6 +123,16 @@ func _ready() -> void:
 	var btn_row = HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_END
 	vbox.add_child(btn_row)
+
+	# Settle the difference in coin: pay what the NPC is short from the
+	# party's currency, or take change back when the party is overpaying.
+	_balance_button = Button.new()
+	_balance_button.text = "Balance with Gold"
+	_balance_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_balance_button.tooltip_text = "Pay the difference in gold (or other currency) from the party, or take change back from the trader."
+	_balance_button.pressed.connect(_on_balance_pressed)
+	_balance_button.set_meta("sfx_silent", true)
+	btn_row.add_child(_balance_button)
 
 	_accept_button = Button.new()
 	_accept_button.text = "Accept Trade"
@@ -260,6 +271,158 @@ func _recompute_balance() -> void:
 		_balance_label.text = "NPC needs %.0f more gold value to accept" % abs(net_to_npc)
 		_balance_label.add_theme_color_override("font_color", Color(0.9, 0.35, 0.35))
 		_accept_button.disabled = true
+	if _balance_button != null:
+		# Balanced already (or within one coin of overpaying): nothing to do.
+		_balance_button.disabled = net_to_npc >= 0.0 and net_to_npc < _smallest_currency_unit(npc)
+
+# ---------------------------------------------------------------------------
+# Auto-balance with currency
+# ---------------------------------------------------------------------------
+
+## The net value the NPC gains from the staged trade (negative: they're short).
+func net_to_npc() -> float:
+	if not is_instance_valid(npc):
+		return 0.0
+	return _compute_inventory_value(npc) - _snapshot_npc_value
+
+func _on_balance_pressed() -> void:
+	var moved: int = balance_with_currency()
+	if moved > 0:
+		SfxManager.play_ui("coin_pickup")
+	else:
+		SfxManager.play_ui("trade_decline")
+		var net: float = net_to_npc()
+		if net < 0.0:
+			GameLog.add_entry("The party has no coin left to make up the difference.")
+		elif net > 0.0:
+			GameLog.add_entry("%s has no coin to give as change." % (npc.Name if "Name" in npc else "The trader"))
+
+## Settles the staged trade in coin. The NPC short: the party pays the
+## shortfall, rounded UP to whole coins, from whoever carries currency (gold
+## first, then any Currency-trait item, cheapest unit first so the overshoot
+## stays under one coin). The party overpaying: the NPC hands back change,
+## rounded DOWN (never below even), to the party member opening the trade.
+## Returns how many coins moved. Inventory signals redraw both panels.
+func balance_with_currency() -> int:
+	if not is_instance_valid(npc) or npc.inventory == null or game == null:
+		return 0
+	var net: float = net_to_npc()
+	if net < 0.0:
+		var need: float = -net
+		var moved: int = 0
+		for member in _payers():
+			if need <= 0.0:
+				break
+			var got: Array = _move_currency(member.inventory, npc.inventory, need, true)
+			moved += int(got[0])
+			need -= float(got[1])
+		return moved
+	if net > 0.0:
+		var recv = _change_receiver()
+		if recv == null:
+			return 0
+		var got2: Array = _move_currency(npc.inventory, recv.inventory, net, false)
+		return int(got2[0])
+	return 0
+
+## Party members that can pay, the one trading first.
+func _payers() -> Array:
+	var out: Array = []
+	var first = _change_receiver()
+	if first != null:
+		out.append(first)
+	for m in game.party_chars:
+		if is_instance_valid(m) and m.inventory != null and not (m in out):
+			out.append(m)
+	return out
+
+func _change_receiver():
+	if "primary_selected" in game and is_instance_valid(game.primary_selected) \
+			and game.primary_selected in game.party_chars and game.primary_selected.inventory != null:
+		return game.primary_selected
+	for m in game.party_chars:
+		if is_instance_valid(m) and m.inventory != null:
+			return m
+	return null
+
+## Currency stacks in `inv`, as [index, unit value], gold first then cheaper
+## units first.
+func _currency_slots(inv) -> Array:
+	var out: Array = []
+	for i in range(inv.items.size()):
+		var it = inv.items[i]
+		if not (it is Dictionary) or not ItemDatabase.is_currency(it):
+			continue
+		var unit: float = float(it.get("cost", 1.0)) if it.get("cost") != null else 1.0
+		if unit <= 0.0:
+			continue
+		out.append([i, unit, str(it.get("id", "")) == "gold"])
+	out.sort_custom(func(a, b):
+		if a[2] != b[2]:
+			return a[2]
+		return float(a[1]) < float(b[1]))
+	return out
+
+func _smallest_currency_unit(who) -> float:
+	var best: float = INF
+	if is_instance_valid(who) and who.inventory != null:
+		for slot in _currency_slots(who.inventory):
+			best = minf(best, float(slot[1]))
+	return 1.0 if best == INF else best
+
+## Moves coin worth `value` from `src` to `dst`. round_up: pay at least
+## `value` (whole coins); otherwise at most `value`. Returns [coins, value
+## moved]. A receiver with no room keeps what it can; the rest stays put.
+func _move_currency(src, dst, value: float, round_up: bool) -> Array:
+	var coins: int = 0
+	var moved_value: float = 0.0
+	var remaining: float = value
+	# Indices shift as stacks empty: re-scan after each stack.
+	var guard: int = 0
+	while remaining > 0.0 and guard < 32:
+		guard += 1
+		var slots: Array = _currency_slots(src)
+		if slots.is_empty():
+			break
+		var progressed := false
+		for slot in slots:
+			var idx: int = int(slot[0])
+			var unit: float = float(slot[1])
+			var want: int = int(ceil(remaining / unit - 0.0001)) if round_up else int(floor(remaining / unit + 0.0001))
+			if want <= 0:
+				continue
+			var it: Dictionary = src.items[idx]
+			var sv = it.get("num_stacks", 1)
+			var have: int = int(sv) if sv != null else 1
+			var take: int = mini(want, have)
+			var parcel: Dictionary = it.duplicate(true)
+			parcel["num_stacks"] = take
+			if not dst.can_accept(parcel):
+				continue
+			if take >= have:
+				src.items.remove_at(idx)
+			else:
+				it["num_stacks"] = have - take
+			src.emit_signal("item_removed", parcel)
+			var placed: int = take
+			if not dst.add_stack(parcel):
+				# what didn't fit goes back where it came from
+				var back: int = int(parcel.get("num_stacks", 0))
+				placed = take - back
+				if back > 0:
+					var ret: Dictionary = parcel.duplicate(true)
+					ret["num_stacks"] = back
+					src.add_stack(ret)
+			if placed <= 0:
+				continue
+			coins += placed
+			moved_value += float(placed) * unit
+			remaining -= float(placed) * unit
+			progressed = true
+			break   # indices changed: re-scan
+		if not progressed:
+			break
+	return [coins, moved_value]
 
 # ---------------------------------------------------------------------------
 # NPC grid rendering

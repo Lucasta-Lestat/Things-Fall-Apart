@@ -6113,6 +6113,11 @@
 	"base_width": 140.0,
 	"base_height": 140.0,
 	"sprite_path": "res://Items/piazza_fountain.png",
+	"structure": {
+	 "shape": "disc",
+	 "radius": 0.44,
+	 "occlude_h": 0.45
+	},
 	"weight": 1500.0,
 	"cost": 500.0,
 	"interact_options": [],

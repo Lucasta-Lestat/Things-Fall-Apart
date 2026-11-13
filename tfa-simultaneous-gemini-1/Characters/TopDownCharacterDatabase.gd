@@ -199,6 +199,10 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 			_set_if_exists(character, "unarmed_strike_damage", int(combat["unarmed_strike_damage"]))
 		if combat.get("unarmed_strike_damage_type") != null:
 			_set_if_exists(character, "unarmed_strike_damage_type", str(combat["unarmed_strike_damage_type"]))
+		# A "neutral" (civilian) NPC panics when attacked unless the template
+		# says it fights (ai.gd is_noncombatant).
+		if bool(combat.get("retaliates", false)):
+			character.set_meta("retaliates", true)
 
 	# --- Resolve and grant equipment ---
 	var equipment = _resolve_equipment(template, faction_data, overrides)
