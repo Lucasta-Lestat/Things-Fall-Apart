@@ -565,7 +565,7 @@ def main():
     NAMED_HEADS_DIR.mkdir(parents=True, exist_ok=True)
 
     body_sprite_updates = {}  # npc_id -> flat body_sprites dict
-    race_fixes = {"earl_grey": "elf"}  # one-line data fix per plan
+    race_fixes = {"earl_grey": "high_elf"}  # one-line data fix per plan
     failures = []
 
     for i, char in enumerate(targets, 1):

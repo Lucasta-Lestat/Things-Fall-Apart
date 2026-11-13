@@ -214,6 +214,7 @@ func build_character(character, template_id: String, overrides: Dictionary = {})
 			"quantity": 1,
 			"equip_slot": ov_data.get("equip_slot", ""),
 		})
+	_ensure_clothed(equipment, template, template_id, faction_data, race_id)
 	_grant_equipment(character, equipment)
 
 	# --- Appearance overrides (skeleton bones, wolf fur, etc.) ---
@@ -431,6 +432,110 @@ const SLOT_TO_CATEGORY: Dictionary = {
 }
 # Which categories we try to fill when rolling a random loadout
 const LOADOUT_SLOTS: Array = ["main_hand", "torso", "head"]
+# Items.json equip_slot labels that auto-equip as worn gear.
+const WEARABLE_SLOTS: Array[String] = ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]
+# Template "slot" spellings that mean a worn slot but don't capitalize to one.
+# "slot": "body" became "Body", matched nothing and left the wearer naked.
+const TEMPLATE_SLOT_ALIASES: Dictionary = {
+	"body": "Torso", "chest": "Torso", "armor": "Torso", "cloak": "Cape"}
+# What a clothed-by-design humanoid wears when its template and faction give it
+# no torso item (a faction's "default_clothing" list wins when it has one).
+const DEFAULT_CLOTHING: Array[String] = ["peasant's_stained_shirt", "padded_vest"]
+
+## The equip_slot a template entry resolves to. Hand slots follow the entry; a
+## wearable keeps the slot Items.json gave it (an entry cannot move a shirt to
+## the head); anything else maps through TEMPLATE_SLOT_ALIASES.
+func _entry_equip_slot(entry: Dictionary, item_data: Dictionary) -> String:
+	var own_raw: Variant = item_data.get("equip_slot", "")
+	var own: String = "" if own_raw == null else str(own_raw)
+	if not entry.has("slot"):
+		var given: Variant = entry.get("equip_slot", own)
+		return own if given == null or str(given).is_empty() else str(given)
+	var want: String = String(entry["slot"]).to_lower()
+	if want == "main_hand" or want == "off_hand":
+		return want.capitalize()
+	if WEARABLE_SLOTS.has(own):
+		return own
+	if TEMPLATE_SLOT_ALIASES.has(want):
+		return String(TEMPLATE_SLOT_ALIASES[want])
+	return String(entry["slot"]).capitalize()
+
+## Quiet existence test (ItemDatabase.get_item_data push_warns on a miss).
+func _item_exists(item_id: String) -> bool:
+	var key: String = Globals.name_to_id(item_id)
+	return ItemDatabase.items.has(key) or ItemDatabase.weapons.has(key) \
+		or ItemDatabase.equipment.has(key)
+
+func _has_torso_entry(equipment: Array) -> bool:
+	for entry in equipment:
+		if not (entry is Dictionary):
+			continue
+		var id: String = str(entry.get("id", ""))
+		if not _item_exists(id):
+			continue
+		var data: Dictionary = ItemDatabase.get_item_data(id)
+		if _entry_equip_slot(entry, data) == "Torso":
+			return true
+	return false
+
+## Nobody spawns naked by accident. The rig's base mesh is bare skin and only
+## an equipped torso item shows a garment, so a template with an empty list, an
+## item id that does not exist, or a loadout roll that found nothing left the
+## NPC nude (5 of the 7 on the launch map). Returns the torso entry to add, or
+## {} when none applies: creatures, quadrupeds, templates marked
+## "unclothed": true, and races with no rig (their legacy sprites are painted
+## bodies, and a garment there is a flat icon over the art) are left alone.
+## The pick is stable per template, so a named NPC keeps one outfit across
+## map reloads; a faction's "default_clothing" list wins over DEFAULT_CLOTHING.
+func _default_clothing_entry(template: Dictionary, template_id: String, faction_data: Dictionary, race_id: String) -> Dictionary:
+	if template.get("is_creature", false) or template.get("unclothed", false):
+		return {}
+	if not RaceDatabase.has_race(race_id):
+		return {}
+	var body: Dictionary = RaceDatabase.get_race_data(race_id).get("body", {})
+	if str(body.get("body_type", "bipedal")) == "quadruped":
+		return {}
+	var rig: Variant = body.get("rig_scene", "")
+	if rig == null or (rig is String and (rig as String).is_empty()) \
+			or (rig is Dictionary and (rig as Dictionary).is_empty()):
+		return {}
+	var pool: Array[String] = []
+	for raw_id in faction_data.get("default_clothing", []):
+		if _item_exists(str(raw_id)):
+			pool.append(str(raw_id))
+	if pool.is_empty():
+		for fallback_id in DEFAULT_CLOTHING:
+			if _item_exists(fallback_id):
+				pool.append(fallback_id)
+	if pool.is_empty():
+		return {}
+	var pick: int = posmod(hash(template_id), pool.size())
+	return {"id": pool[pick], "quantity": 1, "equip_slot": "Torso"}
+
+func _ensure_clothed(equipment: Array, template: Dictionary, template_id: String, faction_data: Dictionary, race_id: String) -> void:
+	if _has_torso_entry(equipment):
+		return
+	var entry: Dictionary = _default_clothing_entry(template, template_id, faction_data, race_id)
+	if not entry.is_empty():
+		equipment.append(entry)
+
+## One-time pass for an NPC restored from a snapshot written before default
+## clothing existed: its saved inventory replaced what build_character granted,
+## so it would stay naked for the life of that save. Dresses a living character
+## that wears no torso item; Game stamps the snapshot so a later strip sticks.
+func clothe_if_bare(character) -> void:
+	if character == null or character.get("torso_equipment") != null:
+		return
+	if character.has_method("is_alive") and not character.is_alive():
+		return
+	var template_id: String = str(character.get("template_id"))
+	var template: Dictionary = get_template(template_id)
+	if template.is_empty():
+		return
+	var faction_data: Dictionary = FactionDatabase.get_faction_data(str(character.get("faction_id")))
+	var entry: Dictionary = _default_clothing_entry(template, template_id, faction_data, str(character.get("race_id")))
+	if not entry.is_empty():
+		_grant_equipment(character, [entry])
 
 func _resolve_equipment(template: Dictionary, faction_data: Dictionary, overrides: Dictionary) -> Array:
 	# Explicit equipment list on the template
@@ -583,7 +688,7 @@ func _grant_equipment(character, equipment: Array) -> void:
 		# "Main Hand" labels — normalize, or the override silently disables
 		# equipping (orc_warrior/bandit_chief/bandit_archer fought bare-handed).
 		if entry.has("slot"):
-			item_data["equip_slot"] = String(entry["slot"]).capitalize()
+			item_data["equip_slot"] = _entry_equip_slot(entry, item_data)
 		item_data["source"] = "starting_equipment"
 		var quantity: int = entry.get("quantity", item_data.get("quantity", 1))
 
@@ -616,7 +721,7 @@ func _grant_equipment(character, equipment: Array) -> void:
 						inventory.stow_weapon_from_data(item_data)
 				elif inventory.has_method("equip_ability_from_id"):
 					inventory.equip_ability_from_id(item_name, hand)
-			elif equip_slot in ["Head", "Torso", "Back", "Legs", "Feet", "Cape"]:
+			elif WEARABLE_SLOTS.has(equip_slot):
 				if character.has_method("equip_equipment"):
 					character.equip_equipment(item_data)
 					# Mark the inventory copy as equipped so the UI shows "Unequip"

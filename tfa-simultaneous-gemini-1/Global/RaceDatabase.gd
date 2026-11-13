@@ -42,6 +42,10 @@ func get_race_data(race_id: String) -> Dictionary:
 	push_error("Race ID not found: " + race_id)
 	return {}
 
+## Quiet existence test (get_race_data push_errors on a miss).
+func has_race(race_id: String) -> bool:
+	return _races.has(race_id)
+
 func get_all_race_ids() -> Array:
 	return _races.keys()
 

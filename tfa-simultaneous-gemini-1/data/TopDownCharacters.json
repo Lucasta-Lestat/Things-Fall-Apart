@@ -109,7 +109,7 @@
 	},
 	{
 	 "id": "leather_armor",
-	 "slot": "body"
+	 "slot": "torso"
 	}
    ],
    "icon": "res://Icons/default_human_icon.png",
@@ -172,8 +172,8 @@
 	 "slot": "main_hand"
 	},
 	{
-	 "id": "merchant_garb",
-	 "slot": "body"
+	 "id": "noble's_blouse",
+	 "slot": "torso"
 	},
 	{
 	 "id": "gold",
@@ -241,8 +241,8 @@
 	 "slot": "main_hand"
 	},
 	{
-	 "id": "studded_leather",
-	 "slot": "body"
+	 "id": "leather_armor",
+	 "slot": "torso"
 	},
 	{
 	 "id": "gold",
@@ -443,8 +443,8 @@
 	 "slot": "main_hand"
 	},
 	{
-	 "id": "elven_garb",
-	 "slot": "body"
+	 "id": "noble's_blouse",
+	 "slot": "torso"
 	}
    ],
    "icon": "res://Icons/forest_elf_icon.png",
@@ -528,6 +528,7 @@
   },
   {
    "id": "demon_imp",
+   "unclothed": true,
    "name": "Demon Imp",
    "race": "mephistkin",
    "faction": "neutral",
@@ -731,8 +732,8 @@
 	 "slot": "main_hand"
 	},
 	{
-	 "id": "liziti_boss_vest",
-	 "slot": "body"
+	 "id": "padded_vest",
+	 "slot": "torso"
 	},
 	{
 	 "id": "gold",
@@ -808,8 +809,8 @@
 	 "slot": "off_hand"
 	},
 	{
-	 "id": "centurion_lorica",
-	 "slot": "body"
+	 "id": "legionnaires_armor",
+	 "slot": "torso"
 	},
 	{
 	 "id": "centurion_crest",
@@ -914,8 +915,8 @@
 	 "slot": "off_hand"
 	},
 	{
-	 "id": "captain_coat",
-	 "slot": "body"
+	 "id": "leather_armor",
+	 "slot": "torso"
 	},
 	{
 	 "id": "captain_hat",
@@ -1312,8 +1313,9 @@
   },
   {
    "id": "earl_grey",
+   "gender": "male",
    "name": "Earl Grey",
-   "race": "elf",
+   "race": "high_elf",
    "background": "hermit",
    "faction": "druids",
    "body_sprites": {
@@ -1381,8 +1383,9 @@
   },
   {
    "id": "nude_elf",
+   "unclothed": true,
    "name": "Nude Elf",
-   "race": "elf",
+   "race": "high_elf",
    "background": "amnesiac",
    "faction": "neutral",
    "body_sprites": {
@@ -1685,6 +1688,7 @@
   },
   {
    "id": "siren",
+   "unclothed": true,
    "name": "Siren",
    "race": "siren",
    "background": "from_faction",
@@ -2193,7 +2197,7 @@
 	"intelligence": 70,
 	"charisma": 65
    },
-   "equipment": [
+   "equipment": [{"id": "venonan_vestments", "slot": "torso"},
 	{
 	 "id": "potion_of_healing",
 	 "quantity": 2
@@ -2237,7 +2241,7 @@
 	"intelligence": 75,
 	"charisma": 60
    },
-   "equipment": [
+   "equipment": [{"id": "venonan_vestments", "slot": "torso"},
 	{
 	 "id": "dagger",
 	 "slot": "main_hand"
@@ -3226,7 +3230,7 @@
 	},
 	{
 	 "id": "leather_armor",
-	 "slot": "body"
+	 "slot": "torso"
 	},
 	{
 	 "id": "potion_of_healing",
@@ -3291,8 +3295,9 @@
   },
   {
    "id": "queen_madeline_du_belmonte",
+   "gender": "female",
    "name": "Queen Madeline du Belmonte",
-   "race": "elf",
+   "race": "high_elf",
    "background": "noble",
    "faction": "patriciate",
    "stats": {
@@ -3346,6 +3351,7 @@
   },
   {
    "id": "rapture_beast",
+   "unclothed": true,
    "name": "Rapture Beast",
    "race": "from_faction",
    "background": "",
@@ -3467,7 +3473,7 @@
 	"intelligence": 50,
 	"charisma": 50
    },
-   "equipment": [],
+   "equipment": [{"id": "peasant's_stained_shirt", "slot": "torso"}],
    "icon": "res://Icons/cheese_monger_icon.png",
    "dialogue": null,
    "interact_options": [
@@ -3495,7 +3501,7 @@
 	"intelligence": 50,
 	"charisma": 45
    },
-   "equipment": [],
+   "equipment": [{"id": "padded_vest", "slot": "torso"}],
    "icon": "res://Icons/chef_master_icon.png",
    "dialogue": null,
    "interact_options": [
@@ -3622,8 +3628,9 @@
   },
   {
    "id": "barthes",
+   "gender": "male",
    "name": "Barthes",
-   "race": "elf",
+   "race": "high_elf",
    "background": "academic",
    "faction": "neutral",
    "stats": {

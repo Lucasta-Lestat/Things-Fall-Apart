@@ -773,14 +773,17 @@ func _maybe_restore_npc_state(npc, template_id: String, unique_name: String) -> 
 	var bucket: Dictionary = npc_state_per_region.get(_npc_bucket_key(), {})
 	if bucket.is_empty():
 		return
+	var snap_uid: String = "%s#%d" % [template_id, int(npc.get_meta("spawn_ordinal", 0))]
 	if _uses_named_uid(npc):
-		var uid: String = _build_npc_uid(template_id, unique_name)
-		if bucket.has(uid):
-			_deserialize_character(npc, bucket[uid])
+		snap_uid = _build_npc_uid(template_id, unique_name)
+	if not bucket.has(snap_uid):
 		return
-	var ordinal_uid: String = "%s#%d" % [template_id, int(npc.get_meta("spawn_ordinal", 0))]
-	if bucket.has(ordinal_uid):
-		_deserialize_character(npc, bucket[ordinal_uid])
+	var snap: Dictionary = bucket[snap_uid]
+	_deserialize_character(npc, snap)
+	# A snapshot from before default clothing replays an inventory with no
+	# torso item over the one build_character just granted: dress it once.
+	if not snap.get("clothing_pass", false):
+		TopDownCharacterDatabase.clothe_if_bare(npc)
 
 func mark_service_seen(npc) -> void:
 	## Records discovery. The panel lists a service only when it is legal AND
@@ -5749,6 +5752,9 @@ func _serialize_character(character: ProceduralCharacter) -> Dictionary:
 	state["display_name"] = character.display_name
 	state["faction_id"] = character.faction_id
 	state["template_id"] = character.template_id
+	# Snapshots written since default clothing exists (TopDownCharacterDatabase
+	# .clothe_if_bare): a torso left bare from here on is the player's doing.
+	state["clothing_pass"] = true
 	state["race_id"] = character.race_id
 	state["gender"] = character.gender
 	state["creature_size"] = character.creature_size
