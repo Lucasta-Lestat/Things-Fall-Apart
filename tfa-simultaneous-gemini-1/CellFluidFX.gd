@@ -18,11 +18,17 @@ const WATER_SHADER := preload("res://shaders/water_surface.gdshader")
 const FULL := 0.35             # depth that reads visually "deep" (editor cfg.fluid_full)
 # P3-A: the ground sprite's meta holding its open-water mask (a contract-3
 # row's images.water, set by MapLoader.attach_water_mask). setup binds it to
-# water_surface.gdshader, which animates the painted open water through it.
+# water_surface.gdshader, which animates the painted open water through it,
+# and renders the glint-free CALM frame of that water once (water_calm.gdshader
+# into _calm_vp, 1/CALM_DIV of the mask's size: the de-glint's 17-tap rank is
+# too dear per pixel per frame, and the calm frame is static).
 const WATER_MASK_META := &"water_mask"
+const CALM_SHADER := preload("res://shaders/water_calm.gdshader")
+const CALM_DIV := 2
 
 var sim: CellFluid
 var water_mask: Texture2D = null   # the open-water mask bound this map; null = none
+var _calm_vp: SubViewport = null   # the calm frame (rendered once); null without a mask
 var graph: CellGraph
 var _colors: Array = []         # ftype byte -> Color (from fluids.json)
 var _ground: Node2D             # the map ground Sprite2D (gets the water material)
@@ -103,9 +109,41 @@ func setup(p_sim: CellFluid, p_graph: CellGraph, ground_sprite: Node2D, db: Dict
 			water_mask = ground_sprite.get_meta(WATER_MASK_META) as Texture2D
 		if water_mask != null:
 			wm.set_shader_parameter("water_mask", water_mask)
+			wm.set_shader_parameter("water_calm", _build_calm(ground_sprite, water_mask))
 			wm.set_shader_parameter("water_mask_on", 1.0)
 		ground_sprite.material = wm
 	_request_render()
+
+
+# The calm frame of the painted open water: the ground drawn once through
+# water_calm.gdshader into a SubViewport at 1/CALM_DIV of the mask's size (a
+# Sprite2D scaled onto it, so the shader's UV and TEXTURE_PIXEL_SIZE are the
+# ground's). UPDATE_ONCE: it renders on the next frame and keeps its texture;
+# until then its alpha is 0 and the water shader keeps the painted frame.
+func _build_calm(ground_sprite: Node2D, mask: Texture2D) -> Texture2D:
+	if _calm_vp != null and is_instance_valid(_calm_vp):
+		_calm_vp.queue_free()
+	var gtex: Texture2D = (ground_sprite as Sprite2D).texture if ground_sprite is Sprite2D else null
+	var msz := Vector2i(mask.get_size())
+	var csz := Vector2i(maxi(1, int(float(msz.x) / float(CALM_DIV))), maxi(1, int(float(msz.y) / float(CALM_DIV))))
+	_calm_vp = SubViewport.new()
+	_calm_vp.size = csz
+	_calm_vp.transparent_bg = true
+	_calm_vp.disable_3d = true
+	_calm_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(_calm_vp)
+	if gtex != null:
+		var spr := Sprite2D.new()
+		spr.texture = gtex
+		spr.centered = false
+		spr.scale = Vector2(csz) / gtex.get_size()
+		spr.texture_filter = (ground_sprite as CanvasItem).texture_filter   # sample it as the ground does
+		var cm := ShaderMaterial.new()
+		cm.shader = CALM_SHADER
+		cm.set_shader_parameter("water_mask", mask)
+		spr.material = cm
+		_calm_vp.add_child(spr)
+	return _calm_vp.get_texture()
 
 
 func clear_all() -> void:

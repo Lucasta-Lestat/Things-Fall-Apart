@@ -11,7 +11,9 @@ extends Node2D
 #      structured_water_mask and the meta; a row without it (every contract-1/2
 #      row) has neither; a missing file or a misfit mask warns and reads none;
 #   4. CellFluidFX.setup binds the meta's mask to water_surface.gdshader
-#      (water_mask + water_mask_on 1); without one it sets neither, so the
+#      (water_mask + water_mask_on 1) and its calm frame (water_calm: a
+#      SubViewport at half the mask's size drawing the ground once through
+#      water_calm.gdshader); without a mask it sets none of them, so the
 #      shader's open-water branch stays off (water_mask_on defaults to 0) and
 #      the material carries exactly the pre-P3-A parameters;
 #   5. end to end: MapLoader -> FluidManager.setup_cell_graph -> CellFluidFX,
@@ -175,6 +177,16 @@ func _case_fx_bind() -> void:
 	var mat := g.material as ShaderMaterial
 	_report("fx.bound", mat != null and fx.water_mask == m and mat.get_shader_parameter("water_mask") == m
 		and float(mat.get_shader_parameter("water_mask_on")) == 1.0)
+	# the calm frame: a SubViewport at 1/CALM_DIV of the mask, rendering the
+	# ground through water_calm.gdshader once, bound as water_calm
+	var cvp: SubViewport = fx.get("_calm_vp")
+	var ctex: Variant = mat.get_shader_parameter("water_calm") if mat != null else null
+	var spr: Sprite2D = cvp.get_child(0) as Sprite2D if cvp != null and cvp.get_child_count() > 0 else null
+	_report("fx.calm-frame", cvp != null and ctex is ViewportTexture and cvp.size == Vector2i(32, 32)
+		and cvp.render_target_update_mode == SubViewport.UPDATE_ONCE and spr != null and spr.texture == g.texture
+		and spr.scale == Vector2(0.25, 0.25) and (spr.material as ShaderMaterial).shader == CellFluidFX.CALM_SHADER
+		and (spr.material as ShaderMaterial).get_shader_parameter("water_mask") == m,
+		"%s %s" % [str(cvp.size) if cvp != null else "no viewport", str(ctex)])
 	fx.queue_free()
 	g.queue_free()
 	var g2 := Sprite2D.new()
@@ -182,12 +194,13 @@ func _case_fx_bind() -> void:
 	add_child(g2)
 	var fx2 := _fx(g2, graph)
 	var mat2 := g2.material as ShaderMaterial
-	_report("fx.none-without-mask", mat2 != null and fx2.water_mask == null
-		and mat2.get_shader_parameter("water_mask") == null and mat2.get_shader_parameter("water_mask_on") == null)
+	_report("fx.none-without-mask", mat2 != null and fx2.water_mask == null and fx2.get("_calm_vp") == null
+		and mat2.get_shader_parameter("water_mask") == null and mat2.get_shader_parameter("water_calm") == null
+		and mat2.get_shader_parameter("water_mask_on") == null)
 	# exactly the parameters CellFluidFX set before P3-A
 	var want := ["flow_mask", "fluid_mask", "fluid_on", "wave_scale"]
 	var have: Array = []
-	for pn in ["fluid_mask", "flow_mask", "fluid_on", "wave_scale", "water_mask", "water_mask_on"]:
+	for pn in ["fluid_mask", "flow_mask", "fluid_on", "wave_scale", "water_mask", "water_calm", "water_mask_on"]:
 		if mat2 != null and mat2.get_shader_parameter(pn) != null:
 			have.append(pn)
 	have.sort()
@@ -228,4 +241,8 @@ func _case_shader_text() -> void:
 	var code: String = (load("res://shaders/water_surface.gdshader") as Shader).code
 	_report("shader.uniforms", code.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;")
 		and code.contains("uniform float water_mask_on = 0.0;"))
-	_report("shader.gated", code.contains("if (water_mask_on > 0.5) {"))
+	_report("shader.gated", code.contains("if (water_mask_on > 0.5) {")
+		and code.contains("uniform sampler2D water_calm : filter_linear, repeat_disable;"))
+	var calm: String = (load("res://shaders/water_calm.gdshader") as Shader).code
+	_report("shader.calm", calm.contains("render_mode blend_disabled;") and calm.contains("const int OW_RANK = 5;")
+		and calm.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;"))
