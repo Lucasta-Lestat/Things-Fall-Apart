@@ -106,6 +106,12 @@ var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
 # cover interiors (and everyone in them, by z), roof-walkers draw above the
 # cover via their on_roof z boost. Auto-follows the primary selection's layer
 # every frame (_process); structured maps only (legacy maps have no roof data).
+# Absolute z of the world layers, bottom up: ground -6, scorch -5, a tree's
+# shade -4 (P3-B), structure slices -3, items 1, characters 5, CanopyLayer 45
+# (the crowns that hide, P3-B: MapLoader.canopy_layer), targeting indicators
+# 49..51, projectiles 50, StealthOverlay 60, widgets 90..115, RoofLayer 120,
+# roof-walkers 135, unexplored fog 140 (UnexploredFogLayer.FOG_Z), intent UI
+# 150+, floating text 200.
 var roof_view: bool = false
 var roof_layer: Node2D = null   # RoofLayer under map_loader; freed on unload
 # Manual layer browse (Ctrl+scroll, DF-style): -1 = follow the selection
@@ -2357,8 +2363,14 @@ func _fit_sight_light(light: PointLight2D, c: ProceduralCharacter) -> void:
 
 ## Re-fits every drawn cone each frame, paused or not (the party plans while
 ## paused), so Perceptive, Blinded, weather and walking into fog show at once.
+## On a map with crowns above characters (MapLoader.canopy_layer, P3-B) the
+## party's and the NPCs' cones also fit their canopy child, which lights the
+## crowns only as far as the crown rules let that viewer see under them
+## (CanopyLayer.fit_canopy_cone); the pink elevated-surface cone has none.
 const SIGHT_CONE_NAMES := ["LineOfSight", "NPCLineOfSight", "NPCLineOfSightHigh"]
 func _update_sight_cones() -> void:
+	var canopy_on: bool = map_loader != null and is_instance_valid(map_loader) \
+		and "canopy_layer" in map_loader and is_instance_valid(map_loader.canopy_layer)
 	for c in characters_in_scene:
 		if not is_instance_valid(c):
 			continue
@@ -2366,6 +2378,8 @@ func _update_sight_cones() -> void:
 			var light = c.get_node_or_null(n)
 			if light is PointLight2D:
 				_fit_sight_light(light, c)
+				if n != "NPCLineOfSightHigh":
+					CanopyLayer.fit_canopy_cone(light, c, canopy_on)
 		if c.has_node("NPCLineOfSightHigh"):
 			sync_npc_elevated_cone(c)
 
