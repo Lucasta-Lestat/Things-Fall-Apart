@@ -57,7 +57,8 @@ const RELIEF_LOS_MIN_SPAN := 1.0         # terrain span (stories) that turns on 
 const TERRAIN_LOS_EPS := 0.1             # slack for nearest-cell projection noise on graded slopes
 const ROOF_SLAB_EPS := 0.05
 const MAX_PLANNED_DROP_STORIES := 3.0    # jump planner never plans a deliberate drop deeper than this
-const DEEP_WATER_ELEV := -0.5            # shallow_water floor at/below this ABSOLUTE elev = deep (seabed)
+const DEEP_WATER_ELEV := -0.5            # no water layer: shallow_water floor at/below this ABSOLUTE elev = deep (seabed)
+const DEEP_WATER_DEPTH := 0.5            # water layer (P3-D): ground this far below its tile_water surface = deep
 var terrain_min: float = 0.0
 var terrain_max: float = 0.0
 # Relief LOS: interpolated eye line, terrain occlusion, roof slabs, and the
@@ -65,6 +66,10 @@ var terrain_max: float = 0.0
 # RELIEF_LOS_MIN_SPAN) — never configured — so every shipped map (all span
 # < 1 story) keeps the legacy max(viewer, target) + eye rule exactly.
 var relief_los: bool = false             # reset in initialize(); set by refresh_terrain_stats()
+# Maps.json entry "relief_los" (P3-D, L17): -1 auto (the span rule above), 0
+# forced off, 1 forced on. Reset in initialize(); set by MapLoader through
+# set_relief_los_override. No shipped row sets it.
+var relief_los_override: int = -1
 # Sight-cone elevation bands (relief maps only): band b covers EYE heights
 # [cone_band_base + b, cone_band_base + b + 1). Set by refresh_terrain_stats.
 var cone_band_base: int = 0
@@ -114,6 +119,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	terrain_min = 0.0
 	terrain_max = 0.0
 	relief_los = false
+	relief_los_override = -1
 	cone_band_base = 0
 	roof_lint_bad = 0
 	deck_lint_bad = 0
@@ -277,6 +283,14 @@ func is_high_layer(c) -> bool:
 		return height_above_ground(world_to_map(c.global_position), ce) >= HIGH_LAYER_STORIES
 	return false
 
+# The map's relief_los entry key (P3-D, L17; MapLoader): true / false force the
+# eye-line LOS model (and the no-layer deep-water rule, which rides it) on or
+# off for this map; -1 returns to the span rule. Re-derives relief_los and the
+# cone bands at once. initialize() resets it.
+func set_relief_los_override(v: int) -> void:
+	relief_los_override = clampi(v, -1, 1)
+	refresh_terrain_stats()
+
 # Terrain span + the relief_los switch. Call after any bulk write to
 # `elevations` (set_elevation_data does; tests that hand-write terrain must).
 func refresh_terrain_stats() -> void:
@@ -291,6 +305,8 @@ func refresh_terrain_stats() -> void:
 	terrain_min = lo if lo != INF else 0.0
 	terrain_max = hi if hi != -INF else 0.0
 	relief_los = terrain_max - terrain_min >= RELIEF_LOS_MIN_SPAN
+	if relief_los_override >= 0:
+		relief_los = relief_los_override == 1   # the map's entry key wins (L17)
 	# Band 0 sits at the lowest ground, unless the highest surface someone can
 	# stand on (top terrace + a deck, or the highest roof) would then clamp
 	# above band 17. Then the bands anchor at the TOP instead: a viewer
@@ -332,17 +348,34 @@ func band_mask_below(top_abs: float) -> int:
 # DEEP_WATER_ELEV (absolute; sea surface is 0, seabed -1). There is no swimming:
 # the jump planner never drops into it and forced movers refuse to carry a body
 # into it (a knocked-off-the-quay body would be soft-locked on the seabed).
-# Relief maps only: a sea map always spans >= 1 story (land >= 0, seabed -1),
-# while the shipped flat maps' walkable ravine streams (tg_export -0.98,
-# tg_guild_hall -0.66) must keep their current knockback/jump behaviour.
+# Two models (P3-D, L8):
+#   - the map ships the open-water layer (cells.json tile_water / tile_body,
+#     export contract 3): deep water is EXPLICIT and RELATIVE: open water at t
+#     whose standing surface (effective_elev: a deck or bridge over the water
+#     is the surface) lies DEEP_WATER_DEPTH or more below that water's own
+#     surface. A river or mill pond above sea level is deep without a fake
+#     absolute bed, on any map, flat or not; a creek (its surface is the
+#     water's edge, its bed a little below) stays wadeable.
+#   - no layer (every contract-1/2 map): today's rule, unchanged. Relief maps
+#     only: a sea map always spans >= 1 story (land >= 0, seabed -1), while the
+#     shipped flat maps' walkable ravine streams (tg_export -0.98,
+#     tg_guild_hall -0.66) must keep their current knockback/jump behaviour.
+# On the harbour, the ossuary and every other shipped map the two give the
+# same verdict on every tile (tests/deep_water_verdict_diff, on contract-3
+# dumps of the shipped maps).
 func is_deep_water(t: Vector2i) -> bool:
+	if water_layer_used:
+		var i: int = _water_index(t)
+		if i < 0 or _water_body[i] <= 0:
+			return false
+		return float(_water_surf[i]) - effective_elev(t) >= DEEP_WATER_DEPTH - 0.0001
 	return relief_los and floors.get(t, "") == "shallow_water" \
 		and effective_elev(t) <= DEEP_WATER_ELEV + 0.0001
 
 # True if the straight segment enters a deep-water tile that its start tile is
 # not already in (sampled like can_traverse). Forced movers dead-stop on it.
 func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
-	if not relief_los:
+	if not relief_los and not water_layer_used:
 		return false
 	var start_t := world_to_map(from_pos)
 	if is_deep_water(start_t):
@@ -365,8 +398,8 @@ func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
 # open water. The map's cells.json "tile_water" when it ships one (export
 # contract 3: sea, rivers, channels, creeks, pools, each at its own surface,
 # also under a deck or bridge), else the deep-water rule above with the body
-# surface at sea level (SEA_SURFACE_ELEV). It never changes is_deep_water's
-# verdicts; P3-D builds its relative deep-water rule on it.
+# surface at sea level (SEA_SURFACE_ELEV). With the layer, is_deep_water is
+# measured against this surface (P3-D).
 func water_surface_at(t: Vector2i) -> float:
 	if water_layer_used:
 		var i: int = _water_index(t)
@@ -909,10 +942,12 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 				# never solid rock (a leap onto a cave's rock mass).
 				if grid_costs.get(n, INF) != INF and not has_roof(n) and not is_solid_rock(n):
 					var rise := effective_elev(n) - here
-					if rise > MAX_STEP_STORIES and rise <= jump_height:
+					if rise > MAX_STEP_STORIES and rise <= jump_height and not is_deep_water(n):
 						# jump UP a step too tall to walk. step_cost, not raw
 						# grid_costs: a landing pays hazard weights like any
 						# walk edge, or the planner leaps INTO fire for ~9.
+						# Never into deep water: a river above the jumper's
+						# ground is still no swimming (P3-D).
 						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + JUMP_COST * d})
 					elif rise < -MAX_STEP_STORIES and -rise <= MAX_PLANNED_DROP_STORIES \
 							and not is_deep_water(n):
