@@ -16,8 +16,13 @@ extends Node2D
 const BLOB_SHADER := preload("res://shaders/fluid_field.gdshader")
 const WATER_SHADER := preload("res://shaders/water_surface.gdshader")
 const FULL := 0.35             # depth that reads visually "deep" (editor cfg.fluid_full)
+# P3-A: the ground sprite's meta holding its open-water mask (a contract-3
+# row's images.water, set by MapLoader.attach_water_mask). setup binds it to
+# water_surface.gdshader, which animates the painted open water through it.
+const WATER_MASK_META := &"water_mask"
 
 var sim: CellFluid
+var water_mask: Texture2D = null   # the open-water mask bound this map; null = none
 var graph: CellGraph
 var _colors: Array = []         # ftype byte -> Color (from fluids.json)
 var _ground: Node2D             # the map ground Sprite2D (gets the water material)
@@ -91,6 +96,14 @@ func setup(p_sim: CellFluid, p_graph: CellGraph, ground_sprite: Node2D, db: Dict
 		# convert the shader's export-pixel Wn back to WORLD units so the wave/foam/
 		# rush frequencies match the editor (which tuned them at world scale)
 		wm.set_shader_parameter("wave_scale", 1.0 / maxf(p_graph.export_scale, 0.01))
+		# P3-A: the painted open water animates where the map ships a mask; a
+		# map without one leaves water_mask_on at the shader's 0 (unchanged)
+		water_mask = null
+		if ground_sprite.has_meta(WATER_MASK_META):
+			water_mask = ground_sprite.get_meta(WATER_MASK_META) as Texture2D
+		if water_mask != null:
+			wm.set_shader_parameter("water_mask", water_mask)
+			wm.set_shader_parameter("water_mask_on", 1.0)
 		ground_sprite.material = wm
 	_request_render()
 

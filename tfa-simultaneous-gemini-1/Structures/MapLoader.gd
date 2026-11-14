@@ -20,6 +20,10 @@ var map_lights: Node2D = null
 # cell sim, after this loader has run.
 const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
 var water_sim: String = "visual"
+# P3-A visual half: the structured map's open-water mask (a contract-3 row's
+# images.water; _load_water_mask), null when the row ships none. It rides on
+# structured_ground's meta, where CellFluidFX binds it to the water shader.
+var structured_water_mask: Texture2D = null
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -218,6 +222,8 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# override. The open-water layer itself (cells.json tile_water/tile_body)
 	# came in with the cell graph (GridManager.set_elevation_data).
 	water_sim = resolve_water_sim(map_data)
+	# 2d. the open-water mask (P3-A visual half): the painted sea animates
+	structured_water_mask = _load_water_mask(images)
 
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
@@ -295,6 +301,52 @@ static func resolve_water_sim(map_data: Dictionary) -> String:
 	push_warning("map %s: water_sim must be sink or visual, got %s: using visual"
 		% [String(map_data.get("id", "")), JSON.stringify(v)])
 	return "visual"
+
+
+# The open-water mask of a structured row (images.water, TG export contract >= 3:
+# docs/export_contract.md "P3-A: the open-water mask"): loaded and put on the
+# ground sprite for CellFluidFX, or null. No key: null, today's frozen paint.
+# A path that does not load or a mask that does not span the ground warns and
+# reads null too: a misaligned mask would animate the quays.
+func _load_water_mask(images: Dictionary) -> Texture2D:
+	var wp := String(images.get("water", ""))
+	if wp == "" or structured_ground == null:
+		return null
+	if not ResourceLoader.exists(wp):
+		push_warning("map %s: images.water %s is missing: its open water stays the painted frame" % [_current_map_id, wp])
+		return null
+	var tex := load(wp) as Texture2D
+	if not attach_water_mask(structured_ground, tex):
+		push_warning("map %s: images.water %s (%s) does not span the ground (%s) at 1/k, k = 1..%d: ignored"
+			% [_current_map_id, wp, str(tex.get_size()) if tex != null else "not a texture",
+			str(structured_ground.texture.get_size()), WATER_MASK_MAX_DIV])
+		return null
+	return tex
+
+
+## The mask spans the ground at a whole 1/k of its size, the same k on both
+## axes, k in 1..WATER_MASK_MAX_DIV (TG writes k = 2). The shader samples it at
+## the ground's UV, so any such k lines up.
+const WATER_MASK_MAX_DIV := 8
+
+static func water_mask_fits(mask_size: Vector2i, ground_size: Vector2i) -> bool:
+	if mask_size.x <= 0 or mask_size.y <= 0:
+		return false
+	for k in range(1, WATER_MASK_MAX_DIV + 1):
+		if mask_size * k == ground_size:
+			return true
+	return false
+
+
+## Puts tex on ground's meta for CellFluidFX (CellFluidFX.WATER_MASK_META) when
+## it fits the ground's texture; false (and no meta) otherwise.
+static func attach_water_mask(ground: Sprite2D, tex: Texture2D) -> bool:
+	if ground == null or ground.texture == null or tex == null:
+		return false
+	if not water_mask_fits(Vector2i(tex.get_size()), Vector2i(ground.texture.get_size())):
+		return false
+	ground.set_meta(CellFluidFX.WATER_MASK_META, tex)
+	return true
 
 
 ## One PointLight2D per Maps.json "lights" row (docs/export_contract.md,

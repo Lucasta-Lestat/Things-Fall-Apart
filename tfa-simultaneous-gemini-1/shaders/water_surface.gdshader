@@ -21,6 +21,34 @@ uniform float ravine_sun_z = 0.42;          // editor default (grazing)
 // Wn must be converted back or the surface detail is export_scale x too fine.
 uniform float wave_scale = 1.0;
 
+// --- P3-A: the PAINTED open water, animated. A contract-3 map ships an
+// open-water mask (Maps.json images.water; MapLoader.attach_water_mask, bound
+// by CellFluidFX). Its texels span k x k ground pixels (TG writes k = 2) and
+// are sampled at the ground's own UV:
+//   R = c, the share of the ground the TG export painted as open water (the
+//       ground shader's ravine water floor, so the edge is the painted edge);
+//   G, B = 0.5 + 0.5 * c * dir, the ripple drift, premultiplied by c;
+//   A = c * q, q = the unshaded water luma at the ripple's darkest over the
+//       export's spec gain, premultiplied by c.
+// The ground PNG froze one frame of ripples and sun glints. Where c is set,
+// the glints are filtered back out (the darkest open-water tap within OW_R2
+// ground px, taken only where the pixel is more than OW_TOL brighter than it:
+// shadows and the water's own shading stay) and the editor's ravine water
+// (TG ground_paint_body.gdshaderinc ravine_color: the ripple, the spec, the
+// same sun) is laid back on at TIME, scaled by the frame's own shading.
+// water_mask_on 0 (every map without images.water): the branch never runs.
+uniform sampler2D water_mask : filter_linear, repeat_disable;
+uniform float water_mask_on = 0.0;
+const float OW_TOL = 0.02;   // luma: a pixel this much over its darkest tap may be a glint
+const float OW_R1 = 6.0;     // de-glint tap rings, in ground (export) px
+const float OW_R2 = 12.0;
+const vec2 OW_RING1[8] = vec2[8](vec2(1.0, 0.0), vec2(0.70710678, 0.70710678), vec2(0.0, 1.0),
+	vec2(-0.70710678, 0.70710678), vec2(-1.0, 0.0), vec2(-0.70710678, -0.70710678), vec2(0.0, -1.0),
+	vec2(0.70710678, -0.70710678));
+const vec2 OW_RING2[8] = vec2[8](vec2(0.92387953, 0.38268343), vec2(0.38268343, 0.92387953),
+	vec2(-0.38268343, 0.92387953), vec2(-0.92387953, 0.38268343), vec2(-0.92387953, -0.38268343),
+	vec2(-0.38268343, -0.92387953), vec2(0.38268343, -0.92387953), vec2(0.92387953, -0.38268343));
+
 const mat2 M2 = mat2(vec2(0.8, -0.6), vec2(0.6, 0.8));
 
 float hash12(vec2 p) {
@@ -76,6 +104,47 @@ void fragment() {
 	vec3 col = base.rgb;
 	// world units (export px / export_scale): the wave math was tuned at world scale
 	vec2 Wn = (UV / TEXTURE_PIXEL_SIZE) * wave_scale;
+	if (water_mask_on > 0.5) {
+		vec4 wmk = texture(water_mask, UV);
+		float wc = wmk.r;
+		if (wc > 0.004) {
+			// de-glint: the darkest open-water tap (the centre counts when it is
+			// open water itself); none = keep the painted frame
+			float lc = dot(col, vec3(0.299, 0.587, 0.114));
+			vec3 dark = col;
+			float dl = (wc >= 0.99) ? lc : 9.0;
+			for (int i = 0; i < 8; i++) {
+				vec2 t1 = UV + OW_RING1[i] * (OW_R1 * TEXTURE_PIXEL_SIZE);
+				if (texture(water_mask, t1).r >= 0.99) {
+					vec3 s1 = texture(TEXTURE, t1).rgb;
+					float l1 = dot(s1, vec3(0.299, 0.587, 0.114));
+					if (l1 < dl) { dl = l1; dark = s1; }
+				}
+				vec2 t2 = UV + OW_RING2[i] * (OW_R2 * TEXTURE_PIXEL_SIZE);
+				if (texture(water_mask, t2).r >= 0.99) {
+					vec3 s2 = texture(TEXTURE, t2).rgb;
+					float l2 = dot(s2, vec3(0.299, 0.587, 0.114));
+					if (l2 < dl) { dl = l2; dark = s2; }
+				}
+			}
+			if (dl < 8.0) {
+				vec3 calm = mix(col, dark, smoothstep(OW_TOL, 2.0 * OW_TOL, lc - dl));
+				vec2 odir = (wmk.gb * 2.0 - 1.0) / wc;
+				float oq = max(wmk.a / wc, 1.0 / 255.0);
+				vec2 ogr;
+				float oh = waterSurf(Wn, normalize(odir + vec2(1e-4)), TIME, ogr);
+				// ravine_color: water *= 1 + 0.18 (S - 0.25); the calm frame sits at S = 0
+				vec3 live = calm * ((1.0 + 0.18 * (smoothstep(0.55, 0.95, oh * 0.5 + 0.5) - 0.25)) / 0.955);
+				vec3 oL = normalize(vec3(sun_dir, ravine_sun_z));
+				vec3 oN = normalize(vec3(-ogr * 1.8, 1.0));
+				vec3 oH = normalize(oL + vec3(0.0, 0.0, 1.0));
+				float ospec = pow(max(dot(oN, oH), 0.0), 24.0) * smoothstep(0.0, 0.3, dot(oN.xy, normalize(sun_dir)));
+				// its spec (x 0.9 x gain), shaded as the frame is: luma(calm) / q
+				live += vec3(1.0, 0.97, 0.88) * (ospec * 0.9 * dot(calm, vec3(0.299, 0.587, 0.114)) / oq);
+				col = mix(col, live, smoothstep(0.25, 0.75, wc));
+			}
+		}
+	}
 	if (fluid_on > 0.5) {
 		// 9-tap blur: the blob union has a cell-periodic ripple that would print
 		// as dimples on the body
