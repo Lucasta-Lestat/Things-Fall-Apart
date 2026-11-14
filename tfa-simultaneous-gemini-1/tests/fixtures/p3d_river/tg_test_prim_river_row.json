@@ -1,0 +1,119 @@
+{
+	"cell_graph": "res://Maps/tg_test_prim_river_cells.json",
+	"description": "Exported from the Terrain Generation editor (seed 7, Grass)",
+	"editor_export": true,
+	"export_contract": 3.0,
+	"floors": [
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"gggggggggggppgggggssggggg",
+		"ggggggwggggppgggggssggggg",
+		"wwwwwwwwwwwppggwwwsswwwww",
+		"wwwwwwwwwwwppwwwwwsswwwww",
+		"gggggggggwwppwwwwwssgggww",
+		"gggggggggggppgggggssggggg",
+		"gggggggggggppgggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg",
+		"ggggggggggggggggggggggggg"
+	],
+	"fluid_spawns": [],
+	"format": "structured",
+	"id": "tg_test_prim_river",
+	"images": {
+		"map": "res://Maps/tg_test_prim_river.png",
+		"structures": "res://Maps/tg_test_prim_river_structures.png"
+	},
+	"item_spawns": [
+		{
+			"id": "plank_bridge",
+			"position": [
+				768.0,
+				620.0
+			],
+			"rotation": 3.142,
+			"scale": 2.286,
+			"scale_y": 1.425
+		}
+	],
+	"name": "Tg Test Prim River",
+	"npc_spawns": [
+		{
+			"count": 1.0,
+			"position": [
+				600.0,
+				940.0
+			],
+			"spread_radius": 40.0,
+			"template_id": "town_guard"
+		}
+	],
+	"party_spawns": {
+		"default": {
+			"formation": "cluster",
+			"offset_radius": 40.0
+		}
+	},
+	"player_spawns": {
+		"default": {
+			"facing": 90.0,
+			"position": [
+				768.0,
+				220.0
+			]
+		},
+		"south": {
+			"facing": 270.0,
+			"position": [
+				768.0,
+				960.0
+			]
+		}
+	},
+	"structures": [
+		{
+			"a": [
+				768.0,
+				440.0
+			],
+			"b": [
+				768.0,
+				800.0
+			],
+			"half": 64.0,
+			"hp": 450.0,
+			"id": "wood_wall",
+			"kind": "wall",
+			"walk_elev": 2.0
+		},
+		{
+			"a": [
+				1200.0,
+				440.0
+			],
+			"b": [
+				1200.0,
+				740.0
+			],
+			"half": 56.0,
+			"hp": 375.0,
+			"id": "stone_wall",
+			"kind": "wall",
+			"walk_elev": 2.3
+		}
+	],
+	"tile_size": 64.0,
+	"warp_points": [],
+	"weather_group": "Scarlatti",
+	"world_size": [
+		1600.0,
+		1216.0
+	]
+}
