@@ -20,6 +20,13 @@ var map_lights: Node2D = null
 # cell sim, after this loader has run.
 const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
 var water_sim: String = "visual"
+# P3-B: the crowns that hide characters, drawn above them (CanopyLayer, built
+# from the rows' contract-3 canopy cells and images.canopy); null on a map
+# without that art (every contract-2 map: its crowns stay in the structures
+# overlay, under characters). Game's sight cones fit their canopy child to it.
+var canopy_layer: CanopyLayer = null
+var _canopy_tex: Texture2D = null      # images.canopy, while the map loads
+var _canopy_crowns: Array = []         # [{index, cell, art}] for the CanopyLayer
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -224,6 +231,17 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	var op := String(images.get("structures", ""))
 	if op != "" and ResourceLoader.exists(op):
 		overlay_tex = load(op)
+	# the canopy atlas (P3-B, contract 3): the art of every tree row that
+	# carries canopy_cell / shade_cell (_add_tree_canopy_art)
+	canopy_layer = null
+	_canopy_crowns = []
+	_canopy_tex = null
+	var cp := String(images.get("canopy", ""))
+	if cp != "":
+		if ResourceLoader.exists(cp):
+			_canopy_tex = load(cp)
+		else:
+			push_error("structured map: missing canopy image " + cp)
 	if game != null and "structures_in_scene" in game:
 		game.structures_in_scene.clear()
 	# TWO passes, decks (walk_elev) first: a solid structure's occlude_top is
@@ -260,6 +278,8 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# the tree crowns the loop registered (P3-F): buckets and clusters now,
 	# not on the first sight check
 	GridManager.canopy.finish()
+	# 3b. the crowns that hide, above characters (P3-B)
+	_spawn_canopy_layer()
 
 	# 4. cliff shadows for the sight cones (relief maps only)
 	if GridManager.relief_los:
@@ -482,9 +502,18 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		circ.radius = maxf(6.0, r * 0.45)   # trunk-scale: canopy overhang stays walkable
 		trunk_r = circ.radius
 		shape = circ
-		var rr := r + 4.0
-		poly_local = PackedVector2Array([
-			Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
+		# The tree's slice. A contract-3 row with canopy cells (P3-B) cuts
+		# nothing from the structures overlay (its art is not there): its
+		# crown, out to its widest lobe, and its shade, out to the end of its
+		# cast shadow down-sun, are whole cells of the canopy atlas
+		# (_add_tree_canopy_art, below). Every other row keeps the overlay's
+		# r + 4 square (contract <= 2: the crown art is in the overlay).
+		if _has_canopy_cells(s):
+			overlay_tex = null
+		else:
+			var rr := r + 4.0
+			poly_local = PackedVector2Array([
+				Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
 		# occluder = the TRUNK silhouette (matches what LOS rays hit), not the crown
 		for i in 10:
 			var ang := TAU * float(i) / 10.0
@@ -748,6 +777,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			GridManager.register_obstacle(t)
 	if kind == "tree":
 		_register_crown(s, inst, center, trunk_r)
+		if _has_canopy_cells(s):
+			_add_tree_canopy_art(s, inst, center)
 	return inst
 
 
@@ -857,6 +888,80 @@ func spawn_prop_structure(item_id: String, data: Dictionary, pos: Vector2,
 	for t in occupied:
 		GridManager.register_obstacle(t)
 	return inst
+
+
+## P3-B: the row carries its canopy-atlas cells (TG export contract 3:
+## "canopy_cell" and "shade_cell", each [atlas x, y, w, h, map x, y, w, h] px)
+## and the map ships the atlas (images.canopy).
+func _has_canopy_cells(s: Dictionary) -> bool:
+	if _canopy_tex == null:
+		return false
+	var cc: Variant = s.get("canopy_cell")
+	var sc: Variant = s.get("shade_cell")
+	return cc is Array and sc is Array and (cc as Array).size() == 8 and (sc as Array).size() == 8
+
+
+## P3-B: a contract-3 tree's art from the canopy atlas. The SHADE (the
+## multiplier its cast shadow and understory put on the ground) multiplies
+## what lies under it -- the ground, scorch -- below every structure slice
+## (z -4) and lit by nothing. The CROWN: one that hides (GridManager.canopy
+## registered it: _register_crown) goes to the CanopyLayer, above characters,
+## and the tree keeps an empty "Art" node for Structure's hit flash and damage
+## tint to drive (the layer copies its modulate onto the crown); any other
+## crown (a dead snag, a willow: they hide nothing) is the tree's "Art"
+## itself, a slice under characters like the overlay's was.
+func _add_tree_canopy_art(s: Dictionary, inst: Structure, center: Vector2) -> void:
+	var shade := _canopy_quad(s.get("shade_cell") as Array, center)
+	shade.name = "Shade"
+	var mul := CanvasItemMaterial.new()
+	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+	shade.material = mul
+	shade.light_mask = 0
+	shade.z_index = -1   # -4 with the structure's -3: under every slice
+	inst.add_child(shade)
+	var ci: int = GridManager.canopy.crown_of(inst)
+	if ci >= 0:
+		var proxy := Node2D.new()
+		proxy.name = "Art"
+		inst.add_child(proxy)
+		_canopy_crowns.append({"index": ci, "cell": s.get("canopy_cell"), "art": proxy})
+		return
+	var art := _canopy_quad(s.get("canopy_cell") as Array, center)
+	art.name = "Art"
+	var pm := CanvasItemMaterial.new()
+	pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+	art.material = pm
+	inst.add_child(art)
+
+
+## One atlas cell as a Polygon2D local to `center`: the map rect, its UVs the
+## atlas rect (px). A shade cell's atlas rect is a downsampled copy of its map
+## rect; the UVs scale it back.
+func _canopy_quad(cell: Array, center: Vector2) -> Polygon2D:
+	var a := Rect2(float(cell[0]), float(cell[1]), float(cell[2]), float(cell[3]))
+	var m := Rect2(float(cell[4]), float(cell[5]), float(cell[6]), float(cell[7]))
+	var q := Polygon2D.new()
+	q.texture = _canopy_tex
+	q.polygon = PackedVector2Array([m.position - center, Vector2(m.end.x, m.position.y) - center,
+		m.end - center, Vector2(m.position.x, m.end.y) - center])
+	q.uv = PackedVector2Array([a.position, Vector2(a.end.x, a.position.y), a.end,
+		Vector2(a.position.x, a.end.y)])
+	return q
+
+
+## P3-B: the CanopyLayer over the crowns _add_tree_canopy_art collected, once
+## the structures have spawned (and the crown record is finished). None on a
+## map without canopy cells.
+func _spawn_canopy_layer() -> void:
+	if _canopy_tex == null or _canopy_crowns.is_empty():
+		_canopy_crowns = []
+		return
+	var layer := CanopyLayer.new()
+	layer.name = "CanopyLayer"
+	layer.setup(_canopy_tex, _canopy_crowns, get_parent())
+	add_child(layer)
+	canopy_layer = layer
+	_canopy_crowns = []
 
 
 ## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
