@@ -31,17 +31,22 @@ uniform float wave_scale = 1.0;
 //   A = c * q, q = the unshaded water luma at the ripple's darkest over the
 //       export's spec gain, premultiplied by c.
 // The ground PNG froze one frame of ripples and sun glints. Where c is set,
-// the glints are filtered back out (the darkest open-water tap within OW_R2
-// ground px, taken only where the pixel is more than OW_TOL brighter than it:
-// shadows and the water's own shading stay) and the editor's ravine water
-// (TG ground_paint_body.gdshaderinc ravine_color: the ripple, the spec, the
-// same sun) is laid back on at TIME, scaled by the frame's own shading.
+// the glints are filtered back out and the editor's ravine water (TG
+// ground_paint_body.gdshaderinc ravine_color: the ripple, the spec, the same
+// sun) is laid back on at TIME, scaled by the frame's own shading. The calm
+// frame under the glints: of the pixel and two rings of 8 taps (OW_R1, OW_R2
+// ground px) that lie in open water, the (OW_RANK + 1)-th darkest, taken only
+// where the pixel is more than OW_TOL brighter than it. A rank, not the
+// darkest: a shadow band or a dark rim inside the water edge reaches only a
+// few taps, so it neither spreads into the open water nor prints the rings
+// as lines, while glints (a minority of the taps) still fall out.
 // water_mask_on 0 (every map without images.water): the branch never runs.
 uniform sampler2D water_mask : filter_linear, repeat_disable;
 uniform float water_mask_on = 0.0;
-const float OW_TOL = 0.02;   // luma: a pixel this much over its darkest tap may be a glint
+const float OW_TOL = 0.02;   // luma: a pixel this much over its calm tap may be a glint
 const float OW_R1 = 6.0;     // de-glint tap rings, in ground (export) px
 const float OW_R2 = 12.0;
+const int OW_RANK = 5;       // the calm tap: the 6th darkest open-water tap (0 = the darkest)
 const vec2 OW_RING1[8] = vec2[8](vec2(1.0, 0.0), vec2(0.70710678, 0.70710678), vec2(0.0, 1.0),
 	vec2(-0.70710678, 0.70710678), vec2(-1.0, 0.0), vec2(-0.70710678, -0.70710678), vec2(0.0, -1.0),
 	vec2(0.70710678, -0.70710678));
@@ -108,23 +113,43 @@ void fragment() {
 		vec4 wmk = texture(water_mask, UV);
 		float wc = wmk.r;
 		if (wc > 0.004) {
-			// de-glint: the darkest open-water tap (the centre counts when it is
-			// open water itself); none = keep the painted frame
+			// de-glint: the OW_RANK-th darkest of the taps in open water (the
+			// centre counts when it is open water itself; 9 = not open water);
+			// none = keep the painted frame
 			float lc = dot(col, vec3(0.299, 0.587, 0.114));
-			vec3 dark = col;
-			float dl = (wc >= 0.99) ? lc : 9.0;
+			float tl[17];
+			vec3 tc[17];
+			tl[0] = (wc >= 0.99) ? lc : 9.0;
+			tc[0] = col;
+			int nv = (wc >= 0.99) ? 1 : 0;
 			for (int i = 0; i < 8; i++) {
 				vec2 t1 = UV + OW_RING1[i] * (OW_R1 * TEXTURE_PIXEL_SIZE);
-				if (texture(water_mask, t1).r >= 0.99) {
-					vec3 s1 = texture(TEXTURE, t1).rgb;
-					float l1 = dot(s1, vec3(0.299, 0.587, 0.114));
-					if (l1 < dl) { dl = l1; dark = s1; }
-				}
+				vec3 s1 = texture(TEXTURE, t1).rgb;
+				bool v1 = texture(water_mask, t1).r >= 0.99;
+				tl[1 + i] = v1 ? dot(s1, vec3(0.299, 0.587, 0.114)) : 9.0;
+				tc[1 + i] = s1;
+				nv += v1 ? 1 : 0;
 				vec2 t2 = UV + OW_RING2[i] * (OW_R2 * TEXTURE_PIXEL_SIZE);
-				if (texture(water_mask, t2).r >= 0.99) {
-					vec3 s2 = texture(TEXTURE, t2).rgb;
-					float l2 = dot(s2, vec3(0.299, 0.587, 0.114));
-					if (l2 < dl) { dl = l2; dark = s2; }
+				vec3 s2 = texture(TEXTURE, t2).rgb;
+				bool v2 = texture(water_mask, t2).r >= 0.99;
+				tl[9 + i] = v2 ? dot(s2, vec3(0.299, 0.587, 0.114)) : 9.0;
+				tc[9 + i] = s2;
+				nv += v2 ? 1 : 0;
+			}
+			float dl = 9.0;
+			vec3 dark = col;
+			if (nv > 0) {
+				int kk = min(OW_RANK, nv - 1);
+				for (int i = 0; i < 17; i++) {
+					int rk = 0;
+					for (int j = 0; j < 17; j++) {
+						if (tl[j] < tl[i] || (tl[j] == tl[i] && j < i))
+							rk++;
+					}
+					if (rk == kk) {
+						dl = tl[i];
+						dark = tc[i];
+					}
 				}
 			}
 			if (dl < 8.0) {

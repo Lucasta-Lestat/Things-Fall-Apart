@@ -9,12 +9,17 @@ extends Node
 #   2. water.animates: open-water pixels (mask c >= 0.99 over the footprint)
 #      change between two frames ANIM_FRAMES apart, while land does not;
 #   3. water.calm-kept: the layer keeps the painted water's own tone (its
-#      median luma within CALM_TOL of the frame's) -- the frozen glints are
-#      filtered out, not the water re-coloured;
+#      median and p10 luma within CALM_TOL of the frame's) -- the frozen glints
+#      are filtered out, not the water re-coloured or its shadows spread;
+#   3b. water.shore-tone-kept: the same within EDGE_PX of the shore (median and
+#      p10), where the frame's own lip shadows and dark rims sit;
 #   4. water.glints-live: the live frame carries glints (luma p99 well over its
 #      median) -- they move, they are not gone;
-#   5. it reports the GPU time of the view with the layer on and off and the
-#      VRAM the mask takes (Performance RENDER_TEXTURE_MEM_USED around its load).
+#   5. vram.mask-is-rgba8: loading the mask adds about 4 bytes a texel to
+#      Performance RENDER_TEXTURE_MEM_USED (measured after the ground's load;
+#      up to 10 % allocator slack, so no mipmaps and no second copy);
+#      it reports that, the ground's, and the GPU time of the view with the
+#      layer on and off.
 # Needs a row with images.water whose files are imported in this project (a
 # contract-3 TG export; under D3D12 never commit its art). The row comes from
 # TFA_WATER_ROWS (a Maps.json path, may lie outside the project; default
@@ -32,6 +37,7 @@ const SIZE := Vector2i(960, 640)
 const ANIM_FRAMES := 45         # 0.75 s at --fixed-fps 60
 const SETTLE_FRAMES := 8
 const CALM_TOL := 0.02          # luma
+const EDGE_PX := 16.0           # the shore band of water.shore-tone-kept, screen px
 const GPU_FRAMES := 30
 
 # --- Game stand-in state (read by MapLoader / Structure / FluidManager) ---
@@ -106,18 +112,28 @@ func _run() -> int:
 		return 2
 	current_map_id = String(row.get("id", ""))
 	current_map_data = row
-	# VRAM: the mask alone, loaded before the map (MapLoader reuses the cached one)
+	# VRAM (RENDER_TEXTURE_MEM_USED around each load; the ground first, so the
+	# mask's delta carries no first-upload overhead; MapLoader reuses both)
 	await RenderingServer.frame_post_draw
 	var m0: float = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
-	var mask_tex := load(wpath) as Texture2D
-	await RenderingServer.frame_post_draw
-	var m1: float = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
 	var ground_tex := load(String(images.get("map", ""))) as Texture2D
 	await RenderingServer.frame_post_draw
+	var m1: float = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
+	var mask_tex := load(wpath) as Texture2D
+	await RenderingServer.frame_post_draw
 	var m2: float = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
-	print("water_surface_shot: VRAM mask %s %.1f MB (RGBA8 %.1f MB), ground %s %.1f MB"
-		% [str(mask_tex.get_size()), (m1 - m0) / 1048576.0, mask_tex.get_width() * mask_tex.get_height() * 4.0 / 1048576.0,
-		str(ground_tex.get_size()), (m2 - m1) / 1048576.0])
+	var rgba8: float = float(mask_tex.get_width() * mask_tex.get_height() * 4)
+	var mask_b: float = m2 - m1
+	# the ground's own delta carries the first upload's staging overhead: the
+	# share is against its RGBA8 size
+	var g_rgba8: float = float(ground_tex.get_width() * ground_tex.get_height() * 4)
+	print("water_surface_shot: VRAM mask %s %.2f MiB (RGBA8 %.2f MiB); ground %s RGBA8 %.2f MiB (its load: %+.2f MiB); the mask adds %.1f %%"
+		% [str(mask_tex.get_size()), mask_b / 1048576.0, rgba8 / 1048576.0, str(ground_tex.get_size()),
+		g_rgba8 / 1048576.0, (m1 - m0) / 1048576.0, 100.0 * mask_b / g_rgba8])
+	# RGBA8 plus the allocator's slack (D3D12: +6 %); mipmaps or a second copy
+	# would add a third or more
+	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= rgba8 * 1.10,
+		"%.0f B for %s (RGBA8 = %.0f B)" % [mask_b, str(mask_tex.get_size()), rgba8])
 
 	sv = SubViewport.new()
 	sv.size = SIZE
@@ -180,6 +196,9 @@ func _run() -> int:
 	var water_anim := 0
 	var l_off := PackedFloat32Array()
 	var l_on := PackedFloat32Array()
+	var e_off := PackedFloat32Array()   # open water within EDGE_PX of the shore
+	var e_on := PackedFloat32Array()
+	var reach := EDGE_PX / zm / gsize.x * msz.x   # EDGE_PX screen px in mask texels
 	var diff_img := Image.create(SIZE.x, SIZE.y, false, Image.FORMAT_RGB8)
 	for y in range(0, SIZE.y):
 		for x in range(0, SIZE.x):
@@ -212,6 +231,13 @@ func _run() -> int:
 				if (x + y) % 3 == 0:
 					l_off.append(_luma(a))
 					l_on.append(_luma(b))
+					var shore := false
+					for dv: Vector2 in [Vector2(reach, 0.0), Vector2(-reach, 0.0), Vector2(0.0, reach), Vector2(0.0, -reach)]:
+						var te := Vector2i(clampi(int(round(mt.x + dv.x)), 0, int(msz.x) - 1), clampi(int(round(mt.y + dv.y)), 0, int(msz.y) - 1))
+						shore = shore or mask_img.get_pixelv(te).r < 0.99
+					if shore:
+						e_off.append(_luma(a))
+						e_on.append(_luma(b))
 	if _shot_dir != "":
 		diff_img.save_png("%s/water_surface_shot_%s_diff.png" % [_shot_dir, current_map_id])
 	print("water_surface_shot: %d land px, %d open-water px in the view" % [land, water])
@@ -223,7 +249,18 @@ func _run() -> int:
 	var off_p := _pcts(l_off)
 	var on_p := _pcts(l_on)
 	print("water_surface_shot: open-water luma off p10/p50/p90/p99 %s, on %s" % [str(off_p), str(on_p)])
-	_report("water.calm-kept", absf(on_p[1] - off_p[1]) <= CALM_TOL, "median %.3f on vs %.3f off" % [on_p[1], off_p[1]])
+	# p10 too: a de-glint that spreads the frame's darker bands (its shadows, a
+	# dark rim) into the water darkens the low tail before the median
+	_report("water.calm-kept", absf(on_p[1] - off_p[1]) <= CALM_TOL and absf(on_p[0] - off_p[0]) <= CALM_TOL,
+		"p10 %.3f / median %.3f on vs %.3f / %.3f off" % [on_p[0], on_p[1], off_p[0], off_p[1]])
+	# by the shore the frame has its own shading (lip shadows, a dark rim): the
+	# de-glint must not spread it into the water (a darkest-tap filter did, and
+	# printed its tap rings as lines parallel to the shore)
+	var eoff_p := _pcts(e_off)
+	var eon_p := _pcts(e_on)
+	print("water_surface_shot: open water within %d px of the shore (%d samples): luma off %s, on %s" % [int(EDGE_PX), e_off.size(), str(eoff_p), str(eon_p)])
+	_report("water.shore-tone-kept", e_off.size() < 50 or (absf(eon_p[1] - eoff_p[1]) <= CALM_TOL and absf(eon_p[0] - eoff_p[0]) <= CALM_TOL),
+		"p10 %.3f / median %.3f on vs %.3f / %.3f off" % [eon_p[0], eon_p[1], eoff_p[0], eoff_p[1]])
 	_report("water.glints-live", on_p[3] - on_p[1] >= 0.10, "p99 %.3f over median %.3f" % [on_p[3], on_p[1]])
 	return 0
 
