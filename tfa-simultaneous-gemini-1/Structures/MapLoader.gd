@@ -219,6 +219,18 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# came in with the cell graph (GridManager.set_elevation_data).
 	water_sim = resolve_water_sim(map_data)
 
+	# 2d. relief LOS override (P3-D, L17): an optional entry key, true / false,
+	# forces the eye-line LOS model on or off for this map instead of the
+	# 1-story terrain-span rule. Before the structures: their occluders read
+	# relief_los. No key: the span rule, today's behaviour (no shipped row
+	# sets it). GridManager.initialize() reset the override.
+	var rl: Variant = map_data.get("relief_los", null)
+	if rl is bool:
+		GridManager.set_relief_los_override(1 if rl else 0)
+	elif rl != null:
+		push_warning("map %s: relief_los must be true or false, got %s: using the terrain-span rule"
+			% [_current_map_id, JSON.stringify(rl)])
+
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
 	var op := String(images.get("structures", ""))
