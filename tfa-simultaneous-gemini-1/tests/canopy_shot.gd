@@ -10,6 +10,8 @@ extends Node2D
 #   canopy_<map>_cursor.png     the same with the cursor over another crown
 #   canopy_<map>_cone.png       a ground NPC's red sight cone into the grove
 #                               (+ its canopy child when the map has one)
+#   canopy_<map>_cone_far.png   the same from 0.75 of its range: the crown past
+#                               half range
 #   canopy_<map>_cone_high.png  the same viewer a story up (on a roof)
 # On a map without the contract-3 canopy cells (every shipped map today) the
 # crowns are the structures overlay's, under the stand-ins, and the cone has
@@ -142,6 +144,15 @@ func _ready() -> void:
 	party.position = cpos + Vector2(r * 2.6, 0.0)   # out of the grove: no fade in the cone shots
 	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
 	await _shot(out_dir + "/canopy_%s_cone.png" % want)
+	# the same viewer 0.75 of its range away: the crown past half range (unlit
+	# with canopy cells), the ground round it lit as before
+	var near_pos: Vector2 = viewer.position
+	viewer.position = cpos + (near_pos - cpos).normalized() * 675.0
+	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
+	cam.position = (viewer.position + cpos) * 0.5
+	await _shot(out_dir + "/canopy_%s_cone_far.png" % want)
+	viewer.position = near_pos
+	cam.position = cpos
 	viewer.on_roof = true
 	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
 	await _shot(out_dir + "/canopy_%s_cone_high.png" % want)
