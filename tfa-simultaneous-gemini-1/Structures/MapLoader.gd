@@ -219,9 +219,9 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# came in with the cell graph (GridManager.set_elevation_data).
 	water_sim = resolve_water_sim(map_data)
 
-	# 2d. relief LOS override (P3-D, L17): an optional entry key, true / false,
-	# forces the eye-line LOS model on or off for this map instead of the
-	# 1-story terrain-span rule. Before the structures: their occluders read
+	# 2e. relief LOS override (P3-D, L17; 2d is P3-A's water mask): an
+	# optional entry key, true / false, forces the eye-line LOS model on or off
+	# for this map instead of the 1-story terrain-span rule. Before the structures: their occluders read
 	# relief_los. No key: the span rule, today's behaviour (no shipped row
 	# sets it). GridManager.initialize() reset the override.
 	var rl: Variant = map_data.get("relief_los", null)
@@ -720,6 +720,12 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	if s.has("hp"):
 		inst.max_health = int(s["hp"])
 		inst.current_health = inst.max_health
+	# "indestructible": true (TG P3-D bridge decks): no damage, never burns, a
+	# firebreak in the fire index (after add_child: _ready set `flammable` from
+	# the id's StructureDatabase entry). No shipped row sets it.
+	if s.get("indestructible", false) == true:
+		inst.indestructible = true
+		inst.flammable = false
 	if inst is Door:
 		var door := inst as Door
 		door.locked = bool(s.get("locked", false))

@@ -33,6 +33,13 @@ const LOG_DAMAGE := false
 var is_deck: bool = false
 var deck_elevation: float = 0.0
 var deck_tiles: Array[Vector2i] = []
+# Takes no damage at all and never burns (MapLoader: a structure row's
+# "indestructible": true, which TG writes on P3-D bridge decks). Until P4-B
+# makes a destroyed deck safe, a bridge that burned or broke would drop
+# whoever stood on it into deep water with no way out (no swimming), so every
+# hit is a silent no-op: no number, no flash, no ignition. MapLoader also
+# clears `flammable`, so the fire index reads the deck as a firebreak.
+var indestructible: bool = false
 
 # Damage states, by fraction of max_health: Damaged below full, Cracking at
 # half, Crumbling at a quarter. Each darkens the art a step (DAMAGE_TINT, RGB
@@ -103,6 +110,8 @@ func take_damage(amount: Dictionary, success_level:int = 0):
 		# a no-damage hit must not flash/emit -- it reads as "wall is immortal"
 		push_warning("%s hit with an empty damage dict" % name)
 		return
+	if indestructible:
+		return   # silent: a fire beside a bridge hits it every second
 	var state_before := get_damage_state()
 	var damage_multiplier = pow(1.5,success_level)
 	var took_fire_damage = false
