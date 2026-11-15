@@ -15,7 +15,9 @@ extends Node2D
 #      structured_water_mask and the meta; a row without it (every contract-1/2
 #      row) has neither; a missing file, a misfit mask or a bad water_rect warns
 #      and reads none; generate_map (a warp to a legacy or world map) clears
-#      structured_water_mask, so the last mask is not kept resident;
+#      structured_water_mask, so the last mask is not kept resident; with the
+#      tfa/graphics/animated_water setting off the mask is never loaded (no
+#      structured_water_mask, no meta: no VRAM);
 #   4. CellFluidFX.setup binds the meta's mask to water_surface.gdshader
 #      (water_mask, water_rect in UV + water_mask_on 1) and its calm frame
 #      (water_calm: a SubViewport at half the mask's size drawing the mask's
@@ -26,7 +28,11 @@ extends Node2D
 #   5. end to end: MapLoader -> FluidManager.setup_cell_graph -> CellFluidFX,
 #      the way Game.load_map wires a structured map;
 #   6. the shader declares the pair with the branch off by default, the c <
-#      0.25 gate, and the calm frame's shore rank.
+#      0.25 gate, the calm frame's shore rank, and both shaders' remap of the
+#      ground UV into water_rect (the cropped mask, the calm frame).
+#   The setting's default is checked through CellFluidFX.animated_water_on()
+#   with the setting cleared: on (a project.godot that declares it must
+#   declare it true).
 # The masks are ImageTextures saved to user:// (no art in the project); the
 # ground is res://icon.svg (128 x 128). What the shader draws is
 # tests/water_surface_shot.tscn's (windowed; needs a contract-3 export).
@@ -322,8 +328,26 @@ func _case_off_switch() -> void:
 	var graph := _graph()
 	var had: bool = ProjectSettings.has_setting(CellFluidFX.ANIMATED_WATER_SETTING)
 	var old: Variant = ProjectSettings.get_setting(CellFluidFX.ANIMATED_WATER_SETTING, null)
-	_report("off.default-on", not had and CellFluidFX.animated_water_on(), "setting present: %s" % str(had))
+	# the default through the getter alone (the setting cleared); a project
+	# that declares the setting (an options menu would) must declare it on
+	if had:
+		ProjectSettings.clear(CellFluidFX.ANIMATED_WATER_SETTING)
+	var unset_on := CellFluidFX.animated_water_on()
+	if had:
+		ProjectSettings.set_setting(CellFluidFX.ANIMATED_WATER_SETTING, old)
+	_report("off.default-on", unset_on and (not had or bool(old)),
+		"unset reads %s; declared: %s (%s)" % [str(unset_on), str(had), str(old)])
 	ProjectSettings.set_setting(CellFluidFX.ANIMATED_WATER_SETTING, false)
+	# off, the loader never loads the mask: no structured_water_mask, no meta
+	# on the ground (so the mask takes no VRAM), the row otherwise loaded
+	var mlo := _loader()
+	mlo.generate_structured_map(_row({"water": MASK_OK}))
+	var gso: Sprite2D = mlo.get("structured_ground")
+	_report("off.loader-skips-mask", gso != null and mlo.get("structured_water_mask") == null
+		and not gso.has_meta(CellFluidFX.WATER_MASK_META) and not gso.has_meta(CellFluidFX.WATER_RECT_META),
+		"structured_water_mask %s, ground meta %s" % [str(mlo.get("structured_water_mask")),
+		str(gso.has_meta(CellFluidFX.WATER_MASK_META)) if gso != null else "no ground"])
+	mlo.queue_free()
 	var g := Sprite2D.new()
 	g.texture = _tex(128, 128)
 	add_child(g)
@@ -384,6 +408,11 @@ func _case_shader_text() -> void:
 	# pixels as computing it and mixing by 0
 	_report("shader.weight-gate", code.contains("float ww = smoothstep(0.25, 0.75, wc);")
 		and code.contains("if (ww > 0.0) {") and code.contains("col = mix(col, live, ww);"))
+	# the ground UV mapped into water_rect (a mask cropped to the water): the
+	# mask and the calm frame are both looked up there, never at UV
+	_report("shader.rect-remap", code.contains("vec2 wuv = (UV - water_rect.xy) / water_rect.zw;")
+		and code.contains("vec4 wmk = texture(water_mask, wuv);") and code.contains("vec4 cm = texture(water_calm, wuv);")
+		and not code.contains("texture(water_mask, UV)") and not code.contains("texture(water_calm, UV)"))
 	# the open water's surface is waterSurf's six warpfields in one loop; the
 	# dynamic fluids keep waterSurf itself
 	_report("shader.surface", code.contains("float oh = waterSurfOW(Wn, normalize(odir + vec2(1e-4)), TIME, ogr);")
@@ -393,3 +422,6 @@ func _case_shader_text() -> void:
 		and calm.contains("int kk = min(OW_RANK, (nv - 1) / 2);")
 		and calm.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;")
 		and calm.contains("uniform vec4 water_rect = vec4(0.0, 0.0, 1.0, 1.0);"))
+	# its taps' open-water test maps the ground UV into water_rect the same way
+	_report("shader.calm-rect-remap", calm.contains("return texture(water_mask, (uv - water_rect.xy) / water_rect.zw).r;")
+		and not calm.contains("texture(water_mask, uv)") and not calm.contains("texture(water_mask, UV)"))

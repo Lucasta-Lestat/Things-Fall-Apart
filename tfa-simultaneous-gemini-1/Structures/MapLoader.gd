@@ -21,8 +21,9 @@ var map_lights: Node2D = null
 const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
 var water_sim: String = "visual"
 # P3-A visual half: the structured map's open-water mask (a contract-3 row's
-# images.water; _load_water_mask), null when the row ships none. It rides on
-# structured_ground's meta, where CellFluidFX binds it to the water shader.
+# images.water; _load_water_mask), null when the row ships none or the
+# tfa/graphics/animated_water setting is off. It rides on structured_ground's
+# meta, where CellFluidFX binds it to the water shader.
 # generate_map (legacy and world maps) clears it, so a warp off a watery map
 # does not keep the last mask resident in VRAM.
 var structured_water_mask: Texture2D = null
@@ -312,10 +313,14 @@ static func resolve_water_sim(map_data: Dictionary) -> String:
 # water's bounding box on the ground; without it the mask spans the whole
 # ground. A path that does not load, a water_rect that is not a rectangle
 # inside the ground, or a mask that does not span its rect warns and reads
-# null too: a misaligned mask would animate the quays.
+# null too: a misaligned mask would animate the quays. With the
+# tfa/graphics/animated_water setting off it reads null without a word and
+# loads nothing, so the switch saves the mask's VRAM too.
 func _load_water_mask(images: Dictionary, rect_v: Variant = null) -> Texture2D:
 	var wp := String(images.get("water", ""))
 	if wp == "" or structured_ground == null or structured_ground.texture == null:
+		return null
+	if not CellFluidFX.animated_water_on():
 		return null
 	if not ResourceLoader.exists(wp):
 		push_warning("map %s: images.water %s is missing: its open water stays the painted frame" % [_current_map_id, wp])

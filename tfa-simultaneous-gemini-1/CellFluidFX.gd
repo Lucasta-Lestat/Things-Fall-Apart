@@ -29,9 +29,10 @@ const WATER_RECT_META := &"water_rect"
 const CALM_SHADER := preload("res://shaders/water_calm.gdshader")
 const CALM_DIV := 2
 # The project setting that switches the animated open water off (bool, default
-# true). Off: setup binds no mask, so every map shows exactly its painted frame
-# (the pre-P3-A material) and pays neither the calm frame's VRAM nor the
-# layer's GPU time (docs/export_contract.md, P3-A "GPU"). Read per map load.
+# true). Off: MapLoader never loads a mask and setup binds none, so every map
+# shows exactly its painted frame (the pre-P3-A material) and pays neither the
+# mask's nor the calm frame's VRAM nor the layer's GPU time
+# (docs/export_contract.md, P3-A "GPU"). Read per map load.
 const ANIMATED_WATER_SETTING := "tfa/graphics/animated_water"
 
 var sim: CellFluid
