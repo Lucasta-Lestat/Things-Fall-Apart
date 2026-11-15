@@ -25,7 +25,7 @@ var water_sim: String = "visual"
 # without that art (every contract-2 map: its crowns stay in the structures
 # overlay, under characters). Game's sight cones fit their canopy child to it.
 var canopy_layer: CanopyLayer = null
-var _canopy_tex: Texture2D = null      # images.canopy, while the map loads
+var _canopy_tex: Texture2D = null      # images.canopy, while the map loads (null after)
 var _canopy_crowns: Array = []         # [{index, cell, art}] for the CanopyLayer
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
@@ -242,6 +242,14 @@ func generate_structured_map(map_data: Dictionary) -> void:
 			_canopy_tex = load(cp)
 		else:
 			push_error("structured map: missing canopy image " + cp)
+	else:
+		# contract-3 tree rows without their atlas (a hand splice that lost
+		# the images key): the overlay holds no tree art, so they would draw
+		# nothing at all
+		var n_cells: int = canopy_cell_rows(map_data.get("structures", []))
+		if n_cells > 0:
+			push_error("structured map %s: %d tree rows carry canopy_cell/shade_cell but images.canopy is missing: they draw no tree art"
+				% [_current_map_id, n_cells])
 	if game != null and "structures_in_scene" in game:
 		game.structures_in_scene.clear()
 	# TWO passes, decks (walk_elev) first: a solid structure's occlude_top is
@@ -915,6 +923,10 @@ func _add_tree_canopy_art(s: Dictionary, inst: Structure, center: Vector2) -> vo
 	shade.name = "Shade"
 	var mul := CanvasItemMaterial.new()
 	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+	# UNSHADED: a lit (normal) item is multiplied by the world CanvasModulate
+	# (game.tscn 0.716) before the MUL blend, so its white "no shade" texels
+	# would darken the ground under the whole cell into a hard square
+	mul.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	shade.material = mul
 	shade.light_mask = 0
 	shade.z_index = -1   # -4 with the structure's -3: under every slice
@@ -951,10 +963,12 @@ func _canopy_quad(cell: Array, center: Vector2) -> Polygon2D:
 
 ## P3-B: the CanopyLayer over the crowns _add_tree_canopy_art collected, once
 ## the structures have spawned (and the crown record is finished). None on a
-## map without canopy cells.
+## map without canopy cells. The atlas is not held past this (the quads and
+## the layer keep their own).
 func _spawn_canopy_layer() -> void:
 	if _canopy_tex == null or _canopy_crowns.is_empty():
 		_canopy_crowns = []
+		_canopy_tex = null
 		return
 	var layer := CanopyLayer.new()
 	layer.name = "CanopyLayer"
@@ -962,6 +976,17 @@ func _spawn_canopy_layer() -> void:
 	add_child(layer)
 	canopy_layer = layer
 	_canopy_crowns = []
+	_canopy_tex = null
+
+
+## P3-B: how many tree rows carry canopy cells (canopy_cell, contract 3).
+static func canopy_cell_rows(structs: Variant) -> int:
+	var n: int = 0
+	if structs is Array:
+		for s in (structs as Array):
+			if s is Dictionary and String((s as Dictionary).get("kind", "")) == "tree" and (s as Dictionary).get("canopy_cell") is Array:
+				n += 1
+	return n
 
 
 ## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
