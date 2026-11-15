@@ -40,7 +40,11 @@ extends Node
 #      GPU_MIN_MPX Mpx of layer pixels prints a SKIP line instead, not counted
 #      as a check: a narrow channel's view pays the shore's warp divergence and
 #      the off subtraction's noise per Mpx (ossuary 0.78, middle 0.87 at 0.3-0.4
-#      Mpx), so it would judge the map's shape, not the shader.
+#      Mpx), so it would judge the map's shape, not the shader. No GPU time
+#      measured (a renderer or driver without GPU timestamps reads 0 ms) is a
+#      SKIP too; a fastest on block no slower than the fastest off block is a
+#      FAIL (the layer measured no cost: the toggle never reached it), not a
+#      pass at 0 ms per Mpx (gpu_verdict; tests/water_mask_check checks it).
 #      tfa/graphics/animated_water switches the layer off.
 # The mask covers the row's water_rect of the ground (TG crops it to the
 # water's bounding box; no key = the whole ground): every lookup maps there.
@@ -363,11 +367,36 @@ func _gpu_1080p(gs: Sprite2D, mat: ShaderMaterial, mask_img: Image, gsize: Vecto
 		on_ms, off_ms, layer_ms, per_open, per_layer, per_layer * vmpx, per_layer * vmpx * 4.0, fast_ms, per_fast, str(ons), str(offs)])
 	var ceil_s := OS.get_environment("TFA_GPU_CEIL_MS_PER_MPX")
 	var ceil_ms: float = float(ceil_s) if ceil_s != "" else GPU_CEIL_MS_PER_MPX
-	if lmpx < GPU_MIN_MPX:
-		print("SKIP gpu.layer-ms-per-mpx: %.2f Mpx of layer px in the view (< %.2f), too little to measure" % [lmpx, GPU_MIN_MPX])
+	var v: Dictionary = gpu_verdict(ons, offs, lmpx, ceil_ms)
+	var verdict: String = String(v["verdict"])
+	var why: String = String(v["why"])
+	if verdict == "SKIP":
+		print("SKIP gpu.layer-ms-per-mpx: %s" % why)
 	else:
-		_report("gpu.layer-ms-per-mpx", per_fast <= ceil_ms, "%.3f ms per Mpx of layer px, fastest blocks (ceiling %.2f%s; median blocks %.3f): %.3f ms on %.2f Mpx"
-			% [per_fast, ceil_ms, ", TFA_GPU_CEIL_MS_PER_MPX" if ceil_s != "" else "", per_layer, fast_ms, lmpx])
+		_report("gpu.layer-ms-per-mpx", verdict == "PASS", "%s%.3f ms per Mpx of layer px, fastest blocks (ceiling %.2f%s; median blocks %.3f): %.3f ms on %.2f Mpx"
+			% [why + ": " if why != "" else "", per_fast, ceil_ms, ", TFA_GPU_CEIL_MS_PER_MPX" if ceil_s != "" else "", per_layer, fast_ms, lmpx])
+
+
+# the gpu.layer-ms-per-mpx verdict (header, 6.) from the blocks' medians, each list
+# sorted ascending, judged on the fastest on block less the fastest off block:
+# {"verdict": "SKIP" | "PASS" | "FAIL", "per_fast": ms per Mpx of layer px,
+# "why": the reason of a SKIP, or of a FAIL other than the ceiling}. Too little
+# layer area, or no GPU time measured (0 ms on either side: no GPU timestamps),
+# is a SKIP; an on block no slower than the off block is a FAIL, never a pass.
+static func gpu_verdict(ons: Array, offs: Array, lmpx: float, ceil_ms: float) -> Dictionary:
+	var on0: float = float(ons[0]) if ons.size() > 0 else 0.0
+	var off0: float = float(offs[0]) if offs.size() > 0 else 0.0
+	var per_fast: float = (on0 - off0) / maxf(1e-6, lmpx)
+	if lmpx < GPU_MIN_MPX:
+		return {"verdict": "SKIP", "per_fast": per_fast,
+			"why": "%.2f Mpx of layer px in the view (< %.2f), too little to measure" % [lmpx, GPU_MIN_MPX]}
+	if on0 <= 0.0 or off0 <= 0.0:
+		return {"verdict": "SKIP", "per_fast": per_fast,
+			"why": "no GPU time measured (fastest blocks on %.3f ms, off %.3f ms: the renderer gives no GPU timestamps)" % [on0, off0]}
+	if on0 <= off0:
+		return {"verdict": "FAIL", "per_fast": per_fast,
+			"why": "the layer measured no cost (fastest blocks on %.3f ms, off %.3f ms): the toggle never reached it" % [on0, off0]}
+	return {"verdict": "PASS" if per_fast <= ceil_ms else "FAIL", "per_fast": per_fast, "why": ""}
 
 
 # the open-water (c >= 0.99) share of a ground rect, sampled every `step` ground

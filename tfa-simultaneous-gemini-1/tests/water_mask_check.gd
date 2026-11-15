@@ -30,6 +30,10 @@ extends Node2D
 #   6. the shader declares the pair with the branch off by default, the c <
 #      0.25 gate, the calm frame's shore rank, and both shaders' remap of the
 #      ground UV into water_rect (the cropped mask, the calm frame).
+#   7. tests/water_surface_shot's gpu.layer-ms-per-mpx verdict (gpu_verdict,
+#      pure; the shot is windowed): no GPU time measured (0 ms) or too little
+#      layer area is a SKIP, an on block no slower than the off block a FAIL,
+#      else the ceiling decides;
 #   The setting's default is checked through CellFluidFX.animated_water_on()
 #   with the setting cleared: on (a project.godot that declares it must
 #   declare it true).
@@ -39,6 +43,7 @@ extends Node2D
 # Headless:  godot --headless --path . res://tests/water_mask_check.tscn
 # Judge by the PASS/FAIL lines and "WATER MASK CHECK DONE: N checks, M FAIL".
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
+const SHOT := preload("res://tests/water_surface_shot.gd")
 const MASK_OK := "user://water_mask_check_64.res"      # 64 x 64: icon.svg at k = 2
 const MASK_BAD := "user://water_mask_check_50.res"     # 50 x 50: fits no k
 const CELLS_PATH := "user://water_mask_check_cells.json"
@@ -83,6 +88,7 @@ func _ready() -> void:
 	_case_off_switch()
 	await _case_end_to_end()
 	_case_shader_text()
+	_case_gpu_verdict()
 	print("WATER MASK CHECK DONE: %d checks, %d FAIL" % [_checks, _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -425,3 +431,22 @@ func _case_shader_text() -> void:
 	# its taps' open-water test maps the ground UV into water_rect the same way
 	_report("shader.calm-rect-remap", calm.contains("return texture(water_mask, (uv - water_rect.xy) / water_rect.zw).r;")
 		and not calm.contains("texture(water_mask, uv)") and not calm.contains("texture(water_mask, UV)"))
+
+
+# 7. the shot's GPU verdict: a measurement that never happened is not a pass
+func _case_gpu_verdict() -> void:
+	var zero: Array = [0.0, 0.0, 0.0]
+	var cases: Array = [
+		# [name, ons, offs, layer Mpx, ceiling, verdict]
+		["no-timestamps-skip", zero, zero, 1.5, 1.0, "SKIP"],
+		["off-unmeasured-skip", [0.9, 1.0], zero, 1.5, 1.0, "SKIP"],
+		["no-cost-fails", [0.4, 0.5], [0.4, 0.45], 1.5, 1.0, "FAIL"],
+		["cheaper-on-fails", [0.3, 0.5], [0.4, 0.45], 1.5, 1.0, "FAIL"],
+		["small-view-skip", [1.3, 1.4], [0.4, 0.45], 0.3, 1.0, "SKIP"],
+		["within-ceiling-pass", [1.3, 1.4], [0.4, 0.45], 1.5, 1.0, "PASS"],   # 0.6 ms / Mpx
+		["over-ceiling-fails", [2.4, 2.5], [0.4, 0.45], 1.5, 1.0, "FAIL"],    # 1.33 ms / Mpx
+	]
+	for c: Array in cases:
+		var v: Dictionary = SHOT.gpu_verdict(c[1], c[2], float(c[3]), float(c[4]))
+		_report("gpu-verdict.%s" % String(c[0]), String(v["verdict"]) == String(c[5]),
+			"%s (%s), want %s" % [String(v["verdict"]), String(v["why"]), String(c[5])])
