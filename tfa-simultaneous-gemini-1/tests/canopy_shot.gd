@@ -12,7 +12,14 @@ extends Node2D
 #                               (+ its canopy child when the map has one)
 #   canopy_<map>_cone_far.png   the same from 0.75 of its range: the crown past
 #                               half range
+#   canopy_<map>_cone_fadehole.png  the same, the party member back under the
+#                               crown: its fade hole's ground and the party
+#                               member stay unlit by that cone (the rules hide
+#                               them from it)
 #   canopy_<map>_cone_high.png  the same viewer a story up (on a roof)
+#   canopy_<map>_route.png      a planned route (PathDrawer) through the crown:
+#                               the crown fades along it
+# The world wears game.tscn's CanvasModulate (0.716), as in the game.
 # On a map without the contract-3 canopy cells (every shipped map today) the
 # crowns are the structures overlay's, under the stand-ins, and the cone has
 # no canopy child: the "before" shots. WINDOWED only (the headless renderer
@@ -25,6 +32,7 @@ const ShotDir := preload("res://tests/shot_dir.gd")
 const VIEW := Vector2(1200.0, 860.0)
 
 var structures_in_scene: Array = []
+var characters_in_scene: Array = []
 var party_chars: Array = []
 var unlocked_locks: Dictionary = {}
 var map_loader: Node2D = null
@@ -64,6 +72,10 @@ func _ready() -> void:
 	var ws: Array = m.get("world_size", [2048, 2048])
 	GridManager.initialize(int(ws[0]), int(ws[1]))
 	GridManager.set_elevation_data(CellGraph.from_structured(String(m.get("cell_graph", ""))))
+	# game.tscn's world tint: lit things (and a lit MUL quad) are multiplied by it
+	var cm := CanvasModulate.new()
+	cm.color = Color(0.716296, 0.716296, 0.716296)
+	add_child(cm)
 	var ml: Node2D = MAP_LOADER.new()
 	add_child(ml)
 	map_loader = ml
@@ -105,6 +117,7 @@ func _ready() -> void:
 	npc.col = Color(0.9, 0.2, 0.2)
 	npc.position = cpos + Vector2(-r * 0.7, r * 0.2)
 	add_child(npc)
+	characters_in_scene = [party, npc]
 	var cam := Camera2D.new()
 	cam.position = cpos
 	var vp := get_viewport().get_visible_rect().size
@@ -142,20 +155,33 @@ func _ready() -> void:
 	viewer.add_child(light)
 	viewer.rotation = (cpos - viewer.position).angle()
 	party.position = cpos + Vector2(r * 2.6, 0.0)   # out of the grove: no fade in the cone shots
-	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
+	CanopyLayer.fit_canopy_cone(light, viewer, layer)
 	await _shot(out_dir + "/canopy_%s_cone.png" % want)
 	# the same viewer 0.75 of its range away: the crown past half range (unlit
 	# with canopy cells), the ground round it lit as before
 	var near_pos: Vector2 = viewer.position
 	viewer.position = cpos + (near_pos - cpos).normalized() * 675.0
-	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
+	CanopyLayer.fit_canopy_cone(light, viewer, layer)
 	cam.position = (viewer.position + cpos) * 0.5
 	await _shot(out_dir + "/canopy_%s_cone_far.png" % want)
-	viewer.position = near_pos
+	# the party member hidden under the crown again, the far cone on it
+	party.position = cpos + Vector2(r * 0.7, 0.0)
 	cam.position = cpos
+	await _shot(out_dir + "/canopy_%s_cone_fadehole.png" % want)
+	party.position = cpos + Vector2(r * 2.6, 0.0)
+	viewer.position = near_pos
 	viewer.on_roof = true
-	CanopyLayer.fit_canopy_cone(light, viewer, layer != null)
+	CanopyLayer.fit_canopy_cone(light, viewer, layer)
 	await _shot(out_dir + "/canopy_%s_cone_high.png" % want)
+	# a planned route through the crown, the cone off
+	light.enabled = false
+	CanopyLayer.fit_canopy_cone(light, viewer, layer)
+	var pd := PathDrawer.new()
+	pd.tactical_path = TacticalPath.new()
+	pd.tactical_path.set_waypoints(PackedVector2Array([cpos + Vector2(-r * 2.4, r * 0.9),
+		cpos + Vector2(-r * 0.3, r * 0.35), cpos + Vector2(r * 2.4, -r * 0.6)]))
+	add_child(pd)
+	await _shot(out_dir + "/canopy_%s_route.png" % want)
 	get_tree().quit(0)
 
 

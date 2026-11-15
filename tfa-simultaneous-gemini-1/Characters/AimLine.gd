@@ -76,6 +76,20 @@ func _init() -> void:
 	visible = false
 
 
+func _enter_tree() -> void:
+	# Tree crowns drawn above characters (P3-B) fade along the ribbon
+	add_to_group(CanopyLayer.REVEAL_GROUP)
+
+
+## CanopyLayer (P3-B): the ribbon and its landing reticle, which the crowns
+## must not hide (CanopyLayer.REVEAL_GROUP).
+func canopy_reveal(out: Array) -> void:
+	if not is_visible_in_tree() or _from == _to:
+		return
+	out.append([PackedVector2Array([_from, _to]), 14.0])
+	out.append([PackedVector2Array([_to]), RETICLE_RADIUS + 10.0])
+
+
 func _process(delta: float) -> void:
 	if not visible:
 		return

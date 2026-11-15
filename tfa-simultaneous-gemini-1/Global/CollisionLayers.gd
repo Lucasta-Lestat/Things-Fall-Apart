@@ -72,16 +72,31 @@ const LIGHT_SHADOW_MASK := SIGHT_MASK_GROUND | SIGHT_MASK_HIGH
 # (range_item_cull_mask); ordinary lights use bit 1 as before. Not a physics layer.
 const ELEVATED_SURFACE_LIGHT := 4
 
-# CanvasItem.light_mask of the tree crowns that hide characters (P3-B:
-# CanopyLayer, on maps whose rows carry the contract-3 canopy cells). No
-# ordinary light or full-range cone lights it; each drawn sight cone carries a
+# CanvasItem.light_mask bit of what the tree crown rules hide (P3-B, on maps
+# whose rows carry the contract-3 canopy cells): the crowns (CanopyLayer),
+# each hiding crown's rule disc of ground and every character standing under
+# a live crown -- all carrying CanopyLayer.SHADED_MASK = this | LAMP_LIGHT and
+# not bit 1. No full-range cone lights it; each drawn sight cone carries a
 # "CanopyCone" child that does, at the range the crown rules let that viewer
 # see under a crown (half range from the ground, nothing a story up:
-# CanopyLayer.fit_canopy_cone), so a cone never lights a crown that hides a
-# target from that viewer. The child culls shadows on its viewer's mask | this
-# bit, and the crowns receive them through it. Not a physics layer. On relief
-# maps the same value is band 17's bit: an occluder carries it only with every
-# band below it (band masks run up from band 0, or from the bands its main
-# occluder carries), so it never shadows a canopy cone that its viewer's own
-# band bit would not.
+# CanopyLayer.fit_canopy_cone), so a cone never lights what hides from that
+# viewer. The child culls shadows on its viewer's mask | this bit, and those
+# items receive them through it. Not a physics layer. On relief maps the same
+# value is band 17's bit: an occluder carries it only with every band below
+# it (band masks run up from band 0, or from the bands its main occluder
+# carries), so it never shadows a canopy cone that its viewer's own band bit
+# would not.
 const CANOPY_LIGHT := 1 << 19
+
+# CanvasItem.light_mask bit lit by the ORDINARY lights -- map lights and held
+# lights (EquipmentEffects.make_light), glow marks, fire (CellFireFX),
+# lightning and VFXEffectNode lights -- through their range_item_cull_mask
+# (1 | LAMP_LIGHT); the sight cones never carry it. Only the items that trade
+# bit 1 for CANOPY_LIGHT carry it (above), so a torch still lights a crown or
+# a character under one, and nothing else changes. The same value as
+# SIGHT_MASK_HIGH in the shadow-mask space: harmless, since every light whose
+# shadow mask has bit 2 and that lights LAMP_LIGHT is an ordinary light, whose
+# shadows those items should receive.
+const LAMP_LIGHT := 2
+# range_item_cull_mask of an ordinary light (above).
+const LAMP_RANGE_MASK := 1 | LAMP_LIGHT

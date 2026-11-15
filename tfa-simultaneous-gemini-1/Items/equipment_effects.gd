@@ -176,6 +176,8 @@ static func make_light(level: float, traits, color = null) -> PointLight2D:
 		light.color = light_color(traits)
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = CollisionLayers.LIGHT_SHADOW_MASK
+	# an ordinary light: it lights what the sight cones may not (P3-B's crowns)
+	light.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK
 	return light
 
 static func _light_texture() -> Texture2D:

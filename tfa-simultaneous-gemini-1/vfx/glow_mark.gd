@@ -24,7 +24,7 @@ func _ready() -> void:
 	light.texture = tex
 	light.energy = 0.9
 	light.texture_scale = 0.55
-	light.range_item_cull_mask = 1
+	light.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK   # P3-B's crowns too
 	add_child(light)
 
 	var spark := Sprite2D.new()

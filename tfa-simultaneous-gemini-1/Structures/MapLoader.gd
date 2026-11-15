@@ -962,9 +962,9 @@ func _canopy_quad(cell: Array, center: Vector2) -> Polygon2D:
 
 
 ## P3-B: the CanopyLayer over the crowns _add_tree_canopy_art collected, once
-## the structures have spawned (and the crown record is finished). None on a
-## map without canopy cells. The atlas is not held past this (the quads and
-## the layer keep their own).
+## the structures have spawned (and the crown record is finished), with the
+## ground sprite for its rule discs. None on a map without canopy cells. The
+## atlas is not held past this (the quads and the layer keep their own).
 func _spawn_canopy_layer() -> void:
 	if _canopy_tex == null or _canopy_crowns.is_empty():
 		_canopy_crowns = []
@@ -972,7 +972,7 @@ func _spawn_canopy_layer() -> void:
 		return
 	var layer := CanopyLayer.new()
 	layer.name = "CanopyLayer"
-	layer.setup(_canopy_tex, _canopy_crowns, get_parent())
+	layer.setup(_canopy_tex, _canopy_crowns, get_parent(), structured_ground)
 	add_child(layer)
 	canopy_layer = layer
 	_canopy_crowns = []

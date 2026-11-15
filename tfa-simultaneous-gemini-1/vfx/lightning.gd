@@ -63,6 +63,7 @@ func setup_light() -> void:
 	point_light.texture_scale = light_range / 128.0
 	point_light.color = glow_color
 	point_light.blend_mode = Light2D.BLEND_MODE_ADD
+	point_light.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK   # P3-B's crowns too
 	add_child(point_light)
 	point_light.position = (start_position + end_position) / 2.0
 
@@ -74,6 +75,7 @@ func setup_light() -> void:
 	impact_light.texture_scale = (light_range * 0.6) / 128.0
 	impact_light.color = color
 	impact_light.blend_mode = Light2D.BLEND_MODE_ADD
+	impact_light.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK
 	add_child(impact_light)
 	impact_light.position = end_position
 
