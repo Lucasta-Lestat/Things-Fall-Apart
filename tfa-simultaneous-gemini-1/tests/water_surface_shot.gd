@@ -21,14 +21,27 @@ extends Node
 #      imported mask has no mipmaps;
 #      it reports that, the ground's, and the GPU time of the view with the
 #      layer on and off;
-#   6. the layer's GPU cost, the number docs/export_contract.md records (P3-A
-#      "GPU"): GPU_VIEWS views of GPU_VIEW px (1080p) on the window with the
-#      most open water, all drawing the ground with the map's own water
-#      material, measured in alternating blocks with the layer on and off
-#      (median of GPU_BLOCKS blocks of the per-frame GPU time of one view;
-#      several views keep the GPU clocked up as a game frame does, so the
-#      number is stable). Printed as "GPU 1080p view", not judged: the budget
-#      is the reader's (and tfa/graphics/animated_water switches it off).
+#   6. gpu.layer-ms-per-mpx: the layer's GPU cost, the number
+#      docs/export_contract.md records (P3-A "GPU"): GPU_VIEWS views of
+#      GPU_VIEW px (1080p) on the window with the most open water, all drawing
+#      the ground with the map's own water material, measured in alternating
+#      blocks with the layer on and off (median of GPU_BLOCKS blocks of the
+#      per-frame GPU time of one view; several views keep the GPU clocked up as
+#      a game frame does, so the number is stable). Printed as "GPU 1080p
+#      view" and JUDGED: the layer's ms per Mpx of the view's layer pixels (c >
+#      0.25, where its branch runs), taken from the fastest on block less the
+#      fastest off block (other GPU work on a shared machine only ever adds
+#      time; the median is printed too), must stay within GPU_CEIL_MS_PER_MPX,
+#      the ceiling set for the RTX 4080 Laptop the docs measure on (about 1.6 x
+#      the 0.63 measured on harbour's all-sea view, 0.54 on lower's; a full
+#      1080p screen of sea at the ceiling costs 2.1 ms): a regression to the
+#      per-pixel calm frame or a second surface fails it. Another GPU sets
+#      TFA_GPU_CEIL_MS_PER_MPX (ms per Mpx) to its own. A view with fewer than
+#      GPU_MIN_MPX Mpx of layer pixels prints a SKIP line instead, not counted
+#      as a check: a narrow channel's view pays the shore's warp divergence and
+#      the off subtraction's noise per Mpx (ossuary 0.78, middle 0.87 at 0.3-0.4
+#      Mpx), so it would judge the map's shape, not the shader.
+#      tfa/graphics/animated_water switches the layer off.
 # The mask covers the row's water_rect of the ground (TG crops it to the
 # water's bounding box; no key = the whole ground): every lookup maps there.
 # Needs a row with images.water whose files are imported in this project (a
@@ -53,6 +66,8 @@ const GPU_FRAMES := 30
 const GPU_VIEW := Vector2i(1920, 1080)
 const GPU_VIEWS := 6
 const GPU_BLOCKS := 8
+const GPU_CEIL_MS_PER_MPX := 1.0   # the RTX 4080 Laptop's ceiling (TFA_GPU_CEIL_MS_PER_MPX overrides)
+const GPU_MIN_MPX := 0.5           # less layer area than this in the 1080p view: not judged
 
 # --- Game stand-in state (read by MapLoader / Structure / FluidManager) ---
 var structures_in_scene: Array = []
@@ -294,7 +309,9 @@ func _run() -> int:
 # 6. the layer's GPU cost on a 1080p view of the most open water (see the header)
 func _gpu_1080p(gs: Sprite2D, mat: ShaderMaterial, mask_img: Image, gsize: Vector2) -> void:
 	var centre := _most_water(mask_img, gsize, Vector2(GPU_VIEW))
-	var share := _open_share(mask_img, gsize, Rect2(centre - Vector2(GPU_VIEW) * 0.5, Vector2(GPU_VIEW)))
+	var vrect := Rect2(centre - Vector2(GPU_VIEW) * 0.5, Vector2(GPU_VIEW))
+	var share := _open_share(mask_img, gsize, vrect)
+	var lshare := _open_share(mask_img, gsize, vrect, 8.0, 0.25)   # the layer's pixels: its branch runs
 	var vps: Array = []
 	for _k in GPU_VIEWS:
 		var vp := SubViewport.new()
@@ -333,13 +350,29 @@ func _gpu_1080p(gs: Sprite2D, mat: ShaderMaterial, mask_img: Image, gsize: Vecto
 	offs.sort()
 	var on_ms: float = ons[int(ons.size() / 2.0)]
 	var off_ms: float = offs[int(offs.size() / 2.0)]
-	print("water_surface_shot: GPU 1080p view (%d x %dx%d at %s, %.0f %% open water = %.2f Mpx): layer on %.3f ms, off %.3f ms, the layer %.3f ms (%.3f ms per Mpx of open water; blocks on %s)"
-		% [GPU_VIEWS, GPU_VIEW.x, GPU_VIEW.y, str(centre.round()), share * 100.0, share * GPU_VIEW.x * GPU_VIEW.y / 1e6,
-		on_ms, off_ms, on_ms - off_ms, (on_ms - off_ms) / maxf(1e-6, share * GPU_VIEW.x * GPU_VIEW.y / 1e6), str(ons)])
+	var vmpx: float = float(GPU_VIEW.x * GPU_VIEW.y) / 1e6
+	var layer_ms: float = on_ms - off_ms
+	var per_open: float = layer_ms / maxf(1e-6, share * vmpx)
+	var lmpx: float = lshare * vmpx
+	var per_layer: float = layer_ms / maxf(1e-6, lmpx)
+	# the judged number: the fastest blocks (other GPU work only adds time)
+	var fast_ms: float = float(ons[0]) - float(offs[0])
+	var per_fast: float = fast_ms / maxf(1e-6, lmpx)
+	print("water_surface_shot: GPU 1080p view (%d x %dx%d at %s, %.0f %% open water = %.2f Mpx, %.0f %% layer px = %.2f Mpx): layer on %.3f ms, off %.3f ms, the layer %.3f ms (%.3f ms per Mpx of open water, %.3f per Mpx of layer px; a full screen of it: %.2f ms at 1080p, %.2f ms at 4K); fastest blocks: the layer %.3f ms, %.3f ms per Mpx of layer px (blocks on %s, off %s)"
+		% [GPU_VIEWS, GPU_VIEW.x, GPU_VIEW.y, str(centre.round()), share * 100.0, share * vmpx, lshare * 100.0, lmpx,
+		on_ms, off_ms, layer_ms, per_open, per_layer, per_layer * vmpx, per_layer * vmpx * 4.0, fast_ms, per_fast, str(ons), str(offs)])
+	var ceil_s := OS.get_environment("TFA_GPU_CEIL_MS_PER_MPX")
+	var ceil_ms: float = float(ceil_s) if ceil_s != "" else GPU_CEIL_MS_PER_MPX
+	if lmpx < GPU_MIN_MPX:
+		print("SKIP gpu.layer-ms-per-mpx: %.2f Mpx of layer px in the view (< %.2f), too little to measure" % [lmpx, GPU_MIN_MPX])
+	else:
+		_report("gpu.layer-ms-per-mpx", per_fast <= ceil_ms, "%.3f ms per Mpx of layer px, fastest blocks (ceiling %.2f%s; median blocks %.3f): %.3f ms on %.2f Mpx"
+			% [per_fast, ceil_ms, ", TFA_GPU_CEIL_MS_PER_MPX" if ceil_s != "" else "", per_layer, fast_ms, lmpx])
 
 
-# the open-water (c >= 0.99) share of a ground rect, sampled every `step` ground px
-func _open_share(mask_img: Image, gsize: Vector2, r: Rect2, step: float = 8.0) -> float:
+# the open-water (c >= 0.99) share of a ground rect, sampled every `step` ground
+# px; with `above`, the share of c > above instead (0.25: the layer's pixels)
+func _open_share(mask_img: Image, gsize: Vector2, r: Rect2, step: float = 8.0, above: float = -1.0) -> float:
 	var msz := Vector2(mask_img.get_size())
 	var n := 0
 	var w := 0
@@ -351,7 +384,9 @@ func _open_share(mask_img: Image, gsize: Vector2, r: Rect2, step: float = 8.0) -
 			var wp := Vector2(x, y)
 			if _wrect.has_point(wp) and x >= 0.0 and y >= 0.0 and x < gsize.x and y < gsize.y:
 				var t := Vector2i(((wp - _wrect.position) / _wrect.size * msz).floor())
-				if mask_img.get_pixelv(t.clamp(Vector2i.ZERO, Vector2i(msz) - Vector2i.ONE)).r >= 0.99:
+				var c: float = mask_img.get_pixelv(t.clamp(Vector2i.ZERO, Vector2i(msz) - Vector2i.ONE)).r
+				var hit: bool = (c > above) if above >= 0.0 else (c >= 0.99)
+				if hit:
 					w += 1
 			x += step
 		y += step

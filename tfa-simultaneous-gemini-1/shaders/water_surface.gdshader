@@ -103,9 +103,12 @@ float waterSurf(vec2 W, vec2 dir, float t, out vec2 grad) {
 // P3-A's open water: waterSurf's six warpfields (the same inputs, the same
 // arithmetic) in ONE loop, so the shader carries one copy of warpfield instead
 // of six inlined ones. It draws what waterSurf draws (float contraction may
-// move a few pixels by 1-2/255) about 10 % faster on the GPU (RTX 4080 Laptop,
-// D3D12). The dynamic-fluid branch keeps waterSurf itself, so every map
-// without an open-water mask renders exactly as before. (Forward differences
+// move a few pixels by 1-2/255) about 4-5 % cheaper on the GPU (RTX 4080
+// Laptop, D3D12, a 1080p view of open sea: 1.33 ms against 1.39 ms; the
+// c > 0.25 gate below saves nothing there, only on soft shore bands;
+// tests/water_surface_shot judges the cost per Mpx). The dynamic-fluid branch
+// keeps waterSurf itself, so every map without an open-water mask renders
+// exactly as before. (Forward differences
 // off the centre tap would halve the cost but brighten the glints, p90 luma
 // +0.06: rejected.)
 float waterSurfOW(vec2 W, vec2 dir, float t, out vec2 grad) {
