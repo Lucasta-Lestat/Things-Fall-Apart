@@ -637,8 +637,9 @@ var current_elevation: float = 0.0
 # Roof layer: true while standing ON a roof (a stacked surface over the ground;
 # interiors below keep ground elevation). Only jumpers ever set this.
 var on_roof: bool = false
-# Bare terrain under the tile current_elevation was last read from (ABSOLUTE
-# stories). Cached by _refresh_elevation — which is suppressed while airborne —
+# Local ground under the tile current_elevation was last read from (ABSOLUTE
+# stories; GridManager.ground_ref: the bare terrain, or the open-water surface
+# over a river bed on a water-layer map). Cached by _refresh_elevation — which is suppressed while airborne —
 # so height_above_ground (and with it the view layer / cone tier) cannot
 # flicker mid-jump off a terrace. Tests that poke current_elevation directly
 # keep reading it against ground 0.
@@ -726,7 +727,9 @@ func _refresh_elevation() -> void:
 		e = GridManager.roof_at(t)
 	else:
 		e = GridManager.effective_elev(t)
-	var g: float = GridManager.terrain_elev(t)
+	# the local ground: the terrain, or the open-water surface over a river bed
+	# (P3-D: a bridge walker is measured from the water, not the bed)
+	var g: float = GridManager.ground_ref(t)
 	# Roof-walkers render ABOVE the RoofLayer cover (z 120): boost the root z
 	# while on_roof and restore on dismount. This is the single chokepoint
 	# every mover path funnels through (jump land, fall, warp, per-frame), so

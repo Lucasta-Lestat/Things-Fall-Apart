@@ -263,9 +263,27 @@ func effective_elev(t: Vector2i) -> float:
 func terrain_elev(t: Vector2i) -> float:
 	return float(elevations.get(t, 0.0))
 
-# How far `elev` (an absolute surface height) stands above the terrain at t.
+# The ground a surface at t is measured from for the view layer and the sight
+# tier (ABSOLUTE stories): the bare terrain, except over open water on a map
+# that ships the water layer (contract 3), where it is the water's own surface
+# when that is higher. A P3-D bridge deck stands over a river BED a story or
+# more down; measured from the bed, a bank-level bridge read as a deck a story
+# up (HIGH layer: walkers hidden in ground view, the leader's view flipped to
+# the roof slice, crowns always blocking the bridge viewer). From the surface,
+# a deck 0.2 over its river is the ground layer, and one 1.2 over it is still
+# high. No layer (every contract-1/2 map): the bare terrain, unchanged.
+func ground_ref(t: Vector2i) -> float:
+	var g: float = terrain_elev(t)
+	if water_layer_used:
+		var i: int = _water_index(t)
+		if i >= 0 and _water_body[i] > 0:
+			g = maxf(g, float(_water_surf[i]))
+	return g
+
+# How far `elev` (an absolute surface height) stands above the local ground
+# at t (ground_ref: the terrain, or the open-water surface over it).
 func height_above_ground(t: Vector2i, elev: float) -> float:
-	return elev - terrain_elev(t)
+	return elev - ground_ref(t)
 
 # THE view-layer / sight-tier predicate: on a roof, or standing on a surface
 # at least HIGH_LAYER_STORIES above the local ground (a battlement deck). A
