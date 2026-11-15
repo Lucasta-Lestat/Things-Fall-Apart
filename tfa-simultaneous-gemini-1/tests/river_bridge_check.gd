@@ -34,7 +34,15 @@ extends Node2D
 #     below the waterline (the clamp saw the deck as the water under it); a
 #     0.6 spill on the bridge sheds down to its puddle floor, into the river,
 #     and one on such a shore cell runs under the deck; no sink ever holds
-#     fluid and the mass ledger closes; 'visual' builds no sinks.
+#     fluid and the mass ledger closes; 'visual' builds no sinks;
+#   flat LOS (the row's relief_los false): neither bank-level bridge's
+#     occluder shadows the cone of a walker on it; a deck a story up keeps
+#     its GROUND mask;
+#   fire: oil on each bridge's span lights, burns the walker in it and burns
+#     away, the decks stand; a grass fire at a bridge end never lights a dry
+#     deck tile or crosses the river;
+#   fluid art: each bridge deck's Art draws the fluid field (deck_fluid
+#     .gdshader on CellFluidFX's fields) and a slick on it turns that on.
 # Headless:  godot --headless --path . res://tests/river_bridge_check.tscn
 # Exit 0 when every check passes.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
@@ -43,11 +51,17 @@ const ROW_PATH := FIX + "tg_test_prim_river_row.json"
 const CELLS_PATH := FIX + "tg_test_prim_river_cells.json"
 const NOLAYER_PATH := "user://river_bridge_check_nolayer_cells.json"
 
-# MapLoader's game stub (it reads these off its parent) + FluidManager's
+# MapLoader's game stub (it reads these off its parent) + FluidManager's, and
+# SurfaceManager's for the fire checks (it finds its game by load_map)
 var structures_in_scene: Array = []
 var party_chars: Array = []
 var unlocked_locks: Dictionary = {}
 var map_loader: Node2D = null
+var characters_in_scene: Array = []
+var items_in_scene: Array = []
+var fluid_manager: FluidManager = null
+var surface_manager: SurfaceManager = null
+var fog_manager: FogManager = null
 
 var fails := 0
 var checks := 0
@@ -55,6 +69,10 @@ var row: Dictionary = {}
 var cols := 0
 var rows := 0
 var decks: Array = []          # [{tiles: Array[Vector2i], elev, id, a, b}] from the row's walk_elev rows
+
+
+func load_map(_a = null, _b = "", _c = "") -> void:
+	pass
 
 
 func _check(cname: String, ok: bool, detail: String = "") -> void:
@@ -87,6 +105,9 @@ func _ready() -> void:
 	_view_layer_checks()
 	_bridge_art_and_damage_checks()
 	await _fluid_checks(g)
+	await _flat_occluder_checks()
+	await _fire_checks()
+	await _deck_fluid_art_checks()
 	# --- the fallback: the same map without the water layer (contract 2's reading).
 	# The river's tiles are taken while the layer is loaded: without it,
 	# water_body_at IS is_deep_water, so a list taken after the strip is empty
@@ -110,7 +131,8 @@ func _done() -> void:
 
 
 # Game.load_map's order: graph -> set_elevation_data -> MapLoader (floors, decks).
-func _load(cells_path: String) -> CellGraph:
+# `over`: row keys replaced for this load (the relief_los key, edited structures).
+func _load(cells_path: String, over: Dictionary = {}) -> CellGraph:
 	if map_loader != null and is_instance_valid(map_loader):
 		map_loader.queue_free()
 		map_loader = null
@@ -125,6 +147,8 @@ func _load(cells_path: String) -> CellGraph:
 	var m: Dictionary = row.duplicate(true)
 	m["images"] = {"map": "res://icon.svg"}
 	m["cell_graph"] = cells_path
+	for k in over:
+		m[k] = over[k]
 	var ml: Node2D = MAP_LOADER.new()
 	add_child(ml)
 	map_loader = ml
@@ -504,6 +528,263 @@ func _fluid_checks(g: CellGraph) -> void:
 	_check("fluid.mass-closes", absf(res) < 1e-4, "residual %.6f" % res)
 	fm.queue_free()
 	await get_tree().process_frame
+
+
+# A FLAT-LOS map (the row's relief_los key false, L17): there a deck's light
+# occluder carries the GROUND sight mask, and a walker on a bank-level bridge
+# is the GROUND tier (measured from the water, ground_ref), so the deck's own
+# polygon -- the walker's light inside it -- would black out the walker's cone
+# beyond the deck edges. A deck under one story over its ground on any tile
+# casts no cone shadow; a deck a story or more over every tile keeps the
+# GROUND mask (it still hides what is under it) and its walkers are HIGH.
+func _flat_occluder_checks() -> void:
+	var g := await _load(CELLS_PATH, {"relief_los": false})
+	_check("flat.relief-off", g != null and not GridManager.relief_los, "")
+	if g == null:
+		return
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	for st in structures_in_scene:
+		if not is_instance_valid(st) or not (st as Structure).is_deck:
+			continue
+		var s: Structure = st
+		var occ: LightOccluder2D = s.get_node_or_null("Occluder")
+		var om: int = occ.occluder_light_mask if occ != null else -1
+		var overlap := 0
+		var n := 0
+		for t in s.deck_tiles:
+			ch.global_position = GridManager.map_to_world(t)
+			ch._refresh_elevation()
+			n += 1
+			if (int(ch.sight_cone_mask()) & om) != 0:
+				overlap += 1
+		_check("flat.%s-occluder-spares-its-walkers" % String(s.structure_id), occ != null and n > 0 and overlap == 0,
+			"occluder mask %d, %d of %d deck tiles shadow the walker's own cone" % [om, overlap, n])
+	# the control: the stone deck raised to 3.4 (1.4 over the banks, 1.6 over the water)
+	var structs: Array = (row["structures"] as Array).duplicate(true)
+	for s_v in structs:
+		if String((s_v as Dictionary).get("id", "")) == "stone_wall" and (s_v as Dictionary).get("walk_elev") != null:
+			(s_v as Dictionary)["walk_elev"] = 3.4
+	ch.queue_free()
+	g = await _load(CELLS_PATH, {"relief_los": false, "structures": structs})
+	ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	var hi_ok := false
+	var hi_detail := "no raised deck"
+	for st in structures_in_scene:
+		if is_instance_valid(st) and (st as Structure).is_deck and is_equal_approx((st as Structure).deck_elevation, 3.4):
+			var s: Structure = st
+			var occ: LightOccluder2D = s.get_node_or_null("Occluder")
+			var om: int = occ.occluder_light_mask if occ != null else -1
+			var overlap := 0
+			for t in s.deck_tiles:
+				ch.global_position = GridManager.map_to_world(t)
+				ch._refresh_elevation()
+				if (int(ch.sight_cone_mask()) & om) != 0:
+					overlap += 1
+			hi_ok = om == CollisionLayers.SIGHT_MASK_GROUND and overlap == 0
+			hi_detail = "occluder mask %d, %d deck tiles shadow the walker's cone" % [om, overlap]
+	_check("flat.high-deck-keeps-ground-mask", hi_ok, hi_detail)
+	ch.queue_free()
+
+
+# Fire on a bridge (CellFire.FUEL_DECK). An oil slick on each deck's span
+# lights, burns whoever stands in it and burns away, and the deck neither
+# burns nor breaks. With no oil, a grass fire on the north bank at a bridge's
+# end never lights a deck tile and never crosses the river.
+func _fire_checks() -> void:
+	var g := await _fire_setup()
+	if g == null:
+		return
+	var cf: CellFire = surface_manager.cell_fire
+	var spans: Array = []   # per deck: the span tiles across its middle row
+	for d_v in decks:
+		var d: Dictionary = d_v
+		var mid_y: int = GridManager.world_to_map(((d["a"] as Vector2) + (d["b"] as Vector2)) * 0.5).y
+		var st: Array[Vector2i] = []
+		for t_v in d["tiles"]:
+			var t: Vector2i = t_v
+			if t.y == mid_y and _water(t):
+				st.append(t)
+		spans.append(st)
+		for t in st:
+			fluid_manager.register_fluid(t, "oil", 1.0)
+	for _i in 30:
+		fluid_manager.update_fluid_tick(1.0 / 60.0)
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	ch.global_position = GridManager.map_to_world((spans[0] as Array)[0])
+	ch._refresh_elevation()
+	var oil0: Array = []
+	var fuel_ok: Array = []
+	var lit: Array = []
+	for k in decks.size():
+		var o := 0.0
+		var fok := true
+		for t in spans[k]:
+			o += fluid_manager.get_fluid_amount(t, "oil")
+			fok = fok and cf._fuel(g.cell_at(GridManager.map_to_world(t))) > 0.0
+		oil0.append(o)
+		fuel_ok.append(fok)
+		var n0 := cf.burning.size()
+		surface_manager.try_ignite_area(GridManager.map_to_world((spans[k] as Array)[0]), 48.0)
+		lit.append(cf.burning.size() - n0)
+	var burned_walker := false
+	for _i in 600:   # 10 s
+		surface_manager.update_surfaces(1.0 / 60.0, [ch], self)
+		fluid_manager.update_fluid_tick(1.0 / 60.0)
+		burned_walker = burned_walker or (ch.get_node("ConditionManager") as ConditionManager).has_condition("burning")
+	for k in decks.size():
+		var d: Dictionary = decks[k]
+		var o1 := 0.0
+		for t in spans[k]:
+			o1 += fluid_manager.get_fluid_amount(t, "oil")
+		_check("fire.oil-on-%s-burns" % String(d["id"]), (spans[k] as Array).size() > 0 and fuel_ok[k] and lit[k] > 0
+			and o1 < 0.2,   # burned away: unlit, the slick sheds only to its ~0.5 floor
+			"%d span tiles, lit %d at ignition, oil %.2f -> %.2f" % [(spans[k] as Array).size(), lit[k], oil0[k], o1])
+	_check("fire.burns-the-walker-on-the-deck", burned_walker, "")
+	_check("fire.decks-stand-after-burning-oil", _decks_whole(), "")
+	ch.queue_free()
+	# a grass fire beside the mill bridge's north end, no oil anywhere
+	g = await _fire_setup()
+	cf = surface_manager.cell_fire
+	var mill: Dictionary = decks[0]
+	var river_south := 0
+	for t in _river_tiles():
+		river_south = maxi(river_south, t.y)
+	var a_t: Vector2i = GridManager.world_to_map(mill["a"])
+	surface_manager.try_ignite_area(GridManager.map_to_world(a_t + Vector2i(0, -2)), 64.0)
+	var lit0 := cf.burning.size()
+	var on_deck := 0
+	var south := 0
+	var near_deck := 0
+	for i in 1200:   # 20 s
+		surface_manager.update_surfaces(1.0 / 60.0, [], self)
+		if i % 30 == 0:
+			for cid in cf.burning:
+				var t := GridManager.world_to_map(g.centroid(cid))
+				if _on_deck(t):
+					on_deck += 1
+				elif t.y > river_south:
+					south += 1
+				elif _on_deck(t + Vector2i(0, 1)) or _on_deck(t + Vector2i(1, 0)) or _on_deck(t + Vector2i(-1, 0)):
+					near_deck += 1
+	_check("fire.grass-fire-reaches-the-bridge-end", lit0 > 0 and near_deck > 0, "lit %d, %d samples beside the deck" % [lit0, near_deck])
+	_check("fire.dry-deck-and-river-are-a-firebreak", on_deck == 0 and south == 0,
+		"%d samples on a deck tile, %d south of the river" % [on_deck, south])
+	_check("fire.decks-stand-after-grass-fire", _decks_whole(), "")
+	surface_manager.queue_free()
+	fluid_manager.queue_free()
+	fog_manager.queue_free()
+	surface_manager = null
+	fluid_manager = null
+	fog_manager = null
+	await get_tree().process_frame
+
+
+# A fluid on a bridge deck is drawn OVER the deck's art (z -3, opaque), not
+# by the ground's water pass under it (z -6): each bridge deck's Art carries
+# deck_fluid.gdshader on CellFluidFX's own blob and flow fields, mapped onto
+# the ground texture's frame, and turns its fluid pass on with the ground's.
+# Headless renders nothing: this checks the wiring; the look was checked in
+# an off-screen capture.
+func _deck_fluid_art_checks() -> void:
+	var g := await _load(CELLS_PATH, {"images": {"map": "res://icon.svg", "structures": "res://icon.svg"}})
+	if g == null:
+		return
+	map_loader.set("water_sim", "sink")
+	# the ground at the map's own size, as an exported ground PNG is
+	var img := Image.create(cols * 64, rows * 64, false, Image.FORMAT_RGBA8)
+	var ground := Sprite2D.new()
+	ground.texture = ImageTexture.create_from_image(img)
+	ground.centered = false
+	map_loader.add_child(ground)
+	map_loader.set("structured_ground", ground)
+	var fm := FluidManager.new()
+	fm.name = "FluidManager"
+	add_child(fm)
+	await get_tree().process_frame
+	fm.setup_cell_graph(g)
+	var fx: CellFluidFX = fm.cell_fluid_fx
+	var arts: Array = map_loader.get("bridge_deck_arts")
+	var gm := ground.material as ShaderMaterial
+	var wired := 0
+	for art_v in arts:
+		var dm := (art_v as Polygon2D).material as ShaderMaterial
+		if dm != null and dm.shader == CellFluidFX.DECK_SHADER and gm != null 				and dm.get_shader_parameter("fluid_mask") == gm.get_shader_parameter("fluid_mask") 				and dm.get_shader_parameter("flow_mask") == gm.get_shader_parameter("flow_mask") 				and dm.get_shader_parameter("field_size") == ground.texture.get_size() 				and is_equal_approx(float(dm.get_shader_parameter("wave_scale")), float(gm.get_shader_parameter("wave_scale"))):
+			wired += 1
+	_check("fluid-art.bridge-decks-draw-the-fluid-field", fx != null and arts.size() == decks.size() and wired == arts.size(),
+		"%d bridge deck arts, %d on the deck fluid pass" % [arts.size(), wired])
+	# a slick on each deck turns the deck pass on and is drawn into the field
+	var cf: CellFluid = fm.cell_fluid
+	var dep_cells: Array[int] = []
+	for d_v in decks:
+		var d: Dictionary = d_v
+		var wp: Vector2 = ((d["a"] as Vector2) + (d["b"] as Vector2)) * 0.5
+		cf.deposit(wp, "oil", 0.5)
+		dep_cells.append(cf._deck_cell_at(wp, g.cell_at(wp)))
+	for _i in 4:
+		await get_tree().process_frame
+	var on := 0
+	for art_v in arts:
+		var dm := (art_v as Polygon2D).material as ShaderMaterial
+		if dm != null and float(dm.get_shader_parameter("fluid_on")) > 0.5:
+			on += 1
+	var drawn := 0
+	for cid in dep_cells:
+		if fx != null and fx._disp.has(cid):
+			drawn += 1
+	_check("fluid-art.deck-slick-turns-the-deck-pass-on", on == arts.size() and arts.size() > 0 and drawn == dep_cells.size(),
+		"%d of %d deck passes on, %d of %d deck slicks in the field" % [on, arts.size(), drawn, dep_cells.size()])
+	fm.queue_free()
+	await get_tree().process_frame
+
+
+# A fresh load with FluidManager ('sink') and SurfaceManager (CellFire) on it.
+func _fire_setup() -> CellGraph:
+	if surface_manager != null and is_instance_valid(surface_manager):
+		surface_manager.queue_free()
+		fluid_manager.queue_free()
+		fog_manager.queue_free()
+	var g := await _load(CELLS_PATH)
+	if g == null:
+		return null
+	map_loader.set("water_sim", "sink")
+	fog_manager = FogManager.new()
+	add_child(fog_manager)
+	fluid_manager = FluidManager.new()
+	fluid_manager.name = "FluidManager"
+	add_child(fluid_manager)
+	surface_manager = SurfaceManager.new()
+	add_child(surface_manager)
+	await get_tree().process_frame
+	fluid_manager.setup_cell_graph(g)
+	surface_manager.setup_cell_graph(g)
+	surface_manager.cell_fire._rng.seed = 1
+	return g
+
+
+# Every deck stands at full health with every tile registered.
+func _decks_whole() -> bool:
+	var n := 0
+	for st in structures_in_scene:
+		if is_instance_valid(st) and (st as Structure).is_deck and not (st as Structure).is_queued_for_deletion():
+			n += 1
+			if (st as Structure).current_health != (st as Structure).max_health:
+				return false
+	if n != decks.size():
+		return false
+	for d in decks:
+		for t in (d as Dictionary)["tiles"]:
+			if not is_equal_approx(GridManager.effective_elev(t), float((d as Dictionary)["elev"])):
+				return false
+	return true
 
 
 # The fixture's cells.json without tile_water / tile_body (the contract-2 reading).
