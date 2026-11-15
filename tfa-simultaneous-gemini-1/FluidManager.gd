@@ -140,6 +140,9 @@ func setup_cell_graph(graph: CellGraph) -> void:
 		cell_fluid_fx = CELL_FLUID_FX_SCENE.new()
 		add_child(cell_fluid_fx)
 		cell_fluid_fx.setup(cell_fluid, graph, gs, _fluid_db, _cell_type_order)
+		# P3-D: fluid on a bridge deck draws over the deck's own art
+		if "bridge_deck_arts" in ml:
+			cell_fluid_fx.bind_deck_arts(ml.bridge_deck_arts)
 
 
 func update_fluid_tick(delta: float) -> void:

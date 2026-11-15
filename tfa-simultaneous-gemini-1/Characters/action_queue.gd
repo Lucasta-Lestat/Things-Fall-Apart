@@ -67,6 +67,21 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	character = get_parent() as ProceduralCharacter
 	_setup_reticle_container()
+	# Tree crowns drawn above characters (P3-B) fade over the reticles
+	add_to_group(CanopyLayer.REVEAL_GROUP)
+
+## CanopyLayer (P3-B): the queued orders' reticles, which the crowns must not
+## hide (CanopyLayer.REVEAL_GROUP; a queued dash's AimLine says its own).
+func canopy_reveal(out: Array) -> void:
+	if reticle_container == null or not is_instance_valid(reticle_container) or not reticle_container.is_inside_tree():
+		return
+	for r in reticle_container.get_children():
+		if r is Sprite2D and (r as Sprite2D).is_visible_in_tree():
+			var spr := r as Sprite2D
+			var half: float = 16.0
+			if spr.texture != null:
+				half = maxf(spr.texture.get_width(), spr.texture.get_height()) * 0.5 * maxf(absf(spr.scale.x), absf(spr.scale.y))
+			out.append([PackedVector2Array([spr.global_position]), half])
 
 func _setup_reticle_container() -> void:
 	"""Create a container node for reticles in the scene tree"""

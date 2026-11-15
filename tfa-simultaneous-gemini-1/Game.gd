@@ -106,6 +106,16 @@ var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
 # cover interiors (and everyone in them, by z), roof-walkers draw above the
 # cover via their on_roof z boost. Auto-follows the primary selection's layer
 # every frame (_process); structured maps only (legacy maps have no roof data).
+# Absolute z of the world layers, bottom up: ground -6 (and the crowns' rule
+# discs, P3-B), scorch -5, a tree's shade -4 (P3-B), structure slices -3,
+# fire 0, items 1, path ribbon / aim line 2, selection rings and weapon shots
+# 3, characters 5, queued-order reticles 10, CanopyLayer 45 (the crowns that
+# hide, P3-B: MapLoader.canopy_layer; it fades over routes, aim lines,
+# reticles and fire, CanopyLayer.REVEAL_GROUP), targeting indicators 49..51,
+# thrown projectiles 50 (weapon shots too on a map with a CanopyLayer:
+# weapon_shot_z), StealthOverlay 60, widgets 90..115, RoofLayer 120,
+# roof-walkers 135, unexplored fog 140 (UnexploredFogLayer.FOG_Z), intent UI
+# 150+ (action-node markers 152), floating text 200.
 var roof_view: bool = false
 var roof_layer: Node2D = null   # RoofLayer under map_loader; freed on unload
 # Manual layer browse (Ctrl+scroll, DF-style): -1 = follow the selection
@@ -2357,8 +2367,14 @@ func _fit_sight_light(light: PointLight2D, c: ProceduralCharacter) -> void:
 
 ## Re-fits every drawn cone each frame, paused or not (the party plans while
 ## paused), so Perceptive, Blinded, weather and walking into fog show at once.
+## On a map with crowns above characters (MapLoader.canopy_layer, P3-B) the
+## party's and the NPCs' cones also fit their canopy child, which lights what
+## a crown hides (the crowns, their rule discs, characters under them) only
+## as far as the crown rules let that viewer see under them
+## (CanopyLayer.fit_canopy_cone); the pink elevated-surface cone has none.
 const SIGHT_CONE_NAMES := ["LineOfSight", "NPCLineOfSight", "NPCLineOfSightHigh"]
 func _update_sight_cones() -> void:
+	var canopy: CanopyLayer = CanopyLayer.of(map_loader)
 	for c in characters_in_scene:
 		if not is_instance_valid(c):
 			continue
@@ -2366,6 +2382,8 @@ func _update_sight_cones() -> void:
 			var light = c.get_node_or_null(n)
 			if light is PointLight2D:
 				_fit_sight_light(light, c)
+				if n != "NPCLineOfSightHigh":
+					CanopyLayer.fit_canopy_cone(light, c, canopy)
 		if c.has_node("NPCLineOfSightHigh"):
 			sync_npc_elevated_cone(c)
 
@@ -4056,10 +4074,12 @@ func _process(delta: float) -> void:
 	# paused): Perceptive, Blinded, weather and fog show at once.
 	_update_sight_cones()
 	# Update all selection indicators
+	var ring_canopy: CanopyLayer = CanopyLayer.of(map_loader)
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
 			selection_indicators[character].global_position = character.global_position
 			selection_indicators[character].visible = PauseManager.is_paused
+			shade_selection_ring(selection_indicators[character], character, ring_canopy)
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
@@ -4426,6 +4446,22 @@ func _refresh_all_circles() -> void:
 			_update_circle_color(character, SELECTION_CIRCLE_COLOR)
 		else:
 			_update_circle_color(character, SELECTION_CIRCLE_COLOR_MULTI)
+
+## P3-B: while the crown rules hide a party member under a crown, CanopyLayer
+## trades its body's light mask 1 for CanopyLayer.SHADED_MASK, so only the
+## cones whose viewers may see it there light it. Its selection ring is Game's
+## (the layer's walk of the character never reaches it), so it takes the same
+## gate here, or a cone whose viewer is blind to the member would still tint
+## the ring round it. Mask 1 whenever the member is not hidden, and always on
+## a map without a CanopyLayer (every contract-2 map: unchanged).
+func shade_selection_ring(indicator: Node2D, character: Node, canopy: CanopyLayer) -> void:
+	var mask: int = CanopyLayer.SHADED_MASK if canopy != null and CanopyLayer.hides_under_crown(character) else 1
+	if indicator.light_mask == mask:
+		return
+	indicator.light_mask = mask
+	for ch in indicator.get_children():
+		if ch is CanvasItem:
+			(ch as CanvasItem).light_mask = mask
 
 func _select_initial_character() -> void:
 	"""Select the first party character on startup"""
@@ -5253,7 +5289,7 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 
 	var proj := Projectile.new()
 	proj.name = "Projectile"
-	proj.z_index = 3
+	proj.z_index = weapon_shot_z()
 	proj.speed = 1800.0 if is_pistol else 1200.0
 	proj.max_range = 700.0 if is_pistol else 900.0
 
@@ -5284,6 +5320,13 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(shooter.get_weapon_tip_world_position(), direction, shooter)
 	return proj
+
+
+## A weapon shot's z: under characters (3), or on a map with crowns above
+## characters (P3-B) up with the thrown things (CanopyLayer.SHOT_Z), so a
+## shot through a grove stays readable.
+func weapon_shot_z() -> int:
+	return CanopyLayer.SHOT_Z if CanopyLayer.of(map_loader) != null else 3
 
 
 func _on_weapon_projectile_expired(final_pos: Vector2, shooter) -> void:

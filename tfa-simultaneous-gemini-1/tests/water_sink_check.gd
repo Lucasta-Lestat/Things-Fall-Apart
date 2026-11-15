@@ -13,10 +13,11 @@ extends Node2D
 #     onto a sink drain at once; nothing ever stands in or leaves a sink; every
 #     fluid type drains; the mass ledger closes; 'visual' builds no sinks;
 #   - the waterline clamp: shore cells whose own ground is the seabed while
-#     their centroid tile is land, and the deck, sit at the waterline and shed
-#     into the sea instead of trapping; an inland pit keeps its pond; a deck
-#     over water is never a sink, keeps what lands on it, and sheds like it
-#     does in 'visual';
+#     their centroid tile is land sit at the waterline and shed into the sea
+#     instead of trapping; an inland pit keeps its pond; a deck over water is
+#     never a sink, stands at its own walk_elev head outside the clamp (P3-D;
+#     it sat at the waterline before), keeps what lands on it, and sheds like
+#     it does in 'visual';
 #   - the clamp between two bodies (small layouts of their own): a slope from
 #     an upper body down to a lower one keeps its ground and a pit beside it
 #     its pond; a trap beside the upper body is raised only to the rim it
@@ -219,13 +220,16 @@ func _ready() -> void:
 		"ground head %.3f (cell ground %.2f, centroid tile land)" % [cf._ground_head(cs), g.ground_elev(cs)])
 	_check("clamp.behind-straddle", is_equal_approx(cf._ground_head(cs2), 0.0),
 		"ground head %.3f (reached through the straddle cell)" % cf._ground_head(cs2))
-	_check("clamp.deck-at-waterline", is_equal_approx(cf._ground_head(deck_cid), 0.0),
-		"ground head %.3f, not the seabed 1.6 below its sinks" % cf._ground_head(deck_cid))
+	# P3-D: a deck over the water stands at its own walk_elev (0.5), outside the
+	# clamp (P3-A put it at the waterline, 0.0)
+	_check("deck.own-head", is_equal_approx(cf._ground_head(deck_cid), 0.5 * CellFluid.HEAD_PER_STORY)
+		and cf.deck_head_count == 1,
+		"ground head %.3f (its walk_elev 0.5, not the seabed nor the waterline)" % cf._ground_head(deck_cid))
 	_check("clamp.inland-pit-kept", is_equal_approx(cf._ground_head(cpit), -0.5 * CellFluid.HEAD_PER_STORY),
 		"ground head %.3f" % cf._ground_head(cpit))
 	_check("clamp.quay-untouched", is_equal_approx(cf._ground_head(g.cell_at(GridManager.map_to_world(Vector2i(2, 2)))),
 		0.5 * CellFluid.HEAD_PER_STORY), "")
-	_check("clamp.count", cf.waterline_count == 3, "%d cells raised (the deck and two straddle cells)" % cf.waterline_count)
+	_check("clamp.count", cf.waterline_count == 2, "%d cells raised (the two straddle cells; the deck has its own head)" % cf.waterline_count)
 
 	# a deck cell holding water, out in the sea: never deleted outright
 	var dd0: float = cf.drained_total()

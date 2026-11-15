@@ -24,6 +24,11 @@ var elevations: Dictionary = {}        # Vector2i -> float
 # one — destroying the taller must drop the tile to the survivor's height.
 var deck_elevations: Dictionary = {}   # Vector2i -> float (max of registered heights)
 var _deck_refs: Dictionary = {}        # Vector2i -> Array of float (one entry per registration)
+# The ground a deck's tiles over the contract-3 open water are measured from
+# (P3-D, ground_ref): Vector2i -> float, the deck's own bank ground, capped at
+# its walk_elev (MapLoader._register_deck_ground -> register_deck_ground).
+# Empty without the water layer.
+var deck_ground_refs: Dictionary = {}
 # Roof surface height per tile, SPARSE — a layer STACKED OVER the ground, never
 # folded into effective_elev (a house interior stays at ground height under its
 # own roof). Only jump-capable characters (jump_height > 0) ever enter it.
@@ -57,7 +62,8 @@ const RELIEF_LOS_MIN_SPAN := 1.0         # terrain span (stories) that turns on 
 const TERRAIN_LOS_EPS := 0.1             # slack for nearest-cell projection noise on graded slopes
 const ROOF_SLAB_EPS := 0.05
 const MAX_PLANNED_DROP_STORIES := 3.0    # jump planner never plans a deliberate drop deeper than this
-const DEEP_WATER_ELEV := -0.5            # shallow_water floor at/below this ABSOLUTE elev = deep (seabed)
+const DEEP_WATER_ELEV := -0.5            # no water layer: shallow_water floor at/below this ABSOLUTE elev = deep (seabed)
+const DEEP_WATER_DEPTH := 0.5            # water layer (P3-D): ground this far below its tile_water surface = deep
 var terrain_min: float = 0.0
 var terrain_max: float = 0.0
 # Relief LOS: interpolated eye line, terrain occlusion, roof slabs, and the
@@ -65,6 +71,10 @@ var terrain_max: float = 0.0
 # RELIEF_LOS_MIN_SPAN) — never configured — so every shipped map (all span
 # < 1 story) keeps the legacy max(viewer, target) + eye rule exactly.
 var relief_los: bool = false             # reset in initialize(); set by refresh_terrain_stats()
+# Maps.json entry "relief_los" (P3-D, L17): -1 auto (the span rule above), 0
+# forced off, 1 forced on. Reset in initialize(); set by MapLoader through
+# set_relief_los_override. No shipped row sets it.
+var relief_los_override: int = -1
 # Sight-cone elevation bands (relief maps only): band b covers EYE heights
 # [cone_band_base + b, cone_band_base + b + 1). Set by refresh_terrain_stats.
 var cone_band_base: int = 0
@@ -109,11 +119,13 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	elevations.clear()
 	deck_elevations.clear()
 	_deck_refs.clear()
+	deck_ground_refs.clear()
 	roof_elevations.clear()
 	hazard_costs.clear()
 	terrain_min = 0.0
 	terrain_max = 0.0
 	relief_los = false
+	relief_los_override = -1
 	cone_band_base = 0
 	roof_lint_bad = 0
 	deck_lint_bad = 0
@@ -195,6 +207,7 @@ func set_elevation_data(graph) -> void:
 	elevations.clear()
 	deck_elevations.clear()
 	_deck_refs.clear()
+	deck_ground_refs.clear()
 	roof_elevations.clear()
 	roof_lint_bad = 0
 	deck_lint_bad = 0
@@ -257,9 +270,35 @@ func effective_elev(t: Vector2i) -> float:
 func terrain_elev(t: Vector2i) -> float:
 	return float(elevations.get(t, 0.0))
 
-# How far `elev` (an absolute surface height) stands above the terrain at t.
+# The ground a surface at t is measured from for the view layer and the sight
+# tier (ABSOLUTE stories): the bare terrain, except over open water on a map
+# that ships the water layer (contract 3). There it is the highest of the bed,
+# the water's own surface and, under a deck, that deck's bank ground
+# (deck_ground_refs: the lowest bare ground of the deck's own tiles off the
+# water, capped at its walk_elev; MapLoader registers it). A P3-D bridge deck
+# stands over a river BED a story or more down, and its river's surface can lie
+# a story under its banks too (a ravine); measured from either, a bank-level
+# bridge read as a deck a story up (HIGH layer: walkers hidden in ground view,
+# the leader's view flipped to the roof slice, crowns always blocking the
+# bridge viewer). From its banks, a bank-level bridge is the ground layer over
+# any river, and a deck a story over its banks is high. Open water with no
+# deck over it, or a deck with no tile off the water: the surface. No layer
+# (every contract-1/2 map): the bare terrain, unchanged.
+func ground_ref(t: Vector2i) -> float:
+	var g: float = terrain_elev(t)
+	if water_layer_used:
+		var i: int = _water_index(t)
+		if i >= 0 and _water_body[i] > 0:
+			g = maxf(g, float(_water_surf[i]))
+			if deck_ground_refs.has(t):
+				g = maxf(g, float(deck_ground_refs[t]))
+	return g
+
+# How far `elev` (an absolute surface height) stands above the local ground
+# at t (ground_ref: the terrain, the open-water surface over it, or a bridge's
+# bank ground).
 func height_above_ground(t: Vector2i, elev: float) -> float:
-	return elev - terrain_elev(t)
+	return elev - ground_ref(t)
 
 # THE view-layer / sight-tier predicate: on a roof, or standing on a surface
 # at least HIGH_LAYER_STORIES above the local ground (a battlement deck). A
@@ -277,6 +316,14 @@ func is_high_layer(c) -> bool:
 		return height_above_ground(world_to_map(c.global_position), ce) >= HIGH_LAYER_STORIES
 	return false
 
+# The map's relief_los entry key (P3-D, L17; MapLoader): true / false force the
+# eye-line LOS model (and the no-layer deep-water rule, which rides it) on or
+# off for this map; -1 returns to the span rule. Re-derives relief_los and the
+# cone bands at once. initialize() resets it.
+func set_relief_los_override(v: int) -> void:
+	relief_los_override = clampi(v, -1, 1)
+	refresh_terrain_stats()
+
 # Terrain span + the relief_los switch. Call after any bulk write to
 # `elevations` (set_elevation_data does; tests that hand-write terrain must).
 func refresh_terrain_stats() -> void:
@@ -291,6 +338,8 @@ func refresh_terrain_stats() -> void:
 	terrain_min = lo if lo != INF else 0.0
 	terrain_max = hi if hi != -INF else 0.0
 	relief_los = terrain_max - terrain_min >= RELIEF_LOS_MIN_SPAN
+	if relief_los_override >= 0:
+		relief_los = relief_los_override == 1   # the map's entry key wins (L17)
 	# Band 0 sits at the lowest ground, unless the highest surface someone can
 	# stand on (top terrace + a deck, or the highest roof) would then clamp
 	# above band 17. Then the bands anchor at the TOP instead: a viewer
@@ -332,17 +381,34 @@ func band_mask_below(top_abs: float) -> int:
 # DEEP_WATER_ELEV (absolute; sea surface is 0, seabed -1). There is no swimming:
 # the jump planner never drops into it and forced movers refuse to carry a body
 # into it (a knocked-off-the-quay body would be soft-locked on the seabed).
-# Relief maps only: a sea map always spans >= 1 story (land >= 0, seabed -1),
-# while the shipped flat maps' walkable ravine streams (tg_export -0.98,
-# tg_guild_hall -0.66) must keep their current knockback/jump behaviour.
+# Two models (P3-D, L8):
+#   - the map ships the open-water layer (cells.json tile_water / tile_body,
+#     export contract 3): deep water is EXPLICIT and RELATIVE: open water at t
+#     whose standing surface (effective_elev: a deck or bridge over the water
+#     is the surface) lies DEEP_WATER_DEPTH or more below that water's own
+#     surface. A river or mill pond above sea level is deep without a fake
+#     absolute bed, on any map, flat or not; a creek (its surface is the
+#     water's edge, its bed a little below) stays wadeable.
+#   - no layer (every contract-1/2 map): today's rule, unchanged. Relief maps
+#     only: a sea map always spans >= 1 story (land >= 0, seabed -1), while the
+#     shipped flat maps' walkable ravine streams (tg_export -0.98,
+#     tg_guild_hall -0.66) must keep their current knockback/jump behaviour.
+# On the harbour, the ossuary and every other shipped map the two give the
+# same verdict on every tile (tests/deep_water_verdict_diff, on contract-3
+# dumps of the shipped maps).
 func is_deep_water(t: Vector2i) -> bool:
+	if water_layer_used:
+		var i: int = _water_index(t)
+		if i < 0 or _water_body[i] <= 0:
+			return false
+		return float(_water_surf[i]) - effective_elev(t) >= DEEP_WATER_DEPTH - 0.0001
 	return relief_los and floors.get(t, "") == "shallow_water" \
 		and effective_elev(t) <= DEEP_WATER_ELEV + 0.0001
 
 # True if the straight segment enters a deep-water tile that its start tile is
 # not already in (sampled like can_traverse). Forced movers dead-stop on it.
 func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
-	if not relief_los:
+	if not relief_los and not water_layer_used:
 		return false
 	var start_t := world_to_map(from_pos)
 	if is_deep_water(start_t):
@@ -365,8 +431,8 @@ func segment_enters_deep_water(from_pos: Vector2, to_pos: Vector2) -> bool:
 # open water. The map's cells.json "tile_water" when it ships one (export
 # contract 3: sea, rivers, channels, creeks, pools, each at its own surface,
 # also under a deck or bridge), else the deep-water rule above with the body
-# surface at sea level (SEA_SURFACE_ELEV). It never changes is_deep_water's
-# verdicts; P3-D builds its relative deep-water rule on it.
+# surface at sea level (SEA_SURFACE_ELEV). With the layer, is_deep_water is
+# measured against this surface (P3-D).
 func water_surface_at(t: Vector2i) -> float:
 	if water_layer_used:
 		var i: int = _water_index(t)
@@ -539,11 +605,17 @@ func unregister_deck(t: Vector2i, elev: float) -> void:
 	if hs.is_empty():
 		_deck_refs.erase(t)
 		deck_elevations.erase(t)
+		deck_ground_refs.erase(t)   # no deck left over this water: ground_ref is the surface again
 	else:
 		var m := -1e9
 		for h in hs:
 			m = maxf(m, float(h))
 		deck_elevations[t] = m
+
+# P3-D: a deck's tile over open water is measured from `g`, the deck's own bank
+# ground (ground_ref). Overlapping decks keep the highest.
+func register_deck_ground(t: Vector2i, g: float) -> void:
+	deck_ground_refs[t] = maxf(float(deck_ground_refs.get(t, -1e9)), g)
 
 # True if every tile transition along the straight segment passes can_step.
 # Use for displacements that can span more than one tile per frame (knockback,
@@ -909,10 +981,12 @@ func _get_jump_neighbors(node: Vector3i, jump_height: float, jump_range: int) ->
 				# never solid rock (a leap onto a cave's rock mass).
 				if grid_costs.get(n, INF) != INF and not has_roof(n) and not is_solid_rock(n):
 					var rise := effective_elev(n) - here
-					if rise > MAX_STEP_STORIES and rise <= jump_height:
+					if rise > MAX_STEP_STORIES and rise <= jump_height and not is_deep_water(n):
 						# jump UP a step too tall to walk. step_cost, not raw
 						# grid_costs: a landing pays hazard weights like any
 						# walk edge, or the planner leaps INTO fire for ~9.
+						# Never into deep water: a river above the jumper's
+						# ground is still no swimming (P3-D).
 						out.append({"n": Vector3i(n.x, n.y, 0), "cost": step_cost(n) + JUMP_COST * d})
 					elif rise < -MAX_STEP_STORIES and -rise <= MAX_PLANNED_DROP_STORIES \
 							and not is_deep_water(n):

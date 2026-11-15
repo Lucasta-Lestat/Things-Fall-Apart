@@ -25,10 +25,12 @@
 # SINK. A sink holds a FIXED head at its body's surface, is never in `active`
 # (so it never flows, evaporates or meets fire), and whatever flows, deposits,
 # pours or springs into it is deleted at once and counted in `drained`. Shore
-# and deck cells below a sink's head that could not drain otherwise are raised
-# to the level they spill at (beside one body, its waterline) so they shed into
-# it instead of trapping. Only wet cells are iterated, so the cost scales with
-# the spill, not the sea.
+# cells below a sink's head that could not drain otherwise are raised to the
+# level they spill at (beside one body, its waterline) so they shed into it
+# instead of trapping. A deck over the water (a pier, a bridge: P3-D) never
+# drains: it is never a sink, it stands at its own walking surface (its head),
+# and a point deposit landing on it lands on it, never in the water below.
+# Only wet cells are iterated, so the cost scales with the spill, not the sea.
 class_name CellFluid
 extends Node2D
 
@@ -56,7 +58,9 @@ var flow_speed: Dictionary = {}  # cid -> outflow fraction 0..1
 var sources: Array = []          # {cid, ti, rate} continuous emitters (authored springs)
 var sink: PackedByteArray = PackedByteArray()          # cid -> 1 = sink; EMPTY on maps without
 var sink_count := 0
-var waterline_count := 0                               # shore/deck cells setup_sinks raised to their spill level
+var waterline_count := 0                               # shore cells setup_sinks raised to their spill level
+var deck_head_count := 0                               # deck cells over the water standing at their own head (P3-D)
+var _deck_water: PackedFloat32Array = PackedFloat32Array()  # cid -> the head of the water under a deck (NAN = no deck over water); EMPTY on maps without
 var clamp_cells := 0                                   # non-sink cells the clamp's floods covered (its region)
 var drained: PackedFloat64Array = PackedFloat64Array() # per ftype byte: mass the sinks deleted
 # Mass ledger (tests/fluid_sink_bench closes it): poured = what is in the cells
@@ -89,6 +93,8 @@ func setup(p_graph: CellGraph, p_fm: Node, fluid_db: Dictionary, order: Array) -
 	sink_count = 0
 	waterline_count = 0
 	clamp_cells = 0
+	deck_head_count = 0
+	_deck_water = PackedFloat32Array()
 	drained = PackedFloat64Array(); drained.resize(_order.size() + 1)
 	mass_poured = 0.0; mass_evaporated = 0.0; mass_lost = 0.0
 	_ti_water = _ti_of("water")
@@ -117,11 +123,22 @@ func active_sim() -> bool:
 # before it drains (and oil never evaporates). Raised to the waterline (or to
 # a lower rim they spill over into another body), they shed what stands above
 # their puddle floor into the sea, as they shed onto the seabed in 'visual'.
-# Known limits, left to P3-D / P4-B: a deck over water gets the waterline, not
-# a head of its own; a destroyed deck is not re-tagged as a sink; and the clamp
-# follows the walls at load. Doors start closed (Door.gd), so they are walls
-# then: a door or a breach opened later re-derives the edges, not the clamp,
-# and a below-waterline floor behind it can then trap beside the raised shore.
+# A deck over the water (P3-D: a bridge or a pier; its centroid tile a deck
+# tile over open water) never drains. The cell graph has one cell there, so
+# it stands for two layers: the deck's walking surface, its ground head
+# max(walk_elev, the water surface), which holds what lands on it down to its
+# puddle floor and sheds the rest off its edges (deposit / add_source:
+# _deck_cell_at keeps a point that lands on a deck on it); and the water
+# under it, which the clamp sees as a sink at the surface (so a shore cell
+# whose only way to the river runs under the bridge is raised to the
+# waterline) and which takes what flows into it from a neighbour lying below
+# the deck (_flow_tick: it runs under the deck, into the river: drained). In
+# 'visual' it stays the seabed cell it is in the export (cells.json elev).
+# Known limits, left to P4-B: a destroyed deck is not re-tagged as a sink, nor
+# its head dropped; and the clamp follows the walls at load. Doors start
+# closed (Door.gd), so they are walls then: a door or a breach opened later
+# re-derives the edges, not the clamp, and a below-waterline floor behind it
+# can then trap beside the raised shore.
 # One O(cell_count) pass per map load, plus the clamp's walk and two floods
 # over the ground joined to a body below its head. Returns the sink count.
 func setup_sinks() -> int:
@@ -130,9 +147,16 @@ func setup_sinks() -> int:
 	sink_count = 0
 	waterline_count = 0
 	clamp_cells = 0
+	deck_head_count = 0
+	_deck_water = PackedFloat32Array()
+	var deck_heads: Dictionary = {}   # cid -> [its own head, the water's head] (decks over water)
 	for cid in n:
 		var t := GridManager.world_to_map(graph.centroid(cid))
 		if GridManager.deck_elevations.has(t):
+			var dsurf: float = GridManager.water_surface_at(t)
+			if not is_nan(dsurf):
+				deck_heads[cid] = [maxf(float(GridManager.deck_elevations[t]), dsurf) * HEAD_PER_STORY,
+					dsurf * HEAD_PER_STORY]
 			continue
 		var surf: float = GridManager.water_surface_at(t)
 		if is_nan(surf):
@@ -148,7 +172,22 @@ func setup_sinks() -> int:
 	if sink_count == 0:
 		sink = PackedByteArray()   # the hot-path guard reads sink_count first
 		return 0
+	# the clamp sees each deck over the water as the water under it (a sink at
+	# the surface, for the clamp only); then the deck takes its own head, and
+	# _deck_water keeps the water's for what runs under it
+	for dcid in deck_heads:
+		sink[dcid] = 1
+		_ground[dcid] = float((deck_heads[dcid] as Array)[1])
 	waterline_count = _clamp_waterline()
+	if not deck_heads.is_empty():
+		_deck_water.resize(n)
+		_deck_water.fill(NAN)
+		for dcid in deck_heads:
+			var hh: Array = deck_heads[dcid]
+			sink[dcid] = 0
+			_ground[dcid] = float(hh[0])
+			_deck_water[dcid] = float(hh[1])
+		deck_head_count = deck_heads.size()
 	# The clamp's walk built the shore's edges; start cold like 'visual'
 	# (edges are rebuilt from the walls on demand, so nothing changes).
 	_edge_cache.clear()
@@ -380,9 +419,32 @@ func deposit(world_pos: Vector2, type_str: String, depth: float, wipe: bool = tr
 	var ti := _ti_of(type_str)
 	if ti <= 0 or depth <= 0.0:
 		return
-	var cid := graph.cell_at(world_pos)
+	var cid := _deck_cell_at(world_pos, graph.cell_at(world_pos))
 	if cid >= 0:
 		_add(cid, ti, depth, wipe, true)
+
+
+# P3-D: a point that lands on a deck over the water lands ON the deck. The
+# graph's nearest cell to a point at a deck's edge can be a sink beside it
+# (its centroid out on the water), which would delete the drop the deck
+# caught; such a point goes to the nearest deck cell (centroid on a deck tile,
+# not a sink) within a tile of it instead. No sinks, no deck under the point,
+# or no deck cell near it: `cid` unchanged.
+func _deck_cell_at(world_pos: Vector2, cid: int) -> int:
+	if sink_count == 0 or cid < 0 or cid >= sink.size() or sink[cid] == 0:
+		return cid
+	if not GridManager.deck_elevations.has(GridManager.world_to_map(world_pos)):
+		return cid
+	var best := cid
+	var best_d := INF
+	for c in graph.cells_within(world_pos, float(GridManager.TILE_SIZE)):
+		if sink[c] == 1 or not GridManager.deck_elevations.has(GridManager.world_to_map(graph.centroid(c))):
+			continue
+		var d := graph.centroid(c).distance_squared_to(world_pos)
+		if d < best_d:
+			best_d = d
+			best = c
+	return best
 
 
 # Pour over a world radius (fluid_spawns with radius): fall-off toward the rim.
@@ -411,7 +473,7 @@ func add_source(world_pos: Vector2, type_str: String, rate: float) -> void:
 	var ti := _ti_of(type_str)
 	if ti <= 0:
 		return
-	var cid := graph.cell_at(world_pos)
+	var cid := _deck_cell_at(world_pos, graph.cell_at(world_pos))
 	if cid >= 0:
 		sources.append({"cid": cid, "ti": ti, "rate": rate})
 
@@ -519,6 +581,8 @@ func _cell_fire():
 func _flow_tick() -> void:
 	var rate_tick := FLOW_RATE_PER_SEC * SIM_INTERVAL
 	var deltas: Dictionary = {}
+	var under_on := not _deck_water.is_empty()   # P3-D decks over the water ('sink' only)
+	var under: Dictionary = {}                    # ftype -> mass run under a deck into the water
 	flow_dir.clear(); flow_speed.clear()
 	for cid in active:
 		var amt := amount[cid]
@@ -558,6 +622,23 @@ func _flow_tick() -> void:
 			if j < opens.size() and opens[j] == 0:
 				continue
 			var nb: int = nbs[j]
+			if under_on and not is_nan(_deck_water[nb]) and is_nan(_deck_water[cid]) \
+					and _ground_head(cid) < _ground_head(nb) - HEAD_EPS:
+				# P3-D: from a cell lying below a deck over the water, the flow
+				# runs UNDER the deck: the water beneath takes it like a sink
+				# (into the river: drained), never the deck's own surface
+				var udiff: float = head - _deck_water[nb]
+				if udiff <= EPSILON:
+					continue
+				var ufa := minf(minf(amt * rate_tick * (udiff / (press + 0.1)) / visc, udiff * 0.5), avail)
+				if ufa <= MIN_FLOW:
+					continue
+				avail -= ufa
+				_delta_add(deltas, cid, ti, -ufa)
+				under[ti] = float(under.get(ti, 0.0)) + ufa
+				vect += (graph.centroid(nb) - cc).normalized() * ufa
+				out_total += ufa
+				continue
 			var nti := int(ftype[nb])
 			var diff: float
 			if nti == 0 or nti == int(ti):
@@ -627,6 +708,8 @@ func _flow_tick() -> void:
 					mass_lost += d
 					continue
 				_add(cid, int(ti), d)   # into a sink: deleted and counted there
+	for uti in under:   # P3-D: what ran under a deck into the water
+		drained[int(uti)] += float(under[uti])
 	# cull dried cells
 	var drop: Array = []
 	for cid in active:

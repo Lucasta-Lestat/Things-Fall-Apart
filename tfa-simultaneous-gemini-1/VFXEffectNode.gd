@@ -39,6 +39,7 @@ func setup_effect(material: ShaderMaterial, effect_size: Vector2, effect_shape: 
 func add_light(color: Color, energy: float, radius: float, texture: Texture2D):
 	if not light:
 		light = PointLight2D.new()
+		light.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK   # P3-B's crowns too
 		add_child(light)
 	
 	light.color = color

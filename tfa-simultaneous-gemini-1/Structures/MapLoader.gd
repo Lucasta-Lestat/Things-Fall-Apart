@@ -20,6 +20,28 @@ var map_lights: Node2D = null
 # cell sim, after this loader has run.
 const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
 var water_sim: String = "visual"
+# P3-A visual half: the structured map's open-water mask (a contract-3 row's
+# images.water; _load_water_mask), null when the row ships none or the
+# tfa/graphics/animated_water setting is off. It rides on structured_ground's
+# meta, where CellFluidFX binds it to the water shader.
+# generate_map (legacy and world maps) clears it, so a warp off a watery map
+# does not keep the last mask resident in VRAM.
+var structured_water_mask: Texture2D = null
+# P3-B: the crowns that hide characters, drawn above them (CanopyLayer, built
+# from the rows' contract-3 canopy cells and images.canopy); null on a map
+# without that art (every contract-2 map: its crowns stay in the structures
+# overlay, under characters). Game's sight cones fit their canopy child to it.
+# The layer is this loader's child, so a warp's unload sweep frees it, and
+# generate_map (legacy and world maps) drops the reference too.
+var canopy_layer: CanopyLayer = null
+var _canopy_tex: Texture2D = null      # images.canopy, while the map loads (null after)
+var _canopy_crowns: Array = []         # [{index, cell, art}] for the CanopyLayer
+# P3-D: the Art of every deck over the contract-3 open-water layer (a bridge),
+# rebuilt per map load. FluidManager hands them to CellFluidFX, which draws a
+# fluid standing on the deck over its art (the ground's water pass cannot
+# reach above z -6). Empty on every contract-1/2 map, and emptied by
+# generate_map (legacy and world maps).
+var bridge_deck_arts: Array[Polygon2D] = []
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -157,6 +179,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	structured_ground = null
 	cliff_occluders = null
 	map_lights = null
+	bridge_deck_arts = []
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -218,12 +241,45 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# override. The open-water layer itself (cells.json tile_water/tile_body)
 	# came in with the cell graph (GridManager.set_elevation_data).
 	water_sim = resolve_water_sim(map_data)
+	# 2d. the open-water mask (P3-A visual half): the painted sea animates
+	structured_water_mask = _load_water_mask(images, map_data.get("water_rect", null))
+
+	# 2e. relief LOS override (P3-D, L17; 2d is P3-A's water mask): an
+	# optional entry key, true / false, forces the eye-line LOS model on or off
+	# for this map instead of the 1-story terrain-span rule. Before the structures: their occluders read
+	# relief_los. No key: the span rule, today's behaviour (no shipped row
+	# sets it). GridManager.initialize() reset the override.
+	var rl: Variant = map_data.get("relief_los", null)
+	if rl is bool:
+		GridManager.set_relief_los_override(1 if rl else 0)
+	elif rl != null:
+		push_warning("map %s: relief_los must be true or false, got %s: using the terrain-span rule"
+			% [_current_map_id, JSON.stringify(rl)])
 
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
 	var op := String(images.get("structures", ""))
 	if op != "" and ResourceLoader.exists(op):
 		overlay_tex = load(op)
+	# the canopy atlas (P3-B, contract 3): the art of every tree row that
+	# carries canopy_cell / shade_cell (_add_tree_canopy_art)
+	canopy_layer = null
+	_canopy_crowns = []
+	_canopy_tex = null
+	var cp := String(images.get("canopy", ""))
+	if cp != "":
+		if ResourceLoader.exists(cp):
+			_canopy_tex = load(cp)
+		else:
+			push_error("structured map: missing canopy image " + cp)
+	else:
+		# contract-3 tree rows without their atlas (a hand splice that lost
+		# the images key): the overlay holds no tree art, so they would draw
+		# nothing at all
+		var n_cells: int = canopy_cell_rows(map_data.get("structures", []))
+		if n_cells > 0:
+			push_error("structured map %s: %d tree rows carry canopy_cell/shade_cell but images.canopy is missing: they draw no tree art"
+				% [_current_map_id, n_cells])
 	if game != null and "structures_in_scene" in game:
 		game.structures_in_scene.clear()
 	# TWO passes, decks (walk_elev) first: a solid structure's occlude_top is
@@ -260,6 +316,8 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# the tree crowns the loop registered (P3-F): buckets and clusters now,
 	# not on the first sight check
 	GridManager.canopy.finish()
+	# 3b. the crowns that hide, above characters (P3-B)
+	_spawn_canopy_layer()
 
 	# 4. cliff shadows for the sight cones (relief maps only)
 	if GridManager.relief_los:
@@ -295,6 +353,91 @@ static func resolve_water_sim(map_data: Dictionary) -> String:
 	push_warning("map %s: water_sim must be sink or visual, got %s: using visual"
 		% [String(map_data.get("id", "")), JSON.stringify(v)])
 	return "visual"
+
+
+# The open-water mask of a structured row (images.water, TG export contract >= 3:
+# docs/export_contract.md "P3-A: the open-water mask"): loaded and put on the
+# ground sprite for CellFluidFX, or null. No key: null, today's frozen paint.
+# The row's water_rect ([x, y, w, h], export px) places a mask CROPPED to the
+# water's bounding box on the ground; without it the mask spans the whole
+# ground. A path that does not load, a water_rect that is not a rectangle
+# inside the ground, or a mask that does not span its rect warns and reads
+# null too: a misaligned mask would animate the quays. With the
+# tfa/graphics/animated_water setting off it reads null without a word and
+# loads nothing, so the switch saves the mask's VRAM too.
+func _load_water_mask(images: Dictionary, rect_v: Variant = null) -> Texture2D:
+	var wp := String(images.get("water", ""))
+	if wp == "" or structured_ground == null or structured_ground.texture == null:
+		return null
+	if not CellFluidFX.animated_water_on():
+		return null
+	if not ResourceLoader.exists(wp):
+		push_warning("map %s: images.water %s is missing: its open water stays the painted frame" % [_current_map_id, wp])
+		return null
+	var gsize := Vector2i(structured_ground.texture.get_size())
+	var rect := water_rect_of(rect_v, gsize)
+	if not rect.has_area():
+		push_warning("map %s: water_rect %s is not [x, y, w, h] whole export px inside the ground (%s): images.water ignored"
+			% [_current_map_id, str(rect_v), str(gsize)])
+		return null
+	var tex := load(wp) as Texture2D
+	if not attach_water_mask(structured_ground, tex, rect):
+		push_warning("map %s: images.water %s (%s) does not span its rect %s at 1/k, k = 1..%d: ignored"
+			% [_current_map_id, wp, str(tex.get_size()) if tex != null else "not a texture",
+			str(rect), WATER_MASK_MAX_DIV])
+		return null
+	return tex
+
+
+## The mask spans its rect of the ground (the row's water_rect, or the whole
+## ground) at a whole 1/k of its size, the same k on both axes, k in
+## 1..WATER_MASK_MAX_DIV (TG writes k = 2). The shader samples it at the
+## ground's UV mapped into that rect, so any such k lines up.
+const WATER_MASK_MAX_DIV := 8
+
+static func water_mask_fits(mask_size: Vector2i, rect_size: Vector2i) -> bool:
+	if mask_size.x <= 0 or mask_size.y <= 0:
+		return false
+	for k in range(1, WATER_MASK_MAX_DIV + 1):
+		if mask_size * k == rect_size:
+			return true
+	return false
+
+
+## The row's water_rect as a Rect2i of the ground (export px): null (no key) =
+## the whole ground; four whole numbers with w, h > 0 lying inside the ground
+## = that rect; anything else = an empty Rect2i (the caller ignores the mask).
+static func water_rect_of(v: Variant, ground_size: Vector2i) -> Rect2i:
+	if v == null:
+		return Rect2i(Vector2i.ZERO, ground_size)
+	if not (v is Array) or (v as Array).size() != 4:
+		return Rect2i()
+	var n := PackedInt32Array()
+	for e: Variant in v:
+		if not (e is float or e is int) or float(e) != floorf(float(e)):
+			return Rect2i()
+		n.append(int(e))
+	var r := Rect2i(n[0], n[1], n[2], n[3])
+	if r.size.x <= 0 or r.size.y <= 0 or not Rect2i(Vector2i.ZERO, ground_size).encloses(r):
+		return Rect2i()
+	return r
+
+
+## Puts tex on ground's meta for CellFluidFX (CellFluidFX.WATER_MASK_META, and
+## its rect under CellFluidFX.WATER_RECT_META) when it fits its rect of the ground's
+## texture (no rect = the whole ground); false (and no meta) otherwise.
+static func attach_water_mask(ground: Sprite2D, tex: Texture2D, rect := Rect2i()) -> bool:
+	if ground == null or ground.texture == null or tex == null:
+		return false
+	var gsize := Vector2i(ground.texture.get_size())
+	var r := rect if rect.has_area() else Rect2i(Vector2i.ZERO, gsize)
+	if not Rect2i(Vector2i.ZERO, gsize).encloses(r):
+		return false
+	if not water_mask_fits(Vector2i(tex.get_size()), r.size):
+		return false
+	ground.set_meta(CellFluidFX.WATER_MASK_META, tex)
+	ground.set_meta(CellFluidFX.WATER_RECT_META, r)
+	return true
 
 
 ## One PointLight2D per Maps.json "lights" row (docs/export_contract.md,
@@ -482,9 +625,18 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		circ.radius = maxf(6.0, r * 0.45)   # trunk-scale: canopy overhang stays walkable
 		trunk_r = circ.radius
 		shape = circ
-		var rr := r + 4.0
-		poly_local = PackedVector2Array([
-			Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
+		# The tree's slice. A contract-3 row with canopy cells (P3-B) cuts
+		# nothing from the structures overlay (its art is not there): its
+		# crown, out to its widest lobe, and its shade, out to the end of its
+		# cast shadow down-sun, are whole cells of the canopy atlas
+		# (_add_tree_canopy_art, below). Every other row keeps the overlay's
+		# r + 4 square (contract <= 2: the crown art is in the overlay).
+		if _has_canopy_cells(s):
+			overlay_tex = null
+		else:
+			var rr := r + 4.0
+			poly_local = PackedVector2Array([
+				Vector2(-rr, -rr), Vector2(rr, -rr), Vector2(rr, rr), Vector2(-rr, rr)])
 		# occluder = the TRUNK silhouette (matches what LOS rays hit), not the crown
 		for i in 10:
 			var ang := TAU * float(i) / 10.0
@@ -558,6 +710,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var follow := false
 	if is_deck:
 		occlude_top = float(walk_elev)   # a viewer AT deck height sees past the deck floor itself
+		# a bridge's span is measured from its own banks (GridManager.ground_ref),
+		# before the occluder below reads it
+		_register_deck_ground(tight, float(walk_elev))
 	else:
 		var base_elev := GridManager.effective_elev(GridManager.world_to_map(center))
 		occlude_top = base_elev + occ_h
@@ -605,6 +760,15 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
 		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
+		elif is_deck and not GridManager.relief_los and _deck_has_ground_tier_tile(tight, float(walk_elev)):
+			# flat-LOS map, a LOW deck (P3-D: a bank-level bridge, measured from
+			# its banks by GridManager.ground_ref): a walker on it is the GROUND
+			# sight tier, so the GROUND mask would let the deck's own polygon,
+			# with the walker's light inside it, black out the cone beyond its
+			# edges. A deck under one story hides nothing beneath it: no cone
+			# shadow at all, like the waist-high parapet. Every shipped deck
+			# stands >= 1 story over its ground on every tile: unchanged there.
+			occ.occluder_light_mask = 0
 		elif GridManager.relief_los:
 			# relief maps: cones there are GROUND | their elevation band, so the
 			# structure must NOT carry bit 1 (it would shadow every cone). It
@@ -668,6 +832,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			# seeing someone standing up here) lights it as well as the
 			# ordinary bit-1 lights
 			art.light_mask = 1 | CollisionLayers.ELEVATED_SURFACE_LIGHT
+			if _over_open_water(tight):
+				bridge_deck_arts.append(art)
 		inst.add_child(art)
 		# "art_under" (curtain pieces next to a tower): the piece's wall as it
 		# runs on UNDER the tower, from the exporter's small atlas
@@ -708,6 +874,13 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	if s.has("hp"):
 		inst.max_health = int(s["hp"])
 		inst.current_health = inst.max_health
+	# "indestructible": true (TG P3-D bridge decks): no damage, never burns, a
+	# firebreak in the fire index for ground fuel, though an oil slick standing
+	# on it still burns (CellFire.FUEL_DECK). After add_child: _ready set
+	# `flammable` from the id's StructureDatabase entry. No shipped row sets it.
+	if s.get("indestructible", false) == true:
+		inst.indestructible = true
+		inst.flammable = false
 	if inst is Door:
 		var door := inst as Door
 		door.locked = bool(s.get("locked", false))
@@ -748,6 +921,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			GridManager.register_obstacle(t)
 	if kind == "tree":
 		_register_crown(s, inst, center, trunk_r)
+		if _has_canopy_cells(s):
+			_add_tree_canopy_art(s, inst, center)
 	return inst
 
 
@@ -857,6 +1032,97 @@ func spawn_prop_structure(item_id: String, data: Dictionary, pos: Vector2,
 	for t in occupied:
 		GridManager.register_obstacle(t)
 	return inst
+
+
+## P3-B: the row carries its canopy-atlas cells (TG export contract 3:
+## "canopy_cell" and "shade_cell", each [atlas x, y, w, h, map x, y, w, h] px)
+## and the map ships the atlas (images.canopy).
+func _has_canopy_cells(s: Dictionary) -> bool:
+	if _canopy_tex == null:
+		return false
+	var cc: Variant = s.get("canopy_cell")
+	var sc: Variant = s.get("shade_cell")
+	return cc is Array and sc is Array and (cc as Array).size() == 8 and (sc as Array).size() == 8
+
+
+## P3-B: a contract-3 tree's art from the canopy atlas. The SHADE (the
+## multiplier its cast shadow and understory put on the ground) multiplies
+## what lies under it -- the ground, scorch -- below every structure slice
+## (z -4) and lit by nothing. The CROWN: one that hides (GridManager.canopy
+## registered it: _register_crown) goes to the CanopyLayer, above characters,
+## and the tree keeps an empty "Art" node for Structure's hit flash and damage
+## tint to drive (the layer copies its modulate onto the crown); any other
+## crown (a dead snag, a willow: they hide nothing) is the tree's "Art"
+## itself, a slice under characters like the overlay's was.
+func _add_tree_canopy_art(s: Dictionary, inst: Structure, center: Vector2) -> void:
+	var shade := _canopy_quad(s.get("shade_cell") as Array, center)
+	shade.name = "Shade"
+	var mul := CanvasItemMaterial.new()
+	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+	# UNSHADED: a lit (normal) item is multiplied by the world CanvasModulate
+	# (game.tscn 0.716) before the MUL blend, so its white "no shade" texels
+	# would darken the ground under the whole cell into a hard square
+	mul.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	shade.material = mul
+	shade.light_mask = 0
+	shade.z_index = -1   # -4 with the structure's -3: under every slice
+	inst.add_child(shade)
+	var ci: int = GridManager.canopy.crown_of(inst)
+	if ci >= 0:
+		var proxy := Node2D.new()
+		proxy.name = "Art"
+		inst.add_child(proxy)
+		_canopy_crowns.append({"index": ci, "cell": s.get("canopy_cell"), "art": proxy})
+		return
+	var art := _canopy_quad(s.get("canopy_cell") as Array, center)
+	art.name = "Art"
+	var pm := CanvasItemMaterial.new()
+	pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+	art.material = pm
+	inst.add_child(art)
+
+
+## One atlas cell as a Polygon2D local to `center`: the map rect, its UVs the
+## atlas rect (px). A shade cell's atlas rect is a downsampled copy of its map
+## rect; the UVs scale it back.
+func _canopy_quad(cell: Array, center: Vector2) -> Polygon2D:
+	var a := Rect2(float(cell[0]), float(cell[1]), float(cell[2]), float(cell[3]))
+	var m := Rect2(float(cell[4]), float(cell[5]), float(cell[6]), float(cell[7]))
+	var q := Polygon2D.new()
+	q.texture = _canopy_tex
+	q.polygon = PackedVector2Array([m.position - center, Vector2(m.end.x, m.position.y) - center,
+		m.end - center, Vector2(m.position.x, m.end.y) - center])
+	q.uv = PackedVector2Array([a.position, Vector2(a.end.x, a.position.y), a.end,
+		Vector2(a.position.x, a.end.y)])
+	return q
+
+
+## P3-B: the CanopyLayer over the crowns _add_tree_canopy_art collected, once
+## the structures have spawned (and the crown record is finished), with the
+## ground sprite for its rule discs. None on a map without canopy cells. The
+## atlas is not held past this (the quads and the layer keep their own).
+func _spawn_canopy_layer() -> void:
+	if _canopy_tex == null or _canopy_crowns.is_empty():
+		_canopy_crowns = []
+		_canopy_tex = null
+		return
+	var layer := CanopyLayer.new()
+	layer.name = "CanopyLayer"
+	layer.setup(_canopy_tex, _canopy_crowns, get_parent(), structured_ground)
+	add_child(layer)
+	canopy_layer = layer
+	_canopy_crowns = []
+	_canopy_tex = null
+
+
+## P3-B: how many tree rows carry canopy cells (canopy_cell, contract 3).
+static func canopy_cell_rows(structs: Variant) -> int:
+	var n: int = 0
+	if structs is Array:
+		for s in (structs as Array):
+			if s is Dictionary and String((s as Dictionary).get("kind", "")) == "tree" and (s as Dictionary).get("canopy_cell") is Array:
+				n += 1
+	return n
 
 
 ## P3-F (crowns HIDE characters): a tree row's crown, for GridManager.canopy.
@@ -1030,6 +1296,49 @@ func _add_cliff_run(root: Node2D, p0: Vector2, p1: Vector2, mask: int) -> void:
 	root.add_child(occ)
 
 
+# A deck footprint with a tile over the contract-3 open-water layer: a bridge
+# or a pier (never true without the layer: the fallback's water is not read).
+func _over_open_water(tiles: Array[Vector2i]) -> bool:
+	if not GridManager.has_water_layer():
+		return false
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			return true
+	return false
+
+
+# P3-D: the ground a deck's tiles over the contract-3 open water are measured
+# from (GridManager.ground_ref): its BANK ground, the lowest bare terrain of its
+# own tiles off the water, capped at walk_elev. A bank-level bridge is then the
+# ground layer however far its river lies below the banks (a ravine), and a
+# deck a story over its banks stays high. No-op without the layer (every
+# contract-1/2 map) and for a deck with no tile off the water.
+func _register_deck_ground(tiles: Array[Vector2i], walk_elev: float) -> void:
+	if not GridManager.has_water_layer():
+		return
+	var bank := INF
+	for t in tiles:
+		if GridManager.water_body_at(t) <= 0:
+			bank = minf(bank, GridManager.terrain_elev(t))
+	if bank == INF:
+		return
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			GridManager.register_deck_ground(t, minf(bank, walk_elev))
+
+
+# True when a walker standing on some tile of this deck footprint would be the
+# GROUND sight tier: walk_elev less than HIGH_LAYER_STORIES above the local
+# ground there (GridManager.ground_ref: a bridge's bank ground over a river,
+# so a bank-level bridge is low; the bare terrain on every contract-1/2 map).
+# The same predicate as ProceduralCharacter.is_on_raised_surface, off a roof.
+func _deck_has_ground_tier_tile(tiles: Array[Vector2i], walk_elev: float) -> bool:
+	for t in tiles:
+		if walk_elev - GridManager.ground_ref(t) < GridManager.HIGH_LAYER_STORIES:
+			return true
+	return false
+
+
 # Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).
 func _tiles_near_segment(a: Vector2, b: Vector2, reach: float, tile_size: int) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
@@ -1160,6 +1469,15 @@ func _blank_tex() -> ImageTexture:
 
 func generate_map():
 	water_sim = "visual"   # legacy/world maps run the flat tile sim: no sinks
+	structured_water_mask = null   # P3-A: no open-water mask off a structured map
+	# P3-B: no crowns above characters off a structured map (the layer itself
+	# died with the warp's unload sweep of this loader's children)
+	canopy_layer = null
+	_canopy_tex = null
+	_canopy_crowns = []
+	# P3-D: no bridge decks off a structured map (their Art died with the same
+	# sweep; GridManager.initialize() already dropped their bank grounds)
+	bridge_deck_arts = []
 	if world_map_mode:
 		_generate_world_map()
 		return
