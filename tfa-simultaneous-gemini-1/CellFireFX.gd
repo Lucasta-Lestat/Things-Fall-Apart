@@ -59,6 +59,7 @@ var _light_timer := 0.0      # recluster cooldown: during a big fire's decay
                              # cap the O(burning) flood-fill at ~3 Hz
 var _light_tex: GradientTexture2D
 var _crackles: Array[int] = []   # SfxManager loop handles, largest cluster first
+var _reveal: Array = []          # every burning cluster [pos (local), ext] at the last recluster
 
 
 func _ready() -> void:
@@ -89,8 +90,21 @@ func _ready() -> void:
 	_light_tex.fill_to = Vector2(1.0, 0.5)
 
 
+func _enter_tree() -> void:
+	# Tree crowns drawn above characters (P3-B) fade over the fire under them
+	add_to_group(CanopyLayer.REVEAL_GROUP)
+
+
 func _exit_tree() -> void:
 	_stop_crackles(0)
+
+
+## CanopyLayer (P3-B): every burning cluster (a burning tree, burning ground)
+## is gameplay information the crowns over it must not hide
+## (CanopyLayer.REVEAL_GROUP): a disc round each, re-clustered with the lights.
+func canopy_reveal(out: Array) -> void:
+	for cl in _reveal:
+		out.append([PackedVector2Array([to_global(cl[0])]), float(cl[1]) + 12.0])
 
 
 func _make_multimesh() -> MultiMesh:
@@ -275,6 +289,9 @@ func _refresh_lights() -> void:
 			for mc in members:
 				ext = maxf(ext, center.distance_to(graph.centroid(mc)) + graph.radius(mc))
 			clusters.append({"pos": center, "ext": ext})
+	_reveal.clear()
+	for cl in clusters:
+		_reveal.append([cl["pos"], cl["ext"]])
 	# largest first: the light cap and the (smaller) crackle cap both keep
 	# the biggest clusters
 	if clusters.size() > MAX_CRACKLES:
@@ -286,6 +303,8 @@ func _refresh_lights() -> void:
 		var l := PointLight2D.new()
 		l.texture = _light_tex
 		l.color = Color(1.0, 0.6, 0.2)
+		# lights the tree crowns over it too (P3-B: they carry LAMP_LIGHT)
+		l.range_item_cull_mask = CollisionLayers.LAMP_RANGE_MASK
 		add_child(l)
 		_lights.append(l)
 	for i in _lights.size():

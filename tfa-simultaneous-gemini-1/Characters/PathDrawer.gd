@@ -175,6 +175,46 @@ func _ready() -> void:
 	_pause_layer.z_as_relative = false
 	_pause_layer.z_index = Z_MARKERS
 	add_child(_pause_layer)
+	# Tree crowns drawn above characters (P3-B) fade along what this layer draws
+	add_to_group(CanopyLayer.REVEAL_GROUP)
+
+## CanopyLayer (P3-B): what the crowns must not hide of this ground layer --
+## the route, each node's facing arrow and its leashes and aim lines out to
+## where they end -- as [points, radius] (CanopyLayer.REVEAL_GROUP). Only a map
+## with crowns above characters asks.
+const CANOPY_REVEAL_R := 14.0
+func canopy_reveal(out: Array) -> void:
+	if tactical_path == null or not is_visible_in_tree():
+		return
+	# no plan (every NPC, most of the time): nothing to ask for, cheaply
+	if tactical_path.waypoints.size() < 2 and tactical_path.action_nodes.is_empty() and not is_drawing_rotation:
+		return
+	var route := _visible_route()
+	if route.size() >= 2:
+		out.append([route, CANOPY_REVEAL_R])
+	for node in _visible_nodes():
+		var pos: Vector2 = node.world_position
+		out.append([PackedVector2Array([pos]), ARROW_LENGTH])
+		var ends := PackedVector2Array()
+		if node.has_action():
+			if node.action_data.has("dash_target"):
+				ends.append(node.action_data["dash_target"])
+			var designated = _node_designated_target(node)
+			if designated != null:
+				ends.append(designated.global_position)
+			else:
+				var lost_spot: Vector2 = _node_lost_target_spot(node)
+				if lost_spot.is_finite():
+					ends.append(lost_spot)
+				elif node.action_type == ActionQueue.ActionType.ATTACK and node.action_data.has("target_position"):
+					ends.append(node.action_data["target_position"])
+		if node.aoe_center != Vector2.INF:
+			ends.append(node.aoe_center)
+		for e in ends:
+			out.append([PackedVector2Array([pos, e]), CANOPY_REVEAL_R])
+			out.append([PackedVector2Array([e]), NODE_RADIUS + 4.0])
+	if is_drawing_rotation:
+		out.append([PackedVector2Array([rotation_start]), ARROW_LENGTH + 4.0])
 
 func _process(delta: float) -> void:
 	# Redraw when drawing in progress, executing, or when a visible path exists.
