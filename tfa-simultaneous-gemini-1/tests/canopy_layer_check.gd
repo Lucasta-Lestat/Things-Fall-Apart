@@ -1,35 +1,57 @@
 # res://tests/canopy_layer_check.gd
 # Headless checks for P3-B (TG roadmap Phase 3, exit criterion 2's visual
-# half): crowns draw ABOVE characters, fade near the party and the cursor,
-# are not squared off, and the sight cones stop lighting crowns the rules
-# hide. All from data (no map art): tree rows exactly as a TG contract-3
-# export writes them (canopy_cell / shade_cell, [atlas x, y, w, h, map x, y,
-# w, h] px) over a synthetic atlas texture.
+# half): crowns draw ABOVE characters, fade near the party and the cursor and
+# over what must stay readable, are not squared off, and the sight cones stop
+# lighting what the crown rules hide. All from data (no map art): tree rows
+# exactly as a TG contract-3 export writes them (canopy_cell / shade_cell,
+# [atlas x, y, w, h, map x, y, w, h] px) over a synthetic atlas texture.
 #   A. MapLoader._spawn_geo_structure: a row with canopy cells cuts nothing
 #      from the structures overlay; its shade multiplies the ground under every
-#      slice (z -4, lit by nothing) with the shade cell's 2x map rect; a crown
-#      that hides goes to the CanopyLayer (the tree keeps an empty "Art" for
-#      the hit flash), one that hides nothing (a snag) is the tree's own
-#      premultiplied slice under characters; hedges, contract-2 rows and rows
-#      whose map ships no atlas keep the overlay's r + 4 square, byte for byte.
+#      slice (z -4, UNSHADED so the world CanvasModulate cannot darken its white
+#      into a square) with the shade cell's 2x map rect; a crown that hides
+#      goes to the CanopyLayer (the tree keeps an empty "Art" for the hit
+#      flash), one that hides nothing (a snag) is the tree's own premultiplied
+#      slice under characters; hedges, contract-2 rows and rows whose map ships
+#      no atlas keep the overlay's r + 4 square, byte for byte.
 #   B. CanopyLayer: absolute z between characters and the targeting UI, below
 #      RoofLayer, roof-walkers and the unexplored fog; lit only by
-#      CANOPY_LIGHT; draws the crowns that hide, drops one on crown_changed
-#      (kill_crown, and a felled tree through Structure.take_damage); fades
-#      round a party member under a crown's art and the cursor over one, and
-#      not elsewhere; mirrors the tree's hit flash / damage tint.
+#      CANOPY_LIGHT | LAMP_LIGHT; draws the crowns that hide, each with its
+#      rule disc of ground (r minus the trunk, the ground's texture and
+#      material, lit like the crowns); fades round a party member under a
+#      crown's art (or its body's edge: BODY_PAD) with the party rings, the
+#      cursor over one with the cursor rings, and over the REVEAL_GROUP's
+#      shapes near a crown (a stub, a real AimLine and PathDrawer, fire);
+#      mirrors the tree's hit flash / damage tint; drops a crown and its disc
+#      on crown_changed (kill_crown, and a felled tree through
+#      Structure.take_damage).
 #   C. The cone renderer's canopy child (CanopyLayer.fit_canopy_cone): off on
-#      a map without a CanopyLayer; else the parent cone's texture, tint,
-#      energy and shadows (mask | CANOPY_LIGHT), lighting CANOPY_LIGHT only,
-#      at half its range from the ground (the near exemption when farther),
-#      all of it under a crown, none a story up (roof, high deck), off with
-#      its cone; real ProceduralCharacters through the same path.
+#      a map without a CanopyLayer and with no crown in its reach; else the
+#      parent cone's texture, tint, energy and shadows (mask | CANOPY_LIGHT),
+#      lighting CANOPY_LIGHT only, at half its range from the ground (the near
+#      exemption when farther), all of it under a crown, none a story up
+#      (roof, high deck), off with its cone; real ProceduralCharacters through
+#      the same path. A real character under a crown trades light mask 1 for
+#      SHADED_MASK on its body (the full cones stop lighting it) and has it
+#      back out from under it, when revealed and when the layer goes; its
+#      queued reticle is a REVEAL shape.
+#   D. The real loader: MapLoader.generate_structured_map on a contract-3 map
+#      dict builds the CanopyLayer (and its discs from the ground sprite),
+#      drops the atlas reference after, and a contract-2 one builds none.
+#   E. Game._update_sight_cones (Game.gd, instanced bare): fits the canopy
+#      child on a map with a CanopyLayer, switches it off on one without.
+#   F. A missing atlas push_errors: images.canopy naming no file, and tree
+#      rows with canopy cells but no images.canopy at all.
 # Run:  godot --headless --path . res://tests/canopy_layer_check.tscn
 # Judge by the PASS/FAIL lines and "CANOPY LAYER DONE failures=0".
 extends Node2D
 
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const PC_SCENE := preload("res://Characters/ProceduralCharacter.tscn")
+const GAME_SCRIPT := "res://Game.gd"
+const EQUIPMENT_EFFECTS := preload("res://Items/equipment_effects.gd")
+# Two small project textures for the real loader's map dict.
+const GROUND_RES := "res://UI/UI Icons/warp_arrow.png"
+const ATLAS_RES := "res://UI/UI Icons/Dash.png"
 
 # --- Game stub surface (MapLoader, ProceduralCharacter, CanopyLayer) ---
 var characters_in_scene: Array = []
@@ -74,10 +96,39 @@ class Viewer extends Node2D:
 		return 150.0
 
 
+## A REVEAL_GROUP member handing over fixed shapes.
+class RevealStub extends Node:
+	var shapes: Array = []
+	func _enter_tree() -> void:
+		add_to_group(CanopyLayer.REVEAL_GROUP)
+	func canopy_reveal(out: Array) -> void:
+		out.append_array(shapes)
+
+
+## Collects push_error text (Godot's Logger).
+class ErrLog extends Logger:
+	var msgs: PackedStringArray = PackedStringArray()
+	var mu := Mutex.new()
+	func _log_error(_function: String, _file: String, _line: int, code: String, rationale: String,
+			_editor_notify: bool, _error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
+		mu.lock()
+		msgs.append(code + " " + rationale)
+		mu.unlock()
+	func has(sub: String) -> bool:
+		mu.lock()
+		var found := false
+		for m in msgs:
+			if sub in m:
+				found = true
+		mu.unlock()
+		return found
+
+
 var failures := 0
 var checks := 0
 var _atlas: Texture2D = null
 var _overlay: Texture2D = null
+var _ground_tex: Texture2D = null
 
 
 func _check(check_name: String, cond: bool, detail: Variant = "") -> void:
@@ -102,6 +153,9 @@ func _ready() -> void:
 	_atlas = ImageTexture.create_from_image(img)
 	var oimg := Image.create(2048, 2048, false, Image.FORMAT_RGBA8)
 	_overlay = ImageTexture.create_from_image(oimg)
+	var gimg := Image.create(2048, 2048, false, Image.FORMAT_RGBA8)
+	gimg.fill(Color(0.4, 0.5, 0.3, 1.0))
+	_ground_tex = ImageTexture.create_from_image(gimg)
 	await get_tree().process_frame
 	var ml: Node2D = MAP_LOADER.new()
 	add_child(ml)
@@ -110,11 +164,23 @@ func _ready() -> void:
 	ml._canopy_crowns = []
 	var spawned: Dictionary = _part_a(ml)
 	GridManager.canopy.finish()
+	var gs := Sprite2D.new()
+	gs.texture = _ground_tex
+	gs.centered = false
+	gs.z_index = -6
+	ml.add_child(gs)
+	ml.structured_ground = gs
 	ml._spawn_canopy_layer()
+	_check("a.atlas-not-held-after-load", ml._canopy_tex == null)
 	await get_tree().process_frame
 	await _part_b(ml, spawned)
 	await _part_c(ml)
-	await _part_c_real(ml)
+	await _part_c_real(ml, spawned)
+	await _part_b_drop(ml, spawned)
+	ml.queue_free()
+	await get_tree().process_frame
+	await _part_d()
+	await _part_f()
 	print("CANOPY LAYER DONE failures=%d checks=%d" % [failures, checks])
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -135,6 +201,35 @@ func _cells(pos: Vector2, r: float, ax: int, ay: int, sx: int, sy: int) -> Dicti
 		"shade_cell": [sx, sy, s_aw, s_aw, int(pos.x) - sh, int(pos.y) - sh, 2 * s_aw, 2 * s_aw]}
 
 
+# The body's own canvas items (CanopyLayer._gate's walk): [mask 1 count,
+# SHADED_MASK count].
+func _body_masks(c: Node) -> Vector2i:
+	var out := Vector2i.ZERO
+	var stack: Array = [c]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is Light2D:
+			continue
+		if n != c and n is CanvasItem and (n as CanvasItem).top_level:
+			continue
+		if n is CanvasItem:
+			if (n as CanvasItem).light_mask == 1:
+				out.x += 1
+			elif (n as CanvasItem).light_mask == CanopyLayer.SHADED_MASK:
+				out.y += 1
+		for ch in n.get_children():
+			stack.append(ch)
+	return out
+
+
+func _shapes_of(layer: CanopyLayer, kind: int) -> Array:
+	var out: Array = []
+	for s in layer.fade_shapes():
+		if int(s["kind"]) == kind:
+			out.append(s)
+	return out
+
+
 # ---------------------------------------------------------------------------
 # A. MapLoader: what each row's slice is
 # ---------------------------------------------------------------------------
@@ -151,7 +246,11 @@ func _part_a(ml: Node2D) -> Dictionary:
 	if shade != null:
 		var mm := shade.material as CanvasItemMaterial
 		_check("a.hide.shade-mul", mm != null and mm.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL)
-		_check("a.hide.shade-unlit", shade.light_mask == 0, shade.light_mask)
+		# lit, the world CanvasModulate (game.tscn 0.716) multiplies the MUL quad
+		# first: every white "no shade" texel darkens the ground into a square
+		_check("a.hide.shade-unshaded", mm != null and mm.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED,
+			mm.light_mode if mm != null else -1)
+		_check("a.hide.shade-no-light-mask", shade.light_mask == 0, shade.light_mask)
 		_check("a.hide.shade-under-slices", shade.z_as_relative and t1.z_index + shade.z_index == -4,
 			"%d + %d" % [t1.z_index, shade.z_index])
 		_check("a.hide.shade-texture", shade.texture == _atlas)
@@ -247,8 +346,15 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	_check("b.z-below-roofs", CanopyLayer.CANOPY_Z < RoofLayer.ROOF_Z)
 	_check("b.z-below-roof-walkers", CanopyLayer.CANOPY_Z < ProceduralCharacter.ROOF_WALKER_Z)
 	_check("b.z-below-fog", CanopyLayer.CANOPY_Z < UnexploredFogLayer.FOG_Z)
-	_check("b.lit-by-canopy-cones-only", layer.light_mask == CollisionLayers.CANOPY_LIGHT)
-	_check("b.canopy-bit-unused-by-lights", (CollisionLayers.CANOPY_LIGHT & (1 | CollisionLayers.ELEVATED_SURFACE_LIGHT)) == 0)
+	_check("b.lit-by-canopy-cones-and-lamps", layer.light_mask == (CollisionLayers.CANOPY_LIGHT | CollisionLayers.LAMP_LIGHT),
+		layer.light_mask)
+	_check("b.not-lit-by-full-cones", (layer.light_mask & 1) == 0)
+	_check("b.canopy-bits-unused-by-cones", (CollisionLayers.CANOPY_LIGHT & (1 | CollisionLayers.ELEVATED_SURFACE_LIGHT)) == 0
+		and (CollisionLayers.LAMP_LIGHT & (1 | CollisionLayers.ELEVATED_SURFACE_LIGHT)) == 0)
+	var lamp: PointLight2D = EQUIPMENT_EFFECTS.make_light(0.5, {})
+	_check("b.lamps-light-the-crowns", (lamp.range_item_cull_mask & CollisionLayers.LAMP_LIGHT) != 0
+		and (lamp.range_item_cull_mask & 1) != 0, lamp.range_item_cull_mask)
+	lamp.free()
 	var sm := layer.material as ShaderMaterial
 	_check("b.fade-shader", sm != null and sm.shader != null)
 	var i1: int = GridManager.canopy.crown_of(spawned["hide"])
@@ -256,38 +362,129 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	var drawn: Array = layer.drawn_crowns()
 	_check("b.draws-the-hiding-crowns", drawn.size() == 2 and i1 in drawn and i2 in drawn, str(drawn))
 	_check("b.c2-crown-not-drawn", not (GridManager.canopy.crown_of(spawned["c2"]) in drawn))
+	# the rule disc: the ground (its texture and material) over r minus the trunk, lit like the crowns
+	var d1 := layer.rule_disc(i1)
+	_check("b.disc.built", d1 != null and layer.rule_disc(i2) != null)
+	if d1 != null:
+		_check("b.disc.ground-texture", d1.texture == _ground_tex)
+		_check("b.disc.uv-is-map-px", d1.uv == d1.polygon)
+		_check("b.disc.z-ground", not d1.z_as_relative and d1.z_index == -6)
+		_check("b.disc.lit-like-crowns", d1.light_mask == CanopyLayer.SHADED_MASK, d1.light_mask)
+		var c1: Dictionary = GridManager.canopy.crown(i1)
+		var outer: float = (d1.polygon[0] - (c1["pos"] as Vector2)).length()
+		var inner: float = (d1.polygon[CanopyLayer.DISC_SEGMENTS] - (c1["pos"] as Vector2)).length()
+		_check("b.disc.rule-radii", is_equal_approx(outer, float(c1["r"])) and is_equal_approx(inner, float(c1["trunk_r"])),
+			"%.2f / %.2f vs r %.2f trunk %.2f" % [outer, inner, float(c1["r"]), float(c1["trunk_r"])])
+		var gm := ShaderMaterial.new()
+		ml.structured_ground.material = gm
+		await get_tree().process_frame
+		_check("b.disc.follows-ground-material", d1.material == gm)
+		ml.structured_ground.material = null
+		await get_tree().process_frame
 	# fade: nobody under a crown, cursor off every crown
 	layer.cursor_override = Vector2(100, 100)
 	party_chars = []
 	await get_tree().process_frame
-	_check("b.fade.none", layer.fade_points().size() == 0, layer.fade_points())
+	_check("b.fade.none", layer.fade_shapes().size() == 0, layer.fade_shapes())
 	# a party member under the first crown's art (inside 1.35 r, outside the disc r)
 	var pm := Node2D.new()
 	add_child(pm)
 	pm.global_position = Vector2(600 + 75, 600)
 	party_chars = [pm]
 	await get_tree().process_frame
-	var fp: PackedVector4Array = layer.fade_points()
-	_check("b.fade.party-under-art", fp.size() == 1 and Vector2(fp[0].x, fp[0].y).is_equal_approx(pm.global_position), fp)
+	var fp: Array = _shapes_of(layer, CanopyLayer.Fade.PARTY)
+	_check("b.fade.party-under-art", fp.size() == 1 and (fp[0]["a"] as Vector2).is_equal_approx(pm.global_position), fp)
+	_check("b.fade.party-rings", fp.size() == 1 and is_equal_approx(float(fp[0]["inner"]), CanopyLayer.PARTY_FADE.x)
+		and is_equal_approx(float(fp[0]["outer"]), CanopyLayer.PARTY_FADE.y), fp)
+	_check("b.fade.uniform", int(sm.get_shader_parameter("fade_count")) == layer.fade_shapes().size())
+	# the body's edge: past the art's reach by less than BODY_PAD fades, more does not
+	var reach1: float = 60.0 * CanopyLayer.ART_REACH
+	pm.global_position = Vector2(600 - reach1 - CanopyLayer.BODY_PAD * 0.5, 600)
+	await get_tree().process_frame
+	_check("b.fade.body-edge-under-art", _shapes_of(layer, CanopyLayer.Fade.PARTY).size() == 1)
+	pm.global_position = Vector2(600 - reach1 - CanopyLayer.BODY_PAD * 1.5, 600)
+	await get_tree().process_frame
+	_check("b.fade.body-past-art", _shapes_of(layer, CanopyLayer.Fade.PARTY).size() == 0)
 	# an NPC under it fades nothing (only the party)
 	party_chars = []
 	var npc := Node2D.new()
 	add_child(npc)
 	npc.global_position = Vector2(600, 600)
 	await get_tree().process_frame
-	_check("b.fade.not-for-npcs", layer.fade_points().size() == 0)
+	_check("b.fade.not-for-npcs", layer.fade_shapes().size() == 0)
 	# a party member in the open: no fade
 	pm.global_position = Vector2(1000, 1000)
 	party_chars = [pm]
 	await get_tree().process_frame
-	_check("b.fade.party-in-open", layer.fade_points().size() == 0)
+	_check("b.fade.party-in-open", layer.fade_shapes().size() == 0)
 	# the cursor over a crown
 	layer.cursor_override = Vector2(700, 640)
 	await get_tree().process_frame
-	fp = layer.fade_points()
-	_check("b.fade.cursor", fp.size() == 1 and is_equal_approx(fp[0].z, CanopyLayer.CURSOR_FADE.x), fp)
-	_check("b.fade.uniform", int(sm.get_shader_parameter("fade_count")) == 1)
+	fp = _shapes_of(layer, CanopyLayer.Fade.CURSOR)
+	_check("b.fade.cursor", fp.size() == 1 and is_equal_approx(float(fp[0]["inner"]), CanopyLayer.CURSOR_FADE.x)
+		and is_equal_approx(float(fp[0]["outer"]), CanopyLayer.CURSOR_FADE.y), fp)
 	layer.cursor_override = Vector2(100, 100)
+	# REVEAL_GROUP: a polyline through the grove fades along it near the
+	# crowns only; a disc far from every crown fades nothing
+	var stub := RevealStub.new()
+	stub.shapes = [[PackedVector2Array([Vector2(200, 600), Vector2(1000, 600)]), 14.0],
+		[PackedVector2Array([Vector2(1800, 1800)]), 20.0]]
+	add_child(stub)
+	await get_tree().process_frame
+	var rv: Array = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var all_near := not rv.is_empty()
+	var covers_trunk := false
+	for s in rv:
+		all_near = all_near and layer.near_art(s["a"], s["b"], float(s["outer"]))
+		var a: Vector2 = s["a"]
+		var b: Vector2 = s["b"]
+		if a.x <= 600.0 and b.x >= 600.0:
+			covers_trunk = true
+		all_near = all_near and is_equal_approx(float(s["inner"]), 14.0) and is_equal_approx(float(s["outer"]), 14.0 + CanopyLayer.REVEAL_FEATHER)
+	_check("b.reveal.polyline-near-crowns", all_near and covers_trunk, rv)
+	var far := false
+	for s in rv:
+		if (s["b"] as Vector2).x < 400.0 or (s["a"] as Vector2).distance_to(Vector2(1800, 1800)) < 1.0:
+			far = true
+	_check("b.reveal.culls-far-shapes", not far, rv)
+	stub.shapes = [[PackedVector2Array([Vector2(610, 560)]), 10.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.disc", rv.size() == 1 and (rv[0]["a"] as Vector2) == Vector2(610, 560) and rv[0]["a"] == rv[0]["b"], rv)
+	stub.queue_free()
+	await get_tree().process_frame   # freed at the end of this frame
+	await get_tree().process_frame
+	_check("b.reveal.gone-with-provider", _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty())
+	# a real aim line through the crown
+	var aim := AimLine.new()
+	add_child(aim)
+	aim.show_aim(Vector2(450, 600), Vector2(760, 600))
+	await get_tree().process_frame
+	_check("b.reveal.aim-line", _shapes_of(layer, CanopyLayer.Fade.REVEAL).size() >= 3)
+	aim.hide_aim()
+	await get_tree().process_frame
+	_check("b.reveal.aim-line-hidden", _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty())
+	aim.queue_free()
+	# a real planned route through the grove
+	var pd := PathDrawer.new()
+	pd.tactical_path = TacticalPath.new()
+	pd.tactical_path.set_waypoints(PackedVector2Array([Vector2(420, 700), Vector2(600, 660), Vector2(820, 640)]))
+	add_child(pd)
+	await get_tree().process_frame
+	_check("b.reveal.path-route", _shapes_of(layer, CanopyLayer.Fade.REVEAL).size() >= 4,
+		_shapes_of(layer, CanopyLayer.Fade.REVEAL).size())
+	pd.queue_free()
+	await get_tree().process_frame
+	# fire under a crown (CellFireFX's clusters, re-clustered with its lights)
+	var fx := CellFireFX.new()
+	add_child(fx)
+	fx._reveal = [[Vector2(640, 610), 20.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.fire", rv.size() == 1 and (rv[0]["a"] as Vector2).is_equal_approx(Vector2(640, 610))
+		and float(rv[0]["inner"]) >= 20.0, rv)
+	fx.queue_free()
+	await get_tree().process_frame
 	# the hit flash / damage tint of the tree, onto its crown
 	var art := (spawned["hide"] as Structure).get_node("Art") as CanvasItem
 	art.modulate = Color(1, 0, 0)
@@ -298,20 +495,33 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	(spawned["hide"] as Structure)._refresh_tint()
 	await get_tree().process_frame
 	_check("b.mirror.damage-tint", layer.crown_color(i1).r < 0.99, layer.crown_color(i1))
-	# a crown the record kills goes at once
+	pm.queue_free()
+	npc.queue_free()
+	party_chars = []
+
+
+# A crown the record kills goes at once, its disc too; a felled tree's crown,
+# disc and shade go.
+func _part_b_drop(ml: Node2D, spawned: Dictionary) -> void:
+	var layer: CanopyLayer = ml.canopy_layer
+	if layer == null:
+		return
+	var i1: int = GridManager.canopy.crown_of(spawned["hide"])
+	var i2: int = GridManager.canopy.crown_of(spawned["hide2"])
+	var d2 := layer.rule_disc(i2)
 	GridManager.canopy.kill_crown(i2)
 	_check("b.drop.kill_crown", not (i2 in layer.drawn_crowns()), layer.drawn_crowns())
-	# a felled tree: its Structure dies, its crown and its shade go
+	await get_tree().process_frame
+	_check("b.drop.disc-freed", not is_instance_valid(d2) and layer.rule_disc(i2) == null)
 	var tree: Structure = spawned["hide"]
 	var shade := tree.get_node("Shade")
+	var d1 := layer.rule_disc(i1)
 	tree.take_damage({"slashing": 100000})
 	_check("b.drop.felled", layer.drawn_crowns().is_empty(), layer.drawn_crowns())
 	await get_tree().process_frame
 	_check("b.drop.shade-freed", not is_instance_valid(shade))
+	_check("b.drop.felled-disc-freed", not is_instance_valid(d1))
 	_check("b.drop.no-fade-over-dead-crowns", not layer.under_art(Vector2(600, 600), 0.0))
-	pm.queue_free()
-	npc.queue_free()
-	party_chars = []
 
 
 # ---------------------------------------------------------------------------
@@ -329,17 +539,20 @@ func _cone(range_px: float) -> PointLight2D:
 	return light
 
 
-func _part_c(_ml: Node2D) -> void:
+func _part_c(ml: Node2D) -> void:
+	var layer: CanopyLayer = ml.canopy_layer
+	_check("c.of-map-loader", CanopyLayer.of(ml) == layer and layer != null)
 	var v := Viewer.new()
 	add_child(v)
-	v.global_position = Vector2(1000, 1000)
+	v.global_position = Vector2(900, 700)   # 209 px from the second crown
 	var light := _cone(800.0)
 	v.add_child(light)
 	# a map without a CanopyLayer: no child
-	_check("c.off.none", CanopyLayer.fit_canopy_cone(light, v, false) == null)
-	var cc: PointLight2D = CanopyLayer.fit_canopy_cone(light, v, true)
+	_check("c.off.none", CanopyLayer.fit_canopy_cone(light, v, null) == null)
+	var cc: PointLight2D = CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.child", cc != null and cc.get_parent() == light and cc.name == CanopyLayer.CANOPY_CONE_NAME)
 	if cc == null:
+		v.queue_free()
 		return
 	_check("c.same-texture", cc.texture == light.texture)
 	_check("c.same-tint-energy", cc.color == light.color and is_equal_approx(cc.energy, light.energy))
@@ -351,74 +564,256 @@ func _part_c(_ml: Node2D) -> void:
 	_check("c.inherits-rotation", is_zero_approx(cc.rotation) and cc.position == Vector2.ZERO)
 	# a short-sighted viewer: the near exemption's reach wins
 	light.texture_scale = 200.0 / (light.texture.get_width() * 0.5)
-	CanopyLayer.fit_canopy_cone(light, v, true)
-	_check("c.ground.near-wins", is_equal_approx(cc.texture_scale, light.texture_scale * 150.0 / 200.0), cc.texture_scale)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
+	_check("c.ground.near-wins", cc.enabled and is_equal_approx(cc.texture_scale, light.texture_scale * 150.0 / 200.0), cc.texture_scale)
 	light.texture_scale = 800.0 / (light.texture.get_width() * 0.5)
+	# no live crown within the canopy cone's reach: off (no second shadowed light for nothing)
+	v.global_position = Vector2(1900, 1900)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
+	_check("c.no-crown-in-reach.off", not cc.enabled)
+	v.global_position = Vector2(900, 700)
 	# under a crown: its whole range
 	v.crown = 3
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.under-crown.full-range", cc.enabled and is_equal_approx(cc.texture_scale, light.texture_scale))
 	v.crown = -1
 	# a story up: nothing
 	v.hag = 1.2
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.high-deck.off", not cc.enabled)
 	v.hag = 0.0
 	v.on_roof = true
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.roof.off", not cc.enabled)
 	v.on_roof = false
 	# a deck under a story: a ground viewer
 	v.hag = 0.7
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.low-deck.half", cc.enabled and is_equal_approx(cc.texture_scale, light.texture_scale * 0.5))
 	v.hag = 0.0
 	# the cone off (Blinded, dead): its child too
 	light.enabled = false
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.cone-off", not cc.enabled)
 	light.enabled = true
 	# the cone retiers (a band mask): the child follows
 	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_GROUND | (1 << 5)
 	light.color = Color(0.55, 0.62, 0.72)
 	light.energy = 0.08
-	CanopyLayer.fit_canopy_cone(light, v, true)
+	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.follows-retier", cc.shadow_item_cull_mask == (CollisionLayers.SIGHT_MASK_GROUND | (1 << 5) | CollisionLayers.CANOPY_LIGHT))
 	_check("c.follows-tint", cc.color == light.color and is_equal_approx(cc.energy, 0.08))
 	# the map loses its CanopyLayer: the child switches off
-	CanopyLayer.fit_canopy_cone(light, v, false)
+	CanopyLayer.fit_canopy_cone(light, v, null)
 	_check("c.off-again", not cc.enabled)
 	v.queue_free()
+	await get_tree().process_frame
 
 
-# Real characters: the methods the fit reads exist and agree with the rules.
-func _part_c_real(_ml: Node2D) -> void:
+func _spawn_pc(pos: Vector2) -> ProceduralCharacter:
 	var c: ProceduralCharacter = PC_SCENE.instantiate()
 	c.AI_enabled = false
 	add_child(c)
 	TopDownCharacterDatabase.build_character(c, "default_human")
 	c.game = self
 	c.faction_id = "player"
-	c.global_position = Vector2(1000, 1500)
+	c.global_position = pos
 	c._refresh_elevation()
+	return c
+
+
+# Real characters: the methods the fit reads exist and agree with the rules;
+# a character under a crown is lit only by the canopy cones; its reticle.
+func _part_c_real(ml: Node2D, spawned: Dictionary) -> void:
+	var layer: CanopyLayer = ml.canopy_layer
+	var c := _spawn_pc(Vector2(880, 640))   # 180 px from the second crown, under none
 	characters_in_scene.append(c)
 	var light := _cone(c.get_sight_range_px())
 	c.add_child(light)
-	var cc: PointLight2D = CanopyLayer.fit_canopy_cone(light, c, true)
+	var cc: PointLight2D = CanopyLayer.fit_canopy_cone(light, c, layer)
 	var near: float = c._canopy_near_px(c)
 	var want: float = maxf(ProceduralCharacter.CANOPY_VISIBILITY, near / c.get_sight_range_px())
 	_check("c.real.ground", cc != null and cc.enabled and is_equal_approx(cc.texture_scale, light.texture_scale * want),
 		"%s %f want x%f" % [str(cc != null and cc.enabled), cc.texture_scale if cc else -1.0, want])
 	# a fresh crown over them through the record (they stand under its leaves, off its trunk)
-	var ci: int = GridManager.canopy.add_crown(Vector2(1040, 1500), 60.0, 27.0, 0.0, 1.0, 1.7, null)
+	var ci: int = GridManager.canopy.add_crown(Vector2(920, 640), 60.0, 27.0, 0.0, 1.0, 1.7, null)
 	GridManager.canopy.finish()
 	_check("c.real.under-crown-is-read", c.canopy_crown() == ci, c.canopy_crown())
-	CanopyLayer.fit_canopy_cone(light, c, true)
+	CanopyLayer.fit_canopy_cone(light, c, layer)
 	_check("c.real.under-crown.full", cc.enabled and is_equal_approx(cc.texture_scale, light.texture_scale))
 	GridManager.canopy.kill_crown(ci)
 	c.on_roof = true
-	CanopyLayer.fit_canopy_cone(light, c, true)
+	CanopyLayer.fit_canopy_cone(light, c, layer)
 	_check("c.real.roof.off", not cc.enabled)
 	c.on_roof = false
+	# out in the open: the full cones light the body (mask 1)
+	await get_tree().process_frame
+	var m0 := _body_masks(c)
+	_check("c.gate.open-body-lit", m0.x > 0 and m0.y == 0 and not (c in layer.gated_characters()), m0)
+	# under the first crown (the rules hide it): its body trades mask 1 for SHADED_MASK
+	var i1: int = GridManager.canopy.crown_of(spawned["hide"])
+	c.global_position = Vector2(600 + 45, 600)
+	await get_tree().process_frame
+	_check("c.gate.hidden-is-read", c.canopy_crown() == i1 and CanopyLayer.hides_under_crown(c), c.canopy_crown())
+	var m1 := _body_masks(c)
+	_check("c.gate.hidden-body-shaded", m1.x == 0 and m1.y >= m0.x and c in layer.gated_characters(), m1)
+	_check("c.gate.own-cone-untouched", light.light_mask == 1)
+	# its queued reticle is a REVEAL shape (ActionQueue)
+	var ret: Sprite2D = c.action_queue._create_reticle(Vector2(600, 560), ActionQueue.ActionType.ATTACK)
+	await get_tree().process_frame
+	var found := false
+	for s in _shapes_of(layer, CanopyLayer.Fade.REVEAL):
+		if (s["a"] as Vector2).is_equal_approx(Vector2(600, 560)):
+			found = true
+	_check("c.reveal.reticle", ret != null and found, _shapes_of(layer, CanopyLayer.Fade.REVEAL))
+	if ret != null:
+		ret.queue_free()
+	# an attack gives it away (reveal()): lit by the full cones again
+	c.reveal()
+	await get_tree().process_frame
+	var m2 := _body_masks(c)
+	_check("c.gate.revealed-body-lit", m2.y == 0 and m2.x >= m0.x and not (c in layer.gated_characters()), m2)
+	c._canopy_revealed_until = -1.0
+	await get_tree().process_frame
+	_check("c.gate.hidden-again", _body_masks(c).x == 0)
+	# out from under it: mask 1 back
+	c.global_position = Vector2(880, 640)
+	await get_tree().process_frame
+	var m3 := _body_masks(c)
+	_check("c.gate.out-body-lit", m3.y == 0 and m3.x >= m0.x, m3)
+	characters_in_scene.erase(c)
 	c.queue_free()
+	await get_tree().process_frame
+
+
+# ---------------------------------------------------------------------------
+# D/E. the real loader, and Game's cone wiring
+# ---------------------------------------------------------------------------
+func _map_dict(id: String, images: Dictionary, with_cells: bool) -> Dictionary:
+	var p1 := Vector2(600, 600)
+	var p2 := Vector2(1200, 600)
+	var p3 := Vector2(1500, 1300)
+	var rows: Array = [
+		_row(p1, 60.0, 1.7, _cells(p1, 60.0, 2, 2, 200, 2) if with_cells else {}),
+		_row(p2, 50.0, 1.7, _cells(p2, 50.0, 2, 180, 330, 2) if with_cells else {}),
+		_row(p3, 40.0, 0.72, _cells(p3, 40.0, 120, 180, 420, 120) if with_cells else {}),
+		{"kind": "tree", "pos": [300, 1200], "r": 18.0, "id": "hedge", "hp": 30, "stories": 0.5, "occlude_h": 0.45}]
+	return {"id": id, "format": "structured", "images": images, "floors": [], "structures": rows}
+
+
+func _load_map(m: Dictionary) -> Node2D:
+	GridManager.initialize(32 * 64, 32 * 64)
+	structures_in_scene.clear()
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	ml.generate_structured_map(m)
+	return ml
+
+
+func _part_d() -> void:
+	var ml: Node2D = _load_map(_map_dict("canopy_check_c3", {"map": GROUND_RES, "canopy": ATLAS_RES}, true))
+	var layer: CanopyLayer = ml.canopy_layer
+	_check("d.loader.layer-built", layer != null and is_instance_valid(layer) and layer.get_parent() == ml)
+	_check("d.loader.of", CanopyLayer.of(ml) == layer)
+	if layer == null:
+		ml.queue_free()
+		return
+	_check("d.loader.draws-hiding-crowns", layer.drawn_crowns().size() == 2, layer.drawn_crowns())
+	_check("d.loader.atlas-not-held", ml._canopy_tex == null)
+	var shades := 0
+	var unshaded := 0
+	for ch in ml.get_children():
+		if ch is Structure:
+			var sh := (ch as Node).get_node_or_null("Shade") as Polygon2D
+			if sh != null:
+				shades += 1
+				var mm := sh.material as CanvasItemMaterial
+				if mm != null and mm.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED:
+					unshaded += 1
+	_check("d.loader.shades-unshaded", shades == 3 and unshaded == 3, "%d shades, %d unshaded" % [shades, unshaded])
+	var discs := 0
+	for ci in layer.drawn_crowns():
+		var d := layer.rule_disc(int(ci))
+		if d != null and ml.structured_ground != null and d.texture == ml.structured_ground.texture \
+				and d.light_mask == CanopyLayer.SHADED_MASK and not d.z_as_relative and d.z_index == -6:
+			discs += 1
+	_check("d.loader.rule-discs-from-ground", discs == 2, discs)
+	# the layer's game is the loader's parent: the party fade works on a real load
+	var pm := Node2D.new()
+	add_child(pm)
+	pm.global_position = Vector2(600 + 50, 600)
+	party_chars = [pm]
+	await get_tree().process_frame
+	_check("d.loader.party-fade", _shapes_of(layer, CanopyLayer.Fade.PARTY).size() == 1)
+	party_chars = []
+	pm.queue_free()
+	# E. Game._update_sight_cones, Game.gd instanced bare (not in the tree)
+	var c := _spawn_pc(Vector2(700, 600))   # 100 px from the first crown: off its rule disc, near it
+	var los := _cone(c.get_sight_range_px())
+	los.name = "LineOfSight"
+	c.add_child(los)
+	var g: Object = load(GAME_SCRIPT).new()
+	g.set("map_loader", ml)
+	g.set("characters_in_scene", [c])
+	g.call("_update_sight_cones")
+	var cc := los.get_node_or_null(CanopyLayer.CANOPY_CONE_NAME) as PointLight2D
+	_check("e.game.fits-canopy-cone", cc != null and cc.enabled and cc.range_item_cull_mask == CollisionLayers.CANOPY_LIGHT)
+	var c2: Node2D = _load_map(_map_dict("canopy_check_c2", {"map": GROUND_RES}, false))
+	_check("d.loader.c2-no-layer", c2.canopy_layer == null and CanopyLayer.of(c2) == null)
+	g.set("map_loader", c2)
+	g.call("_update_sight_cones")
+	_check("e.game.c2-canopy-cone-off", cc != null and not cc.enabled)
+	(g as Node).free()
+	c2.queue_free()
+	await get_tree().process_frame
+	# the layer gives a hidden character's lights back when the map goes
+	GridManager.initialize(32 * 64, 32 * 64)
+	ml.queue_free()
+	await get_tree().process_frame
+	c.queue_free()
+	await get_tree().process_frame
+	await _part_d_exit()
+
+
+# A hidden character keeps its lights when the map (and its layer) goes.
+func _part_d_exit() -> void:
+	var ml: Node2D = _load_map(_map_dict("canopy_check_exit", {"map": GROUND_RES, "canopy": ATLAS_RES}, true))
+	var c := _spawn_pc(Vector2(600 + 45, 600))
+	characters_in_scene.append(c)
+	await get_tree().process_frame
+	var layer: CanopyLayer = ml.canopy_layer
+	_check("d.exit.gated", layer != null and c in layer.gated_characters() and _body_masks(c).x == 0)
+	ml.queue_free()
+	await get_tree().process_frame
+	var m := _body_masks(c)
+	_check("d.exit.lights-back", m.y == 0 and m.x > 0, m)
+	characters_in_scene.erase(c)
+	c.queue_free()
+	await get_tree().process_frame
+
+
+# ---------------------------------------------------------------------------
+# F. a missing atlas is loud
+# ---------------------------------------------------------------------------
+func _part_f() -> void:
+	var lg := ErrLog.new()
+	OS.add_logger(lg)
+	var ml: Node2D = _load_map(_map_dict("canopy_check_nokey", {"map": GROUND_RES}, true))
+	_check("f.cells-without-images-canopy.error", lg.has("images.canopy is missing"), lg.msgs)
+	_check("f.cells-without-images-canopy.no-layer", ml.canopy_layer == null)
+	ml.queue_free()
+	await get_tree().process_frame
+	ml = _load_map(_map_dict("canopy_check_nofile", {"map": GROUND_RES, "canopy": "res://Maps/no_such_canopy.png"}, true))
+	_check("f.missing-canopy-file.error", lg.has("missing canopy image"), lg.msgs)
+	ml.queue_free()
+	await get_tree().process_frame
+	var before := lg.msgs.size()
+	ml = _load_map(_map_dict("canopy_check_c2quiet", {"map": GROUND_RES}, false))
+	var quiet := true
+	for i in range(before, lg.msgs.size()):
+		if "canopy" in lg.msgs[i]:
+			quiet = false
+	_check("f.contract-2.quiet", quiet, lg.msgs)
+	ml.queue_free()
+	OS.remove_logger(lg)
 	await get_tree().process_frame
