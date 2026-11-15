@@ -13,7 +13,7 @@ What stays in plain git: every `*.png.import`, every `*_cells.json`, and every o
 
 **Forward-only.** History was not rewritten. The old PNG blobs stay in the pack, so the repo stops growing by a full PNG per art change but doesn't shrink. A rewrite would need a force-push, and happens only if you ask for it.
 
-**Nothing is pushed.** See [Hosting quota](#hosting-quota-read-before-the-first-push).
+**The first push is done.** `origin/main` was pushed on 2026-11-12 at `fd43157c`, which contains `8889d695`, so the ~440 MB first LFS upload has happened. Nothing from P3-T (Perrow train 3, `e2e28c43` on `p3-t-tfa`) is pushed yet. See [Hosting quota](#hosting-quota-read-before-every-push).
 
 ## How it works
 
@@ -47,7 +47,7 @@ Nothing to do. Worktrees share the main checkout's `.git`: its config, its hooks
 
 - `git worktree add`, `git switch` and `git merge` smudge from that shared store, so no object is downloaded twice and nothing needs the network while the objects are local.
 - Run Godot's `--headless --import` after switching a worktree to a branch with other art, as for any branch switch.
-- Don't delete `.git/lfs`. Until a push, the shared store is the ONLY copy of the art for the LFS commits.
+- Don't delete `.git/lfs`. The shared store is the ONLY copy of the art of every commit that hasn't been pushed (on 2026-11-15, P3-T's `e2e28c43`). The art of `origin/main` is also on GitHub.
 
 ### The store grows with uncommitted art
 
@@ -98,7 +98,7 @@ grep -n "Error importing" <the import log>
 
 The fix, in this order (checked on the same throwaway project):
 
-1. `git lfs checkout` when the objects are in the local store (always the case on this machine until something deletes them), or `git lfs pull` to download them (only once they have been pushed).
+1. `git lfs checkout` when the objects are in the local store (always the case on this machine until something deletes them), or `git lfs pull` to download them (only once they have been pushed; `origin/main`'s have been since 2026-11-12).
 2. `git checkout -- Maps/<file>.png.import` for every `.import` an import rewrote to `valid=false`.
 3. Run Godot's `--headless --import`. The `.md5` in `.godot/imported` still holds the pointer's md5, so Godot re-imports the PNG, and the `.import` comes back exactly as committed.
 
@@ -118,12 +118,17 @@ After merging any branch cut before `8889d695`, from `tfa-simultaneous-gemini-1/
 
 Checked on a throwaway repo on 2026-11-01. Branches that don't add, change or delete a file on these paths merge as usual.
 
-## Hosting quota (read before the first push)
+## Hosting quota (read before every push)
 
 GitHub meters Git LFS **storage** and **bandwidth** per account. **Every pushed version of every LFS file is kept**: deleting a branch or a commit doesn't free the storage, and removing pushed LFS objects is not an ordinary git operation on GitHub.
 
-- The first push of `8889d695` uploads the whole set: about 435-500 MB (439 MB today).
-- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: about 215 MB of new versions today (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images (P3-T's water and canopy art). The open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only, cropped to its water) are small: 0.03-0.15 MB each in the contract-3 test exports of 2026-11-14 (harbor 0.15, middle 0.06, lower 0.05, upper 0.05, guild_hall 0.05, ossuary 0.03), about 0.4 MB a train. A legacy art round adds its own share.
+- The first push of `8889d695` uploaded the whole set, 439 MB. It happened on 2026-11-12, when `origin/main` was pushed at `fd43157c`.
+- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: up to about 215 MB of new versions (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images. A PNG whose bytes don't change is the same LFS object and uploads nothing. A legacy art round adds its own share.
+- P3-T (`e2e28c43`, not pushed yet) is 16 LFS objects, 167.3 MB: new versions of 8 PNGs, the ground and structures of harbor, lower, middle and upper (162.6 MB; cavern's art and ossuary's ground and structures are unchanged, and no roofs or curtain_under PNG changed), and 8 new companion images (4.7 MB):
+  - open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only, cropped to its water): harbor 145 KB, middle 55 KB, lower 53 KB, upper 51 KB, ossuary 32 KB, 0.34 MB together. The contract-3 test exports of 2026-11-14 also wrote a guild_hall mask (0.05 MB); guild_hall isn't one of the six hillside maps, so P3-T doesn't carry it.
+  - canopy atlases (`Maps/<id>_canopy.png`, the tree crowns): upper 2.10 MB (77 trees), middle 1.57 MB (56 trees), lower 0.74 MB (27 trees), 4.40 MB together.
+
+  `e2e28c43` is the only commit on `p3-t-tfa` since `origin/main` that touches these paths (checked 2026-11-15), so pushing the branch uploads those 167.3 MB.
 - Every fresh clone, and every `git lfs pull` of new art, counts against the bandwidth.
 
 Before pushing, check the account's current LFS allowance (GitHub Settings, Billing, Git LFS data). Then budget data packs, or a lower train cadence.
@@ -136,7 +141,7 @@ No tool or agent pushes:
 - The TG roadmap's trains commit locally.
 - LFS objects go up only when a train ships and you push.
 
-The `pre-push` hook uploads the LFS objects of the commits being pushed, so a `git push` of any branch that contains `8889d695` is the ~440 MB upload. To see what a push would upload without sending anything:
+The `pre-push` hook uploads the LFS objects of the commits being pushed that the remote doesn't have yet. `origin` has had the first set since 2026-11-12, so a push now uploads only the new versions: 167.3 MB for P3-T (see [Hosting quota](#hosting-quota-read-before-every-push)). To see what a push would upload without sending anything:
 
 ```sh
 git lfs push --dry-run origin <branch>
