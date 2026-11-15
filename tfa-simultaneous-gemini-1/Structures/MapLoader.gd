@@ -193,6 +193,14 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		ground.texture = load(ground_path)
 		ground.centered = false
 		ground.z_index = -6
+		# P3-C (export contract >= 3): TG writes the ground's .import with
+		# lossless mipmaps, which only a mipmap filter samples (no shimmer when
+		# zoomed out). Contract 1-2 grounds have no mipmaps and keep the
+		# inherited filter. Rows store the contract as 2.0 or 2, hence float().
+		# CellFluidFX copies this filter onto the calm-frame sprite.
+		var export_contract: float = float(map_data.get("export_contract", 1))
+		if export_contract >= 3.0:
+			ground.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		add_child(ground)
 		structured_ground = ground
 	else:

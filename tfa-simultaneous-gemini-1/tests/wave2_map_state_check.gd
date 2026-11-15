@@ -28,6 +28,9 @@
 #      set_elevation_data(null), initialize, generate_map): all cleared, the
 #      old CanopyLayer and deck arts freed.
 #   4. load again: all rebuilt, as fresh instances.
+#   5. P3-C (P3-T): every contract-3 load above samples the ground with
+#      TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; the same row at contract 2 (an int)
+#      keeps the inherited filter.
 # Run:  godot --headless --path . res://tests/wave2_map_state_check.tscn
 # Judge by the PASS/FAIL lines and "WAVE2 MAP STATE CHECK DONE: N checks, M FAIL".
 extends Node2D
@@ -139,6 +142,17 @@ func _ready() -> void:
 			fresh = false
 	_check("after-warp.fresh-instances", fresh and arts_a.size() == 2)
 
+	# 5. P3-C: only a contract >= 3 row samples its ground through mipmaps
+	_unload()
+	await get_tree().process_frame
+	var c3: Variant = _row.get("export_contract")
+	_row["export_contract"] = 2   # an int, as the ossuary row stores it
+	await _load()
+	var gs2: Sprite2D = ml.get("structured_ground")
+	_check("c2.c.ground-filter-inherited", gs2 != null and gs2.texture_filter == CanvasItem.TEXTURE_FILTER_PARENT_NODE,
+		str(gs2.texture_filter) if gs2 != null else "no ground")
+	_row["export_contract"] = c3
+
 	_unload()
 	await get_tree().process_frame
 	for p in [GROUND_PATH, MASK_PATH]:
@@ -212,6 +226,9 @@ func _built(tag: String) -> Dictionary:
 	var ml := map_loader
 	var gs: Sprite2D = ml.get("structured_ground")
 	var gmat: ShaderMaterial = gs.material as ShaderMaterial if gs != null else null
+	# P3-C: the fixture row is contract 3.0, so the ground samples its mipmaps
+	_check(tag + ".c.ground-mipmap-filter", gs != null and gs.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
+		str(gs.texture_filter) if gs != null else "no ground")
 	# P3-A
 	var mask: Variant = ml.get("structured_water_mask")
 	_check(tag + ".a.mask-loaded", mask != null and gs != null and gs.get_meta(CellFluidFX.WATER_MASK_META, null) == mask,
