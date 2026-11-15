@@ -117,7 +117,8 @@ func bind_deck_arts(arts: Array) -> void:
 		dm.set_shader_parameter("flow_mask", _vpf.get_texture())
 		dm.set_shader_parameter("fluid_on", 1.0 if _fluid_on else 0.0)
 		dm.set_shader_parameter("field_size", _field_size)
-		var wm: Variant = _ground.material.get_shader_parameter("wave_scale") 			if _ground != null and _ground.material is ShaderMaterial else null
+		var wm: Variant = _ground.material.get_shader_parameter("wave_scale") \
+			if _ground != null and _ground.material is ShaderMaterial else null
 		dm.set_shader_parameter("wave_scale", float(wm) if wm != null else 1.0)
 		art.material = dm
 		_deck_mats.append(dm)

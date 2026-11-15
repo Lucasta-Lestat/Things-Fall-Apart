@@ -588,7 +588,8 @@ func _ensure_index() -> void:
 			continue
 		# an indestructible deck (MapLoader cleared its `flammable`) lets standing
 		# fluid decide; damage still reaches it below, a no-op for it
-		var flag := FUEL_FLAMMABLE if structure.flammable 			else (FUEL_DECK if structure.get("indestructible") == true else FUEL_BLOCKED)
+		var flag := FUEL_FLAMMABLE if structure.flammable \
+			else (FUEL_DECK if structure.get("indestructible") == true else FUEL_BLOCKED)
 		for ft in sm._fire_tiles_of(structure):
 			_tile_index[ft] = int(_tile_index.get(ft, 0)) | flag
 			var claimers = _tile_structs.get(ft)
