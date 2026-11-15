@@ -5,20 +5,26 @@ extends Node2D
 #         -0.5 rule; also checked against a literal copy of that rule as it
 #         stood before P3-D),
 #   NEW = the same map with the contract-3 open-water layer (cells.json
-#         tile_water / tile_body) from a TG export or headless dump of it, so
-#         is_deep_water measures depth below each water's own surface.
-# A map's contract-3 cells.json is used only when every other key equals the
-# shipped file's (the layer is the only difference); a map whose contract-3
-# file has no layer (no open water) is reported, and its NEW verdicts are the
-# fallback's. Floors, decks and the relief switch come from the shipped row
-# through MapLoader (images swapped for the icon: no art is loaded).
-#   TFA_DEEP_CELLS=<dir of <id>_cells.json> godot --headless --path . res://tests/deep_water_verdict_diff.tscn
+#         tile_water / tile_body), so is_deep_water measures depth below each
+#         water's own surface. The layers are COMMITTED: LAYERS_PATH holds
+#         every shipped map's pair (run-length text, packed from TG p3-rivers
+#         contract-3 dumps whose other keys equal the shipped files), grafted
+#         onto the shipped cells.json text here. TFA_DEEP_CELLS=<dir of
+#         contract-3 <id>_cells.json> uses those files instead (each only when
+#         every other key equals the shipped file's: the layer is the only
+#         difference). A map with no recorded layer (no open water) is
+#         reported, and its NEW verdicts are the fallback's; a map with no
+#         record at all is a SKIP (a map shipped after the fixture: re-pack it).
+# Floors, decks and the relief switch come from the shipped row through
+# MapLoader (images swapped for the icon: no art is loaded).
+#   godot --headless --path . res://tests/deep_water_verdict_diff.tscn
 # Env: TFA_DEEP_MAPS (comma list; default every format:"structured" row of
-# data/Maps.json whose cell_graph exists). Without TFA_DEEP_CELLS only the
-# OLD-vs-literal check runs (a map is then "no c3 file").
+# data/Maps.json whose cell_graph exists), TFA_DEEP_CELLS (above).
 # Prints one line per map and "DEEP WATER DIFF DONE: N maps, M tiles differ,
-# K FAIL"; exit 0 when no tile differs and every map had a usable file.
+# K FAIL, S SKIP"; exit 0 when no tile differs and no map failed.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
+const LAYERS_PATH := "res://tests/fixtures/p3d_deep_water/c3_water_layers.json"
+const GRAFT_PATH := "user://deep_water_verdict_graft_cells.json"
 
 var structures_in_scene: Array = []
 var party_chars: Array = []
@@ -26,7 +32,9 @@ var unlocked_locks: Dictionary = {}
 
 var _fails := 0
 var _maps := 0
+var _skips := 0
 var _diff_total := 0
+var _layers: Dictionary = {}   # LAYERS_PATH "maps": id -> {layer, cols, rows, tile_water, tile_body}
 
 
 func _ready() -> void:
@@ -36,6 +44,13 @@ func _ready() -> void:
 	var envm := OS.get_environment("TFA_DEEP_MAPS")
 	if envm != "":
 		only = envm.split(",", false)
+	if cdir == "":
+		var lf := _parse(LAYERS_PATH)
+		if lf.is_empty() or not (lf.get("maps") is Dictionary):
+			_fails += 1
+			print("FAIL the committed water layers %s did not load" % LAYERS_PATH)
+		else:
+			_layers = lf["maps"]
 	var f := FileAccess.open("res://data/Maps.json", FileAccess.READ)
 	var data: Dictionary = JSON.parse_string(f.get_as_text())
 	f.close()
@@ -48,7 +63,8 @@ func _ready() -> void:
 		if not only.is_empty() and not only.has(mid):
 			continue
 		await _diff_map(m, cdir)
-	print("DEEP WATER DIFF DONE: %d maps, %d tiles differ, %d FAIL" % [_maps, _diff_total, _fails])
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GRAFT_PATH))
+	print("DEEP WATER DIFF DONE: %d maps, %d tiles differ, %d FAIL, %d SKIP" % [_maps, _diff_total, _fails, _skips])
 	get_tree().quit(1 if _fails > 0 or _maps == 0 else 0)
 
 
@@ -93,6 +109,43 @@ func _parse(path: String) -> Dictionary:
 	return v if v is Dictionary else {}
 
 
+func _unrle(runs: Array) -> Array:
+	var out: Array = []
+	for r_v in runs:
+		var r: Array = r_v
+		for i in int(r[1]):
+			out.append(r[0])
+	return out
+
+
+# The shipped cells.json TEXT with the recorded layer appended (every shipped
+# byte kept), written to GRAFT_PATH. "" when the record does not fit the map.
+func _graft(shipped: String, rec: Dictionary) -> String:
+	var n: int = int(rec["cols"]) * int(rec["rows"])
+	var tw := _unrle(rec["tile_water"])
+	var tb := _unrle(rec["tile_body"])
+	if tw.size() != n or tb.size() != n:
+		return ""
+	var f := FileAccess.open(shipped, FileAccess.READ)
+	if f == null:
+		return ""
+	var text := f.get_as_text().strip_edges()
+	f.close()
+	if not text.ends_with("}") or text.contains("\"tile_water\""):
+		return ""
+	var dims := {"cols": int(rec["cols"]), "rows": int(rec["rows"])}
+	var wd := dims.duplicate()
+	wd["data"] = tw
+	var bd := dims.duplicate()
+	bd["data"] = tb
+	text = text.substr(0, text.length() - 1) + ",\"tile_water\":" + JSON.stringify(wd, "", false, true) \
+		+ ",\"tile_body\":" + JSON.stringify(bd, "", false, true) + "}"
+	var w := FileAccess.open(GRAFT_PATH, FileAccess.WRITE)
+	w.store_string(text)
+	w.close()
+	return GRAFT_PATH
+
+
 func _free(ml: Node2D) -> void:
 	ml.queue_free()
 	structures_in_scene.clear()
@@ -115,24 +168,42 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 	if not lit_ok:
 		_fails += 1
 	var note := ""
-	var c3 := cdir + "/%s_cells.json" % mid
-	if cdir == "" or not FileAccess.file_exists(c3):
-		_fails += 1 if cdir != "" else 0
-		print("%s %s: tiles %d relief %s deep(old) %d, literal-old %s | no c3 file" % [
-			"FAIL" if cdir != "" or not lit_ok else "PASS", mid, old.size(), str(relief), old_n,
-			"same" if lit_ok else "DIFFERS"])
-		return
-	# the graft is valid only when the layer is the only difference
-	var a := _parse(ProjectSettings.globalize_path(shipped))
-	var b := _parse(c3)
-	var has_layer: bool = b.has("tile_water") and b.has("tile_body")
-	b.erase("tile_water")
-	b.erase("tile_body")
-	if a.is_empty() or a != b:
-		_fails += 1
-		print("FAIL %s: the contract-3 cells.json differs from the shipped one outside tile_water/tile_body (keys %s vs %s)"
-			% [mid, str(a.keys()), str(b.keys())])
-		return
+	var c3 := ""
+	var has_layer := false
+	if cdir == "":
+		# the committed layer, grafted onto the shipped text
+		if not _layers.has(mid):
+			_skips += 1
+			print("SKIP %s: tiles %d relief %s deep(old) %d, literal-old %s | no recorded contract-3 layer (re-pack %s)" % [
+				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS", LAYERS_PATH])
+			return
+		var rec: Dictionary = _layers[mid]
+		has_layer = bool(rec.get("layer", false))
+		c3 = shipped
+		if has_layer:
+			c3 = _graft(ProjectSettings.globalize_path(shipped), rec)
+			if c3 == "":
+				_fails += 1
+				print("FAIL %s: the recorded layer does not fit the shipped cells.json" % mid)
+				return
+	else:
+		c3 = cdir + "/%s_cells.json" % mid
+		if not FileAccess.file_exists(c3):
+			_fails += 1
+			print("FAIL %s: tiles %d relief %s deep(old) %d, literal-old %s | no c3 file in TFA_DEEP_CELLS" % [
+				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS"])
+			return
+		# the graft is valid only when the layer is the only difference
+		var a := _parse(ProjectSettings.globalize_path(shipped))
+		var b := _parse(c3)
+		has_layer = b.has("tile_water") and b.has("tile_body")
+		b.erase("tile_water")
+		b.erase("tile_body")
+		if a.is_empty() or a != b:
+			_fails += 1
+			print("FAIL %s: the contract-3 cells.json differs from the shipped one outside tile_water/tile_body (keys %s vs %s)"
+				% [mid, str(a.keys()), str(b.keys())])
+			return
 	ml = _load(m, c3)
 	var layer_used: bool = GridManager.has_water_layer()
 	var water_tiles := 0

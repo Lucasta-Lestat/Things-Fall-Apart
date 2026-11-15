@@ -31,18 +31,7 @@
 		"map": "res://Maps/tg_test_prim_river.png",
 		"structures": "res://Maps/tg_test_prim_river_structures.png"
 	},
-	"item_spawns": [
-		{
-			"id": "plank_bridge",
-			"position": [
-				768.0,
-				620.0
-			],
-			"rotation": 3.142,
-			"scale": 2.286,
-			"scale_y": 1.425
-		}
-	],
+	"item_spawns": [],
 	"name": "Tg Test Prim River",
 	"npc_spawns": [
 		{
@@ -90,6 +79,7 @@
 			"half": 64.0,
 			"hp": 450.0,
 			"id": "wood_wall",
+			"indestructible": true,
 			"kind": "wall",
 			"walk_elev": 2.0
 		},
@@ -105,6 +95,7 @@
 			"half": 56.0,
 			"hp": 375.0,
 			"id": "stone_wall",
+			"indestructible": true,
 			"kind": "wall",
 			"walk_elev": 2.3
 		}

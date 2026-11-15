@@ -19,7 +19,14 @@ extends Node2D
 #     relief LOS on; without the water layer the absolute rule calls none of
 #     the river deep (the L8 hole the layer closes); the jump planner never
 #     lands in the river, can_jump_to refuses it, knockback stops at the bank
-#     and at the deck's edge and runs along the deck;
+#     and at the deck's edge (the deep-water veto itself) and runs along the deck;
+#   view layer: a walker on either bridge over the river is the ground layer
+#     (height measured from the water's surface, GridManager.ground_ref), a
+#     deck 1.3 over the water is the high layer;
+#   bridge art and damage: no loose item rows on the decks (the deck art is
+#     baked into the structures overlay); every deck row is indestructible
+#     and its Structure neither burns nor breaks (no walker stranded in deep
+#     water before P4-B);
 #   fluid (water_sim 'sink'): every river cell off the decks is a sink, no
 #     deck cell is, each deck cell stands at its own walk_elev head; a deposit
 #     anywhere on a deck lands on the deck (never drained on landing); one on
@@ -77,16 +84,22 @@ func _ready() -> void:
 		return
 	_walk_checks()
 	_elevation_checks()
+	_view_layer_checks()
+	_bridge_art_and_damage_checks()
 	await _fluid_checks(g)
-	# --- the fallback: the same map without the water layer (contract 2's reading)
+	# --- the fallback: the same map without the water layer (contract 2's reading).
+	# The river's tiles are taken while the layer is loaded: without it,
+	# water_body_at IS is_deep_water, so a list taken after the strip is empty
+	var river := _river_tiles()
 	_strip_layer()
 	g = await _load(NOLAYER_PATH)
 	var deep := 0
-	for t in _river_tiles():
+	for t in river:
 		if GridManager.is_deep_water(t):
 			deep += 1
-	_check("fallback.absolute-rule-misses-the-river", not GridManager.has_water_layer() and GridManager.relief_los and deep == 0,
-		"%d of %d river tiles deep without the layer (bed 0.8 > -0.5)" % [deep, _river_tiles().size()])
+	_check("fallback.absolute-rule-misses-the-river", not GridManager.has_water_layer() and GridManager.relief_los
+		and river.size() > 0 and deep == 0,
+		"%d of %d river tiles deep without the layer (bed 0.8 > -0.5)" % [deep, river.size()])
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(NOLAYER_PATH))
 	_done()
 
@@ -271,6 +284,10 @@ func _elevation_checks() -> void:
 	ch.global_position = GridManager.map_to_world(bank)
 	ch._refresh_elevation()
 	_check("elev.can-jump-to-refuses-river", bank.x >= 0 and not ch.can_jump_to(bank, below), "%s -> %s" % [str(bank), str(below)])
+	# the forced-mover veto itself: on this fixture the bank and the deck stand
+	# 1.2 over the bed, so can_traverse alone already refuses those steps
+	_check("elev.knockback-veto-at-bank", GridManager.segment_enters_deep_water(
+		GridManager.map_to_world(bank), GridManager.map_to_world(below)), "%s -> %s" % [str(bank), str(below)])
 	_check("elev.knockback-stops-at-bank", not ch._forced_step_ok(GridManager.map_to_world(bank), GridManager.map_to_world(below))
 		and not ch._forced_drop_check(Vector2(0.0, 64.0)) and not ch._fall_active)
 	var mill: Dictionary = decks[0]
@@ -279,9 +296,100 @@ func _elevation_checks() -> void:
 	var mid := (a + b) * 0.5
 	var side := mid + (b - a).normalized().orthogonal() * 160.0
 	_check("elev.knockback-runs-along-deck", ch._forced_step_ok(a.lerp(b, 0.15), a.lerp(b, 0.85)), "")
-	_check("elev.knockback-stops-at-deck-edge", GridManager.segment_enters_deep_water(mid, side)
-		or not ch._forced_step_ok(mid, side), "")
+	_check("elev.knockback-veto-at-deck-edge", GridManager.segment_enters_deep_water(mid, side), "")
+	_check("elev.knockback-stops-at-deck-edge", not ch._forced_step_ok(mid, side), "")
+	_check("elev.knockback-along-deck-no-veto", not GridManager.segment_enters_deep_water(a.lerp(b, 0.15), a.lerp(b, 0.85)), "")
 	ch.queue_free()
+
+
+# The view layer / sight tier on a bridge (GridManager.ground_ref): a walker on
+# a deck over the river is measured from the water's surface, not the bed a
+# story further down, so neither bridge (0.2 / 0.5 over a surface at 1.8) is
+# the HIGH layer (was: 1.2 / 1.5 over the bed: hidden in ground view, the
+# leader's view flipped to the roof slice, crowns always blocking them). A
+# deck 1.3 over the same water still is.
+func _view_layer_checks() -> void:
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	for d_v in decks:
+		var d: Dictionary = d_v
+		var n := 0
+		var high := 0
+		var hag_max := -INF
+		for t_v in d["tiles"]:
+			var t: Vector2i = t_v
+			if not _water(t):
+				continue
+			n += 1
+			ch.global_position = GridManager.map_to_world(t)
+			ch._refresh_elevation()
+			hag_max = maxf(hag_max, ch.height_above_ground())
+			if GridManager.is_high_layer(ch) or ch.is_on_raised_surface() \
+					or GridManager.height_above_ground(t, ch.get_elevation()) >= GridManager.HIGH_LAYER_STORIES:
+				high += 1
+		_check("view.%s-walker-is-ground-layer" % String(d["id"]), n > 0 and high == 0,
+			"%d deck tiles over the water, %d on the high layer, height above the water %.2f" % [n, high, hag_max])
+	var bank := _spawn_tile("default")
+	ch.global_position = GridManager.map_to_world(bank)
+	ch._refresh_elevation()
+	_check("view.bank-walker-is-ground-layer", not GridManager.is_high_layer(ch) and is_zero_approx(ch.height_above_ground()), "")
+	var rt: Vector2i = _river_tiles()[0]
+	var hi_e: float = GridManager.water_surface_at(rt) + 1.3
+	GridManager.register_deck(rt, hi_e)
+	ch.global_position = GridManager.map_to_world(rt)
+	ch._refresh_elevation()
+	_check("view.high-deck-over-water-is-high", GridManager.is_high_layer(ch) and absf(ch.height_above_ground() - 1.3) < 1e-4,
+		"deck %.2f over the water at %.2f: hag %.2f" % [hi_e, GridManager.water_surface_at(rt), ch.height_above_ground()])
+	GridManager.unregister_deck(rt, hi_e)
+	ch.queue_free()
+
+
+# Bridge art is baked (TG draws the deck into the structures overlay, which the
+# deck's own Art slices): no loose plank items to loot or knock away. And a
+# bridge deck is indestructible until P4-B: fire or a big hit never drops its
+# walkers into deep water.
+func _bridge_art_and_damage_checks() -> void:
+	var loose := 0
+	for it_v in row.get("item_spawns", []):
+		var it: Dictionary = it_v
+		var ip: Array = it.get("position", [0, 0])
+		if _on_deck(GridManager.world_to_map(Vector2(float(ip[0]), float(ip[1])))) or String(it.get("id", "")) == "plank_bridge":
+			loose += 1
+	_check("art.no-loose-items-on-the-decks", loose == 0, "%d item rows on a deck or plank_bridge" % loose)
+	var rows_ok := 0
+	for s_v in row.get("structures", []):
+		var s: Dictionary = s_v
+		if s.get("walk_elev") != null and s.get("indestructible", false) == true:
+			rows_ok += 1
+	_check("damage.deck-rows-indestructible", rows_ok == decks.size(), "%d of %d deck rows" % [rows_ok, decks.size()])
+	var insts: Array = []
+	for st in structures_in_scene:
+		if is_instance_valid(st) and (st as Structure).is_deck:
+			insts.append(st)
+	var flags_ok := insts.size() == decks.size()
+	for st in insts:
+		flags_ok = flags_ok and (st as Structure).indestructible and not (st as Structure).flammable
+	_check("damage.decks-indestructible-not-flammable", flags_ok, "%d deck structures" % insts.size())
+	var tiles_before := 0
+	for d in decks:
+		tiles_before += ((d as Dictionary)["tiles"] as Array).size()
+	for st in insts:
+		(st as Structure).take_damage({"fire": 100000, "bludgeoning": 100000})
+	var alive := 0
+	var hp_ok := true
+	for st in insts:
+		if is_instance_valid(st) and not (st as Structure).is_queued_for_deletion():
+			alive += 1
+			hp_ok = hp_ok and (st as Structure).current_health == (st as Structure).max_health
+	var still := 0
+	for d in decks:
+		for t in (d as Dictionary)["tiles"]:
+			if is_equal_approx(GridManager.effective_elev(t), float((d as Dictionary)["elev"])):
+				still += 1
+	_check("damage.decks-survive-fire-and-blows", alive == insts.size() and hp_ok and still == tiles_before,
+		"%d of %d decks stand, %d of %d deck tiles registered" % [alive, insts.size(), still, tiles_before])
 
 
 func _fluid_checks(g: CellGraph) -> void:
