@@ -2,15 +2,15 @@ shader_type canvas_item;
 render_mode blend_premul_alpha;
 
 // CanopyLayer (P3-B): the canopy atlas's crowns, premultiplied, faded round
-// up to 64 shapes (CanopyLayer.MAX_FADES): party members under a crown, the
+// up to 128 shapes (CanopyLayer.MAX_FADES): party members under a crown, the
 // cursor, and what must stay readable under the crowns (routes, aim lines,
 // reticles, fire: CanopyLayer.REVEAL_GROUP), each a capsule a..b (a == b: a
 // disc). COLOR comes in as the atlas texel times the crown's vertex colour
 // (its tree's hit flash and damage tint), still premultiplied.
 
 uniform int fade_count = 0;
-uniform vec4 fade_seg[64];     // xy = a, zw = b (world px)
-uniform vec2 fade_rad[64];     // x = full fade within, y = no fade past (px)
+uniform vec4 fade_seg[128];    // xy = a, zw = b (world px)
+uniform vec2 fade_rad[128];    // x = full fade within, y = no fade past (px)
 uniform float fade_min = 0.25; // what is left of a crown under a fade shape
 
 varying vec2 world_pos;
@@ -21,7 +21,7 @@ void vertex() {
 
 void fragment() {
 	float a = 1.0;
-	for (int i = 0; i < 64; i++) {
+	for (int i = 0; i < 128; i++) {
 		if (i >= fade_count) {
 			break;
 		}

@@ -186,6 +186,9 @@ const CANOPY_REVEAL_R := 14.0
 func canopy_reveal(out: Array) -> void:
 	if tactical_path == null or not is_visible_in_tree():
 		return
+	# no plan (every NPC, most of the time): nothing to ask for, cheaply
+	if tactical_path.waypoints.size() < 2 and tactical_path.action_nodes.is_empty() and not is_drawing_rotation:
+		return
 	var route := _visible_route()
 	if route.size() >= 2:
 		out.append([route, CANOPY_REVEAL_R])

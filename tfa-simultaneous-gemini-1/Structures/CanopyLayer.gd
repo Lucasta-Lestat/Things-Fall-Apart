@@ -19,6 +19,11 @@ extends Node2D
 #     REVEAL_GROUP hands over shapes each frame (canopy_reveal(out), below) --
 #     the planned routes and their ground marks (PathDrawer), aim lines
 #     (AimLine), queued-order reticles (ActionQueue) and fire (CellFireFX).
+#     The shader takes MAX_FADES shapes a frame, so the budget goes only to
+#     what can be seen (a shape off the view or away from every live crown
+#     is dropped), a polyline costs a shape per straight run near a crown
+#     (not one per few px), and the primary selection's own plan is served
+#     first, then the rest of the selection's, then everyone else's.
 #   - Mirrors the tree's hit flash and damage tint (the tree's empty "Art"
 #     node, which Structure drives) onto its crown.
 #   - Cone shading by the crown RULES (P3-F), not only by the crown art. The
@@ -61,8 +66,9 @@ const CURSOR_FADE := Vector2(36.0, 96.0)
 ## r + REVEAL_FEATHER.
 const REVEAL_FEATHER := 28.0
 const FADE_MIN := 0.25
-## Fade shapes per frame: canopy_layer.gdshader's arrays hold this many.
-const MAX_FADES := 64
+## Fade shapes per frame: canopy_layer.gdshader's arrays hold this many (its
+## loop runs only over the shapes there are).
+const MAX_FADES := 128
 ## A party member's body: under a crown when its edge is.
 const BODY_PAD := 16.0
 ## Nodes asked each frame for what the crowns must not hide:
@@ -71,8 +77,13 @@ const BODY_PAD := 16.0
 ## point: a disc; more: a polyline, faded along its length). Asked only on a
 ## map with a CanopyLayer.
 const REVEAL_GROUP := "canopy_reveal"
-## A polyline is faded as capsules about this long (px).
+## A polyline's points closer than this (px) to the last one kept are
+## skipped; the kept ones are merged into the fewest straight capsules that
+## keep every one of them within REVEAL_TOL of a capsule's axis (reveal_runs).
 const REVEAL_STEP := 32.0
+## How far (px) a polyline's merged capsules may stray from its kept points;
+## its fade radii grow by as much, so it still fades fully over the line.
+const REVEAL_TOL := 6.0
 ## What the shape kinds are (fade_shapes()).
 enum Fade { PARTY, CURSOR, REVEAL }
 ## The name of a sight cone's canopy child (fit_canopy_cone).
@@ -83,15 +94,23 @@ const SHADED_MASK := CollisionLayers.CANOPY_LIGHT | CollisionLayers.LAMP_LIGHT
 ## A hidden character's canvas items are looked over again this often for
 ## new ones (gear put on, an effect added) while it stays hidden.
 const REGATE_SECONDS := 0.5
+## Weapon shots' z on a map with a CanopyLayer (Game.weapon_shot_z): up with
+## the thrown things (Game's ThrownProjectile), above the crowns.
+const SHOT_Z := 50
 const DISC_SEGMENTS := 48
 const SHADER := preload("res://Structures/canopy_layer.gdshader")
 # The fade's quick reject: crowns by 64 px cell, each crown listed in every
 # cell its art reach + BUCKET_MARGIN touches.
 const BUCKET_CELL := 64.0
 const BUCKET_MARGIN := 64.0
+# The long queries (a long capsule, a canopy cone's reach): crowns by the
+# COARSE_CELL px cell their centre lies in.
+const COARSE_CELL := 256.0
 
 ## Tests: a world point to use instead of the mouse (null = the mouse).
 var cursor_override: Variant = null
+## Tests: a world Rect2 to serve as the view (null = what the viewport shows).
+var view_override: Variant = null
 
 var _tex: Texture2D = null
 var _game: Node = null
@@ -103,11 +122,15 @@ var _disc_mat: Material = null
 # pos and reach (px) for the fade test, disc (its rule disc, or null).
 var _crowns: Array = []
 var _bucket: Dictionary = {}           # Vector2i cell -> [indices into _crowns]
-var _all: Array = []                   # every index into _crowns
+var _grid: Array = []                  # COARSE_CELL cells, row-major: [indices into _crowns]
+var _grid_org := Vector2i.ZERO         # the first cell's (x, y)
+var _grid_dim := Vector2i.ZERO         # cells across, down
+var _max_reach: float = 0.0            # the largest crown's art reach (px)
 var _seg := PackedVector4Array()       # this frame's fade shapes: a, b
 var _rad := PackedVector2Array()       #   inner, outer radius
 var _kind := PackedInt32Array()        #   Fade
 var _reveal_buf: Array = []
+var _cand: Array = []                  # scratch: coarse-grid candidates
 var _gated: Dictionary = {}            # character instance id -> {c, items}
 var _regate_left: float = 0.0
 
@@ -175,9 +198,7 @@ func _rule_disc(pos: Vector2, r: float, trunk_r: float) -> Polygon2D:
 
 func _build_buckets() -> void:
 	_bucket.clear()
-	_all.clear()
 	for i in _crowns.size():
-		_all.append(i)
 		var c: Dictionary = _crowns[i]
 		var p: Vector2 = c["pos"]
 		var rr: float = float(c["reach"]) + BUCKET_MARGIN
@@ -195,6 +216,54 @@ func _build_buckets() -> void:
 				if not _bucket.has(k):
 					_bucket[k] = []
 				(_bucket[k] as Array).append(i)
+	_build_grid()
+
+
+func _build_grid() -> void:
+	_grid.clear()
+	_grid_dim = Vector2i.ZERO
+	_max_reach = 0.0
+	if _crowns.is_empty():
+		return
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for c in _crowns:
+		var p: Vector2 = c["pos"]
+		lo = lo.min(p)
+		hi = hi.max(p)
+		_max_reach = maxf(_max_reach, float(c["reach"]))
+	_grid_org = Vector2i(floori(lo.x / COARSE_CELL), floori(lo.y / COARSE_CELL))
+	_grid_dim = Vector2i(floori(hi.x / COARSE_CELL), floori(hi.y / COARSE_CELL)) - _grid_org + Vector2i.ONE
+	_grid.resize(_grid_dim.x * _grid_dim.y)
+	for k in _grid.size():
+		_grid[k] = []
+	for i in _crowns.size():
+		var p: Vector2 = _crowns[i]["pos"]
+		var cell := Vector2i(floori(p.x / COARSE_CELL), floori(p.y / COARSE_CELL)) - _grid_org
+		(_grid[cell.y * _grid_dim.x + cell.x] as Array).append(i)
+
+
+# The coarse cells (x0, y0, x1, y1, inclusive; empty when x0 > x1) holding
+# every crown whose art may come within `pad` of `rect`.
+func _grid_span(rect: Rect2, pad: float) -> Rect2i:
+	if _grid_dim.x <= 0:
+		return Rect2i(0, 0, -1, -1)
+	var g := rect.grow(pad + _max_reach)
+	var c0 := Vector2i(floori(g.position.x / COARSE_CELL), floori(g.position.y / COARSE_CELL)) - _grid_org
+	var c1 := Vector2i(floori(g.end.x / COARSE_CELL), floori(g.end.y / COARSE_CELL)) - _grid_org
+	c0 = c0.max(Vector2i.ZERO)
+	c1 = c1.min(_grid_dim - Vector2i.ONE)
+	return Rect2i(c0, c1 - c0)
+
+
+# The crowns (indices into _crowns, into `out`) whose art may come within
+# `pad` of `rect` (_grid_span).
+func _crowns_near_rect(rect: Rect2, pad: float, out: Array) -> void:
+	out.clear()
+	var span := _grid_span(rect, pad)
+	for cy in range(span.position.y, span.end.y + 1):
+		for cx in range(span.position.x, span.end.x + 1):
+			out.append_array(_grid[cy * _grid_dim.x + cx])
 
 
 func _ready() -> void:
@@ -282,6 +351,7 @@ func _update_fade() -> void:
 	_seg.clear()
 	_rad.clear()
 	_kind.clear()
+	var view: Rect2 = view_rect()
 	var party: Array = []
 	if _game != null and is_instance_valid(_game) and "party_chars" in _game:
 		party = _game.party_chars
@@ -289,63 +359,144 @@ func _update_fade() -> void:
 		if not (pc is Node2D) or not is_instance_valid(pc) or not (pc as Node2D).is_inside_tree():
 			continue
 		var p: Vector2 = (pc as Node2D).global_position
-		if under_art(p, BODY_PAD):
+		if _in_view(p, p, PARTY_FADE.y, view) and under_art(p, BODY_PAD):
 			_add_fade(p, p, PARTY_FADE, Fade.PARTY)
 	var cur: Vector2 = get_global_mouse_position()
 	if cursor_override is Vector2:
 		cur = cursor_override
-	if under_art(cur, 0.0):
+	if _in_view(cur, cur, CURSOR_FADE.y, view) and under_art(cur, 0.0):
 		_add_fade(cur, cur, CURSOR_FADE, Fade.CURSOR)
+	# the providers' shapes, served by rank (_reveal_rank): each provider's
+	# run [from, to) of _reveal_buf is filed under its rank
 	_reveal_buf.clear()
+	var runs: Array = [[], [], [], []]
 	if is_inside_tree():
 		for n in get_tree().get_nodes_in_group(REVEAL_GROUP):
-			if n.has_method("canopy_reveal"):
-				n.canopy_reveal(_reveal_buf)
-	for e in _reveal_buf:
-		if _seg.size() >= MAX_FADES:
-			break
-		_add_reveal(e)
+			if not n.has_method("canopy_reveal"):
+				continue
+			var from: int = _reveal_buf.size()
+			n.canopy_reveal(_reveal_buf)
+			if _reveal_buf.size() > from:
+				(runs[_reveal_rank(n)] as Array).append(Vector2i(from, _reveal_buf.size()))
+	for rank_runs in runs:
+		for run in rank_runs:
+			var span: Vector2i = run
+			for i in range(span.x, span.y):
+				if _seg.size() >= MAX_FADES:
+					break
+				_add_reveal(_reveal_buf[i], view)
 	if _mat != null:
 		_mat.set_shader_parameter("fade_count", _seg.size())
 		_mat.set_shader_parameter("fade_seg", _seg)
 		_mat.set_shader_parameter("fade_rad", _rad)
 
 
-func _add_fade(a: Vector2, b: Vector2, radii: Vector2, kind: int) -> void:
+## The world rect the fade serves this frame: what the layer's viewport shows
+## (view_override when set). A fade shape wholly outside it is dropped.
+func view_rect() -> Rect2:
+	if view_override is Rect2:
+		return view_override
+	if not is_inside_tree():
+		return Rect2(-1e9, -1e9, 2e9, 2e9)
+	return get_canvas_transform().affine_inverse() * get_viewport_rect()
+
+
+static func _in_view(a: Vector2, b: Vector2, pad: float, view: Rect2) -> bool:
+	return Rect2(a, Vector2.ZERO).expand(b).grow(pad).intersects(view)
+
+
+# Whose plan a REVEAL_GROUP provider draws, as the order the budget serves it
+# in: 0 the primary selection's, 1 the rest of the selection's, 2 another
+# party member's or nobody's (fire, a loose aim line), 3 an NPC's.
+func _reveal_rank(n: Node) -> int:
+	var who: Node = null
+	var p: Node = n
+	for _i in 3:
+		if p == null:
+			break
+		if p is ProceduralCharacter:
+			who = p
+			break
+		p = p.get_parent()
+	if who == null or _game == null or not is_instance_valid(_game):
+		return 2
+	if "primary_selected" in _game and _game.primary_selected == who:
+		return 0
+	if "selected_characters" in _game and who in _game.selected_characters:
+		return 1
+	if "party_chars" in _game and not (who in _game.party_chars):
+		return 3
+	return 2
+
+
+# Appends a fade shape; false once the budget is spent.
+func _add_fade(a: Vector2, b: Vector2, radii: Vector2, kind: int) -> bool:
 	if _seg.size() >= MAX_FADES:
-		return
+		return false
 	_seg.append(Vector4(a.x, a.y, b.x, b.y))
 	_rad.append(radii)
 	_kind.append(kind)
+	return true
 
 
-# One REVEAL_GROUP shape: a disc, or a polyline cut into capsules, each kept
-# only where it comes near a live crown's art.
-func _add_reveal(e: Variant) -> void:
+# One REVEAL_GROUP shape: a disc, or a polyline as its straight runs
+# (reveal_runs), each kept only where it is in view and comes near a live
+# crown's art.
+func _add_reveal(e: Variant, view: Rect2) -> void:
 	if not (e is Array) or (e as Array).size() < 2:
 		return
 	var pts := PackedVector2Array((e as Array)[0])
 	var r: float = float((e as Array)[1])
 	var radii := Vector2(r, r + REVEAL_FEATHER)
 	if pts.size() == 1:
-		if near_art(pts[0], pts[0], radii.y):
+		if _in_view(pts[0], pts[0], radii.y, view) and near_art(pts[0], pts[0], radii.y):
 			_add_fade(pts[0], pts[0], radii, Fade.REVEAL)
 		return
-	var a: Vector2 = pts[0] if pts.size() > 0 else Vector2.ZERO
+	radii += Vector2(REVEAL_TOL, REVEAL_TOL)
+	var v := reveal_runs(pts)
+	for i in range(1, v.size()):
+		if _in_view(v[i - 1], v[i], radii.y, view) and near_art(v[i - 1], v[i], radii.y):
+			if not _add_fade(v[i - 1], v[i], radii, Fade.REVEAL):
+				return
+
+
+## A polyline's fade capsules, as the vertices of a polyline each of whose
+## segments is one: its points at least REVEAL_STEP apart (the last always
+## kept), merged greedily into straight runs that keep every kept point
+## within REVEAL_TOL of the run's axis.
+static func reveal_runs(pts: PackedVector2Array) -> PackedVector2Array:
+	var v := PackedVector2Array()
+	if pts.is_empty():
+		return v
+	v.append(pts[0])
+	var step2: float = REVEAL_STEP * REVEAL_STEP
 	for i in range(1, pts.size()):
-		var b: Vector2 = pts[i]
-		var d: float = a.distance_to(b)
-		if d < REVEAL_STEP and i < pts.size() - 1:
-			continue
-		var n: int = maxi(1, ceili(d / (REVEAL_STEP * 1.5)))
-		for k in n:
-			var p0: Vector2 = a.lerp(b, float(k) / float(n))
-			var p1: Vector2 = a.lerp(b, float(k + 1) / float(n))
-			if near_art(p0, p1, radii.y):
-				if _seg.size() >= MAX_FADES:
-					return
-				_add_fade(p0, p1, radii, Fade.REVEAL)
-		a = b
+		if pts[i].distance_squared_to(v[v.size() - 1]) >= step2 or i == pts.size() - 1:
+			v.append(pts[i])
+	if v.size() <= 2:
+		return v
+	var out := PackedVector2Array([v[0]])
+	var tol2: float = REVEAL_TOL * REVEAL_TOL
+	var s: int = 0
+	while s < v.size() - 1:
+		var e: int = s + 1
+		while e + 1 < v.size() and _run_holds(v, s, e + 1, tol2):
+			e += 1
+		out.append(v[e])
+		s = e
+	return out
+
+
+# True when every point of v strictly between s and e lies within sqrt(tol2)
+# of the segment v[s] .. v[e].
+static func _run_holds(v: PackedVector2Array, s: int, e: int, tol2: float) -> bool:
+	var a: Vector2 = v[s]
+	var b: Vector2 = v[e]
+	for k in range(s + 1, e):
+		var q: Vector2 = Geometry2D.get_closest_point_to_segment(v[k], a, b)
+		if q.distance_squared_to(v[k]) > tol2:
+			return false
+	return true
 
 
 ## True when point `p` (map px) is within `pad` of a live crown's art.
@@ -357,7 +508,8 @@ func under_art(p: Vector2, pad: float) -> bool:
 ## crown's art (ART_REACH r round its trunk).
 func near_art(p0: Vector2, p1: Vector2, r: float) -> bool:
 	if r + p0.distance_to(p1) * 0.25 > BUCKET_MARGIN:
-		return _capsule_hits(p0, p1, r, _all)
+		_crowns_near_rect(Rect2(p0, Vector2.ZERO).expand(p1), r, _cand)
+		return _capsule_hits(p0, p1, r, _cand)
 	var mid: Vector2 = (p0 + p1) * 0.5
 	for q in [p0, mid, p1]:
 		var qv: Vector2 = q
@@ -385,14 +537,19 @@ func _capsule_hits(p0: Vector2, p1: Vector2, r: float, idx: Array) -> bool:
 
 
 ## True when a live crown's art lies within `radius` of `p` (the canopy cone's
-## quick reject: no crown in reach, no second shadowed light).
+## quick reject: no crown in reach, no second shadowed light). Looks only at
+## the coarse cells round p (_grid_span).
 func any_crown_within(p: Vector2, radius: float) -> bool:
-	for c in _crowns:
-		if not bool(c["alive"]):
-			continue
-		var reach: float = float(c["reach"]) + radius
-		if p.distance_squared_to(c["pos"] as Vector2) <= reach * reach:
-			return true
+	var span := _grid_span(Rect2(p, Vector2.ZERO), radius)
+	for cy in range(span.position.y, span.end.y + 1):
+		for cx in range(span.position.x, span.end.x + 1):
+			for i in (_grid[cy * _grid_dim.x + cx] as Array):
+				var c: Dictionary = _crowns[int(i)]
+				if not bool(c["alive"]):
+					continue
+				var reach: float = float(c["reach"]) + radius
+				if p.distance_squared_to(c["pos"] as Vector2) <= reach * reach:
+					return true
 	return false
 
 
@@ -540,8 +697,9 @@ static func of(map_loader: Node) -> CanopyLayer:
 
 ## Fits `light`'s canopy child to `viewer` (created on first use), for the
 ## map's CanopyLayer `layer` (null: a map without one, so it is switched
-## off). On only while the cone is and a live crown lies within its reach.
-## Returns it (or null).
+## off). On only while the cone is on and shown (stealth mode owns an NPC
+## cone's visible) and a live crown lies within its reach. Returns it (or
+## null).
 static func fit_canopy_cone(light: PointLight2D, viewer: Node2D, layer: CanopyLayer) -> PointLight2D:
 	var cc := light.get_node_or_null(CANOPY_CONE_NAME) as PointLight2D
 	if layer == null or not is_instance_valid(layer):
@@ -563,11 +721,15 @@ static func fit_canopy_cone(light: PointLight2D, viewer: Node2D, layer: CanopyLa
 	var mask: int = light.shadow_item_cull_mask | CollisionLayers.CANOPY_LIGHT
 	if cc.shadow_item_cull_mask != mask:
 		cc.shadow_item_cull_mask = mask
+	if not light.enabled or not light.is_visible_in_tree():
+		if cc.enabled:
+			cc.enabled = false
+		return cc
 	var range_px: float = 0.0
 	if light.texture != null:
 		range_px = light.texture_scale * float(light.texture.get_width()) * 0.5
 	var k: float = canopy_cone_fraction(viewer, range_px)
-	var want_on: bool = light.enabled and k > 0.0 and layer.any_crown_within(viewer.global_position, range_px * k)
+	var want_on: bool = k > 0.0 and layer.any_crown_within(viewer.global_position, range_px * k)
 	if cc.enabled != want_on:
 		cc.enabled = want_on
 	if want_on and not is_equal_approx(cc.texture_scale, light.texture_scale * k):
