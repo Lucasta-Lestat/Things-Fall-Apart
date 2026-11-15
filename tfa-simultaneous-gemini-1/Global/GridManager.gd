@@ -24,6 +24,11 @@ var elevations: Dictionary = {}        # Vector2i -> float
 # one — destroying the taller must drop the tile to the survivor's height.
 var deck_elevations: Dictionary = {}   # Vector2i -> float (max of registered heights)
 var _deck_refs: Dictionary = {}        # Vector2i -> Array of float (one entry per registration)
+# The ground a deck's tiles over the contract-3 open water are measured from
+# (P3-D, ground_ref): Vector2i -> float, the deck's own bank ground, capped at
+# its walk_elev (MapLoader._register_deck_ground -> register_deck_ground).
+# Empty without the water layer.
+var deck_ground_refs: Dictionary = {}
 # Roof surface height per tile, SPARSE — a layer STACKED OVER the ground, never
 # folded into effective_elev (a house interior stays at ground height under its
 # own roof). Only jump-capable characters (jump_height > 0) ever enter it.
@@ -114,6 +119,7 @@ func initialize(map_width_px: int, map_height_px: int) -> void:
 	elevations.clear()
 	deck_elevations.clear()
 	_deck_refs.clear()
+	deck_ground_refs.clear()
 	roof_elevations.clear()
 	hazard_costs.clear()
 	terrain_min = 0.0
@@ -201,6 +207,7 @@ func set_elevation_data(graph) -> void:
 	elevations.clear()
 	deck_elevations.clear()
 	_deck_refs.clear()
+	deck_ground_refs.clear()
 	roof_elevations.clear()
 	roof_lint_bad = 0
 	deck_lint_bad = 0
@@ -265,23 +272,31 @@ func terrain_elev(t: Vector2i) -> float:
 
 # The ground a surface at t is measured from for the view layer and the sight
 # tier (ABSOLUTE stories): the bare terrain, except over open water on a map
-# that ships the water layer (contract 3), where it is the water's own surface
-# when that is higher. A P3-D bridge deck stands over a river BED a story or
-# more down; measured from the bed, a bank-level bridge read as a deck a story
-# up (HIGH layer: walkers hidden in ground view, the leader's view flipped to
-# the roof slice, crowns always blocking the bridge viewer). From the surface,
-# a deck 0.2 over its river is the ground layer, and one 1.2 over it is still
-# high. No layer (every contract-1/2 map): the bare terrain, unchanged.
+# that ships the water layer (contract 3). There it is the highest of the bed,
+# the water's own surface and, under a deck, that deck's bank ground
+# (deck_ground_refs: the lowest bare ground of the deck's own tiles off the
+# water, capped at its walk_elev; MapLoader registers it). A P3-D bridge deck
+# stands over a river BED a story or more down, and its river's surface can lie
+# a story under its banks too (a ravine); measured from either, a bank-level
+# bridge read as a deck a story up (HIGH layer: walkers hidden in ground view,
+# the leader's view flipped to the roof slice, crowns always blocking the
+# bridge viewer). From its banks, a bank-level bridge is the ground layer over
+# any river, and a deck a story over its banks is high. Open water with no
+# deck over it, or a deck with no tile off the water: the surface. No layer
+# (every contract-1/2 map): the bare terrain, unchanged.
 func ground_ref(t: Vector2i) -> float:
 	var g: float = terrain_elev(t)
 	if water_layer_used:
 		var i: int = _water_index(t)
 		if i >= 0 and _water_body[i] > 0:
 			g = maxf(g, float(_water_surf[i]))
+			if deck_ground_refs.has(t):
+				g = maxf(g, float(deck_ground_refs[t]))
 	return g
 
 # How far `elev` (an absolute surface height) stands above the local ground
-# at t (ground_ref: the terrain, or the open-water surface over it).
+# at t (ground_ref: the terrain, the open-water surface over it, or a bridge's
+# bank ground).
 func height_above_ground(t: Vector2i, elev: float) -> float:
 	return elev - ground_ref(t)
 
@@ -590,11 +605,17 @@ func unregister_deck(t: Vector2i, elev: float) -> void:
 	if hs.is_empty():
 		_deck_refs.erase(t)
 		deck_elevations.erase(t)
+		deck_ground_refs.erase(t)   # no deck left over this water: ground_ref is the surface again
 	else:
 		var m := -1e9
 		for h in hs:
 			m = maxf(m, float(h))
 		deck_elevations[t] = m
+
+# P3-D: a deck's tile over open water is measured from `g`, the deck's own bank
+# ground (ground_ref). Overlapping decks keep the highest.
+func register_deck_ground(t: Vector2i, g: float) -> void:
+	deck_ground_refs[t] = maxf(float(deck_ground_refs.get(t, -1e9)), g)
 
 # True if every tile transition along the straight segment passes can_step.
 # Use for displacements that can span more than one tile per frame (knockback,

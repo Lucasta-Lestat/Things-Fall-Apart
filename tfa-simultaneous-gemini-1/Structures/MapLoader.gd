@@ -576,6 +576,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var follow := false
 	if is_deck:
 		occlude_top = float(walk_elev)   # a viewer AT deck height sees past the deck floor itself
+		# a bridge's span is measured from its own banks (GridManager.ground_ref),
+		# before the occluder below reads it
+		_register_deck_ground(tight, float(walk_elev))
 	else:
 		var base_elev := GridManager.effective_elev(GridManager.world_to_map(center))
 		occlude_top = base_elev + occ_h
@@ -625,7 +628,7 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
 		elif is_deck and not GridManager.relief_los and _deck_has_ground_tier_tile(tight, float(walk_elev)):
 			# flat-LOS map, a LOW deck (P3-D: a bank-level bridge, measured from
-			# the water by GridManager.ground_ref): a walker on it is the GROUND
+			# its banks by GridManager.ground_ref): a walker on it is the GROUND
 			# sight tier, so the GROUND mask would let the deck's own polygon,
 			# with the walker's light inside it, black out the cone beyond its
 			# edges. A deck under one story hides nothing beneath it: no cone
@@ -1077,9 +1080,29 @@ func _over_open_water(tiles: Array[Vector2i]) -> bool:
 	return false
 
 
+# P3-D: the ground a deck's tiles over the contract-3 open water are measured
+# from (GridManager.ground_ref): its BANK ground, the lowest bare terrain of its
+# own tiles off the water, capped at walk_elev. A bank-level bridge is then the
+# ground layer however far its river lies below the banks (a ravine), and a
+# deck a story over its banks stays high. No-op without the layer (every
+# contract-1/2 map) and for a deck with no tile off the water.
+func _register_deck_ground(tiles: Array[Vector2i], walk_elev: float) -> void:
+	if not GridManager.has_water_layer():
+		return
+	var bank := INF
+	for t in tiles:
+		if GridManager.water_body_at(t) <= 0:
+			bank = minf(bank, GridManager.terrain_elev(t))
+	if bank == INF:
+		return
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			GridManager.register_deck_ground(t, minf(bank, walk_elev))
+
+
 # True when a walker standing on some tile of this deck footprint would be the
 # GROUND sight tier: walk_elev less than HIGH_LAYER_STORIES above the local
-# ground there (GridManager.ground_ref: the open-water surface over a river,
+# ground there (GridManager.ground_ref: a bridge's bank ground over a river,
 # so a bank-level bridge is low; the bare terrain on every contract-1/2 map).
 # The same predicate as ProceduralCharacter.is_on_raised_surface, off a roof.
 func _deck_has_ground_tier_tile(tiles: Array[Vector2i], walk_elev: float) -> bool:
