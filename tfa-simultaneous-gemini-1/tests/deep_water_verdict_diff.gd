@@ -15,16 +15,23 @@ extends Node2D
 #         difference). A map with no recorded layer (no open water) is
 #         reported, and its NEW verdicts are the fallback's; a map with no
 #         record at all is a SKIP (a map shipped after the fixture: re-pack it).
+#         Each record carries cells_md5, the md5 of the shipped cells.json text
+#         (CR dropped) it was checked against: a shipped map re-exported since
+#         FAILS until the fixture is re-packed. More than SKIP_ALLOWANCE skips,
+#         or every map skipped, fails the run (a fixture whose ids no longer
+#         match would otherwise pass with nothing compared).
 # Floors, decks and the relief switch come from the shipped row through
 # MapLoader (images swapped for the icon: no art is loaded).
 #   godot --headless --path . res://tests/deep_water_verdict_diff.tscn
 # Env: TFA_DEEP_MAPS (comma list; default every format:"structured" row of
 # data/Maps.json whose cell_graph exists), TFA_DEEP_CELLS (above).
 # Prints one line per map and "DEEP WATER DIFF DONE: N maps, M tiles differ,
-# K FAIL, S SKIP"; exit 0 when no tile differs and no map failed.
+# K FAIL, S SKIP"; exit 0 when no tile differs, no map failed and at most
+# SKIP_ALLOWANCE maps (never all of them) skipped.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const LAYERS_PATH := "res://tests/fixtures/p3d_deep_water/c3_water_layers.json"
 const GRAFT_PATH := "user://deep_water_verdict_graft_cells.json"
+const SKIP_ALLOWANCE := 2   # maps shipped after the fixture was packed, before it is re-packed
 
 var structures_in_scene: Array = []
 var party_chars: Array = []
@@ -64,8 +71,11 @@ func _ready() -> void:
 			continue
 		await _diff_map(m, cdir)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GRAFT_PATH))
+	var skip_bad: bool = _skips > SKIP_ALLOWANCE or (_maps > 0 and _skips == _maps)
+	if skip_bad:
+		print("FAIL %d of %d maps skipped (allowance %d): re-pack %s" % [_skips, _maps, SKIP_ALLOWANCE, LAYERS_PATH])
 	print("DEEP WATER DIFF DONE: %d maps, %d tiles differ, %d FAIL, %d SKIP" % [_maps, _diff_total, _fails, _skips])
-	get_tree().quit(1 if _fails > 0 or _maps == 0 else 0)
+	get_tree().quit(1 if _fails > 0 or _maps == 0 or skip_bad else 0)
 
 
 # The deep-water rule as it stood before P3-D (GridManager at TFA 07a3cb2e).
@@ -116,6 +126,17 @@ func _unrle(runs: Array) -> Array:
 		for i in int(r[1]):
 			out.append(r[0])
 	return out
+
+
+# md5 of a file's text with every CR dropped (a checkout's line endings never
+# matter); "" when it does not open. The fixture packer hashes the same bytes.
+func _text_md5(path: String) -> String:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return ""
+	var text := f.get_as_text()
+	f.close()
+	return text.replace("", "").md5_text()
 
 
 # The shipped cells.json TEXT with the recorded layer appended (every shipped
@@ -178,6 +199,12 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS", LAYERS_PATH])
 			return
 		var rec: Dictionary = _layers[mid]
+		var md5 := _text_md5(ProjectSettings.globalize_path(shipped))
+		if String(rec.get("cells_md5", "")) != md5:
+			_fails += 1
+			print("FAIL %s: the shipped cells.json (md5 %s) is not the one the layer was packed against (%s): re-pack %s" % [
+				mid, md5, String(rec.get("cells_md5", "none")), LAYERS_PATH])
+			return
 		has_layer = bool(rec.get("layer", false))
 		c3 = shipped
 		if has_layer:
