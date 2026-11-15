@@ -617,6 +617,15 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
 		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
+		elif is_deck and not GridManager.relief_los and _deck_has_ground_tier_tile(tight, float(walk_elev)):
+			# flat-LOS map, a LOW deck (P3-D: a bank-level bridge, measured from
+			# the water by GridManager.ground_ref): a walker on it is the GROUND
+			# sight tier, so the GROUND mask would let the deck's own polygon,
+			# with the walker's light inside it, black out the cone beyond its
+			# edges. A deck under one story hides nothing beneath it: no cone
+			# shadow at all, like the waist-high parapet. Every shipped deck
+			# stands >= 1 story over its ground on every tile: unchanged there.
+			occ.occluder_light_mask = 0
 		elif GridManager.relief_los:
 			# relief maps: cones there are GROUND | their elevation band, so the
 			# structure must NOT carry bit 1 (it would shadow every cone). It
@@ -1046,6 +1055,18 @@ func _add_cliff_run(root: Node2D, p0: Vector2, p1: Vector2, mask: int) -> void:
 	occ.occluder_light_mask = mask
 	occ.sdf_collision = false
 	root.add_child(occ)
+
+
+# True when a walker standing on some tile of this deck footprint would be the
+# GROUND sight tier: walk_elev less than HIGH_LAYER_STORIES above the local
+# ground there (GridManager.ground_ref: the open-water surface over a river,
+# so a bank-level bridge is low; the bare terrain on every contract-1/2 map).
+# The same predicate as ProceduralCharacter.is_on_raised_surface, off a roof.
+func _deck_has_ground_tier_tile(tiles: Array[Vector2i], walk_elev: float) -> bool:
+	for t in tiles:
+		if walk_elev - GridManager.ground_ref(t) < GridManager.HIGH_LAYER_STORIES:
+			return true
+	return false
 
 
 # Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).
