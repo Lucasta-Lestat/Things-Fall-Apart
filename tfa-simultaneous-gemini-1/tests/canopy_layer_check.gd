@@ -47,6 +47,9 @@
 #   D. The real loader: MapLoader.generate_structured_map on a contract-3 map
 #      dict builds the CanopyLayer (and its discs from the ground sprite),
 #      drops the atlas reference after, and a contract-2 one builds none.
+#      Game.shade_selection_ring: a hidden party member's selection ring
+#      (Game's own node) wears SHADED_MASK like its body; mask 1 in the
+#      open, out from under the crown, and on a map without a CanopyLayer.
 #   E. Game._update_sight_cones (Game.gd, instanced bare): fits the canopy
 #      child on a map with a CanopyLayer, switches it off on one without;
 #      Game.weapon_shot_z: CanopyLayer.SHOT_Z there, 3 here.
@@ -1056,6 +1059,8 @@ func _part_d_exit() -> void:
 	await get_tree().process_frame
 	var layer: CanopyLayer = ml.canopy_layer
 	_check("d.exit.gated", layer != null and c in layer.gated_characters() and _body_masks(c).x == 0)
+	# its selection ring (Game's, not the character's) takes the same gate
+	_part_d_ring(ml, c)
 	ml.queue_free()
 	await get_tree().process_frame
 	var m := _body_masks(c)
@@ -1063,6 +1068,53 @@ func _part_d_exit() -> void:
 	characters_in_scene.erase(c)
 	c.queue_free()
 	await get_tree().process_frame
+
+
+# Game.shade_selection_ring (Game.gd instanced bare, as in part E): the
+# selection ring of a party member the crown rules hide under a crown wears
+# SHADED_MASK like its body, so no cone whose viewer is blind to the member
+# tints it; a member in the open, and any member on a map without a
+# CanopyLayer (contract 2), keeps mask 1; the ring follows the member out.
+func _part_d_ring(ml: Node2D, hidden: ProceduralCharacter) -> void:
+	var g: Node = load(GAME_SCRIPT).new()
+	g.set("map_loader", ml)
+	var open_c := _spawn_pc(Vector2(1000, 1100))   # under no crown
+	g.call("_add_selection_circle", hidden, Color.WHITE)
+	g.call("_add_selection_circle", open_c, Color.WHITE)
+	var inds: Dictionary = g.get("selection_indicators")
+	var ring: Node2D = inds.get(hidden) as Node2D
+	var open_ring: Node2D = inds.get(open_c) as Node2D
+	var layer: CanopyLayer = CanopyLayer.of(ml)
+	_check("d.ring.made", ring != null and open_ring != null and _ring_mask(ring) == 1 and layer != null
+		and CanopyLayer.hides_under_crown(hidden) and not CanopyLayer.hides_under_crown(open_c))
+	if ring == null or open_ring == null:
+		g.free()
+		open_c.queue_free()
+		return
+	g.call("shade_selection_ring", ring, hidden, layer)
+	g.call("shade_selection_ring", open_ring, open_c, layer)
+	_check("d.ring.hidden-shaded", _ring_mask(ring) == CanopyLayer.SHADED_MASK, _ring_mask(ring))
+	_check("d.ring.open-lit", _ring_mask(open_ring) == 1, _ring_mask(open_ring))
+	g.call("shade_selection_ring", ring, hidden, null)
+	_check("d.ring.no-layer-lit", _ring_mask(ring) == 1, _ring_mask(ring))
+	g.call("shade_selection_ring", ring, hidden, layer)
+	hidden.global_position = Vector2(1000, 1000)   # out from under the crown
+	hidden._refresh_elevation()
+	g.call("shade_selection_ring", ring, hidden, layer)
+	_check("d.ring.out-lit", not CanopyLayer.hides_under_crown(hidden) and _ring_mask(ring) == 1, _ring_mask(ring))
+	hidden.global_position = Vector2(600 + 45, 600)
+	hidden._refresh_elevation()
+	g.free()
+	open_c.queue_free()
+
+
+# The ring's light mask: the indicator's and its circle's when they agree, else -1.
+func _ring_mask(ring: Node2D) -> int:
+	var m: int = ring.light_mask
+	for ch in ring.get_children():
+		if ch is CanvasItem and (ch as CanvasItem).light_mask != m:
+			return -1
+	return m if ring.get_child_count() > 0 else -1
 
 
 # ---------------------------------------------------------------------------

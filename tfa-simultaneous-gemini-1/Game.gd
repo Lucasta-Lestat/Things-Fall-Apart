@@ -4074,10 +4074,12 @@ func _process(delta: float) -> void:
 	# paused): Perceptive, Blinded, weather and fog show at once.
 	_update_sight_cones()
 	# Update all selection indicators
+	var ring_canopy: CanopyLayer = CanopyLayer.of(map_loader)
 	for character in selection_indicators.keys():
 		if is_instance_valid(character):
 			selection_indicators[character].global_position = character.global_position
 			selection_indicators[character].visible = PauseManager.is_paused
+			shade_selection_ring(selection_indicators[character], character, ring_canopy)
 		else:
 			selection_indicators[character].queue_free()
 			selection_indicators.erase(character)
@@ -4444,6 +4446,22 @@ func _refresh_all_circles() -> void:
 			_update_circle_color(character, SELECTION_CIRCLE_COLOR)
 		else:
 			_update_circle_color(character, SELECTION_CIRCLE_COLOR_MULTI)
+
+## P3-B: while the crown rules hide a party member under a crown, CanopyLayer
+## trades its body's light mask 1 for CanopyLayer.SHADED_MASK, so only the
+## cones whose viewers may see it there light it. Its selection ring is Game's
+## (the layer's walk of the character never reaches it), so it takes the same
+## gate here, or a cone whose viewer is blind to the member would still tint
+## the ring round it. Mask 1 whenever the member is not hidden, and always on
+## a map without a CanopyLayer (every contract-2 map: unchanged).
+func shade_selection_ring(indicator: Node2D, character: Node, canopy: CanopyLayer) -> void:
+	var mask: int = CanopyLayer.SHADED_MASK if canopy != null and CanopyLayer.hides_under_crown(character) else 1
+	if indicator.light_mask == mask:
+		return
+	indicator.light_mask = mask
+	for ch in indicator.get_children():
+		if ch is CanvasItem:
+			(ch as CanvasItem).light_mask = mask
 
 func _select_initial_character() -> void:
 	"""Select the first party character on startup"""
