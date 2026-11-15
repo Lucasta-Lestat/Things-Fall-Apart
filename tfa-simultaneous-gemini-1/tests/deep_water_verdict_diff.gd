@@ -1,27 +1,42 @@
 extends Node2D
 # P3-D proof that the relative deep-water rule REPRODUCES today's verdicts: a
 # per-tile diff of GridManager.is_deep_water on every shipped structured map,
-#   OLD = the map as it ships (contract 2: no water layer, so the absolute
-#         -0.5 rule; also checked against a literal copy of that rule as it
-#         stood before P3-D),
+#   OLD = the map WITHOUT a water layer, so the absolute -0.5 rule (also
+#         checked against a literal copy of that rule as it stood before
+#         P3-D, on the same load). A map whose shipped cells.json carries no
+#         tile_water / tile_body (contract 1/2) loads as it ships. One that
+#         carries them (it ships at contract 3: the Perrow tg_hillside_* water
+#         maps since P3-T) loads from a copy with both keys removed: the
+#         shipped file parsed, the keys erased, written to STRIP_PATH and
+#         checked to re-read as exactly that. Either way the OLD load must
+#         report no layer (GridManager.has_water_layer() false) or the map
+#         FAILS: with the layer, OLD would already be the relative rule and
+#         the diff would compare it with itself.
 #   NEW = the same map with the contract-3 open-water layer (cells.json
 #         tile_water / tile_body), so is_deep_water measures depth below each
-#         water's own surface. The layers are COMMITTED: LAYERS_PATH holds
-#         every shipped map's pair (run-length text, packed from TG p3-rivers
-#         contract-3 dumps whose other keys equal the shipped files), grafted
-#         onto the shipped cells.json text here. TFA_DEEP_CELLS=<dir of
-#         contract-3 <id>_cells.json> uses those files instead (each only when
-#         every other key equals the shipped file's: the layer is the only
-#         difference). A map with no recorded layer (no open water) is
-#         reported, and its NEW verdicts are the fallback's; a map with no
-#         record at all is a SKIP (a map shipped after the fixture: re-pack it).
-#         Each record carries cells_md5, the md5 of the shipped cells.json text
-#         (CR dropped) it was checked against: a shipped map re-exported since
-#         FAILS until the fixture is re-packed. More than SKIP_ALLOWANCE skips,
-#         or every map skipped, fails the run (a fixture whose ids no longer
-#         match would otherwise pass with nothing compared). The packer is
+#         water's own surface. A map SHIPPING its layer: the shipped file as is
+#         (it must load as a layer); it needs no fixture record, and a record
+#         left for it is not used (its line says "shipped layer"). Every other
+#         map's layer is COMMITTED: LAYERS_PATH holds its pair (run-length
+#         text, packed from TG p3-rivers contract-3 dumps whose other keys
+#         equal the shipped files), grafted onto the shipped cells.json text
+#         here. TFA_DEEP_CELLS=<dir of contract-3 <id>_cells.json> uses those
+#         files instead, for every map (each only when every key but
+#         tile_water / tile_body equals the shipped file's: the layer is the
+#         only difference; and a map SHIPPING its layer FAILS unless the c3
+#         file carries that same layer, so a c3 file without it, or with
+#         another one, can never pass vacuously). A map
+#         with no recorded layer (no open water) is reported, and its NEW
+#         verdicts are the fallback's; a map with no record at all is a SKIP (a
+#         map shipped after the fixture: re-pack it). Each record carries
+#         cells_md5, the md5 of the shipped cells.json text (CR dropped) it was
+#         checked against: a shipped map re-exported since FAILS until the
+#         fixture is re-packed. More than SKIP_ALLOWANCE skips, or every map
+#         skipped, fails the run (a fixture whose ids no longer match would
+#         otherwise pass with nothing compared). The packer is
 #         tools/pack_c3_water_layers.py (PACK_CMD; --merge re-packs only the
-#         maps with a file in the dir, --check lists the stale records).
+#         maps with a file in the dir, --check lists the stale records; both
+#         skip a map shipping its own layer).
 # Floors, decks and the relief switch come from the shipped row through
 # MapLoader (images swapped for the icon: no art is loaded).
 #   godot --headless --path . res://tests/deep_water_verdict_diff.tscn
@@ -32,7 +47,11 @@ extends Node2D
 # SKIP_ALLOWANCE maps (never all of them) skipped.
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const LAYERS_PATH := "res://tests/fixtures/p3d_deep_water/c3_water_layers.json"
-const GRAFT_PATH := "user://deep_water_verdict_graft_cells.json"
+# temp files (user:// is shared by every worktree of the project, so each run
+# names its own by process id): the grafted NEW, and the stripped OLD of a map
+# shipping its layer
+var GRAFT_PATH := "user://deep_water_verdict_graft_cells_%d.json" % OS.get_process_id()
+var STRIP_PATH := "user://deep_water_verdict_strip_cells_%d.json" % OS.get_process_id()
 const SKIP_ALLOWANCE := 2   # maps shipped after the fixture was packed, before it is re-packed
 # how to re-pack LAYERS_PATH (run from the project folder; TG contract-3 files)
 const PACKER_PATH := "res://tools/pack_c3_water_layers.py"
@@ -79,7 +98,10 @@ func _ready() -> void:
 		if not only.is_empty() and not only.has(mid):
 			continue
 		await _diff_map(m, cdir)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(GRAFT_PATH))
+	for tmp_v in [GRAFT_PATH, STRIP_PATH]:
+		var tmp: String = tmp_v
+		if FileAccess.file_exists(tmp):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 	var skip_bad: bool = _skips > SKIP_ALLOWANCE or (_maps > 0 and _skips == _maps)
 	if skip_bad:
 		print("FAIL %d of %d maps skipped (allowance %d): re-pack %s: %s" % [_skips, _maps, SKIP_ALLOWANCE, LAYERS_PATH, PACK_CMD])
@@ -177,6 +199,37 @@ func _graft(shipped: String, rec: Dictionary) -> String:
 	return GRAFT_PATH
 
 
+# True when a parsed cells.json carries the contract-3 open-water layer. Either
+# key counts: a lone one is malformed, and its NEW load then fails the layer
+# check (has_layer true, no layer loaded).
+func _carries_layer(cells: Dictionary) -> bool:
+	return cells.has("tile_water") or cells.has("tile_body")
+
+
+# A parsed cells.json without tile_water / tile_body (only top-level keys go,
+# so a shallow copy suffices).
+func _without_layer(cells: Dictionary) -> Dictionary:
+	var out: Dictionary = cells.duplicate()
+	out.erase("tile_water")
+	out.erase("tile_body")
+	return out
+
+
+# The shipped cells.json (parsed) minus its water layer, written to STRIP_PATH
+# at full float precision and checked to re-read as exactly that: every other
+# key and value is the shipped one. "" when it does not.
+func _strip(cells: Dictionary) -> String:
+	var want := _without_layer(cells)
+	var w := FileAccess.open(STRIP_PATH, FileAccess.WRITE)
+	if w == null:
+		return ""
+	w.store_string(JSON.stringify(want, "", false, true))
+	w.close()
+	if _parse(STRIP_PATH) != want:
+		return ""
+	return STRIP_PATH
+
+
 func _free(ml: Node2D) -> void:
 	ml.queue_free()
 	structures_in_scene.clear()
@@ -188,12 +241,27 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 	var shipped := String(m["cell_graph"])
 	_maps += 1
 	var t0 := Time.get_ticks_msec()
-	var ml := _load(m, shipped)
+	# OLD has no water layer: a shipped one (contract 3) is stripped from a copy
+	var shipped_cells := _parse(ProjectSettings.globalize_path(shipped))
+	var shipped_layer := _carries_layer(shipped_cells)
+	var old_path := shipped
+	if shipped_layer:
+		old_path = _strip(shipped_cells)
+		if old_path == "":
+			_fails += 1
+			print("FAIL %s: the shipped cells.json without tile_water/tile_body did not write to %s intact" % [mid, STRIP_PATH])
+			return
+	var ml := _load(m, old_path)
+	var old_layer: bool = GridManager.has_water_layer()
 	var old := _verdicts(false)
 	var lit := _verdicts(true)
 	var relief: bool = GridManager.relief_los
 	var cols: int = GridManager.map_rect.size.x
 	await _free(ml)
+	if old_layer:
+		_fails += 1
+		print("FAIL %s: the OLD load (%s) has a water layer, so OLD is not the absolute rule" % [mid, old_path])
+		return
 	var old_n := old.count(1)
 	var lit_ok: bool = old == lit
 	if not lit_ok:
@@ -201,7 +269,13 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 	var note := ""
 	var c3 := ""
 	var has_layer := false
-	if cdir == "":
+	if cdir == "" and shipped_layer:
+		# NEW = the shipped file and its own layer: no fixture record needed
+		c3 = shipped
+		has_layer = true
+		note = " (shipped layer used: OLD = the shipped cells.json without it%s)" % [
+			"; its fixture record was not used" if _layers.has(mid) else ""]
+	elif cdir == "":
 		# the committed layer, grafted onto the shipped text
 		if not _layers.has(mid):
 			_skips += 1
@@ -230,12 +304,20 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 			print("FAIL %s: tiles %d relief %s deep(old) %d, literal-old %s | no c3 file in TFA_DEEP_CELLS" % [
 				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS"])
 			return
-		# the graft is valid only when the layer is the only difference
-		var a := _parse(ProjectSettings.globalize_path(shipped))
-		var b := _parse(c3)
-		has_layer = b.has("tile_water") and b.has("tile_body")
-		b.erase("tile_water")
-		b.erase("tile_body")
+		# the c3 file is valid only when the layer is the only difference (the
+		# shipped file's own layer, when it carries one, set aside too)
+		var a := _without_layer(shipped_cells)
+		var b_full := _parse(c3)
+		has_layer = b_full.has("tile_water") and b_full.has("tile_body")
+		if shipped_layer:
+			# the map ships its layer: the c3 file must carry exactly that one
+			if not has_layer or b_full.get("tile_water") != shipped_cells.get("tile_water") 					or b_full.get("tile_body") != shipped_cells.get("tile_body"):
+				_fails += 1
+				print("FAIL %s: the map ships its own water layer, and the contract-3 file %s (has a layer: %s) does not carry that same one"
+					% [mid, c3, str(has_layer)])
+				return
+			note = " (shipped layer: OLD = the shipped cells.json without it; the c3 file carries the same layer)"
+		var b := _without_layer(b_full)
 		if a.is_empty() or a != b:
 			_fails += 1
 			print("FAIL %s: the contract-3 cells.json differs from the shipped one outside tile_water/tile_body (keys %s vs %s)"
@@ -262,7 +344,7 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 	if n_diff > 0 or not lit_ok or has_layer != layer_used:
 		_fails += 1
 	if not has_layer:
-		note = " (the contract-3 file has no layer: no open water)"
+		note += " (the contract-3 file has no layer: no open water)"
 	print("%s %s: tiles %d relief %s | deep old %d new %d, %d differ%s | layer %s, %d open-water tiles%s | literal-old %s | %d ms" % [
 		"PASS" if n_diff == 0 and lit_ok and has_layer == layer_used else "FAIL", mid, nw.size(), str(relief),
 		old_n, nw.count(1), n_diff, (": " + ", ".join(diffs)) if n_diff > 0 else "",

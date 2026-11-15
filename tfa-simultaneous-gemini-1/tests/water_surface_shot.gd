@@ -17,7 +17,9 @@ extends Node
 #      median) -- they move, they are not gone;
 #   5. vram.mask-is-rgba8: loading the mask adds about 4 bytes a texel to
 #      Performance RENDER_TEXTURE_MEM_USED (measured after the ground's load;
-#      up to 10 % + 128 KiB allocator slack, so no second copy), and the
+#      up to 10 % + 128 KiB allocator slack, or Vulkan/NVIDIA's block-linear
+#      padding (width to 16 texels, height to 128 rows) + 2 % + 128 KiB, so
+#      no second copy), and the
 #      imported mask has no mipmaps;
 #      it reports that, the ground's, and the GPU time of the view with the
 #      layer on and off;
@@ -168,10 +170,20 @@ func _run() -> int:
 	# crop pads its rows and rounds up to 64 KiB blocks: tg_guild_hall's 100 x
 	# 1368 creek mask takes 640 KiB for 534 KiB of texels, hence the 128 KiB);
 	# a second copy or a wider format would add far more, and the imported
-	# image must carry no mipmaps (they would add a third)
+	# image must carry no mipmaps (they would add a third).
+	# Vulkan on NVIDIA allocates block-linear: the width padded to 16 texels
+	# (64 B) and the height to 128 rows. Measured on the RTX 4080 Laptop
+	# (P3-T, 2026-11-15) every Perrow mask took exactly that, e.g. lower's
+	# 3680 x 572 -> 3680 x 640 x 4 = 9420800 B (+11.9 %) and ossuary's
+	# 2648 x 548 -> 2656 x 640 x 4 (+17.1 %), so a mask just past a 128-row
+	# step pays up to ~22 % on its own. The bound is the larger of the two
+	# allocators' (a second copy still adds ~100 %).
+	var tiled: float = float(ceili(mask_tex.get_width() / 16.0) * 16 * ceili(mask_tex.get_height() / 128.0) * 128 * 4)
+	var vram_cap: float = maxf(rgba8 * 1.10, tiled * 1.02) + 131072.0
 	var mask_mips := mask_tex.get_image().has_mipmaps()
-	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= rgba8 * 1.10 + 131072.0 and not mask_mips,
-		"%.0f B for %s (RGBA8 = %.0f B), mipmaps %s" % [mask_b, str(mask_tex.get_size()), rgba8, str(mask_mips)])
+	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= vram_cap and not mask_mips,
+		"%.0f B for %s (RGBA8 = %.0f B, block-linear tiled = %.0f B, cap %.0f B), mipmaps %s"
+		% [mask_b, str(mask_tex.get_size()), rgba8, tiled, vram_cap, str(mask_mips)])
 
 	sv = SubViewport.new()
 	sv.size = SIZE
