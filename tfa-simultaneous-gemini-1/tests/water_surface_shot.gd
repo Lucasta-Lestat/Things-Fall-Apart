@@ -17,9 +17,20 @@ extends Node
 #      median) -- they move, they are not gone;
 #   5. vram.mask-is-rgba8: loading the mask adds about 4 bytes a texel to
 #      Performance RENDER_TEXTURE_MEM_USED (measured after the ground's load;
-#      up to 10 % allocator slack, so no mipmaps and no second copy);
+#      up to 10 % + 128 KiB allocator slack, so no second copy), and the
+#      imported mask has no mipmaps;
 #      it reports that, the ground's, and the GPU time of the view with the
-#      layer on and off.
+#      layer on and off;
+#   6. the layer's GPU cost, the number docs/export_contract.md records (P3-A
+#      "GPU"): GPU_VIEWS views of GPU_VIEW px (1080p) on the window with the
+#      most open water, all drawing the ground with the map's own water
+#      material, measured in alternating blocks with the layer on and off
+#      (median of GPU_BLOCKS blocks of the per-frame GPU time of one view;
+#      several views keep the GPU clocked up as a game frame does, so the
+#      number is stable). Printed as "GPU 1080p view", not judged: the budget
+#      is the reader's (and tfa/graphics/animated_water switches it off).
+# The mask covers the row's water_rect of the ground (TG crops it to the
+# water's bounding box; no key = the whole ground): every lookup maps there.
 # Needs a row with images.water whose files are imported in this project (a
 # contract-3 TG export; under D3D12 never commit its art). The row comes from
 # TFA_WATER_ROWS (a Maps.json path, may lie outside the project; default
@@ -39,6 +50,9 @@ const SETTLE_FRAMES := 8
 const CALM_TOL := 0.02          # luma
 const EDGE_PX := 16.0           # the shore band of water.shore-tone-kept, screen px
 const GPU_FRAMES := 30
+const GPU_VIEW := Vector2i(1920, 1080)
+const GPU_VIEWS := 6
+const GPU_BLOCKS := 8
 
 # --- Game stand-in state (read by MapLoader / Structure / FluidManager) ---
 var structures_in_scene: Array = []
@@ -51,6 +65,7 @@ var current_map_id := ""
 var map_loader: Node2D = null
 
 var sv: SubViewport
+var _wrect := Rect2()   # the ground rect the mask covers (the row's water_rect)
 var _fails := 0
 var _checks := 0
 var _shot_dir := ""
@@ -130,10 +145,14 @@ func _run() -> int:
 	print("water_surface_shot: VRAM mask %s %.2f MiB (RGBA8 %.2f MiB); ground %s RGBA8 %.2f MiB (its load: %+.2f MiB); the mask adds %.1f %%"
 		% [str(mask_tex.get_size()), mask_b / 1048576.0, rgba8 / 1048576.0, str(ground_tex.get_size()),
 		g_rgba8 / 1048576.0, (m1 - m0) / 1048576.0, 100.0 * mask_b / g_rgba8])
-	# RGBA8 plus the allocator's slack (D3D12: +6 %); mipmaps or a second copy
-	# would add a third or more
-	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= rgba8 * 1.10,
-		"%.0f B for %s (RGBA8 = %.0f B)" % [mask_b, str(mask_tex.get_size()), rgba8])
+	# RGBA8 plus the allocator's slack (D3D12: +6 % on the big masks; a narrow
+	# crop pads its rows and rounds up to 64 KiB blocks: tg_guild_hall's 100 x
+	# 1368 creek mask takes 640 KiB for 534 KiB of texels, hence the 128 KiB);
+	# a second copy or a wider format would add far more, and the imported
+	# image must carry no mipmaps (they would add a third)
+	var mask_mips := mask_tex.get_image().has_mipmaps()
+	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= rgba8 * 1.10 + 131072.0 and not mask_mips,
+		"%.0f B for %s (RGBA8 = %.0f B), mipmaps %s" % [mask_b, str(mask_tex.get_size()), rgba8, str(mask_mips)])
 
 	sv = SubViewport.new()
 	sv.size = SIZE
@@ -163,6 +182,9 @@ func _run() -> int:
 	if mask_img.is_compressed():
 		mask_img.decompress()
 	var gsize := Vector2(gs.texture.get_size())
+	var wrv: Variant = gs.get_meta(CellFluidFX.WATER_RECT_META, null)
+	_wrect = Rect2(wrv as Rect2i) if wrv is Rect2i else Rect2(Vector2.ZERO, gsize)
+	print("water_surface_shot: mask %s on the ground rect %s of %s" % [str(mask_img.get_size()), str(_wrect), str(gsize)])
 	var cam := Camera2D.new()
 	cam.position = _camera_pos(mask_img, gsize)
 	var zm := float(OS.get_environment("TFA_CAM_ZOOM")) if OS.get_environment("TFA_CAM_ZOOM") != "" else 1.0
@@ -198,20 +220,23 @@ func _run() -> int:
 	var l_on := PackedFloat32Array()
 	var e_off := PackedFloat32Array()   # open water within EDGE_PX of the shore
 	var e_on := PackedFloat32Array()
-	var reach := EDGE_PX / zm / gsize.x * msz.x   # EDGE_PX screen px in mask texels
+	var reach := EDGE_PX / zm / _wrect.size.x * msz.x   # EDGE_PX screen px in mask texels
 	var diff_img := Image.create(SIZE.x, SIZE.y, false, Image.FORMAT_RGB8)
 	for y in range(0, SIZE.y):
 		for x in range(0, SIZE.x):
 			var wp := world0 + (Vector2(x, y) + Vector2(0.5, 0.5)) / zm
-			var mt := wp / gsize * msz - Vector2(0.5, 0.5)
+			var mt := (wp - _wrect.position) / _wrect.size * msz - Vector2(0.5, 0.5)
 			var cmin := 1.0
 			var cmax := 0.0
-			for oy: int in [0, 1]:
-				for ox: int in [0, 1]:
-					var t := Vector2i(clampi(int(floor(mt.x)) + ox, 0, int(msz.x) - 1), clampi(int(floor(mt.y)) + oy, 0, int(msz.y) - 1))
-					var c: float = mask_img.get_pixelv(t).r
-					cmin = minf(cmin, c)
-					cmax = maxf(cmax, c)
+			if not _wrect.has_point(wp):
+				cmin = 0.0   # past the crop: land (the mask holds zero texels around its water)
+			else:
+				for oy: int in [0, 1]:
+					for ox: int in [0, 1]:
+						var t := Vector2i(clampi(int(floor(mt.x)) + ox, 0, int(msz.x) - 1), clampi(int(floor(mt.y)) + oy, 0, int(msz.y) - 1))
+						var c: float = mask_img.get_pixelv(t).r
+						cmin = minf(cmin, c)
+						cmax = maxf(cmax, c)
 			var a := off.get_pixel(x, y)
 			var b := on1.get_pixel(x, y)
 			var b2 := on2.get_pixel(x, y)
@@ -262,13 +287,103 @@ func _run() -> int:
 	_report("water.shore-tone-kept", e_off.size() < 50 or (absf(eon_p[1] - eoff_p[1]) <= CALM_TOL and absf(eon_p[0] - eoff_p[0]) <= CALM_TOL),
 		"p10 %.3f / median %.3f on vs %.3f / %.3f off" % [eon_p[0], eon_p[1], eoff_p[0], eoff_p[1]])
 	_report("water.glints-live", on_p[3] - on_p[1] >= 0.10, "p99 %.3f over median %.3f" % [on_p[3], on_p[1]])
+	await _gpu_1080p(gs, mat, mask_img, gsize)
 	return 0
 
 
-func _camera_pos(mask_img: Image, gsize: Vector2) -> Vector2:
+# 6. the layer's GPU cost on a 1080p view of the most open water (see the header)
+func _gpu_1080p(gs: Sprite2D, mat: ShaderMaterial, mask_img: Image, gsize: Vector2) -> void:
+	var centre := _most_water(mask_img, gsize, Vector2(GPU_VIEW))
+	var share := _open_share(mask_img, gsize, Rect2(centre - Vector2(GPU_VIEW) * 0.5, Vector2(GPU_VIEW)))
+	var vps: Array = []
+	for _k in GPU_VIEWS:
+		var vp := SubViewport.new()
+		vp.size = GPU_VIEW
+		vp.disable_3d = true
+		vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		add_child(vp)
+		vp.canvas_transform = Transform2D(0.0, Vector2(GPU_VIEW) * 0.5 - centre)
+		var spr := Sprite2D.new()
+		spr.texture = gs.texture
+		spr.centered = false
+		spr.texture_filter = gs.texture_filter
+		spr.material = mat
+		vp.add_child(spr)
+		vps.append(vp)
+	var rid: RID = (vps[0] as SubViewport).get_viewport_rid()
+	RenderingServer.viewport_set_measure_render_time(rid, true)
+	var ons: Array = []
+	var offs: Array = []
+	for _b in GPU_BLOCKS:
+		for on: float in [1.0, 0.0]:
+			mat.set_shader_parameter("water_mask_on", on)
+			for _i in 5:
+				await RenderingServer.frame_post_draw
+			var vals: Array = []
+			for _i in GPU_FRAMES:
+				await RenderingServer.frame_post_draw
+				vals.append(RenderingServer.viewport_get_measured_render_time_gpu(rid))
+			vals.sort()
+			(ons if on > 0.5 else offs).append(float(vals[int(vals.size() / 2.0)]))
+	RenderingServer.viewport_set_measure_render_time(rid, false)
+	mat.set_shader_parameter("water_mask_on", 1.0)
+	for vp in vps:
+		(vp as SubViewport).queue_free()
+	ons.sort()
+	offs.sort()
+	var on_ms: float = ons[int(ons.size() / 2.0)]
+	var off_ms: float = offs[int(offs.size() / 2.0)]
+	print("water_surface_shot: GPU 1080p view (%d x %dx%d at %s, %.0f %% open water = %.2f Mpx): layer on %.3f ms, off %.3f ms, the layer %.3f ms (%.3f ms per Mpx of open water; blocks on %s)"
+		% [GPU_VIEWS, GPU_VIEW.x, GPU_VIEW.y, str(centre.round()), share * 100.0, share * GPU_VIEW.x * GPU_VIEW.y / 1e6,
+		on_ms, off_ms, on_ms - off_ms, (on_ms - off_ms) / maxf(1e-6, share * GPU_VIEW.x * GPU_VIEW.y / 1e6), str(ons)])
+
+
+# the open-water (c >= 0.99) share of a ground rect, sampled every `step` ground px
+func _open_share(mask_img: Image, gsize: Vector2, r: Rect2, step: float = 8.0) -> float:
+	var msz := Vector2(mask_img.get_size())
+	var n := 0
+	var w := 0
+	var y := r.position.y + step * 0.5
+	while y < r.end.y:
+		var x := r.position.x + step * 0.5
+		while x < r.end.x:
+			n += 1
+			var wp := Vector2(x, y)
+			if _wrect.has_point(wp) and x >= 0.0 and y >= 0.0 and x < gsize.x and y < gsize.y:
+				var t := Vector2i(((wp - _wrect.position) / _wrect.size * msz).floor())
+				if mask_img.get_pixelv(t.clamp(Vector2i.ZERO, Vector2i(msz) - Vector2i.ONE)).r >= 0.99:
+					w += 1
+			x += step
+		y += step
+	return float(w) / float(maxi(1, n))
+
+
+# the view centre (ground px) whose view-sized window holds the most open water,
+# kept inside the ground; TFA_GPU_X / TFA_GPU_Y override it
+func _most_water(mask_img: Image, gsize: Vector2, view: Vector2) -> Vector2:
+	if OS.get_environment("TFA_GPU_X") != "" and OS.get_environment("TFA_GPU_Y") != "":
+		return Vector2(float(OS.get_environment("TFA_GPU_X")), float(OS.get_environment("TFA_GPU_Y")))
+	var half := (view * 0.5).min(gsize * 0.5)
+	var best := gsize * 0.5
+	var best_s := -1.0
+	var step := 256.0
+	var y := half.y
+	while y <= gsize.y - half.y + 0.5:
+		var x := half.x
+		while x <= gsize.x - half.x + 0.5:
+			var sh := _open_share(mask_img, gsize, Rect2(Vector2(x, y) - view * 0.5, view), 32.0)
+			if sh > best_s:
+				best_s = sh
+				best = Vector2(x, y)
+			x += step
+		y += step
+	return best
+
+
+func _camera_pos(mask_img: Image, _gsize: Vector2) -> Vector2:
 	if OS.get_environment("TFA_CAM_X") != "" and OS.get_environment("TFA_CAM_Y") != "":
 		return Vector2(float(OS.get_environment("TFA_CAM_X")), float(OS.get_environment("TFA_CAM_Y")))
-	# the shore texel (0.3 < c < 0.7) nearest the map centre
+	# the shore texel (0.3 < c < 0.7) nearest the mask's centre
 	var msz := Vector2(mask_img.get_size())
 	var centre := msz * 0.5
 	var best := centre
@@ -281,7 +396,7 @@ func _camera_pos(mask_img: Image, gsize: Vector2) -> Vector2:
 				if d < bd:
 					bd = d
 					best = Vector2(x, y)
-	return (best + Vector2(0.5, 0.5)) / msz * gsize
+	return _wrect.position + (best + Vector2(0.5, 0.5)) / msz * _wrect.size
 
 
 func _shot(tag: String) -> Image:

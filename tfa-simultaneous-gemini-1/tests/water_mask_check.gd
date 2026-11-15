@@ -4,21 +4,29 @@ extends Node2D
 # images.water, a mask at 1/k of the ground's size (TG writes k = 2):
 #   1. MapLoader.water_mask_fits: a whole 1/k on both axes, k = 1..8, the same
 #      k; anything else (another k per axis, a remainder, k = 9, empty) is not;
+#      MapLoader.water_rect_of: the row's water_rect (TG crops the mask to the
+#      water's bounding box) as a Rect2i inside the ground; no key = the whole
+#      ground; a malformed or outlying rect = empty (the mask is ignored);
 #   2. MapLoader.attach_water_mask puts a fitting mask on the ground sprite's
-#      meta (CellFluidFX.WATER_MASK_META) and refuses a misfit, a null mask or
-#      a ground without a texture (no meta then);
+#      meta (CellFluidFX.WATER_MASK_META, its rect under WATER_RECT_META) and
+#      refuses a misfit, a null mask, a rect off the ground or a ground without
+#      a texture (no meta then);
 #   3. generate_structured_map: a row with images.water exposes
 #      structured_water_mask and the meta; a row without it (every contract-1/2
-#      row) has neither; a missing file or a misfit mask warns and reads none;
+#      row) has neither; a missing file, a misfit mask or a bad water_rect warns
+#      and reads none; generate_map (a warp to a legacy or world map) clears
+#      structured_water_mask, so the last mask is not kept resident;
 #   4. CellFluidFX.setup binds the meta's mask to water_surface.gdshader
-#      (water_mask + water_mask_on 1) and its calm frame (water_calm: a
-#      SubViewport at half the mask's size drawing the ground once through
-#      water_calm.gdshader); without a mask it sets none of them, so the
-#      shader's open-water branch stays off (water_mask_on defaults to 0) and
-#      the material carries exactly the pre-P3-A parameters;
+#      (water_mask, water_rect in UV + water_mask_on 1) and its calm frame
+#      (water_calm: a SubViewport at half the mask's size drawing the mask's
+#      rect of the ground once through water_calm.gdshader); without a mask,
+#      or with the tfa/graphics/animated_water setting off, it sets none of
+#      them, so the shader's open-water branch stays off (water_mask_on
+#      defaults to 0) and the material carries exactly the pre-P3-A parameters;
 #   5. end to end: MapLoader -> FluidManager.setup_cell_graph -> CellFluidFX,
 #      the way Game.load_map wires a structured map;
-#   6. the shader declares the pair with the branch off by default.
+#   6. the shader declares the pair with the branch off by default, the c <
+#      0.25 gate, and the calm frame's shore rank.
 # The masks are ImageTextures saved to user:// (no art in the project); the
 # ground is res://icon.svg (128 x 128). What the shader draws is
 # tests/water_surface_shot.tscn's (windowed; needs a contract-3 export).
@@ -60,9 +68,13 @@ func _ready() -> void:
 	_save_mask(MASK_BAD, 50, 50)
 	await get_tree().process_frame
 	_case_fits()
+	_case_rect()
 	_case_attach()
 	_case_loader()
+	_case_stale_after_legacy()
 	_case_fx_bind()
+	_case_fx_rect()
+	_case_off_switch()
 	await _case_end_to_end()
 	_case_shader_text()
 	print("WATER MASK CHECK DONE: %d checks, %d FAIL" % [_checks, _fails])
@@ -79,11 +91,14 @@ func _tex(w: int, h: int) -> ImageTexture:
 	return ImageTexture.create_from_image(Image.create(w, h, false, Image.FORMAT_RGBA8))
 
 
-func _row(images_extra: Dictionary) -> Dictionary:
+func _row(images_extra: Dictionary, rect: Variant = null) -> Dictionary:
 	var imgs := {"map": GROUND}
 	imgs.merge(images_extra, true)
-	return {"id": "water_mask_check", "format": "structured", "images": imgs, "export_contract": 3.0,
+	var row := {"id": "water_mask_check", "format": "structured", "images": imgs, "export_contract": 3.0,
 		"tile_size": 64, "world_size": [128, 128], "floors": [], "structures": []}
+	if rect != null:
+		row["water_rect"] = rect
+	return row
 
 
 func _loader() -> Node2D:
@@ -104,11 +119,38 @@ func _case_fits() -> void:
 	_report("fits.not-empty", not MAP_LOADER.water_mask_fits(Vector2i(0, 0), Vector2i(128, 128)))
 
 
+func _case_rect() -> void:
+	var gs := Vector2i(128, 128)
+	_report("rect.absent-is-whole", MAP_LOADER.water_rect_of(null, gs) == Rect2i(0, 0, 128, 128))
+	_report("rect.json-floats", MAP_LOADER.water_rect_of([16.0, 32.0, 64.0, 48.0], gs) == Rect2i(16, 32, 64, 48))
+	_report("rect.ints", MAP_LOADER.water_rect_of([0, 0, 128, 128], gs) == Rect2i(0, 0, 128, 128))
+	for bad: Variant in [[16.5, 0.0, 64.0, 64.0], [0.0, 0.0, 64.0], [0.0, 0.0, 0.0, 64.0], [-8.0, 0.0, 64.0, 64.0],
+			[96.0, 0.0, 64.0, 64.0], [0.0, 0.0, 64.0, 136.0], "0,0,64,64", {"x": 0}, [0.0, 0.0, "64", 64.0]]:
+		_report("rect.bad %s" % str(bad), not MAP_LOADER.water_rect_of(bad, gs).has_area())
+	# a cropped mask fits its rect, not the ground
+	_report("fits.k2-rect", MAP_LOADER.water_mask_fits(Vector2i(32, 24), Vector2i(64, 48)))
+
+
 func _case_attach() -> void:
 	var g := Sprite2D.new()
 	g.texture = _tex(128, 128)
 	var m := _tex(64, 64)
-	_report("attach.fit", MAP_LOADER.attach_water_mask(g, m) and g.get_meta(CellFluidFX.WATER_MASK_META, null) == m)
+	_report("attach.fit", MAP_LOADER.attach_water_mask(g, m) and g.get_meta(CellFluidFX.WATER_MASK_META, null) == m
+		and g.get_meta(CellFluidFX.WATER_RECT_META, null) == Rect2i(0, 0, 128, 128))
+	var gr := Sprite2D.new()
+	gr.texture = _tex(128, 128)
+	var mc := _tex(32, 24)
+	_report("attach.cropped", MAP_LOADER.attach_water_mask(gr, mc, Rect2i(16, 32, 64, 48))
+		and gr.get_meta(CellFluidFX.WATER_MASK_META, null) == mc
+		and gr.get_meta(CellFluidFX.WATER_RECT_META, null) == Rect2i(16, 32, 64, 48))
+	var gr2 := Sprite2D.new()
+	gr2.texture = _tex(128, 128)
+	_report("attach.cropped-misfit", not MAP_LOADER.attach_water_mask(gr2, mc, Rect2i(16, 32, 64, 64))
+		and not gr2.has_meta(CellFluidFX.WATER_MASK_META) and not gr2.has_meta(CellFluidFX.WATER_RECT_META))
+	_report("attach.rect-off-ground", not MAP_LOADER.attach_water_mask(gr2, mc, Rect2i(96, 32, 64, 48))
+		and not gr2.has_meta(CellFluidFX.WATER_MASK_META))
+	gr.free()
+	gr2.free()
 	var g2 := Sprite2D.new()
 	g2.texture = _tex(128, 128)
 	_report("attach.misfit", not MAP_LOADER.attach_water_mask(g2, _tex(50, 50)) and not g2.has_meta(CellFluidFX.WATER_MASK_META))
@@ -146,6 +188,38 @@ func _case_loader() -> void:
 	_report("loader.misfit", gs4 != null and ml4.get("structured_water_mask") == null
 		and not gs4.has_meta(CellFluidFX.WATER_MASK_META))
 	ml4.queue_free()
+	# a 64 x 64 mask on the cropped rect [0, 0, 128, 128] (k = 2): fits
+	var ml5 := _loader()
+	ml5.generate_structured_map(_row({"water": MASK_OK}, [0.0, 0.0, 128.0, 128.0]))
+	var gs5: Sprite2D = ml5.get("structured_ground")
+	_report("loader.with-rect", gs5 != null and ml5.get("structured_water_mask") != null
+		and gs5.get_meta(CellFluidFX.WATER_RECT_META, null) == Rect2i(0, 0, 128, 128))
+	ml5.queue_free()
+	# the same mask on a rect it does not span at a whole 1/k, and on a malformed rect
+	for bad: Variant in [[0.0, 0.0, 96.0, 128.0], [0.0, 0.0, 128.0]]:
+		var ml6 := _loader()
+		ml6.generate_structured_map(_row({"water": MASK_OK}, bad))
+		var gs6: Sprite2D = ml6.get("structured_ground")
+		_report("loader.bad-rect %s" % str(bad), gs6 != null and ml6.get("structured_water_mask") == null
+			and not gs6.has_meta(CellFluidFX.WATER_MASK_META))
+		ml6.queue_free()
+
+
+# A warp from a watery structured map to a legacy or world map goes through
+# generate_map: the loader (Game keeps one) must drop the last map's mask, or
+# its texture stays resident until the next structured load. World mode with a
+# missing source image returns early (an error line, no tiles), the cheapest
+# generate_map there is.
+func _case_stale_after_legacy() -> void:
+	var ml := _loader()
+	ml.generate_structured_map(_row({"water": MASK_OK}))
+	var had: bool = ml.get("structured_water_mask") != null
+	ml.set("world_map_mode", true)
+	ml.set("map_image_path", "res://tests/water_mask_check_no_such_world.png")
+	ml.call("generate_map")
+	_report("loader.cleared-by-generate_map", had and ml.get("structured_water_mask") == null,
+		"had a mask: %s, after generate_map: %s" % [str(had), str(ml.get("structured_water_mask"))])
+	ml.queue_free()
 
 
 func _graph() -> CellGraph:
@@ -184,8 +258,11 @@ func _case_fx_bind() -> void:
 	var spr: Sprite2D = cvp.get_child(0) as Sprite2D if cvp != null and cvp.get_child_count() > 0 else null
 	_report("fx.calm-frame", cvp != null and ctex is ViewportTexture and cvp.size == Vector2i(32, 32)
 		and cvp.render_target_update_mode == SubViewport.UPDATE_ONCE and spr != null and spr.texture == g.texture
+		and spr.region_enabled and spr.region_rect == Rect2(0, 0, 128, 128)
 		and spr.scale == Vector2(0.25, 0.25) and (spr.material as ShaderMaterial).shader == CellFluidFX.CALM_SHADER
-		and (spr.material as ShaderMaterial).get_shader_parameter("water_mask") == m,
+		and (spr.material as ShaderMaterial).get_shader_parameter("water_mask") == m
+		and (spr.material as ShaderMaterial).get_shader_parameter("water_rect") == Vector4(0.0, 0.0, 1.0, 1.0)
+		and mat.get_shader_parameter("water_rect") == Vector4(0.0, 0.0, 1.0, 1.0),
 		"%s %s" % [str(cvp.size) if cvp != null else "no viewport", str(ctex)])
 	fx.queue_free()
 	g.queue_free()
@@ -198,15 +275,74 @@ func _case_fx_bind() -> void:
 		and mat2.get_shader_parameter("water_mask") == null and mat2.get_shader_parameter("water_calm") == null
 		and mat2.get_shader_parameter("water_mask_on") == null)
 	# exactly the parameters CellFluidFX set before P3-A
-	var want := ["flow_mask", "fluid_mask", "fluid_on", "wave_scale"]
-	var have: Array = []
-	for pn in ["fluid_mask", "flow_mask", "fluid_on", "wave_scale", "water_mask", "water_calm", "water_mask_on"]:
-		if mat2 != null and mat2.get_shader_parameter(pn) != null:
-			have.append(pn)
-	have.sort()
-	_report("fx.pre-p3a-parameters", have == want, str(have))
+	_report("fx.pre-p3a-parameters", _set_params(mat2) == PRE_P3A, str(_set_params(mat2)))
 	fx2.queue_free()
 	g2.queue_free()
+
+
+const PRE_P3A := ["flow_mask", "fluid_mask", "fluid_on", "wave_scale"]
+
+func _set_params(mat: ShaderMaterial) -> Array:
+	var have: Array = []
+	for pn in ["fluid_mask", "flow_mask", "fluid_on", "wave_scale", "water_mask", "water_calm", "water_rect", "water_mask_on"]:
+		if mat != null and mat.get_shader_parameter(pn) != null:
+			have.append(pn)
+	have.sort()
+	return have
+
+
+# a mask cropped to the ground rect [16, 32, 64, 48] (k = 2: 32 x 24): the water
+# shader maps the ground UV into that rect, the calm frame draws only that
+# region of the ground (16 x 12 texels) and maps its taps the same way
+func _case_fx_rect() -> void:
+	var graph := _graph()
+	var g := Sprite2D.new()
+	g.texture = _tex(128, 128)
+	add_child(g)
+	var m := _tex(32, 24)
+	MAP_LOADER.attach_water_mask(g, m, Rect2i(16, 32, 64, 48))
+	var fx := _fx(g, graph)
+	var mat := g.material as ShaderMaterial
+	var want_uv := Vector4(0.125, 0.25, 0.5, 0.375)
+	var cvp: SubViewport = fx.get("_calm_vp")
+	var spr: Sprite2D = cvp.get_child(0) as Sprite2D if cvp != null and cvp.get_child_count() > 0 else null
+	_report("fx.rect-bound", mat != null and float(mat.get_shader_parameter("water_mask_on")) == 1.0
+		and mat.get_shader_parameter("water_rect") == want_uv, str(mat.get_shader_parameter("water_rect") if mat != null else null))
+	_report("fx.rect-calm", cvp != null and cvp.size == Vector2i(16, 12) and spr != null and spr.region_enabled
+		and spr.region_rect == Rect2(16, 32, 64, 48) and spr.scale == Vector2(0.25, 0.25)
+		and (spr.material as ShaderMaterial).get_shader_parameter("water_rect") == want_uv,
+		"%s %s %s" % [str(cvp.size) if cvp != null else "-", str(spr.region_rect) if spr != null else "-", str(spr.scale) if spr != null else "-"])
+	fx.queue_free()
+	g.queue_free()
+
+
+# tfa/graphics/animated_water off: a map that ships a mask shows exactly its
+# painted frame (the pre-P3-A material, no calm frame); on again: bound
+func _case_off_switch() -> void:
+	var graph := _graph()
+	var had: bool = ProjectSettings.has_setting(CellFluidFX.ANIMATED_WATER_SETTING)
+	var old: Variant = ProjectSettings.get_setting(CellFluidFX.ANIMATED_WATER_SETTING, null)
+	_report("off.default-on", not had and CellFluidFX.animated_water_on(), "setting present: %s" % str(had))
+	ProjectSettings.set_setting(CellFluidFX.ANIMATED_WATER_SETTING, false)
+	var g := Sprite2D.new()
+	g.texture = _tex(128, 128)
+	add_child(g)
+	MAP_LOADER.attach_water_mask(g, _tex(64, 64))
+	var fx := _fx(g, graph)
+	var mat := g.material as ShaderMaterial
+	_report("off.painted-frame", mat != null and fx.water_mask == null and fx.get("_calm_vp") == null
+		and _set_params(mat) == PRE_P3A, str(_set_params(mat)))
+	fx.queue_free()
+	ProjectSettings.set_setting(CellFluidFX.ANIMATED_WATER_SETTING, true)
+	var fx2 := _fx(g, graph)
+	var mat2 := g.material as ShaderMaterial
+	_report("off.on-again", mat2 != null and fx2.water_mask != null and float(mat2.get_shader_parameter("water_mask_on")) == 1.0)
+	fx2.queue_free()
+	g.queue_free()
+	if had:
+		ProjectSettings.set_setting(CellFluidFX.ANIMATED_WATER_SETTING, old)
+	else:
+		ProjectSettings.clear(CellFluidFX.ANIMATED_WATER_SETTING)
 
 
 func _case_end_to_end() -> void:
@@ -241,8 +377,19 @@ func _case_shader_text() -> void:
 	var code: String = (load("res://shaders/water_surface.gdshader") as Shader).code
 	_report("shader.uniforms", code.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;")
 		and code.contains("uniform float water_mask_on = 0.0;"))
-	_report("shader.gated", code.contains("if (water_mask_on > 0.5) {")
-		and code.contains("uniform sampler2D water_calm : filter_linear, repeat_disable;"))
+	_report("shader.gated", code.contains("if (water_mask_on > 0.5 && wuv.x >= 0.0")
+		and code.contains("uniform sampler2D water_calm : filter_linear, repeat_disable;")
+		and code.contains("uniform vec4 water_rect = vec4(0.0, 0.0, 1.0, 1.0);"))
+	# nothing is computed where the blend weight is 0 (c <= 0.25): the same
+	# pixels as computing it and mixing by 0
+	_report("shader.weight-gate", code.contains("float ww = smoothstep(0.25, 0.75, wc);")
+		and code.contains("if (ww > 0.0) {") and code.contains("col = mix(col, live, ww);"))
+	# the open water's surface is waterSurf's six warpfields in one loop; the
+	# dynamic fluids keep waterSurf itself
+	_report("shader.surface", code.contains("float oh = waterSurfOW(Wn, normalize(odir + vec2(1e-4)), TIME, ogr);")
+		and code.contains("float hA = waterSurf(Wn - offA, vec2(0.22, -0.14), TIME, gradA);"))
 	var calm: String = (load("res://shaders/water_calm.gdshader") as Shader).code
 	_report("shader.calm", calm.contains("render_mode blend_disabled;") and calm.contains("const int OW_RANK = 5;")
-		and calm.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;"))
+		and calm.contains("int kk = min(OW_RANK, (nv - 1) / 2);")
+		and calm.contains("uniform sampler2D water_mask : filter_linear, repeat_disable;")
+		and calm.contains("uniform vec4 water_rect = vec4(0.0, 0.0, 1.0, 1.0);"))
