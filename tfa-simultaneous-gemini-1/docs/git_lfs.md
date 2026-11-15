@@ -123,7 +123,7 @@ Checked on a throwaway repo on 2026-11-01. Branches that don't add, change or de
 GitHub meters Git LFS **storage** and **bandwidth** per account. **Every pushed version of every LFS file is kept**: deleting a branch or a commit doesn't free the storage, and removing pushed LFS objects is not an ordinary git operation on GitHub.
 
 - The first push of `8889d695` uploads the whole set: about 435-500 MB (439 MB today).
-- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: about 215 MB of new versions today (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images (P3-T's water and canopy art). The open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only) are small: 0.15 MB for tg_hillside_harbor and 0.05 MB for tg_hillside_ossuary in the contract-3 test exports of 2026-11-14. A legacy art round adds its own share.
+- Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: about 215 MB of new versions today (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images (P3-T's water and canopy art). The open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only, cropped to its water) are small: 0.03-0.15 MB each in the contract-3 test exports of 2026-11-14 (harbor 0.15, middle 0.06, lower 0.05, upper 0.05, guild_hall 0.05, ossuary 0.03), about 0.4 MB a train. A legacy art round adds its own share.
 - Every fresh clone, and every `git lfs pull` of new art, counts against the bandwidth.
 
 Before pushing, check the account's current LFS allowance (GitHub Settings, Billing, Git LFS data). Then budget data packs, or a lower train cadence.
