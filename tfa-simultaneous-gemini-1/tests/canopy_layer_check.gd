@@ -21,10 +21,13 @@
 #      crown's art (or its body's edge: BODY_PAD) with the party rings, the
 #      cursor over one with the cursor rings, and over the REVEAL_GROUP's
 #      shapes near a crown and in view (a stub; a real AimLine with its
-#      landing reticle; a real PathDrawer's route, dash leash and AoE end; a
+#      landing reticle; a real PathDrawer's route, dash leash and AoE end, a
+#      node left on a plan with no route, a facing arrow being drawn; a
 #      real CellFireFX driven through setup() by a stub sim, whose cluster
 #      light lights the crowns), a straight polyline as one capsule; the
-#      view is the viewport's (its canvas transform); the ordinary lights
+#      view is the viewport's (its canvas transform), a shape whose feather
+#      reaches into it from just outside kept; the shader's arrays and loop
+#      hold exactly MAX_FADES shapes; the ordinary lights
 #      (make_light, glow marks, VFXEffectNode, lightning) light the crowns;
 #      mirrors the tree's hit flash / damage tint; drops a crown and its disc
 #      on crown_changed (kill_crown, and a felled tree through
@@ -52,9 +55,14 @@
 #   G. The fade budget (a 12-crown grove): three planned routes through four
 #      crowns each, with dash leashes, keep every crown crossing faded, in
 #      few capsules; with the budget overrun the primary selection's route
-#      (then the rest of the selection's) is served first; reveal_runs; the
-#      coarse grid answers any_crown_within and long near_art queries as a
-#      scan of every crown would.
+#      (then the rest of the selection's, then a party member's before an
+#      NPC's) is served first; reveal_runs (a straight line one run, its last
+#      point kept, every kept point within REVEAL_TOL of its run's axis on
+#      part G's routes, an arc, a hairpin and random hand-drawn weaves), its
+#      runs reused by polyline content (an edit PathDrawer's smooth key would
+#      miss is seen; only this frame's polylines held); the coarse grid
+#      answers any_crown_within and long near_art queries as a scan of every
+#      crown would.
 # Run:  godot --headless --path . res://tests/canopy_layer_check.tscn
 # Judge by the PASS/FAIL lines and "CANOPY LAYER DONE failures=0".
 extends Node2D
@@ -291,6 +299,46 @@ func _uncovered(layer: CanopyLayer, route: PackedVector2Array) -> Array:
 	return out
 
 
+# The farthest any kept point (CanopyLayer.reveal_kept) of `pts` lies from
+# its run's axis (CanopyLayer.reveal_runs); -1 when the runs are not the kept
+# points' own, in order, first and last included.
+func _runs_worst(pts: PackedVector2Array) -> float:
+	var kept := CanopyLayer.reveal_kept(pts)
+	var runs := CanopyLayer.reveal_runs(pts)
+	if kept.is_empty() or runs.is_empty() or runs[0] != kept[0] or runs[runs.size() - 1] != kept[kept.size() - 1]:
+		return -1.0
+	var j := 0
+	var worst := 0.0
+	for r in range(1, runs.size()):
+		var k := j + 1
+		while k < kept.size() and kept[k] != runs[r]:
+			var q: Vector2 = Geometry2D.get_closest_point_to_segment(kept[k], runs[r - 1], runs[r])
+			worst = maxf(worst, q.distance_to(kept[k]))
+			k += 1
+		if k >= kept.size():
+			return -1.0
+		j = k
+	return worst
+
+
+# A hand-drawn route as PathDrawer hands it over: mouse samples along a
+# wobbly line, waypoints TacticalPath.MIN_WAYPOINT_DISTANCE apart, Chaikin x2.
+func _weave_route(rng: RandomNumberGenerator) -> PackedVector2Array:
+	var amp: float = rng.randf_range(0.0, 70.0)
+	var lam: float = rng.randf_range(150.0, 600.0)
+	var ph: float = rng.randf() * TAU
+	var length: float = rng.randf_range(300.0, 2500.0)
+	var turn: float = rng.randf() * TAU
+	var raw := PackedVector2Array()
+	var x := 0.0
+	while x <= length:
+		var p := Vector2(1000, 1000) + Vector2(x, amp * sin(TAU * x / lam + ph) + rng.randf_range(-3.0, 3.0)).rotated(turn)
+		if raw.is_empty() or p.distance_to(raw[raw.size() - 1]) >= TacticalPath.MIN_WAYPOINT_DISTANCE:
+			raw.append(p)
+		x += 3.0
+	return PathDrawer._chaikin(raw, PathDrawer.SMOOTH_ITERATIONS)
+
+
 # ---------------------------------------------------------------------------
 # A. MapLoader: what each row's slice is
 # ---------------------------------------------------------------------------
@@ -444,6 +492,16 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	lt.queue_free()
 	var sm := layer.material as ShaderMaterial
 	_check("b.fade-shader", sm != null and sm.shader != null)
+	# its arrays and its loop hold exactly MAX_FADES shapes (headless nothing
+	# renders, so a shape past the shader's size would go unfaded unseen)
+	var code: String = (sm.shader as Shader).code if sm != null and sm.shader != null else ""
+	var sizes: Array = []
+	for m in RegEx.create_from_string("fade_(?:seg|rad)\\s*\\[\\s*(\\d+)\\s*\\]").search_all(code):
+		sizes.append(int((m as RegExMatch).get_string(1)))
+	var loop_m := RegEx.create_from_string("for\\s*\\(\\s*int\\s+i\\s*=\\s*0\\s*;\\s*i\\s*<\\s*(\\d+)").search(code)
+	var loop_n: int = int(loop_m.get_string(1)) if loop_m != null else -1
+	_check("b.fade-shader.holds-max-fades", sizes.size() == 2 and sizes.count(CanopyLayer.MAX_FADES) == 2
+		and loop_n == CanopyLayer.MAX_FADES, "arrays %s, loop %d, MAX_FADES %d" % [str(sizes), loop_n, CanopyLayer.MAX_FADES])
 	var i1: int = GridManager.canopy.crown_of(spawned["hide"])
 	var i2: int = GridManager.canopy.crown_of(spawned["hide2"])
 	var drawn: Array = layer.drawn_crowns()
@@ -497,6 +555,10 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	layer.view_override = Rect2(1500, 1500, 100, 100)
 	await get_tree().process_frame
 	_check("b.fade.party-off-view", _shapes_of(layer, CanopyLayer.Fade.PARTY).is_empty())
+	# ... but just off it, its rings reaching in (55 px past its edge, rings 120), it does
+	layer.view_override = Rect2(560, 520, 60, 60)
+	await get_tree().process_frame
+	_check("b.fade.party-just-off-view", _shapes_of(layer, CanopyLayer.Fade.PARTY).size() == 1)
 	layer.view_override = Rect2(0, 0, 2048, 2048)
 	# an NPC under it fades nothing (only the party)
 	party_chars = []
@@ -516,6 +578,11 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	fp = _shapes_of(layer, CanopyLayer.Fade.CURSOR)
 	_check("b.fade.cursor", fp.size() == 1 and is_equal_approx(float(fp[0]["inner"]), CanopyLayer.CURSOR_FADE.x)
 		and is_equal_approx(float(fp[0]["outer"]), CanopyLayer.CURSOR_FADE.y), fp)
+	# ... but not off the view (the mouse is always in it; an override need not be)
+	layer.view_override = Rect2(1500, 1500, 100, 100)
+	await get_tree().process_frame
+	_check("b.fade.cursor-off-view", _shapes_of(layer, CanopyLayer.Fade.CURSOR).is_empty())
+	layer.view_override = Rect2(0, 0, 2048, 2048)
 	layer.cursor_override = Vector2(100, 100)
 	# REVEAL_GROUP: a polyline fades along each straight run that comes near
 	# a crown (one capsule, its radii grown by REVEAL_TOL), not along a run
@@ -545,6 +612,17 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	await get_tree().process_frame
 	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
 	_check("b.reveal.view-culls", rv.size() == 1 and _has_disc(rv, Vector2(610, 560), 10.0), rv)
+	# ... and one whose feather reaches into it from just outside is kept: a
+	# disc 30 px past its edge (outer 38), a polyline 30 px past it (outer 48)
+	stub.shapes = [[PackedVector2Array([Vector2(650, 560)]), 10.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.view-keeps-feather-disc", rv.size() == 1 and _has_disc(rv, Vector2(650, 560), 10.0), rv)
+	stub.shapes = [[PackedVector2Array([Vector2(650, 500), Vector2(650, 660)]), 14.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.view-keeps-feather-capsule", rv.size() == 1
+		and _has_capsule(rv, Vector2(650, 500), Vector2(650, 660), 14.0 + CanopyLayer.REVEAL_TOL), rv)
 	# ... and the view is what the viewport shows: zoomed in x8 on (610, 560)
 	var vp := get_viewport()
 	var keep_xf: Transform2D = vp.canvas_transform
@@ -601,6 +679,28 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 		and _has_disc(rv, dash_to, PathDrawer.NODE_RADIUS + 4.0), rv)
 	_check("b.reveal.path-aoe", _has_capsule(rv, na.world_position, na.aoe_center, leash_r)
 		and _has_disc(rv, na.aoe_center, PathDrawer.NODE_RADIUS + 4.0), rv)
+	# a plan with no route left (TacticalPath.truncate_before at its last point
+	# keeps one waypoint and the nodes there), a node there with a detached
+	# AoE: its mark and its leash still fade
+	var spot := Vector2(560, 640)
+	pd.tactical_path.set_waypoints(PackedVector2Array([spot]))
+	var ns = pd.tactical_path.insert_action_node(spot)
+	ns.aoe_center = Vector2(620, 570)
+	ns.aoe_extent = 30.0
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.path-node-without-route", _has_disc(rv, spot, PathDrawer.ARROW_LENGTH)
+		and _has_capsule(rv, spot, ns.aoe_center, leash_r) and _has_disc(rv, ns.aoe_center, PathDrawer.NODE_RADIUS + 4.0), rv)
+	# no plan at all, a facing arrow being drawn: its start fades
+	pd.tactical_path.set_waypoints(PackedVector2Array())
+	pd.is_drawing_rotation = true
+	pd.rotation_start = Vector2(640, 560)
+	pd.rotation_current = Vector2(700, 560)
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.path-rotation-without-plan", rv.size() == 1
+		and _has_disc(rv, Vector2(640, 560), PathDrawer.ARROW_LENGTH + 4.0), rv)
+	pd.is_drawing_rotation = false
 	pd.queue_free()
 	await get_tree().process_frame
 	# fire under a crown: a real CellFireFX, set up with a sim whose two
@@ -1011,6 +1111,43 @@ func _part_g() -> void:
 	_check("g.runs.straight", CanopyLayer.reveal_runs(line).size() == 2, CanopyLayer.reveal_runs(line))
 	line.append(Vector2(900, 700))
 	_check("g.runs.corner", CanopyLayer.reveal_runs(line).size() == 3, CanopyLayer.reveal_runs(line))
+	# the last point is always kept: 20 px past the last REVEAL_STEP one, and
+	# a 20 px last leg that turns is a run of its own, out to its tip
+	line.remove_at(line.size() - 1)
+	line.append(Vector2(920, 300))
+	var lr := CanopyLayer.reveal_runs(line)
+	_check("g.runs.keeps-last", lr.size() == 2 and lr[lr.size() - 1] == Vector2(920, 300), lr)
+	line.append(Vector2(920, 320))
+	lr = CanopyLayer.reveal_runs(line)
+	_check("g.runs.keeps-last-turn", lr.size() == 3 and lr[lr.size() - 1] == Vector2(920, 320), lr)
+	# every kept point within REVEAL_TOL of its run's axis (the fade radii
+	# grow by just that much, so the line's own radius fades fully): part G's
+	# routes as PathDrawer smooths them, an arc, a hairpin back along itself,
+	# forty hand-drawn weaves
+	var curves: Array = []
+	for k in 3:
+		curves.append(PathDrawer._chaikin(_g_route(k), PathDrawer.SMOOTH_ITERATIONS))
+	var arc := PackedVector2Array()
+	for i in 181:
+		arc.append(Vector2(1000, 1000) + Vector2.from_angle(deg_to_rad(float(i))) * 300.0)
+	curves.append(arc)
+	curves.append(PathDrawer._chaikin(PackedVector2Array([Vector2(100, 100), Vector2(500, 100), Vector2(300, 102),
+		Vector2(300, 400)]), PathDrawer.SMOOTH_ITERATIONS))
+	var wrng := RandomNumberGenerator.new()
+	wrng.seed = 5
+	for _i in 40:
+		curves.append(_weave_route(wrng))
+	var broken: Array = []
+	var n_runs := 0
+	var n_kept := 0
+	for i in curves.size():
+		var worst: float = _runs_worst(curves[i])
+		if worst < 0.0 or worst > CanopyLayer.REVEAL_TOL + 0.001:
+			broken.append("curve %d: %.3f" % [i, worst])
+		n_runs += CanopyLayer.reveal_runs(curves[i]).size() - 1
+		n_kept += CanopyLayer.reveal_kept(curves[i]).size() - 1
+	_check("g.runs.within-tol-of-axis", broken.is_empty() and n_runs * 2 < n_kept,
+		"%s; %d runs for %d kept segments" % [str(broken), n_runs, n_kept])
 	# three planned routes, each through four crowns, each with a dash leash
 	var pds: Array = []
 	for k in 3:
@@ -1063,8 +1200,63 @@ func _part_g() -> void:
 	mine = _uncovered(layer, pc.path_drawer._visible_route())
 	_check("g.overrun.others-after", not mine.is_empty(), "the flood should have spent the budget first")
 	pc.path_drawer.tactical_path = pc.tactical_path
+	var flood_shapes: Array = flood.shapes.duplicate()
 	flood.queue_free()
 	pc.queue_free()
+	await get_tree().process_frame
+	# a party member's plan before an NPC's: the same flood handed over by an
+	# NPC's child, earlier in the tree, does not crowd out an unselected party
+	# member's route
+	var npc := _spawn_pc(Vector2(1900, 100))
+	var nflood := RevealStub.new()
+	nflood.shapes = flood_shapes
+	npc.add_child(nflood)
+	var mate := _spawn_pc(Vector2(1800, 1950))
+	var tp2 := TacticalPath.new()
+	tp2.set_waypoints(_g_route(2))
+	mate.path_drawer.tactical_path = tp2
+	party_chars = [mate]
+	await get_tree().process_frame
+	mine = _uncovered(layer, mate.path_drawer._visible_route())
+	_check("g.overrun.party-before-npcs", layer.fade_shapes().size() == CanopyLayer.MAX_FADES and mine.is_empty(),
+		"%d shapes, uncovered %s" % [layer.fade_shapes().size(), str(mine)])
+	mate.path_drawer.tactical_path = mate.tactical_path
+	party_chars = []
+	npc.queue_free()
+	mate.queue_free()
+	await get_tree().process_frame
+	# a polyline's runs are reused while it is unchanged, by its content: an
+	# edit keeping its count and first, middle and last points (PathDrawer's
+	# smooth key would miss it) is seen at once; only this frame's are held
+	var c0: Vector2 = GridManager.canopy.crown(int(crowns[0]["index"]))["pos"]
+	var cl := PackedVector2Array([c0 + Vector2(-150, 0), c0 + Vector2(-75, 0), c0, c0 + Vector2(75, 0), c0 + Vector2(150, 0)])
+	var cst := RevealStub.new()
+	cst.shapes = [[cl, 14.0]]
+	add_child(cst)
+	await get_tree().process_frame
+	var inner_c: float = 14.0 + CanopyLayer.REVEAL_TOL
+	var rv: Array = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var straight_one: bool = rv.size() == 1 and _has_capsule(rv, cl[0], cl[4], inner_c)
+	var reused: int = layer._runs_reused
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var still_one: bool = rv.size() == 1 and _has_capsule(rv, cl[0], cl[4], inner_c)
+	_check("g.cache.reused-while-unchanged", layer._runs_reused > reused, "%d reuses, %d before" % [layer._runs_reused, reused])
+	var cl2 := PackedVector2Array(cl)
+	cl2[3] = c0 + Vector2(75, 40)
+	cst.shapes = [[cl2, 14.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("g.cache.sees-an-edit", straight_one and still_one and _has_capsule(rv, c0, cl2[3], inner_c)
+		and not _has_capsule(rv, cl[0], cl[4], inner_c), rv)
+	for i in 6:
+		var walk := PackedVector2Array(cl2)
+		walk.append(c0 + Vector2(200.0 + 40.0 * float(i), 0))
+		cst.shapes = [[walk, 14.0]]
+		await get_tree().process_frame
+	_check("g.cache.this-frame-only", layer._runs_now.size() == 1 and layer._runs_prev.size() <= 1,
+		"%d now, %d kept from the frame before" % [layer._runs_now.size(), layer._runs_prev.size()])
+	cst.queue_free()
 	# the coarse grid answers as a scan of every crown would (two crowns dead)
 	GridManager.canopy.kill_crown(int(crowns[5]["index"]))
 	GridManager.canopy.kill_crown(int(crowns[6]["index"]))
