@@ -31,13 +31,16 @@ var structured_water_mask: Texture2D = null
 # from the rows' contract-3 canopy cells and images.canopy); null on a map
 # without that art (every contract-2 map: its crowns stay in the structures
 # overlay, under characters). Game's sight cones fit their canopy child to it.
+# The layer is this loader's child, so a warp's unload sweep frees it, and
+# generate_map (legacy and world maps) drops the reference too.
 var canopy_layer: CanopyLayer = null
 var _canopy_tex: Texture2D = null      # images.canopy, while the map loads (null after)
 var _canopy_crowns: Array = []         # [{index, cell, art}] for the CanopyLayer
 # P3-D: the Art of every deck over the contract-3 open-water layer (a bridge),
 # rebuilt per map load. FluidManager hands them to CellFluidFX, which draws a
 # fluid standing on the deck over its art (the ground's water pass cannot
-# reach above z -6). Empty on every contract-1/2 map.
+# reach above z -6). Empty on every contract-1/2 map, and emptied by
+# generate_map (legacy and world maps).
 var bridge_deck_arts: Array[Polygon2D] = []
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
@@ -1467,6 +1470,14 @@ func _blank_tex() -> ImageTexture:
 func generate_map():
 	water_sim = "visual"   # legacy/world maps run the flat tile sim: no sinks
 	structured_water_mask = null   # P3-A: no open-water mask off a structured map
+	# P3-B: no crowns above characters off a structured map (the layer itself
+	# died with the warp's unload sweep of this loader's children)
+	canopy_layer = null
+	_canopy_tex = null
+	_canopy_crowns = []
+	# P3-D: no bridge decks off a structured map (their Art died with the same
+	# sweep; GridManager.initialize() already dropped their bank grounds)
+	bridge_deck_arts = []
 	if world_map_mode:
 		_generate_world_map()
 		return
