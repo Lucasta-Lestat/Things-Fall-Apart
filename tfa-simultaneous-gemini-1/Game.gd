@@ -113,7 +113,7 @@ var selection_indicators: Dictionary = {}  # ProceduralCharacter -> Node2D
 # hide, P3-B: MapLoader.canopy_layer; it fades over routes, aim lines,
 # reticles and fire, CanopyLayer.REVEAL_GROUP), targeting indicators 49..51,
 # thrown projectiles 50 (weapon shots too on a map with a CanopyLayer:
-# spawn_projectile), StealthOverlay 60, widgets 90..115, RoofLayer 120,
+# weapon_shot_z), StealthOverlay 60, widgets 90..115, RoofLayer 120,
 # roof-walkers 135, unexplored fog 140 (UnexploredFogLayer.FOG_Z), intent UI
 # 150+ (action-node markers 152), floating text 200.
 var roof_view: bool = false
@@ -5271,9 +5271,7 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 
 	var proj := Projectile.new()
 	proj.name = "Projectile"
-	# under characters (3); on a map with crowns above characters (P3-B) up
-	# with the thrown things (50), so a shot through a grove stays readable
-	proj.z_index = 50 if CanopyLayer.of(map_loader) != null else 3
+	proj.z_index = weapon_shot_z()
 	proj.speed = 1800.0 if is_pistol else 1200.0
 	proj.max_range = 700.0 if is_pistol else 900.0
 
@@ -5304,6 +5302,13 @@ func spawn_projectile(shooter: ProceduralCharacter, direction: Vector2, weapon: 
 	get_tree().current_scene.add_child(proj)
 	proj.launch(shooter.get_weapon_tip_world_position(), direction, shooter)
 	return proj
+
+
+## A weapon shot's z: under characters (3), or on a map with crowns above
+## characters (P3-B) up with the thrown things (CanopyLayer.SHOT_Z), so a
+## shot through a grove stays readable.
+func weapon_shot_z() -> int:
+	return CanopyLayer.SHOT_Z if CanopyLayer.of(map_loader) != null else 3
 
 
 func _on_weapon_projectile_expired(final_pos: Vector2, shooter) -> void:
