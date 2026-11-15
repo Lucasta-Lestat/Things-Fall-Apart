@@ -23,8 +23,10 @@ uniform float wave_scale = 1.0;
 
 // --- P3-A: the PAINTED open water, animated. A contract-3 map ships an
 // open-water mask (Maps.json images.water; MapLoader.attach_water_mask, bound
-// by CellFluidFX). Its texels span k x k ground pixels (TG writes k = 2) and
-// are sampled at the ground's own UV:
+// by CellFluidFX). It covers water_rect of the ground (the row's water_rect:
+// TG crops the mask to the water's bounding box; UV units, the whole ground
+// without the key), its texels span k x k ground pixels (TG writes k = 2), and
+// it is sampled at the ground's UV mapped into that rect (outside: land):
 //   R = c, the share of the ground the TG export painted as open water (the
 //       ground shader's ravine water floor, so the edge is the painted edge);
 //   G, B = 0.5 + 0.5 * c * dir, the ripple drift, premultiplied by c;
@@ -35,12 +37,16 @@ uniform float wave_scale = 1.0;
 // ground_paint_body.gdshaderinc ravine_color: the ripple, the spec, the same
 // sun) is laid back on at TIME, scaled by the frame's own shading. The glint-
 // free frame is water_calm (shaders/water_calm.gdshader, rendered once per map
-// by CellFluidFX: rgb = the calm tap, a = 1 where it has one); a pixel more
-// than OW_TOL brighter than it is a glint and takes it, every other pixel (the
-// frame's shadows, its own tone) stays.
-// water_mask_on 0 (every map without images.water): the branch never runs.
+// by CellFluidFX over the same rect: rgb = the calm tap, a = 1 where it has
+// one); a pixel more than OW_TOL brighter than it is a glint and takes it,
+// every other pixel (the frame's shadows, its own tone) stays. The layer
+// blends in by smoothstep(0.25, 0.75, c), so below c = 0.25 nothing is
+// computed at all (the weight is exactly 0 there).
+// water_mask_on 0 (every map without images.water, or the project setting
+// tfa/graphics/animated_water off): the branch never runs.
 uniform sampler2D water_mask : filter_linear, repeat_disable;
 uniform sampler2D water_calm : filter_linear, repeat_disable;
+uniform vec4 water_rect = vec4(0.0, 0.0, 1.0, 1.0);   // the mask's rect: UV origin, UV size
 uniform float water_mask_on = 0.0;
 const float OW_TOL = 0.02;   // luma: a pixel this much over the calm frame may be a glint
 
@@ -94,19 +100,44 @@ float waterSurf(vec2 W, vec2 dir, float t, out vec2 grad) {
 	return a * 0.6 + b * 0.4;
 }
 
+// P3-A's open water: waterSurf's six warpfields (the same inputs, the same
+// arithmetic) in ONE loop, so the shader carries one copy of warpfield instead
+// of six inlined ones. It draws what waterSurf draws (float contraction may
+// move a few pixels by 1-2/255) about 10 % faster on the GPU (RTX 4080 Laptop,
+// D3D12). The dynamic-fluid branch keeps waterSurf itself, so every map
+// without an open-water mask renders exactly as before. (Forward differences
+// off the centre tap would halve the cost but brighten the glints, p90 luma
+// +0.06: rejected.)
+float waterSurfOW(vec2 W, vec2 dir, float t, out vec2 grad) {
+	vec2 adv = dir * (t * 2.4);
+	float e = 1.5;
+	vec2 P[6] = vec2[6](W * 0.10 + adv, W * 0.23 - adv * 0.6 + 17.0,
+		(W + vec2(e, 0.0)) * 0.10 + adv, (W - vec2(e, 0.0)) * 0.10 + adv,
+		(W + vec2(0.0, e)) * 0.10 + adv, (W - vec2(0.0, e)) * 0.10 + adv);
+	float v[6];
+	vec2 _q;
+	for (int i = 0; i < 6; i++) {
+		v[i] = warpfield(P[i], 1.0, _q);
+	}
+	grad = vec2(v[2] - v[3], v[4] - v[5]);
+	return v[0] * 0.6 + v[1] * 0.4;
+}
+
 void fragment() {
 	vec4 base = texture(TEXTURE, UV);
 	vec3 col = base.rgb;
 	// world units (export px / export_scale): the wave math was tuned at world scale
 	vec2 Wn = (UV / TEXTURE_PIXEL_SIZE) * wave_scale;
-	if (water_mask_on > 0.5) {
-		vec4 wmk = texture(water_mask, UV);
+	vec2 wuv = (UV - water_rect.xy) / water_rect.zw;
+	if (water_mask_on > 0.5 && wuv.x >= 0.0 && wuv.y >= 0.0 && wuv.x <= 1.0 && wuv.y <= 1.0) {
+		vec4 wmk = texture(water_mask, wuv);
 		float wc = wmk.r;
-		if (wc > 0.004) {
+		float ww = smoothstep(0.25, 0.75, wc);   // the layer's weight
+		if (ww > 0.0) {
 			// the calm frame under the glints: premultiplied by its a, so by the
 			// shore (texels without an open-water tap hold 0) the bilinear mean
 			// is the mean of the texels that have one; none = keep the painted frame
-			vec4 cm = texture(water_calm, UV);
+			vec4 cm = texture(water_calm, wuv);
 			float lc = dot(col, vec3(0.299, 0.587, 0.114));
 			vec3 dark = col;
 			float dl = 9.0;
@@ -119,7 +150,7 @@ void fragment() {
 				vec2 odir = (wmk.gb * 2.0 - 1.0) / wc;
 				float oq = max(wmk.a / wc, 1.0 / 255.0);
 				vec2 ogr;
-				float oh = waterSurf(Wn, normalize(odir + vec2(1e-4)), TIME, ogr);
+				float oh = waterSurfOW(Wn, normalize(odir + vec2(1e-4)), TIME, ogr);
 				// ravine_color: water *= 1 + 0.18 (S - 0.25); the calm frame sits at S = 0
 				vec3 live = calm * ((1.0 + 0.18 * (smoothstep(0.55, 0.95, oh * 0.5 + 0.5) - 0.25)) / 0.955);
 				vec3 oL = normalize(vec3(sun_dir, ravine_sun_z));
@@ -128,7 +159,7 @@ void fragment() {
 				float ospec = pow(max(dot(oN, oH), 0.0), 24.0) * smoothstep(0.0, 0.3, dot(oN.xy, normalize(sun_dir)));
 				// its spec (x 0.9 x gain), shaded as the frame is: luma(calm) / q
 				live += vec3(1.0, 0.97, 0.88) * (ospec * 0.9 * dot(calm, vec3(0.299, 0.587, 0.114)) / oq);
-				col = mix(col, live, smoothstep(0.25, 0.75, wc));
+				col = mix(col, live, ww);
 			}
 		}
 	}
