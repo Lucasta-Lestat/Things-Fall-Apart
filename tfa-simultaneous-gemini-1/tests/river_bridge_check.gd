@@ -21,8 +21,12 @@ extends Node2D
 #     lands in the river, can_jump_to refuses it, knockback stops at the bank
 #     and at the deck's edge (the deep-water veto itself) and runs along the deck;
 #   view layer: a walker on either bridge over the river is the ground layer
-#     (height measured from the water's surface, GridManager.ground_ref), a
-#     deck 1.3 over the water is the high layer;
+#     (height measured from the bridge's banks, GridManager.ground_ref, never
+#     the bed), a deck 1.3 over plain water is the high layer; in a RAVINE (the
+#     same map with the river's surface 0.9, a story under its banks, and its
+#     bed 0.3: TG's export of the layout at surface 0.9, depth 0.6) both
+#     bridges are still the ground layer and a deck 1.4 over its banks is high,
+#     measured from the banks;
 #   bridge art and damage: no loose item rows on the decks (the deck art is
 #     baked into the structures overlay); every deck row is indestructible
 #     and its Structure neither burns nor breaks (no walker stranded in deep
@@ -50,6 +54,7 @@ const FIX := "res://tests/fixtures/p3d_river/"
 const ROW_PATH := FIX + "tg_test_prim_river_row.json"
 const CELLS_PATH := FIX + "tg_test_prim_river_cells.json"
 const NOLAYER_PATH := "user://river_bridge_check_nolayer_cells.json"
+const RAVINE_PATH := "user://river_bridge_check_ravine_cells.json"
 
 # MapLoader's game stub (it reads these off its parent) + FluidManager's, and
 # SurfaceManager's for the fire checks (it finds its game by load_map)
@@ -108,6 +113,7 @@ func _ready() -> void:
 	await _flat_occluder_checks()
 	await _fire_checks()
 	await _deck_fluid_art_checks()
+	await _ravine_view_checks()
 	# --- the fallback: the same map without the water layer (contract 2's reading).
 	# The river's tiles are taken while the layer is loaded: without it,
 	# water_body_at IS is_deep_water, so a list taken after the strip is empty
@@ -223,7 +229,9 @@ func _walk_checks() -> void:
 		var np: Array = (n_v as Dictionary)["position"]
 		guard_ok = guard_ok and not GridManager.find_path(t0, GridManager.world_to_map(Vector2(float(np[0]), float(np[1])))).is_empty()
 	_check("walk.guard-reachable", guard_ok, "")
-	# each bridge alone carries the walk; with no deck nothing crosses
+	# each bridge alone carries the walk; with no deck nothing crosses (removing
+	# a deck drops its bank ground too: restored with the decks)
+	var saved_ground: Dictionary = GridManager.deck_ground_refs.duplicate()
 	for k in decks.size():
 		var other: Dictionary = decks[1 - k]
 		for t in other["tiles"]:
@@ -235,9 +243,12 @@ func _walk_checks() -> void:
 		for t in (d as Dictionary)["tiles"]:
 			GridManager.unregister_deck(t, float((d as Dictionary)["elev"]))
 	_check("walk.no-crossing-without-decks", GridManager.find_path(t0, t1).is_empty(), "")
+	_check("walk.removed-decks-drop-their-bank-ground", not saved_ground.is_empty() and GridManager.deck_ground_refs.is_empty(),
+		"%d bank-ground tiles registered, %d left with every deck removed" % [saved_ground.size(), GridManager.deck_ground_refs.size()])
 	for d in decks:
 		for t in (d as Dictionary)["tiles"]:
 			GridManager.register_deck(t, float((d as Dictionary)["elev"]))
+	GridManager.deck_ground_refs = saved_ground
 
 
 func _elevation_checks() -> void:
@@ -327,11 +338,12 @@ func _elevation_checks() -> void:
 
 
 # The view layer / sight tier on a bridge (GridManager.ground_ref): a walker on
-# a deck over the river is measured from the water's surface, not the bed a
-# story further down, so neither bridge (0.2 / 0.5 over a surface at 1.8) is
-# the HIGH layer (was: 1.2 / 1.5 over the bed: hidden in ground view, the
-# leader's view flipped to the roof slice, crowns always blocking them). A
-# deck 1.3 over the same water still is.
+# a deck over the river is measured from the deck's own banks (2.0, above the
+# surface at 1.8), not the bed a story further down, so neither bridge (0.0 /
+# 0.3 over its banks) is the HIGH layer (was: 1.2 / 1.5 over the bed: hidden
+# in ground view, the leader's view flipped to the roof slice, crowns always
+# blocking them). A deck 1.3 over plain water (no banks: measured from the
+# surface) still is.
 func _view_layer_checks() -> void:
 	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
 	ch.AI_enabled = false
@@ -353,8 +365,9 @@ func _view_layer_checks() -> void:
 			if GridManager.is_high_layer(ch) or ch.is_on_raised_surface() \
 					or GridManager.height_above_ground(t, ch.get_elevation()) >= GridManager.HIGH_LAYER_STORIES:
 				high += 1
-		_check("view.%s-walker-is-ground-layer" % String(d["id"]), n > 0 and high == 0,
-			"%d deck tiles over the water, %d on the high layer, height above the water %.2f" % [n, high, hag_max])
+		_check("view.%s-walker-is-ground-layer" % String(d["id"]), n > 0 and high == 0
+			and absf(hag_max - (float(d["elev"]) - 2.0)) < 1e-4,
+			"%d deck tiles over the water, %d on the high layer, height above ground up to %.2f (over its 2.0 banks)" % [n, high, hag_max])
 	var bank := _spawn_tile("default")
 	ch.global_position = GridManager.map_to_world(bank)
 	ch._refresh_elevation()
@@ -368,6 +381,107 @@ func _view_layer_checks() -> void:
 		"deck %.2f over the water at %.2f: hag %.2f" % [hi_e, GridManager.water_surface_at(rt), ch.height_above_ground()])
 	GridManager.unregister_deck(rt, hi_e)
 	ch.queue_free()
+
+
+# The same view-layer contract in a RAVINE: the fixture with the river's surface
+# lowered 0.9 (to 0.9, 1.1 stories under its 2.0 banks) and its bed 0.5 (to
+# 0.3), which is TG's export of the same layout at water surface 0.9, depth
+# 0.6 (no depth or low-bank warning). Measured from the water, the bank-level
+# mill bridge stood 1.1 over it and the weir 1.4: both HIGH (hidden in ground
+# view, the leader's view flipped to the roof slice). Measured from their banks
+# they are the ground layer, and the weir raised to 3.4 (1.4 over its banks,
+# 2.5 over the water) is high at 1.4. The river off the decks stays deep.
+func _ravine_view_checks() -> void:
+	var f := FileAccess.open(CELLS_PATH, FileAccess.READ)
+	var d: Dictionary = JSON.parse_string(f.get_as_text())
+	f.close()
+	var tw: Array = (d["tile_water"] as Dictionary)["data"]
+	var te: Array = (d["tile_elev"] as Dictionary)["data"]
+	var tb: Array = (d["tile_body"] as Dictionary)["data"]
+	for i in tb.size():
+		if int(tb[i]) > 0:
+			tw[i] = float(tw[i]) - 0.9
+			te[i] = float(te[i]) - 0.5
+	var ce: Array = d["elev"]
+	for i in ce.size():
+		if absf(float(ce[i]) - 0.8) < 1e-4:
+			ce[i] = 0.3
+	var w := FileAccess.open(RAVINE_PATH, FileAccess.WRITE)
+	w.store_string(JSON.stringify(d))
+	w.close()
+	var g := await _load(RAVINE_PATH)
+	var river := _river_tiles()
+	var surf: float = GridManager.water_surface_at(river[0]) if not river.is_empty() else NAN
+	var bed: float = GridManager.terrain_elev(river[0]) if not river.is_empty() else NAN
+	var deep := 0
+	for t in river:
+		if GridManager.is_deep_water(t):
+			deep += 1
+	_check("ravine.loaded", g != null and GridManager.has_water_layer() and absf(surf - 0.9) < 1e-4
+		and absf(bed - 0.3) < 1e-4 and deep == river.size() and not river.is_empty(),
+		"surface %.2f, bed %.2f, %d of %d river tiles deep" % [surf, bed, deep, river.size()])
+	if g == null or river.is_empty():
+		return
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	for d_v in decks:
+		var dk: Dictionary = d_v
+		var n := 0
+		var high := 0
+		var hag_max := -INF
+		for t_v in dk["tiles"]:
+			var t: Vector2i = t_v
+			if not _water(t):
+				continue
+			n += 1
+			ch.global_position = GridManager.map_to_world(t)
+			ch._refresh_elevation()
+			hag_max = maxf(hag_max, ch.height_above_ground())
+			if GridManager.is_high_layer(ch) or ch.is_on_raised_surface() \
+					or GridManager.height_above_ground(t, ch.get_elevation()) >= GridManager.HIGH_LAYER_STORIES:
+				high += 1
+		_check("ravine.%s-walker-is-ground-layer" % String(dk["id"]), n > 0 and high == 0,
+			"walk_elev %.2f: %d deck tiles over the water, %d on the high layer, height above ground up to %.2f (%.2f over the water)"
+			% [float(dk["elev"]), n, high, hag_max, float(dk["elev"]) - surf])
+	var bank := _spawn_tile("default")
+	ch.global_position = GridManager.map_to_world(bank)
+	ch._refresh_elevation()
+	_check("ravine.bank-walker-is-ground-layer", not GridManager.is_high_layer(ch) and is_zero_approx(ch.height_above_ground()), "")
+	ch.queue_free()
+	# the weir a story over its banks
+	var structs: Array = (row["structures"] as Array).duplicate(true)
+	for s_v in structs:
+		if String((s_v as Dictionary).get("id", "")) == "stone_wall" and (s_v as Dictionary).get("walk_elev") != null:
+			(s_v as Dictionary)["walk_elev"] = 3.4
+	g = await _load(RAVINE_PATH, {"structures": structs})
+	ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	var n_hi := 0
+	var hi := 0
+	var hag_lo := INF
+	var hag_hi := -INF
+	for st in structures_in_scene:
+		if not (is_instance_valid(st) and (st as Structure).is_deck and is_equal_approx((st as Structure).deck_elevation, 3.4)):
+			continue
+		for t in (st as Structure).deck_tiles:
+			if not _water(t):
+				continue
+			n_hi += 1
+			ch.global_position = GridManager.map_to_world(t)
+			ch._refresh_elevation()
+			hag_lo = minf(hag_lo, ch.height_above_ground())
+			hag_hi = maxf(hag_hi, ch.height_above_ground())
+			if GridManager.is_high_layer(ch) and ch.is_on_raised_surface():
+				hi += 1
+	_check("ravine.deck-a-story-over-its-banks-is-high", g != null and n_hi > 0 and hi == n_hi
+		and absf(hag_lo - 1.4) < 1e-4 and absf(hag_hi - 1.4) < 1e-4,
+		"%d of %d deck tiles over the water high, height above ground %.2f..%.2f (1.4 over the banks)" % [hi, n_hi, hag_lo, hag_hi])
+	ch.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(RAVINE_PATH))
 
 
 # Bridge art is baked (TG draws the deck into the structures overlay, which the
@@ -717,7 +831,11 @@ func _deck_fluid_art_checks() -> void:
 	var wired := 0
 	for art_v in arts:
 		var dm := (art_v as Polygon2D).material as ShaderMaterial
-		if dm != null and dm.shader == CellFluidFX.DECK_SHADER and gm != null 				and dm.get_shader_parameter("fluid_mask") == gm.get_shader_parameter("fluid_mask") 				and dm.get_shader_parameter("flow_mask") == gm.get_shader_parameter("flow_mask") 				and dm.get_shader_parameter("field_size") == ground.texture.get_size() 				and is_equal_approx(float(dm.get_shader_parameter("wave_scale")), float(gm.get_shader_parameter("wave_scale"))):
+		if dm != null and dm.shader == CellFluidFX.DECK_SHADER and gm != null \
+				and dm.get_shader_parameter("fluid_mask") == gm.get_shader_parameter("fluid_mask") \
+				and dm.get_shader_parameter("flow_mask") == gm.get_shader_parameter("flow_mask") \
+				and dm.get_shader_parameter("field_size") == ground.texture.get_size() \
+				and is_equal_approx(float(dm.get_shader_parameter("wave_scale")), float(gm.get_shader_parameter("wave_scale"))):
 			wired += 1
 	_check("fluid-art.bridge-decks-draw-the-fluid-field", fx != null and arts.size() == decks.size() and wired == arts.size(),
 		"%d bridge deck arts, %d on the deck fluid pass" % [arts.size(), wired])
