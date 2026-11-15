@@ -38,7 +38,9 @@ var deck_tiles: Array[Vector2i] = []
 # makes a destroyed deck safe, a bridge that burned or broke would drop
 # whoever stood on it into deep water with no way out (no swimming), so every
 # hit is a silent no-op: no number, no flash, no ignition. MapLoader also
-# clears `flammable`, so the fire index reads the deck as a firebreak.
+# clears `flammable`, so the fire index reads the deck as a firebreak, except
+# for a flammable fluid standing on it (CellFire.FUEL_DECK: oil on a bridge
+# burns, and burns whoever stands in it, while the deck stays whole).
 var indestructible: bool = false
 
 # Damage states, by fraction of max_health: Damaged below full, Cracking at

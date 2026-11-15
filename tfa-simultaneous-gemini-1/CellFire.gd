@@ -41,6 +41,8 @@ var _rng := RandomNumberGenerator.new()
 # 300-500 ms per damage tick in that scan.
 const FUEL_BLOCKED := 1               # a non-flammable claimer (stone): firebreak
 const FUEL_FLAMMABLE := 2             # a flammable claimer (timber/tree): heavy fuel
+const FUEL_DECK := 4                  # an indestructible deck (P3-D bridge): no fuel of its own or under
+                                      # it, but a slick standing on it burns (the deck never takes damage)
 var _tile_index: Dictionary = {}      # Vector2i -> int flags
 var _tile_structs: Dictionary = {}    # Vector2i -> Array of structures
 var _index_dirty := true
@@ -533,8 +535,10 @@ func _clear_smoke() -> void:
 
 # Cell fuel: non-flammable structure -> firebreak; flammable structure -> heavy
 # fuel; else standing fluid (oil = fuel, water = break); else the graph's
-# static ground fuel. Every layer is an O(1) lookup, so nothing is cached per
-# cell -- the structure index is the only derived state (see invalidate_fuel).
+# static ground fuel, except under an indestructible deck (none: a bridge
+# stays a firebreak for a grass fire, while oil spilled on it still burns).
+# Every layer is an O(1) lookup, so nothing is cached per cell -- the
+# structure index is the only derived state (see invalidate_fuel).
 func _fuel(cid: int) -> float:
 	_ensure_index()
 	var flags := int(_tile_index.get(_tile_of(cid), 0))
@@ -562,6 +566,8 @@ func _fuel(cid: int) -> float:
 				return 2.5
 			if fm.get_fluid_type_at(t) != "":
 				return 0.0
+	if flags & FUEL_DECK:
+		return 0.0                                             # a dry bridge deck: firebreak
 	return graph.ground_fuel(cid)
 
 
@@ -580,7 +586,9 @@ func _ensure_index() -> void:
 	for structure in game.structures_in_scene:
 		if not is_instance_valid(structure):
 			continue
-		var flag := FUEL_FLAMMABLE if structure.flammable else FUEL_BLOCKED
+		# an indestructible deck (MapLoader cleared its `flammable`) lets standing
+		# fluid decide; damage still reaches it below, a no-op for it
+		var flag := FUEL_FLAMMABLE if structure.flammable 			else (FUEL_DECK if structure.get("indestructible") == true else FUEL_BLOCKED)
 		for ft in sm._fire_tiles_of(structure):
 			_tile_index[ft] = int(_tile_index.get(ft, 0)) | flag
 			var claimers = _tile_structs.get(ft)

@@ -730,8 +730,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 		inst.max_health = int(s["hp"])
 		inst.current_health = inst.max_health
 	# "indestructible": true (TG P3-D bridge decks): no damage, never burns, a
-	# firebreak in the fire index (after add_child: _ready set `flammable` from
-	# the id's StructureDatabase entry). No shipped row sets it.
+	# firebreak in the fire index for ground fuel, though an oil slick standing
+	# on it still burns (CellFire.FUEL_DECK). After add_child: _ready set
+	# `flammable` from the id's StructureDatabase entry. No shipped row sets it.
 	if s.get("indestructible", false) == true:
 		inst.indestructible = true
 		inst.flammable = false
