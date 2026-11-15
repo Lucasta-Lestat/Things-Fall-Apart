@@ -123,6 +123,13 @@ func _load(m: Dictionary, cells_path: String) -> Node2D:
 	var row: Dictionary = m.duplicate(true)
 	row["images"] = {"map": "res://icon.svg"}
 	row.erase("lights")
+	# no art is loaded, so no canopy atlas either: drop the contract-3 tree
+	# cells too, or MapLoader reports the missing images.canopy (only the
+	# elevation and water data matter here)
+	for s_v in row.get("structures", []):
+		if s_v is Dictionary:
+			(s_v as Dictionary).erase("canopy_cell")
+			(s_v as Dictionary).erase("shade_cell")
 	var ml: Node2D = MAP_LOADER.new()
 	add_child(ml)
 	ml.generate_structured_map(row)

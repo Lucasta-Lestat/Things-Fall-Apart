@@ -1,7 +1,8 @@
 extends Node2D
 # The sea drain's moving parts on a hand-built map (P3-A), where
-# fluid_sink_bench runs the shipped maps. No shipped cells.json carries the
-# contract-3 open-water layer yet, so this is the only test of that path:
+# fluid_sink_bench runs the shipped maps. Since P3-T five shipped Perrow
+# cells.json carry the contract-3 open-water layer (fluid_sink_bench and
+# deep_water_verdict_diff load them); this is the path's unit test:
 #   - CellGraph reads cells.json tile_water/tile_body; GridManager installs the
 #     pair only when it is exactly the map's tiles and answers
 #     water_surface_at / water_body_at from it, else from the deep-water rule;

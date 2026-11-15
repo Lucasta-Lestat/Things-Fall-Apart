@@ -197,7 +197,8 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		# lossless mipmaps, which only a mipmap filter samples (no shimmer when
 		# zoomed out). Contract 1-2 grounds have no mipmaps and keep the
 		# inherited filter. Rows store the contract as 2.0 or 2, hence float().
-		# CellFluidFX copies this filter onto the calm-frame sprite.
+		# CellFluidFX copies this filter onto the calm-frame sprite, and
+		# CanopyLayer onto its rule discs (both sample this ground).
 		var export_contract: float = float(map_data.get("export_contract", 1))
 		if export_contract >= 3.0:
 			ground.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS

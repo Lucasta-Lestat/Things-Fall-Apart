@@ -17,9 +17,9 @@ extends Node
 #      median) -- they move, they are not gone;
 #   5. vram.mask-is-rgba8: loading the mask adds about 4 bytes a texel to
 #      Performance RENDER_TEXTURE_MEM_USED (measured after the ground's load;
-#      up to 10 % + 128 KiB allocator slack, or Vulkan/NVIDIA's block-linear
-#      padding (width to 16 texels, height to 128 rows) + 2 % + 128 KiB, so
-#      no second copy), and the
+#      up to 10 % + 128 KiB allocator slack; on Vulkan + NVIDIA the exact
+#      block-linear size (width to 16 texels, height to the 8..128-row block)
+#      + 2 % + 128 KiB, so no second copy), and the
 #      imported mask has no mipmaps;
 #      it reports that, the ground's, and the GPU time of the view with the
 #      layer on and off;
@@ -171,19 +171,27 @@ func _run() -> int:
 	# 1368 creek mask takes 640 KiB for 534 KiB of texels, hence the 128 KiB);
 	# a second copy or a wider format would add far more, and the imported
 	# image must carry no mipmaps (they would add a third).
-	# Vulkan on NVIDIA allocates block-linear: the width padded to 16 texels
-	# (64 B) and the height to 128 rows. Measured on the RTX 4080 Laptop
-	# (P3-T, 2026-11-15) every Perrow mask took exactly that, e.g. lower's
-	# 3680 x 572 -> 3680 x 640 x 4 = 9420800 B (+11.9 %) and ossuary's
-	# 2648 x 548 -> 2656 x 640 x 4 (+17.1 %), so a mask just past a 128-row
-	# step pays up to ~22 % on its own. The bound is the larger of the two
-	# allocators' (a second copy still adds ~100 %).
-	var tiled: float = float(ceili(mask_tex.get_width() / 16.0) * 16 * ceili(mask_tex.get_height() / 128.0) * 128 * 4)
-	var vram_cap: float = maxf(rgba8 * 1.10, tiled * 1.02) + 131072.0
+	# Vulkan on NVIDIA allocates block-linear: 64 B x 8-row GOBs, the width
+	# padded to 16 texels and the height to the block height, 8 rows x the
+	# smallest power of two GOBs covering the image, at most 16 (128 rows).
+	# Measured on the RTX 4080 Laptop (P3-T, 2026-11-15) every Perrow mask took
+	# exactly that: lower's 3680 x 572 -> 3680 x 640 x 4 = 9420800 B (+11.9 %),
+	# ossuary's 2648 x 548 -> 2656 x 640 x 4 (+17.1 %), where the D3D12-tuned
+	# 10 % failed. So on Vulkan + NVIDIA the bound is that exact tiled size
+	# (+2 % + 128 KiB): a second copy or a 16-bit format doubles it and fails.
+	# Any other driver keeps the RGBA8 bound.
+	var mw: int = mask_tex.get_width()
+	var mh: int = mask_tex.get_height()
+	var block_rows: int = 8 * mini(16, nearest_po2(ceili(mh / 8.0)))
+	var tiled: float = float(ceili(mw / 16.0) * 16 * ceili(float(mh) / float(block_rows)) * block_rows * 4)
+	var nv_vulkan: bool = RenderingServer.get_video_adapter_api_version().begins_with("1.") \
+		and RenderingServer.get_video_adapter_vendor().to_lower().contains("nvidia")
+	var vram_cap: float = (tiled * 1.02 if nv_vulkan else rgba8 * 1.10) + 131072.0
 	var mask_mips := mask_tex.get_image().has_mipmaps()
 	_report("vram.mask-is-rgba8", mask_b > 0.0 and mask_b <= vram_cap and not mask_mips,
-		"%.0f B for %s (RGBA8 = %.0f B, block-linear tiled = %.0f B, cap %.0f B), mipmaps %s"
-		% [mask_b, str(mask_tex.get_size()), rgba8, tiled, vram_cap, str(mask_mips)])
+		"%.0f B for %s (RGBA8 = %.0f B, %s cap %.0f B), mipmaps %s"
+		% [mask_b, str(mask_tex.get_size()), rgba8,
+			("NVIDIA Vulkan block-linear %.0f B," % tiled) if nv_vulkan else "RGBA8", vram_cap, str(mask_mips)])
 
 	sv = SubViewport.new()
 	sv.size = SIZE
