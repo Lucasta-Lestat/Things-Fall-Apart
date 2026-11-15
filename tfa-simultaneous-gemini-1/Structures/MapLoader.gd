@@ -20,6 +20,11 @@ var map_lights: Node2D = null
 # cell sim, after this loader has run.
 const WATER_SIM_SETTING := "tfa/fluids/sea_sink"
 var water_sim: String = "visual"
+# P3-D: the Art of every deck over the contract-3 open-water layer (a bridge),
+# rebuilt per map load. FluidManager hands them to CellFluidFX, which draws a
+# fluid standing on the deck over its art (the ground's water pass cannot
+# reach above z -6). Empty on every contract-1/2 map.
+var bridge_deck_arts: Array[Polygon2D] = []
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -157,6 +162,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	structured_ground = null
 	cliff_occluders = null
 	map_lights = null
+	bridge_deck_arts = []
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -689,6 +695,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			# seeing someone standing up here) lights it as well as the
 			# ordinary bit-1 lights
 			art.light_mask = 1 | CollisionLayers.ELEVATED_SURFACE_LIGHT
+			if _over_open_water(tight):
+				bridge_deck_arts.append(art)
 		inst.add_child(art)
 		# "art_under" (curtain pieces next to a tower): the piece's wall as it
 		# runs on UNDER the tower, from the exporter's small atlas
@@ -1056,6 +1064,17 @@ func _add_cliff_run(root: Node2D, p0: Vector2, p1: Vector2, mask: int) -> void:
 	occ.occluder_light_mask = mask
 	occ.sdf_collision = false
 	root.add_child(occ)
+
+
+# A deck footprint with a tile over the contract-3 open-water layer: a bridge
+# or a pier (never true without the layer: the fallback's water is not read).
+func _over_open_water(tiles: Array[Vector2i]) -> bool:
+	if not GridManager.has_water_layer():
+		return false
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			return true
+	return false
 
 
 # True when a walker standing on some tile of this deck footprint would be the
