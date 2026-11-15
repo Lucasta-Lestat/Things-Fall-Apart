@@ -20,7 +20,12 @@
 #      material, lit like the crowns); fades round a party member under a
 #      crown's art (or its body's edge: BODY_PAD) with the party rings, the
 #      cursor over one with the cursor rings, and over the REVEAL_GROUP's
-#      shapes near a crown (a stub, a real AimLine and PathDrawer, fire);
+#      shapes near a crown and in view (a stub; a real AimLine with its
+#      landing reticle; a real PathDrawer's route, dash leash and AoE end; a
+#      real CellFireFX driven through setup() by a stub sim, whose cluster
+#      light lights the crowns), a straight polyline as one capsule; the
+#      view is the viewport's (its canvas transform); the ordinary lights
+#      (make_light, glow marks, VFXEffectNode, lightning) light the crowns;
 #      mirrors the tree's hit flash / damage tint; drops a crown and its disc
 #      on crown_changed (kill_crown, and a felled tree through
 #      Structure.take_damage).
@@ -29,18 +34,27 @@
 #      parent cone's texture, tint, energy and shadows (mask | CANOPY_LIGHT),
 #      lighting CANOPY_LIGHT only, at half its range from the ground (the near
 #      exemption when farther), all of it under a crown, none a story up
-#      (roof, high deck), off with its cone; real ProceduralCharacters through
-#      the same path. A real character under a crown trades light mask 1 for
-#      SHADED_MASK on its body (the full cones stop lighting it) and has it
-#      back out from under it, when revealed and when the layer goes; its
-#      queued reticle is a REVEAL shape.
+#      (roof, high deck), off with its cone or while the cone is hidden; real
+#      ProceduralCharacters through the same path. A real character under a
+#      crown trades light mask 1 for SHADED_MASK on its body (the full cones
+#      stop lighting it; its top_level route layer and aim line keep mask 1),
+#      gear put on while it stays hidden is shaded at the next re-walk
+#      (REGATE_SECONDS), and it has mask 1 back out from under it, when
+#      revealed and when the layer goes; its queued reticle is a REVEAL disc.
 #   D. The real loader: MapLoader.generate_structured_map on a contract-3 map
 #      dict builds the CanopyLayer (and its discs from the ground sprite),
 #      drops the atlas reference after, and a contract-2 one builds none.
 #   E. Game._update_sight_cones (Game.gd, instanced bare): fits the canopy
-#      child on a map with a CanopyLayer, switches it off on one without.
+#      child on a map with a CanopyLayer, switches it off on one without;
+#      Game.weapon_shot_z: CanopyLayer.SHOT_Z there, 3 here.
 #   F. A missing atlas push_errors: images.canopy naming no file, and tree
 #      rows with canopy cells but no images.canopy at all.
+#   G. The fade budget (a 12-crown grove): three planned routes through four
+#      crowns each, with dash leashes, keep every crown crossing faded, in
+#      few capsules; with the budget overrun the primary selection's route
+#      (then the rest of the selection's) is served first; reveal_runs; the
+#      coarse grid answers any_crown_within and long near_art queries as a
+#      scan of every crown would.
 # Run:  godot --headless --path . res://tests/canopy_layer_check.tscn
 # Judge by the PASS/FAIL lines and "CANOPY LAYER DONE failures=0".
 extends Node2D
@@ -103,6 +117,13 @@ class RevealStub extends Node:
 		add_to_group(CanopyLayer.REVEAL_GROUP)
 	func canopy_reveal(out: Array) -> void:
 		out.append_array(shapes)
+
+
+## What CellFireFX reads of a CellFire.
+class FireSimStub extends Node:
+	var burning: Dictionary = {}
+	var burn_rev: int = 0
+	var sim_time: float = 0.0
 
 
 ## Collects push_error text (Godot's Logger).
@@ -177,6 +198,7 @@ func _ready() -> void:
 	await _part_c(ml)
 	await _part_c_real(ml, spawned)
 	await _part_b_drop(ml, spawned)
+	await _part_g()
 	ml.queue_free()
 	await get_tree().process_frame
 	await _part_d()
@@ -227,6 +249,45 @@ func _shapes_of(layer: CanopyLayer, kind: int) -> Array:
 	for s in layer.fade_shapes():
 		if int(s["kind"]) == kind:
 			out.append(s)
+	return out
+
+
+# A disc shape at p with inner radius `inner` among `shapes`.
+func _has_disc(shapes: Array, p: Vector2, inner: float) -> bool:
+	for s in shapes:
+		if (s["a"] as Vector2).is_equal_approx(p) and (s["b"] as Vector2).is_equal_approx(p) \
+				and is_equal_approx(float(s["inner"]), inner):
+			return true
+	return false
+
+
+# A capsule a..b (either way round) with inner radius `inner` among `shapes`.
+func _has_capsule(shapes: Array, a: Vector2, b: Vector2, inner: float) -> bool:
+	for s in shapes:
+		var sa: Vector2 = s["a"]
+		var sb: Vector2 = s["b"]
+		if ((sa.is_equal_approx(a) and sb.is_equal_approx(b)) or (sa.is_equal_approx(b) and sb.is_equal_approx(a))) \
+				and is_equal_approx(float(s["inner"]), inner):
+			return true
+	return false
+
+
+# The points of `route` within a live crown's art reach that no REVEAL shape
+# fades fully (within its inner radius).
+func _uncovered(layer: CanopyLayer, route: PackedVector2Array) -> Array:
+	var shapes: Array = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var out: Array = []
+	for p in route:
+		if not layer.under_art(p, 0.0):
+			continue
+		var ok := false
+		for s in shapes:
+			var q: Vector2 = Geometry2D.get_closest_point_to_segment(p, s["a"], s["b"])
+			if q.distance_to(p) <= float(s["inner"]) + 0.01:
+				ok = true
+				break
+		if not ok:
+			out.append(p)
 	return out
 
 
@@ -340,6 +401,8 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	_check("b.layer-built", layer != null and is_instance_valid(layer))
 	if layer == null:
 		return
+	# headless, the window (the view the fade serves) is 64 px: serve the map
+	layer.view_override = Rect2(0, 0, 2048, 2048)
 	_check("b.z-absolute", not layer.z_as_relative and layer.z_index == CanopyLayer.CANOPY_Z)
 	_check("b.z-above-characters", CanopyLayer.CANOPY_Z > 5 and CanopyLayer.CANOPY_Z > 1)
 	_check("b.z-below-targeting-ui", CanopyLayer.CANOPY_Z < 49)
@@ -355,6 +418,30 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	_check("b.lamps-light-the-crowns", (lamp.range_item_cull_mask & CollisionLayers.LAMP_LIGHT) != 0
 		and (lamp.range_item_cull_mask & 1) != 0, lamp.range_item_cull_mask)
 	lamp.free()
+	# the other ordinary lights: glow marks, VFXEffectNode, lightning
+	var gmk: Node2D = load("res://vfx/glow_mark.gd").new()
+	add_child(gmk)
+	var glow_l: PointLight2D = null
+	for ch in gmk.get_children():
+		if ch is PointLight2D:
+			glow_l = ch
+	_check("b.lamps.glow-mark", glow_l != null and glow_l.range_item_cull_mask == CollisionLayers.LAMP_RANGE_MASK,
+		glow_l.range_item_cull_mask if glow_l != null else -1)
+	gmk.queue_free()
+	var vn: Node2D = load("res://VFXEffectNode.gd").new()
+	add_child(vn)
+	vn.call("add_light", Color.WHITE, 1.0, 100.0, null)
+	var vl: PointLight2D = vn.get("light")
+	_check("b.lamps.vfx-node", vl != null and vl.range_item_cull_mask == CollisionLayers.LAMP_RANGE_MASK,
+		vl.range_item_cull_mask if vl != null else -1)
+	vn.queue_free()
+	var lt := LightningVFX.new()
+	lt.end_position = Vector2(100, 0)
+	add_child(lt)
+	_check("b.lamps.lightning", lt.point_light != null and lt.impact_light != null
+		and lt.point_light.range_item_cull_mask == CollisionLayers.LAMP_RANGE_MASK
+		and lt.impact_light.range_item_cull_mask == CollisionLayers.LAMP_RANGE_MASK)
+	lt.queue_free()
 	var sm := layer.material as ShaderMaterial
 	_check("b.fade-shader", sm != null and sm.shader != null)
 	var i1: int = GridManager.canopy.crown_of(spawned["hide"])
@@ -405,6 +492,12 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	pm.global_position = Vector2(600 - reach1 - CanopyLayer.BODY_PAD * 1.5, 600)
 	await get_tree().process_frame
 	_check("b.fade.body-past-art", _shapes_of(layer, CanopyLayer.Fade.PARTY).size() == 0)
+	# off the view: no fade (the budget is for what can be seen)
+	pm.global_position = Vector2(600 + 75, 600)
+	layer.view_override = Rect2(1500, 1500, 100, 100)
+	await get_tree().process_frame
+	_check("b.fade.party-off-view", _shapes_of(layer, CanopyLayer.Fade.PARTY).is_empty())
+	layer.view_override = Rect2(0, 0, 2048, 2048)
 	# an NPC under it fades nothing (only the party)
 	party_chars = []
 	var npc := Node2D.new()
@@ -424,66 +517,123 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	_check("b.fade.cursor", fp.size() == 1 and is_equal_approx(float(fp[0]["inner"]), CanopyLayer.CURSOR_FADE.x)
 		and is_equal_approx(float(fp[0]["outer"]), CanopyLayer.CURSOR_FADE.y), fp)
 	layer.cursor_override = Vector2(100, 100)
-	# REVEAL_GROUP: a polyline through the grove fades along it near the
-	# crowns only; a disc far from every crown fades nothing
+	# REVEAL_GROUP: a polyline fades along each straight run that comes near
+	# a crown (one capsule, its radii grown by REVEAL_TOL), not along a run
+	# far from every crown; a disc far from every crown fades nothing
 	var stub := RevealStub.new()
-	stub.shapes = [[PackedVector2Array([Vector2(200, 600), Vector2(1000, 600)]), 14.0],
+	stub.shapes = [[PackedVector2Array([Vector2(200, 1700), Vector2(200, 600), Vector2(1000, 600)]), 14.0],
 		[PackedVector2Array([Vector2(1800, 1800)]), 20.0]]
 	add_child(stub)
 	await get_tree().process_frame
 	var rv: Array = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var inner_l: float = 14.0 + CanopyLayer.REVEAL_TOL
 	var all_near := not rv.is_empty()
-	var covers_trunk := false
 	for s in rv:
-		all_near = all_near and layer.near_art(s["a"], s["b"], float(s["outer"]))
-		var a: Vector2 = s["a"]
-		var b: Vector2 = s["b"]
-		if a.x <= 600.0 and b.x >= 600.0:
-			covers_trunk = true
-		all_near = all_near and is_equal_approx(float(s["inner"]), 14.0) and is_equal_approx(float(s["outer"]), 14.0 + CanopyLayer.REVEAL_FEATHER)
-	_check("b.reveal.polyline-near-crowns", all_near and covers_trunk, rv)
-	var far := false
-	for s in rv:
-		if (s["b"] as Vector2).x < 400.0 or (s["a"] as Vector2).distance_to(Vector2(1800, 1800)) < 1.0:
-			far = true
-	_check("b.reveal.culls-far-shapes", not far, rv)
+		all_near = all_near and layer.near_art(s["a"], s["b"], float(s["outer"])) \
+			and is_equal_approx(float(s["outer"]), inner_l + CanopyLayer.REVEAL_FEATHER)
+	_check("b.reveal.polyline-near-crowns", all_near and _has_capsule(rv, Vector2(200, 600), Vector2(1000, 600), inner_l), rv)
+	_check("b.reveal.straight-run-one-capsule", rv.size() == 1, rv)
+	_check("b.reveal.culls-far-shapes", not _has_capsule(rv, Vector2(200, 1700), Vector2(200, 600), inner_l)
+		and not _has_disc(rv, Vector2(1800, 1800), 20.0), rv)
 	stub.shapes = [[PackedVector2Array([Vector2(610, 560)]), 10.0]]
 	await get_tree().process_frame
 	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
-	_check("b.reveal.disc", rv.size() == 1 and (rv[0]["a"] as Vector2) == Vector2(610, 560) and rv[0]["a"] == rv[0]["b"], rv)
+	_check("b.reveal.disc", rv.size() == 1 and _has_disc(rv, Vector2(610, 560), 10.0), rv)
+	# the view: a shape wholly outside it (grown by its feather) is dropped
+	stub.shapes = [[PackedVector2Array([Vector2(610, 560)]), 10.0], [PackedVector2Array([Vector2(700, 700)]), 10.0]]
+	layer.view_override = Rect2(560, 520, 60, 60)
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.view-culls", rv.size() == 1 and _has_disc(rv, Vector2(610, 560), 10.0), rv)
+	# ... and the view is what the viewport shows: zoomed in x8 on (610, 560)
+	var vp := get_viewport()
+	var keep_xf: Transform2D = vp.canvas_transform
+	var vs: Vector2 = vp.get_visible_rect().size
+	vp.canvas_transform = Transform2D(0.0, Vector2(8, 8), 0.0, vs * 0.5 - Vector2(610, 560) * 8.0)
+	layer.view_override = null
+	stub.shapes = [[PackedVector2Array([Vector2(610, 560)]), 10.0], [PackedVector2Array([Vector2(790, 660)]), 10.0]]
+	await get_tree().process_frame
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	var vr: Rect2 = layer.view_rect()
+	_check("b.reveal.view-is-the-viewport", vr.get_center().is_equal_approx(Vector2(610, 560))
+		and is_equal_approx(vr.size.x, vs.x / 8.0) and rv.size() == 1 and _has_disc(rv, Vector2(610, 560), 10.0), [vr, rv])
+	vp.canvas_transform = keep_xf
+	layer.view_override = Rect2(0, 0, 2048, 2048)
 	stub.queue_free()
 	await get_tree().process_frame   # freed at the end of this frame
 	await get_tree().process_frame
 	_check("b.reveal.gone-with-provider", _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty())
-	# a real aim line through the crown
+	# a real aim line into the crown: the ribbon and its landing reticle
 	var aim := AimLine.new()
 	add_child(aim)
-	aim.show_aim(Vector2(450, 600), Vector2(760, 600))
+	aim.show_aim(Vector2(450, 600), Vector2(650, 600))
 	await get_tree().process_frame
-	_check("b.reveal.aim-line", _shapes_of(layer, CanopyLayer.Fade.REVEAL).size() >= 3)
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.aim-line", _has_capsule(rv, aim._from, aim._to, 14.0 + CanopyLayer.REVEAL_TOL), rv)
+	_check("b.reveal.aim-reticle", _has_disc(rv, aim._to, AimLine.RETICLE_RADIUS + 10.0), rv)
 	aim.hide_aim()
 	await get_tree().process_frame
 	_check("b.reveal.aim-line-hidden", _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty())
 	aim.queue_free()
-	# a real planned route through the grove
+	# a real planned route through the grove: every point of it under a
+	# crown's art fades fully
 	var pd := PathDrawer.new()
 	pd.tactical_path = TacticalPath.new()
 	pd.tactical_path.set_waypoints(PackedVector2Array([Vector2(420, 700), Vector2(600, 660), Vector2(820, 640)]))
 	add_child(pd)
 	await get_tree().process_frame
-	_check("b.reveal.path-route", _shapes_of(layer, CanopyLayer.Fade.REVEAL).size() >= 4,
-		_shapes_of(layer, CanopyLayer.Fade.REVEAL).size())
-	pd.queue_free()
-	await get_tree().process_frame
-	# fire under a crown (CellFireFX's clusters, re-clustered with its lights)
-	var fx := CellFireFX.new()
-	add_child(fx)
-	fx._reveal = [[Vector2(640, 610), 20.0]]
+	var route: PackedVector2Array = pd._visible_route()
+	var bare: Array = _uncovered(layer, route)
+	_check("b.reveal.path-route", route.size() > 3 and bare.is_empty() and not _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty(),
+		"%d route points, uncovered %s" % [route.size(), str(bare)])
+	# its nodes' ends: a queued dash's leash and landing, a detached AoE's
+	var dash_to := Vector2(690, 600)
+	var nd = pd.tactical_path.insert_action_node(Vector2(600, 660), ActionQueue.ActionType.ATTACK, {"dash_target": dash_to})
+	var na = pd.tactical_path.insert_action_node(Vector2(540, 672))
+	na.aoe_center = Vector2(560, 590)
+	na.aoe_extent = 30.0
 	await get_tree().process_frame
 	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
-	_check("b.reveal.fire", rv.size() == 1 and (rv[0]["a"] as Vector2).is_equal_approx(Vector2(640, 610))
-		and float(rv[0]["inner"]) >= 20.0, rv)
+	var leash_r: float = PathDrawer.CANOPY_REVEAL_R + CanopyLayer.REVEAL_TOL
+	_check("b.reveal.path-node-marks", _has_disc(rv, nd.world_position, PathDrawer.ARROW_LENGTH)
+		and _has_disc(rv, na.world_position, PathDrawer.ARROW_LENGTH), rv)
+	_check("b.reveal.path-dash", _has_capsule(rv, nd.world_position, dash_to, leash_r)
+		and _has_disc(rv, dash_to, PathDrawer.NODE_RADIUS + 4.0), rv)
+	_check("b.reveal.path-aoe", _has_capsule(rv, na.world_position, na.aoe_center, leash_r)
+		and _has_disc(rv, na.aoe_center, PathDrawer.NODE_RADIUS + 4.0), rv)
+	pd.queue_free()
+	await get_tree().process_frame
+	# fire under a crown: a real CellFireFX, set up with a sim whose two
+	# neighbouring cells burn, clusters them with its lights; the cluster is a
+	# REVEAL disc and its light lights the crowns
+	var fx := CellFireFX.new()
+	add_child(fx)
+	var sim := FireSimStub.new()
+	add_child(sim)
+	var graph := CellGraph.from_square_tiles()
+	var c0: int = graph.cell_at(Vector2(610, 610))
+	var c1: int = c0 + 1
+	sim.burning = {c0: {"seed": 0.3, "t0": 6.0, "t": 5.0}, c1: {"seed": 0.6, "t0": 6.0, "t": 5.0}}
+	sim.burn_rev = 1
+	fx.setup(sim, graph)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var fc: Vector2 = (graph.centroid(c0) + graph.centroid(c1)) * 0.5
+	var fext: float = fc.distance_to(graph.centroid(c0)) + graph.radius(c0)
+	_check("b.fire.clusters", fx._reveal.size() == 1 and (fx._reveal[0][0] as Vector2).is_equal_approx(fc)
+		and is_equal_approx(float(fx._reveal[0][1]), fext), fx._reveal)
+	rv = _shapes_of(layer, CanopyLayer.Fade.REVEAL)
+	_check("b.reveal.fire", rv.size() == 1 and _has_disc(rv, fx.to_global(fc), fext + 12.0), rv)
+	var fl: PointLight2D = fx._lights[0] if fx._lights.size() > 0 else null
+	_check("b.fire.light-lights-crowns", fl != null and fl.visible and fl.range_item_cull_mask == CollisionLayers.LAMP_RANGE_MASK,
+		fl.range_item_cull_mask if fl != null else -1)
+	sim.burning = {}
+	sim.burn_rev = 2
+	await get_tree().process_frame   # the fire re-clusters (the layer may ask first)
+	await get_tree().process_frame
+	_check("b.reveal.fire-out", fx._reveal.is_empty() and _shapes_of(layer, CanopyLayer.Fade.REVEAL).is_empty())
 	fx.queue_free()
+	sim.queue_free()
 	await get_tree().process_frame
 	# the hit flash / damage tint of the tree, onto its crown
 	var art := (spawned["hide"] as Structure).get_node("Art") as CanvasItem
@@ -596,6 +746,13 @@ func _part_c(ml: Node2D) -> void:
 	CanopyLayer.fit_canopy_cone(light, v, layer)
 	_check("c.cone-off", not cc.enabled)
 	light.enabled = true
+	# the cone hidden (stealth mode off hides NPC cones): its child off, no work
+	light.visible = false
+	CanopyLayer.fit_canopy_cone(light, v, layer)
+	_check("c.cone-hidden", not cc.enabled)
+	light.visible = true
+	CanopyLayer.fit_canopy_cone(light, v, layer)
+	_check("c.cone-shown-again", cc.enabled)
 	# the cone retiers (a band mask): the child follows
 	light.shadow_item_cull_mask = CollisionLayers.SIGHT_MASK_GROUND | (1 << 5)
 	light.color = Color(0.55, 0.62, 0.72)
@@ -658,12 +815,25 @@ func _part_c_real(ml: Node2D, spawned: Dictionary) -> void:
 	var m1 := _body_masks(c)
 	_check("c.gate.hidden-body-shaded", m1.x == 0 and m1.y >= m0.x and c in layer.gated_characters(), m1)
 	_check("c.gate.own-cone-untouched", light.light_mask == 1)
-	# its queued reticle is a REVEAL shape (ActionQueue)
+	# its world-space UI (top_level: the route layer, the aim line) is no body
+	# part and keeps mask 1; gear put on while it stays hidden is shaded at
+	# the next re-walk
+	c._ensure_aim_line()
+	var gear := Sprite2D.new()
+	c.add_child(gear)
+	await get_tree().create_timer(CanopyLayer.REGATE_SECONDS + 0.25, true).timeout
+	await get_tree().process_frame
+	_check("c.gate.regate-new-gear", gear.light_mask == CanopyLayer.SHADED_MASK, gear.light_mask)
+	_check("c.gate.top-level-ui-untouched", c.path_drawer != null and c.path_drawer.light_mask == 1
+		and c._aim_line != null and c._aim_line.light_mask == 1,
+		"%d %d" % [c.path_drawer.light_mask if c.path_drawer else -1, c._aim_line.light_mask if c._aim_line else -1])
+	gear.queue_free()
+	# its queued reticle is a REVEAL disc as wide as the sprite (ActionQueue)
 	var ret: Sprite2D = c.action_queue._create_reticle(Vector2(600, 560), ActionQueue.ActionType.ATTACK)
 	await get_tree().process_frame
 	var found := false
 	for s in _shapes_of(layer, CanopyLayer.Fade.REVEAL):
-		if (s["a"] as Vector2).is_equal_approx(Vector2(600, 560)):
+		if (s["a"] as Vector2).is_equal_approx(Vector2(600, 560)) and float(s["inner"]) >= 4.0:
 			found = true
 	_check("c.reveal.reticle", ret != null and found, _shapes_of(layer, CanopyLayer.Fade.REVEAL))
 	if ret != null:
@@ -718,6 +888,7 @@ func _part_d() -> void:
 	if layer == null:
 		ml.queue_free()
 		return
+	layer.view_override = Rect2(0, 0, 2048, 2048)
 	_check("d.loader.draws-hiding-crowns", layer.drawn_crowns().size() == 2, layer.drawn_crowns())
 	_check("d.loader.atlas-not-held", ml._canopy_tex == null)
 	var shades := 0
@@ -758,11 +929,13 @@ func _part_d() -> void:
 	g.call("_update_sight_cones")
 	var cc := los.get_node_or_null(CanopyLayer.CANOPY_CONE_NAME) as PointLight2D
 	_check("e.game.fits-canopy-cone", cc != null and cc.enabled and cc.range_item_cull_mask == CollisionLayers.CANOPY_LIGHT)
+	_check("e.game.weapon-shot-over-crowns", int(g.call("weapon_shot_z")) == CanopyLayer.SHOT_Z and CanopyLayer.SHOT_Z > CanopyLayer.CANOPY_Z)
 	var c2: Node2D = _load_map(_map_dict("canopy_check_c2", {"map": GROUND_RES}, false))
 	_check("d.loader.c2-no-layer", c2.canopy_layer == null and CanopyLayer.of(c2) == null)
 	g.set("map_loader", c2)
 	g.call("_update_sight_cones")
 	_check("e.game.c2-canopy-cone-off", cc != null and not cc.enabled)
+	_check("e.game.c2-weapon-shot-under-characters", int(g.call("weapon_shot_z")) == 3)
 	(g as Node).free()
 	c2.queue_free()
 	await get_tree().process_frame
@@ -789,6 +962,140 @@ func _part_d_exit() -> void:
 	_check("d.exit.lights-back", m.y == 0 and m.x > 0, m)
 	characters_in_scene.erase(c)
 	c.queue_free()
+	await get_tree().process_frame
+
+
+# ---------------------------------------------------------------------------
+# G. the fade budget
+# ---------------------------------------------------------------------------
+const G_R := 60.0
+
+# Route k of three through four crowns each, zig-zagging (the crowns' centre
+# offset as a party would walk through them).
+func _g_route(k: int) -> PackedVector2Array:
+	var y0: float = 360.0 + 420.0 * float(k)
+	var pts := PackedVector2Array([Vector2(120, y0)])
+	for j in 4:
+		var c := Vector2(320.0 + 230.0 * float(j), y0 + (70.0 if j % 2 == 1 else -40.0))
+		pts.append(c + Vector2(G_R * 0.3, G_R * 0.35))
+	pts.append(Vector2(1280, y0 + 60.0))
+	return pts
+
+
+func _part_g() -> void:
+	# a grove of its own: twelve hiding crowns, four on each route
+	var crowns: Array = []
+	var arts: Array = []
+	for k in 3:
+		var y0: float = 360.0 + 420.0 * float(k)
+		for j in 4:
+			var p := Vector2(320.0 + 230.0 * float(j), y0 + (70.0 if j % 2 == 1 else -40.0))
+			var art := Node2D.new()
+			add_child(art)
+			arts.append(art)
+			var ci: int = GridManager.canopy.add_crown(p, G_R, 27.0, 0.0, 1.0, 1.7, null)
+			var ch: int = ceili(G_R * 1.35 + 4.0)
+			crowns.append({"index": ci, "art": art,
+				"cell": [2, 2, 2 * ch, 2 * ch, int(p.x) - ch, int(p.y) - ch, 2 * ch, 2 * ch]})
+	GridManager.canopy.finish()
+	var layer := CanopyLayer.new()
+	layer.setup(_atlas, crowns, self, null)
+	add_child(layer)
+	layer.view_override = Rect2(0, 0, 2048, 2048)
+	layer.cursor_override = Vector2(-9999, -9999)
+	party_chars = []
+	# reveal_runs: a straight line of many points is one capsule, an L two
+	var line := PackedVector2Array()
+	for i in 41:
+		line.append(Vector2(100.0 + 20.0 * float(i), 300.0))
+	_check("g.runs.straight", CanopyLayer.reveal_runs(line).size() == 2, CanopyLayer.reveal_runs(line))
+	line.append(Vector2(900, 700))
+	_check("g.runs.corner", CanopyLayer.reveal_runs(line).size() == 3, CanopyLayer.reveal_runs(line))
+	# three planned routes, each through four crowns, each with a dash leash
+	var pds: Array = []
+	for k in 3:
+		var pd := PathDrawer.new()
+		pd.tactical_path = TacticalPath.new()
+		pd.tactical_path.set_waypoints(_g_route(k))
+		add_child(pd)
+		pd.tactical_path.insert_action_node(_g_route(k)[2], ActionQueue.ActionType.ATTACK,
+			{"dash_target": _g_route(k)[3] + Vector2(0, 40)})
+		pds.append(pd)
+	await get_tree().process_frame
+	var n_rev: int = _shapes_of(layer, CanopyLayer.Fade.REVEAL).size()
+	var bare: Array = []
+	for pd in pds:
+		bare.append(_uncovered(layer, (pd as PathDrawer)._visible_route()).size())
+	_check("g.three-routes.every-crossing-faded", bare == [0, 0, 0], "uncovered points per route %s" % str(bare))
+	# round 1 cut each route into a capsule per ~48 px near a crown: 34 a
+	# route here (111 shapes in all, past its 64); a straight run is one
+	# capsule now (13 a route, 48 in all)
+	_check("g.three-routes.few-capsules", n_rev <= 60 and layer.fade_shapes().size() < CanopyLayer.MAX_FADES,
+		"%d REVEAL shapes for three routes (+ node marks and leashes)" % n_rev)
+	for pd in pds:
+		(pd as Node).queue_free()
+	await get_tree().process_frame
+	# the budget overrun: 300 discs from a provider earlier in the tree, then a
+	# character's own route; served first while it is the primary selection,
+	# or in the selection, else the budget is spent before it
+	var flood := RevealStub.new()
+	for i in 300:
+		var ci: Dictionary = crowns[i % crowns.size()]
+		var rec: Dictionary = GridManager.canopy.crown(int(ci["index"]))
+		flood.shapes.append([PackedVector2Array([(rec["pos"] as Vector2) + Vector2(float(i % 7) - 3.0, float(i % 5) - 2.0)]), 8.0])
+	add_child(flood)
+	var pc := _spawn_pc(Vector2(1800, 1900))
+	var tp := TacticalPath.new()
+	tp.set_waypoints(_g_route(1))
+	pc.path_drawer.tactical_path = tp
+	primary_selected = pc
+	selected_characters = [pc]
+	await get_tree().process_frame
+	var mine: Array = _uncovered(layer, pc.path_drawer._visible_route())
+	_check("g.overrun.full", layer.fade_shapes().size() == CanopyLayer.MAX_FADES, layer.fade_shapes().size())
+	_check("g.overrun.primary-served-first", mine.is_empty(), "uncovered %s" % str(mine))
+	primary_selected = null
+	await get_tree().process_frame
+	mine = _uncovered(layer, pc.path_drawer._visible_route())
+	_check("g.overrun.selection-served-next", mine.is_empty(), "uncovered %s" % str(mine))
+	selected_characters = []
+	await get_tree().process_frame
+	mine = _uncovered(layer, pc.path_drawer._visible_route())
+	_check("g.overrun.others-after", not mine.is_empty(), "the flood should have spent the budget first")
+	pc.path_drawer.tactical_path = pc.tactical_path
+	flood.queue_free()
+	pc.queue_free()
+	# the coarse grid answers as a scan of every crown would (two crowns dead)
+	GridManager.canopy.kill_crown(int(crowns[5]["index"]))
+	GridManager.canopy.kill_crown(int(crowns[6]["index"]))
+	var every: Array = range(layer._crowns.size())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var bad_any := 0
+	var bad_near := 0
+	var hits := 0
+	for i in 600:
+		var p := Vector2(rng.randf_range(-300.0, 2300.0), rng.randf_range(-300.0, 2300.0))
+		var rad: float = rng.randf_range(0.0, 900.0)
+		var want := false
+		for c in layer._crowns:
+			if bool(c["alive"]) and p.distance_to(c["pos"]) <= float(c["reach"]) + rad:
+				want = true
+		if want:
+			hits += 1
+		if layer.any_crown_within(p, rad) != want:
+			bad_any += 1
+		var q := p + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 1500.0)
+		var rr: float = rng.randf_range(0.0, 80.0)
+		if layer.near_art(p, q, rr) != layer._capsule_hits(p, q, rr, every):
+			bad_near += 1
+	_check("g.grid.any-crown-within", bad_any == 0 and hits > 50 and hits < 550, "%d wrong (%d hits of 600)" % [bad_any, hits])
+	_check("g.grid.near-art-long", bad_near == 0, "%d wrong of 600" % bad_near)
+	layer.queue_free()
+	for a in arts:
+		(a as Node).queue_free()
+	primary_selected = null
+	selected_characters = []
 	await get_tree().process_frame
 
 
