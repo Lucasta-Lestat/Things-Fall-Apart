@@ -126,6 +126,7 @@ var _game: Node = null
 var _ground: Sprite2D = null
 var _mat: ShaderMaterial = null
 var _disc_mat: Material = null
+var _disc_filter: CanvasItem.TextureFilter = CanvasItem.TEXTURE_FILTER_PARENT_NODE
 # Per crown: index (GridManager.canopy), pts (map px quad), uvs (0..1 in the
 # atlas), art (the tree's "Art" node), color (its tint last frame), alive,
 # pos and reach (px) for the fade test, disc (its rule disc, or null).
@@ -204,6 +205,10 @@ func _rule_disc(pos: Vector2, r: float, trunk_r: float) -> Polygon2D:
 	d.polygons = quads
 	d.texture = _ground.texture
 	d.material = _ground.material
+	# sampled as the ground is: a contract-3 ground carries mipmaps and
+	# MapLoader gives it TEXTURE_FILTER_LINEAR_WITH_MIPMAPS (P3-C), so a disc
+	# without it would read mip 0 and shimmer as a ring when zoomed out
+	d.texture_filter = _ground.texture_filter
 	d.light_mask = SHADED_MASK
 	d.z_as_relative = false
 	d.z_index = GROUND_Z
@@ -340,6 +345,14 @@ func _process(delta: float) -> void:
 			var disc: Variant = c["disc"]
 			if disc != null and is_instance_valid(disc):
 				(disc as Polygon2D).material = _disc_mat
+	# ... and its texture filter (set by MapLoader before the layer spawns;
+	# kept in step should anything change it later)
+	if _ground != null and is_instance_valid(_ground) and _ground.texture_filter != _disc_filter:
+		_disc_filter = _ground.texture_filter
+		for c in _crowns:
+			var disc_f: Variant = c["disc"]
+			if disc_f != null and is_instance_valid(disc_f):
+				(disc_f as Polygon2D).texture_filter = _disc_filter
 	# the tree's hit flash / damage tint, onto its crown
 	var dirty := false
 	for c in _crowns:

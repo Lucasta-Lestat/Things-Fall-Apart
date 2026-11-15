@@ -200,6 +200,8 @@ func _ready() -> void:
 	gs.texture = _ground_tex
 	gs.centered = false
 	gs.z_index = -6
+	# a contract-3 ground: MapLoader samples it through its mipmaps (P3-C)
+	gs.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	ml.add_child(gs)
 	ml.structured_ground = gs
 	ml._spawn_canopy_layer()
@@ -515,6 +517,8 @@ func _part_b(ml: Node2D, spawned: Dictionary) -> void:
 	_check("b.disc.built", d1 != null and layer.rule_disc(i2) != null)
 	if d1 != null:
 		_check("b.disc.ground-texture", d1.texture == _ground_tex)
+		_check("b.disc.ground-filter", d1.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
+			"%d (the ground samples its mipmaps)" % d1.texture_filter)
 		_check("b.disc.uv-is-map-px", d1.uv == d1.polygon)
 		_check("b.disc.z-ground", not d1.z_as_relative and d1.z_index == -6)
 		_check("b.disc.lit-like-crowns", d1.light_mask == CanopyLayer.SHADED_MASK, d1.light_mask)

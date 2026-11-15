@@ -12,7 +12,14 @@ export (TFA_ROOT = a sandbox, never this project) of each procedural one, at
 --contract 3. For every format:"structured" row of data/Maps.json whose
 cell_graph exists, <dir>/<id>_cells.json must equal the shipped cells.json in
 every key but tile_water / tile_body (the graft is only valid when the layer
-is the one difference: anything else refuses the pack). Each record is
+is the one difference: anything else refuses the pack).
+
+A map whose SHIPPED cells.json already carries tile_water / tile_body (it
+ships at contract 3: the Perrow tg_hillside_* water maps since P3-T) needs no
+record: the test strips that layer for its OLD load and uses the shipped file
+as NEW. The pack reports such a map and skips it (its file in <dir>, if any,
+is ignored; --merge drops a stale record for it), and --check lists it as ok
+("shipped layer"). Every other map gets a record:
   {"layer": false, "cells_md5": M}                         (no open water), or
   {"layer": true, "cols", "rows", "tile_water", "tile_body", "cells_md5": M}
 with the pair run-length encoded ([value, count] over the row-major data) and
@@ -20,9 +27,10 @@ M the md5 of the shipped cells.json text with every CR byte dropped: the test
 hashes the same text and FAILs a map whose shipped file changed since.
 
 --merge keeps the fixture's record for a map with no file in <dir> (re-pack
-one re-exported map); without it every map needs a file. --check packs
-nothing: it lists the maps whose record is missing or whose cells_md5 no
-longer matches the shipped file, and exits 1 when there are any.
+one re-exported map); without it every map needs a file (but one shipping its
+own layer). --check packs nothing: it lists the maps whose record is missing
+or whose cells_md5 no longer matches the shipped file (a map shipping its own
+layer is ok whatever its record), and exits 1 when there are any.
 """
 import argparse
 import glob
@@ -40,6 +48,9 @@ COMMENT = (
     "the layout maps, windowed sandbox exports for the procedural ones) whose every other cells.json key "
     "equals the shipped file. Each map's cells_md5 is the md5 of the shipped <id>_cells.json text (CR bytes "
     "dropped) the layer was checked against: a re-exported map fails the diff until it is re-packed. "
+    "A map whose shipped cells.json carries its own tile_water / tile_body (contract 3, e.g. the Perrow "
+    "tg_hillside_* water maps) needs no record: the diff strips that layer for OLD and uses the shipped "
+    "file as NEW, and the packer skips it. "
     "Re-pack: python tools/pack_c3_water_layers.py <dir of contract-3 <id>_cells.json> [--merge] "
     "(from the project folder); python tools/pack_c3_water_layers.py --check lists the stale maps."
 )
@@ -79,9 +90,26 @@ def shipped_maps(project):
     return out
 
 
+def shipped_layer(shipped):
+    """True when the shipped cells.json already carries tile_water / tile_body (either key:
+    the test then strips it for OLD and needs no record)."""
+    with open(shipped, encoding="utf-8") as fh:
+        cells = json.load(fh)
+    return any(k in cells for k in LAYER_KEYS)
+
+
+def shipped_layer_whole(shipped):
+    """True when the shipped cells.json carries BOTH tile_water and tile_body (a lone key is
+    malformed: the test FAILs that map, so --check must not call it ok)."""
+    with open(shipped, encoding="utf-8") as fh:
+        cells = json.load(fh)
+    return all(k in cells for k in LAYER_KEYS)
+
+
 def record(shipped, c3):
     """The fixture record for one map, or raise ValueError when the c3 file is not the
-    shipped file plus (at most) the layer."""
+    shipped file plus (at most) the layer. main() never calls it for a map whose shipped
+    file carries the layer (shipped_layer: no record); the check below guards other callers."""
     with open(shipped, encoding="utf-8") as fh:
         a = json.load(fh)
     with open(c3, encoding="utf-8") as fh:
@@ -111,7 +139,12 @@ def check(project, fixture):
     bad = 0
     for mid, shipped in shipped_maps(project):
         rec = recs.get(mid)
-        if rec is None:
+        if shipped_layer(shipped) and not shipped_layer_whole(shipped):
+            print("MALFORMED %s: the shipped cells.json carries only one of tile_water / tile_body" % mid)
+            bad += 1
+        elif shipped_layer(shipped):
+            print("ok %s: shipped layer%s" % (mid, " (its record is unused: --merge drops it)" if rec is not None else ""))
+        elif rec is None:
             print("MISSING %s: no record (re-pack it)" % mid)
             bad += 1
         elif rec.get("cells_md5") != text_md5(shipped):
@@ -120,7 +153,7 @@ def check(project, fixture):
             bad += 1
         else:
             print("ok %s" % mid)
-    print("%d stale or missing" % bad)
+    print("%d stale, missing or malformed" % bad)
     return 1 if bad else 0
 
 
@@ -143,9 +176,17 @@ def main(argv=None):
         with open(out, encoding="utf-8") as fh:
             old = json.load(fh).get("maps", {})
     maps = {}
+    layered = set()
     errors = 0
     for mid, shipped in shipped_maps(args.project):
         c3 = os.path.join(args.c3_dir, "%s_cells.json" % mid)
+        if shipped_layer(shipped):
+            # the test reads the shipped layer itself: no record (a stale one is dropped)
+            layered.add(mid)
+            print("skipped %s: the shipped cells.json carries tile_water / tile_body, no record needed%s%s" % (
+                mid, "; its c3 file is ignored" if os.path.isfile(c3) else "",
+                "; dropped its record" if mid in old else ""))
+            continue
         if not os.path.isfile(c3):
             if mid in old:
                 maps[mid] = old[mid]
@@ -163,7 +204,8 @@ def main(argv=None):
         print("packed %s: %s" % (mid, "layer %dx%d" % (maps[mid]["cols"], maps[mid]["rows"])
                                  if maps[mid]["layer"] else "no open water"))
     extra = sorted(os.path.basename(f)[:-len("_cells.json")] for f in glob.glob(os.path.join(args.c3_dir, "*_cells.json"))
-                   if os.path.basename(f)[:-len("_cells.json")] not in maps)
+                   if os.path.basename(f)[:-len("_cells.json")] not in maps
+                   and os.path.basename(f)[:-len("_cells.json")] not in layered)
     if extra:
         print("ignored (no shipped structured map): %s" % ", ".join(extra))
     if errors:
