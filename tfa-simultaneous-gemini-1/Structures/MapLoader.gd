@@ -23,6 +23,8 @@ var water_sim: String = "visual"
 # P3-A visual half: the structured map's open-water mask (a contract-3 row's
 # images.water; _load_water_mask), null when the row ships none. It rides on
 # structured_ground's meta, where CellFluidFX binds it to the water shader.
+# generate_map (legacy and world maps) clears it, so a warp off a watery map
+# does not keep the last mask resident in VRAM.
 var structured_water_mask: Texture2D = null
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
@@ -223,7 +225,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	# came in with the cell graph (GridManager.set_elevation_data).
 	water_sim = resolve_water_sim(map_data)
 	# 2d. the open-water mask (P3-A visual half): the painted sea animates
-	structured_water_mask = _load_water_mask(images)
+	structured_water_mask = _load_water_mask(images, map_data.get("water_rect", null))
 
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
@@ -306,46 +308,81 @@ static func resolve_water_sim(map_data: Dictionary) -> String:
 # The open-water mask of a structured row (images.water, TG export contract >= 3:
 # docs/export_contract.md "P3-A: the open-water mask"): loaded and put on the
 # ground sprite for CellFluidFX, or null. No key: null, today's frozen paint.
-# A path that does not load or a mask that does not span the ground warns and
-# reads null too: a misaligned mask would animate the quays.
-func _load_water_mask(images: Dictionary) -> Texture2D:
+# The row's water_rect ([x, y, w, h], export px) places a mask CROPPED to the
+# water's bounding box on the ground; without it the mask spans the whole
+# ground. A path that does not load, a water_rect that is not a rectangle
+# inside the ground, or a mask that does not span its rect warns and reads
+# null too: a misaligned mask would animate the quays.
+func _load_water_mask(images: Dictionary, rect_v: Variant = null) -> Texture2D:
 	var wp := String(images.get("water", ""))
-	if wp == "" or structured_ground == null:
+	if wp == "" or structured_ground == null or structured_ground.texture == null:
 		return null
 	if not ResourceLoader.exists(wp):
 		push_warning("map %s: images.water %s is missing: its open water stays the painted frame" % [_current_map_id, wp])
 		return null
+	var gsize := Vector2i(structured_ground.texture.get_size())
+	var rect := water_rect_of(rect_v, gsize)
+	if not rect.has_area():
+		push_warning("map %s: water_rect %s is not [x, y, w, h] whole export px inside the ground (%s): images.water ignored"
+			% [_current_map_id, str(rect_v), str(gsize)])
+		return null
 	var tex := load(wp) as Texture2D
-	if not attach_water_mask(structured_ground, tex):
-		push_warning("map %s: images.water %s (%s) does not span the ground (%s) at 1/k, k = 1..%d: ignored"
+	if not attach_water_mask(structured_ground, tex, rect):
+		push_warning("map %s: images.water %s (%s) does not span its rect %s at 1/k, k = 1..%d: ignored"
 			% [_current_map_id, wp, str(tex.get_size()) if tex != null else "not a texture",
-			str(structured_ground.texture.get_size()), WATER_MASK_MAX_DIV])
+			str(rect), WATER_MASK_MAX_DIV])
 		return null
 	return tex
 
 
-## The mask spans the ground at a whole 1/k of its size, the same k on both
-## axes, k in 1..WATER_MASK_MAX_DIV (TG writes k = 2). The shader samples it at
-## the ground's UV, so any such k lines up.
+## The mask spans its rect of the ground (the row's water_rect, or the whole
+## ground) at a whole 1/k of its size, the same k on both axes, k in
+## 1..WATER_MASK_MAX_DIV (TG writes k = 2). The shader samples it at the
+## ground's UV mapped into that rect, so any such k lines up.
 const WATER_MASK_MAX_DIV := 8
 
-static func water_mask_fits(mask_size: Vector2i, ground_size: Vector2i) -> bool:
+static func water_mask_fits(mask_size: Vector2i, rect_size: Vector2i) -> bool:
 	if mask_size.x <= 0 or mask_size.y <= 0:
 		return false
 	for k in range(1, WATER_MASK_MAX_DIV + 1):
-		if mask_size * k == ground_size:
+		if mask_size * k == rect_size:
 			return true
 	return false
 
 
-## Puts tex on ground's meta for CellFluidFX (CellFluidFX.WATER_MASK_META) when
-## it fits the ground's texture; false (and no meta) otherwise.
-static func attach_water_mask(ground: Sprite2D, tex: Texture2D) -> bool:
+## The row's water_rect as a Rect2i of the ground (export px): null (no key) =
+## the whole ground; four whole numbers with w, h > 0 lying inside the ground
+## = that rect; anything else = an empty Rect2i (the caller ignores the mask).
+static func water_rect_of(v: Variant, ground_size: Vector2i) -> Rect2i:
+	if v == null:
+		return Rect2i(Vector2i.ZERO, ground_size)
+	if not (v is Array) or (v as Array).size() != 4:
+		return Rect2i()
+	var n := PackedInt32Array()
+	for e: Variant in v:
+		if not (e is float or e is int) or float(e) != floorf(float(e)):
+			return Rect2i()
+		n.append(int(e))
+	var r := Rect2i(n[0], n[1], n[2], n[3])
+	if r.size.x <= 0 or r.size.y <= 0 or not Rect2i(Vector2i.ZERO, ground_size).encloses(r):
+		return Rect2i()
+	return r
+
+
+## Puts tex on ground's meta for CellFluidFX (CellFluidFX.WATER_MASK_META, and
+## its rect under CellFluidFX.WATER_RECT_META) when it fits its rect of the ground's
+## texture (no rect = the whole ground); false (and no meta) otherwise.
+static func attach_water_mask(ground: Sprite2D, tex: Texture2D, rect := Rect2i()) -> bool:
 	if ground == null or ground.texture == null or tex == null:
 		return false
-	if not water_mask_fits(Vector2i(tex.get_size()), Vector2i(ground.texture.get_size())):
+	var gsize := Vector2i(ground.texture.get_size())
+	var r := rect if rect.has_area() else Rect2i(Vector2i.ZERO, gsize)
+	if not Rect2i(Vector2i.ZERO, gsize).encloses(r):
+		return false
+	if not water_mask_fits(Vector2i(tex.get_size()), r.size):
 		return false
 	ground.set_meta(CellFluidFX.WATER_MASK_META, tex)
+	ground.set_meta(CellFluidFX.WATER_RECT_META, r)
 	return true
 
 
@@ -1212,6 +1249,7 @@ func _blank_tex() -> ImageTexture:
 
 func generate_map():
 	water_sim = "visual"   # legacy/world maps run the flat tile sim: no sinks
+	structured_water_mask = null   # P3-A: no open-water mask off a structured map
 	if world_map_mode:
 		_generate_world_map()
 		return

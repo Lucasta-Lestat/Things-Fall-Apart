@@ -23,8 +23,16 @@ const FULL := 0.35             # depth that reads visually "deep" (editor cfg.fl
 # into _calm_vp, 1/CALM_DIV of the mask's size: the de-glint's 17-tap rank is
 # too dear per pixel per frame, and the calm frame is static).
 const WATER_MASK_META := &"water_mask"
+# ... and its rect of the ground (a Rect2i in ground px: the row's water_rect,
+# a mask cropped to the water's bounding box; absent = the whole ground)
+const WATER_RECT_META := &"water_rect"
 const CALM_SHADER := preload("res://shaders/water_calm.gdshader")
 const CALM_DIV := 2
+# The project setting that switches the animated open water off (bool, default
+# true). Off: setup binds no mask, so every map shows exactly its painted frame
+# (the pre-P3-A material) and pays neither the calm frame's VRAM nor the
+# layer's GPU time (docs/export_contract.md, P3-A "GPU"). Read per map load.
+const ANIMATED_WATER_SETTING := "tfa/graphics/animated_water"
 
 var sim: CellFluid
 var water_mask: Texture2D = null   # the open-water mask bound this map; null = none
@@ -102,25 +110,48 @@ func setup(p_sim: CellFluid, p_graph: CellGraph, ground_sprite: Node2D, db: Dict
 		# convert the shader's export-pixel Wn back to WORLD units so the wave/foam/
 		# rush frequencies match the editor (which tuned them at world scale)
 		wm.set_shader_parameter("wave_scale", 1.0 / maxf(p_graph.export_scale, 0.01))
-		# P3-A: the painted open water animates where the map ships a mask; a
-		# map without one leaves water_mask_on at the shader's 0 (unchanged)
+		# P3-A: the painted open water animates where the map ships a mask (and
+		# the animated_water setting is on); otherwise water_mask_on stays at
+		# the shader's 0 and the material holds the pre-P3-A parameters
 		water_mask = null
-		if ground_sprite.has_meta(WATER_MASK_META):
+		if ground_sprite.has_meta(WATER_MASK_META) and animated_water_on():
 			water_mask = ground_sprite.get_meta(WATER_MASK_META) as Texture2D
 		if water_mask != null:
+			var grect := _water_rect(ground_sprite, tex_size)
 			wm.set_shader_parameter("water_mask", water_mask)
-			wm.set_shader_parameter("water_calm", _build_calm(ground_sprite, water_mask))
+			wm.set_shader_parameter("water_calm", _build_calm(ground_sprite, water_mask, grect))
+			wm.set_shader_parameter("water_rect", Vector4(grect.position.x / tex_size.x,
+				grect.position.y / tex_size.y, grect.size.x / tex_size.x, grect.size.y / tex_size.y))
 			wm.set_shader_parameter("water_mask_on", 1.0)
+		elif _calm_vp != null and is_instance_valid(_calm_vp):
+			_calm_vp.queue_free()
+			_calm_vp = null
 		ground_sprite.material = wm
 	_request_render()
 
 
-# The calm frame of the painted open water: the ground drawn once through
-# water_calm.gdshader into a SubViewport at 1/CALM_DIV of the mask's size (a
-# Sprite2D scaled onto it, so the shader's UV and TEXTURE_PIXEL_SIZE are the
-# ground's). UPDATE_ONCE: it renders on the next frame and keeps its texture;
-# until then its alpha is 0 and the water shader keeps the painted frame.
-func _build_calm(ground_sprite: Node2D, mask: Texture2D) -> Texture2D:
+## The animated open water's switch: the ANIMATED_WATER_SETTING project
+## setting, true when unset.
+static func animated_water_on() -> bool:
+	return bool(ProjectSettings.get_setting(ANIMATED_WATER_SETTING, true))
+
+
+# The ground rect (px) the mask covers: WATER_RECT_META (the row's
+# water_rect, a crop to the water's bounding box), else the whole ground.
+func _water_rect(ground_sprite: Node2D, tex_size: Vector2) -> Rect2:
+	var r: Variant = ground_sprite.get_meta(WATER_RECT_META, null)
+	if r is Rect2i and (r as Rect2i).has_area():
+		return Rect2(r as Rect2i)
+	return Rect2(Vector2.ZERO, tex_size)
+
+
+# The calm frame of the painted open water: the ground's rect under the mask
+# drawn once through water_calm.gdshader into a SubViewport at 1/CALM_DIV of
+# the mask's size (a Sprite2D showing that region, scaled onto it, so the
+# shader's UV and TEXTURE_PIXEL_SIZE are the ground's). UPDATE_ONCE: it
+# renders on the next frame and keeps its texture; until then its alpha is 0
+# and the water shader keeps the painted frame.
+func _build_calm(ground_sprite: Node2D, mask: Texture2D, grect: Rect2) -> Texture2D:
 	if _calm_vp != null and is_instance_valid(_calm_vp):
 		_calm_vp.queue_free()
 	var gtex: Texture2D = (ground_sprite as Sprite2D).texture if ground_sprite is Sprite2D else null
@@ -136,11 +167,16 @@ func _build_calm(ground_sprite: Node2D, mask: Texture2D) -> Texture2D:
 		var spr := Sprite2D.new()
 		spr.texture = gtex
 		spr.centered = false
-		spr.scale = Vector2(csz) / gtex.get_size()
+		spr.region_enabled = true
+		spr.region_rect = grect
+		spr.scale = Vector2(csz) / grect.size
 		spr.texture_filter = (ground_sprite as CanvasItem).texture_filter   # sample it as the ground does
 		var cm := ShaderMaterial.new()
 		cm.shader = CALM_SHADER
 		cm.set_shader_parameter("water_mask", mask)
+		var gsz := gtex.get_size()
+		cm.set_shader_parameter("water_rect", Vector4(grect.position.x / gsz.x, grect.position.y / gsz.y,
+			grect.size.x / gsz.x, grect.size.y / gsz.y))
 		spr.material = cm
 		_calm_vp.add_child(spr)
 	return _calm_vp.get_texture()
