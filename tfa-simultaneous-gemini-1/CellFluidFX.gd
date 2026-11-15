@@ -15,6 +15,7 @@ extends Node2D
 
 const BLOB_SHADER := preload("res://shaders/fluid_field.gdshader")
 const WATER_SHADER := preload("res://shaders/water_surface.gdshader")
+const DECK_SHADER := preload("res://shaders/deck_fluid.gdshader")
 const FULL := 0.35             # depth that reads visually "deep" (editor cfg.fluid_full)
 # P3-A: the ground sprite's meta holding its open-water mask (a contract-3
 # row's images.water, set by MapLoader.attach_water_mask). setup binds it to
@@ -51,6 +52,8 @@ var _dtype: Dictionary = {}     # cid -> last seen ftype
 var _dflow: Dictionary = {}     # cid -> displayed flow vector (dir*speed, EMA-chased)
 var _idle := true
 var _fluid_on := false
+var _field_size := Vector2(1024, 1024)   # the ground texture the fields cover 1:1
+var _deck_mats: Array[ShaderMaterial] = []   # bridge decks' Art materials (bind_deck_arts)
 
 
 func _ready() -> void:
@@ -93,6 +96,8 @@ func setup(p_sim: CellFluid, p_graph: CellGraph, ground_sprite: Node2D, db: Dict
 	var tex_size := Vector2(1024, 1024)
 	if ground_sprite != null and ground_sprite.texture != null:
 		tex_size = ground_sprite.texture.get_size()
+	_field_size = tex_size
+	_deck_mats.clear()
 	# field resolution ~ half the map (editor world_per_texel 2.0); world (0,0)..
 	# (tex_size) maps 1:1 to UV so the ground shader samples it at its own UV
 	var res := Vector2i(maxi(8, int(tex_size.x / 2.0)), maxi(8, int(tex_size.y / 2.0)))
@@ -183,6 +188,30 @@ func _build_calm(ground_sprite: Node2D, mask: Texture2D, grect: Rect2) -> Textur
 	return _calm_vp.get_texture()
 
 
+# P3-D: a fluid on a bridge deck lies under the deck's own Art (z -3, opaque),
+# out of the ground shader's reach. Each deck's Art gets the deck variant of
+# the water pass (deck_fluid.gdshader) on the same fields, so oil, blood or
+# poison on the planks shows where it acts. MapLoader.bridge_deck_arts lists
+# the decks over the open-water layer (none on any contract-1/2 map).
+func bind_deck_arts(arts: Array) -> void:
+	_deck_mats.clear()
+	for a_v in arts:
+		var art := a_v as Polygon2D
+		if art == null or not is_instance_valid(art) or art.texture == null:
+			continue
+		var dm := ShaderMaterial.new()
+		dm.shader = DECK_SHADER
+		dm.set_shader_parameter("fluid_mask", _vp.get_texture())
+		dm.set_shader_parameter("flow_mask", _vpf.get_texture())
+		dm.set_shader_parameter("fluid_on", 1.0 if _fluid_on else 0.0)
+		dm.set_shader_parameter("field_size", _field_size)
+		var wm: Variant = _ground.material.get_shader_parameter("wave_scale") \
+			if _ground != null and _ground.material is ShaderMaterial else null
+		dm.set_shader_parameter("wave_scale", float(wm) if wm != null else 1.0)
+		art.material = dm
+		_deck_mats.append(dm)
+
+
 func clear_all() -> void:
 	_disp.clear(); _dcol.clear(); _dtype.clear(); _dflow.clear()
 	_request_render()
@@ -246,6 +275,8 @@ func _process(delta: float) -> void:
 	if want_on != _fluid_on and _ground != null and _ground.material != null:
 		_fluid_on = want_on
 		_ground.material.set_shader_parameter("fluid_on", 1.0 if want_on else 0.0)
+		for dm in _deck_mats:
+			dm.set_shader_parameter("fluid_on", 1.0 if want_on else 0.0)
 	if changed or not _idle:
 		_request_render()
 	_idle = not changed

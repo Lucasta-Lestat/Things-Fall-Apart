@@ -637,8 +637,9 @@ var current_elevation: float = 0.0
 # Roof layer: true while standing ON a roof (a stacked surface over the ground;
 # interiors below keep ground elevation). Only jumpers ever set this.
 var on_roof: bool = false
-# Bare terrain under the tile current_elevation was last read from (ABSOLUTE
-# stories). Cached by _refresh_elevation — which is suppressed while airborne —
+# Local ground under the tile current_elevation was last read from (ABSOLUTE
+# stories; GridManager.ground_ref: the bare terrain, or on a water-layer map the
+# open-water surface over a river bed, or a bridge's bank ground). Cached by _refresh_elevation — which is suppressed while airborne —
 # so height_above_ground (and with it the view layer / cone tier) cannot
 # flicker mid-jump off a terrace. Tests that poke current_elevation directly
 # keep reading it against ground 0.
@@ -726,7 +727,9 @@ func _refresh_elevation() -> void:
 		e = GridManager.roof_at(t)
 	else:
 		e = GridManager.effective_elev(t)
-	var g: float = GridManager.terrain_elev(t)
+	# the local ground: the terrain, or the open-water surface over a river bed
+	# (P3-D: a bridge walker is measured from its banks, never the bed)
+	var g: float = GridManager.ground_ref(t)
 	# Roof-walkers render ABOVE the RoofLayer cover (z 120): boost the root z
 	# while on_roof and restore on dismount. This is the single chokepoint
 	# every mover path funnels through (jump land, fall, warp, per-frame), so
@@ -6295,7 +6298,8 @@ func _step_ok(a: Vector2i, b: Vector2i) -> bool:
 # Mirrors the planner's jump edges: cardinal, within jump_range, target tile
 # pathable, and the TARGET SURFACE (roof if roofed, else ground/deck) rises at
 # most jump_height above us. Falling rises are negative -> always allowed (a
-# jumper may leap DOWN any distance; the landing applies fall damage).
+# jumper may leap DOWN any distance; the landing applies fall damage), except
+# into deep water (no swimming).
 func can_jump_to(from_t: Vector2i, to_t: Vector2i) -> bool:
 	if jump_height <= 0.001:
 		return false
@@ -6303,10 +6307,12 @@ func can_jump_to(from_t: Vector2i, to_t: Vector2i) -> bool:
 	if (dt.x != 0 and dt.y != 0) or maxi(absi(dt.x), absi(dt.y)) > jump_range or dt == Vector2i.ZERO:
 		return false
 	# roof landings float above ground obstacles (real roofs sit over INF wall
-	# tiles); only GROUND landings need a pathable tile, and never solid rock
-	# (the planner's ground jump edge carries the same veto)
+	# tiles); only GROUND landings need a pathable tile, never solid rock and
+	# never deep water (the planner's ground jump edges carry the same vetoes;
+	# deep water is GridManager.is_deep_water, relative to the water's own
+	# surface on a map with the open-water layer: P3-D)
 	if not GridManager.has_roof(to_t) and (GridManager.grid_costs.get(to_t, INF) == INF
-			or GridManager.is_solid_rock(to_t)):
+			or GridManager.is_solid_rock(to_t) or GridManager.is_deep_water(to_t)):
 		return false
 	var target_surface := GridManager.roof_at(to_t) if GridManager.has_roof(to_t) else GridManager.effective_elev(to_t)
 	return target_surface - current_elevation <= jump_height
@@ -6395,7 +6401,9 @@ func _play_landing() -> void:
 # The forced-mover (ice/knockback/dash, knockback preview) step gate:
 # can_traverse, and never INTO deep water (no swimming: a body knocked off the
 # quay would be soft-locked on the seabed). Identical to can_traverse on maps
-# without sea (GridManager.is_deep_water is relief-map only).
+# without deep water: without the open-water layer is_deep_water is relief-map
+# only; with it (contract 3) a river is deep below its own surface, off a
+# bridge deck too (P3-D).
 func _forced_step_ok(from_pos: Vector2, to_pos: Vector2) -> bool:
 	return GridManager.can_traverse(from_pos, to_pos) \
 		and not GridManager.segment_enters_deep_water(from_pos, to_pos)

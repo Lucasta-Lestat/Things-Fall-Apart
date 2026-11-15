@@ -34,6 +34,11 @@ var structured_water_mask: Texture2D = null
 var canopy_layer: CanopyLayer = null
 var _canopy_tex: Texture2D = null      # images.canopy, while the map loads (null after)
 var _canopy_crowns: Array = []         # [{index, cell, art}] for the CanopyLayer
+# P3-D: the Art of every deck over the contract-3 open-water layer (a bridge),
+# rebuilt per map load. FluidManager hands them to CellFluidFX, which draws a
+# fluid standing on the deck over its art (the ground's water pass cannot
+# reach above z -6). Empty on every contract-1/2 map.
+var bridge_deck_arts: Array[Polygon2D] = []
 
 @export var map_image_path: String = "res://Maps/cemetery.png"
 @export var mask_image_path: String = "res://Maps/cemetery_mask.png"
@@ -171,6 +176,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	structured_ground = null
 	cliff_occluders = null
 	map_lights = null
+	bridge_deck_arts = []
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
 		var ground := Sprite2D.new()
@@ -234,6 +240,18 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	water_sim = resolve_water_sim(map_data)
 	# 2d. the open-water mask (P3-A visual half): the painted sea animates
 	structured_water_mask = _load_water_mask(images, map_data.get("water_rect", null))
+
+	# 2e. relief LOS override (P3-D, L17; 2d is P3-A's water mask): an
+	# optional entry key, true / false, forces the eye-line LOS model on or off
+	# for this map instead of the 1-story terrain-span rule. Before the structures: their occluders read
+	# relief_los. No key: the span rule, today's behaviour (no shipped row
+	# sets it). GridManager.initialize() reset the override.
+	var rl: Variant = map_data.get("relief_los", null)
+	if rl is bool:
+		GridManager.set_relief_los_override(1 if rl else 0)
+	elif rl != null:
+		push_warning("map %s: relief_los must be true or false, got %s: using the terrain-span rule"
+			% [_current_map_id, JSON.stringify(rl)])
 
 	# 3. structures: geometry instances with exact collision
 	var overlay_tex: Texture2D = null
@@ -689,6 +707,9 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	var follow := false
 	if is_deck:
 		occlude_top = float(walk_elev)   # a viewer AT deck height sees past the deck floor itself
+		# a bridge's span is measured from its own banks (GridManager.ground_ref),
+		# before the occluder below reads it
+		_register_deck_ground(tight, float(walk_elev))
 	else:
 		var base_elev := GridManager.effective_elev(GridManager.world_to_map(center))
 		occlude_top = base_elev + occ_h
@@ -736,6 +757,15 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			occ.occluder_light_mask |= CollisionLayers.SIGHT_MASK_HIGH
 		if has_occ_h and not is_deck and occ_h < GridManager.EYE_HEIGHT_STORIES:
 			occ.occluder_light_mask = 0   # waist-high parapet: no cone shadow at all
+		elif is_deck and not GridManager.relief_los and _deck_has_ground_tier_tile(tight, float(walk_elev)):
+			# flat-LOS map, a LOW deck (P3-D: a bank-level bridge, measured from
+			# its banks by GridManager.ground_ref): a walker on it is the GROUND
+			# sight tier, so the GROUND mask would let the deck's own polygon,
+			# with the walker's light inside it, black out the cone beyond its
+			# edges. A deck under one story hides nothing beneath it: no cone
+			# shadow at all, like the waist-high parapet. Every shipped deck
+			# stands >= 1 story over its ground on every tile: unchanged there.
+			occ.occluder_light_mask = 0
 		elif GridManager.relief_los:
 			# relief maps: cones there are GROUND | their elevation band, so the
 			# structure must NOT carry bit 1 (it would shadow every cone). It
@@ -799,6 +829,8 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 			# seeing someone standing up here) lights it as well as the
 			# ordinary bit-1 lights
 			art.light_mask = 1 | CollisionLayers.ELEVATED_SURFACE_LIGHT
+			if _over_open_water(tight):
+				bridge_deck_arts.append(art)
 		inst.add_child(art)
 		# "art_under" (curtain pieces next to a tower): the piece's wall as it
 		# runs on UNDER the tower, from the exporter's small atlas
@@ -839,6 +871,13 @@ func _spawn_geo_structure(s: Dictionary, overlay_tex: Texture2D, tile_size: int)
 	if s.has("hp"):
 		inst.max_health = int(s["hp"])
 		inst.current_health = inst.max_health
+	# "indestructible": true (TG P3-D bridge decks): no damage, never burns, a
+	# firebreak in the fire index for ground fuel, though an oil slick standing
+	# on it still burns (CellFire.FUEL_DECK). After add_child: _ready set
+	# `flammable` from the id's StructureDatabase entry. No shipped row sets it.
+	if s.get("indestructible", false) == true:
+		inst.indestructible = true
+		inst.flammable = false
 	if inst is Door:
 		var door := inst as Door
 		door.locked = bool(s.get("locked", false))
@@ -1252,6 +1291,49 @@ func _add_cliff_run(root: Node2D, p0: Vector2, p1: Vector2, mask: int) -> void:
 	occ.occluder_light_mask = mask
 	occ.sdf_collision = false
 	root.add_child(occ)
+
+
+# A deck footprint with a tile over the contract-3 open-water layer: a bridge
+# or a pier (never true without the layer: the fallback's water is not read).
+func _over_open_water(tiles: Array[Vector2i]) -> bool:
+	if not GridManager.has_water_layer():
+		return false
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			return true
+	return false
+
+
+# P3-D: the ground a deck's tiles over the contract-3 open water are measured
+# from (GridManager.ground_ref): its BANK ground, the lowest bare terrain of its
+# own tiles off the water, capped at walk_elev. A bank-level bridge is then the
+# ground layer however far its river lies below the banks (a ravine), and a
+# deck a story over its banks stays high. No-op without the layer (every
+# contract-1/2 map) and for a deck with no tile off the water.
+func _register_deck_ground(tiles: Array[Vector2i], walk_elev: float) -> void:
+	if not GridManager.has_water_layer():
+		return
+	var bank := INF
+	for t in tiles:
+		if GridManager.water_body_at(t) <= 0:
+			bank = minf(bank, GridManager.terrain_elev(t))
+	if bank == INF:
+		return
+	for t in tiles:
+		if GridManager.water_body_at(t) > 0:
+			GridManager.register_deck_ground(t, minf(bank, walk_elev))
+
+
+# True when a walker standing on some tile of this deck footprint would be the
+# GROUND sight tier: walk_elev less than HIGH_LAYER_STORIES above the local
+# ground there (GridManager.ground_ref: a bridge's bank ground over a river,
+# so a bank-level bridge is low; the bare terrain on every contract-1/2 map).
+# The same predicate as ProceduralCharacter.is_on_raised_surface, off a roof.
+func _deck_has_ground_tier_tile(tiles: Array[Vector2i], walk_elev: float) -> bool:
+	for t in tiles:
+		if walk_elev - GridManager.ground_ref(t) < GridManager.HIGH_LAYER_STORIES:
+			return true
+	return false
 
 
 # Tiles whose CENTRE lies within `reach` of segment ab (a == b -> a disc).

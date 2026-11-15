@@ -34,6 +34,7 @@ func _ready() -> void:
 	await _scenario_high_terrain()
 	_scenario_cone_bands()
 	await _scenario_solid_rock()
+	_scenario_relative_deep_water()
 	_scenario_battlements()   # LAST: loads the full real map into GridManager
 	print("HARNESS DONE failures=%d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -822,6 +823,213 @@ func _scenario_solid_rock() -> void:
 		and GridManager.terrain_line_hit(_c(15, 9), _c(12, 9), 12.5, 8.9, false) < 0.0)
 	GridManager.roof_elevations.clear()
 	ch.queue_free()
+
+# 10. RELATIVE DEEP WATER (P3-D, L8/L17): with the open-water layer (cells.json
+# tile_water / tile_body, export contract 3) deep water is measured below the
+# water's own surface, on any map; without it the absolute -0.5 rule stands.
+# A cells.json with one cell per tile (64 px), ground 2.0, a river on rows 3-4
+# (surface 1.8, bed 0.8, body 1: deep only by the relative rule) with a deck
+# bridge on column 6 (walk_elev 2.0, rows 2-5), a ditch at (0,3) (ground 0.0,
+# beside the river: a jump UP into it), threshold tiles (11,3) bed 1.3 (depth
+# exactly 0.5: deep) and (11,4) bed 1.31 (0.49: not), and a creek at (9,6)
+# (surface 1.7, bed 1.4, body 2: wadeable).
+const RDW_COLS := 12
+const RDW_ROWS := 8
+
+func _rdw_te(x: int, y: int) -> float:
+	if x == 0 and y == 3:
+		return 0.0
+	if x == 11 and y == 3:
+		return 1.3
+	if x == 11 and y == 4:
+		return 1.31
+	if x == 9 and y == 6:
+		return 1.4
+	return 0.8 if (y == 3 or y == 4) else 2.0
+
+func _rdw_body(x: int, y: int) -> int:
+	if x == 9 and y == 6:
+		return 2
+	return 1 if (y == 3 or y == 4) and x > 0 else 0
+
+func _write_rdw_graph(path: String, cols: int, rows: int, te: Array, tw: Array, tb: Array, layer: bool) -> void:
+	var cx: Array = []
+	var cy: Array = []
+	var r: Array = []
+	var fuel: Array = []
+	var roof: Array = []
+	var nb_off: Array = []
+	var nb: Array = []
+	for y in rows:
+		for x in cols:
+			cx.append((float(x) + 0.5) * 64.0)
+			cy.append((float(y) + 0.5) * 64.0)
+			r.append(32.0)
+			fuel.append(0.0)
+			roof.append(0.0)
+			nb_off.append(nb.size())
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n := Vector2i(x, y) + d
+				if n.x >= 0 and n.y >= 0 and n.x < cols and n.y < rows:
+					nb.append(n.y * cols + n.x)
+	nb_off.append(nb.size())
+	var d: Dictionary = {"n": cols * rows, "export_scale": 2.0, "cx": cx, "cy": cy, "r": r, "fuel": fuel,
+		"elev": te, "roof": roof, "nb_off": nb_off, "nb": nb, "tile_elev": {"cols": cols, "rows": rows, "data": te}}
+	if layer:
+		d["tile_water"] = {"cols": cols, "rows": rows, "data": tw}
+		d["tile_body"] = {"cols": cols, "rows": rows, "data": tb}
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(d))
+	f.close()
+
+func _load_rdw(layer: bool) -> void:
+	var path := "user://elev_harness_rdw_cells.json"
+	var te: Array = []
+	var tw: Array = []
+	var tb: Array = []
+	for y in RDW_ROWS:
+		for x in RDW_COLS:
+			te.append(_rdw_te(x, y))
+			var bid := _rdw_body(x, y)
+			tb.append(bid)
+			tw.append(1.7 if bid == 2 else (1.8 if bid == 1 else 0.0))
+	_write_rdw_graph(path, RDW_COLS, RDW_ROWS, te, tw, tb, layer)
+	GridManager.TILE_SIZE = 64
+	GridManager.initialize(RDW_COLS * 64, RDW_ROWS * 64)
+	GridManager.set_elevation_data(CellGraph.from_structured(path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	for y in RDW_ROWS:
+		for x in RDW_COLS:
+			var t := Vector2i(x, y)
+			GridManager.floors[t] = "shallow_water" if _rdw_body(x, y) > 0 else "floor_stone"
+	for y in range(2, 6):
+		GridManager.register_deck(Vector2i(6, y), 2.0)
+		GridManager.floors[Vector2i(6, y)] = "floor_wood"   # TG writes planks under a deck
+
+func _scenario_relative_deep_water() -> void:
+	# --- the layer: the river is deep below its OWN surface (bed 0.8 > -0.5)
+	_load_rdw(true)
+	_check("rdw.layer-loaded", GridManager.has_water_layer() and GridManager.relief_los
+		and is_equal_approx(GridManager.water_surface_at(Vector2i(2, 3)), 1.8))
+	_check("rdw.river-deep-above-sea-level", GridManager.is_deep_water(Vector2i(2, 3))
+		and GridManager.is_deep_water(Vector2i(8, 4)), "bed 0.8, surface 1.8")
+	_check("rdw.bridge-not-deep", not GridManager.is_deep_water(Vector2i(6, 3)) and not GridManager.is_deep_water(Vector2i(6, 4)),
+		"a deck over the water is its surface")
+	_check("rdw.bank-not-deep", not GridManager.is_deep_water(Vector2i(2, 1)) and not GridManager.is_deep_water(Vector2i(0, 3)))
+	_check("rdw.creek-wadeable", not GridManager.is_deep_water(Vector2i(9, 6)), "depth 0.3")
+	_check("rdw.threshold", GridManager.is_deep_water(Vector2i(11, 3)) and not GridManager.is_deep_water(Vector2i(11, 4)),
+		"depth 0.50 deep, 0.49 not")
+	# walking: the bridge carries the walk, its ends pass the step gate, the river does not
+	_check("rdw.can-step-bridge-ends", GridManager.can_step(Vector2i(6, 1), Vector2i(6, 2))
+		and GridManager.can_step(Vector2i(6, 5), Vector2i(6, 6)) and not GridManager.can_step(Vector2i(6, 3), Vector2i(5, 3))
+		and not GridManager.can_step(Vector2i(5, 2), Vector2i(5, 3)))
+	var p := GridManager.find_path(Vector2i(2, 0), Vector2i(2, 7))
+	var over_deck := true
+	for t in p:
+		over_deck = over_deck and (GridManager.deck_elevations.has(t) or _rdw_body(t.x, t.y) == 0)
+	_check("rdw.path-over-bridge", not p.is_empty() and over_deck, "len=%d" % p.size())
+	# the jump planner: no landing in the river, down from the bank or UP from the ditch
+	var into := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(2, 2, 0), 2.5, 2):
+		var n := Vector2i((e["n"] as Vector3i).x, (e["n"] as Vector3i).y)
+		if GridManager.is_deep_water(n):
+			into += 1
+	var up_into := 0
+	for e in GridManager._get_jump_neighbors(Vector3i(0, 3, 0), 2.5, 2):
+		var n := Vector2i((e["n"] as Vector3i).x, (e["n"] as Vector3i).y)
+		if GridManager.is_deep_water(n):
+			up_into += 1
+	_check("rdw.planner-never-into-river", into == 0 and up_into == 0, "down %d, up %d" % [into, up_into])
+	var ch = load("res://Characters/ProceduralCharacter.tscn").instantiate()
+	ch.AI_enabled = false
+	ch.is_player_controlled = false
+	add_child(ch)
+	ch.jump_height = 2.5
+	ch.jump_range = 2
+	ch.global_position = _c(2, 2)
+	ch._refresh_elevation()
+	_check("rdw.can-jump-to-refuses-river", not ch.can_jump_to(Vector2i(2, 2), Vector2i(2, 3))
+		and not ch.can_jump_to(Vector2i(2, 2), Vector2i(2, 4)) and ch.can_jump_to(Vector2i(2, 2), Vector2i(4, 2)))
+	ch.global_position = _c(0, 3)
+	ch._refresh_elevation()
+	_check("rdw.can-jump-to-refuses-river-uphill", not ch.can_jump_to(Vector2i(0, 3), Vector2i(1, 3)),
+		"ditch 0.0 -> bed 0.8")
+	ch.global_position = _c(2, 2)
+	ch._refresh_elevation()
+	_check("rdw.knockback-refuses-river", not ch._forced_drop_check(Vector2(0.0, 64.0)) and not ch._fall_active
+		and not ch._forced_step_ok(_c(2, 2), _c(2, 3)))
+	_check("rdw.knockback-along-bridge", ch._forced_step_ok(_c(6, 2), _c(6, 5)), "deck tiles are not deep")
+	_check("rdw.knockback-off-bridge-refused", not ch._forced_step_ok(_c(6, 3), _c(5, 3)))
+	ch.queue_free()
+	# --- no layer: the absolute rule, exactly as before (the bed is above -0.5)
+	_load_rdw(false)
+	_check("rdw.fallback-absolute", not GridManager.has_water_layer() and GridManager.relief_los
+		and not GridManager.is_deep_water(Vector2i(2, 3)) and not GridManager.is_deep_water(Vector2i(11, 3)),
+		"today's rule: a river above sea level is not deep (L8)")
+	# --- a FLAT map (span < 1) with the layer: deep without relief_los, and the
+	# forced movers see it (segment_enters_deep_water no longer bails on flat maps)
+	var fpath := "user://elev_harness_rdw_flat.json"
+	var fte: Array = []
+	var ftw: Array = []
+	var ftb: Array = []
+	for y in 4:
+		for x in 6:
+			var wet: bool = x == 3
+			fte.append(-0.7 if wet else 0.0)
+			ftw.append(-0.1 if wet else 0.0)
+			ftb.append(1 if wet else 0)
+	for layer in [true, false]:
+		_write_rdw_graph(fpath, 6, 4, fte, ftw, ftb, layer)
+		GridManager.initialize(6 * 64, 4 * 64)
+		GridManager.set_elevation_data(CellGraph.from_structured(fpath))
+		for y in 4:
+			GridManager.floors[Vector2i(3, y)] = "shallow_water"
+		if layer:
+			_check("rdw.flat-layer-deep", not GridManager.relief_los and GridManager.is_deep_water(Vector2i(3, 1))
+				and GridManager.segment_enters_deep_water(_c(1, 1), _c(5, 1)), "depth 0.6 on a 0.7-span map")
+		else:
+			_check("rdw.flat-no-layer-unchanged", not GridManager.relief_los and not GridManager.is_deep_water(Vector2i(3, 1))
+				and not GridManager.segment_enters_deep_water(_c(1, 1), _c(5, 1)))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(fpath))
+	# --- L17: the relief_los override (GridManager) and its entry key (MapLoader)
+	GridManager.initialize(6 * 64, 4 * 64)
+	GridManager.elevations[Vector2i(3, 1)] = -0.98
+	GridManager.floors[Vector2i(3, 1)] = "shallow_water"
+	GridManager.refresh_terrain_stats()
+	var auto_off: bool = not GridManager.relief_los
+	GridManager.set_relief_los_override(1)
+	var forced_on: bool = GridManager.relief_los and GridManager.is_deep_water(Vector2i(3, 1))
+	GridManager.refresh_terrain_stats()
+	var sticks: bool = GridManager.relief_los
+	GridManager.set_relief_los_override(-1)
+	_check("l17.override-forces-on", auto_off and forced_on and sticks and not GridManager.relief_los,
+		"flat map: on with the override (the no-layer deep rule rides it), auto again at -1")
+	_build_terraces()
+	GridManager.set_relief_los_override(0)
+	var forced_off: bool = not GridManager.relief_los
+	GridManager.initialize(4 * 64, 4 * 64)
+	_check("l17.override-forces-off-and-resets", forced_off and GridManager.relief_los_override == -1)
+	var ml: Node2D = MAP_LOADER.new()
+	add_child(ml)
+	GridManager.initialize(6 * 64, 4 * 64)
+	GridManager.refresh_terrain_stats()
+	ml.generate_structured_map({"id": "l17_on", "images": {"map": "res://icon.svg"}, "floors": [], "structures": [],
+		"relief_los": true})
+	var key_on: bool = GridManager.relief_los
+	_build_terraces()
+	ml.generate_structured_map({"id": "l17_off", "images": {"map": "res://icon.svg"}, "floors": [], "structures": [],
+		"relief_los": false})
+	var key_off: bool = not GridManager.relief_los
+	_build_terraces()
+	ml.generate_structured_map({"id": "l17_bad", "images": {"map": "res://icon.svg"}, "floors": [], "structures": [],
+		"relief_los": "yes"})
+	var key_bad_auto: bool = GridManager.relief_los and GridManager.relief_los_override == -1
+	_build_terraces()
+	ml.generate_structured_map({"id": "l17_none", "images": {"map": "res://icon.svg"}, "floors": [], "structures": []})
+	var key_absent_auto: bool = GridManager.relief_los and GridManager.relief_los_override == -1
+	ml.queue_free()
+	_check("l17.maploader-entry-key", key_on and key_off and key_bad_auto and key_absent_auto,
+		"on %s off %s bad->auto %s absent->auto %s" % [str(key_on), str(key_off), str(key_bad_auto), str(key_absent_auto)])
 
 # 6b. JUMP + FALL: roof channel, layered A*, jump/fall states
 func _scenario_jump_fall() -> void:
