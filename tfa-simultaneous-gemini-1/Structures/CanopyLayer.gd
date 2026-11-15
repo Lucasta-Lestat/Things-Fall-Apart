@@ -22,8 +22,10 @@ extends Node2D
 #     The shader takes MAX_FADES shapes a frame, so the budget goes only to
 #     what can be seen (a shape off the view or away from every live crown
 #     is dropped), a polyline costs a shape per straight run near a crown
-#     (not one per few px), and the primary selection's own plan is served
-#     first, then the rest of the selection's, then everyone else's.
+#     (not one per few px; the runs found in one linear pass, and kept from
+#     frame to frame while the polyline is unchanged), and the primary
+#     selection's own plan is served first, then the rest of the selection's,
+#     then everyone else's.
 #   - Mirrors the tree's hit flash and damage tint (the tree's empty "Art"
 #     node, which Structure drives) onto its crown.
 #   - Cone shading by the crown RULES (P3-F), not only by the crown art. The
@@ -67,7 +69,13 @@ const CURSOR_FADE := Vector2(36.0, 96.0)
 const REVEAL_FEATHER := 28.0
 const FADE_MIN := 0.25
 ## Fade shapes per frame: canopy_layer.gdshader's arrays hold this many (its
-## loop runs only over the shapes there are).
+## loop runs only over the shapes there are; canopy_layer_check reads the
+## shader's sizes against it). Headroom, measured on a grove of r 55 crowns
+## in one 1920x1080 view: a party route zig-zagging through four crowns
+## costs about 13 shapes (canopy_layer_check part G), a 1240 px hand-drawn
+## route weaving through the grove 14-22 (about one per 60-80 px), a straight
+## one 1; so the budget holds 5-6 weaving routes with their node marks and
+## leashes, and past it the primary selection's plan is still served first.
 const MAX_FADES := 128
 ## A party member's body: under a crown when its edge is.
 const BODY_PAD := 16.0
@@ -78,8 +86,9 @@ const BODY_PAD := 16.0
 ## map with a CanopyLayer.
 const REVEAL_GROUP := "canopy_reveal"
 ## A polyline's points closer than this (px) to the last one kept are
-## skipped; the kept ones are merged into the fewest straight capsules that
-## keep every one of them within REVEAL_TOL of a capsule's axis (reveal_runs).
+## skipped (reveal_kept); the kept ones are merged greedily into straight
+## capsules that keep every one of them within REVEAL_TOL of a capsule's
+## axis (reveal_runs).
 const REVEAL_STEP := 32.0
 ## How far (px) a polyline's merged capsules may stray from its kept points;
 ## its fade radii grow by as much, so it still fades fully over the line.
@@ -130,6 +139,11 @@ var _seg := PackedVector4Array()       # this frame's fade shapes: a, b
 var _rad := PackedVector2Array()       #   inner, outer radius
 var _kind := PackedInt32Array()        #   Fade
 var _reveal_buf: Array = []
+# reveal_runs by polyline (content): this frame's, and last frame's to reuse
+# (a planned route hands over the same points frame after frame)
+var _runs_now: Dictionary = {}
+var _runs_prev: Dictionary = {}
+var _runs_reused: int = 0             # tests: polylines whose runs came from the cache
 var _cand: Array = []                  # scratch: coarse-grid candidates
 var _gated: Dictionary = {}            # character instance id -> {c, items}
 var _regate_left: float = 0.0
@@ -369,6 +383,10 @@ func _update_fade() -> void:
 	# the providers' shapes, served by rank (_reveal_rank): each provider's
 	# run [from, to) of _reveal_buf is filed under its rank
 	_reveal_buf.clear()
+	var keep: Dictionary = _runs_prev
+	_runs_prev = _runs_now
+	_runs_now = keep
+	_runs_now.clear()
 	var runs: Array = [[], [], [], []]
 	if is_inside_tree():
 		for n in get_tree().get_nodes_in_group(REVEAL_GROUP):
@@ -453,50 +471,94 @@ func _add_reveal(e: Variant, view: Rect2) -> void:
 			_add_fade(pts[0], pts[0], radii, Fade.REVEAL)
 		return
 	radii += Vector2(REVEAL_TOL, REVEAL_TOL)
-	var v := reveal_runs(pts)
+	var v: PackedVector2Array
+	var had: Variant = _runs_prev.get(pts)
+	if had is PackedVector2Array:
+		v = had
+		_runs_reused += 1
+	else:
+		v = reveal_runs(pts)
+	_runs_now[pts] = v
 	for i in range(1, v.size()):
 		if _in_view(v[i - 1], v[i], radii.y, view) and near_art(v[i - 1], v[i], radii.y):
 			if not _add_fade(v[i - 1], v[i], radii, Fade.REVEAL):
 				return
 
 
-## A polyline's fade capsules, as the vertices of a polyline each of whose
-## segments is one: its points at least REVEAL_STEP apart (the last always
-## kept), merged greedily into straight runs that keep every kept point
-## within REVEAL_TOL of the run's axis.
-static func reveal_runs(pts: PackedVector2Array) -> PackedVector2Array:
+## A polyline's points that its fade capsules are fitted to: the first, each
+## one at least REVEAL_STEP from the last kept, and the last always (a route
+## ending under a crown fades to its very end).
+static func reveal_kept(pts: PackedVector2Array) -> PackedVector2Array:
 	var v := PackedVector2Array()
 	if pts.is_empty():
 		return v
-	v.append(pts[0])
+	var last: int = pts.size() - 1
+	var lp: Vector2 = pts[0]
+	v.append(lp)
 	var step2: float = REVEAL_STEP * REVEAL_STEP
-	for i in range(1, pts.size()):
-		if pts[i].distance_squared_to(v[v.size() - 1]) >= step2 or i == pts.size() - 1:
-			v.append(pts[i])
-	if v.size() <= 2:
+	for i in range(1, last):
+		var p: Vector2 = pts[i]
+		if p.distance_squared_to(lp) >= step2:
+			v.append(p)
+			lp = p
+	if last > 0:
+		v.append(pts[last])
+	return v
+
+
+## A polyline's fade capsules, as the vertices of a polyline each of whose
+## segments is one: its kept points (reveal_kept) merged greedily into
+## straight runs, every kept point within REVEAL_TOL of its run's axis.
+## One pass, linear in the kept points: a run carries the directions from its
+## first point that keep every point so far within REVEAL_TOL of the axis (a
+## point d > REVEAL_TOL out allows those within asin(REVEAL_TOL / d) of its
+## own; one nearer allows all) and the farthest such point's distance; the
+## next point may end the run when its direction is allowed and it is no
+## nearer than that (so every point is that near the run's segment, not only
+## its line). A run that doubles back on itself is cut where it turns.
+static func reveal_runs(pts: PackedVector2Array) -> PackedVector2Array:
+	var v := reveal_kept(pts)
+	var n: int = v.size()
+	if n <= 2:
 		return v
 	var out := PackedVector2Array([v[0]])
-	var tol2: float = REVEAL_TOL * REVEAL_TOL
 	var s: int = 0
-	while s < v.size() - 1:
+	while s < n - 1:
+		var a: Vector2 = v[s]
+		var bound := false        # a point farther than REVEAL_TOL out is in the run
+		var ref := Vector2.RIGHT  # the first such point's direction: angles are from it
+		var lo: float = 0.0       # the allowed directions, ref-relative (radians)
+		var hi: float = 0.0
+		var far: float = 0.0      # the farthest such point's distance from a
 		var e: int = s + 1
-		while e + 1 < v.size() and _run_holds(v, s, e + 1, tol2):
+		while e + 1 < n:
+			var q: Vector2 = v[e] - a   # v[e] goes inside the run
+			var d: float = q.length()
+			if d > REVEAL_TOL:
+				var w: float = asin(REVEAL_TOL / d)
+				if not bound:
+					bound = true
+					ref = q / d
+					lo = -w
+					hi = w
+				else:
+					var ang: float = atan2(ref.cross(q), ref.dot(q))
+					lo = maxf(lo, ang - w)
+					hi = minf(hi, ang + w)
+					if lo > hi:
+						break
+				far = maxf(far, d)
+			if bound:
+				var c: Vector2 = v[e + 1] - a   # may it end the run?
+				if c.length() < far:
+					break
+				var ca: float = atan2(ref.cross(c), ref.dot(c))
+				if ca < lo or ca > hi:
+					break
 			e += 1
 		out.append(v[e])
 		s = e
 	return out
-
-
-# True when every point of v strictly between s and e lies within sqrt(tol2)
-# of the segment v[s] .. v[e].
-static func _run_holds(v: PackedVector2Array, s: int, e: int, tol2: float) -> bool:
-	var a: Vector2 = v[s]
-	var b: Vector2 = v[e]
-	for k in range(s + 1, e):
-		var q: Vector2 = Geometry2D.get_closest_point_to_segment(v[k], a, b)
-		if q.distance_squared_to(v[k]) > tol2:
-			return false
-	return true
 
 
 ## True when point `p` (map px) is within `pad` of a live crown's art.
