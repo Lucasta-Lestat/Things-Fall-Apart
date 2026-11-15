@@ -14,6 +14,12 @@ var cliff_occluders: Node2D = null
 # forges, hearths, glow blocks); null when the row has none. Held by
 # reference for the same reason as cliff_occluders.
 var map_lights: Node2D = null
+# the painted DF-style roof cover (a row's images.roofs, spawned hidden by
+# generate_structured_map); null when the row ships none. Game.roof_layer
+# reads it. Held by reference for the same reason as cliff_occluders: during a
+# warp or save-load the previous map's "RoofLayer" is still in the tree, so a
+# lookup by name found that dying node instead of this one.
+var roof_layer: Sprite2D = null
 # P3-A living water, resolved per map load (resolve_water_sim): "sink" = the
 # open-water cells drain fluid (CellFluid sink cells), "visual" = today's
 # painted sea that fluids pool on. FluidManager reads it when it builds the
@@ -179,6 +185,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 	structured_ground = null
 	cliff_occluders = null
 	map_lights = null
+	roof_layer = null
 	bridge_deck_arts = []
 	var ground_path := String(images.get("map", ""))
 	if ground_path != "" and ResourceLoader.exists(ground_path):
@@ -211,6 +218,7 @@ func generate_structured_map(map_data: Dictionary) -> void:
 		rmat.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
 		roofs.material = rmat
 		add_child(roofs)
+		roof_layer = roofs
 
 	# 2. floors: logical registration from per-tile codes
 	var rows: Array = map_data.get("floors", [])
@@ -1475,6 +1483,8 @@ func generate_map():
 	canopy_layer = null
 	_canopy_tex = null
 	_canopy_crowns = []
+	# no painted roof cover either (it died with the same sweep)
+	roof_layer = null
 	# P3-D: no bridge decks off a structured map (their Art died with the same
 	# sweep; GridManager.initialize() already dropped their bank grounds)
 	bridge_deck_arts = []

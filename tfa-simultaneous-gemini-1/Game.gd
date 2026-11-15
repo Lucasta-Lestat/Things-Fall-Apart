@@ -1188,7 +1188,11 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 		# quads from the roof grid. Parented under map_loader either way, so
 		# the unload sweep frees it with the rest of the map. Only structured
 		# maps carry roof data; legacy battlemaps correctly get nothing.
-		roof_layer = map_loader.get_node_or_null("RoofLayer")
+		# By reference, never by name: the unload sweep only queue_frees, so
+		# the previous map's RoofLayer still holds that name this frame (the
+		# new one is auto-renamed) and a name lookup returned the dying node
+		# (tests/roof_layer_warp_check).
+		roof_layer = map_loader.roof_layer
 		if roof_layer == null and not GridManager.roof_elevations.is_empty():
 			roof_layer = RoofLayer.new()
 			roof_layer.name = "RoofLayer"

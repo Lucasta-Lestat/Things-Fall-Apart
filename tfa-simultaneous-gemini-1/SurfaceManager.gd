@@ -977,7 +977,10 @@ func _rebuild_floor_cache(game: Node) -> void:
 		return
 	var map_loader = game.get_node("MapLoader")
 	for child in map_loader.get_children():
-		if child is Floor:
+		# a rebuild in the warp's own frame still sees the previous map's
+		# floors (the unload sweep only queue_frees): caching them would leave
+		# freed nodes in the cache once that frame ends
+		if child is Floor and not child.is_queued_for_deletion():
 			var grid_pos = GridManager.world_to_map(child.global_position)
 			if not _floor_cache.has(grid_pos):
 				_floor_cache[grid_pos] = []
