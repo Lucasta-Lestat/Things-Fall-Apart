@@ -19,7 +19,9 @@ extends Node2D
 #         (CR dropped) it was checked against: a shipped map re-exported since
 #         FAILS until the fixture is re-packed. More than SKIP_ALLOWANCE skips,
 #         or every map skipped, fails the run (a fixture whose ids no longer
-#         match would otherwise pass with nothing compared).
+#         match would otherwise pass with nothing compared). The packer is
+#         tools/pack_c3_water_layers.py (PACK_CMD; --merge re-packs only the
+#         maps with a file in the dir, --check lists the stale records).
 # Floors, decks and the relief switch come from the shipped row through
 # MapLoader (images swapped for the icon: no art is loaded).
 #   godot --headless --path . res://tests/deep_water_verdict_diff.tscn
@@ -32,6 +34,9 @@ const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 const LAYERS_PATH := "res://tests/fixtures/p3d_deep_water/c3_water_layers.json"
 const GRAFT_PATH := "user://deep_water_verdict_graft_cells.json"
 const SKIP_ALLOWANCE := 2   # maps shipped after the fixture was packed, before it is re-packed
+# how to re-pack LAYERS_PATH (run from the project folder; TG contract-3 files)
+const PACKER_PATH := "res://tools/pack_c3_water_layers.py"
+const PACK_CMD := "python tools/pack_c3_water_layers.py <dir of contract-3 <id>_cells.json> --merge"
 
 var structures_in_scene: Array = []
 var party_chars: Array = []
@@ -58,6 +63,10 @@ func _ready() -> void:
 			print("FAIL the committed water layers %s did not load" % LAYERS_PATH)
 		else:
 			_layers = lf["maps"]
+		# the fixture's re-pack path: its packer is committed and the fixture names it
+		if not FileAccess.file_exists(PACKER_PATH) or not String(lf.get("_comment", "")).contains(PACK_CMD.get_slice(" <", 0)):
+			_fails += 1
+			print("FAIL the fixture packer %s is missing, or %s's _comment does not name it" % [PACKER_PATH, LAYERS_PATH])
 	var f := FileAccess.open("res://data/Maps.json", FileAccess.READ)
 	var data: Dictionary = JSON.parse_string(f.get_as_text())
 	f.close()
@@ -73,7 +82,7 @@ func _ready() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GRAFT_PATH))
 	var skip_bad: bool = _skips > SKIP_ALLOWANCE or (_maps > 0 and _skips == _maps)
 	if skip_bad:
-		print("FAIL %d of %d maps skipped (allowance %d): re-pack %s" % [_skips, _maps, SKIP_ALLOWANCE, LAYERS_PATH])
+		print("FAIL %d of %d maps skipped (allowance %d): re-pack %s: %s" % [_skips, _maps, SKIP_ALLOWANCE, LAYERS_PATH, PACK_CMD])
 	print("DEEP WATER DIFF DONE: %d maps, %d tiles differ, %d FAIL, %d SKIP" % [_maps, _diff_total, _fails, _skips])
 	get_tree().quit(1 if _fails > 0 or _maps == 0 or skip_bad else 0)
 
@@ -129,14 +138,15 @@ func _unrle(runs: Array) -> Array:
 
 
 # md5 of a file's text with every CR dropped (a checkout's line endings never
-# matter); "" when it does not open. The fixture packer hashes the same bytes.
+# matter); "" when it does not open. The fixture packer
+# (tools/pack_c3_water_layers.py text_md5) hashes the same bytes.
 func _text_md5(path: String) -> String:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return ""
 	var text := f.get_as_text()
 	f.close()
-	return text.replace("", "").md5_text()
+	return text.replace("\r", "").md5_text()
 
 
 # The shipped cells.json TEXT with the recorded layer appended (every shipped
@@ -195,15 +205,15 @@ func _diff_map(m: Dictionary, cdir: String) -> void:
 		# the committed layer, grafted onto the shipped text
 		if not _layers.has(mid):
 			_skips += 1
-			print("SKIP %s: tiles %d relief %s deep(old) %d, literal-old %s | no recorded contract-3 layer (re-pack %s)" % [
-				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS", LAYERS_PATH])
+			print("SKIP %s: tiles %d relief %s deep(old) %d, literal-old %s | no recorded contract-3 layer (re-pack %s: %s)" % [
+				mid, old.size(), str(relief), old_n, "same" if lit_ok else "DIFFERS", LAYERS_PATH, PACK_CMD])
 			return
 		var rec: Dictionary = _layers[mid]
 		var md5 := _text_md5(ProjectSettings.globalize_path(shipped))
 		if String(rec.get("cells_md5", "")) != md5:
 			_fails += 1
-			print("FAIL %s: the shipped cells.json (md5 %s) is not the one the layer was packed against (%s): re-pack %s" % [
-				mid, md5, String(rec.get("cells_md5", "none")), LAYERS_PATH])
+			print("FAIL %s: the shipped cells.json (md5 %s) is not the one the layer was packed against (%s): re-pack %s: %s" % [
+				mid, md5, String(rec.get("cells_md5", "none")), LAYERS_PATH, PACK_CMD])
 			return
 		has_layer = bool(rec.get("layer", false))
 		c3 = shipped
