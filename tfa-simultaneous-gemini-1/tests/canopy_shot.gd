@@ -129,11 +129,13 @@ func _ready() -> void:
 	if layer != null:
 		layer.cursor_override = Vector2(-99999, -99999)
 	await _shot(out_dir + "/canopy_%s_crowns.png" % want)
-	# the cursor over a neighbour crown (or past this one)
+	# the cursor over crown art, clear of the party member's fade: a neighbour
+	# crown in the shot, else this crown's far side (_cursor_point)
 	if layer != null:
-		layer.cursor_override = cpos + Vector2(-r * 0.2, -r * 1.6)
+		layer.cursor_override = _cursor_point(layer, best, cpos, r, party.position)
 	await _shot(out_dir + "/canopy_%s_cursor.png" % want)
 	if layer != null:
+		print("canopy_shot: cursor at %s, %d cursor fade(s)" % [str(layer.cursor_override), _cursor_fades(layer)])
 		layer.cursor_override = Vector2(-99999, -99999)
 	# a ground NPC's cone from 3.2 r west of the crown, looking east into it
 	var viewer := Marker.new()
@@ -183,6 +185,48 @@ func _ready() -> void:
 	add_child(pd)
 	await _shot(out_dir + "/canopy_%s_route.png" % want)
 	get_tree().quit(0)
+
+
+## The cursor shot's point: over a live crown's art (CanopyLayer.under_art,
+## so the layer makes a CURSOR fade) and, where one is, far enough from the
+## party member that its fade does not swallow the cursor's. Tried in order:
+## the other live crowns inside the shot, nearest first, then eight points
+## round this crown at 0.6 r (west first, away from the party member).
+func _cursor_point(layer: CanopyLayer, best: int, cpos: Vector2, r: float, party_pos: Vector2) -> Vector2:
+	var cands: Array[Vector2] = []
+	var half: Vector2 = VIEW * 0.4
+	for j in GridManager.canopy.crown_count():
+		if j == best:
+			continue
+		var cj: Dictionary = GridManager.canopy.crown(j)
+		if not bool(cj.get("alive", false)):
+			continue
+		var pj: Vector2 = cj["pos"]
+		if absf(pj.x - cpos.x) <= half.x and absf(pj.y - cpos.y) <= half.y:
+			cands.append(pj)
+	cands.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		return a.distance_squared_to(cpos) < b.distance_squared_to(cpos))
+	for k in 8:
+		var ang: float = PI + TAU * float(k) / 8.0
+		cands.append(cpos + Vector2(cos(ang), sin(ang)) * r * 0.6)
+	var clear: float = CanopyLayer.PARTY_FADE.y + CanopyLayer.CURSOR_FADE.x
+	for p in cands:
+		if layer.under_art(p, 0.0) and p.distance_to(party_pos) >= clear:
+			return p
+	for p in cands:
+		if layer.under_art(p, 0.0):
+			return p
+	return cpos
+
+
+## How many CURSOR fades the layer drew this frame (the cursor shot's own
+## proof that it shows the cursor fade).
+func _cursor_fades(layer: CanopyLayer) -> int:
+	var n: int = 0
+	for s in layer.fade_shapes():
+		if int((s as Dictionary)["kind"]) == CanopyLayer.Fade.CURSOR:
+			n += 1
+	return n
 
 
 func _shot(path: String) -> void:
