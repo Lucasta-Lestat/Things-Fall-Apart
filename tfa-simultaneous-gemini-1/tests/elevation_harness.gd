@@ -1275,7 +1275,11 @@ func _scenario_projection() -> void:
 	if graph == null:
 		_check("projection.load", false, "from_structured returned null")
 		return
-	GridManager.initialize(3328, 4096)
+	# tg_export's real world_size (71 x 84 tiles): since P3-L its cells.json
+	# carries the open-water layer, which GridManager installs only when its
+	# dims are exactly the map's tiles (a stale 3328 x 4096 grid fell back to
+	# the deep-water rule with a warning)
+	GridManager.initialize(4544, 5376)
 	GridManager.set_elevation_data(graph)
 	var has_nonzero := false
 	for i in graph._elev.size():
