@@ -28,14 +28,15 @@ extends Node2D
 #       unwalkable arrival and skip reachability; relief maps stay strict)
 const MAP_LOADER := preload("res://Structures/MapLoader.gd")
 # check key ("<map>.<spawn key>" walkability, "<map>.strict.<spawn key>"
-# reachability) -> why it is excused, and until when
+# reachability) -> why it is excused, and until when. The legacy entries wait
+# for P4-L, like TG's: P3-L (the contract-3 legacy round) moved no walls.
 const ALLOWLIST := {
-	"tg_town_square.from_venonan_chapel": "the arrival tile (2,16) sits in a wall halo (WARN since TFA 5ce48a26); hand-authored legacy layout, fixed by the P2-L legacy train",
-	"tg_town_square.strict.from_courthouse": "the courthouse arrival and its warp sit in a walled 24-tile NW pocket cut off from the piazza; hand-authored legacy layout, P2-L legacy train",
-	"tg_castle_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P2-L legacy train",
-	"tg_castle_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P2-L legacy train",
-	"tg_villa_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P2-L legacy train",
-	"tg_villa_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P2-L legacy train",
+	"tg_town_square.from_venonan_chapel": "the arrival tile (2,16) sits in a wall halo (WARN since TFA 5ce48a26); hand-authored legacy layout, fixed by P4-L (P3-L moved no walls)",
+	"tg_town_square.strict.from_courthouse": "the courthouse arrival and its warp sit in a walled 24-tile NW pocket cut off from the piazza; hand-authored legacy layout, P4-L",
+	"tg_castle_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P4-L",
+	"tg_castle_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket (its gate mouth is walled in); legacy procedural map, P4-L",
+	"tg_villa_demo.strict.fort_tower_1_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P4-L",
+	"tg_villa_demo.strict.fort_tower_2_base": "the fort bailey holding the ladder bases is a pocket cut off from the default spawn; legacy procedural map, P4-L",
 }
 var structures_in_scene: Array = []
 var party_chars: Array = []
