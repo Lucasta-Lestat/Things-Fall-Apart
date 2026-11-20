@@ -54,8 +54,10 @@ extends Node
 # contract-3 TG export; under D3D12 never commit its art). The row comes from
 # TFA_WATER_ROWS (a Maps.json path, may lie outside the project; default
 # res://data/Maps.json), id TFA_WATER_MAP (default tg_hillside_harbor). Camera:
-# TFA_CAM_X / TFA_CAM_Y (world px; default the shore texel nearest the map
-# centre), TFA_CAM_ZOOM (default 1). Shots: TFA_SHOT_DIR (tests/shot_dir.gd).
+# TFA_CAM_X / TFA_CAM_Y (world px; default the shore of the mask's 64-texel block
+# with the most open water; before P3-L, the shore texel nearest the map
+# centre), TFA_CAM_ZOOM (default 1, or up to 4 where so little open water is
+# in view that view.has-both could not pass: tg_export's wadeable pools). Shots: TFA_SHOT_DIR (tests/shot_dir.gd).
 # WINDOWED only (the headless renderer is a dummy):
 #   godot --path . --fixed-fps 60 --resolution 64x64 --position -20000,-20000 res://tests/water_surface_shot.tscn
 # Judge by the PASS/FAIL lines and "WATER SURFACE SHOT DONE: N checks, M FAIL"
@@ -87,6 +89,9 @@ var map_loader: Node2D = null
 
 var sv: SubViewport
 var _wrect := Rect2()   # the ground rect the mask covers (the row's water_rect)
+# the default zoom: 1, or more on a map whose open water is too scarce for the
+# view to hold the >1000 water px view.has-both needs (set by _camera_pos)
+var _auto_zoom := 1.0
 var _fails := 0
 var _checks := 0
 var _shot_dir := ""
@@ -226,7 +231,7 @@ func _run() -> int:
 	print("water_surface_shot: mask %s on the ground rect %s of %s" % [str(mask_img.get_size()), str(_wrect), str(gsize)])
 	var cam := Camera2D.new()
 	cam.position = _camera_pos(mask_img, gsize)
-	var zm := float(OS.get_environment("TFA_CAM_ZOOM")) if OS.get_environment("TFA_CAM_ZOOM") != "" else 1.0
+	var zm := float(OS.get_environment("TFA_CAM_ZOOM")) if OS.get_environment("TFA_CAM_ZOOM") != "" else _auto_zoom
 	cam.zoom = Vector2(zm, zm)
 	sv.add_child(cam)
 	cam.make_current()
@@ -467,19 +472,64 @@ func _most_water(mask_img: Image, gsize: Vector2, view: Vector2) -> Vector2:
 func _camera_pos(mask_img: Image, _gsize: Vector2) -> Vector2:
 	if OS.get_environment("TFA_CAM_X") != "" and OS.get_environment("TFA_CAM_Y") != "":
 		return Vector2(float(OS.get_environment("TFA_CAM_X")), float(OS.get_environment("TFA_CAM_Y")))
-	# the shore texel (0.3 < c < 0.7) nearest the mask's centre
+	# The shore of the most open water: the 64-texel block holding the most
+	# open-water texels (c >= 0.99; ties: nearest the mask's centre), then the
+	# shore texel (0.3 < c < 0.7) nearest that block's open-water centroid. The
+	# shore nearest the mask's centre alone (the rule before P3-L) can land on
+	# a pool with no open water at all: tg_export's 25 wadeable ravine pools
+	# hold 120 open-water texels in three blobs across a 1788 x 1172 mask, and
+	# that view had 56 water px.
 	var msz := Vector2(mask_img.get_size())
 	var centre := msz * 0.5
-	var best := centre
+	const BLOCK := 64
+	var counts := {}
+	var sums := {}
+	for y in range(0, mask_img.get_height(), 4):
+		for x in range(0, mask_img.get_width(), 4):
+			if mask_img.get_pixel(x, y).r >= 0.99:
+				var key := Vector2i(floori(float(x) / BLOCK), floori(float(y) / BLOCK))
+				counts[key] = int(counts.get(key, 0)) + 1
+				var acc: Vector2 = sums.get(key, Vector2.ZERO)
+				sums[key] = acc + Vector2(x, y)
+	var target := centre
+	if not counts.is_empty():
+		var best_key := Vector2i(-1, -1)
+		var best_n := -1
+		var best_d := INF
+		for key_v in counts:
+			var key: Vector2i = key_v
+			var n: int = counts[key]
+			var dk := (Vector2(key) * BLOCK).distance_squared_to(centre)
+			if n > best_n or (n == best_n and dk < best_d):
+				best_key = key
+				best_n = n
+				best_d = dk
+		var s: Vector2 = sums[best_key]
+		target = s / float(best_n)
+	var best := target
 	var bd := INF
 	for y in range(0, mask_img.get_height(), 4):
 		for x in range(0, mask_img.get_width(), 4):
 			var c: float = mask_img.get_pixel(x, y).r
 			if c > 0.3 and c < 0.7:
-				var d := Vector2(x, y).distance_squared_to(centre)
+				var d := Vector2(x, y).distance_squared_to(target)
 				if d < bd:
 					bd = d
 					best = Vector2(x, y)
+	# the open water a zoom-1 view round best would hold (each 4-texel sample
+	# stands for 16 texels of k x k world px): too little, and the default zoom
+	# goes up to 4 so the view holds about 1500 water px (tg_export at zoom 1:
+	# 272 px; its largest open-water blob is 90 texels)
+	var k: float = _wrect.size.x / msz.x
+	var half := Vector2(SIZE) * 0.5 / k
+	var n_view := 0
+	for y in range(maxi(0, floori(best.y - half.y)), mini(mask_img.get_height(), ceili(best.y + half.y)), 4):
+		for x in range(maxi(0, floori(best.x - half.x)), mini(mask_img.get_width(), ceili(best.x + half.x)), 4):
+			if mask_img.get_pixel(x, y).r >= 0.99:
+				n_view += 1
+	var est: float = float(n_view) * 16.0 * k * k
+	if est > 0.0 and est < 1500.0:
+		_auto_zoom = clampf(ceilf(sqrt(1500.0 / est)), 1.0, 4.0)
 	return _wrect.position + (best + Vector2(0.5, 0.5)) / msz * _wrect.size
 
 

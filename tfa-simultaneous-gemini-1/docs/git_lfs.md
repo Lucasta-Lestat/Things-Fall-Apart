@@ -13,7 +13,7 @@ What stays in plain git: every `*.png.import`, every `*_cells.json`, and every o
 
 **Forward-only.** History was not rewritten. The old PNG blobs stay in the pack, so the repo stops growing by a full PNG per art change but doesn't shrink. A rewrite would need a force-push, and happens only if you ask for it.
 
-**The first push is done.** `origin/main` was pushed on 2026-11-12 at `fd43157c`, which contains `8889d695`, so the ~440 MB first LFS upload has happened. Nothing from P3-T (Perrow train 3, `e2e28c43` on `p3-t-tfa`) is pushed yet. See [Hosting quota](#hosting-quota-read-before-every-push).
+**The first push is done.** `origin/main` was pushed on 2026-11-12 at `fd43157c`, which contains `8889d695`, so the ~440 MB first LFS upload has happened. Nothing from P3-T (Perrow train 3, `e2e28c43` on `p3-t-tfa`, merged into the local `main` at `2a04dc9f`) or P3-L (legacy round 3, `8739b2b2` and `649a23ad` on `p3-l-tfa`) is pushed yet. See [Hosting quota](#hosting-quota-read-before-every-push).
 
 ## How it works
 
@@ -47,7 +47,7 @@ Nothing to do. Worktrees share the main checkout's `.git`: its config, its hooks
 
 - `git worktree add`, `git switch` and `git merge` smudge from that shared store, so no object is downloaded twice and nothing needs the network while the objects are local.
 - Run Godot's `--headless --import` after switching a worktree to a branch with other art, as for any branch switch.
-- Don't delete `.git/lfs`. The shared store is the ONLY copy of the art of every commit that hasn't been pushed (on 2026-11-15, P3-T's `e2e28c43`). The art of `origin/main` is also on GitHub.
+- Don't delete `.git/lfs`. The shared store is the ONLY copy of the art of every commit that hasn't been pushed (on 2026-11-17, P3-T's `e2e28c43` and P3-L's `8739b2b2`). The art of `origin/main` is also on GitHub.
 
 ### The store grows with uncommitted art
 
@@ -125,10 +125,15 @@ GitHub meters Git LFS **storage** and **bandwidth** per account. **Every pushed 
 - The first push of `8889d695` uploaded the whole set, 439 MB. It happened on 2026-11-12, when `origin/main` was pushed at `fd43157c`.
 - Each Perrow art train re-exports the six tg_hillside_* maps' PNGs: up to about 215 MB of new versions (their 20 PNGs, 213.3 MB at `335c18bd`), plus the size of any new companion images. A PNG whose bytes don't change is the same LFS object and uploads nothing. A legacy art round adds its own share.
 - P3-T (`e2e28c43`, not pushed yet) is 16 LFS objects, 167.3 MB: new versions of 8 PNGs, the ground and structures of harbor, lower, middle and upper (162.6 MB; cavern's art and ossuary's ground and structures are unchanged, and no roofs or curtain_under PNG changed), and 8 new companion images (4.7 MB):
-  - open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only, cropped to its water): harbor 145 KB, middle 55 KB, lower 53 KB, upper 51 KB, ossuary 32 KB, 0.34 MB together. The contract-3 test exports of 2026-11-14 also wrote a guild_hall mask (0.05 MB); guild_hall isn't one of the six hillside maps, so P3-T doesn't carry it.
+  - open-water masks (`Maps/<id>_water.png`, P3-A, a map with open water only, cropped to its water): harbor 145 KB, middle 55 KB, lower 53 KB, upper 51 KB, ossuary 32 KB, 0.34 MB together. The contract-3 test exports of 2026-11-14 also wrote a guild_hall mask (0.05 MB); guild_hall isn't one of the six hillside maps, so P3-T doesn't carry it; P3-L does.
   - canopy atlases (`Maps/<id>_canopy.png`, the tree crowns): upper 2.10 MB (77 trees), middle 1.57 MB (56 trees), lower 0.74 MB (27 trees), 4.40 MB together.
 
   `e2e28c43` is the only commit on `p3-t-tfa` since `origin/main` that touches these paths (checked 2026-11-15), so pushing the branch uploads those 167.3 MB.
+- P3-L (`8739b2b2` and `649a23ad` on `p3-l-tfa`, not pushed yet) is 15 LFS objects, 181.7 MB: new versions of 11 PNGs, the ground of castle_demo, castle_keep, guild_hall, tg_export and villa_demo and the structures of those five and cemetery (174.5 MB; combat_test's, town_square's and courthouse's art and cemetery's ground are unchanged), and 4 new companion images (7.18 MB):
+  - the open-water mask of guild_hall (`Maps/tg_guild_hall_water.png`, 49 KB), the only legacy map with one.
+  - canopy atlases: tg_export 5.33 MB (237 trees), castle_keep 1.00 MB (51 trees), cemetery 0.80 MB (39 trees), 7.13 MB together.
+
+  `8739b2b2` also added a tg_export mask (`Maps/tg_export_water.png`, 99,855 bytes), and `649a23ad` deletes it (its open water is under 5 % of its water, so TG no longer writes it). The `pre-push` hook uploads the objects of every commit being pushed, not only those of the tip, so a push of `p3-l-tfa` uploads that object too: 16 objects, 181.8 MB. `8739b2b2` and `649a23ad` are the only P3-L commits that touch these paths. `p3-l-tfa` also carries P3-T, so pushing it uploads 349.1 MB, P3-T's 167.3 MB and P3-L's 181.8 MB (`git lfs push --dry-run origin p3-l-tfa` lists 32 objects, checked 2026-11-17).
 - Every fresh clone, and every `git lfs pull` of new art, counts against the bandwidth.
 
 Before pushing, check the account's current LFS allowance (GitHub Settings, Billing, Git LFS data). Then budget data packs, or a lower train cadence.
@@ -141,7 +146,7 @@ No tool or agent pushes:
 - The TG roadmap's trains commit locally.
 - LFS objects go up only when a train ships and you push.
 
-The `pre-push` hook uploads the LFS objects of the commits being pushed that the remote doesn't have yet. `origin` has had the first set since 2026-11-12, so a push now uploads only the new versions: 167.3 MB for P3-T (see [Hosting quota](#hosting-quota-read-before-every-push)). To see what a push would upload without sending anything:
+The `pre-push` hook uploads the LFS objects of the commits being pushed that the remote doesn't have yet. `origin` has had the first set since 2026-11-12, so a push now uploads only the new versions: 167.3 MB for P3-T and 181.8 MB for P3-L, 349.1 MB together (see [Hosting quota](#hosting-quota-read-before-every-push)). To see what a push would upload without sending anything:
 
 ```sh
 git lfs push --dry-run origin <branch>
