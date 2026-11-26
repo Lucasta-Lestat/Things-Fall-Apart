@@ -7,6 +7,9 @@ signal faction_tier_changed(faction_id: String, old_tier: int, new_tier: int)
 ## adjust_player_standing, mark_outlaw, and settle all emit it. Game derives
 ## the `wanted` display condition from it.
 signal player_standing_changed(faction_id: String, old_value: int, new_value: int)
+## The wanted registry changed (marked, cleared, loaded). CrimeManager
+## re-derives the `wanted` icon and its per-map enforcer cache from it.
+signal wanted_changed()
 
 var _factions: Dictionary = {}
 
@@ -19,6 +22,14 @@ var _factions: Dictionary = {}
 var _player_standing: Dictionary = {}    # faction_id -> int
 var _crime_ledger: Dictionary = {}       # faction_id -> {records: Array, days_served: float}
 var _hostile_override: Dictionary = {}   # faction_id -> true
+# Wanted: PER REGION, PER CULPRIT. bucket (region id, else "map:<id>" for a
+# map in no region, else "" in harnesses with no map) -> perp key
+# ("party:<party_index>") -> {"law_faction", "name", "since", "crimes": []}.
+# Written by an IDENTIFIED report (CrimeManager.on_alarm_heard) and the
+# downtime "caught" outcome; cleared by settling with / a pardon from that law
+# faction. Enforcers of the law attack a wanted character on sight in that
+# region only (ai._is_enemy via CrimeManager.wanted_here). Saved.
+var _wanted: Dictionary = {}
 
 # --- Runtime factions and relation changes (dialogue actions) ---
 # A dialogue can turn characters against someone ("make_hostile" moves them
@@ -353,6 +364,89 @@ func is_outlaw_with(faction_id: String) -> bool:
 func is_outlaw_anywhere() -> bool:
 	return not _hostile_override.is_empty()
 
+## Where a wanted entry lives for `map_id`: the map's region, else
+## "map:<id>" (wilderness maps have no region), else "" (no map: harnesses).
+func wanted_bucket(map_id: String) -> String:
+	if map_id.is_empty():
+		return ""
+	var region_id: String = RegionDatabase.get_region_for_map(map_id)
+	return region_id if not region_id.is_empty() else "map:" + map_id
+
+func mark_wanted(bucket: String, perp_key: String, perp_name: String, law_faction: String, crime_name: String = "") -> void:
+	if perp_key.is_empty() or law_faction.is_empty():
+		return
+	var region: Dictionary = _wanted.get(bucket, {})
+	var entry: Dictionary = region.get(perp_key, {"law_faction": law_faction, "name": perp_name,
+		"since": TimeManager.absolute_time(), "crimes": []})
+	entry["law_faction"] = law_faction
+	entry["name"] = perp_name
+	if not crime_name.is_empty():
+		(entry["crimes"] as Array).append(crime_name)
+	region[perp_key] = entry
+	_wanted[bucket] = region
+	wanted_changed.emit()
+
+func wanted_entry(bucket: String, perp_key: String) -> Dictionary:
+	return (_wanted.get(bucket, {}) as Dictionary).get(perp_key, {})
+
+func is_wanted(bucket: String, perp_key: String) -> bool:
+	return not wanted_entry(bucket, perp_key).is_empty()
+
+## Every wanted entry in a region: perp key -> entry.
+func wanted_in(bucket: String) -> Dictionary:
+	return (_wanted.get(bucket, {}) as Dictionary).duplicate(true)
+
+## Whether `law_faction` wants anyone, in any region (a debt to settle).
+func has_wanted_for_law(law_faction: String) -> bool:
+	for bucket in _wanted:
+		for key in _wanted[bucket]:
+			if str((_wanted[bucket][key] as Dictionary).get("law_faction", "")) == law_faction:
+				return true
+	return false
+
+## Squared with (or pardoned by) a law faction: every region's wanted entry
+## under that law goes.
+func clear_wanted_for_law(law_faction: String) -> void:
+	var changed := false
+	for bucket in _wanted.keys():
+		var region: Dictionary = _wanted[bucket]
+		for key in region.keys():
+			if str((region[key] as Dictionary).get("law_faction", "")) == law_faction:
+				region.erase(key)
+				changed = true
+		if region.is_empty():
+			_wanted.erase(bucket)
+	if changed:
+		wanted_changed.emit()
+
+## A party row left (Game.remove_party_member): its wanted entries go with
+## it, and every later row's entries shift up one, as party_index does.
+func party_row_removed(row: int) -> void:
+	var changed := false
+	for bucket in _wanted.keys():
+		var region: Dictionary = _wanted[bucket]
+		var rekeyed: Dictionary = {}
+		for key in region.keys():
+			var k: String = str(key)
+			if not k.begins_with("party:"):
+				rekeyed[k] = region[key]
+				continue
+			var n: int = int(k.substr(6))
+			if n == row:
+				changed = true
+				continue
+			if n > row:
+				changed = true
+				rekeyed["party:%d" % (n - 1)] = region[key]
+			else:
+				rekeyed[k] = region[key]
+		if rekeyed.is_empty():
+			_wanted.erase(bucket)
+		else:
+			_wanted[bucket] = rekeyed
+	if changed:
+		wanted_changed.emit()
+
 ## Ledger entry — pricing and dialogue ONLY. Never read on a behaviour path.
 func record_crime(faction_id: String, verdict: Dictionary, ctx: Dictionary = {}) -> void:
 	if faction_id.is_empty():
@@ -412,6 +506,7 @@ func standing_to_dict() -> Dictionary:
 		"hostile_override": _hostile_override.duplicate(true),
 		"runtime_factions": _runtime_factions.duplicate(true),
 		"relation_overrides": _relation_overrides.duplicate(true),
+		"wanted": _wanted.duplicate(true),
 	}
 
 func standing_from_dict(data: Dictionary) -> void:
@@ -428,6 +523,8 @@ func standing_from_dict(data: Dictionary) -> void:
 	for fid in _player_standing.keys():
 		var v: int = int(_player_standing[fid])
 		player_standing_changed.emit(str(fid), v, v)
+	_wanted = data.get("wanted", {}).duplicate(true)
+	wanted_changed.emit()
 
 # ---------------------------------------------------------------------------
 # Race weight helpers

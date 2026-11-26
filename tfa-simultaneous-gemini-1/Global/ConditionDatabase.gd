@@ -1619,14 +1619,16 @@ func get_all_conditions() -> Array:
 	{
 		"id": "wanted",
 		"display_name": "Wanted",
-		"description": "The watch has your description. Guards in this region are hostile on sight.",
+		"description": "The watch here knows your face: its guards attack you on sight in this region until you settle with the law (surrender to them, pay the fine or serve your time) or are pardoned.",
 		"traits": {"debuff": 1, "affliction": 1, "social": 1, "legal": 1},
 		"stackable": false,
 		"max_tier": 1,
 		"duration": -1.0,
 		"icon": "res://UI/UI Icons/cond_wanted.png",
 		"transforms_into": {},
-		"canceled_by_trait": ["pardon"],
+		# not "pardon": the icon follows the wanted registry (CrimeManager.
+		# refresh_wanted), and a pardon clears that through CrimeManager.pardon
+		"canceled_by_trait": [],
 		"custom_vfx": "",
 		"custom_sfx": "",
 		"stat_modifiers": [],

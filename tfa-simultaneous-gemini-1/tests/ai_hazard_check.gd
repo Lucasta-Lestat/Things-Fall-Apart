@@ -319,6 +319,9 @@ func _ready() -> void:
 	var chaser := _spawn(GridManager.map_to_world(Vector2i(10, 13)), true)
 	await get_tree().physics_frame
 	var chai = chaser.get_node("AI")
+	# a held target must be an enemy (_update_target drops one that isn't):
+	# both actors share the default faction, so make it personal
+	chai.grudges[prey.get_instance_id()] = {"who": prey, "until": INF}
 	chai.current_target = prey
 	chai._change_state(chai.AIState.CHASE)
 	var chaser_entered_fire := false
