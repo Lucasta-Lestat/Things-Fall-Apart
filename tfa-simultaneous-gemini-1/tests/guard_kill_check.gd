@@ -292,7 +292,8 @@ func _case_settle_holds() -> void:
 	CrimeManager.settle_with("liziti", "")
 	var merchant = game._spawn_character("merchant", base + Vector2(-120, 0))
 	merchant.AI_enabled = true
-	merchant.get_node("AI").take_grudge(comp, true)
+	# a real blow: the party struck first (ai._note_struck_by marks it)
+	merchant.take_damage({"bludgeoning": 1}, merchant.global_position, comp)
 	_check("settle-holds.grudge-is-not-self-defence", not bool(CrimeManager.attack_payload(comp, merchant)["victim_hostile_to_actor"]))
 	for c in [victim, witness, merchant]:
 		if is_instance_valid(c):

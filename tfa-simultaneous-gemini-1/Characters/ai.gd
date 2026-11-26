@@ -98,6 +98,10 @@ var last_known_target_pos: Vector2 = Vector2.ZERO
 const TARGET_REANNOUNCE_GAP: float = 1.0
 var _announced_target_id: int = 0
 var _time_without_target: float = 0.0
+# A hunter that lost sight of the party member it was after still counts as
+# hunting them this long while it searches (hunted_party_member): the
+# companions defending against it don't drop the fight at the first corner.
+const HUNT_MEMORY_SEC: float = 10.0
 # Seconds since we last had a wall-clear sight line to current_target (or had
 # them in close quarters / took a hit from them). See TARGET_OCCLUSION_GIVE_UP.
 var _target_occluded_time: float = 0.0
@@ -200,6 +204,29 @@ var manhunt_target: ProceduralCharacter = null
 # _on_self_damaged, a witnessed attack via Game._on_character_damaged).
 var grudges: Dictionary = {}
 const GRUDGE_SEC := 300.0
+# The party started it with us: a party-side character struck us while we
+# were not going after the party (_note_struck_by). Until then (absolute
+# time), the party fighting us is no self-defence and companions don't take
+# it up on their own (defended_hunt). NPC-wide, not per foe: it outlives the
+# summon who struck us being freed, and covers every party member in the
+# fight. Extended by every party blow while it lasts.
+var party_wronged_until: float = 0.0
+# The hunt as it stood just BEFORE the blow being dealt now
+# (snapshot_hunt_before_blow, from ProceduralCharacter.take_damage): our own
+# damaged_by handler reacts first -- dies, panics, acquires the striker -- and
+# the law must judge the blow on what we were doing when it fell.
+var _hunt_snapshot_frame: int = -1
+var _hunt_snapshot_defended: Variant = null
+# ...and the defended hunt ignoring a momentary harmless spell (a panic, a
+# stun): whether a party blow STARTED a fight (_note_struck_by) is not the
+# same question as whether this one blow was lawful.
+var _hunt_snapshot_core: Variant = null
+# Process frame in which we last turned on a new target (_acquire_target). A
+# hunt begun this very frame is no hunt to the law: one Fireball's later
+# victims saw its first victim burn and turned on the caster mid-resolution.
+var _hunt_began_frame: int = -1
+# Who we last called out to the party (_maybe_call_out_hunt): once per target.
+var _called_out_target_id: int = 0
 # Compulsion parameters, in the same shape and for the same reason as
 # manhunt_target: personal, per-AI, unserialised, dies with the map. The
 # CONDITION is only the clock and the saving throw; this is the "about whom".
@@ -503,6 +530,7 @@ func _on_self_damaged(attacker, location: Vector2, _total_damage: float) -> void
 	if _is_condition_tick():
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, location if last_heard_position == Vector2.ZERO else Vector2.INF)
 		return
+	_note_struck_by(attacker)
 	var foe := attacker as ProceduralCharacter
 	if foe != null and is_instance_valid(foe) and foe.is_alive() and _is_enemy(foe):
 		wake_from_at_ease(ALERTNESS_SEARCHING_THRESHOLD + 5.0, foe.global_position)
@@ -566,6 +594,123 @@ func _holds_grudge(other: ProceduralCharacter) -> bool:
 		grudges.erase(other.get_instance_id())
 		return false
 	return true
+
+
+## Whether we are on the party's side: a party member or anything one of
+## them summoned. Cheap reject first -- this runs inside every _is_enemy.
+func _on_party_side() -> bool:
+	if not (str(character.faction_id) in LawDatabase.applies_to()):
+		return false
+	return game != null and CrimeManager.on_party_side(character, game)
+
+
+## No threat to anyone right now: running for their life (Panicked,
+## Frightened), pacified (Apathetic, Transfixed), stunned or out cold.
+func _is_harmless(other) -> bool:
+	var ocm = other.get_node_or_null("ConditionManager")
+	if ocm == null:
+		return false
+	for cid in ["panicked", "frightened", "apathetic", "transfixed"]:
+		if ocm.has_active_condition(cid):
+			return true
+	return ocm.has_condition("unconscious") or ocm.has_active_condition("stunned")
+
+
+## The party member (or party summon) we are going after right now, or null:
+## our current target, or -- for HUNT_MEMORY_SEC after losing sight of them,
+## while we are still searching -- the one we last had. Only someone we count
+## as an enemy (a faction foe, a grudge, a manhunt, a warrant, a compulsion),
+## and never while we are harmless (_is_harmless; ignore_harmless skips that
+## one gate) or dote on them.
+func hunted_party_member(ignore_harmless: bool = false) -> ProceduralCharacter:
+	var prey: Variant = current_target
+	if prey == null and (_announced_target_id == 0 or _time_without_target > HUNT_MEMORY_SEC \
+			or alertness_value < ALERTNESS_SEARCHING_THRESHOLD):
+		return null
+	if current_state == AIState.DEAD or not character.is_alive():
+		return null
+	if game == null or not ("party_chars" in game) or _on_party_side():
+		return null
+	if prey == null:
+		prey = instance_from_id(_announced_target_id)
+	if prey == null or not is_instance_valid(prey) or not (prey is ProceduralCharacter):
+		return null
+	var hunted: ProceduralCharacter = prey as ProceduralCharacter
+	if not hunted.is_alive() or not CrimeManager.on_party_side(hunted, game):
+		return null
+	if (not ignore_harmless and _is_harmless(character)) or hunted == _infatuation_source() \
+			or not _is_enemy(hunted):
+		return null
+	return hunted
+
+
+## hunted_party_member, when the party may lawfully fight us for it: the law
+## is after that member through us (a manhunt, a warrant here), or we took up
+## a grudge against them -- as a witness, never one the party started with us
+## (party_wronged_until). Not a compulsion alone, and not a faction feud (the
+## oracle covers those for both the companions and the law). The party's AIs
+## defend against whoever this names (_is_enemy); the law calls the party's
+## blows on us self-defence (CrimeManager._victim_hunts, via hunt_at_blow).
+func defended_hunt(ignore_harmless: bool = false) -> ProceduralCharacter:
+	var prey: ProceduralCharacter = hunted_party_member(ignore_harmless)
+	if prey == null:
+		return null
+	if manhunt_target == prey:
+		return prey
+	var wanted_by: String = str(CrimeManager.wanted_here.get(prey.get_instance_id(), ""))
+	if wanted_by != "" and LawDatabase.enforces(str(character.faction_id), wanted_by):
+		return prey
+	if _holds_grudge(prey) and not wronged_by_party():
+		return prey
+	return null
+
+
+## Called by ProceduralCharacter.take_damage before the blow lands. The
+## first blow of a frame wins: a flurry's later hits are judged on the hunt
+## as it stood before the flurry, not on the panic its first hit caused.
+func snapshot_hunt_before_blow() -> void:
+	var f: int = Engine.get_process_frames()
+	if f == _hunt_snapshot_frame:
+		return
+	_hunt_snapshot_frame = f
+	if _hunt_began_frame == f:
+		_hunt_snapshot_defended = null
+		_hunt_snapshot_core = null
+		return
+	_hunt_snapshot_core = defended_hunt(true)
+	_hunt_snapshot_defended = defended_hunt() if _hunt_snapshot_core != null else null
+
+
+## defended_hunt as the law must see the blow being dealt now: from before
+## it (the snapshot), else live (a preview, the confirm prompt).
+func hunt_at_blow() -> ProceduralCharacter:
+	if _hunt_snapshot_frame == Engine.get_process_frames():
+		var snap: Variant = _hunt_snapshot_defended
+		return snap as ProceduralCharacter if snap != null and is_instance_valid(snap) else null
+	return defended_hunt()
+
+
+## A party-side blow on us while we weren't in a fight the party may answer
+## (as we stood before the blow, a momentary panic or stun aside): the party
+## started it. A compulsion alone is no such fight; a faction feud is the
+## oracle's, not ours to mark. Every party blow while it stands keeps it fresh.
+func _note_struck_by(attacker) -> void:
+	if attacker == null or not is_instance_valid(attacker) or game == null \
+			or not CrimeManager.on_party_side(attacker, game) or _on_party_side():
+		return
+	if "faction_id" in attacker \
+			and FactionDatabase.are_hostile(str(character.faction_id), str(CrimeManager.attribute(attacker).faction_id)):
+		return
+	var now: float = TimeManager.absolute_time()
+	var was_defended: Variant = _hunt_snapshot_core if _hunt_snapshot_frame == Engine.get_process_frames() \
+		else defended_hunt(true)
+	if party_wronged_until > now or was_defended == null or not is_instance_valid(was_defended):
+		party_wronged_until = now + GRUDGE_SEC
+
+
+## Whether the party started it with us (party_wronged_until).
+func wronged_by_party() -> bool:
+	return party_wronged_until > 0.0 and TimeManager.absolute_time() < party_wronged_until
 
 
 ## `foe` hurt us (struck = true) or someone we stand with in front of us
@@ -1086,6 +1231,10 @@ func _update_target(delta: float = 0.0) -> void:
 			last_heard_position = current_target.global_position
 			if alertness_value < ALERTNESS_MAX:
 				_set_alertness_value(ALERTNESS_MAX)
+			# a hunt that started out of the party's view is called out the
+			# first time they see it (cheap id test first: this runs per tick)
+			if _called_out_target_id != current_target.get_instance_id():
+				_maybe_call_out_hunt()
 		else:
 			_target_occluded_time += delta
 			if _target_occluded_time > TARGET_OCCLUSION_GIVE_UP:
@@ -1273,7 +1422,23 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 	if compel_victim != null and is_instance_valid(compel_victim) and other == compel_victim:
 		return true
 	if not grudges.is_empty() and _holds_grudge(other):
-		return true
+		# The party's side doesn't run down a grudge who is harmless: a merchant
+		# who struck a companion and then panicked is no threat, and cutting
+		# him down from behind is a murder on the companion's own initiative.
+		# Once he turns on the party again, the defence below takes him.
+		if not (_on_party_side() and _is_harmless(other)):
+			return true
+	# Our side (party members and their summons) defends itself: anyone going
+	# after one of us -- a merchant who saw a killing, a guard serving a
+	# warrant -- is our enemy while they hunt, and no longer once they flee,
+	# are pacified or give up. Only a hunt the law lets the party answer
+	# (defended_hunt): a merchant the party struck first is the player's
+	# fight to pick, not a companion's. The hunter's grudge lives on the
+	# hunter; without this the companions stood by until struck themselves.
+	if not (str(other.faction_id) in LawDatabase.applies_to()) and _on_party_side():
+		var oai = other.get_node_or_null("AI")
+		if oai != null and oai.has_method("defended_hunt") and oai.defended_hunt() != null:
+			return true
 	# Wanted in this region (CrimeManager.wanted_here, a per-map cache of the
 	# saved registry): the law's enforcers attack them on sight, after warps
 	# and reloads too, until the account is settled.
@@ -1303,6 +1468,8 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 		return
 	var tid: int = target.get_instance_id()
 	var announce: bool = tid != _announced_target_id or _time_without_target >= TARGET_REANNOUNCE_GAP
+	if announce:
+		_hunt_began_frame = Engine.get_process_frames()
 	_announced_target_id = tid
 	_time_without_target = 0.0
 	current_target = target
@@ -1340,6 +1507,31 @@ func _acquire_target(target: ProceduralCharacter) -> void:
 	if announce and game != null and ("party_chars" in game) and character in game.party_chars \
 			and game.has_method("alert_party"):
 		game.alert_party(target.global_position)
+	else:
+		_maybe_call_out_hunt()
+
+
+## An NPC the party can see going after one of us is called out to the
+## party (Game.alert_party, as a member's own sighting is): the selected
+## character's AI is dormant, so nobody else would shout it, and a companion
+## facing the other way never turned until the hunter's blade landed. Once
+## per hunter and target, at acquisition or the first time the party sees the
+## hunter hold them (_update_target); only for a hunt the companions will
+## actually answer (a defended hunt, or a faction foe), so a confused pick or a
+## fight the party started doesn't drag them about.
+func _maybe_call_out_hunt() -> void:
+	if current_target == null or not is_instance_valid(current_target):
+		return
+	var tid: int = current_target.get_instance_id()
+	if tid == _called_out_target_id or game == null or not game.has_method("alert_party"):
+		return
+	if not _party_can_see(character) or hunted_party_member() != current_target:
+		return
+	if defended_hunt() == null \
+			and not FactionDatabase.are_hostile(str(character.faction_id), str(current_target.faction_id)):
+		return
+	_called_out_target_id = tid
+	game.alert_party(character.global_position)
 
 # The creature charming us (the 'infatuated' condition's source), or null.
 # Never targeted: not by sight, not by confusion, not held, not by its own hits.
