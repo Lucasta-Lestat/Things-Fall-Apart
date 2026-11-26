@@ -10,28 +10,53 @@
 > (Door.gd). Read the plan's "As built" sections for the current design; treat
 > everything below as history until this audit is redone.
 
-## Known open issues (2026-11-13 re-audit)
+## Known issues (re-audit 2026-11-13, updated 2026-11-26)
 
-Found while fixing "shooting merchants gets no reaction" (branch
-`claude/map-bugs-ai-issues-75a82e`, which added per-NPC grudges, civilian
-panic, the hue-and-cry relay and the enforcer manhunt spread). Not yet fixed:
+Fixed 2026-11-26 (branch `claude/map-bugs-ai-issues-75a82e`; regression
+test `tests/guard_kill_check.tscn`):
 
-- **Your own summons can report you.** `CrimeManager.witnesses_of` has no
-  faction filter: it skips party members but not other `player`-faction
-  characters (Rat Pack's rat swarm, any summon), nor witnesses hostile to the
-  actor (bandits). A summon standing by while you commit a crime starts an
-  outcry fuse against you.
-- **`wanted` is wrong in three ways.** Its text says "Guards in this region are
-  hostile on sight", which is false in Perrow: the outlaw mark lands on the law
-  faction (liziti), not the golden_guard who actually patrol. It is always
-  applied to `party_chars[0]`, even when a companion committed the crime. And
-  it is global, not per-region.
-- **Surrender settles with the wrong faction.** `SurrenderPanel` picks the
-  hostile NPC's own faction (golden_guard), but the ledger and outlaw flag are
-  keyed by the law faction (liziti): "Charges: none", a 0-gold fine, manhunts
-  cleared, while the liziti outlaw flag and `wanted` stay forever.
-- **Killing guards is legal in Perrow.** `LawDatabase._protected_by` derives
-  protection from hostility, and liziti and golden_guard are enemies.
+- **Guards ignored a guard killed beside them.** Crime witnesses had no
+  close-quarters exception to the view cone, and killing a golden_guard is
+  legal in Perrow (liziti law doesn't protect its enemies), so nothing else
+  reacted. Now the bystander REACTION path (`witnesses_of(..., close_quarters)`
+  from `Game._on_character_damaged`) notices a blow within 2 tiles + body
+  whichever way the witness faces (not a sneaking killer); a comrade seen
+  fighting a grudge target takes the grudge up (`_share_alertness_with_allies`);
+  and a guard who finds a comrade's body within 20 s with the killer within 3
+  tiles of it attacks (`ai._check_slain_comrades`, the corpse's `slain_by`
+  meta). By the user's decision a guard kill stays a LOCAL grudge: no crime,
+  no record, liziti untouched. Crime identification keeps the strict cone.
+- **Your own summons (and the culprit's enemies) reported you.**
+  `CrimeManager.would_cry_out` now filters the fan-out, the victim fallback and
+  the hue-and-cry relay: the law's enforcers always cry out; the culprit's own
+  side (player faction, party summons, someone they've charmed) and anyone
+  hostile to the culprit never do.
+- **`wanted` was one global icon on the protagonist.** It is now a saved
+  registry per region and per culprit (`FactionDatabase._wanted`, keyed
+  `party:<party_index>`), written by an identified report or the downtime
+  "caught" outcome (which now also records the theft). The icon shows only on
+  that character, only in that region (`CrimeManager.refresh_wanted`), and the
+  law's enforcers there attack that character on sight after warps and reloads
+  (`CrimeManager.wanted_here`, read in `ai._is_enemy`). The description is now
+  true; the inert `pardon` trait is gone.
+- **Surrender settled with the wrong faction.** `_pick_counterparty` maps a
+  hostile enforcer to the law faction the party owes (golden_guard answers for
+  liziti in Perrow), preferring a debt, then a faction that accepts surrender,
+  then the larger fine, then the nearest. Settling or a pardon clears the
+  wanted entries and the watch's grudges against the party, and returns goods
+  stolen from anyone the law protects (not only the law faction itself).
+
+Still open:
+
+- **Killing guards is legal in Perrow** (`LawDatabase._protected_by` derives
+  protection from hostility; liziti and golden_guard are enemies). Kept by
+  design: guards answer it with local grudges only.
+- **The global outlaw mark remains.** An identified crime still marks the law
+  faction hostile everywhere (D8's binary), alongside the per-region wanted
+  registry; in Perrow that is liziti, who field nobody on the hillside maps.
+- **Surrender ends a guard grudge for free.** With no debt on the books,
+  surrendering to golden_guard settles an empty account but clears their
+  grudges (a guard kill carries no record by design).
 - **Confirmation prompts never reset.** `_confirmed_*_maps` in CrimeManager are
   never cleared ("for the rest of the map visit" is not what happens), and the
   attack confirmation can never warn about murder (the preview always sees a

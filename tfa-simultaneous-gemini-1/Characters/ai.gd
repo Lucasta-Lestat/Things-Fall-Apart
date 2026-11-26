@@ -595,11 +595,81 @@ func take_grudge(foe: ProceduralCharacter, struck: bool) -> bool:
 	# A bystander already fighting someone else keeps that fight; the grudge
 	# makes the foe a target the moment it is free. Our own wound is positive
 	# identification (like the enemy branch of _on_self_damaged).
-	if current_target == null or (struck and not is_instance_valid(current_target)):
+	if current_target == null or not is_instance_valid(current_target) or not current_target.is_alive():
 		var foe_cm = foe.get_node_or_null("ConditionManager")
-		if struck or character.traits.get("true_sight", 0) != 0 				or foe_cm == null or not foe_cm.has_active_condition("invisible"):
+		if struck or character.traits.get("true_sight", 0) != 0 \
+				or foe_cm == null or not foe_cm.has_active_condition("invisible"):
 			_acquire_target(foe)
 	return true
+
+
+## Whether `attacker` hurting (or killing) `victim` is ours to answer: the
+## victim is one of our own (same faction -- every civilian is "neutral" --
+## or an ally), or we keep the peace here (an enforcer of this map's law,
+## whether or not the law calls it a crime). Never for a fair fight (the
+## victim's faction is hostile to the attacker's) or a victim we count as an
+## enemy ourselves. Shared by the live witness path (Game._witness_grudge) and
+## the comrade's-body path (_check_slain_comrades).
+func avenges(victim: ProceduralCharacter, attacker: ProceduralCharacter) -> bool:
+	if victim == null or attacker == null or not is_instance_valid(victim) or not is_instance_valid(attacker):
+		return false
+	if attacker == character or victim == character:
+		return false
+	# Not the party's side (companions, summons): their fights are the
+	# player's to pick -- a companion avenging a member the watch cut down
+	# would commit a fresh crime on its own initiative.
+	if str(character.faction_id) in LawDatabase.applies_to():
+		return false
+	var vf: String = str(victim.faction_id)
+	var af: String = str(attacker.faction_id)
+	if FactionDatabase.are_hostile(vf, af):
+		return false
+	if _is_enemy(victim):
+		return false
+	var wf: String = str(character.faction_id)
+	if wf == vf or FactionDatabase.are_allies(wf, vf):
+		return true
+	var law: String = LawDatabase.jurisdiction_for_map(str(game.current_map_id)) if game != null and "current_map_id" in game else ""
+	return law != "" and LawDatabase.enforces(wf, law)
+
+
+## Coming upon a comrade's body with the killer still standing over it: a
+## guard who turned at his comrade's death cry (and so didn't see the blow
+## land) still knows who did it. Game stamps the corpse's "slain_by" on the
+## killing blow (or killing tick); within SLAIN_RECENT_SEC of the death, a
+## killer within SLAIN_NEAR_PX of the body whom we can see now is our grudge.
+## Checked on the corpse-discovery throttle (1 s). Local only, like every
+## grudge: nothing is recorded, and leaving the map ends it.
+const SLAIN_RECENT_SEC := 20.0
+const SLAIN_NEAR_PX := 192.0   # 3 tiles
+
+func _check_slain_comrades() -> void:
+	if current_state == AIState.DEAD or not character.is_alive():
+		return
+	var now: float = TimeManager.absolute_time()
+	for c in game.characters_in_scene:
+		if not is_instance_valid(c) or c == character or c.is_alive() or not c.has_meta("slain_by"):
+			continue
+		var info: Variant = c.get_meta("slain_by")
+		if not (info is Dictionary):
+			continue
+		var killer = (info as Dictionary).get("who")
+		if killer == null or not is_instance_valid(killer) or not (killer is ProceduralCharacter) \
+				or not killer.is_alive() or killer == character:
+			continue
+		if now - float((info as Dictionary).get("at", -1.0e12)) > SLAIN_RECENT_SEC:
+			continue
+		if _holds_grudge(killer) or _is_enemy(killer):
+			continue
+		if killer.global_position.distance_to(c.global_position) > SLAIN_NEAR_PX:
+			continue
+		if not avenges(c, killer):
+			continue
+		if not is_in_line_of_sight(c.global_position, c.get_elevation()):
+			continue
+		if not can_see_character(killer):
+			continue
+		take_grudge(killer, false)
 
 
 ## Panicked, fleeing `foe` (Will save: a civilian who keeps their nerve
@@ -710,6 +780,7 @@ func process_ai(delta: float) -> void:
 	if corpse_check_timer <= 0.0:
 		corpse_check_timer = 1.0
 		_check_corpse_discovery()
+		_check_slain_comrades()
 
 	# Check path progress for wandering/seeking
 	_check_path_progress()
@@ -956,6 +1027,14 @@ func _update_target(delta: float = 0.0) -> void:
 			_lose_target()
 			return
 
+		# No longer an enemy at all: a grudge ran out, the account was
+		# settled or pardoned (wanted cleared, manhunt called off), a truce.
+		# Every way a target is taken goes through _is_enemy, so a held one
+		# that fails it is stale -- it used to be chased to the death anyway.
+		if not _is_enemy(current_target):
+			_lose_target()
+			return
+
 		# Invisible again (a cloak's Invisible returning after the attack
 		# window, a potion drunk mid-fight): acquisition skips an active
 		# Invisible, and now so does holding. Lost like a target behind a wall
@@ -1195,6 +1274,13 @@ func _is_enemy(other: ProceduralCharacter) -> bool:
 		return true
 	if not grudges.is_empty() and _holds_grudge(other):
 		return true
+	# Wanted in this region (CrimeManager.wanted_here, a per-map cache of the
+	# saved registry): the law's enforcers attack them on sight, after warps
+	# and reloads too, until the account is settled.
+	if not CrimeManager.wanted_here.is_empty():
+		var wanted_by: String = str(CrimeManager.wanted_here.get(other.get_instance_id(), ""))
+		if wanted_by != "" and LawDatabase.enforces(str(character.faction_id), wanted_by):
+			return true
 	# Post-robbery truce: they took your purse and let you live (Phase 7).
 	if truce_until > 0.0 and other.faction_id == "player" \
 			and TimeManager.absolute_time() < truce_until:
@@ -1503,7 +1589,8 @@ func _process_panicked(delta: float) -> void:
 		var angle = randf() * TAU
 		var _pcm = character.get_node_or_null("ConditionManager")
 		var _pinst = _pcm.conditions.get("panicked") if _pcm else null
-		if _pinst != null and _pinst.source is Node2D and is_instance_valid(_pinst.source) 				and _pinst.source != character:
+		if _pinst != null and _pinst.source is Node2D and is_instance_valid(_pinst.source) \
+				and _pinst.source != character:
 			var away: Vector2 = character.global_position - (_pinst.source as Node2D).global_position
 			if away.length() > 1.0:
 				angle = away.angle() + randf_range(-1.4, 1.4)
@@ -2437,13 +2524,16 @@ func on_sound_heard(world_pos: Vector2, loudness: float, _source = null,
 			# two) startles but isn't passed on, so walls still degrade the
 			# town's response; and the relayer is no more roused than it was.
 			var heard: float = minf(loudness * ALERTNESS_SOUND_GAIN, ALERTNESS_SOUND_CAP)
-			if cid >= 0 and not _relayed_crimes.has(cid) and heard >= ALERTNESS_SEARCHING_THRESHOLD:
+			if cid >= 0 and not _relayed_crimes.has(cid) and heard >= ALERTNESS_SEARCHING_THRESHOLD \
+					and CrimeManager.would_cry_out(character, payload.get("perp"), law_faction):
 				_relayed_crimes[cid] = true
 				var relay: Dictionary = CrimeManager.relay_payload(payload, character)
 				if not relay.is_empty():
 					relay["witness_alert"] = minf(float(relay.get("witness_alert", heard)), heard)
 					begin_outcry(relay)
-		if law_faction != "" and LawDatabase.enforces(character.faction_id, law_faction):
+		var charmed_by_perp: bool = payload.get("perp") != null \
+			and _infatuation_source() == CrimeManager.attribute(payload.get("perp"))
+		if law_faction != "" and LawDatabase.enforces(character.faction_id, law_faction) and not charmed_by_perp:
 			CrimeManager.on_alarm_heard(character, payload)
 			# Knowledge outlives arousal: alertness decays at 4/sec and this
 			# guard stops actively searching in ~11 s, but he does not FORGET.
@@ -2589,6 +2679,15 @@ func _share_alertness_with_allies() -> void:
 		if not both_party \
 				and not is_in_line_of_sight(other_char.global_position, other_char.get_elevation()):
 			continue
+		# A comrade seen fighting someone we have a grudge with takes it up:
+		# one guard who saw the killing pulls in every guard who can see him
+		# fight. Only an ACTIVE grudge fight spreads (a panicked civilian holds
+		# no target), and only a grudge (a faction enemy needs no telling).
+		if current_target != null and is_instance_valid(current_target) and current_target.is_alive() \
+				and _holds_grudge(current_target) and not other_ai._holds_grudge(current_target) \
+				and other_ai.has_method("take_grudge") \
+				and not (str(other_char.faction_id) in LawDatabase.applies_to()):
+			other_ai.take_grudge(current_target, false)
 		if alertness_value > other_ai.alertness_value:
 			# Transfer half the gap; tag last_heard_position so they look the
 			# same direction we were looking. Sharing never pushes another AI

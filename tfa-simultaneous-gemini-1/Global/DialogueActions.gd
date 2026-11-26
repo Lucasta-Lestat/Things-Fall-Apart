@@ -1096,6 +1096,8 @@ func _do_join_party(a: Dictionary) -> bool:
 		joined.append(c)
 		c.notify("Joined the party", GAIN_COLOR, "%s joins the party." % _name(c))
 	if not joined.is_empty():
+		# a recruit takes a fresh row: re-derive who is wanted here
+		CrimeManager.refresh_wanted()
 		SfxManager.play_ui("party_join", Vector2.ONE, -4.0)
 		_refresh_party_panel()
 		_drop_stale_targets()
@@ -1121,7 +1123,15 @@ func _do_leave_party(a: Dictionary) -> bool:
 			for other in g.party_chars:
 				if is_instance_valid(other) and int(other.get_meta("party_index", -1)) > row:
 					other.set_meta("party_index", int(other.get_meta("party_index")) - 1)
+			# Wanted entries are keyed by party row and move with it: the
+			# leaver's go, later rows shift up (emits -> refresh_wanted).
+			FactionDatabase.party_row_removed(row)
 		c.remove_meta("party_index")
+		# no longer the party's: off the wanted icon and the enforcers' cache
+		var lcm = c.get_node_or_null("ConditionManager")
+		if lcm != null and lcm.has_condition("wanted"):
+			lcm.remove_condition("wanted")
+		CrimeManager.wanted_here.erase(c.get_instance_id())
 		if "selected_characters" in g and c in g.selected_characters:
 			if g.has_method("_remove_selection_circle"):
 				g._remove_selection_circle(c)

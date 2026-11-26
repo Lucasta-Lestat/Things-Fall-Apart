@@ -674,6 +674,8 @@ func _spawn_returned_members(_arrived_map: String) -> void:
 		_add_line_of_sight_light(character)
 		# Anything they finished studying while away lands now.
 		TrainingManager.flush_pending_grants(character)
+	# a returned member may be the one wanted here
+	CrimeManager.refresh_wanted()
 
 
 # ---------------------------------------------------------------------------
@@ -1299,6 +1301,10 @@ func load_map(map_id: String, from_map: String = "", spawn_override: String = ""
 	var scheduler = get_node_or_null("/root/EventScheduler")
 	if scheduler:
 		scheduler.on_map_entered(map_id, current_map_data.get("dialogue_time_triggers", []))
+
+	# 8d. Wanted is per region: the icon on whoever is wanted HERE, and the
+	# enforcers' on-sight cache (CrimeManager.refresh_wanted).
+	CrimeManager.refresh_wanted()
 
 	# 9. Select the player
 	call_deferred("_select_initial_character")
@@ -3236,6 +3242,11 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 		if not dot_tick or _dot_tick_reportable(attacker, victim):
 			CrimeManager.report(attacker, "attack", CrimeManager.attack_payload(attacker, victim))
 		victim.set_meta("dot_harm_by_%d" % attacker.get_instance_id(), TimeManager.absolute_time())
+		# Who killed them, for comrades who come upon the body while the killer
+		# is still standing over it (ai.gd _check_slain_comrades). Before the
+		# DoT early-out: a killing Burning or bleed tick is still a killing.
+		if not victim.is_alive() and attacker is ProceduralCharacter:
+			victim.set_meta("slain_by", {"who": attacker, "at": TimeManager.absolute_time()})
 	if dot_tick:
 		return
 	# A blow traded with an invisible NPC gives away where it is.
@@ -3248,7 +3259,9 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 	# already skips the actor, party members, and the dead, and its LOS is
 	# elevation-aware (a rooftop attack is visible from the street now).
 	var victim_elev: float = victim.get_elevation() if victim.has_method("get_elevation") else 0.0
-	for entry in CrimeManager.witnesses_of(victim.global_position, victim_elev, attacker):
+	# close_quarters: a bystander at arm's length notices whichever way they
+	# face (crime identification elsewhere keeps the strict cone)
+	for entry in CrimeManager.witnesses_of(victim.global_position, victim_elev, attacker, false, [], true):
 		var witness = entry["witness"]
 		if witness == victim:
 			continue
@@ -3283,20 +3296,9 @@ func _on_character_damaged(attacker, location: Vector2, _total_damage: float, vi
 func _witness_grudge(ai_node, witness, attacker, victim) -> void:
 	if not (attacker is ProceduralCharacter) or not is_instance_valid(attacker) or attacker == witness:
 		return
-	if not ai_node.has_method("take_grudge") or not (victim is ProceduralCharacter):
+	if not ai_node.has_method("avenges") or not (victim is ProceduralCharacter):
 		return
-	var vf: String = str(victim.faction_id)
-	var af: String = str(attacker.faction_id)
-	if FactionDatabase.are_hostile(vf, af):
-		return
-	if ai_node.has_method("_is_enemy") and ai_node._is_enemy(victim):
-		return
-	var wf: String = str(witness.faction_id)
-	var stands_with: bool = wf == vf or FactionDatabase.are_allies(wf, vf)
-	if not stands_with:
-		var law: String = LawDatabase.jurisdiction_for_map(current_map_id)
-		stands_with = law != "" and LawDatabase.enforces(wf, law)
-	if stands_with:
+	if ai_node.avenges(victim, attacker):
 		ai_node.take_grudge(attacker, false)
 
 

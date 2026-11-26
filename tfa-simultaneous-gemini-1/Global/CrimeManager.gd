@@ -40,26 +40,61 @@ var _pending_attack_confirms: Dictionary = {}  # "map_id|victim_iid" -> true
 var _confirmed_attack_maps: Dictionary = {}    # map_id -> true
 
 func _ready() -> void:
-	# The `wanted` condition on the protagonist is a pure display derivative
-	# of FactionDatabase's hostile override — derived here (an autoload, so
-	# it works identically under the real Game and test harnesses).
-	FactionDatabase.player_standing_changed.connect(_on_player_standing_changed)
+	# The `wanted` condition is a display derivative of FactionDatabase's
+	# wanted registry (per region, per culprit), derived here (an autoload,
+	# so it works identically under the real Game and test harnesses). Game
+	# also calls refresh_wanted after a map load and a party change.
+	FactionDatabase.wanted_changed.connect(refresh_wanted)
 
-func _on_player_standing_changed(_faction_id: String, _old_value: int, _new_value: int) -> void:
+## Party members wanted HERE (the current map's region): instance id -> the
+## law faction that wants them. ai._is_enemy reads it on every candidate scan
+## (an enforcer of that law attacks them on sight), so it is a cache, rebuilt
+## by refresh_wanted -- never derived per call.
+var wanted_here: Dictionary = {}
+
+## The registry key of whoever answers for `who`: the party member a summon
+## or familiar belongs to (attribute), as "party:<party_index>" -- stable
+## across warps and saves, unlike an instance id. Party members spawned
+## without the meta fall back to their position in party_chars. "" for
+## anyone else (only the party can be wanted).
+func perp_key(who) -> String:
+	var c = attribute(who)
+	if c == null or not is_instance_valid(c):
+		return ""
+	if c.has_meta("party_index"):
+		return "party:%d" % int(c.get_meta("party_index"))
 	var game = get_tree().current_scene
-	if game == null or not ("party_chars" in game) or game.party_chars.is_empty():
+	if game != null and ("party_chars" in game):
+		var idx: int = (game.party_chars as Array).find(c)
+		if idx >= 0:
+			return "party:%d" % idx
+	return ""
+
+func current_wanted_bucket() -> String:
+	var game = get_tree().current_scene
+	var map_id: String = str(game.current_map_id) if game != null and ("current_map_id" in game) else ""
+	return FactionDatabase.wanted_bucket(map_id)
+
+## Re-derive the `wanted` icon on every party member (wanted in THIS region,
+## on THAT character) and the wanted_here cache. On wanted_changed, after
+## every map load and party change (Game), and after a settlement.
+func refresh_wanted() -> void:
+	wanted_here.clear()
+	var game = get_tree().current_scene
+	if game == null or not ("party_chars" in game):
 		return
-	var protagonist = game.party_chars[0]
-	if not is_instance_valid(protagonist):
-		return
-	var cm = protagonist.get_node_or_null("ConditionManager")
-	if cm == null:
-		return
-	if FactionDatabase.is_outlaw_anywhere():
-		if not cm.has_condition("wanted"):
-			cm.apply_condition("wanted", null, 1, -1.0)
-	elif cm.has_condition("wanted"):
-		cm.remove_condition("wanted")
+	var bucket: String = current_wanted_bucket()
+	for c in game.party_chars:
+		if not is_instance_valid(c):
+			continue
+		var entry: Dictionary = FactionDatabase.wanted_entry(bucket, perp_key(c))
+		var cm = c.get_node_or_null("ConditionManager")
+		if not entry.is_empty():
+			wanted_here[c.get_instance_id()] = str(entry.get("law_faction", ""))
+			if cm != null and not cm.has_condition("wanted") and c.is_alive():
+				cm.apply_condition("wanted", null, 1, -1.0)
+		elif cm != null and cm.has_condition("wanted"):
+			cm.remove_condition("wanted")
 
 # Witness pipeline (Phase 5)
 var _crime_counter: int = 0
@@ -181,6 +216,22 @@ func cast_payload(ability) -> Dictionary:
 		ability_traits = ability.traits
 	return {"traits": ability_traits}
 
+## The law is already hunting the actor through this victim: an enforcer
+## attacking a wanted character on sight here, or one on a manhunt for them.
+## Striking back is self-defence, not a fresh assault on the books every
+## blow. Deliberately NOT a grudge: a grudge exists because the actor struck
+## first, and the second blow is no more lawful than the first.
+func _victim_hunts(victim, actor) -> bool:
+	if victim == null or actor == null or not is_instance_valid(victim) or not is_instance_valid(actor):
+		return false
+	if not (victim is Node) or not ("faction_id" in victim):
+		return false
+	var vai = victim.get_node_or_null("AI")
+	if vai != null and ("manhunt_target" in vai) and vai.manhunt_target == actor:
+		return true
+	var wanted_by: String = str(wanted_here.get(actor.get_instance_id(), ""))
+	return wanted_by != "" and LawDatabase.enforces(str(victim.faction_id), wanted_by)
+
 func attack_payload(actor, victim) -> Dictionary:
 	var victim_faction: String = str(victim.faction_id) if ("faction_id" in victim) else ""
 	var effective = attribute(actor)
@@ -200,7 +251,8 @@ func attack_payload(actor, victim) -> Dictionary:
 		"victim_faction": victim_faction,
 		# Self-defence carve-out: no charge for fighting someone already
 		# hostile to you (faction-level; the Phase 1 oracle).
-		"victim_hostile_to_actor": FactionDatabase.are_hostile(victim_faction, actor_faction),
+		"victim_hostile_to_actor": FactionDatabase.are_hostile(victim_faction, actor_faction) \
+			or _victim_hunts(victim, effective),
 		"lethal": lethal,
 		"victim": victim,
 		"crime_pos": victim.global_position if victim is Node2D else Vector2.INF,
@@ -281,7 +333,9 @@ func attack_needs_confirmation(actor, victim) -> Dictionary:
 ## The test itself is ProceduralCharacter.can_see_point, the one AI detection
 ## and party visibility share: live sight range (senses, Perceptive, weather,
 ## fog at either end), effective FOV, elevation-aware sight line.
-func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) -> bool:
+## `fov_free`: within this many px the view cone doesn't apply (the AI's
+## close quarters); 0 = the strict cone, which crime identification keeps.
+func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN, fov_free: float = 0.0) -> bool:
 	if not is_instance_valid(from_char) or not from_char.has_method("is_alive") or not from_char.is_alive():
 		return false
 	var cm = from_char.get_node_or_null("ConditionManager")
@@ -289,7 +343,7 @@ func has_visual_los(from_char, target_pos: Vector2, target_elev: float = NAN) ->
 		return false
 	if not from_char.has_method("can_see_point"):
 		return false
-	return from_char.can_see_point(target_pos, target_elev)
+	return from_char.can_see_point(target_pos, target_elev, 1.0, fov_free)
 
 ## What hides `who` from `viewer`, by the AI's own perception rules (ai.gd
 ## can_see_character, _update_target): an active Invisible, unless the viewer
@@ -365,7 +419,13 @@ static func _under_a_crown(who) -> bool:
 ## victim (a theft, looting, a cast), so a witness the actor is hidden from
 ## saw nothing at all; each such witness's reason goes into `evaded`. Each
 ## entry also carries "hidden": the reason, or "".
-func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand: bool = false, evaded: Array = []) -> Array:
+## `close_quarters` (the bystander REACTION path, Game._on_character_damaged,
+## never crime identification): within a witness's close-quarters radius
+## (ai.gd _close_quarters_radius, 2 tiles + body) facing doesn't matter, the
+## same peripheral awareness the AI's own target acquisition has -- a guard
+## does not miss his comrade cut down at his elbow because he faced the other
+## way. A sneaking actor gets no such awareness (the cone IS stealth).
+func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand: bool = false, evaded: Array = [], close_quarters: bool = false) -> Array:
 	var out: Array = []
 	var game = get_tree().current_scene
 	if game == null or not ("characters_in_scene" in game):
@@ -386,9 +446,13 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand
 			continue
 		if not c.has_method("is_alive") or not c.is_alive():
 			continue
-		if c.get_node_or_null("AI") == null:
+		var c_ai = c.get_node_or_null("AI")
+		if c_ai == null:
 			continue
-		if not has_visual_los(c, crime_pos, crime_elev):
+		var cq: float = 0.0
+		if close_quarters and c_ai.has_method("_close_quarters_radius"):
+			cq = float(c_ai._close_quarters_radius())
+		if not has_visual_los(c, crime_pos, crime_elev, cq):
 			continue
 		var crown_cut: bool = false
 		if at_actor:
@@ -408,7 +472,10 @@ func witnesses_of(crime_pos: Vector2, crime_elev: float, physical_actor, by_hand
 			if by_hand and hidden != "":
 				evaded.append(hidden)
 				continue
-			sees_actor = has_visual_los(c, actor_pos, actor_elev)
+			var actor_cq: float = cq
+			if actor_cq > 0.0 and physical_actor.has_method("is_sneaking") and physical_actor.is_sneaking():
+				actor_cq = 0.0
+			sees_actor = has_visual_los(c, actor_pos, actor_elev, actor_cq)
 			if not sees_actor:
 				hidden = ""   # out of sight anyway: the condition changed nothing
 			elif hidden != "":
@@ -469,6 +536,7 @@ func accuse(actor, statute_id: String, witnesses: Array = [], law_faction: Strin
 ## Clears the outlaw mark and manhunts; the ledger keeps the records, settled.
 func pardon(law_faction: String) -> void:
 	FactionDatabase.settle(law_faction, "pardon")
+	FactionDatabase.clear_wanted_for_law(law_faction)
 	clear_manhunts(law_faction)
 
 func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, payload: Dictionary, named_witnesses: Array = []) -> void:
@@ -510,14 +578,20 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 	var unrecognised_by: String = ""   # why someone in plain view didn't make them out
 	var entries: Array = named_witnesses if not named_witnesses.is_empty() \
 		else witnesses_of(crime_pos, crime_elev, physical_actor, not (victim is Object and is_instance_valid(victim)), evaded)
+	var law_f: String = str(verdict.get("law_faction", ""))
 	for entry in entries:
 		var witness = entry["witness"]
 		var is_victim: bool = witness == victim
+		if witness == victim:
+			victim_covered = true
+		# The culprit's own side (their summons, someone they've charmed) and
+		# their enemies saw it but won't cry out (would_cry_out).
+		if not would_cry_out(witness, effective, law_f):
+			seen_silent += 1
+			continue
 		# D7: LOS to the actor means identified UNLESS disguised. The victim
 		# is forced identified — they were touched; contact beats costume.
 		var identified: bool = (bool(entry["sees_actor"]) and not disguised) or is_victim
-		if is_victim:
-			victim_covered = true
 		any_identified = any_identified or identified
 		if str(entry.get("hidden", "")) != "":
 			unrecognised_by = str(entry["hidden"])
@@ -532,7 +606,7 @@ func _fan_out_witnesses(effective: Node, physical_actor, verdict: Dictionary, pa
 	# assault must be able to report it.
 	if not victim_covered and victim is Object and is_instance_valid(victim) \
 			and victim != physical_actor and victim.has_method("is_alive") and victim.is_alive() \
-			and victim.get_node_or_null("AI") != null:
+			and victim.get_node_or_null("AI") != null and would_cry_out(victim, effective, law_f):
 		if _start_outcry(victim, crime_id, true, true, crime_pos, effective, verdict, cfg):
 			fuses += 1
 			any_identified = true
@@ -720,6 +794,40 @@ func fire_outcry(witness, payload: Dictionary) -> void:
 		on_outcry_resolved(int(payload.get("crime_id", -1)), true)
 
 
+## Whether `witness` would raise the alarm against `culprit` (already
+## attributed: a summon's crimes are its summoner's) under `law_faction`.
+## The law's own enforcers always do. Nobody on the culprit's own side does:
+## their faction (the player's summons and familiars carry it), anything a
+## party member summoned, or someone the culprit has charmed. Nor does the
+## culprit's enemy -- a bandit doesn't run to the watch. An anonymous report
+## (culprit null) is filtered only by the witness's own allegiance.
+func would_cry_out(witness, culprit, law_faction: String) -> bool:
+	if witness == null or not is_instance_valid(witness) or not ("faction_id" in witness):
+		return true
+	var wf: String = str(witness.faction_id)
+	# The culprit's own side first -- even an enforcer they've charmed keeps
+	# quiet about them.
+	if wf in LawDatabase.applies_to():
+		return false   # the player's own side (summons, familiars, hirelings)
+	var game = get_tree().current_scene
+	var summoner = attribute(witness)
+	if summoner != witness and game != null and ("party_chars" in game) and summoner in game.party_chars:
+		return false
+	var has_culprit: bool = culprit != null and is_instance_valid(culprit) and ("faction_id" in culprit)
+	if has_culprit:
+		if summoner == culprit or wf == str(culprit.faction_id):
+			return false
+		var ai_node = witness.get_node_or_null("AI")
+		if ai_node != null and ai_node.has_method("_infatuation_source") and ai_node._infatuation_source() == culprit:
+			return false
+	# The law's own enforcers report whoever it is, enemy or not.
+	if law_faction != "" and LawDatabase.enforces(wf, law_faction):
+		return true
+	if has_culprit and FactionDatabase.are_hostile(wf, str(culprit.faction_id)):
+		return false
+	return true
+
+
 ## Hue and cry: a civilian who hears a crime's alarm takes it up once, so a
 ## scream crosses town to a guard post out of one voice's reach (810 px in the
 ## open, far less over Perrow's relief). Bounded: RELAY_HOPS voices deep, one
@@ -779,6 +887,12 @@ func on_alarm_heard(enforcer, payload: Dictionary) -> void:
 			FactionDatabase.adjust_player_standing(law_faction, -int(payload.get("severity", 0)))
 			FactionDatabase.mark_outlaw(law_faction)
 			FactionDatabase.record_crime(law_faction, payload, {"crime_id": crime_id})
+			# Wanted HERE, on the one identified -- not the whole party, not
+			# every region (the registry's emit re-derives icon + enforcer cache)
+			if perp is Object and is_instance_valid(perp):
+				FactionDatabase.mark_wanted(current_wanted_bucket(), perp_key(perp),
+					str(perp.Name) if "Name" in perp else "", law_faction,
+					str(payload.get("display_name", "")))
 			# Outlawed. The bell may be far off-screen (and out of earshot),
 			# so the party hears that it was named.
 			_party_sting(perp)
@@ -806,14 +920,17 @@ func settle_with(law_faction: String, mode: String) -> void:
 			var removed_any := false
 			for i in range(c.inventory.items.size() - 1, -1, -1):
 				var entry = c.inventory.items[i]
-				if entry is Dictionary and str(entry.get("stolen_from", "")) == law_faction:
+				# the law's own goods, and goods of anyone it protects (a
+				# merchant's wares in Perrow belong to "neutral", not liziti)
+				if entry is Dictionary and _returned_to(str(entry.get("stolen_from", "")),
+						str(entry.get("stolen_under", "")), law_faction):
 					c.inventory.items.remove_at(i)
 					returned += 1
 					removed_any = true
 			var returned_weapons: Array = []
 			for i in range(c.inventory.stowed_items.size() - 1, -1, -1):
 				var w = c.inventory.stowed_items[i]
-				if w != null and ("stolen_from" in w) and w.stolen_from == law_faction:
+				if w != null and ("stolen_from" in w) and _returned_to(str(w.stolen_from), "", law_faction):
 					c.inventory.stowed_items.remove_at(i)
 					returned_weapons.append(w)
 					returned += 1
@@ -845,11 +962,21 @@ func settle_with(law_faction: String, mode: String) -> void:
 				TimeManager.advance_days(days)
 				GameLog.add_entry("Sentence served: %d days." % days)
 	FactionDatabase.settle(law_faction, mode)
+	FactionDatabase.clear_wanted_for_law(law_faction)
 	clear_manhunts(law_faction)
 	GameLog.add_entry("You are square with %s. Nobody has forgotten." % law_faction)
 	var law_name: String = str(FactionDatabase.get_faction_data(law_faction).get("name", law_faction)) \
 		if FactionDatabase.has_faction(law_faction) else law_faction
 	_party_float(protagonist, "Square with " + law_name, Color(0.55, 1.0, 0.55))
+
+## Settlement returns goods stolen from the law faction itself, or taken
+## under its law (Item.to_inventory_data stamps "stolen_under": a merchant's
+## wares in Perrow belong to "neutral", not liziti, yet liziti's court hands
+## them back). Goods stolen elsewhere stay owed to that law.
+func _returned_to(stolen_from: String, stolen_under: String, law_faction: String) -> bool:
+	if stolen_from.is_empty():
+		return false
+	return stolen_from == law_faction or stolen_under == law_faction
 
 func _spread_manhunt(law_faction: String, perp) -> void:
 	if not (perp is ProceduralCharacter) or not is_instance_valid(perp):
@@ -878,9 +1005,55 @@ func clear_manhunts(law_faction: String) -> void:
 		var ai_node = c.get_node_or_null("AI")
 		if ai_node == null or not ("manhunt_target" in ai_node):
 			continue
-		if ai_node.manhunt_target != null and ("faction_id" in c) \
-				and LawDatabase.enforces(str(c.faction_id), law_faction):
+		if not ("faction_id" in c) or not LawDatabase.enforces(str(c.faction_id), law_faction):
+			continue
+		if ai_node.manhunt_target != null:
 			ai_node.manhunt_target = null
+		# The account is square: the watch's own grudges against the party
+		# (a guard who saw you cut down his comrade) are settled with it, or
+		# they re-acquire the party on the next tick.
+		if ("grudges" in ai_node) and not ai_node.grudges.is_empty():
+			_drop_party_grudges(ai_node, game)
+	# ...and the party's own AIs (companions, summons) drop theirs on the
+	# law's enforcers, or a summon restarts the fight it was settled from.
+	if "party_chars" in game:
+		for c in game.characters_in_scene:
+			if not is_instance_valid(c) or not _on_party_side(c, game):
+				continue
+			var pai = c.get_node_or_null("AI")
+			if pai == null or not ("grudges" in pai) or pai.grudges.is_empty():
+				continue
+			for gid in pai.grudges.keys():
+				var who = (pai.grudges[gid] as Dictionary).get("who")
+				if who == null or not is_instance_valid(who) or not ("faction_id" in who) \
+						or LawDatabase.enforces(str(who.faction_id), law_faction):
+					pai.grudges.erase(gid)
+	# A settled account also closes the bodies it was about: a guard coming
+	# upon a comrade's corpse must not re-take the grudge just settled
+	# (ai._check_slain_comrades reads this stamp for 20 s after the death).
+	for c in game.characters_in_scene:
+		if is_instance_valid(c) and c.has_meta("slain_by"):
+			var info: Variant = c.get_meta("slain_by")
+			var killer = (info as Dictionary).get("who") if info is Dictionary else null
+			if killer == null or not is_instance_valid(killer) or _on_party_side(killer, game):
+				c.remove_meta("slain_by")
+
+
+## Whether `c` answers to the party: a party member, or anything summoned by
+## one (attribute walks summoned_by).
+func _on_party_side(c, game) -> bool:
+	if c == null or not is_instance_valid(c) or game == null or not ("party_chars" in game):
+		return false
+	return attribute(c) in game.party_chars
+
+
+## Drop every grudge `ai_node` holds on the party side (members AND their
+## summons -- a grudge is keyed on whoever physically struck).
+func _drop_party_grudges(ai_node, game) -> void:
+	for gid in ai_node.grudges.keys():
+		var who = (ai_node.grudges[gid] as Dictionary).get("who")
+		if who == null or not is_instance_valid(who) or _on_party_side(who, game):
+			ai_node.grudges.erase(gid)
 
 ## Binary, per D7: strength >= 3 summed over equipped disguise blocks, head
 ## slot required. Pure read of equipment state via the item_data meta already

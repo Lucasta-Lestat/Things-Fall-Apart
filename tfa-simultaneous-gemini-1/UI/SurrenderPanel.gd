@@ -53,21 +53,49 @@ func try_open(faction_override: String = "") -> bool:
 	_build_panel(line)
 	return true
 
+## A guard answers for the LAW he enforces: a golden_guard in Perrow takes a
+## surrender on behalf of liziti, whose books the debt is on (settling with
+## golden_guard itself used to read "Charges: none", fine 0, and leave the
+## liziti mark and the wanted icon in place for good). Ranked: a faction the
+## party owes (debt, outlaw mark or a wanted entry), then one that takes
+## surrender at all (a grudge-hostile civilian is implacable by default), then
+## the larger fine, then the nearest.
 func _pick_counterparty() -> String:
 	if game == null:
 		return ""
 	var hostiles: Array = game.known_threats_near_party()
 	if hostiles.is_empty():
 		return ""
+	var law: String = LawDatabase.jurisdiction_for_map(str(game.current_map_id)) if ("current_map_id" in game) else ""
+	var anchor: Vector2 = Vector2.ZERO
+	if ("party_chars" in game) and not game.party_chars.is_empty() and is_instance_valid(game.party_chars[0]):
+		anchor = game.party_chars[0].global_position
 	var best_faction: String = ""
-	var best_fine: int = -1
+	var best_rank: Array = []
 	for c in hostiles:
+		if not is_instance_valid(c):
+			continue
 		var fid: String = str(c.faction_id)
-		var fine: int = FactionDatabase.fine_owed(fid)
-		if fine > best_fine:
-			best_fine = fine
+		if law != "" and fid != law and LawDatabase.enforces(fid, law) and _owes(law):
+			fid = law
+		var dist: float = c.global_position.distance_to(anchor) if c is Node2D else INF
+		var rank: Array = [1 if _owes(fid) else 0,
+			1 if bool(LawDatabase.surrender_profile(fid).get("accepts", false)) else 0,
+			FactionDatabase.fine_owed(fid), -dist]
+		if best_rank.is_empty() or _rank_greater(rank, best_rank):
+			best_rank = rank
 			best_faction = fid
 	return best_faction
+
+static func _owes(faction_id: String) -> bool:
+	return FactionDatabase.fine_owed(faction_id) > 0 or FactionDatabase.is_outlaw_with(faction_id) \
+		or FactionDatabase.has_wanted_for_law(faction_id)
+
+static func _rank_greater(a: Array, b: Array) -> bool:
+	for i in range(mini(a.size(), b.size())):
+		if a[i] != b[i]:
+			return a[i] > b[i]
+	return false
 
 func _build_panel(line: String) -> void:
 	_panel = PanelContainer.new()

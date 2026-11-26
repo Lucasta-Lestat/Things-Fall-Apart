@@ -423,6 +423,10 @@ func to_inventory_data() -> Dictionary:
 	if owner_faction != "":
 		dict["stolen_from"] = owner_faction
 		dict["stolen_value"] = cost
+		# whose court it is answerable to (CrimeManager._returned_to)
+		var under: String = CrimeManager.current_law_faction()
+		if not under.is_empty():
+			dict["stolen_under"] = under
 	# Provenance rides back into the inventory the same way, so a head that was
 	# dropped and re-taken still satisfies the bounty it was harvested for.
 	if not origin.is_empty():

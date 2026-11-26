@@ -489,6 +489,10 @@ func _part_a_flat() -> void:
 		and _log_sum("No one saw it: Ximena was under the trees.") == deck_lines + 1, str(GameLog.get_entries().slice(-2)))
 	# a cast there (no crime_pos: the crime is at her feet). Casting shows her
 	# from above for 3 s, and the act with her: the deck sees it happen.
+	# The outcry cases below need a witness who'd report her: a bandit no
+	# longer runs to the watch about the party (CrimeManager.would_cry_out),
+	# so the guard is a neutral bystander until they're done.
+	guard.faction_id = "neutral"
 	x.reveal(ProceduralCharacter.REVEAL_SECONDS, "casting", false)
 	var cast_evaded: Array = []
 	var cast_seen := false
@@ -557,6 +561,7 @@ func _part_a_flat() -> void:
 	_check("a.instant-cast-shrouded-witnessed", bool(ic["ok"]) and ic["hidden_at_report"] == ""
 		and bool(ic["outcry"]) and int(ic["unseen"]) == 0, ic)
 	x.visibility_mult = 1.0
+	guard.faction_id = "bandits"
 	_place(x, T1 + UNDER, Vector2.UP)
 	_place(guard, T1 + UNDER + Vector2(0, sight_px * 0.6), Vector2.UP)
 	at_report.clear()

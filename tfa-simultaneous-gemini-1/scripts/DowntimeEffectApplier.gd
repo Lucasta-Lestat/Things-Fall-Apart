@@ -329,6 +329,14 @@ static func _apply_add_condition(character, value) -> Array:
 			var law_faction: String = LawDatabase.jurisdiction_for_map(str(game.current_map_id))
 			if not law_faction.is_empty():
 				FactionDatabase.mark_outlaw(law_faction)
+				# On the books too (it used to outlaw with no charge, so the
+				# surrender panel read "none on record" and settled for free),
+				# and wanted in this region on the one who was caught.
+				var caught: Dictionary = {"statute": "theft", "display_name": "Theft", "severity": 25}
+				FactionDatabase.record_crime(law_faction, caught, {"downtime": true})
+				FactionDatabase.mark_wanted(FactionDatabase.wanted_bucket(str(game.current_map_id)),
+					CrimeManager.perp_key(character), str(character.Name) if "Name" in character else "",
+					law_faction, "Theft")
 				var faction_name: String = str(FactionDatabase.get_faction_data(law_faction).get("name", law_faction)) \
 						if FactionDatabase.has_faction(law_faction) else law_faction
 				lines.append("Wanted by " + faction_name)
