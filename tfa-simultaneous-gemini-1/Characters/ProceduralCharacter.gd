@@ -8270,6 +8270,13 @@ func take_damage(damage: Dictionary, location: Vector2, attacker = null, hit_lim
 			if first_denial:
 				GameLog.add_entry("%s refuses to die (Deny Ending)." % Name)
 
+	# The law judges this blow on the hunt as it stood before it: our own AI
+	# reacts to damaged_by first (dies, panics, acquires the striker), and
+	# CrimeManager._victim_hunts reads this through ai.hunt_at_blow.
+	var _blow_ai = get_node_or_null("AI")
+	if total_damage > 0 and _blow_ai != null and _blow_ai.has_method("snapshot_hunt_before_blow"):
+		_blow_ai.snapshot_hunt_before_blow()
+
 	current_health = clamp(prospective_hp, 0, max_health)
 
 	if total_damage > 0:

@@ -216,11 +216,20 @@ func cast_payload(ability) -> Dictionary:
 		ability_traits = ability.traits
 	return {"traits": ability_traits}
 
-## The law is already hunting the actor through this victim: an enforcer
-## attacking a wanted character on sight here, or one on a manhunt for them.
-## Striking back is self-defence, not a fresh assault on the books every
-## blow. Deliberately NOT a grudge: a grudge exists because the actor struck
-## first, and the second blow is no more lawful than the first.
+## Striking the victim is self-defence, not a fresh assault on the books
+## every blow:
+## - the law is already hunting the actor through this victim: an enforcer
+##   attacking a wanted character on sight here, or one on a manhunt for them;
+## - the victim was going after a party member when the blow fell
+##   (ai.hunt_at_blow: judged from BEFORE the blow, or the killing blow would
+##   always be murder) and the actor is on the party's side: the law hunting
+##   that member (manhunt, wanted), or a grudge the victim took up as a
+##   WITNESS (ai.defended_hunt).
+## Never a fight the party started: a victim the party struck first
+## (ai.wronged_by_party) answering back makes the party's second blow no more
+## lawful than its first -- or a companion could finish a merchant the
+## protagonist only slapped, free of a murder charge. Nor an ambush on a
+## grudge-holder who wasn't hunting anyone when struck.
 func _victim_hunts(victim, actor) -> bool:
 	if victim == null or actor == null or not is_instance_valid(victim) or not is_instance_valid(actor):
 		return false
@@ -230,7 +239,20 @@ func _victim_hunts(victim, actor) -> bool:
 	if vai != null and ("manhunt_target" in vai) and vai.manhunt_target == actor:
 		return true
 	var wanted_by: String = str(wanted_here.get(actor.get_instance_id(), ""))
-	return wanted_by != "" and LawDatabase.enforces(str(victim.faction_id), wanted_by)
+	if wanted_by != "" and LawDatabase.enforces(str(victim.faction_id), wanted_by):
+		return true
+	if vai == null or not vai.has_method("hunt_at_blow") or not on_party_side(actor, get_tree().current_scene):
+		return false
+	# A damage-over-time tick is judged on the blow that set it going: a
+	# hunter set burning in self-defence who panicked and burned to death was
+	# not murdered by the flames. Each real blow records its verdict.
+	var key: String = "lawful_harm_by_%d" % actor.get_instance_id()
+	if "_condition_tick_damage" in victim and bool(victim._condition_tick_damage):
+		return bool(victim.get_meta(key, false))
+	var lawful: bool = vai.hunt_at_blow() != null
+	if vai._hunt_snapshot_frame == Engine.get_process_frames():
+		victim.set_meta(key, lawful)
+	return lawful
 
 func attack_payload(actor, victim) -> Dictionary:
 	var victim_faction: String = str(victim.faction_id) if ("faction_id" in victim) else ""
@@ -1014,11 +1036,13 @@ func clear_manhunts(law_faction: String) -> void:
 		# they re-acquire the party on the next tick.
 		if ("grudges" in ai_node) and not ai_node.grudges.is_empty():
 			_drop_party_grudges(ai_node, game)
+		if "party_wronged_until" in ai_node:
+			ai_node.party_wronged_until = 0.0
 	# ...and the party's own AIs (companions, summons) drop theirs on the
 	# law's enforcers, or a summon restarts the fight it was settled from.
 	if "party_chars" in game:
 		for c in game.characters_in_scene:
-			if not is_instance_valid(c) or not _on_party_side(c, game):
+			if not is_instance_valid(c) or not on_party_side(c, game):
 				continue
 			var pai = c.get_node_or_null("AI")
 			if pai == null or not ("grudges" in pai) or pai.grudges.is_empty():
@@ -1035,13 +1059,13 @@ func clear_manhunts(law_faction: String) -> void:
 		if is_instance_valid(c) and c.has_meta("slain_by"):
 			var info: Variant = c.get_meta("slain_by")
 			var killer = (info as Dictionary).get("who") if info is Dictionary else null
-			if killer == null or not is_instance_valid(killer) or _on_party_side(killer, game):
+			if killer == null or not is_instance_valid(killer) or on_party_side(killer, game):
 				c.remove_meta("slain_by")
 
 
 ## Whether `c` answers to the party: a party member, or anything summoned by
 ## one (attribute walks summoned_by).
-func _on_party_side(c, game) -> bool:
+func on_party_side(c, game) -> bool:
 	if c == null or not is_instance_valid(c) or game == null or not ("party_chars" in game):
 		return false
 	return attribute(c) in game.party_chars
@@ -1052,7 +1076,7 @@ func _on_party_side(c, game) -> bool:
 func _drop_party_grudges(ai_node, game) -> void:
 	for gid in ai_node.grudges.keys():
 		var who = (ai_node.grudges[gid] as Dictionary).get("who")
-		if who == null or not is_instance_valid(who) or _on_party_side(who, game):
+		if who == null or not is_instance_valid(who) or on_party_side(who, game):
 			ai_node.grudges.erase(gid)
 
 ## Binary, per D7: strength >= 3 summed over equipped disguise blocks, head

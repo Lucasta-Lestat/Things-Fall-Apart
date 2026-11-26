@@ -45,6 +45,29 @@ test `tests/guard_kill_check.tscn`):
   then the larger fine, then the nearest. Settling or a pardon clears the
   wanted entries and the watch's grudges against the party, and returns goods
   stolen from anyone the law protects (not only the law faction itself).
+- **Companions ignored anyone hunting the party until struck.** A grudge
+  lives on the NPC that holds it, so a merchant coming at the protagonist was
+  no enemy to a companion. Now `ai.hunted_party_member` names the party member
+  a non-party NPC is going after (its target, or for 10 s after losing it
+  while searching; never while harmless: panicked, frightened, apathetic,
+  transfixed, stunned, unconscious), and `ai.defended_hunt` narrows it to a
+  hunt the party may lawfully answer: a manhunt or warrant on that member, or
+  a grudge taken as a WITNESS. Not when the party started it
+  (`party_wronged_until`, set by `_note_struck_by` when a party blow lands on
+  an NPC that wasn't hunting the party), not a compulsion alone. Party AIs
+  count a defended hunter as an enemy (`_is_enemy`), and the law calls the
+  party's blows on it self-defence (`CrimeManager._victim_hunts` via
+  `ai.hunt_at_blow`, judged on the hunt as it stood BEFORE the blow:
+  `ProceduralCharacter.take_damage` snapshots it, because the victim's own AI
+  reacts to `damaged_by` first, so a killing blow read as murder and a
+  panicking blow as assault). A hunt begun in the same frame as the blow is
+  no hunt (one Fireball's later victims saw its first fall and turned on the
+  caster mid-resolution); a damage-over-time tick is judged on the verdict of
+  the real blow that set it going (`lawful_harm_by_<id>` meta); a follow-up
+  blow during a momentary panic or stun is a crime on its own but does not
+  mark the party as having started it. A hunter the party sees is called out
+  to the companions once (`_maybe_call_out_hunt`). Regression test
+  `tests/party_defend_check.tscn` (62 checks, each protection mutation-tested).
 
 Still open:
 
