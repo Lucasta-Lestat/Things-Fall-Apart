@@ -1,0 +1,40 @@
+[
+ {
+  "image": "r2_1.png",
+  "iou": 0.957,
+  "span_px": 1295,
+  "depth_px": 258,
+  "depth_over_span": 0.1992,
+  "outside_guide": 0.0185,
+  "guide_uncovered": 0.0254,
+  "symmetry_shape": 0.9952,
+  "symmetry_colour": 0.9811,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   128,
+   128,
+   128
+  ],
+  "ground_std": 1.52,
+  "auto_pass": true
+ },
+ {
+  "image": "r2_2.png",
+  "iou": 0.9456,
+  "span_px": 1293,
+  "depth_px": 255,
+  "depth_over_span": 0.1972,
+  "outside_guide": 0.0302,
+  "guide_uncovered": 0.0257,
+  "symmetry_shape": 0.9943,
+  "symmetry_colour": 0.9789,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   128,
+   128,
+   127
+  ],
+  "ground_std": 1.43,
+  "auto_pass": true
+ }
+]

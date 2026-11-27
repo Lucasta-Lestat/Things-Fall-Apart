@@ -1,0 +1,40 @@
+[
+ {
+  "image": "r3_1_dome.png",
+  "iou": 0.9383,
+  "span_px": 1297,
+  "depth_px": 256,
+  "depth_over_span": 0.1974,
+  "outside_guide": 0.0357,
+  "guide_uncovered": 0.028,
+  "symmetry_shape": 0.9956,
+  "symmetry_colour": 0.9818,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   128,
+   128,
+   127
+  ],
+  "ground_std": 1.5,
+  "auto_pass": true
+ },
+ {
+  "image": "r3_2_dome.png",
+  "iou": 0.9359,
+  "span_px": 1296,
+  "depth_px": 254,
+  "depth_over_span": 0.196,
+  "outside_guide": 0.0443,
+  "guide_uncovered": 0.0216,
+  "symmetry_shape": 0.9964,
+  "symmetry_colour": 0.9826,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.29,
+  "auto_pass": true
+ }
+]

@@ -240,6 +240,18 @@ What was learned:
 
 Still open after pilot 2: finish is softer than the house style in the best-camera images; the head sits a little south of the shoulder line in the clay guide; feet vary between toe tips and stumps; each recipe has only one to four samples. Next step is one merged recipe (clay guide + block-out head + swatch), run several times, before any batch.
 
+**Pilot 3 (2026-11-27, merged recipe, 22 generations, `tools/rigkit/gen_plan.py`, outputs in `tools/rigkit/out/plan/`).** One tool now renders the guide (clay, tint, mask, label map in `derive.py` colours, JSON), generates candidates, and checks them (IoU against the guide, depth/span, symmetry, ground colour, head-crop sheet). Races are entries in its `RACES` dict; orc, human and halfling guides render, only the orc has been painted.
+
+| Set (4 images, one frozen recipe each) | Clean heads | Judges' pass counts (camera / style / rig) |
+|---|---|---|
+| `final_*`: guide with nose bump and tusks | 0 of 4 raw | 1 / 2 / 2 |
+| `v2_*`: nose bump removed, tusks only | 4 of 4 | 2 / 2 / 3 |
+
+- **Removing the nose bump is what removed the face**: a nose between two tusks is read as a face and completed. 8 of 8 noseless images have a plain dome.
+- **Cost:** the head is now a ball identified as an orc only by ears and tusks, and the judges disagree on whether that is acceptable.
+- **Still open:** toes copy the guide's pegs literally and read as stalks; the chest shelf can read as thighs; outline weight and gloss vary run to run; the crown highlight drifts 11-30 px north; the shoulder label cut sits inside the painted deltoid.
+- **Decision needed from the user:** strict 90 degree plan view (ball head, no face) or a small forward tilt rendered into the guide (a sliver of brow and nose, slightly deeper chest). The guide is 3D, so tilt is a parameter.
+
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 
 ## 5. Migration plan

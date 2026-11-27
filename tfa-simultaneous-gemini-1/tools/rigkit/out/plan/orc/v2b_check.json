@@ -1,0 +1,50 @@
+[
+ {
+  "image": "v2b_1.png",
+  "iou": 0.9891,
+  "span_px": 1294,
+  "depth_px": 253,
+  "depth_over_span": 0.1955,
+  "outside_guide": 0.0061,
+  "guide_uncovered": 0.0048,
+  "symmetry_shape": 0.9971,
+  "symmetry_colour": 0.9813,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.4,
+  "auto_pass": true,
+  "face_dark": 0.0,
+  "muzzle_dark": 0.0222,
+  "hl_dx": -1.3,
+  "hl_dy": -20.5,
+  "head_pass": true
+ },
+ {
+  "image": "v2b_2.png",
+  "iou": 0.9787,
+  "span_px": 1294,
+  "depth_px": 256,
+  "depth_over_span": 0.1978,
+  "outside_guide": 0.0151,
+  "guide_uncovered": 0.0064,
+  "symmetry_shape": 0.9928,
+  "symmetry_colour": 0.9801,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   128,
+   128,
+   128
+  ],
+  "ground_std": 1.42,
+  "auto_pass": true,
+  "face_dark": 0.0003,
+  "muzzle_dark": 0.0,
+  "hl_dx": -0.9,
+  "hl_dy": -1.7,
+  "head_pass": true
+ }
+]

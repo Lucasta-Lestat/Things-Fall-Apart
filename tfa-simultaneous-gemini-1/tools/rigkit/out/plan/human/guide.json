@@ -1,0 +1,128 @@
+{
+ "race": "human",
+ "canvas": [
+  1376,
+  768
+ ],
+ "px_per_unit": 639.84,
+ "bbox": [
+  43,
+  274,
+  1332,
+  483
+ ],
+ "span_px": 1290,
+ "depth_px": 210,
+ "shoulder_line_y": 369.6,
+ "skull_centre": [
+  688.0,
+  372.16
+ ],
+ "skull_r_px": 57.59,
+ "depth_over_span": 0.1628,
+ "label_colours": {
+  "background": [
+   0,
+   0,
+   0
+  ],
+  "body": [
+   60,
+   180,
+   75
+  ],
+  "face": [
+   230,
+   25,
+   75
+  ],
+  "upperarm_l": [
+   0,
+   130,
+   200
+  ],
+  "upperarm_r": [
+   70,
+   190,
+   255
+  ],
+  "forearm_l": [
+   145,
+   30,
+   180
+  ],
+  "forearm_r": [
+   240,
+   50,
+   230
+  ],
+  "hand_l": [
+   255,
+   150,
+   200
+  ],
+  "hand_r": [
+   160,
+   20,
+   90
+  ],
+  "foot_l": [
+   255,
+   225,
+   25
+  ],
+  "foot_r": [
+   170,
+   180,
+   40
+  ]
+ },
+ "note": "figure faces south (image bottom); _l/_r are IMAGE left/right, as derive.py expects",
+ "derive": {
+  "ok": true,
+  "frames": [
+   "back",
+   "foot_l",
+   "foot_r",
+   "forearm_l",
+   "forearm_r",
+   "grip_l",
+   "grip_r",
+   "hand_l",
+   "hand_r",
+   "head",
+   "head_full",
+   "torso",
+   "upperarm_l",
+   "upperarm_r"
+  ],
+  "notes": [
+   "legs not visible from above: leg items are hidden on this race"
+  ],
+  "head": {
+   "o": [
+    687.31,
+    367.03
+   ],
+   "ax": [
+    1.0,
+    0.0
+   ],
+   "lx": 55.889,
+   "ly": 55.889
+  },
+  "torso": {
+   "o": [
+    687.23,
+    369.07
+   ],
+   "ax": [
+    1.0,
+    -0.00034
+   ],
+   "lx": 229.75,
+   "ly": 91.912,
+   "ly_neg": 91.089
+  }
+ }
+}

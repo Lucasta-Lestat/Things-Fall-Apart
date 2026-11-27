@@ -1,0 +1,21 @@
+[
+ {
+  "image": "r4_1_dome.png",
+  "iou": 0.9379,
+  "span_px": 1295,
+  "depth_px": 242,
+  "depth_over_span": 0.1869,
+  "outside_guide": 0.0335,
+  "guide_uncovered": 0.0307,
+  "symmetry_shape": 0.9953,
+  "symmetry_colour": 0.9816,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   126
+  ],
+  "ground_std": 1.5,
+  "auto_pass": true
+ }
+]
