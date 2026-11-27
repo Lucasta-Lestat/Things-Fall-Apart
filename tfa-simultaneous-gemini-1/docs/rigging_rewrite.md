@@ -219,10 +219,26 @@ The Gemini key works again as of this run (it was out of credits on 2026-11-01).
 
 **Batch C: rigid pieces.** great_helm, plate_sabaton, steel_greaves, and the two pants if legs stay visible on any race after batch A.
 
-**Pilot so far (four small generations, `tools/rigkit/gen_overhead.py`, outputs in `tools/rigkit/out/overhead/`).**
+**Pilot 1 (2026-11-26, four generations, `tools/rigkit/gen_overhead.py`): rejected.** Both modes copied a reference painting's camera. The user's verdict: "almost the same perspective but with the legs cropped off". The root cause is that the human painting used as the camera reference is itself a high three-quarter view whose face is hidden by hair, so no amount of copying it gives a plan view.
 
-- Giving the model the current orc painting as an identity reference reproduced the old three-quarter angle both times. The identity image drags its camera along.
-- Camera-first mode (`--describe`: the human painting is the only image, the orc is described in words) fixed the body: upper back visible, legs hidden under the trunk, same foreshortening as the human. The face is still fully visible on the bald head, so the prompt needs another pass before any batch.
+**Pilot 2 (2026-11-27, method bake-off, 29 generations, `tools/rigkit/pilot/`, outputs and `orc_bakeoff_sheet.jpg` in `tools/rigkit/out/overhead2/`).** Four methods were tried on the orc and ranked by three judges (camera, style, rig use).
+
+| Method | Camera result | Verdict |
+|---|---|---|
+| Wording only ("top-down token", drone, plan view; style swatches only) | Shallow and legless, but 0 of 8 true plan views | Dropped |
+| Clay guide (numpy height-map render of a parametrised proxy, painted over) | Silhouette IoU 0.95-0.99 with the guide, depth/span 21-22% (old orc 38%) | Chosen base |
+| Blender guide (headless orthographic render, painted over) | Same lock, 6 of 6 plan views | Fallback for odd bodies (tails, wings, four legs) |
+| Flat block-out paint-over (PIL shapes) | Same lock; cleanest heads | Its head recipe is adopted |
+
+What was learned:
+
+- **Give the camera, do not ask for it.** A rendered guide that already is the plan view fixes silhouette, arm level, depth and hidden legs every time. A full-body reference painting always drags its own camera along.
+- **The model paints a face wherever the guide leaves room for one.** The face goes away only when the guide's skull is a plain dome with at most nose-tip and tusk-tip bumps on its south rim, and the prompt never names brow, eyes or mouth.
+- **Naming a feature grows it.** Asking for "five clear toes" grew whole feet and shins.
+- **A small skin swatch** (a patch of upper arm from the old painting, never the face or whole body) carries colour and line style without carrying the camera.
+- **The guide also yields the label map and silhouette mask for free**, so a repainted race needs no hand-made or segmented labels, and silhouette IoU against the guide is an automatic gate. IoU cannot see a painted-on face, so a zoomed head crop still needs a look.
+
+Still open after pilot 2: finish is softer than the house style in the best-camera images; the head sits a little south of the shoulder line in the clay guide; feet vary between toe tips and stumps; each recipe has only one to four samples. Next step is one merged recipe (clay guide + block-out head + swatch), run several times, before any batch.
 
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 

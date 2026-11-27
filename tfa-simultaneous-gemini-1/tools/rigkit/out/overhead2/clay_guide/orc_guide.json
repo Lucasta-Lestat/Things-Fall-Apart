@@ -1,0 +1,31 @@
+{
+ "race": "orc",
+ "canvas": [
+  1376,
+  768
+ ],
+ "px_per_unit": 639.8399999999999,
+ "bbox": [
+  40,
+  248,
+  1335,
+  525
+ ],
+ "span_px": 1296,
+ "depth_px": 278,
+ "depth_over_span": 0.2145,
+ "labels": {
+  "background": 0,
+  "body": 1,
+  "head": 2,
+  "upper_arm_R": 3,
+  "upper_arm_L": 4,
+  "forearm_R": 5,
+  "forearm_L": 6,
+  "hand_R": 7,
+  "hand_L": 8,
+  "foot_R": 9,
+  "foot_L": 10
+ },
+ "note": "figure faces south (image bottom); character LEFT is image RIGHT"
+}

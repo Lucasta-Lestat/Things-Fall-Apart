@@ -1,0 +1,10 @@
+foot_r 255,128,0
+foot_l 255,200,0
+body 200,0,0
+upper_arm_r 0,160,0
+upper_arm_l 0,230,120
+forearm_r 0,120,220
+forearm_l 0,220,230
+hand_r 130,0,220
+hand_l 230,0,220
+head 255,255,0
