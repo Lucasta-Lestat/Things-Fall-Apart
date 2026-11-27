@@ -1,0 +1,24 @@
+{
+ "file": "final_2.png",
+ "iou": 0.9545,
+ "bg": [
+  126,
+  126,
+  126
+ ],
+ "guide_bbox": [
+  46,
+  284,
+  1874,
+  795
+ ],
+ "out_bbox": [
+  45,
+  280,
+  1876,
+  800
+ ],
+ "symmetry_iou": 0.9954,
+ "guide_depth_over_span": 0.28,
+ "out_depth_over_span": 0.284
+}

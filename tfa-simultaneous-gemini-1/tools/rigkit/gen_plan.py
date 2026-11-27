@@ -1,9 +1,22 @@
-"""Repaint a race at the TRUE top-down (plan view) camera, by painting over a rendered guide.
+"""Repaint a race at one shared steep overhead camera, by painting over a rendered guide.
 
-    python -m tools.rigkit.gen_plan guide [--race orc]
-    python -m tools.rigkit.gen_plan gen   [--race orc] [--n 4] [--tag final] [--guide tint|clay] [--no-swatch]
+    python -m tools.rigkit.gen_plan guide [--race orc] [--tilt 15]
+    python -m tools.rigkit.gen_plan gen   [--race orc] [--n 4] [--tag final] [--guide tint|clay] [--no-swatch] [--tilt 15]
     python -m tools.rigkit.gen_plan check [--race orc] [--tag final | image.png ...]
-    python -m tools.rigkit.gen_plan dome  [--race orc] [--tag final | image.png ...]
+    python -m tools.rigkit.gen_plan sheet [--race orc] [--tag final | image.png ...]
+    python -m tools.rigkit.gen_plan dome  [--race orc] [--tag final | image.png ...]     (tilt 0 sets only)
+
+--tilt is the camera's angle off vertical in degrees, leaning toward the character's FRONT (default
+DEFAULT_TILT = 15, or a race's own "tilt"). 0 is the strict plan view of pilot 3 and still renders
+that guide (dome head, pec shelf, toe pegs, files guide_*.png). A tilted guide (files
+guide_t<deg>_*.png) uses the anatomical proxy: a head with brow, nose, jaw and tusks, one chest mass
+with pecs, a belly and real foot fronts, so the tilt reveals a face sliver and foot fronts by geometry.
+The projection is exact (ray / ellipsoid z-buffer; clay, mask, labels and JSON share it), with ONE
+deliberate cheat: the tilted proxy stands on a floor at z = floor_z (0.70), i.e. its legs are about a
+quarter of their real length. A true 15 degree orthographic view of a figure with real legs is about
+36 % deep on this proxy (the legs alone add 0.26 * leg length) and shows the legs, like the old orc
+painting (38 %); the target of 22-30 % with the feet peeking out under the belly needs the short
+stance. Set a race's floor_z to 0.0 to see the honest version.
 
 guide   renders the race's proxy figure from RACES[race] with an orthographic camera
         straight above it and writes, to tools/rigkit/out/plan/<race>/:
@@ -37,6 +50,8 @@ MAX height, so the same pass yields the silhouette and the label map.
 A new race is a new RACES entry (proportions, colours, words), not new code.
 
 What the recipe encodes (docs/rigging_rewrite.md, "Pilot 2"):
+  (the items below are the tilt-0 recipe; for a tilted guide the face, chest and feet are modelled as
+   anatomy instead and build_prompt_tilt names each at the size the guide has it)
   * the guide gives the camera; the prompt never has to ask for it;
   * the skull is a plain round dome centred on the shoulder axis with only tiny
     nose-tip / tusk-tip bumps on its south rim, and the prompt names no other part of
@@ -69,11 +84,15 @@ OUT = os.path.join(HERE, "out", "plan")
 W, H = 1376, 768            # what gemini-3-pro-image returns at 16:9
 SS = 2
 BG = 128
+DEFAULT_TILT = 15.0       # degrees off vertical, toward the character's front; 0 = strict plan view
 FACE_DARK_MAX, MUZZLE_DARK_MAX, HL_OFFSET_MAX = 0.004, 0.06, 0.35   # head gate; see head_metrics
+DEPTH_BAND_PLAN = (0.18, 0.26)      # depth / span the auto gate accepts at tilt 0 ...
+DEPTH_BAND_TILT = (0.22, 0.30)      # ... and for a tilted guide (the old three-quarter orc was 0.38)
+IOU_MIN_TILT = 0.90                 # a natural repaint of the anatomy outranks tracing the proxy
 
 # part -> derive.PALETTE name. derive's _l/_r are IMAGE left/right.
 PARTS = ["background", "body", "face", "upperarm_l", "upperarm_r", "forearm_l", "forearm_r",
-         "hand_l", "hand_r", "foot_l", "foot_r"]
+         "hand_l", "hand_r", "foot_l", "foot_r", "leg_l", "leg_r"]
 PART_RGB = [(0, 0, 0)] + [PALETTE[n] for n in PARTS[1:]]
 
 # ---------------------------------------------------------------- races
@@ -91,6 +110,7 @@ RACES = {
         elbow_x=0.585, wrist_x=0.805,
         palm_rx=0.070, palm_ry=0.064, finger_r=0.0145,
         foot_x=0.128, toe_y=0.238, toe_r=0.023,
+        foot_x_tilt=0.150, foot_w=0.066, toe_y_tilt=0.188, tusk_x_tilt=0.046,   # tilted proxy only
         skin=(118, 136, 70), ivory=(236, 226, 196),
         swatch=dict(src="Rigs/races/orc/default/body.png", box=(630, 20, 810, 170)),
         look="an orc with olive-green skin, a bald scalp, pointed ears, heavy muscles and ivory tusk tips",
@@ -99,6 +119,20 @@ RACES = {
                     "out sideways from each side of the dome.",
         skin_words="fresh saturated olive-green hue, its lighter yellow-green highlights",
         line_words="heavy, crisp, near-black green contour line",
+        # tilted camera (see build_prompt_tilt): what the guide shows, then how to paint it
+        face_tilt="a heavy brow ridge whose overhang shades the eye sockets into two dark slits, right "
+                  "under it the broad tip of the nose, and just behind the nose the front of the jaw with "
+                  "one small ivory tusk rising from each corner of the lower lip. Brow, nose tip and "
+                  "tusks sit close together, squeezed by the steep view, and the tusks and lower lip "
+                  "are the bottom edge of the head, with the chest starting directly below them. A "
+                  "pointed ear sticks out sideways from each side of the head.",
+        torso_tilt="first the top plane of the broad chest with its two pectoral muscles meeting at the "
+                   "breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+        face_paint="the head as a big bald scalp with, in the narrow strip along its bottom edge, a natural "
+                   "orc face strongly foreshortened from above, a scowling brow over shadowed eye slits, a "
+                   "broad nose tip and the front of a heavy jaw with its two small tusks",
+        torso_paint="the torso as one broad chest with two full pectoral muscles and a firm upper belly "
+                    "below them",
     ),
     "human": dict(
         shoulder_half=0.25, delt_r=0.08, trunk_depth_n=0.125, chest_depth_s=0.13,
@@ -140,45 +174,99 @@ RACES = {
 }
 
 
-def primitives(p):
-    """List of (part, kind, params). part may carry a ':tag' suffix (tusk, crown)."""
+def primitives(p, anat=False):
+    """List of (part, centre xyz, radii xyz): every primitive is an ellipsoid. part may carry a
+    ':tag' suffix (tusk, skull). Tapered capsules are chains of ellipsoids (`cap`, `rod`).
+
+    anat=False  the strict plan-view proxy: a plain dome head, a pec shelf, toe pegs.
+    anat=True   the tilted-camera proxy: the parts a tilted camera can see are modelled as anatomy
+                (a head with brow, nose, jaw and tusks; one chest mass with pecs; a belly; feet)."""
     P = []
     sh = p["shoulder_half"]
     zs = 1.56  # shoulder / arm axis height
 
     def ell(part, c, r):
-        P.append((part, "ell", (c, r)))
+        P.append((part, tuple(float(v) for v in c), tuple(float(v) for v in r)))
 
-    def cap(part, a, b, ra, rb, z, kz=1.0):
-        P.append((part, "cap", (a, b, ra, rb, z, kz)))
+    def rod(part, a, b, ra, rb, kz=1.0):
+        """Tapered capsule between two 3D points, as a chain of ellipsoids (r, r, r * kz)."""
+        a, b = np.array(a, float), np.array(b, float)
+        n = int(np.ceil(np.linalg.norm(b - a) / (0.14 * max(min(ra, rb), 0.004)))) + 1
+        for t in np.linspace(0, 1, min(max(n, 2), 90)):
+            r = ra + (rb - ra) * t
+            ell(part, a + (b - a) * t, (r, r, r * kz))
 
-    # ---- trunk: a level shoulder band, with the chest as a lower shelf south of it
+    def cap(part, a, b, ra, rb, z, kz=1.0):     # level capsule at height z
+        rod(part, (a[0], a[1], z), (b[0], b[1], z), ra, rb, kz)
+
     n, cs, bs = p["trunk_depth_n"], p["chest_depth_s"], p["belly_depth_s"]
-    ell("body", (0, 0.0, 1.32), (sh + 0.01, 0.15, 0.28))                      # rib cage
+    r, hy = p["skull_r"], p["skull_y"]
+
+    # ---- upper trunk, shared: a level shoulder band
+    if not anat:
+        ell("body", (0, 0.0, 1.32), (sh + 0.01, 0.15, 0.28))                  # rib cage
     ell("body", (0, -(n - 0.115), 1.40), (sh + 0.02, 0.115, 0.20))            # upper back / lats
-    cap("body", (-sh, -0.01), (sh, -0.01), 0.10, 0.10, 1.465, 1.15)           # shoulder girdle, easing into the chest
+    cap("body", (-sh, -0.01), (sh, -0.01), 0.10, 0.10, 1.465, 1.15)           # shoulder girdle
     ell("body", (0, -0.035, 1.52), (0.20, 0.11, 0.09))                        # traps / neck root, a low swell
     for s in (-1, 1):
-        ell("body", (s * (sh + 0.045), 0.0, 1.56), (p["delt_r"], p["delt_r"] + 0.005, 0.10))  # deltoid
-        # pec shelf: two lobes that meet at the sternum without crossing (crossing lobes read as a hunch)
-        ell("body", (s * p["pec_half"], cs - 0.085, 1.36), (p["pec_half"], 0.085, 0.10))
-    ell("body", (0, cs - 0.105, 1.35), (p["pec_half"] * 0.75, 0.085, 0.10))    # sternum: shallow cleft only
-    ell("body", (0, bs - 0.13, 1.08), (p["belly_half"], 0.13, 0.25))          # belly, lower still
+        if anat:                                # a flatter cap that eases into the arm and the trapezius
+            ell("body", (s * (sh + 0.035), 0.0, 1.535), (p["delt_r"] * 1.05, p["delt_r"], 0.095))
+        else:
+            ell("body", (s * (sh + 0.045), 0.0, 1.56), (p["delt_r"], p["delt_r"] + 0.005, 0.10))  # deltoid
 
-    # ---- head: a plain round dome on the shoulder axis; only tips jut past its south rim
-    r, hy = p["skull_r"], p["skull_y"]
-    ell("face:skull", (0, hy, 1.86), (r, r, 0.15))
-    nx, ny = p["nose"]
-    if nx > 0:                                  # (0, 0): the nose stays inside the skull's outline
-        ell("face", (0, hy + r + ny * 0.45, 1.72), (nx, ny, 0.03))            # nose tip
-    if p["tusk"] > 0:
+    if not anat:
         for s in (-1, 1):
-            tx = p["tusk_x"]
-            y0 = hy + (r * r - tx * tx) ** 0.5 - 0.008
-            cap("face:tusk", (s * tx, y0), (s * (tx + 0.003), y0 + p["tusk"]), 0.011, 0.002, 1.70, 0.5)
-    if p["ear_len"] > 0:
+            # pec shelf: two lobes that meet at the sternum without crossing (crossing lobes read as a hunch)
+            ell("body", (s * p["pec_half"], cs - 0.085, 1.36), (p["pec_half"], 0.085, 0.10))
+        ell("body", (0, cs - 0.105, 1.35), (p["pec_half"] * 0.75, 0.085, 0.10))    # sternum: shallow cleft only
+        ell("body", (0, bs - 0.13, 1.08), (p["belly_half"], 0.13, 0.25))      # belly, lower still
+
+        # ---- head: a plain round dome on the shoulder axis; only tips jut past its south rim
+        ell("face:skull", (0, hy, 1.86), (r, r, 0.15))
+        nx, ny = p["nose"]
+        if nx > 0:                              # (0, 0): the nose stays inside the skull's outline
+            ell("face", (0, hy + r + ny * 0.45, 1.72), (nx, ny, 0.03))        # nose tip
+        if p["tusk"] > 0:
+            for s in (-1, 1):
+                tx = p["tusk_x"]
+                y0 = hy + (r * r - tx * tx) ** 0.5 - 0.008
+                cap("face:tusk", (s * tx, y0), (s * (tx + 0.003), y0 + p["tusk"]), 0.011, 0.002, 1.70, 0.5)
+        if p["ear_len"] > 0:
+            for s in (-1, 1):
+                cap("face", (s * r * 0.92, hy + 0.012), (s * (r + p["ear_len"]), hy - 0.030), 0.024, 0.004, 1.78, 0.6)
+    else:
+        # ---- trunk front: ONE chest mass; the pecs are low swells on it that overlap at the sternum,
+        # the belly a slightly shallower mass below, the hips under that
+        ph = p["pec_half"]
+        ell("body", (0, cs - 0.175, 1.33), (sh + 0.005, 0.165, 0.26))         # rib cage, front at cs - 0.01
         for s in (-1, 1):
-            cap("face", (s * r * 0.92, hy + 0.012), (s * (r + p["ear_len"]), hy - 0.030), 0.024, 0.004, 1.78, 0.6)
+            ell("body", (s * ph * 0.93, cs - 0.105, 1.385), (ph * 1.22, 0.105, 0.115))   # pec
+        ell("body", (0, bs - 0.135, 1.10), (p["belly_half"], 0.135, 0.22))    # belly
+        z0 = p.get("floor_z", 0.70)             # the floor; see the note on the short stance in RACES
+        ell("body", (0, bs - 0.155, 0.92), (p["belly_half"] * 0.95, 0.125, 0.14))   # hips
+
+        # ---- head: cranium + the forms that make a face when seen from above and in front
+        hf = p.get("head_fwd", 0.03)            # the head is carried a little forward of the shoulders
+        zh = p.get("head_z", 1.80)
+        yh = hy + hf
+        ell("body", (0, yh * 0.5, 1.60), (0.085, 0.085, 0.14))                # neck
+        ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))                  # cranium
+        f = r / 0.108                           # face forms scale with the skull
+        bw = p.get("brow", 1.0)
+        for s in (-1, 1):                       # brow ridge: two lobes that meet in a notch above the nose
+            ell("face", (s * 0.040 * f, yh + 0.076 * f, zh + 0.010), (0.052 * f, 0.040 * f * bw, 0.034))
+        ell("face", (0, yh + 0.046 * f, zh - 0.080), (0.090 * f, 0.074 * f, 0.070))             # cheeks / mid face
+        ell("face", (0, yh + 0.066 * f, zh - 0.125), (0.074 * f, 0.058 * f * p.get("jaw", 1.0), 0.045))   # jaw, chin
+        rod("face", (0, yh + 0.104 * f, zh - 0.010), (0, yh + 0.124 * f, zh - 0.062), 0.013 * f, 0.021 * f)  # nose
+        if p["tusk"] > 0:
+            for s in (-1, 1):
+                tx = p.get("tusk_x_tilt", p["tusk_x"])
+                rod("face:tusk", (s * tx, yh + 0.106 * f, zh - 0.140),
+                    (s * (tx + 0.007), yh + 0.106 * f + p["tusk"] * 1.3, zh - 0.140 + p["tusk"] * 2.2), 0.0115, 0.003)
+        if p["ear_len"] > 0:
+            for s in (-1, 1):
+                rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035), (s * (r + p["ear_len"]), yh - 0.028, zh + 0.005),
+                    0.024, 0.004, 0.6)
 
     # ---- arms: dead-level bars at shoulder height; hands flat with spread fingers
     ex, wx = p["elbow_x"], p["wrist_x"]
@@ -200,81 +288,158 @@ def primitives(p):
         cap(hand, (s * (hx - 0.03), p["palm_ry"] * 0.6), (s * (hx + 0.028), p["palm_ry"] + 0.036),
             fr * 1.25, fr * 0.95, zs - 0.035, 0.8)                            # thumb, toward south
 
-        # ---- feet: only short separate toe ends peek out south of the belly
-        fx, ty, tr = p["foot_x"], p["toe_y"], p["toe_r"]
+        fx, tr = (p.get("foot_x_tilt", p["foot_x"]) if anat else p["foot_x"]), p["toe_r"]
+        ty = p.get("toe_y_tilt", p["toe_y"] * 0.85) if anat else p["toe_y"]
         foot = "foot_" + side
-        # Each toe is a peg that starts hidden under the chest and ends in a short rounded tip, so
-        # only the tips show, with grey ground between neighbours. Big toe is the inner one.
-        for i, (k, back) in enumerate(((1.0, 0.30), (0.84, 0.15), (0.78, 0.15), (0.72, 0.35), (0.66, 0.70))):
-            tx = fx - tr * 3.4 + i * tr * 1.7
-            rad = tr * k * 0.64
-            cap(foot, (s * tx, ty - 0.075), (s * tx, ty - back * tr - rad), rad, rad, 0.05, 0.6)
+        if not anat:
+            # ---- feet: only short separate toe ends peek out south of the belly.
+            # Each toe is a peg that starts hidden under the chest and ends in a short rounded tip, so
+            # only the tips show, with grey ground between neighbours. Big toe is the inner one.
+            for i, (k, back) in enumerate(((1.0, 0.30), (0.84, 0.15), (0.78, 0.15), (0.72, 0.35), (0.66, 0.70))):
+                tx = fx - tr * 3.4 + i * tr * 1.7
+                rad = tr * k * 0.64
+                cap(foot, (s * tx, ty - 0.075), (s * tx, ty - back * tr - rad), rad, rad, 0.05, 0.6)
+        else:
+            # ---- legs and feet: a real foot (heel, instep, ball, five touching toes) on the floor
+            fw = p.get("foot_w", tr * 2.6)      # half width of the ball of the foot
+            fl = p.get("foot_len", 0.25)        # heel to big-toe tip
+            tl = fw * 0.95                      # big-toe length
+            heel = ty - fl
+            ball = ty - tl - fw * 0.30
+            rod("leg_" + side, (s * fx * 0.95, 0.02, 0.90), (s * fx, heel + 0.07, z0 + 0.10), 0.085, 0.055)   # leg, short
+            rod(foot, (s * fx, heel + 0.045, z0 + 0.040), (s * fx, ball - 0.01, z0 + 0.034),
+                fw * 0.72, fw * 0.98, 0.62)                                   # heel to ball
+            ell(foot, (s * fx, heel + 0.10, z0 + 0.075), (fw * 0.70, 0.075, 0.055))           # instep rising to the ankle
+            # toes: big toe inner; each overlaps its neighbour so the foot front is one scalloped edge
+            widths = (1.0, 0.76, 0.70, 0.64, 0.58)
+            reach = (1.0, 0.99, 0.93, 0.85, 0.75)
+            tot = sum(widths)
+            x = -fw * 1.04
+            for k, rc in zip(widths, reach):
+                half = fw * 1.04 * k / tot
+                rad = half * 1.10
+                cx = x + half
+                x += 2 * half
+                tip = ball + (tl + fw * 0.30) * rc - rad
+                rod(foot, (s * (fx + cx * 0.92), ball, z0 + 0.024), (s * (fx + cx * 1.05), tip, z0 + 0.020),
+                    rad, rad * 0.95, 0.78)
     return P
 
 
-def render(race="orc", w=W, h=H, ss=SS, margin=0.035):
-    """Returns (clay, tint, mask, label_idx, stats)."""
+def guide_prefix(tilt):
+    """Guide files of the strict plan view keep their old names; tilted guides get their own."""
+    return "guide" if tilt == 0 else "guide_t%g" % tilt
+
+
+def race_tilt(race, tilt=None):
+    return float(RACES[race].get("tilt", DEFAULT_TILT) if tilt is None else tilt)
+
+
+def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None):
+    """Returns (clay, tint, mask, label_idx, stats).
+
+    Orthographic camera `tilt` degrees off vertical, leaning toward the character's front (south):
+    a world point (x, y, z) lands at screen (x, y cos t - z sin t), so higher parts move north and
+    the front surfaces come into view. Every pixel's ray is intersected with every ellipsoid and the
+    hit nearest the camera wins; clay, mask and labels all come from that one z-buffer."""
     p = RACES[race]
+    tilt = race_tilt(race, tilt)
+    anat = tilt > 0
+    ct, st = float(np.cos(np.radians(tilt))), float(np.sin(np.radians(tilt)))
     ww, hh = w * ss, h * ss
     scale = ww * (0.5 - margin)                 # px per unit; fingertips land `margin` from each edge
-    prims = primitives(p)
-    y_n = -(p["trunk_depth_n"]) - 0.01
-    y_s = max(p["toe_y"], p["belly_depth_s"])
-    yc = (y_n + y_s) / 2                        # centre the north-south extent on the canvas
-    xs = (np.arange(ww) + 0.5 - ww / 2) / scale
-    ys = (np.arange(hh) + 0.5 - hh / 2) / scale + yc
-    X, Y = np.meshgrid(xs, ys)
-    height = np.full((hh, ww), -1.0, np.float32)
+    prims = primitives(p, anat)
+    cen = np.array([c for _, c, _ in prims])
+    rad = np.array([q for _, _, q in prims])
+    if anat:                                    # centre the projected north-south extent on the canvas
+        syc = cen[:, 1] * ct - cen[:, 2] * st
+        ext = np.sqrt((rad[:, 1] * ct) ** 2 + (rad[:, 2] * st) ** 2)
+        y_n, y_s = float((syc - ext).min()), float((syc + ext).max())
+    else:
+        y_n = -(p["trunk_depth_n"]) - 0.01
+        y_s = max(p["toe_y"], p["belly_depth_s"])
+    yc = (y_n + y_s) / 2
+    xs = ((np.arange(ww) + 0.5 - ww / 2) / scale).astype(np.float32)
+    ys = ((np.arange(hh) + 0.5 - hh / 2) / scale + yc).astype(np.float32)
+    dep = np.full((hh, ww), -1e9, np.float32)   # distance toward the camera along the view direction
+    nrm = np.zeros((hh, ww, 3), np.float32)
+    nrm[..., 2] = 1
     label = np.zeros((hh, ww), np.uint8)
     tusk = np.zeros((hh, ww), bool)
     skull = np.zeros((hh, ww), bool)
-    for name, kind, prm in prims:
-        if kind == "ell":
-            (cx, cy, cz), (rx, ry, rz) = prm
-            q = 1 - ((X - cx) / rx) ** 2 - ((Y - cy) / ry) ** 2
-            z = np.where(q > 0, cz + rz * np.sqrt(np.clip(q, 0, None)), -1)
-        else:
-            (ax, ay), (bx, by), ra, rb, cz, kz = prm
-            dx, dy = bx - ax, by - ay
-            t = np.clip(((X - ax) * dx + (Y - ay) * dy) / (dx * dx + dy * dy), 0, 1)
-            rr = ra + (rb - ra) * t
-            d2 = (X - (ax + t * dx)) ** 2 + (Y - (ay + t * dy)) ** 2
-            q = rr * rr - d2
-            z = np.where(q > 0, cz + kz * np.sqrt(np.clip(q, 0, None)), -1)
-        win = z > height
-        height[win] = z[win]
-        label[win] = PARTS.index(name.split(":")[0])
-        tusk[win] = name.endswith(":tusk")
-        skull[win] = name.endswith(":skull")
-    mask = height > -0.5
-
-    # clay shading from the height-map normal, light almost straight down
-    hs = np.where(mask, height, 0).astype(np.float32)
-    hsm = ndi.gaussian_filter(hs, 1.5 * ss)
-    gy, gx = np.gradient(hsm * scale * 0.55)    # 0.55: flatten relief a little so cliffs do not go black
-    nrm = np.stack([-gx, -gy, np.ones_like(gx)], -1)
-    nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True)
-    L = np.array([-0.04, -0.08, 0.995]); L /= np.linalg.norm(L)
-    lam = np.clip(nrm @ L, 0, 1)
-    ao = np.clip((ndi.gaussian_filter(hs, 14 * ss) - hs) * 1.6, 0, 0.45)       # pits and low parts darker
+    for name, (cx, cy, cz), (rx, ry, rz) in prims:
+        sy0 = cy * ct - cz * st
+        ey = float(np.sqrt((ry * ct) ** 2 + (rz * st) ** 2))
+        i0 = max(int(np.floor((cx - rx) * scale + ww / 2)) - 1, 0)
+        i1 = min(int(np.ceil((cx + rx) * scale + ww / 2)) + 1, ww)
+        j0 = max(int(np.floor((sy0 - ey - yc) * scale + hh / 2)) - 1, 0)
+        j1 = min(int(np.ceil((sy0 + ey - yc) * scale + hh / 2)) + 1, hh)
+        if i1 <= i0 or j1 <= j0:
+            continue
+        sx, sy = np.meshgrid(xs[i0:i1], ys[j0:j1])
+        # the ray  (sx, sy ct, -sy st) + lam (0, st, ct)  in the ellipsoid's unit-sphere space
+        ox, oy, oz = (sx - cx) / rx, (sy * ct - cy) / ry, (-sy * st - cz) / rz
+        dy, dz = st / ry, ct / rz
+        a = dy * dy + dz * dz
+        b = oy * dy + oz * dz
+        disc = b * b - a * (ox * ox + oy * oy + oz * oz - 1)
+        hit = disc > 0
+        lam = (-b + np.sqrt(np.clip(disc, 0, None))) / a
+        sub = dep[j0:j1, i0:i1]
+        win = hit & (lam > sub)
+        if not win.any():
+            continue
+        sub[win] = lam[win]
+        n3 = np.stack([ox / rx, (oy + lam * dy) / ry, (oz + lam * dz) / rz], -1)[win]
+        nrm[j0:j1, i0:i1][win] = n3 / np.linalg.norm(n3, axis=-1, keepdims=True)
+        label[j0:j1, i0:i1][win] = PARTS.index(name.split(":")[0])
+        tusk[j0:j1, i0:i1][win] = name.endswith(":tusk")
+        skull[j0:j1, i0:i1][win] = name.endswith(":skull")
+    mask = dep > -1e8
+    X, Y = np.meshgrid(xs, ys)
     r, hy = p["skull_r"], p["skull_y"]
-    rho = np.hypot(X, Y - hy) / r
-    near = np.clip((rho - 1.0) / 0.9, 0, 1)     # 0 at the skull rim .. 1 from 1.9 r out
-    ao *= near                                   # no dark crescent under the dome: it gets painted as a muzzle
-    depth = 0.80 + 0.20 * np.clip(hs / 1.9, 0, 1)
-    shade = (0.30 + 0.70 * lam) * depth * (1 - ao)
-    # the block-out head recipe: explicit sphere shading on the skull, crown highlight dead centre
-    sphere = np.sqrt(np.clip(1 - (rho * 0.93) ** 2, 0, 1))
-    crown = np.exp(-(rho / 0.22) ** 2)          # tight bright spot at the dead centre
-    shade = np.where(skull, (0.34 + 0.66 * sphere) * 0.95 + 0.26 * crown, shade)
-    clay = 205 * shade
-    # crease lines where one part overlaps another (depth discontinuity)
-    edge = np.hypot(*np.gradient(ndi.gaussian_filter(hs, 0.8 * ss))) * scale
-    crease = np.clip((edge - 1.6) / 3.0, 0, 1) * 0.35
-    crease *= np.where(skull, 1.0, 0.35 + 0.65 * np.clip((rho - 1.0) / 0.45, 0, 1))   # nose / tusk tips: soft, fused to the rim
-    clay *= (1 - crease)
-    rim = np.exp(-(((rho - 1.0) * r * scale) / (1.6 * ss)) ** 2) * mask             # the skull's rim: one hard, strict circle
-    clay = clay * (1 - 0.8 * rim) + 40 * 0.8 * rim
+    hs = np.where(mask, dep, 0).astype(np.float32)
+    if not anat:
+        # clay shading from the height-map normal, light almost straight down
+        hsm = ndi.gaussian_filter(hs, 1.5 * ss)
+        gy, gx = np.gradient(hsm * scale * 0.55)    # 0.55: flatten relief a little so cliffs do not go black
+        nh = np.stack([-gx, -gy, np.ones_like(gx)], -1)
+        nh /= np.linalg.norm(nh, axis=-1, keepdims=True)
+        L = np.array([-0.04, -0.08, 0.995]); L /= np.linalg.norm(L)
+        lam = np.clip(nh @ L, 0, 1)
+        ao = np.clip((ndi.gaussian_filter(hs, 14 * ss) - hs) * 1.6, 0, 0.45)       # pits and low parts darker
+        rho = np.hypot(X, Y - hy) / r
+        near = np.clip((rho - 1.0) / 0.9, 0, 1)     # 0 at the skull rim .. 1 from 1.9 r out
+        ao *= near                                   # no dark crescent under the dome: it gets painted as a muzzle
+        depth = 0.80 + 0.20 * np.clip(hs / 1.9, 0, 1)
+        shade = (0.30 + 0.70 * lam) * depth * (1 - ao)
+        # the block-out head recipe: explicit sphere shading on the skull, crown highlight dead centre
+        sphere = np.sqrt(np.clip(1 - (rho * 0.93) ** 2, 0, 1))
+        crown = np.exp(-(rho / 0.22) ** 2)          # tight bright spot at the dead centre
+        shade = np.where(skull, (0.34 + 0.66 * sphere) * 0.95 + 0.26 * crown, shade)
+        clay = 205 * shade
+        # crease lines where one part overlaps another (depth discontinuity)
+        edge = np.hypot(*np.gradient(ndi.gaussian_filter(hs, 0.8 * ss))) * scale
+        crease = np.clip((edge - 1.6) / 3.0, 0, 1) * 0.35
+        crease *= np.where(skull, 1.0, 0.35 + 0.65 * np.clip((rho - 1.0) / 0.45, 0, 1))   # nose / tusk tips: soft, fused to the rim
+        clay *= (1 - crease)
+        rim = np.exp(-(((rho - 1.0) * r * scale) / (1.6 * ss)) ** 2) * mask             # the skull's rim: one hard, strict circle
+        clay = clay * (1 - 0.8 * rim) + 40 * 0.8 * rim
+    else:
+        # clay shading from the TRUE surface normal (lightly smoothed so unions blend), key light from
+        # above and a little in front, so the face and chest fronts the camera sees are lit, not black
+        mf = mask.astype(np.float32)
+        sig = p.get("normal_blur", 2.2) * ss
+        wsum = np.maximum(ndi.gaussian_filter(mf, sig), 1e-4)
+        ns = np.stack([ndi.gaussian_filter(nrm[..., i] * mf, sig) / wsum for i in range(3)], -1)
+        ns /= np.maximum(np.linalg.norm(ns, axis=-1, keepdims=True), 1e-6)
+        L = np.array([-0.05, 0.30, 0.95]); L /= np.linalg.norm(L)
+        lam = np.clip(ns @ L, 0, 1)
+        ao = np.clip((ndi.gaussian_filter(hs, 12 * ss) - hs) * 0.7, 0, 0.28)        # parts tucked under others
+        shade = (0.36 + 0.64 * lam) * (1 - ao)
+        clay = 205 * shade
+        edge = np.hypot(*np.gradient(ndi.gaussian_filter(hs, 0.8 * ss))) * scale    # one part in front of another
+        clay *= 1 - np.clip((edge - 1.4) / 3.0, 0, 1) * 0.50
     dist_in = ndi.distance_transform_edt(mask)
     outline = np.clip(1.25 - dist_in / (2.4 * ss), 0, 1)   # a bold contour: the painting keeps its weight
     clay = clay * (1 - 0.75 * outline) + 45 * 0.75 * outline
@@ -296,11 +461,16 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035):
         lab = lab[tuple(idx)] * mnp
     ys_, xs_ = np.nonzero(mnp)
     px = scale / ss
-    stats = dict(race=race, canvas=[w, h], px_per_unit=round(px, 3),
+    if anat:
+        hyw, hzw = hy + p.get("head_fwd", 0.03), p.get("head_z", 1.80)
+    else:
+        hyw, hzw = hy, 0.0
+    stats = dict(race=race, canvas=[w, h], tilt_deg=tilt, px_per_unit=round(px, 3),
                  bbox=[int(xs_.min()), int(ys_.min()), int(xs_.max()), int(ys_.max())],
                  span_px=int(xs_.max() - xs_.min() + 1), depth_px=int(ys_.max() - ys_.min() + 1),
-                 shoulder_line_y=round(h / 2 - yc * px, 2),
-                 skull_centre=[round(w / 2, 2), round(h / 2 + (hy - yc) * px, 2)], skull_r_px=round(r * px, 2))
+                 shoulder_line_y=round(h / 2 + ((-1.56 * st if anat else 0.0) - yc) * px, 2),
+                 skull_centre=[round(w / 2, 2), round(h / 2 + (hyw * ct - hzw * st - yc) * px, 2)],
+                 skull_r_px=round(r * px, 2))
     stats["depth_over_span"] = round(stats["depth_px"] / stats["span_px"], 4)
     stats["label_colours"] = {n: list(c) for n, c in zip(PARTS, PART_RGB)}
     stats["note"] = "figure faces south (image bottom); _l/_r are IMAGE left/right, as derive.py expects"
@@ -326,14 +496,16 @@ def make_swatch(race, out):
     return p
 
 
-def save_guide(race):
+def save_guide(race, tilt=None):
     out = race_out(race)
-    clay, tint, m, lab, stats = render(race)
-    clay.save(os.path.join(out, "guide_clay.png"))
-    tint.save(os.path.join(out, "guide_tint.png"))
-    m.save(os.path.join(out, "guide_mask.png"))
+    tilt = race_tilt(race, tilt)
+    g = os.path.join(out, guide_prefix(tilt))
+    clay, tint, m, lab, stats = render(race, tilt=tilt)
+    clay.save(g + "_clay.png")
+    tint.save(g + "_tint.png")
+    m.save(g + "_mask.png")
     lab_rgb = np.array(PART_RGB, np.uint8)[lab]
-    Image.fromarray(lab_rgb).save(os.path.join(out, "guide_labels.png"))
+    Image.fromarray(lab_rgb).save(g + "_labels.png")
     make_swatch(race, out)
     try:                                        # prove the label map feeds derive.py as it stands
         frames, notes = derive_frames(lab_rgb, 1.0)
@@ -341,9 +513,9 @@ def save_guide(race):
                                head=frames["head"], torso=frames["torso"])
     except LabelError as e:
         stats["derive"] = dict(ok=False, error=str(e))
-    with open(os.path.join(out, "guide.json"), "w") as f:
+    with open(g + ".json", "w") as f:
         json.dump(stats, f, indent=1)
-    print(json.dumps({k: stats[k] for k in ("bbox", "span_px", "depth_px", "depth_over_span",
+    print(json.dumps({k: stats[k] for k in ("tilt_deg", "bbox", "span_px", "depth_px", "depth_over_span",
                                              "shoulder_line_y", "skull_centre", "skull_r_px")}))
     print("derive:", "ok, %d frames; %s" % (len(stats["derive"]["frames"]), stats["derive"]["notes"])
           if stats["derive"]["ok"] else "FAIL " + stats["derive"]["error"])
@@ -352,7 +524,9 @@ def save_guide(race):
 
 # ---------------------------------------------------------------- prompt
 
-def build_prompt(race, guide="tint", swatch=True):
+def build_prompt(race, guide="tint", swatch=True, tilt=None):
+    if race_tilt(race, tilt) > 0:
+        return build_prompt_tilt(race, guide, swatch, race_tilt(race, tilt))
     p = RACES[race]
     what = "a flat-colour 3D sculpt" if guide == "tint" else "a grey clay sculpt"
     dome = p.get("dome", "smooth scalp")        # what the top of the head is covered with; last word = its noun
@@ -398,21 +572,76 @@ def build_prompt(race, guide="tint", swatch=True):
     return t
 
 
-def gen(race, n, tag, guide="tint", swatch=True, text=None):
+TILT_WORDS = {5: "five", 10: "ten", 15: "fifteen", 20: "twenty", 25: "twenty-five", 30: "thirty"}
+
+
+def build_prompt_tilt(race, guide, swatch, tilt):
+    """The tilted camera: the guide's own face, chest and feet are anatomy, so the prompt names each
+    one at the size the guide has it and asks for a living creature, positively phrased."""
+    p = RACES[race]
+    what = "a flat-colour 3D sculpt" if guide == "tint" else "a grey clay sculpt"
+    deg = TILT_WORDS.get(int(round(tilt)), "%g" % tilt)
+    t = (
+        "Image 1 is %s of a game character, a simple block-out rendered by an orthographic camera high "
+        "above the character, looking steeply down at it from just in front of directly overhead, leaning "
+        "%s degrees toward the character's front: the view of a miniature on a tabletop battle map. The "
+        "character stands upright, facing the bottom of the picture, with both arms stretched straight "
+        "out to the sides at shoulder height, palms down. "
+        "The rounded form at the centre is the head seen from steeply above. Most of it is the %s: the "
+        "top of the skull, with the crown a little above the middle of the head. Along the head's bottom "
+        "edge sits a narrow, strongly foreshortened strip of face seen from above: %s "
+        "The wide band across the picture is the tops of the shoulders, the trapezius and the upper "
+        "back. The level bars to the left and right are the arms seen from above, ending in flat hands "
+        "with the backs of the hands, the knuckles and the spread fingers toward the camera. Below the "
+        "shoulder band is the front of the torso seen from steeply above and strongly foreshortened: %s "
+        "At the very bottom the front halves of the two bare feet stand on the floor far below, toes "
+        "pointing at the bottom of the picture, each a natural foot front with its instep and five toes "
+        "side by side, the big toe on the inner side. "
+        "Paint over this exact sculpt to make a finished game character: %s. Keep the identical outline, "
+        "pose, proportions, position, scale and steep overhead viewpoint, tracing the silhouette "
+        "precisely and keeping every form where and how large the sculpt has it. Turn the sculpt's "
+        "simple forms into the natural anatomy of a believable living creature: %s; trapezius, deltoid "
+        "and shoulder-blade muscles across the shoulder band; level arms of biceps, triceps and forearm "
+        "muscle; each hand with five well-formed fingers, knuckles and short fingernails; %s; and each "
+        "foot front with five natural toes with short dull toenails. Bare unclothed base body, left-right "
+        "symmetric, chalky matte skin, lit softly and evenly from above, on a perfectly flat uniform mid-grey "
+        "background, RGB 128 128 128, that fills the rest of the picture."
+    ) % (what, deg, p.get("dome", "smooth bald scalp"),
+         p.get("face_tilt", "the brow, under it the bridge and tip of the nose, and the chin behind them."),
+         p.get("torso_tilt", "first the top plane of the chest, then, tucked under it, a short glimpse of "
+                             "the upper belly."),
+         p["look"],
+         p.get("face_paint", "the head with, in the strip along its bottom edge, a natural face seen from "
+                             "above, brow, nose and chin"),
+         p.get("torso_paint", "the torso as one natural chest with a flat upper belly below it"))
+    if swatch:
+        t += (
+            " Image 2 is a small close-up swatch of this character's painted skin, for colour and finish "
+            "only: match its %s, its smooth cel-like painted matte shading with a few broad, soft-edged, "
+            "low-contrast highlights per muscle and one on the scalp, mirrored left and right, every highlight a lighter tint of the skin hue, "
+            "and its %s, about four pixels thick around the whole silhouette and around the head, crisp "
+            "everywhere, with thinner dark lines separating the muscles and the features, across the whole "
+            "figure."
+        ) % (p["skin_words"], p["line_words"])
+    return t
+
+
+def gen(race, n, tag, guide="tint", swatch=True, text=None, tilt=None):
     from .gen_overhead import generate, _part
     out = race_out(race)
-    gsrc = os.path.join(out, "guide_%s.png" % guide)
-    if not os.path.exists(gsrc):
-        save_guide(race)
-    prompt = text or build_prompt(race, guide, swatch)
+    tilt = race_tilt(race, tilt)
+    gp = os.path.join(out, guide_prefix(tilt))
+    gsrc = "%s_%s.png" % (gp, guide)
+    save_guide(race, tilt)                      # always fresh: the proxy is what is being tuned
+    prompt = text or build_prompt(race, guide, swatch, tilt)
     with open(os.path.join(out, "%s.prompt.txt" % tag), "w", encoding="utf-8") as f:
         f.write(prompt)
     # snapshot the inputs: the guide changes between rounds, the candidates must keep theirs
     in1 = os.path.join(out, "%s.in1_guide.png" % tag)
     shutil.copyfile(gsrc, in1)
-    shutil.copyfile(os.path.join(out, "guide_mask.png"), os.path.join(out, "%s.guide_mask.png" % tag))
-    shutil.copyfile(os.path.join(out, "guide_labels.png"), os.path.join(out, "%s.guide_labels.png" % tag))
-    shutil.copyfile(os.path.join(out, "guide.json"), os.path.join(out, "%s.guide.json" % tag))
+    shutil.copyfile(gp + "_mask.png", os.path.join(out, "%s.guide_mask.png" % tag))
+    shutil.copyfile(gp + "_labels.png", os.path.join(out, "%s.guide_labels.png" % tag))
+    shutil.copyfile(gp + ".json", os.path.join(out, "%s.guide.json" % tag))
     inputs = [in1]
     parts = [{"text": prompt}, _part(in1, max_side=1376)]
     if swatch:
@@ -440,7 +669,7 @@ def gen(race, n, tag, guide="tint", swatch=True, text=None):
             f.write(raw)
         with open(os.path.join(out, name + ".json"), "w") as f:
             json.dump(dict(prompt=prompt, inputs=[os.path.basename(x) for x in inputs], model=model,
-                           race=race, guide=guide, swatch=swatch), f, indent=1)
+                           race=race, guide=guide, swatch=swatch, tilt_deg=tilt), f, indent=1)
         print("[ok ] %s via %s %s  (Gemini calls so far: %d)" % (p, model, Image.open(io.BytesIO(raw)).size, len(log)))
         made.append(p)
     if made:
@@ -492,10 +721,18 @@ def measure(path, gmask, write_overlay=True, stats=None, face_lab=None):
                centre_x_offset_px=int(cx - W // 2),
                ground_rgb=[int(round(v)) for v in ground.mean(0)],
                ground_std=round(float(ground.std(0).max()), 2))
-    res["auto_pass"] = bool(res["iou"] >= 0.93 and 0.18 <= res["depth_over_span"] <= 0.26
+    tilt = float((stats or {}).get("tilt_deg", 0.0))
+    lo, hi, iou_min = DEPTH_BAND_TILT + (IOU_MIN_TILT,) if tilt > 0 else DEPTH_BAND_PLAN + (0.93,)
+    res["tilt_deg"] = tilt
+    res["depth_band"] = [lo, hi]
+    res["auto_pass"] = bool(res["iou"] >= iou_min and lo <= res["depth_over_span"] <= hi
                             and res["symmetry_shape"] >= 0.93
                             and max(abs(v - BG) for v in res["ground_rgb"]) <= 10)
-    if stats is not None and face_lab is not None:
+    if stats is not None and face_lab is not None and tilt > 0:
+        # a tilted camera SHOWS a face sliver, so the plan view's "plain dome" head gate does not apply;
+        # what can be measured is roughly how much of the head the face takes (see face_share)
+        res.update(face_share(a, stats, face_lab))
+    elif stats is not None and face_lab is not None:
         res.update(head_metrics(a, stats, face_lab))
         res["head_pass"] = bool(res["face_dark"] <= FACE_DARK_MAX and res["muzzle_dark"] <= MUZZLE_DARK_MAX
                                 and np.hypot(res["hl_dx"], res["hl_dy"]) <= HL_OFFSET_MAX * stats["skull_r_px"])
@@ -505,6 +742,23 @@ def measure(path, gmask, write_overlay=True, stats=None, face_lab=None):
         ov[g & f] = (90, 170, 90); ov[f & ~g] = (220, 60, 60); ov[g & ~f] = (60, 90, 220)
         Image.fromarray(ov).save(os.path.splitext(path)[0] + "_iou.png")
     return res
+
+
+def face_share(a, stats, face_lab):
+    """Tilted guides only, a rough number for the eye check: the share of the guide head's height
+    that lies south of the northernmost dark stroke near the head's centre line, i.e. roughly how
+    much of the head is face. The guide's own value sits near 0.3; a clean scalp with no face is 0."""
+    cx, _ = stats["skull_centre"]
+    r = stats["skull_r_px"]
+    cols = slice(int(cx - 0.55 * r), int(cx + 0.55 * r))
+    rows = np.nonzero(face_lab[:, cols].any(1))[0]
+    top, bot = int(rows.min()), int(rows.max())
+    lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
+    dark = (lum - ndi.gaussian_filter(lum, 6)) < -12
+    inset = int(0.18 * (bot - top))             # skip the head's own top outline
+    strip = dark[top + inset:bot + 1, cols].mean(1) > 0.25
+    first = int(np.argmax(strip)) + inset if strip.any() else bot - top + 1
+    return dict(face_share=round(1.0 - first / float(bot - top + 1), 3))
 
 
 def head_metrics(a, stats, face_lab):
@@ -617,6 +871,25 @@ def head_sheet(paths, stats, guide_path, dst, zoom=3):
     return dst
 
 
+def contact_sheet(race, paths, tag=None, pad=14):
+    """<tag>_sheet.jpg: the candidates stacked, each cropped to the guide figure's box."""
+    out = race_out(race)
+    tag = tag or _tag_of(paths[0])
+    sj = os.path.join(out, tag + ".guide.json")
+    x0, y0, x1, y1 = json.load(open(sj))["bbox"] if os.path.exists(sj) else (0, 0, W - 1, H - 1)
+    box = (max(x0 - pad * 2, 0), max(y0 - pad, 0), min(x1 + pad * 2, W), min(y1 + pad, H))
+    crops = [Image.open(q).convert("RGB").resize((W, H), Image.LANCZOS).crop(box) for q in paths]
+    sheet = Image.new("RGB", (crops[0].width, sum(c.height for c in crops)), (BG, BG, BG))
+    y = 0
+    for c in crops:
+        sheet.paste(c, (0, y))
+        y += c.height
+    dst = os.path.join(out, tag + "_sheet.jpg")
+    sheet.save(dst, quality=92)
+    print("contact sheet:", dst)
+    return dst
+
+
 def check(race, paths, tag=None):
     out = race_out(race)
     res = []
@@ -647,29 +920,36 @@ def check(race, paths, tag=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
+    th = ("camera tilt in degrees off vertical, toward the character's front "
+          "(default: the race's, else %g; 0 = strict plan view)" % DEFAULT_TILT)
     g = sub.add_parser("guide"); g.add_argument("--race", default="orc")
+    g.add_argument("--tilt", type=float, default=None, help=th)
     n = sub.add_parser("gen")
     n.add_argument("--race", default="orc"); n.add_argument("--n", type=int, default=4)
     n.add_argument("--tag", default="final"); n.add_argument("--guide", default="tint", choices=["tint", "clay"])
-    n.add_argument("--no-swatch", action="store_true")
+    n.add_argument("--no-swatch", action="store_true"); n.add_argument("--tilt", type=float, default=None, help=th)
     n.add_argument("--text-file", default="", help="use this prompt instead of the built one")
     c = sub.add_parser("check")
     c.add_argument("images", nargs="*"); c.add_argument("--race", default="orc"); c.add_argument("--tag", default="")
     d = sub.add_parser("dome")
     d.add_argument("images", nargs="*"); d.add_argument("--race", default="orc"); d.add_argument("--tag", default="")
+    h = sub.add_parser("sheet")
+    h.add_argument("images", nargs="*"); h.add_argument("--race", default="orc"); h.add_argument("--tag", default="")
     a = ap.parse_args(argv)
-    if a.cmd in ("check", "dome") and not a.images:
+    if a.cmd in ("check", "dome", "sheet") and not a.images:
         if not a.tag:
             ap.error("%s needs --tag or image paths" % a.cmd)
         a.images = sorted(q for q in glob.glob(os.path.join(race_out(a.race), a.tag + "_*.png"))
                           if os.path.basename(q)[len(a.tag) + 1:-4].isdigit())
     if a.cmd == "dome":
         check(a.race, dome(a.race, a.images), a.tag or None)
+    elif a.cmd == "sheet":
+        contact_sheet(a.race, a.images, a.tag or None)
     elif a.cmd == "guide":
-        save_guide(a.race)
+        save_guide(a.race, a.tilt)
     elif a.cmd == "gen":
         text = open(a.text_file, encoding="utf-8").read().strip() if a.text_file else None
-        gen(a.race, a.n, a.tag, a.guide, not a.no_swatch, text)
+        gen(a.race, a.n, a.tag, a.guide, not a.no_swatch, text, a.tilt)
     else:
         check(a.race, a.images, a.tag or None)
     return 0

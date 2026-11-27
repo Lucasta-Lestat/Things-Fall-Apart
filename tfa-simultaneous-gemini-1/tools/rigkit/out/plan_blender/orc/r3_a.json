@@ -1,0 +1,24 @@
+{
+ "file": "r3_a.png",
+ "iou": 0.9639,
+ "bg": [
+  127,
+  127,
+  127
+ ],
+ "guide_bbox": [
+  46,
+  284,
+  1874,
+  795
+ ],
+ "out_bbox": [
+  44,
+  280,
+  1876,
+  800
+ ],
+ "symmetry_iou": 0.9966,
+ "guide_depth_over_span": 0.28,
+ "out_depth_over_span": 0.284
+}

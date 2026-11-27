@@ -1,0 +1,52 @@
+[
+ {
+  "name": "r1_a",
+  "prompt": "tilt1",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "r1_b",
+  "prompt": "tilt1",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "r2_a",
+  "prompt": "tilt2",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "r2_b",
+  "prompt": "tilt2",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "r3_a",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "r3_b",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "final_1",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "final_2",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "final_3",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ },
+ {
+  "name": "final_4",
+  "prompt": "tilt3",
+  "model": "gemini-3-pro-image"
+ }
+]

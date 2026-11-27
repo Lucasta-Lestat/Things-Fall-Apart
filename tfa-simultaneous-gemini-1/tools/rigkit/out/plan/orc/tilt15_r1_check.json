@@ -1,0 +1,52 @@
+[
+ {
+  "image": "tilt15_r1_1.png",
+  "iou": 0.9596,
+  "span_px": 1295,
+  "depth_px": 345,
+  "depth_over_span": 0.2664,
+  "outside_guide": 0.0227,
+  "guide_uncovered": 0.0186,
+  "symmetry_shape": 0.9954,
+  "symmetry_colour": 0.975,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.29,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.402
+ },
+ {
+  "image": "tilt15_r1_2.png",
+  "iou": 0.9749,
+  "span_px": 1294,
+  "depth_px": 342,
+  "depth_over_span": 0.2643,
+  "outside_guide": 0.0153,
+  "guide_uncovered": 0.0101,
+  "symmetry_shape": 0.9971,
+  "symmetry_colour": 0.9752,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   126,
+   126,
+   125
+  ],
+  "ground_std": 1.22,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.366
+ }
+]

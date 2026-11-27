@@ -252,6 +252,18 @@ Still open after pilot 2: finish is softer than the house style in the best-came
 - **Still open:** toes copy the guide's pegs literally and read as stalks; the chest shelf can read as thighs; outline weight and gloss vary run to run; the crown highlight drifts 11-30 px north; the shoulder label cut sits inside the painted deltoid.
 - **Decision needed from the user:** strict 90 degree plan view (ball head, no face) or a small forward tilt rendered into the guide (a sliver of brow and nose, slightly deeper chest). The guide is 3D, so tilt is a parameter.
 
+**Pilot 4 (2026-11-27, 15 degree tilt, 20 generations).** The user rejected the strict plan-view set ("all 4 look kind of insane") and asked for the camera tilted 15 degrees. Two guide renderers were run, a set of four each.
+
+| Renderer | Where | Result |
+|---|---|---|
+| `gen_plan.py` (numpy, analytic ray cast, `--tilt`, default 15) | `tools/rigkit/out/plan/orc/tilt15_final_*` | Reads as a living orc in 4 of 4; IoU 0.96-0.97, depth/span 27%; 2 of 4 clean, 2 have a pink nose or glossier highlights |
+| Blender proxy (`tools/rigkit/pilot/blender_tilt_*.py`) | `tools/rigkit/out/plan_blender/orc/final_*` | Also natural, IoU 0.95-0.96, depth/span 28-29%, but a paunchy build and squat legs; one emerald-ear and one four-toe artefact |
+
+- **An anatomical proxy fixes the odd look at the source.** With a brow, nose and jaw form, one chest mass and real feet in the guide, no image had a ball head, peg toes or a split chest.
+- **A true 15 degree view of a full-height figure shows the whole legs** (33-36% depth, about what the old orc has). Both renderers shorten the legs so only the feet show under the belly. This is a stylisation, the same one the existing human painting uses.
+- **The model enlarges the face** past the guide's strip (30-40% of the head against a 25-33% target), and nose colour, gloss and outline weight still vary between runs, so expect to pick the best of about four.
+- `gen_plan.py` is the chosen renderer; tilt 0 still reproduces the strict plan guide.
+
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 
 ## 5. Migration plan

@@ -1,0 +1,139 @@
+{
+ "race": "orc",
+ "canvas": [
+  1376,
+  768
+ ],
+ "tilt_deg": 15.0,
+ "px_per_unit": 639.84,
+ "bbox": [
+  41,
+  209,
+  1334,
+  558
+ ],
+ "span_px": 1294,
+ "depth_px": 350,
+ "shoulder_line_y": 304.28,
+ "skull_centre": [
+  688.0,
+  285.55
+ ],
+ "skull_r_px": 69.1,
+ "depth_over_span": 0.2705,
+ "label_colours": {
+  "background": [
+   0,
+   0,
+   0
+  ],
+  "body": [
+   60,
+   180,
+   75
+  ],
+  "face": [
+   230,
+   25,
+   75
+  ],
+  "upperarm_l": [
+   0,
+   130,
+   200
+  ],
+  "upperarm_r": [
+   70,
+   190,
+   255
+  ],
+  "forearm_l": [
+   145,
+   30,
+   180
+  ],
+  "forearm_r": [
+   240,
+   50,
+   230
+  ],
+  "hand_l": [
+   255,
+   150,
+   200
+  ],
+  "hand_r": [
+   160,
+   20,
+   90
+  ],
+  "foot_l": [
+   255,
+   225,
+   25
+  ],
+  "foot_r": [
+   170,
+   180,
+   40
+  ],
+  "leg_l": [
+   0,
+   230,
+   230
+  ],
+  "leg_r": [
+   0,
+   100,
+   90
+  ]
+ },
+ "note": "figure faces south (image bottom); _l/_r are IMAGE left/right, as derive.py expects",
+ "derive": {
+  "ok": true,
+  "frames": [
+   "back",
+   "foot_l",
+   "foot_r",
+   "forearm_l",
+   "forearm_r",
+   "grip_l",
+   "grip_r",
+   "hand_l",
+   "hand_r",
+   "head",
+   "head_full",
+   "leg_l",
+   "leg_r",
+   "torso",
+   "upperarm_l",
+   "upperarm_r"
+  ],
+  "notes": [],
+  "head": {
+   "o": [
+    687.24,
+    277.63
+   ],
+   "ax": [
+    1.0,
+    0.0
+   ],
+   "lx": 70.501,
+   "ly": 70.501
+  },
+  "torso": {
+   "o": [
+    687.35,
+    301.74
+   ],
+   "ax": [
+    1.0,
+    0.00018
+   ],
+   "lx": 210.965,
+   "ly": 204.258,
+   "ly_neg": 71.757
+  }
+ }
+}
