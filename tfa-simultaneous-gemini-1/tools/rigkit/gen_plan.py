@@ -48,6 +48,13 @@ z = height, and the fingertip-to-fingertip half span is 1.0. The image is the pe
 MAX height, so the same pass yields the silhouette and the label map.
 
 A new race is a new RACES entry (proportions, colours, words), not new code.
+Tilted-proxy knobs a race may set (all optional, the orc uses the defaults): foot_x_tilt, foot_w,
+toe_y_tilt, tusk_x_tilt, head_z, head_fwd, jaw, brow, leg_r=(hip, ankle radius), nose_tilt=(extra
+reach, radius factor), ear_tilt=(root radius, tip sweep back, tip rise), face_scale and face_fwd (size
+and forward offset of the face forms, for a hair cap wider than the skull), and an "anat" dict of any
+keys that should differ from the plan guide (see tilt_params). The approved look is the orc's
+tilt15_final set; orc, human, halfling and goblin guides are tuned to that camera (depth / span
+0.26-0.28), and only orc and goblin have been painted.
 
 What the recipe encodes (docs/rigging_rewrite.md, "Pilot 2"):
   (the items below are the tilt-0 recipe; for a tilted guide the face, chest and feet are modelled as
@@ -134,6 +141,9 @@ RACES = {
         torso_paint="the torso as one broad chest with two full pectoral muscles and a firm upper belly "
                     "below them",
     ),
+    # human and halfling: tilted guides tuned, never painted. "anat" holds what only the tilted proxy
+    # uses (see tilt_params): for a haired race skull_r is there the HAIR CAP, and face_scale / face_fwd
+    # size and place the face strip under its fringe.
     "human": dict(
         shoulder_half=0.25, delt_r=0.08, trunk_depth_n=0.125, chest_depth_s=0.13,
         belly_depth_s=0.120, belly_half=0.17, pec_half=0.11,
@@ -143,15 +153,30 @@ RACES = {
         elbow_x=0.57, wrist_x=0.83,
         palm_rx=0.055, palm_ry=0.048, finger_r=0.010,
         foot_x=0.085, toe_y=0.180, toe_r=0.012,
-        skin=(214, 160, 120), ivory=(236, 226, 196),
-        swatch=dict(src="Rigs/races/human/default/body.png", box=(700, 100, 800, 150)),
-        look="a human man with light tan skin, short brown hair and an athletic build",
+        anat=dict(skull_r=0.100, face_scale=0.90, face_fwd=0.012, chest_depth_s=0.165, belly_depth_s=0.150,
+                  foot_x_tilt=0.112, foot_w=0.050, toe_y_tilt=0.168, leg_r=(0.070, 0.048)),
+        skin=(214, 160, 120), ivory=(236, 226, 196), hair=(150, 78, 48),
+        swatch=dict(src="Rigs/races/human/default/body.png", box=(715, 50, 845, 178)),
+        look="a human man with light tan skin, short wavy auburn-brown hair and an athletic build",
+        dome="cap of short wavy hair", dome_cover="hair", dome_cover_tilt="hair",
         head_extras="At the middle of the dome's lower rim a small rounded nose tip pokes out.",
         skin_words="warm skin hue, its lighter highlights",
         line_words="heavy, crisp, dark brown contour line",
+        face_tilt="the fringe of the hair, right under it the brow shading the eye sockets into two dark "
+                  "slits, then the bridge and tip of the nose, and just behind the nose the lips and the "
+                  "front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep "
+                  "view, and the chin is the bottom edge of the head, with the chest starting directly "
+                  "below it.",
+        torso_tilt="first the top plane of the chest with its two pectoral muscles meeting at the "
+                   "breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+        face_paint="the head as a cap of short wavy hair seen from above with, in the narrow strip along "
+                   "its bottom edge, a natural human face strongly foreshortened from above, calm brows "
+                   "over shadowed eyes, a nose tip, closed lips and the front of the chin",
+        torso_paint="the torso as one athletic chest with two pectoral muscles and a flat upper belly "
+                    "below them",
     ),
-    # Guide only so far (never painted). Small and slim with a big head: the hair cap is wider than the
-    # trunk is deep, so the dome overhangs the back, and the round belly juts further south than the chest.
+    # Small and slim with a big head: the hair cap is wider than the trunk is deep, so it overhangs the
+    # back, and the round belly juts further south than the chest.
     "halfling": dict(
         shoulder_half=0.27, delt_r=0.075, trunk_depth_n=0.115, chest_depth_s=0.170,
         belly_depth_s=0.215, belly_half=0.20, pec_half=0.115,
@@ -161,17 +186,77 @@ RACES = {
         elbow_x=0.56, wrist_x=0.82,
         palm_rx=0.058, palm_ry=0.052, finger_r=0.011,
         foot_x=0.105, toe_y=0.228, toe_r=0.020,
+        anat=dict(skull_r=0.140, face_scale=1.05, face_fwd=0.030, head_z=1.76, chest_depth_s=0.150,
+                  belly_depth_s=0.168, foot_x_tilt=0.142, foot_w=0.058, toe_y_tilt=0.176,
+                  leg_r=(0.075, 0.052)),
         skin=(206, 152, 122), ivory=(236, 226, 196), hair=(150, 108, 62),
         swatch=dict(src="Rigs/races/halfling_male/default/body.png", box=(170, 150, 300, 260)),
         look="a halfling man with warm light skin, a soft slim build and a big head of thick wavy "
              "light-brown hair",
-        dome="cap of thick wavy hair", dome_cover="hair",
+        dome="cap of thick wavy hair", dome_cover="hair", dome_cover_tilt="hair",
         head_extras="At the middle of the dome's lower rim a small rounded nose tip touches the rim, lying "
                     "on plain smooth chest skin.",
         skin_words="warm peach skin hue, its lighter highlights",
         line_words="heavy, crisp, dark red-brown contour line",
+        face_tilt="the fringe of the thick hair, right under it the brow shading the eye sockets into two "
+                  "dark slits, then the round tip of the nose, and just behind the nose the lips and the "
+                  "front of a soft round chin. Brow, nose tip and chin sit close together, squeezed by the "
+                  "steep view, and the chin is the bottom edge of the head, with the chest starting "
+                  "directly below it.",
+        torso_tilt="first the top plane of the soft chest, then, below the chest, the top of a small round "
+                   "belly.",
+        face_paint="the head as a big cap of thick wavy hair seen from above with, in the narrow strip "
+                   "along its bottom edge, a natural halfling face strongly foreshortened from above, "
+                   "friendly brows over shadowed eyes, a round nose tip, closed lips and a soft chin",
+        torso_paint="the torso as one soft chest with a small round belly below it",
+    ),
+    # Male goblin: small and wiry with a big bald head, big pointed ears and a long pointed nose.
+    "goblin": dict(
+        shoulder_half=0.25, delt_r=0.064, trunk_depth_n=0.115, chest_depth_s=0.145,
+        belly_depth_s=0.168, belly_half=0.170, pec_half=0.092,
+        skull_r=0.140, skull_y=0.004,
+        nose=(0.0, 0.0), tusk=0.012, tusk_x=0.060, ear_len=0.200,
+        upper_arm_r=(0.052, 0.044), forearm_r=(0.046, 0.034),
+        elbow_x=0.56, wrist_x=0.80,
+        palm_rx=0.066, palm_ry=0.058, finger_r=0.0125,
+        foot_x=0.120, toe_y=0.210, toe_r=0.020,
+        foot_x_tilt=0.122, foot_w=0.056, toe_y_tilt=0.176, tusk_x_tilt=0.058,
+        head_z=1.76, jaw=0.90, nose_tilt=(0.018, 0.74), ear_tilt=(0.046, 0.085, 0.075),
+        leg_r=(0.070, 0.048),
+        skin=(128, 136, 66), ivory=(236, 226, 196),
+        swatch=dict(src="Rigs/races/goblin_male/default/body.png", box=(718, 150, 818, 228)),
+        look="a male goblin with olive-green skin, a big bald head, very large pointed ears, a long pointed "
+             "nose and a small wiry body with thin sinewy arms",
+        head_extras="Two tiny ivory fang points touch the outside of the dome's lower rim, set well apart. "
+                    "A very large pointed ear sticks out sideways from each side of the dome.",
+        skin_words="muted olive-green hue, its lighter yellow-green highlights",
+        line_words="heavy, crisp, near-black green contour line",
+        face_tilt="a bony brow ridge whose overhang shades the eye sockets into two dark slits, right "
+                  "under it a long pointed nose that juts forward to a narrow tip, and just behind the "
+                  "nose the front of a narrow jaw with one tiny ivory fang rising from each corner of the "
+                  "lower lip. Brow, nose and fangs sit close together, squeezed by the steep view, and "
+                  "the nose tip and lower lip are the bottom edge of the head, with the chest starting "
+                  "directly below them. A very large pointed ear, a long leaf shape, sweeps out sideways "
+                  "and a little backward from each side of the head, lying over the shoulder.",
+        torso_tilt="first the top plane of a narrow wiry chest with two small flat pectoral muscles meeting "
+                   "at the breastbone, then, tucked under the chest, a short glimpse of a small round "
+                   "belly.",
+        face_paint="the head as a big bald scalp with, in the narrow strip along its bottom edge, a natural "
+                   "goblin face strongly foreshortened from above, a sly scowling brow over shadowed eye "
+                   "slits, a long pointed nose the same olive-green as the rest of the skin, and a narrow "
+                   "jaw with its two tiny fangs; each big ear a thin leaf of skin with a shallow inner "
+                   "hollow",
+        torso_paint="the torso as one narrow wiry chest with two small flat pectoral muscles and a small "
+                    "round belly below them",
     ),
 }
+
+
+def tilt_params(p, anat=True):
+    """A race's proportions for the tilted (anatomical) proxy: its own entry with the optional
+    "anat" dict laid over it, so a race can differ between the plan guide and the tilted guide
+    (a hair cap that is not a skull, a belly the tilt would otherwise drop over the feet)."""
+    return dict(p, **p["anat"]) if anat and "anat" in p else p
 
 
 def primitives(p, anat=False):
@@ -181,6 +266,7 @@ def primitives(p, anat=False):
     anat=False  the strict plan-view proxy: a plain dome head, a pec shelf, toe pegs.
     anat=True   the tilted-camera proxy: the parts a tilted camera can see are modelled as anatomy
                 (a head with brow, nose, jaw and tusks; one chest mass with pecs; a belly; feet)."""
+    p = tilt_params(p, anat)
     P = []
     sh = p["shoulder_half"]
     zs = 1.56  # shoulder / arm axis height
@@ -250,23 +336,28 @@ def primitives(p, anat=False):
         zh = p.get("head_z", 1.80)
         yh = hy + hf
         ell("body", (0, yh * 0.5, 1.60), (0.085, 0.085, 0.14))                # neck
-        ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))                  # cranium
-        f = r / 0.108                           # face forms scale with the skull
+        ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))                  # cranium (or the hair cap)
+        f = p.get("face_scale", r / 0.108)      # face forms scale with the skull unless a race says otherwise
+        yf = yh + p.get("face_fwd", 0.0)        # a hair cap wider than the skull: the face sits forward in it
         bw = p.get("brow", 1.0)
         for s in (-1, 1):                       # brow ridge: two lobes that meet in a notch above the nose
-            ell("face", (s * 0.040 * f, yh + 0.076 * f, zh + 0.010), (0.052 * f, 0.040 * f * bw, 0.034))
-        ell("face", (0, yh + 0.046 * f, zh - 0.080), (0.090 * f, 0.074 * f, 0.070))             # cheeks / mid face
-        ell("face", (0, yh + 0.066 * f, zh - 0.125), (0.074 * f, 0.058 * f * p.get("jaw", 1.0), 0.045))   # jaw, chin
-        rod("face", (0, yh + 0.104 * f, zh - 0.010), (0, yh + 0.124 * f, zh - 0.062), 0.013 * f, 0.021 * f)  # nose
+            ell("face", (s * 0.040 * f, yf + 0.076 * f, zh + 0.010), (0.052 * f, 0.040 * f * bw, 0.034))
+        ell("face", (0, yf + 0.046 * f, zh - 0.080), (0.090 * f, 0.074 * f, 0.070))             # cheeks / mid face
+        ell("face", (0, yf + 0.066 * f, zh - 0.125), (0.074 * f, 0.058 * f * p.get("jaw", 1.0), 0.045))   # jaw, chin
+        nl, nr = p.get("nose_tilt", (0.0, 1.0))  # extra reach of the nose tip (in f units), radius factor
+        rod("face", (0, yf + 0.104 * f, zh - 0.010), (0, yf + (0.124 + nl) * f, zh - 0.062 - nl * 0.6 * f),
+            0.013 * f * nr, 0.021 * f * nr)                                   # nose
         if p["tusk"] > 0:
             for s in (-1, 1):
                 tx = p.get("tusk_x_tilt", p["tusk_x"])
-                rod("face:tusk", (s * tx, yh + 0.106 * f, zh - 0.140),
-                    (s * (tx + 0.007), yh + 0.106 * f + p["tusk"] * 1.3, zh - 0.140 + p["tusk"] * 2.2), 0.0115, 0.003)
-        if p["ear_len"] > 0:
+                rod("face:tusk", (s * tx, yf + 0.106 * f, zh - 0.140),
+                    (s * (tx + 0.007), yf + 0.106 * f + p["tusk"] * 1.3, zh - 0.140 + p["tusk"] * 2.2), 0.0115, 0.003)
+        el = p["ear_len"]
+        if el > 0:
+            er, eb, eu = p.get("ear_tilt", (0.024, 0.028, 0.005))   # root radius, tip sweep back, tip rise
             for s in (-1, 1):
-                rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035), (s * (r + p["ear_len"]), yh - 0.028, zh + 0.005),
-                    0.024, 0.004, 0.6)
+                rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035), (s * (r + el), yh - eb, zh + eu),
+                    er, 0.004, 0.6)
 
     # ---- arms: dead-level bars at shoulder height; hands flat with spread fingers
     ex, wx = p["elbow_x"], p["wrist_x"]
@@ -306,7 +397,8 @@ def primitives(p, anat=False):
             tl = fw * 0.95                      # big-toe length
             heel = ty - fl
             ball = ty - tl - fw * 0.30
-            rod("leg_" + side, (s * fx * 0.95, 0.02, 0.90), (s * fx, heel + 0.07, z0 + 0.10), 0.085, 0.055)   # leg, short
+            lr = p.get("leg_r", (0.085, 0.055))
+            rod("leg_" + side, (s * fx * 0.95, 0.02, 0.90), (s * fx, heel + 0.07, z0 + 0.10), lr[0], lr[1])   # leg, short
             rod(foot, (s * fx, heel + 0.045, z0 + 0.040), (s * fx, ball - 0.01, z0 + 0.034),
                 fw * 0.72, fw * 0.98, 0.62)                                   # heel to ball
             ell(foot, (s * fx, heel + 0.10, z0 + 0.075), (fw * 0.70, 0.075, 0.055))           # instep rising to the ankle
@@ -342,9 +434,9 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None):
     a world point (x, y, z) lands at screen (x, y cos t - z sin t), so higher parts move north and
     the front surfaces come into view. Every pixel's ray is intersected with every ellipsoid and the
     hit nearest the camera wins; clay, mask and labels all come from that one z-buffer."""
-    p = RACES[race]
     tilt = race_tilt(race, tilt)
     anat = tilt > 0
+    p = tilt_params(RACES[race], anat)
     ct, st = float(np.cos(np.radians(tilt))), float(np.sin(np.radians(tilt)))
     ww, hh = w * ss, h * ss
     scale = ww * (0.5 - margin)                 # px per unit; fingertips land `margin` from each edge
@@ -618,11 +710,11 @@ def build_prompt_tilt(race, guide, swatch, tilt):
         t += (
             " Image 2 is a small close-up swatch of this character's painted skin, for colour and finish "
             "only: match its %s, its smooth cel-like painted matte shading with a few broad, soft-edged, "
-            "low-contrast highlights per muscle and one on the scalp, mirrored left and right, every highlight a lighter tint of the skin hue, "
+            "low-contrast highlights per muscle and one on the %s, mirrored left and right, every highlight a lighter tint of the skin hue, "
             "and its %s, about four pixels thick around the whole silhouette and around the head, crisp "
             "everywhere, with thinner dark lines separating the muscles and the features, across the whole "
             "figure."
-        ) % (p["skin_words"], p["line_words"])
+        ) % (p["skin_words"], p.get("dome_cover_tilt", "scalp"), p["line_words"])
     return t
 
 

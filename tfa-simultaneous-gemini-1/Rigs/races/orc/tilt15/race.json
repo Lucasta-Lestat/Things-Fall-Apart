@@ -1,0 +1,219 @@
+{
+ "id": "orc",
+ "variant": "tilt15",
+ "art": "body.png",
+ "labels": "labels.png",
+ "size": [
+  1024,
+  290
+ ],
+ "world_scale": 0.19158,
+ "facing": "south",
+ "race": "orc",
+ "gender": "male",
+ "source": "gen_plan paint-over: tilt15_final_3.png (guide tilt15_final.guide, tilt 15.0 deg)",
+ "install": {
+  "match": "orc/default",
+  "match_by": "span",
+  "guide_iou": 0.9647,
+  "px_per_source_px": 0.77517,
+  "key": {
+   "ground_rgb": [
+    126,
+    126,
+    126
+   ],
+   "shadow_px": 907,
+   "silhouette_px": 190196
+  },
+  "label_fixes": [
+   "shoulder l: 2987 px of trunk outboard of x=504 relabelled upper arm (cut was inside the deltoid)",
+   "shoulder r: 3078 px of trunk outboard of x=870 relabelled upper arm (cut was inside the deltoid)",
+   "legs: 724 px of thigh sliver folded into the nearest label (no leg frame from this camera)",
+   "head: label snapped to the painted contour (area x1.17 of the guide's head)"
+  ]
+ },
+ "overlays": {
+  "head": {
+   "file": "head.png",
+   "offset": [
+    424,
+    12
+   ]
+  }
+ },
+ "notes": [
+  "legs not visible from above: leg items are hidden on this race"
+ ],
+ "frames": {
+  "upperarm_l": {
+   "o": [
+    367.13,
+    94.74
+   ],
+   "ax": [
+    -0.99529,
+    -0.09697
+   ],
+   "lx": 147.27,
+   "ly": 45.04
+  },
+  "forearm_l": {
+   "o": [
+    220.55,
+    80.46
+   ],
+   "ax": [
+    -0.99942,
+    0.03398
+   ],
+   "lx": 126.044,
+   "ly": 32.044
+  },
+  "hand_l": {
+   "o": [
+    94.58,
+    84.74
+   ],
+   "ax": [
+    -0.9899,
+    0.14179
+   ],
+   "lx": 86.457,
+   "ly": 30.558
+  },
+  "grip_l": {
+   "o": [
+    59.11,
+    91.17
+   ],
+   "ax": [
+    -0.9899,
+    0.14179
+   ],
+   "lx": 5.22,
+   "ly": 5.22
+  },
+  "upperarm_r": {
+   "o": [
+    654.91,
+    94.91
+   ],
+   "ax": [
+    0.99554,
+    -0.09433
+   ],
+   "lx": 147.988,
+   "ly": 44.436
+  },
+  "forearm_r": {
+   "o": [
+    802.24,
+    80.95
+   ],
+   "ax": [
+    0.99946,
+    0.03295
+   ],
+   "lx": 126.019,
+   "ly": 31.912
+  },
+  "hand_r": {
+   "o": [
+    928.19,
+    85.11
+   ],
+   "ax": [
+    0.98864,
+    0.15032
+   ],
+   "lx": 85.785,
+   "ly": 30.623
+  },
+  "grip_r": {
+   "o": [
+    963.43,
+    91.15
+   ],
+   "ax": [
+    0.98864,
+    0.15032
+   ],
+   "lx": 5.22,
+   "ly": 5.22
+  },
+  "torso": {
+   "o": [
+    511.02,
+    94.83
+   ],
+   "ax": [
+    1.0,
+    0.00061
+   ],
+   "lx": 143.89,
+   "ly": 145.158,
+   "ly_neg": 75.807
+  },
+  "back": {
+   "o": [
+    511.07,
+    19.02
+   ],
+   "ax": [
+    1.0,
+    0.00061
+   ],
+   "lx": 143.89,
+   "ly": 75.807
+  },
+  "head": {
+   "o": [
+    511.24,
+    62.21
+   ],
+   "ax": [
+    1.0,
+    0.0
+   ],
+   "lx": 53.994,
+   "ly": 53.994
+  },
+  "head_full": {
+   "o": [
+    511.5,
+    89.0
+   ],
+   "ax": [
+    1.0,
+    0.0
+   ],
+   "lx": 88.0,
+   "ly": 77.5
+  },
+  "foot_l": {
+   "o": [
+    437.0,
+    241.5
+   ],
+   "ax": [
+    0.0,
+    1.0
+   ],
+   "lx": 39.0,
+   "ly": 36.5
+  },
+  "foot_r": {
+   "o": [
+    585.0,
+    241.0
+   ],
+   "ax": [
+    0.0,
+    1.0
+   ],
+   "lx": 38.5,
+   "ly": 36.5
+  }
+ }
+}

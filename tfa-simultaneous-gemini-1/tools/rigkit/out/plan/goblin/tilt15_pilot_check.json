@@ -1,0 +1,102 @@
+[
+ {
+  "image": "tilt15_pilot_1.png",
+  "iou": 0.9696,
+  "span_px": 1292,
+  "depth_px": 358,
+  "depth_over_span": 0.2771,
+  "outside_guide": 0.0272,
+  "guide_uncovered": 0.0034,
+  "symmetry_shape": 0.9945,
+  "symmetry_colour": 0.9707,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.29,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.271
+ },
+ {
+  "image": "tilt15_pilot_2.png",
+  "iou": 0.9857,
+  "span_px": 1292,
+  "depth_px": 358,
+  "depth_over_span": 0.2771,
+  "outside_guide": 0.014,
+  "guide_uncovered": 0.0003,
+  "symmetry_shape": 0.9957,
+  "symmetry_colour": 0.9723,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   128,
+   128,
+   127
+  ],
+  "ground_std": 1.5,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.322
+ },
+ {
+  "image": "tilt15_pilot_3.png",
+  "iou": 0.9489,
+  "span_px": 1293,
+  "depth_px": 358,
+  "depth_over_span": 0.2769,
+  "outside_guide": 0.048,
+  "guide_uncovered": 0.0034,
+  "symmetry_shape": 0.9936,
+  "symmetry_colour": 0.9706,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.41,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.271
+ },
+ {
+  "image": "tilt15_pilot_4.png",
+  "iou": 0.9398,
+  "span_px": 1294,
+  "depth_px": 360,
+  "depth_over_span": 0.2782,
+  "outside_guide": 0.06,
+  "guide_uncovered": 0.0002,
+  "symmetry_shape": 0.996,
+  "symmetry_colour": 0.9691,
+  "centre_x_offset_px": 0,
+  "ground_rgb": [
+   127,
+   127,
+   127
+  ],
+  "ground_std": 1.32,
+  "tilt_deg": 15.0,
+  "depth_band": [
+   0.22,
+   0.3
+  ],
+  "auto_pass": true,
+  "face_share": 0.284
+ }
+]

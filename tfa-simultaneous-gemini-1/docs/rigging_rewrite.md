@@ -171,11 +171,13 @@ An item that cannot be worn says why (`race naga_male has no leg_l`) instead of 
 
 ### 4.1 The spec
 
-**Camera.** Straight down, tilted at most about 15 degrees toward the front. The test: the crown of the head is the middle of the head, the face is hidden or reduced to brow and nose tip, the shoulders are the widest part, and the legs are hidden under the trunk with only the toes showing.
+**Camera (approved by the user 2026-11-27).** Orthographic, tilted 15 degrees off vertical toward the character's front. The test: the scalp fills most of the head and the face is a foreshortened strip along its bottom edge (brow, nose tip, front of the jaw), the shoulders are the widest part, the top of the chest and a glimpse of upper belly show, and the legs are shortened so only the feet show under the trunk. Depth is 22-30% of the arm span.
+
+**Method.** Race bodies are not painted from a text description of the camera. `tools/rigkit/gen_plan.py` renders a 3D proxy of the race at this camera and the painting is made over that guide, so every race shares one camera by construction. The guide also supplies the label map. A candidate must match the guide's outline (IoU 0.90 or better) and pass a look at the head.
 
 **Pose.** T-pose, arms straight out, palms down, facing south (toes toward the bottom of the image). Left-right symmetric.
 
-**Canvas.** 1024 px on the long side, body centred, flat mid-grey background, soft contact shadow allowed.
+**Canvas.** 1024 px on the long side, body centred. Generated on flat mid-grey, which is keyed out on install.
 
 **Label map.** Same size as the painting, flat colours on black: body, face, hair, upper arm, forearm and hand per side, foot per side, optional leg per side, white for anatomy that sits over clothing. The colours are in `tools/rigkit/derive.py`.
 
@@ -263,6 +265,27 @@ Still open after pilot 2: finish is softer than the house style in the best-came
 - **A true 15 degree view of a full-height figure shows the whole legs** (33-36% depth, about what the old orc has). Both renderers shorten the legs so only the feet show under the belly. This is a stylisation, the same one the existing human painting uses.
 - **The model enlarges the face** past the guide's strip (30-40% of the head against a 25-33% target), and nose colour, gloss and outline weight still vary between runs, so expect to pick the best of about four.
 - `gen_plan.py` is the chosen renderer; tilt 0 still reproduces the strict plan guide.
+
+**Pilot 5 (2026-11-27, standard approved; 4 generations).** The user approved the 15 degree `gen_plan` look as the standard for every race. Two follow-ups were run and independently reviewed.
+
+*Orc installed in the new rig.* `tools/rigkit/install_plan.py` turns a painted candidate plus its guide into a race pack: it keys the grey ground, snaps the guide's labels to the painted outline, moves the shoulder seam to the armpit, and runs `build_race`. `tilt15_final_3` is installed as `orc/tilt15` (standalone pack, no leg frames; `orc/default` untouched). Sheet: `tools/rigkit/out/plan/orc/tilt15_rig_sheet.jpg`.
+
+| | orc/default | orc/tilt15 |
+|---|---|---|
+| Fit gate, 25 rows | 22 ok, 3 WARN, 0 FAIL | 18 ok, 7 WARN, 0 FAIL |
+| Godot parity test | | 1,210 checks, 0 failures |
+
+Open after the install:
+
+- **Size match needs a decision.** The pack is scaled so fingertip span equals the old orc's. The head then comes out about 27% smaller in game than the old one, because the old painting's head was oversized by its camera. Matching shoulders, arm length or head instead gives a different scale each.
+- **Boots and sabatons draw over the lower edge of the belly**: feet items sit above the body layer. Needs the trunk redrawn over feet items or the feet slot clipped to the foot label.
+- **Gauntlets squash (x0.43) and gloves leave fingertips bare** on the spread-finger hands.
+- **The upper-arm frame tilts about 5.6 degrees** because the armpit seam's centre sits below the arm's centre line.
+- **Front-view item art is now the main visual problem** (batches B and C): `great_helm` leaves jaw, tusks and ears out; shirt, vest and robes stretch x1.7 to x1.9; the breastplate collar reads as a wide ring.
+- **Variant inheritance leaks frames**: a new-build variant that uses `inherits` keeps the parent's leg frames (section 3.2 recipe). Not fixed; the pack avoids it by being standalone.
+- The parity fixture has no vertex samples for `orc/tilt15` yet.
+
+*Second race.* Human and halfling tilted guides now pass the depth band (0.257 and 0.276), and a goblin entry was added and painted (`tools/rigkit/out/plan/goblin/tilt15_pilot_*`, 4 of 4 pass the gate, IoU 0.94-0.99, depth/span 0.277 against the orc's 0.270). Camera matches the orc. Style holds in 2 of 4 (best `tilt15_pilot_1`). Open: the goblin came out muscular, not wiry; its big head and ears cover most of the chest and shoulder tops, so torso items will have little visible area; eye sockets are large dark hollows. The halfling's face strip is very thin under the fringe, so its first painting is a risk. Guides side by side: `tools/rigkit/out/plan/tilt15_guides_sheet.jpg`.
 
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 
