@@ -1,0 +1,346 @@
+item                          ok  WARN  FAIL   n/a   worst
+adventurer_pack               53     0     0     0   
+breastplate                   40    12     1     0   human_undead_male: art distorted x3.13
+chain_shirt                   48     4     1     0   human_undead_male: art distorted x3.52
+dagger                        53     0     0     0   
+dark_hood                     53     0     0     0   
+dark_robes                     6    38     9     0   aedelf_male: art distorted x2.59
+golden_helm                   53     0     0     0   
+great_helm                    53     0     0     0   
+kettle_helm                   53     0     0     0   
+leather_armor                 51     1     1     0   human_undead_male: art distorted x3.05
+leather_boot                  92    14     0     0   aedelf_female/l: art stretched x0.53
+leather_glove                105     1     0     0   cerebrals_male/r: art stretched x1.85
+legionnaires_armor            32    20     1     0   human_undead_male: art distorted x3.71
+longsword                     53     0     0     0   
+nobles_blouse                 44     8     1     0   human_undead_male: art distorted x4.16
+padded_vest                    8    40     5     0   aedelf_male: art distorted x2.80
+peasants_stained_shirt        18    32     3     0   aedelf_male: art distorted x2.52
+plate_gauntlet                78    28     0     0   draconian_male/l: art stretched x0.59
+plate_sabaton                  3    63    40     0   aedelf_female/l: art distorted x0.31
+red_cape                      53     0     0     0   
+spear                         53     0     0     0   
+TOTAL  FAIL=62  WARN=261  ok=1002
+  WARN aedelf_female        dark_robes                covers 80%
+  WARN aedelf_female        leather_boot             l art stretched x0.53
+  WARN aedelf_female        legionnaires_armor        covers 82%
+  WARN aedelf_female        padded_vest               art stretched x2.32
+  WARN aedelf_female        peasants_stained_shirt    art stretched x2.08
+  FAIL aedelf_female        plate_sabaton            l art distorted x0.31
+  FAIL aedelf_female        plate_sabaton            r art distorted x0.39
+  FAIL aedelf_male          dark_robes                art distorted x2.59
+  WARN aedelf_male          leather_boot             l art stretched x0.59
+  WARN aedelf_male          leather_boot             r art stretched x0.49
+  WARN aedelf_male          legionnaires_armor        art stretched x1.74
+  WARN aedelf_male          nobles_blouse             art stretched x1.95
+  FAIL aedelf_male          padded_vest               art distorted x2.80
+  FAIL aedelf_male          peasants_stained_shirt    art distorted x2.52
+  FAIL aedelf_male          plate_sabaton            l art distorted x0.35
+  FAIL aedelf_male          plate_sabaton            r art distorted x0.29
+  WARN cerebrals_female     dark_robes                covers 80%
+  WARN cerebrals_female     legionnaires_armor        covers 71%
+  WARN cerebrals_female     nobles_blouse             art stretched x1.71
+  WARN cerebrals_female     padded_vest               art stretched x2.45
+  WARN cerebrals_female     peasants_stained_shirt    art stretched x2.20
+  WARN cerebrals_female     plate_sabaton            l art stretched x0.47
+  WARN cerebrals_female     plate_sabaton            r art stretched x0.46
+  WARN cerebrals_male       breastplate               13% off the body
+  FAIL cerebrals_male       dark_robes                covers only 63%
+  WARN cerebrals_male       leather_glove            r art stretched x1.85
+  WARN cerebrals_male       padded_vest               art stretched x1.79
+  WARN dhampir_female       dark_robes                13% off the body
+  WARN dhampir_female       legionnaires_armor        covers 83%
+  WARN dhampir_female       padded_vest               art stretched x2.08
+  WARN dhampir_female       peasants_stained_shirt    art stretched x1.87
+  FAIL dhampir_female       plate_sabaton            l art distorted x0.38
+  WARN dhampir_female       plate_sabaton            r art stretched x0.47
+  WARN dhampir_male         dark_robes                art stretched x2.09
+  WARN dhampir_male         padded_vest               art stretched x2.26
+  WARN dhampir_male         peasants_stained_shirt    art stretched x2.03
+  WARN dhampir_male         plate_sabaton            l art stretched x0.49
+  WARN dhampir_male         plate_sabaton            r art stretched x0.51
+  FAIL draconian_female     dark_robes                22% floats off the body
+  WARN draconian_female     padded_vest               11% off the body
+  WARN draconian_female     peasants_stained_shirt    art stretched x2.05
+  WARN draconian_female     plate_sabaton            l art stretched x0.41
+  FAIL draconian_female     plate_sabaton            r art distorted x0.36
+  FAIL draconian_male       dark_robes                23% floats off the body
+  WARN draconian_male       padded_vest               11% off the body
+  WARN draconian_male       peasants_stained_shirt    art stretched x2.05
+  WARN draconian_male       plate_gauntlet           l art stretched x0.59
+  WARN draconian_male       plate_gauntlet           r art stretched x0.59
+  FAIL draconian_male       plate_sabaton            l art distorted x0.40
+  FAIL draconian_male       plate_sabaton            r art distorted x0.36
+  WARN dwarf_female         legionnaires_armor        covers 80%
+  WARN dwarf_female         padded_vest               art stretched x1.74
+  WARN dwarf_female         plate_gauntlet           l art stretched x0.52
+  WARN dwarf_female         plate_gauntlet           r art stretched x0.54
+  WARN dwarf_female         plate_sabaton            l art stretched x0.44
+  WARN dwarf_female         plate_sabaton            r art stretched x0.43
+  WARN dwarf_male           dark_robes                art stretched x2.02
+  WARN dwarf_male           legionnaires_armor        covers 81%
+  WARN dwarf_male           padded_vest               art stretched x2.19
+  WARN dwarf_male           peasants_stained_shirt    art stretched x1.97
+  WARN dwarf_male           plate_gauntlet           l art stretched x0.52
+  WARN dwarf_male           plate_gauntlet           r art stretched x0.54
+  WARN dwarf_male           plate_sabaton            l art stretched x0.45
+  WARN dwarf_male           plate_sabaton            r art stretched x0.45
+  WARN elf                  dark_robes                16% off the body
+  WARN elf                  leather_boot             l art stretched x0.42
+  WARN elf                  leather_boot             r art stretched x0.42
+  WARN elf                  legionnaires_armor        covers 83%
+  WARN elf                  padded_vest               art stretched x2.19
+  WARN elf                  peasants_stained_shirt    art stretched x1.97
+  FAIL elf                  plate_sabaton            l art distorted x0.25
+  FAIL elf                  plate_sabaton            r art distorted x0.25
+  WARN gnome_female         breastplate               covers 80%
+  WARN gnome_female         chain_shirt               covers 85%
+  WARN gnome_female         dark_robes                12% off the body
+  WARN gnome_female         padded_vest               art stretched x2.14
+  WARN gnome_female         peasants_stained_shirt    art stretched x1.93
+  WARN gnome_female         plate_gauntlet           l art stretched x0.54
+  WARN gnome_female         plate_gauntlet           r art stretched x0.55
+  WARN gnome_female         plate_sabaton            l art stretched x0.43
+  WARN gnome_female         plate_sabaton            r art stretched x0.45
+  WARN gnome_male           dark_robes                art stretched x1.80
+  WARN gnome_male           padded_vest               art stretched x1.95
+  WARN gnome_male           peasants_stained_shirt    art stretched x1.75
+  WARN gnome_male           plate_gauntlet           l art stretched x0.52
+  WARN gnome_male           plate_gauntlet           r art stretched x0.54
+  WARN gnome_male           plate_sabaton            l art stretched x0.49
+  WARN gnome_male           plate_sabaton            r art stretched x0.49
+  WARN goatmen_female       dark_robes                art stretched x1.82
+  WARN goatmen_female       legionnaires_armor        covers 78%
+  WARN goatmen_female       padded_vest               art stretched x1.97
+  WARN goatmen_female       peasants_stained_shirt    art stretched x1.78
+  FAIL goatmen_female       plate_sabaton            l art distorted x0.38
+  FAIL goatmen_female       plate_sabaton            r art distorted x0.39
+  WARN goatmen_male         breastplate               covers 85%
+  WARN goatmen_male         dark_robes                12% off the body
+  WARN goatmen_male         nobles_blouse             10% off the body
+  WARN goatmen_male         padded_vest               11% off the body
+  WARN goatmen_male         peasants_stained_shirt    art stretched x2.17
+  FAIL goatmen_male         plate_sabaton            l art distorted x0.39
+  FAIL goatmen_male         plate_sabaton            r art distorted x0.37
+  WARN goblin_female        breastplate               13% off the body
+  WARN goblin_female        dark_robes                covers 70%
+  WARN goblin_female        padded_vest               art stretched x1.78
+  WARN goblin_female        plate_sabaton            l art stretched x0.44
+  WARN goblin_female        plate_sabaton            r art stretched x0.44
+  WARN goblin_male          breastplate               10% off the body
+  WARN goblin_male          dark_robes                covers 76%
+  WARN goblin_male          padded_vest               art stretched x1.89
+  WARN goblin_male          peasants_stained_shirt    art stretched x1.70
+  WARN goblin_male          plate_sabaton            l art stretched x0.45
+  WARN goblin_male          plate_sabaton            r art stretched x0.47
+  WARN goluna_female        dark_robes                11% off the body
+  WARN goluna_female        legionnaires_armor        covers 78%
+  WARN goluna_female        padded_vest               art stretched x1.76
+  WARN goluna_female        plate_sabaton            l art stretched x0.42
+  WARN goluna_female        plate_sabaton            r art stretched x0.46
+  FAIL goluna_male          dark_robes                16% off the body; art distorted x2.54
+  WARN goluna_male          leather_boot             l art stretched x0.45
+  WARN goluna_male          leather_boot             r art stretched x0.43
+  WARN goluna_male          legionnaires_armor        art stretched x1.71
+  WARN goluna_male          nobles_blouse             art stretched x1.92
+  FAIL goluna_male          padded_vest               art distorted x2.75
+  WARN goluna_male          peasants_stained_shirt    art stretched x2.47
+  FAIL goluna_male          plate_sabaton            l art distorted x0.26
+  FAIL goluna_male          plate_sabaton            r art distorted x0.26
+  WARN grimalkin_female     dark_robes                covers 83%
+  WARN grimalkin_female     padded_vest               art stretched x2.09
+  WARN grimalkin_female     peasants_stained_shirt    art stretched x1.88
+  WARN grimalkin_female     plate_sabaton            l art stretched x0.43
+  WARN grimalkin_female     plate_sabaton            r art stretched x0.41
+  WARN grimalkin_male       dark_robes                art stretched x2.20
+  WARN grimalkin_male       padded_vest               art stretched x2.39
+  WARN grimalkin_male       peasants_stained_shirt    art stretched x2.15
+  WARN grimalkin_male       plate_sabaton            l art stretched x0.43
+  WARN grimalkin_male       plate_sabaton            r art stretched x0.44
+  WARN half_elf_female      breastplate               covers 81%
+  WARN half_elf_female      chain_shirt               covers 80%
+  FAIL half_elf_female      dark_robes                covers only 47%
+  WARN half_elf_female      legionnaires_armor        covers 84%
+  WARN half_elf_female      plate_sabaton            r art stretched x0.59
+  WARN half_elf_male        padded_vest               art stretched x1.82
+  WARN half_elf_male        plate_gauntlet           r art stretched x0.56
+  FAIL half_elf_male        plate_sabaton            l art distorted x0.39
+  FAIL half_elf_male        plate_sabaton            r art distorted x0.40
+  WARN half_orc_female      breastplate               covers 83%
+  WARN half_orc_female      leather_boot             l art stretched x0.54
+  WARN half_orc_female      leather_boot             r art stretched x0.55
+  WARN half_orc_female      padded_vest               art stretched x1.83
+  WARN half_orc_female      plate_gauntlet           r art stretched x0.60
+  FAIL half_orc_female      plate_sabaton            l art distorted x0.32
+  FAIL half_orc_female      plate_sabaton            r art distorted x0.33
+  WARN half_orc_male        dark_robes                art stretched x2.15
+  WARN half_orc_male        padded_vest               art stretched x2.33
+  WARN half_orc_male        peasants_stained_shirt    art stretched x2.10
+  WARN half_orc_male        plate_sabaton            l art stretched x0.42
+  WARN half_orc_male        plate_sabaton            r art stretched x0.46
+  WARN halfling_female      plate_gauntlet           l art stretched x0.54
+  WARN halfling_female      plate_gauntlet           r art stretched x0.55
+  WARN halfling_female      plate_sabaton            l art stretched x0.47
+  WARN halfling_female      plate_sabaton            r art stretched x0.42
+  WARN halfling_male        dark_robes                art stretched x1.81
+  WARN halfling_male        padded_vest               art stretched x1.96
+  WARN halfling_male        peasants_stained_shirt    art stretched x1.76
+  WARN halfling_male        plate_gauntlet           l art stretched x0.54
+  WARN halfling_male        plate_gauntlet           r art stretched x0.56
+  WARN halfling_male        plate_sabaton            l art stretched x0.45
+  WARN halfling_male        plate_sabaton            r art stretched x0.47
+  FAIL high_elf_female      dark_robes                covers 83%; art distorted x2.65
+  WARN high_elf_female      leather_boot             l art stretched x0.47
+  WARN high_elf_female      leather_boot             r art stretched x0.45
+  WARN high_elf_female      legionnaires_armor        art stretched x1.79
+  WARN high_elf_female      nobles_blouse             art stretched x2.00
+  FAIL high_elf_female      padded_vest               art distorted x2.87
+  FAIL high_elf_female      peasants_stained_shirt    art distorted x2.58
+  WARN high_elf_female      plate_gauntlet           l art stretched x0.53
+  WARN high_elf_female      plate_gauntlet           r art stretched x0.58
+  FAIL high_elf_female      plate_sabaton            l art distorted x0.28
+  FAIL high_elf_female      plate_sabaton            r art distorted x0.27
+  WARN human                breastplate               covers 83%
+  WARN human                chain_shirt               covers 82%
+  FAIL human                dark_robes                33% floats off the body
+  WARN human                leather_armor             covers 70%
+  WARN human                legionnaires_armor        covers 71%
+  WARN human                nobles_blouse             covers 85%
+  WARN human                padded_vest               12% off the body
+  WARN human                plate_sabaton            l art stretched x0.41
+  WARN human                plate_sabaton            r art stretched x0.41
+  WARN human_female         dark_robes                13% off the body
+  WARN human_female         padded_vest               art stretched x2.42
+  WARN human_female         peasants_stained_shirt    art stretched x2.17
+  WARN human_female         plate_sabaton            l art stretched x0.47
+  WARN human_female         plate_sabaton            r art stretched x0.47
+  WARN human_undead_female  dark_robes                covers 85%
+  WARN human_undead_female  padded_vest               art stretched x2.33
+  WARN human_undead_female  peasants_stained_shirt    art stretched x2.09
+  WARN human_undead_female  plate_sabaton            l art stretched x0.44
+  WARN human_undead_female  plate_sabaton            r art stretched x0.45
+  FAIL human_undead_male    breastplate               art distorted x3.13
+  FAIL human_undead_male    chain_shirt               art distorted x3.52
+  FAIL human_undead_male    dark_robes                14% off the body; art distorted x5.50
+  FAIL human_undead_male    leather_armor             art distorted x3.05
+  FAIL human_undead_male    legionnaires_armor        art distorted x3.71
+  FAIL human_undead_male    nobles_blouse             art distorted x4.16
+  FAIL human_undead_male    padded_vest               art distorted x5.97
+  FAIL human_undead_male    peasants_stained_shirt    art distorted x5.36
+  FAIL human_undead_male    plate_sabaton            l art distorted x0.37
+  WARN human_undead_male    plate_sabaton            r art stretched x0.46
+  WARN kobold_female        breastplate               10% off the body
+  WARN kobold_female        dark_robes                12% off the body
+  WARN kobold_female        plate_sabaton            l art stretched x0.42
+  WARN kobold_female        plate_sabaton            r art stretched x0.44
+  WARN kobold_male          breastplate               10% off the body
+  WARN kobold_male          dark_robes                12% off the body
+  WARN kobold_male          plate_sabaton            l art stretched x0.47
+  WARN kobold_male          plate_sabaton            r art stretched x0.49
+  WARN mephistkin_female    dark_robes                13% off the body
+  WARN mephistkin_female    legionnaires_armor        covers 72%
+  WARN mephistkin_female    nobles_blouse             art stretched x1.71
+  WARN mephistkin_female    padded_vest               art stretched x2.46
+  WARN mephistkin_female    peasants_stained_shirt    art stretched x2.21
+  WARN mephistkin_female    plate_sabaton            l art stretched x0.45
+  WARN mephistkin_female    plate_sabaton            r art stretched x0.42
+  WARN mephistkin_male      dark_robes                21% off the body
+  WARN mephistkin_male      legionnaires_armor        covers 80%
+  WARN mephistkin_male      padded_vest               art stretched x2.02
+  WARN mephistkin_male      peasants_stained_shirt    art stretched x1.82
+  FAIL mephistkin_male      plate_sabaton            l art distorted x0.37
+  FAIL mephistkin_male      plate_sabaton            r art distorted x0.37
+  WARN naga_female          dark_robes                art stretched x1.83
+  WARN naga_female          legionnaires_armor        covers 82%
+  WARN naga_female          padded_vest               art stretched x1.98
+  WARN naga_female          peasants_stained_shirt    art stretched x1.78
+  FAIL naga_female          plate_sabaton            l art distorted x0.37
+  FAIL naga_female          plate_sabaton            r art distorted x0.37
+  WARN naga_male            breastplate               covers 78%
+  WARN naga_male            chain_shirt               covers 82%
+  WARN naga_male            dark_robes                covers 80%
+  FAIL naga_male            plate_sabaton            l art distorted x0.37
+  FAIL naga_male            plate_sabaton            r art distorted x0.38
+  WARN newt_female          dark_robes                art stretched x1.90
+  WARN newt_female          leather_boot             r art stretched x0.57
+  WARN newt_female          padded_vest               art stretched x2.06
+  WARN newt_female          peasants_stained_shirt    art stretched x1.85
+  FAIL newt_female          plate_sabaton            l art distorted x0.36
+  FAIL newt_female          plate_sabaton            r art distorted x0.34
+  WARN newt_male            dark_robes                art stretched x1.98
+  WARN newt_male            padded_vest               art stretched x2.14
+  WARN newt_male            peasants_stained_shirt    art stretched x1.93
+  WARN newt_male            plate_gauntlet           l art stretched x0.56
+  WARN newt_male            plate_gauntlet           r art stretched x0.56
+  FAIL newt_male            plate_sabaton            l art distorted x0.39
+  FAIL newt_male            plate_sabaton            r art distorted x0.39
+  WARN orc                  dark_robes                19% off the body
+  WARN orc                  plate_sabaton            l art stretched x0.48
+  WARN orc                  plate_sabaton            r art stretched x0.49
+  WARN orc                  dark_robes                19% off the body
+  WARN orc                  plate_sabaton            l art stretched x0.48
+  WARN orc                  plate_sabaton            r art stretched x0.49
+  WARN orc_female           dark_robes                art stretched x1.74
+  WARN orc_female           padded_vest               art stretched x1.88
+  WARN orc_female           plate_gauntlet           l art stretched x0.54
+  WARN orc_female           plate_gauntlet           r art stretched x0.56
+  WARN orc_female           plate_sabaton            l art stretched x0.41
+  WARN orc_female           plate_sabaton            r art stretched x0.44
+  WARN quadrelf_female      breastplate               11% off the body
+  WARN quadrelf_female      dark_robes                covers 82%
+  WARN quadrelf_female      padded_vest               art stretched x2.26
+  WARN quadrelf_female      peasants_stained_shirt    art stretched x2.03
+  WARN quadrelf_female      plate_sabaton            l art stretched x0.43
+  WARN quadrelf_female      plate_sabaton            r art stretched x0.44
+  WARN quadrelf_male        dark_robes                art stretched x2.03
+  WARN quadrelf_male        padded_vest               art stretched x2.20
+  WARN quadrelf_male        peasants_stained_shirt    art stretched x1.98
+  WARN quadrelf_male        plate_gauntlet           l art stretched x0.60
+  WARN quadrelf_male        plate_gauntlet           r art stretched x0.60
+  FAIL quadrelf_male        plate_sabaton            l art distorted x0.36
+  FAIL quadrelf_male        plate_sabaton            r art distorted x0.37
+  WARN sahuagin_female      legionnaires_armor        covers 75%
+  WARN sahuagin_female      plate_gauntlet           r art stretched x0.60
+  WARN sahuagin_female      plate_sabaton            l art stretched x0.46
+  WARN sahuagin_female      plate_sabaton            r art stretched x0.41
+  WARN sahuagin_male        dark_robes                18% off the body
+  WARN sahuagin_male        legionnaires_armor        covers 84%
+  WARN sahuagin_male        padded_vest               art stretched x2.11
+  WARN sahuagin_male        peasants_stained_shirt    art stretched x1.90
+  WARN sahuagin_male        plate_sabaton            l art stretched x0.45
+  WARN sahuagin_male        plate_sabaton            r art stretched x0.44
+  WARN saurian_female       dark_robes                16% off the body
+  WARN saurian_female       leather_boot             l art stretched x0.58
+  WARN saurian_female       legionnaires_armor        covers 85%
+  WARN saurian_female       padded_vest               art stretched x2.20
+  WARN saurian_female       peasants_stained_shirt    art stretched x1.98
+  WARN saurian_female       plate_gauntlet           l art stretched x0.58
+  WARN saurian_female       plate_gauntlet           r art stretched x0.59
+  FAIL saurian_female       plate_sabaton            l art distorted x0.35
+  FAIL saurian_female       plate_sabaton            r art distorted x0.37
+  WARN saurian_male         padded_vest               art stretched x1.82
+  WARN saurian_male         plate_sabaton            l art stretched x0.45
+  WARN saurian_male         plate_sabaton            r art stretched x0.45
+  WARN sobruaro_female      dark_robes                covers 85%
+  WARN sobruaro_female      legionnaires_armor        covers 79%
+  WARN sobruaro_female      padded_vest               art stretched x1.84
+  WARN sobruaro_female      plate_sabaton            l art stretched x0.46
+  WARN sobruaro_female      plate_sabaton            r art stretched x0.45
+  WARN sobruaro_male        dark_robes                art stretched x2.09
+  WARN sobruaro_male        leather_boot             l art stretched x0.54
+  WARN sobruaro_male        padded_vest               art stretched x2.26
+  WARN sobruaro_male        peasants_stained_shirt    art stretched x2.04
+  WARN sobruaro_male        plate_gauntlet           l art stretched x0.59
+  FAIL sobruaro_male        plate_sabaton            l art distorted x0.32
+  FAIL sobruaro_male        plate_sabaton            r art distorted x0.36
+  WARN vampire_female       dark_robes                12% off the body
+  WARN vampire_female       nobles_blouse             art stretched x1.75
+  FAIL vampire_female       padded_vest               art distorted x2.51
+  WARN vampire_female       peasants_stained_shirt    art stretched x2.26
+  WARN vampire_female       plate_sabaton            l art stretched x0.50
+  WARN vampire_female       plate_sabaton            r art stretched x0.55
+  WARN vampire_male         dark_robes                art stretched x2.11
+  WARN vampire_male         padded_vest               art stretched x2.29
+  WARN vampire_male         peasants_stained_shirt    art stretched x2.06
+  WARN vampire_male         plate_sabaton            l art stretched x0.43
+  FAIL vampire_male         plate_sabaton            r art distorted x0.38

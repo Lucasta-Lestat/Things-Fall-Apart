@@ -1,6 +1,6 @@
 # Rigging rewrite
 
-Started 2026-11-26 on branch `claude/rigging-workflow-rewrite-bca442`. Nothing here is merged to main.
+Started 2026-11-26 on branch `claude/rigging-workflow-rewrite-bca442`. Nothing here is merged to main. A phone-readable version of this doc: https://claude.ai/artifact/E77oPLp4MwtCFhpDqehJvY
 
 **Status in one paragraph.** The new system ("rig2") exists beside the old one and is proven end to end in bind pose: 52 race packs, 21 item packs of every kind, an offline previewer, an automated fit gate, and a Godot runtime that builds a dressed character from data with no per-race baking. The game still runs on the old rig; nothing in gameplay code was touched. Animation on the new rig is the next phase and is not built.
 
@@ -263,9 +263,29 @@ It exits 1 on any FAIL. Thresholds are one table in `check.py`.
 
 **Still to add in phase 2.** Posed contact sheets (idle, walk, swing), and a windowed off-screen capture compared against the offline render.
 
-## 7. What was verified on this branch
+## 7. What was verified on this branch (2026-11-26 run)
 
-See the commit messages and the final report of the run for exact numbers. In short: all 52 legacy races imported from their label maps with no failures; the gate and contact sheets ran across races and items; the Godot parity test passed headless.
+| Check | Result |
+|---|---|
+| Legacy import | 52 of 52 race packs built from their label maps, no failures |
+| Fit gate, 53 packs x 21 items | 1,325 pairings: 1,002 ok, 261 WARN, 62 FAIL. Report: `tools/rigkit/out/fit_gate.txt`, `fit_report.json` |
+| Godot parity test (headless) | 1,196 checks, 0 failures; worst vertex error 0.0007 px over 150 pairings |
+| Mutation check | Changing `BLEND_FRAC` in `rig_fit.gd` gives 36 failures, so the test does detect drift |
+| Variant | `orc/ashen` builds and dresses from a `body.png` and a four-line `race.json` |
+| Game | No existing file changed. A headless `--import` reported only the two known addon errors |
+
+Where the 62 failures are: 40 are `plate_sabaton` (side-view art squashed onto a foot), 9 `dark_robes` (flared hem), 8 `human_undead_male`, 5 other.
+
+Contact sheets for every pack are in `tools/rigkit/out/outfits_01..05.jpg` and `frames_01..04.jpg`.
+
+**Known problems in the fit itself, not the art.**
+
+- The torso's front depth is measured from the body label only. On hunched races the head label covers the chest, so the depth comes out shallow (`human_undead_male`: every garment is flagged as distorted). Measuring the trunk under the head as well should fix it.
+- Thick hair inflates the skull circle (high_elf_female, mephistkin_female: helmets too large), and long beards pull hoods down (dwarf_male).
+- Rigid sleeveless armour does not reach the upper back on overhead races (human in `legionnaires_armor` covers 71 %).
+- No arm-over-garment depth split yet: in bind pose the arms never cross the trunk, so this only matters once posing lands.
+- Held gear whose art is wider than tall is not handled by ingest (the game auto-rotates it).
+- Rendering a full set of sheets takes about 20 minutes; the renderer is not optimised.
 
 ## 8. Commands
 
