@@ -1,0 +1,15 @@
+{
+ "inherits": "default",
+ "variant": "ashen",
+ "art": "body.png",
+ "source": "procedural recolour of orc/default (demo of a re-skin variant)",
+ "overlays": {
+  "head": {
+   "file": "head.png",
+   "offset": [
+    417,
+    17
+   ]
+  }
+ }
+}

@@ -1,0 +1,55 @@
+{
+ "version": 1,
+ "_doc": [
+  "The canonical skeleton every race pack and every item is described against.",
+  "See docs/rigging_rewrite.md. A FRAME is {o, ax, lx, ly[, ly_neg]} in pixels;",
+  "races and items both carry frames with the names listed here, and fitting an",
+  "item is mapping its points from its own frame to the race's frame of the same name.",
+  "_l/_r are IMAGE left/right; every pack faces south, so _r is the main hand."
+ ],
+ "facing": "south",
+ "reference_race": "human",
+ "frames": {
+  "torso": "origin midway between the shoulder seams, axis along the shoulder line; lx = half shoulder span, ly = trunk depth toward the front, ly_neg = toward the back",
+  "back": "the trunk's rear edge (torso origin pushed back by ly_neg), same axis and lx: where capes and packs hang",
+  "upperarm_l": "shoulder seam -> elbow seam; lx = length, ly = mean half-thickness",
+  "upperarm_r": "",
+  "forearm_l": "elbow seam -> wrist seam",
+  "forearm_r": "",
+  "hand_l": "wrist seam -> fingertip",
+  "hand_r": "",
+  "grip_l": "palm centre, axis along the hand; lx = ly = pack px per world px",
+  "grip_r": "",
+  "head": "largest circle inside the head label (ears, horns, beards stick out of it); lx = ly = radius",
+  "head_full": "bounding box of the whole head label",
+  "foot_l": "bounding box of the foot label; lx/ly = half width/height",
+  "foot_r": "",
+  "leg_l": "optional: hip -> ankle, only on races whose legs show from above",
+  "leg_r": ""
+ },
+ "required_frames": ["torso", "back", "upperarm_l", "upperarm_r", "forearm_l", "forearm_r",
+                     "hand_l", "hand_r", "grip_l", "grip_r", "head"],
+ "bones": {
+  "torso": null,
+  "head": "torso",
+  "upperarm_l": "torso", "forearm_l": "upperarm_l", "hand_l": "forearm_l", "grip_l": "hand_l",
+  "upperarm_r": "torso", "forearm_r": "upperarm_r", "hand_r": "forearm_r", "grip_r": "hand_r",
+  "leg_l": "torso", "foot_l": "leg_l",
+  "leg_r": "torso", "foot_r": "leg_r"
+ },
+ "slots": {
+  "back":      {"frame": "back",  "fit": "rigid",   "scale": "uniform", "ease": 1.0,  "z": -4},
+  "legs":      {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.05, "z": 4},
+  "feet":      {"frame": "foot",  "fit": "rigid",   "scale": "free",    "ease": 1.15, "z": 5, "sided": true},
+  "torso":     {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.06, "z": 6, "layers": 4},
+  "hands":     {"frame": "hand",  "fit": "rigid",   "scale": "free",    "ease": 1.25, "z": 19, "sided": true},
+  "off_hand":  {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "l"},
+  "main_hand": {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "r"},
+  "head":      {"frame": "head",  "fit": "rigid",   "scale": "uniform", "ease": 1.12, "z": 23}
+ },
+ "body_layers": {"body": 0, "arms_over_garments": 10, "head": 20},
+ "item_slot_aliases": {
+  "Torso": "torso", "Head": "head", "Feet": "feet", "Legs": "legs", "Hands": "hands",
+  "Back": "back", "Cape": "back", "Main Hand": "main_hand", "Off Hand": "off_hand"
+ }
+}
