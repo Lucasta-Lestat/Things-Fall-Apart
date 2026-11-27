@@ -5,6 +5,7 @@
     python -m tools.rigkit.gen_plan check [--race orc] [--tag final | image.png ...]
     python -m tools.rigkit.gen_plan sheet [--race orc] [--tag final | image.png ...]
     python -m tools.rigkit.gen_plan dome  [--race orc] [--tag final | image.png ...]     (tilt 0 sets only)
+    python -m tools.rigkit.gen_plan headsize [--race orc] [--legacy orc/default]
 
 --tilt is the camera's angle off vertical in degrees, leaning toward the character's FRONT (default
 DEFAULT_TILT = 15, or a race's own "tilt"). 0 is the strict plan view of pilot 3 and still renders
@@ -55,6 +56,22 @@ and forward offset of the face forms, for a hair cap wider than the skull), and 
 keys that should differ from the plan guide (see tilt_params). The approved look is the orc's
 tilt15_final set; orc, human, halfling and goblin guides are tuned to that camera (depth / span
 0.26-0.28), and only orc and goblin have been painted.
+
+HEAD SIZE CONVENTION (tilted guides). A repainted race keeps the in-game head size of the pack it
+replaces. install_plan scales a new pack so its fingertip span equals the legacy pack's, so the head
+is preserved when (head frame radius / half span) is the same in the guide as in the legacy pack; the
+head frame is derive.py's skull circle, the measure helmets are fitted to. A legacy three-quarter
+painting has a much bigger head than true proportions seen from above (orc: x1.35), so every race
+entry that replaces a legacy pack sets
+    head_scale = <value printed by `gen_plan headsize --race R --legacy R/default`>
+(head_scale_for() below; it is stored as a number so a guide never depends on pack files). head_scale
+grows the WHOLE tilted head (cranium, brow, cheeks, jaw, nose, tusks, ears) about the skull base
+(head_pivot_z, default 1.64), so the face stays the same share of the head: a strip on its bottom
+edge. head_back (default 0; negative = south) then slides the scaled head north. A bigger head
+overhangs the upper back and covers more chest: the orc raises the pivot (1.70) and slides the head a
+little south so depth / span stays inside DEPTH_BAND_TILT. The printed value is a linear estimate;
+set it, run headsize again and nudge until in_game_head_now_vs_legacy reads 1.00 (orc: 1.362).
+Entries without head_scale render exactly as before.
 
 What the recipe encodes (docs/rigging_rewrite.md, "Pilot 2"):
   (the items below are the tilt-0 recipe; for a tilted guide the face, chest and feet are modelled as
@@ -118,6 +135,8 @@ RACES = {
         palm_rx=0.070, palm_ry=0.064, finger_r=0.0145,
         foot_x=0.128, toe_y=0.238, toe_r=0.023,
         foot_x_tilt=0.150, foot_w=0.066, toe_y_tilt=0.188, tusk_x_tilt=0.046,   # tilted proxy only
+        # in-game head size of orc/default: `gen_plan headsize --race orc --legacy orc/default`
+        head_scale=1.362, head_back=-0.012, head_pivot_z=1.70,
         skin=(118, 136, 70), ivory=(236, 226, 196),
         swatch=dict(src="Rigs/races/orc/default/body.png", box=(630, 20, 810, 170)),
         look="an orc with olive-green skin, a bald scalp, pointed ears, heavy muscles and ivory tusk tips",
@@ -336,6 +355,7 @@ def primitives(p, anat=False):
         zh = p.get("head_z", 1.80)
         yh = hy + hf
         ell("body", (0, yh * 0.5, 1.60), (0.085, 0.085, 0.14))                # neck
+        head_from = len(P)                      # everything from here to the ears is the head
         ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))                  # cranium (or the hair cap)
         f = p.get("face_scale", r / 0.108)      # face forms scale with the skull unless a race says otherwise
         yf = yh + p.get("face_fwd", 0.0)        # a hair cap wider than the skull: the face sits forward in it
@@ -358,6 +378,11 @@ def primitives(p, anat=False):
             for s in (-1, 1):
                 rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035), (s * (r + el), yh - eb, zh + eu),
                     er, 0.004, 0.6)
+        hs = p.get("head_scale", 1.0)           # see HEAD SIZE CONVENTION in the module docstring
+        if hs != 1.0:
+            for i in range(head_from, len(P)):
+                part, c, q = P[i]
+                P[i] = (part, head_point(p, c), tuple(v * hs for v in q))
 
     # ---- arms: dead-level bars at shoulder height; hands flat with spread fingers
     ex, wx = p["elbow_x"], p["wrist_x"]
@@ -418,6 +443,38 @@ def primitives(p, anat=False):
     return P
 
 
+def head_point(p, c):
+    """Where head_scale / head_back put a point of the tilted proxy's unscaled head: scaled about the
+    skull base (on the cranium's axis, at head_pivot_z), then slid north by head_back."""
+    hs = p.get("head_scale", 1.0)
+    if hs == 1.0:
+        return tuple(c)
+    py = p["skull_y"] + p.get("head_fwd", 0.03)
+    pz = p.get("head_pivot_z", 1.64)
+    return (c[0] * hs, py + (c[1] - py) * hs - p.get("head_back", 0.0), pz + (c[2] - pz) * hs)
+
+
+def head_scale_for(race, legacy=None, tilt=None):
+    """The head_scale that gives `race`'s tilted guide the same head-frame radius per half span as the
+    pack `legacy` ("race/variant", default "<race>/default"), i.e. the same in-game head size once
+    install_plan has span-matched the new pack to it. Returns (head_scale, info)."""
+    from . import core
+    from .install_plan import measures
+    mr, mv = ((legacy or race + "/default").split("/") + ["default"])[:2]
+    ref = core.load_race(mr, mv)
+    want = ref["frames"]["head"]["lx"] / (measures(ref["frames"])["span"] / 2.0)
+
+    def ratio(over):
+        _, _, _, lab, st = render(race, tilt=tilt, over=over)
+        fr, _ = derive_frames(np.array(PART_RGB, np.uint8)[lab], 1.0)
+        return fr["head"]["lx"] / (st["span_px"] / 2.0)
+    base = ratio(dict(head_scale=1.0))
+    now = ratio(None)
+    return want / base, dict(legacy="%s/%s" % (mr, mv), legacy_ratio=round(want, 4), guide_ratio_unscaled=round(base, 4),
+                             guide_ratio_now=round(now, 4), head_scale_now=RACES[race].get("head_scale", 1.0),
+                             in_game_head_now_vs_legacy=round(now / want, 3))
+
+
 def guide_prefix(tilt):
     """Guide files of the strict plan view keep their old names; tilted guides get their own."""
     return "guide" if tilt == 0 else "guide_t%g" % tilt
@@ -427,7 +484,7 @@ def race_tilt(race, tilt=None):
     return float(RACES[race].get("tilt", DEFAULT_TILT) if tilt is None else tilt)
 
 
-def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None):
+def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
     """Returns (clay, tint, mask, label_idx, stats).
 
     Orthographic camera `tilt` degrees off vertical, leaning toward the character's front (south):
@@ -437,6 +494,9 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None):
     tilt = race_tilt(race, tilt)
     anat = tilt > 0
     p = tilt_params(RACES[race], anat)
+    if over:                                    # trial values, e.g. head_scale_for's unscaled head
+        p = dict(p, **over)
+        p.pop("anat", None)                     # already laid over by tilt_params; keep `over` on top
     ct, st = float(np.cos(np.radians(tilt))), float(np.sin(np.radians(tilt)))
     ww, hh = w * ss, h * ss
     scale = ww * (0.5 - margin)                 # px per unit; fingertips land `margin` from each edge
@@ -554,7 +614,8 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None):
     ys_, xs_ = np.nonzero(mnp)
     px = scale / ss
     if anat:
-        hyw, hzw = hy + p.get("head_fwd", 0.03), p.get("head_z", 1.80)
+        _, hyw, hzw = head_point(p, (0.0, hy + p.get("head_fwd", 0.03), p.get("head_z", 1.80)))
+        r = r * p.get("head_scale", 1.0)
     else:
         hyw, hzw = hy, 0.0
     stats = dict(race=race, canvas=[w, h], tilt_deg=tilt, px_per_unit=round(px, 3),
@@ -1025,6 +1086,9 @@ def main(argv=None):
     c.add_argument("images", nargs="*"); c.add_argument("--race", default="orc"); c.add_argument("--tag", default="")
     d = sub.add_parser("dome")
     d.add_argument("images", nargs="*"); d.add_argument("--race", default="orc"); d.add_argument("--tag", default="")
+    z = sub.add_parser("headsize"); z.add_argument("--race", default="orc")
+    z.add_argument("--legacy", default=None, help="pack to keep the head size of (default <race>/default)")
+    z.add_argument("--tilt", type=float, default=None, help=th)
     h = sub.add_parser("sheet")
     h.add_argument("images", nargs="*"); h.add_argument("--race", default="orc"); h.add_argument("--tag", default="")
     a = ap.parse_args(argv)
@@ -1033,7 +1097,12 @@ def main(argv=None):
             ap.error("%s needs --tag or image paths" % a.cmd)
         a.images = sorted(q for q in glob.glob(os.path.join(race_out(a.race), a.tag + "_*.png"))
                           if os.path.basename(q)[len(a.tag) + 1:-4].isdigit())
-    if a.cmd == "dome":
+    if a.cmd == "headsize":
+        hs, info = head_scale_for(a.race, a.legacy, a.tilt)
+        print(json.dumps(info))
+        print("first estimate: head_scale=%.3f in RACES[%r]; nudge until in_game_head_now_vs_legacy is 1.00"
+              % (hs, a.race))
+    elif a.cmd == "dome":
         check(a.race, dome(a.race, a.images), a.tag or None)
     elif a.cmd == "sheet":
         contact_sheet(a.race, a.images, a.tag or None)

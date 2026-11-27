@@ -7,6 +7,22 @@
   1120
  ],
  "total_length": 25.0,
+ "grip_position": 0.65,
+ "hold": {
+  "at": 0.7986,
+  "handle": [
+   0.7866,
+   0.8973
+  ],
+  "offset": 3.72,
+  "width": 2.9,
+  "guard": true,
+  "tail": "under",
+  "layer": "through",
+  "pose": "grip",
+  "hands": 1,
+  "grip_length": 8.0
+ },
  "item_ids": [
   "dagger"
  ],
@@ -14,7 +30,7 @@
   "grip": {
    "o": [
     155.0,
-    728.0
+    894.43
    ],
    "ax": [
     0.0,

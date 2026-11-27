@@ -1,0 +1,26 @@
+item                          ok  WARN  FAIL   n/a   worst
+adventurer_pack               55     0     0     0   
+breastplate                   42    12     1     0   human_undead_male: art distorted x3.13
+breastplate_td                50     4     1     0   human_undead_male: covers 83%; art distorted x3.08
+chain_shirt                   50     4     1     0   human_undead_male: art distorted x3.52
+dagger                        55     0     0     0   
+dark_hood                     55     0     0     0   
+dark_robes                     6    40     9     0   aedelf_male: art distorted x2.59
+golden_helm                   55     0     0     0   
+great_helm                    55     0     0     0   
+great_helm_td                 55     0     0     0   
+kettle_helm                   55     0     0     0   
+leather_armor                 53     1     1     0   human_undead_male: art distorted x3.05
+leather_boot                  96    14     0     0   aedelf_female/l: art stretched x0.53
+leather_glove                220     0     0     0   
+legionnaires_armor            34    20     1     0   human_undead_male: art distorted x3.71
+longsword                     55     0     0     0   
+nobles_blouse                 46     8     1     0   human_undead_male: art distorted x4.16
+padded_vest                    8    42     5     0   aedelf_male: art distorted x2.80
+peasants_stained_shirt        18    34     3     0   aedelf_male: art distorted x2.52
+peasants_stained_shirt_td     52     2     1     0   human_undead_male: covers 85%; art distorted x3.08
+plate_gauntlet               220     0     0     0   
+plate_sabaton                  3    67    40     0   aedelf_female/l: art distorted x0.31
+red_cape                      55     0     0     0   
+spear                         37    18     0     0   aedelf_female/r: 61% of the handle is inside the hand
+TOTAL  FAIL=64  WARN=266  ok=1430

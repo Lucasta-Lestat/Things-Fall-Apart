@@ -17,7 +17,7 @@ import numpy as np
 from PIL import Image
 
 from . import core
-from .derive import LabelError, derive_frames, label_masks
+from .derive import LabelError, derive_frames, hand_parts, label_masks, skin_ramp
 
 
 def write_overlays(folder, body_rgba, lab):
@@ -46,6 +46,22 @@ def write_overlays(folder, body_rgba, lab):
     return out
 
 
+def hand_rig(own, merged, body_rgba, lab, relabelled):
+    """The hand rig's race data (docs 3.6): the skin ramp of THIS body, and, when the
+    pack has its own labels, the open-hand cut-outs. Returns the (grip_u, wrist_u) to
+    derive with ((None, 1) when no hand set is installed: the pack then keeps the old
+    grip only)."""
+    hs = core.race_hand_set(merged, core.skeleton())
+    if hs is None:
+        return None, 1.0
+    skin = skin_ramp(body_rgba, lab)
+    if skin is not None:
+        own["skin"] = skin
+    if relabelled:
+        own["parts"] = hand_parts(lab)
+    return float(hs["poses"]["grip"]["grip_u"]), float(hs["poses"]["grip"].get("wrist_u", 1.0))
+
+
 def build(race, variant):
     d = core.race_dir(race, variant)
     path = os.path.join(d, "race.json")
@@ -58,17 +74,21 @@ def build(race, variant):
             raise LabelError("re-skin body.png is %s, parent is %s: paint it on the parent's canvas "
                              "or give the variant its own labels.png" % (body.size, merged["size"]))
         lab = np.array(Image.open(core.race_file(merged, "labels")).convert("RGB"))
-        own["overlays"] = write_overlays(d, np.array(body.convert("RGBA")), lab)
+        rgba = np.array(body.convert("RGBA"))
+        own["overlays"] = write_overlays(d, rgba, lab)
+        hand_rig(own, merged, rgba, lab, False)
         core.save_json(path, own)
         return core.load_race(race, variant), "re-skin of %s" % own["inherits"]
     lab = np.array(Image.open(core.race_file(merged, "labels")).convert("RGB"))
     body = Image.open(core.race_file(merged, "art"))
     if body.size != (lab.shape[1], lab.shape[0]):
         raise LabelError("body.png %s and labels.png %s differ in size" % (body.size, lab.shape[1::-1]))
-    frames, notes = derive_frames(lab, float(merged["world_scale"]))
+    rgba = np.array(body.convert("RGBA"))
+    grip_u, wrist_u = hand_rig(own, merged, rgba, lab, True)
+    frames, notes = derive_frames(lab, float(merged["world_scale"]), grip_u, wrist_u)
     for name in own.get("pinned", []):
         frames[name] = own["frames"][name]
-    own["overlays"] = write_overlays(d, np.array(body.convert("RGBA")), lab)
+    own["overlays"] = write_overlays(d, rgba, lab)
     own["size"] = [int(lab.shape[1]), int(lab.shape[0])]
     own["notes"] = notes
     own["frames"] = frames

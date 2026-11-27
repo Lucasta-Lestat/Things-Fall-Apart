@@ -81,8 +81,137 @@ def _radius(mask, a, b):
     return float(mask.sum()) / max(2.0 * length, 1.0)
 
 
-def derive_frames(labels_rgb, world_scale):
-    """Returns (frames, notes). Raises LabelError when a required label is missing."""
+PALM_AXIS_MAX_DEG = 25.0  # palm axis further than this off the forearm -> use the forearm axis
+PALM_MIN_WORLD = 1.5      # a palm circle smaller than this many world px is not a usable hand
+PART_STEP = 2             # px; the grid the hand cut-out is stored on
+PART_REACH = 6            # px; painted outline just outside the hand label still belongs to the hand
+
+
+def hand_frames(m, s, wrist, forearm_ax, world_scale, grip_u, wrist_u=1.0):
+    """The pose-independent hand anatomy of side `s` (docs/rigging_rewrite.md 3.6):
+
+      palm_<s>   origin at the wrist seam, the forearm's axis; measured with the largest
+                 circle inside the hand label: ly = the hand's half-width (that circle's
+                 radius, or more when the wrist is so thick that the hand set's fist
+                 would be narrower than it: `wrist_u` is that fist's wrist half-width
+                 in palm units), lx = the
+                 distance to the knuckle line (the far side of that circle). Finger
+                 spread, finger count and claws cannot move it.
+      wrist_<s>  same origin, FOREARM axis, lx = ly = half the wrist's width: where
+                 glove cuffs sit.
+      grip_<s>   where a held item's hold point goes: `grip_u` half-widths out along
+                 the palm axis (the front of the closed fist), lx = px per world px.
+
+    Returns ({name: frame}, note or None); no frames when the hand cannot be measured.
+    """
+    fo, ha = m["forearm_" + s], m["hand_" + s]
+    dist = cv2.distanceTransform(ha.astype(np.uint8), cv2.DIST_L2, 5)
+    _, r, _, loc = cv2.minMaxLoc(dist)
+    if r * world_scale < PALM_MIN_WORLD:
+        return {}, "hand_%s: palm not measurable (%.1f px): no grip pose on this side" % (s, r)
+    c = np.array(loc, float)
+    # The palm continues the forearm. (The line from the wrist to the palm circle is
+    # pulled toward the thumb by 5-15 degrees, and the line to the furthest fingertip
+    # swings with the finger spread; a held blade would inherit either error.)
+    ax = forearm_ax
+    note = None
+    d = c - wrist
+    if float(d @ forearm_ax) < np.cos(np.radians(PALM_AXIS_MAX_DEG)) * float(np.hypot(*d)):
+        note = "hand_%s: the painted hand bends more than %d deg off the forearm" % (s, PALM_AXIS_MAX_DEG)
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    ys, xs = np.nonzero(fo & (cv2.dilate(ha.astype(np.uint8), k) > 0))
+    v = (np.stack([xs, ys], axis=1) - wrist) @ np.array([-forearm_ax[1], forearm_ax[0]])
+    hw = float(np.percentile(v, 98) - np.percentile(v, 2)) / 2.0 if len(v) >= 3 else r
+    half = max(float(r), hw / wrist_u)    # the fist must not be narrower than the wrist it sits on
+    knuckle = float(np.clip(float((c - wrist) @ ax) + float(r), 0.8 * half, 2.6 * half))
+    out = {"palm_" + s: make_frame(wrist, ax=ax, lx=knuckle, ly=half),
+           "wrist_" + s: make_frame(wrist, ax=forearm_ax, lx=hw, ly=hw)}
+    kk = 1.0 / world_scale
+    out["grip_" + s] = make_frame(wrist + ax * half * grip_u, ax=ax, lx=kk, ly=kk)
+    return out, note
+
+
+def hand_parts(labels_rgb):
+    """The open hands as cut-outs of body.png: {"hand_l": {"step", "runs"}, ...}.
+
+    A run is [row, first column, last column + 1] on a PART_STEP grid from (0, 0). A cell
+    belongs to a hand when it holds any pixel that is nearer the hand label than any other
+    label (within PART_REACH), so the painted outline goes with the hand. Hiding the cells
+    hides the open hand; drawing them through a colour ramp gloves it."""
+    m = label_masks(labels_rgb)
+    h, w = labels_rgb.shape[:2]
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * PART_REACH + 1, 2 * PART_REACH + 1))
+    other = np.zeros((h, w), bool)
+    for name, mask in m.items():
+        if not name.startswith("hand_"):
+            other |= mask
+    out = {}
+    for s in ("l", "r"):
+        if "hand_" + s not in m:
+            continue
+        reg = (cv2.dilate(m["hand_" + s].astype(np.uint8), k) > 0) & ~other
+        ny, nx = -(-h // PART_STEP), -(-w // PART_STEP)
+        pad = np.zeros((ny * PART_STEP, nx * PART_STEP), bool)
+        pad[:h, :w] = reg
+        occ = pad.reshape(ny, PART_STEP, nx, PART_STEP).any(axis=(1, 3))
+        runs = []
+        for j in np.nonzero(occ.any(axis=1))[0]:
+            row = np.concatenate([[0], occ[j].astype(np.int8), [0]])
+            d = np.diff(row)
+            for a, b in zip(np.nonzero(d == 1)[0], np.nonzero(d == -1)[0]):
+                runs.append([int(j), int(a), int(b)])
+        out["hand_" + s] = {"step": PART_STEP, "runs": runs}
+    return out
+
+
+def luma(rgb):
+    a = np.asarray(rgb, float)
+    return (0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]) / 255.0
+
+
+RAMP_PCT = (2.0, 22.0, 55.0, 93.0)     # outline, shadow, mid, light
+
+
+def colour_ramp(rgb, sel):
+    """Four (luminance stop, colour) pairs of the selected pixels: the painting's own
+    outline, shadow, mid and light tones. Returns {"stops": [4], "ramp": [[r,g,b] x 4]}.
+    A hand drawn through core.apply_ramp(src stops -> dst ramp) keeps its shading and
+    line work and changes material."""
+    px = np.asarray(rgb, float)[sel]
+    lum = luma(px)
+    order = np.argsort(lum)
+    stops, ramp = [], []
+    for p in RAMP_PCT:
+        lo = int(len(order) * max(p - 4.0, 0.0) / 100.0)
+        hi = max(int(len(order) * min(p + 4.0, 100.0) / 100.0), lo + 1)
+        pick = order[lo:hi]
+        st = float(lum[pick].mean())
+        if stops and st <= stops[-1] + 0.01:
+            st = stops[-1] + 0.01
+        stops.append(round(st, 4))
+        ramp.append([round(float(c) / 255.0, 4) for c in px[pick].mean(axis=0)])
+    return {"stops": stops, "ramp": ramp}
+
+
+def skin_ramp(body_rgba, labels_rgb):
+    """The race's skin tones, read off the hands of its own painting (the pixels a
+    glove recolours, and the ones a fist replaces)."""
+    m = label_masks(labels_rgb)
+    sel = np.zeros(labels_rgb.shape[:2], bool)
+    for name in ("hand_l", "hand_r"):
+        if name in m:
+            sel |= m[name]
+    sel &= body_rgba[:, :, 3] > 230
+    if int(sel.sum()) < 50:
+        return None
+    return colour_ramp(body_rgba[:, :, :3], sel)
+
+
+def derive_frames(labels_rgb, world_scale, grip_u=None, wrist_u=1.0):
+    """Returns (frames, notes). Raises LabelError when a required label is missing.
+
+    `grip_u` (from the hand set, see hands.py) turns on the hand rig frames palm_*,
+    wrist_* and the fist-centred grip_*; without it the pack keeps the old grip only."""
     m = label_masks(labels_rgb)
     notes = []
     for need in ("body", "upperarm_l", "upperarm_r", "forearm_l", "forearm_r", "hand_l", "hand_r"):
@@ -109,6 +238,12 @@ def derive_frames(labels_rgb, world_scale):
         palm = _centroid(ha)
         k = 1.0 / world_scale
         frames["grip_" + s] = make_frame(palm, palm + (tip - wrist), k, k)
+        if grip_u is not None:
+            fax = (wrist - elbow) / max(float(np.hypot(*(wrist - elbow))), 1e-6)
+            extra, note = hand_frames(m, s, wrist, fax, world_scale, grip_u, wrist_u)
+            frames.update(extra)
+            if note:
+                notes.append(note)
 
     # torso: origin midway between the shoulders, axis along the shoulder line,
     # across = how far the trunk reaches toward the back (-) and the front (+)

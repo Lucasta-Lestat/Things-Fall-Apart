@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "_doc": [
   "The canonical skeleton every race pack and every item is described against.",
   "See docs/rigging_rewrite.md. A FRAME is {o, ax, lx, ly[, ly_neg]} in pixels;",
@@ -18,8 +18,12 @@
   "forearm_r": "",
   "hand_l": "wrist seam -> fingertip",
   "hand_r": "",
-  "grip_l": "palm centre, axis along the hand; lx = ly = pack px per world px",
+  "grip_l": "where a held item's hold point goes: the front of the closed fist (a guard rests against the knuckles), axis along the palm; lx = ly = pack px per world px (packs built without the hand rig: centre of the hand label)",
   "grip_r": "",
+  "palm_l": "hand rig (section 3.6): origin at the wrist seam, forearm axis; measured with the largest circle inside the hand label: ly = the hand's half-width, lx = the distance to the knuckle line. Independent of finger spread, finger count and claws",
+  "palm_r": "",
+  "wrist_l": "hand rig: wrist seam, forearm axis; lx = ly = half the wrist's width (glove cuffs)",
+  "wrist_r": "",
   "head": "largest circle inside the head label (ears, horns, beards stick out of it); lx = ly = radius",
   "head_full": "bounding box of the whole head label",
   "foot_l": "bounding box of the foot label; lx/ly = half width/height",
@@ -29,11 +33,12 @@
  },
  "required_frames": ["torso", "back", "upperarm_l", "upperarm_r", "forearm_l", "forearm_r",
                      "hand_l", "hand_r", "grip_l", "grip_r", "head"],
+ "optional_frames": ["palm_l", "palm_r", "wrist_l", "wrist_r"],
  "bones": {
   "torso": null,
   "head": "torso",
-  "upperarm_l": "torso", "forearm_l": "upperarm_l", "hand_l": "forearm_l", "grip_l": "hand_l",
-  "upperarm_r": "torso", "forearm_r": "upperarm_r", "hand_r": "forearm_r", "grip_r": "hand_r",
+  "upperarm_l": "torso", "forearm_l": "upperarm_l", "hand_l": "forearm_l", "grip_l": "hand_l", "palm_l": "hand_l", "wrist_l": "forearm_l",
+  "upperarm_r": "torso", "forearm_r": "upperarm_r", "hand_r": "forearm_r", "grip_r": "hand_r", "palm_r": "hand_r", "wrist_r": "forearm_r",
   "leg_l": "torso", "foot_l": "leg_l",
   "leg_r": "torso", "foot_r": "leg_r"
  },
@@ -42,10 +47,16 @@
   "legs":      {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.05, "z": 4},
   "feet":      {"frame": "foot",  "fit": "rigid",   "scale": "free",    "ease": 1.15, "z": 5, "sided": true},
   "torso":     {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.06, "z": 6, "layers": 4},
-  "hands":     {"frame": "hand",  "fit": "rigid",   "scale": "free",    "ease": 1.25, "z": 19, "sided": true},
-  "off_hand":  {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "l"},
-  "main_hand": {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "r"},
+  "hands":     {"frame": "hand",  "fit": "rigid",   "scale": "free",    "ease": 1.25, "z": 19, "sided": true,
+               "pieces": {"cuff": {"frame": "wrist", "ease": 1.12}, "back": {"frame": "palm", "ease": 1.06}}},
+  "off_hand":  {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "l", "tail_z": -1, "over_z": 21},
+  "main_hand": {"frame": "grip",  "fit": "rigid",   "scale": "world",   "z": 15, "side": "r", "tail_z": -1, "over_z": 21},
   "head":      {"frame": "head",  "fit": "rigid",   "scale": "uniform", "ease": 1.12, "z": 23}
+ },
+ "hands": {
+  "_doc": "Hand poses (docs/rigging_rewrite.md 3.6). open = the painted hand; grip = the hand set's fist on the palm frame, coloured by the race skin ramp. A held item closes its hand. z: held item 15 < fist 16 < gloved hand 17 < glove back 18 < glove cuff 19.",
+  "default_set": "humanoid", "poses": ["open", "grip"],
+  "z_fist": 16, "z_glove": 17, "z_back": 18, "z_cuff": 19
  },
  "body_layers": {"body": 0, "arms_over_garments": 10, "head": 20},
  "item_slot_aliases": {

@@ -7,6 +7,22 @@
   1252
  ],
  "total_length": 50.0,
+ "grip_position": 0.75,
+ "hold": {
+  "at": 0.8128,
+  "handle": [
+   0.8068,
+   0.9224
+  ],
+  "offset": 3.17,
+  "width": 3.69,
+  "guard": true,
+  "tail": "under",
+  "layer": "through",
+  "pose": "grip",
+  "hands": 1,
+  "grip_length": 12.0
+ },
  "item_ids": [
   "longsword"
  ],
@@ -14,7 +30,7 @@
   "grip": {
    "o": [
     141.0,
-    935.75
+    1013.43
    ],
    "ax": [
     0.0,

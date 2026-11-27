@@ -90,7 +90,7 @@ A **frame** is the only geometric primitive:
 
 An origin, a unit axis, a scale along the axis, a scale across it (and optionally a different scale on the negative side, for a torso whose back and front depths differ).
 
-`Rigs/skeleton.json` lists the frame names every race shares: `torso`, `back`, `head`, `upperarm_l/r`, `forearm_l/r`, `hand_l/r`, `grip_l/r`, `foot_l/r`, and optional `leg_l/r`.
+`Rigs/skeleton.json` lists the frame names every race shares: `torso`, `back`, `head`, `upperarm_l/r`, `forearm_l/r`, `hand_l/r`, `palm_l/r`, `wrist_l/r`, `grip_l/r`, `foot_l/r`, and optional `leg_l/r`.
 
 - A **race pack** gives each frame's position on its own painting.
 - An **item pack** gives the same-named frames on its own art: where the shoulders, the sleeve or the skull sit in the item's picture.
@@ -105,9 +105,10 @@ Slots choose how frames combine:
 | torso | skinned: torso blends into upper arm and forearm across each joint | torso + arm chain | free (width and depth independently), 6 % ease across |
 | legs | skinned along the legs | torso + legs | free |
 | head | rigid | head | uniform, from skull radius, 12 % ease |
-| feet, hands | rigid, authored once and mirrored | foot / hand | free |
+| feet | rigid, authored once and mirrored | foot | free |
+| hands | the showing hand recoloured, plus rigid cuff and back pieces (section 3.6) | wrist, palm | cuff uniform; back knuckle-to-knuckle |
 | back | rigid, hangs from the trunk's rear edge | back | uniform, from shoulder span |
-| main_hand, off_hand | rigid | grip | world: keeps the item's authored world size |
+| main_hand, off_hand | rigid, under a closed fist (section 3.6) | grip | world: keeps the item's authored world size |
 
 ### 3.2 Races and variants are data
 
@@ -167,6 +168,71 @@ An item that cannot be worn says why (`race naga_male has no leg_l`) instead of 
 
 **`_l` and `_r` stay image-left and image-right.** All 52 label maps are painted that way. Every pack faces south, so `_r` is the main hand.
 
+### 3.6 Hands
+
+Added 2026-11-27 after the user asked for weapons that are "actually held in the hands rather than just sitting on top of them" and a better glove fit. Sheet: `tools/rigkit/out/hands/hands_sheet.jpg` (before and after, three races). Numbers: `python tools/rigkit/out/hands/compare_gate.py`.
+
+**What was wrong.** The hand was only pixels of `body.png`. A held item was drawn above it, so it lay on the back of an open hand. A glove was one picture stretched onto the hand's bounding box, and one picture cannot match the finger layout of another painting (gauntlets squashed to x0.43, gloves left fingertips bare).
+
+**The design in four rules.**
+
+1. **A hand has a pose.** `open` is the hand the race painting already has. `grip` is a fist. Holding anything closes that hand; so does being the second hand of a two-handed item. More poses later are more entries, not more code.
+2. **The fist is one shared greyscale painting** (`Rigs/hands/humanoid/grip.png`, made by the guide method, `tools/rigkit/gen_hands.py`). It is fitted to each race's palm frame and coloured through that race's skin ramp, so every race, variant and re-skin has a fist with no art of its own.
+3. **The fist is drawn over the item, and the item's tail goes under the body.** Palm down, a handle is under the hand and a haft runs under the forearm. So the blade comes out past the knuckles and the pommel or spear butt disappears under the wrist. No per-weapon mask is needed.
+4. **A glove is the hand that is showing, drawn again in the glove's material,** plus rigid pieces cut from the glove's art (cuff on the wrist, back-of-hand plate on the palm). The fingers are the race's own fingers, or the shared fist, recoloured. That is why a glove covers any hand in either pose with nothing tuned per race.
+
+**New frames** (measured by `derive.py` from the label map, like every other frame):
+
+| Frame | What it is |
+|---|---|
+| `palm_l/r` | Origin at the wrist seam, forearm axis. `ly` = the hand's half-width (radius of the largest circle inside the hand label, the same trick as the skull); `lx` = distance to the knuckle line. Finger spread, finger count and claws do not move it |
+| `wrist_l/r` | Wrist seam, forearm axis, `lx = ly` = half the wrist's width. Glove cuffs sit here |
+| `grip_l/r` | Re-defined: the **front of the closed fist**. A held item's hold point lands here |
+
+**New race data** (all written by `build_race`, nothing by hand): `skin` (four tone stops and four colours read off the hands: outline, shadow, mid, light) and `parts.hand_l/r` (the open hand as a list of 2 px cell runs of `body.png`). No new image files per race.
+
+**Held items** (`ingest`, main_hand / off_hand). The item's `grip` frame now sits on its hold point, not on Items.json `grip_position`. On a sword `grip_position` is on the crossguard, so ingest finds the guard in the art's width profile and puts the hold point at its back edge: the guard rests against the knuckles on any size of hand. An item with no guard (spear) is held around its grip point. `item.json` gets a `hold` block: `at`, `handle`, `width`, `offset` (world px between hold point and gameplay grip point), `tail` (`under` | `over`), `layer` (`through` | `over` for shields), `hands` (1 | 2, from Items.json `grip_style`) and, for two-handed items, a `grip2` frame.
+
+**Gloves** (`ingest --slot hands`). `item.json` gets a `hand` block: `ramp` (four colours), `cuts` (wrist and knuckle lines of the art) and `pieces` (`cuff`, `back`; each has its own frame and mesh; either may be absent). The old single-image `hand` frame is kept as the fallback.
+
+**Draw order at a hand:** item tail -1 < body 0 < sleeves 6-9 < held item 15 < fist 16 < gloved hand 17 < glove back 18 < glove cuff 19 < head 20 < items held `over` 21.
+
+**Runtime.** `RigCharacter` draws the body as three polygons on one texture (`Body`, `Hand_l`, `Hand_r`). `wear()` of a held item closes the hand: the open-hand polygon is hidden and `Fist_<side>` shown. Gloves are rebuilt in the new pose. New calls: `hand_pose(side)`, `set_hand_pose(side, pose)` (an empty fist; `""` returns to the rule), `cannot_grip(side)`, `grip_target(item, side)`; `grip(side)` also returns `pose`. Colour goes through one small shader, `Characters/rig2/rig_ramp.gdshader`.
+
+**Why this one.** Three designs were weighed.
+
+| Option | Verdict |
+|---|---|
+| Squash each race's own painted hand into a fist (no art at all) | Rejected as the base. A prototype read as a fist but was lumpy on the orc, and plate fingers lose all detail. Its ideas kept: palm circle, item under the hand, handle measured from the art |
+| A painted fist per race | Rejected as the default: about 50 races times 4 generations, and every new race or new-build variant needs one more. Kept as an override: a race can ship its own hand set (`"hand_set"` in `race.json`) |
+| One shared fist coloured per race (chosen) | A new race needs nothing. A new glove needs one picture. The cost is that claws, fur and scales do not show on the closed hand |
+| Stretching a glove picture to the hand's silhouette | Rejected: unpredictable, and it cannot be gated by a simple rule |
+| Splitting fingers over and under the handle | Not needed: seen from above with the palm down, nothing of the hand is under the handle |
+
+**Results** (gate over all 55 packs; glove cover is 1.00 by construction, because the glove is the hand recoloured, so spill and stretch are the informative columns):
+
+| | Before | After, open | After, gripping |
+|---|---|---|---|
+| leather_glove cover (worst / median) | 0.74 / 0.87 | 1.00 / 1.00 | 1.00 / 1.00 |
+| leather_glove spill (worst) | 0.23 | 0.00 | 0.00 |
+| plate_gauntlet cover (worst / median) | 0.81 / 0.91 | 1.00 / 1.00 | 1.00 / 1.00 |
+| plate_gauntlet stretch | 0.43 to 1.08 | 0.83 to 1.59 | 0.75 |
+| plate_gauntlet WARN rows | 32 of 110 | 0 | 0 |
+| Handle inside the hand (longsword / dagger / spear, median) | 0 | | 1.00 / 1.00 / 0.97 |
+
+**Known limits.**
+
+- **Bind pose only.** A two-handed grip cannot be shown in a T-pose. The data (`hold.hands`, `grip2`) and `grip_target()` exist and are untested beyond the measurement; no two-handed item pack exists yet. Phase 2 arm IK has to bring the second hand to `grip2`.
+- **The shader is not pixel-checked.** Headless Godot does not render. The parity test checks geometry, layering, the pose rule and that the material is set; the colour maths is mirrored in `core.ramp_colour` and has only been looked at offline.
+- **Race character is lost on the closed hand**: the shared fist is smooth skin in the race's colours. Scaled, furred and clawed races get a plain fist.
+- **The fist is softer than the paintings** at 4x zoom (a 135 px greyscale picture, re-inked at the rim). At game size it reads cleanly.
+- **Gauntlet fingers are recoloured fingers**, not articulated plates. The gauntlet's identity is its cuff and knuckle plate.
+- **The glove's wrist and knuckle lines are pinned by eye** for the two existing gloves (`cuts` in `ingest.LEGACY`); the automatic measurement was off on both. That is per item, never per race.
+- **The spear's shaft art is as wide as a small fist** (7.1 world px; 18 packs WARN). An item-art problem the gate now lists.
+- **Hold point and hitbox.** The hold point is 3 to 4 world px from Items.json `grip_position` (`hold.offset`). Phase 3 must add it back when it places the `WeaponShape` holder, or correct `grip_position`, which would change melee reach and is the user's call.
+- **A tail drawn under the body** is also under the torso once arms cross it. Fine in bind pose; phase 2 should move the tail to just under its own arm.
+- The automatic gate cannot say whether a hand looks good. Look at the sheet.
+
 ## 4. Art spec
 
 ### 4.1 The spec
@@ -188,7 +254,7 @@ An item that cannot be worn says why (`race naga_male has no leg_l`) instead of 
 | torso | The garment as seen from straight above on a T-pose body: collar hole in the middle, sleeves out to the sides, back and front both visible around the collar |
 | head | From straight above, centred on the skull |
 | feet | One foot, toes toward the bottom |
-| hands | One hand, fingers toward the right |
+| hands | One open hand from above, fingers toward the right. Only the cuff and the back of the hand are used as art; the fingers give the colour (section 3.6) |
 | back | Hanging from the top edge; only the part that shows past the shoulders matters |
 | held | Upright, business end at the top (unchanged) |
 
@@ -279,13 +345,29 @@ Open after the install:
 
 - **Size match needs a decision.** The pack is scaled so fingertip span equals the old orc's. The head then comes out about 27% smaller in game than the old one, because the old painting's head was oversized by its camera. Matching shoulders, arm length or head instead gives a different scale each.
 - **Boots and sabatons draw over the lower edge of the belly**: feet items sit above the body layer. Needs the trunk redrawn over feet items or the feet slot clipped to the foot label.
-- **Gauntlets squash (x0.43) and gloves leave fingertips bare** on the spread-finger hands.
+- **Gauntlets squash (x0.43) and gloves leave fingertips bare** on the spread-finger hands. Fixed by the hand rig, section 3.6.
 - **The upper-arm frame tilts about 5.6 degrees** because the armpit seam's centre sits below the arm's centre line.
 - **Front-view item art is now the main visual problem** (batches B and C): `great_helm` leaves jaw, tusks and ears out; shirt, vest and robes stretch x1.7 to x1.9; the breastplate collar reads as a wide ring.
 - **Variant inheritance leaks frames**: a new-build variant that uses `inherits` keeps the parent's leg frames (section 3.2 recipe). Not fixed; the pack avoids it by being standalone.
 - The parity fixture has no vertex samples for `orc/tilt15` yet.
 
 *Second race.* Human and halfling tilted guides now pass the depth band (0.257 and 0.276), and a goblin entry was added and painted (`tools/rigkit/out/plan/goblin/tilt15_pilot_*`, 4 of 4 pass the gate, IoU 0.94-0.99, depth/span 0.277 against the orc's 0.270). Camera matches the orc. Style holds in 2 of 4 (best `tilt15_pilot_1`). Open: the goblin came out muscular, not wiry; its big head and ears cover most of the chest and shoulder tops, so torso items will have little visible area; eye sockets are large dark hollows. The halfling's face strip is very thin under the fringe, so its first painting is a risk. Guides side by side: `tools/rigkit/out/plan/tilt15_guides_sheet.jpg`.
+
+**Pilot 6 (2026-11-27, 28 generations; three tracks, each independently reviewed).** After seeing the installed orc the user said the head was too small, agreed that front-view item art is the main visual problem, and asked for the hands to be rigged properly (section 3.6).
+
+*Head size.* `gen_plan.py` has a `head_scale` knob that scales the whole tilted head together, and a `headsize` command that reads the legacy pack's head frame. **Convention: a repainted race keeps its legacy in-game head size.** The orc was repainted with `head_scale=1.362` and installed as `orc/tilt15_head` (best of four: `tilt15_head_3`; one of four matched the house style). Head radius in world px: default 14.11, tilt15 10.34, tilt15_head 14.12. Fit gate same as `orc/tilt15`. Sheet: `tools/rigkit/out/plan/orc/tilt15_head_rig_sheet.jpg`. Cost: visible trunk area drops 19%, to about the old orc's; guide depth/span is 0.290 against a 0.30 ceiling. The tracked orc `guide_t15*` files are now the big-head guide; `orc/tilt15` is reproducible from its `tilt15_final.guide*` snapshot.
+
+*Top-down item art.* `tools/rigkit/gen_item.py` renders an item shell on the same proxy and camera as the races (torso garment: trunk plus upper arms with a keyed neck hole; helm: shell round the head), paints over it on a blue ground, and takes the item's frames from the proxy's own anatomy, not from the art. Three items were piloted as new packs beside the originals: `peasants_stained_shirt_td`, `breastplate_td`, `great_helm_td`. Sheet: `tools/rigkit/out/items_td/pilot_sheet.jpg`.
+
+| Across all 55 packs | Old (ok / WARN / FAIL) | `_td` |
+|---|---|---|
+| Shirt | 18 / 34 / 3, median stretch 1.87 | 52 / 2 / 1, median stretch 1.07 |
+| Breastplate | 42 / 12 / 1 | 50 / 4 / 1 |
+| Great helm | 55 / 0 / 0 | 55 / 0 / 0 |
+
+Open: ears stick out of the great helm on big-eared races (needs a rig rule: a full helm hides head pixels outside it); the `_td` breastplate came out bluer and brighter than the original and reads as a muscle cuirass with shoulder caps, so it is a different-looking item; plate needed a corrective round (1 of 4 clean); the shell copies the orc proxy's build; robes, long sleeves and layering are untested; `human/default` has an abnormal torso frame that loses cover. The items table in 4.1 changes for worn gear: painted over the item guide at the race camera, not "from straight above".
+
+*Hands.* See section 3.6. Sheets: `tools/rigkit/out/hands/hands_sheet*.jpg`. Glove and gauntlet spill fell from 0.23 / 0.17 worst case to 0.00 / 0.01, gauntlet WARN rows from 32 of 110 to 0, and held handles sit inside the fist (median share 1.00 sword and dagger, 0.97 spear). The reviewer found and fixed a shader bug that would have drawn fists and gloves 35-50% too dark in engine. Not yet seen in engine: a full character render with the new hand path.
 
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 
@@ -317,6 +399,10 @@ Art batches A to C are independent of phases 2 to 5 and can run in parallel once
 | stretch | along-to-across distortion applied to the art | art that fails the spec |
 | clipped | the item ran off the canvas | cut-off art |
 | frames | the race has every frame the item needs | anchor coverage |
+| gripped | share of a held item's handle hidden inside the closed hand | a weapon lying on the hand |
+| visible | share of a held item that still shows | a dagger swallowed by a big fist |
+
+Gloves get one row per side per hand pose (open, grip).
 
 It exits 1 on any FAIL. Thresholds are one table in `check.py`.
 
@@ -359,6 +445,8 @@ python -m tools.rigkit.ingest <id> <art.png> --slot <slot>
 python -m tools.rigkit.ingest --legacy          # the starter catalogue
 python -m tools.rigkit.check [--races a,b] [--items x,y] [--list]
 python -m tools.rigkit.sheet --out <dir> [--frames]
+python -m tools.rigkit.gen_hands guide|gen|check|install   # the shared fist (section 3.6)
+python -m tools.rigkit.hands_sheet              # hand cases, arm view and zoom, before/after
 python -m tools.rigkit.export_parity            # refresh the Godot test fixture
 godot --headless --path . res://tests/rig2_parity_test.tscn
 ```

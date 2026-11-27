@@ -7,6 +7,22 @@
   1333
  ],
  "total_length": 95.0,
+ "grip_position": 0.75,
+ "hold": {
+  "at": 0.7075,
+  "handle": [
+   0.5915,
+   0.9069
+  ],
+  "offset": -4.0,
+  "width": 7.06,
+  "guard": false,
+  "tail": "under",
+  "layer": "through",
+  "pose": "grip",
+  "hands": 1,
+  "grip_length": 30.0
+ },
  "item_ids": [
   "spear"
  ],
@@ -14,7 +30,7 @@
   "grip": {
    "o": [
     670.0,
-    972.5
+    918.19
    ],
    "ax": [
     0.0,

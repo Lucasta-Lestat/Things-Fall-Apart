@@ -12,7 +12,9 @@ Authoring conventions the measurements assume (docs/rigging_rewrite.md, art spec
   torso      T-pose, collar up, sleeves out to the sides, left/right symmetric
   head       seen from above, centred on the skull
   feet       ONE foot, toes toward the bottom of the image
-  hands      ONE hand, fingers toward the right of the image
+  hands      ONE open hand seen from above, fingers toward the right of the image (or
+             pass the axis). Only the cuff and the back of the hand are used as art; the
+             fingers give the colour ramp (docs/rigging_rewrite.md 3.6)
   back       hangs from the top edge (the neck end)
   held       upright, business end at the top
 """
@@ -152,6 +154,143 @@ def measure_hand(alpha, axis=(1.0, 0.0)):
     return {"hand": make_frame(wrist, ax=ax, lx=along, ly=rad)}
 
 
+HAND_PIECE_CELLS = 16
+HOLD_HALF_FIST = 4.0      # world px: half a typical fist, for items held around their grip point
+GUARD_TUCK = 0.3          # world px the back of a guard tucks under the knuckles
+
+
+def measure_glove(rgba, axis=(1.0, 0.0), wrist=None, knuckle=None, palm_half=None, want=("cuff", "back")):
+    """The hand-rig description of a glove (docs 3.6): its colour ramp and up to two rigid
+    pieces cut from the art.
+
+      cuff   everything behind the wrist line; sits on the race's wrist frame (uniform)
+      back   wrist line -> knuckle line, as wide as the palm; sits on the palm frame,
+             knuckles on knuckles and edge on edge
+
+    The fingers are not used: on a race they are that race's own fingers (or the shared
+    fist) drawn through `ramp`, which is why a glove covers any hand in any pose.
+    The art's cut lines are found from its alpha: the knuckle line is where the hand
+    splits into three or more fingers, the wrist is the thinnest section behind it.
+    `wrist`, `knuckle` (fractions of the art's length from the cuff end) and `palm_half`
+    (px) override the measurement; ingest keeps them when they are pinned in item.json.
+    """
+    alpha = rgba[:, :, 3]
+    op = alpha > 40
+    ax = np.asarray(axis, float)
+    perp = np.array([-ax[1], ax[0]])
+    ys, xs = np.nonzero(op)
+    pts = np.stack([xs, ys], axis=1).astype(float)
+    u = pts @ ax
+    v = pts @ perp
+    u0, length = float(u.min()), float(u.max() - u.min() + 1)
+    n = int(length)
+    ui = np.clip((u - u0).astype(int), 0, n - 1)
+    lo = np.full(n, np.inf)
+    hi = np.full(n, -np.inf)
+    np.minimum.at(lo, ui, v)
+    np.maximum.at(hi, ui, v)
+    count = np.bincount(ui, minlength=n).astype(float)
+    runs = np.zeros(n, int)
+    for i in range(n):
+        vv = np.sort(v[ui == i])
+        runs[i] = 1 + int((np.diff(vv) > 3.0).sum()) if len(vv) else 0
+    measured = {}
+    if knuckle is None:
+        split = runs >= 3
+        k = n - 1
+        for i in range(int(0.2 * n), n - 4):
+            if split[i:i + max(4, n // 40)].all():
+                k = i
+                break
+        knuckle = k / float(n)
+        measured["knuckle"] = round(knuckle, 3)
+    ki = int(knuckle * n)
+    if wrist is None:
+        th = _smooth(count, n * 0.04)
+        a0 = int(0.25 * ki)
+        wi = a0 + int(np.argmin(th[a0:max(a0 + 1, int(0.9 * ki))]))
+        if th[int(0.03 * n):wi].max(initial=0.0) < 1.15 * th[wi]:
+            wi = int(0.03 * n)          # nothing flares behind it: the art starts at the wrist
+        wrist = wi / float(n)
+        measured["wrist"] = round(wrist, 3)
+    wi = int(wrist * n)
+    vc = float((lo[wi] + hi[wi]) / 2.0)
+    wrist_half = float(hi[wi] - lo[wi] + 1) / 2.0
+    if palm_half is None:
+        band = slice(wi + (ki - wi) // 2, ki + 1)
+        palm_half = float(np.median(count[band])) / 2.0
+        measured["palm_half"] = round(palm_half, 1)
+    o = ax * (u0 + wi) + perp * vc
+    pieces = []
+    uu = (np.indices(alpha.shape)[1] * ax[0] + np.indices(alpha.shape)[0] * ax[1]) - u0
+    vv = (np.indices(alpha.shape)[1] * perp[0] + np.indices(alpha.shape)[0] * perp[1])
+    overlap = 0.03 * n
+    if wi > 0.08 * n and "cuff" in want:
+        m = op & (uu <= wi + overlap)
+        pieces.append({"name": "cuff", "frame": "wrist",
+                       "frames": {"wrist": make_frame(o, ax=ax, lx=wrist_half, ly=wrist_half)},
+                       "mesh": core.mesh_cells(np.where(m, alpha, 0), HAND_PIECE_CELLS)})
+    if ki - wi > 0.1 * n and "back" in want:
+        m = op & (uu >= wi - overlap) & (uu <= ki) & (np.abs(vv - vc) <= palm_half * 1.1)
+        pieces.append({"name": "back", "frame": "palm",
+                       "frames": {"palm": make_frame(o, ax=ax, lx=ki - wi, ly=palm_half)},
+                       "mesh": core.mesh_cells(np.where(m, alpha, 0), HAND_PIECE_CELLS)})
+    from .derive import colour_ramp
+    sel = (alpha > 230) & (uu >= wi)
+    ramp = colour_ramp(rgba[:, :, :3], sel)["ramp"]
+    hand = {"ramp": ramp, "cuts": {"wrist": round(wrist, 3), "knuckle": round(knuckle, 3),
+                                   "palm_half": round(palm_half, 1)},
+            "pieces": pieces}
+    return hand, measured
+
+
+def measure_hold(alpha, total_length, grip_position, grip_length, two_handed=False):
+    """Where a fist closes on a held item (upright art, tip at the top).
+
+    The hold point is what lands on the FRONT of the fist (the race's grip frame).
+    Items.json `grip_position` is the gameplay grip point; on a sword it sits on the
+    crossguard. The fist belongs on the HANDLE, behind the guard (the widest rows near
+    the grip point), so the hold point is the back of the guard: the guard then rests
+    against the knuckles on any size of hand. An item with no guard (spear, staff) is
+    held around the grip point, so its hold point is half a nominal fist (HOLD_HALF_FIST
+    world px) toward the tip. Returns the `hold` block; `at` is the hold point as a
+    fraction of the length from the tip, `offset` how far that is behind the gameplay
+    grip point in world px (negative = toward the tip; ProceduralCharacter's holder
+    must account for it in phase 3)."""
+    x0, y0, x1, y1 = _bbox(alpha)
+    n = int(y1 - y0)
+    w = _smooth((alpha[int(y0):int(y1)] > 40).sum(axis=1).astype(float), max(3, n * 0.01))
+    g = int(np.clip(grip_position * n, 0, n - 1))
+    behind = w[g + int(0.03 * n):]
+    med = float(np.percentile(behind, 10)) if len(behind) else float(w[g])   # the handle, not the pommel
+    a, b = max(g - int(0.08 * n), 0), min(g + int(0.08 * n), n - 1)
+    peak = a + int(np.argmax(w[a:b + 1]))
+    start = end = None
+    if w[peak] > 1.6 * med:
+        i = peak
+        while i < n - 1 and w[i] > 1.25 * med:
+            i += 1
+        start = i
+        j = start + max(2, int(0.02 * n))
+        while j < n - 1 and w[j] <= 1.4 * med:
+            j += 1
+        end = j
+    if start is None or end - start < 0.03 * n:
+        half = 0.5 * grip_length / total_length * n
+        start, end = int(max(g - half, 0)), int(min(g + half, n - 1))
+        at = max(g - HOLD_HALF_FIST * n / float(total_length), 0.0)
+        guard = False
+    else:
+        at = start + GUARD_TUCK * n / float(total_length)
+        guard = True
+    k = n / float(total_length)
+    hold = {"at": round(at / n, 4), "handle": [round(start / n, 4), round(end / n, 4)],
+            "offset": round((at - g) / k, 2), "width": round(float(np.median(w[start:end + 1])) / k, 2),
+            "guard": guard, "tail": "under", "layer": "through", "pose": "grip",
+            "hands": 2 if two_handed else 1}
+    return hold
+
+
 def measure_back(alpha, spread=1.0, peek=0.3):
     """`spread` = art width in shoulder spans; `peek` = share of the height that shows
     beyond the shoulder line toward the back."""
@@ -160,12 +299,19 @@ def measure_back(alpha, spread=1.0, peek=0.3):
     return {"back": make_frame(((x0 + x1) / 2.0, y0 + peek * (y1 - y0)), ax=(1.0, 0.0), lx=half, ly=half)}
 
 
-def measure_held(alpha, total_length, grip_position):
-    """Upright art, tip at the top. lx = art px per world px."""
+def measure_held(alpha, total_length, grip_position, hold=None):
+    """Upright art, tip at the top. lx = art px per world px. The grip frame's origin is
+    the HOLD point (the middle of the handle, see measure_hold), which is what lands in
+    the middle of the fist. `grip2` is where a second hand closes on a two-handed item."""
     x0, y0, x1, y1 = _bbox(alpha)
     k = (y1 - y0) / float(total_length)
-    o = ((x0 + x1) / 2.0, y0 + grip_position * (y1 - y0))
-    return {"grip": make_frame(o, ax=(0.0, -1.0), lx=k, ly=k)}
+    at = hold["at"] if hold else grip_position
+    o = ((x0 + x1) / 2.0, y0 + at * (y1 - y0))
+    out = {"grip": make_frame(o, ax=(0.0, -1.0), lx=k, ly=k)}
+    if hold and hold.get("hands") == 2:
+        gap = max(9.0, 0.5 * float(hold.get("grip_length", 18.0)))
+        out["grip2"] = make_frame((o[0], min(o[1] + gap * k, y1 - 1)), ax=(0.0, -1.0), lx=k, ly=k)
+    return out
 
 
 def ingest(item_id, art_path, slot, **opt):
@@ -180,7 +326,16 @@ def ingest(item_id, art_path, slot, **opt):
     _, alpha = load_alpha(dst)
     data = {"id": item_id, "slot": slot, "art": "art.png",
             "size": [int(alpha.shape[1]), int(alpha.shape[0])]}
-    if slot == "torso":
+    if opt.get("frames"):
+        # frames supplied by the caller (gen_item: the guide proxy's own anatomy), not measured
+        frames = {k: dict(v) for k, v in opt["frames"].items()}
+        data["frames_from"] = "given"
+        if slot == "torso":
+            data["sleeve"] = opt.get("sleeve") or "sleeveless"
+            data["layer"] = int(opt.get("layer") or 1)
+        elif slot == "hands":
+            data["authored_side"] = "r"
+    elif slot == "torso":
         frames, kind = measure_torso(alpha, opt.get("sleeve"))
         data["sleeve"] = kind
         data["layer"] = int(opt.get("layer") or 1)
@@ -194,16 +349,40 @@ def ingest(item_id, art_path, slot, **opt):
         axis = opt.get("axis") or (1.0, 0.0)
         frames = measure_hand(alpha, axis)
         data["authored_side"] = "r"
+        cuts = dict(opt.get("cuts") or {})
+        if os.path.exists(os.path.join(out, "item.json")):
+            prev = core.load_json(os.path.join(out, "item.json"))
+            if "cuts" in prev.get("pinned", []):
+                cuts = dict(prev["hand"]["cuts"])
+        rgba = np.array(Image.open(dst).convert("RGBA"))
+        data["hand"], measured = measure_glove(rgba, axis, cuts.get("wrist"), cuts.get("knuckle"),
+                                               cuts.get("palm_half"),
+                                               tuple(opt["pieces"]) if opt.get("pieces") is not None
+                                               else ("cuff", "back"))
+        data["hand"]["axis"] = [float(axis[0]), float(axis[1])]
+        if opt.get("fingers"):
+            data["hand"]["fingers"] = opt["fingers"]
     elif slot == "back":
         frames = measure_back(alpha, float(opt.get("spread") or 1.0), float(opt.get("peek") or 0.3))
     elif slot in ("main_hand", "off_hand"):
-        frames = measure_held(alpha, float(opt["total_length"]), float(opt.get("grip_position") or 0.75))
+        gp = float(opt.get("grip_position") or 0.75)
+        hold = measure_hold(alpha, float(opt["total_length"]), gp, float(opt.get("grip_length") or 12.0),
+                            opt.get("grip_style") == "two_handed")
+        hold["grip_length"] = float(opt.get("grip_length") or 12.0)
+        if opt.get("hold"):
+            hold.update(opt["hold"])
+        frames = measure_held(alpha, float(opt["total_length"]), gp, hold)
         data["total_length"] = float(opt["total_length"])
+        data["grip_position"] = gp
+        data["hold"] = hold
     else:
         raise SystemExit("slot %r has no ingest rule yet" % slot)
     for k in ("ease", "scale", "item_ids"):
         if opt.get(k) is not None:
             data[k] = opt[k]
+    if opt.get("meta"):                 # extra provenance keys, never geometry
+        for k, v in opt["meta"].items():
+            data.setdefault(k, v)
     # keep hand-pinned frames from a previous run
     old_path = os.path.join(out, "item.json")
     if os.path.exists(old_path):
@@ -238,9 +417,13 @@ LEGACY = {
     "leather_boot": dict(art="gloves and boots/isolated/leather boot.png", slot="feet",
                          item_ids=["leather_boots"]),
     "plate_sabaton": dict(art="gloves and boots/isolated/plate sabaton.png", slot="feet"),
-    "leather_glove": dict(art="gloves and boots/isolated/leather glove.png", slot="hands"),
+    # cuts: the wrist and knuckle lines of the art, set by eye (the automatic ones are
+    # off on these two: splayed fingers split late, and a thumb widens the palm)
+    # leather_glove is soft and cuffless: colour only, no rigid pieces
+    "leather_glove": dict(art="gloves and boots/isolated/leather glove.png", slot="hands", pieces=(),
+                          cuts=dict(wrist=0.03, knuckle=0.47, palm_half=105.0)),
     "plate_gauntlet": dict(art="gloves and boots/isolated/plate gauntlet.png", slot="hands",
-                           axis=(0.0, -1.0)),
+                           axis=(0.0, -1.0), cuts=dict(wrist=0.47, knuckle=0.73, palm_half=115.0)),
     "red_cape": dict(art="item art/red_cape.png", slot="back", spread=1.5, peek=0.30,
                      item_ids=["red_travel_cape"]),
     "adventurer_pack": dict(art="item art/adventurer_pack.png", slot="back", spread=0.95, peek=0.35,
@@ -259,11 +442,16 @@ def ingest_legacy(src, only=None):
         spec = dict(spec)
         art = spec.pop("art")
         art = os.path.join(core.ROOT, art[6:]) if art.startswith("res://") else os.path.join(src, art)
+        own = os.path.join(core.RIGS, "items", item_id, "art.png")
+        if not os.path.exists(art) and os.path.exists(own):
+            art = own                   # re-ingest an installed pack from its own art
         slot = spec.pop("slot")
         game = spec.pop("game_item", None)
         if game:
             spec["total_length"] = items[game]["total_length"]
             spec["grip_position"] = items[game]["grip_position"]
+            spec["grip_length"] = items[game].get("grip_length", 12.0)
+            spec["grip_style"] = items[game].get("grip_style", "")
             spec["item_ids"] = [game]
         d = ingest(item_id, art, slot, **spec)
         print("[ok ] %-24s %-9s frames: %s%s" % (item_id, slot, ", ".join(d["frames"]),
@@ -282,6 +470,13 @@ def main(argv=None):
     ap.add_argument("--peek", type=float)
     ap.add_argument("--total-length", type=float, dest="total_length")
     ap.add_argument("--grip-position", type=float, dest="grip_position")
+    ap.add_argument("--grip-length", type=float, dest="grip_length")
+    ap.add_argument("--grip-style", dest="grip_style", help="two_handed adds the grip2 frame")
+    ap.add_argument("--wrist", type=float, help="hands: wrist line, fraction of the art's length from the cuff end")
+    ap.add_argument("--knuckle", type=float, help="hands: knuckle line, same units")
+    ap.add_argument("--pieces", help="hands: rigid pieces to cut from the art: cuff,back (default) or none")
+    ap.add_argument("--frames", help="JSON file holding the item's frames ({name: frame}); skips measuring")
+    ap.add_argument("--ease", type=float)
     ap.add_argument("--legacy", action="store_true")
     ap.add_argument("--src", default=os.environ.get("RIG_LEGACY_SRC", DEFAULT_SRC))
     a = ap.parse_args(argv)
@@ -291,6 +486,16 @@ def main(argv=None):
     if not (a.id and a.art and a.slot):
         ap.error("need <id> <art.png> --slot, or --legacy")
     opt = {k: v for k, v in vars(a).items() if k not in ("id", "art", "slot", "legacy", "src")}
+    cuts = {k: opt.pop(k) for k in ("wrist", "knuckle") if opt.get(k) is not None}
+    opt.pop("wrist", None)
+    opt.pop("knuckle", None)
+    if cuts:
+        opt["cuts"] = cuts
+    if opt.get("pieces") is not None:
+        opt["pieces"] = [x for x in opt["pieces"].split(",") if x and x != "none"]
+    if opt.get("frames"):
+        opt["frames"] = core.load_json(opt["frames"])
+        opt["frames"] = opt["frames"].get("frames", opt["frames"])
     d = ingest(a.id, a.art, a.slot, **opt)
     print("wrote Rigs/items/%s  frames: %s" % (a.id, ", ".join(d["frames"])))
     return 0

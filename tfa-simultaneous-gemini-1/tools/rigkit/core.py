@@ -345,3 +345,200 @@ def missing_frames(item, skel, race):
             if t not in race["frames"]:
                 out.append(t)
     return out
+
+
+# ---------------------------------------------------------------- hands (docs 3.6)
+#
+# A hand has a POSE. "open" is the hand in the race painting; "grip" is the shared
+# fist of the race's hand set (Rigs/hands/<set>), fitted to the race's palm frame and
+# coloured through the race's skin ramp. Holding anything closes that hand: the open
+# hand's cells are hidden, the fist is drawn OVER the item, and whatever of the item
+# lies behind its hold point is drawn under the body (palm down, a haft runs under
+# the forearm). A glove is the showing hand drawn again through the glove's own
+# colour ramp, plus rigid cuff / back-of-hand pieces cut from the glove's art.
+
+TAIL_BACK = 2.0          # world px behind the hold point where a held item's tail starts
+PART_OVERLAP = 0.5       # px each cut-out quad is grown by, so neighbours leave no crack
+
+
+def hand_set(name="humanoid"):
+    """The hand set's data (with "_dir"), or None when it is not installed."""
+    d = os.path.join(RIGS, "hands", name)
+    p = os.path.join(d, "hand.json")
+    if not os.path.exists(p):
+        return None
+    data = load_json(p)
+    data["_dir"] = d
+    return data
+
+
+def race_hand_set(race, skel):
+    return hand_set(race.get("hand_set", skel.get("hands", {}).get("default_set", "humanoid")))
+
+
+def hand_rig_ok(race, side):
+    """True when this race side can show hand poses (built with the hand rig)."""
+    return ("palm_" + side in race["frames"] and "wrist_" + side in race["frames"]
+            and "hand_" + side in race.get("parts", {}) and "skin" in race)
+
+
+def fit_frame(fi, fr, pts, ease=1.0, flip=False, uniform=""):
+    """Map points from frame fi onto frame fr. `uniform` = "lx" or "ly" uses ONE scale,
+    read off that axis (no distortion); "" scales the two axes independently."""
+    g = dict(fr)
+    if uniform == "lx":
+        k = float(fr["lx"]) / float(fi["lx"])
+        g["ly"] = float(fi["ly"]) * k
+        g["ly_neg"] = float(fi.get("ly_neg", fi["ly"])) * k
+    elif uniform == "ly":
+        k = float(fr["ly"]) / float(fi["ly"])
+        g["lx"] = float(fi["lx"]) * k
+        g["ly_neg"] = float(fi.get("ly_neg", fi["ly"])) * k
+    U, V = frame_local(fi, pts)
+    return frame_world(g, U, -V if flip else V, ease, ease)
+
+
+def pose_palm(race, hs, side, pose):
+    """The palm frame a pose shows on this race side. Open: the race's own. Grip: the
+    same origin, axis and half-width, with the knuckle line where the fist's is."""
+    f = dict(race["frames"]["palm_" + side])
+    if pose == "grip" and hs is not None:
+        fp = hs["poses"]["grip"]["frames"]["palm"]
+        f["lx"] = float(fp["lx"]) * float(f["ly"]) / float(fp["ly"])
+    return f
+
+
+def fist_points(race, hs, side, pts):
+    """The hand set's fist vertices on this race side (uniform, by the half-width)."""
+    fp = hs["poses"]["grip"]["frames"]["palm"]
+    return fit_frame(fp, race["frames"]["palm_" + side], pts, 1.0, side != hs.get("authored_side", "r"), "ly")
+
+
+def glove_piece_points(piece, skel, race, hs, side, pose, pts, authored_side="r"):
+    """A glove piece's vertices on this race side in this pose. The cuff rides the wrist
+    frame at one scale; the back of the hand maps wrist to wrist, knuckles to knuckles
+    and edge to edge on the pose's palm frame."""
+    spec = skel["slots"]["hands"]["pieces"][piece["name"]]
+    fi = piece["frames"][piece["frame"]]
+    flip = side != authored_side
+    if piece["frame"] == "wrist":
+        return fit_frame(fi, race["frames"]["wrist_" + side], pts, float(spec.get("ease", 1.0)), flip, "lx")
+    return fit_frame(fi, pose_palm(race, hs, side, pose), pts, float(spec.get("ease", 1.0)), flip, "")
+
+
+def ramp_colour(lum, stops, ramp):
+    """Luminance (0..1, any shape) -> RGB 0..1 through a four-stop ramp: `stops` are the
+    source's outline/shadow/mid/light luminances, `ramp` the colours they become.
+    Mirrored by Characters/rig2/rig_ramp.gdshader."""
+    lum = np.asarray(lum, float)
+    ramp = np.asarray(ramp, float)
+    out = np.zeros(lum.shape + (3,))
+    out[...] = ramp[0]
+    for i in range(3):
+        t = np.clip((lum - stops[i]) / max(stops[i + 1] - stops[i], 1e-4), 0.0, 1.0)
+        seg = ramp[i] + (ramp[i + 1] - ramp[i]) * t[..., None]
+        out = np.where((lum >= stops[i])[..., None], seg, out)
+    return out
+
+
+def part_quads(part, overlap=PART_OVERLAP):
+    """A stored cut-out as quads [(x0, y0, x1, y1)], one per run, in pack px."""
+    s = float(part["step"])
+    return [(i0 * s - overlap, j * s - overlap, i1 * s + overlap, (j + 1) * s + overlap)
+            for j, i0, i1 in part["runs"]]
+
+
+def part_bbox(part):
+    s = float(part["step"])
+    runs = part["runs"]
+    return (min(r[1] for r in runs) * s, min(r[0] for r in runs) * s,
+            max(r[2] for r in runs) * s, (max(r[0] for r in runs) + 1) * s)
+
+
+def rest_quads(size, parts, overlap=PART_OVERLAP):
+    """The body with the given cut-outs removed, as quads. Whole-height slabs between
+    the cut-outs' column ranges, slabs above and below each, and the gaps between the
+    runs inside. Returns None when two cut-outs share columns (the body is then drawn
+    whole and no hand can be hidden)."""
+    w, h = float(size[0]), float(size[1])
+    boxes = sorted((part_bbox(p), p) for p in parts)
+    out = []
+    x = 0.0
+    for (bx0, by0, bx1, by1), p in boxes:
+        if bx0 < x:
+            return None
+        if bx0 > x:
+            out.append((x - overlap, -overlap, bx0 + overlap, h + overlap))
+        bx1 = min(bx1, w)
+        if by0 > 0:
+            out.append((bx0 - overlap, -overlap, bx1 + overlap, by0 + overlap))
+        if by1 < h:
+            out.append((bx0 - overlap, by1 - overlap, bx1 + overlap, h + overlap))
+        s = float(p["step"])
+        rows = {}
+        for j, i0, i1 in p["runs"]:
+            rows.setdefault(j, []).append((i0, i1))
+        j = int(round(by0 / s))
+        while j * s < by1:
+            cur = bx0
+            for i0, i1 in sorted(rows.get(j, [])):
+                if i0 * s > cur:
+                    out.append((cur - overlap, j * s - overlap, i0 * s + overlap, (j + 1) * s + overlap))
+                cur = i1 * s
+            if cur < bx1:
+                out.append((cur - overlap, j * s - overlap, bx1 + overlap, (j + 1) * s + overlap))
+            j += 1
+        x = bx1
+    if x < w:
+        out.append((x - overlap, -overlap, w + overlap, h + overlap))
+    return out
+
+
+def held_tail(item, mesh):
+    """Per mesh cell: True when the cell lies well behind the item's hold point (its
+    `grip` frame origin, which sits at the front of the fist), i.e. on the pommel/butt
+    side. Those cells are drawn under the body when the item's hold says tail "under".
+    The cut is TAIL_BACK world px behind the hold point, so it is hidden by the fist."""
+    f = item["frames"]["grip"]
+    x0, y0, step = mesh["x0"], mesh["y0"], mesh["step"]
+    c = np.array([(x0 + (i + 0.5) * step, y0 + (j + 0.5) * step) for i, j in mesh["cells"]], float)
+    return ((c - np.asarray(f["o"], float)) @ np.asarray(f["ax"], float)) < -TAIL_BACK * float(f["lx"])
+
+
+def held_layers(item, skel, race, side):
+    """How a held item is layered on this race side: (front z, tail z or None).
+    tail z None = the item is drawn in one piece."""
+    slot = skel["slots"][item["slot"]]
+    hold = item.get("hold", {})
+    if not hand_rig_ok(race, side):
+        return slot["z"], None
+    if hold.get("layer") == "over":
+        return slot.get("over_z", slot["z"]), None
+    if hold.get("tail", "under") == "under" and "hold" in item:
+        return slot["z"], slot.get("tail_z", slot["z"])
+    return slot["z"], None
+
+
+def hand_poses(items, skel, race):
+    """{"l": pose, "r": pose} for a race wearing `items` (loaded item dicts): a hand is
+    "grip" when a held item occupies it, or is the support hand of a two-handed item."""
+    poses = {"l": "open", "r": "open"}
+    for item in items:
+        slot = skel["slots"][item["slot"]]
+        if item["slot"] in ("main_hand", "off_hand"):
+            poses[slot["side"]] = item.get("hold", {}).get("pose", "grip")
+            if int(item.get("hold", {}).get("hands", 1)) == 2:
+                poses["l" if slot["side"] == "r" else "r"] = "grip"
+    return {s: (p if hand_rig_ok(race, s) else "open") for s, p in poses.items()}
+
+
+def glove_cut(hs):
+    """Art x (px) left of which a GLOVED fist is not drawn: just behind the wrist line."""
+    fp = hs["poses"]["grip"]["frames"]["palm"]
+    return float(fp["o"][0]) - 0.12 * float(fp["ly"])
+
+
+def glove_ok(item, race, side):
+    """True when a hands item can use the hand rig on this side (else the legacy
+    one-image fit to the hand frame is used)."""
+    return "hand" in item and hand_rig_ok(race, side)

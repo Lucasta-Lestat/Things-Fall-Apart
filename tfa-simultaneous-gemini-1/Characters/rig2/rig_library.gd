@@ -9,6 +9,7 @@ static var _skeleton: Dictionary = {}
 static var _races: Dictionary = {}
 static var _items: Dictionary = {}
 static var _item_ids: Dictionary = {}
+static var _hand_sets: Dictionary = {}
 
 
 static func _read(path: String) -> Dictionary:
@@ -124,3 +125,23 @@ static func clear_cache() -> void:
 	_races = {}
 	_items = {}
 	_item_ids = {}
+	_hand_sets = {}
+
+
+## A hand set (Rigs/hands/<name>/hand.json): the shared fist every race closes its
+## hand into. Empty when it is not installed.
+static func hand_set(set_name: String = "humanoid") -> Dictionary:
+	if _hand_sets.has(set_name):
+		var cached: Dictionary = _hand_sets[set_name]
+		return cached
+	var dir: String = "%s/hands/%s" % [ROOT, set_name]
+	var data: Dictionary = _read(dir + "/hand.json")
+	if not data.is_empty():
+		data["_dir"] = dir
+	_hand_sets[set_name] = data
+	return data
+
+
+static func race_hand_set(race_data: Dictionary) -> Dictionary:
+	var hands: Dictionary = skeleton().get("hands", {})
+	return hand_set(str(race_data.get("hand_set", hands.get("default_set", "humanoid"))))

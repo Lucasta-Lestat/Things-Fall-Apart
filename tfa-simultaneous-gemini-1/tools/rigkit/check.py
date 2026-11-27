@@ -12,6 +12,11 @@ with the race's labels:
   stretch  along:across distortion the fit applied to the art
   clipped  the item ran off the canvas
 
+Hands (docs/rigging_rewrite.md 3.6). A glove gets one row per side per POSE (open,
+grip): cover is measured against the hand that is showing. A held item also gets
+  gripped  share of its handle hidden inside the closed hand
+  visible  share of the whole item that still shows
+
 Exit code 1 if anything FAILs. WARN is for a human to look at on the contact
 sheet. The thresholds live in THRESHOLDS so tightening the gate is one edit.
 """
@@ -23,7 +28,7 @@ import cv2
 import numpy as np
 
 from . import core
-from .render import RaceCanvas, item_layers
+from .render import RaceCanvas, hand_layer, item_layers
 
 # slot -> (cover fail, cover warn, spill warn, spill fail)
 THRESHOLDS = {
@@ -38,6 +43,12 @@ THRESHOLDS = {
 }
 STRETCH_WARN = (0.60, 1.70)
 STRETCH_FAIL = (0.40, 2.50)
+# the hand rig (docs 3.6): a glove is the hand itself in another material, so it must
+# cover it; a held item's handle must be inside the closed hand
+GLOVE_COVER = (0.92, 0.97)          # fail below, warn below
+GRIPPED = (0.50, 0.75)              # share of the handle hidden by the hand: fail below, warn below
+VISIBLE_WARN = 0.35                 # share of a held item still visible
+HANDLE_VS_FIST = 0.90               # handle wider than this share of the fist: WARN
 
 
 def _disc(shape, o, r):
@@ -74,6 +85,118 @@ def _target(canvas, item, side):
     return None, None
 
 
+def check_glove(canvas, item, skel, base):
+    """Hand-rig rows for a glove: one per side per pose. cover = share of the SHOWING
+    hand (the hand label when open, the fist when gripping) the glove hides; spill as
+    for any item; stretch = along:across distortion of the back-of-hand piece."""
+    race = canvas.data
+    hs = core.race_hand_set(race, skel)
+    half = float(race["frames"]["torso"]["lx"])
+    tol = max(2, int(0.14 * half))
+    kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * tol + 1, 2 * tol + 1))
+    _, _, sw, sf = THRESHOLDS["hands"]
+    rows = []
+    for pose in ("open", "grip"):
+        layers = item_layers(canvas, item, skel, {"l": pose, "r": pose})
+        for side in core.slot_sides(item, skel):
+            mask = np.zeros(canvas.size, bool)
+            for _, layer, s in layers:
+                if s == side:
+                    mask |= layer[:, :, 3] > 24
+            row = dict(base, side=side, pose=pose, status="ok", why=[])
+            if pose == "open":
+                tgt = canvas.mask("hand_" + side)
+            else:
+                tgt = hand_layer(canvas, skel, side, "grip", item["hand"]["ramp"])[:, :, 3] > 127
+            near = tgt | canvas.mask("forearm_" + side, "hand_" + side)
+            row["cover"] = round(float((mask & tgt).sum()) / max(float(tgt.sum()), 1.0), 3)
+            if row["cover"] < GLOVE_COVER[0]:
+                row["status"] = "FAIL"
+                row["why"].append("covers only %d%% of the %s hand" % (100 * row["cover"], pose))
+            elif row["cover"] < GLOVE_COVER[1]:
+                row["status"] = "WARN"
+                row["why"].append("covers %d%% of the %s hand" % (100 * row["cover"], pose))
+            grown = cv2.dilate(near.astype(np.uint8), kern) > 0
+            row["spill"] = round(float((mask & ~grown).sum()) / max(float(mask.sum()), 1.0), 3)
+            if row["spill"] > sf:
+                row["status"] = "FAIL"
+                row["why"].append("%d%% floats off the arm" % (100 * row["spill"]))
+            elif row["spill"] > sw and row["status"] == "ok":
+                row["status"] = "WARN"
+                row["why"].append("%d%% off the arm" % (100 * row["spill"]))
+            row["stretch"] = 1.0
+            for piece in item["hand"]["pieces"]:
+                if piece["frame"] != "palm":
+                    continue
+                fi = piece["frames"]["palm"]
+                fr = core.pose_palm(race, hs, side, pose)
+                ratio = (float(fr["lx"]) / float(fi["lx"])) / (float(fr["ly"]) / float(fi["ly"]))
+                row["stretch"] = round(ratio, 2)
+                if not (STRETCH_FAIL[0] <= ratio <= STRETCH_FAIL[1]):
+                    row["status"] = "FAIL"
+                    row["why"].append("back of hand distorted x%.2f" % ratio)
+                elif not (STRETCH_WARN[0] <= ratio <= STRETCH_WARN[1]) and row["status"] == "ok":
+                    row["status"] = "WARN"
+                    row["why"].append("back of hand stretched x%.2f" % ratio)
+            row["why"] = "; ".join(row["why"])
+            rows.append(row)
+    return rows
+
+
+def check_held(canvas, item, skel, row, side, layers):
+    """Hand-rig measures for a held item (the hand is closed on it): is the handle
+    inside the hand, does the business end show, does the handle fit the fist."""
+    race = canvas.data
+    hold = item.get("hold", {})
+    if hold.get("layer") == "over":
+        return
+    fist = hand_layer(canvas, skel, side, "grip")[:, :, 3] > 127
+    g = race["frames"]["grip_" + side]
+    o = np.asarray(g["o"], float) + canvas.pad
+    if not fist[int(o[1] - 2 * g["ax"][1]), int(o[0] - 2 * g["ax"][0])]:
+        row["status"] = "FAIL"
+        row["why"].append("hold point is outside the fist")
+    body = canvas.place(canvas.body.astype(np.float32))[:, :, 3] > 127
+    front = np.zeros(canvas.size, bool)
+    tail = np.zeros(canvas.size, bool)
+    zf, zt = core.held_layers(item, skel, race, side)
+    for z, layer, s in layers:
+        if s == side:
+            if zt is not None and z == zt:
+                tail |= layer[:, :, 3] > 24
+            else:
+                front |= layer[:, :, 3] > 24
+    whole = front | tail
+    hidden = (front & fist) | (tail & (body | fist))
+    yy, xx = np.nonzero(whole)
+    u = ((xx - o[0]) * g["ax"][0] + (yy - o[1]) * g["ax"][1]) / float(g["lx"])       # world px ahead of the fist front
+    fist_len = float(race["frames"]["palm_" + side]["ly"]) * float(race["world_scale"]) * \
+        float(core.race_hand_set(race, skel)["poses"]["grip"]["grip_u"])
+    span = float(item.get("total_length", 0.0)) * (hold.get("handle", [0, 0])[1] - hold.get("handle", [0, 0])[0])
+    reach = min(span, fist_len) if span > 0 else fist_len
+    band = (u <= 0) & (u >= -reach)
+    if band.any():
+        row["gripped"] = round(float(hidden[yy[band], xx[band]].mean()), 3)
+        if row["gripped"] < GRIPPED[0]:
+            row["status"] = "FAIL"
+            row["why"].append("only %d%% of the handle is inside the hand" % (100 * row["gripped"]))
+        elif row["gripped"] < GRIPPED[1] and row["status"] == "ok":
+            row["status"] = "WARN"
+            row["why"].append("%d%% of the handle is inside the hand" % (100 * row["gripped"]))
+    row["visible"] = round(float((whole & ~hidden).sum()) / max(float(whole.sum()), 1.0), 3)
+    ahead = (u > 0.5)
+    if not (ahead.any() and (~hidden[yy[ahead], xx[ahead]]).any()):
+        row["status"] = "FAIL"
+        row["why"].append("nothing shows beyond the fist")
+    elif row["visible"] < VISIBLE_WARN and row["status"] == "ok":
+        row["status"] = "WARN"
+        row["why"].append("only %d%% of the item shows" % (100 * row["visible"]))
+    fist_w = 2.0 * float(race["frames"]["palm_" + side]["ly"]) * float(race["world_scale"])
+    if hold.get("width") and hold["width"] > HANDLE_VS_FIST * fist_w and row["status"] == "ok":
+        row["status"] = "WARN"
+        row["why"].append("handle %.1f wide, fist %.1f" % (hold["width"], fist_w))
+
+
 def check_pair(canvas, item, skel):
     """Returns a list of result rows for one race x item."""
     race = canvas.data
@@ -91,7 +214,16 @@ def check_pair(canvas, item, skel):
     kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * tol + 1, 2 * tol + 1))
     cf, cw, sw, sf = THRESHOLDS[slot]
     root = core.root_frame_name(item, skel)
-    for z, layer, side in item_layers(canvas, item, skel):
+    if slot == "hands" and all(core.glove_ok(item, race, s) for s in core.slot_sides(item, skel)):
+        return check_glove(canvas, item, skel, base)
+    layers = item_layers(canvas, item, skel)
+    seen = set()
+    for z, layer, side in layers:
+        if slot in ("main_hand", "off_hand"):
+            if side in seen:
+                continue                 # front and tail are one item: one row
+            seen.add(side)
+            layer = np.maximum.reduce([l for _, l, s in layers if s == side])
         mask = layer[:, :, 3] > 24
         row = dict(base, side=side or "", status="ok", why=[])
         area = int(mask.sum())
@@ -128,11 +260,17 @@ def check_pair(canvas, item, skel):
                 row["status"] = "WARN"
                 row["why"].append("art stretched x%.2f" % ratio)
         if slot in ("main_hand", "off_hand"):
-            g = race["frames"]["grip_" + side]["o"]
-            hand = canvas.mask("hand_" + side)
-            if not hand[int(g[1]) + canvas.pad, int(g[0]) + canvas.pad]:
-                row["status"] = "FAIL"
-                row["why"].append("grip is outside the hand")
+            if core.hand_rig_ok(race, side) and core.race_hand_set(race, skel) is not None:
+                check_held(canvas, item, skel, row, side, layers)
+            else:
+                g = race["frames"]["grip_" + side]["o"]
+                hand = canvas.mask("hand_" + side)
+                if not hand[int(g[1]) + canvas.pad, int(g[0]) + canvas.pad]:
+                    row["status"] = "FAIL"
+                    row["why"].append("grip is outside the hand")
+                row["why"].append("no hand rig: item lies on the open hand")
+                if row["status"] == "ok":
+                    row["status"] = "WARN"
         if mask[0].any() or mask[-1].any() or mask[:, 0].any() or mask[:, -1].any():
             if slot not in ("main_hand", "off_hand"):
                 row["status"] = "FAIL"
