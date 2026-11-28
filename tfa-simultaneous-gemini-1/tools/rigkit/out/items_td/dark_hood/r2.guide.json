@@ -1,0 +1,34 @@
+{
+ "item": "dark_hood",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 2.419,
+ "slot": "head",
+ "frames": {
+  "head": {
+   "o": [
+    686.31,
+    328.25
+   ],
+   "ax": [
+    1.0,
+    0.0
+   ],
+   "lx": 230.959,
+   "ly": 230.959
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1547.773,
+ "proxy_head_scale": 1.362,
+ "shell": "hood",
+ "build": "proxy",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.020)",
+ "one_sided": false,
+ "camera_iou_vs_gen_plan": 1.0
+}

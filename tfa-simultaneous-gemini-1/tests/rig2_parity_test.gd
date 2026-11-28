@@ -10,6 +10,11 @@ extends Node2D
 #             vertices against core.py, and the pose rule on a built character
 #             (holding closes the hand, the fist is above the weapon, the glove
 #             above the fist, the weapon's tail under the body, removing reopens).
+#  5. BODY    head enclosure and trunk over feet (tools/rigkit/core.py): the body
+#             polygon's quads against core.py, and on a built character: an
+#             enclosing helm hides the head and swaps the head box for the bare
+#             patch, an open helm does not, the trunk is drawn again above boots
+#             and below shirts.
 # Run:  godot --headless --path . res://tests/rig2_parity_test.tscn
 const FIXTURE := "res://tests/fixtures/rig2_parity.json"
 const TOLERANCE := 0.05
@@ -33,6 +38,7 @@ func _ready() -> void:
 	_packs()
 	_build()
 	_hands()
+	_body_rules()
 	# a GDScript runtime error aborts only the function it happens in, so a
 	# crashed section would otherwise pass silently: assert the check count
 	_check("check count", checks >= MIN_CHECKS, "only %d checks ran" % checks)
@@ -261,3 +267,84 @@ func _hand_poses() -> void:
 		rc.set_hand_pose("l", "")
 		_check("forced fist released " + tag, rc.hand_pose("l") == "open" and open_l.visible)
 		rc.queue_free()
+
+
+func _body_rules() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIXTURE))
+	var root: Dictionary = parsed
+	var body: Dictionary = root["body"]
+	var skel: Dictionary = RigLibrary.skeleton()
+	var layers: Dictionary = skel["body_layers"]
+	var slots: Dictionary = skel["slots"]
+	var feet_slot: Dictionary = slots["feet"]
+	var torso_slot: Dictionary = slots["torso"]
+	_check("trunk layer order", int(feet_slot["z"]) < int(layers["trunk_over_feet"]) and int(layers["trunk_over_feet"]) < int(torso_slot["z"]))
+	var enclosing: Array = body["encloses"]
+	_check("an enclosing pack exists", enclosing.has("great_helm"), str(enclosing))
+	for item_id: Variant in enclosing:
+		var pack: Dictionary = RigLibrary.item(str(item_id))
+		_check("encloses flag " + str(item_id), bool(pack.get("encloses", false)))
+	var races: Array = body["races"]
+	_check("body fixture", races.size() >= 6, "%d races" % races.size())
+	var with_trunk: int = 0
+	for row: Dictionary in races:
+		var tag: String = "%s/%s" % [row["race"], row["variant"]]
+		var race: Dictionary = RigLibrary.race(str(row["race"]), str(row["variant"]))
+		var parts: Array[Dictionary] = []
+		if RigFit.hand_rig_ok(race, "l") and RigFit.hand_rig_ok(race, "r") and not RigLibrary.race_hand_set(race).is_empty():
+			var race_parts: Dictionary = race["parts"]
+			parts.append(race_parts["hand_l"])
+			parts.append(race_parts["hand_r"])
+		var quads: Array[Rect2] = RigFit.body_quads(race, parts)
+		var want_quads: Variant = row["quads"]
+		if want_quads == null:
+			_check("body quads " + tag, quads.is_empty())
+		else:
+			var wq: Dictionary = want_quads
+			_check("body quads " + tag, quads.size() == int(wq["n"]) and absf(_quad_sum(quads) - float(wq["sum"])) < 0.5,
+				"%d quads, sum %.2f vs %s" % [quads.size(), _quad_sum(quads), wq])
+		var box: Rect2 = RigFit.head_box(race)
+		var want_box: Variant = row["head_box"]
+		if want_box == null:
+			_check("head box " + tag, not box.has_area())
+		else:
+			var wb: Array = want_box
+			_check("head box " + tag, box.position.distance_to(Vector2(float(wb[0]), float(wb[1]))) < 0.01
+				and box.end.distance_to(Vector2(float(wb[2]), float(wb[3]))) < 0.01, str(box))
+		var rc: RigCharacter = RigCharacter.new()
+		add_child(rc)
+		_check("body setup " + tag, rc.setup(str(row["race"]), str(row["variant"])))
+		var head: Sprite2D = rc.get_node_or_null("Head")
+		var head_box: Polygon2D = rc.get_node_or_null("HeadBox")
+		var bare: Sprite2D = rc.get_node_or_null("Bare")
+		var body_node: Node2D = rc.get_node_or_null("Body")
+		_check("head box nodes " + tag, (want_box == null) == (head_box == null) and (head_box == null) == (bare == null))
+		var trunk: Sprite2D = rc.get_node_or_null("TrunkOverFeet")
+		_check("trunk node " + tag, (trunk != null) == bool(row["trunk"]))
+		if head == null or head_box == null or bare == null or body_node == null:
+			rc.queue_free()
+			continue
+		_check("starts with a head " + tag, head.visible and head_box.visible and not bare.visible and not rc.head_enclosed())
+		_check("box on the body layer " + tag, head_box.z_index == body_node.z_index and bare.z_index == body_node.z_index)
+		_check("open helm worn " + tag, rc.wear("kettle_helm"))
+		_check("open helm keeps the head " + tag, head.visible and head_box.visible and not bare.visible)
+		_check("enclosing helm worn " + tag, rc.wear("great_helm"))
+		_check("enclosing helm hides the head " + tag, rc.head_enclosed() and not head.visible and not head_box.visible and bare.visible)
+		rc.remove("kettle_helm")
+		_check("still enclosed " + tag, rc.head_enclosed() and not head.visible and bare.visible)
+		rc.remove("great_helm")
+		_check("helm off shows the head " + tag, not rc.head_enclosed() and head.visible and head_box.visible and not bare.visible)
+		if trunk != null:
+			with_trunk += 1
+			_check("boots worn " + tag, rc.wear("leather_boot") and rc.wear("peasants_stained_shirt"))
+			var boots: Array = rc.item_nodes("leather_boot")
+			var shirt: Array = rc.item_nodes("peasants_stained_shirt")
+			if boots.size() == 2 and shirt.size() == 1:
+				var zb: int = (boots[0] as Node2D).z_index
+				var zs: int = (shirt[0] as Node2D).z_index
+				_check("trunk over boots, under shirt " + tag, body_node.z_index < zb and zb < trunk.z_index and trunk.z_index < zs,
+					"body %d boot %d trunk %d shirt %d" % [body_node.z_index, zb, trunk.z_index, zs])
+			else:
+				_check("boots and shirt built " + tag, false, "%d boot nodes" % boots.size())
+		rc.queue_free()
+	_check("a pack with a trunk overlay was tested", with_trunk >= 2, "%d" % with_trunk)

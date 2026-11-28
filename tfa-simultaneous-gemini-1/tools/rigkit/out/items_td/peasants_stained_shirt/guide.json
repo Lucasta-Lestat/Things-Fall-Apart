@@ -50,6 +50,11 @@
  ],
  "px_per_unit": 1051.257,
  "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "proxy",
+ "ground_name": "blue",
+ "ground_why": "set in the spec",
+ "one_sided": false,
  "sleeve": "short",
  "collar": {
   "centre_px": [

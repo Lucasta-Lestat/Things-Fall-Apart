@@ -44,8 +44,8 @@
  },
  "slots": {
   "back":      {"frame": "back",  "fit": "rigid",   "scale": "uniform", "ease": 1.0,  "z": -4},
-  "legs":      {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.05, "z": 4},
-  "feet":      {"frame": "foot",  "fit": "rigid",   "scale": "free",    "ease": 1.15, "z": 5, "sided": true},
+  "legs":      {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.05, "z": 3},
+  "feet":      {"frame": "foot",  "fit": "rigid",   "scale": "free",    "ease": 1.15, "z": 4, "sided": true},
   "torso":     {"frame": "torso", "fit": "skinned", "scale": "free",    "ease": 1.06, "z": 6, "layers": 4},
   "hands":     {"frame": "hand",  "fit": "rigid",   "scale": "free",    "ease": 1.25, "z": 19, "sided": true,
                "pieces": {"cuff": {"frame": "wrist", "ease": 1.12}, "back": {"frame": "palm", "ease": 1.06}}},
@@ -58,7 +58,8 @@
   "default_set": "humanoid", "poses": ["open", "grip"],
   "z_fist": 16, "z_glove": 17, "z_back": 18, "z_cuff": 19
  },
- "body_layers": {"body": 0, "arms_over_garments": 10, "head": 20},
+ "body_layers": {"_doc": "trunk_over_feet: the trunk round the feet (race overlay `trunk`), drawn again above feet items (z 4) and below torso items (z 6+), so a boot never covers the belly. An item pack with \"encloses\": true hides the head layer and swaps the head's box of the body for the race overlay `bare`.",
+                 "body": 0, "trunk_over_feet": 5, "arms_over_garments": 10, "head": 20},
  "item_slot_aliases": {
   "Torso": "torso", "Head": "head", "Feet": "feet", "Legs": "legs", "Hands": "hands",
   "Back": "back", "Cape": "back", "Main Hand": "main_hand", "Off Hand": "off_hand"

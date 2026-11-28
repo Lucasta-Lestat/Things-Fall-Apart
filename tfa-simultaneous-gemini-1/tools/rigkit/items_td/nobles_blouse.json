@@ -1,0 +1,27 @@
+{
+ "shell": "torso",
+ "build": "neutral",
+ "sleeve": "short",
+ "layer": 1,
+ "inflate": 0.014,
+ "hole_clear": 0.018,
+ "ring_r": 0.022,
+ "sleeve_cover": 0.7,
+ "sleeve_inflate": 0.022,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   330,
+   440,
+   600,
+   740
+  ]
+ },
+ "what": "a single empty garment, a noble's short-sleeved blouse",
+ "reads": "The wide band across the top is the blouse lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean round hole, and the raised ring around it is the frilled collar; the plain {ground} background fills the entire circle from rim to rim. The two level bars to the left and right are the short sleeves over the upper arms, held straight out sideways, each ending in a straight vertical cuff edge. Below the shoulder band is the front of the blouse over the chest and belly, seen from steeply above and strongly foreshortened into a shallow bowl shape, ending in the rounded hem at the bottom. ",
+ "look": "a noble's blouse of deep burgundy wine-red cloth with narrow gold scrollwork trim and a frilled collar",
+ "paint": "Turn the simple forms into believable fine cloth, working entirely inside the block-out's silhouette: smooth deep burgundy fabric with soft darker folds over the shoulders and across the chest, the raised ring around the neck opening painted as a small pleated frill of the same burgundy, a narrow band of gold scrollwork embroidery edged by two thin gold lines running down each side of the chest from shoulder to hem, a matching gold band running along the top of each shoulder from the collar out along the sleeve, the last narrow strip of each sleeve bar painted as a gold band and a small pleated burgundy frill that finishes flush with the bar's straight end, and a neat stitched hem along the block-out's bottom edge",
+ "material": "deep burgundy wine-red cloth with its darker folds and its narrow band of gold scrollwork embroidery",
+ "hole_words": " and the round neck opening",
+ "note": "The finished painting lies exactly over the block-out: the sleeves stay the same level horizontal bars reaching the same left and right ends, the chest keeps the same shallow height, and the neck opening keeps the same round size and place."
+}

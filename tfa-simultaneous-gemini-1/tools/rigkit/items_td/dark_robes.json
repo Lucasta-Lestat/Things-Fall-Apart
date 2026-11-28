@@ -1,0 +1,32 @@
+{
+ "shell": "torso",
+ "build": "neutral",
+ "sleeve": "short",
+ "layer": 2,
+ "inflate": 0.018,
+ "hole_clear": 0.02,
+ "ring_r": 0.022,
+ "sleeve_cover": 0.85,
+ "sleeve_taper": 0.25,
+ "skirt": {
+  "flare": 0.02,
+  "hem": 0.02,
+  "front": 0.0,
+  "wide": 0.0
+ },
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   250,
+   380,
+   620,
+   700
+  ]
+ },
+ "what": "a single empty garment, a dark cowled robe seen from above",
+ "reads": "The wide band across the top is the robe lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean round hole with a thick cowl collar of gathered cloth around it, and the plain {ground} background fills the entire circle from rim to rim. The two level horizontal bars to the left and right are the short wide sleeves over the upper arms, held straight out sideways and reaching exactly as far left and right as the bars do, each ending in a frayed cuff at the bar's upright end. Below the shoulder band is the front of the robe over the chest and belly, seen from steeply above and strongly foreshortened into a shallow rounded shape. The shallow curved crescent at the very bottom is the whole skirt of the robe from waist to hem: the camera looks down along its length, so the full skirt shows only as this thin crescent, with its ragged hem along the crescent's lower edge. ",
+ "look": "a robe of heavy charcoal-black cloth with a faint violet cast, seen from overhead: a thick draped cowl collar lying in broad concentric folds over the shoulders, wide short sleeves stretched out level with frayed ragged ends, a thin pale grey-brown hemp rope belt knotted to one side with two short ends, and the gathered skirt showing as a shallow crescent of folds below the belt",
+ "paint": "Turn the simple forms into believable heavy cloth, every fold staying inside the block-out's outline: a thick gathered cowl around the neck opening whose broad soft folds ring the opening and spread over the shoulders and upper chest, loose folds along each level sleeve to a frayed ragged end, the thin twisted hemp rope belt curving across the lower front just above the crescent with its small knot and two short ends, and short gathered folds across the skirt crescent down to its ragged lower edge",
+ "material": "charcoal-black heavy cloth with its faint violet-grey folds, soft worn highlights and thin twisted hemp rope",
+ "hole_words": " and the round neck opening"
+}

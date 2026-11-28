@@ -1,0 +1,82 @@
+{
+ "item": "dark_robes",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.643,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.41,
+    279.78
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 303.845,
+   "ly": 301.172,
+   "ly_neg": 146.194
+  },
+  "upperarm_l": {
+   "o": [
+    382.57,
+    278.96
+   ],
+   "ax": [
+    -0.99442,
+    -0.10545
+   ],
+   "lx": 314.906,
+   "ly": 93.317
+  },
+  "upperarm_r": {
+   "o": [
+    990.26,
+    280.6
+   ],
+   "ax": [
+    0.99357,
+    -0.11321
+   ],
+   "lx": 316.021,
+   "ly": 93.424
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1051.257,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.027)",
+ "one_sided": false,
+ "sleeve": "short",
+ "collar": {
+  "centre_px": [
+   688.0,
+   249.46
+  ],
+  "r_px": 110.38,
+  "U": 0.005,
+  "V": -0.2074,
+  "r_over_half_shoulder": 0.3633,
+  "world": {
+   "y": 0.017,
+   "z": 1.6186,
+   "r": 0.105
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.85,
+   201.38
+  ],
+  "r": 156.87
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}

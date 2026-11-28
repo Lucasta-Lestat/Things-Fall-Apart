@@ -1,0 +1,54 @@
+[
+ {
+  "name": "r2_1.png",
+  "iou": 0.9817,
+  "bbox_dx_dy_dw_dh": [
+   -9,
+   0,
+   18,
+   1
+  ],
+  "symmetry": 0.9985,
+  "hole_open": 0.907,
+  "hole_px_vs_guide": 0.907
+ },
+ {
+  "name": "r2_2.png",
+  "iou": 0.9659,
+  "bbox_dx_dy_dw_dh": [
+   -22,
+   0,
+   44,
+   -1
+  ],
+  "symmetry": 0.9983,
+  "hole_open": 0.922,
+  "hole_px_vs_guide": 0.922
+ },
+ {
+  "name": "r2_3.png",
+  "iou": 0.83,
+  "bbox_dx_dy_dw_dh": [
+   -9,
+   -5,
+   18,
+   74
+  ],
+  "symmetry": 0.9971,
+  "hole_open": 0.914,
+  "hole_px_vs_guide": 0.914
+ },
+ {
+  "name": "r2_4.png",
+  "iou": 0.7373,
+  "bbox_dx_dy_dw_dh": [
+   -6,
+   -39,
+   13,
+   112
+  ],
+  "symmetry": 0.999,
+  "hole_open": 0.264,
+  "hole_px_vs_guide": 0.46
+ }
+]

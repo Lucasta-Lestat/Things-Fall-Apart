@@ -95,6 +95,35 @@ class RaceCanvas:
         return m
 
 
+def overlay_layer(canvas, name):
+    """A race overlay file (race.json "overlays") as a premultiplied layer on the padded canvas,
+    or None when the pack has none. Read from the file the engine draws, not from the labels."""
+    ov = canvas.data.get("overlays", {}).get(name)
+    if not ov:
+        return None
+    path = core.race_file(dict(canvas.data, _f=ov["file"]), "_f")
+    if not os.path.exists(path):
+        return None
+    img = _premul(_image(path))
+    out = np.zeros((canvas.size[0], canvas.size[1], 4), np.float32)
+    x, y = int(ov["offset"][0]) + canvas.pad, int(ov["offset"][1]) + canvas.pad
+    out[y:y + img.shape[0], x:x + img.shape[1]] = img
+    return out
+
+
+def bare_body(canvas, body):
+    """The body layer with the head's box swapped for the `bare` overlay (enclosing headwear,
+    core.py). Returns the layer unchanged when the pack has no such overlay."""
+    box = core.head_box(canvas.data)
+    bare = overlay_layer(canvas, "bare")
+    if box is None or bare is None:
+        return body
+    x0, y0, x1, y1 = [int(v) + canvas.pad for v in box]
+    body = body.copy()
+    body[y0:y1, x0:x1] = bare[y0:y1, x0:x1]
+    return body
+
+
 def recolour(rgba, stops, ramp):
     """RGBA uint8 -> RGBA uint8 with the colour replaced through a ramp (alpha kept)."""
     from .derive import luma
@@ -192,9 +221,17 @@ def compose(race, item_ids, variant="default", skel=None, background=None, poses
         if core.hand_rig_ok(canvas.data, side):
             hp[side] = pose
     body = canvas.place(_premul(canvas.body))
-    head = body * canvas.mask("face", "hair")[:, :, None]
+    head = overlay_layer(canvas, "head")             # the file the engine draws (feathered edge)
+    if head is None:
+        head = body * canvas.mask("face", "hair")[:, :, None]
+    enclosed = core.encloses(items)
+    if enclosed:
+        # enclosing headwear: the head is not drawn; its box of the body shows the trunk under it
+        body = bare_body(canvas, body)
     over = canvas.mask("over_garment")
-    over_layer = body * over[:, :, None] if over.any() else None
+    over_layer = overlay_layer(canvas, "over")
+    if over_layer is None and over.any():
+        over_layer = body * over[:, :, None]
     layers = []
     for side, pose in hp.items():
         if pose != "open":
@@ -202,7 +239,12 @@ def compose(race, item_ids, variant="default", skel=None, background=None, poses
             body = body * (~part_mask(canvas, "hand_" + side))[:, :, None]
             layers.append((skel["hands"]["z_fist"], hand_layer(canvas, skel, side, pose)))
     layers.append((skel["body_layers"]["body"], body))
-    layers.append((skel["body_layers"]["head"], head))
+    if not enclosed:
+        layers.append((skel["body_layers"]["head"], head))
+    trunk = overlay_layer(canvas, "trunk")
+    if trunk is not None:
+        # the trunk round the feet, again, above feet items: a boot never covers the belly
+        layers.append((skel["body_layers"]["trunk_over_feet"], trunk))
     if over_layer is not None:
         layers.append((skel["body_layers"]["arms_over_garments"], over_layer))
     for item in items:
@@ -220,4 +262,5 @@ def compose(race, item_ids, variant="default", skel=None, background=None, poses
     img = np.dstack([rgb, np.clip(out[:, :, 3], 0, 255)]).astype(np.uint8)
     canvas.skipped = skipped
     canvas.poses = hp
+    canvas.enclosed = enclosed
     return img, alphas, canvas

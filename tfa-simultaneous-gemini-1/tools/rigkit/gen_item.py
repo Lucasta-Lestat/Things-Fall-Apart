@@ -1,37 +1,59 @@
 """Paint a WORN item for the approved race camera, by painting over a rendered item guide.
 
+    python -m tools.rigkit.gen_item list
     python -m tools.rigkit.gen_item guide   <item> [--proxy orc] [--tilt 15]
     python -m tools.rigkit.gen_item gen     <item> [--n 4] [--tag r1] [--note "extra positive sentence"]
-    python -m tools.rigkit.gen_item check   <item> --tag r1
+    python -m tools.rigkit.gen_item check   <item> [r1]
     python -m tools.rigkit.gen_item install <item> <painting.png> [--id <item>_td]
-    python -m tools.rigkit.gen_item compare [--out tools/rigkit/out/items_td]   (metrics + pilot sheet)
+    python -m tools.rigkit.gen_item sheet   <item>     (original vs _td on five race packs -> <item>/compare.jpg)
+    python -m tools.rigkit.gen_item promote <item>     (the _td pack becomes Rigs/items/<item>; old art -> <item>/original.png)
+    python -m tools.rigkit.gen_item compare [--out tools/rigkit/out/items_td]   (pilot metrics + pilot sheet)
+
+EVERY ITEM IS A SPEC FILE: tools/rigkit/items_td/<item>.json (shell type and knobs, swatch crop of
+the ORIGINAL art, prompt words). This module holds no per-item data. tools/rigkit/items_td/README.md
+lists the fields. A painter tunes only its own spec file.
 
 The race pilots' lesson, applied to items: GIVE the camera, do not ask for it. The guide is the
-garment's own shell, built on the SAME 3D proxy gen_plan.py paints races over and rendered by the
-SAME camera (orthographic, tilted 15 degrees off vertical toward the front, T-pose):
+item's own shell, built on the SAME 3D proxy gen_plan.py paints races over and rendered by the
+SAME camera (orthographic, tilted 15 degrees off vertical toward the front, T-pose). Shell types:
 
-  torso   the proxy's trunk primitives (and upper arms for a sleeved garment), inflated by the cloth's
-          clearance, with the neck primitive removed and a neck opening cut where the neck leaves the
-          trunk at this camera, a collar ring round it. The upper back shows north of the opening
-          because the camera sees it, not because a prompt asked for it.
-  head    an elliptic cylinder (a great helm) that encloses every head primitive of the proxy except
-          the ears: cranium, brow, nose, jaw and tusks.
+  torso   the trunk primitives (and arms for a sleeved garment), inflated by the cloth's clearance,
+          with the neck removed and a neck opening cut where the neck leaves the trunk at this
+          camera, a collar ring round it. Knobs: sleeve (sleeveless | short | long), sleeve cover /
+          inflate / taper, shoulder cap, and an optional SKIRT (a robe: a wall that hangs from the
+          hips to the floor round the feet, hugging the body footprint).
+  bucket  a flat-topped elliptic cylinder (a great helm) round every head primitive but the ears.
+  brim    a dome over the cranium and a wide flat brim (a kettle hat).
+  open    a dome over the cranium, the face left open, with optional crown spikes and cheek guards.
+  hood    a soft shell round the whole head with a dark face opening and a drape on the nape.
+  foot    ONE foot (image left; the rig mirrors it): sole, a smooth toe cap and a short ankle cuff
+          whose open top is ground (keyed out), so the wearer's leg shows through it.
+
+BUILD. "build": "proxy" builds the shell on the proxy race's own muscles (the two accepted pilots,
+shirt and great helm, were painted that way and their guides are frozen). "build": "neutral" builds a
+torso shell on a tailor's form of the SAME proportions: one smooth chest instead of two pectoral
+lobes, no deltoid caps. The extents (shoulder span, front and back depth) are unchanged, so the
+proxy's frames still describe the shell and the fit to every race is unchanged; only the surface
+the painter sees is generic, so cloth and plate stop copying an orc's chest. New torso specs use it.
 
 ITEM FRAMES ARE NOT MEASURED FROM THE ART. They are the proxy's own anatomy: the proxy's label map,
 with install_plan's label conventions (armpit shoulder seam, no leg sliver), goes through derive.py,
-exactly as a painted race does, and those frames (torso, upperarm_l/r, head), moved into the item
-picture, are the item's frames. So fitting a _td item to a race maps the proxy's body onto that
-race's body, and on a race painted over the same proxy the fit is the identity. The item stays
-race-agnostic: one painting, fitted to every race by the frames.
+exactly as a painted race does, and those frames (torso, upperarm_l/r, forearm_l/r, head, foot),
+moved into the item picture, are the item's frames. So fitting a _td item to a race maps the proxy's
+body onto that race's body, and on a race painted over the same proxy the fit is the identity.
 
-The ground is a flat blue, not the races' grey: steel and linen shadows pass through mid-grey, and
-a blue-dominance key (blue far above red and green) cannot eat them. The neck opening is painted as
-ground and keyed out, so the wearer's own neck (or the garment underneath) shows through it.
+GROUND. The ground is a flat key colour, never the races' grey (steel and linen shadows pass through
+mid-grey). It is chosen per item: "ground": "blue" | "green" | "magenta", or "auto" = the key hue
+farthest from the hues of the swatch (green for a colourless swatch such as steel), so the ground
+cannot be mistaken for, or bleed into, the material. The neck opening is painted as ground and keyed
+out; every keyed edge is smoothed and feathered (see `key`). "tone_match" (0..1) pulls the keyed painting's mean colour and contrast
+toward the swatch of the original at install, so a repaint keeps the original's colour and darkness.
 
 This tool imports from gen_plan and install_plan and never edits them. Prompts are phrased
 positively only. `gen` needs GEMINI_API_KEY.
 """
 import argparse
+import colorsys
 import json
 import os
 import shutil
@@ -47,9 +69,13 @@ from .derive import derive_frames
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out", "items_td")
+SPECS = os.path.join(HERE, "items_td")
 W, H, SS = gen_plan.W, gen_plan.H, gen_plan.SS
 MARGIN = 0.035                      # gen_plan.render's default: fingertips this far from the edges
-GROUND = (58, 110, 215)             # flat key colour; see the module docstring
+GROUNDS = {"blue": (58, 110, 215), "green": (40, 190, 70), "magenta": (225, 45, 205)}
+GROUND_HUE = {"blue": 220.0, "green": 132.0, "magenta": 307.0}
+GROUND = GROUNDS["blue"]            # gen_hands imports this name
+NEUTRAL_WEIGHT = 0.10               # a swatch whose mean colour weight (S x V) is below this has no hue
 TILT_WORDS = gen_plan.TILT_WORDS
 
 CAMERA = (
@@ -60,68 +86,91 @@ CAMERA = (
     "the piece holds its worn shape on its own. ")
 FINISH = (
     " Left-right symmetric, lit softly and evenly from above, the piece alone on a perfectly flat "
-    "uniform blue background, RGB %d %d %d, that fills the rest of the picture%s.")
+    "uniform %s background, RGB %d %d %d, that fills the rest of the picture%s.")
+FINISH_ONE = (
+    " Lit softly and evenly from above, the piece alone on a perfectly flat uniform %s background, "
+    "RGB %d %d %d, that fills the rest of the picture%s.")
 SWATCH = (
     " Image 2 is a small close-up swatch of this item's existing painted art, for material, colour "
     "and finish only: match its %s, its semi-realistic hand-painted brushwork with soft-edged "
     "shading, and its thin dark contour line, about three pixels thick, around the whole silhouette%s.")
 
-ITEMS = {
-    "peasants_stained_shirt": dict(
-        slot="torso", sleeve="short", layer=1, inflate=0.016, hole_clear=0.012, ring_r=0.012,
-        swatch=dict(box=(170, 230, 520, 560)),
-        what="a single empty garment, a loose short-sleeved shirt",
-        reads="The wide band across the top is the shirt lying over the tops of the shoulders and the "
-              "upper back. The round opening in the middle of that band is the neck opening seen from "
-              "above, a clean round hole with a low collar band around it, and the plain blue background "
-              "shows through it. The two level bars to the left and right are the short sleeves over the "
-              "upper arms, each ending in a straight open cuff. Below the shoulder band is the front of "
-              "the shirt over the chest and belly, seen from steeply above and strongly foreshortened, "
-              "ending in the rounded hem at the bottom. ",
-        look="a humble peasant's shirt of rough homespun linen in faded off-white and beige, well worn, "
-             "with dirt smudges and brown stains",
-        paint="Turn the simple forms into believable cloth: soft creases running from the collar over "
-              "the shoulders, loose folds along the sleeves gathering at the cuffs, a stitched seam "
-              "where each sleeve joins the body, a short laced slit just below the neck opening, and "
-              "gentle folds across the chest down to a plain stitched hem",
-        material="faded beige linen hue with its brown stains and lighter worn highlights",
-        hole_words=" and the round neck opening"),
-    "breastplate": dict(
-        slot="torso", sleeve="sleeveless", layer=4, inflate=0.012, hole_clear=0.016, ring_r=0.015,
-        cap_x=0.50, swatch=dict(box=(8, 55, 80, 185)),
-        what="a single piece of body armour, a steel cuirass made of a breastplate and a back plate",
-        reads="The wide band across the top is the armour over the tops of the shoulders and the upper "
-              "back: the upper edge of the back plate and the two shoulder straps. The round opening in "
-              "the middle of that band is the neck opening seen from above, a clean round hole cut straight "
-              "through the armour with a rolled steel rim around it: the plain flat blue background fills "
-              "the entire circle from rim to rim. The left and right ends of the piece are the outer "
-              "edges of the shoulder straps and of the two plates, solid steel seen from above. Below the shoulder band is the "
-              "breastplate over the chest and belly, seen from steeply above and strongly foreshortened, "
-              "ending in the waist flange at the bottom. ",
-        look="a polished steel cuirass, sturdy and plain, with brushed-metal highlights",
-        paint="Turn the simple forms into believable plate armour: one smooth fitted chest plate with a "
-              "soft central ridge, a rolled steel rim around the neck opening, a buckled leather strap lying over each shoulder "
-              "and joining the breastplate to the back plate, the top surface of the armour continuous "
-              "solid steel from the left edge to the right edge, a row of small rivets along the edges, "
-              "and a flared waist flange along the bottom",
-        material="cool grey polished steel with its bright brushed highlights and dark blue-grey shadows",
-        hole_words=" and the round neck opening"),
-    "great_helm": dict(
-        slot="head", pad=0.014, swatch=dict(box=(8, 150, 120, 320)),
-        what="a single helmet, a great helm: a closed steel bucket helmet with a flat top",
-        reads="The large oval that fills most of the picture is the helmet's flat top plate seen from "
-              "above. The curved band along its bottom edge is the front wall of the helmet, seen from "
-              "steeply above and strongly foreshortened: across it runs the narrow dark eye slit, and a "
-              "raised vertical reinforcing bar crosses the slit at the centre, making a cross. ",
-        look="a plain great helm of grey hammered steel, with a flat top plate, a narrow eye slit and a "
-             "cross-shaped reinforcing bar on its front",
-        paint="Turn the simple forms into believable hammered steel: the flat top plate with a soft "
-              "sheen and a riveted seam around its rim, the front wall curving away to both sides, the "
-              "eye slit a narrow black opening, the cross-shaped bar raised and riveted, and a few small "
-              "round breathing holes below the slit",
-        material="grey hammered steel with its soft pale highlights and dark shadows",
-        hole_words=""),
-}
+SHELL_SLOT = {"torso": "torso", "bucket": "head", "brim": "head", "open": "head", "hood": "head", "foot": "feet"}
+DEFAULTS = dict(build="neutral", ground="auto", tint_pct=65.0, tone_match=0.0, encloses=False, note="",
+                hole_words="")
+
+
+# ---------------------------------------------------------------- specs
+
+def list_specs():
+    if not os.path.isdir(SPECS):
+        return []
+    return sorted(f[:-5] for f in os.listdir(SPECS) if f.endswith(".json"))
+
+
+def load_spec(item):
+    """tools/rigkit/items_td/<item>.json with the defaults laid under it. `slot` follows the shell.
+    Prompt strings may be written as a list of pieces (joined) and may hold {ground}, the key
+    colour's name."""
+    p = os.path.join(SPECS, item + ".json")
+    if not os.path.exists(p):
+        raise SystemExit("no spec %s (have: %s)" % (os.path.relpath(p, core.ROOT), ", ".join(list_specs())))
+    s = dict(DEFAULTS, **core.load_json(p))
+    s["item"] = item
+    if s.get("shell") not in SHELL_SLOT:
+        raise SystemExit("%s: \"shell\" must be one of %s" % (item, ", ".join(SHELL_SLOT)))
+    s["slot"] = SHELL_SLOT[s["shell"]]
+    for k in ("what", "reads", "look", "paint", "material", "hole_words", "note"):
+        if isinstance(s.get(k), list):
+            s[k] = "".join(s[k])
+    for k in ("what", "reads", "look", "paint", "material"):
+        if not s.get(k):
+            raise SystemExit("%s: spec has no %r" % (item, k))
+    s["swatch"] = dict(s["swatch"], box=tuple(s["swatch"]["box"]))
+    return s
+
+
+def original_art(item):
+    """The pre-repaint art: the swatch, tint and tone-match source. `promote` files it as
+    out/items_td/<item>/original.png when the repaint takes over Rigs/items/<item>/."""
+    kept = os.path.join(OUT, item, "original.png")
+    return kept if os.path.exists(kept) else os.path.join(core.RIGS, "items", item, "art.png")
+
+
+def swatch_pixels(spec):
+    """Opaque RGB pixels (N, 3 float) of the swatch crop of the original art."""
+    a = np.array(Image.open(original_art(spec["item"])).convert("RGBA").crop(spec["swatch"]["box"])).astype(np.float32)
+    px = a[a[..., 3] > 200][:, :3]
+    if len(px) < 50:
+        raise SystemExit("%s: swatch box %s holds almost no opaque art" % (spec["item"], spec["swatch"]["box"]))
+    return px
+
+
+def ground_for(spec):
+    """(name, rgb, why). "auto": the key hue farthest from the swatch's hues, weighting each swatch
+    pixel by its saturation x value; a swatch with no colour to speak of (steel, black cloth) takes
+    green, the key a grey can least be mistaken for (green minus the larger of red and blue is zero
+    on every grey)."""
+    g = spec.get("ground", "auto")
+    if g in GROUNDS:
+        return g, GROUNDS[g], "set in the spec"
+    px = swatch_pixels(spec) / 255.0
+    mx, mn = px.max(1), px.min(1)
+    sat = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0.0)
+    wt = sat * mx
+    if float(wt.mean()) < NEUTRAL_WEIGHT:
+        return "green", GROUNDS["green"], "colourless swatch (weight %.3f)" % float(wt.mean())
+    step = max(1, len(px) // 4000)
+    hue = np.array([colorsys.rgb_to_hsv(*c)[0] * 360.0 for c in px[::step]])
+    w = wt[::step]
+    best = None
+    for name, h in GROUND_HUE.items():
+        d = np.abs(hue - h) % 360.0
+        d = np.minimum(d, 360.0 - d)
+        score = float((d * w).sum() / w.sum())
+        if best is None or score > best[1]:
+            best = (name, score)
+    return best[0], GROUNDS[best[0]], "mean hue distance %.0f deg from the swatch" % best[1]
 
 
 # ---------------------------------------------------------------- camera and proxy
@@ -235,23 +284,65 @@ def proxy_frames(proxy, tilt):
 
 
 # ---------------------------------------------------------------- shells
+#
+# A shell function takes (spec, cam at zoom 1) and returns a dict:
+#   prims    [(kind, tag, centre, radii[, (z0, z1)])] for raycast
+#   frames   the proxy frames the item carries ({item frame name: proxy frame name})
+#   hole     torso only: dict(y, r, z) of the neck opening
+#   clip_x   torso only: |x| the sleeves are cut at
+#   geo      numbers the shell's markings use
+#   sigma    normal-smoothing radius (the softness of the block-out)
+#   xc       x of the shell's centre when it is not on the body's centre line
+
+def neutral_build(P, p):
+    """The proxy's primitives with the trunk's muscles smoothed into a tailor's form: the two
+    pectoral lobes become one chest swell of the same reach, and the deltoid caps go (the arm
+    capsule already rounds the shoulder). Depths, widths and every other primitive are untouched,
+    so the proxy's frames still fit the shell."""
+    cs, ph, sh = p["chest_depth_s"], p["pec_half"], p["shoulder_half"]
+    out = []
+    done = False
+    for part, c, r in P:
+        if part == "body" and abs(c[2] - 1.385) < 1e-6 and abs(c[0]) > 1e-6:           # a pec
+            if not done:
+                out.append(("body", (0.0, cs - 0.105, 1.385), (min(ph * 2.15, sh * 0.96), 0.105, 0.115)))
+                done = True
+            continue
+        if part == "body" and abs(c[2] - 1.535) < 1e-6 and abs(c[0]) > 1e-6:           # a deltoid cap
+            continue
+        out.append((part, c, r))
+    assert done, "proxy layout changed: pecs not found"
+    return out
+
 
 def torso_shell(spec, cam):
-    """(prims, hole dict, clip_x) for a torso garment on the proxy."""
+    """A torso garment on the proxy: trunk (+ arms), a neck opening, an optional skirt."""
     p, P = cam["params"], cam["prims"]
     t = spec["inflate"]
     i_head = next(i for i, q in enumerate(P) if q[0].startswith("face"))
     neck = P[i_head - 1]
     assert neck[0] == "body" and neck[1][0] == 0 and neck[2][0] < 0.14, "proxy layout changed: neck not found"
     sh = p["shoulder_half"]
+    seam = sh + 0.05
+    clip_x = None
+    if spec["sleeve"] == "short":
+        clip_x = seam + float(spec.get("sleeve_cover", ingest.SHORT_SLEEVE_COVERS)) * (p["elbow_x"] - seam)
+    elif spec["sleeve"] == "long":
+        clip_x = seam + float(spec.get("sleeve_cover", ingest.LONG_SLEEVE_COVERS)) * (p["wrist_x"] - seam)
+    elif spec.get("clip_half"):
+        clip_x = float(spec["clip_half"]) * sh           # a sleeveless piece cut square at the arm holes
+    src = [q for i, q in enumerate(P) if i != i_head - 1]
+    if spec.get("build", "neutral") == "neutral":
+        src = neutral_build(src, p)
+    ti, tp = float(spec.get("sleeve_inflate", 0.0)), float(spec.get("sleeve_taper", 0.0))
     prims = []
-    for i, (part, c, r) in enumerate(P):
-        if i == i_head - 1:
-            continue
+    for part, c, r in src:
         if part == "body":
             if spec["sleeve"] == "sleeveless" and abs(c[0]) > spec.get("cap_x", 0.78) * sh:
                 continue                                    # deltoid caps and the outer shoulder girdle
-        elif part.startswith("upperarm_"):
+            prims.append(("ell", "shell", c, tuple(v + t for v in r)))
+            continue
+        if part.startswith("upperarm_"):
             if spec["sleeve"] == "sleeveless":
                 continue
         elif part.startswith("forearm_"):
@@ -259,55 +350,249 @@ def torso_shell(spec, cam):
                 continue
         else:
             continue
-        prims.append(("ell", "shell", c, tuple(v + t for v in r)))
-    clip_x = None
-    seam = sh + 0.05
-    if spec["sleeve"] == "short":
-        clip_x = seam + ingest.SHORT_SLEEVE_COVERS * (p["elbow_x"] - seam)
-    elif spec["sleeve"] == "long":
-        clip_x = seam + ingest.LONG_SLEEVE_COVERS * (p["wrist_x"] - seam)
-    hole = dict(y=neck[1][1], r=neck[2][0] + spec["hole_clear"], z=neck[1][2])
-    return prims, hole, clip_x
+        if ti or tp:                                        # a loose or belled sleeve
+            k = float(np.clip((abs(c[0]) - seam) / max(clip_x - seam, 1e-6), 0.0, 1.0))
+            prims.append(("ell", "shell", c, tuple(v + t + ti + v * tp * k for v in r)))
+        else:
+            prims.append(("ell", "shell", c, tuple(v + t for v in r)))
+    sk = spec.get("skirt")
+    if sk is not None:
+        # a robe's skirt: a wall from the hips down to just above the floor, round the legs. Its
+        # half-width follows the wider of hips and feet, its front the belly, so it hugs the body's
+        # footprint (the original front-view robe flared and floated off narrow bodies).
+        z_floor = p.get("floor_z", 0.70)
+        fx, fw = p.get("foot_x_tilt", p["foot_x"]), p.get("foot_w", p["toe_r"] * 2.6)
+        rx = max(p["belly_half"] * 0.95, fx + fw * 0.55) + t + float(sk.get("wide", 0.0))
+        front = p["belly_depth_s"] - 0.03 + t + float(sk.get("front", 0.0))
+        back = -(p["trunk_depth_n"] - 0.05) - t
+        z0 = z_floor + float(sk.get("hem", 0.02))
+        z1 = float(sk.get("top", 1.00))
+        flare, n = float(sk.get("flare", 0.02)), 12
+        for i in range(n):                                  # widest at the hem
+            f = flare * (1.0 - i / (n - 1.0))
+            za, zb = z0 + (z1 - z0) * i / n, z0 + (z1 - z0) * (i + 1) / n
+            prims.append(("cyl", "shell", (0.0, (front + back) / 2 + f / 2, (za + zb) / 2),
+                          (rx + f, (front - back) / 2 + f / 2, (zb - za) / 2), (za, zb)))
+    hole = dict(y=neck[1][1] + float(spec.get("hole_y", 0.0)), r=neck[2][0] + spec["hole_clear"], z=neck[1][2])
+    want = {"torso": "torso"}
+    if spec["sleeve"] != "sleeveless":
+        want.update(upperarm_l="upperarm_l", upperarm_r="upperarm_r")
+    if spec["sleeve"] == "long":
+        want.update(forearm_l="forearm_l", forearm_r="forearm_r")
+    return dict(prims=prims, hole=hole, clip_x=clip_x, frames=want, sigma=3.0)
 
 
-def helm_shell(spec, cam):
-    """A flat-topped elliptic cylinder round every head primitive except the ears."""
+def _head_geo(cam):
+    """The proxy head's numbers every helm shell starts from."""
     P = cam["prims"]
     skull = next(q for q in P if q[0] == "face:skull")
     (_, sy_, sz), (srx, sry, srz) = skull[1], skull[2]
-    pad = spec["pad"]
     face = [q for q in P if q[0].startswith("face") and abs(q[1][0]) < srx * 0.75]     # ears start at 0.9 r
-    y_back = sy_ - sry
-    y_front = max(c[1] + r[1] for _, c, r in face)
-    z_top = sz + srz + pad
-    z_bot = min(c[2] - r[2] for _, c, r in face) - 2 * pad
+    return dict(sy=sy_, sz=sz, srx=srx, sry=sry, srz=srz, y_back=sy_ - sry,
+                y_front=max(c[1] + r[1] for _, c, r in face), z_face=min(c[2] - r[2] for _, c, r in face))
+
+
+def helm_shell(spec, cam):
+    """bucket: a flat-topped elliptic cylinder round every head primitive except the ears."""
+    g = _head_geo(cam)
+    pad = spec["pad"]
+    y_back, y_front = g["y_back"], g["y_front"]
+    z_top = g["sz"] + g["srz"] + pad
+    z_bot = g["z_face"] - 2 * pad
     ry = (y_front - y_back) / 2 + pad
-    rx = max(srx + pad, 0.92 * ry)
+    rx = max(g["srx"] + pad, 0.92 * ry)
     c = (0.0, (y_front + y_back) / 2, (z_top + z_bot) / 2)
-    geo = dict(c=c, rx=rx, ry=ry, z0=z_bot, z1=z_top, slit_z=sz - 0.15 * srz, bar_x=0.11 * rx)
-    return [("cyl", "shell", c, (rx, ry, (z_top - z_bot) / 2), (z_bot, z_top))], geo
+    geo = dict(kind="bucket", c=c, rx=rx, ry=ry, z0=z_bot, z1=z_top, slit_z=g["sz"] - 0.15 * g["srz"], bar_x=0.11 * rx)
+    return dict(prims=[("cyl", "shell", c, (rx, ry, (z_top - z_bot) / 2), (z_bot, z_top))], geo=geo,
+                frames={"head": "head"}, sigma=1.0)
 
 
-def base_colour(item):
-    """Median colour of the lit part of the existing art: the guide's flat tint."""
-    a = np.array(Image.open(os.path.join(core.RIGS, "items", item, "art.png")).convert("RGBA")).astype(np.float32)
+def brim_shell(spec, cam):
+    """brim: a kettle hat. A dome over the cranium and a wide, thin, slightly dished brim at brow
+    height that hides the face and ears below it."""
+    g = _head_geo(cam)
+    pad = float(spec.get("pad", 0.012))
+    srx, sry, srz = g["srx"], g["sry"], g["srz"]
+    c = (0.0, g["sy"] + float(spec.get("forward", 0.010)), g["sz"])
+    k = float(spec.get("brim", 1.72))                       # brim radius over the dome's
+    zb = g["sz"] - srz * float(spec.get("brim_drop", 0.30))
+    th = float(spec.get("brim_thick", 0.012))
+    drx, dry = srx + pad, sry + pad
+    prims = [("ell", "shell", c, (drx, dry, srz * float(spec.get("crown", 1.0)) + pad))]
+    n = 5                                                   # a brim that slopes down toward its edge
+    slope = float(spec.get("brim_slope", 0.035))
+    for i in range(n):
+        f = (i + 1.0) / n
+        r = 1.0 + (k - 1.0) * f
+        z1 = zb - slope * f
+        prims.append(("cyl", "shell", (c[0], c[1], z1 - th / 2), (drx * r, dry * r, th / 2), (z1 - th, z1)))
+    geo = dict(kind="brim", c=c, rx=drx, ry=dry, zb=zb, ridge=float(spec.get("ridge", 0.010)))
+    return dict(prims=prims, geo=geo, frames={"head": "head"}, sigma=1.4)
+
+
+def open_shell(spec, cam):
+    """open: an open-faced helm. A dome over the cranium whose rim stops at the brow, so the face
+    strip stays uncovered; optional crown spikes round the rim and a cheek guard each side."""
+    g = _head_geo(cam)
+    pad = float(spec.get("pad", 0.012))
+    srx, sry, srz = g["srx"], g["sry"], g["srz"]
+    c = (0.0, g["sy"], g["sz"])
+    drx, dry, drz = srx + pad, sry + pad, srz + pad
+    prims = [("ell", "shell", c, (drx, dry, drz))]
+    n = int(spec.get("spikes", 0))
+    if n:
+        ln = float(spec.get("spike_len", 0.07)) * srx / 0.108
+        rise = float(spec.get("spike_rise", 0.55))          # how far a spike leans up (0 = flat outward)
+        gap = np.radians(float(spec.get("spike_gap_deg", 55.0)))   # the front arc left free for the face
+        zr = g["sz"] - drz * 0.25
+        for a in np.linspace(np.pi / 2 + gap, np.pi / 2 + 2 * np.pi - gap, n):
+            ca, sa = float(np.cos(a)), float(np.sin(a))
+            q = float(np.sqrt(max(1 - (0.25) ** 2, 0)))     # the dome's radius at height zr
+            a0 = np.array([drx * q * ca * 0.92, c[1] + dry * q * sa * 0.92, zr])
+            a1 = a0 + np.array([ca * ln, sa * ln, ln * rise])
+            m = int(np.ceil(ln / 0.004)) + 2
+            for t_ in np.linspace(0, 1, m):
+                r = 0.017 * srx / 0.108 * (1 - t_) + 0.003
+                prims.append(("ell", "shell", tuple(a0 + (a1 - a0) * t_), (r, r, r)))
+    ck = float(spec.get("cheek", 0.0))
+    if ck:
+        yf = g["y_front"]
+        for s_ in (-1, 1):                                  # a guard hanging in front of each ear
+            prims.append(("ell", "shell", (s_ * srx * 0.78, c[1] + (yf - c[1]) * 0.55, g["sz"] - srz * 0.75),
+                          (srx * 0.26 * ck, (yf - c[1]) * 0.50, srz * 0.62)))
+    geo = dict(kind="open", c=c, rx=drx, ry=dry, ridge=float(spec.get("ridge", 0.0)))
+    return dict(prims=prims, geo=geo, frames={"head": "head"}, sigma=1.2)
+
+
+def hood_shell(spec, cam):
+    """hood: soft cloth round the whole head, ears and all, falling to a drape on the nape; the
+    face opening is a dark hollow on its front."""
+    g = _head_geo(cam)
+    pad = float(spec.get("pad", 0.020))
+    srx, srz = g["srx"], g["srz"]
+    y_back, y_front = g["y_back"] - pad, g["y_front"] + pad * 0.5
+    z_top, z_bot = g["sz"] + srz + pad, g["z_face"] - pad
+    rx = srx + pad + float(spec.get("wide", 0.012))
+    ry = (y_front - y_back) / 2
+    c = (0.0, (y_front + y_back) / 2, (z_top + z_bot) / 2)
+    prims = [("ell", "shell", c, (rx, ry, (z_top - z_bot) / 2 * 1.08))]
+    dr = float(spec.get("drape", 1.0))
+    if dr:                                                  # the cowl gathering behind the neck
+        prims.append(("ell", "shell", (0.0, y_back + ry * 0.30, z_bot + 0.02), (rx * 0.92 * dr, ry * 0.62, 0.075)))
+    pk = float(spec.get("peak", 0.5))
+    if pk:                                                  # the hood's point, at the back of the crown
+        prims.append(("ell", "shell", (0.0, y_back + ry * 0.12, c[2] + (z_top - c[2]) * 0.35),
+                      (rx * 0.42, ry * 0.30 * (0.6 + pk), (z_top - z_bot) * 0.28)))
+    geo = dict(kind="hood", c=c, rx=rx, ry=ry, z0=z_bot, z1=z_top, open_w=float(spec.get("opening", 0.62)))
+    return dict(prims=prims, geo=geo, frames={"head": "head"}, sigma=2.2)
+
+
+def foot_shell(spec, cam):
+    """foot: ONE boot, on the proxy's image-left foot (the rig mirrors feet items to the other
+    side). Sole from heel to ball, one smooth toe cap in place of five toes, the instep, and a short
+    ankle cuff round the bottom of the leg. From this camera the cuff's top is mostly under the belly."""
+    p, P = cam["params"], cam["prims"]
+    s = -1.0
+    t = float(spec.get("inflate", 0.010))
+    z0 = p.get("floor_z", 0.70)
+    fx = p.get("foot_x_tilt", p["foot_x"])
+    ty = p.get("toe_y_tilt", p["toe_y"] * 0.85)
+    fw = p.get("foot_w", p["toe_r"] * 2.6)
+    fl = p.get("foot_len", 0.25)
+    tl = fw * 0.95
+    heel, ball = ty - fl, ty - tl - fw * 0.30
+    first = next(q for q in P if q[0] == "foot_l")
+    assert abs(first[1][0] - s * fx) < 1e-6 and abs(first[1][1] - (heel + 0.045)) < 1e-6, "proxy layout changed: foot"
+    prims = []
+    a, b = np.array([s * fx, heel + 0.045, z0 + 0.040]), np.array([s * fx, ball - 0.01, z0 + 0.034])
+    for u in np.linspace(0, 1, 24):                         # heel to ball
+        r = fw * (0.72 + 0.26 * u)
+        prims.append(("ell", "shell", tuple(a + (b - a) * u), (r + t, r + t, r * 0.62 + t)))
+    prims.append(("ell", "shell", (s * fx, heel + 0.10, z0 + 0.075), (fw * 0.70 + t, 0.075 + t, 0.055 + t)))   # instep
+    point = float(spec.get("toe_point", 0.0))               # 0 = round toe; 1 = a long pointed toe
+    tip = ty + float(spec.get("toe_reach", 0.0)) + point * fw * 0.6
+    cy = (ball + tip) / 2
+    m = 18
+    for u in np.linspace(0, 1, m):                          # the toe cap: a tapering run of ellipsoids
+        w = fw * 1.02 * (1.0 - (0.30 + 0.55 * point) * u ** 1.6)
+        y = ball - 0.012 + (tip - ball - w * 0.55) * u
+        prims.append(("ell", "shell", (s * fx, y, z0 + 0.030), (w + t, w * 0.62 + t, 0.040 + t)))
+    leg = [q for q in P if q[0] == "leg_l"][-1]
+    cuff_h = float(spec.get("cuff", 0.10))
+    cr = leg[2][0] + t + float(spec.get("cuff_wide", 0.012))
+    cz0, cz1 = z0 + 0.05, z0 + 0.05 + cuff_h
+    cc = (leg[1][0], leg[1][1], (cz0 + cz1) / 2)
+    prims.append(("cyl", "shell", cc, (cr, cr, cuff_h / 2), (cz0, cz1)))
+    geo = dict(kind="foot", cuff_c=cc, cuff_r=cr, cuff_z=cz1, cuff_open=float(spec.get("cuff_open", 0.74)))
+    return dict(prims=prims, geo=geo, frames={"foot": "foot_l"}, sigma=1.3, xc=s * fx, one_sided=True)
+
+
+SHELLS = {"torso": torso_shell, "bucket": helm_shell, "brim": brim_shell, "open": open_shell,
+          "hood": hood_shell, "foot": foot_shell}
+
+
+def base_colour(item, pct=65.0):
+    """Median colour of the lit part of the existing art: the guide's flat tint. `pct` is the
+    luminance percentile the lit part starts at (lower = the guide carries more of the art's darkness)."""
+    a = np.array(Image.open(original_art(item)).convert("RGBA")).astype(np.float32)
     px = a[a[..., 3] > 200][:, :3]
     lum = px @ np.array([0.299, 0.587, 0.114], np.float32)
-    px = px[lum > np.percentile(lum, 65)]
+    px = px[lum > np.percentile(lum, pct)]
     return np.median(px, 0)
 
 
-def render_item(item, proxy="orc", tilt=None):
+def _markings(clay, geo, mask, nrm, dep, X, Y, st, ct, k):
+    """Shell markings drawn into the clay: slits, bars, ridges, openings."""
+    kind = geo.get("kind")
+    if kind == "bucket":
+        # markings on the front wall: eye slit, and a raised cross bar (lighter, dark-edged)
+        Z = -Y * st + dep * ct
+        wall = mask & (nrm[..., 2] < 0.5)
+        dz = np.abs(Z - geo["slit_z"])
+        band = wall & (dz < 0.030)
+        bar = wall & (np.abs(X) < geo["bar_x"])
+        clay = np.where(band | bar, clay * 1.12 + 10, clay)
+        rim = (wall & (np.abs(dz - 0.030) < 0.004)) | (wall & (np.abs(np.abs(X) - geo["bar_x"]) < 0.004))
+        clay = np.where(rim, clay * 0.55, clay)
+        clay = np.where(wall & (dz < 0.009) & ~bar, 26, clay)
+        top_rim = mask & (nrm[..., 2] >= 0.5) & (ndi.distance_transform_edt(nrm[..., 2] >= 0.5) < 2.2 * SS)
+        clay = np.where(top_rim, clay * 0.6, clay)
+    elif kind in ("brim", "open"):
+        if geo.get("ridge"):
+            # a raised ridge from front to back over the crown
+            Yw = Y * ct + dep * st
+            on = mask & (((X - geo["c"][0]) / geo["rx"]) ** 2 + ((Yw - geo["c"][1]) / geo["ry"]) ** 2 < 0.96)
+            rid = on & (np.abs(X) < geo["ridge"])
+            clay = np.where(rid, clay * 1.10 + 8, clay)
+            clay = np.where(on & (np.abs(np.abs(X) - geo["ridge"]) < 0.0035), clay * 0.62, clay)
+    elif kind == "hood":
+        # the face opening: a dark hollow on the south face of the hood
+        Yw = Y * ct + dep * st
+        Z = -Y * st + dep * ct
+        u = (X / (geo["rx"] * geo["open_w"])) ** 2 + ((Z - (geo["z0"] + 0.46 * (geo["z1"] - geo["z0"]))) /
+                                                      (0.36 * (geo["z1"] - geo["z0"]))) ** 2
+        op = mask & (Yw > geo["c"][1] + geo["ry"] * 0.30) & (u < 1.0)
+        clay = np.where(op, 24 + 20 * np.clip(u, 0, 1) ** 3, clay)
+        clay = np.where(mask & (Yw > geo["c"][1] + geo["ry"] * 0.30) & (u >= 1.0) & (u < 1.25), clay * 0.72, clay)
+    elif kind == "foot":
+        # the cuff's open top is cut out (render_item); here only its rim is drawn
+        Yw = Y * ct + dep * st
+        Z = -Y * st + dep * ct
+        c, r = geo["cuff_c"], geo["cuff_r"]
+        d = np.hypot(X - c[0], Yw - c[1]) / r
+        top = mask & (np.abs(Z - geo["cuff_z"]) < 0.004) & (nrm[..., 2] > 0.9)
+        clay = np.where(top & (d < geo["cuff_open"] + 0.07), clay * 0.6, clay)     # the rim's inner edge
+    return clay
+
+
+def render_item(item, proxy="orc", tilt=None, spec=None):
     """Returns (guide RGB image, mask image, info dict with the item's frames in guide pixels)."""
-    spec = ITEMS[item]
+    spec = spec or load_spec(item)
     tilt = gen_plan.race_tilt(proxy, tilt)
     cam0 = camera(proxy, tilt)
     ct, st = cam0["ct"], cam0["st"]
-    hole = clip_x = geo = None
-    if spec["slot"] == "torso":
-        prims, hole, clip_x = torso_shell(spec, cam0)
-    else:
-        prims, geo = helm_shell(spec, cam0)
+    sh_ = SHELLS[spec["shell"]](spec, cam0)
+    prims, hole, clip_x, geo = sh_["prims"], sh_.get("hole"), sh_.get("clip_x"), sh_.get("geo")
     # centre the zoomed camera on the shell's projected box
     lo, hi = [], []
     for pr in prims:
@@ -318,10 +603,16 @@ def render_item(item, proxy="orc", tilt=None):
         else:
             lo.append((cy - ry) * ct - pr[4][1] * st); hi.append((cy + ry) * ct - pr[4][0] * st)
     # ... and zoom so the piece fills the canvas (a helmet is a sixth of the span at zoom 1)
-    xw = 2 * (clip_x if clip_x is not None else max(abs(pr[2][0]) + pr[3][0] for pr in prims))
+    xc = float(sh_.get("xc", 0.0))
+    if xc:
+        x_lo = min(pr[2][0] - pr[3][0] for pr in prims)
+        x_hi = max(pr[2][0] + pr[3][0] for pr in prims)
+        xc, xw = (x_lo + x_hi) / 2, x_hi - x_lo
+    else:
+        xw = 2 * (clip_x if clip_x is not None else max(abs(pr[2][0]) + pr[3][0] for pr in prims))
     px0 = cam0["scale0"] / SS
     zoom = min(0.84 * W / (xw * px0), 0.80 * H / ((max(hi) - min(lo)) * px0), 4.0)
-    cam = camera(proxy, tilt, round(zoom, 3), (0.0, (min(lo) + max(hi)) / 2))
+    cam = camera(proxy, tilt, round(zoom, 3), (xc, (min(lo) + max(hi)) / 2))
     scale = cam["scale"]
     if hole:
         # the collar plane is the shell's own surface at the neck axis (two fixed-point steps)
@@ -349,10 +640,16 @@ def render_item(item, proxy="orc", tilt=None):
         mask &= ~cut
     else:
         cut = np.zeros_like(mask)
+    if geo and geo.get("kind") == "foot":
+        # the cuff's open top is ground, keyed out like a collar: the wearer's leg shows through it
+        Yw, Zw = Y * ct + dep * st, -Y * st + dep * ct
+        c_, r_ = geo["cuff_c"], geo["cuff_r"]
+        cut = mask & (np.abs(Zw - geo["cuff_z"]) < 0.004) & (nrm[..., 2] > 0.9) &             (np.hypot(X - c_[0], Yw - c_[1]) < r_ * geo["cuff_open"])
+        mask &= ~cut
     hs = np.where(mask, dep, 0).astype(np.float32)
     k = cam["zoom"]
     mf = mask.astype(np.float32)
-    sig = (3.0 if spec["slot"] == "torso" else 1.0) * SS * k
+    sig = sh_.get("sigma", 1.0) * SS * k
     wsum = np.maximum(ndi.gaussian_filter(mf, sig), 1e-4)
     ns = np.stack([ndi.gaussian_filter(nrm[..., i] * mf, sig) / wsum for i in range(3)], -1)
     ns /= np.maximum(np.linalg.norm(ns, axis=-1, keepdims=True), 1e-6)
@@ -363,44 +660,33 @@ def render_item(item, proxy="orc", tilt=None):
     edge = np.hypot(*np.gradient(ndi.gaussian_filter(hs, 0.8 * SS))) * scale
     clay *= 1 - np.clip((edge - 1.4 * k) / (3.0 * k), 0, 1) * 0.50
     if geo:
-        # markings on the front wall: eye slit, and a raised cross bar (lighter, dark-edged)
-        Z = -Y * st + dep * ct
-        wall = mask & (nrm[..., 2] < 0.5)
-        dz = np.abs(Z - geo["slit_z"])
-        band = wall & (dz < 0.030)
-        bar = wall & (np.abs(X) < geo["bar_x"])
-        clay = np.where(band | bar, clay * 1.12 + 10, clay)
-        rim = (wall & (np.abs(dz - 0.030) < 0.004)) | (wall & (np.abs(np.abs(X) - geo["bar_x"]) < 0.004))
-        clay = np.where(rim, clay * 0.55, clay)
-        clay = np.where(wall & (dz < 0.009) & ~bar, 26, clay)
-        top_rim = mask & (nrm[..., 2] >= 0.5) & (ndi.distance_transform_edt(nrm[..., 2] >= 0.5) < 2.2 * SS)
-        clay = np.where(top_rim, clay * 0.6, clay)
+        clay = _markings(clay, geo, mask, nrm, dep, X, Y, st, ct, k)
     dist_in = ndi.distance_transform_edt(mask)
     outline = np.clip(1.25 - dist_in / (2.0 * SS), 0, 1)
     clay = clay * (1 - 0.75 * outline) + 45 * 0.75 * outline
-    base = base_colour(item) / 205.0
+    base = base_colour(item, float(spec.get("tint_pct", 65.0))) / 205.0
     col = np.clip(base[None, None] * (clay[..., None] * 1.18), 0, 255)
-    img = np.where(mask[..., None], col, np.array(GROUND, np.float32)).astype(np.uint8)
+    gname, ground, gwhy = ground_for(spec)
+    img = np.where(mask[..., None], col, np.array(ground, np.float32)).astype(np.uint8)
     guide = Image.fromarray(img).resize((W, H), Image.LANCZOS)
     m = Image.fromarray((mask * 255).astype(np.uint8)).resize((W, H), Image.LANCZOS).point(
         lambda v: 255 if v >= 128 else 0)
 
     pf, body_mask, _, pstats = proxy_frames(proxy, tilt)
-    want = ["head"] if spec["slot"] == "head" else ["torso"] + (
-        [] if spec["sleeve"] == "sleeveless" else ["upperarm_l", "upperarm_r"]) + (
-        ["forearm_l", "forearm_r"] if spec["sleeve"] == "long" else [])
     frames = {}
-    for name in want:
-        f = dict(pf[name])
+    for name, src in sh_["frames"].items():
+        f = dict(pf[src])
         o = guide_to_item(cam, f["o"])
         f["o"] = [round(float(o[0]), 2), round(float(o[1]), 2)]
-        for key in ("lx", "ly", "ly_neg"):
-            if key in f:
-                f[key] = round(f[key] * k, 3)
+        for key_ in ("lx", "ly", "ly_neg"):
+            if key_ in f:
+                f[key_] = round(f[key_] * k, 3)
         frames[name] = f
     info = dict(item=item, proxy=proxy, tilt_deg=tilt, zoom=k, slot=spec["slot"], frames=frames,
-                ground=list(GROUND), px_per_unit=round(scale / SS, 3),
+                ground=list(ground), px_per_unit=round(scale / SS, 3),
                 proxy_head_scale=cam["params"].get("head_scale", 1.0))
+    info.update(shell=spec["shell"], build=spec.get("build", "neutral") if spec["shell"] == "torso" else "proxy",
+                ground_name=gname, ground_why=gwhy, one_sided=bool(sh_.get("one_sided")))
     if spec["slot"] == "torso":
         info["sleeve"] = spec["sleeve"]
         # where the collar hole sits in the torso frame (normalised U, V; V < 0 = toward the back)
@@ -428,9 +714,9 @@ def item_out(item):
     return d
 
 
-def make_swatch(item, out):
-    sw = ITEMS[item]["swatch"]
-    im = Image.open(os.path.join(core.RIGS, "items", item, "art.png")).convert("RGBA")
+def make_swatch(item, out, spec=None):
+    sw = (spec or load_spec(item))["swatch"]
+    im = Image.open(original_art(item)).convert("RGBA")
     bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
     bg.alpha_composite(im)
     c = bg.convert("RGB").crop(sw["box"])
@@ -443,28 +729,31 @@ def make_swatch(item, out):
 
 def save_guide(item, proxy="orc", tilt=None):
     out = item_out(item)
-    guide, m, info = render_item(item, proxy, tilt)
+    spec = load_spec(item)
+    guide, m, info = render_item(item, proxy, tilt, spec)
     guide.save(os.path.join(out, "guide.png"))
     m.save(os.path.join(out, "guide_mask.png"))
-    make_swatch(item, out)
+    make_swatch(item, out, spec)
     with open(os.path.join(out, "guide.json"), "w") as f:
         json.dump(info, f, indent=1)
     print(json.dumps({k: info[k] for k in info if k not in ("frames",)}))
     return info
 
 
-def build_prompt(item, tilt, note=""):
-    s = ITEMS[item]
+def build_prompt(item, tilt, note="", spec=None):
+    s = spec or load_spec(item)
+    gname, ground, _ = ground_for(s)
     deg = TILT_WORDS.get(int(round(tilt)), "%g" % tilt)
     t = ("Image 1 is a flat-colour 3D block-out of %s, " % s["what"]) + CAMERA % deg + s["reads"]
     t += ("Paint over this exact block-out to make a finished game item: %s. Keep the identical outline, "
           "position, scale and steep overhead viewpoint, tracing the silhouette precisely and keeping "
           "every form where and how large the block-out has it. %s." % (s["look"], s["paint"]))
-    t += FINISH % (GROUND + (s["hole_words"],))
+    t += (FINISH_ONE if s["shell"] == "foot" else FINISH) % ((gname,) + tuple(ground) + (s["hole_words"],))
     t += SWATCH % (s["material"], s["hole_words"])
-    if note:
-        t += " " + note
-    return t
+    for extra in (s.get("note", ""), note):
+        if extra:
+            t += " " + extra
+    return t.replace("{ground}", gname)
 
 
 def gen(item, n, tag, proxy="orc", tilt=None, note=""):
@@ -479,7 +768,8 @@ def gen(item, n, tag, proxy="orc", tilt=None, note=""):
         shutil.copyfile(os.path.join(out, src), os.path.join(out, "%s.%s" % (tag, dst)))
     parts = [{"text": prompt}, _part(os.path.join(out, tag + ".in1_guide.png"), max_side=1376),
              _part(os.path.join(out, tag + ".in2_swatch.png"))]
-    log_p = os.path.join(OUT, "calls.json")
+    # one call log per item, so painters working side by side never write the same file
+    log_p = os.path.join(out, "calls.json")
     log = json.load(open(log_p)) if os.path.exists(log_p) else []
     made = []
     for i in range(1, n + 1):
@@ -508,16 +798,35 @@ def gen(item, n, tag, proxy="orc", tilt=None, note=""):
 
 # ---------------------------------------------------------------- key, check, install
 
-def key(rgb):
-    """Blue-dominance key. Returns (paint float RGB with the ground replaced by bled paint,
-    alpha float 0..1)."""
+EDGE_EAT = 1.0          # px of paint next to the ground that become clear (the key-coloured fringe)
+EDGE_FEATHER = 2.0      # px over which the edge then fades in
+
+
+def _dominance(a, ground):
+    """How much a pixel is the key colour: the key's own channel(s) above the others."""
+    if ground == "green":
+        return a[..., 1] - np.maximum(a[..., 0], a[..., 2])
+    if ground == "magenta":
+        return np.minimum(a[..., 0], a[..., 2]) - a[..., 1]
+    return a[..., 2] - np.maximum(a[..., 0], a[..., 1])
+
+
+def key(rgb, ground="blue", soft=False):
+    """Key-colour dominance key. Returns (paint float RGB with the ground replaced by bled paint,
+    alpha float 0..1).
+
+    soft=False  the pilot's edge: a one-pixel rim whose alpha is estimated pixel by pixel (gen_hands).
+    soft=True   every edge, the collar hole's included, is redrawn: the ground's outline is smoothed,
+                the first EDGE_EAT px of paint beside it are cleared (that is where the key colour
+                bleeds into the painting), alpha then fades in over EDGE_FEATHER px, and the faded
+                band takes its colour from clean paint further in. No jagged or key-tinted fringe."""
     a = rgb.astype(np.float32)
-    dom = a[..., 2] - np.maximum(a[..., 0], a[..., 1])
+    dom = _dominance(a, ground)
     k = 24
     corners = np.concatenate([a[:k, :k].reshape(-1, 3), a[:k, -k:].reshape(-1, 3),
                               a[-k:, :k].reshape(-1, 3), a[-k:, -k:].reshape(-1, 3)])
     bg = np.median(corners, 0)
-    bdom = float(bg[2] - max(bg[0], bg[1]))
+    bdom = float(_dominance(bg, ground))
     fg = dom < 0.45 * bdom
     fg = ndi.binary_opening(fg, iterations=1)
     lab, n = ndi.label(fg)
@@ -528,6 +837,16 @@ def key(rgb):
     holes, hn = ndi.label(~fg)                      # specks of ground inside the paint are paint
     hs = ndi.sum(~fg, holes, range(1, hn + 1))
     fg |= np.isin(holes, 1 + np.nonzero(hs < 60)[0])
+    if soft:
+        gnd = ndi.gaussian_filter((~fg).astype(np.float32), 1.6) > 0.5
+        d = ndi.distance_transform_edt(~gnd)
+        t = np.clip((d - EDGE_EAT) / EDGE_FEATHER, 0.0, 1.0)
+        alpha = np.where(gnd, 0.0, t * t * (3.0 - 2.0 * t)).astype(np.float32)
+        clean = fg & (d >= EDGE_EAT + EDGE_FEATHER + 1.0)
+        _, (iy, ix) = ndi.distance_transform_edt(~clean, return_indices=True)
+        bled = a[iy, ix]
+        smooth = np.stack([ndi.gaussian_filter(bled[..., c], 1.0) for c in range(3)], -1)
+        return np.where(clean[:, :, None], a, smooth), alpha
     core_m = ndi.binary_erosion(fg, iterations=2)
     _, (iy, ix) = ndi.distance_transform_edt(~core_m, return_indices=True)
     F = a[iy, ix]
@@ -539,9 +858,31 @@ def key(rgb):
     return np.where(core_m[:, :, None], a, F), alpha
 
 
+def tone_match(paint, alpha, ref_px, strength):
+    """Pull the painting's colour toward the original's: per Lab channel, move the mean and the
+    spread of the opaque paint toward those of `ref_px` (the swatch of the original art), by
+    `strength` (0 = leave, 1 = match). Returns the new paint and what was done."""
+    if strength <= 0:
+        return paint, None
+    lab = cv2.cvtColor(np.ascontiguousarray(np.clip(paint, 0, 255).astype(np.uint8)), cv2.COLOR_RGB2LAB).astype(np.float32)
+    ref = cv2.cvtColor(np.clip(ref_px, 0, 255).astype(np.uint8)[None], cv2.COLOR_RGB2LAB)[0].astype(np.float32)
+    sel = alpha > 0.9
+    out = lab.copy()
+    rep = {}
+    for c, name in enumerate("Lab"):
+        m0, s0 = float(lab[sel][:, c].mean()), float(lab[sel][:, c].std())
+        m1, s1 = float(ref[:, c].mean()), float(ref[:, c].std())
+        g = float(np.clip(s1 / max(s0, 1e-3), 0.6, 1.6))
+        g = 1.0 + (g - 1.0) * strength
+        out[..., c] = (lab[..., c] - m0) * g + m0 + (m1 - m0) * strength
+        rep[name] = [round(m0, 1), round(m1, 1)]
+    rgb = cv2.cvtColor(np.clip(out, 0, 255).astype(np.uint8), cv2.COLOR_LAB2RGB).astype(np.float32)
+    return rgb, rep
+
+
 def measure(path, gmask, info):
     rgb = np.asarray(Image.open(path).convert("RGB"))
-    _, alpha = key(rgb)
+    _, alpha = key(rgb, info.get("ground_name", "blue"), soft=True)
     sil = alpha >= 0.5
     r = dict(name=os.path.basename(path),
              iou=round(float((sil & gmask).sum()) / float((sil | gmask).sum()), 4))
@@ -550,7 +891,8 @@ def measure(path, gmask, info):
     r["bbox_dx_dy_dw_dh"] = [int(xs.min() - gx.min()), int(ys.min() - gy.min()),
                              int((xs.max() - xs.min()) - (gx.max() - gx.min())),
                              int((ys.max() - ys.min()) - (gy.max() - gy.min()))]
-    r["symmetry"] = round(float((sil & sil[:, ::-1]).sum()) / float((sil | sil[:, ::-1]).sum()), 4)
+    if not info.get("one_sided"):
+        r["symmetry"] = round(float((sil & sil[:, ::-1]).sum()) / float((sil | sil[:, ::-1]).sum()), 4)
     if "collar" in info:
         c = info["collar"]
         yy, xx = np.mgrid[0:H, 0:W]
@@ -576,13 +918,17 @@ def check(item, tag):
     out = item_out(item)
     info = json.load(open(os.path.join(out, tag + ".guide.json")))
     gmask = np.array(Image.open(os.path.join(out, tag + ".guide_mask.png"))) > 127
-    rows = [measure(p, gmask, info) for p in tag_paths(item, tag)]
+    paths = tag_paths(item, tag)
+    if not paths:
+        raise SystemExit("no paintings %s_<n>.png in %s" % (tag, os.path.relpath(out, core.ROOT)))
+    rows = [measure(p, gmask, info) for p in paths]
     for r in rows:
         print(json.dumps(r))
     with open(os.path.join(out, tag + "_check.json"), "w") as f:
         json.dump(rows, f, indent=1)
-    # contact sheet: guide + candidates, half size
-    ims = [Image.open(os.path.join(out, tag + ".in1_guide.png"))] + [Image.open(p) for p in tag_paths(item, tag)]
+    # contact sheet: guide + swatch + candidates, half size
+    sw = Image.open(os.path.join(out, tag + ".in2_swatch.png")).convert("RGB")
+    ims = [Image.open(os.path.join(out, tag + ".in1_guide.png"))] + [Image.open(p) for p in paths]
     tw, th = W // 2, H // 2
     cols = 2
     sheet = Image.new("RGB", (tw * cols, th * ((len(ims) + 1) // cols)), (20, 20, 20))
@@ -591,6 +937,9 @@ def check(item, tag):
         ImageDraw.Draw(sheet).text(((i % cols) * tw + 6, (i // cols) * th + 6),
                                    "guide" if i == 0 else rows[i - 1]["name"] + "  IoU %.3f" % rows[i - 1]["iou"],
                                    fill=(255, 255, 255))
+    if info.get("ground_name"):                     # sheets made before the swatch inset stay as they were
+        sw.thumbnail((150, 150))
+        sheet.paste(sw, (tw - sw.width - 6, 6))
     sheet.save(os.path.join(out, tag + "_sheet.jpg"), quality=90)
     return rows
 
@@ -599,11 +948,15 @@ def install(item, painting, new_id=None, ease=1.0):
     """Key the painting, crop it, and ingest it as an item pack with the guide's proxy frames."""
     new_id = new_id or item + "_td"
     out = item_out(item)
+    spec = load_spec(item)
     tag = os.path.basename(painting).rsplit("_", 1)[0]
     info = json.load(open(os.path.join(out, tag + ".guide.json")))
     gmask = np.array(Image.open(os.path.join(out, tag + ".guide_mask.png"))) > 127
     rgb = np.asarray(Image.open(painting).convert("RGB"))
-    paint, alpha = key(rgb)
+    paint, alpha = key(rgb, info.get("ground_name", "blue"), soft=True)
+    tm = None
+    if float(spec.get("tone_match", 0.0)) > 0:
+        paint, tm = tone_match(paint, alpha, swatch_pixels(spec), float(spec["tone_match"]))
     m = measure(painting, gmask, info)
     ys, xs = np.nonzero(alpha > 0.02)
     pad = 4
@@ -624,11 +977,51 @@ def install(item, painting, new_id=None, ease=1.0):
                       % (item, os.path.basename(painting), info["proxy"], m["iou"])}
     if "collar" in info:
         meta["collar"] = {k: info["collar"][k] for k in ("U", "V", "r_over_half_shoulder")}
-    spec = ITEMS[item]
+    if spec.get("encloses"):
+        meta["encloses"] = True
+    if tm:
+        meta["tone_match"] = {"strength": float(spec["tone_match"]), "lab_mean_from_to": tm}
+    if spec["slot"] == "feet":
+        meta["authored_side"] = "l"
     d = ingest.ingest(new_id, tmp, spec["slot"], frames=frames, sleeve=spec.get("sleeve"),
                       layer=spec.get("layer"), ease=ease, meta=meta)
+    os.remove(tmp)
     print("wrote Rigs/items/%s  frames: %s  %s" % (new_id, ", ".join(d["frames"]), json.dumps(m)))
     return d
+
+
+def promote(item, new_id=None):
+    """Make the repaint the pack for the ORIGINAL id: Rigs/items/<item>/ gets the _td art, frames
+    and mesh and keeps its own id, layer and `item_ids` game mapping. The old art is filed as
+    out/items_td/<item>/original.png (the swatch source); the _td pack is deleted. Run a Godot
+    --import afterwards."""
+    import shutil
+    new_id = new_id or item + "_td"
+    src, dst = os.path.join(core.RIGS, "items", new_id), os.path.join(core.RIGS, "items", item)
+    if not os.path.exists(os.path.join(src, "item.json")):
+        raise SystemExit("no pack Rigs/items/%s to promote" % new_id)
+    old, new = core.load_json(os.path.join(dst, "item.json")), core.load_json(os.path.join(src, "item.json"))
+    if old.get("camera") == new.get("camera"):
+        raise SystemExit("%s is already a %s pack" % (item, new.get("camera")))
+    if old["slot"] != new["slot"] or set(old["frames"]) != set(new["frames"]):
+        raise SystemExit("%s and %s differ in slot or frames; promote by hand" % (item, new_id))
+    kept = os.path.join(item_out(item), "original.png")
+    if not os.path.exists(kept):
+        shutil.copyfile(os.path.join(dst, old["art"]), kept)
+    new["id"] = item
+    for k in ("layer", "item_ids"):
+        if k in old:
+            new[k] = old[k]
+    out = {}
+    for k in new:                      # item_ids next to the other identity keys, mesh last
+        if k == "frames" and "item_ids" in new:
+            out["item_ids"] = new["item_ids"]
+        if k != "item_ids":
+            out[k] = new[k]
+    shutil.copyfile(os.path.join(src, new["art"]), os.path.join(dst, "art.png"))
+    core.save_json(os.path.join(dst, "item.json"), out)
+    shutil.rmtree(src)
+    print("promoted %s -> Rigs/items/%s (old art kept as %s)" % (new_id, item, os.path.relpath(kept, core.ROOT)))
 
 
 # ---------------------------------------------------------------- compare
@@ -638,6 +1031,8 @@ RACES = [("orc", "tilt15"), ("orc", "tilt15_head"), ("orc", "default"), ("human"
          ("halfling_male", "default")]
 SHEET_RACES = [("orc", "tilt15"), ("orc", "tilt15_head"), ("human", "default"), ("halfling_male", "default"), ("orc", "default"),
                ("goblin_male", "default")]
+ITEM_SHEET_RACES = [("orc", "tilt15_head"), ("orc", "default"), ("human", "default"), ("halfling_male", "default"),
+                    ("goblin_male", "default")]
 
 
 def _present(races):
@@ -670,6 +1065,36 @@ def metrics(races=RACES, items=PILOT):
     return rows
 
 
+def _tile(img, box, tile, bg):
+    """Crop `box` (x0, y0, x1, y1, may run off the image) out of an RGB(A) array and scale it to `tile`."""
+    x0, y0, x1, y1 = [int(round(v)) for v in box]
+    pad = max(0, -x0, -y0, x1 - img.shape[1], y1 - img.shape[0])
+    big = np.zeros((img.shape[0] + 2 * pad, img.shape[1] + 2 * pad, 3), np.uint8)
+    big[:] = bg
+    big[pad:pad + img.shape[0], pad:pad + img.shape[1]] = img[:, :, :3]
+    crop = big[y0 + pad:y1 + pad, x0 + pad:x1 + pad]
+    interp = cv2.INTER_AREA if crop.shape[1] > tile[0] else cv2.INTER_CUBIC
+    return Image.fromarray(cv2.resize(crop, tile, interpolation=interp))
+
+
+def _body_box(canvas, tile, feet=False):
+    """The trunk and head of a composed race, at least 2.9 half-shoulders wide, at the tile's aspect."""
+    f = canvas.data["frames"]
+    t = f["torso"]
+    half_w = t["lx"] * 2.9
+    cx = t["o"][0] + canvas.pad
+    y_top = min(f["head_full"]["o"][1] - f["head_full"]["ly"], t["o"][1] - t.get("ly_neg", t["ly"])) + canvas.pad
+    y_bot = t["o"][1] + t["ly"] + canvas.pad
+    if feet:
+        for s in "lr":
+            if "foot_" + s in f:
+                y_bot = max(y_bot, f["foot_" + s]["o"][1] + f["foot_" + s]["lx"] + canvas.pad)
+    cy = (y_top + y_bot) / 2.0
+    half_h = max(half_w * tile[1] / tile[0], (y_bot - y_top) / 2.0 * 1.12)
+    half_w = half_h * tile[0] / tile[1]
+    return cx - half_w, cy - half_h, cx + half_w, cy + half_h
+
+
 def pilot_sheet(out_path, races=SHEET_RACES, items=PILOT, tile=(560, 330)):
     from .render import compose
     from .sheet import BG
@@ -687,32 +1112,71 @@ def pilot_sheet(out_path, races=SHEET_RACES, items=PILOT, tile=(560, 330)):
         dr.text((6, head + i * tile[1] + 24), iid.replace("_stained", "\n_stained"), fill=(200, 200, 190))
         for j, (race, variant) in enumerate(races):
             img, _, canvas = compose(race, [iid], variant, skel, background=BG)
-            f = canvas.data["frames"]
-            t = f["torso"]
-            # frame the trunk and head: at least 2.9 half-shoulders wide
-            half_w = t["lx"] * 2.9
-            cx = t["o"][0] + canvas.pad
-            y_top = min(f["head_full"]["o"][1] - f["head_full"]["ly"], t["o"][1] - t.get("ly_neg", t["ly"])) + canvas.pad
-            y_bot = t["o"][1] + t["ly"] + canvas.pad
-            cy = (y_top + y_bot) / 2.0
-            half_h = max(half_w * tile[1] / tile[0], (y_bot - y_top) / 2.0 * 1.12)
-            half_w = half_h * tile[0] / tile[1]
-            x0, x1 = int(round(cx - half_w)), int(round(cx + half_w))
-            y0, y1 = int(round(cy - half_h)), int(round(cy + half_h))
-            pad = max(0, -x0, -y0, x1 - img.shape[1], y1 - img.shape[0])
-            big = np.zeros((img.shape[0] + 2 * pad, img.shape[1] + 2 * pad, 3), np.uint8)
-            big[:] = BG
-            big[pad:pad + img.shape[0], pad:pad + img.shape[1]] = img[:, :, :3]
-            crop = big[y0 + pad:y1 + pad, x0 + pad:x1 + pad]
-            interp = cv2.INTER_AREA if crop.shape[1] > tile[0] else cv2.INTER_CUBIC
-            sheet.paste(Image.fromarray(cv2.resize(crop, tile, interpolation=interp)),
-                        (side + j * tile[0], head + i * tile[1]))
+            sheet.paste(_tile(img, _body_box(canvas, tile), tile, BG), (side + j * tile[0], head + i * tile[1]))
     for j in range(1, len(races)):
         dr.line([(side + j * tile[0], 0), (side + j * tile[0], sheet.height)], fill=(30, 32, 30), width=2)
     for i in range(1, len(cols)):
         dr.line([(0, head + i * tile[1]), (sheet.width, head + i * tile[1])], fill=(30, 32, 30),
                 width=6 if i % 2 == 0 else 2)
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    sheet.save(out_path, quality=90)
+    return out_path
+
+
+def item_sheet(item, new_id=None, races=ITEM_SHEET_RACES, tile=(520, 330)):
+    """tools/rigkit/out/items_td/<item>/compare.jpg: the original pack against the _td pack, each
+    worn alone by five race packs. Top two rows: the whole trunk, head and feet. Bottom two rows: a
+    zoomed crop on the item. A missing _td pack leaves its rows empty."""
+    from .render import compose
+    from .sheet import BG
+    skel = core.skeleton()
+    new_id = new_id or item + "_td"
+    races = _present(races)
+    ids = [item, new_id]
+    have = [os.path.exists(os.path.join(core.RIGS, "items", i, "item.json")) for i in ids]
+    side, head = 150, 26
+    rows = [(0, False), (1, False), (0, True), (1, True)]
+    sheet = Image.new("RGB", (side + tile[0] * len(races), head + tile[1] * len(rows)), (30, 32, 30))
+    dr = ImageDraw.Draw(sheet)
+    for j, (race, variant) in enumerate(races):
+        dr.text((side + j * tile[0] + 6, 7), "%s/%s" % (race, variant), fill=(230, 230, 220))
+    cache = {}
+    for i, (which, zoomed) in enumerate(rows):
+        y = head + i * tile[1]
+        dr.text((6, y + 8), ("NEW (tilt15)" if which else "ORIGINAL") + ("  zoom" if zoomed else ""),
+                fill=(255, 220, 140) if which else (200, 200, 190))
+        dr.text((6, y + 24), ids[which] if have[which] else ids[which] + "\n(not installed)", fill=(200, 200, 190))
+        if not have[which]:
+            continue
+        for j, (race, variant) in enumerate(races):
+            if (which, j) not in cache:
+                cache[(which, j)] = compose(race, [ids[which]], variant, skel, background=BG)
+            img, alphas, canvas = cache[(which, j)]
+            if canvas.skipped:
+                dr.text((side + j * tile[0] + 8, y + 8), "cannot wear: race has no %s" % ", ".join(canvas.skipped[0][1]),
+                        fill=(240, 150, 120))
+                continue
+            box = _body_box(canvas, tile, feet=True)
+            if zoomed:
+                # the union of both packs' pixels on this race, so the two zoom rows share one frame
+                m = np.zeros(canvas.size, bool)
+                for w2 in (0, 1):
+                    if have[w2]:
+                        if (w2, j) not in cache:
+                            cache[(w2, j)] = compose(race, [ids[w2]], variant, skel, background=BG)
+                        for _, a in cache[(w2, j)][1].get(ids[w2], []):
+                            m |= a
+                ys, xs = np.nonzero(m)
+                if len(xs):
+                    cx, cy = (xs.min() + xs.max()) / 2.0, (ys.min() + ys.max()) / 2.0
+                    hw = max((xs.max() - xs.min()) / 2.0 * 1.25, (ys.max() - ys.min()) / 2.0 * 1.25 * tile[0] / tile[1], 12)
+                    box = (cx - hw, cy - hw * tile[1] / tile[0], cx + hw, cy + hw * tile[1] / tile[0])
+            sheet.paste(_tile(img, box, tile, BG), (side + j * tile[0], y))
+    for j in range(1, len(races)):
+        dr.line([(side + j * tile[0], 0), (side + j * tile[0], sheet.height)], fill=(30, 32, 30), width=2)
+    for i in range(1, len(rows)):
+        dr.line([(0, head + i * tile[1]), (sheet.width, head + i * tile[1])], fill=(30, 32, 30), width=6 if i == 2 else 2)
+    out_path = os.path.join(item_out(item), "compare.jpg")
     sheet.save(out_path, quality=90)
     return out_path
 
@@ -732,9 +1196,9 @@ def compare(out_dir):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("guide", "gen", "check", "install"):
+    for name in ("guide", "gen", "check", "install", "sheet", "prompt", "promote"):
         s = sub.add_parser(name)
-        s.add_argument("item", choices=sorted(ITEMS))
+        s.add_argument("item", choices=list_specs())
         if name in ("guide", "gen"):
             s.add_argument("--proxy", default="orc")
             s.add_argument("--tilt", type=float, default=None)
@@ -743,23 +1207,37 @@ def main(argv=None):
             s.add_argument("--tag", default="r1")
             s.add_argument("--note", default="")
         if name == "check":
+            s.add_argument("tag_pos", nargs="?", default=None, metavar="tag")
             s.add_argument("--tag", default="r1")
         if name == "install":
             s.add_argument("painting")
             s.add_argument("--id", default=None)
             s.add_argument("--ease", type=float, default=1.0)
+        if name in ("sheet", "promote"):
+            s.add_argument("--id", default=None)
+    sub.add_parser("list")
     c = sub.add_parser("compare")
     c.add_argument("--out", default=OUT)
     a = ap.parse_args(argv)
-    if a.cmd == "guide":
+    if a.cmd == "list":
+        for i in list_specs():
+            s = load_spec(i)
+            print("%-24s %-7s %-6s ground=%s" % (i, s["shell"], s["slot"], ground_for(s)[0]))
+    elif a.cmd == "guide":
         save_guide(a.item, a.proxy, a.tilt)
+    elif a.cmd == "prompt":
+        print(build_prompt(a.item, gen_plan.race_tilt("orc", None)))
     elif a.cmd == "gen":
         gen(a.item, a.n, a.tag, a.proxy, a.tilt, a.note)
         check(a.item, a.tag)
     elif a.cmd == "check":
-        check(a.item, a.tag)
+        check(a.item, a.tag_pos or a.tag)
     elif a.cmd == "install":
         install(a.item, a.painting, a.id, a.ease)
+    elif a.cmd == "promote":
+        promote(a.item, a.id)
+    elif a.cmd == "sheet":
+        print("wrote", item_sheet(a.item, a.id))
     else:
         compare(a.out)
     return 0

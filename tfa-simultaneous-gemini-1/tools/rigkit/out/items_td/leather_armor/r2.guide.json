@@ -1,0 +1,58 @@
+{
+ "item": "leather_armor",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.977,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.08,
+    299.8
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 365.613,
+   "ly": 362.396,
+   "ly_neg": 175.913
+  }
+ },
+ "ground": [
+  58,
+  110,
+  215
+ ],
+ "px_per_unit": 1264.964,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "blue",
+ "ground_why": "mean hue distance 165 deg from the swatch",
+ "one_sided": false,
+ "sleeve": "sleeveless",
+ "collar": {
+  "centre_px": [
+   688.0,
+   264.72
+  ],
+  "r_px": 142.94,
+  "U": 0.005,
+  "V": -0.1994,
+  "r_over_half_shoulder": 0.391,
+  "world": {
+   "y": 0.017,
+   "z": 1.6144,
+   "r": 0.113
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.62,
+   205.46
+  ],
+  "r": 188.76
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}

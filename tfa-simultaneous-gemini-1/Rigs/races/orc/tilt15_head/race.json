@@ -40,6 +40,28 @@
     395,
     14
    ]
+  },
+  "bare": {
+   "file": "bare.png",
+   "offset": [
+    390,
+    9
+   ],
+   "size": [
+    246,
+    207
+   ]
+  },
+  "trunk": {
+   "file": "trunk.png",
+   "offset": [
+    370,
+    127
+   ],
+   "size": [
+    284,
+    139
+   ]
   }
  },
  "notes": [

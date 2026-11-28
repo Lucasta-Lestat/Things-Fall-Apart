@@ -1,0 +1,20 @@
+{
+ "shell": "bucket",
+ "ground": "blue",
+ "encloses": true,
+ "pad": 0.014,
+ "swatch": {
+  "box": [
+   8,
+   150,
+   120,
+   320
+  ]
+ },
+ "what": "a single helmet, a great helm: a closed steel bucket helmet with a flat top",
+ "reads": "The large oval that fills most of the picture is the helmet's flat top plate seen from above. The curved band along its bottom edge is the front wall of the helmet, seen from steeply above and strongly foreshortened: across it runs the narrow dark eye slit, and a raised vertical reinforcing bar crosses the slit at the centre, making a cross. ",
+ "look": "a plain great helm of grey hammered steel, with a flat top plate, a narrow eye slit and a cross-shaped reinforcing bar on its front",
+ "paint": "Turn the simple forms into believable hammered steel: the flat top plate with a soft sheen and a riveted seam around its rim, the front wall curving away to both sides, the eye slit a narrow black opening, the cross-shaped bar raised and riveted, and a few small round breathing holes below the slit",
+ "material": "grey hammered steel with its soft pale highlights and dark shadows",
+ "hole_words": ""
+}

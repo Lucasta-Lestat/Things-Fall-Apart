@@ -1,0 +1,26 @@
+{
+ "shell": "brim",
+ "brim": 1.5,
+ "brim_drop": 0.3,
+ "brim_slope": 0.035,
+ "forward": 0.01,
+ "ridge": 0.01,
+ "pad": 0.012,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   195,
+   60,
+   290,
+   170
+  ]
+ },
+ "what": "a single helmet, a kettle hat: a round steel skull with a wide brim all around",
+ "reads": "The helmet is seen from almost straight above, so the crown is the large oval dome in the middle and the brim is the flat ring that surrounds the dome on every side: a narrow band of brim above the dome at the back, a wider band of brim below the dome at the front. The raised ridge is the straight vertical line running over the dome from its top edge to its bottom edge. ",
+ "look": "a weathered kettle hat of mid-grey steel with a wide brim, a raised ridge over the crown, a plain raised band around the foot of the crown and patches of brown patina",
+ "paint": "Turn the simple forms into believable hammered steel: a rounded crown with a soft sheen and a raised ridge from front to back, a plain raised steel band where the crown meets the brim, the wide brim with a thin rolled outer edge, a few short fine scratches, and soft cloudy patches of warm brown patina mottled over the grey steel of both crown and brim",
+ "material": "grey weathered steel surface with its soft pale highlights, fine scratches and cloudy patches of warm brown patina",
+ "hole_words": "",
+ "tint_pct": 45,
+ "tone_match": 0
+}

@@ -25,5 +25,10 @@
  ],
  "px_per_unit": 1247.688,
  "proxy_head_scale": 1.362,
+ "shell": "bucket",
+ "build": "proxy",
+ "ground_name": "blue",
+ "ground_why": "set in the spec",
+ "one_sided": false,
  "camera_iou_vs_gen_plan": 1.0
 }

@@ -1,0 +1,82 @@
+{
+ "item": "chain_shirt",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.84,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.22,
+    305.64
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 340.277,
+   "ly": 337.283,
+   "ly_neg": 163.723
+  },
+  "upperarm_l": {
+   "o": [
+    345.94,
+    304.72
+   ],
+   "ax": [
+    -0.99442,
+    -0.10545
+   ],
+   "lx": 352.664,
+   "ly": 104.506
+  },
+  "upperarm_r": {
+   "o": [
+    1026.5,
+    306.56
+   ],
+   "ax": [
+    0.99357,
+    -0.11321
+   ],
+   "lx": 353.913,
+   "ly": 104.626
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1177.306,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.024)",
+ "one_sided": false,
+ "sleeve": "short",
+ "collar": {
+  "centre_px": [
+   688.0,
+   272.98
+  ],
+  "r_px": 135.39,
+  "U": 0.005,
+  "V": -0.1995,
+  "r_over_half_shoulder": 0.3979,
+  "world": {
+   "y": 0.017,
+   "z": 1.6144,
+   "r": 0.115
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.71,
+   217.83
+  ],
+  "r": 175.68
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}

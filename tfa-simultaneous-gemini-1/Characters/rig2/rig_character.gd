@@ -19,6 +19,13 @@ extends Node2D
 ## through the glove's colour ramp, plus rigid cuff / back-of-hand pieces. A race
 ## pack built without the hand rig keeps the old behaviour.
 ##
+## HEAD ENCLOSURE and TRUNK OVER FEET (tools/rigkit/core.py has the rules). An item
+## pack with "encloses": true (great helm, deep hood) hides the whole head while it
+## is worn: the "Head" overlay is hidden and the head's box of the body ("HeadBox")
+## is swapped for "Bare", the same box with the head painted out. "TrunkOverFeet"
+## is the trunk round the feet drawn again above feet items, so a boot never covers
+## the belly.
+##
 ## Node space is race-pack pixels with the torso origin at (0, 0); scale the
 ## node by `world_scale()` to get game units.
 
@@ -37,6 +44,10 @@ var _pose: Dictionary = {"l": "open", "r": "open"}      # what is shown
 var _forced: Dictionary = {}                               # side -> pose set by set_hand_pose
 var _open_hand: Dictionary = {}                            # side -> Polygon2D (cut-out of the body)
 var _fist: Dictionary = {}                                 # side -> Polygon2D (built on first use)
+var _head: Sprite2D = null                                 # the head overlay (above collars and capes)
+var _head_box: Polygon2D = null                            # the head's box of the body painting
+var _bare: Sprite2D = null                                 # the same box with the head painted out
+var _enclosed: bool = false
 
 
 ## Build the bare body. Returns false (and builds nothing) if the pack is missing.
@@ -58,7 +69,10 @@ func setup(p_race: String, p_variant: String = "default") -> bool:
 	var overlays: Dictionary = _race.get("overlays", {})
 	if overlays.has("head"):
 		var head: Dictionary = overlays["head"]
-		_sprite("Head", str(head["file"]), RigFit._v(head["offset"]), int(layers["head"]))
+		_head = _sprite("Head", str(head["file"]), RigFit._v(head["offset"]), int(layers["head"]))
+	if overlays.has("trunk") and layers.has("trunk_over_feet"):
+		var trunk: Dictionary = overlays["trunk"]
+		_sprite("TrunkOverFeet", str(trunk["file"]), RigFit._v(trunk["offset"]), int(layers["trunk_over_feet"]))
 	if overlays.has("over"):
 		var over: Dictionary = overlays["over"]
 		_sprite("OverGarment", str(over["file"]), RigFit._v(over["offset"]), int(layers["arms_over_garments"]))
@@ -67,7 +81,8 @@ func setup(p_race: String, p_variant: String = "default") -> bool:
 
 ## The body. With the hand rig it is three polygons sharing body.png: "Body" (all
 ## but the hands) and "Hand_l" / "Hand_r" (the open hands, hidden while that hand
-## grips). Without it, one sprite as before.
+## grips). With a `bare` overlay the head's box is cut out of "Body" too and drawn
+## as "HeadBox" (or "Bare" under enclosing headwear). With neither, one sprite.
 func _build_body(z: int) -> Node2D:
 	var path: String = RigLibrary.race_file(_race, str(_race["art"]))
 	if path == "":
@@ -79,13 +94,25 @@ func _build_body(z: int) -> Node2D:
 			var all_parts: Dictionary = _race["parts"]
 			var p: Dictionary = all_parts["hand_" + side]
 			parts.append(p)
-	var size_arr: Array = _race["size"]
-	var size: Vector2 = Vector2(float(size_arr[0]), float(size_arr[1]))
-	var rest: Array[Rect2] = RigFit.rest_quads(size, parts) if parts.size() == 2 else ([] as Array[Rect2])
+	var hands_split: bool = parts.size() == 2 and not RigFit.rest_quads(_race_size(), parts).is_empty()
+	if not hands_split:
+		parts.clear()
+	var rest: Array[Rect2] = RigFit.body_quads(_race, parts)
 	if rest.is_empty():
 		return _sprite("Body", str(_race["art"]), Vector2.ZERO, z)
 	var tex: Texture2D = load(path)
 	var body: Polygon2D = _quad_polygon("Body", tex, rest, z)
+	var box: Rect2 = RigFit.head_box(_race)
+	if box.has_area():
+		var overlays: Dictionary = _race["overlays"]
+		var bare: Dictionary = overlays["bare"]
+		var box_quads: Array[Rect2] = [box.grow(RigFit.PART_OVERLAP)]
+		_head_box = _quad_polygon("HeadBox", tex, box_quads, z)
+		_bare = _sprite("Bare", str(bare["file"]), box.position, z)
+		if _bare != null:
+			_bare.visible = false
+	if not hands_split:
+		return body
 	for side: String in SIDES:
 		var all_parts2: Dictionary = _race["parts"]
 		var part: Dictionary = all_parts2["hand_" + side]
@@ -132,6 +159,11 @@ func _sprite(node_name: String, file_name: String, offset: Vector2, z: int) -> S
 	return s
 
 
+func _race_size() -> Vector2:
+	var size_arr: Array = _race["size"]
+	return Vector2(float(size_arr[0]), float(size_arr[1]))
+
+
 func clear() -> void:
 	for child: Node in get_children():
 		remove_child(child)
@@ -144,6 +176,10 @@ func clear() -> void:
 	_forced = {}
 	_open_hand = {}
 	_fist = {}
+	_head = null
+	_head_box = null
+	_bare = null
+	_enclosed = false
 
 
 func world_scale() -> float:
@@ -181,6 +217,7 @@ func wear(item_id: String) -> bool:
 	if _is_held(item):
 		_refresh_hands()                # closes the hand; rebuilds gloves in the new pose
 	_worn[item_id] = _build_item(item_id)
+	_refresh_enclosed()
 	return true
 
 
@@ -192,6 +229,28 @@ func remove(item_id: String) -> void:
 	_worn.erase(item_id)
 	if _is_held(item):
 		_refresh_hands()
+	_refresh_enclosed()
+
+
+## True while something worn encloses the head (item.json "encloses"): the head is
+## then not drawn, so nothing of it can stick out of a great helm or a deep hood.
+func head_enclosed() -> bool:
+	return _enclosed
+
+
+func _refresh_enclosed() -> void:
+	var enc: bool = false
+	for item_id: String in _worn.keys():
+		var item: Dictionary = RigLibrary.item(item_id)
+		if bool(item.get("encloses", false)):
+			enc = true
+	_enclosed = enc
+	if _head != null:
+		_head.visible = not enc
+	# without a `bare` overlay the body keeps its head pixels: the helm still covers the skull
+	if _head_box != null and _bare != null:
+		_head_box.visible = not enc
+		_bare.visible = enc
 
 
 func _free_nodes(item_id: String) -> void:

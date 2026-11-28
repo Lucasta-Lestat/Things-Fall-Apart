@@ -1,0 +1,34 @@
+{
+ "item": "leather_boot",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 3.397,
+ "slot": "feet",
+ "frames": {
+  "foot": {
+   "o": [
+    686.22,
+    517.04
+   ],
+   "ax": [
+    0.0,
+    1.0
+   ],
+   "lx": 168.152,
+   "ly": 156.262
+  }
+ },
+ "ground": [
+  58,
+  110,
+  215
+ ],
+ "px_per_unit": 2173.536,
+ "proxy_head_scale": 1.362,
+ "shell": "foot",
+ "build": "proxy",
+ "ground_name": "blue",
+ "ground_why": "mean hue distance 161 deg from the swatch",
+ "one_sided": true,
+ "camera_iou_vs_gen_plan": 1.0
+}

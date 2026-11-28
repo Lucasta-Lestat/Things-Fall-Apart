@@ -117,8 +117,10 @@ Rigs/races/<race>/<variant>/
   body.png      the painting, keyed, at most 1024 px on the long side
   labels.png    the colour label map (same palette as before)
   race.json     frames + world_scale; DERIVED from labels.png, never hand-written
-  head.png      derived: head pixels redrawn above collars and capes
+  head.png      derived: head pixels redrawn above collars and capes (edge feathered)
   over.png      derived: crests, fins, tail coils redrawn above garments
+  bare.png      derived: the head's box of the painting with the head painted out (section 3.7)
+  trunk.png     derived, legless packs only: the trunk round the feet, redrawn above boots (section 3.7)
 ```
 
 All anatomy is measured from the label map and nothing else (`tools/rigkit/derive.py`). Joints are the seams between labels. The skull is the largest circle that fits inside the head label, so ears, horns and beards cannot inflate a helmet.
@@ -195,7 +197,7 @@ Added 2026-11-27 after the user asked for weapons that are "actually held in the
 
 **Gloves** (`ingest --slot hands`). `item.json` gets a `hand` block: `ramp` (four colours), `cuts` (wrist and knuckle lines of the art) and `pieces` (`cuff`, `back`; each has its own frame and mesh; either may be absent). The old single-image `hand` frame is kept as the fallback.
 
-**Draw order at a hand:** item tail -1 < body 0 < sleeves 6-9 < held item 15 < fist 16 < gloved hand 17 < glove back 18 < glove cuff 19 < head 20 < items held `over` 21.
+**Draw order at a hand:** item tail -1 < body 0 < legs 3 < feet 4 < trunk over feet 5 < sleeves 6-9 < held item 15 < fist 16 < gloved hand 17 < glove back 18 < glove cuff 19 < head 20 < items held `over` 21.
 
 **Runtime.** `RigCharacter` draws the body as three polygons on one texture (`Body`, `Hand_l`, `Hand_r`). `wear()` of a held item closes the hand: the open-hand polygon is hidden and `Fist_<side>` shown. Gloves are rebuilt in the new pose. New calls: `hand_pose(side)`, `set_hand_pose(side, pose)` (an empty fist; `""` returns to the rule), `cannot_grip(side)`, `grip_target(item, side)`; `grip(side)` also returns `pose`. Colour goes through one small shader, `Characters/rig2/rig_ramp.gdshader`.
 
@@ -233,6 +235,20 @@ Added 2026-11-27 after the user asked for weapons that are "actually held in the
 - **A tail drawn under the body** is also under the torso once arms cross it. Fine in bind pose; phase 2 should move the tail to just under its own arm.
 - The automatic gate cannot say whether a hand looks good. Look at the sheet.
 
+### 3.7 Enclosing headwear, trunk over feet, clean edges
+
+Added 2026-11-27 with the item repaint tooling. All three are data plus a few lines in `core.py` / `render.py` and their mirrors in `Characters/rig2`; the parity test covers them (section "BODY").
+
+**Enclosing headwear.** An item pack may say `"encloses": true` (`great_helm` does; `dark_hood` was painted with its face opening keyed out instead, so it leaves the flag off). While such an item is worn the wearer's head is not drawn at all, so ears, jaw, tusks and long noses cannot stick out of it. Open helms and hats leave the flag off and the ears stay visible.
+
+- `build_race` writes `bare.png`: the head label's bounding box of the body painting with the head removed. Where the trunk is under the head (the torso frame's own footprint) the head is replaced by plain skin, blurred from the trunk around it, with a contour where it now borders nothing; elsewhere it becomes transparent.
+- The body polygon is drawn with that box cut out (`core.cut_rect` / `RigFit.cut_rect`). The box is a node of its own: `HeadBox` (the painting) normally, `Bare` (the patch) while enclosed. The `Head` overlay is hidden while enclosed. `RigCharacter.head_enclosed()` reports the state.
+- Limits: the patch is flat skin, so on a legacy three-quarter pack, where the face hangs over the chest, a paler patch can show below a hood. The rule is all or nothing per item: a hood that should show the nose but hide the ears is not expressible.
+
+**Trunk over feet.** Feet items used to draw over the lower edge of the belly. On a pack whose legs are hidden (`race.json` has no leg frames) `build_race` writes `trunk.png`, the trunk's own pixels around the feet, and the engine draws it again as `TrunkOverFeet` at `body_layers.trunk_over_feet` (z 5), above feet items and below everything else worn. The legs and feet slots moved down one step to make room: legs 3, feet 4. Packs with visible legs get no overlay: there a boot sits at the end of a leg and nothing of the trunk is in front of it.
+
+**Clean edges.** `gen_item`'s key (`key(..., soft=True)`) now redraws every keyed edge, the collar hole's included: the outline is smoothed, the first pixel of paint beside the ground (where the key colour bleeds in) is cleared, alpha fades in over two pixels and the faded band takes its colour from clean paint further in. The `head` and `over` overlays' label edge is feathered by about a pixel. Together these remove the jagged green fringe that showed above the head through a collar hole.
+
 ## 4. Art spec
 
 ### 4.1 The spec
@@ -251,14 +267,27 @@ Added 2026-11-27 after the user asked for weapons that are "actually held in the
 
 | Slot | How it is painted |
 |---|---|
-| torso | The garment as seen from straight above on a T-pose body: collar hole in the middle, sleeves out to the sides, back and front both visible around the collar |
-| head | From straight above, centred on the skull |
-| feet | One foot, toes toward the bottom |
+| torso | Painted over an item guide rendered at the race camera (`gen_item`, shell `torso`): the garment on a T-pose form, neck hole keyed out, sleeves level, a strip of the back above the collar and the front below it |
+| head | Painted over an item guide at the race camera (shells `bucket`, `brim`, `open`, `hood`): mostly crown, the front as a foreshortened strip along the bottom. A helm that covers the face sets `"encloses": true` (section 3.7) |
+| feet | Painted over an item guide at the race camera (shell `foot`): the image-left foot, toes toward the bottom, with a short ankle cuff whose open top is keyed out |
 | hands | One open hand from above, fingers toward the right. Only the cuff and the back of the hand are used as art; the fingers give the colour (section 3.6) |
 | back | Hanging from the top edge; only the part that shows past the shoulders matters |
 | held | Upright, business end at the top (unchanged) |
 
 Two registers stay as they are: painterly for worn gear, outlined cel shading for held gear.
+
+**Worn gear (torso, head, feet) is never measured from its art.** Its frames are the guide proxy's own anatomy, so the painting must stay on the guide's outline (IoU 0.95 or better is the target; 0.85 was accepted once). To add a worn item:
+
+```bash
+# 1. write tools/rigkit/items_td/<id>.json (shell, knobs, prompt words; fields in items_td/README.md)
+python -m tools.rigkit.gen_item guide   <id>              # look at guide.png before paying for paint
+python -m tools.rigkit.gen_item gen     <id> --n 4 --tag r1
+python -m tools.rigkit.gen_item install <id> tools/rigkit/out/items_td/<id>/r1_2.png --id <id>
+python -m tools.rigkit.check --items <id>
+godot --headless --path . --import
+```
+
+A brand-new item has no earlier art, so put any picture of its material at `tools/rigkit/out/items_td/<id>/original.png` for the swatch, and add `item_ids` (the Items.json ids it dresses) to the new `item.json` by hand. To repaint an existing pack, install beside it (`--id <id>_td`, the default), compare with `gen_item sheet <id>`, then `gen_item promote <id>`: the repaint takes over `Rigs/items/<id>/` with its id, layer and `item_ids`, and the old art is filed as `original.png`.
 
 ### 4.2 What fails the spec today
 
@@ -282,6 +311,8 @@ The practical damage from the three-quarter view is that the head sits in front 
 The Gemini key works again as of this run (it was out of credits on 2026-11-01).
 
 **Batch A: races to the overhead camera.** Regenerate the 34 three-quarter races, image-to-image from their current painting, with the human male as the camera reference. Each needs a new label map (auto-draft plus a pass by eye) and then `build_race`. Order: orc and orc_female first, since they are the named problem and the most common enemy, then half_orc, goblin, human_female and the launch-map races, then the rest.
+
+**Status 2026-11-27.** Batch B and C: done for 11 of 14 worn items (Pilot 7 below); `breastplate`, `leather_boot` and `plate_sabaton` are painted but wait as `_td` packs. `venonan_vestament`, `steel_greaves` and the two pants have no rig2 pack yet and were not painted. Batch A: only the orc (`orc/tilt15_head`); it is next.
 
 **Batch B: torso garments from above.** Regenerate the nine garments as true overhead views with a visible back panel: peasants_stained_shirt, nobles_blouse, dark_robes, padded_vest, leather_armor, chain_shirt, legionnaires_armor, breastplate, venonan_vestament.
 
@@ -369,6 +400,59 @@ Open: ears stick out of the great helm on big-eared races (needs a rig rule: a f
 
 *Hands.* See section 3.6. Sheets: `tools/rigkit/out/hands/hands_sheet*.jpg`. Glove and gauntlet spill fell from 0.23 / 0.17 worst case to 0.00 / 0.01, gauntlet WARN rows from 32 of 110 to 0, and held handles sit inside the fist (median share 1.00 sword and dagger, 0.97 spear). The reviewer found and fixed a shader bug that would have drawn fists and gloves 35-50% too dark in engine. Not yet seen in engine: a full character render with the new hand path.
 
+**Item repaint tooling (2026-11-27, no generations).** The user accepted `peasants_stained_shirt_td` and `great_helm_td`, rejected `breastplate_td` (bluer and brighter than the original, a muscle cuirass with shoulder caps: a different item) and approved repainting all worn item art for the race camera, items first, then races. Rule for every repaint: recognisably the same item as the original (materials, colours, trim, design), only seen from the new camera.
+
+- **Specs are files.** Each item is `tools/rigkit/items_td/<item>.json` (shell type and knobs, swatch crop of the original art, prompt words); `gen_item.py` holds no per-item data. Fields: `tools/rigkit/items_td/README.md`. Fourteen specs exist: the two accepted pilots (guides byte-identical to the ones they were painted from) and twelve to paint.
+- **Shell types:** `torso` (sleeveless / short / long sleeves, loose or belled sleeves, an optional robe skirt down to the floor), `bucket`, `brim` (kettle hat), `open` (crown helm: dome, spikes, cheek guards, face left open), `hood`, `foot` (one boot or sabaton on the image-left foot, cuff top keyed out).
+- **Neutral build.** New torso specs build the shell on a tailor's form of the proxy's proportions: one smooth chest swell instead of two pectoral lobes, no deltoid caps. Extents are unchanged, so the proxy's frames, and with them the fit to every race, are unchanged. This is what made the pilot breastplate a muscle cuirass and gave the pilot shirt a pec fold. The accepted shirt keeps `"build": "proxy"` so its guide stays as painted.
+- **Key colour per item.** `"ground": "auto"` picks the key hue (blue, green, magenta) farthest from the swatch's hues, green for a colourless swatch. Steel no longer sits on blue. `"tone_match"` (breastplate: 0.7) pulls a keyed painting's mean colour and contrast toward the swatch of the original at install; run on the rejected breastplate painting it brought the steel back to the original's darkness, so colour drift can be corrected without repainting, design drift cannot.
+- **`gen_item sheet <item>`** writes `tools/rigkit/out/items_td/<item>/compare.jpg`: original against `_td` on five packs, whole body and zoomed.
+- **Checked by installing each guide as if it were a painting** (packs since deleted): all twelve install, fit and layer on `orc/tilt15_head`, `orc/default`, `human/default`, `halfling_male/default` and `goblin_male/default`.
+
+Known weak spots going into the batch: on legacy packs with visible legs a `_td` boot's cuff lands on the shin or thigh as a ring, because the foot frame there is the whole foot and on the race camera only the front of the foot (fixed by repainting the race, or set `"cuff": 0`); a robe's skirt ends mid-thigh on those packs for the same reason; the kettle hat's brim reaches the shoulders on big-headed races; the hood hides the whole face (section 3.7); long sleeves render but have never been painted; `padded_vest` is specced sleeveless with shoulder caps although the original has short cap sleeves.
+
+**Pilot 7 / item batch (2026-11-27, 100 generations).** Twelve items were painted in parallel, one painter each, at most three sets of four. Sheets, all in `tools/rigkit/out/items_td/`: `batch_sheet.jpg` (before and after, all 14), `batch_sheet_torso.jpg`, `_head.jpg`, `_feet.jpg`, `_feet_zoom.jpg`, and `outfits_after.jpg` (five layered outfits on orc/tilt15_head, human, goblin_male).
+
+Gate columns are ok / WARN / FAIL over all 55 race packs (feet: 110 rows, one per foot).
+
+| Item | Generations | Gate, old | Gate, new | Promoted |
+|---|---|---|---|---|
+| peasants_stained_shirt | pilot 6 | 18 / 34 / 3 | 51 / 3 / 1 | yes |
+| nobles_blouse | 8 | 46 / 8 / 1 | 51 / 3 / 1 | yes |
+| padded_vest | 4 | 8 / 42 / 5 | 51 / 3 / 1 | yes |
+| leather_armor | 8 | 53 / 1 / 1 | 49 / 4 / 2 | yes |
+| chain_shirt | 8 | 50 / 4 / 1 | 49 / 5 / 1 | yes |
+| legionnaires_armor | 12 | 34 / 20 / 1 | 39 / 15 / 1 | yes |
+| dark_robes | 12 | 6 / 40 / 9 | 40 / 14 / 1 | yes |
+| breastplate | 12 | 42 / 12 / 1 | 30 / 21 / 4 | no: `breastplate_td` |
+| great_helm | pilot 6 | 55 / 0 / 0 | 55 / 0 / 0 | yes |
+| kettle_helm | 8 | 55 / 0 / 0 | 55 / 0 / 0 | yes |
+| golden_helm | 4 | 55 / 0 / 0 | 55 / 0 / 0 | yes |
+| dark_hood | 12 | 55 / 0 / 0 | 55 / 0 / 0 | yes |
+| leather_boot | 8 | 96 / 14 / 0 | 108 / 2 / 0 | no: `leather_boot_td` |
+| plate_sabaton | 4 | 3 / 67 / 40 | 108 / 2 / 0 | no: `plate_sabaton_td` |
+
+Whole gate, the 21 standing item ids on 55 packs: 1,273 ok / 260 WARN / 62 FAIL before, 1,388 / 158 / 49 after. With the three waiting packs counted as well: 1,634 / 183 / 53. Parity test: 1,602 checks, 0 failures.
+
+Why three are not promoted:
+
+- **breastplate.** Colour and plain design now match the original (mean RGB 79, 86, 89 against 72, 78, 81; the rejected pilot was 98, 109, 119). But the square-cut shell without shoulder caps is narrow on legacy packs: it covers 47% of `human/default` and fails four packs. It is ok on both tilt packs. It also lacks the original's small shoulder flanges and stepped lower rim. Needs the user's eye, and either a wider guide (`clip_half` about 1.0, `cap_x` about 0.8) with a fresh set, or promotion once the races are repainted.
+- **leather_boot, plate_sabaton.** Both are right on `orc/tilt15_head` and on packs with hidden legs. On the 34 legacy packs with visible legs the ankle cuff draws as an empty ring over the thighs or belly when nothing is worn over it, which looks worse than the old art. Promote them (`gen_item promote leather_boot`, `... plate_sabaton`) when batch A removes the leg frames; that also removes 40 of the 49 remaining FAILs.
+
+Open problems:
+
+- **`human/default` loses cover with every torso repaint** (66 to 78%; `leather_armor` now FAILs there at 66%, was WARN at 70%). Its head hangs in front of the chest, so the new collar sits behind the hair and the belly shows. `sahuagin`, `saurian_male` and `goluna_male` WARN on cover as well. Expected to go when those races are repainted.
+- **`human_undead_male` fails every torso item** (x3.08 distortion), as before: the pack's torso depth is wrong (section 7).
+- **Outline lock varies by item.** `legionnaires_armor` is at IoU 0.85 (the red hem and strap tips run past the guide; on the tilt orc it covers most of the feet) and `dark_robes` at 0.915 (cowl stands above the guide). `nobles_blouse` held the guide in 1 of 8 generations.
+- **Design details lost:** chain shirt's dark hem band; the blouse's puffed sleeves and cuff scrollwork; the leather armour's open scoop front (now closed leather with the rim painted on); the robe's thrown-back hood (now a thick cowl ring); the golden helm's tall standing crown (spikes now radiate round the rim).
+- **Pale collar arc behind the head** on legacy three-quarter packs for sleeveless armour, because those heads sit forward of the neck hole.
+- **Hood:** `dark_hood` is not enclosing, so ears and the lower face show; it sits lower over the face than the old one. Only five packs were looked at.
+- **Kettle helm and great helm are oversized on thick-haired packs** (`human/default`: the brim covers the shoulders), an old head-frame problem (section 7).
+- **Trunk-over-feet patch is a little small on `human/default`:** two specks of a `_td` boot cuff show on the chest.
+- **Words that broke the camera:** a swatch that shows the whole item in its old view, and "long", "puffed", "ruffled", "hangs down". Describe the foreshortened shape instead. A `--note` naming an edge grew that edge.
+- `padded_vest` had 18 key-colour specks in the lacing recoloured by hand after install; a re-install from `r1_3.png` brings them back.
+- `gen_item sheet` and `compare` need both an original and a `_td` pack, so they only work for the three waiting items now. `pilot_sheet.jpg` and each item's `compare.jpg` are records from before promotion.
+
 I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
 
 ## 5. Migration plan
@@ -447,6 +531,7 @@ python -m tools.rigkit.check [--races a,b] [--items x,y] [--list]
 python -m tools.rigkit.sheet --out <dir> [--frames]
 python -m tools.rigkit.gen_hands guide|gen|check|install   # the shared fist (section 3.6)
 python -m tools.rigkit.hands_sheet              # hand cases, arm view and zoom, before/after
+python -m tools.rigkit.gen_item list|guide|prompt|gen|check|install|sheet|promote <item>   # worn item repaint (items_td/README.md)
 python -m tools.rigkit.export_parity            # refresh the Godot test fixture
 godot --headless --path . res://tests/rig2_parity_test.tscn
 ```

@@ -6,6 +6,10 @@ with RigFit and fails if any vertex differs by more than a fraction of a pixel.
 
 The "hands" block covers the hand rig (docs 3.6): the body cut-outs, the fist on
 each side, glove pieces in both poses, and which cells of a held item are tail.
+The "body" block covers the body polygon of packs with a head box (enclosing
+headwear) and the layers the engine must build: the quads the body is drawn with,
+the head box, whether the pack has a trunk-over-feet overlay, and which item packs
+enclose the head.
 """
 import os
 import sys
@@ -67,6 +71,22 @@ def hands(skel):
     return out
 
 
+BODY_RACES = HAND_RACES + [("orc", "default"), ("halfling_male", "default"), ("dwarf_female", "default")]
+
+
+def body(skel):
+    out = {"races": [], "encloses": sorted(i for i in core.list_items() if core.load_item(i).get("encloses"))}
+    for race_id, variant in BODY_RACES:
+        race = core.load_race(race_id, variant)
+        quads = core.body_quads(race, skel)
+        box = core.head_box(race)
+        out["races"].append({"race": race_id, "variant": variant,
+                             "quads": _quads(quads) if quads is not None else None,
+                             "head_box": [round(v, 2) for v in box] if box else None,
+                             "trunk": "trunk" in race.get("overlays", {})})
+    return out
+
+
 def main():
     skel = core.skeleton()
     cases = []
@@ -85,7 +105,7 @@ def main():
                               "sample_step": step,
                               "sample": [[round(float(x), 3), round(float(y), 3)] for x, y in pts[::step]]})
     h = hands(skel)
-    core.save_json(OUT, {"cases": cases, "hands": h})
+    core.save_json(OUT, {"cases": cases, "hands": h, "body": body(skel)})
     print("wrote %s (%d cases, %d hand races, %d held items)" % (os.path.relpath(OUT, core.ROOT), len(cases),
                                                                 len(h["races"]), len(h["held"])))
     return 0

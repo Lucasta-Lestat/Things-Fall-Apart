@@ -1,0 +1,1107 @@
+{
+ "counts": {
+  "ok": 110
+ },
+ "rows": [
+  {
+   "race": "aedelf_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "aedelf_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "aedelf_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "aedelf_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "cerebrals_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "cerebrals_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "cerebrals_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "cerebrals_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dhampir_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dhampir_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dhampir_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dhampir_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "draconian_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "draconian_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "draconian_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "draconian_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dwarf_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dwarf_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dwarf_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "dwarf_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "elf",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "elf",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "gnome_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "gnome_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "gnome_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "gnome_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goatmen_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goatmen_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goatmen_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goatmen_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goblin_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goblin_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goblin_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goblin_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goluna_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goluna_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goluna_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "goluna_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "grimalkin_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "grimalkin_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "grimalkin_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "grimalkin_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_elf_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_elf_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_elf_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_elf_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_orc_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_orc_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_orc_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "half_orc_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "halfling_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "halfling_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "halfling_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "halfling_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "high_elf_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "high_elf_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_undead_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_undead_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_undead_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "human_undead_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "kobold_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "kobold_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "kobold_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "kobold_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "mephistkin_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "mephistkin_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "mephistkin_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "mephistkin_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "naga_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "naga_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "naga_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "naga_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "newt_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "newt_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "newt_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "newt_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "ashen",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "ashen",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "tilt15",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "tilt15",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "tilt15_head",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc",
+   "variant": "tilt15_head",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "orc_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "quadrelf_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "quadrelf_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "quadrelf_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "quadrelf_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sahuagin_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sahuagin_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sahuagin_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sahuagin_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "saurian_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "saurian_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "saurian_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "saurian_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sobruaro_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sobruaro_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sobruaro_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "sobruaro_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "vampire_female",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "vampire_female",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "vampire_male",
+   "variant": "default",
+   "item": "kettle_helm",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  },
+  {
+   "race": "vampire_male",
+   "variant": "default",
+   "item": "kettle_helm_td",
+   "slot": "head",
+   "side": "",
+   "status": "ok",
+   "why": "",
+   "cover": 1.0
+  }
+ ]
+}

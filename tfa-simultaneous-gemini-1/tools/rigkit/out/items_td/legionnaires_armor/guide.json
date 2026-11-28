@@ -1,0 +1,82 @@
+{
+ "item": "legionnaires_armor",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.885,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.17,
+    303.72
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 348.599,
+   "ly": 345.532,
+   "ly_neg": 167.727
+  },
+  "upperarm_l": {
+   "o": [
+    337.58,
+    302.78
+   ],
+   "ax": [
+    -0.99442,
+    -0.10545
+   ],
+   "lx": 361.289,
+   "ly": 107.062
+  },
+  "upperarm_r": {
+   "o": [
+    1034.78,
+    304.66
+   ],
+   "ax": [
+    0.99357,
+    -0.11321
+   ],
+   "lx": 362.568,
+   "ly": 107.185
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1206.098,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.075)",
+ "one_sided": false,
+ "sleeve": "short",
+ "collar": {
+  "centre_px": [
+   688.0,
+   269.6
+  ],
+  "r_px": 131.46,
+  "U": 0.005,
+  "V": -0.2035,
+  "r_over_half_shoulder": 0.3771,
+  "world": {
+   "y": 0.017,
+   "z": 1.6165,
+   "r": 0.109
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.68,
+   213.77
+  ],
+  "r": 179.97
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}

@@ -1,0 +1,24 @@
+{
+ "shell": "torso",
+ "build": "proxy",
+ "ground": "blue",
+ "sleeve": "short",
+ "layer": 1,
+ "inflate": 0.016,
+ "hole_clear": 0.012,
+ "ring_r": 0.012,
+ "swatch": {
+  "box": [
+   170,
+   230,
+   520,
+   560
+  ]
+ },
+ "what": "a single empty garment, a loose short-sleeved shirt",
+ "reads": "The wide band across the top is the shirt lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean round hole with a low collar band around it, and the plain blue background shows through it. The two level bars to the left and right are the short sleeves over the upper arms, each ending in a straight open cuff. Below the shoulder band is the front of the shirt over the chest and belly, seen from steeply above and strongly foreshortened, ending in the rounded hem at the bottom. ",
+ "look": "a humble peasant's shirt of rough homespun linen in faded off-white and beige, well worn, with dirt smudges and brown stains",
+ "paint": "Turn the simple forms into believable cloth: soft creases running from the collar over the shoulders, loose folds along the sleeves gathering at the cuffs, a stitched seam where each sleeve joins the body, a short laced slit just below the neck opening, and gentle folds across the chest down to a plain stitched hem",
+ "material": "faded beige linen hue with its brown stains and lighter worn highlights",
+ "hole_words": " and the round neck opening"
+}

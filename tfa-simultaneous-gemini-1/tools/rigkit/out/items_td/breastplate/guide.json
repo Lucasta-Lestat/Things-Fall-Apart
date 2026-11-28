@@ -20,26 +20,31 @@
   }
  },
  "ground": [
-  58,
-  110,
-  215
+  40,
+  190,
+  70
  ],
  "px_per_unit": 1275.201,
  "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.040)",
+ "one_sided": false,
  "sleeve": "sleeveless",
  "collar": {
   "centre_px": [
    688.0,
    264.46
   ],
-  "r_px": 128.8,
+  "r_px": 146.65,
   "U": 0.005,
   "V": -0.1955,
-  "r_over_half_shoulder": 0.3494,
+  "r_over_half_shoulder": 0.3979,
   "world": {
    "y": 0.017,
    "z": 1.6122,
-   "r": 0.101
+   "r": 0.115
   }
  },
  "proxy_head_in_item_px": {

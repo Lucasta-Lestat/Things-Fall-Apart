@@ -416,6 +416,56 @@ static func rest_quads(size: Vector2, parts: Array[Dictionary], overlap: float =
 	return out
 
 
+## (x0, y0, x1, y1) of the race's `bare` overlay as a Rect2 in pack px; no area when
+## the pack has none. See core.py, "head enclosure".
+static func head_box(race: Dictionary) -> Rect2:
+	var overlays: Dictionary = race.get("overlays", {})
+	if not overlays.has("bare"):
+		return Rect2()
+	var b: Dictionary = overlays["bare"]
+	return Rect2(_v(b["offset"]), _v(b["size"]))
+
+
+## Quads with the rectangle `box` removed (same construction and order as
+## core.cut_rect): a quad that overlaps it is split into above, below, left, right.
+static func cut_rect(quads: Array[Rect2], box: Rect2) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for q: Rect2 in quads:
+		if q.end.x <= box.position.x or q.position.x >= box.end.x or q.end.y <= box.position.y or q.position.y >= box.end.y:
+			out.append(q)
+			continue
+		if q.position.y < box.position.y:
+			out.append(Rect2(q.position.x, q.position.y, q.size.x, box.position.y - q.position.y))
+		if q.end.y > box.end.y:
+			out.append(Rect2(q.position.x, box.end.y, q.size.x, q.end.y - box.end.y))
+		var ya: float = maxf(q.position.y, box.position.y)
+		var yb: float = minf(q.end.y, box.end.y)
+		if q.position.x < box.position.x:
+			out.append(Rect2(q.position.x, ya, box.position.x - q.position.x, yb - ya))
+		if q.end.x > box.end.x:
+			out.append(Rect2(box.end.x, ya, q.end.x - box.end.x, yb - ya))
+	return out
+
+
+## The quads the body polygon is drawn with (core.body_quads): the painting minus the
+## open hands (`hand_parts`: both hands, or empty when the hand rig is off) and minus
+## the head box. Empty = nothing to cut, the body is one sprite.
+static func body_quads(race: Dictionary, hand_parts: Array[Dictionary]) -> Array[Rect2]:
+	var size_arr: Array = race["size"]
+	var size: Vector2 = Vector2(float(size_arr[0]), float(size_arr[1]))
+	var rest: Array[Rect2] = []
+	if hand_parts.size() == 2:
+		rest = rest_quads(size, hand_parts)
+	var box: Rect2 = head_box(race)
+	if rest.is_empty() and not box.has_area():
+		return rest
+	if rest.is_empty():
+		rest.append(Rect2(Vector2.ZERO, size))
+	if box.has_area():
+		rest = cut_rect(rest, box)
+	return rest
+
+
 ## Per mesh cell: 1 when the cell lies well behind the item's hold point (its grip
 ## frame origin, which sits at the front of the fist). Those cells are drawn under
 ## the body when the item's hold says tail "under".

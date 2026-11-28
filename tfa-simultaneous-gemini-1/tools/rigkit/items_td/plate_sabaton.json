@@ -1,0 +1,25 @@
+{
+ "shell": "foot",
+ "inflate": 0.01,
+ "cuff": 0.1,
+ "cuff_wide": 0.012,
+ "cuff_open": 0.74,
+ "toe_point": 0.5,
+ "toe_reach": 0.0,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   20,
+   330,
+   200,
+   530
+  ]
+ },
+ "what": "a single armoured boot for the wearer's foot, a steel plate sabaton",
+ "reads": "The sabaton points toward the bottom of the picture: the tapering shape at the bottom is the pointed toe, above it the plates over the instep rise toward the ankle, and the short tube at the top is the ankle cuff seen from above. The round opening inside the cuff is where the leg goes in, a clean hole, and the plain {ground} background fills it from rim to rim. ",
+ "look": "a plain plate sabaton of warm grey steel: a smooth steel cuff around the ankle, then three overlapping chevron plates across the instep, each dipping to a point at the centre line, and a smooth rounded toe cap, with one raised keel ridge running down the centre from the ankle to the tip of the toe",
+ "paint": "Turn the simple forms into believable articulated plate exactly like the swatch: three overlapping curved steel plates across the instep, each shaped as a shallow chevron whose point sits on the centre line and aims at the toe, each plate edged with a thin dark line, one small round rivet at each outer end of every plate, a smooth toe cap below them, a pale highlight along the single centre keel ridge, soft vertical streaks of lighter and darker grey on each plate, and a plain smooth steel cuff around the ankle with a slightly darker inner rim",
+ "material": "warm mid-grey brushed steel with soft pale streaked highlights, grey-brown shading and thin dark lines between the plates",
+ "hole_words": " and the round opening of the cuff",
+ "tone_match": 0.5
+}

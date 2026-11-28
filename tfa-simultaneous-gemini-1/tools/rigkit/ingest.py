@@ -439,6 +439,11 @@ def ingest_legacy(src, only=None):
     for item_id, spec in LEGACY.items():
         if only and item_id not in only:
             continue
+        have = os.path.join(core.RIGS, "items", item_id, "item.json")
+        if os.path.exists(have) and core.load_json(have).get("camera"):
+            # a repaint for the race camera (gen_item promote): its frames are given, not measured
+            print("[skip] %-24s repainted pack (camera %s); re-install it with gen_item" % (item_id, core.load_json(have)["camera"]))
+            continue
         spec = dict(spec)
         art = spec.pop("art")
         art = os.path.join(core.ROOT, art[6:]) if art.startswith("res://") else os.path.join(src, art)

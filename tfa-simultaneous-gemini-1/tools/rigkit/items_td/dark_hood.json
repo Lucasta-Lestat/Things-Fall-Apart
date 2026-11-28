@@ -1,0 +1,24 @@
+{
+ "shell": "hood",
+ "encloses": false,
+ "pad": 0.02,
+ "wide": 0.012,
+ "drape": 1.0,
+ "peak": 0.0,
+ "opening": 0.5,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   40,
+   60,
+   260,
+   250
+  ]
+ },
+ "what": "a single empty piece of clothing, a soft cloth hood seen from above",
+ "reads": "The large egg-shaped form is the crown of the hood seen from above: its highest point is in the middle of the shape, and the cloth curves away from there down to the outline on every side, toward the back of the neck at the top of the picture and toward the brow at the bottom. The small dark crescent at the very bottom edge marks the face opening of the hood, an arched notch in the front hem through which the {ground} background shows. ",
+ "look": "a plain soft hood of charcoal-black cloth, pulled up over the head and seen from above, the crown filling the egg-shaped outline, with long gentle folds and an arched face opening cut into its front hem",
+ "paint": "Turn the simple forms into believable soft cloth: plain matte charcoal fabric lying smooth over the crown, long soft folds fanning out from the top of the crown in the middle of the shape toward the outline as slightly paler and slightly darker grey streaks, and a plain thin hem with the dark contour line running along the arched top edge of the crescent. Fill the whole crescent, exactly as large as the block-out has it, with the same flat uniform {ground} as the background, so the hood's outline arches up around it",
+ "material": "plain charcoal-black soft cloth, uniformly dark, with its faint grey fanning folds and low contrast",
+ "hole_words": " and the arched face opening at the bottom edge of the hood"
+}

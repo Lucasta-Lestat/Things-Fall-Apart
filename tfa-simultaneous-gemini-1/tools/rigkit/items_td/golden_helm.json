@@ -1,0 +1,25 @@
+{
+ "shell": "open",
+ "spikes": 7,
+ "spike_len": 0.042,
+ "spike_rise": 1.1,
+ "spike_gap_deg": 72,
+ "cheek": 1.0,
+ "ridge": 0.01,
+ "pad": 0.012,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   45,
+   95,
+   225,
+   290
+  ]
+ },
+ "what": "a single helmet, an open-faced golden crown helm",
+ "reads": "The large rounded dome is the top of the helmet seen from above, with a raised ridge running over it from the back to the brow at the front. The seven pointed spikes around its back and sides are the tall points of the crown standing up around the rim, seen from above. The two rounded lobes at the bottom left and right are the cheek guards hanging down at the front, with open space between them for the wearer's face. ",
+ "look": "a regal open-faced helm made entirely of polished yellow gold: a smooth dome with a raised central ridge, a crown of seven tall pointed spikes around its back and sides, a spiked golden brow band across the front of the dome, and two cheek guards",
+ "paint": "Turn the simple forms into believable polished yellow gold plate: a smooth mirror-bright domed skull with broad pale highlights and warm amber-brown shading, the raised ridge running from the back to the brow, each crown spike a flat tapering golden blade with a bright edge and a dark outline, and across the front of the dome, at the bottom of the dome in the picture, a raised golden brow band carrying a row of small sharp triangular points that lie back onto the dome, with one larger faceted diamond-shaped point at the centre where the ridge meets the band, and two curved plain golden cheek guards below the band",
+ "material": "polished yellow gold with its bright pale highlights, its warm amber-brown shadows, and the row of sharp triangular points with a central diamond on its brow band",
+ "hole_words": ""
+}

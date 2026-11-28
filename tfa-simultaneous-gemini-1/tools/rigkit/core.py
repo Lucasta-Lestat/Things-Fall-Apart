@@ -542,3 +542,69 @@ def glove_ok(item, race, side):
     """True when a hands item can use the hand rig on this side (else the legacy
     one-image fit to the hand frame is used)."""
     return "hand" in item and hand_rig_ok(race, side)
+
+
+# ---------------------------------------------------------------- head enclosure, trunk over feet
+#
+# ENCLOSING HEADWEAR. An item pack may say `"encloses": true` (a great helm, a deep hood): while
+# it is worn the wearer's head is not drawn at all, so ears, jaw, tusks and long noses cannot
+# stick out of it. build_race writes the overlay `bare` for that: the head's bounding box of the
+# body painting with the head's pixels replaced by plain skin where the trunk is under the head
+# and by nothing elsewhere. The body is drawn with that box cut out (`cut_rect`), and the box is
+# drawn either from the painting (normal) or from `bare` (enclosed); the `head` overlay is hidden.
+#
+# TRUNK OVER FEET. On a pack whose legs are hidden the feet peek out from under the belly, and a
+# boot is larger than the foot it covers. build_race writes the overlay `trunk`: the trunk's own
+# pixels around the feet, drawn again above feet items (body_layers.trunk_over_feet) and below
+# everything else that is worn, so the trunk hides the part of a boot that is under it.
+
+def encloses(items):
+    """True when any of the loaded item dicts encloses the head."""
+    return any(bool(i.get("encloses")) for i in items)
+
+
+def head_box(race):
+    """(x0, y0, x1, y1) of the `bare` overlay in pack px, or None when the pack has none."""
+    b = race.get("overlays", {}).get("bare")
+    if not b:
+        return None
+    return (float(b["offset"][0]), float(b["offset"][1]),
+            float(b["offset"][0] + b["size"][0]), float(b["offset"][1] + b["size"][1]))
+
+
+def cut_rect(quads, box):
+    """Quads with the rectangle `box` removed. A quad that overlaps it is split into up to four,
+    in this order: above, below, left, right."""
+    bx0, by0, bx1, by1 = box
+    out = []
+    for x0, y0, x1, y1 in quads:
+        if x1 <= bx0 or x0 >= bx1 or y1 <= by0 or y0 >= by1:
+            out.append((x0, y0, x1, y1))
+            continue
+        if y0 < by0:
+            out.append((x0, y0, x1, by0))
+        if y1 > by1:
+            out.append((x0, by1, x1, y1))
+        ya, yb = max(y0, by0), min(y1, by1)
+        if x0 < bx0:
+            out.append((x0, ya, bx0, yb))
+        if x1 > bx1:
+            out.append((bx1, ya, x1, yb))
+    return out
+
+
+def body_quads(race, skel):
+    """The quads the body polygon is drawn with: the painting minus the open hands (hand rig) and
+    minus the head box (enclosing headwear). None = nothing to cut, the body is one sprite."""
+    w, h = float(race["size"][0]), float(race["size"][1])
+    rest = None
+    if race_hand_set(race, skel) is not None and all(hand_rig_ok(race, s) for s in "lr"):
+        rest = rest_quads(race["size"], [race["parts"]["hand_l"], race["parts"]["hand_r"]])
+    box = head_box(race)
+    if rest is None and box is None:
+        return None
+    if rest is None:
+        rest = [(0.0, 0.0, w, h)]
+    if box is not None:
+        rest = cut_rect(rest, box)
+    return rest

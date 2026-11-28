@@ -241,6 +241,28 @@
     425,
     24
    ]
+  },
+  "bare": {
+   "file": "bare.png",
+   "offset": [
+    420,
+    19
+   ],
+   "size": [
+    184,
+    221
+   ]
+  },
+  "trunk": {
+   "file": "trunk.png",
+   "offset": [
+    379,
+    189
+   ],
+   "size": [
+    267,
+    99
+   ]
   }
  },
  "skin": {

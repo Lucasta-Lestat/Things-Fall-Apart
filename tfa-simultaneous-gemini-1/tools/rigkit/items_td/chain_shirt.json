@@ -1,0 +1,26 @@
+{
+ "shell": "torso",
+ "build": "neutral",
+ "sleeve": "short",
+ "layer": 3,
+ "inflate": 0.014,
+ "hole_clear": 0.03,
+ "ring_r": 0.014,
+ "sleeve_cover": 0.6,
+ "ground": "auto",
+ "tone_match": 0.5,
+ "swatch": {
+  "box": [
+   20,
+   30,
+   150,
+   100
+  ]
+ },
+ "what": "a single empty piece of armour, a short-sleeved shirt of chain mail",
+ "reads": "The wide band across the top is the mail shirt lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean round hole with a thick rolled collar of mail around it, and the plain {ground} background fills the entire circle from rim to rim. The two level bars to the left and right are the short mail sleeves over the upper arms, each ending in a straight open cuff. Below the shoulder band is the front of the mail shirt over the chest and belly, seen from steeply above and strongly foreshortened, ending in the thick rolled hem at the bottom. ",
+ "look": "a shirt of dark grey riveted chain mail with a wide neck, short sleeves and a rolled hem",
+ "paint": "Turn the simple forms into believable chain mail: the whole surface a fine, even weave of small interlocking steel rings in dark grey with tiny pale glints, the rows of rings following the shoulders, the sleeves and the curve of the chest, a thick rolled collar of mail around the neck opening, a rolled band at each sleeve end and a thick rolled hem",
+ "material": "dark grey chain-mail weave of small interlocking rings with tiny pale steel glints",
+ "hole_words": " and the round neck opening"
+}

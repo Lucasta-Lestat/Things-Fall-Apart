@@ -1,0 +1,27 @@
+{
+ "shell": "torso",
+ "build": "neutral",
+ "sleeve": "sleeveless",
+ "layer": 2,
+ "inflate": 0.014,
+ "hole_clear": 0.028,
+ "ring_r": 0.012,
+ "cap_x": 1.01,
+ "ground": "auto",
+ "swatch": {
+  "box": [
+   14,
+   34,
+   84,
+   200
+  ]
+ },
+ "what": "a single empty piece of armour, a sleeveless cuirass of thick boiled leather",
+ "reads": "The wide band across the top is the leather cuirass lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean round hole with a slim rolled leather rim around it, and the plain {ground} background fills the entire circle from rim to rim. The straight left and right ends of the piece are the arm openings at the points of the shoulders, each finished with a slim rolled edge of the same brown leather. Below the shoulder band is the front of the cuirass over the chest and belly, seen from steeply above and strongly foreshortened, and the narrow darker band at the very bottom is the flared hip band of the cuirass. ",
+ "look": "a sleeveless cuirass of thick deep earthy brown boiled leather, well worn, exactly as dark and muted as the swatch: a slim paler rolled rim around the neck opening, a seam across the top of each shoulder laced with two short pale thong stitches, a front that closes on the centre line with three short plain bands of leather, and a darker flared hip band along the lower edge",
+ "paint": "Turn the simple forms into believable boiled leather: broad smooth panels of deep earthy brown leather with soft darker brushed shading and patches of fine cross-hatched scuffing, a slim paler tan rolled rim around the neck opening, from which two slim paler rolled edges run down the front of the chest and meet on the centre line, where three short plain flat bands of the same tan leather, each a simple strip wrapped across both edges, hold the front closed, one dark seam line across the top of each shoulder crossed by two short pale thong stitches, a slim rolled brown edge at each arm opening, and the darker hip band along the bottom joined to the body by a line of small pale stitches",
+ "material": "deep earthy brown worn leather with its paler tan rolled edging, fine cross-hatched scuffs, dark seam lines with pale thong stitches and soft matte finish",
+ "hole_words": " and the round neck opening",
+ "clip_half": 1.08,
+ "note": "The leather is all leather and thong from edge to edge, deep muted dark brown, the same darkness as the swatch, painted with loose visible brushwork."
+}

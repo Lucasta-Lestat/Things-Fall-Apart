@@ -1,0 +1,82 @@
+{
+ "item": "nobles_blouse",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.756,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.3,
+    309.22
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 324.742,
+   "ly": 321.885,
+   "ly_neg": 156.249
+  },
+  "upperarm_l": {
+   "o": [
+    361.56,
+    308.34
+   ],
+   "ax": [
+    -0.99442,
+    -0.10545
+   ],
+   "lx": 336.564,
+   "ly": 99.736
+  },
+  "upperarm_r": {
+   "o": [
+    1011.05,
+    310.09
+   ],
+   "ax": [
+    0.99357,
+    -0.11321
+   ],
+   "lx": 337.756,
+   "ly": 99.85
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1123.559,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "mean hue distance 137 deg from the swatch",
+ "one_sided": false,
+ "sleeve": "short",
+ "collar": {
+  "centre_px": [
+   688.0,
+   278.05
+  ],
+  "r_px": 115.73,
+  "U": 0.005,
+  "V": -0.1995,
+  "r_over_half_shoulder": 0.3564,
+  "world": {
+   "y": 0.017,
+   "z": 1.6144,
+   "r": 0.103
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.77,
+   225.42
+  ],
+  "r": 167.66
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}
