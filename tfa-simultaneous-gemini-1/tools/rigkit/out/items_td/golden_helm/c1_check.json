@@ -1,0 +1,46 @@
+[
+ {
+  "name": "c1_1.png",
+  "iou": 0.7412,
+  "bbox_dx_dy_dw_dh": [
+   -20,
+   -6,
+   40,
+   31
+  ],
+  "symmetry": 0.9967
+ },
+ {
+  "name": "c1_2.png",
+  "iou": 0.8075,
+  "bbox_dx_dy_dw_dh": [
+   -14,
+   -1,
+   29,
+   16
+  ],
+  "symmetry": 0.9932
+ },
+ {
+  "name": "c1_3.png",
+  "iou": 0.7677,
+  "bbox_dx_dy_dw_dh": [
+   0,
+   1,
+   0,
+   -2
+  ],
+  "symmetry": 0.9961
+ },
+ {
+  "name": "c1_4.png",
+  "iou": 0.825,
+  "bbox_dx_dy_dw_dh": [
+   -1,
+   2,
+   3,
+   -2
+  ],
+  "symmetry": 0.9957
+ }
+]

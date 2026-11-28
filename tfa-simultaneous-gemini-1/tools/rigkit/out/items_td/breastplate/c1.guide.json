@@ -1,0 +1,58 @@
+{
+ "item": "breastplate",
+ "proxy": "orc",
+ "tilt_deg": 15.0,
+ "zoom": 1.993,
+ "slot": "torso",
+ "frames": {
+  "torso": {
+   "o": [
+    686.07,
+    299.12
+   ],
+   "ax": [
+    1.0,
+    0.00269
+   ],
+   "lx": 368.571,
+   "ly": 365.329,
+   "ly_neg": 177.337
+  }
+ },
+ "ground": [
+  40,
+  190,
+  70
+ ],
+ "px_per_unit": 1275.201,
+ "proxy_head_scale": 1.362,
+ "shell": "torso",
+ "build": "neutral",
+ "ground_name": "green",
+ "ground_why": "colourless swatch (weight 0.040)",
+ "one_sided": false,
+ "sleeve": "sleeveless",
+ "collar": {
+  "centre_px": [
+   688.0,
+   264.46
+  ],
+  "r_px": 118.59,
+  "U": 0.005,
+  "V": -0.1955,
+  "r_over_half_shoulder": 0.3218,
+  "world": {
+   "y": 0.017,
+   "z": 1.6122,
+   "r": 0.093
+  }
+ },
+ "proxy_head_in_item_px": {
+  "o": [
+   686.6,
+   204.02
+  ],
+  "r": 190.29
+ },
+ "camera_iou_vs_gen_plan": 1.0
+}

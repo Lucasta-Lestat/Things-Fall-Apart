@@ -1,25 +1,30 @@
 {
  "shell": "open",
- "spikes": 7,
- "spike_len": 0.042,
- "spike_rise": 1.1,
- "spike_gap_deg": 72,
- "cheek": 1.0,
+ "spikes": 9,
+ "spike_len": 0.022,
+ "spike_rise": 4.5,
+ "spike_gap_deg": 60,
+ "cheek": 2.6,
  "ridge": 0.01,
  "pad": 0.012,
  "ground": "auto",
  "swatch": {
   "box": [
-   45,
-   95,
-   225,
-   290
+   70,
+   100,
+   200,
+   185
   ]
  },
- "what": "a single helmet, an open-faced golden crown helm",
- "reads": "The large rounded dome is the top of the helmet seen from above, with a raised ridge running over it from the back to the brow at the front. The seven pointed spikes around its back and sides are the tall points of the crown standing up around the rim, seen from above. The two rounded lobes at the bottom left and right are the cheek guards hanging down at the front, with open space between them for the wearer's face. ",
- "look": "a regal open-faced helm made entirely of polished yellow gold: a smooth dome with a raised central ridge, a crown of seven tall pointed spikes around its back and sides, a spiked golden brow band across the front of the dome, and two cheek guards",
- "paint": "Turn the simple forms into believable polished yellow gold plate: a smooth mirror-bright domed skull with broad pale highlights and warm amber-brown shading, the raised ridge running from the back to the brow, each crown spike a flat tapering golden blade with a bright edge and a dark outline, and across the front of the dome, at the bottom of the dome in the picture, a raised golden brow band carrying a row of small sharp triangular points that lie back onto the dome, with one larger faceted diamond-shaped point at the centre where the ridge meets the band, and two curved plain golden cheek guards below the band",
+ "what": "a single helmet, a golden crown helm with cheek plates",
+ "reads": "The large round dome that fills most of the block-out is the top of the helmet seen from above, with a raised ridge running over it from the back to the brow at the front. The nine pointed spikes around its back and sides are the tall points of the crown, standing upright on the rim and seen from above, so each one is a short tapering blade whose tip points toward the top of the picture. The solid rounded apron under the dome, at the bottom of the picture, is the front of the helm seen from steeply above and squeezed short by the view: two cheek plates of solid gold that sweep in from the sides and meet along the centre line, and lying over their meeting line a short nasal bar that comes forward from the brow. ",
+ "look": "a regal helm made entirely of polished yellow gold, seen from above: a big smooth dome with a raised central ridge, a standing crown of nine pointed blades on its rim, a spiked golden brow band across the front of the dome, and under the brow a solid golden apron of two cheek plates curving inward to meet under a short nasal bar",
+ "paint": "Turn the simple forms into believable polished yellow gold plate: a smooth mirror-bright domed skull with broad pale highlights and warm amber-brown shading, the raised ridge running from the back to the brow, each crown point a flat tapering golden blade standing upright with a bright edge and a dark outline, and across the front of the dome, at the bottom of the dome in the picture, a raised golden brow band carrying a row of small sharp triangular points that lie back onto the dome, with one larger faceted diamond-shaped point at the centre where the ridge meets the band, a short golden nasal bar coming forward from that diamond, and the two cheek plates as broad solid curved plates of smooth gold with a raised rolled border along their outer edge, meeting in a fine dark seam under the nasal, with a narrow dark shadow under the brow band where each cheek plate tucks beneath it",
  "material": "polished yellow gold with its bright pale highlights, its warm amber-brown shadows, and the row of sharp triangular points with a central diamond on its brow band",
- "hole_words": ""
+ "hole_words": "",
+ "spike_base": 1.02,
+ "cheek_in": 1.0,
+ "cheek_gap": 0.1,
+ "nasal": 1.3,
+ "note": "The dome keeps the full size it has in the block-out and the cheek plates stay the same solid rounded apron beneath it, every edge of the painting lying on the block-out's own outline, polished gold from edge to edge."
 }

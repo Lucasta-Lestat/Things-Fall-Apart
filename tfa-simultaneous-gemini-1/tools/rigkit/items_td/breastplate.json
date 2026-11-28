@@ -4,10 +4,10 @@
  "sleeve": "sleeveless",
  "layer": 4,
  "inflate": 0.012,
- "hole_clear": 0.03,
+ "hole_clear": 0.008,
  "ring_r": 0.02,
- "cap_x": 0.62,
- "clip_half": 0.9,
+ "cap_x": 0.8,
+ "clip_half": 1.0,
  "tint_pct": 45,
  "tone_match": 0.25,
  "ground": "auto",
@@ -20,10 +20,14 @@
   ]
  },
  "what": "a single piece of body armour, a plain steel breastplate with its back plate",
- "reads": "The wide band across the top is the armour lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean smooth perfectly round hole with a plain smooth rolled steel edge around it, and the plain {ground} background fills the entire circle from rim to rim. The straight left and right ends of the piece are the outer flanks of the plates at the arm openings, rounded polished steel right up to the edge, where the breastplate and the back plate meet in a plain steel seam over each shoulder. Below the shoulder band is the front of the breastplate over the chest and belly, seen from steeply above and strongly foreshortened, ending in the lower edge of the plate at the bottom. ",
- "look": "a plain, sturdy breastplate of polished dark gunmetal steel, one smooth bare chest plate and a matching back plate, all of it the same gleaming dark steel as the swatch",
- "paint": "Turn the simple forms into believable polished plate armour made entirely of steel: one smooth plain chest plate with a soft central crease running down its middle, a matching smooth back plate across the top, a plain steel seam over each shoulder where the two plates meet, a smooth rolled steel edge along the neck opening and the flared lower rim, dark neutral grey gunmetal in the body of the plates with bold streaky near-white silver reflections sweeping along the tops of the shoulders, the flanks and the rolled edges, and deep charcoal-black shadows, a strong shiny metallic contrast",
+ "reads": "The wide band across the top is the armour lying over the tops of the shoulders and the upper back. The round opening in the middle of that band is the neck opening seen from above, a clean smooth perfectly round hole with a plain smooth rolled steel edge around it, and the plain {ground} background fills the entire circle from rim to rim. The straight left and right ends of the piece are the arm openings: down each one runs a raised rolled steel flange, a bright rounded band of steel set off from the plate by a dark groove. Below the shoulder band is the front of the breastplate over the chest and belly, seen from steeply above and strongly foreshortened, flaring out over the hips and ending at the bottom in a stepped lower rim: two narrow overlapping bands of steel, one below the other, following the curved lower edge. ",
+ "look": "a plain, sturdy breastplate of polished dark gunmetal steel, one smooth bare chest plate and a matching back plate, a bright rolled flange down each arm opening and a stepped lower rim of two narrow steel bands, all of it the same gleaming dark steel as the swatch",
+ "paint": "Turn the simple forms into believable polished plate armour made entirely of steel: one smooth plain chest plate with a soft central crease running down its middle, a matching smooth back plate across the top, a plain steel seam over each shoulder where the two plates meet, a smooth rolled steel edge along the neck opening, a thick rolled flange down each arm opening catching a bold near-white streak of light along its whole length, and the stepped lower rim as two narrow overlapping bands of steel, each with its own bright upper edge and a dark shadow line beneath it, dark neutral grey gunmetal in the body of the plates with bold streaky near-white silver reflections sweeping along the tops of the shoulders, the flanges and the rim bands, and deep charcoal-black shadows, a strong shiny metallic contrast",
  "material": "polished dark gunmetal steel, neutral iron grey, charcoal-black in its shadows with bright streaky near-white brushed reflections",
  "hole_words": " and the round neck opening",
- "note": "Every part of the piece is the same bare polished neutral-grey gunmetal steel from edge to edge, with broad smooth unbroken gleaming surfaces and a firm dark contour line around the whole outline."
+ "note": "Every part of the piece is the same bare polished neutral-grey gunmetal steel from edge to edge, with broad smooth unbroken gleaming surfaces and a firm dark contour line around the whole outline.",
+ "hip_wide": 0.07,
+ "flange": 0.05,
+ "rim_steps": 2,
+ "rim_step": 0.024
 }

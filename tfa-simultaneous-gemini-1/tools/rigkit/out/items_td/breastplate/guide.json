@@ -37,14 +37,14 @@
    688.0,
    264.46
   ],
-  "r_px": 146.65,
+  "r_px": 118.59,
   "U": 0.005,
   "V": -0.1955,
-  "r_over_half_shoulder": 0.3979,
+  "r_over_half_shoulder": 0.3218,
   "world": {
    "y": 0.017,
    "z": 1.6122,
-   "r": 0.115
+   "r": 0.093
   }
  },
  "proxy_head_in_item_px": {

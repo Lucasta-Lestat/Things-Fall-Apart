@@ -2,20 +2,20 @@
  "item": "golden_helm",
  "proxy": "orc",
  "tilt_deg": 15.0,
- "zoom": 2.125,
+ "zoom": 1.928,
  "slot": "head",
  "frames": {
   "head": {
    "o": [
-    686.51,
-    340.54
+    686.65,
+    326.57
    ],
    "ax": [
     1.0,
     0.0
    ],
-   "lx": 202.889,
-   "ly": 202.889
+   "lx": 184.08,
+   "ly": 184.08
   }
  },
  "ground": [
@@ -23,12 +23,12 @@
   110,
   215
  ],
- "px_per_unit": 1359.66,
+ "px_per_unit": 1233.612,
  "proxy_head_scale": 1.362,
  "shell": "open",
  "build": "proxy",
  "ground_name": "blue",
- "ground_why": "mean hue distance 174 deg from the swatch",
+ "ground_why": "mean hue distance 176 deg from the swatch",
  "one_sided": false,
  "camera_iou_vs_gen_plan": 1.0
 }

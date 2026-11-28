@@ -340,6 +340,10 @@ def torso_shell(spec, cam):
         if part == "body":
             if spec["sleeve"] == "sleeveless" and abs(c[0]) > spec.get("cap_x", 0.78) * sh:
                 continue                                    # deltoid caps and the outer shoulder girdle
+            hw = float(spec.get("hip_wide", 0.0))           # a lower rim that flares out over the hips
+            if hw and abs(c[0]) < 1e-6 and c[2] < 1.2:
+                prims.append(("ell", "shell", c, (r[0] + t + hw, r[1] + t, r[2] + t)))
+                continue
             prims.append(("ell", "shell", c, tuple(v + t for v in r)))
             continue
         if part.startswith("upperarm_"):
@@ -379,7 +383,13 @@ def torso_shell(spec, cam):
         want.update(upperarm_l="upperarm_l", upperarm_r="upperarm_r")
     if spec["sleeve"] == "long":
         want.update(forearm_l="forearm_l", forearm_r="forearm_r")
-    return dict(prims=prims, hole=hole, clip_x=clip_x, frames=want, sigma=3.0)
+    out = dict(prims=prims, hole=hole, clip_x=clip_x, frames=want, sigma=3.0)
+    if spec.get("flange") or spec.get("rim_steps"):
+        # plate details drawn into the clay: a rolled flange down each arm hole (needs clip_half),
+        # and a lower rim stepped into `rim_steps` narrow bands, each `rim_step` wide
+        out["geo"] = dict(kind="torso", clip_x=clip_x, flange=float(spec.get("flange", 0.0)),
+                          rim_steps=int(spec.get("rim_steps", 0)), rim_step=float(spec.get("rim_step", 0.022)))
+    return out
 
 
 def _head_geo(cam):
@@ -445,21 +455,46 @@ def open_shell(spec, cam):
         rise = float(spec.get("spike_rise", 0.55))          # how far a spike leans up (0 = flat outward)
         gap = np.radians(float(spec.get("spike_gap_deg", 55.0)))   # the front arc left free for the face
         zr = g["sz"] - drz * 0.25
+        sb = float(spec.get("spike_base", 0.92))            # 0.92 = rooted inside the dome; 1.0 = on its surface
         for a in np.linspace(np.pi / 2 + gap, np.pi / 2 + 2 * np.pi - gap, n):
             ca, sa = float(np.cos(a)), float(np.sin(a))
             q = float(np.sqrt(max(1 - (0.25) ** 2, 0)))     # the dome's radius at height zr
-            a0 = np.array([drx * q * ca * 0.92, c[1] + dry * q * sa * 0.92, zr])
+            a0 = np.array([drx * q * ca * sb, c[1] + dry * q * sa * sb, zr])
             a1 = a0 + np.array([ca * ln, sa * ln, ln * rise])
             m = int(np.ceil(ln / 0.004)) + 2
+            if "spike_base" in spec:                        # steep spikes: sample their true length
+                m = int(np.ceil(ln * np.sqrt(1 + rise * rise) / 0.0025)) + 2
             for t_ in np.linspace(0, 1, m):
                 r = 0.017 * srx / 0.108 * (1 - t_) + 0.003
                 prims.append(("ell", "shell", tuple(a0 + (a1 - a0) * t_), (r, r, r)))
     ck = float(spec.get("cheek", 0.0))
-    if ck:
+    ci = float(spec.get("cheek_in", 0.0))
+    if ck and ci:
+        # cheek plates that hang in front of the ears and curve in round the face toward the nose,
+        # stopping `cheek_gap` (share of the head's half width) short of the centre line
+        yf = g["y_front"]
+        gap_x = float(spec.get("cheek_gap", 0.10)) * srx
+        ry_ = (yf - c[1]) * (0.86 + 0.14 * ci)
+        a_end = float(np.arccos(np.clip(gap_x / (srx * 0.80), 0, 1)))
+        for s_ in (-1, 1):
+            for u in np.linspace(0, 1, 40):
+                a = np.radians(8.0) + (a_end - np.radians(8.0)) * u
+                z = g["sz"] - srz * (0.55 + 0.42 * u)
+                rr = srx * 0.20 * ck * (1.0 - 0.45 * u)
+                prims.append(("ell", "shell", (s_ * srx * 0.80 * float(np.cos(a)), c[1] + ry_ * float(np.sin(a)), z),
+                              (rr, rr, srz * (0.50 - 0.22 * u))))
+    elif ck:
         yf = g["y_front"]
         for s_ in (-1, 1):                                  # a guard hanging in front of each ear
             prims.append(("ell", "shell", (s_ * srx * 0.78, c[1] + (yf - c[1]) * 0.55, g["sz"] - srz * 0.75),
                           (srx * 0.26 * ck, (yf - c[1]) * 0.50, srz * 0.62)))
+    ns = float(spec.get("nasal", 0.0))
+    if ns:                                                  # a nasal bar from the brow down the nose
+        yf = g["y_front"]
+        for u in np.linspace(0, 1, 24):
+            rr = srx * 0.085 * ns * (1.0 - 0.35 * u)
+            prims.append(("ell", "shell", (0.0, c[1] + (yf - c[1]) * (0.80 + 0.22 * u), g["sz"] - srz * (0.15 + 0.80 * u)),
+                          (rr, rr, srz * 0.16)))
     geo = dict(kind="open", c=c, rx=drx, ry=dry, ridge=float(spec.get("ridge", 0.0)))
     return dict(prims=prims, geo=geo, frames={"head": "head"}, sigma=1.2)
 
@@ -544,7 +579,27 @@ def base_colour(item, pct=65.0):
 def _markings(clay, geo, mask, nrm, dep, X, Y, st, ct, k):
     """Shell markings drawn into the clay: slits, bars, ridges, openings."""
     kind = geo.get("kind")
-    if kind == "bucket":
+    if kind == "torso":
+        if geo.get("flange") and geo.get("clip_x"):
+            d = geo["clip_x"] - np.abs(X)                      # distance in from the arm-hole edge
+            fw = geo["flange"]
+            band = mask & (d < fw)
+            roll = np.clip(1.0 - np.abs(d / fw - 0.5) * 2.0, 0, 1)      # a rounded roll: brightest mid-band
+            clay = np.where(band, clay * (0.95 + 0.30 * roll) + 26 * roll, clay)
+            clay = np.where(mask & (np.abs(d - fw) < 0.0045), clay * 0.50, clay)
+        if geo.get("rim_steps"):
+            unit = float(X[0, 1] - X[0, 0])
+            dist, (iy, ix) = ndi.distance_transform_edt(mask, return_indices=True)
+            jj, ii = np.indices(mask.shape)
+            below = (iy - jj) > 0.8 * np.abs(ix - ii)          # the nearest edge is the lower one
+            d = dist * unit
+            sw, n = geo["rim_step"], geo["rim_steps"]
+            lower = mask & below & (d < sw * n)
+            step = np.floor(d / sw)
+            frac = d / sw - step
+            clay = np.where(lower, clay * (1.10 - 0.05 * step) + 14 * np.clip(1 - np.abs(frac - 0.45) * 2.2, 0, 1), clay)
+            clay = np.where(mask & below & (d < sw * n + 0.004) & (frac > 0.82) | (lower & (frac > 0.84)), clay * 0.50, clay)
+    elif kind == "bucket":
         # markings on the front wall: eye slit, and a raised cross bar (lighter, dark-edged)
         Z = -Y * st + dep * ct
         wall = mask & (nrm[..., 2] < 0.5)

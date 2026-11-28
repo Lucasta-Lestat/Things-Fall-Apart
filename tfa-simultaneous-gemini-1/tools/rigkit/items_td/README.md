@@ -53,6 +53,9 @@ there, never what is absent.
 | `sleeve_inflate`, `sleeve_taper` | Looser sleeve; sleeve that widens toward the cuff (0.25 = a quarter wider at the cuff) |
 | `cap_x` | Sleeveless only: trunk forms further out than this share of the half shoulder width are dropped (1.01 = keep the shoulder caps, 0.62 = plate without them) |
 | `clip_half` | Sleeveless only: cut the piece square at this share of the half shoulder width (straight arm holes) |
+| `hip_wide` | Widen the trunk forms below the chest by this much (world units, 0.07 on the breastplate): a lower rim that flares over the hips. Raises cover on long-bodied legacy packs; above about 0.08 thin races WARN on spill |
+| `flange` | Needs `clip_half`: draw a rolled band this wide (0.05) down each arm-hole edge, lighter than the plate and set off by a dark groove |
+| `rim_steps`, `rim_step` | Draw the lower rim as this many stepped bands (2), each `rim_step` wide (0.024) |
 | `skirt` | A robe: `{"hem": 0.02, "flare": 0.02, "wide": 0, "front": 0, "top": 1.0}`. A wall from the hips to `hem` above the floor, hugging the body footprint; `wide` / `front` push it out, `flare` widens it toward the hem |
 
 ### Head knobs
@@ -61,7 +64,7 @@ there, never what is absent.
 |---|---|
 | `bucket` | `pad` |
 | `brim` | `pad`, `brim` (brim radius over the crown's), `brim_drop`, `brim_slope`, `brim_thick`, `crown`, `forward`, `ridge` (0 = none) |
-| `open` | `pad`, `spikes` (count), `spike_len`, `spike_rise`, `spike_gap_deg` (front arc left free), `cheek` (0 = none), `ridge` |
+| `open` | `pad`, `spikes` (count), `spike_len`, `spike_rise`, `spike_gap_deg` (front arc left free), `spike_base` (where a spike is rooted, as a share of the dome's radius: default 0.92 = inside the dome, 1.02 = on its surface, needed for steep upright spikes with `spike_rise` 4+), `cheek` (0 = none; size of the cheek guards), `cheek_in` (above 0: the guards become plates that curve in round the face toward the centre line, stopping `cheek_gap` x the head's half width short of it; `cheek` 1.8 = bands with eye gaps, 2.6 = a solid apron), `nasal` (0 = none; thickness of a nasal bar from the brow), `ridge` |
 | `hood` | `pad`, `wide`, `drape` (cloth on the nape, 0 = none), `peak` (0 = round), `opening` (width of the dark face opening) |
 
 ### `foot` knobs
